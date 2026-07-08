@@ -1,0 +1,532 @@
+---
+description: AsliJobs production engineering standards for all applications (frontend, backend, admin)
+alwaysApply: true
+---
+
+# AsliJobs Production Engineering Rules
+
+## Core Principle
+
+AsliJobs is a real production application, not a prototype, demo, tutorial, or hackathon project.
+
+Every implementation must prioritize:
+
+- maintainability
+- scalability
+- readability
+- security
+- accessibility
+- performance
+- testability
+- clean architecture
+- clear separation of concerns
+
+Before modifying code, inspect the existing project structure and reuse existing architecture, utilities, components, types, constants, services, and conventions.
+
+Never blindly generate duplicate architecture.
+
+---
+
+## Repository Boundaries
+
+The repository contains three applications:
+
+frontend/
+- Next.js public website
+- Job Seeker experience
+- Employer experience
+
+backend/
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- Common REST API
+- Authentication
+- WhatsApp integrations
+- Business logic
+
+admin/
+- React
+- Vite
+- Internal Team application
+
+Never modify another application unless the current task explicitly requires it.
+
+If a task is frontend-only:
+- modify only frontend/
+
+If a task is backend-only:
+- modify only backend/
+
+If a task is admin-only:
+- modify only admin/
+
+Never make unrelated cross-project changes.
+
+---
+
+## Inspect Before Implementing
+
+Before creating or modifying code:
+
+1. Inspect the relevant package.json.
+2. Inspect the current folder structure.
+3. Inspect existing reusable components.
+4. Inspect existing types and interfaces.
+5. Inspect constants and route configuration.
+6. Inspect utility functions.
+7. Inspect services and API clients.
+8. Inspect styling and design-system conventions.
+9. Inspect existing libraries before adding dependencies.
+10. Identify the smallest set of files required for the task.
+
+Do not immediately start coding before understanding the existing implementation.
+
+---
+
+## Architecture Rules
+
+Follow the architecture already established in each application.
+
+Do not:
+- create duplicate utilities
+- create duplicate route systems
+- create duplicate API clients
+- create duplicate types
+- create duplicate constants
+- create duplicate UI primitives
+- place all logic in page files
+- place business logic directly inside large UI components
+- create giant monolithic components
+- create unnecessary abstraction layers
+- create folders only for visual appearance
+- reorganize unrelated project architecture
+
+Each file must have a clear responsibility.
+
+Prefer feature-oriented organization where appropriate.
+
+Keep:
+- UI rendering
+- state management
+- validation
+- API communication
+- business logic
+- configuration
+- types
+
+properly separated.
+
+---
+
+## TypeScript Rules
+
+Use TypeScript strictly.
+
+Never use `any` unless there is a documented and unavoidable external-library boundary.
+
+Prefer:
+- explicit interfaces
+- explicit type aliases
+- discriminated unions
+- typed configuration
+- typed API contracts
+- typed component props
+- typed event handlers
+
+Do not:
+- silence TypeScript errors
+- use unsafe type assertions to bypass errors
+- use `@ts-ignore` without a genuine documented reason
+- use broad object types when a precise domain type is possible
+
+Fix the root cause of type errors.
+
+---
+
+## Component Rules
+
+Components must be:
+
+- focused
+- reusable when reuse is realistic
+- readable
+- accessible
+- appropriately sized
+
+Do not split every small element into a separate file.
+
+Do not keep a very large feature inside one component.
+
+Extract components when:
+- the section has independent responsibility
+- logic is reusable
+- the component becomes difficult to understand
+- testing benefits from separation
+
+Avoid premature abstraction.
+
+---
+
+## Constants and Configuration
+
+Do not scatter repeated values throughout JSX or business logic.
+
+Centralize when appropriate:
+
+- routes
+- navigation configuration
+- API paths
+- role values
+- status values
+- feature flags
+- environment configuration
+- reusable domain constants
+
+Do not duplicate the same configuration for desktop and mobile UI.
+
+Use one typed source of truth where practical.
+
+---
+
+## Frontend Rules
+
+For frontend/:
+
+Follow Next.js architecture already configured in the project.
+
+Use:
+- Server Components by default where appropriate
+- Client Components only when interactivity requires them
+- the smallest practical client boundary
+- Next.js navigation APIs
+- Next.js Image where appropriate
+- reusable components
+- typed data models
+- centralized route constants
+- centralized API services
+
+Do not:
+- convert entire layouts to Client Components unnecessarily
+- fetch static configuration through APIs
+- create fake API calls
+- hardcode backend URLs inside components
+- access MongoDB directly
+- duplicate navigation data
+- introduce hydration issues
+- access browser-only APIs during server rendering without guards
+
+Keep UI, feature logic, API services, and shared utilities separated.
+
+---
+
+## Backend Rules
+
+For backend/:
+
+Use modular feature architecture.
+
+Business modules should own their related:
+
+- model
+- types
+- validation
+- service
+- controller
+- routes
+
+Controllers should remain thin.
+
+Controllers:
+- receive requests
+- validate/use validated input
+- call services
+- return responses
+
+Services:
+- contain business logic
+- coordinate models
+- enforce domain rules
+
+Models:
+- define persistence schemas
+
+Validation:
+- validates external input at application boundaries
+
+Do not:
+- put large business logic inside route files
+- put large business logic inside controllers
+- expose secrets
+- trust unvalidated request input
+- leak internal error details to clients
+- directly mix WhatsApp webhook logic with unrelated business modules
+
+Use centralized:
+- error handling
+- environment validation
+- authentication middleware
+- authorization middleware
+- response conventions where already established
+
+---
+
+## Admin Application Rules
+
+For admin/:
+
+The Internal Team application must remain role-aware.
+
+Supported role domains include:
+
+- SUPER_ADMIN
+- OPERATIONS
+- SUPPORT
+- MARKETING
+- CONTENT_LANGUAGE
+- SALES
+
+Do not expose screens or actions merely by hiding navigation items.
+
+Authorization must ultimately be enforced by the backend.
+
+Frontend route guards are for user experience, not the security boundary.
+
+Keep role-specific features organized clearly.
+
+Shared components should remain role-neutral when possible.
+
+---
+
+## API Integration Rules
+
+Use the existing centralized API client.
+
+Do not:
+- create Axios instances inside components
+- hardcode API base URLs
+- create fake API calls
+- duplicate endpoint strings across files
+- swallow errors silently
+
+Keep API integration in appropriate service or feature layers.
+
+Use TanStack Query consistently if the application already uses it.
+
+Use stable query keys and centralized query-key factories where complexity justifies them.
+
+---
+
+## Forms and Validation
+
+Use the project's existing form and validation stack.
+
+If React Hook Form and Zod are already configured, use them consistently.
+
+Keep:
+- form UI
+- schema validation
+- submission logic
+- API mutation logic
+
+clearly separated where complexity requires it.
+
+Do not manually duplicate validation logic across UI and services unnecessarily.
+
+---
+
+## Accessibility Rules
+
+Accessibility is mandatory.
+
+Use:
+- semantic HTML
+- proper buttons for actions
+- proper links for navigation
+- labels for form controls
+- keyboard accessibility
+- visible focus states
+- appropriate ARIA attributes
+- logical tab order
+- sufficient touch target sizes
+- accessible error messages
+
+Never:
+- use clickable divs
+- use spans as buttons
+- rely only on hover
+- remove focus outlines without accessible replacements
+
+---
+
+## Responsive UI Rules
+
+Every frontend and admin UI task must consider:
+
+- large desktop
+- desktop
+- laptop
+- tablet
+- mobile
+
+Prevent:
+- horizontal overflow
+- overlapping controls
+- unreadable text
+- tiny touch targets
+- broken grids
+- awkward wrapping
+
+Do not optimize only for the reference screenshot resolution.
+
+---
+
+## Performance Rules
+
+Avoid unnecessary client-side JavaScript.
+
+Do not:
+- add global state for local component state
+- fetch data that can remain static
+- import large libraries for small functionality
+- install animation libraries for basic transitions
+- load oversized images without optimization
+- introduce unnecessary re-renders
+
+Prefer the simplest production-safe solution.
+
+---
+
+## Security Rules
+
+Never:
+- commit secrets
+- hardcode tokens
+- expose server secrets to client bundles
+- trust client-side authorization
+- log passwords or tokens
+- expose stack traces in production responses
+- disable security middleware to make development easier
+- store sensitive authentication tokens insecurely without architectural justification
+
+Use environment variables according to application boundaries.
+
+Only public environment variables may be exposed to browser applications.
+
+---
+
+## Dependency Rules
+
+Before installing a package:
+
+1. Check whether an existing dependency already solves the problem.
+2. Prefer platform and framework capabilities.
+3. Evaluate maintenance and bundle impact.
+4. Avoid overlapping libraries.
+
+Do not install dependencies without a clear requirement.
+
+---
+
+## Code Quality Rules
+
+Never leave:
+
+- console.log debugging
+- dead code
+- unused imports
+- unused variables
+- duplicate implementations
+- commented-out old implementations
+- temporary test UI
+- fake production data presented as real
+- meaningless placeholder code
+- unresolved TypeScript errors
+- unresolved lint errors
+
+Use clear domain-specific naming.
+
+Avoid vague names such as:
+- data
+- thing
+- stuff
+- temp
+- component1
+- handler2
+
+when a precise name is available.
+
+---
+
+## Task Scope Discipline
+
+Implement only what the current task requests.
+
+Do not:
+- add unrelated features
+- redesign unrelated sections
+- refactor unrelated modules
+- change working configuration without need
+- add speculative functionality
+
+If future functionality is relevant, structure the current implementation to support extension without implementing the future feature prematurely.
+
+---
+
+## Validation Before Completion
+
+Before declaring a task complete:
+
+1. Run TypeScript checks for the affected application.
+2. Run lint if configured.
+3. Run the production build for the affected application.
+4. Fix all errors.
+5. Remove debug code.
+6. Review changed files for unnecessary modifications.
+7. Check responsive behavior for UI tasks.
+8. Check keyboard accessibility for interactive UI.
+9. Check for horizontal overflow.
+10. Check for console and hydration errors.
+
+Do not claim success if validation fails.
+
+Report clearly:
+- files created
+- files modified
+- validation commands run
+- build result
+- remaining genuine manual actions
+
+---
+
+## Existing Code Protection
+
+Do not overwrite or reinitialize existing application foundations.
+
+Never:
+- recreate the Next.js application
+- recreate the Vite application
+- replace package.json unnecessarily
+- replace tsconfig unnecessarily
+- delete existing utilities
+- rewrite unrelated global styles
+- change environment configuration unrelated to the task
+
+Make focused incremental changes.
+
+---
+
+## Final Engineering Standard
+
+For every future task:
+
+Inspect → Understand → Plan → Implement → Validate → Clean Up → Report.
+
+All code must be suitable for a long-term production application.
+
+Prefer clear, maintainable code over clever code.
+
+Prefer existing architecture over unnecessary new patterns.
+
+Prefer small focused changes over broad unrelated rewrites.

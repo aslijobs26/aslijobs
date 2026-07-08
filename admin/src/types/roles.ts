@@ -1,0 +1,10 @@
+export const ADMIN_ROLES = {
+  SUPER_ADMIN: "SUPER_ADMIN",
+  OPERATIONS: "OPERATIONS",
+  SUPPORT: "SUPPORT",
+  MARKETING: "MARKETING",
+  CONTENT_LANGUAGE: "CONTENT_LANGUAGE",
+  SALES: "SALES",
+} as const;
+
+export type AdminRole = (typeof ADMIN_ROLES)[keyof typeof ADMIN_ROLES];

@@ -1,0 +1,273 @@
+@import "tailwindcss";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+@theme inline {
+  --color-primary: #0e8585;
+  --color-primary-hover: #0b6f6f;
+  --color-primary-soft: #149a9a;
+  --color-primary-soft-hover: #0e8585;
+  --color-primary-light: #e8f5f5;
+  --color-hyderabad: #0e8585;
+  --color-hyderabad-dark: #0b6f6f;
+  --color-whatsapp-cta: #d8f0de;
+  --color-whatsapp-cta-mid: #dcf2e3;
+  --color-whatsapp: #25d366;
+  --color-whatsapp-hover: #20ba5a;
+  --color-whatsapp-dark: #128c7e;
+  --color-whatsapp-darker: #0d6f63;
+  --color-whatsapp-icon-surface: #ffffff;
+  --color-employer-cta: #dce8fc;
+  --color-employer-cta-mid: #d8e5fb;
+  --color-employer-cta-end: #e2ebfb;
+  --color-employer-button: #2563eb;
+  --color-employer-button-hover: #1d4ed8;
+  --color-employer-icon: #2563eb;
+  --color-employer-icon-surface: #ffffff;
+  --color-nav: #2d2d2d;
+  --color-foreground: #1a2b3c;
+  --color-muted: #5a6570;
+  --color-hero-bg: #f4f7f8;
+  --color-hero-glow: #dce8ea;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+  --color-border-subtle: #eef1f3;
+  --color-resource-guide-surface: #dff0e3;
+  --color-resource-resume-surface: #e4dff9;
+  --color-resource-interview-surface: #f2e6d8;
+  --color-resource-salary-surface: #ddeef8;
+  --color-resource-career-surface: #e5e4f8;
+  --color-benefit-whatsapp-icon: #55b95a;
+  --color-benefit-whatsapp-surface: #eaf7eb;
+  --color-benefit-languages-icon: #7257d9;
+  --color-benefit-languages-surface: #efedfc;
+  --color-benefit-voice-icon: #ef8b3a;
+  --color-benefit-voice-surface: #faf0e6;
+  --color-benefit-verified-icon: #4f7ff3;
+  --color-benefit-verified-surface: #eaf1fd;
+  --color-benefit-ai-matching-icon: #e45b8b;
+  --color-benefit-ai-matching-surface: #f9eaef;
+  --color-benefit-free-icon: #e8ae26;
+  --color-benefit-free-surface: #fcf5e3;
+  --color-workflow-mint-surface: #f3faf5;
+  --color-workflow-mint-alt-surface: #f4faf5;
+  --color-workflow-neutral-surface: #f7f9fb;
+  --color-workflow-connector: #aec5c5;
+  --color-category-construction-surface: #faf0e3;
+  --color-social-facebook: #1877f2;
+  --color-social-linkedin: #0a66c2;
+  --color-social-youtube: #ff0000;
+  --color-pin-state: #e53935;
+  --font-sans: var(--font-quicksand), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+@utility bg-whatsapp-cta-surface {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-whatsapp-cta) 0%,
+    var(--color-whatsapp-cta-mid) 50%,
+    var(--color-whatsapp-cta) 100%
+  );
+}
+
+@utility text-whatsapp-blend {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-whatsapp-hover) 0%,
+    var(--color-whatsapp-dark) 40%,
+    var(--color-whatsapp-darker) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-employer-cta-surface {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-employer-cta) 0%,
+    var(--color-employer-cta-mid) 50%,
+    var(--color-employer-cta-end) 100%
+  );
+}
+
+@utility bg-social-instagram {
+  background-image: linear-gradient(
+    45deg,
+    #f58529 0%,
+    #dd2a7b 45%,
+    #8134af 75%,
+    #515bd4 100%
+  );
+}
+
+@keyframes hero-float-voice {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  33% {
+    transform: translate3d(0, -8px, 0);
+  }
+
+  66% {
+    transform: translate3d(3px, -8px, 0);
+  }
+}
+
+@keyframes hero-float-voice-sm {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  33% {
+    transform: translate3d(0, -5px, 0);
+  }
+
+  66% {
+    transform: translate3d(2px, -5px, 0);
+  }
+}
+
+@keyframes hero-float-whatsapp {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  33% {
+    transform: translate3d(0, 7px, 0);
+  }
+
+  66% {
+    transform: translate3d(-3px, 7px, 0);
+  }
+}
+
+@keyframes hero-float-whatsapp-sm {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  33% {
+    transform: translate3d(0, 5px, 0);
+  }
+
+  66% {
+    transform: translate3d(-2px, 5px, 0);
+  }
+}
+
+@keyframes hero-float-verified {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  33% {
+    transform: translate3d(0, -7px, 0);
+  }
+
+  66% {
+    transform: translate3d(-2px, -7px, 0);
+  }
+}
+
+@keyframes hero-float-verified-sm {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  33% {
+    transform: translate3d(0, -5px, 0);
+  }
+
+  66% {
+    transform: translate3d(-1px, -5px, 0);
+  }
+}
+
+@keyframes hero-float-language {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  33% {
+    transform: translate3d(0, 7px, 0);
+  }
+
+  66% {
+    transform: translate3d(3px, 7px, 0);
+  }
+}
+
+@keyframes hero-float-language-sm {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  33% {
+    transform: translate3d(0, 5px, 0);
+  }
+
+  66% {
+    transform: translate3d(2px, 5px, 0);
+  }
+}
+
+@utility animate-hero-float-voice {
+  animation: hero-float-voice 5.5s ease-in-out infinite;
+
+  @media (width < 1024px) {
+    animation-name: hero-float-voice-sm;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility animate-hero-float-whatsapp {
+  animation: hero-float-whatsapp 6.2s ease-in-out -1.5s infinite;
+
+  @media (width < 1024px) {
+    animation-name: hero-float-whatsapp-sm;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility animate-hero-float-verified {
+  animation: hero-float-verified 6.8s ease-in-out -2.8s infinite;
+
+  @media (width < 1024px) {
+    animation-name: hero-float-verified-sm;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility animate-hero-float-language {
+  animation: hero-float-language 5.9s ease-in-out -1.1s infinite;
+
+  @media (width < 1024px) {
+    animation-name: hero-float-language-sm;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
