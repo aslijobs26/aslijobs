@@ -1,3 +1,5 @@
+import type { HeroFeatureId, HeroFeatureMessage } from "@/types/hero";
+
 export const HERO_LANGUAGES = [
   "English",
   "తెలుగు",
@@ -43,6 +45,16 @@ export const HERO_FEATURE_CARDS = [
     position: "bottom-right",
   },
 ] as const;
+
+export const HERO_FEATURE_MESSAGES: Record<
+  HeroFeatureId,
+  HeroFeatureMessage
+> = {
+  "voice-search": { emoji: "🎙️", text: "Delivery jobs near me" },
+  "whatsapp-first": { emoji: "💬", text: "Hi AsliJobs, find jobs for me" },
+  "verified-jobs": { emoji: "🛡️", text: "Show me verified jobs" },
+  "in-your-language": { emoji: "🌐", text: "తెలుగులో ఉద్యోగాలు చూపించు" },
+};
 
 export const HERO_SEARCH_DEFAULTS = {
   query: "",

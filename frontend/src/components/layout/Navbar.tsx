@@ -41,13 +41,18 @@ export function Navbar() {
   const closeMobileNav = () => setIsMobileNavOpen(false);
 
   return (
-    <header className="sticky top-0 z-50 bg-white">
-      <Container className="px-2 sm:px-6 lg:px-8 xl:px-10">
+    <header
+      className={cn(
+        "sticky top-0 z-50 bg-surface",
+        isMobileNavOpen && "border-b border-border-subtle lg:border-b-0",
+      )}
+    >
+      <Container className="relative z-50 bg-surface px-2 sm:px-6 lg:px-8 xl:px-10">
         <div className="flex min-h-[72px] items-center gap-4 py-2 lg:min-h-[80px] lg:gap-6">
           <Link
             href={ROUTES.HOME}
             aria-label="AsliJobs home"
-            className="flex shrink-0 flex-col items-start gap-0.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mr-0"
+            className="flex shrink-0 flex-col items-start gap-0.5 rounded-sm pl-1 lg:pl-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mr-0"
             onClick={closeMobileNav}
           >
             <Image
@@ -55,11 +60,11 @@ export function Navbar() {
               alt=""
               width={213}
               height={70}
-              className="block h-[52px] w-auto lg:h-[60px]"
+              className="block h-[38px] w-auto lg:h-[60px]"
               priority
               aria-hidden
             />
-            <p className="whitespace-nowrap text-[8px] font-bold leading-tight text-gray-500 sm:text-[9px] lg:text-[10px]">
+            <p className="whitespace-nowrap text-[7px] font-bold leading-tight text-muted sm:text-[9px] lg:text-[10px]">
               {BRAND_TAGLINE}
             </p>
           </Link>
@@ -100,7 +105,7 @@ export function Navbar() {
 
           <button
             type="button"
-            className="ml-auto inline-flex size-10 items-center justify-center rounded-md text-nav transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
+            className="ml-auto inline-flex size-10 items-center justify-center rounded-md text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
             aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={isMobileNavOpen}
             aria-controls="mobile-navigation"

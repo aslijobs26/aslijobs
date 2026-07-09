@@ -2,9 +2,11 @@ import amazonLogo from "@/assets/amazon.png";
 import delhiveryLogo from "@/assets/delhivery-seeklogo.png";
 import dhlLogo from "@/assets/dhl-seeklogo.png";
 import flipkartLogo from "@/assets/Flipkart_logo_PNG1.png";
+import propenuLogo from "@/assets/propenu.png";
 import relianceLogo from "@/assets/RELIANCE.NS_BIG.png";
 import swiggyLogo from "@/assets/Swiggy_(2).png";
 import tataLogo from "@/assets/Tata_logo.svg";
+import teamWorksLogo from "@/assets/TeamWorks.png";
 import zomatoLogo from "@/assets/Zomato_logo_PNG1.png";
 import type { Employer } from "@/types/discovery";
 import { ROUTES } from "./routes";
@@ -69,5 +71,19 @@ export const TOP_EMPLOYERS: Employer[] = [
     initials: "D",
     href: employerHref("delhivery"),
     logo: delhiveryLogo,
+  },
+  {
+    id: "teamworks",
+    name: "TeamWorks",
+    initials: "TW",
+    href: employerHref("teamworks"),
+    logo: teamWorksLogo,
+  },
+  {
+    id: "propenu",
+    name: "Propenu",
+    initials: "P",
+    href: employerHref("propenu"),
+    logo: propenuLogo,
   },
 ];

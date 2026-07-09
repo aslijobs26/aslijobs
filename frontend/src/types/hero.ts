@@ -27,3 +27,14 @@ export type HeroFeatureCardConfig = {
   description: string;
   position: HeroFeatureCardPosition;
 };
+
+export type HeroFeatureId =
+  | "voice-search"
+  | "whatsapp-first"
+  | "verified-jobs"
+  | "in-your-language";
+
+export type HeroFeatureMessage = {
+  emoji: string;
+  text: string;
+};

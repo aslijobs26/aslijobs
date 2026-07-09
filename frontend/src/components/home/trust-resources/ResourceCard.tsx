@@ -1,21 +1,22 @@
-import type { CategoryIconVariant } from "@/types/discovery";
-import type { JobSeekerResource } from "@/types/trust-resources";
+import type { JobSeekerResource, ResourceSurfaceVariant } from "@/types/trust-resources";
 import { cn } from "@/utils/cn";
 import Link from "next/link";
 import { ResourceIcon } from "./resource-icons";
 
-const surfaceVariantStyles = {
+const surfaceVariantStyles: Record<ResourceSurfaceVariant, string> = {
   guide: "bg-resource-guide-surface",
   resume: "bg-resource-resume-surface",
   interview: "bg-resource-interview-surface",
   salary: "bg-resource-salary-surface",
   career: "bg-resource-career-surface",
-} as const;
+};
 
-const iconVariantStyles: Record<CategoryIconVariant, string> = {
-  primary: "bg-primary-light text-primary",
-  glow: "bg-hero-glow text-primary",
-  surface: "border border-border-subtle bg-surface text-muted",
+const resourceIconContainerStyles: Record<ResourceSurfaceVariant, string> = {
+  guide: "bg-resource-guide-icon-surface text-resource-guide-icon",
+  resume: "bg-resource-resume-icon-surface text-resource-resume-icon",
+  interview: "bg-resource-interview-icon-surface text-resource-interview-icon",
+  salary: "bg-resource-salary-icon-surface text-resource-salary-icon",
+  career: "bg-resource-career-icon-surface text-resource-career-icon",
 };
 
 type ResourceCardProps = {
@@ -34,7 +35,7 @@ export function ResourceCard({ resource }: ResourceCardProps) {
       <div
         className={cn(
           "mb-3 flex size-10 items-center justify-center rounded-lg sm:mb-4",
-          iconVariantStyles[resource.iconVariant],
+          resourceIconContainerStyles[resource.surfaceVariant],
         )}
       >
         <ResourceIcon icon={resource.icon} />

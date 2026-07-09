@@ -4,8 +4,8 @@
 @theme inline {
   --color-primary: #0e8585;
   --color-primary-hover: #0b6f6f;
-  --color-primary-soft: #149a9a;
-  --color-primary-soft-hover: #0e8585;
+  --color-primary-soft: #00baa5;
+  --color-primary-soft-hover: #00a896;
   --color-primary-light: #e8f5f5;
   --color-hyderabad: #0e8585;
   --color-hyderabad-dark: #0b6f6f;
@@ -31,11 +31,21 @@
   --color-surface: #ffffff;
   --color-border: #e5e7eb;
   --color-border-subtle: #eef1f3;
-  --color-resource-guide-surface: #dff0e3;
-  --color-resource-resume-surface: #e4dff9;
-  --color-resource-interview-surface: #f2e6d8;
-  --color-resource-salary-surface: #ddeef8;
-  --color-resource-career-surface: #e5e4f8;
+  --color-resource-guide-surface: #f2fbf4;
+  --color-resource-guide-icon-surface: #dff0e3;
+  --color-resource-guide-icon: #55b95a;
+  --color-resource-resume-surface: #f5f2fd;
+  --color-resource-resume-icon-surface: #e4dff9;
+  --color-resource-resume-icon: #7257d9;
+  --color-resource-interview-surface: #fdf8f3;
+  --color-resource-interview-icon-surface: #f2e6d8;
+  --color-resource-interview-icon: #ef8b3a;
+  --color-resource-salary-surface: #f3f9fd;
+  --color-resource-salary-icon-surface: #ddeef8;
+  --color-resource-salary-icon: #4f7ff3;
+  --color-resource-career-surface: #f6f5fd;
+  --color-resource-career-icon-surface: #e5e4f8;
+  --color-resource-career-icon: #6f5fd9;
   --color-benefit-whatsapp-icon: #55b95a;
   --color-benefit-whatsapp-surface: #eaf7eb;
   --color-benefit-languages-icon: #7257d9;

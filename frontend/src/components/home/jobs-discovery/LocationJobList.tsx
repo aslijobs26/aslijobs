@@ -1,8 +1,11 @@
 import { DiscoverySectionHeader } from "@/components/home/discovery/DiscoverySectionHeader";
+import {
+  getLocationIconContainerClass,
+  LocationListIcon,
+} from "@/components/home/jobs-discovery/location-icons";
 import type { JobLocationIconType, JobLocationItem } from "@/types/jobs-discovery";
-import { Building2, Map } from "lucide-react";
+import { cn } from "@/utils/cn";
 import Link from "next/link";
-
 type LocationJobListProps = {
   title: string;
   titleId: string;
@@ -11,18 +14,6 @@ type LocationJobListProps = {
   items: JobLocationItem[];
   iconType: JobLocationIconType;
 };
-
-function LocationIcon({ iconType }: { iconType: JobLocationIconType }) {
-  const className = "size-4";
-
-  if (iconType === "city") {
-    return (
-      <Building2 className={className} strokeWidth={2} aria-hidden="true" />
-    );
-  }
-
-  return <Map className={className} strokeWidth={2} aria-hidden="true" />;
-}
 
 export function LocationJobList({
   title,
@@ -48,8 +39,13 @@ export function LocationJobList({
               href={item.href}
               className="flex items-center gap-3 py-3 transition-colors hover:text-primary focus-visible:rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:py-3.5"
             >
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-hero-glow text-muted">
-                <LocationIcon iconType={iconType} />
+              <div
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                  getLocationIconContainerClass(item.id, iconType),
+                )}
+              >
+                <LocationListIcon iconType={iconType} itemId={item.id} />
               </div>
               <span className="min-w-0 flex-1 text-sm font-semibold text-foreground">
                 {item.name}

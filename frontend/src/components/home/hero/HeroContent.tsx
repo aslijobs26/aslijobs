@@ -6,7 +6,7 @@ import {
 
 export function HeroContent() {
   return (
-    <div className="flex flex-col justify-start pt-4 sm:pt-6 lg:mt-10 lg:pt-0 lg:pr-8 xl:mt-14">
+    <div className="flex flex-col justify-start pt-4 sm:pt-6 lg:mt-20 lg:pt-0 lg:pr-8 xl:mt-24">
       <h1 className="text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
         {HERO_HEADING.line1}
         <br />

@@ -191,7 +191,7 @@ export function HeroSearchForm() {
         <div className="sm:col-span-2 lg:col-span-1 lg:flex lg:justify-end">
           <button
             type="submit"
-            className="inline-flex h-12 w-full min-w-[148px] items-center justify-center gap-2.5 rounded-xl bg-primary px-8 text-sm font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:bg-primary-hover lg:w-auto"
+            className="inline-flex h-12 w-full min-w-[148px] items-center justify-center gap-2.5 rounded-xl bg-primary-soft px-8 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:bg-primary-soft-hover lg:w-auto"
           >
             <Search className="size-[18px]" strokeWidth={2.5} aria-hidden="true" />
             Search Jobs

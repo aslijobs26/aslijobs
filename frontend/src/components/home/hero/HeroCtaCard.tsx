@@ -9,7 +9,7 @@ const cardVariants = {
 
 const buttonVariants = {
   whatsapp:
-    "bg-whatsapp-dark text-surface hover:bg-whatsapp focus-visible:ring-whatsapp-dark/40",
+    "bg-whatsapp-dark text-surface hover:bg-whatsapp-darker hover:text-surface focus-visible:ring-whatsapp-dark/40",
   employer:
     "bg-employer-button text-surface hover:bg-employer-button-hover focus-visible:ring-employer-button/40",
 } as const;

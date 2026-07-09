@@ -10,12 +10,12 @@ export function WhatsAppIcon({ className, fill = false }: WhatsAppIconProps) {
     return (
       <span
         className={cn(
-          "absolute inset-0 flex items-center justify-center text-whatsapp",
+          "absolute inset-0 flex items-center justify-center bg-whatsapp text-white",
           className,
         )}
         aria-hidden
       >
-        <i className="bi bi-whatsapp text-[1.5rem] leading-none sm:text-[1.75rem]" />
+        <i className="bi bi-whatsapp text-[1.5rem] leading-none text-white sm:text-[1.75rem]" />
       </span>
     );
   }

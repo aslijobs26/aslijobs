@@ -11,7 +11,7 @@ export function HeroFeatureCard({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-sm sm:gap-3.5 sm:px-4 sm:py-3",
+        "flex items-center gap-2 rounded-xl border border-border-subtle bg-surface px-2 py-2 shadow-sm sm:gap-2 sm:px-2.5 sm:py-2",
         className,
       )}
     >
@@ -24,11 +24,11 @@ export function HeroFeatureCard({
       >
         {icon}
       </div>
-      <div className="shrink-0">
-        <p className="whitespace-nowrap text-sm font-bold leading-tight text-foreground sm:text-base">
+      <div className="flex min-w-0 flex-col gap-px">
+        <p className="whitespace-nowrap text-[11px] font-bold leading-tight text-foreground sm:text-sm lg:text-sm xl:text-base">
           {title}
         </p>
-        <p className="whitespace-nowrap text-xs leading-snug text-muted sm:text-sm">
+        <p className="whitespace-nowrap text-[11px] leading-snug text-muted sm:text-xs lg:text-xs xl:text-sm">
           {description}
         </p>
       </div>
