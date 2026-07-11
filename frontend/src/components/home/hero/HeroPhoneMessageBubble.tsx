@@ -32,9 +32,16 @@ export function HeroPhoneMessageBubble({
           : "translate-y-2 scale-[0.94] opacity-0",
       )}
     >
-      <div className="relative max-w-[180px] rounded-2xl bg-whatsapp-cta px-3 py-1.5 shadow-md">
-        <p className="text-xs font-semibold leading-snug text-foreground sm:text-sm">
-          {message?.text}
+      <div className="relative w-max max-w-none rounded-2xl bg-whatsapp-cta px-3 py-1.5 shadow-md">
+        <p className="whitespace-nowrap text-xs font-semibold leading-snug text-foreground sm:text-sm">
+          {message?.emoji ? (
+            <>
+              <span aria-hidden="true">{message.emoji}</span>{" "}
+              {message.text}
+            </>
+          ) : (
+            message?.text
+          )}
         </p>
         <div
           aria-hidden="true"

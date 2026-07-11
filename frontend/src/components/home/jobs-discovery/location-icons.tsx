@@ -69,7 +69,7 @@ const LOCATION_ICON_THEMES: Record<LocationIconThemeKey, LocationIconTheme> = {
     circle: "fill-employer-icon",
   },
   career: {
-    container: "bg-resource-career-icon-surface",
+    container: "bg-location-chennai-icon-surface",
     circle: "fill-resource-career-icon",
   },
   resume: {

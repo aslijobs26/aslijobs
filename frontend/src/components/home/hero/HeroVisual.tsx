@@ -1,6 +1,6 @@
 "use client";
 
-import heroPersonImage from "@/assets/hero-img.png";
+import heroPersonImage from "@/assets/image/hero-img.png";
 import { HERO_FEATURE_CARDS, HERO_FEATURE_MESSAGES } from "@/constants/hero";
 import type { HeroFeatureCardPosition, HeroFeatureId } from "@/types/hero";
 import { cn } from "@/utils/cn";
@@ -19,9 +19,9 @@ const FLOATING_POSITIONS: Record<HeroFeatureCardPosition, string> = {
   "top-left":
     "absolute z-20 left-0 top-2 w-max sm:top-0 lg:-left-36 lg:top-[1%] lg:w-auto lg:max-w-[200px] xl:-left-40 xl:max-w-[220px]",
   "top-right":
-    "absolute z-20 right-0 top-2 w-max sm:top-0 lg:-right-36 lg:top-[1%] lg:w-auto lg:max-w-[200px] xl:-right-40 xl:max-w-[220px]",
+    "absolute z-20 right-0 top-10 w-max sm:top-0 lg:-right-36 lg:top-[1%] lg:w-auto lg:max-w-[200px] xl:-right-40 xl:max-w-[220px]",
   "bottom-left":
-    "absolute z-40 bottom-2 left-0 w-max sm:bottom-1 lg:bottom-[12%] lg:-left-40 lg:z-20 lg:w-auto lg:max-w-[200px] xl:-left-44 xl:max-w-[220px]",
+    "absolute z-40 bottom-8 left-0 w-max sm:bottom-1 lg:bottom-[12%] lg:-left-40 lg:z-20 lg:w-auto lg:max-w-[200px] xl:-left-44 xl:max-w-[220px]",
   "bottom-right":
     "absolute z-40 bottom-2 right-0 w-max sm:bottom-1 lg:bottom-[12%] lg:-right-40 lg:z-20 lg:w-auto lg:max-w-[200px] xl:-right-44 xl:max-w-[220px]",
 };
@@ -34,7 +34,7 @@ const CARD_DESKTOP_POSITION_OVERRIDES: Partial<Record<HeroFeatureId, string>> = 
 };
 
 const MOBILE_CARD_COMPACT =
-  "w-fit max-w-[calc(100vw-2rem)] gap-1.5 px-2 py-1.5 [&>div:first-child]:size-8 sm:gap-2 sm:px-2 sm:py-2 sm:[&>div:first-child]:size-9 lg:w-full lg:max-w-none lg:gap-2 lg:px-2.5 lg:py-2";
+  "w-fit max-w-[calc(100vw-2rem)] gap-2 px-3 py-2.5 [&>div:first-child]:size-8 sm:gap-2 sm:px-2 sm:py-2 sm:[&>div:first-child]:size-9 lg:w-full lg:max-w-none lg:gap-2 lg:px-2.5 lg:py-2";
 
 const DESKTOP_CARD_ICON_SIZES = "lg:[&>div:first-child]:size-14";
 

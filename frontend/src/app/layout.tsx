@@ -1,5 +1,3 @@
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/footer/Footer";
 import { QueryProvider } from "@/providers/query-provider";
 import type { Metadata } from "next";
 import { Quicksand } from "next/font/google";
@@ -23,11 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={quicksand.variable}>
       <body className="min-h-screen bg-white font-sans antialiased">
-        <QueryProvider>
-          <Navbar />
-          {children}
-          <Footer />
-        </QueryProvider>
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );

@@ -51,9 +51,9 @@ export const HERO_FEATURE_MESSAGES: Record<
   HeroFeatureMessage
 > = {
   "voice-search": { emoji: "🎙️", text: "Delivery jobs near me" },
-  "whatsapp-first": { emoji: "💬", text: "Hi AsliJobs, find jobs for me" },
-  "verified-jobs": { emoji: "🛡️", text: "Show me verified jobs" },
-  "in-your-language": { emoji: "🌐", text: "తెలుగులో ఉద్యోగాలు చూపించు" },
+  "whatsapp-first": { text: "Hi AsliJobs, find jobs for me" },
+  "verified-jobs": { text: "Show me verified jobs" },
+  "in-your-language": { text: "తెలుగులో ఉద్యోగాలు చూపించు" },
 };
 
 export const HERO_SEARCH_DEFAULTS = {

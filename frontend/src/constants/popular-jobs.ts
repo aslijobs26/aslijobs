@@ -1,5 +1,5 @@
-import amazonLogo from "@/assets/amazon.png";
-import swiggyLogo from "@/assets/Swiggy_(2).png";
+import amazonLogo from "@/assets/branding/amazon.png";
+import swiggyLogo from "@/assets/branding/Swiggy_(2).png";
 import type { PopularJob } from "@/types/jobs-discovery";
 import { ROUTES } from "./routes";
 

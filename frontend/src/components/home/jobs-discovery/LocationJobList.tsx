@@ -37,7 +37,7 @@ export function LocationJobList({
           <li key={item.id}>
             <Link
               href={item.href}
-              className="flex items-center gap-3 py-3 transition-colors hover:text-primary focus-visible:rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:py-3.5"
+              className="flex cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-surface p-4 shadow-none transition-all duration-[250ms] ease hover:-translate-y-0.5 hover:border-border hover:text-primary hover:shadow-[0_10px_30px_rgba(15,23,42,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <div
                 className={cn(

@@ -11,11 +11,15 @@ const iconVariantStyles = {
 
 function getCategoryIconContainerStyles(category: JobCategory) {
   if (category.icon === "construction") {
-    return "border border-border-subtle bg-category-construction-surface text-muted";
+    return "border border-border-subtle bg-category-construction-surface text-benefit-voice-icon";
   }
 
   if (category.icon === "manufacturing") {
     return "border border-border-subtle bg-benefit-verified-surface text-benefit-verified-icon";
+  }
+
+  if (category.icon === "view-all") {
+    return "bg-employer-cta text-employer-icon";
   }
 
   return iconVariantStyles[category.iconVariant];

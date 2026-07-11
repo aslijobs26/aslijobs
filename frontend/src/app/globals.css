@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "bootstrap-icons/font/bootstrap-icons.css";
 
+@custom-variant lg-short (@media (min-width: 1024px) and (max-height: 820px));
+@custom-variant lg-compact (@media (min-width: 1024px) and (max-height: 760px));
+@custom-variant lg-tight (@media (min-width: 1024px) and (max-height: 720px));
+
 @theme inline {
   --color-primary: #0e8585;
   --color-primary-hover: #0b6f6f;
@@ -45,7 +49,8 @@
   --color-resource-salary-icon: #4f7ff3;
   --color-resource-career-surface: #f6f5fd;
   --color-resource-career-icon-surface: #e5e4f8;
-  --color-resource-career-icon: #6f5fd9;
+  --color-resource-career-icon: #b3790e;
+  --color-location-chennai-icon-surface: #fce0ac;
   --color-benefit-whatsapp-icon: #55b95a;
   --color-benefit-whatsapp-surface: #eaf7eb;
   --color-benefit-languages-icon: #7257d9;
@@ -60,6 +65,8 @@
   --color-benefit-free-surface: #fcf5e3;
   --color-workflow-mint-surface: #f3faf5;
   --color-workflow-mint-alt-surface: #f4faf5;
+  --color-post-job-step-surface-start: #a2eddc;
+  --color-post-job-step-surface-end: #ffffff;
   --color-workflow-neutral-surface: #f7f9fb;
   --color-workflow-connector: #aec5c5;
   --color-category-construction-surface: #faf0e3;
@@ -102,6 +109,37 @@ body {
     var(--color-employer-cta-mid) 50%,
     var(--color-employer-cta-end) 100%
   );
+}
+
+@utility bg-post-job-step-active-surface {
+  background-image:
+    linear-gradient(
+      to right,
+      var(--color-border-subtle) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      var(--color-border-subtle) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      var(--color-post-job-step-surface-start) 0%,
+      var(--color-post-job-step-surface-end) 100%
+    );
+  background-size: 12px 12px, 12px 12px, auto;
+}
+
+@utility scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
 }
 
 @utility bg-social-instagram {

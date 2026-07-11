@@ -19,7 +19,7 @@ const iconMap: Record<CategoryIconKey, ReactNode> = {
   ),
   security: <Shield className="size-5" strokeWidth={2} aria-hidden="true" />,
   construction: (
-    <HardHat className="size-5" strokeWidth={2} aria-hidden="true" />
+    <HardHat className="size-5" strokeWidth={2.75} aria-hidden="true" />
   ),
   hospitality: (
     <UtensilsCrossed className="size-5" strokeWidth={2} aria-hidden="true" />
@@ -28,7 +28,7 @@ const iconMap: Record<CategoryIconKey, ReactNode> = {
     <Factory className="size-5" strokeWidth={2} aria-hidden="true" />
   ),
   "view-all": (
-    <LayoutGrid className="size-5" strokeWidth={2} aria-hidden="true" />
+    <LayoutGrid className="size-5" strokeWidth={2.75} aria-hidden="true" />
   ),
 };
 

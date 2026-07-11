@@ -35,6 +35,6 @@ export type HeroFeatureId =
   | "in-your-language";
 
 export type HeroFeatureMessage = {
-  emoji: string;
+  emoji?: string;
   text: string;
 };

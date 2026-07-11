@@ -1,13 +1,13 @@
-import amazonLogo from "@/assets/amazon.png";
-import delhiveryLogo from "@/assets/delhivery-seeklogo.png";
-import dhlLogo from "@/assets/dhl-seeklogo.png";
-import flipkartLogo from "@/assets/Flipkart_logo_PNG1.png";
-import propenuLogo from "@/assets/propenu.png";
-import relianceLogo from "@/assets/RELIANCE.NS_BIG.png";
-import swiggyLogo from "@/assets/Swiggy_(2).png";
-import tataLogo from "@/assets/Tata_logo.svg";
-import teamWorksLogo from "@/assets/TeamWorks.png";
-import zomatoLogo from "@/assets/Zomato_logo_PNG1.png";
+import amazonLogo from "@/assets/branding/amazon.png";
+import delhiveryLogo from "@/assets/branding/delhivery-seeklogo.png";
+import dhlLogo from "@/assets/branding/dhl-seeklogo.png";
+import flipkartLogo from "@/assets/branding/Flipkart_logo_PNG1.png";
+import propenuLogo from "@/assets/branding/propenu.png";
+import relianceLogo from "@/assets/branding/RELIANCE.NS_BIG.png";
+import swiggyLogo from "@/assets/branding/Swiggy_(2).png";
+import tataLogo from "@/assets/branding/Tata_logo.svg";
+import teamWorksLogo from "@/assets/branding/TeamWorks.png";
+import zomatoLogo from "@/assets/branding/Zomato_logo_PNG1.png";
 import type { Employer } from "@/types/discovery";
 import { ROUTES } from "./routes";
 
