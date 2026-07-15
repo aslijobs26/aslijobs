@@ -29,7 +29,7 @@ const FLOATING_POSITIONS: Record<HeroFeatureCardPosition, string> = {
 const CARD_DESKTOP_POSITION_OVERRIDES: Partial<Record<HeroFeatureId, string>> = {
   "voice-search": "lg:top-[18%] xl:top-[20%]",
   "whatsapp-first": "lg:top-[16%] xl:top-[17%]",
-  "verified-jobs": "lg:bottom-[22%] xl:bottom-[24%]",
+  "verified-jobs": "lg:bottom-[14%] xl:bottom-[16%] lg:-left-32 xl:-left-36",
   "in-your-language": "lg:bottom-[22%] xl:bottom-[24%]",
 };
 
@@ -91,14 +91,19 @@ export function HeroVisual() {
     setActiveFeature((current) => (current === id ? null : current));
 
   return (
-    <div className="relative mt-4 flex flex-col items-center lg:mt-0 lg:items-end lg:justify-start">
+    <div className="relative mt-4 flex w-full flex-col items-center lg:mt-0 lg:items-center lg:justify-start">
       <div
-        className="pointer-events-none absolute left-1/2 top-[45%] size-[250px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-80 sm:size-[300px] lg:hidden"
-        aria-hidden="true"
-      />
+        className={cn(
+          "hero-illustration-group relative w-full max-w-[340px] sm:max-w-[380px] lg:mx-auto lg:max-w-[580px]",
+          "lg:-translate-x-10 xl:-translate-x-8 2xl:-translate-x-6",
+        )}
+      >
+        <div
+          className="pointer-events-none absolute left-1/2 top-[45%] size-[250px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-80 sm:size-[300px] lg:hidden"
+          aria-hidden="true"
+        />
 
-      <div className="relative w-full max-w-[340px] sm:max-w-[380px] lg:max-w-[580px] lg:pl-8">
-        <div className="relative mx-auto min-h-[430px] w-full px-1 sm:min-h-[460px] sm:px-0 lg:min-h-0 lg:ml-auto lg:mr-0 lg:max-w-[440px] lg:px-0">
+        <div className="relative mx-auto min-h-[430px] w-full px-1 sm:min-h-[460px] sm:px-0 lg:min-h-0 lg:max-w-[440px] lg:px-0">
           <div
             className="pointer-events-none absolute left-[calc(50%+1rem)] top-[36%] z-0 hidden size-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-25 lg:block"
             aria-hidden="true"

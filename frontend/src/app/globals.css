@@ -321,3 +321,323 @@ body {
     animation: none;
   }
 }
+
+@layer components {
+  .employer-register-layout {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    background-color: var(--color-surface);
+
+    @media (width >= 1024px) {
+      height: 100vh;
+      flex-direction: row;
+      overflow: hidden;
+    }
+  }
+
+  .employer-register-panel {
+    position: relative;
+    display: flex;
+    min-height: 24rem;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--color-surface);
+    container-type: inline-size;
+    container-name: employer-register;
+
+    @media (width >= 640px) {
+      min-height: 28rem;
+    }
+
+    @media (width >= 1024px) {
+      width: clamp(20rem, 35vw, 40rem);
+      flex-shrink: 0;
+      height: 100vh;
+      min-height: 0;
+    }
+  }
+
+  .employer-register-panel-content {
+    --register-scale: clamp(
+      0.78,
+      calc(0.78 + (100vw - 64rem) * 0.22 / 56rem),
+      1
+    );
+
+    position: relative;
+    z-index: 10;
+    display: flex;
+    height: 100%;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .employer-register-logo-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 20;
+    display: inline-flex;
+    width: fit-content;
+    flex-shrink: 0;
+    border-radius: 0.125rem;
+  }
+
+  .employer-register-logo-link:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-surface) 40%, transparent);
+  }
+
+  .employer-register-panel-body {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    padding-top: clamp(5.5rem, calc(4cqi + 12cqi), 8.5rem);
+    padding-left: clamp(1.5rem, 5cqi, 3.5rem);
+    padding-right: clamp(1.5rem, 5cqi, 3.5rem);
+    padding-bottom: clamp(1.75rem, 4.5cqi, 3.5rem);
+
+    @media (width >= 1024px) {
+      padding-top: clamp(
+        6rem,
+        calc((4rem + 13cqi) * var(--register-scale)),
+        9.25rem
+      );
+      padding-bottom: clamp(2rem, calc(3.5rem * var(--register-scale)), 3.5rem);
+      padding-left: clamp(1.75rem, calc(3.5rem * var(--register-scale)), 3.5rem);
+      padding-right: clamp(1.75rem, calc(3.5rem * var(--register-scale)), 3.5rem);
+    }
+  }
+
+  .employer-register-logo {
+    width: clamp(8.75rem, 35cqi, 13.75rem);
+    height: auto;
+  }
+
+  .employer-register-scale-group {
+    display: flex;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-block: clamp(0.5rem, 2.5cqi, 2.5rem);
+  }
+
+  .employer-register-illustration {
+    position: relative;
+    aspect-ratio: 438.68 / 304.82;
+    width: clamp(
+      11rem,
+      calc(74cqi * var(--register-scale, 1)),
+      21.5rem
+    );
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
+  .employer-register-bottom {
+    display: flex;
+    flex-shrink: 0;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .employer-register-testimonial {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .employer-register-testimonial-card {
+    display: block;
+    width: clamp(
+      11rem,
+      calc(85cqi * var(--register-scale, 1)),
+      31rem
+    );
+    max-width: 100%;
+    height: auto;
+    margin-inline: auto;
+  }
+
+  @media (width < 640px) {
+    .employer-register-testimonial-card {
+      width: clamp(10.5rem, 82cqi, 19.5rem);
+    }
+  }
+
+  @media (width >= 1024px) {
+    .employer-register-testimonial-card {
+      width: clamp(
+        13rem,
+        calc(85cqi * var(--register-scale, 1)),
+        31rem
+      );
+    }
+  }
+
+  .employer-register-testimonial-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(0.5rem, 1.5cqi, 0.625rem);
+    padding-top: clamp(0.75rem, 2.5cqi, 1rem);
+  }
+
+  .employer-register-testimonial-dot {
+    border-radius: 9999px;
+    width: clamp(0.375rem, 1.2cqi, 0.5rem);
+    height: clamp(0.375rem, 1.2cqi, 0.5rem);
+  }
+
+  .employer-register-form-section {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    background-color: var(--color-surface);
+    overflow: hidden;
+
+    @media (width >= 1024px) {
+      height: 100vh;
+    }
+  }
+
+  .employer-register-form-container {
+    display: flex;
+    margin-inline: auto;
+    width: min(45rem, 100%);
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    padding: clamp(1.25rem, 2.5vw, 2rem) clamp(1.25rem, 3vw, 2rem)
+      clamp(2rem, 3vw, 2.5rem);
+
+    @media (width < 1024px) {
+      padding-top: clamp(3.5rem, 11vw, 5rem);
+    }
+
+    @media (width >= 1024px) {
+      padding-inline: clamp(1.5rem, 4vw, 3rem);
+      padding-top: clamp(1.5rem, 2.5vw, 2rem);
+      padding-bottom: clamp(2rem, 3vw, 2.5rem);
+    }
+  }
+
+  .employer-register-form-body {
+    display: flex;
+    min-height: 0;
+    width: 100%;
+    flex: 1;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: clamp(1.5rem, 5vw, 2.5rem);
+
+    @media (width >= 1024px) {
+      align-items: center;
+      padding-top: 0;
+    }
+  }
+
+  .employer-register-form-heading {
+    font-size: clamp(1.25rem, 4.5vw, 2rem);
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--color-foreground);
+    white-space: nowrap;
+  }
+
+  .employer-register-form-label {
+    font-size: clamp(0.8125rem, 1.1vw, 0.875rem);
+    font-weight: 700;
+    color: var(--color-foreground);
+  }
+
+  .employer-register-form-input {
+    height: clamp(3.25rem, 3vw, 4rem);
+    width: 100%;
+    border-radius: 0.375rem;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    padding-inline: clamp(0.75rem, 1.2vw, 0.875rem);
+    font-size: clamp(0.8125rem, 1vw, 0.875rem);
+    color: var(--color-foreground);
+    outline: none;
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+
+  .employer-register-form-input::placeholder {
+    color: var(--color-muted);
+  }
+
+  .employer-register-form-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  }
+
+  .employer-register-form-stack {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.5rem, 1vw, 0.5rem);
+  }
+
+  .employer-register-form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1rem, 1.5vw, 2rem);
+  }
+
+  .employer-register-form-row {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 1fr;
+    gap: clamp(1rem, 1.5vw, 2rem);
+
+    @media (width >= 640px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .employer-register-form-submit {
+    display: inline-flex;
+    height: clamp(3.25rem, 3vw, 4rem);
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    background-color: var(--color-primary-soft);
+    font-size: clamp(0.8125rem, 1vw, 0.875rem);
+    font-weight: 700;
+    color: var(--color-surface);
+    transition: background-color 150ms;
+  }
+
+  .employer-register-form-submit:hover {
+    background-color: var(--color-primary-soft-hover);
+  }
+
+  .employer-register-form-submit:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  }
+
+  .employer-register-login-prompt {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 10;
+    flex-shrink: 0;
+    padding: clamp(0.75rem, 1.5vw, 1.25rem);
+    font-size: clamp(0.8125rem, 1vw, 0.875rem);
+    color: var(--color-muted);
+    white-space: nowrap;
+  }
+}

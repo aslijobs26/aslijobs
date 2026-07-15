@@ -5,42 +5,37 @@ import { cn } from "@/utils/cn";
 import Image from "next/image";
 
 /**
- * Frame positions match the Employer Register reference collage:
- * - Verified Candidates: mid-left with orange accent
- * - WhatsApp-First Hiring: upper-right with purple accent (front)
- * - Quick Job Posting: lower-center with blue accent
+ * Frame layout matches Figma artboard 438.68 × 304.82.
+ * Positions and widths are percentage-based for proportional scaling.
  */
 const EMPLOYER_REGISTER_FRAMES = [
   {
     id: "verified-candidates",
     src: frameVerifiedCandidates,
-    className: "absolute left-0 top-[22%] z-20 w-[56%] max-w-[13.25rem]",
+    className: "absolute -left-[8%] top-[15%] z-20 w-[53.8%]",
   },
   {
     id: "whatsapp-first-hiring",
     src: frameWhatsappFirstHiring,
-    className: "absolute left-[30%] top-0 z-30 w-[70%] max-w-[16.5rem]",
+    className: "absolute left-[27.4%] top-0 z-30 w-[69.1%]",
   },
   {
     id: "quick-job-posting",
     src: frameQuickJobPosting,
-    className: "absolute left-[18%] top-[52%] z-20 w-[52%] max-w-[12.5rem]",
+    className: "absolute left-[17.1%] top-[56%] z-20 w-[50.4%]",
   },
 ] as const;
 
 export function EmployerRegisterIllustration() {
   return (
-    <div
-      className="relative mx-auto aspect-[340/280] w-full max-w-[21rem] sm:max-w-[22.5rem]"
-      aria-hidden="true"
-    >
+    <div className="employer-register-illustration" aria-hidden="true">
       {EMPLOYER_REGISTER_FRAMES.map((frame) => (
         <Image
           key={frame.id}
           src={frame.src}
           alt=""
-          className={cn("h-auto select-none", frame.className)}
-          sizes="(max-width: 1024px) 55vw, 17rem"
+          className={cn("h-auto w-full select-none", frame.className)}
+          sizes="(max-width: 1024px) 90cqi, 35vw"
           priority
         />
       ))}

@@ -8,11 +8,6 @@ import {
 import type { EmployerRegisterFormData } from "@/types/employer-register";
 import { useState, type FormEvent } from "react";
 
-const fieldLabelClassName = "text-sm font-bold text-foreground";
-
-const inputClassName =
-  "h-12 w-full rounded-md border border-border bg-surface px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20";
-
 export function EmployerRegisterForm() {
   const [formData, setFormData] = useState<EmployerRegisterFormData>(
     EMPLOYER_REGISTER_INITIAL_FORM_DATA,
@@ -31,13 +26,17 @@ export function EmployerRegisterForm() {
 
   return (
     <div className="w-full">
-      <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.75rem] sm:leading-tight">
+      <h1 className="employer-register-form-heading">
         {EMPLOYER_REGISTER_HEADING}
       </h1>
 
-      <form className="mt-8 w-full space-y-5" onSubmit={handleSubmit} noValidate>
-        <div className="flex w-full flex-col gap-2">
-          <label htmlFor="company-name" className={fieldLabelClassName}>
+      <form
+        className="employer-register-form-fields mt-[clamp(1.5rem,2.5vw,2rem)] w-full"
+        onSubmit={handleSubmit}
+        noValidate
+      >
+        <div className="employer-register-form-stack">
+          <label htmlFor="company-name" className="employer-register-form-label">
             Company/Business Name*
           </label>
           <input
@@ -47,13 +46,13 @@ export function EmployerRegisterForm() {
             onChange={(event) => updateField("companyName", event.target.value)}
             placeholder="Enter company name"
             autoComplete="organization"
-            className={inputClassName}
+            className="employer-register-form-input"
           />
         </div>
 
-        <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2">
-          <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="first-name" className={fieldLabelClassName}>
+        <div className="employer-register-form-row">
+          <div className="employer-register-form-stack">
+            <label htmlFor="first-name" className="employer-register-form-label">
               First Name
             </label>
             <input
@@ -63,12 +62,12 @@ export function EmployerRegisterForm() {
               onChange={(event) => updateField("firstName", event.target.value)}
               placeholder="Enter company name"
               autoComplete="given-name"
-              className={inputClassName}
+              className="employer-register-form-input"
             />
           </div>
 
-          <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="last-name" className={fieldLabelClassName}>
+          <div className="employer-register-form-stack">
+            <label htmlFor="last-name" className="employer-register-form-label">
               Last Name
             </label>
             <input
@@ -78,13 +77,13 @@ export function EmployerRegisterForm() {
               onChange={(event) => updateField("lastName", event.target.value)}
               placeholder="Enter company name"
               autoComplete="family-name"
-              className={inputClassName}
+              className="employer-register-form-input"
             />
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-2">
-          <label htmlFor="whatsapp-number" className={fieldLabelClassName}>
+        <div className="employer-register-form-stack">
+          <label htmlFor="whatsapp-number" className="employer-register-form-label">
             WhatsApp Number*
           </label>
           <input
@@ -97,12 +96,12 @@ export function EmployerRegisterForm() {
             }
             placeholder="Enter WhatsApp Number"
             autoComplete="tel"
-            className={inputClassName}
+            className="employer-register-form-input"
           />
         </div>
 
-        <div className="flex w-full flex-col gap-2">
-          <label htmlFor="email-address" className={fieldLabelClassName}>
+        <div className="employer-register-form-stack">
+          <label htmlFor="email-address" className="employer-register-form-label">
             Email Address
           </label>
           <input
@@ -114,14 +113,11 @@ export function EmployerRegisterForm() {
             }
             placeholder="Enter Email Address"
             autoComplete="email"
-            className={inputClassName}
+            className="employer-register-form-input"
           />
         </div>
 
-        <button
-          type="submit"
-          className="inline-flex h-12 w-full items-center justify-center rounded-md bg-primary-soft text-sm font-bold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-        >
+        <button type="submit" className="employer-register-form-submit">
           {EMPLOYER_REGISTER_SUBMIT_LABEL}
         </button>
       </form>
