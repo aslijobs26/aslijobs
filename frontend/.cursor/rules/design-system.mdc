@@ -1,0 +1,40 @@
+---
+description: AsliJobs frontend design system — typography and visual standards
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# AsliJobs Frontend Design System
+
+## Typography Standard
+
+- Use ONLY the Inter font family throughout the AsliJobs project.
+- Never introduce another font family unless explicitly approved.
+- All future pages, components, forms, dialogs, dashboards, landing pages, employer pages, admin pages, and mobile layouts must inherit Inter from the global design system.
+- Do not import fonts locally inside components.
+- Always use the global Inter font configured in the root layout (`src/app/layout.tsx`).
+- Official typography constants live in `src/constants/design-system.ts`.
+- Global CSS maps `--font-sans` to `--font-inter` in `src/app/globals.css`.
+
+## Typography Rules for New Work
+
+- Do not add `next/font` imports in feature components, pages, or layouts other than the root layout.
+- Do not hardcode `font-family` values that override Inter.
+- Prefer the existing `font-sans` utility and inherited body styles.
+- Keep font sizes, font weights, line heights, and letter spacing as defined by existing component classes — only the typeface family is Inter.
+
+## Scope
+
+This rule applies to every frontend surface, including:
+
+- Landing page and hero
+- Navbar and footer
+- Search bar
+- Resources
+- Employer pages
+- Post Job flow
+- Authentication pages
+- Dashboards
+- Dialogs, modals, forms, cards, tables
+- All future pages and features

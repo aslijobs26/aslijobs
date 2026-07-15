@@ -74,7 +74,9 @@
   --color-social-linkedin: #0a66c2;
   --color-social-youtube: #ff0000;
   --color-pin-state: #e53935;
-  --font-sans: var(--font-quicksand), ui-sans-serif, system-ui, sans-serif;
+  --color-employer-register-panel: #014a42;
+  --color-employer-register-card: #026a5f;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {

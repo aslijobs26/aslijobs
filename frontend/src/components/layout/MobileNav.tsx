@@ -63,7 +63,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
       >
         <div className="flex flex-col px-4 py-4">
           {NAV_ITEMS.map((item) =>
-            item.hasChevron ? (
+            item.hasChevron && item.label !== "Employers" ? (
               <button
                 key={item.label}
                 type="button"
@@ -79,10 +79,16 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
               <Link
                 key={item.label}
                 href={item.href}
-                className="flex min-h-12 items-center rounded-md px-3 text-[15px] font-medium text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="flex min-h-12 items-center justify-between rounded-md px-3 text-[15px] font-medium text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 onClick={onClose}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.hasChevron ? (
+                  <ChevronDown
+                    className="size-4 shrink-0 text-muted"
+                    strokeWidth={2}
+                  />
+                ) : null}
               </Link>
             ),
           )}
@@ -90,17 +96,17 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
           <div className="mt-4 flex flex-col gap-3 border-t border-border-subtle pt-4">
             <Link
               href={ROUTES.LOGIN}
-              className="inline-flex min-h-12 items-center justify-center rounded-md border border-primary bg-surface px-4 text-[15px] font-medium text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              onClick={onClose}
-            >
-              Login
-            </Link>
-            <Link
-              href={ROUTES.POST_JOB}
               className="inline-flex min-h-12 items-center justify-center rounded-md bg-primary-soft px-4 text-[15px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               onClick={onClose}
             >
-              Post a Job
+              Sign in
+            </Link>
+            <Link
+              href={ROUTES.EMPLOYER_REGISTER}
+              className="inline-flex min-h-12 items-center justify-center rounded-md border border-primary bg-transparent px-4 text-[15px] font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              onClick={onClose}
+            >
+              Employers / Post Job
             </Link>
           </div>
         </div>

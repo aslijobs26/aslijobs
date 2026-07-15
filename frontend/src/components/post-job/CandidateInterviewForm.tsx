@@ -150,8 +150,14 @@ export function CandidateInterviewForm({
     );
   };
 
-  const selectGender = (genderId: PostJobGenderId) => {
-    onFieldChange("gender", formData.gender === genderId ? "" : genderId);
+  const toggleGender = (genderId: PostJobGenderId) => {
+    const isSelected = formData.gender.includes(genderId);
+    onFieldChange(
+      "gender",
+      isSelected
+        ? formData.gender.filter((item) => item !== genderId)
+        : [...formData.gender, genderId],
+    );
   };
 
   const handleAgeChange = (field: "ageMin" | "ageMax", value: string) => {
@@ -296,8 +302,8 @@ export function CandidateInterviewForm({
                   <PostJobChipButton
                     key={option.value}
                     label={option.label}
-                    isSelected={formData.gender === option.value}
-                    onClick={() => selectGender(option.value)}
+                    isSelected={formData.gender.includes(option.value)}
+                    onClick={() => toggleGender(option.value)}
                   />
                 ))}
               </div>
@@ -391,7 +397,7 @@ export function CandidateInterviewForm({
                   <div className={postJobFormRowGapClassName}>
                     <div className={postJobFormSubsectionClassName}>
                       <span className={postJobFieldLabelClassName}>
-                        Walk-in Dates
+                        Walk-in Dates*
                       </span>
                       <div
                         className={cn(

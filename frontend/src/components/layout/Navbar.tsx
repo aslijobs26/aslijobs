@@ -12,25 +12,41 @@ import { useState } from "react";
 import { Container } from "./Container";
 import { MobileNav } from "./MobileNav";
 
+const navTriggerClassName =
+  "inline-flex items-center gap-1 whitespace-nowrap text-[15px] font-medium text-nav transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-sm";
+
 function NavTrigger({
   label,
+  href,
   className,
 }: {
   label: string;
+  href?: string;
   className?: string;
 }) {
+  const content = (
+    <>
+      {label}
+      <ChevronDown className="size-3.5 shrink-0 text-nav/80" strokeWidth={2.5} />
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={cn(navTriggerClassName, className)}>
+        {content}
+      </Link>
+    );
+  }
+
   return (
     <button
       type="button"
-      className={cn(
-        "inline-flex items-center gap-1 whitespace-nowrap text-[15px] font-medium text-nav transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-sm",
-        className,
-      )}
+      className={cn(navTriggerClassName, className)}
       aria-haspopup="true"
       aria-expanded={false}
     >
-      {label}
-      <ChevronDown className="size-3.5 shrink-0 text-nav/80" strokeWidth={2.5} />
+      {content}
     </button>
   );
 }
@@ -75,7 +91,13 @@ export function Navbar() {
           >
             {NAV_ITEMS.map((item) =>
               item.hasChevron ? (
-                <NavTrigger key={item.label} label={item.label} />
+                <NavTrigger
+                  key={item.label}
+                  label={item.label}
+                  href={
+                    item.label === "Employers" ? item.href : undefined
+                  }
+                />
               ) : (
                 <Link
                   key={item.label}
@@ -91,15 +113,15 @@ export function Navbar() {
           <div className="ml-auto hidden items-center gap-3 lg:flex">
             <Link
               href={ROUTES.LOGIN}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-primary px-5 text-[15px] font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              Login
-            </Link>
-            <Link
-              href={ROUTES.POST_JOB}
               className="inline-flex h-10 items-center justify-center rounded-md bg-primary-soft px-5 text-[15px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              Post a Job
+              Sign in
+            </Link>
+            <Link
+              href={ROUTES.EMPLOYER_REGISTER}
+              className="inline-flex h-10 items-center justify-center rounded-md border border-primary bg-transparent px-5 text-[15px] font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              Employers / Post Job
             </Link>
           </div>
 

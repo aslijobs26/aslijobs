@@ -2,6 +2,8 @@ export type JobType = "full-time" | "part-time" | "contract";
 
 export type WorkMode = "office" | "field" | "both";
 
+export type ContractPeriodUnit = "days" | "months" | "years";
+
 export type PostJobFormData = {
   companyDetails: string;
   jobTitle: string;
@@ -24,11 +26,14 @@ export type PostJobPerkId =
   | "laptop"
   | "pf";
 
+export type SalaryType = "fixed" | "range";
+
 export type LocationAndSalaryFormData = {
   state: string;
   city: string;
   address: string;
   landmark: string;
+  salaryType: SalaryType | "";
   salaryMin: string;
   salaryMax: string;
   incentives: string;
@@ -83,7 +88,7 @@ export type CandidateInterviewFormData = {
   experienceRequired: PostJobExperienceId | "";
   additionalRequirements: AdditionalRequirementsState;
   languages: PostJobLanguageId[];
-  gender: PostJobGenderId | "";
+  gender: PostJobGenderId[];
   ageMin: string;
   ageMax: string;
   walkIn: WalkInOption;

@@ -3,6 +3,7 @@ import type {
   JobType,
   LocationAndSalaryFormData,
   PostJobActiveStep,
+  ContractPeriodUnit,
   PostJobEducationId,
   PostJobExperienceId,
   PostJobFormData,
@@ -12,6 +13,7 @@ import type {
   PostJobPerkId,
   PostJobStep,
   PostJobWizardFormData,
+  SalaryType,
   WorkMode,
 } from "@/types/post-job";
 import { JOB_CITIES, JOB_STATES } from "@/constants/job-locations";
@@ -58,11 +60,17 @@ export const POST_JOB_INITIAL_LOCATION_SALARY_DATA: LocationAndSalaryFormData = 
   city: "",
   address: "",
   landmark: "",
+  salaryType: "",
   salaryMin: "",
   salaryMax: "",
   incentives: "",
   perks: [],
 };
+
+export const POST_JOB_SALARY_TYPE_OPTIONS: PostJobOption<SalaryType>[] = [
+  { value: "fixed", label: "Fixed" },
+  { value: "range", label: "Range" },
+];
 
 export const POST_JOB_INITIAL_CANDIDATE_INTERVIEW_DATA: CandidateInterviewFormData =
   {
@@ -74,7 +82,7 @@ export const POST_JOB_INITIAL_CANDIDATE_INTERVIEW_DATA: CandidateInterviewFormDa
       age: true,
     },
     languages: [],
-    gender: "",
+    gender: [],
     ageMin: "",
     ageMax: "",
     walkIn: "yes",
@@ -123,13 +131,62 @@ export const JOB_TYPE_OPTIONS: PostJobOption<JobType>[] = [
   { value: "contract", label: "Contract" },
 ];
 
-export const POST_JOB_CONTRACT_PERIOD_OPTIONS = [
-  { value: "1_month", label: "1 Month" },
-  { value: "3_months", label: "3 Months" },
-  { value: "6_months", label: "6 Months" },
-  { value: "12_months", label: "12 Months" },
-  { value: "24_months", label: "24 Months" },
-] as const;
+export const POST_JOB_CONTRACT_PERIOD_UNITS: PostJobOption<ContractPeriodUnit>[] =
+  [
+    { value: "days", label: "Days" },
+    { value: "months", label: "Months" },
+    { value: "years", label: "Years" },
+  ];
+
+const LEGACY_CONTRACT_PERIOD_VALUES: Record<
+  string,
+  { amount: string; unit: ContractPeriodUnit }
+> = {
+  "1_month": { amount: "1", unit: "months" },
+  "3_months": { amount: "3", unit: "months" },
+  "6_months": { amount: "6", unit: "months" },
+  "12_months": { amount: "12", unit: "months" },
+  "24_months": { amount: "24", unit: "months" },
+};
+
+export function parseContractPeriodStoredValue(value: string): {
+  amount: string;
+  unit: ContractPeriodUnit;
+} {
+  if (!value) {
+    return { amount: "", unit: "months" };
+  }
+
+  const legacyValue = LEGACY_CONTRACT_PERIOD_VALUES[value];
+
+  if (legacyValue) {
+    return legacyValue;
+  }
+
+  const match = value.match(/^(\d+)_(days|months|years)$/);
+
+  if (match) {
+    return {
+      amount: match[1],
+      unit: match[2] as ContractPeriodUnit,
+    };
+  }
+
+  return { amount: "", unit: "months" };
+}
+
+export function buildContractPeriodStoredValue(
+  amount: string,
+  unit: ContractPeriodUnit,
+) {
+  const sanitizedAmount = amount.replace(/\D/g, "");
+
+  if (!sanitizedAmount || Number(sanitizedAmount) <= 0) {
+    return "";
+  }
+
+  return `${sanitizedAmount}_${unit}`;
+}
 
 export const WORK_MODE_OPTIONS: PostJobOption<WorkMode>[] = [
   {

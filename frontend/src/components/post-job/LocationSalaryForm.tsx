@@ -3,9 +3,14 @@
 import {
   POST_JOB_CITY_OPTIONS,
   POST_JOB_PERK_OPTIONS,
+  POST_JOB_SALARY_TYPE_OPTIONS,
   POST_JOB_STATE_OPTIONS,
 } from "@/constants/post-job";
-import type { LocationAndSalaryFormData, PostJobPerkId } from "@/types/post-job";
+import type {
+  LocationAndSalaryFormData,
+  PostJobPerkId,
+  SalaryType,
+} from "@/types/post-job";
 import { cn } from "@/utils/cn";
 import { ChevronDown } from "lucide-react";
 import type { RefObject } from "react";
@@ -19,15 +24,12 @@ import {
   postJobFieldLabelClassName,
   postJobFormInlineActionsClassName,
   postJobFormGridGapClassName,
-  postJobFormRowGapClassName,
   postJobFormSectionsClassName,
   postJobFormShellClassName,
   postJobFormSubsectionClassName,
   postJobInputClassName,
   postJobPerkWrapClassName,
-  postJobSalaryRangeGridClassName,
   postJobSectionHeadingClassName,
-  postJobFieldStackClassName,
   postJobTextareaClassName,
 } from "./post-job-form-styles";
 
@@ -170,50 +172,73 @@ export function LocationSalaryForm({
           <div className={postJobFormSubsectionClassName}>
             <h3 className={postJobSectionHeadingClassName}>Salary</h3>
 
-            <div className={postJobFormRowGapClassName}>
-              <div className={postJobFieldStackClassName}>
-                <span className={postJobFieldLabelClassName}>Salary Range</span>
-                <div className={postJobSalaryRangeGridClassName}>
-                  <input
-                    id="salary-min"
-                    type="text"
-                    inputMode="numeric"
-                    value={formData.salaryMin}
-                    onChange={(event) =>
-                      onFieldChange("salaryMin", event.target.value)
-                    }
-                    placeholder="Enter minimum salary"
-                    aria-label="Minimum salary"
-                    className={postJobInputClassName}
-                  />
-                  <input
-                    id="salary-max"
-                    type="text"
-                    inputMode="numeric"
-                    value={formData.salaryMax}
-                    onChange={(event) =>
-                      onFieldChange("salaryMax", event.target.value)
-                    }
-                    placeholder="Enter maximum salary"
-                    aria-label="Maximum salary"
-                    className={postJobInputClassName}
-                  />
-                </div>
-              </div>
+            <div
+              className={cn(
+                "grid grid-cols-1 gap-4 sm:gap-5 lg:gap-6 lg-short:gap-4 lg-compact:gap-3 lg-tight:gap-2.5",
+                formData.salaryType === "range" &&
+                  "sm:grid-cols-[minmax(10.5rem,13rem)_minmax(0,1fr)_minmax(0,1fr)]",
+                formData.salaryType === "fixed" &&
+                  "sm:grid-cols-[minmax(10.5rem,13rem)_minmax(10.5rem,13rem)]",
+                !formData.salaryType && "sm:max-w-[13rem]",
+              )}
+            >
+              <SelectField
+                id="salary-type"
+                label="Salary Range"
+                value={formData.salaryType}
+                placeholder="Select salary type"
+                options={POST_JOB_SALARY_TYPE_OPTIONS}
+                onChange={(value) =>
+                  onFieldChange("salaryType", value as SalaryType)
+                }
+              />
 
-              <PostJobFormField id="salary-incentives" label="Incentives">
-                <input
-                  id="salary-incentives"
-                  type="text"
-                  inputMode="numeric"
-                  value={formData.incentives}
-                  onChange={(event) =>
-                    onFieldChange("incentives", event.target.value)
-                  }
-                  placeholder="₹ 500"
-                  className={postJobInputClassName}
-                />
-              </PostJobFormField>
+              {formData.salaryType === "fixed" ? (
+                <PostJobFormField id="salary-incentives" label="Incentives">
+                  <input
+                    id="salary-incentives"
+                    type="text"
+                    inputMode="numeric"
+                    value={formData.incentives}
+                    onChange={(event) =>
+                      onFieldChange("incentives", event.target.value)
+                    }
+                    placeholder="₹ 500"
+                    className={postJobInputClassName}
+                  />
+                </PostJobFormField>
+              ) : null}
+
+              {formData.salaryType === "range" ? (
+                <>
+                  <PostJobFormField id="salary-min" label="Minimum Salary">
+                    <input
+                      id="salary-min"
+                      type="text"
+                      inputMode="numeric"
+                      value={formData.salaryMin}
+                      onChange={(event) =>
+                        onFieldChange("salaryMin", event.target.value)
+                      }
+                      placeholder="Enter minimum salary"
+                      className={postJobInputClassName}
+                    />
+                  </PostJobFormField>
+                  <PostJobFormField id="salary-max" label="Maximum Salary">
+                    <input
+                      id="salary-max"
+                      type="text"
+                      inputMode="numeric"
+                      value={formData.salaryMax}
+                      onChange={(event) =>
+                        onFieldChange("salaryMax", event.target.value)
+                      }
+                      placeholder="Enter maximum salary"
+                      className={postJobInputClassName}
+                    />
+                  </PostJobFormField>
+                </>
+              ) : null}
             </div>
           </div>
 

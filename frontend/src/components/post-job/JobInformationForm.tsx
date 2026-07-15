@@ -2,10 +2,12 @@
 
 import {
   JOB_TYPE_OPTIONS,
-  POST_JOB_CONTRACT_PERIOD_OPTIONS,
+  POST_JOB_CONTRACT_PERIOD_UNITS,
+  buildContractPeriodStoredValue,
+  parseContractPeriodStoredValue,
   WORK_MODE_OPTIONS,
 } from "@/constants/post-job";
-import type { JobType, PostJobFormData, WorkMode } from "@/types/post-job";
+import type { ContractPeriodUnit, JobType, PostJobFormData, WorkMode } from "@/types/post-job";
 import { cn } from "@/utils/cn";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode, RefObject } from "react";
@@ -73,7 +75,10 @@ function RadioIndicator({ checked }: RadioIndicatorProps) {
   );
 }
 
-function ContractPeriodSelect({
+const contractPeriodFieldShellClassName =
+  "flex h-12 w-full overflow-hidden rounded-md border border-border bg-surface text-sm text-foreground transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 lg-short:h-11 lg-compact:h-10 lg-tight:h-10";
+
+function ContractPeriodField({
   id,
   value,
   onChange,
@@ -84,33 +89,53 @@ function ContractPeriodSelect({
   onChange: (value: string) => void;
   "aria-label"?: string;
 }) {
+  const { amount, unit } = parseContractPeriodStoredValue(value);
+  const unitSelectId = `${id}-unit`;
+
+  const updateContractPeriod = (
+    nextAmount: string,
+    nextUnit: ContractPeriodUnit,
+  ) => {
+    onChange(buildContractPeriodStoredValue(nextAmount, nextUnit));
+  };
+
   return (
-    <div className="relative">
-      <select
+    <div className={contractPeriodFieldShellClassName}>
+      <input
         id={id}
-        value={value}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={amount}
+        onChange={(event) =>
+          updateContractPeriod(event.target.value.replace(/\D/g, ""), unit)
+        }
+        placeholder="0"
         aria-label={ariaLabel}
-        onChange={(event) => onChange(event.target.value)}
-        className={cn(
-          inputClassName,
-          "cursor-pointer appearance-none pr-10",
-          !value && "text-muted",
-        )}
-      >
-        <option value="" disabled>
-          Select
-        </option>
-        {POST_JOB_CONTRACT_PERIOD_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-foreground/70"
-        strokeWidth={2}
-        aria-hidden="true"
+        className="min-w-0 flex-1 border-0 bg-transparent px-3.5 outline-none placeholder:text-muted"
       />
+      <div className="relative flex shrink-0 items-center border-l border-border">
+        <select
+          id={unitSelectId}
+          value={unit}
+          aria-label={`${ariaLabel ?? "Contract period"} unit`}
+          onChange={(event) =>
+            updateContractPeriod(amount, event.target.value as ContractPeriodUnit)
+          }
+          className="h-full min-w-[5.75rem] cursor-pointer appearance-none border-0 bg-transparent py-0 pl-3 pr-8 text-sm outline-none sm:min-w-[6.25rem]"
+        >
+          {POST_JOB_CONTRACT_PERIOD_UNITS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-foreground/70"
+          strokeWidth={2}
+          aria-hidden="true"
+        />
+      </div>
     </div>
   );
 }
@@ -215,13 +240,13 @@ export function JobInformationForm({
           <fieldset className="space-y-3">
             <legend className={fieldLabelClassName}>Contract Period</legend>
             <div className={postJobSalaryRangeGridClassName}>
-              <ContractPeriodSelect
+              <ContractPeriodField
                 id="contract-period-from"
                 value={formData.contractPeriodFrom}
                 aria-label="Contract period start"
                 onChange={(value) => onFieldChange("contractPeriodFrom", value)}
               />
-              <ContractPeriodSelect
+              <ContractPeriodField
                 id="contract-period-to"
                 value={formData.contractPeriodTo}
                 aria-label="Contract period end"

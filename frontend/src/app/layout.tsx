@@ -1,11 +1,13 @@
 import { QueryProvider } from "@/providers/query-provider";
 import type { Metadata } from "next";
-import { Quicksand } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const quicksand = Quicksand({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-quicksand",
+  display: "swap",
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -19,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={quicksand.variable}>
+    <html lang="en" className={inter.variable}>
       <body className="min-h-screen bg-white font-sans antialiased">
         <QueryProvider>{children}</QueryProvider>
       </body>
