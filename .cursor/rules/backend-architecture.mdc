@@ -1,0 +1,937 @@
+---
+description: AsliJobs backend architecture — mandatory standard for all backend development
+globs: backend/**
+alwaysApply: false
+---
+
+# AsliJobs Backend Architecture
+
+## Mandatory Rule
+
+Before generating, modifying, or reviewing **any** code inside `backend/`, read this document in full.
+
+This is the single source of truth for AsliJobs backend architecture.
+
+If an implementation violates these rules, correct the design **before** writing code.
+
+Do not introduce alternate patterns, duplicate layers, or shortcut separation of concerns.
+
+This document complements the repository-wide `production-engineering.mdc` rule. When both apply, follow the more specific backend guidance here.
+
+---
+
+## Core Principle
+
+AsliJobs backend is a long-lived production API — not a prototype, tutorial, or throwaway service.
+
+Every change must prioritize:
+
+- maintainability
+- scalability
+- readability
+- security
+- testability
+- clear separation of concerns
+- modular feature growth
+- production safety
+
+The backend serves:
+
+- `frontend/` — public website, job seeker experience, employer experience
+- `admin/` — internal team application
+
+Never leak backend internals to clients. Never trust client-side authorization.
+
+---
+
+## Tech Stack
+
+Current and approved stack:
+
+| Layer | Technology |
+|-------|------------|
+| Runtime | Node.js |
+| Framework | Express.js |
+| Language | TypeScript (strict) |
+| Database | MongoDB |
+| ODM | Mongoose |
+| Auth tokens | JWT |
+| Validation | Zod |
+| Media uploads | Cloudinary |
+| Messaging | WhatsApp Cloud API |
+| HTTP client | Axios (external integrations only) |
+
+Approved future integrations (structure code to support without rework):
+
+- Socket.IO — realtime notifications and live updates
+- Redis — caching, rate limiting, sessions, job queues
+- AWS S3 — object storage if Cloudinary is insufficient for a use case
+
+Do not add dependencies without checking `package.json` first and confirming no existing utility already solves the problem.
+
+---
+
+## Architectural Model
+
+Use a **feature-modular, layered architecture**.
+
+### Layer Responsibilities
+
+| Layer | Responsibility | Must NOT contain |
+|-------|----------------|------------------|
+| Routes | HTTP mapping, middleware composition, versioned mounting | Business logic, DB queries, validation schemas |
+| Controllers | Request/response orchestration, status codes, calling services | Business rules, Mongoose queries, validation definitions |
+| Services | Business logic, domain rules, orchestration across repositories/models | Express `req`/`res`, route definitions |
+| Repositories | Reusable persistence/query abstractions when complexity justifies them | HTTP concerns, authorization decisions |
+| Models | Schema, indexes, instance/static hooks tied to persistence | Controller logic, API response shaping |
+| Validation | Input/output schema definitions and parsers | Database access, response sending |
+| Middleware | Cross-cutting request pipeline concerns | Feature-specific business logic |
+| Config | Environment parsing, app boot configuration | Feature business rules |
+| Constants | Domain enums, role values, status values, route prefixes | Logic |
+| Utilities | Pure reusable helpers | Feature-specific domain knowledge |
+
+### Golden Rules
+
+1. **No business logic in routes.**
+2. **Controllers stay lightweight.**
+3. **Business logic lives in services.**
+4. **Database access stays in models/repositories — never in controllers.**
+5. **Validation never lives inside controllers.**
+6. **Authentication and authorization remain isolated in middleware and dedicated auth modules.**
+7. **No duplicated utilities, constants, validators, or response helpers.**
+8. **Inspect existing code before creating new abstractions.**
+
+### Repository Layer Policy
+
+Introduce a repository only when a feature has:
+
+- complex query composition reused in multiple services
+- aggregation pipelines
+- transactional coordination across collections
+- testability benefits that outweigh added indirection
+
+Do not create repositories for trivial CRUD that a service can call on a model directly.
+
+---
+
+## Folder Structure
+
+Preserve and extend the existing `backend/src/` layout.
+
+```text
+backend/
+├── src/
+│   ├── server.ts                 # Process entry: DB connect, listen
+│   ├── app.ts                    # Express app assembly only
+│   ├── config/
+│   │   ├── env.ts                # Zod-validated environment variables
+│   │   ├── db.ts                 # MongoDB connection
+│   │   └── ...                   # cloudinary, redis, socket (future)
+│   ├── constants/
+│   │   ├── http-status.ts
+│   │   ├── roles.ts
+│   │   ├── permissions.ts
+│   │   └── ...
+│   ├── middleware/
+│   │   ├── error.middleware.ts
+│   │   ├── notFound.middleware.ts
+│   │   ├── auth.middleware.ts
+│   │   ├── authorize.middleware.ts
+│   │   ├── validate.middleware.ts
+│   │   └── ...
+│   ├── utils/
+│   │   ├── async-handler.ts
+│   │   ├── api-response.ts
+│   │   ├── pagination.ts
+│   │   ├── logger.ts
+│   │   └── ...
+│   ├── types/
+│   │   ├── express.d.ts            # Request augmentation (user, roles)
+│   │   └── ...
+│   ├── modules/
+│   │   ├── auth/
+│   │   │   ├── auth.routes.ts
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── auth.validation.ts
+│   │   │   ├── auth.types.ts
+│   │   │   └── auth.model.ts       # only if module owns persistence
+│   │   ├── employers/
+│   │   ├── job-seekers/
+│   │   ├── jobs/
+│   │   ├── applications/
+│   │   ├── notifications/
+│   │   ├── whatsapp/
+│   │   ├── uploads/
+│   │   ├── analytics/
+│   │   ├── payments/
+│   │   └── admin/                  # internal-team-facing API surfaces
+│   └── routes/
+│       └── index.ts                # mounts all versioned module routers
+├── .env.example
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+### Module Folder Rules
+
+Each feature module under `src/modules/<feature>/` should own its vertical slice:
+
+- `*.routes.ts`
+- `*.controller.ts`
+- `*.service.ts`
+- `*.validation.ts`
+- `*.types.ts`
+- `*.model.ts` when persistence is module-specific
+- `*.repository.ts` only when justified
+- `*.constants.ts` only for module-local constants
+
+Shared cross-module logic belongs in `src/utils/`, `src/constants/`, or a clearly named shared module — never copied.
+
+Do not create empty folders for appearance.
+
+---
+
+## Naming Conventions
+
+### Files
+
+Use **kebab-case** filenames with explicit layer suffixes:
+
+- `job.service.ts`
+- `employer-registration.validation.ts`
+- `auth.middleware.ts`
+
+### Exports
+
+- Classes: `PascalCase` — `EmployerService`, `AppError`
+- Functions: `camelCase` — `createJob`, `validateEmployerRegisterInput`
+- Constants: `SCREAMING_SNAKE_CASE` — `USER_ROLES`, `JOB_STATUS`
+- Types/interfaces: `PascalCase` — `CreateJobInput`, `AuthenticatedUser`
+- Enums: `PascalCase` name, `PascalCase` or `SCREAMING_SNAKE_CASE` members depending on existing module convention — stay consistent within a module
+
+### Functions
+
+Use verb-first names that describe intent:
+
+- `getEmployerById`
+- `registerEmployer`
+- `sendOtpViaWhatsApp`
+- `assertCanPublishJob`
+
+Avoid vague names: `handleData`, `processThing`, `doStuff`, `helper`.
+
+### Mongo / Domain Naming
+
+- Model names: singular `PascalCase` — `Job`, `Employer`, `Application`
+- Collection names: plural lowercase — Mongoose default or explicit consistent pluralization
+- Field names: `camelCase`
+- Enum values: stable string literals stored in constants
+
+---
+
+## API Conventions
+
+### Versioning
+
+All public REST endpoints must be mounted under:
+
+```text
+/api/v1/
+```
+
+Never introduce unversioned business endpoints outside health checks and infrastructure endpoints explicitly approved in this document.
+
+Future breaking changes require `/api/v2/`, not silent breakage.
+
+### HTTP Methods
+
+| Method | Use |
+|--------|-----|
+| GET | Read one or many |
+| POST | Create or non-idempotent actions |
+| PUT | Full replace when appropriate |
+| PATCH | Partial update |
+| DELETE | Delete or soft-delete operations |
+
+Use nouns in paths, not verbs:
+
+- `GET /api/v1/jobs`
+- `POST /api/v1/employers/register`
+- `PATCH /api/v1/jobs/:jobId`
+
+### Route Rules
+
+Routes may:
+
+- define path and method
+- attach middleware (`auth`, `authorize`, `validate`, rate limits)
+- delegate to controller methods
+
+Routes must not:
+
+- contain `try/catch` business workflows
+- query Mongoose directly
+- shape complex response objects inline
+
+Mount module routers from `src/routes/index.ts` into `app.ts`.
+
+### Query Parameters
+
+Use consistent names across modules:
+
+- `page` — 1-based page number
+- `limit` — page size
+- `sort` — field name
+- `order` — `asc` or `desc`
+- `search` — free-text search when supported
+
+Validate all query params with Zod in the validation layer.
+
+---
+
+## Controller Conventions
+
+Controllers are thin adapters between HTTP and services.
+
+A controller method should:
+
+1. Read validated input from `req` (`body`, `params`, `query`, `user`)
+2. Call exactly one service method unless a documented orchestration exception exists
+3. Map service result to standard API response
+4. Forward errors to centralized error middleware via `next(error)` or async wrapper
+
+A controller method must not:
+
+- implement business rules
+- perform password hashing, token creation logic, or payment logic inline
+- call Mongoose models directly
+- contain Zod schema definitions
+- send inconsistent response shapes
+
+Keep one controller per module (e.g. `job.controller.ts`). Split only when a module becomes too large to maintain — prefer submodule folders over giant files.
+
+---
+
+## Service Layer
+
+Services own business logic and domain workflows.
+
+Services may:
+
+- call models or repositories
+- call other services
+- enqueue future jobs
+- call external APIs (WhatsApp, Cloudinary, payment providers)
+- throw `AppError` or domain-specific errors
+
+Services must not:
+
+- access `req` or `res`
+- know about HTTP status codes except by throwing typed errors mapped in middleware
+- return raw Mongoose documents without transforming when sensitive fields exist
+
+Design services around use cases:
+
+- `registerEmployer`
+- `publishJob`
+- `applyToJob`
+- `verifyEmployerOtp`
+
+Not around transport mechanics.
+
+---
+
+## Validation Layer
+
+Use **Zod** for all external input:
+
+- request body
+- route params
+- query string
+- webhook payloads
+- upload metadata
+
+Validation files live in `*.validation.ts` per module.
+
+Expose schemas and inferred types:
+
+- schema: `createJobSchema`
+- type: `CreateJobInput = z.infer<typeof createJobSchema>`
+
+Validation must be executed through shared middleware (e.g. `validate(schema, "body")`) before controller execution.
+
+Never duplicate validation in services unless defending against non-HTTP callers — if duplicated, extract shared schema.
+
+---
+
+## Middleware Structure
+
+Global middleware belongs in `src/app.ts` only for app-wide concerns:
+
+- `helmet`
+- `cors`
+- `morgan`
+- `express.json`
+- `cookieParser`
+- global rate limiting
+- route mounting
+- `notFoundMiddleware`
+- `errorMiddleware`
+
+Feature middleware belongs in `src/middleware/` or module-local middleware when truly feature-specific.
+
+### Required Middleware Categories
+
+| Middleware | Purpose |
+|------------|---------|
+| `auth.middleware.ts` | Verify JWT/access token, attach `req.user` |
+| `authorize.middleware.ts` | Role and permission checks |
+| `validate.middleware.ts` | Run Zod schemas against body/params/query |
+| `error.middleware.ts` | Centralized error formatting |
+| `notFound.middleware.ts` | 404 handling |
+
+Authorization must be enforced server-side for every protected action.
+
+Frontend and admin route guards are UX only, never the security boundary.
+
+---
+
+## Authentication Structure
+
+Authentication is module-driven but middleware-executed.
+
+### Rules
+
+- Use JWT access tokens for API authentication unless a documented cookie strategy is chosen for a specific client
+- Keep token creation, refresh, and verification in `auth.service.ts`
+- Secrets only from `env.ts` — never hardcoded
+- Never log tokens, OTPs, passwords, or refresh tokens
+- Hash passwords with `bcryptjs` using project-standard cost factor
+- Use HTTP-only secure cookies only if explicitly designed and documented
+
+### Token Policy
+
+- Access token: short-lived
+- Refresh token: long-lived, rotatable, revocable when refresh flow is implemented
+- Invalidate sessions on password change and role downgrade when session management exists
+
+Auth routes live in `src/modules/auth/`.
+
+---
+
+## Authorization Structure
+
+Authorization is separate from authentication.
+
+Use centralized constants for:
+
+- roles
+- permissions
+- resource ownership checks
+
+Supported role domains must remain extensible for:
+
+- job seekers
+- employers
+- internal team users
+- admin / super admin
+- operations
+- support
+- marketing
+- content / language
+
+Never hardcode role strings in controllers.
+
+Use `authorize(...rolesOrPermissions)` middleware and service-level ownership assertions for resource-specific access.
+
+Example policy:
+
+- employers can mutate only their own jobs
+- support can read but not delete unless permitted
+- super admin actions require explicit permission constants
+
+---
+
+## Error Handling
+
+Use the existing `AppError` pattern in `src/middleware/error.middleware.ts`.
+
+### Rules
+
+- Throw `AppError` for expected operational failures (400, 401, 403, 404, 409, 422)
+- Unexpected errors become 500 with generic client message
+- Never expose stack traces in production responses
+- Never leak MongoDB error details to clients
+- Log unexpected errors server-side
+
+### Error Middleware Contract
+
+Operational errors:
+
+```json
+{
+  "success": false,
+  "message": "Human-readable safe message"
+}
+```
+
+When validation fails, use a consistent 400/422 shape defined once in shared response utilities.
+
+Do not invent per-module error JSON formats.
+
+---
+
+## Response Format
+
+All API responses must follow a consistent envelope.
+
+### Success
+
+```json
+{
+  "success": true,
+  "message": "Optional human-readable message",
+  "data": {}
+}
+```
+
+### Success with pagination
+
+```json
+{
+  "success": true,
+  "message": "Optional message",
+  "data": [],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 100,
+    "totalPages": 5,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  }
+}
+```
+
+### Failure
+
+```json
+{
+  "success": false,
+  "message": "Safe error message"
+}
+```
+
+Use shared helpers in `src/utils/api-response.ts` to avoid inline `res.json` duplication.
+
+---
+
+## Logging
+
+Use a centralized logger utility (`src/utils/logger.ts`) as the project grows.
+
+### Rules
+
+- No `console.log` in committed production code except bootstrap messages in `server.ts`
+- Use structured logs in services and middleware for unexpected failures
+- Never log secrets, tokens, OTPs, passwords, or full PII
+- Redact phone numbers and emails in logs unless explicitly required and approved
+- Include request correlation IDs when request logging middleware is introduced
+
+Development may use `morgan` for HTTP logs. Production should use combined format or structured logging.
+
+---
+
+## Environment Variables
+
+All environment variables must be declared and validated in `src/config/env.ts` using Zod.
+
+### Rules
+
+- Update `.env.example` whenever adding a variable
+- Never commit `.env`
+- Never access `process.env` directly outside config files
+- Fail fast on boot when required production variables are missing
+- Optional development variables may warn instead of crash only when explicitly documented
+
+### Categories
+
+| Category | Examples |
+|----------|----------|
+| Server | `PORT`, `NODE_ENV` |
+| Database | `MONGO_URI` |
+| Auth | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` |
+| Clients | `FRONTEND_URL`, `ADMIN_URL` |
+| WhatsApp | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN` |
+| Cloudinary | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
+| Future | `REDIS_URL`, `AWS_*`, `SOCKET_*` |
+
+---
+
+## Configuration Files
+
+`src/config/` contains boot-time integrations only.
+
+Each integration gets its own config file:
+
+- `db.ts`
+- `cloudinary.ts`
+- `redis.ts` (future)
+
+Config files may create clients and export typed instances.
+
+Config files must not contain business logic.
+
+---
+
+## Constants
+
+Domain constants live in `src/constants/`.
+
+Examples:
+
+- roles and permissions
+- job/application/employer statuses
+- OTP expiry durations
+- pagination defaults
+- upload size limits
+- WhatsApp template names
+
+Do not sprinkle magic strings or numbers across services.
+
+---
+
+## Utilities
+
+`src/utils/` is for pure or infrastructure helpers reusable across modules.
+
+Examples:
+
+- async handler wrapper for Express
+- API response builders
+- pagination parser
+- phone normalization
+- slug generation
+- date helpers
+
+Utilities must be stateless when possible.
+
+If a utility is feature-specific, keep it inside the module — do not pollute global utils.
+
+---
+
+## Database Models
+
+Models live in module folders unless shared across multiple modules — then use a shared models folder only with a documented reason.
+
+### Model Rules
+
+- Define explicit schema types using TypeScript interfaces/types
+- Use `timestamps: true` unless a domain exception exists
+- Prefer `select: false` for sensitive fields (password hash, refresh token hash)
+- Use enum/constants for status fields
+- Add indexes deliberately — not redundantly
+- Use virtuals sparingly and document them
+- Use pre/post hooks only for true persistence concerns, not business workflows
+
+### Sensitive Data
+
+Never return password hashes, refresh token hashes, internal notes, or secret metadata in API responses.
+
+Use service-layer DTO mapping when transforming documents for clients.
+
+---
+
+## Indexing
+
+Add indexes based on real query patterns.
+
+### Rules
+
+- Index fields used in filters, sorts, and unique constraints
+- Use compound indexes for common combined queries
+- Add unique indexes for natural unique keys (email, slug) when business rules require
+- Document why a compound index exists in a short comment above the index
+- Review indexes when adding new list/search endpoints
+
+Do not add indexes blindly on every field.
+
+---
+
+## Pagination
+
+Use a shared pagination utility.
+
+### Defaults
+
+- Default `page`: 1
+- Default `limit`: 20
+- Maximum `limit`: 100 unless a module documents otherwise
+
+### Service Return Shape
+
+Services return:
+
+- `items`
+- `total`
+- `page`
+- `limit`
+
+Controllers/responders map to the standard `meta` envelope.
+
+Never return unbounded large arrays for list endpoints.
+
+---
+
+## File Uploads
+
+Use **Cloudinary** for media uploads unless AWS S3 is explicitly chosen for a specific feature.
+
+### Rules
+
+- Validate file type, size, and count in validation layer
+- Upload from service layer via a dedicated upload service/module
+- Never expose Cloudinary API secrets to clients
+- Store only safe public URLs or public IDs in MongoDB
+- Consider virus scanning and content moderation hooks for user-generated uploads in production
+- Delete orphaned media when parent entities are deleted when business rules require cleanup
+
+Upload routes may use `multer` or equivalent only through a centralized upload middleware.
+
+---
+
+## WhatsApp Integration
+
+WhatsApp Cloud API logic belongs in `src/modules/whatsapp/`.
+
+### Rules
+
+- Separate webhook verification from message handling
+- Validate webhook payloads with Zod
+- Keep template names and language codes in constants
+- Never block HTTP request lifecycle on long outbound sends — queue when volume grows
+- Retry transient failures with backoff in a future queue layer
+- Log delivery failures without logging message body PII unnecessarily
+
+Do not embed WhatsApp HTTP calls directly in unrelated modules — call `whatsapp.service.ts`.
+
+---
+
+## Security
+
+Security is mandatory, not optional.
+
+### Required Practices
+
+- `helmet` enabled globally
+- `cors` restricted to known client URLs from env
+- rate limiting on public and auth endpoints
+- input validation on every mutating endpoint
+- output filtering for sensitive fields
+- bcrypt for passwords
+- JWT secret rotation support in design
+- parameterized queries via Mongoose — never string-concatenated queries
+- sanitize user-generated HTML if stored and rendered
+- protect admin/internal endpoints with role middleware
+- use least-privilege permissions
+- verify resource ownership in services, not only route prefixes
+
+### Never
+
+- commit secrets
+- trust client-sent role/userId fields
+- disable auth for convenience
+- expose internal stack traces
+- return different 404 vs 403 in a way that leaks resource existence when policy requires ambiguity
+
+---
+
+## Scalability and Future Modular Expansion
+
+Design every feature so the platform can grow without restructuring.
+
+### Domain Areas to Support
+
+- job seekers
+- employers
+- jobs and applications
+- internal team and admin operations
+- marketing tooling
+- support tooling
+- content and language management
+- notifications
+- WhatsApp messaging
+- analytics and reporting
+- payments and billing
+
+### Expansion Rules
+
+- Add new features as new modules under `src/modules/`
+- Avoid cross-module circular dependencies
+- Prefer service-to-service calls with clear interfaces
+- Extract shared logic only after the second real reuse
+- Keep webhook, realtime, and queue consumers in dedicated modules
+- Prepare for Redis caching of expensive reads without baking cache logic into controllers
+- Prepare for Socket.IO event emitters via a notification/event module
+
+When a module grows large, split by sub-feature folders — not by technical layer at the top level.
+
+---
+
+## Production Readiness
+
+Every backend task must be production-safe.
+
+### Before Completing a Task
+
+1. Run `npm run typecheck` in `backend/`
+2. Run `npm run build` when types or build config change
+3. Remove debug logging
+4. Update `.env.example` for new env vars
+5. Update `backend/README.md` only when endpoints or setup materially change
+6. Confirm no secrets were added
+7. Confirm authorization is enforced
+8. Confirm validation covers all external input
+9. Confirm responses use the standard envelope
+10. Confirm database indexes for new query patterns are considered
+
+### Process Model
+
+- `server.ts` boots the app
+- `app.ts` configures Express
+- Boot failures must exit non-zero
+- Graceful shutdown hooks should be added when background workers exist
+
+---
+
+## Code Quality
+
+### TypeScript
+
+- Strict typing always
+- No `any` unless at a documented third-party boundary
+- Prefer `unknown` over `any` for untrusted input before parsing
+- Use `z.infer` for request types
+- Do not use `@ts-ignore` without a documented reason
+
+### ESM Imports
+
+The backend uses native ESM (`"type": "module"`).
+
+- Use `.js` extension in TypeScript import paths for local files
+- Prefer named exports
+- Avoid default exports except for `app.ts` and similar entry patterns already established
+
+### Import Ordering
+
+Order imports consistently in every file:
+
+1. Node built-ins
+2. External packages
+3. Absolute/internal aliases (if introduced)
+4. Parent directory imports
+5. Sibling module imports
+6. Type-only imports last in their group
+
+Separate groups with a blank line.
+
+### Comments
+
+- Prefer self-documenting code
+- Comment non-obvious business rules, indexes, and security decisions
+- Do not comment obvious code
+- Do not leave commented-out code in commits
+
+### Async Handling
+
+- Use `async/await`
+- Wrap async controllers with a shared `asyncHandler` to forward errors to `next`
+- Never leave floating promises
+- Use `try/catch` in services only when transforming errors into `AppError`
+- Avoid `void` on promises unless intentionally fire-and-forget with explicit error logging
+
+### DRY and Dead Code
+
+Never leave:
+
+- duplicate validators
+- duplicate response shapes
+- unused imports
+- unused functions
+- temporary test endpoints
+- fake data generators in production paths
+
+---
+
+## Testing Expectations
+
+When tests are requested or introduced:
+
+- unit test services and utilities
+- integration test routes for critical flows (auth, payments, applications)
+- mock external APIs (WhatsApp, Cloudinary, payments)
+- do not hit real external services in CI
+
+Use a consistent test folder strategy when testing is added (`src/modules/<feature>/__tests__/` or `backend/tests/` — pick one when first test lands and keep it consistent).
+
+---
+
+## Cross-Application Contracts
+
+The backend is the source of truth for business rules.
+
+- Frontend and admin must consume API contracts, not reimplement backend rules
+- Document breaking API changes
+- Keep role and status constants aligned with admin expectations
+- Prefer explicit DTOs over raw Mongoose documents in responses
+
+---
+
+## Inspect Before Implementing
+
+Before any backend task:
+
+1. Read this document
+2. Read `production-engineering.mdc`
+3. Inspect `backend/package.json`
+4. Inspect existing module structure
+5. Inspect existing middleware, utils, constants, and config
+6. Identify the smallest set of files to change
+7. Reuse before creating
+
+Do not immediately scaffold parallel architectures.
+
+---
+
+## Automatic Self-Correction Checklist
+
+Before finalizing backend code, verify:
+
+- [ ] Route has no business logic
+- [ ] Controller is thin
+- [ ] Validation is in `*.validation.ts`
+- [ ] Service owns business rules
+- [ ] No direct model access from controller
+- [ ] AuthZ enforced for protected actions
+- [ ] Response uses standard envelope
+- [ ] Errors use `AppError` or centralized handling
+- [ ] No secrets in code
+- [ ] No `process.env` outside config
+- [ ] No duplicate constants or utils
+- [ ] Indexes considered for new queries
+- [ ] `.env.example` updated if needed
+- [ ] Typecheck passes
+
+If any item fails, fix the design before submitting code.
+
+---
+
+## Final Standard
+
+For every backend task:
+
+**Read this document → Inspect existing code → Design module boundaries → Implement in layers → Validate → Clean up → Report.**
+
+The AsliJobs backend must remain enterprise-grade, modular, secure, and scalable from day one.

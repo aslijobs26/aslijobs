@@ -8,4 +8,6 @@ export const ROUTES = {
   EMPLOYERS: "/employer/register",
   JOB_CATEGORIES: "/job-categories",
   RESOURCES: "/resources",
+  TERMS_AND_CONDITIONS: "/terms-and-conditions",
+  PRIVACY_POLICY: "/privacy-policy",
 } as const;

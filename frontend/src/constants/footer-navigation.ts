@@ -56,12 +56,12 @@ export const FOOTER_NAV_GROUPS: FooterNavGroup[] = [
       {
         id: "terms",
         label: "Terms & Conditions",
-        href: `${ROUTES.RESOURCES}?page=terms`,
+        href: ROUTES.TERMS_AND_CONDITIONS,
       },
       {
         id: "privacy",
         label: "Privacy Policy",
-        href: `${ROUTES.RESOURCES}?page=privacy`,
+        href: ROUTES.PRIVACY_POLICY,
       },
       {
         id: "guidelines",

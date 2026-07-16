@@ -11,6 +11,7 @@
   --color-primary-soft: #00baa5;
   --color-primary-soft-hover: #00a896;
   --color-primary-light: #e8f5f5;
+  --color-brand-accent: #ffd54f;
   --color-hyderabad: #0e8585;
   --color-hyderabad-dark: #0b6f6f;
   --color-whatsapp-cta: #d8f0de;
@@ -110,6 +111,15 @@ body {
     var(--color-employer-cta) 0%,
     var(--color-employer-cta-mid) 50%,
     var(--color-employer-cta-end) 100%
+  );
+}
+
+@utility bg-legal-hero-surface {
+  background-image: linear-gradient(
+    180deg,
+    var(--color-surface) 0%,
+    color-mix(in srgb, var(--color-primary-soft) 14%, white) 55%,
+    color-mix(in srgb, var(--color-primary-soft) 22%, white) 100%
   );
 }
 
@@ -339,7 +349,7 @@ body {
   .employer-register-panel {
     position: relative;
     display: flex;
-    min-height: 24rem;
+    min-height: 44rem;
     flex-direction: column;
     overflow: hidden;
     color: var(--color-surface);
@@ -347,7 +357,7 @@ body {
     container-name: employer-register;
 
     @media (width >= 640px) {
-      min-height: 28rem;
+      min-height: 48rem;
     }
 
     @media (width >= 1024px) {
@@ -370,6 +380,14 @@ body {
     padding-right: clamp(1.5rem, 6cqi, 3rem);
     padding-bottom: clamp(1.5rem, 4cqi, 2.5rem);
     padding-left: clamp(1.5rem, 6cqi, 3rem);
+
+    @media (width < 1024px) {
+      min-height: 44rem;
+    }
+
+    @media (width >= 640px) and (width < 1024px) {
+      min-height: 48rem;
+    }
   }
 
   .employer-register-logo-link {
@@ -378,6 +396,12 @@ body {
     width: fit-content;
     flex-shrink: 0;
     border-radius: 0.125rem;
+
+    @media (width < 1024px) {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
   }
 
   .employer-register-logo-link:focus-visible {
@@ -415,6 +439,12 @@ body {
     aspect-ratio: 438.68 / 304.82;
     width: min(100%, clamp(14rem, 82cqi, 22rem));
     margin-inline: auto;
+
+    @media (width < 1024px) {
+      width: min(100%, 22rem);
+      max-width: 22rem;
+      flex-shrink: 0;
+    }
   }
 
   .employer-register-bottom {

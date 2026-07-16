@@ -68,7 +68,7 @@ export function Navbar() {
           <Link
             href={ROUTES.HOME}
             aria-label="AsliJobs home"
-            className="flex shrink-0 flex-col items-start gap-0.5 rounded-sm pl-1 lg:pl-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mr-0"
+            className="flex shrink-0 flex-col items-start gap-0.5 rounded-sm pl-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mr-0 lg:pl-0"
             onClick={closeMobileNav}
           >
             <Image
