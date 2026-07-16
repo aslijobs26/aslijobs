@@ -1,28 +1,74 @@
 "use client";
 
 import {
+  EMPLOYER_REGISTER_CONTINUE_LABEL,
   EMPLOYER_REGISTER_HEADING,
   EMPLOYER_REGISTER_INITIAL_FORM_DATA,
+  EMPLOYER_REGISTER_OTP_LENGTH,
   EMPLOYER_REGISTER_SUBMIT_LABEL,
+  isValidEmployerWhatsappNumber,
 } from "@/constants/employer-register";
 import type { EmployerRegisterFormData } from "@/types/employer-register";
 import { useState, type FormEvent } from "react";
+import { EmployerRegisterOtpSection } from "./EmployerRegisterOtpSection";
+
+const EMPTY_OTP_DIGITS = Array.from(
+  { length: EMPLOYER_REGISTER_OTP_LENGTH },
+  () => "",
+);
 
 export function EmployerRegisterForm() {
   const [formData, setFormData] = useState<EmployerRegisterFormData>(
     EMPLOYER_REGISTER_INITIAL_FORM_DATA,
   );
+  const [isOtpVisible, setIsOtpVisible] = useState(false);
+  const [isWhatsappVerified, setIsWhatsappVerified] = useState(false);
+  const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
 
   const updateField = <K extends keyof EmployerRegisterFormData>(
     field: K,
     value: EmployerRegisterFormData[K],
   ) => {
     setFormData((current) => ({ ...current, [field]: value }));
+
+    if (field === "whatsappNumber" && (isOtpVisible || isWhatsappVerified)) {
+      setIsOtpVisible(false);
+      setIsWhatsappVerified(false);
+      setOtpDigits(EMPTY_OTP_DIGITS);
+    }
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (isWhatsappVerified) {
+      return;
+    }
+
+    if (!isValidEmployerWhatsappNumber(formData.whatsappNumber)) {
+      return;
+    }
+
+    setIsOtpVisible(true);
+    setIsWhatsappVerified(false);
+    setOtpDigits(EMPTY_OTP_DIGITS);
   };
+
+  const handleVerifyOtp = () => {
+    const isComplete = otpDigits.every(
+      (digit) => digit.length === 1 && /\d/.test(digit),
+    );
+
+    if (!isComplete) {
+      return;
+    }
+
+    setIsWhatsappVerified(true);
+  };
+
+  const submitLabel = isWhatsappVerified
+    ? EMPLOYER_REGISTER_CONTINUE_LABEL
+    : EMPLOYER_REGISTER_SUBMIT_LABEL;
 
   return (
     <div className="w-full">
@@ -31,7 +77,7 @@ export function EmployerRegisterForm() {
       </h1>
 
       <form
-        className="employer-register-form-fields mt-[clamp(1.5rem,2.5vw,2rem)] w-full"
+        className="employer-register-form-fields mt-8 w-full"
         onSubmit={handleSubmit}
         noValidate
       >
@@ -83,24 +129,6 @@ export function EmployerRegisterForm() {
         </div>
 
         <div className="employer-register-form-stack">
-          <label htmlFor="whatsapp-number" className="employer-register-form-label">
-            WhatsApp Number*
-          </label>
-          <input
-            id="whatsapp-number"
-            type="tel"
-            inputMode="numeric"
-            value={formData.whatsappNumber}
-            onChange={(event) =>
-              updateField("whatsappNumber", event.target.value)
-            }
-            placeholder="Enter WhatsApp Number"
-            autoComplete="tel"
-            className="employer-register-form-input"
-          />
-        </div>
-
-        <div className="employer-register-form-stack">
           <label htmlFor="email-address" className="employer-register-form-label">
             Email Address
           </label>
@@ -117,8 +145,38 @@ export function EmployerRegisterForm() {
           />
         </div>
 
+        <div className="employer-register-form-stack">
+          <label htmlFor="whatsapp-number" className="employer-register-form-label">
+            WhatsApp Number*
+          </label>
+          <input
+            id="whatsapp-number"
+            type="tel"
+            inputMode="numeric"
+            value={formData.whatsappNumber}
+            onChange={(event) =>
+              updateField(
+                "whatsappNumber",
+                event.target.value.replace(/\D/g, "").slice(0, 10),
+              )
+            }
+            placeholder="Enter WhatsApp Number"
+            autoComplete="tel"
+            className="employer-register-form-input"
+          />
+        </div>
+
+        {isOtpVisible || isWhatsappVerified ? (
+          <EmployerRegisterOtpSection
+            otpDigits={otpDigits}
+            isVerified={isWhatsappVerified}
+            onOtpChange={setOtpDigits}
+            onVerify={handleVerifyOtp}
+          />
+        ) : null}
+
         <button type="submit" className="employer-register-form-submit">
-          {EMPLOYER_REGISTER_SUBMIT_LABEL}
+          {submitLabel}
         </button>
       </form>
     </div>

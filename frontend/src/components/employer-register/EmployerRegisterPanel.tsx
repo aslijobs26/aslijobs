@@ -14,7 +14,7 @@ export function EmployerRegisterPanel() {
         alt=""
         fill
         className="object-cover"
-        sizes="(max-width: 1024px) 100vw, 35vw"
+        sizes="(max-width: 1024px) 100vw, 39vw"
         priority
         aria-hidden
       />
