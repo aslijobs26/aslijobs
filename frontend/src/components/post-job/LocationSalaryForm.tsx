@@ -206,7 +206,7 @@ export function LocationSalaryForm({
                     placeholder="₹ 500"
                     className={postJobInputClassName}
                   />
-                </PostJobFormField>
+                </PostJobFormField>      
               ) : null}
 
               {formData.salaryType === "range" ? (

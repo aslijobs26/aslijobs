@@ -16,7 +16,27 @@ type TableOfContentsProps = {
   className?: string;
 };
 
-const SCROLL_OFFSET_PX = 140;
+const SCROLL_OFFSET_PX = 128;
+const MOBILE_SCROLL_OFFSET_PX = 96;
+
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 1023px)").matches;
+}
+
+function scrollToSection(id: string, offsetPx: number) {
+  const target = document.getElementById(id);
+  if (!target) {
+    return;
+  }
+
+  const top = Math.max(
+    0,
+    target.getBoundingClientRect().top + window.scrollY - offsetPx,
+  );
+
+  window.scrollTo({ top, behavior: "smooth" });
+  window.history.replaceState(null, "", `#${id}`);
+}
 
 export function TableOfContents({
   items,
@@ -27,25 +47,32 @@ export function TableOfContents({
 }: TableOfContentsProps) {
   const handleClick = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
     event.preventDefault();
-    const target = document.getElementById(id);
-    if (!target) {
+
+    if (!document.getElementById(id)) {
       return;
     }
 
+    // Activate first so only this section is highlighted during navigation.
     onItemSelect?.(id);
 
-    const top = Math.max(
-      0,
-      target.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET_PX,
-    );
+    const isMobileAccordion = Boolean(onNavigate) && isMobileViewport();
 
-    window.scrollTo({ top, behavior: "smooth" });
-    window.history.replaceState(null, "", `#${id}`);
+    if (isMobileAccordion) {
+      // Close accordion first — its height shifts section positions.
+      onNavigate?.();
+
+      window.setTimeout(() => {
+        scrollToSection(id, MOBILE_SCROLL_OFFSET_PX);
+      }, 50);
+      return;
+    }
+
+    scrollToSection(id, SCROLL_OFFSET_PX);
     onNavigate?.();
   };
 
   return (
-    <nav aria-label="Terms and Conditions sections" className={className}>
+    <nav aria-label="On this page sections" className={className}>
       <ul className="space-y-0.5">
         {items.map((item) => {
           const isActive = item.id === activeId;
@@ -57,7 +84,7 @@ export function TableOfContents({
                 onClick={(event) => handleClick(event, item.id)}
                 aria-current={isActive ? "location" : undefined}
                 className={cn(
-                  "block rounded-lg border-l-[3px] px-3 py-2.5 text-sm font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                  "block rounded-lg border-l-[3px] px-3 py-2.5 text-xs font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 md:text-sm",
                   isActive
                     ? "border-primary bg-primary-light/80 text-primary"
                     : "border-transparent text-muted hover:bg-primary-light/40 hover:text-primary",

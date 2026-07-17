@@ -18,16 +18,16 @@ function getDocumentTop(element: HTMLElement): number {
 
 export function useActiveLegalSection({
   sectionIds,
-  offsetPx = 140,
+  offsetPx = 128,
 }: UseActiveLegalSectionOptions): UseActiveLegalSectionResult {
   const [activeId, setActiveId] = useState(sectionIds[0] ?? "");
   const activeIdRef = useRef(sectionIds[0] ?? "");
-  const isClickNavigationRef = useRef(false);
+  const lockedTargetIdRef = useRef<string | null>(null);
   const frameRef = useRef<number | null>(null);
   const settleTimerRef = useRef<number | null>(null);
-  const idleTimerRef = useRef<number | null>(null);
   const maxLockTimerRef = useRef<number | null>(null);
   const scrollListenerRef = useRef<(() => void) | null>(null);
+  const scrollEndListenerRef = useRef<(() => void) | null>(null);
 
   const sectionIdsKey = sectionIds.join("|");
 
@@ -35,11 +35,6 @@ export function useActiveLegalSection({
     if (settleTimerRef.current !== null) {
       window.clearTimeout(settleTimerRef.current);
       settleTimerRef.current = null;
-    }
-
-    if (idleTimerRef.current !== null) {
-      window.clearTimeout(idleTimerRef.current);
-      idleTimerRef.current = null;
     }
 
     if (maxLockTimerRef.current !== null) {
@@ -51,56 +46,96 @@ export function useActiveLegalSection({
       window.removeEventListener("scroll", scrollListenerRef.current);
       scrollListenerRef.current = null;
     }
+
+    if (scrollEndListenerRef.current) {
+      window.removeEventListener("scrollend", scrollEndListenerRef.current);
+      scrollEndListenerRef.current = null;
+    }
   }, []);
 
-  const unlockNavigation = useCallback(() => {
-    clearNavigationLockTimers();
-    isClickNavigationRef.current = false;
-  }, [clearNavigationLockTimers]);
+  const commitActiveId = useCallback((id: string) => {
+    if (activeIdRef.current === id) {
+      return;
+    }
+
+    activeIdRef.current = id;
+    setActiveId(id);
+  }, []);
+
+  const unlockNavigation = useCallback(
+    (keepId?: string) => {
+      clearNavigationLockTimers();
+      lockedTargetIdRef.current = null;
+
+      if (keepId) {
+        commitActiveId(keepId);
+      }
+    },
+    [clearNavigationLockTimers, commitActiveId],
+  );
 
   const activateSection = useCallback(
     (id: string) => {
-      activeIdRef.current = id;
-      setActiveId(id);
-      isClickNavigationRef.current = true;
+      lockedTargetIdRef.current = id;
+      commitActiveId(id);
       clearNavigationLockTimers();
 
-      let didScroll = false;
-
-      const onScrollDuringNavigation = () => {
-        didScroll = true;
-
-        if (idleTimerRef.current !== null) {
-          window.clearTimeout(idleTimerRef.current);
-          idleTimerRef.current = null;
+      const finishNavigation = () => {
+        if (lockedTargetIdRef.current !== id) {
+          return;
         }
 
+        unlockNavigation(id);
+      };
+
+      const onScrollDuringNavigation = () => {
         if (settleTimerRef.current !== null) {
           window.clearTimeout(settleTimerRef.current);
         }
 
+        // Keep the clicked section active for the whole smooth-scroll.
+        commitActiveId(id);
+
+        const settleMs =
+          typeof window !== "undefined" &&
+          window.matchMedia("(max-width: 1023px)").matches
+            ? 280
+            : 180;
+
         settleTimerRef.current = window.setTimeout(() => {
-          unlockNavigation();
-        }, 200);
+          finishNavigation();
+        }, settleMs);
       };
 
       scrollListenerRef.current = onScrollDuringNavigation;
+      scrollEndListenerRef.current = finishNavigation;
       window.addEventListener("scroll", onScrollDuringNavigation, {
         passive: true,
       });
+      window.addEventListener("scrollend", finishNavigation, { passive: true });
 
-      // Already at target → no scroll events → unlock soon.
-      idleTimerRef.current = window.setTimeout(() => {
-        if (!didScroll) {
-          unlockNavigation();
-        }
-      }, 120);
+      const target = document.getElementById(id);
+      const alreadyAtTarget =
+        target !== null &&
+        Math.abs(getDocumentTop(target) - (window.scrollY + offsetPx)) <= 8;
+
+      if (alreadyAtTarget) {
+        settleTimerRef.current = window.setTimeout(() => {
+          finishNavigation();
+        }, 50);
+      }
+
+      const maxLockMs =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 1023px)").matches
+          ? 2800
+          : 2000;
 
       maxLockTimerRef.current = window.setTimeout(() => {
-        unlockNavigation();
-      }, 1800);
+        finishNavigation();
+      }, maxLockMs);
     },
-    [clearNavigationLockTimers, unlockNavigation],
+    [clearNavigationLockTimers, commitActiveId, offsetPx, unlockNavigation],
   );
 
   useEffect(() => {
@@ -111,7 +146,9 @@ export function useActiveLegalSection({
     }
 
     const resolveActiveSection = () => {
-      if (isClickNavigationRef.current) {
+      // While a sidebar click is navigating, only the clicked section stays active.
+      if (lockedTargetIdRef.current) {
+        commitActiveId(lockedTargetIdRef.current);
         return;
       }
 
@@ -132,16 +169,11 @@ export function useActiveLegalSection({
         }
       }
 
-      if (activeIdRef.current === currentId) {
-        return;
-      }
-
-      activeIdRef.current = currentId;
-      setActiveId(currentId);
+      commitActiveId(currentId);
     };
 
     const onScrollOrResize = () => {
-      if (isClickNavigationRef.current) {
+      if (lockedTargetIdRef.current) {
         return;
       }
 
@@ -167,7 +199,7 @@ export function useActiveLegalSection({
       }
       clearNavigationLockTimers();
     };
-  }, [clearNavigationLockTimers, offsetPx, sectionIdsKey]);
+  }, [clearNavigationLockTimers, commitActiveId, offsetPx, sectionIdsKey]);
 
   return { activeId, activateSection };
 }

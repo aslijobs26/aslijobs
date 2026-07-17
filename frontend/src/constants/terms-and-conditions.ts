@@ -2,8 +2,8 @@ import type { LegalDocumentMeta, LegalSection } from "@/types/legal";
 
 export const TERMS_DOCUMENT_META: LegalDocumentMeta = {
   title: "Terms & Conditions",
-  effectiveDate: "[●]",
-  lastUpdated: "[●]",
+  effectiveDate: "17 July 2026",
+  lastUpdated: "17 July 2026",
 };
 
 export const TERMS_AND_CONDITIONS_SECTIONS: LegalSection[] = [
@@ -587,7 +587,7 @@ export const TERMS_AND_CONDITIONS_SECTIONS: LegalSection[] = [
           "Email:[Email Address]",
           "Phone / WhatsApp:[Phone Number]",
           "Address:[Registered Office Address]",
-          "Website:[Website URL]",
+          "Website:https://www.aslijobs.com/",
         ],
       },
     ],

@@ -14,7 +14,7 @@ export function LegalContent({
 }: LegalContentProps) {
   return (
     <article className="w-full bg-transparent">
-      <div className="mb-8 space-y-1 border-b-2 border-border pb-6 text-sm text-muted sm:mb-10">
+      <div className="mb-8 space-y-1 border-b-2 border-border pb-6 text-xs text-muted sm:mb-10 md:text-sm">
         <p>
           <span className="font-semibold text-foreground">Effective Date:</span>{" "}
           {effectiveDate}

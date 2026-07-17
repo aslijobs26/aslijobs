@@ -2,6 +2,7 @@ import avatar1 from "@/assets/employer-register/avatar-1.png";
 import avatar2 from "@/assets/employer-register/avatar-2.png";
 import avatar3 from "@/assets/employer-register/avatar-3.png";
 import type {
+  EmployerRegisterAccountType,
   EmployerRegisterFormData,
   EmployerRegisterTestimonial,
 } from "@/types/employer-register";
@@ -13,6 +14,10 @@ export const EMPLOYER_REGISTER_LOGIN_PROMPT = "Already have an account?";
 export const EMPLOYER_REGISTER_SUBMIT_LABEL = "Create Account";
 
 export const EMPLOYER_REGISTER_CONTINUE_LABEL = "Continue";
+
+export const EMPLOYER_REGISTER_ACCOUNT_TYPE_LABEL = "Account Type";
+
+export const EMPLOYER_REGISTER_SEND_OTP_LABEL = "Send OTP";
 
 export const EMPLOYER_REGISTER_OTP_LENGTH = 4;
 
@@ -26,6 +31,17 @@ export const EMPLOYER_REGISTER_OTP_DESCRIPTION =
 export const EMPLOYER_REGISTER_OTP_VERIFY_LABEL = "Verify OTP";
 
 export const EMPLOYER_REGISTER_OTP_SUCCESS_LABEL = "WhatsApp Number Verified";
+
+export const EMPLOYER_REGISTER_DEFAULT_ACCOUNT_TYPE: EmployerRegisterAccountType =
+  "company";
+
+export const EMPLOYER_REGISTER_ACCOUNT_TYPE_OPTIONS: ReadonlyArray<{
+  value: EmployerRegisterAccountType;
+  label: string;
+}> = [
+  { value: "company", label: "Company/Business" },
+  { value: "individual", label: "Individual" },
+] as const;
 
 export const EMPLOYER_REGISTER_INITIAL_FORM_DATA: EmployerRegisterFormData = {
   companyName: "",

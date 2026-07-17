@@ -1,5 +1,7 @@
 import type { StaticImageData } from "next/image";
 
+export type EmployerRegisterAccountType = "company" | "individual";
+
 export type EmployerRegisterFormData = {
   companyName: string;
   firstName: string;

@@ -2,8 +2,8 @@ import type { LegalDocumentMeta, LegalSection } from "@/types/legal";
 
 export const PRIVACY_POLICY_META: LegalDocumentMeta = {
   title: "Privacy Policy",
-  effectiveDate: "[●]",
-  lastUpdated: "[●]",
+  effectiveDate: "17 July 2026",
+  lastUpdated: "17 July 2026",
 };
 
 export const PRIVACY_POLICY_SECTIONS: LegalSection[] = [
@@ -975,7 +975,7 @@ export const PRIVACY_POLICY_SECTIONS: LegalSection[] = [
           "Email:[Email Address]",
           "Phone / WhatsApp:[Phone Number]",
           "Address:[Registered Office Address]",
-          "Website:[Website URL]",
+          "Website:https://www.aslijobs.com/",
         ],
       },
     ],

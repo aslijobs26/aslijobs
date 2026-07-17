@@ -349,16 +349,12 @@ body {
   .employer-register-panel {
     position: relative;
     display: flex;
-    min-height: 44rem;
+    min-height: 0;
     flex-direction: column;
     overflow: hidden;
     color: var(--color-surface);
     container-type: inline-size;
     container-name: employer-register;
-
-    @media (width >= 640px) {
-      min-height: 48rem;
-    }
 
     @media (width >= 1024px) {
       width: 39%;
@@ -382,11 +378,14 @@ body {
     padding-left: clamp(1.5rem, 6cqi, 3rem);
 
     @media (width < 1024px) {
-      min-height: 44rem;
+      min-height: 0;
+      padding-top: 2.25rem;
+      padding-bottom: 2rem;
     }
 
     @media (width >= 640px) and (width < 1024px) {
-      min-height: 48rem;
+      padding-top: 2.5rem;
+      padding-bottom: 2.25rem;
     }
   }
 
@@ -422,6 +421,25 @@ body {
     justify-content: space-between;
     gap: clamp(1.25rem, 4cqi, 2.5rem);
     padding-top: clamp(1.5rem, 5cqi, 3rem);
+
+    @media (width < 1024px) {
+      gap: 1.375rem;
+      padding-top: 3.75rem;
+    }
+  }
+
+  .employer-register-illustration {
+    position: relative;
+    aspect-ratio: 438.68 / 304.82;
+    width: min(100%, clamp(14rem, 82cqi, 22rem));
+    margin-inline: auto;
+    display: block;
+
+    @media (width < 1024px) {
+      width: min(100%, 22rem);
+      max-width: 22rem;
+      flex-shrink: 0;
+    }
   }
 
   .employer-register-scale-group {
@@ -432,18 +450,11 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-  }
-
-  .employer-register-illustration {
-    position: relative;
-    aspect-ratio: 438.68 / 304.82;
-    width: min(100%, clamp(14rem, 82cqi, 22rem));
-    margin-inline: auto;
 
     @media (width < 1024px) {
-      width: min(100%, 22rem);
-      max-width: 22rem;
-      flex-shrink: 0;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
     }
   }
 
@@ -624,6 +635,7 @@ body {
     line-height: 1.25;
     font-weight: 700;
     letter-spacing: -0.025em;
+    text-align: center;
     color: var(--color-foreground);
   }
 
@@ -631,6 +643,133 @@ body {
     font-size: 0.875rem;
     font-weight: 700;
     color: var(--color-foreground);
+  }
+
+  .employer-register-account-type {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .employer-register-account-type-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    min-height: 3rem;
+    gap: 1.5rem 2rem;
+  }
+
+  .employer-register-account-type-option {
+    display: inline-flex;
+    cursor: pointer;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--color-foreground);
+    user-select: none;
+  }
+
+  .employer-register-account-type-option:focus-within {
+    outline: none;
+  }
+
+  .employer-register-account-type-option:focus-within .employer-register-account-type-indicator {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-soft) 30%, transparent);
+  }
+
+  .employer-register-account-type-indicator {
+    display: inline-flex;
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 2px solid var(--color-border);
+    background-color: var(--color-surface);
+    transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .employer-register-account-type-indicator--checked {
+    border-color: var(--color-primary-soft);
+    background-color: var(--color-primary-soft);
+  }
+
+  .employer-register-account-type-indicator-dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 9999px;
+    background-color: var(--color-surface);
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+
+  .employer-register-account-type-indicator--checked .employer-register-account-type-indicator-dot {
+    opacity: 1;
+  }
+
+  .employer-register-company-field {
+    display: grid;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    margin-bottom: 0;
+    transition:
+      grid-template-rows 180ms ease,
+      opacity 180ms ease,
+      margin-bottom 180ms ease;
+  }
+
+  .employer-register-company-field[data-visible="false"] {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    margin-bottom: -1.25rem;
+    pointer-events: none;
+
+    @media (width >= 1024px) {
+      margin-bottom: -1.5rem;
+    }
+  }
+
+  .employer-register-company-field-inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .employer-register-send-otp-link {
+    align-self: flex-start;
+    margin-top: 0.125rem;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+
+  .employer-register-send-otp-link:hover {
+    color: var(--color-primary-hover);
+  }
+
+  .employer-register-send-otp-link:focus-visible {
+    outline: none;
+    border-radius: 0.125rem;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .employer-register-company-field {
+      transition: none;
+    }
   }
 
   .employer-register-form-input {

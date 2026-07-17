@@ -66,7 +66,7 @@ export const FOOTER_NAV_GROUPS: FooterNavGroup[] = [
       {
         id: "guidelines",
         label: "Guidelines",
-        href: `${ROUTES.RESOURCES}?page=guidelines`,
+        href: ROUTES.GUIDELINES,
       },
       {
         id: "sitemap",

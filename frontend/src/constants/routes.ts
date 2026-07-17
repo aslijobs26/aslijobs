@@ -10,4 +10,5 @@ export const ROUTES = {
   RESOURCES: "/resources",
   TERMS_AND_CONDITIONS: "/terms-and-conditions",
   PRIVACY_POLICY: "/privacy-policy",
+  GUIDELINES: "/guidelines",
 } as const;

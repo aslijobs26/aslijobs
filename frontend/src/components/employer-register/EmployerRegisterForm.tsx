@@ -1,14 +1,22 @@
 "use client";
 
 import {
+  EMPLOYER_REGISTER_ACCOUNT_TYPE_LABEL,
+  EMPLOYER_REGISTER_ACCOUNT_TYPE_OPTIONS,
   EMPLOYER_REGISTER_CONTINUE_LABEL,
+  EMPLOYER_REGISTER_DEFAULT_ACCOUNT_TYPE,
   EMPLOYER_REGISTER_HEADING,
   EMPLOYER_REGISTER_INITIAL_FORM_DATA,
   EMPLOYER_REGISTER_OTP_LENGTH,
+  EMPLOYER_REGISTER_SEND_OTP_LABEL,
   EMPLOYER_REGISTER_SUBMIT_LABEL,
   isValidEmployerWhatsappNumber,
 } from "@/constants/employer-register";
-import type { EmployerRegisterFormData } from "@/types/employer-register";
+import type {
+  EmployerRegisterAccountType,
+  EmployerRegisterFormData,
+} from "@/types/employer-register";
+import { cn } from "@/utils/cn";
 import { useState, type FormEvent } from "react";
 import { EmployerRegisterOtpSection } from "./EmployerRegisterOtpSection";
 
@@ -17,13 +25,36 @@ const EMPTY_OTP_DIGITS = Array.from(
   () => "",
 );
 
+function AccountTypeRadioIndicator({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "employer-register-account-type-indicator",
+        checked && "employer-register-account-type-indicator--checked",
+      )}
+    >
+      <span className="employer-register-account-type-indicator-dot" />
+    </span>
+  );
+}
+
 export function EmployerRegisterForm() {
   const [formData, setFormData] = useState<EmployerRegisterFormData>(
     EMPLOYER_REGISTER_INITIAL_FORM_DATA,
   );
+  const [accountType, setAccountType] = useState<EmployerRegisterAccountType>(
+    EMPLOYER_REGISTER_DEFAULT_ACCOUNT_TYPE,
+  );
   const [isOtpVisible, setIsOtpVisible] = useState(false);
   const [isWhatsappVerified, setIsWhatsappVerified] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
+
+  const isCompanyAccount = accountType === "company";
+  const canSendOtp =
+    isValidEmployerWhatsappNumber(formData.whatsappNumber) &&
+    !isOtpVisible &&
+    !isWhatsappVerified;
 
   const updateField = <K extends keyof EmployerRegisterFormData>(
     field: K,
@@ -40,11 +71,9 @@ export function EmployerRegisterForm() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+  };
 
-    if (isWhatsappVerified) {
-      return;
-    }
-
+  const handleSendOtp = () => {
     if (!isValidEmployerWhatsappNumber(formData.whatsappNumber)) {
       return;
     }
@@ -81,19 +110,69 @@ export function EmployerRegisterForm() {
         onSubmit={handleSubmit}
         noValidate
       >
-        <div className="employer-register-form-stack">
-          <label htmlFor="company-name" className="employer-register-form-label">
-            Company/Business Name*
-          </label>
-          <input
-            id="company-name"
-            type="text"
-            value={formData.companyName}
-            onChange={(event) => updateField("companyName", event.target.value)}
-            placeholder="Enter company name"
-            autoComplete="organization"
-            className="employer-register-form-input"
-          />
+        <fieldset className="employer-register-account-type">
+          <legend className="sr-only">
+            {EMPLOYER_REGISTER_ACCOUNT_TYPE_LABEL}
+          </legend>
+          <div
+            className="employer-register-account-type-options"
+            role="radiogroup"
+            aria-label={EMPLOYER_REGISTER_ACCOUNT_TYPE_LABEL}
+          >
+            {EMPLOYER_REGISTER_ACCOUNT_TYPE_OPTIONS.map((option) => {
+              const checked = accountType === option.value;
+
+              return (
+                <label
+                  key={option.value}
+                  className={cn(
+                    "employer-register-account-type-option",
+                    checked && "employer-register-account-type-option--checked",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="employer-account-type"
+                    value={option.value}
+                    checked={checked}
+                    onChange={() => setAccountType(option.value)}
+                    className="sr-only"
+                  />
+                  <AccountTypeRadioIndicator checked={checked} />
+                  <span>{option.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <div
+          className="employer-register-company-field"
+          data-visible={isCompanyAccount ? "true" : "false"}
+          aria-hidden={!isCompanyAccount}
+        >
+          <div className="employer-register-company-field-inner">
+            <div className="employer-register-form-stack">
+              <label
+                htmlFor="company-name"
+                className="employer-register-form-label"
+              >
+                Company/Business Name*
+              </label>
+              <input
+                id="company-name"
+                type="text"
+                value={formData.companyName}
+                onChange={(event) =>
+                  updateField("companyName", event.target.value)
+                }
+                placeholder="Enter company name"
+                autoComplete="organization"
+                className="employer-register-form-input"
+                tabIndex={isCompanyAccount ? undefined : -1}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="employer-register-form-row">
@@ -164,6 +243,15 @@ export function EmployerRegisterForm() {
             autoComplete="tel"
             className="employer-register-form-input"
           />
+          {canSendOtp ? (
+            <button
+              type="button"
+              className="employer-register-send-otp-link"
+              onClick={handleSendOtp}
+            >
+              {EMPLOYER_REGISTER_SEND_OTP_LABEL}
+            </button>
+          ) : null}
         </div>
 
         {isOtpVisible || isWhatsappVerified ? (

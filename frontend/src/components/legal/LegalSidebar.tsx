@@ -36,7 +36,7 @@ export function LegalSidebar({
             <span className="block text-xs font-medium uppercase tracking-wide text-muted">
               On this page
             </span>
-            <span className="mt-0.5 block truncate text-sm font-medium text-foreground">
+            <span className="mt-0.5 block truncate text-xs font-medium text-foreground md:text-sm">
               {activeLabel}
             </span>
           </span>
