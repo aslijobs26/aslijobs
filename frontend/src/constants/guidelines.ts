@@ -2,8 +2,8 @@ import type { LegalDocumentMeta, LegalSection } from "@/types/legal";
 
 export const GUIDELINES_DOCUMENT_META: LegalDocumentMeta = {
   title: "Guidelines",
-  effectiveDate: "17 July 2026",
-  lastUpdated: "17 July 2026",
+  effectiveDate: "2nd July",
+  lastUpdated: "2nd July",
 };
 
 export const GUIDELINES_SECTIONS: LegalSection[] = [

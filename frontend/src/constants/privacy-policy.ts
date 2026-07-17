@@ -2,8 +2,8 @@ import type { LegalDocumentMeta, LegalSection } from "@/types/legal";
 
 export const PRIVACY_POLICY_META: LegalDocumentMeta = {
   title: "Privacy Policy",
-  effectiveDate: "17 July 2026",
-  lastUpdated: "17 July 2026",
+  effectiveDate: "2nd July",
+  lastUpdated: "2nd July",
 };
 
 export const PRIVACY_POLICY_SECTIONS: LegalSection[] = [
@@ -37,7 +37,7 @@ export const PRIVACY_POLICY_SECTIONS: LegalSection[] = [
       },
       {
         type: "paragraph",
-        text: "For the purpose of this Privacy Policy, “AsliJobs,” “we,” “us,” or “our” refers to [Legal Entity Name], operating the AsliJobs platform.",
+        text: "For the purpose of this Privacy Policy, “AsliJobs,” “we,” “us,” or “our” refers to Propenu Solutions Private Limited, operating the AsliJobs platform.",
       },
     ],
   },
@@ -926,11 +926,11 @@ export const PRIVACY_POLICY_SECTIONS: LegalSection[] = [
       {
         type: "contact-lines",
         lines: [
-          "Privacy / Grievance Officer:[Name]",
-          "Email:[Email Address]",
-          "Phone / WhatsApp:[Phone Number]",
-          "Address:[Registered Office Address]",
-          "Working Hours:[●]",
+          "Privacy / Grievance Officer:Gandhi Chejarla",
+          "Email:contact@aslijobs.com",
+          "Phone / WhatsApp:9248719057",
+          "Address:3rd Floor, SV Chambers, Plot No. 193, Kavuri Hills, Madhapur, Hyderabad - 500081.",
+          "Working Hours:24 hours",
         ],
       },
       {
@@ -971,10 +971,10 @@ export const PRIVACY_POLICY_SECTIONS: LegalSection[] = [
         type: "contact-lines",
         lines: [
           "AsliJobs",
-          "Legal Entity Name:[●]",
-          "Email:[Email Address]",
-          "Phone / WhatsApp:[Phone Number]",
-          "Address:[Registered Office Address]",
+          "Legal Entity Name:Propenu Solutions Private Limited",
+          "Email:contact@aslijobs.com",
+          "Phone / WhatsApp:9248719057",
+          "Address:3rd Floor, SV Chambers, Plot No. 193, Kavuri Hills, Madhapur, Hyderabad - 500081.",
           "Website:https://www.aslijobs.com/",
         ],
       },

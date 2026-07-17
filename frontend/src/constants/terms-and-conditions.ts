@@ -2,8 +2,8 @@ import type { LegalDocumentMeta, LegalSection } from "@/types/legal";
 
 export const TERMS_DOCUMENT_META: LegalDocumentMeta = {
   title: "Terms & Conditions",
-  effectiveDate: "17 July 2026",
-  lastUpdated: "17 July 2026",
+  effectiveDate: "2nd July",
+  lastUpdated: "2nd July",
 };
 
 export const TERMS_AND_CONDITIONS_SECTIONS: LegalSection[] = [
@@ -434,11 +434,11 @@ export const TERMS_AND_CONDITIONS_SECTIONS: LegalSection[] = [
       {
         type: "contact-lines",
         lines: [
-          "Grievance Officer / Support Contact:[Name]",
-          "Email:[Email Address]",
-          "Phone / WhatsApp:[Phone Number]",
-          "Address:[Registered Office Address]",
-          "Working Hours:[●]",
+          "Grievance Officer / Support Contact:Gandhi Chejarla",
+          "Email:contact@aslijobs.com",
+          "Phone / WhatsApp:9248719057",
+          "Address:3rd Floor, SV Chambers, Plot No. 193, Kavuri Hills, Madhapur, Hyderabad - 500081.",
+          "Working Hours:24 hours",
         ],
       },
       {
@@ -584,9 +584,9 @@ export const TERMS_AND_CONDITIONS_SECTIONS: LegalSection[] = [
         type: "contact-lines",
         lines: [
           "AsliJobs",
-          "Email:[Email Address]",
-          "Phone / WhatsApp:[Phone Number]",
-          "Address:[Registered Office Address]",
+          "Email:contact@aslijobs.com",
+          "Phone / WhatsApp:9248719057",
+          "Address:3rd Floor, SV Chambers, Plot No. 193, Kavuri Hills, Madhapur, Hyderabad - 500081.",
           "Website:https://www.aslijobs.com/",
         ],
       },
