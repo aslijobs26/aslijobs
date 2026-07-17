@@ -14,10 +14,13 @@ import {
 } from "@/constants/employer-register";
 import type {
   EmployerRegisterAccountType,
+  EmployerRegisterDocumentPreview,
+  EmployerRegisterDocumentType,
   EmployerRegisterFormData,
 } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
 import { useState, type FormEvent } from "react";
+import { EmployerRegisterDocumentVerification } from "./EmployerRegisterDocumentVerification";
 import { EmployerRegisterOtpSection } from "./EmployerRegisterOtpSection";
 
 const EMPTY_OTP_DIGITS = Array.from(
@@ -39,7 +42,11 @@ function AccountTypeRadioIndicator({ checked }: { checked: boolean }) {
   );
 }
 
-export function EmployerRegisterForm() {
+export function EmployerRegisterForm({
+  onContinue,
+}: {
+  onContinue: (formData: EmployerRegisterFormData) => void;
+}) {
   const [formData, setFormData] = useState<EmployerRegisterFormData>(
     EMPLOYER_REGISTER_INITIAL_FORM_DATA,
   );
@@ -49,12 +56,26 @@ export function EmployerRegisterForm() {
   const [isOtpVisible, setIsOtpVisible] = useState(false);
   const [isWhatsappVerified, setIsWhatsappVerified] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
+  const [documentType, setDocumentType] =
+    useState<EmployerRegisterDocumentType | null>(null);
+  const [documentPreview, setDocumentPreview] =
+    useState<EmployerRegisterDocumentPreview | null>(null);
 
   const isCompanyAccount = accountType === "company";
+  const isIndividualAccount = accountType === "individual";
   const canSendOtp =
     isValidEmployerWhatsappNumber(formData.whatsappNumber) &&
     !isOtpVisible &&
     !isWhatsappVerified;
+
+  const handleAccountTypeChange = (value: EmployerRegisterAccountType) => {
+    setAccountType(value);
+
+    if (value === "company") {
+      setDocumentType(null);
+      setDocumentPreview(null);
+    }
+  };
 
   const updateField = <K extends keyof EmployerRegisterFormData>(
     field: K,
@@ -71,6 +92,12 @@ export function EmployerRegisterForm() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!isWhatsappVerified) {
+      return;
+    }
+
+    onContinue(formData);
   };
 
   const handleSendOtp = () => {
@@ -135,7 +162,7 @@ export function EmployerRegisterForm() {
                     name="employer-account-type"
                     value={option.value}
                     checked={checked}
-                    onChange={() => setAccountType(option.value)}
+                    onChange={() => handleAccountTypeChange(option.value)}
                     className="sr-only"
                   />
                   <AccountTypeRadioIndicator checked={checked} />
@@ -262,6 +289,21 @@ export function EmployerRegisterForm() {
             onVerify={handleVerifyOtp}
           />
         ) : null}
+
+        <div
+          className="employer-register-document-field"
+          data-visible={isIndividualAccount ? "true" : "false"}
+          aria-hidden={!isIndividualAccount}
+        >
+          <div className="employer-register-document-field-inner">
+            <EmployerRegisterDocumentVerification
+              documentType={documentType}
+              documentPreview={documentPreview}
+              onDocumentTypeChange={setDocumentType}
+              onDocumentPreviewChange={setDocumentPreview}
+            />
+          </div>
+        </div>
 
         <button type="submit" className="employer-register-form-submit">
           {submitLabel}

@@ -1,4 +1,5 @@
 import { EmployerRegisterContent } from "@/components/employer-register/EmployerRegisterContent";
+import { EmployerRegisterPanel } from "@/components/employer-register/EmployerRegisterPanel";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function EmployerRegisterPage() {
   return (
     <main>
-      <EmployerRegisterContent />
+      <EmployerRegisterContent>
+        <EmployerRegisterPanel />
+      </EmployerRegisterContent>
     </main>
   );
 }

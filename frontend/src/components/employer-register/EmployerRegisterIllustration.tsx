@@ -2,14 +2,18 @@ import frameQuickJobPosting from "@/assets/employer-register/frame-quick-job-pos
 import frameVerifiedCandidates from "@/assets/employer-register/frame-verified-candidates.png";
 import frameWhatsappFirstHiring from "@/assets/employer-register/frame-whatsapp-first-hiring.png";
 import { cn } from "@/utils/cn";
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 
 /**
  * Collage layout matched to the Employer Register reference:
  * Verified (left) → WhatsApp (upper-right, front) → Quick Job (lower-center).
  * Positions keep the group optically centered in the illustration frame.
  */
-const EMPLOYER_REGISTER_FRAMES = [
+const EMPLOYER_REGISTER_FRAMES: ReadonlyArray<{
+  id: string;
+  src: StaticImageData;
+  className: string;
+}> = [
   {
     id: "verified-candidates",
     src: frameVerifiedCandidates,
@@ -25,7 +29,7 @@ const EMPLOYER_REGISTER_FRAMES = [
     src: frameQuickJobPosting,
     className: "absolute left-[18%] top-[56%] z-20 w-[50%]",
   },
-] as const;
+];
 
 export function EmployerRegisterIllustration() {
   return (
@@ -35,9 +39,15 @@ export function EmployerRegisterIllustration() {
           key={frame.id}
           src={frame.src}
           alt=""
+          width={frame.src.width}
+          height={frame.src.height}
           className={cn("h-auto select-none", frame.className)}
           sizes="(max-width: 1024px) 80vw, 22rem"
           priority
+          loading="eager"
+          fetchPriority="high"
+          placeholder="empty"
+          draggable={false}
         />
       ))}
     </div>

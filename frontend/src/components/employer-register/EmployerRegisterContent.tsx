@@ -1,13 +1,37 @@
+"use client";
+
 import { EMPLOYER_REGISTER_LOGIN_PROMPT } from "@/constants/employer-register";
 import { ROUTES } from "@/constants/routes";
+import type {
+  EmployerRegisterFormData,
+  EmployerRegisterStep,
+} from "@/types/employer-register";
+import { cn } from "@/utils/cn";
 import Link from "next/link";
+import { useState, type ReactNode } from "react";
+import { EmployerRegisterCompanyProfileForm } from "./EmployerRegisterCompanyProfileForm";
 import { EmployerRegisterForm } from "./EmployerRegisterForm";
-import { EmployerRegisterPanel } from "./EmployerRegisterPanel";
 
-export function EmployerRegisterContent() {
+type EmployerRegisterContentProps = {
+  children: ReactNode;
+};
+
+export function EmployerRegisterContent({
+  children,
+}: EmployerRegisterContentProps) {
+  const [step, setStep] = useState<EmployerRegisterStep>("account");
+  const [accountFormSnapshot, setAccountFormSnapshot] =
+    useState<EmployerRegisterFormData | null>(null);
+
   return (
-    <div className="employer-register-layout">
-      <EmployerRegisterPanel />
+    <div
+      className={cn(
+        "employer-register-layout",
+        step === "company-profile" &&
+          "employer-register-layout--company-profile",
+      )}
+    >
+      {children}
 
       <section className="employer-register-form-section">
         <div className="employer-register-form-container">
@@ -22,7 +46,18 @@ export function EmployerRegisterContent() {
           </p>
 
           <div className="employer-register-form-body">
-            <EmployerRegisterForm />
+            {step === "account" ? (
+              <EmployerRegisterForm
+                onContinue={(formData) => {
+                  setAccountFormSnapshot(formData);
+                  setStep("company-profile");
+                }}
+              />
+            ) : (
+              <EmployerRegisterCompanyProfileForm
+                initialCompanyName={accountFormSnapshot?.companyName}
+              />
+            )}
           </div>
         </div>
       </section>
