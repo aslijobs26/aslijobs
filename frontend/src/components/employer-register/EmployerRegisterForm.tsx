@@ -12,6 +12,12 @@ import {
   EMPLOYER_REGISTER_SUBMIT_LABEL,
   isValidEmployerWhatsappNumber,
 } from "@/constants/employer-register";
+import {
+  registerEmployerAccount,
+  resendEmployerOtp,
+  verifyEmployerOtp,
+  completeEmployerIndividualIdentity,
+} from "@/services/employer-register.service";
 import type {
   EmployerRegisterAccountType,
   EmployerRegisterDocumentPreview,
@@ -19,7 +25,8 @@ import type {
   EmployerRegisterFormData,
 } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
-import { useState, type FormEvent } from "react";
+import { isAxiosError } from "axios";
+import { useEffect, useState, type FormEvent } from "react";
 import { EmployerRegisterDocumentVerification } from "./EmployerRegisterDocumentVerification";
 import { EmployerRegisterOtpSection } from "./EmployerRegisterOtpSection";
 
@@ -27,6 +34,21 @@ const EMPTY_OTP_DIGITS = Array.from(
   { length: EMPLOYER_REGISTER_OTP_LENGTH },
   () => "",
 );
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (isAxiosError(error)) {
+    const message = error.response?.data?.message;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+}
 
 function AccountTypeRadioIndicator({ checked }: { checked: boolean }) {
   return (
@@ -45,7 +67,11 @@ function AccountTypeRadioIndicator({ checked }: { checked: boolean }) {
 export function EmployerRegisterForm({
   onContinue,
 }: {
-  onContinue: (formData: EmployerRegisterFormData) => void;
+  onContinue: (
+    formData: EmployerRegisterFormData,
+    accountType: EmployerRegisterAccountType,
+    employerId: string,
+  ) => void;
 }) {
   const [formData, setFormData] = useState<EmployerRegisterFormData>(
     EMPLOYER_REGISTER_INITIAL_FORM_DATA,
@@ -53,6 +79,7 @@ export function EmployerRegisterForm({
   const [accountType, setAccountType] = useState<EmployerRegisterAccountType>(
     EMPLOYER_REGISTER_DEFAULT_ACCOUNT_TYPE,
   );
+  const [employerId, setEmployerId] = useState<string | null>(null);
   const [isOtpVisible, setIsOtpVisible] = useState(false);
   const [isWhatsappVerified, setIsWhatsappVerified] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
@@ -60,16 +87,36 @@ export function EmployerRegisterForm({
     useState<EmployerRegisterDocumentType | null>(null);
   const [documentPreview, setDocumentPreview] =
     useState<EmployerRegisterDocumentPreview | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isCompanyAccount = accountType === "company";
   const isIndividualAccount = accountType === "individual";
   const canSendOtp =
     isValidEmployerWhatsappNumber(formData.whatsappNumber) &&
     !isOtpVisible &&
-    !isWhatsappVerified;
+    !isWhatsappVerified &&
+    !isSubmitting;
+
+  const [isDocumentFieldVisible, setIsDocumentFieldVisible] = useState(false);
+
+  useEffect(() => {
+    if (!isIndividualAccount) {
+      setIsDocumentFieldVisible(false);
+      return;
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      setIsDocumentFieldVisible(true);
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [isIndividualAccount]);
 
   const handleAccountTypeChange = (value: EmployerRegisterAccountType) => {
     setAccountType(value);
+    setEmployerId(null);
+    setErrorMessage(null);
 
     if (value === "company") {
       setDocumentType(null);
@@ -87,39 +134,116 @@ export function EmployerRegisterForm({
       setIsOtpVisible(false);
       setIsWhatsappVerified(false);
       setOtpDigits(EMPTY_OTP_DIGITS);
+      setEmployerId(null);
     }
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const requestOtp = async () => {
+    if (!isValidEmployerWhatsappNumber(formData.whatsappNumber)) {
+      setErrorMessage("Enter a valid 10-digit WhatsApp number");
+      return;
+    }
+
+    if (isCompanyAccount && !formData.companyName.trim()) {
+      setErrorMessage("Company / Business Name is required");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      if (employerId) {
+        await resendEmployerOtp(employerId, formData.whatsappNumber);
+      } else {
+        const result = await registerEmployerAccount(formData, accountType);
+        setEmployerId(result.employer.id);
+      }
+
+      setIsOtpVisible(true);
+      setIsWhatsappVerified(false);
+      setOtpDigits(EMPTY_OTP_DIGITS);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Failed to send OTP"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!isWhatsappVerified) {
+      await requestOtp();
       return;
     }
 
-    onContinue(formData);
+    if (!employerId) {
+      setErrorMessage("Please verify your WhatsApp number first");
+      return;
+    }
+
+    if (isIndividualAccount) {
+      if (!documentType) {
+        setErrorMessage("Select one identity document");
+        return;
+      }
+
+      if (!documentPreview?.file) {
+        setErrorMessage("Upload your selected identity document");
+        return;
+      }
+
+      setIsSubmitting(true);
+      setErrorMessage(null);
+
+      try {
+        await completeEmployerIndividualIdentity({
+          employerId,
+          documentType,
+          documentFile: documentPreview.file,
+        });
+        onContinue(formData, accountType, employerId);
+      } catch (error) {
+        setErrorMessage(
+          getErrorMessage(error, "Failed to complete individual registration"),
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+
+      return;
+    }
+
+    onContinue(formData, accountType, employerId);
   };
 
   const handleSendOtp = () => {
-    if (!isValidEmployerWhatsappNumber(formData.whatsappNumber)) {
-      return;
-    }
-
-    setIsOtpVisible(true);
-    setIsWhatsappVerified(false);
-    setOtpDigits(EMPTY_OTP_DIGITS);
+    void requestOtp();
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
+    const otp = otpDigits.join("");
     const isComplete = otpDigits.every(
       (digit) => digit.length === 1 && /\d/.test(digit),
     );
 
-    if (!isComplete) {
+    if (!isComplete || !employerId) {
+      setErrorMessage("Enter the 4-digit OTP");
       return;
     }
 
-    setIsWhatsappVerified(true);
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      await verifyEmployerOtp(employerId, otp);
+      setIsWhatsappVerified(true);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Invalid OTP"));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const submitLabel = isWhatsappVerified
@@ -286,26 +410,44 @@ export function EmployerRegisterForm({
             otpDigits={otpDigits}
             isVerified={isWhatsappVerified}
             onOtpChange={setOtpDigits}
-            onVerify={handleVerifyOtp}
+            onVerify={() => {
+              void handleVerifyOtp();
+            }}
           />
         ) : null}
 
-        <div
-          className="employer-register-document-field"
-          data-visible={isIndividualAccount ? "true" : "false"}
-          aria-hidden={!isIndividualAccount}
-        >
-          <div className="employer-register-document-field-inner">
-            <EmployerRegisterDocumentVerification
-              documentType={documentType}
-              documentPreview={documentPreview}
-              onDocumentTypeChange={setDocumentType}
-              onDocumentPreviewChange={setDocumentPreview}
-            />
+        {/*
+          Company flow must not keep Document Verification mounted.
+          CSS-only collapse (opacity:0 + 0fr) still left that large block in the
+          scrollable overflow, creating blank space below Create Account.
+        */}
+        {isIndividualAccount ? (
+          <div
+            className="employer-register-document-field"
+            data-visible={isDocumentFieldVisible ? "true" : "false"}
+          >
+            <div className="employer-register-document-field-inner">
+              <EmployerRegisterDocumentVerification
+                documentType={documentType}
+                documentPreview={documentPreview}
+                onDocumentTypeChange={setDocumentType}
+                onDocumentPreviewChange={setDocumentPreview}
+              />
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        <button type="submit" className="employer-register-form-submit">
+        {errorMessage ? (
+          <p className="text-sm font-medium text-red-600" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+
+        <button
+          type="submit"
+          className="employer-register-form-submit"
+          disabled={isSubmitting}
+        >
           {submitLabel}
         </button>
       </form>

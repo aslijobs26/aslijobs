@@ -87,10 +87,14 @@ export const EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS: ReadonlyArray<{
   value: EmployerRegisterBusinessDocumentType;
   label: string;
 }> = [
-  { value: "gst", label: "GST" },
+  { value: "gst-certificate", label: "GST Certificate" },
   {
     value: "certificate-of-incorporation",
-    label: "Certificate of Incorporation (LLP or PVT/Partnership)",
+    label: "Certificate of Incorporation",
+  },
+  {
+    value: "llp-registration-certificate",
+    label: "LLP Registration Certificate",
   },
   {
     value: "msme-udyam-registration",
@@ -98,13 +102,19 @@ export const EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS: ReadonlyArray<{
   },
   {
     value: "shop-establishment-license",
-    label: "Shop and Establishment License",
+    label: "Shop & Establishment License",
   },
   { value: "trade-license", label: "Trade License" },
   { value: "pan-card-business", label: "PAN Card (Business)" },
   {
     value: "trust-society-registration",
     label: "Trust / Society Registration",
+  },
+  { value: "partnership-deed", label: "Partnership Deed" },
+  { value: "fssai-license", label: "FSSAI License" },
+  {
+    value: "other-government-registration",
+    label: "Other Government Registration",
   },
 ] as const;
 
@@ -396,6 +406,15 @@ export const EMPLOYER_REGISTER_TESTIMONIAL_TRANSITION_MS = 400;
 export const EMPLOYER_REGISTER_TESTIMONIALS: readonly EmployerRegisterTestimonial[] =
   [
     {
+      id: "sneha-patel",
+      quote:
+        "The hiring process became much faster. Verified candidates, multilingual support, and instant communication saved our team valuable time.",
+      name: "Sneha Patel",
+      designation: "Operations Head",
+      avatar: avatar3,
+      avatarAlt: "Portrait of Sneha Patel",
+    },
+    {
       id: "priya-reddy",
       quote:
         "Finding reliable site workers used to take weeks. With AsliJobs, we hired verified candidates quickly, saving both time and effort.",
@@ -412,15 +431,6 @@ export const EMPLOYER_REGISTER_TESTIMONIALS: readonly EmployerRegisterTestimonia
       designation: "HR Manager",
       avatar: avatar2,
       avatarAlt: "Portrait of Rahul Sharma",
-    },
-    {
-      id: "sneha-patel",
-      quote:
-        "The hiring process became much faster. Verified candidates, multilingual support, and instant communication saved our team valuable time.",
-      name: "Sneha Patel",
-      designation: "Operations Head",
-      avatar: avatar3,
-      avatarAlt: "Portrait of Sneha Patel",
     },
   ] as const;
 

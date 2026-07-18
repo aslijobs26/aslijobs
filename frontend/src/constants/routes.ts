@@ -1,8 +1,10 @@
 export const ROUTES = {
   HOME: "/",
-  LOGIN: "/login",
+  LOGIN: "/employer/login",
   POST_JOB: "/post-job",
   EMPLOYER_REGISTER: "/employer/register",
+  EMPLOYER_LOGIN: "/employer/login",
+  EMPLOYER_DASHBOARD: "/employer/dashboard",
   CONTACT: "/contact",
   FIND_JOBS: "/jobs",
   EMPLOYERS: "/employer/register",

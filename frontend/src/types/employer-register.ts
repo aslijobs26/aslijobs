@@ -11,17 +11,22 @@ export type EmployerRegisterDocumentType =
   | "voter-id";
 
 export type EmployerRegisterBusinessDocumentType =
-  | "gst"
+  | "gst-certificate"
   | "certificate-of-incorporation"
+  | "llp-registration-certificate"
   | "msme-udyam-registration"
   | "shop-establishment-license"
   | "trade-license"
   | "pan-card-business"
-  | "trust-society-registration";
+  | "trust-society-registration"
+  | "partnership-deed"
+  | "fssai-license"
+  | "other-government-registration";
 
 export type EmployerRegisterDocumentPreview = {
   name: string;
   sizeBytes: number;
+  file: File;
 };
 
 export type EmployerRegisterFormData = {

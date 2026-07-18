@@ -11,6 +11,7 @@ import Image from "next/image";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -27,7 +28,7 @@ const EXTENDED_SLIDES: Testimonial[] = [
 
 const EXTENDED_SLIDE_COUNT = EXTENDED_SLIDES.length;
 
-/** First real card sits at track index 1 (index 0 is the loop clone). */
+/** First real card (Sneha Patel) sits at track index 1 (index 0 is the loop clone). */
 const INITIAL_TRACK_INDEX = 1;
 
 function getRealIndex(trackIndex: number) {
@@ -78,6 +79,7 @@ export function EmployerRegisterTestimonial() {
   const [trackIndex, setTrackIndex] = useState(INITIAL_TRACK_INDEX);
   const [isTransitionEnabled, setIsTransitionEnabled] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isAutoplayReady, setIsAutoplayReady] = useState(false);
   const isJumpingRef = useRef(false);
 
   const goToRealIndex = useCallback((realIndex: number) => {
@@ -90,9 +92,15 @@ export function EmployerRegisterTestimonial() {
     setTrackIndex((current) => current + 1);
   }, []);
 
+  useLayoutEffect(() => {
+    setTrackIndex(INITIAL_TRACK_INDEX);
+    setIsTransitionEnabled(false);
+  }, []);
+
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
       setIsTransitionEnabled(true);
+      setIsAutoplayReady(true);
     });
 
     return () => {
@@ -101,7 +109,7 @@ export function EmployerRegisterTestimonial() {
   }, []);
 
   useEffect(() => {
-    if (isHovered) {
+    if (!isAutoplayReady || isHovered) {
       return;
     }
 
@@ -112,7 +120,7 @@ export function EmployerRegisterTestimonial() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [goToNext, isHovered]);
+  }, [goToNext, isAutoplayReady, isHovered]);
 
   const handleTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
     if (event.propertyName !== "transform" || isJumpingRef.current) {
@@ -154,6 +162,7 @@ export function EmployerRegisterTestimonial() {
 
   const trackStyle = {
     "--testimonial-slide-count": EXTENDED_SLIDE_COUNT,
+    "--testimonial-track-index": trackIndex,
     transform: `translateX(calc(-100% * ${trackIndex} / ${EXTENDED_SLIDE_COUNT}))`,
     transitionDuration: isTransitionEnabled
       ? `${EMPLOYER_REGISTER_TESTIMONIAL_TRANSITION_MS}ms`

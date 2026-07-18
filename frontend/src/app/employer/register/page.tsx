@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function EmployerRegisterPage() {
   return (
-    <main>
+    <main className="employer-register-page">
       <EmployerRegisterContent>
         <EmployerRegisterPanel />
       </EmployerRegisterContent>

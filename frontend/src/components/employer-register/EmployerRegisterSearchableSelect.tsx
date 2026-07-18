@@ -2,7 +2,7 @@
 
 import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, Plus, Search } from "lucide-react";
 import {
   useEffect,
   useId,
@@ -23,11 +23,22 @@ type EmployerRegisterSearchableSelectProps = {
   disabled?: boolean;
   required?: boolean;
   hideLabel?: boolean;
+  /** Allow typing a value that is not in the preset options. */
+  allowCustom?: boolean;
+  /**
+   * When set, only this many options show until the user searches.
+   * Search results reveal the remaining matches.
+   */
+  initialVisibleCount?: number;
 };
 
 type DropdownPlacement = "down" | "up";
 
 const DROPDOWN_PANEL_ESTIMATED_HEIGHT_PX = 280;
+
+function normalizeOptionKey(value: string) {
+  return value.trim().toLowerCase();
+}
 
 export function EmployerRegisterSearchableSelect({
   id,
@@ -39,26 +50,127 @@ export function EmployerRegisterSearchableSelect({
   disabled = false,
   required = false,
   hideLabel = false,
+  allowCustom = false,
+  initialVisibleCount,
 }: EmployerRegisterSearchableSelectProps) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [placement, setPlacement] = useState<DropdownPlacement>("down");
+  const [customOptions, setCustomOptions] = useState<
+    EmployerRegisterSelectOption[]
+  >([]);
 
-  const selectedOption = options.find((option) => option.value === value);
+  const allOptions = useMemo(() => {
+    const merged = [...options];
+
+    for (const customOption of customOptions) {
+      const alreadyExists = merged.some(
+        (option) =>
+          normalizeOptionKey(option.value) ===
+          normalizeOptionKey(customOption.value),
+      );
+
+      if (!alreadyExists) {
+        merged.push(customOption);
+      }
+    }
+
+    if (
+      value &&
+      !merged.some(
+        (option) => normalizeOptionKey(option.value) === normalizeOptionKey(value),
+      )
+    ) {
+      merged.push({ value, label: value });
+    }
+
+    return merged;
+  }, [options, customOptions, value]);
+
+  const selectedOption = allOptions.find(
+    (option) => normalizeOptionKey(option.value) === normalizeOptionKey(value),
+  );
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    if (!normalizedQuery) {
-      return options;
+    const matchedOptions = !normalizedQuery
+      ? allOptions
+      : allOptions.filter((option) =>
+          option.label.toLowerCase().includes(normalizedQuery),
+        );
+
+    if (normalizedQuery || initialVisibleCount == null) {
+      return matchedOptions;
     }
 
-    return options.filter((option) =>
-      option.label.toLowerCase().includes(normalizedQuery),
+    const limitedOptions = matchedOptions.slice(0, initialVisibleCount);
+    const selectedInLimited = limitedOptions.some(
+      (option) =>
+        normalizeOptionKey(option.value) === normalizeOptionKey(value),
     );
-  }, [options, query]);
+
+    if (!value || selectedInLimited) {
+      return limitedOptions;
+    }
+
+    const selectedOptionInList = matchedOptions.find(
+      (option) =>
+        normalizeOptionKey(option.value) === normalizeOptionKey(value),
+    );
+
+    if (!selectedOptionInList) {
+      return limitedOptions;
+    }
+
+    return [
+      selectedOptionInList,
+      ...limitedOptions.filter(
+        (option) =>
+          normalizeOptionKey(option.value) !== normalizeOptionKey(value),
+      ).slice(0, Math.max(initialVisibleCount - 1, 0)),
+    ];
+  }, [allOptions, query, initialVisibleCount, value]);
+
+  const trimmedQuery = query.trim();
+  const canAddCustom =
+    allowCustom &&
+    trimmedQuery.length > 0 &&
+    !allOptions.some(
+      (option) =>
+        normalizeOptionKey(option.value) === normalizeOptionKey(trimmedQuery) ||
+        normalizeOptionKey(option.label) === normalizeOptionKey(trimmedQuery),
+    );
+
+  const selectOption = (nextValue: string, nextLabel = nextValue) => {
+    if (
+      allowCustom &&
+      !options.some(
+        (option) =>
+          normalizeOptionKey(option.value) === normalizeOptionKey(nextValue),
+      )
+    ) {
+      setCustomOptions((current) => {
+        if (
+          current.some(
+            (option) =>
+              normalizeOptionKey(option.value) ===
+              normalizeOptionKey(nextValue),
+          )
+        ) {
+          return current;
+        }
+
+        return [...current, { value: nextValue, label: nextLabel }];
+      });
+    }
+
+    onChange(nextValue);
+    setIsOpen(false);
+    setQuery("");
+  };
 
   useLayoutEffect(() => {
     if (!isOpen || !rootRef.current) {
@@ -83,7 +195,7 @@ export function EmployerRegisterSearchableSelect({
     updatePlacement();
     window.addEventListener("resize", updatePlacement);
     return () => window.removeEventListener("resize", updatePlacement);
-  }, [isOpen, filteredOptions.length]);
+  }, [isOpen, filteredOptions.length, canAddCustom]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -123,10 +235,15 @@ export function EmployerRegisterSearchableSelect({
     }
   };
 
-  const closeDropdown = () => {
-    setIsOpen(false);
-    setQuery("");
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" && canAddCustom) {
+      event.preventDefault();
+      selectOption(trimmedQuery);
+    }
   };
+
+  const displayValue = selectedOption?.label ?? (value || placeholder);
+  const isPlaceholder = !selectedOption && !value;
 
   return (
     <div className="employer-register-form-stack" ref={rootRef}>
@@ -152,7 +269,8 @@ export function EmployerRegisterSearchableSelect({
           type="button"
           className={cn(
             "employer-register-searchable-select-trigger",
-            !selectedOption && "employer-register-searchable-select-trigger--placeholder",
+            isPlaceholder &&
+              "employer-register-searchable-select-trigger--placeholder",
             disabled && "employer-register-searchable-select-trigger--disabled",
           )}
           aria-haspopup="listbox"
@@ -167,7 +285,7 @@ export function EmployerRegisterSearchableSelect({
           onKeyDown={handleTriggerKeyDown}
         >
           <span className="employer-register-searchable-select-value">
-            {selectedOption?.label ?? placeholder}
+            {displayValue}
           </span>
           <ChevronDown
             className="employer-register-searchable-select-chevron"
@@ -194,10 +312,15 @@ export function EmployerRegisterSearchableSelect({
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search..."
+                onKeyDown={handleSearchKeyDown}
+                placeholder={
+                  allowCustom ? "Search or type to add..." : "Search..."
+                }
                 className="employer-register-searchable-select-search-input"
                 autoFocus
-                aria-label={`Search ${label}`}
+                aria-label={
+                  allowCustom ? `Search or add ${label}` : `Search ${label}`
+                }
               />
             </div>
 
@@ -207,16 +330,41 @@ export function EmployerRegisterSearchableSelect({
               aria-label={label}
               className="employer-register-searchable-select-options"
             >
-              {filteredOptions.length === 0 ? (
+              {canAddCustom ? (
+                <li role="option" aria-selected={false}>
+                  <button
+                    type="button"
+                    className="employer-register-searchable-select-option employer-register-searchable-select-option--custom"
+                    onClick={() => selectOption(trimmedQuery)}
+                  >
+                    <span className="employer-register-searchable-select-option-label">
+                      Add &ldquo;{trimmedQuery}&rdquo;
+                    </span>
+                    <Plus
+                      className="size-4 shrink-0"
+                      strokeWidth={2.25}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </li>
+              ) : null}
+
+              {filteredOptions.length === 0 && !canAddCustom ? (
                 <li className="employer-register-searchable-select-empty">
                   No results found
                 </li>
               ) : (
                 filteredOptions.map((option) => {
-                  const isSelected = option.value === value;
+                  const isSelected =
+                    normalizeOptionKey(option.value) ===
+                    normalizeOptionKey(value);
 
                   return (
-                    <li key={option.value} role="option" aria-selected={isSelected}>
+                    <li
+                      key={option.value}
+                      role="option"
+                      aria-selected={isSelected}
+                    >
                       <button
                         type="button"
                         className={cn(
@@ -224,10 +372,7 @@ export function EmployerRegisterSearchableSelect({
                           isSelected &&
                             "employer-register-searchable-select-option--selected",
                         )}
-                        onClick={() => {
-                          onChange(option.value);
-                          closeDropdown();
-                        }}
+                        onClick={() => selectOption(option.value, option.label)}
                       >
                         <span className="employer-register-searchable-select-option-label">
                           {option.label}

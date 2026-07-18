@@ -335,11 +335,17 @@ body {
 @layer components {
   .employer-register-layout {
     display: flex;
-    min-height: 100dvh;
     flex-direction: column;
     background-color: var(--color-surface);
 
+    @media (width < 1024px) {
+      min-height: 0;
+      height: auto;
+      overflow: visible;
+    }
+
     @media (width >= 1024px) {
+      min-height: 100dvh;
       height: 100vh;
       flex-direction: row;
       overflow: hidden;
@@ -348,6 +354,23 @@ body {
 
   /* Only Complete Your Company Profile: form left, panel right */
   .employer-register-layout--company-profile {
+    @media (width >= 1024px) {
+      .employer-register-form-section {
+        order: -1;
+      }
+    }
+
+    .employer-register-form-container {
+      width: min(44rem, 100%);
+
+      @media (width >= 1024px) {
+        width: min(44rem, 90%);
+      }
+    }
+  }
+
+  /* Employer Login only: mobile branding top / form below; desktop form left / branding right */
+  .employer-register-layout--login {
     @media (width >= 1024px) {
       .employer-register-form-section {
         order: -1;
@@ -365,6 +388,12 @@ body {
     container-type: inline-size;
     container-name: employer-register;
 
+    @media (width < 1024px) {
+      flex: 0 0 auto;
+      width: 100%;
+      height: auto;
+    }
+
     @media (width >= 1024px) {
       width: 39%;
       max-width: 40rem;
@@ -378,7 +407,6 @@ body {
     position: relative;
     z-index: 10;
     display: flex;
-    height: 100%;
     flex: 1;
     flex-direction: column;
     padding-top: clamp(2rem, 5cqi, 3rem);
@@ -387,7 +415,9 @@ body {
     padding-left: clamp(1.5rem, 6cqi, 3rem);
 
     @media (width < 1024px) {
+      height: auto;
       min-height: 0;
+      flex: 0 0 auto;
       padding-top: 2.25rem;
       padding-bottom: 2rem;
     }
@@ -395,6 +425,10 @@ body {
     @media (width >= 640px) and (width < 1024px) {
       padding-top: 2.5rem;
       padding-bottom: 2.25rem;
+    }
+
+    @media (width >= 1024px) {
+      height: 100%;
     }
   }
 
@@ -408,7 +442,8 @@ body {
     @media (width < 1024px) {
       position: absolute;
       top: 0;
-      left: 0;
+      /* Match panel-content padding so logo shares the card’s left edge */
+      left: clamp(1.5rem, 6cqi, 3rem);
       width: auto;
     }
   }
@@ -423,6 +458,11 @@ body {
     height: auto;
     /* PNG includes transparent left padding (~27/217); pull glyph flush with card edge */
     margin-left: calc(clamp(9.5rem, 38cqi, 12.5rem) * -27 / 217);
+
+    @media (width < 1024px) {
+      /* Keep logo box flush with the card; skip optical pull on mobile */
+      margin-left: 0;
+    }
   }
 
   .employer-register-panel-body {
@@ -473,27 +513,43 @@ body {
   .employer-register-bottom {
     display: flex;
     flex-shrink: 0;
-    justify-content: flex-start;
-    width: min(100%, clamp(14rem, 92cqi, 28rem));
+    justify-content: center;
+    width: 100%;
+
+    @media (width < 1024px) {
+      justify-content: flex-start;
+    }
   }
 
   .employer-register-testimonial {
     display: flex;
     width: 100%;
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
+
+    @media (width < 1024px) {
+      align-items: stretch;
+    }
   }
 
   .employer-register-testimonial-viewport {
-    width: 100%;
+    width: min(100%, clamp(14rem, 92cqi, 28rem));
     max-width: 100%;
     overflow: hidden;
+
+    @media (width < 1024px) {
+      width: 100%;
+    }
   }
 
   .employer-register-testimonial-track {
     display: flex;
     width: calc(var(--testimonial-slide-count, 5) * 100%);
     will-change: transform;
+    /* Default to first real card (Priya) before/without inline style */
+    transform: translateX(
+      calc(-100% * var(--testimonial-track-index, 1) / var(--testimonial-slide-count, 5))
+    );
     transition-property: transform;
     transition-timing-function: ease-in-out;
   }
@@ -602,33 +658,46 @@ body {
     position: relative;
     display: flex;
     min-height: 0;
-    flex: 1;
     flex-direction: column;
     background-color: var(--color-surface);
-    overflow-x: hidden;
-    overflow-y: auto;
+
+    /* Mobile: no nested scroll — page scrolls as one unit */
+    @media (width < 1024px) {
+      flex: 0 0 auto;
+      overflow: visible;
+    }
 
     @media (width >= 1024px) {
+      flex: 1;
       width: 61%;
       height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
   }
 
   .employer-register-form-container {
     display: flex;
     margin-inline: auto;
-    width: min(44rem, 100%);
+    width: min(36.5rem, 100%);
     min-height: 0;
-    flex: 1;
     flex-direction: column;
-    padding: 3rem clamp(1.25rem, 4vw, 2.5rem) clamp(2rem, 3vw, 2.5rem);
+    padding-inline: clamp(1.25rem, 4vw, 2.5rem);
 
-    @media (width >= 640px) {
-      padding-top: 3.25rem;
+    @media (width < 1024px) {
+      flex: 0 0 auto;
+      height: auto;
+      padding-top: 2.5rem;
+      padding-bottom: 1.5rem;
+    }
+
+    @media (width >= 640px) and (width < 1024px) {
+      padding-top: 3rem;
+      padding-bottom: 1.75rem;
     }
 
     @media (width >= 1024px) {
-      width: min(44rem, 90%);
+      flex: 1;
       padding-top: 3.5rem;
       padding-bottom: 2.5rem;
     }
@@ -638,9 +707,20 @@ body {
     display: flex;
     min-height: 0;
     width: 100%;
-    flex: 1;
-    align-items: safe center;
-    justify-content: center;
+    flex-direction: column;
+
+    @media (width < 1024px) {
+      flex: 0 0 auto;
+      height: auto;
+      align-items: stretch;
+      justify-content: flex-start;
+    }
+
+    @media (width >= 1024px) {
+      flex: 1;
+      align-items: safe center;
+      justify-content: center;
+    }
   }
 
   .employer-register-form-heading {
@@ -1238,6 +1318,11 @@ body {
     color: var(--color-primary);
   }
 
+  .employer-register-searchable-select-option--custom {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
   .employer-register-searchable-select-empty {
     padding: 0.75rem;
     font-size: 0.8125rem;
@@ -1439,5 +1524,111 @@ body {
     .employer-register-otp-success {
       animation: none;
     }
+  }
+}
+
+/*
+ * Employer Registration page ONLY (unlayered so these beat Tailwind utilities
+ * like body.min-h-screen and win over shared form flex-1 rules).
+ *
+ * Root cause: the form column used flex-1 / height:100vh stretching, so the
+ * scrollport grew to the viewport even after the Create Account button. On
+ * mobile, body.min-h-screen (100vh) also extended past the form content.
+ * Form wrappers must size to content; only the section may scroll on desktop.
+ */
+html:has(.employer-register-page),
+body:has(.employer-register-page) {
+  min-height: auto;
+  background-color: var(--color-surface);
+  overscroll-behavior-y: none;
+}
+
+.employer-register-page {
+  display: block;
+  min-height: 0;
+  height: auto;
+  background-color: var(--color-surface);
+  overflow-x: clip;
+}
+
+.employer-register-page .employer-register-layout {
+  min-height: 0;
+  height: auto;
+}
+
+.employer-register-page .employer-register-form-container,
+.employer-register-page .employer-register-form-body {
+  flex: 0 0 auto;
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex-basis: auto;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.employer-register-page .employer-register-form-section {
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex-basis: auto;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+@media (width >= 1024px) {
+  .employer-register-page .employer-register-layout {
+    min-height: 100dvh;
+    height: 100vh;
+  }
+
+  /* Right column fills the row and scrolls; inner form does not stretch */
+  .employer-register-page .employer-register-form-section {
+    flex: 1 1 auto;
+    width: 61%;
+    height: 100vh;
+    max-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .employer-register-page .employer-register-form-container {
+    flex: 0 0 auto;
+    width: min(36.5rem, 100%);
+    padding-top: 3.5rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .employer-register-page
+    .employer-register-layout--company-profile
+    .employer-register-form-container {
+    width: min(44rem, 90%);
+  }
+
+  .employer-register-page .employer-register-form-body {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+}
+
+@media (width < 1024px) {
+  .employer-register-page .employer-register-layout {
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+  }
+
+  .employer-register-page .employer-register-form-section {
+    flex: 0 0 auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  .employer-register-page .employer-register-form-container {
+    padding-top: 2.5rem;
+    padding-bottom: 1.5rem;
   }
 }

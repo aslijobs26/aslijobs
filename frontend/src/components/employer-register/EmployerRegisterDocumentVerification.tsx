@@ -86,6 +86,7 @@ export function EmployerRegisterDocumentVerification({
     onDocumentPreviewChange({
       name: file.name,
       sizeBytes: file.size,
+      file,
     });
   };
 

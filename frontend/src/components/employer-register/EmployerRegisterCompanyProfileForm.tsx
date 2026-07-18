@@ -17,12 +17,14 @@ import {
   EMPLOYER_REGISTER_STATE_OPTIONS,
   getEmployerRegisterBusinessCategoryOptions,
 } from "@/constants/employer-register";
+import { completeEmployerCompanyProfile } from "@/services/employer-register.service";
 import type {
   EmployerRegisterBusinessDocumentType,
   EmployerRegisterCompanyProfileData,
   EmployerRegisterDocumentPreview,
 } from "@/types/employer-register";
 import { CloudUpload, FileText, ShieldCheck, X } from "lucide-react";
+import { isAxiosError } from "axios";
 import {
   useId,
   useRef,
@@ -57,20 +59,32 @@ function isAcceptedFile(file: File) {
 }
 
 type EmployerRegisterCompanyProfileFormProps = {
+  employerId: string;
   initialCompanyName?: string;
+  initialWhatsappNumber?: string;
+  initialEmailAddress?: string;
+  onContinue?: () => void;
 };
 
 export function EmployerRegisterCompanyProfileForm({
+  employerId,
   initialCompanyName = "",
+  initialWhatsappNumber = "",
+  initialEmailAddress = "",
+  onContinue,
 }: EmployerRegisterCompanyProfileFormProps) {
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<EmployerRegisterCompanyProfileData>({
     ...EMPLOYER_REGISTER_INITIAL_COMPANY_PROFILE_DATA,
     companyName: initialCompanyName,
+    whatsappNumber: initialWhatsappNumber,
+    emailAddress: initialEmailAddress,
   });
   const [documentPreview, setDocumentPreview] =
     useState<EmployerRegisterDocumentPreview | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const businessCategoryOptions = getEmployerRegisterBusinessCategoryOptions(
     formData.industry,
@@ -110,6 +124,7 @@ export function EmployerRegisterCompanyProfileForm({
     setDocumentPreview({
       name: file.name,
       sizeBytes: file.size,
+      file,
     });
   };
 
@@ -140,8 +155,42 @@ export function EmployerRegisterCompanyProfileForm({
     }
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!formData.verificationDocument) {
+      setErrorMessage("Select a business verification document");
+      return;
+    }
+
+    if (!documentPreview?.file) {
+      setErrorMessage("Upload the selected verification document");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      await completeEmployerCompanyProfile({
+        employerId,
+        profile: formData,
+        documentType: formData.verificationDocument,
+        documentFile: documentPreview.file,
+      });
+      onContinue?.();
+    } catch (error) {
+      const message = isAxiosError(error)
+        ? error.response?.data?.message
+        : null;
+      setErrorMessage(
+        typeof message === "string" && message.trim()
+          ? message
+          : "Failed to complete company profile",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -216,6 +265,8 @@ export function EmployerRegisterCompanyProfileForm({
             id="company-profile-pincode"
             label="Pincode"
             required
+            allowCustom
+            initialVisibleCount={5}
             value={formData.pincode}
             placeholder="Select Pincode"
             options={EMPLOYER_REGISTER_PINCODE_OPTIONS}
@@ -225,7 +276,8 @@ export function EmployerRegisterCompanyProfileForm({
             id="company-profile-city"
             label="City"
             required
-            disabled
+            allowCustom
+            initialVisibleCount={5}
             value={formData.city}
             placeholder="Select City"
             options={EMPLOYER_REGISTER_CITY_OPTIONS}
@@ -235,7 +287,8 @@ export function EmployerRegisterCompanyProfileForm({
             id="company-profile-state"
             label="State"
             required
-            disabled
+            allowCustom
+            initialVisibleCount={5}
             value={formData.state}
             placeholder="Select State"
             options={EMPLOYER_REGISTER_STATE_OPTIONS}
@@ -386,7 +439,17 @@ export function EmployerRegisterCompanyProfileForm({
           ) : null}
         </section>
 
-        <button type="submit" className="employer-register-form-submit">
+        {errorMessage ? (
+          <p className="text-sm font-medium text-red-600" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+
+        <button
+          type="submit"
+          className="employer-register-form-submit"
+          disabled={isSubmitting}
+        >
           {EMPLOYER_REGISTER_CONTINUE_LABEL}
         </button>
       </form>
