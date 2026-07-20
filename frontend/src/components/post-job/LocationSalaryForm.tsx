@@ -194,7 +194,7 @@ export function LocationSalaryForm({
               />
 
               {formData.salaryType === "fixed" ? (
-                <PostJobFormField id="salary-incentives" label="Incentives">
+                <PostJobFormField id="salary-incentives" label="Fixed Salary">
                   <input
                     id="salary-incentives"
                     type="text"

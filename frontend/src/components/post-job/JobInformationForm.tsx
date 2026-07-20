@@ -2,12 +2,24 @@
 
 import {
   JOB_TYPE_OPTIONS,
+  PART_TIME_FLEXIBLE_HOURS_OPTIONS,
+  PART_TIME_MERIDIEM_OPTIONS,
+  PART_TIME_SCHEDULE_OPTIONS,
   POST_JOB_CONTRACT_PERIOD_UNITS,
   buildContractPeriodStoredValue,
+  buildPartTimeManualStoredValue,
   parseContractPeriodStoredValue,
+  parsePartTimeManualStoredValue,
   WORK_MODE_OPTIONS,
+  type PartTimeMeridiem,
 } from "@/constants/post-job";
-import type { ContractPeriodUnit, JobType, PostJobFormData, WorkMode } from "@/types/post-job";
+import type {
+  ContractPeriodUnit,
+  JobType,
+  PartTimeScheduleType,
+  PostJobFormData,
+  WorkMode,
+} from "@/types/post-job";
 import { cn } from "@/utils/cn";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode, RefObject } from "react";
@@ -140,6 +152,118 @@ function ContractPeriodField({
   );
 }
 
+function ManualTimeField({
+  id,
+  value,
+  placeholder,
+  onChange,
+  "aria-label": ariaLabel,
+}: {
+  id: string;
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  "aria-label"?: string;
+}) {
+  const { time, meridiem } = parsePartTimeManualStoredValue(value);
+  const meridiemSelectId = `${id}-meridiem`;
+
+  const updateManualTime = (
+    nextTime: string,
+    nextMeridiem: PartTimeMeridiem,
+  ) => {
+    onChange(buildPartTimeManualStoredValue(nextTime, nextMeridiem));
+  };
+
+  return (
+    <div className={contractPeriodFieldShellClassName}>
+      <input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        value={time}
+        onChange={(event) =>
+          updateManualTime(
+            event.target.value.replace(/[^\d:]/g, "").slice(0, 5),
+            meridiem,
+          )
+        }
+        placeholder={placeholder}
+        aria-label={ariaLabel}
+        className="min-w-0 flex-1 border-0 bg-transparent px-3.5 outline-none placeholder:text-muted"
+      />
+      <div className="relative flex shrink-0 items-center border-l border-border">
+        <select
+          id={meridiemSelectId}
+          value={meridiem}
+          aria-label={`${ariaLabel ?? "Time"} AM or PM`}
+          onChange={(event) =>
+            updateManualTime(time, event.target.value as PartTimeMeridiem)
+          }
+          className="h-full min-w-[4.5rem] cursor-pointer appearance-none border-0 bg-transparent py-0 pl-3 pr-8 text-sm outline-none"
+        >
+          {PART_TIME_MERIDIEM_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-foreground/70"
+          strokeWidth={2}
+          aria-hidden="true"
+        />
+      </div>
+    </div>
+  );
+}
+
+function TimingSelectInput({
+  id,
+  value,
+  placeholder,
+  options,
+  onChange,
+  "aria-label": ariaLabel,
+}: {
+  id: string;
+  value: string;
+  placeholder: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+  "aria-label"?: string;
+}) {
+  return (
+    <div className="relative">
+      <select
+        id={id}
+        value={value}
+        aria-label={ariaLabel}
+        onChange={(event) => onChange(event.target.value)}
+        className={cn(
+          inputClassName,
+          "cursor-pointer appearance-none pr-10",
+          !value && "text-muted",
+        )}
+      >
+        <option value="" disabled>
+          {placeholder}
+        </option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-foreground/70"
+        strokeWidth={2}
+        aria-hidden="true"
+      />
+    </div>
+  );
+}
+
 export function JobInformationForm({
   formData,
   onFieldChange,
@@ -154,6 +278,33 @@ export function JobInformationForm({
   onContinue: () => void;
   scrollContainerRef?: RefObject<HTMLFormElement | null>;
 }) {
+  const clearPartTimeFields = () => {
+    onFieldChange("partTimeSchedule", "");
+    onFieldChange("partTimeStartTime", "");
+    onFieldChange("partTimeEndTime", "");
+    onFieldChange("partTimeFlexibleHours", "");
+  };
+
+  const handleJobTypeChange = (nextJobType: JobType) => {
+    onFieldChange("jobType", nextJobType);
+
+    if (nextJobType !== "part-time") {
+      clearPartTimeFields();
+    }
+  };
+
+  const handlePartTimeScheduleChange = (
+    nextSchedule: PartTimeScheduleType,
+  ) => {
+    onFieldChange("partTimeSchedule", nextSchedule);
+
+    if (nextSchedule === "fixed-timings") {
+      onFieldChange("partTimeFlexibleHours", "");
+    } else {
+      onFieldChange("partTimeStartTime", "");
+      onFieldChange("partTimeEndTime", "");
+    }
+  };
   return (
     <section
       aria-labelledby="job-information-heading"
@@ -223,7 +374,9 @@ export function JobInformationForm({
                     name="job-type"
                     value={option.value}
                     checked={checked}
-                    onChange={() => onFieldChange("jobType", option.value as JobType)}
+                    onChange={() =>
+                      handleJobTypeChange(option.value as JobType)
+                    }
                     className="sr-only"
                   />
                   <RadioIndicator checked={checked} />
@@ -235,6 +388,80 @@ export function JobInformationForm({
             })}
           </div>
         </fieldset>
+
+        {formData.jobType === "part-time" ? (
+          <fieldset className="space-y-3">
+            <legend className={fieldLabelClassName}>Part-time Schedule</legend>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {PART_TIME_SCHEDULE_OPTIONS.map((option) => {
+                const checked = formData.partTimeSchedule === option.value;
+
+                return (
+                  <label
+                    key={option.value}
+                    className={cn(
+                      "flex min-h-11 cursor-pointer items-center gap-3 rounded-md border bg-surface px-4 py-2.5 transition-colors sm:min-h-12 sm:py-3 lg-short:min-h-10 lg-short:py-2 lg-compact:min-h-9",
+                      checked
+                        ? "border-primary-soft ring-1 ring-primary-soft/30"
+                        : "border-border hover:border-primary/20",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="part-time-schedule"
+                      value={option.value}
+                      checked={checked}
+                      onChange={() =>
+                        handlePartTimeScheduleChange(
+                          option.value as PartTimeScheduleType,
+                        )
+                      }
+                      className="sr-only"
+                    />
+                    <RadioIndicator checked={checked} />
+                    <span className="text-sm font-medium text-foreground">
+                      {option.label}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {formData.partTimeSchedule === "fixed-timings" ? (
+              <div className={postJobSalaryRangeGridClassName}>
+                <ManualTimeField
+                  id="part-time-start-time"
+                  value={formData.partTimeStartTime}
+                  placeholder="Start time"
+                  aria-label="Part-time start time"
+                  onChange={(value) =>
+                    onFieldChange("partTimeStartTime", value)
+                  }
+                />
+                <ManualTimeField
+                  id="part-time-end-time"
+                  value={formData.partTimeEndTime}
+                  placeholder="End time"
+                  aria-label="Part-time end time"
+                  onChange={(value) => onFieldChange("partTimeEndTime", value)}
+                />
+              </div>
+            ) : null}
+
+            {formData.partTimeSchedule === "flexible-hours" ? (
+              <TimingSelectInput
+                id="part-time-flexible-hours"
+                value={formData.partTimeFlexibleHours}
+                placeholder="Select hours"
+                aria-label="Flexible working hours"
+                options={PART_TIME_FLEXIBLE_HOURS_OPTIONS}
+                onChange={(value) =>
+                  onFieldChange("partTimeFlexibleHours", value)
+                }
+              />
+            ) : null}
+          </fieldset>
+        ) : null}
 
         {formData.jobType === "contract" ? (
           <fieldset className="space-y-3">

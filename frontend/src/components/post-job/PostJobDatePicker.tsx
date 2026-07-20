@@ -54,6 +54,9 @@ type PostJobDatePickerProps = {
   value: string;
   placeholder: string;
   minDate?: string;
+  maxDate?: string;
+  /** Smaller calendar panel — used by Job Seeker registration DOB. */
+  compact?: boolean;
   onChange: (value: string) => void;
   "aria-label"?: string;
 };
@@ -131,11 +134,11 @@ function getYearPageYears(startYear: number) {
   return Array.from({ length: YEAR_PAGE_SIZE }, (_, index) => startYear + index);
 }
 
-function getPopoverWidth(triggerWidth: number) {
-  const maxAvailableWidth =
-    window.innerWidth - VIEWPORT_PADDING_PX * 2;
+function getPopoverWidth(triggerWidth: number, compact = false) {
+  const maxAvailableWidth = window.innerWidth - VIEWPORT_PADDING_PX * 2;
+  const preferredWidth = compact ? Math.min(triggerWidth, 220) : triggerWidth;
 
-  return Math.min(triggerWidth, maxAvailableWidth);
+  return Math.min(preferredWidth, maxAvailableWidth);
 }
 
 function getCalendarPosition(
@@ -173,6 +176,8 @@ export function PostJobDatePicker({
   value,
   placeholder,
   minDate,
+  maxDate,
+  compact = false,
   onChange,
   "aria-label": ariaLabel,
 }: PostJobDatePickerProps) {
@@ -192,8 +197,16 @@ export function PostJobDatePicker({
   });
 
   const selectedDate = parseIsoDate(value);
-  const minimumIso = minDate ?? getTodayIso();
-  const initialMonth = selectedDate ?? parseIsoDate(minimumIso) ?? new Date();
+  const todayIso = getTodayIso();
+  // Post Job default: no past dates. Date of birth: pass maxDate without minDate.
+  const minimumIso =
+    minDate !== undefined ? minDate : maxDate !== undefined ? null : todayIso;
+  const maximumIso = maxDate ?? null;
+  const initialMonth =
+    selectedDate ??
+    (maximumIso ? parseIsoDate(maximumIso) : null) ??
+    (minimumIso ? parseIsoDate(minimumIso) : null) ??
+    new Date();
 
   const [visibleMonth, setVisibleMonth] = useState({
     year: initialMonth.getFullYear(),
@@ -206,7 +219,7 @@ export function PostJobDatePicker({
     }
 
     const triggerRect = triggerRef.current.getBoundingClientRect();
-    const popoverWidth = getPopoverWidth(triggerRect.width);
+    const popoverWidth = getPopoverWidth(triggerRect.width, compact);
 
     setPosition(
       getCalendarPosition(
@@ -215,7 +228,7 @@ export function PostJobDatePicker({
         popoverWidth,
       ),
     );
-  }, []);
+  }, [compact]);
 
   useEffect(() => {
     setMounted(true);
@@ -280,7 +293,11 @@ export function PostJobDatePicker({
   }, [isOpen, panelView]);
 
   const openCalendar = () => {
-    const nextMonth = selectedDate ?? parseIsoDate(minimumIso) ?? new Date();
+    const nextMonth =
+      selectedDate ??
+      (maximumIso ? parseIsoDate(maximumIso) : null) ??
+      (minimumIso ? parseIsoDate(minimumIso) : null) ??
+      new Date();
     setVisibleMonth({
       year: nextMonth.getFullYear(),
       month: nextMonth.getMonth(),
@@ -293,15 +310,27 @@ export function PostJobDatePicker({
       setPosition({
         top: triggerRect.bottom + 4,
         left: triggerRect.left,
-        width: getPopoverWidth(triggerRect.width),
+        width: getPopoverWidth(triggerRect.width, compact),
       });
     }
 
     setIsOpen(true);
   };
 
+  const isDateDisabled = (isoDate: string) => {
+    if (minimumIso !== null && isoDate < minimumIso) {
+      return true;
+    }
+
+    if (maximumIso !== null && isoDate > maximumIso) {
+      return true;
+    }
+
+    return false;
+  };
+
   const handleSelectDate = (isoDate: string) => {
-    if (isoDate < minimumIso) {
+    if (isDateDisabled(isoDate)) {
       return;
     }
 
@@ -352,16 +381,24 @@ export function PostJobDatePicker({
     setYearRangeStart((current) => current + YEAR_PAGE_SIZE);
   };
 
-  const todayIso = getTodayIso();
   const calendarDays = getCalendarDays(visibleMonth.year, visibleMonth.month);
   const yearPageYears = getYearPageYears(yearRangeStart);
   const yearRangeEnd = yearRangeStart + YEAR_PAGE_SIZE - 1;
 
-  const navButtonClassName =
-    "inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-foreground transition-colors hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+  const navButtonClassName = cn(
+    "inline-flex shrink-0 items-center justify-center rounded-md border border-border bg-surface text-foreground transition-colors hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+    compact ? "size-6" : "size-7",
+  );
 
-  const gridCellClassName =
-    "inline-flex h-full min-h-7 w-full items-center justify-center rounded-md text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+  const gridCellClassName = cn(
+    "inline-flex h-full w-full items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+    compact ? "min-h-6 text-[11px]" : "min-h-7 text-xs",
+  );
+
+  const dayCellClassName = cn(
+    "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+    compact ? "size-6 text-[11px]" : "size-7 text-xs",
+  );
 
   const calendar =
     isOpen && mounted
@@ -378,10 +415,23 @@ export function PostJobDatePicker({
               width: position.width || undefined,
               maxWidth: position.width || undefined,
             }}
-            className="fixed z-50 box-border min-w-0 overflow-hidden rounded-md border border-border-subtle bg-surface p-2 shadow-sm"
+            className={cn(
+              "fixed z-50 box-border min-w-0 overflow-hidden rounded-md border border-border-subtle bg-surface shadow-sm",
+              compact ? "p-1.5" : "p-2",
+            )}
           >
-            <div className="flex h-[14.5rem] w-full min-w-0 flex-col overflow-hidden">
-              <div className="mb-1.5 flex h-8 shrink-0 items-center gap-1">
+            <div
+              className={cn(
+                "flex w-full min-w-0 flex-col overflow-hidden",
+                compact ? "h-[11.25rem]" : "h-[14.5rem]",
+              )}
+            >
+              <div
+                className={cn(
+                  "mb-1 flex shrink-0 items-center gap-1",
+                  compact ? "h-7" : "mb-1.5 h-8",
+                )}
+              >
                 {panelView === "days" ? (
                   <>
                     <button
@@ -495,7 +545,7 @@ export function PostJobDatePicker({
                         return (
                           <span
                             key={`empty-${index}`}
-                            className="size-7"
+                            className={compact ? "size-6" : "size-7"}
                             aria-hidden="true"
                           />
                         );
@@ -504,7 +554,7 @@ export function PostJobDatePicker({
                       const isoDate = toIsoDate(date);
                       const isSelected = value === isoDate;
                       const isToday = todayIso === isoDate;
-                      const isDisabled = isoDate < minimumIso;
+                      const isDisabled = isDateDisabled(isoDate);
 
                       return (
                         <button
@@ -515,7 +565,7 @@ export function PostJobDatePicker({
                           aria-label={formatDisplayDate(isoDate)}
                           aria-pressed={isSelected}
                           className={cn(
-                            "inline-flex size-7 items-center justify-center rounded-md text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                            dayCellClassName,
                             isSelected
                               ? "bg-primary-soft text-surface"
                               : isToday

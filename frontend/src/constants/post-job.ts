@@ -2,6 +2,7 @@ import type {
   CandidateInterviewFormData,
   JobType,
   LocationAndSalaryFormData,
+  PartTimeScheduleType,
   PostJobActiveStep,
   ContractPeriodUnit,
   PostJobEducationId,
@@ -50,6 +51,10 @@ export const POST_JOB_INITIAL_FORM_DATA: PostJobFormData = {
   jobType: "",
   contractPeriodFrom: "",
   contractPeriodTo: "",
+  partTimeSchedule: "",
+  partTimeStartTime: "",
+  partTimeEndTime: "",
+  partTimeFlexibleHours: "",
   workMode: "",
   vacancies: "",
   jobDescription: "",
@@ -130,6 +135,60 @@ export const JOB_TYPE_OPTIONS: PostJobOption<JobType>[] = [
   { value: "part-time", label: "Part-time" },
   { value: "contract", label: "Contract" },
 ];
+
+export const PART_TIME_SCHEDULE_OPTIONS: PostJobOption<PartTimeScheduleType>[] =
+  [
+    { value: "fixed-timings", label: "Fixed Timings" },
+    { value: "flexible-hours", label: "Flexible hours" },
+  ];
+
+export const PART_TIME_FLEXIBLE_HOURS_OPTIONS: PostJobOption<string>[] =
+  Array.from({ length: 9 }, (_, index) => {
+    const hours = index + 1;
+    return {
+      value: String(hours),
+      label: hours === 1 ? "1 hour" : `${hours} hours`,
+    };
+  });
+
+export const PART_TIME_MERIDIEM_OPTIONS = [
+  { value: "AM", label: "AM" },
+  { value: "PM", label: "PM" },
+] as const;
+
+export type PartTimeMeridiem = (typeof PART_TIME_MERIDIEM_OPTIONS)[number]["value"];
+
+export function parsePartTimeManualStoredValue(value: string): {
+  time: string;
+  meridiem: PartTimeMeridiem;
+} {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { time: "", meridiem: "AM" };
+  }
+
+  const match = /^(.+?)\s*(AM|PM)$/i.exec(trimmed);
+  if (!match) {
+    return { time: trimmed, meridiem: "AM" };
+  }
+
+  return {
+    time: match[1].trim(),
+    meridiem: match[2].toUpperCase() as PartTimeMeridiem,
+  };
+}
+
+export function buildPartTimeManualStoredValue(
+  time: string,
+  meridiem: PartTimeMeridiem,
+): string {
+  const normalizedTime = time.trim();
+  if (!normalizedTime) {
+    return "";
+  }
+
+  return `${normalizedTime} ${meridiem}`;
+}
 
 export const POST_JOB_CONTRACT_PERIOD_UNITS: PostJobOption<ContractPeriodUnit>[] =
   [

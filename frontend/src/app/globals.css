@@ -1632,3 +1632,40 @@ body:has(.employer-register-page) {
     padding-bottom: 1.5rem;
   }
 }
+
+/* Job Seeker register only: vertically center the form block */
+@media (width >= 1024px) {
+  .employer-register-page.job-seeker-register-page
+    .employer-register-form-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .employer-register-page.job-seeker-register-page
+    .employer-register-form-container {
+    display: flex;
+    flex: 0 0 auto;
+    width: min(36.5rem, 100%);
+    margin-block: auto;
+    margin-inline: auto;
+    justify-content: center;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .employer-register-page.job-seeker-register-page
+    .employer-register-form-body {
+    flex: 0 0 auto;
+    justify-content: center;
+    align-items: stretch;
+  }
+}
+
+@media (width < 1024px) {
+  .employer-register-page.job-seeker-register-page
+    .employer-register-form-container {
+    margin-inline: auto;
+  }
+}

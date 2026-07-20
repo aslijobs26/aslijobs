@@ -112,10 +112,10 @@ export function Navbar() {
 
           <div className="ml-auto hidden items-center gap-3 lg:flex">
             <Link
-              href={ROUTES.LOGIN}
+              href={ROUTES.JOB_SEEKER_REGISTER}
               className="inline-flex h-10 items-center justify-center rounded-md bg-primary-soft px-5 text-[15px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              Sign in
+              Job Seeker
             </Link>
             <Link
               href={ROUTES.EMPLOYER_REGISTER}

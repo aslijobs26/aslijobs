@@ -2,6 +2,8 @@ export type JobType = "full-time" | "part-time" | "contract";
 
 export type WorkMode = "office" | "field" | "both";
 
+export type PartTimeScheduleType = "fixed-timings" | "flexible-hours";
+
 export type ContractPeriodUnit = "days" | "months" | "years";
 
 export type PostJobFormData = {
@@ -10,6 +12,10 @@ export type PostJobFormData = {
   jobType: JobType | "";
   contractPeriodFrom: string;
   contractPeriodTo: string;
+  partTimeSchedule: PartTimeScheduleType | "";
+  partTimeStartTime: string;
+  partTimeEndTime: string;
+  partTimeFlexibleHours: string;
   workMode: WorkMode | "";
   vacancies: string;
   jobDescription: string;
