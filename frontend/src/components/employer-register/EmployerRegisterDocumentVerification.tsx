@@ -13,6 +13,7 @@ import {
 import type {
   EmployerRegisterDocumentPreview,
   EmployerRegisterDocumentType,
+  EmployerRegisterImagePreview,
 } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
 import { CloudUpload, FileText, X } from "lucide-react";
@@ -23,13 +24,18 @@ import {
   type DragEvent,
   type KeyboardEvent,
 } from "react";
+import { EmployerImageUploadField } from "./EmployerImageUploadField";
 
 type EmployerRegisterDocumentVerificationProps = {
   documentType: EmployerRegisterDocumentType | null;
   documentPreview: EmployerRegisterDocumentPreview | null;
+  profilePhotoPreview: EmployerRegisterImagePreview | null;
   onDocumentTypeChange: (value: EmployerRegisterDocumentType) => void;
   onDocumentPreviewChange: (
     preview: EmployerRegisterDocumentPreview | null,
+  ) => void;
+  onProfilePhotoPreviewChange: (
+    preview: EmployerRegisterImagePreview | null,
   ) => void;
 };
 
@@ -47,7 +53,7 @@ function formatFileSize(sizeBytes: number) {
 
 function isAcceptedFile(file: File) {
   const extension = file.name.split(".").pop()?.toLowerCase();
-  const allowedExtensions = new Set(["pdf", "jpg", "jpeg", "png"]);
+  const allowedExtensions = new Set(["pdf", "jpg", "jpeg", "png", "webp"]);
 
   return (
     allowedExtensions.has(extension ?? "") &&
@@ -72,8 +78,10 @@ function DocumentTypeRadioIndicator({ checked }: { checked: boolean }) {
 export function EmployerRegisterDocumentVerification({
   documentType,
   documentPreview,
+  profilePhotoPreview,
   onDocumentTypeChange,
   onDocumentPreviewChange,
+  onProfilePhotoPreviewChange,
 }: EmployerRegisterDocumentVerificationProps) {
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -241,6 +249,13 @@ export function EmployerRegisterDocumentVerification({
           </p>
         </div>
       ) : null}
+
+      <EmployerImageUploadField
+        label="Upload Profile Photo"
+        optional
+        preview={profilePhotoPreview}
+        onPreviewChange={onProfilePhotoPreviewChange}
+      />
     </section>
   );
 }

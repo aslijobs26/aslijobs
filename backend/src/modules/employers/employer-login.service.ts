@@ -1,7 +1,10 @@
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { env } from "../../config/env.js";
-import { OTP_MAX_ATTEMPTS } from "../../constants/employer.constants.js";
+import {
+  OTP_MAX_ATTEMPTS,
+  isBusinessEmployerAccountType,
+} from "../../constants/employer.constants.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { jwtService } from "../auth/jwt.service.js";
@@ -18,6 +21,32 @@ function toLoginEmployer(employer: {
   companyName: string;
   firstName: string;
   lastName: string;
+  industry?: string;
+  businessCategory?: string;
+  minimumEmployees?: number | null;
+  maximumEmployees?: number | null;
+  companyLogo?: {
+    url?: string;
+    storagePath?: string;
+    publicId?: string;
+    storageProvider?: string;
+    originalName?: string;
+    mimeType?: string;
+    fileSize?: number;
+  } | null;
+  profilePhoto?: {
+    url?: string;
+    storagePath?: string;
+    publicId?: string;
+    storageProvider?: string;
+    originalName?: string;
+    mimeType?: string;
+    fileSize?: number;
+  } | null;
+  companyAddress?: string;
+  pincode?: string;
+  city?: string;
+  state?: string;
   emailAddress?: string;
   whatsappNumber: string;
   isWhatsappVerified: boolean;
@@ -27,12 +56,51 @@ function toLoginEmployer(employer: {
   createdAt?: Date;
   updatedAt?: Date;
 }) {
+  const toImage = (
+    asset:
+      | {
+          url?: string;
+          storagePath?: string;
+          publicId?: string;
+          storageProvider?: string;
+          originalName?: string;
+          mimeType?: string;
+          fileSize?: number;
+        }
+      | null
+      | undefined,
+  ) => {
+    if (!asset?.url && !asset?.storagePath) {
+      return null;
+    }
+
+    return {
+      url: asset.url ?? "",
+      storagePath: asset.storagePath ?? "",
+      publicId: asset.publicId ?? "",
+      storageProvider: asset.storageProvider ?? "",
+      originalName: asset.originalName ?? "",
+      mimeType: asset.mimeType ?? "",
+      fileSize: asset.fileSize ?? 0,
+    };
+  };
+
   return {
     id: employer._id.toString(),
     accountType: employer.accountType,
     companyName: employer.companyName,
     firstName: employer.firstName,
     lastName: employer.lastName,
+    industry: employer.industry ?? "",
+    businessCategory: employer.businessCategory ?? "",
+    minimumEmployees: employer.minimumEmployees ?? null,
+    maximumEmployees: employer.maximumEmployees ?? null,
+    companyLogo: toImage(employer.companyLogo),
+    profilePhoto: toImage(employer.profilePhoto),
+    companyAddress: employer.companyAddress ?? "",
+    pincode: employer.pincode ?? "",
+    city: employer.city ?? "",
+    state: employer.state ?? "",
     emailAddress: employer.emailAddress ?? "",
     whatsappNumber: employer.whatsappNumber,
     isWhatsappVerified: employer.isWhatsappVerified,
@@ -50,7 +118,12 @@ function buildEmployerDisplayName(employer: {
   firstName: string;
   lastName: string;
 }) {
-  if (employer.accountType === "company" && employer.companyName.trim()) {
+  if (
+    isBusinessEmployerAccountType(
+      employer.accountType as "company" | "consultancy" | "individual",
+    ) &&
+    employer.companyName.trim()
+  ) {
     return employer.companyName.trim();
   }
 
@@ -147,7 +220,10 @@ export class EmployerLoginService {
 
     const tokens = jwtService.issueEmployerTokens({
       sub: employer._id.toString(),
-      accountType: employer.accountType as "company" | "individual",
+      accountType: employer.accountType as
+        | "company"
+        | "consultancy"
+        | "individual",
       whatsappNumber: employer.whatsappNumber,
     });
 

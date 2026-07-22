@@ -1,14 +1,19 @@
 "use client";
 
 import asliLogo from "@/assets/AsliLogo.svg";
+import { EmployerProfileMenu } from "@/components/employer-dashboard/EmployerProfileMenu";
 import { BRAND_TAGLINE } from "@/constants/brand";
 import { NAV_ITEMS } from "@/constants/navigation";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/utils/cn";
+import {
+  EMPLOYER_ACCESS_TOKEN_STORAGE_KEY,
+  getEmployerAccessToken,
+} from "@/utils/employer-auth-storage";
 import { ChevronDown, Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Container } from "./Container";
 import { MobileNav } from "./MobileNav";
 
@@ -53,8 +58,43 @@ function NavTrigger({
 
 export function Navbar() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isEmployerAuthenticated, setIsEmployerAuthenticated] = useState(false);
 
   const closeMobileNav = () => setIsMobileNavOpen(false);
+
+  const syncEmployerAuthState = () => {
+    setIsEmployerAuthenticated(Boolean(getEmployerAccessToken()));
+  };
+
+  useEffect(() => {
+    syncEmployerAuthState();
+
+    const handlePageShow = () => {
+      syncEmployerAuthState();
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (
+        event.key === null ||
+        event.key === EMPLOYER_ACCESS_TOKEN_STORAGE_KEY
+      ) {
+        syncEmployerAuthState();
+      }
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
+  const handleEmployerLogout = () => {
+    setIsEmployerAuthenticated(false);
+    closeMobileNav();
+  };
 
   return (
     <header
@@ -111,38 +151,56 @@ export function Navbar() {
           </nav>
 
           <div className="ml-auto hidden items-center gap-3 lg:flex">
-            <Link
-              href={ROUTES.JOB_SEEKER_REGISTER}
-              className="inline-flex h-10 items-center justify-center rounded-md bg-primary-soft px-5 text-[15px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-            >
-              Job Seeker
-            </Link>
-            <Link
-              href={ROUTES.EMPLOYER_REGISTER}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-primary bg-transparent px-5 text-[15px] font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              Employers / Post Job
-            </Link>
+            {isEmployerAuthenticated ? (
+              <EmployerProfileMenu onLogout={handleEmployerLogout} />
+            ) : (
+              <>
+                <Link
+                  href={ROUTES.JOB_SEEKER_REGISTER}
+                  className="inline-flex h-10 items-center justify-center rounded-md bg-primary-soft px-5 text-[15px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  Job Seeker
+                </Link>
+                <Link
+                  href={ROUTES.EMPLOYER_REGISTER}
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-primary bg-transparent px-5 text-[15px] font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                >
+                  Employers / Post Job
+                </Link>
+              </>
+            )}
           </div>
 
-          <button
-            type="button"
-            className="ml-auto inline-flex size-10 items-center justify-center rounded-md text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
-            aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
-            aria-expanded={isMobileNavOpen}
-            aria-controls="mobile-navigation"
-            onClick={() => setIsMobileNavOpen((open) => !open)}
-          >
-            {isMobileNavOpen ? (
-              <X className="size-6" strokeWidth={2} />
-            ) : (
-              <Menu className="size-6" strokeWidth={2} />
-            )}
-          </button>
+          <div className="ml-auto flex items-center gap-2 lg:hidden">
+            {isEmployerAuthenticated ? (
+              <EmployerProfileMenu
+                compact
+                onLogout={handleEmployerLogout}
+              />
+            ) : null}
+            <button
+              type="button"
+              className="inline-flex size-10 items-center justify-center rounded-md text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              aria-label={isMobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={isMobileNavOpen}
+              aria-controls="mobile-navigation"
+              onClick={() => setIsMobileNavOpen((open) => !open)}
+            >
+              {isMobileNavOpen ? (
+                <X className="size-6" strokeWidth={2} />
+              ) : (
+                <Menu className="size-6" strokeWidth={2} />
+              )}
+            </button>
+          </div>
         </div>
       </Container>
 
-      <MobileNav isOpen={isMobileNavOpen} onClose={closeMobileNav} />
+      <MobileNav
+        isOpen={isMobileNavOpen}
+        onClose={closeMobileNav}
+        isEmployerAuthenticated={isEmployerAuthenticated}
+      />
     </header>
   );
 }

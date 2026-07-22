@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
 import { env } from "@/constants/env";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import { getJobSeekerAccessToken } from "@/utils/job-seeker-auth-storage";
@@ -20,7 +20,9 @@ apiClient.interceptors.request.use((config) => {
     : getEmployerAccessToken();
 
   if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
+    const headers = AxiosHeaders.from(config.headers ?? {});
+    headers.set("Authorization", `Bearer ${accessToken}`);
+    config.headers = headers;
   }
 
   return config;

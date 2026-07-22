@@ -5,6 +5,26 @@ import { HTTP_STATUS } from "../constants/http-status.js";
 
 type RequestTarget = "body" | "query" | "params";
 
+function assignValidatedTarget<T>(
+  req: Request,
+  target: RequestTarget,
+  data: T,
+): void {
+  // Express 5 exposes req.query (and sometimes req.params) as getter-only.
+  // Replacing the property via defineProperty keeps validated/coerced values available.
+  if (target === "query" || target === "params") {
+    Object.defineProperty(req, target, {
+      value: data,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
+    return;
+  }
+
+  req[target] = data;
+}
+
 export function validate<T>(schema: ZodType<T>, target: RequestTarget = "body") {
   return (req: Request, _res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req[target]);
@@ -18,7 +38,7 @@ export function validate<T>(schema: ZodType<T>, target: RequestTarget = "body") 
       return;
     }
 
-    req[target] = result.data;
+    assignValidatedTarget(req, target, result.data);
     next();
   };
 }

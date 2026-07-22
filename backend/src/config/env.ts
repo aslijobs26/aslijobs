@@ -17,8 +17,8 @@ const envSchema = z.object({
     .string()
     .min(16)
     .default("aslijobs-dev-refresh-secret-change-me"),
-  JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
-  JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
+  JWT_ACCESS_EXPIRES_IN: z.string().default("7d"),
+  JWT_REFRESH_EXPIRES_IN: z.string().default("30d"),
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
   ADMIN_URL: z.string().url().default("http://localhost:5173"),
   OTP_PROVIDER: z.enum(["console", "whatsapp"]).default("console"),

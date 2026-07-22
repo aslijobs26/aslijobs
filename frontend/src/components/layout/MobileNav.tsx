@@ -10,9 +10,14 @@ import { useEffect, useRef } from "react";
 type MobileNavProps = {
   isOpen: boolean;
   onClose: () => void;
+  isEmployerAuthenticated?: boolean;
 };
 
-export function MobileNav({ isOpen, onClose }: MobileNavProps) {
+export function MobileNav({
+  isOpen,
+  onClose,
+  isEmployerAuthenticated = false,
+}: MobileNavProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -93,22 +98,24 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
             ),
           )}
 
-          <div className="mt-4 flex flex-col gap-3 border-t border-border-subtle pt-4">
-            <Link
-              href={ROUTES.JOB_SEEKER_REGISTER}
-              className="inline-flex min-h-12 items-center justify-center rounded-md bg-primary-soft px-4 text-[15px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              onClick={onClose}
-            >
-              Job Seeker
-            </Link>
-            <Link
-              href={ROUTES.EMPLOYER_REGISTER}
-              className="inline-flex min-h-12 items-center justify-center rounded-md border border-primary bg-transparent px-4 text-[15px] font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              onClick={onClose}
-            >
-              Employers / Post Job
-            </Link>
-          </div>
+          {!isEmployerAuthenticated ? (
+            <div className="mt-4 flex flex-col gap-3 border-t border-border-subtle pt-4">
+              <Link
+                href={ROUTES.JOB_SEEKER_REGISTER}
+                className="inline-flex min-h-12 items-center justify-center rounded-md bg-primary-soft px-4 text-[15px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                onClick={onClose}
+              >
+                Job Seeker
+              </Link>
+              <Link
+                href={ROUTES.EMPLOYER_REGISTER}
+                className="inline-flex min-h-12 items-center justify-center rounded-md border border-primary bg-transparent px-4 text-[15px] font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                onClick={onClose}
+              >
+                Employers / Post Job
+              </Link>
+            </div>
+          ) : null}
         </div>
       </nav>
     </>

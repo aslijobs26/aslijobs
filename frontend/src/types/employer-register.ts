@@ -1,6 +1,9 @@
 import type { StaticImageData } from "next/image";
 
-export type EmployerRegisterAccountType = "company" | "individual";
+export type EmployerRegisterAccountType =
+  | "company"
+  | "consultancy"
+  | "individual";
 
 export type EmployerRegisterStep = "account" | "company-profile";
 
@@ -29,6 +32,13 @@ export type EmployerRegisterDocumentPreview = {
   file: File;
 };
 
+export type EmployerRegisterImagePreview = {
+  name: string;
+  sizeBytes: number;
+  file: File;
+  previewUrl: string;
+};
+
 export type EmployerRegisterFormData = {
   companyName: string;
   firstName: string;
@@ -41,6 +51,9 @@ export type EmployerRegisterCompanyProfileData = {
   companyName: string;
   industry: string;
   businessCategory: string;
+  companyStrength: string;
+  minimumEmployees: string;
+  maximumEmployees: string;
   companyAddress: string;
   pincode: string;
   city: string;

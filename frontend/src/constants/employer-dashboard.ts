@@ -32,74 +32,74 @@ export const EMPLOYER_DASHBOARD_NAV_ITEMS: EmployerDashboardNavItem[] = [
   {
     id: "jobs",
     label: "Jobs",
-    href: "#",
+    href: ROUTES.EMPLOYER_JOBS,
     icon: Briefcase,
   },
   {
     id: "candidates",
     label: "Candidates",
-    href: "#",
+    href: ROUTES.EMPLOYER_CANDIDATES,
     icon: Users,
   },
   {
     id: "interviews",
     label: "Interviews",
-    href: "#",
+    href: ROUTES.EMPLOYER_INTERVIEWS,
     icon: CalendarDays,
   },
   {
     id: "messages",
     label: "Messages",
-    href: "#",
+    href: ROUTES.EMPLOYER_MESSAGES,
     icon: MessageSquare,
     badge: 24,
   },
   {
     id: "saved-candidates",
     label: "Saved Candidates",
-    href: "#",
+    href: ROUTES.EMPLOYER_SAVED_CANDIDATES,
     icon: Star,
   },
   {
     id: "campaigns",
     label: "Campaigns",
-    href: "#",
+    href: ROUTES.EMPLOYER_CAMPAIGNS,
     icon: Megaphone,
   },
   {
     id: "analytics",
     label: "Analytics",
-    href: "#",
+    href: ROUTES.EMPLOYER_ANALYTICS,
     icon: LineChart,
   },
   {
     id: "reports",
     label: "Reports",
-    href: "#",
+    href: ROUTES.EMPLOYER_REPORTS,
     icon: FileBarChart,
   },
   {
     id: "subscription",
     label: "Subscription",
-    href: "#",
+    href: ROUTES.EMPLOYER_SUBSCRIPTION,
     icon: CreditCard,
   },
   {
     id: "company-profile",
     label: "Company Profile",
-    href: "#",
+    href: ROUTES.EMPLOYER_COMPANY_PROFILE,
     icon: Building2,
   },
   {
     id: "team-management",
     label: "Team Management",
-    href: "#",
+    href: ROUTES.EMPLOYER_TEAM_MANAGEMENT,
     icon: UsersRound,
   },
   {
     id: "settings",
     label: "Settings",
-    href: "#",
+    href: ROUTES.EMPLOYER_SETTINGS,
     icon: Settings,
   },
 ];
@@ -108,6 +108,7 @@ export const EMPLOYER_DASHBOARD_HELP_TITLE = "Need Help?";
 export const EMPLOYER_DASHBOARD_HELP_SUBTITLE = "We are here to help you";
 export const EMPLOYER_DASHBOARD_HELP_CTA = "Contact Support";
 export const EMPLOYER_DASHBOARD_HELP_ICON = Headphones;
+export const EMPLOYER_DASHBOARD_HELP_CENTER_TITLE = "Help Center";
 
 export const EMPLOYER_DASHBOARD_SEARCH_PLACEHOLDER =
   "Search candidates, jobs, applications...";
@@ -126,7 +127,11 @@ export const EMPLOYER_DASHBOARD_PROFILE_MENU_MY_PROFILE = "My Profile";
 export const EMPLOYER_DASHBOARD_PROFILE_MENU_SETTINGS = "Settings";
 export const EMPLOYER_DASHBOARD_PROFILE_MENU_LOGOUT = "Logout";
 
-export const EMPLOYER_DASHBOARD_PLACEHOLDER_TITLE = "Employer Dashboard";
-export const EMPLOYER_DASHBOARD_PLACEHOLDER_HEADING = "Coming Soon...";
+export const EMPLOYER_DASHBOARD_PLACEHOLDER_HEADING = "Coming Soon";
 export const EMPLOYER_DASHBOARD_PLACEHOLDER_DESCRIPTION =
-  "This section is under development.";
+  "This module is currently under development.";
+export const EMPLOYER_DASHBOARD_PLACEHOLDER_ROUTING_NOTE =
+  "The frontend routing has been completed successfully.";
+export const EMPLOYER_DASHBOARD_PLACEHOLDER_PHASES_NOTE =
+  "Business logic, backend APIs and UI implementation will be added in upcoming development phases.";
+export const EMPLOYER_DASHBOARD_PLACEHOLDER_BACK_LABEL = "Back to Dashboard";

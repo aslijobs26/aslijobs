@@ -18,16 +18,12 @@ declare global {
 
 function extractBearerToken(req: Request): string | null {
   const header = req.headers.authorization;
-  if (!header) {
+  if (!header || Array.isArray(header)) {
     return null;
   }
 
-  const [scheme, token] = header.split(" ");
-  if (scheme?.toLowerCase() !== "bearer" || !token) {
-    return null;
-  }
-
-  return token;
+  const match = /^Bearer\s+(\S+)/i.exec(header.trim());
+  return match?.[1] ?? null;
 }
 
 export async function requireEmployerAuth(

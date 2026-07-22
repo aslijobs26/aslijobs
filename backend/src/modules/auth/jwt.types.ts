@@ -1,7 +1,7 @@
 export type EmployerJwtPayload = {
   sub: string;
   role: "employer";
-  accountType: "company" | "individual";
+  accountType: "company" | "consultancy" | "individual";
   whatsappNumber: string;
 };
 

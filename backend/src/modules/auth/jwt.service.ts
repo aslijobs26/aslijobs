@@ -87,6 +87,12 @@ export class JwtService {
         throw error;
       }
 
+      if (env.NODE_ENV === "development") {
+        const reason =
+          error instanceof Error ? `${error.name}: ${error.message}` : "unknown";
+        console.error(`[JWT] access token verification failed (${reason})`);
+      }
+
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
   }

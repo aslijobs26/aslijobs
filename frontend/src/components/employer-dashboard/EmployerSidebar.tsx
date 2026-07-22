@@ -36,6 +36,9 @@ export function EmployerSidebar({
   onMobileClose,
 }: EmployerSidebarProps) {
   const pathname = usePathname();
+  const isHelpCenterActive =
+    pathname === ROUTES.EMPLOYER_HELP_CENTER ||
+    pathname.startsWith(`${ROUTES.EMPLOYER_HELP_CENTER}/`);
 
   return (
     <>
@@ -125,9 +128,8 @@ export function EmployerSidebar({
                 <EmployerSidebarItem
                   item={item}
                   isActive={
-                    item.href !== "#" &&
-                    (pathname === item.href ||
-                      pathname.startsWith(`${item.href}/`))
+                    pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`)
                   }
                   collapsed={collapsed}
                   onNavigate={onMobileClose}
@@ -151,23 +153,27 @@ export function EmployerSidebar({
               <p className="mt-1 text-xs leading-relaxed text-muted">
                 {EMPLOYER_DASHBOARD_HELP_SUBTITLE}
               </p>
-              <button
-                type="button"
+              <Link
+                href={ROUTES.EMPLOYER_HELP_CENTER}
+                onClick={onMobileClose}
+                aria-current={isHelpCenterActive ? "page" : undefined}
                 className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-primary-soft transition-colors hover:border-primary-soft/40 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               >
                 <HelpIcon className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
                 {EMPLOYER_DASHBOARD_HELP_CTA}
-              </button>
+              </Link>
             </div>
           ) : (
-            <button
-              type="button"
+            <Link
+              href={ROUTES.EMPLOYER_HELP_CENTER}
+              onClick={onMobileClose}
+              aria-current={isHelpCenterActive ? "page" : undefined}
               className="inline-flex w-full items-center justify-center rounded-lg border border-border bg-surface p-2.5 text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               aria-label={EMPLOYER_DASHBOARD_HELP_CTA}
               title={EMPLOYER_DASHBOARD_HELP_CTA}
             >
               <HelpIcon className="size-4" strokeWidth={2} aria-hidden="true" />
-            </button>
+            </Link>
           )}
 
           <button

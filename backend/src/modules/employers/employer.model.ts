@@ -17,6 +17,10 @@ const employerSchema = new Schema(
       trim: true,
       default: "",
     },
+    // Consultancy profile stores its business name in companyName.
+    // Shared business-profile fields below are used by company + consultancy:
+    // companyAddress, pincode, city, state, companyLogo, industry,
+    // businessCategory, minimumEmployees, maximumEmployees.
     firstName: {
       type: String,
       required: true,
@@ -36,6 +40,37 @@ const employerSchema = new Schema(
       type: String,
       trim: true,
       default: "",
+    },
+    roles: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    minimumEmployees: {
+      type: Number,
+      default: null,
+    },
+    maximumEmployees: {
+      type: Number,
+      default: null,
+    },
+    companyLogo: {
+      url: { type: String, default: "" },
+      storagePath: { type: String, default: "" },
+      publicId: { type: String, default: "" },
+      storageProvider: { type: String, default: "" },
+      originalName: { type: String, default: "" },
+      mimeType: { type: String, default: "" },
+      fileSize: { type: Number, default: 0 },
+    },
+    profilePhoto: {
+      url: { type: String, default: "" },
+      storagePath: { type: String, default: "" },
+      publicId: { type: String, default: "" },
+      storageProvider: { type: String, default: "" },
+      originalName: { type: String, default: "" },
+      mimeType: { type: String, default: "" },
+      fileSize: { type: Number, default: 0 },
     },
     companyAddress: {
       type: String,

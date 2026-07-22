@@ -3,6 +3,7 @@ import {
   EMPLOYER_ACCOUNT_TYPES,
   EMPLOYER_BUSINESS_DOCUMENT_TYPES,
   EMPLOYER_IDENTITY_DOCUMENT_TYPES,
+  isBusinessEmployerAccountType,
 } from "../../constants/employer.constants.js";
 
 const whatsappNumberSchema = z
@@ -25,11 +26,17 @@ export const registerEmployerSchema = z
     whatsappNumber: whatsappNumberSchema,
   })
   .superRefine((data, ctx) => {
-    if (data.accountType === "company" && !data.companyName.trim()) {
+    if (
+      isBusinessEmployerAccountType(data.accountType) &&
+      !data.companyName.trim()
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["companyName"],
-        message: "Company / Business Name is required",
+        message:
+          data.accountType === "consultancy"
+            ? "Consultancy Name is required"
+            : "Company / Business Name is required",
       });
     }
   });
@@ -48,31 +55,99 @@ export const employerIdParamsSchema = z.object({
     .regex(/^[a-fA-F0-9]{24}$/, "Invalid employer id"),
 });
 
-export const completeCompanyProfileSchema = z.object({
-  companyName: z.string().trim().min(1, "Company / Business Name is required"),
-  industry: z.string().trim().min(1, "Industry is required"),
-  businessCategory: z.string().trim().min(1, "Business category is required"),
-  companyAddress: z.string().trim().min(1, "Company address is required"),
-  pincode: z.string().trim().min(1, "Pincode is required"),
-  city: z.string().trim().min(1, "City is required"),
-  state: z.string().trim().min(1, "State is required"),
-  emailAddress: z
-    .string()
-    .trim()
-    .email("Enter a valid email address")
-    .optional()
-    .or(z.literal("")),
-  whatsappNumber: whatsappNumberSchema,
-  verificationDocument: z.enum(EMPLOYER_BUSINESS_DOCUMENT_TYPES, {
-    message: "Select a valid business verification document",
-  }),
-});
+const optionalNonNegativeInt = z.preprocess((value) => {
+  if (value === "" || value === undefined || value === null) {
+    return undefined;
+  }
+
+  return value;
+}, z.coerce.number().int().min(0).optional());
+
+export const completeCompanyProfileSchema = z
+  .object({
+    companyName: z.string().trim().min(1, "Business name is required"),
+    industry: z.string().trim().optional().default(""),
+    businessCategory: z.string().trim().optional().default(""),
+    minimumEmployees: optionalNonNegativeInt,
+    maximumEmployees: optionalNonNegativeInt,
+    companyAddress: z.string().trim().min(1, "Company address is required"),
+    pincode: z.string().trim().min(1, "Pincode is required"),
+    city: z.string().trim().min(1, "City is required"),
+    state: z.string().trim().min(1, "State is required"),
+    emailAddress: z
+      .string()
+      .trim()
+      .email("Enter a valid email address")
+      .optional()
+      .or(z.literal("")),
+    whatsappNumber: whatsappNumberSchema,
+    verificationDocument: z.enum(EMPLOYER_BUSINESS_DOCUMENT_TYPES, {
+      message: "Select a valid business verification document",
+    }),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      typeof data.minimumEmployees === "number" &&
+      typeof data.maximumEmployees === "number" &&
+      data.maximumEmployees < data.minimumEmployees
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["maximumEmployees"],
+        message:
+          "Maximum employees must be greater than or equal to minimum employees",
+      });
+    }
+  });
 
 export const completeIndividualIdentitySchema = z.object({
   documentType: z.enum(EMPLOYER_IDENTITY_DOCUMENT_TYPES, {
     message: "Select a valid identity document",
   }),
 });
+
+export const updateEmployerProfileSchema = z
+  .object({
+    companyName: z.string().trim().min(1).optional(),
+    industry: z.string().trim().min(1).optional(),
+    businessCategory: z.string().trim().min(1).optional(),
+    minimumEmployees: z.coerce.number().int().min(0).optional(),
+    maximumEmployees: z.coerce.number().int().min(0).optional(),
+    companyAddress: z.string().trim().min(1).optional(),
+    pincode: z.string().trim().min(1).optional(),
+    city: z.string().trim().min(1).optional(),
+    state: z.string().trim().min(1).optional(),
+    emailAddress: z
+      .string()
+      .trim()
+      .email("Enter a valid email address")
+      .optional()
+      .or(z.literal("")),
+    firstName: z.string().trim().min(1).optional(),
+    lastName: z.string().trim().min(1).optional(),
+    removeCompanyLogo: z
+      .union([z.boolean(), z.literal("true"), z.literal("false")])
+      .optional()
+      .transform((value) => value === true || value === "true"),
+    removeProfilePhoto: z
+      .union([z.boolean(), z.literal("true"), z.literal("false")])
+      .optional()
+      .transform((value) => value === true || value === "true"),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      typeof data.minimumEmployees === "number" &&
+      typeof data.maximumEmployees === "number" &&
+      data.maximumEmployees < data.minimumEmployees
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["maximumEmployees"],
+        message:
+          "Maximum employees must be greater than or equal to minimum employees",
+      });
+    }
+  });
 
 export type RegisterEmployerSchema = z.infer<typeof registerEmployerSchema>;
 export type VerifyEmployerOtpSchema = z.infer<typeof verifyEmployerOtpSchema>;
@@ -81,4 +156,7 @@ export type CompleteCompanyProfileSchema = z.infer<
 >;
 export type CompleteIndividualIdentitySchema = z.infer<
   typeof completeIndividualIdentitySchema
+>;
+export type UpdateEmployerProfileSchema = z.infer<
+  typeof updateEmployerProfileSchema
 >;

@@ -3,8 +3,9 @@
 import {
   EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS,
   EMPLOYER_REGISTER_BUSINESS_VERIFICATION_TITLE,
-  EMPLOYER_REGISTER_CITY_OPTIONS,
   EMPLOYER_REGISTER_COMPANY_PROFILE_HEADING,
+  EMPLOYER_REGISTER_COMPANY_STRENGTH_OPTIONS,
+  EMPLOYER_REGISTER_CONSULTANCY_PROFILE_HEADING,
   EMPLOYER_REGISTER_CONTINUE_LABEL,
   EMPLOYER_REGISTER_DOCUMENT_ACCEPT,
   EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES,
@@ -14,7 +15,6 @@ import {
   EMPLOYER_REGISTER_INITIAL_COMPANY_PROFILE_DATA,
   EMPLOYER_REGISTER_PINCODE_LOCATION_MAP,
   EMPLOYER_REGISTER_PINCODE_OPTIONS,
-  EMPLOYER_REGISTER_STATE_OPTIONS,
   getEmployerRegisterBusinessCategoryOptions,
 } from "@/constants/employer-register";
 import { completeEmployerCompanyProfile } from "@/services/employer-register.service";
@@ -22,6 +22,7 @@ import type {
   EmployerRegisterBusinessDocumentType,
   EmployerRegisterCompanyProfileData,
   EmployerRegisterDocumentPreview,
+  EmployerRegisterImagePreview,
 } from "@/types/employer-register";
 import { CloudUpload, FileText, ShieldCheck, X } from "lucide-react";
 import { isAxiosError } from "axios";
@@ -34,6 +35,8 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import { EmployerImageUploadField } from "./EmployerImageUploadField";
+import { EmployerRegisterPlaceAutocomplete } from "./EmployerRegisterPlaceAutocomplete";
 import { EmployerRegisterSearchableSelect } from "./EmployerRegisterSearchableSelect";
 
 function formatFileSize(sizeBytes: number) {
@@ -50,7 +53,7 @@ function formatFileSize(sizeBytes: number) {
 
 function isAcceptedFile(file: File) {
   const extension = file.name.split(".").pop()?.toLowerCase();
-  const allowedExtensions = new Set(["pdf", "jpg", "jpeg", "png"]);
+  const allowedExtensions = new Set(["pdf", "jpg", "jpeg", "png", "webp"]);
 
   return (
     allowedExtensions.has(extension ?? "") &&
@@ -60,6 +63,7 @@ function isAcceptedFile(file: File) {
 
 type EmployerRegisterCompanyProfileFormProps = {
   employerId: string;
+  accountType?: "company" | "consultancy";
   initialCompanyName?: string;
   initialWhatsappNumber?: string;
   initialEmailAddress?: string;
@@ -68,11 +72,13 @@ type EmployerRegisterCompanyProfileFormProps = {
 
 export function EmployerRegisterCompanyProfileForm({
   employerId,
+  accountType = "company",
   initialCompanyName = "",
   initialWhatsappNumber = "",
   initialEmailAddress = "",
   onContinue,
 }: EmployerRegisterCompanyProfileFormProps) {
+  const isConsultancy = accountType === "consultancy";
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<EmployerRegisterCompanyProfileData>({
@@ -83,12 +89,27 @@ export function EmployerRegisterCompanyProfileForm({
   });
   const [documentPreview, setDocumentPreview] =
     useState<EmployerRegisterDocumentPreview | null>(null);
+  const [companyLogoPreview, setCompanyLogoPreview] =
+    useState<EmployerRegisterImagePreview | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const businessCategoryOptions = getEmployerRegisterBusinessCategoryOptions(
     formData.industry,
   );
+
+  const profileHeading = isConsultancy
+    ? EMPLOYER_REGISTER_CONSULTANCY_PROFILE_HEADING
+    : EMPLOYER_REGISTER_COMPANY_PROFILE_HEADING;
+  const nameLabel = isConsultancy
+    ? "Consultancy Name*"
+    : "Company / Business Name*";
+  const namePlaceholder = isConsultancy
+    ? "Enter Consultancy Name"
+    : "Enter Company / Business Name";
+  const submitErrorFallback = isConsultancy
+    ? "Failed to complete consultancy profile"
+    : "Failed to complete company profile";
 
   const updateField = <K extends keyof EmployerRegisterCompanyProfileData>(
     field: K,
@@ -158,6 +179,35 @@ export function EmployerRegisterCompanyProfileForm({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (!isConsultancy && !formData.companyStrength) {
+      setErrorMessage("Select company strength");
+      return;
+    }
+
+    if (!formData.companyName.trim()) {
+      setErrorMessage(
+        isConsultancy
+          ? "Consultancy Name is required"
+          : "Company / Business Name is required",
+      );
+      return;
+    }
+
+    if (!formData.whatsappNumber.trim()) {
+      setErrorMessage("WhatsApp Number is required");
+      return;
+    }
+
+    if (!formData.companyAddress.trim()) {
+      setErrorMessage("Company Address is required");
+      return;
+    }
+
+    if (!formData.pincode.trim() || !formData.city.trim() || !formData.state.trim()) {
+      setErrorMessage("Pincode, City and State are required");
+      return;
+    }
+
     if (!formData.verificationDocument) {
       setErrorMessage("Select a business verification document");
       return;
@@ -165,6 +215,11 @@ export function EmployerRegisterCompanyProfileForm({
 
     if (!documentPreview?.file) {
       setErrorMessage("Upload the selected verification document");
+      return;
+    }
+
+    if (isConsultancy && !companyLogoPreview?.file) {
+      setErrorMessage("Upload Company Logo");
       return;
     }
 
@@ -177,6 +232,7 @@ export function EmployerRegisterCompanyProfileForm({
         profile: formData,
         documentType: formData.verificationDocument,
         documentFile: documentPreview.file,
+        companyLogoFile: companyLogoPreview?.file,
       });
       onContinue?.();
     } catch (error) {
@@ -186,7 +242,7 @@ export function EmployerRegisterCompanyProfileForm({
       setErrorMessage(
         typeof message === "string" && message.trim()
           ? message
-          : "Failed to complete company profile",
+          : submitErrorFallback,
       );
     } finally {
       setIsSubmitting(false);
@@ -195,9 +251,7 @@ export function EmployerRegisterCompanyProfileForm({
 
   return (
     <div className="w-full">
-      <h1 className="employer-register-form-heading">
-        {EMPLOYER_REGISTER_COMPANY_PROFILE_HEADING}
-      </h1>
+      <h1 className="employer-register-form-heading">{profileHeading}</h1>
 
       <form
         className="employer-register-form-fields mt-8 w-full"
@@ -205,142 +259,321 @@ export function EmployerRegisterCompanyProfileForm({
         noValidate
       >
         <div className="employer-register-form-stack">
-          <label htmlFor="company-profile-name" className="employer-register-form-label">
-            Company / Business Name*
+          <label
+            htmlFor="company-profile-name"
+            className="employer-register-form-label"
+          >
+            {nameLabel}
           </label>
           <input
             id="company-profile-name"
             type="text"
             value={formData.companyName}
             onChange={(event) => updateField("companyName", event.target.value)}
-            placeholder="Enter Company / Business Name"
+            placeholder={namePlaceholder}
             autoComplete="organization"
             className="employer-register-form-input"
           />
         </div>
 
-        <div className="employer-register-form-row">
-          <EmployerRegisterSearchableSelect
-            id="company-profile-industry"
-            label="Industry"
-            required
-            value={formData.industry}
-            placeholder="Select Industry"
-            options={EMPLOYER_REGISTER_INDUSTRY_OPTIONS}
-            onChange={handleIndustryChange}
-          />
-          <EmployerRegisterSearchableSelect
-            id="company-profile-business-category"
-            label="Business Category"
-            required
-            disabled={!formData.industry}
-            value={formData.businessCategory}
-            placeholder="Select Business Category"
-            options={businessCategoryOptions}
-            onChange={(value) => updateField("businessCategory", value)}
-          />
-        </div>
+        {isConsultancy ? (
+          <>
+            <div className="employer-register-form-row">
+              <div className="employer-register-form-stack">
+                <label
+                  htmlFor="company-profile-whatsapp"
+                  className="employer-register-form-label"
+                >
+                  WhatsApp Number*
+                </label>
+                <input
+                  id="company-profile-whatsapp"
+                  type="tel"
+                  inputMode="numeric"
+                  value={formData.whatsappNumber}
+                  onChange={(event) =>
+                    updateField(
+                      "whatsappNumber",
+                      event.target.value.replace(/\D/g, "").slice(0, 10),
+                    )
+                  }
+                  placeholder="Enter Company WhatsApp Number"
+                  autoComplete="tel"
+                  className="employer-register-form-input"
+                />
+              </div>
 
-        <div className="employer-register-form-stack">
-          <label
-            htmlFor="company-profile-address"
-            className="employer-register-form-label"
-          >
-            Company Address*
-          </label>
-          <textarea
-            id="company-profile-address"
-            value={formData.companyAddress}
-            onChange={(event) =>
-              updateField("companyAddress", event.target.value)
-            }
-            placeholder="Enter Company Address"
-            rows={3}
-            className="employer-register-form-textarea"
-          />
-        </div>
+              <div className="employer-register-form-stack">
+                <label
+                  htmlFor="company-profile-email"
+                  className="employer-register-form-label"
+                >
+                  Email Address
+                </label>
+                <input
+                  id="company-profile-email"
+                  type="email"
+                  value={formData.emailAddress}
+                  onChange={(event) =>
+                    updateField("emailAddress", event.target.value)
+                  }
+                  placeholder="Enter Company Email Address"
+                  autoComplete="email"
+                  className="employer-register-form-input"
+                />
+              </div>
+            </div>
 
-        <div className="employer-register-form-row employer-register-form-row--three">
-          <EmployerRegisterSearchableSelect
-            id="company-profile-pincode"
-            label="Pincode"
-            required
-            allowCustom
-            initialVisibleCount={5}
-            value={formData.pincode}
-            placeholder="Select Pincode"
-            options={EMPLOYER_REGISTER_PINCODE_OPTIONS}
-            onChange={handlePincodeChange}
-          />
-          <EmployerRegisterSearchableSelect
-            id="company-profile-city"
-            label="City"
-            required
-            allowCustom
-            initialVisibleCount={5}
-            value={formData.city}
-            placeholder="Select City"
-            options={EMPLOYER_REGISTER_CITY_OPTIONS}
-            onChange={(value) => updateField("city", value)}
-          />
-          <EmployerRegisterSearchableSelect
-            id="company-profile-state"
-            label="State"
-            required
-            allowCustom
-            initialVisibleCount={5}
-            value={formData.state}
-            placeholder="Select State"
-            options={EMPLOYER_REGISTER_STATE_OPTIONS}
-            onChange={(value) => updateField("state", value)}
-          />
-        </div>
+            <div className="employer-register-form-stack">
+              <label
+                htmlFor="company-profile-address"
+                className="employer-register-form-label"
+              >
+                Company Address*
+              </label>
+              <textarea
+                id="company-profile-address"
+                value={formData.companyAddress}
+                onChange={(event) =>
+                  updateField("companyAddress", event.target.value)
+                }
+                placeholder="#6-250, Kavuri Hills, Madhapur, Hyderabad, Telangana"
+                rows={3}
+                className="employer-register-form-textarea"
+              />
+            </div>
 
-        <div className="employer-register-form-row">
-          <div className="employer-register-form-stack">
-            <label
-              htmlFor="company-profile-whatsapp"
-              className="employer-register-form-label"
-            >
-              WhatsApp Number*
-            </label>
-            <input
-              id="company-profile-whatsapp"
-              type="tel"
-              inputMode="numeric"
-              value={formData.whatsappNumber}
-              onChange={(event) =>
-                updateField(
-                  "whatsappNumber",
-                  event.target.value.replace(/\D/g, "").slice(0, 10),
-                )
-              }
-              placeholder="Enter WhatsApp Number"
-              autoComplete="tel"
-              className="employer-register-form-input"
-            />
-          </div>
+            <div className="employer-register-form-row employer-register-form-row--three">
+              <div className="employer-register-form-stack">
+                <label
+                  htmlFor="company-profile-state"
+                  className="employer-register-form-label"
+                >
+                  State*
+                </label>
+                <EmployerRegisterPlaceAutocomplete
+                  id="company-profile-state"
+                  mode="state"
+                  value={formData.state}
+                  placeholder="Select State"
+                  onChange={(value) => {
+                    setFormData((current) => ({
+                      ...current,
+                      state: value,
+                      city: "",
+                    }));
+                  }}
+                  onSelect={(suggestion) => {
+                    setFormData((current) => ({
+                      ...current,
+                      state: suggestion.state,
+                      city: "",
+                    }));
+                  }}
+                />
+              </div>
 
-          <div className="employer-register-form-stack">
-            <label
-              htmlFor="company-profile-email"
-              className="employer-register-form-label"
-            >
-              Email Address
-            </label>
-            <input
-              id="company-profile-email"
-              type="email"
-              value={formData.emailAddress}
-              onChange={(event) =>
-                updateField("emailAddress", event.target.value)
-              }
-              placeholder="Enter Email Address"
-              autoComplete="email"
-              className="employer-register-form-input"
-            />
-          </div>
-        </div>
+              <div className="employer-register-form-stack">
+                <label
+                  htmlFor="company-profile-city"
+                  className="employer-register-form-label"
+                >
+                  City*
+                </label>
+                <EmployerRegisterPlaceAutocomplete
+                  id="company-profile-city"
+                  mode="city"
+                  value={formData.city}
+                  selectedState={formData.state}
+                  disabled={!formData.state.trim()}
+                  placeholder={
+                    formData.state.trim() ? "Select City" : "Select a state first"
+                  }
+                  onChange={(value) => updateField("city", value)}
+                  onSelect={(suggestion) => {
+                    updateField("city", suggestion.city);
+                  }}
+                />
+              </div>
+
+              <EmployerRegisterSearchableSelect
+                id="company-profile-pincode"
+                label="Pincode"
+                required
+                allowCustom
+                initialVisibleCount={5}
+                value={formData.pincode}
+                placeholder="Select Pincode"
+                options={EMPLOYER_REGISTER_PINCODE_OPTIONS}
+                onChange={handlePincodeChange}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="employer-register-form-row employer-register-form-row--three">
+              <EmployerRegisterSearchableSelect
+                id="company-profile-industry"
+                label="Industry"
+                required
+                value={formData.industry}
+                placeholder="Select Industry"
+                options={EMPLOYER_REGISTER_INDUSTRY_OPTIONS}
+                onChange={handleIndustryChange}
+              />
+              <EmployerRegisterSearchableSelect
+                id="company-profile-business-category"
+                label="Business Category"
+                required
+                disabled={!formData.industry}
+                value={formData.businessCategory}
+                placeholder="Select Business Category"
+                options={businessCategoryOptions}
+                onChange={(value) => updateField("businessCategory", value)}
+              />
+              <EmployerRegisterSearchableSelect
+                id="company-profile-strength"
+                label="Company Strength"
+                required
+                value={formData.companyStrength}
+                placeholder="Select Strength"
+                options={EMPLOYER_REGISTER_COMPANY_STRENGTH_OPTIONS}
+                onChange={(value) => updateField("companyStrength", value)}
+              />
+            </div>
+
+            <div className="employer-register-form-stack">
+              <label
+                htmlFor="company-profile-address"
+                className="employer-register-form-label"
+              >
+                Company Address*
+              </label>
+              <textarea
+                id="company-profile-address"
+                value={formData.companyAddress}
+                onChange={(event) =>
+                  updateField("companyAddress", event.target.value)
+                }
+                placeholder="#6-250, Kavuri Hills, Madhapur, Hyderabad, Telangana"
+                rows={3}
+                className="employer-register-form-textarea"
+              />
+            </div>
+
+            <div className="employer-register-form-row employer-register-form-row--three">
+              <div className="employer-register-form-stack">
+                <label
+                  htmlFor="company-profile-state"
+                  className="employer-register-form-label"
+                >
+                  State*
+                </label>
+                <EmployerRegisterPlaceAutocomplete
+                  id="company-profile-state"
+                  mode="state"
+                  value={formData.state}
+                  placeholder="Search State"
+                  onChange={(value) => {
+                    setFormData((current) => ({
+                      ...current,
+                      state: value,
+                      city: "",
+                    }));
+                  }}
+                  onSelect={(suggestion) => {
+                    setFormData((current) => ({
+                      ...current,
+                      state: suggestion.state,
+                      city: "",
+                    }));
+                  }}
+                />
+              </div>
+
+              <div className="employer-register-form-stack">
+                <label
+                  htmlFor="company-profile-city"
+                  className="employer-register-form-label"
+                >
+                  City*
+                </label>
+                <EmployerRegisterPlaceAutocomplete
+                  id="company-profile-city"
+                  mode="city"
+                  value={formData.city}
+                  selectedState={formData.state}
+                  disabled={!formData.state.trim()}
+                  placeholder={
+                    formData.state.trim() ? "Search City" : "Select a state first"
+                  }
+                  onChange={(value) => updateField("city", value)}
+                  onSelect={(suggestion) => {
+                    updateField("city", suggestion.city);
+                  }}
+                />
+              </div>
+
+              <EmployerRegisterSearchableSelect
+                id="company-profile-pincode"
+                label="Pincode"
+                required
+                allowCustom
+                initialVisibleCount={5}
+                value={formData.pincode}
+                placeholder="Select Pincode"
+                options={EMPLOYER_REGISTER_PINCODE_OPTIONS}
+                onChange={handlePincodeChange}
+              />
+            </div>
+
+            <div className="employer-register-form-row">
+              <div className="employer-register-form-stack">
+                <label
+                  htmlFor="company-profile-whatsapp"
+                  className="employer-register-form-label"
+                >
+                  WhatsApp Number*
+                </label>
+                <input
+                  id="company-profile-whatsapp"
+                  type="tel"
+                  inputMode="numeric"
+                  value={formData.whatsappNumber}
+                  onChange={(event) =>
+                    updateField(
+                      "whatsappNumber",
+                      event.target.value.replace(/\D/g, "").slice(0, 10),
+                    )
+                  }
+                  placeholder="Enter Company WhatsApp Number"
+                  autoComplete="tel"
+                  className="employer-register-form-input"
+                />
+              </div>
+
+              <div className="employer-register-form-stack">
+                <label
+                  htmlFor="company-profile-email"
+                  className="employer-register-form-label"
+                >
+                  Email Address
+                </label>
+                <input
+                  id="company-profile-email"
+                  type="email"
+                  value={formData.emailAddress}
+                  onChange={(event) =>
+                    updateField("emailAddress", event.target.value)
+                  }
+                  placeholder="Enter Company Email Address"
+                  autoComplete="email"
+                  className="employer-register-form-input"
+                />
+              </div>
+            </div>
+          </>
+        )}
 
         <section className="employer-register-business-verification">
           <div className="employer-register-business-verification-heading">
@@ -437,6 +670,12 @@ export function EmployerRegisterCompanyProfileForm({
               />
             </>
           ) : null}
+
+          <EmployerImageUploadField
+            label="Upload Company Logo"
+            preview={companyLogoPreview}
+            onPreviewChange={setCompanyLogoPreview}
+          />
         </section>
 
         {errorMessage ? (

@@ -263,7 +263,30 @@ export const WORK_MODE_OPTIONS: PostJobOption<WorkMode>[] = [
     label: "Office & Field Work",
     description: "Employee works from both the office & field locations.",
   },
+  {
+    value: "home",
+    label: "Work From Home",
+    description: "Employee works remotely from home.",
+  },
 ];
+
+export type PostJobPreviewLanguageId =
+  | "english"
+  | "hindi"
+  | "telugu"
+  | "tamil"
+  | "kannada"
+  | "malayalam";
+
+export const POST_JOB_PREVIEW_LANGUAGE_OPTIONS: PostJobOption<PostJobPreviewLanguageId>[] =
+  [
+    { value: "english", label: "English" },
+    { value: "hindi", label: "Hindi" },
+    { value: "telugu", label: "Telugu" },
+    { value: "tamil", label: "Tamil" },
+    { value: "kannada", label: "Kannada" },
+    { value: "malayalam", label: "Malayalam" },
+  ];
 
 export const POST_JOB_EDUCATION_OPTIONS: PostJobOption<PostJobEducationId>[] = [
   { value: "10th_or_below", label: "Below 10th" },

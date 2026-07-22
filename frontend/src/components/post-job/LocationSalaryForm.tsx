@@ -1,10 +1,8 @@
 "use client";
 
 import {
-  POST_JOB_CITY_OPTIONS,
   POST_JOB_PERK_OPTIONS,
   POST_JOB_SALARY_TYPE_OPTIONS,
-  POST_JOB_STATE_OPTIONS,
 } from "@/constants/post-job";
 import type {
   LocationAndSalaryFormData,
@@ -35,6 +33,7 @@ import {
 
 type LocationSalaryFormProps = {
   formData: LocationAndSalaryFormData;
+  fieldErrors?: Record<string, string>;
   onFieldChange: <K extends keyof LocationAndSalaryFormData>(
     field: K,
     value: LocationAndSalaryFormData[K],
@@ -51,6 +50,7 @@ function SelectField({
   placeholder,
   options,
   onChange,
+  error,
 }: {
   id: string;
   label: string;
@@ -58,9 +58,10 @@ function SelectField({
   placeholder: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
+  error?: string;
 }) {
   return (
-    <PostJobFormField id={id} label={label}>
+    <PostJobFormField id={id} label={label} error={error}>
       <div className="relative">
         <select
           id={id}
@@ -70,7 +71,9 @@ function SelectField({
             postJobInputClassName,
             "cursor-pointer appearance-none pr-10",
             !value && "text-muted",
+            error && "border-red-500 focus:border-red-500 focus:ring-red-500/20",
           )}
+          aria-invalid={Boolean(error)}
         >
           <option value="" disabled>
             {placeholder}
@@ -93,6 +96,7 @@ function SelectField({
 
 export function LocationSalaryForm({
   formData,
+  fieldErrors = {},
   onFieldChange,
   onBack,
   onContinue,
@@ -130,35 +134,72 @@ export function LocationSalaryForm({
       >
         <div className={postJobFormSectionsClassName}>
           <div className={postJobFormGridGapClassName}>
-            <SelectField
+            <PostJobFormField
               id="job-state"
               label="State"
-              value={formData.state}
-              placeholder="Select state"
-              options={POST_JOB_STATE_OPTIONS}
-              onChange={(value) => onFieldChange("state", value)}
-            />
-            <SelectField
+              error={fieldErrors.state}
+            >
+              <input
+                id="job-state"
+                type="text"
+                value={formData.state}
+                onChange={(event) => onFieldChange("state", event.target.value)}
+                placeholder="Enter state"
+                autoComplete="address-level1"
+                className={cn(
+                  postJobInputClassName,
+                  fieldErrors.state &&
+                    "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                )}
+                aria-invalid={Boolean(fieldErrors.state)}
+              />
+            </PostJobFormField>
+            <PostJobFormField
               id="job-city"
               label="City"
-              value={formData.city}
-              placeholder="Select city"
-              options={POST_JOB_CITY_OPTIONS}
-              onChange={(value) => onFieldChange("city", value)}
-            />
+              error={fieldErrors.city}
+            >
+              <input
+                id="job-city"
+                type="text"
+                value={formData.city}
+                onChange={(event) => onFieldChange("city", event.target.value)}
+                placeholder="Enter city"
+                autoComplete="address-level2"
+                className={cn(
+                  postJobInputClassName,
+                  fieldErrors.city &&
+                    "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                )}
+                aria-invalid={Boolean(fieldErrors.city)}
+              />
+            </PostJobFormField>
           </div>
 
-          <PostJobFormField id="job-address" label="Job Address">
+          <PostJobFormField
+            id="job-address"
+            label="Job Address"
+            error={fieldErrors.address}
+          >
             <textarea
               id="job-address"
               value={formData.address}
               onChange={(event) => onFieldChange("address", event.target.value)}
               placeholder="Enter complete job address"
-              className={postJobTextareaClassName}
+              className={cn(
+                postJobTextareaClassName,
+                fieldErrors.address &&
+                  "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+              )}
+              aria-invalid={Boolean(fieldErrors.address)}
             />
           </PostJobFormField>
 
-          <PostJobFormField id="job-landmark" label="Landmark (Optional)">
+          <PostJobFormField
+            id="job-landmark"
+            label="Landmark (Optional)"
+            error={fieldErrors.landmark}
+          >
             <input
               id="job-landmark"
               type="text"
@@ -191,10 +232,15 @@ export function LocationSalaryForm({
                 onChange={(value) =>
                   onFieldChange("salaryType", value as SalaryType)
                 }
+                error={fieldErrors.salaryType}
               />
 
               {formData.salaryType === "fixed" ? (
-                <PostJobFormField id="salary-incentives" label="Fixed Salary">
+                <PostJobFormField
+                  id="salary-incentives"
+                  label="Fixed Salary"
+                  error={fieldErrors.incentives}
+                >
                   <input
                     id="salary-incentives"
                     type="text"
@@ -204,14 +250,23 @@ export function LocationSalaryForm({
                       onFieldChange("incentives", event.target.value)
                     }
                     placeholder="₹ 500"
-                    className={postJobInputClassName}
+                    className={cn(
+                      postJobInputClassName,
+                      fieldErrors.incentives &&
+                        "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                    )}
+                    aria-invalid={Boolean(fieldErrors.incentives)}
                   />
                 </PostJobFormField>      
               ) : null}
 
               {formData.salaryType === "range" ? (
                 <>
-                  <PostJobFormField id="salary-min" label="Minimum Salary">
+                  <PostJobFormField
+                    id="salary-min"
+                    label="Minimum Salary"
+                    error={fieldErrors.salaryMin}
+                  >
                     <input
                       id="salary-min"
                       type="text"
@@ -221,10 +276,19 @@ export function LocationSalaryForm({
                         onFieldChange("salaryMin", event.target.value)
                       }
                       placeholder="Enter minimum salary"
-                      className={postJobInputClassName}
+                      className={cn(
+                        postJobInputClassName,
+                        fieldErrors.salaryMin &&
+                          "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                      )}
+                      aria-invalid={Boolean(fieldErrors.salaryMin)}
                     />
                   </PostJobFormField>
-                  <PostJobFormField id="salary-max" label="Maximum Salary">
+                  <PostJobFormField
+                    id="salary-max"
+                    label="Maximum Salary"
+                    error={fieldErrors.salaryMax}
+                  >
                     <input
                       id="salary-max"
                       type="text"
@@ -234,7 +298,12 @@ export function LocationSalaryForm({
                         onFieldChange("salaryMax", event.target.value)
                       }
                       placeholder="Enter maximum salary"
-                      className={postJobInputClassName}
+                      className={cn(
+                        postJobInputClassName,
+                        fieldErrors.salaryMax &&
+                          "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                      )}
+                      aria-invalid={Boolean(fieldErrors.salaryMax)}
                     />
                   </PostJobFormField>
                 </>

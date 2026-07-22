@@ -1,6 +1,8 @@
 const ACCESS_TOKEN_KEY = "aslijobs_employer_access_token";
 const REFRESH_TOKEN_KEY = "aslijobs_employer_refresh_token";
 
+export const EMPLOYER_ACCESS_TOKEN_STORAGE_KEY = ACCESS_TOKEN_KEY;
+
 export type EmployerAuthSession = {
   accessToken: string;
   refreshToken: string;

@@ -3,6 +3,7 @@
 import { EMPLOYER_REGISTER_LOGIN_PROMPT } from "@/constants/employer-register";
 import { ROUTES } from "@/constants/routes";
 import type {
+  EmployerRegisterAccountType,
   EmployerRegisterFormData,
   EmployerRegisterStep,
 } from "@/types/employer-register";
@@ -24,10 +25,12 @@ export function EmployerRegisterContent({
   const [step, setStep] = useState<EmployerRegisterStep>("account");
   const [accountFormSnapshot, setAccountFormSnapshot] =
     useState<EmployerRegisterFormData | null>(null);
+  const [accountType, setAccountType] =
+    useState<EmployerRegisterAccountType>("company");
   const [employerId, setEmployerId] = useState<string | null>(null);
 
-  const navigateToPostJob = () => {
-    router.push(ROUTES.POST_JOB);
+  const navigateToDashboard = () => {
+    router.push(ROUTES.EMPLOYER_DASHBOARD);
   };
 
   return (
@@ -55,11 +58,12 @@ export function EmployerRegisterContent({
           <div className="employer-register-form-body">
             {step === "account" ? (
               <EmployerRegisterForm
-                onContinue={(formData, accountType, nextEmployerId) => {
+                onContinue={(formData, nextAccountType, nextEmployerId) => {
                   setEmployerId(nextEmployerId);
+                  setAccountType(nextAccountType);
 
-                  if (accountType === "individual") {
-                    navigateToPostJob();
+                  if (nextAccountType === "individual") {
+                    navigateToDashboard();
                     return;
                   }
 
@@ -70,10 +74,9 @@ export function EmployerRegisterContent({
             ) : employerId ? (
               <EmployerRegisterCompanyProfileForm
                 employerId={employerId}
+                accountType={accountType === "consultancy" ? "consultancy" : "company"}
                 initialCompanyName={accountFormSnapshot?.companyName}
-                initialWhatsappNumber={accountFormSnapshot?.whatsappNumber}
-                initialEmailAddress={accountFormSnapshot?.emailAddress}
-                onContinue={navigateToPostJob}
+                onContinue={navigateToDashboard}
               />
             ) : null}
           </div>

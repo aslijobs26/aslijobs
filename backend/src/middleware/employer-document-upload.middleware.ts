@@ -12,17 +12,16 @@ function isAllowedMimeType(mimeType: string): boolean {
   return (EMPLOYER_DOCUMENT_MIME_TYPES as readonly string[]).includes(mimeType);
 }
 
-export const employerDocumentUpload = multer({
+const employerUploadBase = multer({
   storage: memoryStorage,
   limits: {
     fileSize: EMPLOYER_DOCUMENT_MAX_SIZE_BYTES,
-    files: 1,
   },
   fileFilter: (_req, file, callback) => {
     if (!isAllowedMimeType(file.mimetype)) {
       callback(
         new AppError(
-          "Invalid file type. Only PDF, PNG, JPG, and JPEG files are allowed",
+          "Invalid file type. Only PDF, PNG, JPG, JPEG, and WEBP files are allowed",
           HTTP_STATUS.BAD_REQUEST,
         ),
       );
@@ -31,4 +30,33 @@ export const employerDocumentUpload = multer({
 
     callback(null, true);
   },
-}).single("document");
+});
+
+/** @deprecated Prefer field-based uploaders for multi-file profile forms. */
+export const employerDocumentUpload = employerUploadBase.single("document");
+
+export const employerCompanyProfileUpload = employerUploadBase.fields([
+  { name: "document", maxCount: 1 },
+  { name: "companyLogo", maxCount: 1 },
+]);
+
+export const employerIndividualIdentityUpload = employerUploadBase.fields([
+  { name: "document", maxCount: 1 },
+  { name: "profilePhoto", maxCount: 1 },
+]);
+
+export const employerProfileUpdateUpload = employerUploadBase.fields([
+  { name: "companyLogo", maxCount: 1 },
+  { name: "profilePhoto", maxCount: 1 },
+]);
+
+export function getUploadedFile(
+  files: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] } | undefined,
+  fieldName: string,
+): Express.Multer.File | undefined {
+  if (!files || Array.isArray(files)) {
+    return undefined;
+  }
+
+  return files[fieldName]?.[0];
+}

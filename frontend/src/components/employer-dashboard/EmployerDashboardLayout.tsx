@@ -79,7 +79,7 @@ export function EmployerDashboardLayout({
           </div>
 
           <main className="flex flex-1 flex-col">
-            {children ?? <EmployerDashboardPlaceholder />}
+            {children ?? <EmployerDashboardPlaceholder title="Dashboard" />}
           </main>
         </div>
       </div>

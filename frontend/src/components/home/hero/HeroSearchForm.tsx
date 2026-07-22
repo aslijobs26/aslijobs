@@ -1,15 +1,14 @@
 "use client";
 
+import { HeroPlaceAutocomplete } from "@/components/home/hero/HeroPlaceAutocomplete";
 import {
   HERO_CATEGORY_OPTIONS,
-  HERO_CITY_OPTIONS,
   HERO_SEARCH_DEFAULTS,
-  HERO_STATE_OPTIONS,
 } from "@/constants/hero";
 import { ROUTES } from "@/constants/routes";
 import type { HeroSearchFormValues } from "@/types/hero";
 import { cn } from "@/utils/cn";
-import { Briefcase, ChevronDown, MapPin, Search } from "lucide-react";
+import { Briefcase, ChevronDown, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 
@@ -84,16 +83,8 @@ export function HeroSearchForm() {
   const [values, setValues] = useState<HeroSearchFormValues>({
     ...HERO_SEARCH_DEFAULTS,
   });
-
-  const handleChange = (field: keyof HeroSearchFormValues, value: string) => {
-    setValues((current) => {
-      const next = { ...current, [field]: value };
-      if (field === "state") {
-        next.city = "";
-      }
-      return next;
-    });
-  };
+  const [stateInput, setStateInput] = useState("");
+  const [cityInput, setCityInput] = useState("");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -132,7 +123,12 @@ export function HeroSearchForm() {
               id="hero-search-query"
               type="search"
               value={values.query}
-              onChange={(event) => handleChange("query", event.target.value)}
+              onChange={(event) =>
+                setValues((current) => ({
+                  ...current,
+                  query: event.target.value,
+                }))
+              }
               placeholder="e.g. Driver, Delivery Boy, Electrician"
               className={inputClassName}
               autoComplete="off"
@@ -141,34 +137,58 @@ export function HeroSearchForm() {
         </SearchField>
 
         <SearchField id="hero-search-state" label="Select State">
-          <SelectControl
+          <HeroPlaceAutocomplete
             id="hero-search-state"
-            value={values.state}
-            onChange={(value) => handleChange("state", value)}
-            icon={
-              <MapPin
-                className="size-[18px] shrink-0 text-pin-state"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-            }
-            options={HERO_STATE_OPTIONS}
+            mode="state"
+            value={stateInput}
+            placeholder="e.g. Telangana"
+            iconClassName="text-pin-state"
+            onChange={(value) => {
+              setStateInput(value);
+              setValues((current) => ({
+                ...current,
+                state: "",
+                city: "",
+              }));
+              setCityInput("");
+            }}
+            onSelect={(suggestion) => {
+              setStateInput(suggestion.label);
+              setCityInput("");
+              setValues((current) => ({
+                ...current,
+                state: suggestion.state,
+                city: "",
+              }));
+            }}
           />
         </SearchField>
 
         <SearchField id="hero-search-city" label="Select City">
-          <SelectControl
+          <HeroPlaceAutocomplete
             id="hero-search-city"
-            value={values.city}
-            onChange={(value) => handleChange("city", value)}
-            icon={
-              <MapPin
-                className="size-[18px] shrink-0 text-foreground"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
+            mode="city"
+            value={cityInput}
+            selectedState={values.state}
+            disabled={!values.state}
+            placeholder={
+              values.state ? "e.g. Hyderabad" : "Select a state first"
             }
-            options={HERO_CITY_OPTIONS}
+            onChange={(value) => {
+              setCityInput(value);
+              setValues((current) => ({
+                ...current,
+                city: "",
+              }));
+            }}
+            onSelect={(suggestion) => {
+              setCityInput(suggestion.label);
+              setValues((current) => ({
+                ...current,
+                city: suggestion.city,
+                state: suggestion.state || current.state,
+              }));
+            }}
           />
         </SearchField>
 
@@ -176,7 +196,12 @@ export function HeroSearchForm() {
           <SelectControl
             id="hero-search-category"
             value={values.category}
-            onChange={(value) => handleChange("category", value)}
+            onChange={(value) =>
+              setValues((current) => ({
+                ...current,
+                category: value,
+              }))
+            }
             icon={
               <Briefcase
                 className="size-[18px] shrink-0 text-foreground"

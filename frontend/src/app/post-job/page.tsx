@@ -1,5 +1,4 @@
-import { PostJobContent } from "@/components/post-job/PostJobContent";
-import { PostJobHeader } from "@/components/post-job/PostJobHeader";
+import { PostJobPageClient } from "@/components/post-job/PostJobPageClient";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -8,10 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function PostJobPage() {
-  return (
-    <main className="flex min-h-dvh flex-col bg-hero-bg">
-      <PostJobHeader />
-      <PostJobContent />
-    </main>
-  );
+  return <PostJobPageClient />;
 }

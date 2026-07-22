@@ -1,3 +1,4 @@
+import { HeroEmployerPostJobLink } from "@/components/home/hero/HeroEmployerPostJobLink";
 import type { HeroCtaCardProps } from "@/types/cta";
 import { cn } from "@/utils/cn";
 import Link from "next/link";
@@ -14,6 +15,12 @@ const buttonVariants = {
     "bg-employer-button text-surface hover:bg-employer-button-hover focus-visible:ring-employer-button/40",
 } as const;
 
+const actionClassName = (variant: HeroCtaCardProps["variant"]) =>
+  cn(
+    "inline-flex h-11 w-full shrink-0 items-center justify-center rounded-xl px-5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 sm:w-auto lg:ml-auto",
+    buttonVariants[variant],
+  );
+
 export function HeroCtaCard({
   title,
   description,
@@ -23,6 +30,7 @@ export function HeroCtaCard({
   variant,
 }: HeroCtaCardProps) {
   const isExternal = href.startsWith("http");
+  const className = actionClassName(variant);
 
   return (
     <article
@@ -51,17 +59,20 @@ export function HeroCtaCard({
         </div>
       </div>
 
-      <Link
-        href={href}
-        target={isExternal ? "_blank" : undefined}
-        rel={isExternal ? "noopener noreferrer" : undefined}
-        className={cn(
-          "inline-flex h-11 w-full shrink-0 items-center justify-center rounded-xl px-5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 sm:w-auto lg:ml-auto",
-          buttonVariants[variant],
-        )}
-      >
-        {actionLabel}
-      </Link>
+      {variant === "employer" ? (
+        <HeroEmployerPostJobLink className={className}>
+          {actionLabel}
+        </HeroEmployerPostJobLink>
+      ) : (
+        <Link
+          href={href}
+          target={isExternal ? "_blank" : undefined}
+          rel={isExternal ? "noopener noreferrer" : undefined}
+          className={className}
+        >
+          {actionLabel}
+        </Link>
+      )}
     </article>
   );
 }

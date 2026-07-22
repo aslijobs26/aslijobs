@@ -9,9 +9,27 @@ export const EMPLOYER_DOCUMENT_MIME_TYPES = [
   "image/png",
   "image/jpeg",
   "image/jpg",
+  "image/webp",
 ] as const;
 
-export const EMPLOYER_ACCOUNT_TYPES = ["company", "individual"] as const;
+export const EMPLOYER_IMAGE_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+] as const;
+
+export const EMPLOYER_ACCOUNT_TYPES = [
+  "company",
+  "consultancy",
+  "individual",
+] as const;
+
+export function isBusinessEmployerAccountType(
+  accountType: (typeof EMPLOYER_ACCOUNT_TYPES)[number],
+): accountType is "company" | "consultancy" {
+  return accountType === "company" || accountType === "consultancy";
+}
 
 export const EMPLOYER_REGISTRATION_STATUSES = [
   "registered",

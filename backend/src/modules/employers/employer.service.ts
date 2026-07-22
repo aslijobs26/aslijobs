@@ -1,8 +1,14 @@
 import path from "node:path";
+import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { env } from "../../config/env.js";
+import {
+  EMPLOYER_IMAGE_MIME_TYPES,
+  isBusinessEmployerAccountType,
+} from "../../constants/employer.constants.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
+import { jwtService } from "../auth/jwt.service.js";
 import { otpService } from "../otp/otp.service.js";
 import { storageService } from "../storage/storage.service.js";
 import { EmployerDocumentModel } from "./employer-document.model.js";
@@ -10,9 +16,37 @@ import { EmployerModel } from "./employer.model.js";
 import type {
   CompleteCompanyProfileInput,
   CompleteIndividualIdentityInput,
+  EmployerAccountType,
   RegisterEmployerInput,
+  UpdateEmployerProfileInput,
   VerifyEmployerOtpInput,
 } from "./employer.types.js";
+
+type EmployerImageAsset = {
+  url?: string;
+  storagePath?: string;
+  publicId?: string;
+  storageProvider?: string;
+  originalName?: string;
+  mimeType?: string;
+  fileSize?: number;
+};
+
+function toPublicImageAsset(asset?: EmployerImageAsset | null) {
+  if (!asset?.url && !asset?.storagePath) {
+    return null;
+  }
+
+  return {
+    url: asset.url ?? "",
+    storagePath: asset.storagePath ?? "",
+    publicId: asset.publicId ?? "",
+    storageProvider: asset.storageProvider ?? "",
+    originalName: asset.originalName ?? "",
+    mimeType: asset.mimeType ?? "",
+    fileSize: asset.fileSize ?? 0,
+  };
+}
 
 function toPublicEmployer(employer: {
   _id: mongoose.Types.ObjectId;
@@ -22,6 +56,11 @@ function toPublicEmployer(employer: {
   lastName: string;
   industry?: string;
   businessCategory?: string;
+  roles?: string;
+  minimumEmployees?: number | null;
+  maximumEmployees?: number | null;
+  companyLogo?: EmployerImageAsset | null;
+  profilePhoto?: EmployerImageAsset | null;
   companyAddress?: string;
   pincode?: string;
   city?: string;
@@ -43,6 +82,11 @@ function toPublicEmployer(employer: {
     lastName: employer.lastName,
     industry: employer.industry ?? "",
     businessCategory: employer.businessCategory ?? "",
+    roles: employer.roles ?? "",
+    minimumEmployees: employer.minimumEmployees ?? null,
+    maximumEmployees: employer.maximumEmployees ?? null,
+    companyLogo: toPublicImageAsset(employer.companyLogo),
+    profilePhoto: toPublicImageAsset(employer.profilePhoto),
     companyAddress: employer.companyAddress ?? "",
     pincode: employer.pincode ?? "",
     city: employer.city ?? "",
@@ -55,6 +99,110 @@ function toPublicEmployer(employer: {
     documentIds: (employer.documentIds ?? []).map((id) => id.toString()),
     createdAt: employer.createdAt,
     updatedAt: employer.updatedAt,
+  };
+}
+
+function assertImageFile(file: Express.Multer.File, label: string) {
+  if (
+    !(EMPLOYER_IMAGE_MIME_TYPES as readonly string[]).includes(file.mimetype)
+  ) {
+    throw new AppError(
+      `${label} must be a PNG, JPG, JPEG, or WEBP image`,
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+}
+
+async function uploadEmployerImageAsset(input: {
+  file: Express.Multer.File;
+  folder: string;
+  fileBaseName: string;
+  label: string;
+}) {
+  assertImageFile(input.file, input.label);
+
+  try {
+    const storedFile = await storageService.upload({
+      buffer: input.file.buffer,
+      originalName: input.file.originalname,
+      mimeType: input.file.mimetype,
+      folder: input.folder,
+      fileBaseName: input.fileBaseName,
+    });
+
+    return {
+      url: storedFile.url ?? "",
+      storagePath: storedFile.storagePath,
+      publicId: storedFile.publicId ?? "",
+      storageProvider: storedFile.storageProvider,
+      originalName: storedFile.originalName,
+      mimeType: storedFile.mimeType,
+      fileSize: storedFile.fileSize,
+    };
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError("Upload failed", HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+}
+
+async function deleteEmployerImageAsset(asset?: EmployerImageAsset | null) {
+  if (!asset?.storagePath) {
+    return;
+  }
+
+  const provider =
+    asset.storageProvider === "cloudinary" ? "cloudinary" : "local";
+
+  try {
+    await storageService.delete({
+      storagePath: asset.storagePath,
+      publicId: asset.publicId || undefined,
+      storageProvider: provider,
+    });
+  } catch {
+    // Best-effort cleanup; profile update should still succeed.
+  }
+}
+
+function emptyImageAsset() {
+  return {
+    url: "",
+    storagePath: "",
+    publicId: "",
+    storageProvider: "",
+    originalName: "",
+    mimeType: "",
+    fileSize: 0,
+  };
+}
+
+async function issueEmployerRegistrationSession(employer: {
+  _id: mongoose.Types.ObjectId;
+  accountType: string;
+  whatsappNumber: string;
+  refreshTokenHash?: string | null;
+  refreshTokenExpiresAt?: Date | null;
+  lastLoginAt?: Date | null;
+  save: () => Promise<unknown>;
+}) {
+  const tokens = jwtService.issueEmployerTokens({
+    sub: employer._id.toString(),
+    accountType: employer.accountType as EmployerAccountType,
+    whatsappNumber: employer.whatsappNumber,
+  });
+
+  employer.refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
+  employer.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt;
+  employer.lastLoginAt = new Date();
+  await employer.save();
+
+  return {
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
+    refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
   };
 }
 
@@ -77,6 +225,8 @@ function resolveFileExtension(file: Express.Multer.File): string {
     case "image/jpeg":
     case "image/jpg":
       return ".jpg";
+    case "image/webp":
+      return ".webp";
     default:
       return "";
   }
@@ -307,8 +457,13 @@ export class EmployerService {
 
   async completeCompanyProfile(
     input: CompleteCompanyProfileInput,
-    file?: Express.Multer.File,
+    files: {
+      document?: Express.Multer.File;
+      companyLogo?: Express.Multer.File;
+    },
   ) {
+    const file = files.document;
+
     if (!file) {
       throw new AppError(
         "Business verification document is required",
@@ -318,18 +473,48 @@ export class EmployerService {
 
     const employer = await findEmployerOrThrow(input.employerId);
 
-    if (employer.accountType !== "company") {
+    if (!isBusinessEmployerAccountType(employer.accountType as EmployerAccountType)) {
       throw new AppError(
-        "Company profile is only available for Company / Business accounts",
+        "Business profile is only available for Company / Business and Consultancy accounts",
         HTTP_STATUS.BAD_REQUEST,
       );
     }
 
     if (!employer.isWhatsappVerified) {
       throw new AppError(
-        "WhatsApp number must be verified before completing company profile",
+        "WhatsApp number must be verified before completing business profile",
         HTTP_STATUS.BAD_REQUEST,
       );
+    }
+
+    if (employer.accountType === "consultancy" && !files.companyLogo) {
+      throw new AppError(
+        "Company logo is required",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    if (employer.accountType === "company") {
+      if (!input.industry?.trim()) {
+        throw new AppError("Industry is required", HTTP_STATUS.BAD_REQUEST);
+      }
+
+      if (!input.businessCategory?.trim()) {
+        throw new AppError(
+          "Business category is required",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+
+      if (
+        typeof input.minimumEmployees !== "number" ||
+        typeof input.maximumEmployees !== "number"
+      ) {
+        throw new AppError(
+          "Company strength is required",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
     }
 
     await assertNoCompletedDuplicateWhatsapp(
@@ -354,6 +539,22 @@ export class EmployerService {
       throw new AppError("Upload failed", HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 
+    let companyLogoAsset = null;
+    if (files.companyLogo) {
+      companyLogoAsset = await uploadEmployerImageAsset({
+        file: files.companyLogo,
+        folder: "employer-logos",
+        fileBaseName:
+          employer.accountType === "consultancy"
+            ? "consultancy-logo"
+            : "company-logo",
+        label:
+          employer.accountType === "consultancy"
+            ? "Consultancy logo"
+            : "Company logo",
+      });
+    }
+
     let document;
     try {
       document = await EmployerDocumentModel.create({
@@ -374,14 +575,26 @@ export class EmployerService {
       });
 
       employer.companyName = input.companyName;
-      employer.industry = input.industry;
-      employer.businessCategory = input.businessCategory;
+      employer.industry = input.industry?.trim() ?? "";
+      employer.businessCategory = input.businessCategory?.trim() ?? "";
+      employer.roles = "";
+      employer.minimumEmployees =
+        typeof input.minimumEmployees === "number"
+          ? input.minimumEmployees
+          : null;
+      employer.maximumEmployees =
+        typeof input.maximumEmployees === "number"
+          ? input.maximumEmployees
+          : null;
       employer.companyAddress = input.companyAddress;
       employer.pincode = input.pincode;
       employer.city = input.city;
       employer.state = input.state;
       employer.emailAddress = input.emailAddress ?? employer.emailAddress;
       employer.whatsappNumber = input.whatsappNumber;
+      if (companyLogoAsset) {
+        employer.companyLogo = companyLogoAsset;
+      }
       employer.isProfileComplete = true;
       employer.registrationStatus = "completed";
       employer.documentIds = [...(employer.documentIds ?? []), document._id];
@@ -393,6 +606,8 @@ export class EmployerService {
       throw new AppError("Database error", HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 
+    const session = await issueEmployerRegistrationSession(employer);
+
     return {
       employer: toPublicEmployer(employer),
       document: {
@@ -403,14 +618,20 @@ export class EmployerService {
         verificationStatus: document.verificationStatus,
         uploadedAt: document.uploadedAt,
       },
-      nextStep: "post-job" as const,
+      ...session,
+      nextStep: "dashboard" as const,
     };
   }
 
   async completeIndividualIdentity(
     input: CompleteIndividualIdentityInput,
-    file?: Express.Multer.File,
+    files: {
+      document?: Express.Multer.File;
+      profilePhoto?: Express.Multer.File;
+    },
   ) {
+    const file = files.document;
+
     if (!file) {
       throw new AppError(
         "Identity document is required",
@@ -464,6 +685,16 @@ export class EmployerService {
       throw new AppError("Upload failed", HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 
+    let profilePhotoAsset = null;
+    if (files.profilePhoto) {
+      profilePhotoAsset = await uploadEmployerImageAsset({
+        file: files.profilePhoto,
+        folder: `employer-profile-photos/${employerCode}`,
+        fileBaseName: "profile-photo",
+        label: "Profile photo",
+      });
+    }
+
     let document;
     try {
       employer.registrationStatus = "document_uploaded";
@@ -487,6 +718,9 @@ export class EmployerService {
       });
 
       employer.documentIds = [...(employer.documentIds ?? []), document._id];
+      if (profilePhotoAsset) {
+        employer.profilePhoto = profilePhotoAsset;
+      }
       employer.registrationStatus = "completed";
       employer.isProfileComplete = true;
       await employer.save();
@@ -496,6 +730,8 @@ export class EmployerService {
       }
       throw new AppError("Database error", HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
+
+    const session = await issueEmployerRegistrationSession(employer);
 
     return {
       employer: toPublicEmployer(employer),
@@ -507,7 +743,114 @@ export class EmployerService {
         verificationStatus: document.verificationStatus,
         uploadedAt: document.uploadedAt,
       },
-      nextStep: "post-job" as const,
+      ...session,
+      nextStep: "dashboard" as const,
+    };
+  }
+
+  async updateEmployerProfile(
+    input: UpdateEmployerProfileInput,
+    files: {
+      companyLogo?: Express.Multer.File;
+      profilePhoto?: Express.Multer.File;
+    } = {},
+  ) {
+    const employer = await findEmployerOrThrow(input.employerId);
+
+    if (typeof input.companyName === "string") {
+      employer.companyName = input.companyName;
+    }
+    if (typeof input.industry === "string") {
+      employer.industry = input.industry;
+    }
+    if (typeof input.businessCategory === "string") {
+      employer.businessCategory = input.businessCategory;
+    }
+    if (typeof input.minimumEmployees === "number") {
+      employer.minimumEmployees = input.minimumEmployees;
+    }
+    if (typeof input.maximumEmployees === "number") {
+      employer.maximumEmployees = input.maximumEmployees;
+    }
+    if (typeof input.companyAddress === "string") {
+      employer.companyAddress = input.companyAddress;
+    }
+    if (typeof input.pincode === "string") {
+      employer.pincode = input.pincode;
+    }
+    if (typeof input.city === "string") {
+      employer.city = input.city;
+    }
+    if (typeof input.state === "string") {
+      employer.state = input.state;
+    }
+    if (typeof input.emailAddress === "string") {
+      employer.emailAddress = input.emailAddress;
+    }
+    if (typeof input.firstName === "string") {
+      employer.firstName = input.firstName;
+    }
+    if (typeof input.lastName === "string") {
+      employer.lastName = input.lastName;
+    }
+
+    if (input.removeCompanyLogo) {
+      await deleteEmployerImageAsset(employer.companyLogo);
+      employer.companyLogo = emptyImageAsset();
+    }
+
+    if (input.removeProfilePhoto) {
+      await deleteEmployerImageAsset(employer.profilePhoto);
+      employer.profilePhoto = emptyImageAsset();
+    }
+
+    if (files.companyLogo) {
+      if (
+        !isBusinessEmployerAccountType(
+          employer.accountType as EmployerAccountType,
+        )
+      ) {
+        throw new AppError(
+          "Logo upload is only available for Company / Business and Consultancy accounts",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+      await deleteEmployerImageAsset(employer.companyLogo);
+      employer.companyLogo = await uploadEmployerImageAsset({
+        file: files.companyLogo,
+        folder: "employer-logos",
+        fileBaseName:
+          employer.accountType === "consultancy"
+            ? "consultancy-logo"
+            : "company-logo",
+        label:
+          employer.accountType === "consultancy"
+            ? "Consultancy logo"
+            : "Company logo",
+      });
+    }
+
+    if (files.profilePhoto) {
+      if (employer.accountType !== "individual") {
+        throw new AppError(
+          "Profile photo is only available for Individual accounts",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+      const employerCode = toEmployerStorageCode(employer._id);
+      await deleteEmployerImageAsset(employer.profilePhoto);
+      employer.profilePhoto = await uploadEmployerImageAsset({
+        file: files.profilePhoto,
+        folder: `employer-profile-photos/${employerCode}`,
+        fileBaseName: "profile-photo",
+        label: "Profile photo",
+      });
+    }
+
+    await employer.save();
+
+    return {
+      employer: toPublicEmployer(employer),
     };
   }
 }

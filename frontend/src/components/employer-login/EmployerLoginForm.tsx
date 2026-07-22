@@ -125,7 +125,7 @@ export function EmployerLoginForm() {
 
     try {
       await verifyEmployerLoginOtp(whatsappNumber, otpDigits.join(""));
-      router.push(ROUTES.EMPLOYER_DASHBOARD);
+      router.replace(ROUTES.EMPLOYER_DASHBOARD);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Invalid OTP"));
     } finally {

@@ -40,8 +40,10 @@ export type VerifyEmployerOtpInput = {
 export type CompleteCompanyProfileInput = {
   employerId: string;
   companyName: string;
-  industry: string;
-  businessCategory: string;
+  industry?: string;
+  businessCategory?: string;
+  minimumEmployees?: number | null;
+  maximumEmployees?: number | null;
   companyAddress: string;
   pincode: string;
   city: string;
@@ -54,4 +56,22 @@ export type CompleteCompanyProfileInput = {
 export type CompleteIndividualIdentityInput = {
   employerId: string;
   documentType: EmployerIdentityDocumentType;
+};
+
+export type UpdateEmployerProfileInput = {
+  employerId: string;
+  companyName?: string;
+  industry?: string;
+  businessCategory?: string;
+  minimumEmployees?: number;
+  maximumEmployees?: number;
+  companyAddress?: string;
+  pincode?: string;
+  city?: string;
+  state?: string;
+  emailAddress?: string;
+  firstName?: string;
+  lastName?: string;
+  removeCompanyLogo?: boolean;
+  removeProfilePhoto?: boolean;
 };

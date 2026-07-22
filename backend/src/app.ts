@@ -12,6 +12,15 @@ import apiRouter from "./routes/index.js";
 
 const app = express();
 
+// Authenticated API responses must not be served from HTTP cache (304),
+// otherwise status/timestamp updates can appear stale in Employer Jobs.
+app.set("etag", false);
+app.use("/api/v1", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.setHeader("Pragma", "no-cache");
+  next();
+});
+
 app.use(helmet());
 app.use(
   cors({

@@ -9,10 +9,36 @@ type ApiSuccess<T> = {
 
 export type EmployerLoginPublic = {
   id: string;
-  accountType: "company" | "individual";
+  accountType: "company" | "consultancy" | "individual";
   companyName: string;
   firstName: string;
   lastName: string;
+  industry?: string;
+  businessCategory?: string;
+  minimumEmployees?: number | null;
+  maximumEmployees?: number | null;
+  companyLogo?: {
+    url: string;
+    storagePath: string;
+    publicId: string;
+    storageProvider: string;
+    originalName: string;
+    mimeType: string;
+    fileSize: number;
+  } | null;
+  profilePhoto?: {
+    url: string;
+    storagePath: string;
+    publicId: string;
+    storageProvider: string;
+    originalName: string;
+    mimeType: string;
+    fileSize: number;
+  } | null;
+  companyAddress?: string;
+  pincode?: string;
+  city?: string;
+  state?: string;
   emailAddress: string;
   whatsappNumber: string;
   isWhatsappVerified: boolean;

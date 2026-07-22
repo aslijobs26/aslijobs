@@ -19,7 +19,7 @@ import type {
 } from "@/types/post-job";
 import { cn } from "@/utils/cn";
 import { ChevronDown } from "lucide-react";
-import type { FormEvent, RefObject } from "react";
+import type { RefObject } from "react";
 import { PostJobChipButton } from "./PostJobChipButton";
 import { PostJobFormField } from "./PostJobFormField";
 import { PostJobDatePicker } from "./PostJobDatePicker";
@@ -46,11 +46,16 @@ import {
 
 type CandidateInterviewFormProps = {
   formData: CandidateInterviewFormData;
+  fieldErrors?: Record<string, string>;
+  submitError?: string;
+  isSubmitting?: boolean;
+  isEditMode?: boolean;
   onFieldChange: <K extends keyof CandidateInterviewFormData>(
     field: K,
     value: CandidateInterviewFormData[K],
   ) => void;
   onBack: () => void;
+  onPostJob: () => void;
   scrollContainerRef?: RefObject<HTMLFormElement | null>;
 };
 
@@ -104,14 +109,15 @@ function sanitizeNumericInput(value: string) {
   return value.replace(/\D/g, "");
 }
 
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
 export function CandidateInterviewForm({
   formData,
+  fieldErrors = {},
+  submitError,
+  isSubmitting = false,
+  isEditMode = false,
   onFieldChange,
   onBack,
+  onPostJob,
   scrollContainerRef,
 }: CandidateInterviewFormProps) {
   const toggleEducation = (educationId: PostJobEducationId) => {
@@ -181,23 +187,6 @@ export function CandidateInterviewForm({
     }
   };
 
-  const handlePostJob = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (
-      formData.additionalRequirements.age &&
-      formData.ageMin &&
-      formData.ageMax &&
-      Number(formData.ageMin) > Number(formData.ageMax)
-    ) {
-      return;
-    }
-
-    if (formData.contactEmail && !isValidEmail(formData.contactEmail)) {
-      return;
-    }
-  };
-
   const showWalkInFields = formData.walkIn === "yes";
 
   return (
@@ -215,11 +204,14 @@ export function CandidateInterviewForm({
       <form
         ref={scrollContainerRef}
         className={postJobFormShellClassName}
-        onSubmit={handlePostJob}
+        onSubmit={(event) => {
+          event.preventDefault();
+          onPostJob();
+        }}
         noValidate
       >
         <div className={postJobFormSectionsClassName}>
-          <fieldset className={postJobFormSubsectionClassName}>
+          <fieldset id="education-group" className={postJobFormSubsectionClassName}>
             <legend className={postJobFieldLabelClassName}>Education Qualification</legend>
             <div className={postJobPerkWrapClassName}>
               {POST_JOB_EDUCATION_OPTIONS.map((option) => (
@@ -231,9 +223,14 @@ export function CandidateInterviewForm({
                 />
               ))}
             </div>
+            {fieldErrors.education ? (
+              <p className="text-xs font-medium text-red-600" role="alert">
+                {fieldErrors.education}
+              </p>
+            ) : null}
           </fieldset>
 
-          <fieldset className={postJobFormSubsectionClassName}>
+          <fieldset id="experience-group" className={postJobFormSubsectionClassName}>
             <legend className={postJobFieldLabelClassName}>
               Experience Required
             </legend>
@@ -247,6 +244,11 @@ export function CandidateInterviewForm({
                 />
               ))}
             </div>
+            {fieldErrors.experienceRequired ? (
+              <p className="text-xs font-medium text-red-600" role="alert">
+                {fieldErrors.experienceRequired}
+              </p>
+            ) : null}
           </fieldset>
 
           <fieldset className={postJobFormSubsectionClassName}>
@@ -279,7 +281,7 @@ export function CandidateInterviewForm({
           </fieldset>
 
           {formData.additionalRequirements.language ? (
-            <fieldset className={postJobFormSubsectionClassName}>
+            <fieldset id="language-group" className={postJobFormSubsectionClassName}>
               <legend className={postJobFieldLabelClassName}>Language Required</legend>
               <div className={postJobPerkWrapClassName}>
                 {POST_JOB_LANGUAGE_OPTIONS.map((option) => (
@@ -291,11 +293,16 @@ export function CandidateInterviewForm({
                   />
                 ))}
               </div>
+              {fieldErrors.languages ? (
+                <p className="text-xs font-medium text-red-600" role="alert">
+                  {fieldErrors.languages}
+                </p>
+              ) : null}
             </fieldset>
           ) : null}
 
           {formData.additionalRequirements.gender ? (
-            <fieldset className={postJobFormSubsectionClassName}>
+            <fieldset id="gender-group" className={postJobFormSubsectionClassName}>
               <legend className={postJobFieldLabelClassName}>Gender</legend>
               <div className={postJobPerkWrapClassName}>
                 {POST_JOB_GENDER_OPTIONS.map((option) => (
@@ -307,6 +314,11 @@ export function CandidateInterviewForm({
                   />
                 ))}
               </div>
+              {fieldErrors.gender ? (
+                <p className="text-xs font-medium text-red-600" role="alert">
+                  {fieldErrors.gender}
+                </p>
+              ) : null}
             </fieldset>
           ) : null}
 
@@ -325,7 +337,12 @@ export function CandidateInterviewForm({
                   placeholder="Minimum Age"
                   aria-label="Minimum age"
                   min={0}
-                  className={postJobInputClassName}
+                  className={cn(
+                    postJobInputClassName,
+                    fieldErrors.ageMin &&
+                      "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                  )}
+                  aria-invalid={Boolean(fieldErrors.ageMin)}
                 />
                 <input
                   id="age-max"
@@ -338,9 +355,24 @@ export function CandidateInterviewForm({
                   placeholder="Maximum Age"
                   aria-label="Maximum age"
                   min={0}
-                  className={postJobInputClassName}
+                  className={cn(
+                    postJobInputClassName,
+                    fieldErrors.ageMax &&
+                      "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                  )}
+                  aria-invalid={Boolean(fieldErrors.ageMax)}
                 />
               </div>
+              {fieldErrors.ageMin ? (
+                <p className="text-xs font-medium text-red-600" role="alert">
+                  {fieldErrors.ageMin}
+                </p>
+              ) : null}
+              {fieldErrors.ageMax ? (
+                <p className="text-xs font-medium text-red-600" role="alert">
+                  {fieldErrors.ageMax}
+                </p>
+              ) : null}
             </fieldset>
           ) : null}
 
@@ -382,7 +414,11 @@ export function CandidateInterviewForm({
 
               {showWalkInFields ? (
                 <>
-                  <PostJobFormField id="walk-in-address" label="Walk-in Interview Address">
+                  <PostJobFormField
+                    id="walk-in-address"
+                    label="Walk-in Interview Address"
+                    error={fieldErrors.walkInAddress}
+                  >
                     <textarea
                       id="walk-in-address"
                       value={formData.walkInAddress}
@@ -405,23 +441,43 @@ export function CandidateInterviewForm({
                           "mt-2",
                         )}
                       >
-                        <PostJobDatePicker
-                          id="walk-in-start-date"
-                          value={formData.walkInStartDate}
-                          placeholder="Start date"
-                          aria-label="Walk-in start date"
-                          onChange={handleWalkInStartDateChange}
-                        />
-                        <PostJobDatePicker
-                          id="walk-in-end-date"
-                          value={formData.walkInEndDate}
-                          placeholder="End date"
-                          minDate={formData.walkInStartDate || undefined}
-                          aria-label="Walk-in end date"
-                          onChange={(value) =>
-                            onFieldChange("walkInEndDate", value)
-                          }
-                        />
+                        <div className="flex min-w-0 flex-col gap-2">
+                          <PostJobDatePicker
+                            id="walk-in-start-date"
+                            value={formData.walkInStartDate}
+                            placeholder="Start date"
+                            aria-label="Walk-in start date"
+                            onChange={handleWalkInStartDateChange}
+                          />
+                          {fieldErrors.walkInStartDate ? (
+                            <p
+                              className="text-xs font-medium text-red-600"
+                              role="alert"
+                            >
+                              {fieldErrors.walkInStartDate}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-2">
+                          <PostJobDatePicker
+                            id="walk-in-end-date"
+                            value={formData.walkInEndDate}
+                            placeholder="End date"
+                            minDate={formData.walkInStartDate || undefined}
+                            aria-label="Walk-in end date"
+                            onChange={(value) =>
+                              onFieldChange("walkInEndDate", value)
+                            }
+                          />
+                          {fieldErrors.walkInEndDate ? (
+                            <p
+                              className="text-xs font-medium text-red-600"
+                              role="alert"
+                            >
+                              {fieldErrors.walkInEndDate}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
@@ -435,26 +491,46 @@ export function CandidateInterviewForm({
                           "mt-2",
                         )}
                       >
-                        <SelectInput
-                          id="walk-in-start-time"
-                          value={formData.walkInStartTime}
-                          placeholder="Start time"
-                          aria-label="Walk-in start time"
-                          options={POST_JOB_WALK_IN_TIME_OPTIONS}
-                          onChange={(value) =>
-                            onFieldChange("walkInStartTime", value)
-                          }
-                        />
-                        <SelectInput
-                          id="walk-in-end-time"
-                          value={formData.walkInEndTime}
-                          placeholder="End time"
-                          aria-label="Walk-in end time"
-                          options={POST_JOB_WALK_IN_TIME_OPTIONS}
-                          onChange={(value) =>
-                            onFieldChange("walkInEndTime", value)
-                          }
-                        />
+                        <div className="flex min-w-0 flex-col gap-2">
+                          <SelectInput
+                            id="walk-in-start-time"
+                            value={formData.walkInStartTime}
+                            placeholder="Start time"
+                            aria-label="Walk-in start time"
+                            options={POST_JOB_WALK_IN_TIME_OPTIONS}
+                            onChange={(value) =>
+                              onFieldChange("walkInStartTime", value)
+                            }
+                          />
+                          {fieldErrors.walkInStartTime ? (
+                            <p
+                              className="text-xs font-medium text-red-600"
+                              role="alert"
+                            >
+                              {fieldErrors.walkInStartTime}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-2">
+                          <SelectInput
+                            id="walk-in-end-time"
+                            value={formData.walkInEndTime}
+                            placeholder="End time"
+                            aria-label="Walk-in end time"
+                            options={POST_JOB_WALK_IN_TIME_OPTIONS}
+                            onChange={(value) =>
+                              onFieldChange("walkInEndTime", value)
+                            }
+                          />
+                          {fieldErrors.walkInEndTime ? (
+                            <p
+                              className="text-xs font-medium text-red-600"
+                              role="alert"
+                            >
+                              {fieldErrors.walkInEndTime}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -483,45 +559,87 @@ export function CandidateInterviewForm({
               Contact Details
             </legend>
             <div className={postJobContactGridClassName}>
-              <input
-                id="contact-name"
-                type="text"
-                value={formData.contactName}
-                onChange={(event) =>
-                  onFieldChange("contactName", event.target.value)
-                }
-                placeholder="Name"
-                aria-label="Contact name"
-                className={postJobInputClassName}
-              />
-              <input
-                id="contact-email"
-                type="email"
-                value={formData.contactEmail}
-                onChange={(event) =>
-                  onFieldChange("contactEmail", event.target.value)
-                }
-                placeholder="Email"
-                aria-label="Contact email"
-                className={postJobInputClassName}
-              />
-              <input
-                id="contact-mobile"
-                type="tel"
-                inputMode="numeric"
-                value={formData.contactMobile}
-                onChange={(event) =>
-                  onFieldChange(
-                    "contactMobile",
-                    sanitizeNumericInput(event.target.value),
-                  )
-                }
-                placeholder="Mobile Number"
-                aria-label="Contact mobile number"
-                className={postJobInputClassName}
-              />
+              <div className="flex min-w-0 flex-col gap-2">
+                <input
+                  id="contact-name"
+                  type="text"
+                  value={formData.contactName}
+                  onChange={(event) =>
+                    onFieldChange("contactName", event.target.value)
+                  }
+                  placeholder="Name"
+                  aria-label="Contact name"
+                  className={cn(
+                    postJobInputClassName,
+                    fieldErrors.contactName &&
+                      "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                  )}
+                  aria-invalid={Boolean(fieldErrors.contactName)}
+                />
+                {fieldErrors.contactName ? (
+                  <p className="text-xs font-medium text-red-600" role="alert">
+                    {fieldErrors.contactName}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex min-w-0 flex-col gap-2">
+                <input
+                  id="contact-email"
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={(event) =>
+                    onFieldChange("contactEmail", event.target.value)
+                  }
+                  placeholder="Email"
+                  aria-label="Contact email"
+                  className={cn(
+                    postJobInputClassName,
+                    fieldErrors.contactEmail &&
+                      "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                  )}
+                  aria-invalid={Boolean(fieldErrors.contactEmail)}
+                />
+                {fieldErrors.contactEmail ? (
+                  <p className="text-xs font-medium text-red-600" role="alert">
+                    {fieldErrors.contactEmail}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex min-w-0 flex-col gap-2">
+                <input
+                  id="contact-mobile"
+                  type="tel"
+                  inputMode="numeric"
+                  value={formData.contactMobile}
+                  onChange={(event) =>
+                    onFieldChange(
+                      "contactMobile",
+                      sanitizeNumericInput(event.target.value),
+                    )
+                  }
+                  placeholder="Mobile Number"
+                  aria-label="Contact mobile number"
+                  className={cn(
+                    postJobInputClassName,
+                    fieldErrors.contactMobile &&
+                      "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                  )}
+                  aria-invalid={Boolean(fieldErrors.contactMobile)}
+                />
+                {fieldErrors.contactMobile ? (
+                  <p className="text-xs font-medium text-red-600" role="alert">
+                    {fieldErrors.contactMobile}
+                  </p>
+                ) : null}
+              </div>
             </div>
           </fieldset>
+
+          {submitError ? (
+            <p className="text-xs font-medium text-red-600" role="alert">
+              {submitError}
+            </p>
+          ) : null}
 
           <div className={postJobFormInlineActionsClassName}>
             <button
@@ -533,12 +651,19 @@ export function CandidateInterviewForm({
             </button>
             <button
               type="submit"
+              disabled={isSubmitting}
               className={cn(
                 postJobPostJobButtonClassName,
                 "w-full sm:w-auto sm:min-w-[156px]",
               )}
             >
-              Post Job
+              {isSubmitting
+                ? isEditMode
+                  ? "Updating..."
+                  : "Posting..."
+                : isEditMode
+                  ? "Update Job"
+                  : "Post Job"}
             </button>
           </div>
         </div>

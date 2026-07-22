@@ -1,6 +1,6 @@
 export type JobType = "full-time" | "part-time" | "contract";
 
-export type WorkMode = "office" | "field" | "both";
+export type WorkMode = "office" | "field" | "both" | "home";
 
 export type PartTimeScheduleType = "fixed-timings" | "flexible-hours";
 

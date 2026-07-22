@@ -1,4 +1,6 @@
 import { apiClient } from "@/services/api-client";
+import { setEmployerAuthSession } from "@/utils/employer-auth-storage";
+import { getCompanyStrengthRange } from "@/constants/employer-register";
 import type {
   EmployerRegisterAccountType,
   EmployerRegisterBusinessDocumentType,
@@ -13,6 +15,16 @@ type ApiSuccess<T> = {
   data: T;
 };
 
+export type EmployerImageAssetPublic = {
+  url: string;
+  storagePath: string;
+  publicId: string;
+  storageProvider: string;
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+};
+
 export type EmployerPublic = {
   id: string;
   accountType: EmployerRegisterAccountType;
@@ -21,6 +33,11 @@ export type EmployerPublic = {
   lastName: string;
   industry: string;
   businessCategory: string;
+  roles: string;
+  minimumEmployees: number | null;
+  maximumEmployees: number | null;
+  companyLogo: EmployerImageAssetPublic | null;
+  profilePhoto: EmployerImageAssetPublic | null;
   companyAddress: string;
   pincode: string;
   city: string;
@@ -61,7 +78,11 @@ type CompleteCompanyProfileResponse = {
     verificationStatus: string;
     uploadedAt: string;
   };
-  nextStep: "post-job";
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAt: string;
+  refreshTokenExpiresAt: string;
+  nextStep: "dashboard";
 };
 
 type CompleteIndividualIdentityResponse = {
@@ -74,7 +95,11 @@ type CompleteIndividualIdentityResponse = {
     verificationStatus: string;
     uploadedAt: string;
   };
-  nextStep: "post-job";
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAt: string;
+  refreshTokenExpiresAt: string;
+  nextStep: "dashboard";
 };
 
 function logDevelopmentOtp(phoneNumber: string, otp?: string) {
@@ -137,11 +162,31 @@ export async function completeEmployerCompanyProfile(input: {
   profile: EmployerRegisterCompanyProfileData;
   documentType: EmployerRegisterBusinessDocumentType;
   documentFile: File;
+  companyLogoFile?: File;
 }) {
   const body = new FormData();
   body.append("companyName", input.profile.companyName);
   body.append("industry", input.profile.industry);
   body.append("businessCategory", input.profile.businessCategory);
+
+  const strengthRange = getCompanyStrengthRange(input.profile.companyStrength);
+  const minimumEmployees =
+    strengthRange?.minimumEmployees ??
+    Number.parseInt(input.profile.minimumEmployees, 10);
+  const maximumEmployees =
+    strengthRange?.maximumEmployees ??
+    Number.parseInt(input.profile.maximumEmployees, 10);
+
+  if (Number.isFinite(minimumEmployees) && Number.isFinite(maximumEmployees)) {
+    if (maximumEmployees < minimumEmployees) {
+      throw new Error(
+        "Maximum employees must be greater than or equal to minimum employees",
+      );
+    }
+
+    body.append("minimumEmployees", String(minimumEmployees));
+    body.append("maximumEmployees", String(maximumEmployees));
+  }
   body.append("companyAddress", input.profile.companyAddress);
   body.append("pincode", input.profile.pincode);
   body.append("city", input.profile.city);
@@ -151,6 +196,10 @@ export async function completeEmployerCompanyProfile(input: {
   body.append("verificationDocument", input.documentType);
   body.append("document", input.documentFile);
 
+  if (input.companyLogoFile) {
+    body.append("companyLogo", input.companyLogoFile);
+  }
+
   const response = await apiClient.post<
     ApiSuccess<CompleteCompanyProfileResponse>
   >(`/employers/${input.employerId}/company-profile`, body, {
@@ -159,17 +208,28 @@ export async function completeEmployerCompanyProfile(input: {
     },
   });
 
-  return response.data.data;
+  const data = response.data.data;
+  setEmployerAuthSession({
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken,
+  });
+
+  return data;
 }
 
 export async function completeEmployerIndividualIdentity(input: {
   employerId: string;
   documentType: EmployerRegisterDocumentType;
   documentFile: File;
+  profilePhotoFile?: File;
 }) {
   const body = new FormData();
   body.append("documentType", input.documentType);
   body.append("document", input.documentFile);
+
+  if (input.profilePhotoFile) {
+    body.append("profilePhoto", input.profilePhotoFile);
+  }
 
   const response = await apiClient.post<
     ApiSuccess<CompleteIndividualIdentityResponse>
@@ -179,5 +239,11 @@ export async function completeEmployerIndividualIdentity(input: {
     },
   });
 
-  return response.data.data;
+  const data = response.data.data;
+  setEmployerAuthSession({
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken,
+  });
+
+  return data;
 }

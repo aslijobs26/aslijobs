@@ -6,6 +6,7 @@ import {
   clearEmployerAuthSession,
   getEmployerAccessToken,
 } from "@/utils/employer-auth-storage";
+import { buildEmployerLoginHref } from "@/utils/safe-return-url";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -24,7 +25,8 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
 
     const redirectUnauthenticated = () => {
       clearEmployerAuthSession();
-      router.replace(ROUTES.EMPLOYER_LOGIN);
+      const returnUrl = `${window.location.pathname}${window.location.search}`;
+      router.replace(buildEmployerLoginHref(returnUrl || ROUTES.POST_JOB));
     };
 
     const verifyEmployerSession = async () => {

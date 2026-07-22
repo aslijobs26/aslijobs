@@ -5,7 +5,7 @@ import {
 } from "@/constants/employer-login";
 import { ROUTES } from "@/constants/routes";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 type EmployerLoginContentProps = {
   children: ReactNode;
@@ -30,7 +30,13 @@ export function EmployerLoginContent({ children }: EmployerLoginContentProps) {
           </p>
 
           <div className="employer-register-form-body">
-            <EmployerLoginForm />
+            <Suspense
+              fallback={
+                <p className="text-sm text-muted">Loading login…</p>
+              }
+            >
+              <EmployerLoginForm />
+            </Suspense>
           </div>
         </div>
       </section>

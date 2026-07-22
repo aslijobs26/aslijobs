@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { requireEmployerAuth } from "../../middleware/auth.middleware.js";
-import { employerDocumentUpload } from "../../middleware/employer-document-upload.middleware.js";
+import {
+  employerCompanyProfileUpload,
+  employerIndividualIdentityUpload,
+  employerProfileUpdateUpload,
+} from "../../middleware/employer-document-upload.middleware.js";
 import {
   employerLoginSendOtpRateLimit,
   employerLoginVerifyOtpRateLimit,
@@ -19,6 +23,7 @@ import {
   completeIndividualIdentitySchema,
   employerIdParamsSchema,
   registerEmployerSchema,
+  updateEmployerProfileSchema,
   verifyEmployerOtpSchema,
 } from "./employer.validation.js";
 
@@ -51,6 +56,14 @@ employerRouter.get(
   asyncHandler(employerLoginController.me),
 );
 
+employerRouter.patch(
+  "/me/profile",
+  asyncHandler(requireEmployerAuth),
+  employerProfileUpdateUpload,
+  validate(updateEmployerProfileSchema, "body"),
+  asyncHandler(employerController.updateProfile),
+);
+
 employerRouter.post(
   "/register",
   validate(registerEmployerSchema, "body"),
@@ -73,7 +86,7 @@ employerRouter.post(
 employerRouter.post(
   "/:employerId/company-profile",
   validate(employerIdParamsSchema, "params"),
-  employerDocumentUpload,
+  employerCompanyProfileUpload,
   validate(completeCompanyProfileSchema, "body"),
   asyncHandler(employerController.completeCompanyProfile),
 );
@@ -81,7 +94,7 @@ employerRouter.post(
 employerRouter.post(
   "/:employerId/identity-document",
   validate(employerIdParamsSchema, "params"),
-  employerDocumentUpload,
+  employerIndividualIdentityUpload,
   validate(completeIndividualIdentitySchema, "body"),
   asyncHandler(employerController.completeIndividualIdentity),
 );

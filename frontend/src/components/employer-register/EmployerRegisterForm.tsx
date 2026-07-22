@@ -10,6 +10,7 @@ import {
   EMPLOYER_REGISTER_OTP_LENGTH,
   EMPLOYER_REGISTER_SEND_OTP_LABEL,
   EMPLOYER_REGISTER_SUBMIT_LABEL,
+  isBusinessEmployerAccountType,
   isValidEmployerWhatsappNumber,
 } from "@/constants/employer-register";
 import {
@@ -23,6 +24,7 @@ import type {
   EmployerRegisterDocumentPreview,
   EmployerRegisterDocumentType,
   EmployerRegisterFormData,
+  EmployerRegisterImagePreview,
 } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
 import { isAxiosError } from "axios";
@@ -87,11 +89,32 @@ export function EmployerRegisterForm({
     useState<EmployerRegisterDocumentType | null>(null);
   const [documentPreview, setDocumentPreview] =
     useState<EmployerRegisterDocumentPreview | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] =
+    useState<EmployerRegisterImagePreview | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const isCompanyAccount = accountType === "company";
+  const isConsultancyAccount = accountType === "consultancy";
+  const isBusinessAccount = isBusinessEmployerAccountType(accountType);
   const isIndividualAccount = accountType === "individual";
+  const businessNameLabel = isConsultancyAccount
+    ? "Consultancy Name*"
+    : "Company/Business Name*";
+  const businessNamePlaceholder = isConsultancyAccount
+    ? "Enter Consultancy Name"
+    : "Enter company name";
+  const firstNamePlaceholder = isConsultancyAccount
+    ? "Enter First Name"
+    : "Enter company name";
+  const lastNamePlaceholder = isConsultancyAccount
+    ? "Enter Last Name"
+    : "Enter company name";
+  const whatsappPlaceholder = isConsultancyAccount
+    ? "Enter WhatsApp Number"
+    : "Enter Your WhatsApp Number";
+  const emailPlaceholder = isConsultancyAccount
+    ? "Enter Email Address"
+    : "Enter Your Email Address";
   const canSendOtp =
     isValidEmployerWhatsappNumber(formData.whatsappNumber) &&
     !isOtpVisible &&
@@ -118,9 +141,10 @@ export function EmployerRegisterForm({
     setEmployerId(null);
     setErrorMessage(null);
 
-    if (value === "company") {
+    if (value !== "individual") {
       setDocumentType(null);
       setDocumentPreview(null);
+      setProfilePhotoPreview(null);
     }
   };
 
@@ -144,8 +168,12 @@ export function EmployerRegisterForm({
       return;
     }
 
-    if (isCompanyAccount && !formData.companyName.trim()) {
-      setErrorMessage("Company / Business Name is required");
+    if (isBusinessAccount && !formData.companyName.trim()) {
+      setErrorMessage(
+        isConsultancyAccount
+          ? "Consultancy Name is required"
+          : "Company / Business Name is required",
+      );
       return;
     }
 
@@ -202,6 +230,7 @@ export function EmployerRegisterForm({
           employerId,
           documentType,
           documentFile: documentPreview.file,
+          profilePhotoFile: profilePhotoPreview?.file,
         });
         onContinue(formData, accountType, employerId);
       } catch (error) {
@@ -299,8 +328,8 @@ export function EmployerRegisterForm({
 
         <div
           className="employer-register-company-field"
-          data-visible={isCompanyAccount ? "true" : "false"}
-          aria-hidden={!isCompanyAccount}
+          data-visible={isBusinessAccount ? "true" : "false"}
+          aria-hidden={!isBusinessAccount}
         >
           <div className="employer-register-company-field-inner">
             <div className="employer-register-form-stack">
@@ -308,7 +337,7 @@ export function EmployerRegisterForm({
                 htmlFor="company-name"
                 className="employer-register-form-label"
               >
-                Company/Business Name*
+                {businessNameLabel}
               </label>
               <input
                 id="company-name"
@@ -317,10 +346,10 @@ export function EmployerRegisterForm({
                 onChange={(event) =>
                   updateField("companyName", event.target.value)
                 }
-                placeholder="Enter company name"
+                placeholder={businessNamePlaceholder}
                 autoComplete="organization"
                 className="employer-register-form-input"
-                tabIndex={isCompanyAccount ? undefined : -1}
+                tabIndex={isBusinessAccount ? undefined : -1}
               />
             </div>
           </div>
@@ -336,7 +365,7 @@ export function EmployerRegisterForm({
               type="text"
               value={formData.firstName}
               onChange={(event) => updateField("firstName", event.target.value)}
-              placeholder="Enter company name"
+              placeholder={firstNamePlaceholder}
               autoComplete="given-name"
               className="employer-register-form-input"
             />
@@ -351,7 +380,7 @@ export function EmployerRegisterForm({
               type="text"
               value={formData.lastName}
               onChange={(event) => updateField("lastName", event.target.value)}
-              placeholder="Enter company name"
+              placeholder={lastNamePlaceholder}
               autoComplete="family-name"
               className="employer-register-form-input"
             />
@@ -369,7 +398,7 @@ export function EmployerRegisterForm({
             onChange={(event) =>
               updateField("emailAddress", event.target.value)
             }
-            placeholder="Enter Email Address"
+            placeholder={emailPlaceholder}
             autoComplete="email"
             className="employer-register-form-input"
           />
@@ -390,7 +419,7 @@ export function EmployerRegisterForm({
                 event.target.value.replace(/\D/g, "").slice(0, 10),
               )
             }
-            placeholder="Enter WhatsApp Number"
+            placeholder={whatsappPlaceholder}
             autoComplete="tel"
             className="employer-register-form-input"
           />
@@ -430,8 +459,10 @@ export function EmployerRegisterForm({
               <EmployerRegisterDocumentVerification
                 documentType={documentType}
                 documentPreview={documentPreview}
+                profilePhotoPreview={profilePhotoPreview}
                 onDocumentTypeChange={setDocumentType}
                 onDocumentPreviewChange={setDocumentPreview}
+                onProfilePhotoPreviewChange={setProfilePhotoPreview}
               />
             </div>
           </div>

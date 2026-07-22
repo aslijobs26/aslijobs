@@ -7,6 +7,7 @@ type PostJobFormFieldProps = {
   label: string;
   children: ReactNode;
   className?: string;
+  error?: string;
 };
 
 export function PostJobFormField({
@@ -14,6 +15,7 @@ export function PostJobFormField({
   label,
   children,
   className,
+  error,
 }: PostJobFormFieldProps) {
   return (
     <div className={cn(postJobFieldStackClassName, className)}>
@@ -21,6 +23,11 @@ export function PostJobFormField({
         {label}
       </label>
       {children}
+      {error ? (
+        <p className="text-xs font-medium text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
