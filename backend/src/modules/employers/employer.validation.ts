@@ -15,6 +15,7 @@ export const registerEmployerSchema = z
   .object({
     accountType: z.enum(EMPLOYER_ACCOUNT_TYPES),
     companyName: z.string().trim().default(""),
+    establishmentName: z.string().trim().default(""),
     firstName: z.string().trim().min(1, "First name is required"),
     lastName: z.string().trim().min(1, "Last name is required"),
     emailAddress: z
@@ -37,6 +38,17 @@ export const registerEmployerSchema = z
           data.accountType === "consultancy"
             ? "Consultancy Name is required"
             : "Company / Business Name is required",
+      });
+    }
+
+    if (
+      data.accountType === "individual" &&
+      !data.establishmentName.trim()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["establishmentName"],
+        message: "Establishment Name is required",
       });
     }
   });
@@ -74,13 +86,6 @@ export const completeCompanyProfileSchema = z
     pincode: z.string().trim().min(1, "Pincode is required"),
     city: z.string().trim().min(1, "City is required"),
     state: z.string().trim().min(1, "State is required"),
-    emailAddress: z
-      .string()
-      .trim()
-      .email("Enter a valid email address")
-      .optional()
-      .or(z.literal("")),
-    whatsappNumber: whatsappNumberSchema,
     verificationDocument: z.enum(EMPLOYER_BUSINESS_DOCUMENT_TYPES, {
       message: "Select a valid business verification document",
     }),
@@ -109,6 +114,7 @@ export const completeIndividualIdentitySchema = z.object({
 export const updateEmployerProfileSchema = z
   .object({
     companyName: z.string().trim().min(1).optional(),
+    establishmentName: z.string().trim().min(1).optional(),
     industry: z.string().trim().min(1).optional(),
     businessCategory: z.string().trim().min(1).optional(),
     minimumEmployees: z.coerce.number().int().min(0).optional(),

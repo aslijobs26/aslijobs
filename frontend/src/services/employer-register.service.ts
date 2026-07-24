@@ -29,6 +29,7 @@ export type EmployerPublic = {
   id: string;
   accountType: EmployerRegisterAccountType;
   companyName: string;
+  establishmentName: string;
   firstName: string;
   lastName: string;
   industry: string;
@@ -123,6 +124,7 @@ export async function registerEmployerAccount(
     {
       accountType,
       companyName: formData.companyName,
+      establishmentName: formData.establishmentName,
       firstName: formData.firstName,
       lastName: formData.lastName,
       emailAddress: formData.emailAddress,
@@ -191,8 +193,6 @@ export async function completeEmployerCompanyProfile(input: {
   body.append("pincode", input.profile.pincode);
   body.append("city", input.profile.city);
   body.append("state", input.profile.state);
-  body.append("emailAddress", input.profile.emailAddress);
-  body.append("whatsappNumber", input.profile.whatsappNumber);
   body.append("verificationDocument", input.documentType);
   body.append("document", input.documentFile);
 

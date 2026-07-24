@@ -65,8 +65,6 @@ type EmployerRegisterCompanyProfileFormProps = {
   employerId: string;
   accountType?: "company" | "consultancy";
   initialCompanyName?: string;
-  initialWhatsappNumber?: string;
-  initialEmailAddress?: string;
   onContinue?: () => void;
 };
 
@@ -74,8 +72,6 @@ export function EmployerRegisterCompanyProfileForm({
   employerId,
   accountType = "company",
   initialCompanyName = "",
-  initialWhatsappNumber = "",
-  initialEmailAddress = "",
   onContinue,
 }: EmployerRegisterCompanyProfileFormProps) {
   const isConsultancy = accountType === "consultancy";
@@ -84,8 +80,6 @@ export function EmployerRegisterCompanyProfileForm({
   const [formData, setFormData] = useState<EmployerRegisterCompanyProfileData>({
     ...EMPLOYER_REGISTER_INITIAL_COMPANY_PROFILE_DATA,
     companyName: initialCompanyName,
-    whatsappNumber: initialWhatsappNumber,
-    emailAddress: initialEmailAddress,
   });
   const [documentPreview, setDocumentPreview] =
     useState<EmployerRegisterDocumentPreview | null>(null);
@@ -193,11 +187,6 @@ export function EmployerRegisterCompanyProfileForm({
       return;
     }
 
-    if (!formData.whatsappNumber.trim()) {
-      setErrorMessage("WhatsApp Number is required");
-      return;
-    }
-
     if (!formData.companyAddress.trim()) {
       setErrorMessage("Company Address is required");
       return;
@@ -278,52 +267,6 @@ export function EmployerRegisterCompanyProfileForm({
 
         {isConsultancy ? (
           <>
-            <div className="employer-register-form-row">
-              <div className="employer-register-form-stack">
-                <label
-                  htmlFor="company-profile-whatsapp"
-                  className="employer-register-form-label"
-                >
-                  WhatsApp Number*
-                </label>
-                <input
-                  id="company-profile-whatsapp"
-                  type="tel"
-                  inputMode="numeric"
-                  value={formData.whatsappNumber}
-                  onChange={(event) =>
-                    updateField(
-                      "whatsappNumber",
-                      event.target.value.replace(/\D/g, "").slice(0, 10),
-                    )
-                  }
-                  placeholder="Enter Company WhatsApp Number"
-                  autoComplete="tel"
-                  className="employer-register-form-input"
-                />
-              </div>
-
-              <div className="employer-register-form-stack">
-                <label
-                  htmlFor="company-profile-email"
-                  className="employer-register-form-label"
-                >
-                  Email Address
-                </label>
-                <input
-                  id="company-profile-email"
-                  type="email"
-                  value={formData.emailAddress}
-                  onChange={(event) =>
-                    updateField("emailAddress", event.target.value)
-                  }
-                  placeholder="Enter Company Email Address"
-                  autoComplete="email"
-                  className="employer-register-form-input"
-                />
-              </div>
-            </div>
-
             <div className="employer-register-form-stack">
               <label
                 htmlFor="company-profile-address"
@@ -525,52 +468,6 @@ export function EmployerRegisterCompanyProfileForm({
                 options={EMPLOYER_REGISTER_PINCODE_OPTIONS}
                 onChange={handlePincodeChange}
               />
-            </div>
-
-            <div className="employer-register-form-row">
-              <div className="employer-register-form-stack">
-                <label
-                  htmlFor="company-profile-whatsapp"
-                  className="employer-register-form-label"
-                >
-                  WhatsApp Number*
-                </label>
-                <input
-                  id="company-profile-whatsapp"
-                  type="tel"
-                  inputMode="numeric"
-                  value={formData.whatsappNumber}
-                  onChange={(event) =>
-                    updateField(
-                      "whatsappNumber",
-                      event.target.value.replace(/\D/g, "").slice(0, 10),
-                    )
-                  }
-                  placeholder="Enter Company WhatsApp Number"
-                  autoComplete="tel"
-                  className="employer-register-form-input"
-                />
-              </div>
-
-              <div className="employer-register-form-stack">
-                <label
-                  htmlFor="company-profile-email"
-                  className="employer-register-form-label"
-                >
-                  Email Address
-                </label>
-                <input
-                  id="company-profile-email"
-                  type="email"
-                  value={formData.emailAddress}
-                  onChange={(event) =>
-                    updateField("emailAddress", event.target.value)
-                  }
-                  placeholder="Enter Company Email Address"
-                  autoComplete="email"
-                  className="employer-register-form-input"
-                />
-              </div>
             </div>
           </>
         )}

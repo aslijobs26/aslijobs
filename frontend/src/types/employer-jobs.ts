@@ -70,6 +70,9 @@ export type EmployerJobStatsResponse = {
 
 export type CreateJobPayload = {
   companyName: string;
+  industry?: string;
+  businessCategory?: string;
+  companySize?: string;
   jobTitle: string;
   jobType: "full-time" | "part-time" | "contract";
   contractPeriodFrom: string;
@@ -88,6 +91,7 @@ export type CreateJobPayload = {
   address: string;
   landmark: string;
   salaryType: "fixed" | "range";
+  salaryPeriod: "per-month" | "per-year";
   fixedSalary: number | null;
   minimumSalary: number | null;
   maximumSalary: number | null;
@@ -114,6 +118,9 @@ export type CreateJobPayload = {
 export type PostJobWizardSnapshot = {
   jobInformation: {
     companyDetails: string;
+    industry?: string;
+    businessCategory?: string;
+    companySize?: string;
     jobTitle: string;
     jobType: string;
     contractPeriodFrom: string;
@@ -132,6 +139,7 @@ export type PostJobWizardSnapshot = {
     address: string;
     landmark: string;
     salaryType: string;
+    salaryPeriod?: string;
     salaryMin: string;
     salaryMax: string;
     incentives: string;
@@ -173,6 +181,9 @@ export type EmployerJobDetail = {
   employerId: string;
   companyId: string;
   companyName: string;
+  industry: string;
+  businessCategory: string;
+  companySize: string;
   jobTitle: string;
   jobType: string;
   contractPeriodFrom: string;
@@ -191,6 +202,7 @@ export type EmployerJobDetail = {
   address: string;
   landmark: string;
   salaryType: string;
+  salaryPeriod?: string;
   fixedSalary: number | null;
   minimumSalary: number | null;
   maximumSalary: number | null;

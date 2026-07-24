@@ -41,6 +41,7 @@ export type EmployerRegisterImagePreview = {
 
 export type EmployerRegisterFormData = {
   companyName: string;
+  establishmentName: string;
   firstName: string;
   lastName: string;
   whatsappNumber: string;
@@ -58,8 +59,6 @@ export type EmployerRegisterCompanyProfileData = {
   pincode: string;
   city: string;
   state: string;
-  whatsappNumber: string;
-  emailAddress: string;
   verificationDocument: EmployerRegisterBusinessDocumentType | "";
 };
 

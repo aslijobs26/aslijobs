@@ -11,6 +11,7 @@ export type EmployerProfilePublic = {
   id: string;
   accountType: "company" | "consultancy" | "individual";
   companyName: string;
+  establishmentName: string;
   firstName: string;
   lastName: string;
   industry: string;
@@ -40,6 +41,7 @@ type UpdateProfileResponse = {
 
 export type UpdateEmployerProfileInput = {
   companyName?: string;
+  establishmentName?: string;
   industry?: string;
   businessCategory?: string;
   minimumEmployees?: number;
@@ -67,6 +69,9 @@ export async function updateEmployerProfile(input: UpdateEmployerProfileInput) {
 
   if (typeof input.companyName === "string") {
     body.append("companyName", input.companyName);
+  }
+  if (typeof input.establishmentName === "string") {
+    body.append("establishmentName", input.establishmentName);
   }
   if (typeof input.industry === "string") {
     body.append("industry", input.industry);

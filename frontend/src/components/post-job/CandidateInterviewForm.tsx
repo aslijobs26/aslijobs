@@ -6,6 +6,7 @@ import {
   POST_JOB_EXPERIENCE_OPTIONS,
   POST_JOB_GENDER_OPTIONS,
   POST_JOB_LANGUAGE_OPTIONS,
+  POST_JOB_LONG_TEXT_MAX_LENGTH,
   POST_JOB_WALK_IN_TIME_OPTIONS,
 } from "@/constants/post-job";
 import type {
@@ -540,16 +541,34 @@ export function CandidateInterviewForm({
               <PostJobFormField
                 id="other-instructions"
                 label="Other Instructions"
+                error={fieldErrors.otherInstructions}
               >
                 <textarea
                   id="other-instructions"
                   value={formData.otherInstructions}
                   onChange={(event) =>
-                    onFieldChange("otherInstructions", event.target.value)
+                    onFieldChange(
+                      "otherInstructions",
+                      event.target.value.slice(0, POST_JOB_LONG_TEXT_MAX_LENGTH),
+                    )
                   }
+                  maxLength={POST_JOB_LONG_TEXT_MAX_LENGTH}
                   placeholder="Mention required documents, or any other interview instruction"
-                  className={postJobTextareaClassName}
+                  className={cn(
+                    postJobTextareaClassName,
+                    fieldErrors.otherInstructions &&
+                      "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+                  )}
+                  aria-invalid={Boolean(fieldErrors.otherInstructions)}
+                  aria-describedby="other-instructions-count"
                 />
+                <p
+                  id="other-instructions-count"
+                  className="text-right text-xs text-muted"
+                >
+                  {formData.otherInstructions.length}/
+                  {POST_JOB_LONG_TEXT_MAX_LENGTH}
+                </p>
               </PostJobFormField>
             </div>
           </div>

@@ -26,6 +26,7 @@ export type EmployerIndustry = (typeof EMPLOYER_INDUSTRIES)[number];
 export type RegisterEmployerInput = {
   accountType: EmployerAccountType;
   companyName: string;
+  establishmentName?: string;
   firstName: string;
   lastName: string;
   emailAddress?: string;
@@ -48,8 +49,6 @@ export type CompleteCompanyProfileInput = {
   pincode: string;
   city: string;
   state: string;
-  emailAddress?: string;
-  whatsappNumber: string;
   verificationDocument: EmployerBusinessDocumentType;
 };
 
@@ -61,6 +60,7 @@ export type CompleteIndividualIdentityInput = {
 export type UpdateEmployerProfileInput = {
   employerId: string;
   companyName?: string;
+  establishmentName?: string;
   industry?: string;
   businessCategory?: string;
   minimumEmployees?: number;

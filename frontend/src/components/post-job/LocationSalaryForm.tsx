@@ -2,11 +2,13 @@
 
 import {
   POST_JOB_PERK_OPTIONS,
+  POST_JOB_SALARY_PERIOD_OPTIONS,
   POST_JOB_SALARY_TYPE_OPTIONS,
 } from "@/constants/post-job";
 import type {
   LocationAndSalaryFormData,
   PostJobPerkId,
+  SalaryPeriod,
   SalaryType,
 } from "@/types/post-job";
 import { cn } from "@/utils/cn";
@@ -14,6 +16,7 @@ import { ChevronDown } from "lucide-react";
 import type { RefObject } from "react";
 import { PostJobFormField } from "./PostJobFormField";
 import { PostJobChipButton } from "./PostJobChipButton";
+import { PostJobPlaceAutocomplete } from "./PostJobPlaceAutocomplete";
 import {
   postJobBackButtonClassName,
   postJobCardClassName,
@@ -139,19 +142,20 @@ export function LocationSalaryForm({
               label="State"
               error={fieldErrors.state}
             >
-              <input
+              <PostJobPlaceAutocomplete
                 id="job-state"
-                type="text"
+                mode="state"
                 value={formData.state}
-                onChange={(event) => onFieldChange("state", event.target.value)}
-                placeholder="Enter state"
-                autoComplete="address-level1"
-                className={cn(
-                  postJobInputClassName,
-                  fieldErrors.state &&
-                    "border-red-500 focus:border-red-500 focus:ring-red-500/20",
-                )}
-                aria-invalid={Boolean(fieldErrors.state)}
+                placeholder="Search state"
+                hasError={Boolean(fieldErrors.state)}
+                onChange={(value) => {
+                  onFieldChange("state", value);
+                  onFieldChange("city", "");
+                }}
+                onSelect={(suggestion) => {
+                  onFieldChange("state", suggestion.state);
+                  onFieldChange("city", "");
+                }}
               />
             </PostJobFormField>
             <PostJobFormField
@@ -159,19 +163,22 @@ export function LocationSalaryForm({
               label="City"
               error={fieldErrors.city}
             >
-              <input
+              <PostJobPlaceAutocomplete
                 id="job-city"
-                type="text"
+                mode="city"
                 value={formData.city}
-                onChange={(event) => onFieldChange("city", event.target.value)}
-                placeholder="Enter city"
-                autoComplete="address-level2"
-                className={cn(
-                  postJobInputClassName,
-                  fieldErrors.city &&
-                    "border-red-500 focus:border-red-500 focus:ring-red-500/20",
-                )}
-                aria-invalid={Boolean(fieldErrors.city)}
+                selectedState={formData.state}
+                disabled={!formData.state.trim()}
+                placeholder={
+                  formData.state.trim()
+                    ? "Search city"
+                    : "Select a state first"
+                }
+                hasError={Boolean(fieldErrors.city)}
+                onChange={(value) => onFieldChange("city", value)}
+                onSelect={(suggestion) => {
+                  onFieldChange("city", suggestion.city);
+                }}
               />
             </PostJobFormField>
           </div>
@@ -217,10 +224,11 @@ export function LocationSalaryForm({
               className={cn(
                 "grid grid-cols-1 gap-4 sm:gap-5 lg:gap-6 lg-short:gap-4 lg-compact:gap-3 lg-tight:gap-2.5",
                 formData.salaryType === "range" &&
-                  "sm:grid-cols-[minmax(10.5rem,13rem)_minmax(0,1fr)_minmax(0,1fr)]",
+                  "sm:grid-cols-[minmax(10.5rem,13rem)_minmax(10.5rem,13rem)_minmax(0,1fr)_minmax(0,1fr)]",
                 formData.salaryType === "fixed" &&
-                  "sm:grid-cols-[minmax(10.5rem,13rem)_minmax(10.5rem,13rem)]",
-                !formData.salaryType && "sm:max-w-[13rem]",
+                  "sm:grid-cols-[minmax(10.5rem,13rem)_minmax(10.5rem,13rem)_minmax(10.5rem,13rem)]",
+                !formData.salaryType &&
+                  "sm:grid-cols-2 sm:max-w-[28rem]",
               )}
             >
               <SelectField
@@ -233,6 +241,18 @@ export function LocationSalaryForm({
                   onFieldChange("salaryType", value as SalaryType)
                 }
                 error={fieldErrors.salaryType}
+              />
+
+              <SelectField
+                id="salary-period"
+                label="Salary Period"
+                value={formData.salaryPeriod}
+                placeholder="Select period"
+                options={POST_JOB_SALARY_PERIOD_OPTIONS}
+                onChange={(value) =>
+                  onFieldChange("salaryPeriod", value as SalaryPeriod)
+                }
+                error={fieldErrors.salaryPeriod}
               />
 
               {formData.salaryType === "fixed" ? (

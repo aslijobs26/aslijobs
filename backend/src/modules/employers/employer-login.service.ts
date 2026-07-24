@@ -19,6 +19,7 @@ function toLoginEmployer(employer: {
   _id: mongoose.Types.ObjectId;
   accountType: string;
   companyName: string;
+  establishmentName?: string;
   firstName: string;
   lastName: string;
   industry?: string;
@@ -89,6 +90,7 @@ function toLoginEmployer(employer: {
     id: employer._id.toString(),
     accountType: employer.accountType,
     companyName: employer.companyName,
+    establishmentName: employer.establishmentName ?? "",
     firstName: employer.firstName,
     lastName: employer.lastName,
     industry: employer.industry ?? "",

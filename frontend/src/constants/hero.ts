@@ -60,13 +60,8 @@ export const HERO_SEARCH_DEFAULTS = {
   query: "",
   state: "",
   city: "",
-  category: "",
 } as const;
 
 export const HERO_STATE_OPTIONS = [{ value: "", label: "All States" }] as const;
 
 export const HERO_CITY_OPTIONS = [{ value: "", label: "All Cities" }] as const;
-
-export const HERO_CATEGORY_OPTIONS = [
-  { value: "", label: "All Categories" },
-] as const;

@@ -6,8 +6,16 @@ export type PartTimeScheduleType = "fixed-timings" | "flexible-hours";
 
 export type ContractPeriodUnit = "days" | "months" | "years";
 
+export type EmployerAccountType = "company" | "consultancy" | "individual";
+
 export type PostJobFormData = {
   companyDetails: string;
+  /** Client company industry — used for Consultancy employers only. */
+  industry: string;
+  /** Client company business category — used for Consultancy employers only. */
+  businessCategory: string;
+  /** Client company strength option value — used for Consultancy employers only. */
+  companySize: string;
   jobTitle: string;
   jobType: JobType | "";
   contractPeriodFrom: string;
@@ -34,12 +42,15 @@ export type PostJobPerkId =
 
 export type SalaryType = "fixed" | "range";
 
+export type SalaryPeriod = "per-month" | "per-year";
+
 export type LocationAndSalaryFormData = {
   state: string;
   city: string;
   address: string;
   landmark: string;
   salaryType: SalaryType | "";
+  salaryPeriod: SalaryPeriod | "";
   salaryMin: string;
   salaryMax: string;
   incentives: string;

@@ -4,6 +4,7 @@ import {
   POST_JOB_INITIAL_STEP,
   POST_JOB_INITIAL_WIZARD_DATA,
 } from "@/constants/post-job";
+import { getCompanyStrengthValueFromRange } from "@/constants/employer-register";
 import { EMPLOYER_JOBS_QUERY_KEYS } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
 import {
@@ -14,6 +15,7 @@ import {
   updateEmployerActiveJob,
   updateEmployerJobDraft,
 } from "@/services/employer-jobs.service";
+import { fetchEmployerProfile } from "@/services/employer-profile.service";
 import type { CreatedJobResponse, JobStatus } from "@/types/employer-jobs";
 import { buildJobPostedSuccessSummary } from "@/utils/build-job-posted-success-summary";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
@@ -33,6 +35,7 @@ import {
 import { buildEmployerLoginHref } from "@/utils/safe-return-url";
 import type {
   CandidateInterviewFormData,
+  EmployerAccountType,
   LocationAndSalaryFormData,
   PostJobActiveStep,
   PostJobFormData,
@@ -77,6 +80,7 @@ function PostJobActiveSection({
   submitError,
   isSubmitting,
   isEditMode,
+  accountType,
   onJobInformationChange,
   onLocationSalaryChange,
   onCandidateInterviewChange,
@@ -93,6 +97,7 @@ function PostJobActiveSection({
   submitError: string;
   isSubmitting: boolean;
   isEditMode: boolean;
+  accountType: EmployerAccountType | null;
   onJobInformationChange: <K extends keyof PostJobFormData>(
     field: K,
     value: PostJobFormData[K],
@@ -117,6 +122,7 @@ function PostJobActiveSection({
       <JobInformationForm
         formData={formData.jobInformation}
         fieldErrors={fieldErrors}
+        accountType={accountType}
         onFieldChange={onJobInformationChange}
         onContinue={onContinueStep1}
         scrollContainerRef={scrollContainerRef}
@@ -172,7 +178,11 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   const [loadedJobStatus, setLoadedJobStatus] = useState<JobStatus | null>(
     null,
   );
+  const [accountType, setAccountType] = useState<EmployerAccountType | null>(
+    null,
+  );
   const formScrollRef = useRef<HTMLFormElement>(null);
+  const hasPrefillEmployerProfileRef = useRef(false);
 
   const draftIdRef = useRef<string | null>(draftJobId ?? null);
   const isActiveEditMode = loadedJobStatus === "active";
@@ -183,11 +193,87 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   const isSavingDraftRef = useRef(false);
   const skipAutosaveRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const validationContext = { accountType };
 
   useEffect(() => {
     formDataRef.current = formData;
     activeStepRef.current = activeStep;
   }, [formData, activeStep]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadEmployerAccountType = async () => {
+      try {
+        const profile = await fetchEmployerProfile();
+        if (cancelled) {
+          return;
+        }
+
+        setAccountType(profile.accountType);
+
+        if (draftJobId || hasPrefillEmployerProfileRef.current) {
+          return;
+        }
+
+        hasPrefillEmployerProfileRef.current = true;
+
+        if (profile.accountType === "consultancy") {
+          const matchedCompanySize = getCompanyStrengthValueFromRange(
+            profile.minimumEmployees,
+            profile.maximumEmployees,
+          );
+          const fallbackCompanySize =
+            typeof profile.minimumEmployees === "number" &&
+            typeof profile.maximumEmployees === "number"
+              ? `${profile.minimumEmployees}-${profile.maximumEmployees}`
+              : "";
+          const companySize = matchedCompanySize || fallbackCompanySize;
+
+          setFormData((current) => ({
+            ...current,
+            jobInformation: {
+              ...current.jobInformation,
+              industry:
+                current.jobInformation.industry || profile.industry || "",
+              businessCategory:
+                current.jobInformation.businessCategory ||
+                profile.businessCategory ||
+                "",
+              companySize: current.jobInformation.companySize || companySize,
+            },
+          }));
+          return;
+        }
+
+        if (profile.accountType === "individual") {
+          const establishmentName = (profile.establishmentName ?? "").trim();
+          if (!establishmentName) {
+            return;
+          }
+
+          setFormData((current) => ({
+            ...current,
+            jobInformation: {
+              ...current.jobInformation,
+              companyDetails:
+                current.jobInformation.companyDetails || establishmentName,
+            },
+          }));
+        }
+      } catch {
+        if (!cancelled) {
+          setAccountType(null);
+        }
+      }
+    };
+
+    void loadEmployerAccountType();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [draftJobId]);
 
   const buildDraftSignature = useCallback(
     (data: PostJobWizardFormData, step: PostJobActiveStep) =>
@@ -447,7 +533,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
         current < step;
         current = (current + 1) as PostJobActiveStep
       ) {
-        const errors = validatePostJobStep(current, formData);
+        const errors = validatePostJobStep(current, formData, validationContext);
         if (Object.keys(errors).length > 0) {
           setActiveStep(current);
           setFieldErrors(errors);
@@ -462,7 +548,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   };
 
   const handleContinueStep1 = () => {
-    const errors = validatePostJobStep(1, formData);
+    const errors = validatePostJobStep(1, formData, validationContext);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       scheduleFocusFirstInvalidField(errors);
@@ -490,7 +576,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       return;
     }
 
-    const invalid = findFirstInvalidPostJobStep(formData);
+    const invalid = findFirstInvalidPostJobStep(formData, validationContext);
 
     if (invalid) {
       setActiveStep(invalid.step);
@@ -591,6 +677,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
               submitError={submitError}
               isSubmitting={isSubmitting}
               isEditMode={isActiveEditMode}
+              accountType={accountType}
               onJobInformationChange={updateJobInformation}
               onLocationSalaryChange={updateLocationAndSalary}
               onCandidateInterviewChange={updateCandidateAndInterview}

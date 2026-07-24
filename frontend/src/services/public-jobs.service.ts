@@ -6,6 +6,12 @@ type ApiSuccess<T> = {
   data: T;
 };
 
+export type PublicJobSort =
+  | "relevant"
+  | "latest"
+  | "salary_desc"
+  | "salary_asc";
+
 export type PublicJobListItem = {
   id: string;
   jobId: string;
@@ -20,12 +26,15 @@ export type PublicJobListItem = {
   city: string;
   cityName: string;
   salaryType: "fixed" | "range";
+  salaryPeriod?: "per-month" | "per-year";
   fixedSalary: number | null;
   minimumSalary: number | null;
   maximumSalary: number | null;
   perks: string[];
   education: string[];
   experience: string;
+  publishedAt: string | null;
+  applyWhatsAppNumber: string | null;
   createdAt: string;
 };
 
@@ -43,7 +52,13 @@ export type PublicJobDetail = PublicJobListItem & {
   walkInStartTime: string;
   walkInEndTime: string;
   interviewInstructions: string;
-  publishedAt: string | null;
+  contactPersonName: string | null;
+};
+
+export type PublicJobCityFacet = {
+  city: string;
+  cityName: string;
+  count: number;
 };
 
 export type PublicJobsResponse = {
@@ -54,6 +69,9 @@ export type PublicJobsResponse = {
     total: number;
     totalPages: number;
   };
+  facets?: {
+    cities: PublicJobCityFacet[];
+  };
 };
 
 export type FetchPublicJobsParams = {
@@ -62,23 +80,35 @@ export type FetchPublicJobsParams = {
   limit?: number;
   city?: string;
   state?: string;
+  jobType?: string;
+  experience?: string;
+  gender?: string;
+  workMode?: string;
+  minSalary?: number;
+  maxSalary?: number;
+  sort?: PublicJobSort;
 };
 
 /** Only Active jobs are returned by the API. */
 export async function fetchPublicActiveJobs(
   params: FetchPublicJobsParams = {},
+  options?: { signal?: AbortSignal },
 ) {
   const response = await apiClient.get<ApiSuccess<PublicJobsResponse>>(
     "/jobs/public",
-    { params },
+    { params, signal: options?.signal },
   );
   return response.data.data;
 }
 
 /** Only Active jobs are returned. Non-active public IDs yield 404. */
-export async function fetchPublicActiveJobByPublicId(publicJobId: string) {
+export async function fetchPublicActiveJobByPublicId(
+  publicJobId: string,
+  options?: { signal?: AbortSignal },
+) {
   const response = await apiClient.get<ApiSuccess<{ job: PublicJobDetail }>>(
     `/jobs/public/${encodeURIComponent(publicJobId)}`,
+    { signal: options?.signal },
   );
   return response.data.data;
 }

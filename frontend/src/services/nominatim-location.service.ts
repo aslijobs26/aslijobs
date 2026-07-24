@@ -293,6 +293,30 @@ function mapCityFeature(
   };
 }
 
+export function resolveIndiaStateLabel(stateValue: string): string {
+  const trimmed = stateValue.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const spaced = normalizeKey(trimmed.replace(/-/g, " "));
+  const slug = trimmed
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const match = INDIAN_STATES_AND_UTS.find((state) => {
+    const stateKey = normalizeKey(state);
+    const stateSlug = state
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return stateKey === spaced || stateSlug === slug;
+  });
+
+  return match ?? trimmed;
+}
+
 export async function searchIndiaStates(
   query: string,
   signal?: AbortSignal,

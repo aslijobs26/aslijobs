@@ -1,14 +1,11 @@
 "use client";
 
 import { HeroPlaceAutocomplete } from "@/components/home/hero/HeroPlaceAutocomplete";
-import {
-  HERO_CATEGORY_OPTIONS,
-  HERO_SEARCH_DEFAULTS,
-} from "@/constants/hero";
+import { HERO_SEARCH_DEFAULTS } from "@/constants/hero";
 import { ROUTES } from "@/constants/routes";
 import type { HeroSearchFormValues } from "@/types/hero";
 import { cn } from "@/utils/cn";
-import { Briefcase, ChevronDown, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 
@@ -36,48 +33,6 @@ const controlClassName =
 const inputClassName =
   "min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted";
 
-const selectClassName =
-  "min-w-0 flex-1 cursor-pointer appearance-none bg-transparent pr-7 text-sm text-foreground outline-none";
-
-type SelectControlProps = {
-  id: string;
-  value: string;
-  onChange: (value: string) => void;
-  icon: ReactNode;
-  options: readonly { value: string; label: string }[];
-};
-
-function SelectControl({
-  id,
-  value,
-  onChange,
-  icon,
-  options,
-}: SelectControlProps) {
-  return (
-    <div className={controlClassName}>
-      {icon}
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={selectClassName}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute right-3.5 size-4 shrink-0 text-foreground/70"
-        strokeWidth={2}
-        aria-hidden="true"
-      />
-    </div>
-  );
-}
-
 export function HeroSearchForm() {
   const router = useRouter();
   const [values, setValues] = useState<HeroSearchFormValues>({
@@ -93,7 +48,6 @@ export function HeroSearchForm() {
     if (values.query.trim()) params.set("q", values.query.trim());
     if (values.state) params.set("state", values.state);
     if (values.city) params.set("city", values.city);
-    if (values.category) params.set("category", values.category);
 
     const queryString = params.toString();
     router.push(
@@ -107,7 +61,7 @@ export function HeroSearchForm() {
       className="rounded-2xl border border-border-subtle bg-surface p-5 shadow-lg sm:p-6 lg:rounded-3xl lg:p-8"
       aria-label="Job search"
     >
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end lg:gap-4 xl:gap-5">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end lg:gap-4 xl:gap-5">
         <SearchField
           id="hero-search-query"
           label="Search Job, Role or Keyword"
@@ -189,27 +143,6 @@ export function HeroSearchForm() {
                 state: suggestion.state || current.state,
               }));
             }}
-          />
-        </SearchField>
-
-        <SearchField id="hero-search-category" label="Job Category">
-          <SelectControl
-            id="hero-search-category"
-            value={values.category}
-            onChange={(value) =>
-              setValues((current) => ({
-                ...current,
-                category: value,
-              }))
-            }
-            icon={
-              <Briefcase
-                className="size-[18px] shrink-0 text-foreground"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-            }
-            options={HERO_CATEGORY_OPTIONS}
           />
         </SearchField>
 

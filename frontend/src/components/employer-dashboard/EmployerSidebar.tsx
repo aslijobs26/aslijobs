@@ -76,9 +76,9 @@ export function EmployerSidebar({
           )}
         >
           <Link
-            href={ROUTES.EMPLOYER_DASHBOARD}
+            href={ROUTES.HOME}
             onClick={onMobileClose}
-            aria-label="AsliJobs employer dashboard"
+            aria-label="AsliJobs home"
             className={cn(
               "rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
               collapsed

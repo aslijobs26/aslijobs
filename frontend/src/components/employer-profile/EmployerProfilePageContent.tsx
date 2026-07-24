@@ -31,6 +31,7 @@ export function EmployerProfilePageContent() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [companyName, setCompanyName] = useState("");
+  const [establishmentName, setEstablishmentName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [industry, setIndustry] = useState("");
@@ -62,6 +63,7 @@ export function EmployerProfilePageContent() {
 
         setEmployer(profile);
         setCompanyName(profile.companyName);
+        setEstablishmentName(profile.establishmentName ?? "");
         setFirstName(profile.firstName);
         setLastName(profile.lastName);
         setIndustry(profile.industry);
@@ -237,10 +239,16 @@ export function EmployerProfilePageContent() {
       return;
     }
 
+    if (!establishmentName.trim()) {
+      setErrorMessage("Establishment Name is required");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const updated = await updateEmployerProfile({
+        establishmentName: establishmentName.trim(),
         firstName,
         lastName,
         emailAddress,
@@ -250,6 +258,7 @@ export function EmployerProfilePageContent() {
       });
 
       setEmployer(updated);
+      setEstablishmentName(updated.establishmentName ?? "");
       setProfilePhotoPreview(null);
       setRemoveProfilePhoto(false);
       setSuccessMessage("Profile updated successfully");
@@ -531,6 +540,23 @@ export function EmployerProfilePageContent() {
           </>
         ) : (
           <>
+            <div className="employer-register-form-stack">
+              <label
+                htmlFor="edit-establishment-name"
+                className="employer-register-form-label"
+              >
+                Establishment Name*
+              </label>
+              <input
+                id="edit-establishment-name"
+                type="text"
+                value={establishmentName}
+                onChange={(event) => setEstablishmentName(event.target.value)}
+                placeholder="Enter Establishment Name"
+                className="employer-register-form-input"
+              />
+            </div>
+
             <div className="employer-register-form-row">
               <div className="employer-register-form-stack">
                 <label

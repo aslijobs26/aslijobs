@@ -49,3 +49,20 @@ export function buildEmployerLoginHref(returnUrl?: string): string {
 
   return `${ROUTES.EMPLOYER_LOGIN}?${params.toString()}`;
 }
+
+/** Same query key as employer login for consistent returnUrl handling. */
+export const JOB_SEEKER_LOGIN_RETURN_URL_QUERY = EMPLOYER_LOGIN_RETURN_URL_QUERY;
+
+export function buildJobSeekerLoginHref(returnUrl?: string): string {
+  const safeReturnUrl = getSafeReturnUrl(returnUrl);
+
+  if (!safeReturnUrl) {
+    return ROUTES.JOB_SEEKER_LOGIN;
+  }
+
+  const params = new URLSearchParams({
+    [JOB_SEEKER_LOGIN_RETURN_URL_QUERY]: safeReturnUrl,
+  });
+
+  return `${ROUTES.JOB_SEEKER_LOGIN}?${params.toString()}`;
+}

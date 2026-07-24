@@ -9,6 +9,7 @@ import {
   JOB_STATUSES,
   JOB_TYPES,
   PART_TIME_SCHEDULES,
+  SALARY_PERIODS,
   SALARY_TYPES,
   WORK_MODES,
 } from "../../constants/job.constants.js";
@@ -28,6 +29,9 @@ const optionalNullableNumber = z
 export const createJobSchema = z
   .object({
     companyName: nonEmptyString("Company name is required"),
+    industry: optionalString,
+    businessCategory: optionalString,
+    companySize: optionalString,
     jobTitle: nonEmptyString("Job title is required"),
     jobType: z.enum(JOB_TYPES, {
       error: "Job type is required",
@@ -48,7 +52,10 @@ export const createJobSchema = z
       .number({ error: "Number of vacancies is required" })
       .int("Vacancies must be a whole number")
       .min(1, "At least one vacancy is required"),
-    description: nonEmptyString("Job description is required"),
+    description: nonEmptyString("Job description is required").max(
+      3000,
+      "Job description must be 3000 characters or less",
+    ),
     state: nonEmptyString("State is required"),
     stateName: nonEmptyString("State is required"),
     city: nonEmptyString("City is required"),
@@ -57,6 +64,9 @@ export const createJobSchema = z
     landmark: optionalString,
     salaryType: z.enum(SALARY_TYPES, {
       error: "Salary type is required",
+    }),
+    salaryPeriod: z.enum(SALARY_PERIODS, {
+      error: "Salary period is required",
     }),
     fixedSalary: optionalNullableNumber,
     minimumSalary: optionalNullableNumber,
@@ -78,7 +88,12 @@ export const createJobSchema = z
     walkInEndDate: optionalString,
     walkInStartTime: optionalString,
     walkInEndTime: optionalString,
-    interviewInstructions: optionalString,
+    interviewInstructions: z
+      .string()
+      .trim()
+      .max(3000, "Other instructions must be 3000 characters or less")
+      .optional()
+      .default(""),
     contactPersonName: nonEmptyString("Contact person name is required"),
     contactEmail: z
       .string()
@@ -242,12 +257,106 @@ export const listEmployerJobsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),
 });
 
+export const PUBLIC_JOB_SORTS = [
+  "relevant",
+  "latest",
+  "salary_desc",
+  "salary_asc",
+] as const;
+
+function parseCsvEnumValues<T extends readonly [string, ...string[]]>(
+  values: T,
+  raw: string | undefined,
+): T[number][] {
+  if (!raw?.trim()) {
+    return [];
+  }
+
+  const allowed = new Set<string>(values);
+  const parsed: T[number][] = [];
+
+  for (const part of raw.split(",")) {
+    const trimmed = part.trim();
+    if (!trimmed || !allowed.has(trimmed)) {
+      continue;
+    }
+    if (!parsed.includes(trimmed as T[number])) {
+      parsed.push(trimmed as T[number]);
+    }
+  }
+
+  return parsed;
+}
+
+function toPublicLocationSlug(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function parseLocationSlugs(raw: string | undefined): string[] {
+  if (!raw?.trim()) {
+    return [];
+  }
+
+  const parsed: string[] = [];
+  for (const part of raw.split(",")) {
+    const slug = toPublicLocationSlug(part);
+    if (!slug || parsed.includes(slug)) {
+      continue;
+    }
+    parsed.push(slug);
+  }
+
+  return parsed;
+}
+
 export const publicJobsQuerySchema = z.object({
   search: z.string().trim().optional().default(""),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),
-  city: z.string().trim().optional(),
-  state: z.string().trim().optional(),
+  city: z
+    .string()
+    .optional()
+    .transform((value) => parseLocationSlugs(value)),
+  state: z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (!value?.trim()) {
+        return undefined;
+      }
+      return toPublicLocationSlug(value) || undefined;
+    }),
+  jobType: z
+    .string()
+    .optional()
+    .transform((value) => parseCsvEnumValues(JOB_TYPES, value)),
+  experience: z
+    .string()
+    .optional()
+    .transform((value) => parseCsvEnumValues(JOB_EXPERIENCE_LEVELS, value)),
+  gender: z
+    .string()
+    .optional()
+    .transform((value) => parseCsvEnumValues(JOB_GENDERS, value)),
+  workMode: z
+    .string()
+    .optional()
+    .transform((value) => parseCsvEnumValues(WORK_MODES, value)),
+  minSalary: z.preprocess(
+    (value) =>
+      value === "" || value === undefined || value === null ? undefined : value,
+    z.coerce.number().nonnegative().optional(),
+  ),
+  maxSalary: z.preprocess(
+    (value) =>
+      value === "" || value === undefined || value === null ? undefined : value,
+    z.coerce.number().nonnegative().optional(),
+  ),
+  sort: z.enum(PUBLIC_JOB_SORTS).optional().default("relevant"),
 });
 
 export const jobIdParamsSchema = z.object({
@@ -275,6 +384,9 @@ export const updateActiveJobSchema = createJobSchema;
 const draftWizardSnapshotSchema = z.object({
   jobInformation: z.object({
     companyDetails: z.string(),
+    industry: z.string().optional().default(""),
+    businessCategory: z.string().optional().default(""),
+    companySize: z.string().optional().default(""),
     jobTitle: z.string(),
     jobType: z.string(),
     contractPeriodFrom: z.string(),
@@ -285,7 +397,9 @@ const draftWizardSnapshotSchema = z.object({
     partTimeFlexibleHours: z.string(),
     workMode: z.string(),
     vacancies: z.string(),
-    jobDescription: z.string(),
+    jobDescription: z
+      .string()
+      .max(3000, "Job description must be 3000 characters or less"),
   }),
   locationAndSalary: z.object({
     state: z.string(),
@@ -293,6 +407,7 @@ const draftWizardSnapshotSchema = z.object({
     address: z.string(),
     landmark: z.string(),
     salaryType: z.string(),
+    salaryPeriod: z.string().optional().default(""),
     salaryMin: z.string(),
     salaryMax: z.string(),
     incentives: z.string(),
@@ -316,7 +431,9 @@ const draftWizardSnapshotSchema = z.object({
     walkInEndDate: z.string(),
     walkInStartTime: z.string(),
     walkInEndTime: z.string(),
-    otherInstructions: z.string(),
+    otherInstructions: z
+      .string()
+      .max(3000, "Other instructions must be 3000 characters or less"),
     contactName: z.string(),
     contactEmail: z.string(),
     contactMobile: z.string(),
@@ -330,6 +447,9 @@ function draftSnapshotHasMeaningfulContent(
 
   const stringFields = [
     jobInformation.companyDetails,
+    jobInformation.industry,
+    jobInformation.businessCategory,
+    jobInformation.companySize,
     jobInformation.jobTitle,
     jobInformation.jobType,
     jobInformation.contractPeriodFrom,
@@ -346,6 +466,7 @@ function draftSnapshotHasMeaningfulContent(
     locationAndSalary.address,
     locationAndSalary.landmark,
     locationAndSalary.salaryType,
+    locationAndSalary.salaryPeriod,
     locationAndSalary.salaryMin,
     locationAndSalary.salaryMax,
     locationAndSalary.incentives,

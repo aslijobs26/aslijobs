@@ -11,6 +11,7 @@ export type EmployerLoginPublic = {
   id: string;
   accountType: "company" | "consultancy" | "individual";
   companyName: string;
+  establishmentName?: string;
   firstName: string;
   lastName: string;
   industry?: string;

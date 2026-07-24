@@ -6,6 +6,8 @@ export const PART_TIME_SCHEDULES = ["fixed-timings", "flexible-hours"] as const;
 
 export const SALARY_TYPES = ["fixed", "range"] as const;
 
+export const SALARY_PERIODS = ["per-month", "per-year"] as const;
+
 export const JOB_STATUSES = [
   "draft",
   "active",
@@ -71,5 +73,6 @@ export type JobType = (typeof JOB_TYPES)[number];
 export type WorkMode = (typeof WORK_MODES)[number];
 export type PartTimeSchedule = (typeof PART_TIME_SCHEDULES)[number];
 export type SalaryType = (typeof SALARY_TYPES)[number];
+export type SalaryPeriod = (typeof SALARY_PERIODS)[number];
 export type JobStatus = (typeof JOB_STATUSES)[number];
 export type JobStatusAction = (typeof JOB_STATUS_ACTIONS)[number];

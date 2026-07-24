@@ -39,6 +39,9 @@ export function mapWizardDataToCreateJobPayload(
 
   return {
     companyName: jobInformation.companyDetails.trim(),
+    industry: jobInformation.industry.trim(),
+    businessCategory: jobInformation.businessCategory.trim(),
+    companySize: jobInformation.companySize.trim(),
     jobTitle: jobInformation.jobTitle.trim(),
     jobType: jobInformation.jobType as CreateJobPayload["jobType"],
     contractPeriodFrom: jobInformation.contractPeriodFrom,
@@ -57,6 +60,8 @@ export function mapWizardDataToCreateJobPayload(
     address: locationAndSalary.address.trim(),
     landmark: locationAndSalary.landmark.trim(),
     salaryType: locationAndSalary.salaryType as CreateJobPayload["salaryType"],
+    salaryPeriod:
+      locationAndSalary.salaryPeriod as CreateJobPayload["salaryPeriod"],
     fixedSalary:
       locationAndSalary.salaryType === "fixed"
         ? toOptionalNumber(locationAndSalary.incentives)

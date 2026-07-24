@@ -25,6 +25,7 @@ type JobPostedApiFields = Partial<
     | "stateName"
     | "jobType"
     | "salaryType"
+    | "salaryPeriod"
     | "fixedSalary"
     | "minimumSalary"
     | "maximumSalary"
@@ -49,14 +50,19 @@ function parseAmount(raw: string): number | null {
   return Number.isFinite(amount) ? amount : null;
 }
 
+function salaryPeriodSuffix(period?: string | null): string {
+  return period === "per-year" ? " /year" : " /month";
+}
+
 function formatSalaryFromForm(formData: PostJobWizardFormData): string {
-  const { salaryType, incentives, salaryMin, salaryMax } =
+  const { salaryType, salaryPeriod, incentives, salaryMin, salaryMax } =
     formData.locationAndSalary;
+  const period = salaryPeriodSuffix(salaryPeriod);
 
   if (salaryType === "fixed") {
     const amount = parseAmount(incentives);
     if (amount !== null) {
-      return `${formatCurrencyAmount(amount)} /month`;
+      return `${formatCurrencyAmount(amount)}${period}`;
     }
   }
 
@@ -65,15 +71,15 @@ function formatSalaryFromForm(formData: PostJobWizardFormData): string {
     const max = parseAmount(salaryMax);
 
     if (min !== null && max !== null) {
-      return `${formatCurrencyAmount(min)} - ${formatCurrencyAmount(max)} /month`;
+      return `${formatCurrencyAmount(min)} - ${formatCurrencyAmount(max)}${period}`;
     }
 
     if (min !== null) {
-      return `${formatCurrencyAmount(min)} /month`;
+      return `${formatCurrencyAmount(min)}${period}`;
     }
 
     if (max !== null) {
-      return `${formatCurrencyAmount(max)} /month`;
+      return `${formatCurrencyAmount(max)}${period}`;
     }
   }
 
@@ -81,8 +87,10 @@ function formatSalaryFromForm(formData: PostJobWizardFormData): string {
 }
 
 function formatSalaryFromJob(job: JobPostedApiFields): string {
+  const period = salaryPeriodSuffix(job.salaryPeriod);
+
   if (job.salaryType === "fixed" && typeof job.fixedSalary === "number") {
-    return `${formatCurrencyAmount(job.fixedSalary)} /month`;
+    return `${formatCurrencyAmount(job.fixedSalary)}${period}`;
   }
 
   if (
@@ -90,19 +98,19 @@ function formatSalaryFromJob(job: JobPostedApiFields): string {
     typeof job.minimumSalary === "number" &&
     typeof job.maximumSalary === "number"
   ) {
-    return `${formatCurrencyAmount(job.minimumSalary)} - ${formatCurrencyAmount(job.maximumSalary)} /month`;
+    return `${formatCurrencyAmount(job.minimumSalary)} - ${formatCurrencyAmount(job.maximumSalary)}${period}`;
   }
 
   if (typeof job.minimumSalary === "number") {
-    return `${formatCurrencyAmount(job.minimumSalary)} /month`;
+    return `${formatCurrencyAmount(job.minimumSalary)}${period}`;
   }
 
   if (typeof job.maximumSalary === "number") {
-    return `${formatCurrencyAmount(job.maximumSalary)} /month`;
+    return `${formatCurrencyAmount(job.maximumSalary)}${period}`;
   }
 
   if (typeof job.fixedSalary === "number") {
-    return `${formatCurrencyAmount(job.fixedSalary)} /month`;
+    return `${formatCurrencyAmount(job.fixedSalary)}${period}`;
   }
 
   return "";

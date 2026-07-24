@@ -8,6 +8,7 @@ import {
   JOB_STATUSES,
   JOB_TYPES,
   PART_TIME_SCHEDULES,
+  SALARY_PERIODS,
   SALARY_TYPES,
   WORK_MODES,
 } from "../../constants/job.constants.js";
@@ -34,6 +35,21 @@ const jobSchema = new Schema(
       index: true,
     },
     companyName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    industry: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    businessCategory: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    companySize: {
       type: String,
       trim: true,
       default: "",
@@ -130,6 +146,11 @@ const jobSchema = new Schema(
       type: String,
       enum: [...SALARY_TYPES, ""],
       default: "",
+    },
+    salaryPeriod: {
+      type: String,
+      enum: SALARY_PERIODS,
+      default: "per-month",
     },
     fixedSalary: {
       type: Number,

@@ -103,18 +103,10 @@ export function EmployerRegisterForm({
   const businessNamePlaceholder = isConsultancyAccount
     ? "Enter Consultancy Name"
     : "Enter company name";
-  const firstNamePlaceholder = isConsultancyAccount
-    ? "Enter First Name"
-    : "Enter company name";
-  const lastNamePlaceholder = isConsultancyAccount
-    ? "Enter Last Name"
-    : "Enter company name";
-  const whatsappPlaceholder = isConsultancyAccount
-    ? "Enter WhatsApp Number"
-    : "Enter Your WhatsApp Number";
-  const emailPlaceholder = isConsultancyAccount
-    ? "Enter Email Address"
-    : "Enter Your Email Address";
+  const firstNamePlaceholder = "Enter First Name";
+  const lastNamePlaceholder = "Enter Last Name";
+  const whatsappPlaceholder = "Enter WhatsApp Number";
+  const emailPlaceholder = "Enter Email Address";
   const canSendOtp =
     isValidEmployerWhatsappNumber(formData.whatsappNumber) &&
     !isOtpVisible &&
@@ -174,6 +166,11 @@ export function EmployerRegisterForm({
           ? "Consultancy Name is required"
           : "Company / Business Name is required",
       );
+      return;
+    }
+
+    if (isIndividualAccount && !formData.establishmentName.trim()) {
+      setErrorMessage("Establishment Name is required");
       return;
     }
 
@@ -328,29 +325,55 @@ export function EmployerRegisterForm({
 
         <div
           className="employer-register-company-field"
-          data-visible={isBusinessAccount ? "true" : "false"}
-          aria-hidden={!isBusinessAccount}
+          data-visible={
+            isBusinessAccount || isIndividualAccount ? "true" : "false"
+          }
+          aria-hidden={!(isBusinessAccount || isIndividualAccount)}
         >
           <div className="employer-register-company-field-inner">
             <div className="employer-register-form-stack">
-              <label
-                htmlFor="company-name"
-                className="employer-register-form-label"
-              >
-                {businessNameLabel}
-              </label>
-              <input
-                id="company-name"
-                type="text"
-                value={formData.companyName}
-                onChange={(event) =>
-                  updateField("companyName", event.target.value)
-                }
-                placeholder={businessNamePlaceholder}
-                autoComplete="organization"
-                className="employer-register-form-input"
-                tabIndex={isBusinessAccount ? undefined : -1}
-              />
+              {isIndividualAccount ? (
+                <>
+                  <label
+                    htmlFor="establishment-name"
+                    className="employer-register-form-label"
+                  >
+                    Establishment Name*
+                  </label>
+                  <input
+                    id="establishment-name"
+                    type="text"
+                    value={formData.establishmentName}
+                    onChange={(event) =>
+                      updateField("establishmentName", event.target.value)
+                    }
+                    placeholder="Enter Establishment Name"
+                    autoComplete="organization"
+                    className="employer-register-form-input"
+                  />
+                </>
+              ) : (
+                <>
+                  <label
+                    htmlFor="company-name"
+                    className="employer-register-form-label"
+                  >
+                    {businessNameLabel}
+                  </label>
+                  <input
+                    id="company-name"
+                    type="text"
+                    value={formData.companyName}
+                    onChange={(event) =>
+                      updateField("companyName", event.target.value)
+                    }
+                    placeholder={businessNamePlaceholder}
+                    autoComplete="organization"
+                    className="employer-register-form-input"
+                    tabIndex={isBusinessAccount ? undefined : -1}
+                  />
+                </>
+              )}
             </div>
           </div>
         </div>

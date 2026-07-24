@@ -29,6 +29,8 @@ export const ROUTES = {
   EMPLOYERS: "/employer/register",
   JOB_CATEGORIES: "/job-categories",
   RESOURCES: "/resources",
+  FAQS: "/faqs",
+  HELP_CENTER: "/help-center",
   TERMS_AND_CONDITIONS: "/terms-and-conditions",
   PRIVACY_POLICY: "/privacy-policy",
   GUIDELINES: "/guidelines",

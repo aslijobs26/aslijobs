@@ -1,9 +1,12 @@
 "use client";
 
-type ToastTone = "success" | "error";
+type ToastTone = "success" | "error" | "warning" | "info";
 
 let toastHost: HTMLDivElement | null = null;
 let hideTimer: ReturnType<typeof setTimeout> | null = null;
+let leaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+const TOAST_EXIT_MS = 250;
 
 function ensureToastHost() {
   if (typeof document === "undefined") {
@@ -23,6 +26,32 @@ function ensureToastHost() {
   return toastHost;
 }
 
+function getToastIconSvg(tone: ToastTone): string {
+  switch (tone) {
+    case "success":
+      return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.25" stroke="currentColor" stroke-width="1.5"/><path d="M8.4 12.15 10.9 14.55 15.6 9.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    case "warning":
+      return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5.2 19.6 18.6H4.4L12 5.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 10.2v4.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 16.85v.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+    case "info":
+      return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.25" stroke="currentColor" stroke-width="1.5"/><path d="M12 11.1v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 8.1v.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+    case "error":
+    default:
+      return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.25" stroke="currentColor" stroke-width="1.5"/><path d="M12 8.2v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 16.1v.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+  }
+}
+
+function clearToastTimers() {
+  if (hideTimer) {
+    clearTimeout(hideTimer);
+    hideTimer = null;
+  }
+
+  if (leaveTimer) {
+    clearTimeout(leaveTimer);
+    leaveTimer = null;
+  }
+}
+
 export function showAppToast(
   message: string,
   tone: ToastTone = "success",
@@ -33,26 +62,34 @@ export function showAppToast(
     return;
   }
 
-  if (hideTimer) {
-    clearTimeout(hideTimer);
-    hideTimer = null;
-  }
-
+  clearToastTimers();
   host.replaceChildren();
 
   const toast = document.createElement("div");
   toast.role = "status";
-  toast.className =
-    tone === "success"
-      ? "rounded-lg border border-primary-soft/30 bg-surface px-4 py-2.5 text-sm font-semibold text-primary-soft shadow-lg"
-      : "rounded-lg border border-red-200 bg-surface px-4 py-2.5 text-sm font-semibold text-red-600 shadow-lg";
-  toast.textContent = message;
+  toast.className = `asli-toast asli-toast--${tone}`;
+
+  const icon = document.createElement("span");
+  icon.className = "asli-toast__icon";
+  icon.innerHTML = getToastIconSvg(tone);
+
+  const text = document.createElement("p");
+  text.className = "asli-toast__message";
+  text.textContent = message;
+
+  toast.append(icon, text);
   host.appendChild(toast);
 
+  const leaveDelay = Math.max(0, durationMs - TOAST_EXIT_MS);
+
   hideTimer = setTimeout(() => {
-    toast.remove();
-    hideTimer = null;
-  }, durationMs);
+    toast.classList.add("asli-toast--leaving");
+    leaveTimer = setTimeout(() => {
+      toast.remove();
+      hideTimer = null;
+      leaveTimer = null;
+    }, TOAST_EXIT_MS);
+  }, leaveDelay);
 }
 
 export async function shareOrCopyText(options: {

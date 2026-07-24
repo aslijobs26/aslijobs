@@ -52,6 +52,7 @@ function toPublicEmployer(employer: {
   _id: mongoose.Types.ObjectId;
   accountType: string;
   companyName: string;
+  establishmentName?: string;
   firstName: string;
   lastName: string;
   industry?: string;
@@ -78,6 +79,7 @@ function toPublicEmployer(employer: {
     id: employer._id.toString(),
     accountType: employer.accountType,
     companyName: employer.companyName,
+    establishmentName: employer.establishmentName ?? "",
     firstName: employer.firstName,
     lastName: employer.lastName,
     industry: employer.industry ?? "",
@@ -311,6 +313,10 @@ export class EmployerService {
       if (employer) {
         employer.accountType = input.accountType;
         employer.companyName = input.companyName;
+        employer.establishmentName =
+          input.accountType === "individual"
+            ? (input.establishmentName ?? "").trim()
+            : "";
         employer.firstName = input.firstName;
         employer.lastName = input.lastName;
         employer.emailAddress = input.emailAddress ?? "";
@@ -326,6 +332,10 @@ export class EmployerService {
         employer = await EmployerModel.create({
           accountType: input.accountType,
           companyName: input.companyName,
+          establishmentName:
+            input.accountType === "individual"
+              ? (input.establishmentName ?? "").trim()
+              : "",
           firstName: input.firstName,
           lastName: input.lastName,
           emailAddress: input.emailAddress ?? "",
@@ -518,10 +528,10 @@ export class EmployerService {
     }
 
     await assertNoCompletedDuplicateWhatsapp(
-      input.whatsappNumber,
+      employer.whatsappNumber,
       employer._id,
     );
-    await assertNoCompletedDuplicateEmail(input.emailAddress, employer._id);
+    await assertNoCompletedDuplicateEmail(employer.emailAddress, employer._id);
 
     let storedFile;
     try {
@@ -590,8 +600,6 @@ export class EmployerService {
       employer.pincode = input.pincode;
       employer.city = input.city;
       employer.state = input.state;
-      employer.emailAddress = input.emailAddress ?? employer.emailAddress;
-      employer.whatsappNumber = input.whatsappNumber;
       if (companyLogoAsset) {
         employer.companyLogo = companyLogoAsset;
       }
@@ -759,6 +767,9 @@ export class EmployerService {
 
     if (typeof input.companyName === "string") {
       employer.companyName = input.companyName;
+    }
+    if (typeof input.establishmentName === "string") {
+      employer.establishmentName = input.establishmentName;
     }
     if (typeof input.industry === "string") {
       employer.industry = input.industry;

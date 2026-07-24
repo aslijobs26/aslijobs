@@ -631,6 +631,7 @@ export const EMPLOYER_REGISTER_PINCODE_LOCATION_MAP: Record<
 
 export const EMPLOYER_REGISTER_INITIAL_FORM_DATA: EmployerRegisterFormData = {
   companyName: "",
+  establishmentName: "",
   firstName: "",
   lastName: "",
   whatsappNumber: "",
@@ -649,8 +650,6 @@ export const EMPLOYER_REGISTER_INITIAL_COMPANY_PROFILE_DATA: EmployerRegisterCom
     pincode: "",
     city: "",
     state: "",
-    whatsappNumber: "",
-    emailAddress: "",
     verificationDocument: "",
   };
 

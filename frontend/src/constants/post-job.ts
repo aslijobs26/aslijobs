@@ -14,10 +14,14 @@ import type {
   PostJobPerkId,
   PostJobStep,
   PostJobWizardFormData,
+  SalaryPeriod,
   SalaryType,
   WorkMode,
 } from "@/types/post-job";
 import { JOB_CITIES, JOB_STATES } from "@/constants/job-locations";
+
+/** Max length for Job Description and Other Instructions in Post Job. */
+export const POST_JOB_LONG_TEXT_MAX_LENGTH = 3000;
 
 export const POST_JOB_STEPS: PostJobStep[] = [
   {
@@ -47,6 +51,9 @@ export const POST_JOB_INITIAL_STEP = 1 satisfies PostJobActiveStep;
 
 export const POST_JOB_INITIAL_FORM_DATA: PostJobFormData = {
   companyDetails: "",
+  industry: "",
+  businessCategory: "",
+  companySize: "",
   jobTitle: "",
   jobType: "",
   contractPeriodFrom: "",
@@ -66,6 +73,7 @@ export const POST_JOB_INITIAL_LOCATION_SALARY_DATA: LocationAndSalaryFormData = 
   address: "",
   landmark: "",
   salaryType: "",
+  salaryPeriod: "",
   salaryMin: "",
   salaryMax: "",
   incentives: "",
@@ -75,6 +83,11 @@ export const POST_JOB_INITIAL_LOCATION_SALARY_DATA: LocationAndSalaryFormData = 
 export const POST_JOB_SALARY_TYPE_OPTIONS: PostJobOption<SalaryType>[] = [
   { value: "fixed", label: "Fixed" },
   { value: "range", label: "Range" },
+];
+
+export const POST_JOB_SALARY_PERIOD_OPTIONS: PostJobOption<SalaryPeriod>[] = [
+  { value: "per-month", label: "Per Month" },
+  { value: "per-year", label: "Per Year" },
 ];
 
 export const POST_JOB_INITIAL_CANDIDATE_INTERVIEW_DATA: CandidateInterviewFormData =

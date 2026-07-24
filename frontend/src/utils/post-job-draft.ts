@@ -16,6 +16,9 @@ export function hasMeaningfulPostJobDraftContent(
 
   const stringFields = [
     jobInformation.companyDetails,
+    jobInformation.industry,
+    jobInformation.businessCategory,
+    jobInformation.companySize,
     jobInformation.jobTitle,
     jobInformation.jobType,
     jobInformation.contractPeriodFrom,
@@ -32,6 +35,7 @@ export function hasMeaningfulPostJobDraftContent(
     locationAndSalary.address,
     locationAndSalary.landmark,
     locationAndSalary.salaryType,
+    locationAndSalary.salaryPeriod,
     locationAndSalary.salaryMin,
     locationAndSalary.salaryMax,
     locationAndSalary.incentives,
@@ -115,6 +119,10 @@ export function mapJobDetailToWizardState(job: EmployerJobDetail): {
             (snapshot.locationAndSalary
               .salaryType as PostJobWizardFormData["locationAndSalary"]["salaryType"]) ||
             "",
+          salaryPeriod:
+            (snapshot.locationAndSalary
+              .salaryPeriod as PostJobWizardFormData["locationAndSalary"]["salaryPeriod"]) ||
+            "per-month",
           perks: (snapshot.locationAndSalary.perks ??
             []) as PostJobWizardFormData["locationAndSalary"]["perks"],
         },
@@ -148,10 +156,13 @@ export function mapJobDetailToWizardState(job: EmployerJobDetail): {
 
   return {
     formData: {
-      jobInformation: {
-        ...POST_JOB_INITIAL_WIZARD_DATA.jobInformation,
-        companyDetails: job.companyName,
-        jobTitle: job.jobTitle === "Untitled draft" ? "" : job.jobTitle,
+        jobInformation: {
+          ...POST_JOB_INITIAL_WIZARD_DATA.jobInformation,
+          companyDetails: job.companyName,
+          industry: job.industry ?? "",
+          businessCategory: job.businessCategory ?? "",
+          companySize: job.companySize ?? "",
+          jobTitle: job.jobTitle === "Untitled draft" ? "" : job.jobTitle,
         jobType:
           (job.jobType as PostJobWizardFormData["jobInformation"]["jobType"]) ||
           "",
@@ -178,6 +189,9 @@ export function mapJobDetailToWizardState(job: EmployerJobDetail): {
         salaryType:
           (job.salaryType as PostJobWizardFormData["locationAndSalary"]["salaryType"]) ||
           "",
+        salaryPeriod:
+          (job.salaryPeriod as PostJobWizardFormData["locationAndSalary"]["salaryPeriod"]) ||
+          "per-month",
         salaryMin:
           job.minimumSalary != null ? String(job.minimumSalary) : "",
         salaryMax:

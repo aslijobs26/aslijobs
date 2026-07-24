@@ -21,9 +21,22 @@ import {
   sendJobSeekerLoginOtp,
   verifyJobSeekerLoginOtp,
 } from "@/services/job-seeker-login.service";
+import {
+  getSafeReturnUrl,
+  JOB_SEEKER_LOGIN_RETURN_URL_QUERY,
+} from "@/utils/safe-return-url";
 import { isAxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+
+function readLoginReturnUrl(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return getSafeReturnUrl(params.get(JOB_SEEKER_LOGIN_RETURN_URL_QUERY));
+}
 
 const EMPTY_OTP_DIGITS = Array.from(
   { length: JOB_SEEKER_LOGIN_OTP_LENGTH },
@@ -125,7 +138,8 @@ export function JobSeekerLoginForm() {
 
     try {
       await verifyJobSeekerLoginOtp(whatsappNumber, otpDigits.join(""));
-      router.push(ROUTES.JOB_SEEKER_DASHBOARD);
+      const returnUrl = readLoginReturnUrl();
+      router.push(returnUrl ?? ROUTES.JOB_SEEKER_DASHBOARD);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Invalid OTP"));
     } finally {

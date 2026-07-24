@@ -3,6 +3,7 @@ import {
   JOB_STATUSES,
   type JobStatus,
   type JobStatusAction,
+  type SalaryPeriod,
 } from "../../constants/job.constants.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
@@ -32,6 +33,10 @@ function toIsoDateString(value: Date | string | null | undefined): string | null
   return date.toISOString();
 }
 
+function normalizeSalaryPeriod(value: unknown): SalaryPeriod {
+  return value === "per-year" ? "per-year" : "per-month";
+}
+
 function toJobPublic(job: JobDocument) {
   return {
     id: job._id.toString(),
@@ -39,6 +44,9 @@ function toJobPublic(job: JobDocument) {
     employerId: job.employerId.toString(),
     companyId: job.companyId.toString(),
     companyName: job.companyName,
+    industry: job.industry ?? "",
+    businessCategory: job.businessCategory ?? "",
+    companySize: job.companySize ?? "",
     jobTitle: job.jobTitle,
     jobType: job.jobType,
     contractPeriodFrom: job.contractPeriodFrom,
@@ -57,6 +65,7 @@ function toJobPublic(job: JobDocument) {
     address: job.address,
     landmark: job.landmark,
     salaryType: job.salaryType,
+    salaryPeriod: normalizeSalaryPeriod(job.salaryPeriod),
     fixedSalary: job.fixedSalary,
     minimumSalary: job.minimumSalary,
     maximumSalary: job.maximumSalary,
@@ -143,6 +152,9 @@ function denormalizeDraftFields(snapshot: DraftWizardSnapshot) {
 
   return {
     companyName: jobInformation.companyDetails.trim(),
+    industry: (jobInformation.industry ?? "").trim(),
+    businessCategory: (jobInformation.businessCategory ?? "").trim(),
+    companySize: (jobInformation.companySize ?? "").trim(),
     jobTitle: jobInformation.jobTitle.trim() || UNTITLED_DRAFT_TITLE,
     jobType: jobInformation.jobType,
     contractPeriodFrom: jobInformation.contractPeriodFrom,
@@ -165,6 +177,7 @@ function denormalizeDraftFields(snapshot: DraftWizardSnapshot) {
     address: locationAndSalary.address.trim(),
     landmark: locationAndSalary.landmark.trim(),
     salaryType: locationAndSalary.salaryType,
+    salaryPeriod: normalizeSalaryPeriod(locationAndSalary.salaryPeriod),
     fixedSalary:
       locationAndSalary.salaryType === "fixed"
         ? toOptionalNumber(locationAndSalary.incentives)
@@ -213,6 +226,9 @@ function denormalizeDraftFields(snapshot: DraftWizardSnapshot) {
 
 function applyCreateInputToJob(job: JobDocument, input: CreateJobInput) {
   job.companyName = input.companyName;
+  job.industry = input.industry ?? "";
+  job.businessCategory = input.businessCategory ?? "";
+  job.companySize = input.companySize ?? "";
   job.jobTitle = input.jobTitle;
   job.jobType = input.jobType;
   job.contractPeriodFrom =
@@ -237,6 +253,7 @@ function applyCreateInputToJob(job: JobDocument, input: CreateJobInput) {
   job.address = input.address;
   job.landmark = input.landmark;
   job.salaryType = input.salaryType;
+  job.salaryPeriod = input.salaryPeriod;
   job.fixedSalary = input.salaryType === "fixed" ? input.fixedSalary : null;
   job.minimumSalary =
     input.salaryType === "range" ? input.minimumSalary : null;
@@ -339,6 +356,7 @@ function buildSearchFilter(search: string) {
   return {
     $or: [
       { jobTitle: regex },
+      { companyName: regex },
       { jobId: regex },
       { city: regex },
       { cityName: regex },
@@ -348,6 +366,187 @@ function buildSearchFilter(search: string) {
     ],
   };
 }
+
+function toMonthlySalaryExpr(fieldPath: string) {
+  return {
+    $cond: [
+      {
+        $eq: [{ $ifNull: ["$salaryPeriod", "per-month"] }, "per-year"],
+      },
+      { $divide: [{ $ifNull: [fieldPath, 0] }, 12] },
+      { $ifNull: [fieldPath, 0] },
+    ],
+  };
+}
+
+/**
+ * Public salary filters are expressed in monthly INR.
+ * Yearly job salaries are converted to monthly equivalents before comparison.
+ */
+function buildSalaryFilter(minSalary?: number, maxSalary?: number) {
+  if (minSalary === undefined && maxSalary === undefined) {
+    return {};
+  }
+
+  const fixedMonthly = toMonthlySalaryExpr("$fixedSalary");
+  const rangeMinMonthly = toMonthlySalaryExpr("$minimumSalary");
+  const rangeMaxMonthly = {
+    $cond: [
+      {
+        $eq: [{ $ifNull: ["$salaryPeriod", "per-month"] }, "per-year"],
+      },
+      {
+        $divide: [
+          {
+            $ifNull: ["$maximumSalary", { $ifNull: ["$minimumSalary", 0] }],
+          },
+          12,
+        ],
+      },
+      {
+        $ifNull: ["$maximumSalary", { $ifNull: ["$minimumSalary", 0] }],
+      },
+    ],
+  };
+
+  const fixedConditions: Record<string, unknown>[] = [];
+  const rangeConditions: Record<string, unknown>[] = [];
+
+  if (minSalary !== undefined) {
+    fixedConditions.push({ $gte: [fixedMonthly, minSalary] });
+    rangeConditions.push({ $gte: [rangeMaxMonthly, minSalary] });
+  }
+
+  if (maxSalary !== undefined) {
+    fixedConditions.push({ $lte: [fixedMonthly, maxSalary] });
+    rangeConditions.push({ $lte: [rangeMinMonthly, maxSalary] });
+  }
+
+  return {
+    $or: [
+      {
+        $and: [
+          { salaryType: "fixed" },
+          { $expr: { $and: fixedConditions } },
+        ],
+      },
+      {
+        $and: [
+          { salaryType: "range" },
+          { $expr: { $and: rangeConditions } },
+        ],
+      },
+    ],
+  };
+}
+
+function buildPublicJobsFilter(query: PublicJobsQuery) {
+  const andClauses: Record<string, unknown>[] = [
+    { status: "active" },
+    buildSearchFilter(query.search),
+  ];
+
+  if (query.city.length === 1) {
+    andClauses.push({ city: query.city[0] });
+  } else if (query.city.length > 1) {
+    andClauses.push({ city: { $in: query.city } });
+  }
+
+  if (query.state) {
+    andClauses.push({ state: query.state });
+  }
+
+  if (query.jobType.length > 0) {
+    andClauses.push({ jobType: { $in: query.jobType } });
+  }
+
+  if (query.experience.length > 0) {
+    andClauses.push({ experience: { $in: query.experience } });
+  }
+
+  if (query.workMode.length > 0) {
+    andClauses.push({ workMode: { $in: query.workMode } });
+  }
+
+  if (query.gender.length > 0) {
+    andClauses.push({
+      $or: [
+        { gender: { $exists: false } },
+        { gender: { $size: 0 } },
+        { gender: { $in: query.gender } },
+      ],
+    });
+  }
+
+  const salaryFilter = buildSalaryFilter(query.minSalary, query.maxSalary);
+  if (Object.keys(salaryFilter).length > 0) {
+    andClauses.push(salaryFilter);
+  }
+
+  const cleaned = andClauses.filter((clause) => Object.keys(clause).length > 0);
+
+  if (cleaned.length === 1) {
+    return cleaned[0];
+  }
+
+  return { $and: cleaned };
+}
+
+function toPublicApplyWhatsAppNumber(
+  contactMobile: string | null | undefined,
+): string | null {
+  if (!contactMobile) {
+    return null;
+  }
+
+  const digits = contactMobile.replace(/\D/g, "");
+  if (digits.length < 10) {
+    return null;
+  }
+
+  return digits;
+}
+
+function toPublicJobListItem(job: JobDocument) {
+  return {
+    id: job._id.toString(),
+    jobId: job.jobId,
+    companyName: job.companyName,
+    jobTitle: job.jobTitle,
+    jobType: job.jobType,
+    workMode: job.workMode,
+    vacancies: job.vacancies,
+    description: job.description,
+    state: job.state,
+    stateName: job.stateName,
+    city: job.city,
+    cityName: job.cityName,
+    salaryType: job.salaryType,
+    salaryPeriod: normalizeSalaryPeriod(job.salaryPeriod),
+    fixedSalary: job.fixedSalary,
+    minimumSalary: job.minimumSalary,
+    maximumSalary: job.maximumSalary,
+    perks: job.perks,
+    education: job.education,
+    experience: job.experience,
+    publishedAt: toIsoDateString(job.publishedAt),
+    applyWhatsAppNumber: toPublicApplyWhatsAppNumber(job.contactMobile),
+    createdAt: job.createdAt,
+  };
+}
+
+const EFFECTIVE_SALARY_EXPRESSION = {
+  $cond: [
+    { $eq: ["$salaryType", "fixed"] },
+    { $ifNull: ["$fixedSalary", 0] },
+    {
+      $ifNull: [
+        "$maximumSalary",
+        { $ifNull: ["$minimumSalary", 0] },
+      ],
+    },
+  ],
+};
 
 export class JobService {
   async createJob(employerId: string, input: CreateJobInput) {
@@ -368,6 +567,9 @@ export class JobService {
       employerId: employerObjectId,
       companyId: employerObjectId,
       companyName: input.companyName,
+      industry: input.industry ?? "",
+      businessCategory: input.businessCategory ?? "",
+      companySize: input.companySize ?? "",
       jobTitle: input.jobTitle,
       jobType: input.jobType,
       contractPeriodFrom:
@@ -392,6 +594,7 @@ export class JobService {
       address: input.address,
       landmark: input.landmark,
       salaryType: input.salaryType,
+      salaryPeriod: input.salaryPeriod,
       fixedSalary: input.salaryType === "fixed" ? input.fixedSalary : null,
       minimumSalary: input.salaryType === "range" ? input.minimumSalary : null,
       maximumSalary: input.salaryType === "range" ? input.maximumSalary : null,
@@ -768,27 +971,9 @@ export class JobService {
 
     return {
       job: {
-        id: job._id.toString(),
-        jobId: job.jobId,
-        companyName: job.companyName,
-        jobTitle: job.jobTitle,
-        jobType: job.jobType,
-        workMode: job.workMode,
-        vacancies: job.vacancies,
-        description: job.description,
-        state: job.state,
-        stateName: job.stateName,
-        city: job.city,
-        cityName: job.cityName,
+        ...toPublicJobListItem(job),
         address: job.address,
         landmark: job.landmark,
-        salaryType: job.salaryType,
-        fixedSalary: job.fixedSalary,
-        minimumSalary: job.minimumSalary,
-        maximumSalary: job.maximumSalary,
-        perks: job.perks,
-        education: job.education,
-        experience: job.experience,
         languages: job.languages,
         gender: job.gender,
         minimumAge: job.minimumAge,
@@ -800,64 +985,85 @@ export class JobService {
         walkInStartTime: job.walkInStartTime,
         walkInEndTime: job.walkInEndTime,
         interviewInstructions: job.interviewInstructions,
-        publishedAt: toIsoDateString(job.publishedAt),
-        createdAt: job.createdAt,
+        contactPersonName: job.contactPersonName?.trim() || null,
       },
     };
   }
 
   async listPublicActiveJobs(query: PublicJobsQuery) {
-    const filter: Record<string, unknown> = {
-      status: "active",
-      ...buildSearchFilter(query.search),
-    };
-
-    if (query.city) {
-      filter.city = query.city;
-    }
-
-    if (query.state) {
-      filter.state = query.state;
-    }
-
+    const filter = buildPublicJobsFilter(query);
     const skip = (query.page - 1) * query.limit;
 
-    const [jobs, total] = await Promise.all([
-      JobModel.find(filter)
-        .sort({ publishedAt: -1, createdAt: -1 })
-        .skip(skip)
-        .limit(query.limit),
+    const facetFilter = buildPublicJobsFilter({
+      ...query,
+      city: [],
+    });
+    const cityFacetLimit = query.state ? 100 : 30;
+
+    const useSalarySort =
+      query.sort === "salary_desc" || query.sort === "salary_asc";
+    const salaryDirection = query.sort === "salary_asc" ? 1 : -1;
+
+    const jobsPromise = useSalarySort
+      ? JobModel.aggregate([
+          { $match: filter },
+          { $addFields: { effectiveSalary: EFFECTIVE_SALARY_EXPRESSION } },
+          {
+            $sort: {
+              effectiveSalary: salaryDirection,
+              publishedAt: -1,
+              createdAt: -1,
+            },
+          },
+          { $skip: skip },
+          { $limit: query.limit },
+        ]).then((docs) =>
+          docs.map((doc) => {
+            const job = JobModel.hydrate(doc) as JobDocument;
+            return toPublicJobListItem(job);
+          }),
+        )
+      : JobModel.find(filter)
+          .sort({ publishedAt: -1, createdAt: -1 })
+          .skip(skip)
+          .limit(query.limit)
+          .then((jobs) => jobs.map((job) => toPublicJobListItem(job)));
+
+    const [jobs, total, cityFacets] = await Promise.all([
+      jobsPromise,
       JobModel.countDocuments(filter),
+      JobModel.aggregate<{
+        _id: { city: string; cityName: string };
+        count: number;
+      }>([
+        { $match: facetFilter },
+        {
+          $group: {
+            _id: { city: "$city", cityName: "$cityName" },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: cityFacetLimit },
+      ]),
     ]);
 
     return {
-      jobs: jobs.map((job) => ({
-        id: job._id.toString(),
-        jobId: job.jobId,
-        companyName: job.companyName,
-        jobTitle: job.jobTitle,
-        jobType: job.jobType,
-        workMode: job.workMode,
-        vacancies: job.vacancies,
-        description: job.description,
-        state: job.state,
-        stateName: job.stateName,
-        city: job.city,
-        cityName: job.cityName,
-        salaryType: job.salaryType,
-        fixedSalary: job.fixedSalary,
-        minimumSalary: job.minimumSalary,
-        maximumSalary: job.maximumSalary,
-        perks: job.perks,
-        education: job.education,
-        experience: job.experience,
-        createdAt: job.createdAt,
-      })),
+      jobs,
       pagination: {
         page: query.page,
         limit: query.limit,
         total,
         totalPages: Math.max(1, Math.ceil(total / query.limit)),
+      },
+      facets: {
+        cities: cityFacets
+          .filter((facet) => facet._id.city)
+          .map((facet) => ({
+            city: facet._id.city,
+            cityName: facet._id.cityName || facet._id.city,
+            count: facet.count,
+          })),
       },
     };
   }

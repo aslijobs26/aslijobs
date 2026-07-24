@@ -17,10 +17,16 @@ const employerSchema = new Schema(
       trim: true,
       default: "",
     },
+    // Individual employers store their shop/service name in establishmentName.
     // Consultancy profile stores its business name in companyName.
     // Shared business-profile fields below are used by company + consultancy:
     // companyAddress, pincode, city, state, companyLogo, industry,
     // businessCategory, minimumEmployees, maximumEmployees.
+    establishmentName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     firstName: {
       type: String,
       required: true,

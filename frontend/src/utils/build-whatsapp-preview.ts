@@ -21,20 +21,21 @@ function labelForOption<T extends string>(
 }
 
 function formatSalary(formData: PostJobWizardFormData): string {
-  const { salaryType, incentives, salaryMin, salaryMax } =
+  const { salaryType, salaryPeriod, incentives, salaryMin, salaryMax } =
     formData.locationAndSalary;
+  const periodSuffix = salaryPeriod === "per-year" ? " /year" : " /month";
 
   if (salaryType === "fixed" && incentives.trim()) {
-    return `₹${incentives.trim()}`;
+    return `₹${incentives.trim()}${periodSuffix}`;
   }
 
   if (salaryType === "range" && (salaryMin.trim() || salaryMax.trim())) {
     const min = salaryMin.trim() ? `₹${salaryMin.trim()}` : "";
     const max = salaryMax.trim() ? `₹${salaryMax.trim()}` : "";
     if (min && max) {
-      return `${min} - ${max}`;
+      return `${min} - ${max}${periodSuffix}`;
     }
-    return min || max;
+    return `${min || max}${periodSuffix}`;
   }
 
   return "";

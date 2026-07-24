@@ -25,6 +25,7 @@ const RELATIVE_FORMATTER = new Intl.RelativeTimeFormat("en", {
 const INDIAN_STATE_ABBREVIATIONS: Readonly<Record<string, string>> = {
   "andaman and nicobar islands": "AN",
   "andhra pradesh": "AP",
+  "andra pradesh": "AP",
   "arunachal pradesh": "AR",
   assam: "AS",
   bihar: "BR",

@@ -1,10 +1,22 @@
-import type { PostJobActiveStep, PostJobWizardFormData } from "@/types/post-job";
+import type {
+  EmployerAccountType,
+  PostJobActiveStep,
+  PostJobWizardFormData,
+} from "@/types/post-job";
+import { POST_JOB_LONG_TEXT_MAX_LENGTH } from "@/constants/post-job";
 
 export type PostJobFieldErrors = Record<string, string>;
+
+export type PostJobValidationContext = {
+  accountType?: EmployerAccountType | null;
+};
 
 /** Maps wizard field keys to DOM element ids for scroll/focus. */
 export const POST_JOB_FIELD_ELEMENT_IDS: Record<string, string> = {
   companyDetails: "company-details",
+  industry: "job-industry",
+  businessCategory: "job-business-category",
+  companySize: "job-company-size",
   jobTitle: "job-title",
   jobType: "job-type-group",
   contractPeriodFrom: "contract-period-from",
@@ -20,6 +32,7 @@ export const POST_JOB_FIELD_ELEMENT_IDS: Record<string, string> = {
   city: "job-city",
   address: "job-address",
   salaryType: "salary-type",
+  salaryPeriod: "salary-period",
   incentives: "salary-incentives",
   salaryMin: "salary-min",
   salaryMax: "salary-max",
@@ -34,6 +47,7 @@ export const POST_JOB_FIELD_ELEMENT_IDS: Record<string, string> = {
   walkInEndDate: "walk-in-end-date",
   walkInStartTime: "walk-in-start-time",
   walkInEndTime: "walk-in-end-time",
+  otherInstructions: "other-instructions",
   contactName: "contact-name",
   contactEmail: "contact-email",
   contactMobile: "contact-mobile",
@@ -92,15 +106,47 @@ export function focusFirstInvalidPostJobField(errors: PostJobFieldErrors) {
 
 export function validateJobInformationStep(
   formData: PostJobWizardFormData["jobInformation"],
+  context: PostJobValidationContext = {},
 ): PostJobFieldErrors {
   const errors: PostJobFieldErrors = {};
+  const isConsultancy = context.accountType === "consultancy";
 
-  requireText(
-    formData.companyDetails,
-    "companyDetails",
-    "Company Name is required.",
-    errors,
-  );
+  if (isConsultancy) {
+    requireText(
+      formData.companyDetails,
+      "companyDetails",
+      "Recruiting For is required.",
+      errors,
+    );
+    requireText(
+      formData.companySize,
+      "companySize",
+      "Please select Company Size.",
+      errors,
+    );
+    requireText(
+      formData.industry,
+      "industry",
+      "Please select Industry.",
+      errors,
+    );
+    requireText(
+      formData.businessCategory,
+      "businessCategory",
+      "Please select Business Category.",
+      errors,
+    );
+  } else {
+    requireText(
+      formData.companyDetails,
+      "companyDetails",
+      context.accountType === "individual"
+        ? "Establishment Name is required."
+        : "Company Name is required.",
+      errors,
+    );
+  }
+
   requireText(
     formData.jobTitle,
     "jobTitle",
@@ -173,6 +219,12 @@ export function validateJobInformationStep(
     "Job Description is required.",
     errors,
   );
+  if (
+    formData.jobDescription.trim() &&
+    formData.jobDescription.length > POST_JOB_LONG_TEXT_MAX_LENGTH
+  ) {
+    errors.jobDescription = `Job Description must be ${POST_JOB_LONG_TEXT_MAX_LENGTH} characters or less.`;
+  }
 
   return errors;
 }
@@ -218,6 +270,10 @@ export function validateLocationSalaryStep(
           "Maximum Salary must be greater than Minimum Salary.";
       }
     }
+  }
+
+  if (!formData.salaryPeriod) {
+    errors.salaryPeriod = "Please select Salary Period.";
   }
 
   return errors;
@@ -327,6 +383,13 @@ export function validateCandidateInterviewStep(
     }
   }
 
+  if (
+    formData.otherInstructions.trim() &&
+    formData.otherInstructions.length > POST_JOB_LONG_TEXT_MAX_LENGTH
+  ) {
+    errors.otherInstructions = `Other Instructions must be ${POST_JOB_LONG_TEXT_MAX_LENGTH} characters or less.`;
+  }
+
   requireText(
     formData.contactName,
     "contactName",
@@ -352,9 +415,10 @@ export function validateCandidateInterviewStep(
 export function validatePostJobStep(
   step: PostJobActiveStep,
   formData: PostJobWizardFormData,
+  context: PostJobValidationContext = {},
 ): PostJobFieldErrors {
   if (step === 1) {
-    return validateJobInformationStep(formData.jobInformation);
+    return validateJobInformationStep(formData.jobInformation, context);
   }
 
   if (step === 2) {
@@ -366,8 +430,12 @@ export function validatePostJobStep(
 
 export function findFirstInvalidPostJobStep(
   formData: PostJobWizardFormData,
+  context: PostJobValidationContext = {},
 ): { step: PostJobActiveStep; errors: PostJobFieldErrors } | null {
-  const step1Errors = validateJobInformationStep(formData.jobInformation);
+  const step1Errors = validateJobInformationStep(
+    formData.jobInformation,
+    context,
+  );
   if (Object.keys(step1Errors).length > 0) {
     return { step: 1, errors: step1Errors };
   }

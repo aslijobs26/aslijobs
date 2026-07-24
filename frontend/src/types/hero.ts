@@ -12,7 +12,6 @@ export type HeroSearchFormValues = {
   query: string;
   state: string;
   city: string;
-  category: string;
 };
 
 export type HeroFeatureCardPosition =
