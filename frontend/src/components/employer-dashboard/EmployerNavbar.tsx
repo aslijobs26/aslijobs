@@ -2,14 +2,14 @@
 
 import { EmployerProfileMenu } from "@/components/employer-dashboard/EmployerProfileMenu";
 import { EmployerSearchBar } from "@/components/employer-dashboard/EmployerSearchBar";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import {
   EMPLOYER_DASHBOARD_LANGUAGE_LABEL,
-  EMPLOYER_DASHBOARD_NOTIFICATION_COUNT,
   EMPLOYER_DASHBOARD_POST_JOB_LABEL,
 } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/utils/cn";
-import { Bell, ChevronDown, Globe, Menu, Plus } from "lucide-react";
+import { ChevronDown, Globe, Menu, Plus } from "lucide-react";
 import Link from "next/link";
 
 type EmployerNavbarProps = {
@@ -67,16 +67,7 @@ export function EmployerNavbar({
           />
         </Link>
 
-        <button
-          type="button"
-          className="relative inline-flex size-10 items-center justify-center rounded-lg text-nav transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          aria-label={`Notifications, ${EMPLOYER_DASHBOARD_NOTIFICATION_COUNT} unread`}
-        >
-          <Bell className="size-5" strokeWidth={2} aria-hidden="true" />
-          <span className="absolute right-1.5 top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-pin-state px-1 text-[10px] font-bold leading-4 text-surface">
-            {EMPLOYER_DASHBOARD_NOTIFICATION_COUNT}
-          </span>
-        </button>
+        <NotificationBell viewAllHref={ROUTES.EMPLOYER_NOTIFICATIONS} />
 
         <button
           type="button"
@@ -85,7 +76,11 @@ export function EmployerNavbar({
         >
           <Globe className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
           <span>{EMPLOYER_DASHBOARD_LANGUAGE_LABEL}</span>
-          <ChevronDown className="size-3.5 shrink-0 text-muted" strokeWidth={2} aria-hidden="true" />
+          <ChevronDown
+            className="size-3.5 shrink-0 text-muted"
+            strokeWidth={2}
+            aria-hidden="true"
+          />
         </button>
 
         <EmployerProfileMenu />

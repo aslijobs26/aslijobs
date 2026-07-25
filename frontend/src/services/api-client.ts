@@ -13,15 +13,27 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const requestUrl = config.url ?? "";
-  const isJobSeekerRequest =
-    requestUrl.includes("/jobseekers") ||
-    requestUrl.includes("/resumes") ||
-    requestUrl.includes("/applications/apply") ||
-    requestUrl.includes("/applications/me");
+  const isNotificationsRequest = requestUrl.includes("/notifications");
+  const pathname =
+    typeof window !== "undefined" ? window.location.pathname : "";
 
-  const accessToken = isJobSeekerRequest
-    ? getJobSeekerAccessToken()
-    : getEmployerAccessToken();
+  let accessToken: string | null = null;
+
+  if (isNotificationsRequest) {
+    accessToken = pathname.startsWith("/employer")
+      ? getEmployerAccessToken()
+      : getJobSeekerAccessToken() || getEmployerAccessToken();
+  } else {
+    const isJobSeekerRequest =
+      requestUrl.includes("/jobseekers") ||
+      requestUrl.includes("/resumes") ||
+      requestUrl.includes("/applications/apply") ||
+      requestUrl.includes("/applications/me");
+
+    accessToken = isJobSeekerRequest
+      ? getJobSeekerAccessToken()
+      : getEmployerAccessToken();
+  }
 
   if (accessToken) {
     const headers = AxiosHeaders.from(config.headers ?? {});

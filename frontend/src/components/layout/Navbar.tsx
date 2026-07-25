@@ -3,6 +3,7 @@
 import asliLogo from "@/assets/AsliLogo.svg";
 import { EmployerProfileMenu } from "@/components/employer-dashboard/EmployerProfileMenu";
 import { JobSeekerProfileMenu } from "@/components/job-seeker/JobSeekerProfileMenu";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { BRAND_TAGLINE } from "@/constants/brand";
 import { ROUTES } from "@/constants/routes";
 import {
@@ -105,7 +106,10 @@ export function Navbar() {
             {isEmployerAuthenticated ? (
               <EmployerProfileMenu onLogout={handleEmployerLogout} />
             ) : isJobSeekerAuthenticated ? (
-              <JobSeekerProfileMenu onLogout={handleJobSeekerLogout} />
+              <>
+                <NotificationBell viewAllHref={ROUTES.JOB_SEEKER_NOTIFICATIONS} />
+                <JobSeekerProfileMenu onLogout={handleJobSeekerLogout} />
+              </>
             ) : (
               <>
                 <Link

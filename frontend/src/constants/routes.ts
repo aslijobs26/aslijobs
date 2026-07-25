@@ -32,6 +32,8 @@ export const ROUTES = {
   jobSeekerApplicationDetail: (applicationId: string) =>
     `/job-seeker/applied-jobs/${applicationId}`,
   JOB_SEEKER_APPLICATION_SUCCESS: "/job-seeker/application-success",
+  JOB_SEEKER_NOTIFICATIONS: "/job-seeker/notifications",
+  EMPLOYER_NOTIFICATIONS: "/employer/notifications",
   CONTACT: "/contact",
   EMPLOYERS: "/employer/register",
   JOB_CATEGORIES: "/job-categories",

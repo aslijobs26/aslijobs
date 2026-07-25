@@ -27,6 +27,8 @@ import type {
   SeekerApplicationListItem,
   SeekerApplicationStats,
 } from "./application.types.js";
+import { notificationService } from "../notifications/notification.service.js";
+import type { ApplicationNotificationContext } from "../notifications/notification.types.js";
 
 type StatusHistoryWrite = {
   status: ApplicationStatus;
@@ -301,9 +303,40 @@ function eventNameForStatus(status: ApplicationStatus): string | null {
   }
 }
 
-/** Reserved for a future notifier — Phase 6 records timeline only. */
-function emitApplicationEvent(_eventName: string): void {
-  // no-op
+/** Dispatches in-app notifications; never fails the hiring mutation. */
+function emitApplicationEvent(
+  eventName: string,
+  context: ApplicationNotificationContext,
+): void {
+  void notificationService
+    .handleApplicationEvent({ eventName, context })
+    .catch((error: unknown) => {
+      console.error("[notifications] Failed to handle application event", {
+        eventName,
+        applicationId: context.applicationId,
+        error,
+      });
+    });
+}
+
+function buildApplicationEventContext(input: {
+  applicationId: string;
+  jobSeekerId: string;
+  employerId: string;
+  publicJobId: string;
+  jobTitle?: string;
+  companyName?: string;
+  candidateName?: string;
+}): ApplicationNotificationContext {
+  return {
+    applicationId: input.applicationId,
+    jobSeekerId: String(input.jobSeekerId),
+    employerId: String(input.employerId),
+    publicJobId: input.publicJobId,
+    jobTitle: input.jobTitle?.trim() || "Job",
+    companyName: input.companyName?.trim() || "",
+    candidateName: input.candidateName?.trim() || undefined,
+  };
 }
 
 function canWithdraw(status: ApplicationStatus): boolean {
@@ -417,6 +450,22 @@ export class ApplicationService {
     }
 
     await JobModel.updateOne({ _id: job._id }, { $inc: { applications: 1 } });
+
+    const snapshot = asSnapshot(resumeSnapshot);
+    const candidate = candidateFieldsFromSnapshot(snapshot);
+
+    emitApplicationEvent(
+      APPLICATION_EVENT_NAMES.SUBMITTED,
+      buildApplicationEventContext({
+        applicationId: application._id.toString(),
+        jobSeekerId: input.jobSeekerId,
+        employerId: String(job.employerId),
+        publicJobId: job.jobId,
+        jobTitle: job.jobTitle,
+        companyName: job.companyName,
+        candidateName: candidate.fullName,
+      }),
+    );
 
     return {
       application: toPublicApplication(application),
@@ -630,7 +679,7 @@ export class ApplicationService {
         remark: "Employer viewed application",
       });
       await application.save();
-      emitApplicationEvent(APPLICATION_EVENT_NAMES.VIEWED);
+      await this.emitForApplication(APPLICATION_EVENT_NAMES.VIEWED, application);
     }
 
     const job = await JobModel.findById(application.jobId)
@@ -680,6 +729,37 @@ export class ApplicationService {
     });
   }
 
+  private async emitForApplication(
+    eventName: string,
+    application: {
+      _id: mongoose.Types.ObjectId;
+      jobSeekerId: unknown;
+      employerId: unknown;
+      publicJobId: string;
+      jobId: unknown;
+      resumeSnapshot?: unknown;
+    },
+  ): Promise<void> {
+    const [job, snapshot] = await Promise.all([
+      JobModel.findById(application.jobId).select("jobTitle companyName").lean(),
+      Promise.resolve(asSnapshot(application.resumeSnapshot)),
+    ]);
+    const candidate = candidateFieldsFromSnapshot(snapshot);
+
+    emitApplicationEvent(
+      eventName,
+      buildApplicationEventContext({
+        applicationId: application._id.toString(),
+        jobSeekerId: String(application.jobSeekerId),
+        employerId: String(application.employerId),
+        publicJobId: application.publicJobId,
+        jobTitle: job?.jobTitle,
+        companyName: job?.companyName,
+        candidateName: candidate.fullName,
+      }),
+    );
+  }
+
   async updateStatusForEmployer(input: {
     employerId: string;
     applicationId: string;
@@ -702,7 +782,7 @@ export class ApplicationService {
 
       const eventName = eventNameForStatus(input.status);
       if (eventName) {
-        emitApplicationEvent(eventName);
+        await this.emitForApplication(eventName, application);
       }
     }
 
@@ -801,10 +881,13 @@ export class ApplicationService {
     if (statusChanged) {
       const eventName = eventNameForStatus(input.status!);
       if (eventName) {
-        emitApplicationEvent(eventName);
+        await this.emitForApplication(eventName, application);
       }
     } else if (interviewUpdated && application.status === "interview_scheduled") {
-      emitApplicationEvent(APPLICATION_EVENT_NAMES.INTERVIEW_UPDATED);
+      await this.emitForApplication(
+        APPLICATION_EVENT_NAMES.INTERVIEW_UPDATED,
+        application,
+      );
     }
 
     return this.loadEmployerDetail({
@@ -1041,7 +1124,10 @@ export class ApplicationService {
       remark: "Application withdrawn by candidate",
     });
     await application.save();
-    emitApplicationEvent(APPLICATION_EVENT_NAMES.WITHDRAWN);
+    await this.emitForApplication(
+      APPLICATION_EVENT_NAMES.WITHDRAWN,
+      application,
+    );
 
     return this.getForSeeker({
       jobSeekerId: input.jobSeekerId,

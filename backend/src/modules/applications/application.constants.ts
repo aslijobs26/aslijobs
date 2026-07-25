@@ -55,6 +55,7 @@ export const WITHDRAWABLE_STATUSES = [
  * Future notification hooks — no emitter wired in Phase 6.
  */
 export const APPLICATION_EVENT_NAMES = {
+  SUBMITTED: "application.submitted",
   VIEWED: "application.viewed",
   UNDER_REVIEW: "application.under_review",
   SHORTLISTED: "application.shortlisted",

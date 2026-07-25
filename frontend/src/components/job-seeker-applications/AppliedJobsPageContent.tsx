@@ -19,7 +19,7 @@ import {
 } from "@/services/job-seeker-applications.service";
 import { cn } from "@/utils/cn";
 import { useQuery } from "@tanstack/react-query";
-import { Briefcase, Search } from "lucide-react";
+import { ArrowLeft, Briefcase, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -144,6 +144,16 @@ export function AppliedJobsPageContent() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mb-4">
+        <Link
+          href={ROUTES.HOME}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back to home
+        </Link>
+      </div>
+
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
