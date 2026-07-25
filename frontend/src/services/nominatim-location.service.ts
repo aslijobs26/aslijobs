@@ -394,6 +394,60 @@ export async function searchIndiaCities(
   return suggestions;
 }
 
+/**
+ * Preferred-location search: states + India-wide city/locality suggestions.
+ * Reuses Photon; does not change state/city autocomplete contracts.
+ */
+export async function searchIndiaPreferredLocations(
+  query: string,
+  signal?: AbortSignal,
+): Promise<PlaceSuggestion[]> {
+  const normalizedQuery = query.trim();
+  if (normalizedQuery.length < 2) {
+    return [];
+  }
+
+  const stateMatches = await searchIndiaStates(normalizedQuery, signal);
+
+  const params = new URLSearchParams({
+    q: normalizedQuery,
+    bbox: "68.1,6.5,97.5,37.1",
+  });
+  const features = await fetchPhoton(params, signal);
+  const cityMatches: PlaceSuggestion[] = [];
+  for (const feature of features) {
+    const properties = feature.properties;
+    if (!properties) {
+      continue;
+    }
+    if (normalizeKey(properties.countrycode || "") !== "in") {
+      continue;
+    }
+    const osmValue = (properties.osm_value || "").toLowerCase();
+    if (!CITY_OSM_VALUES.has(osmValue)) {
+      continue;
+    }
+    const city = (properties.name || "").trim();
+    const state = (properties.state || "").trim();
+    if (!city || !isEnglishLabel(city) || !isPrefixMatch(normalizedQuery, city)) {
+      continue;
+    }
+    const label = state ? `${city}, ${state}` : city;
+    cityMatches.push({
+      id: `place-${properties.osm_id ?? normalizeKey(label)}`,
+      label,
+      kind: "city",
+      state,
+      city,
+    });
+  }
+
+  return rankSuggestions(
+    normalizedQuery,
+    dedupeSuggestions([...stateMatches, ...cityMatches]),
+  ).slice(0, SUGGESTION_LIMIT);
+}
+
 /** @deprecated Use searchIndiaStates / searchIndiaCities */
 export async function searchIndiaLocations(
   query: string,

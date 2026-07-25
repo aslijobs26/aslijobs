@@ -23,6 +23,8 @@ type EmployerRegisterSearchableSelectProps = {
   disabled?: boolean;
   required?: boolean;
   hideLabel?: boolean;
+  /** Hide the search input inside the dropdown panel. */
+  hideSearch?: boolean;
   /** Allow typing a value that is not in the preset options. */
   allowCustom?: boolean;
   /**
@@ -50,6 +52,7 @@ export function EmployerRegisterSearchableSelect({
   disabled = false,
   required = false,
   hideLabel = false,
+  hideSearch = false,
   allowCustom = false,
   initialVisibleCount,
 }: EmployerRegisterSearchableSelectProps) {
@@ -302,27 +305,29 @@ export function EmployerRegisterSearchableSelect({
                 "employer-register-searchable-select-panel--up",
             )}
           >
-            <div className="employer-register-searchable-select-search">
-              <Search
-                className="employer-register-searchable-select-search-icon"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-              <input
-                type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                placeholder={
-                  allowCustom ? "Search or type to add..." : "Search..."
-                }
-                className="employer-register-searchable-select-search-input"
-                autoFocus
-                aria-label={
-                  allowCustom ? `Search or add ${label}` : `Search ${label}`
-                }
-              />
-            </div>
+            {hideSearch ? null : (
+              <div className="employer-register-searchable-select-search">
+                <Search
+                  className="employer-register-searchable-select-search-icon"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder={
+                    allowCustom ? "Search or type to add..." : "Search..."
+                  }
+                  className="employer-register-searchable-select-search-input"
+                  autoFocus
+                  aria-label={
+                    allowCustom ? `Search or add ${label}` : `Search ${label}`
+                  }
+                />
+              </div>
+            )}
 
             <ul
               id={listboxId}

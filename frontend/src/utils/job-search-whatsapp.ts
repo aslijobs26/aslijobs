@@ -17,7 +17,8 @@ export function buildJobApplyWhatsAppUrl(options: {
   const message = [
     `Hi, I am interested in applying for ${options.jobTitle}`,
     `at ${options.companyName}.`,
-    `Job ID: ${options.jobId}`,
+    `Job ID: ${options.jobId}.`,
+    "My AsliJobs ATS resume has been submitted with this application.",
   ].join(" ");
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;

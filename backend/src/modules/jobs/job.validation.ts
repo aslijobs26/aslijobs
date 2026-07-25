@@ -373,6 +373,10 @@ export const publicJobIdParamsSchema = z.object({
     .regex(/^AJ-\d{4}-\d{6}$/i, "Invalid public job id"),
 });
 
+export const similarPublicJobsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(10).optional().default(5),
+});
+
 export const updateJobStatusSchema = z.object({
   action: z.enum(JOB_STATUS_ACTIONS, {
     error: "Status action is required",
@@ -527,6 +531,7 @@ export const publishDraftJobSchema = createJobSchema;
 export type CreateJobInput = z.infer<typeof createJobSchema>;
 export type ListEmployerJobsQuery = z.infer<typeof listEmployerJobsQuerySchema>;
 export type PublicJobsQuery = z.infer<typeof publicJobsQuerySchema>;
+export type SimilarPublicJobsQuery = z.infer<typeof similarPublicJobsQuerySchema>;
 export type UpdateJobStatusInput = z.infer<typeof updateJobStatusSchema>;
 export type SaveDraftJobInput = z.infer<typeof saveDraftJobSchema>;
 export type PublishDraftJobInput = z.infer<typeof publishDraftJobSchema>;

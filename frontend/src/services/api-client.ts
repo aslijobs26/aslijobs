@@ -13,7 +13,11 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const requestUrl = config.url ?? "";
-  const isJobSeekerRequest = requestUrl.includes("/jobseekers");
+  const isJobSeekerRequest =
+    requestUrl.includes("/jobseekers") ||
+    requestUrl.includes("/resumes") ||
+    requestUrl.includes("/applications/apply") ||
+    requestUrl.includes("/applications/me");
 
   const accessToken = isJobSeekerRequest
     ? getJobSeekerAccessToken()

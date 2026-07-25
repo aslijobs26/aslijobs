@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { z } from "zod";
+import { normalizeOrigin } from "../utils/cors-origins.js";
 
 config();
 
@@ -19,8 +20,21 @@ const envSchema = z.object({
     .default("aslijobs-dev-refresh-secret-change-me"),
   JWT_ACCESS_EXPIRES_IN: z.string().default("7d"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("30d"),
-  FRONTEND_URL: z.string().url().default("http://localhost:3000"),
-  ADMIN_URL: z.string().url().default("http://localhost:5173"),
+  FRONTEND_URL: z
+    .string()
+    .url()
+    .default("http://localhost:3000")
+    .transform(normalizeOrigin),
+  ADMIN_URL: z
+    .string()
+    .url()
+    .default("http://localhost:5173")
+    .transform(normalizeOrigin),
+  /**
+   * Optional comma-separated extra browser origins allowed by CORS
+   * (e.g. preview deployments). Trailing slashes are stripped.
+   */
+  CORS_ALLOWED_ORIGINS: z.string().optional().default(""),
   OTP_PROVIDER: z.enum(["console", "whatsapp"]).default("console"),
   STORAGE_PROVIDER: z.enum(["local", "cloudinary"]).default("local"),
   UPLOAD_DIR: z.string().default("uploads"),

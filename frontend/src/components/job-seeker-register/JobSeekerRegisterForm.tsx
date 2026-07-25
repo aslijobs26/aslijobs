@@ -1,40 +1,28 @@
 "use client";
 
 import { EmployerRegisterOtpInput } from "@/components/employer-register/EmployerRegisterOtpInput";
-import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
-import { PostJobDatePicker } from "@/components/post-job/PostJobDatePicker";
 import {
-  JOB_SEEKER_GENDER_OPTIONS,
-  JOB_SEEKER_JOB_ROLE_OPTIONS,
-  JOB_SEEKER_REGISTER_CITY_LABEL,
-  JOB_SEEKER_REGISTER_CITY_PLACEHOLDER,
+  EMPTY_EDUCATION,
+  JobSeekerRegisterEducationExperienceStep,
+} from "@/components/job-seeker-register/JobSeekerRegisterEducationExperienceStep";
+import { JobSeekerRegisterPreferencesStep } from "@/components/job-seeker-register/JobSeekerRegisterPreferencesStep";
+import {
   JOB_SEEKER_REGISTER_CREATE_ACCOUNT_LABEL,
-  JOB_SEEKER_REGISTER_DOB_LABEL,
-  JOB_SEEKER_REGISTER_DOB_PLACEHOLDER,
+  JOB_SEEKER_REGISTER_CONTINUE_LABEL,
+  JOB_SEEKER_REGISTER_EDUCATION_HEADING,
   JOB_SEEKER_REGISTER_FULL_NAME_LABEL,
   JOB_SEEKER_REGISTER_FULL_NAME_PLACEHOLDER,
-  JOB_SEEKER_REGISTER_GENDER_LABEL,
-  JOB_SEEKER_REGISTER_GENDER_PLACEHOLDER,
   JOB_SEEKER_REGISTER_HEADING,
-  JOB_SEEKER_REGISTER_JOB_ROLE_LABEL,
-  JOB_SEEKER_REGISTER_JOB_ROLE_PLACEHOLDER,
   JOB_SEEKER_REGISTER_OTP_DESCRIPTION,
   JOB_SEEKER_REGISTER_OTP_HEADING,
   JOB_SEEKER_REGISTER_OTP_LENGTH,
-  JOB_SEEKER_REGISTER_PINCODE_LABEL,
-  JOB_SEEKER_REGISTER_PINCODE_PLACEHOLDER,
-  JOB_SEEKER_REGISTER_PREFERRED_LOCATION_LABEL,
-  JOB_SEEKER_REGISTER_PREFERRED_LOCATION_PLACEHOLDER,
-  JOB_SEEKER_REGISTER_PROFILE_HEADING,
+  JOB_SEEKER_REGISTER_PREFERENCES_HEADING,
   JOB_SEEKER_REGISTER_RESEND_LABEL,
   JOB_SEEKER_REGISTER_RESEND_PROMPT,
   JOB_SEEKER_REGISTER_SEND_OTP_LABEL,
-  JOB_SEEKER_REGISTER_STATE_LABEL,
-  JOB_SEEKER_REGISTER_STATE_PLACEHOLDER,
   JOB_SEEKER_REGISTER_VERIFY_OTP_LABEL,
   JOB_SEEKER_REGISTER_WHATSAPP_LABEL,
   JOB_SEEKER_REGISTER_WHATSAPP_PLACEHOLDER,
-  isValidJobSeekerPincode,
   isValidJobSeekerWhatsappNumber,
 } from "@/constants/job-seeker-register";
 import { ROUTES } from "@/constants/routes";
@@ -42,9 +30,19 @@ import {
   completeJobSeekerRegistration,
   registerJobSeekerAccount,
   resendJobSeekerOtp,
+  saveJobSeekerPreferences,
   verifyJobSeekerOtp,
 } from "@/services/job-seeker-register.service";
-import type { JobSeekerGender } from "@/types/job-seeker";
+import type {
+  JobSeekerEducation,
+  JobSeekerExperienceEntry,
+  JobSeekerExperienceType,
+  JobSeekerGender,
+  JobSeekerJobType,
+  JobSeekerLanguage,
+  JobSeekerSalaryPeriod,
+  JobSeekerWorkMode,
+} from "@/types/job-seeker";
 import { isAxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -54,14 +52,7 @@ const EMPTY_OTP_DIGITS = Array.from(
   () => "",
 );
 
-type RegisterStep = "account" | "otp" | "profile";
-
-function getLocalTodayIso() {
-  const today = new Date();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  return `${today.getFullYear()}-${month}-${day}`;
-}
+type RegisterStep = "account" | "otp" | "preferences" | "education";
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (isAxiosError(error)) {
@@ -78,6 +69,42 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function validateEducation(education: JobSeekerEducation): string | null {
+  switch (education.level) {
+    case "below_10th":
+      return education.schoolName.trim() ? null : "School name is required";
+    case "10th_pass":
+      if (!education.schoolName.trim()) return "School name is required";
+      if (!education.board.trim()) return "Board is required";
+      if (!education.passingYear.trim()) return "Passing year is required";
+      return null;
+    case "intermediate":
+      if (!education.collegeName.trim()) return "College name is required";
+      if (!education.stream.trim()) return "Stream is required";
+      if (!education.passingYear.trim()) return "Passing year is required";
+      return null;
+    case "iti":
+      if (!education.instituteName.trim()) return "Institute name is required";
+      if (!education.trade.trim()) return "Trade is required";
+      if (!education.passingYear.trim()) return "Passing year is required";
+      return null;
+    case "diploma":
+      if (!education.collegeName.trim()) return "College name is required";
+      if (!education.branch.trim()) return "Branch is required";
+      if (!education.passingYear.trim()) return "Passing year is required";
+      return null;
+    case "graduation":
+    case "post_graduation":
+      if (!education.collegeName.trim()) return "College name is required";
+      if (!education.degree.trim()) return "Degree is required";
+      if (!education.specialization.trim()) return "Specialization is required";
+      if (!education.passingYear.trim()) return "Passing year is required";
+      return null;
+    default:
+      return null;
+  }
+}
+
 export function JobSeekerRegisterForm() {
   const router = useRouter();
   const [step, setStep] = useState<RegisterStep>("account");
@@ -85,13 +112,25 @@ export function JobSeekerRegisterForm() {
   const [fullName, setFullName] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [gender, setGender] = useState("");
-  const [pincode, setPincode] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [jobRole, setJobRole] = useState("");
-  const [preferredJobLocation, setPreferredJobLocation] = useState("");
+  const [preferences, setPreferences] = useState({
+    dateOfBirth: "",
+    gender: "",
+    jobRole: "",
+    jobType: "",
+    workMode: "",
+    preferredJobLocation: "",
+    expectedSalary: "",
+    expectedSalaryPeriod: "per-month",
+  });
+  const [education, setEducation] =
+    useState<JobSeekerEducation>(EMPTY_EDUCATION);
+  const [experienceType, setExperienceType] = useState<
+    JobSeekerExperienceType | ""
+  >("");
+  const [experiences, setExperiences] = useState<JobSeekerExperienceEntry[]>(
+    [],
+  );
+  const [languages, setLanguages] = useState<JobSeekerLanguage[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -100,6 +139,13 @@ export function JobSeekerRegisterForm() {
     (digit) => digit.length === 1 && /\d/.test(digit),
   );
   const canSendOtp = fullName.trim().length > 0 && isWhatsappValid;
+
+  const heading =
+    step === "preferences"
+      ? JOB_SEEKER_REGISTER_PREFERENCES_HEADING
+      : step === "education"
+        ? JOB_SEEKER_REGISTER_EDUCATION_HEADING
+        : JOB_SEEKER_REGISTER_HEADING;
 
   const handleSendOtp = async () => {
     if (!canSendOtp) {
@@ -154,9 +200,72 @@ export function JobSeekerRegisterForm() {
 
     try {
       await verifyJobSeekerOtp(jobSeekerId, otpDigits.join(""));
-      setStep("profile");
+      setStep("preferences");
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Invalid OTP"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    if (!jobSeekerId) {
+      setErrorMessage("Registration session expired. Please start again.");
+      return;
+    }
+
+    if (!preferences.dateOfBirth) {
+      setErrorMessage("Date of birth is required");
+      return;
+    }
+    if (!preferences.gender) {
+      setErrorMessage("Gender is required");
+      return;
+    }
+    if (!preferences.jobRole.trim()) {
+      setErrorMessage("Job role is required");
+      return;
+    }
+    if (!preferences.jobType) {
+      setErrorMessage("Job type is required");
+      return;
+    }
+    if (!preferences.workMode) {
+      setErrorMessage("Work mode is required");
+      return;
+    }
+    if (!preferences.preferredJobLocation.trim()) {
+      setErrorMessage("Preferred job location is required");
+      return;
+    }
+    if (!preferences.expectedSalary.trim()) {
+      setErrorMessage("Expected salary is required");
+      return;
+    }
+    if (!preferences.expectedSalaryPeriod) {
+      setErrorMessage("Salary period is required");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      await saveJobSeekerPreferences({
+        jobSeekerId,
+        dateOfBirth: preferences.dateOfBirth,
+        gender: preferences.gender as JobSeekerGender,
+        jobRole: preferences.jobRole.trim(),
+        jobType: preferences.jobType as JobSeekerJobType,
+        workMode: preferences.workMode as JobSeekerWorkMode,
+        preferredJobLocation: preferences.preferredJobLocation.trim(),
+        expectedSalary: Number(preferences.expectedSalary),
+        expectedSalaryPeriod:
+          preferences.expectedSalaryPeriod as JobSeekerSalaryPeriod,
+      });
+      setStep("education");
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Failed to save preferences"));
     } finally {
       setIsSubmitting(false);
     }
@@ -168,33 +277,57 @@ export function JobSeekerRegisterForm() {
       return;
     }
 
-    if (!dateOfBirth) {
-      setErrorMessage("Date of birth is required");
+    const educationError = validateEducation(education);
+    if (educationError) {
+      setErrorMessage(educationError);
       return;
     }
 
-    if (!gender) {
-      setErrorMessage("Gender is required");
+    if (!experienceType) {
+      setErrorMessage("Select fresher or experienced");
       return;
     }
 
-    if (!isValidJobSeekerPincode(pincode)) {
-      setErrorMessage("Enter a valid 6-digit pincode");
-      return;
+    if (experienceType === "experienced") {
+      if (experiences.length === 0) {
+        setErrorMessage("Add at least one work experience");
+        return;
+      }
+
+      for (const [index, entry] of experiences.entries()) {
+        if (!entry.companyName.trim()) {
+          setErrorMessage(`Experience ${index + 1}: company name is required`);
+          return;
+        }
+        if (!entry.jobRole.trim()) {
+          setErrorMessage(`Experience ${index + 1}: job role is required`);
+          return;
+        }
+        if (!entry.industry.trim()) {
+          setErrorMessage(`Experience ${index + 1}: industry is required`);
+          return;
+        }
+        if (!entry.startDate) {
+          setErrorMessage(`Experience ${index + 1}: start date is required`);
+          return;
+        }
+        if (!entry.currentlyWorking && !entry.endDate) {
+          setErrorMessage(`Experience ${index + 1}: end date is required`);
+          return;
+        }
+        if (!entry.salary.trim()) {
+          setErrorMessage(`Experience ${index + 1}: salary is required`);
+          return;
+        }
+        if (!entry.location.trim()) {
+          setErrorMessage(`Experience ${index + 1}: location is required`);
+          return;
+        }
+      }
     }
 
-    if (!city.trim() || !state.trim()) {
-      setErrorMessage("City and state are required");
-      return;
-    }
-
-    if (!jobRole) {
-      setErrorMessage("Job role is required");
-      return;
-    }
-
-    if (!preferredJobLocation.trim()) {
-      setErrorMessage("Preferred job location is required");
+    if (languages.length === 0) {
+      setErrorMessage("Select at least one language");
       return;
     }
 
@@ -204,15 +337,12 @@ export function JobSeekerRegisterForm() {
     try {
       await completeJobSeekerRegistration({
         jobSeekerId,
-        dateOfBirth,
-        gender: gender as JobSeekerGender,
-        pincode: pincode.trim(),
-        city: city.trim(),
-        state: state.trim(),
-        jobRole,
-        preferredJobLocation: preferredJobLocation.trim(),
+        education,
+        experienceType,
+        experiences: experienceType === "experienced" ? experiences : [],
+        languages,
       });
-      router.push(ROUTES.JOB_SEEKER_DASHBOARD);
+      router.push(ROUTES.HOME);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Failed to create account"));
     } finally {
@@ -233,16 +363,17 @@ export function JobSeekerRegisterForm() {
       return;
     }
 
+    if (step === "preferences") {
+      await handleSavePreferences();
+      return;
+    }
+
     await handleCreateAccount();
   };
 
   return (
     <div className="w-full">
-      <h1 className="employer-register-form-heading">
-        {step === "profile"
-          ? JOB_SEEKER_REGISTER_PROFILE_HEADING
-          : JOB_SEEKER_REGISTER_HEADING}
-      </h1>
+      <h1 className="employer-register-form-heading">{heading}</h1>
 
       <form
         className="employer-register-form-fields mt-8 w-full"
@@ -337,150 +468,41 @@ export function JobSeekerRegisterForm() {
           </div>
         ) : null}
 
-        {step === "profile" ? (
-          <>
-            <div className="employer-register-form-stack">
-              <label
-                htmlFor="job-seeker-register-dob"
-                className="employer-register-form-label"
-              >
-                {JOB_SEEKER_REGISTER_DOB_LABEL}
-              </label>
-              <PostJobDatePicker
-                id="job-seeker-register-dob"
-                value={dateOfBirth}
-                placeholder={JOB_SEEKER_REGISTER_DOB_PLACEHOLDER}
-                maxDate={getLocalTodayIso()}
-                compact
-                onChange={(value) => {
-                  setDateOfBirth(value);
-                  setErrorMessage(null);
-                }}
-                aria-label="Date of birth"
-              />
-            </div>
+        {step === "preferences" ? (
+          <JobSeekerRegisterPreferencesStep
+            values={preferences}
+            disabled={isSubmitting}
+            onChange={(patch) => {
+              setPreferences((current) => ({ ...current, ...patch }));
+              setErrorMessage(null);
+            }}
+          />
+        ) : null}
 
-            <EmployerRegisterSearchableSelect
-              id="job-seeker-register-gender"
-              label={JOB_SEEKER_REGISTER_GENDER_LABEL}
-              value={gender}
-              placeholder={JOB_SEEKER_REGISTER_GENDER_PLACEHOLDER}
-              options={JOB_SEEKER_GENDER_OPTIONS}
-              onChange={(value) => {
-                setGender(value);
-                setErrorMessage(null);
-              }}
-              required
-              disabled={isSubmitting}
-            />
-
-            <div className="employer-register-form-stack">
-              <label
-                htmlFor="job-seeker-register-pincode"
-                className="employer-register-form-label"
-              >
-                {JOB_SEEKER_REGISTER_PINCODE_LABEL}
-              </label>
-              <input
-                id="job-seeker-register-pincode"
-                type="text"
-                inputMode="numeric"
-                value={pincode}
-                onChange={(event) => {
-                  setPincode(event.target.value.replace(/\D/g, "").slice(0, 6));
-                  setErrorMessage(null);
-                }}
-                placeholder={JOB_SEEKER_REGISTER_PINCODE_PLACEHOLDER}
-                className="employer-register-form-input"
-                aria-required="true"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="employer-register-form-row">
-              <div className="employer-register-form-stack">
-                <label
-                  htmlFor="job-seeker-register-city"
-                  className="employer-register-form-label"
-                >
-                  {JOB_SEEKER_REGISTER_CITY_LABEL}
-                </label>
-                <input
-                  id="job-seeker-register-city"
-                  type="text"
-                  value={city}
-                  onChange={(event) => {
-                    setCity(event.target.value);
-                    setErrorMessage(null);
-                  }}
-                  placeholder={JOB_SEEKER_REGISTER_CITY_PLACEHOLDER}
-                  className="employer-register-form-input"
-                  aria-required="true"
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <div className="employer-register-form-stack">
-                <label
-                  htmlFor="job-seeker-register-state"
-                  className="employer-register-form-label"
-                >
-                  {JOB_SEEKER_REGISTER_STATE_LABEL}
-                </label>
-                <input
-                  id="job-seeker-register-state"
-                  type="text"
-                  value={state}
-                  onChange={(event) => {
-                    setState(event.target.value);
-                    setErrorMessage(null);
-                  }}
-                  placeholder={JOB_SEEKER_REGISTER_STATE_PLACEHOLDER}
-                  className="employer-register-form-input"
-                  aria-required="true"
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-
-            <EmployerRegisterSearchableSelect
-              id="job-seeker-register-job-role"
-              label={JOB_SEEKER_REGISTER_JOB_ROLE_LABEL}
-              value={jobRole}
-              placeholder={JOB_SEEKER_REGISTER_JOB_ROLE_PLACEHOLDER}
-              options={JOB_SEEKER_JOB_ROLE_OPTIONS}
-              onChange={(value) => {
-                setJobRole(value);
-                setErrorMessage(null);
-              }}
-              required
-              allowCustom
-              initialVisibleCount={5}
-              disabled={isSubmitting}
-            />
-
-            <div className="employer-register-form-stack">
-              <label
-                htmlFor="job-seeker-register-preferred-location"
-                className="employer-register-form-label"
-              >
-                {JOB_SEEKER_REGISTER_PREFERRED_LOCATION_LABEL}
-              </label>
-              <input
-                id="job-seeker-register-preferred-location"
-                type="text"
-                value={preferredJobLocation}
-                onChange={(event) => {
-                  setPreferredJobLocation(event.target.value);
-                  setErrorMessage(null);
-                }}
-                placeholder={JOB_SEEKER_REGISTER_PREFERRED_LOCATION_PLACEHOLDER}
-                className="employer-register-form-input"
-                aria-required="true"
-                disabled={isSubmitting}
-              />
-            </div>
-          </>
+        {step === "education" ? (
+          <JobSeekerRegisterEducationExperienceStep
+            education={education}
+            experienceType={experienceType}
+            experiences={experiences}
+            languages={languages}
+            disabled={isSubmitting}
+            onEducationChange={(next) => {
+              setEducation(next);
+              setErrorMessage(null);
+            }}
+            onExperienceTypeChange={(next) => {
+              setExperienceType(next);
+              setErrorMessage(null);
+            }}
+            onExperiencesChange={(next) => {
+              setExperiences(next);
+              setErrorMessage(null);
+            }}
+            onLanguagesChange={(next) => {
+              setLanguages(next);
+              setErrorMessage(null);
+            }}
+          />
         ) : null}
 
         {errorMessage ? (
@@ -502,7 +524,9 @@ export function JobSeekerRegisterForm() {
             ? JOB_SEEKER_REGISTER_SEND_OTP_LABEL
             : step === "otp"
               ? JOB_SEEKER_REGISTER_VERIFY_OTP_LABEL
-              : JOB_SEEKER_REGISTER_CREATE_ACCOUNT_LABEL}
+              : step === "preferences"
+                ? JOB_SEEKER_REGISTER_CONTINUE_LABEL
+                : JOB_SEEKER_REGISTER_CREATE_ACCOUNT_LABEL}
         </button>
       </form>
     </div>

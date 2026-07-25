@@ -17,7 +17,6 @@ import {
   formatJobSearchWorkMode,
   getCompanyInitials,
 } from "@/utils/job-search-format";
-import { canApplyViaWhatsApp } from "@/utils/job-search-whatsapp";
 import { protectedApply } from "@/utils/job-apply-auth";
 import {
   buildAbsolutePublicJobUrl,
@@ -218,6 +217,7 @@ export function JobSearchOverviewPanel({
   onRetry,
 }: JobSearchOverviewPanelProps) {
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
   const scrollBodyRef = useRef<HTMLDivElement>(null);
   const collapsedRef = useRef(false);
   const transitionLockRef = useRef(false);
@@ -352,7 +352,6 @@ export function JobSearchOverviewPanel({
   );
   const salary = formatJobSearchSalary(job);
   const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt);
-  const canApply = canApplyViaWhatsApp(job.applyWhatsAppNumber);
   const genderLabel =
     job.gender.length > 0
       ? job.gender.map(formatJobSearchGender).join(", ")
@@ -380,11 +379,17 @@ export function JobSearchOverviewPanel({
   };
 
   const handleApplyClick = () => {
-    protectedApply({
+    if (isApplying) {
+      return;
+    }
+    setIsApplying(true);
+    void protectedApply({
       applyWhatsAppNumber: job.applyWhatsAppNumber,
       jobTitle: job.jobTitle,
       companyName: job.companyName,
       jobId: job.jobId,
+    }).finally(() => {
+      setIsApplying(false);
     });
   };
 
@@ -700,16 +705,15 @@ export function JobSearchOverviewPanel({
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2 border-t border-[#EEEEEE] pt-5">
-          {canApply ? (
-            <button
-              type="button"
-              onClick={handleApplyClick}
-              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 sm:flex-none"
-            >
-              <Send className="size-4" strokeWidth={2.25} aria-hidden="true" />
-              Apply Now
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={handleApplyClick}
+            disabled={isApplying}
+            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+          >
+            <Send className="size-4" strokeWidth={2.25} aria-hidden="true" />
+            {isApplying ? "Submitting…" : "Apply Now"}
+          </button>
           <button
             type="button"
             onClick={handleShare}

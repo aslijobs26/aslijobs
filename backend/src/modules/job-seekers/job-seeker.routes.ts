@@ -1,5 +1,4 @@
 import { Router } from "express";
-import type { ZodType } from "zod";
 import { requireJobSeekerAuth } from "../../middleware/job-seeker-auth.middleware.js";
 import {
   jobSeekerLoginSendOtpRateLimit,
@@ -18,22 +17,12 @@ import {
   completeJobSeekerRegistrationSchema,
   registerJobSeekerSchema,
   resendJobSeekerOtpSchema,
+  saveJobSeekerPreferencesSchema,
+  searchJobSeekerRolesQuerySchema,
   verifyJobSeekerOtpSchema,
 } from "./job-seeker.validation.js";
 
 const jobSeekerRouter = Router();
-
-function isCompleteRegistrationBody(
-  body: unknown,
-): body is { jobSeekerId: string } {
-  return (
-    typeof body === "object" &&
-    body !== null &&
-    "jobSeekerId" in body &&
-    typeof (body as { jobSeekerId?: unknown }).jobSeekerId === "string" &&
-    Boolean((body as { jobSeekerId: string }).jobSeekerId)
-  );
-}
 
 jobSeekerRouter.post(
   "/login/send-otp",
@@ -62,14 +51,15 @@ jobSeekerRouter.get(
   asyncHandler(jobSeekerLoginController.me),
 );
 
+jobSeekerRouter.get(
+  "/register/job-roles",
+  validate(searchJobSeekerRolesQuerySchema, "query"),
+  asyncHandler(jobSeekerController.searchJobRoles),
+);
+
 jobSeekerRouter.post(
   "/register",
-  (req, res, next) => {
-    const schema: ZodType = isCompleteRegistrationBody(req.body)
-      ? completeJobSeekerRegistrationSchema
-      : registerJobSeekerSchema;
-    return validate(schema, "body")(req, res, next);
-  },
+  validate(registerJobSeekerSchema, "body"),
   asyncHandler(jobSeekerController.register),
 );
 
@@ -83,6 +73,18 @@ jobSeekerRouter.post(
   "/register/verify-otp",
   validate(verifyJobSeekerOtpSchema, "body"),
   asyncHandler(jobSeekerController.verifyOtp),
+);
+
+jobSeekerRouter.post(
+  "/register/preferences",
+  validate(saveJobSeekerPreferencesSchema, "body"),
+  asyncHandler(jobSeekerController.savePreferences),
+);
+
+jobSeekerRouter.post(
+  "/register/complete",
+  validate(completeJobSeekerRegistrationSchema, "body"),
+  asyncHandler(jobSeekerController.completeRegistration),
 );
 
 export default jobSeekerRouter;

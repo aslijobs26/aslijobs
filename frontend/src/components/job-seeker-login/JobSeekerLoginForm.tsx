@@ -139,7 +139,7 @@ export function JobSeekerLoginForm() {
     try {
       await verifyJobSeekerLoginOtp(whatsappNumber, otpDigits.join(""));
       const returnUrl = readLoginReturnUrl();
-      router.push(returnUrl ?? ROUTES.JOB_SEEKER_DASHBOARD);
+      router.push(returnUrl ?? ROUTES.HOME);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Invalid OTP"));
     } finally {

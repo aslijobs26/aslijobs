@@ -16,7 +16,6 @@ import {
   formatJobSearchWalkInTimeRange,
   formatJobSearchWorkMode,
 } from "@/utils/job-search-format";
-import { canApplyViaWhatsApp } from "@/utils/job-search-whatsapp";
 import { protectedApply } from "@/utils/job-apply-auth";
 import {
   buildAbsolutePublicJobUrl,
@@ -206,6 +205,7 @@ export function JobSearchMobileJobDetails({
   onRetry,
 }: JobSearchMobileJobDetailsProps) {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
 
   const parsedDescription = useMemo(
     () => parseDescription(job?.description ?? ""),
@@ -258,7 +258,6 @@ export function JobSearchMobileJobDetails({
   );
   const salary = formatJobSearchSalary(job);
   const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt);
-  const canApply = canApplyViaWhatsApp(job.applyWhatsAppNumber);
   const employmentType = formatJobSearchJobType(job.jobType);
   const experience = formatJobSearchExperience(job.experience);
   const education =
@@ -298,11 +297,17 @@ export function JobSearchMobileJobDetails({
   };
 
   const handleApplyClick = () => {
-    protectedApply({
+    if (isApplying) {
+      return;
+    }
+    setIsApplying(true);
+    void protectedApply({
       applyWhatsAppNumber: job.applyWhatsAppNumber,
       jobTitle: job.jobTitle,
       companyName: job.companyName,
       jobId: job.jobId,
+    }).finally(() => {
+      setIsApplying(false);
     });
   };
 
@@ -600,28 +605,19 @@ export function JobSearchMobileJobDetails({
 
         <div className="mt-5 border-t border-[#EEF1F4] bg-white pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div className="h-14">
-            {canApply ? (
-              <button
-                type="button"
-                onClick={handleApplyClick}
-                className="inline-flex h-full w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-2 text-[15px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              >
-                <Send
-                  className="size-4 shrink-0"
-                  strokeWidth={2.25}
-                  aria-hidden="true"
-                />
-                Apply Now
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="inline-flex h-full w-full items-center justify-center rounded-xl bg-primary/40 px-2 text-[15px] font-bold text-white"
-              >
-                Apply Now
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleApplyClick}
+              disabled={isApplying}
+              className="inline-flex h-full w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-2 text-[15px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Send
+                className="size-4 shrink-0"
+                strokeWidth={2.25}
+                aria-hidden="true"
+              />
+              {isApplying ? "Submitting…" : "Apply Now"}
+            </button>
           </div>
         </div>
       </div>

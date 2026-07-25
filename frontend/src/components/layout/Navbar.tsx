@@ -2,12 +2,18 @@
 
 import asliLogo from "@/assets/AsliLogo.svg";
 import { EmployerProfileMenu } from "@/components/employer-dashboard/EmployerProfileMenu";
+import { JobSeekerProfileMenu } from "@/components/job-seeker/JobSeekerProfileMenu";
 import { BRAND_TAGLINE } from "@/constants/brand";
 import { ROUTES } from "@/constants/routes";
 import {
   EMPLOYER_ACCESS_TOKEN_STORAGE_KEY,
   getEmployerAccessToken,
 } from "@/utils/employer-auth-storage";
+import {
+  JOB_SEEKER_ACCESS_TOKEN_STORAGE_KEY,
+  JOB_SEEKER_AUTH_CHANGE_EVENT,
+  getJobSeekerAccessToken,
+} from "@/utils/job-seeker-auth-storage";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -16,38 +22,58 @@ import { NavbarLanguageButton } from "./NavbarLanguageButton";
 
 export function Navbar() {
   const [isEmployerAuthenticated, setIsEmployerAuthenticated] = useState(false);
+  const [isJobSeekerAuthenticated, setIsJobSeekerAuthenticated] =
+    useState(false);
 
-  const syncEmployerAuthState = () => {
+  const syncAuthState = () => {
     setIsEmployerAuthenticated(Boolean(getEmployerAccessToken()));
+    setIsJobSeekerAuthenticated(Boolean(getJobSeekerAccessToken()));
   };
 
   useEffect(() => {
-    syncEmployerAuthState();
+    syncAuthState();
 
     const handlePageShow = () => {
-      syncEmployerAuthState();
+      syncAuthState();
     };
 
     const handleStorage = (event: StorageEvent) => {
       if (
         event.key === null ||
-        event.key === EMPLOYER_ACCESS_TOKEN_STORAGE_KEY
+        event.key === EMPLOYER_ACCESS_TOKEN_STORAGE_KEY ||
+        event.key === JOB_SEEKER_ACCESS_TOKEN_STORAGE_KEY
       ) {
-        syncEmployerAuthState();
+        syncAuthState();
       }
+    };
+
+    const handleJobSeekerAuthChange = () => {
+      syncAuthState();
     };
 
     window.addEventListener("pageshow", handlePageShow);
     window.addEventListener("storage", handleStorage);
+    window.addEventListener(
+      JOB_SEEKER_AUTH_CHANGE_EVENT,
+      handleJobSeekerAuthChange,
+    );
 
     return () => {
       window.removeEventListener("pageshow", handlePageShow);
       window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(
+        JOB_SEEKER_AUTH_CHANGE_EVENT,
+        handleJobSeekerAuthChange,
+      );
     };
   }, []);
 
   const handleEmployerLogout = () => {
     setIsEmployerAuthenticated(false);
+  };
+
+  const handleJobSeekerLogout = () => {
+    setIsJobSeekerAuthenticated(false);
   };
 
   return (
@@ -78,6 +104,8 @@ export function Navbar() {
 
             {isEmployerAuthenticated ? (
               <EmployerProfileMenu onLogout={handleEmployerLogout} />
+            ) : isJobSeekerAuthenticated ? (
+              <JobSeekerProfileMenu onLogout={handleJobSeekerLogout} />
             ) : (
               <>
                 <Link

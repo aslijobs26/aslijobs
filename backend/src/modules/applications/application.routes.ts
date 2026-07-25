@@ -1,0 +1,98 @@
+import { Router } from "express";
+import { requireEmployerAuth } from "../../middleware/auth.middleware.js";
+import { requireJobSeekerAuth } from "../../middleware/job-seeker-auth.middleware.js";
+import { validate } from "../../middleware/validate.middleware.js";
+import { asyncHandler } from "../../utils/async-handler.js";
+import { applicationController } from "./application.controller.js";
+import {
+  applicationIdParamsSchema,
+  applyToJobSchema,
+  listEmployerApplicationsQuerySchema,
+  listSeekerApplicationsQuerySchema,
+  updateApplicationHiringSchema,
+  updateApplicationNotesSchema,
+  updateApplicationStatusSchema,
+} from "./application.validation.js";
+
+const applicationRouter = Router();
+
+applicationRouter.post(
+  "/apply",
+  asyncHandler(requireJobSeekerAuth),
+  validate(applyToJobSchema, "body"),
+  asyncHandler(applicationController.apply),
+);
+
+applicationRouter.get(
+  "/me/stats",
+  asyncHandler(requireJobSeekerAuth),
+  asyncHandler(applicationController.getStatsForSeeker),
+);
+
+applicationRouter.get(
+  "/me",
+  asyncHandler(requireJobSeekerAuth),
+  validate(listSeekerApplicationsQuerySchema, "query"),
+  asyncHandler(applicationController.listForSeeker),
+);
+
+applicationRouter.get(
+  "/me/:applicationId",
+  asyncHandler(requireJobSeekerAuth),
+  validate(applicationIdParamsSchema, "params"),
+  asyncHandler(applicationController.getForSeeker),
+);
+
+applicationRouter.post(
+  "/me/:applicationId/withdraw",
+  asyncHandler(requireJobSeekerAuth),
+  validate(applicationIdParamsSchema, "params"),
+  asyncHandler(applicationController.withdrawForSeeker),
+);
+
+applicationRouter.get(
+  "/employer",
+  asyncHandler(requireEmployerAuth),
+  validate(listEmployerApplicationsQuerySchema, "query"),
+  asyncHandler(applicationController.listForEmployer),
+);
+
+applicationRouter.get(
+  "/employer/:applicationId",
+  asyncHandler(requireEmployerAuth),
+  validate(applicationIdParamsSchema, "params"),
+  asyncHandler(applicationController.getForEmployer),
+);
+
+applicationRouter.get(
+  "/employer/:applicationId/pdf",
+  asyncHandler(requireEmployerAuth),
+  validate(applicationIdParamsSchema, "params"),
+  asyncHandler(applicationController.downloadPdfForEmployer),
+);
+
+applicationRouter.patch(
+  "/employer/:applicationId/status",
+  asyncHandler(requireEmployerAuth),
+  validate(applicationIdParamsSchema, "params"),
+  validate(updateApplicationStatusSchema, "body"),
+  asyncHandler(applicationController.updateStatusForEmployer),
+);
+
+applicationRouter.patch(
+  "/employer/:applicationId/notes",
+  asyncHandler(requireEmployerAuth),
+  validate(applicationIdParamsSchema, "params"),
+  validate(updateApplicationNotesSchema, "body"),
+  asyncHandler(applicationController.updateNotesForEmployer),
+);
+
+applicationRouter.patch(
+  "/employer/:applicationId/hiring",
+  asyncHandler(requireEmployerAuth),
+  validate(applicationIdParamsSchema, "params"),
+  validate(updateApplicationHiringSchema, "body"),
+  asyncHandler(applicationController.updateHiringForEmployer),
+);
+
+export default applicationRouter;

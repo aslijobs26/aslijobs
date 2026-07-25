@@ -112,3 +112,18 @@ export async function fetchPublicActiveJobByPublicId(
   );
   return response.data.data;
 }
+
+/** Related active jobs ranked for the given public job. Excludes the source job. */
+export async function fetchSimilarPublicJobs(
+  publicJobId: string,
+  params: { limit?: number } = {},
+  options?: { signal?: AbortSignal },
+) {
+  const response = await apiClient.get<
+    ApiSuccess<{ jobs: PublicJobListItem[] }>
+  >(`/jobs/public/${encodeURIComponent(publicJobId)}/similar`, {
+    params,
+    signal: options?.signal,
+  });
+  return response.data.data;
+}

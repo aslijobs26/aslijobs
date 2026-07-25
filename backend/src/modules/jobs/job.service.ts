@@ -16,6 +16,7 @@ import type {
   ListEmployerJobsQuery,
   PublicJobsQuery,
   SaveDraftJobInput,
+  SimilarPublicJobsQuery,
 } from "./job.validation.js";
 
 const UNTITLED_DRAFT_TITLE = "Untitled draft";
@@ -535,6 +536,93 @@ function toPublicJobListItem(job: JobDocument) {
   };
 }
 
+const TITLE_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "for",
+  "in",
+  "of",
+  "on",
+  "or",
+  "the",
+  "to",
+  "with",
+  "job",
+  "jobs",
+  "role",
+  "roles",
+  "needed",
+  "required",
+  "urgent",
+  "hiring",
+]);
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractTitleTokens(jobTitle: string): string[] {
+  const tokens = jobTitle
+    .toLowerCase()
+    .split(/[^a-z0-9+]+/i)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && !TITLE_STOP_WORDS.has(token));
+
+  return [...new Set(tokens)].slice(0, 6);
+}
+
+function scoreSimilarJob(
+  candidate: JobDocument,
+  source: {
+    jobTitle: string;
+    titleTokens: string[];
+    city: string;
+    state: string;
+    industry: string;
+    businessCategory: string;
+  },
+): number {
+  let score = 0;
+  const candidateTitle = candidate.jobTitle.toLowerCase();
+  const sourceTitle = source.jobTitle.toLowerCase();
+
+  if (candidateTitle === sourceTitle) {
+    score += 120;
+  } else if (
+    candidateTitle.includes(sourceTitle) ||
+    sourceTitle.includes(candidateTitle)
+  ) {
+    score += 90;
+  }
+
+  for (const token of source.titleTokens) {
+    if (candidateTitle.includes(token)) {
+      score += 35;
+    }
+  }
+
+  const candidateCategory = (candidate.businessCategory ?? "").trim().toLowerCase();
+  const sourceCategory = source.businessCategory.trim().toLowerCase();
+  if (sourceCategory && candidateCategory && candidateCategory === sourceCategory) {
+    score += 80;
+  }
+
+  const candidateIndustry = (candidate.industry ?? "").trim().toLowerCase();
+  const sourceIndustry = source.industry.trim().toLowerCase();
+  if (sourceIndustry && candidateIndustry && candidateIndustry === sourceIndustry) {
+    score += 50;
+  }
+
+  if (source.city && candidate.city === source.city) {
+    score += 40;
+  } else if (source.state && candidate.state === source.state) {
+    score += 20;
+  }
+
+  return score;
+}
+
 const EFFECTIVE_SALARY_EXPRESSION = {
   $cond: [
     { $eq: ["$salaryType", "fixed"] },
@@ -987,6 +1075,102 @@ export class JobService {
         interviewInstructions: job.interviewInstructions,
         contactPersonName: job.contactPersonName?.trim() || null,
       },
+    };
+  }
+
+  async listSimilarPublicJobs(
+    publicJobId: string,
+    query: SimilarPublicJobsQuery,
+  ) {
+    const sourceJob = await JobModel.findOne({
+      jobId: publicJobId.toUpperCase(),
+      status: "active",
+    }).select(
+      "jobId jobTitle city state industry businessCategory",
+    );
+
+    if (!sourceJob) {
+      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const titleTokens = extractTitleTokens(sourceJob.jobTitle);
+    const orClauses: Record<string, unknown>[] = [];
+
+    if (titleTokens.length > 0) {
+      orClauses.push(
+        ...titleTokens.map((token) => ({
+          jobTitle: { $regex: escapeRegex(token), $options: "i" },
+        })),
+      );
+    } else if (sourceJob.jobTitle.trim()) {
+      orClauses.push({
+        jobTitle: {
+          $regex: escapeRegex(sourceJob.jobTitle.trim()),
+          $options: "i",
+        },
+      });
+    }
+
+    if (sourceJob.businessCategory?.trim()) {
+      orClauses.push({
+        businessCategory: sourceJob.businessCategory.trim(),
+      });
+    }
+
+    if (sourceJob.industry?.trim()) {
+      orClauses.push({ industry: sourceJob.industry.trim() });
+    }
+
+    if (sourceJob.city?.trim()) {
+      orClauses.push({ city: sourceJob.city });
+    }
+
+    if (sourceJob.state?.trim()) {
+      orClauses.push({ state: sourceJob.state });
+    }
+
+    const filter: Record<string, unknown> = {
+      status: "active",
+      jobId: { $ne: sourceJob.jobId },
+    };
+
+    if (orClauses.length > 0) {
+      filter.$or = orClauses;
+    }
+
+    const candidates = await JobModel.find(filter)
+      .sort({ publishedAt: -1, createdAt: -1 })
+      .limit(40);
+
+    const sourceContext = {
+      jobTitle: sourceJob.jobTitle,
+      titleTokens,
+      city: sourceJob.city ?? "",
+      state: sourceJob.state ?? "",
+      industry: sourceJob.industry ?? "",
+      businessCategory: sourceJob.businessCategory ?? "",
+    };
+
+    const ranked = candidates
+      .map((candidate) => ({
+        candidate,
+        score: scoreSimilarJob(candidate, sourceContext),
+      }))
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => {
+        if (right.score !== left.score) {
+          return right.score - left.score;
+        }
+
+        const rightPublished = right.candidate.publishedAt?.getTime() ?? 0;
+        const leftPublished = left.candidate.publishedAt?.getTime() ?? 0;
+        return rightPublished - leftPublished;
+      })
+      .slice(0, query.limit)
+      .map((entry) => toPublicJobListItem(entry.candidate));
+
+    return {
+      jobs: ranked,
     };
   }
 

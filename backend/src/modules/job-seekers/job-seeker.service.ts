@@ -2,16 +2,25 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { env } from "../../config/env.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
+import { JOB_SEEKER_JOB_ROLES } from "../../constants/job-seeker.constants.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { jwtService } from "../auth/jwt.service.js";
+import { JobModel } from "../jobs/job.model.js";
 import { otpService } from "../otp/otp.service.js";
+import { resumeService } from "../resumes/resume.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
 import type {
   CompleteJobSeekerRegistrationInput,
   RegisterJobSeekerInput,
   ResendJobSeekerOtpInput,
+  SaveJobSeekerPreferencesInput,
   VerifyJobSeekerOtpInput,
 } from "./job-seeker.types.js";
+import type { SearchJobSeekerRolesQuery } from "./job-seeker.validation.js";
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 function toPublicJobSeeker(jobSeeker: {
   _id: mongoose.Types.ObjectId;
@@ -23,7 +32,15 @@ function toPublicJobSeeker(jobSeeker: {
   city?: string;
   state?: string;
   jobRole?: string;
+  jobType?: string | null;
+  workMode?: string | null;
   preferredJobLocation?: string;
+  expectedSalary?: number | null;
+  expectedSalaryPeriod?: string | null;
+  education?: Record<string, unknown> | null;
+  experienceType?: string | null;
+  experiences?: unknown[];
+  languages?: string[];
   isWhatsappVerified: boolean;
   registrationStatus: string;
   lastLoginAt?: Date | null;
@@ -42,7 +59,15 @@ function toPublicJobSeeker(jobSeeker: {
     city: jobSeeker.city ?? "",
     state: jobSeeker.state ?? "",
     jobRole: jobSeeker.jobRole ?? "",
+    jobType: jobSeeker.jobType ?? null,
+    workMode: jobSeeker.workMode ?? null,
     preferredJobLocation: jobSeeker.preferredJobLocation ?? "",
+    expectedSalary: jobSeeker.expectedSalary ?? null,
+    expectedSalaryPeriod: jobSeeker.expectedSalaryPeriod ?? "per-month",
+    education: jobSeeker.education ?? null,
+    experienceType: jobSeeker.experienceType ?? null,
+    experiences: jobSeeker.experiences ?? [],
+    languages: jobSeeker.languages ?? [],
     isWhatsappVerified: jobSeeker.isWhatsappVerified,
     registrationStatus: jobSeeker.registrationStatus,
     lastLoginAt: jobSeeker.lastLoginAt ?? null,
@@ -238,6 +263,70 @@ export class JobSeekerService {
     };
   }
 
+  async searchJobRoles(query: SearchJobSeekerRolesQuery) {
+    const search = query.search.trim();
+    const limit = query.limit;
+    const roleSet = new Set<string>();
+
+    for (const role of JOB_SEEKER_JOB_ROLES) {
+      if (!search || role.toLowerCase().includes(search.toLowerCase())) {
+        roleSet.add(role);
+      }
+    }
+
+    if (search.length >= 2) {
+      const titles = await JobModel.distinct("jobTitle", {
+        status: "active",
+        jobTitle: { $regex: escapeRegex(search), $options: "i" },
+      });
+
+      for (const title of titles) {
+        if (typeof title === "string" && title.trim()) {
+          roleSet.add(title.trim());
+        }
+      }
+    }
+
+    const roles = [...roleSet]
+      .sort((left, right) => left.localeCompare(right))
+      .slice(0, limit);
+
+    return { roles };
+  }
+
+  async savePreferences(input: SaveJobSeekerPreferencesInput) {
+    const jobSeeker = await findJobSeekerOrThrow(input.jobSeekerId);
+
+    if (jobSeeker.registrationStatus === "COMPLETED") {
+      throw new AppError(
+        "Registration is already completed",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    if (!jobSeeker.isWhatsappVerified) {
+      throw new AppError(
+        "WhatsApp number must be verified before saving preferences",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    jobSeeker.dateOfBirth = new Date(`${input.dateOfBirth}T00:00:00.000Z`);
+    jobSeeker.gender = input.gender;
+    jobSeeker.jobRole = input.jobRole;
+    jobSeeker.jobType = input.jobType;
+    jobSeeker.workMode = input.workMode;
+    jobSeeker.preferredJobLocation = input.preferredJobLocation;
+    jobSeeker.expectedSalary = input.expectedSalary;
+    jobSeeker.expectedSalaryPeriod = input.expectedSalaryPeriod;
+    jobSeeker.registrationStatus = "PENDING";
+    await jobSeeker.save();
+
+    return {
+      jobSeeker: toPublicJobSeeker(jobSeeker),
+    };
+  }
+
   async completeRegistration(input: CompleteJobSeekerRegistrationInput) {
     const jobSeeker = await findJobSeekerOrThrow(input.jobSeekerId);
 
@@ -255,18 +344,34 @@ export class JobSeekerService {
       );
     }
 
+    if (
+      !jobSeeker.dateOfBirth ||
+      !jobSeeker.gender ||
+      !jobSeeker.jobRole?.trim() ||
+      !jobSeeker.jobType ||
+      !jobSeeker.workMode ||
+      !jobSeeker.preferredJobLocation?.trim() ||
+      jobSeeker.expectedSalary == null ||
+      !jobSeeker.expectedSalaryPeriod
+    ) {
+      throw new AppError(
+        "Complete job preferences before creating your account",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
     await assertNoCompletedDuplicateWhatsapp(
       jobSeeker.whatsappNumber,
       jobSeeker._id,
     );
 
-    jobSeeker.dateOfBirth = new Date(`${input.dateOfBirth}T00:00:00.000Z`);
-    jobSeeker.gender = input.gender;
-    jobSeeker.pincode = input.pincode;
-    jobSeeker.city = input.city;
-    jobSeeker.state = input.state;
-    jobSeeker.jobRole = input.jobRole;
-    jobSeeker.preferredJobLocation = input.preferredJobLocation;
+    jobSeeker.education = input.education;
+    jobSeeker.experienceType = input.experienceType;
+    jobSeeker.set(
+      "experiences",
+      input.experienceType === "experienced" ? input.experiences : [],
+    );
+    jobSeeker.languages = input.languages;
     jobSeeker.registrationStatus = "COMPLETED";
 
     const tokens = jwtService.issueJobSeekerTokens({
@@ -279,6 +384,12 @@ export class JobSeekerService {
     jobSeeker.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt;
     jobSeeker.lastLoginAt = new Date();
     await jobSeeker.save();
+
+    try {
+      await resumeService.generateFromProfile(jobSeeker._id.toString());
+    } catch (error) {
+      console.error("Automatic resume generation failed:", error);
+    }
 
     return {
       jobSeeker: toPublicJobSeeker(jobSeeker),

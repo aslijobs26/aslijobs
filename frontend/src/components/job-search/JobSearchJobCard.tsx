@@ -12,7 +12,6 @@ import {
   formatJobSearchSalary,
   getCompanyInitials,
 } from "@/utils/job-search-format";
-import { canApplyViaWhatsApp } from "@/utils/job-search-whatsapp";
 import {
   Bookmark,
   Briefcase,
@@ -25,7 +24,7 @@ import {
   ShieldCheck,
   User,
 } from "lucide-react";
-import type { MouseEvent, ReactNode } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import type { PublicJobListItem } from "@/services/public-jobs.service";
 
 type JobSearchJobCardProps = {
@@ -105,6 +104,7 @@ export function JobSearchJobCard({
   onSelect,
   onToggleBookmark,
 }: JobSearchJobCardProps) {
+  const [isApplying, setIsApplying] = useState(false);
   const location = formatJobSearchLocationCompact(
     job.cityName,
     job.stateName,
@@ -119,7 +119,6 @@ export function JobSearchJobCard({
   const jobType = formatJobSearchJobType(job.jobType);
   const tags = buildCardTags(job);
   const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt);
-  const canApply = canApplyViaWhatsApp(job.applyWhatsAppNumber);
 
   const handleViewDetailsClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -133,12 +132,17 @@ export function JobSearchJobCard({
 
   const handleApplyClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-
-    protectedApply({
+    if (isApplying) {
+      return;
+    }
+    setIsApplying(true);
+    void protectedApply({
       applyWhatsAppNumber: job.applyWhatsAppNumber,
       jobTitle: job.jobTitle,
       companyName: job.companyName,
       jobId: job.jobId,
+    }).finally(() => {
+      setIsApplying(false);
     });
   };
 
@@ -304,24 +308,19 @@ export function JobSearchJobCard({
               aria-hidden="true"
             />
           </button>
-          {canApply ? (
-            <button
-              type="button"
-              onClick={handleApplyClick}
-              className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl bg-primary-soft px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/40"
-            >
-              Apply Now
-              <ChevronRight
-                className="size-3.5"
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-            </button>
-          ) : (
-            <span className="inline-flex h-9 w-full items-center justify-center rounded-xl bg-muted/40 px-4 text-[13px] font-medium text-muted">
-              Apply unavailable
-            </span>
-          )}
+          <button
+            type="button"
+            onClick={handleApplyClick}
+            disabled={isApplying}
+            className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl bg-primary-soft px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/40 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isApplying ? "Submitting…" : "Apply Now"}
+            <ChevronRight
+              className="size-3.5"
+              strokeWidth={2}
+              aria-hidden="true"
+            />
+          </button>
         </div>
       </div>
     </article>

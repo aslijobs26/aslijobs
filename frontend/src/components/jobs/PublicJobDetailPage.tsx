@@ -1,7 +1,7 @@
 "use client";
 
 import { JobSearchMobileJobDetails } from "@/components/job-search/JobSearchMobileJobDetails";
-import { JobSearchOverviewPanel } from "@/components/job-search/JobSearchOverviewPanel";
+import { JobDetailsPageLayout } from "@/components/jobs/JobDetailsPageLayout";
 import { ROUTES } from "@/constants/routes";
 import { fetchPublicActiveJobByPublicId } from "@/services/public-jobs.service";
 import { useQuery } from "@tanstack/react-query";
@@ -92,22 +92,17 @@ export function PublicJobDetailPage({ publicJobId }: PublicJobDetailPageProps) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-      <div className="min-h-[70vh]">
-        <JobSearchOverviewPanel
-          job={jobQuery.data?.job}
-          isLoading={jobQuery.isLoading}
-          isError={jobQuery.isError}
-          bookmarked={bookmarked}
-          showBackButton
-          onBack={handleBack}
-          onToggleBookmark={toggleBookmark}
-          onRetry={() => {
-            void jobQuery.refetch();
-          }}
-        />
-      </div>
-    </main>
+    <JobDetailsPageLayout
+      job={jobQuery.data?.job}
+      isLoading={jobQuery.isLoading}
+      isError={jobQuery.isError}
+      bookmarked={bookmarked}
+      onBack={handleBack}
+      onToggleBookmark={toggleBookmark}
+      onRetry={() => {
+        void jobQuery.refetch();
+      }}
+    />
   );
 }
 

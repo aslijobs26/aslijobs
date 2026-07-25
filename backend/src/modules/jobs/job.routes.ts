@@ -11,6 +11,7 @@ import {
   publicJobsQuerySchema,
   publishDraftJobSchema,
   saveDraftJobSchema,
+  similarPublicJobsQuerySchema,
   updateActiveJobSchema,
   updateJobStatusSchema,
 } from "./job.validation.js";
@@ -21,6 +22,13 @@ jobRouter.get(
   "/public",
   validate(publicJobsQuerySchema, "query"),
   asyncHandler(jobController.listPublic),
+);
+
+jobRouter.get(
+  "/public/:publicJobId/similar",
+  validate(publicJobIdParamsSchema, "params"),
+  validate(similarPublicJobsQuerySchema, "query"),
+  asyncHandler(jobController.listSimilarPublic),
 );
 
 jobRouter.get(

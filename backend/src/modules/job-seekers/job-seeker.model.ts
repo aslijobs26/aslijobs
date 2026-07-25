@@ -1,8 +1,50 @@
 import { Schema, model, type InferSchemaType, type Types } from "mongoose";
 import {
+  JOB_SEEKER_EDUCATION_LEVELS,
+  JOB_SEEKER_EXPERIENCE_TYPES,
   JOB_SEEKER_GENDERS,
+  JOB_SEEKER_JOB_TYPES,
+  JOB_SEEKER_LANGUAGES,
   JOB_SEEKER_REGISTRATION_STATUSES,
+  JOB_SEEKER_SALARY_PERIODS,
+  JOB_SEEKER_WORK_MODES,
 } from "../../constants/job-seeker.constants.js";
+
+const educationSchema = new Schema(
+  {
+    level: {
+      type: String,
+      enum: JOB_SEEKER_EDUCATION_LEVELS,
+      required: true,
+    },
+    schoolName: { type: String, trim: true, default: "" },
+    collegeName: { type: String, trim: true, default: "" },
+    instituteName: { type: String, trim: true, default: "" },
+    board: { type: String, trim: true, default: "" },
+    stream: { type: String, trim: true, default: "" },
+    trade: { type: String, trim: true, default: "" },
+    branch: { type: String, trim: true, default: "" },
+    degree: { type: String, trim: true, default: "" },
+    specialization: { type: String, trim: true, default: "" },
+    passingYear: { type: String, trim: true, default: "" },
+  },
+  { _id: false },
+);
+
+const experienceEntrySchema = new Schema(
+  {
+    companyName: { type: String, trim: true, default: "" },
+    jobRole: { type: String, trim: true, default: "" },
+    industry: { type: String, trim: true, default: "" },
+    startDate: { type: String, trim: true, default: "" },
+    endDate: { type: String, trim: true, default: "" },
+    currentlyWorking: { type: Boolean, default: false },
+    duration: { type: String, trim: true, default: "" },
+    salary: { type: String, trim: true, default: "" },
+    location: { type: String, trim: true, default: "" },
+  },
+  { _id: false },
+);
 
 const jobSeekerSchema = new Schema(
   {
@@ -47,10 +89,51 @@ const jobSeekerSchema = new Schema(
       trim: true,
       default: "",
     },
+    jobType: {
+      type: String,
+      enum: JOB_SEEKER_JOB_TYPES,
+      required: false,
+    },
+    workMode: {
+      type: String,
+      enum: JOB_SEEKER_WORK_MODES,
+      required: false,
+    },
     preferredJobLocation: {
       type: String,
       trim: true,
       default: "",
+    },
+    expectedSalary: {
+      type: Number,
+      default: null,
+    },
+    expectedSalaryPeriod: {
+      type: String,
+      enum: JOB_SEEKER_SALARY_PERIODS,
+      default: "per-month",
+    },
+    education: {
+      type: educationSchema,
+      default: null,
+    },
+    experienceType: {
+      type: String,
+      enum: JOB_SEEKER_EXPERIENCE_TYPES,
+      required: false,
+    },
+    experiences: {
+      type: [experienceEntrySchema],
+      default: [],
+    },
+    languages: {
+      type: [
+        {
+          type: String,
+          enum: JOB_SEEKER_LANGUAGES,
+        },
+      ],
+      default: [],
     },
     isWhatsappVerified: {
       type: Boolean,

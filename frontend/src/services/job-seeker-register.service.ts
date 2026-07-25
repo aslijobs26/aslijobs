@@ -1,5 +1,15 @@
 import { apiClient } from "@/services/api-client";
-import type { JobSeekerGender, JobSeekerPublic } from "@/types/job-seeker";
+import type {
+  JobSeekerEducation,
+  JobSeekerExperienceEntry,
+  JobSeekerExperienceType,
+  JobSeekerGender,
+  JobSeekerJobType,
+  JobSeekerLanguage,
+  JobSeekerPublic,
+  JobSeekerSalaryPeriod,
+  JobSeekerWorkMode,
+} from "@/types/job-seeker";
 import { setJobSeekerAuthSession } from "@/utils/job-seeker-auth-storage";
 
 type ApiSuccess<T> = {
@@ -25,6 +35,10 @@ type VerifyOtpResponse = {
   jobSeeker: JobSeekerPublic;
 };
 
+type PreferencesResponse = {
+  jobSeeker: JobSeekerPublic;
+};
+
 type CompleteRegistrationResponse = {
   jobSeeker: JobSeekerPublic;
   accessToken: string;
@@ -33,15 +47,24 @@ type CompleteRegistrationResponse = {
   refreshTokenExpiresAt: string;
 };
 
-export type CompleteJobSeekerRegistrationPayload = {
+export type SaveJobSeekerPreferencesPayload = {
   jobSeekerId: string;
   dateOfBirth: string;
   gender: JobSeekerGender;
-  pincode: string;
-  city: string;
-  state: string;
   jobRole: string;
+  jobType: JobSeekerJobType;
+  workMode: JobSeekerWorkMode;
   preferredJobLocation: string;
+  expectedSalary: number;
+  expectedSalaryPeriod: JobSeekerSalaryPeriod;
+};
+
+export type CompleteJobSeekerRegistrationPayload = {
+  jobSeekerId: string;
+  education: JobSeekerEducation;
+  experienceType: JobSeekerExperienceType;
+  experiences: JobSeekerExperienceEntry[];
+  languages: JobSeekerLanguage[];
 };
 
 function logDevelopmentOtp(phoneNumber: string, otp?: string) {
@@ -88,12 +111,41 @@ export async function verifyJobSeekerOtp(jobSeekerId: string, otp: string) {
   return response.data.data;
 }
 
+export async function searchJobSeekerRoles(
+  search: string,
+  options?: { signal?: AbortSignal; limit?: number },
+) {
+  const response = await apiClient.get<ApiSuccess<{ roles: string[] }>>(
+    "/jobseekers/register/job-roles",
+    {
+      params: {
+        search: search.trim() || undefined,
+        limit: options?.limit ?? 10,
+      },
+      signal: options?.signal,
+    },
+  );
+
+  return response.data.data.roles;
+}
+
+export async function saveJobSeekerPreferences(
+  payload: SaveJobSeekerPreferencesPayload,
+) {
+  const response = await apiClient.post<ApiSuccess<PreferencesResponse>>(
+    "/jobseekers/register/preferences",
+    payload,
+  );
+
+  return response.data.data;
+}
+
 export async function completeJobSeekerRegistration(
   payload: CompleteJobSeekerRegistrationPayload,
 ) {
   const response = await apiClient.post<
     ApiSuccess<CompleteRegistrationResponse>
-  >("/jobseekers/register", payload);
+  >("/jobseekers/register/complete", payload);
 
   const data = response.data.data;
   setJobSeekerAuthSession({

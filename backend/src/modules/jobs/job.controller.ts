@@ -8,6 +8,7 @@ import type {
   ListEmployerJobsQuery,
   PublicJobsQuery,
   SaveDraftJobInput,
+  SimilarPublicJobsQuery,
   UpdateJobStatusInput,
 } from "./job.validation.js";
 
@@ -185,6 +186,17 @@ export class JobController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Job fetched successfully.",
+      data: result,
+    });
+  };
+
+  listSimilarPublic = async (req: Request, res: Response): Promise<void> => {
+    const { publicJobId } = req.params as { publicJobId: string };
+    const query = req.query as unknown as SimilarPublicJobsQuery;
+    const result = await jobService.listSimilarPublicJobs(publicJobId, query);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Similar jobs fetched successfully.",
       data: result,
     });
   };

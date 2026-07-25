@@ -309,7 +309,13 @@ function EmployerJobsTableRow({
         </span>
       </td>
       <td className={cn(BODY_CELL_CLASS, "text-center text-[11px] font-semibold text-foreground xl:text-[12px]")}>
-        {formatEmployerJobCount(job.applications)}
+        <Link
+          href={`${ROUTES.EMPLOYER_CANDIDATES}?jobId=${encodeURIComponent(job.jobId)}`}
+          className="text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          aria-label={`View ${formatEmployerJobCount(job.applications)} applications for ${job.jobTitle}`}
+        >
+          {formatEmployerJobCount(job.applications)}
+        </Link>
       </td>
       <td className={cn(BODY_CELL_CLASS, "text-center text-[11px] font-semibold text-foreground xl:text-[12px]")}>
         {formatEmployerJobCount(job.shortlisted)}

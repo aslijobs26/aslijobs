@@ -1,10 +1,14 @@
 import { ROUTES } from "@/constants/routes";
+import { applyToJob } from "@/services/job-seeker-apply.service";
+import {
+  buildApplicationSuccessHref,
+  storeApplicationSuccessWhatsAppContext,
+} from "@/utils/application-success";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import {
   clearJobSeekerAuthSession,
   getJobSeekerAccessToken,
 } from "@/utils/job-seeker-auth-storage";
-import { buildJobApplyWhatsAppUrl } from "@/utils/job-search-whatsapp";
 import { buildJobSeekerLoginHref } from "@/utils/safe-return-url";
 import { showAppToast } from "@/utils/share-job";
 
@@ -34,7 +38,6 @@ function decodeJwtPayload(token: string): JwtPayload | null {
 function isExpired(exp: unknown): boolean {
   const expirySeconds = typeof exp === "number" ? exp : Number(exp);
   if (!Number.isFinite(expirySeconds)) {
-    // Fail closed: missing/invalid expiry is not a valid session.
     return true;
   }
 
@@ -82,7 +85,6 @@ function isEmployerSessionPresent(): boolean {
     return true;
   }
 
-  // Any employer token key presence means this browser is in employer mode.
   return true;
 }
 
@@ -104,6 +106,25 @@ function buildApplyReturnUrl(jobId: string): string {
   return current || ROUTES.jobPublic(jobId);
 }
 
+function getApplyErrorMessage(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: { data?: { message?: string } } }).response
+      ?.data?.message === "string"
+  ) {
+    return (error as { response: { data: { message: string } } }).response.data
+      .message;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  return "We couldn't submit your application right now. Please try again.";
+}
+
 export type ProtectedApplyInput = {
   applyWhatsAppNumber: string | null | undefined;
   jobTitle: string;
@@ -111,13 +132,24 @@ export type ProtectedApplyInput = {
   jobId: string;
 };
 
+export type ProtectedApplyResult =
+  | { status: "redirected_to_login" }
+  | { status: "blocked_employer" }
+  | { status: "error"; message: string }
+  | {
+      status: "success";
+      applicationId: string;
+      jobId: string;
+    };
+
 /**
  * Single protected Apply Now entry point for the whole app.
- * WhatsApp URL is created and opened ONLY after Job Seeker auth succeeds.
- * UI components must call this function and must never open WhatsApp themselves.
+ * Persists application + resume snapshot, then navigates to the success page.
+ * WhatsApp is never opened automatically.
  */
-export function protectedApply(input: ProtectedApplyInput): void {
-  // 1) Auth check — stop immediately if not a Job Seeker.
+export async function protectedApply(
+  input: ProtectedApplyInput,
+): Promise<ProtectedApplyResult> {
   if (!isAuthenticatedJobSeeker()) {
     if (isEmployerSessionPresent()) {
       showAppToast(
@@ -125,31 +157,45 @@ export function protectedApply(input: ProtectedApplyInput): void {
         "error",
         3500,
       );
-      return;
+      return { status: "blocked_employer" };
     }
 
     showAppToast("Please login as a Job Seeker to apply.", "error", 3200);
     window.location.assign(
       buildJobSeekerLoginHref(buildApplyReturnUrl(input.jobId)),
     );
-    return;
+    return { status: "redirected_to_login" };
   }
 
-  // 2) Role confirmed as Job Seeker — only now build WhatsApp URL.
-  const whatsappUrl = buildJobApplyWhatsAppUrl({
-    applyWhatsAppNumber: input.applyWhatsAppNumber,
-    jobTitle: input.jobTitle,
-    companyName: input.companyName,
-    jobId: input.jobId,
-  });
+  try {
+    const result = await applyToJob(input.jobId);
+    const applicationId = result.application.id;
+    const jobId = result.application.publicJobId || input.jobId;
 
-  if (!whatsappUrl) {
-    showAppToast("Apply is unavailable for this job.", "error", 2800);
-    return;
+    if (input.applyWhatsAppNumber?.trim()) {
+      storeApplicationSuccessWhatsAppContext({
+        applicationId,
+        jobId,
+        applyWhatsAppNumber: input.applyWhatsAppNumber.trim(),
+        jobTitle: input.jobTitle,
+        companyName: input.companyName,
+      });
+    }
+
+    window.location.assign(
+      buildApplicationSuccessHref({ applicationId, jobId }),
+    );
+
+    return {
+      status: "success",
+      applicationId,
+      jobId,
+    };
+  } catch (error) {
+    const message = getApplyErrorMessage(error);
+    showAppToast(message, "error", 3500);
+    return { status: "error", message };
   }
-
-  // 3) Open WhatsApp only after auth + role validation.
-  window.open(whatsappUrl, "_blank", "noopener,noreferrer");
 }
 
 /** @deprecated Use protectedApply */
@@ -159,7 +205,7 @@ export const handleProtectedJobApply = (
     onRedirectToLogin?: (loginHref: string) => void;
   },
 ): void => {
-  protectedApply({
+  void protectedApply({
     applyWhatsAppNumber: options.applyWhatsAppNumber,
     jobTitle: options.jobTitle,
     companyName: options.companyName,

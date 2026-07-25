@@ -6,22 +6,13 @@ import type {
   CompleteJobSeekerRegistrationSchema,
   RegisterJobSeekerSchema,
   ResendJobSeekerOtpSchema,
+  SaveJobSeekerPreferencesSchema,
+  SearchJobSeekerRolesQuery,
   VerifyJobSeekerOtpSchema,
 } from "./job-seeker.validation.js";
 
 export class JobSeekerController {
   register = async (req: Request, res: Response): Promise<void> => {
-    if ("jobSeekerId" in req.body && req.body.jobSeekerId) {
-      const body = req.body as CompleteJobSeekerRegistrationSchema;
-      const result = await jobSeekerService.completeRegistration(body);
-
-      sendSuccess(res, HTTP_STATUS.OK, {
-        message: "Registration completed successfully",
-        data: result,
-      });
-      return;
-    }
-
     const body = req.body as RegisterJobSeekerSchema;
     const result = await jobSeekerService.registerJobSeeker(body);
 
@@ -47,6 +38,39 @@ export class JobSeekerController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "WhatsApp number verified successfully",
+      data: result,
+    });
+  };
+
+  searchJobRoles = async (req: Request, res: Response): Promise<void> => {
+    const query = req.query as unknown as SearchJobSeekerRolesQuery;
+    const result = await jobSeekerService.searchJobRoles(query);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Job roles fetched successfully.",
+      data: result,
+    });
+  };
+
+  savePreferences = async (req: Request, res: Response): Promise<void> => {
+    const body = req.body as SaveJobSeekerPreferencesSchema;
+    const result = await jobSeekerService.savePreferences(body);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Job preferences saved successfully.",
+      data: result,
+    });
+  };
+
+  completeRegistration = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const body = req.body as CompleteJobSeekerRegistrationSchema;
+    const result = await jobSeekerService.completeRegistration(body);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Registration completed successfully",
       data: result,
     });
   };

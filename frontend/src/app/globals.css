@@ -2401,3 +2401,44 @@ body:has(.employer-register-page) {
   }
 }
 
+/* Job Seeker My Resume — print only the resume preview */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .resume-print-root,
+  .resume-print-root * {
+    visibility: visible;
+  }
+
+  .resume-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+  }
+
+  .resume-no-print {
+    display: none !important;
+  }
+
+  header.sticky,
+  header.ticky,
+  nav,
+  footer {
+    display: none !important;
+  }
+}
+

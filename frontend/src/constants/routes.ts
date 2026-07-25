@@ -11,6 +11,8 @@ export const ROUTES = {
   EMPLOYER_DASHBOARD: "/employer/dashboard",
   EMPLOYER_JOBS: "/employer/jobs",
   EMPLOYER_CANDIDATES: "/employer/candidates",
+  employerCandidateDetail: (applicationId: string) =>
+    `/employer/candidates/${applicationId}`,
   EMPLOYER_INTERVIEWS: "/employer/interviews",
   EMPLOYER_MESSAGES: "/employer/messages",
   EMPLOYER_SAVED_CANDIDATES: "/employer/saved-candidates",
@@ -25,6 +27,11 @@ export const ROUTES = {
   JOB_SEEKER_REGISTER: "/job-seeker/register",
   JOB_SEEKER_LOGIN: "/job-seeker/login",
   JOB_SEEKER_DASHBOARD: "/job-seeker/dashboard",
+  JOB_SEEKER_MY_RESUME: "/job-seeker/my-resume",
+  JOB_SEEKER_APPLIED_JOBS: "/job-seeker/applied-jobs",
+  jobSeekerApplicationDetail: (applicationId: string) =>
+    `/job-seeker/applied-jobs/${applicationId}`,
+  JOB_SEEKER_APPLICATION_SUCCESS: "/job-seeker/application-success",
   CONTACT: "/contact",
   EMPLOYERS: "/employer/register",
   JOB_CATEGORIES: "/job-categories",

@@ -9,8 +9,17 @@ import { env } from "./config/env.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import apiRouter from "./routes/index.js";
+import { buildAllowedCorsOrigins } from "./utils/cors-origins.js";
 
 const app = express();
+
+const allowedCorsOrigins = buildAllowedCorsOrigins({
+  frontendUrl: env.FRONTEND_URL,
+  adminUrl: env.ADMIN_URL,
+  extraOrigins: env.CORS_ALLOWED_ORIGINS.split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+});
 
 // Authenticated API responses must not be served from HTTP cache (304),
 // otherwise status/timestamp updates can appear stale in Employer Jobs.
@@ -21,10 +30,29 @@ app.use("/api/v1", (_req, res, next) => {
   next();
 });
 
-app.use(helmet());
+// cross-origin: required so browser frontends on another host can read API responses.
+// same-origin (Helmet default) blocks credentialed cross-origin fetches even when CORS allows them.
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 app.use(
   cors({
-    origin: [env.FRONTEND_URL, env.ADMIN_URL],
+    origin(origin, callback) {
+      // Non-browser clients (health checks, server-to-server) omit Origin.
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (allowedCorsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, false);
+    },
     credentials: true,
   }),
 );
