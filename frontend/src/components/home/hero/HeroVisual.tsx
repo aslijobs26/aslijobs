@@ -17,13 +17,13 @@ const iconClassName = "size-5";
 
 const FLOATING_POSITIONS: Record<HeroFeatureCardPosition, string> = {
   "top-left":
-    "absolute z-20 left-0 top-2 w-max sm:top-0 lg:-left-36 lg:top-[1%] lg:w-auto lg:max-w-[200px] xl:-left-40 xl:max-w-[220px]",
+    "absolute z-20 left-0 top-2 w-max mobile:top-0 mobile:left-[2%] mobile:max-w-[48%] sm:top-0 lg:-left-36 lg:top-[1%] lg:w-auto lg:max-w-[200px] xl:-left-40 xl:max-w-[220px]",
   "top-right":
-    "absolute z-20 right-0 top-10 w-max sm:top-0 lg:-right-36 lg:top-[1%] lg:w-auto lg:max-w-[200px] xl:-right-40 xl:max-w-[220px]",
+    "absolute z-20 right-0 top-10 w-max mobile:top-[6%] mobile:right-[2%] mobile:max-w-[48%] sm:top-0 lg:-right-36 lg:top-[1%] lg:w-auto lg:max-w-[200px] xl:-right-40 xl:max-w-[220px]",
   "bottom-left":
-    "absolute z-40 bottom-8 left-0 w-max sm:bottom-1 lg:bottom-[12%] lg:-left-40 lg:z-20 lg:w-auto lg:max-w-[200px] xl:-left-44 xl:max-w-[220px]",
+    "absolute z-40 bottom-8 left-0 w-max mobile:bottom-[18%] mobile:left-[2%] mobile:max-w-[48%] sm:bottom-1 lg:bottom-[12%] lg:-left-40 lg:z-20 lg:w-auto lg:max-w-[200px] xl:-left-44 xl:max-w-[220px]",
   "bottom-right":
-    "absolute z-40 bottom-2 right-0 w-max sm:bottom-1 lg:bottom-[12%] lg:-right-40 lg:z-20 lg:w-auto lg:max-w-[200px] xl:-right-44 xl:max-w-[220px]",
+    "absolute z-40 bottom-2 right-0 w-max mobile:bottom-[8%] mobile:right-[2%] mobile:max-w-[48%] sm:bottom-1 lg:bottom-[12%] lg:-right-40 lg:z-20 lg:w-auto lg:max-w-[200px] xl:-right-44 xl:max-w-[220px]",
 };
 
 const CARD_DESKTOP_POSITION_OVERRIDES: Partial<Record<HeroFeatureId, string>> = {
@@ -34,7 +34,7 @@ const CARD_DESKTOP_POSITION_OVERRIDES: Partial<Record<HeroFeatureId, string>> = 
 };
 
 const MOBILE_CARD_COMPACT =
-  "w-fit max-w-[calc(100vw-2rem)] gap-2 px-3 py-2.5 [&>div:first-child]:size-8 sm:gap-2 sm:px-2 sm:py-2 sm:[&>div:first-child]:size-9 lg:w-full lg:max-w-none lg:gap-2 lg:px-2.5 lg:py-2";
+  "w-fit max-w-[min(100%,11.5rem)] gap-2 px-3 py-2.5 mobile:max-w-[min(100%,11.25rem)] [&>div:first-child]:size-8 sm:max-w-[calc(100vw-2rem)] sm:gap-2 sm:px-2 sm:py-2 sm:[&>div:first-child]:size-9 lg:w-full lg:max-w-none lg:gap-2 lg:px-2.5 lg:py-2";
 
 const DESKTOP_CARD_ICON_SIZES = "lg:[&>div:first-child]:size-14";
 
@@ -91,19 +91,19 @@ export function HeroVisual() {
     setActiveFeature((current) => (current === id ? null : current));
 
   return (
-    <div className="relative mt-4 flex w-full flex-col items-center lg:mt-0 lg:items-center lg:justify-start">
+    <div className="relative mt-2 flex w-full min-w-0 flex-col items-center mobile:mt-1.5 sm:mt-4 lg:mt-0 lg:items-center lg:justify-start">
       <div
         className={cn(
-          "hero-illustration-group relative w-full max-w-[340px] sm:max-w-[380px] lg:mx-auto lg:max-w-[580px]",
+          "hero-illustration-group relative w-full max-w-[min(100%,318px)] mobile:max-w-[min(100%,300px)] sm:max-w-[380px] lg:mx-auto lg:max-w-[580px]",
           "lg:-translate-x-10 xl:-translate-x-8 2xl:-translate-x-6",
         )}
       >
         <div
-          className="pointer-events-none absolute left-1/2 top-[45%] size-[250px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-80 sm:size-[300px] lg:hidden"
+          className="pointer-events-none absolute left-1/2 top-[45%] size-[220px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-80 mobile:size-[210px] sm:size-[300px] lg:hidden"
           aria-hidden="true"
         />
 
-        <div className="relative mx-auto min-h-[430px] w-full px-1 sm:min-h-[460px] sm:px-0 lg:min-h-0 lg:max-w-[440px] lg:px-0">
+        <div className="relative mx-auto min-h-[400px] w-full px-0 mobile:min-h-[392px] sm:min-h-[460px] sm:px-0 lg:min-h-0 lg:max-w-[440px] lg:px-0">
           <div
             className="pointer-events-none absolute left-[calc(50%+1rem)] top-[36%] z-0 hidden size-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-25 lg:block"
             aria-hidden="true"
@@ -143,7 +143,7 @@ export function HeroVisual() {
             src={heroPersonImage}
             alt="Job seeker browsing jobs on WhatsApp"
             priority
-            className="absolute left-1/2 top-[46%] z-30 h-auto w-[74%] max-w-[260px] -translate-x-1/2 -translate-y-1/2 object-contain sm:top-[48%] sm:w-[80%] sm:max-w-[300px] lg:relative lg:left-auto lg:top-auto lg:z-10 lg:mx-auto lg:ml-8 lg:w-full lg:max-w-[397px] lg:translate-x-0 lg:translate-y-0 lg:-mt-2"
+            className="absolute left-1/2 top-[50%] z-30 h-auto w-[68%] max-w-[220px] -translate-x-1/2 -translate-y-1/2 object-contain mobile:top-[49%] mobile:w-[66%] mobile:max-w-[210px] sm:top-[48%] sm:w-[80%] sm:max-w-[300px] lg:relative lg:left-auto lg:top-auto lg:z-10 lg:mx-auto lg:ml-8 lg:w-full lg:max-w-[397px] lg:translate-x-0 lg:translate-y-0 lg:-mt-2"
           />
 
           <HeroPhoneMessageBubble

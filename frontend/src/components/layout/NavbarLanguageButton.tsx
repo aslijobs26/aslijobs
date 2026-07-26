@@ -64,7 +64,7 @@ export function NavbarLanguageButton({ className }: { className?: string }) {
     <div ref={rootRef} className={cn("relative", className)}>
       <button
         type="button"
-        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-nav transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:px-3 xl:text-[15px]"
+        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-nav transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 mobile:h-10 mobile:min-h-10 mobile:min-w-10 sm:h-10 sm:px-3 xl:text-[15px]"
         aria-label="Select language"
         aria-haspopup="listbox"
         aria-expanded={isOpen}

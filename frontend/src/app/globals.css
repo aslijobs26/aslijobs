@@ -4,6 +4,7 @@
 @custom-variant lg-short (@media (min-width: 1024px) and (max-height: 820px));
 @custom-variant lg-compact (@media (min-width: 1024px) and (max-height: 760px));
 @custom-variant lg-tight (@media (min-width: 1024px) and (max-height: 720px));
+@custom-variant mobile (@media (width < 768px));
 
 @theme inline {
   --color-primary: #0e8585;
@@ -333,6 +334,14 @@ body {
 }
 
 @layer components {
+  /* Landing hero — mobile only (<768px); md+ layouts unchanged */
+  .landing-hero-section {
+    @media (width < 768px) {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
   .employer-register-layout {
     display: flex;
     flex-direction: column;

@@ -28,7 +28,7 @@ function SearchField({ id, label, children, className }: SearchFieldProps) {
 }
 
 const controlClassName =
-  "relative flex h-12 w-full items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20";
+  "relative flex h-12 w-full min-h-11 items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 mobile:h-11 mobile:px-3";
 
 const inputClassName =
   "min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted";
@@ -58,10 +58,10 @@ export function HeroSearchForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-border-subtle bg-surface p-5 shadow-lg sm:p-6 lg:rounded-3xl lg:p-8"
+      className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-lg mobile:mx-0 mobile:mb-1 mobile:p-4 sm:p-6 lg:mx-0 lg:mb-0 lg:rounded-3xl lg:p-8"
       aria-label="Job search"
     >
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end lg:gap-4 xl:gap-5">
+      <div className="grid grid-cols-1 gap-4 mobile:gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end lg:gap-4 xl:gap-5">
         <SearchField
           id="hero-search-query"
           label="Search Job, Role or Keyword"
@@ -149,7 +149,7 @@ export function HeroSearchForm() {
         <div className="sm:col-span-2 lg:col-span-1 lg:flex lg:justify-end">
           <button
             type="submit"
-            className="inline-flex h-12 w-full min-w-[148px] items-center justify-center gap-2.5 rounded-xl bg-primary-soft px-8 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:bg-primary-soft-hover lg:w-auto"
+            className="inline-flex h-12 w-full min-h-11 min-w-[148px] items-center justify-center gap-2.5 rounded-xl bg-primary-soft px-8 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:bg-primary-soft-hover mobile:h-11 lg:w-auto"
           >
             <Search className="size-[18px]" strokeWidth={2.5} aria-hidden="true" />
             Search Jobs
