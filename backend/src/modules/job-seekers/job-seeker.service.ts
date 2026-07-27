@@ -41,6 +41,7 @@ function toPublicJobSeeker(jobSeeker: {
   experienceType?: string | null;
   experiences?: unknown[];
   languages?: string[];
+  availabilityStatus?: string | null;
   isWhatsappVerified: boolean;
   registrationStatus: string;
   lastLoginAt?: Date | null;
@@ -68,6 +69,7 @@ function toPublicJobSeeker(jobSeeker: {
     experienceType: jobSeeker.experienceType ?? null,
     experiences: jobSeeker.experiences ?? [],
     languages: jobSeeker.languages ?? [],
+    availabilityStatus: jobSeeker.availabilityStatus ?? null,
     isWhatsappVerified: jobSeeker.isWhatsappVerified,
     registrationStatus: jobSeeker.registrationStatus,
     lastLoginAt: jobSeeker.lastLoginAt ?? null,
@@ -372,6 +374,7 @@ export class JobSeekerService {
       input.experienceType === "experienced" ? input.experiences : [],
     );
     jobSeeker.languages = input.languages;
+    jobSeeker.availabilityStatus = input.availabilityStatus;
     jobSeeker.registrationStatus = "COMPLETED";
 
     const tokens = jwtService.issueJobSeekerTokens({

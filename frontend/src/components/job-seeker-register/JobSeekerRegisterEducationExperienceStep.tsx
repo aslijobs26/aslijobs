@@ -3,10 +3,12 @@
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import { PostJobDatePicker } from "@/components/post-job/PostJobDatePicker";
 import {
+  JOB_SEEKER_AVAILABILITY_STATUS_OPTIONS,
   JOB_SEEKER_EDUCATION_OPTIONS,
   JOB_SEEKER_LANGUAGE_OPTIONS,
 } from "@/constants/job-seeker-register";
 import type {
+  JobSeekerAvailabilityStatus,
   JobSeekerEducation,
   JobSeekerEducationLevel,
   JobSeekerExperienceEntry,
@@ -49,11 +51,13 @@ type JobSeekerRegisterEducationExperienceStepProps = {
   experienceType: JobSeekerExperienceType | "";
   experiences: JobSeekerExperienceEntry[];
   languages: JobSeekerLanguage[];
+  availabilityStatus: JobSeekerAvailabilityStatus | "";
   disabled?: boolean;
   onEducationChange: (education: JobSeekerEducation) => void;
   onExperienceTypeChange: (value: JobSeekerExperienceType) => void;
   onExperiencesChange: (experiences: JobSeekerExperienceEntry[]) => void;
   onLanguagesChange: (languages: JobSeekerLanguage[]) => void;
+  onAvailabilityStatusChange: (value: JobSeekerAvailabilityStatus) => void;
 };
 
 function Field({
@@ -278,11 +282,13 @@ export function JobSeekerRegisterEducationExperienceStep({
   experienceType,
   experiences,
   languages,
+  availabilityStatus,
   disabled = false,
   onEducationChange,
   onExperienceTypeChange,
   onExperiencesChange,
   onLanguagesChange,
+  onAvailabilityStatusChange,
 }: JobSeekerRegisterEducationExperienceStepProps) {
   const updateEducation = (patch: Partial<JobSeekerEducation>) => {
     onEducationChange({ ...education, ...patch });
@@ -558,6 +564,21 @@ export function JobSeekerRegisterEducationExperienceStep({
             );
           })}
         </ul>
+      </section>
+
+      <section className="space-y-4">
+        <EmployerRegisterSearchableSelect
+          id="job-seeker-register-availability"
+          label="Availability Status *"
+          value={availabilityStatus}
+          placeholder="Select your availability"
+          options={JOB_SEEKER_AVAILABILITY_STATUS_OPTIONS}
+          onChange={(value) =>
+            onAvailabilityStatusChange(value as JobSeekerAvailabilityStatus)
+          }
+          required
+          disabled={disabled}
+        />
       </section>
     </>
   );

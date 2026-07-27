@@ -170,7 +170,7 @@ export function JobSeekerProfileMenu({
               Profile
             </Link>
             <Link
-              href={ROUTES.FIND_JOBS}
+              href={ROUTES.JOB_SEEKER_SAVED_JOBS}
               role="menuitem"
               className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               onClick={() => setIsOpen(false)}

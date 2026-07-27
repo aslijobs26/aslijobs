@@ -7,12 +7,16 @@ import { applicationController } from "./application.controller.js";
 import {
   applicationIdParamsSchema,
   applyToJobSchema,
+  employerLocationSuggestionsQuerySchema,
+  listEmployerApplicationStatsQuerySchema,
   listEmployerApplicationsQuerySchema,
   listSeekerApplicationsQuerySchema,
   updateApplicationHiringSchema,
   updateApplicationNotesSchema,
   updateApplicationStatusSchema,
 } from "./application.validation.js";
+import { employerExportBodySchema } from "./employer-export.validation.js";
+import { resumeAccessTokenParamsSchema } from "./employer-resume-access.validation.js";
 
 const applicationRouter = Router();
 
@@ -48,6 +52,40 @@ applicationRouter.post(
   asyncHandler(requireJobSeekerAuth),
   validate(applicationIdParamsSchema, "params"),
   asyncHandler(applicationController.withdrawForSeeker),
+);
+
+applicationRouter.get(
+  "/employer/stats",
+  asyncHandler(requireEmployerAuth),
+  validate(listEmployerApplicationStatsQuerySchema, "query"),
+  asyncHandler(applicationController.getStatsForEmployer),
+);
+
+applicationRouter.post(
+  "/employer/export/preview",
+  asyncHandler(requireEmployerAuth),
+  validate(employerExportBodySchema, "body"),
+  asyncHandler(applicationController.previewExportForEmployer),
+);
+
+applicationRouter.post(
+  "/employer/export",
+  asyncHandler(requireEmployerAuth),
+  validate(employerExportBodySchema, "body"),
+  asyncHandler(applicationController.exportForEmployer),
+);
+
+applicationRouter.get(
+  "/employer/resume-access/:token/pdf",
+  validate(resumeAccessTokenParamsSchema, "params"),
+  asyncHandler(applicationController.openResumePdfFromAccessToken),
+);
+
+applicationRouter.get(
+  "/employer/location-suggestions",
+  asyncHandler(requireEmployerAuth),
+  validate(employerLocationSuggestionsQuerySchema, "query"),
+  asyncHandler(applicationController.suggestLocationsForEmployer),
 );
 
 applicationRouter.get(

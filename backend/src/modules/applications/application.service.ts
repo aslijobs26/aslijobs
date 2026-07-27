@@ -1,8 +1,13 @@
 import mongoose from "mongoose";
 import { HTTP_STATUS } from "../../constants/http-status.js";
+import {
+  JOB_SEEKER_AVAILABILITY_STATUS_LABELS,
+  JOB_SEEKER_AVAILABILITY_STATUSES,
+} from "../../constants/job-seeker.constants.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { EmployerModel } from "../employers/employer.model.js";
 import { JobModel } from "../jobs/job.model.js";
+import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
 import { generateResumePdfFromJson } from "../resumes/pdf/index.js";
 import { resumeService } from "../resumes/resume.service.js";
 import type { ResumeJson } from "../resumes/resume.types.js";
@@ -12,6 +17,23 @@ import {
   WITHDRAWABLE_STATUSES,
 } from "./application.constants.js";
 import { ApplicationModel } from "./application.model.js";
+import {
+  buildEmployerAvailabilityMatch,
+  parseEmployerAvailabilityFilter,
+} from "./employer-availability-filter.js";
+import { buildEmployerCandidateSearchMatch } from "./employer-candidate-search.js";
+import {
+  buildEmployerExperienceMatch,
+  parseEmployerExperienceFilter,
+} from "./employer-experience-filter.js";
+import {
+  buildEmployerPreferredLocationMatch,
+  buildPreferredLocationSuggestions,
+  EMPLOYER_LOCATION_AUTOCOMPLETE_MIN_QUERY,
+  escapeEmployerLocationRegex,
+  normalizeEmployerLocationQuery,
+} from "./employer-location-filter.js";
+import { assertValidEmployerStatusTransition } from "./employer-status-transition.js";
 import type {
   ApplicationHistoryActor,
   ApplicationInterview,
@@ -22,6 +44,8 @@ import type {
   ApplyToJobInput,
   EmployerApplicationDetail,
   EmployerApplicationListItem,
+  EmployerApplicationStats,
+  EmployerApplicationsPagination,
   PublicApplicationSummary,
   SeekerApplicationDetail,
   SeekerApplicationListItem,
@@ -102,10 +126,50 @@ function asSnapshot(
   return snapshot;
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+type JobSeekerAvailabilityStatus =
+  (typeof JOB_SEEKER_AVAILABILITY_STATUSES)[number];
+
+function availabilityStatusLabel(status: unknown): string {
+  if (
+    typeof status === "string" &&
+    status in JOB_SEEKER_AVAILABILITY_STATUS_LABELS
+  ) {
+    return JOB_SEEKER_AVAILABILITY_STATUS_LABELS[
+      status as JobSeekerAvailabilityStatus
+    ];
+  }
+  return "";
+}
+
+function jobSeekerLookupStages(): mongoose.PipelineStage[] {
+  return [
+    {
+      $lookup: {
+        from: "jobseekers",
+        localField: "jobSeekerId",
+        foreignField: "_id",
+        as: "jobSeekerDoc",
+      },
+    },
+    {
+      $unwind: {
+        path: "$jobSeekerDoc",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ];
+}
+
 function candidateFieldsFromSnapshot(snapshot: ApplicationResumeSnapshot | null) {
   const header = snapshot?.resumeJson?.header;
   const contact = snapshot?.resumeJson?.sections?.contact;
   const sections = snapshot?.resumeJson?.sections;
+  const preferences = sections?.careerPreferences;
+  const meta = snapshot?.resumeJson?.meta;
 
   const fullName =
     text(header?.fullName) || text(contact?.fullName) || "Candidate";
@@ -116,8 +180,38 @@ function candidateFieldsFromSnapshot(snapshot: ApplicationResumeSnapshot | null)
     text(sections?.professionalHeadline) || text(header?.headline);
   const location =
     [city, state].filter(Boolean).join(", ") || text(header?.location);
+  const experienceLabel = sections?.isFresher
+    ? "Fresher"
+    : text(sections?.experienceLabel) || headline || "Experienced";
+  const availability = text(sections?.availability);
+  const languages = Array.isArray(sections?.languages)
+    ? sections.languages.map((item) => text(item)).filter(Boolean)
+    : [];
+  const skills = Array.isArray(sections?.skills)
+    ? sections.skills.map((item) => text(item)).filter(Boolean)
+    : [];
+  const expectedSalary =
+    typeof preferences?.expectedSalary === "number"
+      ? preferences.expectedSalary
+      : null;
+  const expectedSalaryPeriod = text(preferences?.expectedSalaryPeriod) || null;
+  const dateOfBirth = text(meta?.dateOfBirth) || null;
 
-  return { fullName, phone, city, state, headline, location };
+  return {
+    fullName,
+    phone,
+    city,
+    state,
+    headline,
+    location,
+    experienceLabel,
+    availability,
+    languages,
+    skills,
+    expectedSalary,
+    expectedSalaryPeriod,
+    dateOfBirth,
+  };
 }
 
 function formatCurrencyAmount(amount: number): string {
@@ -541,6 +635,8 @@ export class ApplicationService {
       updatedAt?: Date;
     },
     job: { jobTitle?: string; companyName?: string } | null,
+    availabilityStatus?: string | null,
+    preferredJobLocation?: string | null,
   ): EmployerApplicationDetail {
     const snapshot = asSnapshot(application.resumeSnapshot);
     if (!snapshot) {
@@ -551,6 +647,11 @@ export class ApplicationService {
     }
 
     const candidate = candidateFieldsFromSnapshot(snapshot);
+    const statusLabel = availabilityStatusLabel(availabilityStatus);
+    const preferredLocation =
+      typeof preferredJobLocation === "string" && preferredJobLocation.trim()
+        ? preferredJobLocation.trim()
+        : null;
 
     return {
       id: application._id.toString(),
@@ -587,6 +688,15 @@ export class ApplicationService {
         city: candidate.city,
         state: candidate.state,
         headline: candidate.headline,
+        experienceLabel: candidate.experienceLabel,
+        availability: statusLabel || candidate.availability,
+        availabilityStatus:
+          typeof availabilityStatus === "string" ? availabilityStatus : null,
+        preferredJobLocation: preferredLocation,
+        languages: candidate.languages,
+        expectedSalary: candidate.expectedSalary,
+        expectedSalaryPeriod: candidate.expectedSalaryPeriod,
+        dateOfBirth: candidate.dateOfBirth,
       },
     };
   }
@@ -596,66 +706,346 @@ export class ApplicationService {
     publicJobId?: string;
     status?: ApplicationStatus;
     search?: string;
-  }) {
+    sort?: "newest" | "oldest" | "updated";
+    page?: number;
+    limit?: number;
+    location?: string;
+    experience?: string;
+    skills?: string;
+    availability?: string;
+    appliedFrom?: string;
+    appliedTo?: string;
+  }): Promise<{
+    applications: EmployerApplicationListItem[];
+    pagination: EmployerApplicationsPagination;
+  }> {
     if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
-    const filter: Record<string, unknown> = {
-      employerId: input.employerId,
+    const page = input.page ?? 1;
+    const limit = input.limit ?? 20;
+    const sortKey = input.sort ?? "newest";
+
+    const match: Record<string, unknown> = {
+      employerId: new mongoose.Types.ObjectId(input.employerId),
     };
 
     if (input.publicJobId?.trim()) {
-      filter.publicJobId = input.publicJobId.trim().toUpperCase();
+      match.publicJobId = input.publicJobId.trim().toUpperCase();
     }
 
     if (input.status) {
-      filter.status = input.status;
+      match.status = input.status;
     }
 
-    const applications = await ApplicationModel.find(filter)
-      .sort({ appliedAt: -1 })
-      .lean();
+    const appliedAt: Record<string, Date> = {};
+    if (input.appliedFrom?.trim()) {
+      const from = new Date(input.appliedFrom);
+      if (!Number.isNaN(from.getTime())) {
+        appliedAt.$gte = from;
+      }
+    }
+    if (input.appliedTo?.trim()) {
+      const to = new Date(input.appliedTo);
+      if (!Number.isNaN(to.getTime())) {
+        to.setHours(23, 59, 59, 999);
+        appliedAt.$lte = to;
+      }
+    }
+    if (Object.keys(appliedAt).length > 0) {
+      match.appliedAt = appliedAt;
+    }
 
-    const jobIds = [...new Set(applications.map((app) => String(app.jobId)))];
-    const jobs = await JobModel.find({ _id: { $in: jobIds } })
-      .select("jobTitle companyName jobId")
-      .lean();
-    const jobMap = new Map(jobs.map((job) => [String(job._id), job]));
+    const andFilters: Record<string, unknown>[] = [];
 
-    const search = text(input.search).toLowerCase();
+    const searchMatch = buildEmployerCandidateSearchMatch(input.search);
+    if (searchMatch) {
+      andFilters.push(searchMatch);
+    }
 
-    let items: EmployerApplicationListItem[] = applications.map((app) => {
-      const job = jobMap.get(String(app.jobId));
-      const snapshot = asSnapshot(app.resumeSnapshot);
-      const candidate = candidateFieldsFromSnapshot(snapshot);
+    const locationMatch = buildEmployerPreferredLocationMatch(input.location);
+    if (locationMatch) {
+      andFilters.push(locationMatch);
+    }
 
-      return {
-        id: app._id.toString(),
-        publicJobId: app.publicJobId,
-        jobTitle: job?.jobTitle?.trim() || "Job",
-        companyName: job?.companyName?.trim() || "",
-        candidateName: candidate.fullName,
-        candidateHeadline: candidate.headline,
-        candidateLocation: candidate.location,
-        status: app.status as ApplicationStatus,
-        resumeVersion: app.resumeVersion,
-        resumeStatus: app.resumeStatus,
-        appliedAt: app.appliedAt.toISOString(),
-        updatedAt: app.updatedAt ? app.updatedAt.toISOString() : null,
-      };
+    const experienceMatch = buildEmployerExperienceMatch(
+      parseEmployerExperienceFilter(input.experience),
+    );
+    if (experienceMatch) {
+      andFilters.push(experienceMatch);
+    }
+
+    const skills = text(input.skills);
+    if (skills) {
+      const skillTerms = skills
+        .split(",")
+        .map((term) => term.trim())
+        .filter(Boolean);
+      for (const term of skillTerms) {
+        andFilters.push({
+          "resumeSnapshot.resumeJson.sections.skills": {
+            $elemMatch: {
+              $regex: escapeRegex(term),
+              $options: "i",
+            },
+          },
+        });
+      }
+    }
+
+    const availabilityMatch = buildEmployerAvailabilityMatch(
+      parseEmployerAvailabilityFilter(input.availability),
+    );
+    if (availabilityMatch) {
+      andFilters.push(availabilityMatch);
+    }
+
+    const sortStage: Record<string, 1 | -1> =
+      sortKey === "oldest"
+        ? { appliedAt: 1 }
+        : sortKey === "updated"
+          ? { updatedAt: -1 }
+          : { appliedAt: -1 };
+
+    const pipeline: mongoose.PipelineStage[] = [
+      { $match: match },
+      {
+        $lookup: {
+          from: "jobs",
+          localField: "jobId",
+          foreignField: "_id",
+          as: "job",
+        },
+      },
+      {
+        $unwind: {
+          path: "$job",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      ...jobSeekerLookupStages(),
+    ];
+
+    if (andFilters.length > 0) {
+      pipeline.push({ $match: { $and: andFilters } });
+    }
+
+    pipeline.push({ $sort: sortStage });
+    pipeline.push({
+      $facet: {
+        items: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+        totalCount: [{ $count: "count" }],
+      },
     });
 
-    if (search) {
-      items = items.filter(
-        (item) =>
-          item.candidateName.toLowerCase().includes(search) ||
-          item.jobTitle.toLowerCase().includes(search) ||
-          item.publicJobId.toLowerCase().includes(search),
-      );
+    const [facet] = await ApplicationModel.aggregate<{
+      items: Array<{
+        _id: mongoose.Types.ObjectId;
+        publicJobId: string;
+        status: ApplicationStatus | string;
+        resumeVersion: number;
+        resumeStatus: string;
+        resumeSnapshot: unknown;
+        appliedAt: Date;
+        updatedAt?: Date;
+        job?: { jobTitle?: string; companyName?: string };
+        jobSeekerDoc?: {
+          availabilityStatus?: string | null;
+          preferredJobLocation?: string | null;
+        };
+      }>;
+      totalCount: Array<{ count: number }>;
+    }>(pipeline);
+
+    const total = facet?.totalCount?.[0]?.count ?? 0;
+    const applications: EmployerApplicationListItem[] = (facet?.items ?? []).map(
+      (app) => {
+        const snapshot = asSnapshot(app.resumeSnapshot);
+        const candidate = candidateFieldsFromSnapshot(snapshot);
+        const statusLabel = availabilityStatusLabel(
+          app.jobSeekerDoc?.availabilityStatus,
+        );
+
+        return {
+          id: app._id.toString(),
+          publicJobId: app.publicJobId,
+          jobTitle: app.job?.jobTitle?.trim() || "Job",
+          companyName: app.job?.companyName?.trim() || "",
+          candidateName: candidate.fullName,
+          candidateHeadline: candidate.headline,
+          candidateLocation:
+            text(app.jobSeekerDoc?.preferredJobLocation) || candidate.location,
+          candidatePhone: candidate.phone,
+          candidateExperienceLabel: candidate.experienceLabel,
+          candidateSkills: candidate.skills.slice(0, 5),
+          candidateAvailability: statusLabel || candidate.availability,
+          candidateAvailabilityStatus:
+            typeof app.jobSeekerDoc?.availabilityStatus === "string"
+              ? app.jobSeekerDoc.availabilityStatus
+              : null,
+          status: app.status as ApplicationStatus,
+          resumeVersion: app.resumeVersion,
+          resumeStatus: app.resumeStatus,
+          appliedAt: app.appliedAt.toISOString(),
+          updatedAt: app.updatedAt ? app.updatedAt.toISOString() : null,
+        };
+      },
+    );
+
+    return {
+      applications,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
+  async suggestPreferredLocationsForEmployer(input: {
+    employerId: string;
+    q: string;
+    publicJobId?: string;
+    limit?: number;
+  }): Promise<{ locations: string[] }> {
+    if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
-    return { applications: items };
+    const query = normalizeEmployerLocationQuery(input.q);
+    if (query.length < EMPLOYER_LOCATION_AUTOCOMPLETE_MIN_QUERY) {
+      return { locations: [] };
+    }
+
+    const match: Record<string, unknown> = {
+      employerId: new mongoose.Types.ObjectId(input.employerId),
+    };
+    if (input.publicJobId?.trim()) {
+      match.publicJobId = input.publicJobId.trim().toUpperCase();
+    }
+
+    const pattern = escapeEmployerLocationRegex(query);
+    const rows = await ApplicationModel.aggregate<{ location: string }>([
+      { $match: match },
+      {
+        $group: {
+          _id: "$jobSeekerId",
+        },
+      },
+      {
+        $lookup: {
+          from: "jobseekers",
+          localField: "_id",
+          foreignField: "_id",
+          as: "jobSeekerDoc",
+        },
+      },
+      {
+        $unwind: {
+          path: "$jobSeekerDoc",
+          preserveNullAndEmptyArrays: false,
+        },
+      },
+      {
+        $project: {
+          location: {
+            $trim: {
+              input: {
+                $ifNull: ["$jobSeekerDoc.preferredJobLocation", ""],
+              },
+            },
+          },
+        },
+      },
+      {
+        $match: {
+          location: {
+            $ne: "",
+            $regex: pattern,
+            $options: "i",
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$location",
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          location: "$_id",
+        },
+      },
+      { $limit: 200 },
+    ]);
+
+    return {
+      locations: buildPreferredLocationSuggestions(
+        rows.map((row) => row.location),
+        query,
+        input.limit,
+      ),
+    };
+  }
+
+  async getStatsForEmployer(input: {
+    employerId: string;
+    publicJobId?: string;
+  }): Promise<{ stats: EmployerApplicationStats }> {
+    if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const match: Record<string, unknown> = {
+      employerId: new mongoose.Types.ObjectId(input.employerId),
+    };
+
+    if (input.publicJobId?.trim()) {
+      match.publicJobId = input.publicJobId.trim().toUpperCase();
+    }
+
+    const rows = await ApplicationModel.aggregate<{
+      _id: ApplicationStatus;
+      count: number;
+    }>([
+      { $match: match },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
+
+    const byStatus = new Map(rows.map((row) => [row._id, row.count]));
+
+    const stats: EmployerApplicationStats = {
+      total: 0,
+      submitted: byStatus.get("submitted") ?? 0,
+      viewed: byStatus.get("viewed") ?? 0,
+      under_review: byStatus.get("under_review") ?? 0,
+      shortlisted: byStatus.get("shortlisted") ?? 0,
+      interview_scheduled: byStatus.get("interview_scheduled") ?? 0,
+      interview_completed: byStatus.get("interview_completed") ?? 0,
+      offer_sent: byStatus.get("offer_sent") ?? 0,
+      selected: byStatus.get("selected") ?? 0,
+      joined: byStatus.get("joined") ?? 0,
+      rejected: byStatus.get("rejected") ?? 0,
+      withdrawn: byStatus.get("withdrawn") ?? 0,
+    };
+
+    stats.total =
+      stats.submitted +
+      stats.viewed +
+      stats.under_review +
+      stats.shortlisted +
+      stats.interview_scheduled +
+      stats.interview_completed +
+      stats.offer_sent +
+      stats.selected +
+      stats.joined +
+      stats.rejected +
+      stats.withdrawn;
+
+    return { stats };
   }
 
   private async loadEmployerDetail(input: {
@@ -686,8 +1076,17 @@ export class ApplicationService {
       .select("jobTitle companyName jobId")
       .lean();
 
+    const jobSeeker = await JobSeekerModel.findById(application.jobSeekerId)
+      .select("availabilityStatus preferredJobLocation")
+      .lean();
+
     return {
-      application: this.toEmployerDetail(application, job),
+      application: this.toEmployerDetail(
+        application,
+        job,
+        jobSeeker?.availabilityStatus ?? null,
+        jobSeeker?.preferredJobLocation ?? null,
+      ),
     };
   }
 
@@ -771,6 +1170,10 @@ export class ApplicationService {
     );
 
     if (application.status !== input.status) {
+      assertValidEmployerStatusTransition(
+        application.status as ApplicationStatus,
+        input.status,
+      );
       const now = new Date();
       application.status = input.status;
       appendStatusHistory(application, {
@@ -867,6 +1270,10 @@ export class ApplicationService {
     }
 
     if (input.status && application.status !== input.status) {
+      assertValidEmployerStatusTransition(
+        application.status as ApplicationStatus,
+        input.status,
+      );
       application.status = input.status;
       statusChanged = true;
       appendStatusHistory(application, {

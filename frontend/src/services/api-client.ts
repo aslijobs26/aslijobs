@@ -24,15 +24,22 @@ apiClient.interceptors.request.use((config) => {
       ? getEmployerAccessToken()
       : getJobSeekerAccessToken() || getEmployerAccessToken();
   } else {
+    const isPublicJobsRequest = requestUrl.includes("/jobs/public");
     const isJobSeekerRequest =
       requestUrl.includes("/jobseekers") ||
       requestUrl.includes("/resumes") ||
       requestUrl.includes("/applications/apply") ||
-      requestUrl.includes("/applications/me");
+      requestUrl.includes("/applications/me") ||
+      isPublicJobsRequest;
 
-    accessToken = isJobSeekerRequest
-      ? getJobSeekerAccessToken()
-      : getEmployerAccessToken();
+    if (isPublicJobsRequest) {
+      // Prefer seeker token so public job APIs can attach isApplied.
+      accessToken = getJobSeekerAccessToken();
+    } else {
+      accessToken = isJobSeekerRequest
+        ? getJobSeekerAccessToken()
+        : getEmployerAccessToken();
+    }
   }
 
   if (accessToken) {

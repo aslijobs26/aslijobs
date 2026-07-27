@@ -25,6 +25,8 @@ type EmployerRegisterSearchableSelectProps = {
   hideLabel?: boolean;
   /** Hide the search input inside the dropdown panel. */
   hideSearch?: boolean;
+  /** Optional classes merged onto the trigger button (e.g. match toolbar inputs). */
+  triggerClassName?: string;
   /** Allow typing a value that is not in the preset options. */
   allowCustom?: boolean;
   /**
@@ -55,6 +57,7 @@ export function EmployerRegisterSearchableSelect({
   hideSearch = false,
   allowCustom = false,
   initialVisibleCount,
+  triggerClassName,
 }: EmployerRegisterSearchableSelectProps) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -272,6 +275,7 @@ export function EmployerRegisterSearchableSelect({
           type="button"
           className={cn(
             "employer-register-searchable-select-trigger",
+            triggerClassName,
             isPlaceholder &&
               "employer-register-searchable-select-trigger--placeholder",
             disabled && "employer-register-searchable-select-trigger--disabled",

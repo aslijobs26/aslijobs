@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { AppliedJobsPageContent } from "@/components/job-seeker-applications/AppliedJobsPageContent";
-import { JobSeekerAuthGuard } from "@/components/job-seeker/JobSeekerAuthGuard";
 
 export const metadata: Metadata = {
   title: "Applied Jobs | AsliJobs",
@@ -8,11 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function JobSeekerAppliedJobsPage() {
-  return (
-    <JobSeekerAuthGuard>
-      <main className="min-h-dvh bg-hero-bg">
-        <AppliedJobsPageContent />
-      </main>
-    </JobSeekerAuthGuard>
-  );
+  return <AppliedJobsPageContent showBackLink={false} />;
 }

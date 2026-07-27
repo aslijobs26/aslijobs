@@ -28,9 +28,14 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
+import {
+  getJobSeekerAccessToken,
+  JOB_SEEKER_AUTH_CHANGE_EVENT,
+} from "@/utils/job-seeker-auth-storage";
 
 const JOB_SEARCH_SCROLL_KEY = "asli-job-search-scroll";
 
@@ -116,8 +121,21 @@ export function JobSearchPageContent() {
     [urlState],
   );
 
+  const [seekerAuthEpoch, setSeekerAuthEpoch] = useState(0);
+  useEffect(() => {
+    const bump = () => setSeekerAuthEpoch((value) => value + 1);
+    window.addEventListener(JOB_SEEKER_AUTH_CHANGE_EVENT, bump);
+    window.addEventListener("storage", bump);
+    return () => {
+      window.removeEventListener(JOB_SEEKER_AUTH_CHANGE_EVENT, bump);
+      window.removeEventListener("storage", bump);
+    };
+  }, []);
+
+  const seekerAuthKey = getJobSeekerAccessToken() ? "seeker" : "anon";
+
   const jobsQuery = useQuery({
-    queryKey: ["public-jobs", listParams],
+    queryKey: ["public-jobs", seekerAuthKey, seekerAuthEpoch, listParams],
     queryFn: ({ signal }) => fetchPublicActiveJobs(listParams, { signal }),
     placeholderData: (previous) => previous,
   });
@@ -175,7 +193,7 @@ export function JobSearchPageContent() {
     selectedJobId || (isSplitView ? jobs[0]?.jobId : "") || "";
 
   const detailQuery = useQuery({
-    queryKey: ["public-job", detailJobId],
+    queryKey: ["public-job", seekerAuthKey, seekerAuthEpoch, detailJobId],
     queryFn: ({ signal }) =>
       fetchPublicActiveJobByPublicId(detailJobId, { signal }),
     enabled: Boolean(detailJobId) && isSplitView,

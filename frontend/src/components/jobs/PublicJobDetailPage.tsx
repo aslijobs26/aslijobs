@@ -4,9 +4,13 @@ import { JobSearchMobileJobDetails } from "@/components/job-search/JobSearchMobi
 import { JobDetailsPageLayout } from "@/components/jobs/JobDetailsPageLayout";
 import { ROUTES } from "@/constants/routes";
 import { fetchPublicActiveJobByPublicId } from "@/services/public-jobs.service";
+import {
+  getJobSeekerAccessToken,
+  JOB_SEEKER_AUTH_CHANGE_EVENT,
+} from "@/utils/job-seeker-auth-storage";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 const JOB_SEARCH_RETURN_KEY = "asli-job-search-return";
 
@@ -48,14 +52,27 @@ function readReturnPath(): string {
 export function PublicJobDetailPage({ publicJobId }: PublicJobDetailPageProps) {
   const router = useRouter();
   const [bookmarked, setBookmarked] = useState(false);
+  const [seekerAuthEpoch, setSeekerAuthEpoch] = useState(0);
   const isMobile = useSyncExternalStore(
     subscribeToMobileMedia,
     getMobileSnapshot,
     getServerMobileSnapshot,
   );
 
+  useEffect(() => {
+    const bump = () => setSeekerAuthEpoch((value) => value + 1);
+    window.addEventListener(JOB_SEEKER_AUTH_CHANGE_EVENT, bump);
+    window.addEventListener("storage", bump);
+    return () => {
+      window.removeEventListener(JOB_SEEKER_AUTH_CHANGE_EVENT, bump);
+      window.removeEventListener("storage", bump);
+    };
+  }, []);
+
+  const seekerAuthKey = getJobSeekerAccessToken() ? "seeker" : "anon";
+
   const jobQuery = useQuery({
-    queryKey: ["public-job", publicJobId],
+    queryKey: ["public-job", seekerAuthKey, seekerAuthEpoch, publicJobId],
     queryFn: ({ signal }) =>
       fetchPublicActiveJobByPublicId(publicJobId, { signal }),
     retry: false,

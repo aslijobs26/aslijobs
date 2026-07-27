@@ -4,6 +4,9 @@ import type {
   APPLICATION_STATUSES,
 } from "./application.constants.js";
 import type { ResumeJson, ResumeStatus } from "../resumes/resume.types.js";
+import type { EmployerAvailabilityFilter } from "./employer-availability-filter.js";
+
+export type { EmployerAvailabilityFilter };
 
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
@@ -68,11 +71,38 @@ export type EmployerApplicationListItem = {
   candidateName: string;
   candidateHeadline: string;
   candidateLocation: string;
+  candidatePhone: string;
+  candidateExperienceLabel: string;
+  candidateSkills: string[];
+  candidateAvailability: string;
+  candidateAvailabilityStatus: string | null;
   status: ApplicationStatus;
   resumeVersion: number;
   resumeStatus: ResumeStatus | string;
   appliedAt: string;
   updatedAt: string | null;
+};
+
+export type EmployerApplicationStats = {
+  total: number;
+  submitted: number;
+  viewed: number;
+  under_review: number;
+  shortlisted: number;
+  interview_scheduled: number;
+  interview_completed: number;
+  offer_sent: number;
+  selected: number;
+  joined: number;
+  rejected: number;
+  withdrawn: number;
+};
+
+export type EmployerApplicationsPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 };
 
 export type EmployerApplicationDetail = {
@@ -101,6 +131,15 @@ export type EmployerApplicationDetail = {
     city: string;
     state: string;
     headline: string;
+    experienceLabel: string;
+    availability: string;
+    availabilityStatus: string | null;
+    /** Preferred job location from Job Seeker registration (not resume). */
+    preferredJobLocation: string | null;
+    languages: string[];
+    expectedSalary: number | null;
+    expectedSalaryPeriod: string | null;
+    dateOfBirth: string | null;
   };
 };
 

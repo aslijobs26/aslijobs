@@ -34,6 +34,7 @@ import {
   verifyJobSeekerOtp,
 } from "@/services/job-seeker-register.service";
 import type {
+  JobSeekerAvailabilityStatus,
   JobSeekerEducation,
   JobSeekerExperienceEntry,
   JobSeekerExperienceType,
@@ -131,6 +132,9 @@ export function JobSeekerRegisterForm() {
     [],
   );
   const [languages, setLanguages] = useState<JobSeekerLanguage[]>([]);
+  const [availabilityStatus, setAvailabilityStatus] = useState<
+    JobSeekerAvailabilityStatus | ""
+  >("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -331,6 +335,11 @@ export function JobSeekerRegisterForm() {
       return;
     }
 
+    if (!availabilityStatus) {
+      setErrorMessage("Please select your availability status.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage(null);
 
@@ -341,6 +350,7 @@ export function JobSeekerRegisterForm() {
         experienceType,
         experiences: experienceType === "experienced" ? experiences : [],
         languages,
+        availabilityStatus,
       });
       router.push(ROUTES.HOME);
     } catch (error) {
@@ -485,6 +495,7 @@ export function JobSeekerRegisterForm() {
             experienceType={experienceType}
             experiences={experiences}
             languages={languages}
+            availabilityStatus={availabilityStatus}
             disabled={isSubmitting}
             onEducationChange={(next) => {
               setEducation(next);
@@ -500,6 +511,10 @@ export function JobSeekerRegisterForm() {
             }}
             onLanguagesChange={(next) => {
               setLanguages(next);
+              setErrorMessage(null);
+            }}
+            onAvailabilityStatusChange={(next) => {
+              setAvailabilityStatus(next);
               setErrorMessage(null);
             }}
           />

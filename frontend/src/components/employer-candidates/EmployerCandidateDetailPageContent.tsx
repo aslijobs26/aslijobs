@@ -10,8 +10,9 @@ import {
   updateEmployerApplicationStatus,
 } from "@/services/employer-applications.service";
 import {
-  EMPLOYER_APPLICATION_STATUSES,
   EMPLOYER_APPLICATION_STATUS_LABELS,
+  getAllowedEmployerStatusTransitions,
+  isEmployerTerminalStatus,
   type EmployerApplicationStatus,
 } from "@/types/employer-applications";
 import type {
@@ -24,7 +25,7 @@ import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Download, Printer } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type EmployerCandidateDetailPageContentProps = {
   applicationId: string;
@@ -113,16 +114,18 @@ export function EmployerCandidateDetailPageContent({
 
   const application = detailQuery.data;
 
-  useEffect(() => {
-    if (!application) {
-      return;
-    }
+  const [draftApplicationId, setDraftApplicationId] = useState<string | null>(
+    null,
+  );
+
+  if (application && draftApplicationId !== application.id) {
+    setDraftApplicationId(application.id);
     setNotesDraft(application.employerNotes ?? "");
     setNotesVisible(application.employerNotesVisibleToSeeker === true);
     setRejectReason(application.rejectReason ?? "");
     setInterviewDraft(application.interview ?? EMPTY_INTERVIEW);
     setOfferDraft(application.offer ?? EMPTY_OFFER);
-  }, [application]);
+  }
 
   const statusMutation = useMutation({
     mutationFn: (status: EmployerApplicationStatus) =>
@@ -377,23 +380,40 @@ export function EmployerCandidateDetailPageContent({
             >
               Application status
             </label>
-            <select
-              id="application-status"
-              className="mt-1.5 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              value={application.status}
-              disabled={statusMutation.isPending}
-              onChange={(event) => {
-                statusMutation.mutate(
-                  event.target.value as EmployerApplicationStatus,
-                );
-              }}
-            >
-              {EMPLOYER_APPLICATION_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {EMPLOYER_APPLICATION_STATUS_LABELS[status]}
+            {isEmployerTerminalStatus(application.status) ? (
+              <div className="mt-1.5 rounded-lg border border-border-subtle bg-hero-bg px-3 py-2">
+                <p className="text-sm font-semibold text-foreground">
+                  {EMPLOYER_APPLICATION_STATUS_LABELS[application.status]}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">Hiring Completed</p>
+              </div>
+            ) : (
+              <select
+                id="application-status"
+                className="mt-1.5 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
+                value=""
+                disabled={statusMutation.isPending}
+                onChange={(event) => {
+                  const next = event.target
+                    .value as EmployerApplicationStatus;
+                  if (!next) {
+                    return;
+                  }
+                  statusMutation.mutate(next);
+                }}
+              >
+                <option value="" disabled>
+                  Update status…
                 </option>
-              ))}
-            </select>
+                {getAllowedEmployerStatusTransitions(application.status).map(
+                  (status) => (
+                    <option key={status} value={status}>
+                      {EMPLOYER_APPLICATION_STATUS_LABELS[status]}
+                    </option>
+                  ),
+                )}
+              </select>
+            )}
           </section>
 
           <section className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">

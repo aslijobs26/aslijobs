@@ -3,8 +3,13 @@ import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { applicationService } from "./application.service.js";
+import { employerExportService } from "./employer-export.service.js";
+import { employerResumeAccessService } from "./employer-resume-access.service.js";
+import type { EmployerExportBodySchema } from "./employer-export.validation.js";
 import type {
   ApplyToJobSchema,
+  EmployerLocationSuggestionsQuerySchema,
+  ListEmployerApplicationStatsQuerySchema,
   ListEmployerApplicationsQuerySchema,
   ListSeekerApplicationsQuerySchema,
   UpdateApplicationHiringSchema,
@@ -111,12 +116,114 @@ export class ApplicationController {
       publicJobId: query.publicJobId,
       status: query.status,
       search: query.search,
+      sort: query.sort,
+      page: query.page,
+      limit: query.limit,
+      location: query.location,
+      experience: query.experience,
+      skills: query.skills,
+      availability: query.availability,
+      appliedFrom: query.appliedFrom,
+      appliedTo: query.appliedTo,
     });
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Applications retrieved.",
       data: result,
     });
+  };
+
+  suggestLocationsForEmployer = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const employerId = requireEmployerId(req);
+    const query = req.query as unknown as EmployerLocationSuggestionsQuerySchema;
+
+    const result = await applicationService.suggestPreferredLocationsForEmployer({
+      employerId,
+      q: query.q,
+      publicJobId: query.publicJobId,
+      limit: query.limit,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Location suggestions retrieved.",
+      data: result,
+    });
+  };
+
+  getStatsForEmployer = async (req: Request, res: Response): Promise<void> => {
+    const employerId = requireEmployerId(req);
+    const query = req.query as unknown as ListEmployerApplicationStatsQuerySchema;
+
+    const result = await applicationService.getStatsForEmployer({
+      employerId,
+      publicJobId: query.publicJobId,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Application stats retrieved.",
+      data: result,
+    });
+  };
+
+  previewExportForEmployer = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const employerId = requireEmployerId(req);
+    const body = req.body as EmployerExportBodySchema;
+
+    const result = await employerExportService.preview({
+      employerId,
+      format: body.format,
+      fields: body.fields,
+      publicJobId: body.publicJobId || undefined,
+      status: body.status,
+      search: body.search,
+      location: body.location,
+      experience: body.experience,
+      skills: body.skills,
+      availability: body.availability,
+      quickDateFilter: body.quickDateFilter,
+      appliedFrom: body.appliedFrom,
+      appliedTo: body.appliedTo,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Export preview retrieved.",
+      data: result,
+    });
+  };
+
+  exportForEmployer = async (req: Request, res: Response): Promise<void> => {
+    const employerId = requireEmployerId(req);
+    const body = req.body as EmployerExportBodySchema;
+
+    const file = await employerExportService.export({
+      employerId,
+      format: body.format,
+      fields: body.fields,
+      publicJobId: body.publicJobId || undefined,
+      status: body.status,
+      search: body.search,
+      location: body.location,
+      experience: body.experience,
+      skills: body.skills,
+      availability: body.availability,
+      quickDateFilter: body.quickDateFilter,
+      appliedFrom: body.appliedFrom,
+      appliedTo: body.appliedTo,
+    });
+
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${file.fileName}"`,
+    );
+    res.setHeader("Content-Length", String(file.buffer.length));
+    res.status(HTTP_STATUS.OK).send(file.buffer);
   };
 
   getForEmployer = async (req: Request, res: Response): Promise<void> => {
@@ -150,6 +257,22 @@ export class ApplicationController {
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${pdf.fileName}"`,
+    );
+    res.setHeader("Content-Length", String(pdf.buffer.length));
+    res.status(HTTP_STATUS.OK).send(pdf.buffer);
+  };
+
+  openResumePdfFromAccessToken = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const token = String(req.params.token ?? "");
+    const pdf = await employerResumeAccessService.openResumePdfFromToken(token);
+
+    res.setHeader("Content-Type", pdf.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${pdf.fileName}"`,
     );
     res.setHeader("Content-Length", String(pdf.buffer.length));
     res.status(HTTP_STATUS.OK).send(pdf.buffer);

@@ -160,6 +160,13 @@ const applicationSchema = new Schema(
 
 applicationSchema.index({ jobSeekerId: 1, jobId: 1 }, { unique: true });
 applicationSchema.index({ employerId: 1, appliedAt: -1 });
+applicationSchema.index({ employerId: 1, status: 1, appliedAt: -1 });
+applicationSchema.index({ employerId: 1, updatedAt: -1 });
+applicationSchema.index({ employerId: 1, publicJobId: 1, appliedAt: -1 });
+applicationSchema.index({
+  employerId: 1,
+  "resumeSnapshot.resumeJson.header.fullName": 1,
+});
 applicationSchema.index({ jobId: 1, appliedAt: -1 });
 applicationSchema.index({ jobSeekerId: 1, appliedAt: -1 });
 applicationSchema.index({ jobSeekerId: 1, status: 1 });

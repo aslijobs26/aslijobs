@@ -3,6 +3,8 @@ import {
   APPLICATION_INTERVIEW_MODES,
   APPLICATION_STATUSES,
 } from "./application.constants.js";
+import { parseEmployerAvailabilityFilter } from "./employer-availability-filter.js";
+import { normalizeEmployerCandidateSearchQuery } from "./employer-candidate-search.js";
 
 export const applyToJobSchema = z.object({
   publicJobId: z
@@ -19,7 +21,56 @@ export const listEmployerApplicationsQuerySchema = z.object({
     .transform((value) => value.toUpperCase())
     .optional(),
   status: z.enum(APPLICATION_STATUSES).optional(),
-  search: z.string().trim().optional().default(""),
+  search: z
+    .string()
+    .optional()
+    .default("")
+    .transform((value) => normalizeEmployerCandidateSearchQuery(value)),
+  sort: z
+    .enum(["newest", "oldest", "updated"])
+    .optional()
+    .default("newest"),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(50).optional().default(20),
+  location: z.string().trim().optional().default(""),
+  experience: z.string().trim().optional().default(""),
+  skills: z.string().trim().optional().default(""),
+  availability: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .transform((value) => parseEmployerAvailabilityFilter(value) ?? ""),
+  appliedFrom: z.string().trim().optional().default(""),
+  appliedTo: z.string().trim().optional().default(""),
+});
+
+export const employerLocationSuggestionsQuerySchema = z.object({
+  q: z
+    .string()
+    .optional()
+    .default("")
+    .transform((value) => value.trim().replace(/\s+/g, " ")),
+  publicJobId: z
+    .string()
+    .trim()
+    .transform((value) => value.toUpperCase())
+    .optional(),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .optional()
+    .default(20),
+});
+
+export const listEmployerApplicationStatsQuerySchema = z.object({
+  publicJobId: z
+    .string()
+    .trim()
+    .transform((value) => value.toUpperCase())
+    .optional(),
 });
 
 export const listSeekerApplicationsQuerySchema = z.object({
@@ -89,6 +140,12 @@ export const applicationIdParamsSchema = z.object({
 export type ApplyToJobSchema = z.infer<typeof applyToJobSchema>;
 export type ListEmployerApplicationsQuerySchema = z.infer<
   typeof listEmployerApplicationsQuerySchema
+>;
+export type EmployerLocationSuggestionsQuerySchema = z.infer<
+  typeof employerLocationSuggestionsQuerySchema
+>;
+export type ListEmployerApplicationStatsQuerySchema = z.infer<
+  typeof listEmployerApplicationStatsQuerySchema
 >;
 export type ListSeekerApplicationsQuerySchema = z.infer<
   typeof listSeekerApplicationsQuerySchema

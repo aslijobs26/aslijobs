@@ -1,6 +1,7 @@
 "use client";
 
 import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkeletons";
+import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import {
   formatJobSearchEducation,
@@ -218,6 +219,8 @@ export function JobSearchOverviewPanel({
 }: JobSearchOverviewPanelProps) {
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [appliedLocally, setAppliedLocally] = useState(false);
+  const isApplied = appliedLocally || job?.isApplied === true;
   const scrollBodyRef = useRef<HTMLDivElement>(null);
   const collapsedRef = useRef(false);
   const transitionLockRef = useRef(false);
@@ -234,6 +237,7 @@ export function JobSearchOverviewPanel({
       transitionUnlockTimerRef.current = null;
     }
     setIsSummaryCollapsed(false);
+    setAppliedLocally(false);
     if (scrollBodyRef.current) {
       scrollBodyRef.current.scrollTop = 0;
     }
@@ -379,7 +383,7 @@ export function JobSearchOverviewPanel({
   };
 
   const handleApplyClick = () => {
-    if (isApplying) {
+    if (isApplying || isApplied) {
       return;
     }
     setIsApplying(true);
@@ -388,9 +392,22 @@ export function JobSearchOverviewPanel({
       jobTitle: job.jobTitle,
       companyName: job.companyName,
       jobId: job.jobId,
-    }).finally(() => {
-      setIsApplying(false);
-    });
+    })
+      .then((result) => {
+        if (result.status === "success") {
+          setAppliedLocally(true);
+          return;
+        }
+        if (
+          result.status === "error" &&
+          /already applied/i.test(result.message)
+        ) {
+          setAppliedLocally(true);
+        }
+      })
+      .finally(() => {
+        setIsApplying(false);
+      });
   };
 
   return (
@@ -705,15 +722,16 @@ export function JobSearchOverviewPanel({
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2 border-t border-[#EEEEEE] pt-5">
-          <button
-            type="button"
+          <JobApplyButton
+            isApplied={isApplied}
+            isApplying={isApplying}
             onClick={handleApplyClick}
-            disabled={isApplying}
-            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
-          >
-            <Send className="size-4" strokeWidth={2.25} aria-hidden="true" />
-            {isApplying ? "Submitting…" : "Apply Now"}
-          </button>
+            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:flex-none"
+            appliedClassName="h-11 flex-1 text-sm font-bold sm:flex-none"
+            startIcon={
+              <Send className="size-4" strokeWidth={2.25} aria-hidden="true" />
+            }
+          />
           <button
             type="button"
             onClick={handleShare}

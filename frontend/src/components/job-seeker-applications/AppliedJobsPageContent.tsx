@@ -34,7 +34,13 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return debounced;
 }
 
-export function AppliedJobsPageContent() {
+type AppliedJobsPageContentProps = {
+  showBackLink?: boolean;
+};
+
+export function AppliedJobsPageContent({
+  showBackLink = true,
+}: AppliedJobsPageContentProps) {
   const [searchInput, setSearchInput] = useState("");
   const [statsFilter, setStatsFilter] =
     useState<AppliedJobsStatsFilter>("all");
@@ -144,15 +150,17 @@ export function AppliedJobsPageContent() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-4">
-        <Link
-          href={ROUTES.HOME}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to home
-        </Link>
-      </div>
+      {showBackLink ? (
+        <div className="mb-4">
+          <Link
+            href={ROUTES.HOME}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Back to home
+          </Link>
+        </div>
+      ) : null}
 
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>

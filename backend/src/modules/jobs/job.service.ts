@@ -8,6 +8,7 @@ import {
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { EmployerModel } from "../employers/employer.model.js";
+import { ApplicationModel } from "../applications/application.model.js";
 import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
 import type {
@@ -20,6 +21,44 @@ import type {
 } from "./job.validation.js";
 
 const UNTITLED_DRAFT_TITLE = "Untitled draft";
+
+async function getAppliedJobMongoIdSet(
+  jobSeekerId: string | undefined,
+  jobMongoIds: string[],
+): Promise<Set<string>> {
+  if (
+    !jobSeekerId ||
+    !mongoose.Types.ObjectId.isValid(jobSeekerId) ||
+    jobMongoIds.length === 0
+  ) {
+    return new Set();
+  }
+
+  const validIds = jobMongoIds.filter((id) =>
+    mongoose.Types.ObjectId.isValid(id),
+  );
+  if (validIds.length === 0) {
+    return new Set();
+  }
+
+  const rows = await ApplicationModel.find({
+    jobSeekerId: new mongoose.Types.ObjectId(jobSeekerId),
+    jobId: {
+      $in: validIds.map((id) => new mongoose.Types.ObjectId(id)),
+    },
+  })
+    .select("jobId")
+    .lean();
+
+  return new Set(
+    rows.map((row) => {
+      const jobId = row.jobId;
+      return jobId instanceof mongoose.Types.ObjectId
+        ? jobId.toString()
+        : String(jobId);
+    }),
+  );
+}
 
 function toIsoDateString(value: Date | string | null | undefined): string | null {
   if (!value) {
@@ -508,7 +547,10 @@ function toPublicApplyWhatsAppNumber(
   return digits;
 }
 
-function toPublicJobListItem(job: JobDocument) {
+function toPublicJobListItem(
+  job: JobDocument,
+  options?: { isApplied?: boolean },
+) {
   return {
     id: job._id.toString(),
     jobId: job.jobId,
@@ -533,6 +575,7 @@ function toPublicJobListItem(job: JobDocument) {
     publishedAt: toIsoDateString(job.publishedAt),
     applyWhatsAppNumber: toPublicApplyWhatsAppNumber(job.contactMobile),
     createdAt: job.createdAt,
+    isApplied: options?.isApplied === true,
   };
 }
 
@@ -1047,7 +1090,10 @@ export class JobService {
     };
   }
 
-  async getPublicActiveJobByPublicId(publicJobId: string) {
+  async getPublicActiveJobByPublicId(
+    publicJobId: string,
+    jobSeekerId?: string,
+  ) {
     const job = await JobModel.findOne({
       jobId: publicJobId.toUpperCase(),
       status: "active",
@@ -1057,9 +1103,15 @@ export class JobService {
       throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
     }
 
+    const appliedIds = await getAppliedJobMongoIdSet(jobSeekerId, [
+      job._id.toString(),
+    ]);
+
     return {
       job: {
-        ...toPublicJobListItem(job),
+        ...toPublicJobListItem(job, {
+          isApplied: appliedIds.has(job._id.toString()),
+        }),
         address: job.address,
         landmark: job.landmark,
         languages: job.languages,
@@ -1081,6 +1133,7 @@ export class JobService {
   async listSimilarPublicJobs(
     publicJobId: string,
     query: SimilarPublicJobsQuery,
+    jobSeekerId?: string,
   ) {
     const sourceJob = await JobModel.findOne({
       jobId: publicJobId.toUpperCase(),
@@ -1151,7 +1204,7 @@ export class JobService {
       businessCategory: sourceJob.businessCategory ?? "",
     };
 
-    const ranked = candidates
+    const rankedEntries = candidates
       .map((candidate) => ({
         candidate,
         score: scoreSimilarJob(candidate, sourceContext),
@@ -1166,15 +1219,28 @@ export class JobService {
         const leftPublished = left.candidate.publishedAt?.getTime() ?? 0;
         return rightPublished - leftPublished;
       })
-      .slice(0, query.limit)
-      .map((entry) => toPublicJobListItem(entry.candidate));
+      .slice(0, query.limit);
+
+    const appliedIds = await getAppliedJobMongoIdSet(
+      jobSeekerId,
+      rankedEntries.map((entry) => entry.candidate._id.toString()),
+    );
+
+    const ranked = rankedEntries.map((entry) =>
+      toPublicJobListItem(entry.candidate, {
+        isApplied: appliedIds.has(entry.candidate._id.toString()),
+      }),
+    );
 
     return {
       jobs: ranked,
     };
   }
 
-  async listPublicActiveJobs(query: PublicJobsQuery) {
+  async listPublicActiveJobs(
+    query: PublicJobsQuery,
+    jobSeekerId?: string,
+  ) {
     const filter = buildPublicJobsFilter(query);
     const skip = (query.page - 1) * query.limit;
 
@@ -1202,18 +1268,14 @@ export class JobService {
           { $skip: skip },
           { $limit: query.limit },
         ]).then((docs) =>
-          docs.map((doc) => {
-            const job = JobModel.hydrate(doc) as JobDocument;
-            return toPublicJobListItem(job);
-          }),
+          docs.map((doc) => JobModel.hydrate(doc) as JobDocument),
         )
       : JobModel.find(filter)
           .sort({ publishedAt: -1, createdAt: -1 })
           .skip(skip)
-          .limit(query.limit)
-          .then((jobs) => jobs.map((job) => toPublicJobListItem(job)));
+          .limit(query.limit);
 
-    const [jobs, total, cityFacets] = await Promise.all([
+    const [jobDocs, total, cityFacets] = await Promise.all([
       jobsPromise,
       JobModel.countDocuments(filter),
       JobModel.aggregate<{
@@ -1231,6 +1293,17 @@ export class JobService {
         { $limit: cityFacetLimit },
       ]),
     ]);
+
+    const appliedIds = await getAppliedJobMongoIdSet(
+      jobSeekerId,
+      jobDocs.map((job) => job._id.toString()),
+    );
+
+    const jobs = jobDocs.map((job) =>
+      toPublicJobListItem(job, {
+        isApplied: appliedIds.has(job._id.toString()),
+      }),
+    );
 
     return {
       jobs,

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { AppliedJobDetailPageContent } from "@/components/job-seeker-applications/AppliedJobDetailPageContent";
-import { JobSeekerAuthGuard } from "@/components/job-seeker/JobSeekerAuthGuard";
 
 export const metadata: Metadata = {
   title: "Application Details | AsliJobs",
-  description: "View application timeline, interview details, and submitted resume.",
+  description:
+    "View application timeline, interview details, and submitted resume.",
 };
 
 type AppliedJobDetailPageProps = {
@@ -16,11 +16,5 @@ export default async function JobSeekerAppliedJobDetailPage({
 }: AppliedJobDetailPageProps) {
   const { applicationId } = await params;
 
-  return (
-    <JobSeekerAuthGuard>
-      <main className="min-h-dvh bg-hero-bg">
-        <AppliedJobDetailPageContent applicationId={applicationId} />
-      </main>
-    </JobSeekerAuthGuard>
-  );
+  return <AppliedJobDetailPageContent applicationId={applicationId} />;
 }

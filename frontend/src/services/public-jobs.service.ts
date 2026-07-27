@@ -36,6 +36,8 @@ export type PublicJobListItem = {
   publishedAt: string | null;
   applyWhatsAppNumber: string | null;
   createdAt: string;
+  /** True when the logged-in job seeker already applied to this job. */
+  isApplied?: boolean;
 };
 
 export type PublicJobDetail = PublicJobListItem & {

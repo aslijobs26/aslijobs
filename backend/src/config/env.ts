@@ -20,6 +20,20 @@ const envSchema = z.object({
     .default("aslijobs-dev-refresh-secret-change-me"),
   JWT_ACCESS_EXPIRES_IN: z.string().default("7d"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("30d"),
+  /**
+   * Public API base used in export resume links (no trailing slash).
+   * Example: http://localhost:5000/api/v1
+   */
+  PUBLIC_API_URL: z
+    .string()
+    .url()
+    .default("http://localhost:5000/api/v1")
+    .transform((value) => value.replace(/\/+$/, "")),
+  RESUME_ACCESS_SECRET: z
+    .string()
+    .min(16)
+    .default("aslijobs-dev-resume-access-secret-change-me"),
+  RESUME_ACCESS_EXPIRES_IN: z.string().default("30d"),
   FRONTEND_URL: z
     .string()
     .url()

@@ -62,3 +62,32 @@ export async function requireJobSeekerAuth(
     );
   }
 }
+
+/**
+ * Attaches job seeker identity when a valid seeker token is present.
+ * Does not fail for anonymous or non-seeker requests.
+ */
+export async function optionalJobSeekerAuth(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const token = extractBearerToken(req);
+    if (!token) {
+      next();
+      return;
+    }
+
+    const payload = jwtService.verifyJobSeekerAccessToken(token);
+    const jobSeeker = await JobSeekerModel.findById(payload.sub).select("_id");
+
+    if (jobSeeker) {
+      req.jobSeekerId = jobSeeker._id.toString();
+    }
+  } catch {
+    // Ignore invalid/non-seeker tokens for public routes.
+  }
+
+  next();
+}

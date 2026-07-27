@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/api-client";
 import type {
+  JobSeekerAvailabilityStatus,
   JobSeekerEducation,
   JobSeekerExperienceEntry,
   JobSeekerExperienceType,
@@ -65,6 +66,7 @@ export type CompleteJobSeekerRegistrationPayload = {
   experienceType: JobSeekerExperienceType;
   experiences: JobSeekerExperienceEntry[];
   languages: JobSeekerLanguage[];
+  availabilityStatus: JobSeekerAvailabilityStatus;
 };
 
 function logDevelopmentOtp(phoneNumber: string, otp?: string) {

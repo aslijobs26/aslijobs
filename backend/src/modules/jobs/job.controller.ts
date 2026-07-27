@@ -182,7 +182,10 @@ export class JobController {
 
   getPublicByPublicId = async (req: Request, res: Response): Promise<void> => {
     const { publicJobId } = req.params as { publicJobId: string };
-    const result = await jobService.getPublicActiveJobByPublicId(publicJobId);
+    const result = await jobService.getPublicActiveJobByPublicId(
+      publicJobId,
+      req.jobSeekerId,
+    );
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Job fetched successfully.",
@@ -193,7 +196,11 @@ export class JobController {
   listSimilarPublic = async (req: Request, res: Response): Promise<void> => {
     const { publicJobId } = req.params as { publicJobId: string };
     const query = req.query as unknown as SimilarPublicJobsQuery;
-    const result = await jobService.listSimilarPublicJobs(publicJobId, query);
+    const result = await jobService.listSimilarPublicJobs(
+      publicJobId,
+      query,
+      req.jobSeekerId,
+    );
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Similar jobs fetched successfully.",
@@ -203,7 +210,10 @@ export class JobController {
 
   listPublic = async (req: Request, res: Response): Promise<void> => {
     const query = req.query as unknown as PublicJobsQuery;
-    const result = await jobService.listPublicActiveJobs(query);
+    const result = await jobService.listPublicActiveJobs(
+      query,
+      req.jobSeekerId,
+    );
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Active jobs fetched successfully.",

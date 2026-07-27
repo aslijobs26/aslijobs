@@ -112,6 +112,14 @@ export const JOB_SEEKER_LANGUAGE_OPTIONS = [
   { value: "malayalam", label: "മലയാളം" },
 ] as const;
 
+export const JOB_SEEKER_AVAILABILITY_STATUS_OPTIONS = [
+  { value: "immediate", label: "Immediately Available" },
+  { value: "within_7", label: "Within 7 Days" },
+  { value: "within_15", label: "Within 15 Days" },
+  { value: "within_30", label: "Within 30 Days" },
+  { value: "currently_working", label: "Currently Working" },
+] as const;
+
 export function isValidJobSeekerWhatsappNumber(value: string) {
   return /^\d{10}$/.test(value.trim());
 }

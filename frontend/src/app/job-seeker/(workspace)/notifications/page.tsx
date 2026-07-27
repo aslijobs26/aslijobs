@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { JobSeekerAuthGuard } from "@/components/job-seeker/JobSeekerAuthGuard";
 import { NotificationsPageContent } from "@/components/notifications/NotificationsPageContent";
 
 export const metadata: Metadata = {
@@ -8,11 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function JobSeekerNotificationsPage() {
-  return (
-    <JobSeekerAuthGuard>
-      <main className="min-h-dvh bg-hero-bg">
-        <NotificationsPageContent />
-      </main>
-    </JobSeekerAuthGuard>
-  );
+  return <NotificationsPageContent />;
 }

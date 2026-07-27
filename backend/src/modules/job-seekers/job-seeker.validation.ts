@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  JOB_SEEKER_AVAILABILITY_STATUSES,
   JOB_SEEKER_EDUCATION_LEVELS,
   JOB_SEEKER_EXPERIENCE_TYPES,
   JOB_SEEKER_GENDERS,
@@ -171,6 +172,9 @@ export const completeJobSeekerRegistrationSchema = z
     languages: z
       .array(z.enum(JOB_SEEKER_LANGUAGES))
       .min(1, "Select at least one language"),
+    availabilityStatus: z.enum(JOB_SEEKER_AVAILABILITY_STATUSES, {
+      message: "Please select your availability status.",
+    }),
   })
   .superRefine((value, ctx) => {
     if (value.experienceType === "experienced" && value.experiences.length < 1) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import { protectedApply } from "@/utils/job-apply-auth";
 import { cn } from "@/utils/cn";
 import {
@@ -105,6 +106,8 @@ export function JobSearchJobCard({
   onToggleBookmark,
 }: JobSearchJobCardProps) {
   const [isApplying, setIsApplying] = useState(false);
+  const [appliedLocally, setAppliedLocally] = useState(false);
+  const isApplied = appliedLocally || job.isApplied === true;
   const location = formatJobSearchLocationCompact(
     job.cityName,
     job.stateName,
@@ -130,9 +133,8 @@ export function JobSearchJobCard({
     onToggleBookmark();
   };
 
-  const handleApplyClick = (event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    if (isApplying) {
+  const handleApplyClick = () => {
+    if (isApplying || isApplied) {
       return;
     }
     setIsApplying(true);
@@ -141,9 +143,22 @@ export function JobSearchJobCard({
       jobTitle: job.jobTitle,
       companyName: job.companyName,
       jobId: job.jobId,
-    }).finally(() => {
-      setIsApplying(false);
-    });
+    })
+      .then((result) => {
+        if (result.status === "success") {
+          setAppliedLocally(true);
+          return;
+        }
+        if (
+          result.status === "error" &&
+          /already applied/i.test(result.message)
+        ) {
+          setAppliedLocally(true);
+        }
+      })
+      .finally(() => {
+        setIsApplying(false);
+      });
   };
 
   const metaItems = [
@@ -308,19 +323,25 @@ export function JobSearchJobCard({
               aria-hidden="true"
             />
           </button>
-          <button
-            type="button"
-            onClick={handleApplyClick}
-            disabled={isApplying}
-            className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl bg-primary-soft px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/40 disabled:cursor-not-allowed disabled:opacity-60"
+          <div
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
-            {isApplying ? "Submitting…" : "Apply Now"}
-            <ChevronRight
-              className="size-3.5"
-              strokeWidth={2}
-              aria-hidden="true"
+            <JobApplyButton
+              isApplied={isApplied}
+              isApplying={isApplying}
+              onClick={handleApplyClick}
+              className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl bg-primary-soft px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/40"
+              appliedClassName="h-9 w-full text-[13px] font-medium"
+              endIcon={
+                <ChevronRight
+                  className="size-3.5"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+              }
             />
-          </button>
+          </div>
         </div>
       </div>
     </article>

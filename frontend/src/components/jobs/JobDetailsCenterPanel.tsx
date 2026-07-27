@@ -1,6 +1,7 @@
 "use client";
 
 import type { PublicJobDetail } from "@/services/public-jobs.service";
+import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import { protectedApply } from "@/utils/job-apply-auth";
 import {
   formatJobSearchEducation,
@@ -124,6 +125,8 @@ export function JobDetailsCenterPanel({
 }: JobDetailsCenterPanelProps) {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [appliedLocally, setAppliedLocally] = useState(false);
+  const isApplied = appliedLocally || job?.isApplied === true;
 
   const descriptionNeedsCollapse = useMemo(() => {
     const length = job?.description?.trim().length ?? 0;
@@ -219,7 +222,7 @@ export function JobDetailsCenterPanel({
   };
 
   const handleApplyClick = () => {
-    if (isApplying) {
+    if (isApplying || isApplied) {
       return;
     }
     setIsApplying(true);
@@ -228,9 +231,22 @@ export function JobDetailsCenterPanel({
       jobTitle: job.jobTitle,
       companyName: job.companyName,
       jobId: job.jobId,
-    }).finally(() => {
-      setIsApplying(false);
-    });
+    })
+      .then((result) => {
+        if (result.status === "success") {
+          setAppliedLocally(true);
+          return;
+        }
+        if (
+          result.status === "error" &&
+          /already applied/i.test(result.message)
+        ) {
+          setAppliedLocally(true);
+        }
+      })
+      .finally(() => {
+        setIsApplying(false);
+      });
   };
 
   return (
@@ -499,15 +515,16 @@ export function JobDetailsCenterPanel({
 
       <div className="sticky bottom-0 border-t border-border-subtle bg-surface/95 px-5 py-4 backdrop-blur-md sm:px-7">
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-          <button
-            type="button"
+          <JobApplyButton
+            isApplied={isApplied}
+            isApplying={isApplying}
             onClick={handleApplyClick}
-            disabled={isApplying}
-            className="inline-flex h-11 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Send className="size-4" strokeWidth={2.25} aria-hidden="true" />
-            {isApplying ? "Submitting…" : "Apply Now"}
-          </button>
+            className="inline-flex h-11 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            appliedClassName="h-11 flex-[1.4] text-sm"
+            startIcon={
+              <Send className="size-4" strokeWidth={2.25} aria-hidden="true" />
+            }
+          />
           <button
             type="button"
             onClick={handleShare}

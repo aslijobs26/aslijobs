@@ -46,6 +46,26 @@ export const JOB_SEEKER_LANGUAGES = [
   "malayalam",
 ] as const;
 
+/** Hiring availability — independent of ATS resume generation. */
+export const JOB_SEEKER_AVAILABILITY_STATUSES = [
+  "immediate",
+  "within_7",
+  "within_15",
+  "within_30",
+  "currently_working",
+] as const;
+
+export const JOB_SEEKER_AVAILABILITY_STATUS_LABELS: Record<
+  (typeof JOB_SEEKER_AVAILABILITY_STATUSES)[number],
+  string
+> = {
+  immediate: "Immediately Available",
+  within_7: "Within 7 Days",
+  within_15: "Within 15 Days",
+  within_30: "Within 30 Days",
+  currently_working: "Currently Working",
+};
+
 export const JOB_SEEKER_SALARY_PERIODS = ["per-month", "per-year"] as const;
 
 export const JOB_SEEKER_JOB_ROLES = [

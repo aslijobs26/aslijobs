@@ -5,6 +5,7 @@ import {
   JOB_SEEKER_GENDERS,
   JOB_SEEKER_JOB_TYPES,
   JOB_SEEKER_LANGUAGES,
+  JOB_SEEKER_AVAILABILITY_STATUSES,
   JOB_SEEKER_REGISTRATION_STATUSES,
   JOB_SEEKER_SALARY_PERIODS,
   JOB_SEEKER_WORK_MODES,
@@ -103,6 +104,7 @@ const jobSeekerSchema = new Schema(
       type: String,
       trim: true,
       default: "",
+      index: true,
     },
     expectedSalary: {
       type: Number,
@@ -134,6 +136,13 @@ const jobSeekerSchema = new Schema(
         },
       ],
       default: [],
+    },
+    availabilityStatus: {
+      type: String,
+      enum: JOB_SEEKER_AVAILABILITY_STATUSES,
+      required: false,
+      default: null,
+      index: true,
     },
     isWhatsappVerified: {
       type: Boolean,

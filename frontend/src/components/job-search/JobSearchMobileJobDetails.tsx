@@ -1,6 +1,7 @@
 "use client";
 
 import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkeletons";
+import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import {
   formatJobSearchEducation,
@@ -206,6 +207,8 @@ export function JobSearchMobileJobDetails({
 }: JobSearchMobileJobDetailsProps) {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [appliedLocally, setAppliedLocally] = useState(false);
+  const isApplied = appliedLocally || job?.isApplied === true;
 
   const parsedDescription = useMemo(
     () => parseDescription(job?.description ?? ""),
@@ -297,7 +300,7 @@ export function JobSearchMobileJobDetails({
   };
 
   const handleApplyClick = () => {
-    if (isApplying) {
+    if (!job || isApplying || isApplied) {
       return;
     }
     setIsApplying(true);
@@ -306,9 +309,22 @@ export function JobSearchMobileJobDetails({
       jobTitle: job.jobTitle,
       companyName: job.companyName,
       jobId: job.jobId,
-    }).finally(() => {
-      setIsApplying(false);
-    });
+    })
+      .then((result) => {
+        if (result.status === "success") {
+          setAppliedLocally(true);
+          return;
+        }
+        if (
+          result.status === "error" &&
+          /already applied/i.test(result.message)
+        ) {
+          setAppliedLocally(true);
+        }
+      })
+      .finally(() => {
+        setIsApplying(false);
+      });
   };
 
   const summaryItems: { label: string; content: ReactNode }[] = [
@@ -605,19 +621,20 @@ export function JobSearchMobileJobDetails({
 
         <div className="mt-5 border-t border-[#EEF1F4] bg-white pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div className="h-14">
-            <button
-              type="button"
+            <JobApplyButton
+              isApplied={isApplied}
+              isApplying={isApplying}
               onClick={handleApplyClick}
-              disabled={isApplying}
-              className="inline-flex h-full w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-2 text-[15px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Send
-                className="size-4 shrink-0"
-                strokeWidth={2.25}
-                aria-hidden="true"
-              />
-              {isApplying ? "Submitting…" : "Apply Now"}
-            </button>
+              className="inline-flex h-full w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-2 text-[15px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              appliedClassName="h-full w-full text-[15px] font-bold"
+              startIcon={
+                <Send
+                  className="size-4 shrink-0"
+                  strokeWidth={2.25}
+                  aria-hidden="true"
+                />
+              }
+            />
           </div>
         </div>
       </div>

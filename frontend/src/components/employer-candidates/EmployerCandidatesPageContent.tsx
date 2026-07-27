@@ -1,243 +1,431 @@
 "use client";
 
-import { ROUTES } from "@/constants/routes";
-import { fetchEmployerApplications } from "@/services/employer-applications.service";
+import { CandidatesDetailPanel } from "@/components/employer-candidates/CandidatesDetailPanel";
+import type { CandidatesDetailTab } from "@/components/employer-candidates/CandidatesDetailPanel";
+import { CandidatesExportModal } from "@/components/employer-candidates/CandidatesExportModal";
 import {
-  EMPLOYER_APPLICATION_STATUS_LABELS,
-  EMPLOYER_APPLICATION_STATUSES,
-  type EmployerApplicationListItem,
-  type EmployerApplicationStatus,
+  CandidatesFilterPanel,
+  type CandidatesQuickFilter,
+} from "@/components/employer-candidates/CandidatesFilterPanel";
+import { CandidatesKpiStrip } from "@/components/employer-candidates/CandidatesKpiStrip";
+import { CandidatesListPanel } from "@/components/employer-candidates/CandidatesListPanel";
+import {
+  fetchEmployerApplicationStats,
+  fetchEmployerApplications,
+} from "@/services/employer-applications.service";
+import { fetchEmployerJobs } from "@/services/employer-jobs.service";
+import type {
+  EmployerApplicationStatus,
+  EmployerAvailabilityFilterValue,
 } from "@/types/employer-applications";
 import { cn } from "@/utils/cn";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Filter } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-}
-
-function statusClass(status: EmployerApplicationStatus): string {
-  switch (status) {
-    case "shortlisted":
-    case "selected":
-    case "offer_sent":
-    case "joined":
-      return "bg-emerald-50 text-emerald-700 ring-emerald-200";
-    case "interview_scheduled":
-    case "interview_completed":
-    case "under_review":
-    case "viewed":
-      return "bg-sky-50 text-sky-800 ring-sky-200";
-    case "rejected":
-    case "withdrawn":
-      return "bg-red-50 text-red-700 ring-red-200";
-    default:
-      return "bg-primary-light/50 text-muted ring-border-subtle";
-  }
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
 }
 
 export function EmployerCandidatesPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const publicJobId =
     searchParams.get("jobId")?.trim().toUpperCase() || undefined;
+  const selectedFromUrl = searchParams.get("selected")?.trim() || null;
+  const statusFromUrl = searchParams.get("status")?.trim() || "";
+  const pageFromUrl = Number(searchParams.get("page") || "1");
 
-  const [searchDraft, setSearchDraft] = useState("");
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<EmployerApplicationStatus | "">("");
+  const [quickFilter, setQuickFilter] = useState<CandidatesQuickFilter>(
+    (statusFromUrl as CandidatesQuickFilter) || "all",
+  );
+  const [searchDraft, setSearchDraft] = useState(
+    searchParams.get("q")?.trim() || "",
+  );
+  const [sort, setSort] = useState<"newest" | "oldest" | "updated">(
+    (searchParams.get("sort") as "newest" | "oldest" | "updated") || "newest",
+  );
+  const [activeTab, setActiveTab] = useState<CandidatesDetailTab>("profile");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
-  const applicationsQuery = useQuery({
+  const [locationDraft, setLocationDraft] = useState("");
+  const [experienceDraft, setExperienceDraft] = useState("");
+  const [skillsDraft, setSkillsDraft] = useState("");
+  const [availabilityDraft, setAvailabilityDraft] =
+    useState<EmployerAvailabilityFilterValue>("");
+  const [appliedFrom, setAppliedFrom] = useState("");
+  const [appliedTo, setAppliedTo] = useState("");
+
+  const normalizeSearch = (value: string) =>
+    value.trim().replace(/\s+/g, " ");
+  const search = useDebouncedValue(normalizeSearch(searchDraft), 300);
+  const location = useDebouncedValue(locationDraft.trim(), 300);
+  const experience = useDebouncedValue(experienceDraft.trim(), 300);
+  const skills = useDebouncedValue(skillsDraft.trim(), 300);
+  const availability = useDebouncedValue(availabilityDraft, 300);
+
+  const statusFilter: EmployerApplicationStatus | undefined =
+    quickFilter === "all" ? undefined : quickFilter;
+
+  const filterKey = [
+    search,
+    quickFilter,
+    sort,
+    publicJobId ?? "",
+    location,
+    experience,
+    skills,
+    availability,
+    appliedFrom,
+    appliedTo,
+  ].join("|");
+
+  const [pageState, setPageState] = useState({
+    key: filterKey,
+    page: Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1,
+  });
+  const page = pageState.key === filterKey ? pageState.page : 1;
+  const setPage = (nextPage: number) => {
+    setPageState({ key: filterKey, page: nextPage });
+  };
+
+  const syncUrl = (next: {
+    jobId?: string | undefined;
+    selected?: string | null;
+    status?: string;
+    page?: number;
+    q?: string;
+    sort?: string;
+  }) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next.jobId !== undefined) {
+      if (next.jobId) {
+        params.set("jobId", next.jobId);
+      } else {
+        params.delete("jobId");
+      }
+    }
+    if (next.selected !== undefined) {
+      if (next.selected) {
+        params.set("selected", next.selected);
+      } else {
+        params.delete("selected");
+      }
+    }
+    if (next.status !== undefined) {
+      if (next.status && next.status !== "all") {
+        params.set("status", next.status);
+      } else {
+        params.delete("status");
+      }
+    }
+    if (next.page !== undefined) {
+      if (next.page > 1) {
+        params.set("page", String(next.page));
+      } else {
+        params.delete("page");
+      }
+    }
+    if (next.q !== undefined) {
+      if (next.q) {
+        params.set("q", next.q);
+      } else {
+        params.delete("q");
+      }
+    }
+    if (next.sort !== undefined) {
+      if (next.sort && next.sort !== "newest") {
+        params.set("sort", next.sort);
+      } else {
+        params.delete("sort");
+      }
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+  };
+
+  const statsQuery = useQuery({
+    queryKey: ["employer", "application-stats", publicJobId ?? "all"],
+    queryFn: () =>
+      fetchEmployerApplicationStats({
+        publicJobId,
+      }),
+    staleTime: 30_000,
+  });
+
+  const listQuery = useQuery({
     queryKey: [
       "employer",
       "applications",
       publicJobId ?? "all",
-      status || "all",
+      statusFilter ?? "all",
       search,
+      sort,
+      page,
+      location,
+      experience,
+      skills,
+      availability,
+      appliedFrom,
+      appliedTo,
     ],
     queryFn: () =>
       fetchEmployerApplications({
         publicJobId,
-        status: status || undefined,
+        status: statusFilter,
         search: search || undefined,
+        sort,
+        page,
+        limit: 20,
+        location: location || undefined,
+        experience: experience || undefined,
+        skills: skills || undefined,
+        availability: availability || undefined,
+        appliedFrom: appliedFrom || undefined,
+        appliedTo: appliedTo || undefined,
       }),
+    placeholderData: (previous) => previous,
   });
 
-  const applications = applicationsQuery.data ?? [];
+  const jobsQuery = useQuery({
+    queryKey: ["employer", "jobs", "candidates-filter"],
+    queryFn: () => fetchEmployerJobs({ page: 1, limit: 50 }),
+    staleTime: 60_000,
+  });
+
+  const applications = listQuery.data?.applications ?? [];
+  const pagination = listQuery.data?.pagination;
+  const selectedId =
+    selectedFromUrl || localSelectedId || applications[0]?.id || null;
+
+  const jobOptions = useMemo(() => {
+    const jobs = jobsQuery.data?.jobs ?? [];
+    return jobs
+      .map((job) => ({
+        publicJobId: job.jobId,
+        jobTitle: job.jobTitle,
+      }))
+      .filter((job) => Boolean(job.publicJobId));
+  }, [jobsQuery.data]);
+
+  const selectCandidate = (
+    id: string,
+    options?: { tab?: CandidatesDetailTab; openMobile?: boolean },
+  ) => {
+    setLocalSelectedId(id);
+    if (options?.tab) {
+      setActiveTab(options.tab);
+    }
+    if (options?.openMobile !== false) {
+      setMobileDetailOpen(true);
+    }
+    syncUrl({ selected: id });
+  };
+
+  const handleFilterChange = (filter: CandidatesQuickFilter) => {
+    setQuickFilter(filter);
+    syncUrl({ status: filter, page: 1 });
+  };
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+    <div className="mx-auto w-full max-w-[1600px] px-3 py-5 sm:px-5 lg:px-6">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Candidates
           </h1>
-          <p className="mt-1 text-sm text-muted">
-            Review applicants and the ATS resume submitted with each application.
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            Manage applicants, review resumes, schedule interviews and move
+            candidates through the hiring pipeline.
           </p>
           {publicJobId ? (
             <p className="mt-2 text-xs font-medium text-primary">
               Filtered by job {publicJobId}
               {" · "}
-              <Link
-                href={ROUTES.EMPLOYER_CANDIDATES}
+              <button
+                type="button"
                 className="underline underline-offset-2 hover:text-primary-hover"
+                onClick={() => {
+                  syncUrl({ jobId: "" });
+                }}
               >
-                Clear filter
-              </Link>
+                Clear job filter
+              </button>
             </p>
           ) : null}
         </div>
-        <Link
-          href={ROUTES.EMPLOYER_JOBS}
-          className="text-sm font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          Back to jobs
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setExportModalOpen(true)}
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            Export
+          </button>
+        </div>
       </header>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-        <form
-          className="min-w-0 flex-1"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setSearch(searchDraft.trim());
+      {exportModalOpen ? (
+        <CandidatesExportModal
+          onClose={() => setExportModalOpen(false)}
+          jobOptions={jobOptions}
+          filters={{
+            publicJobId,
+            status: statusFilter,
+            search: search || undefined,
+            location: location || undefined,
+            experience: experience || undefined,
+            skills: skills || undefined,
+            availability: availability || undefined,
+            appliedFrom: appliedFrom || undefined,
+            appliedTo: appliedTo || undefined,
           }}
-        >
-          <label htmlFor="candidates-search" className="sr-only">
-            Search candidates
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="candidates-search"
-              value={searchDraft}
-              onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder="Search by candidate or job title"
-              className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            />
-            <button
-              type="submit"
-              className="shrink-0 rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              Search
-            </button>
-          </div>
-        </form>
+        />
+      ) : null}
 
-        <label className="sr-only" htmlFor="candidates-status">
-          Status filter
-        </label>
-        <select
-          id="candidates-status"
-          value={status}
-          onChange={(event) =>
-            setStatus(event.target.value as EmployerApplicationStatus | "")
-          }
-          className="rounded-lg border border-border-subtle bg-surface px-3 py-2.5 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <option value="">All statuses</option>
-          {EMPLOYER_APPLICATION_STATUSES.map((item) => (
-            <option key={item} value={item}>
-              {EMPLOYER_APPLICATION_STATUS_LABELS[item]}
-            </option>
-          ))}
-        </select>
+      <div className="mt-5">
+        <CandidatesKpiStrip
+          stats={statsQuery.data}
+          isLoading={statsQuery.isLoading}
+        />
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-border-subtle bg-surface">
-        {applicationsQuery.isLoading ? (
-          <p className="px-4 py-10 text-center text-sm text-muted">
-            Loading candidates…
-          </p>
-        ) : applicationsQuery.isError ? (
-          <div className="px-4 py-10 text-center">
-            <p className="text-sm text-muted">
-              Could not load candidates. Please try again.
-            </p>
-            <button
-              type="button"
-              className="mt-4 inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-surface hover:bg-primary-hover"
-              onClick={() => void applicationsQuery.refetch()}
-            >
-              Retry
-            </button>
-          </div>
-        ) : applications.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted">
-            No applications yet
-            {publicJobId ? " for this job" : ""}.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-border-subtle bg-hero-bg/50 text-xs font-semibold uppercase tracking-wide text-muted">
-                <tr>
-                  <th className="px-4 py-3">Candidate</th>
-                  <th className="px-4 py-3">Job</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Applied</th>
-                  <th className="px-4 py-3">
-                    <span className="sr-only">Open</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {applications.map((item) => (
-                  <CandidateRow key={item.id} item={item} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="mt-4 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileFiltersOpen((open) => !open)}
+          className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground"
+        >
+          <Filter className="size-4" aria-hidden="true" />
+          {mobileFiltersOpen ? "Hide filters" : "Show filters"}
+        </button>
       </div>
-    </div>
-  );
-}
 
-function CandidateRow({ item }: { item: EmployerApplicationListItem }) {
-  return (
-    <tr className="border-b border-border-subtle last:border-b-0 hover:bg-hero-bg/35">
-      <td className="px-4 py-3">
-        <p className="font-semibold text-foreground">{item.candidateName}</p>
-        <p className="mt-0.5 text-xs text-muted">
-          {[item.candidateHeadline, item.candidateLocation]
-            .filter(Boolean)
-            .join(" · ") || "—"}
-        </p>
-      </td>
-      <td className="px-4 py-3">
-        <p className="font-medium text-foreground">{item.jobTitle}</p>
-        <p className="mt-0.5 text-xs text-muted">{item.publicJobId}</p>
-      </td>
-      <td className="px-4 py-3">
-        <span
+      <div className="mt-4 grid gap-4 xl:grid-cols-[16rem_minmax(0,1fr)_24rem] lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <div
           className={cn(
-            "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset",
-            statusClass(item.status),
+            "lg:block",
+            mobileFiltersOpen ? "block" : "hidden",
           )}
         >
-          {EMPLOYER_APPLICATION_STATUS_LABELS[item.status]}
-        </span>
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap text-muted">
-        {formatDate(item.appliedAt)}
-      </td>
-      <td className="px-4 py-3 text-right">
-        <Link
-          href={ROUTES.employerCandidateDetail(item.id)}
-          className="inline-flex rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          View
-        </Link>
-      </td>
-    </tr>
+          <div className="lg:sticky lg:top-20">
+            <CandidatesFilterPanel
+              stats={statsQuery.data}
+              activeFilter={quickFilter}
+              onFilterChange={handleFilterChange}
+              searchDraft={searchDraft}
+              location={locationDraft}
+              experience={experienceDraft}
+              skills={skillsDraft}
+              availability={availabilityDraft}
+              appliedFrom={appliedFrom}
+              appliedTo={appliedTo}
+              publicJobId={publicJobId}
+              searchInputRef={searchInputRef}
+              onSearchDraftChange={setSearchDraft}
+              onSearchSubmit={() => {
+                const nextSearch = normalizeSearch(searchDraft);
+                setSearchDraft(nextSearch);
+                syncUrl({ q: nextSearch, page: 1 });
+              }}
+              onLocationChange={setLocationDraft}
+              onExperienceChange={setExperienceDraft}
+              onSkillsChange={setSkillsDraft}
+              onAvailabilityChange={setAvailabilityDraft}
+              onAppliedFromChange={setAppliedFrom}
+              onAppliedToChange={setAppliedTo}
+              onClearAdvanced={() => {
+                setLocationDraft("");
+                setExperienceDraft("");
+                setSkillsDraft("");
+                setAvailabilityDraft("");
+                setAppliedFrom("");
+                setAppliedTo("");
+              }}
+            />
+          </div>
+        </div>
+
+        <CandidatesListPanel
+          applications={applications}
+          pagination={pagination}
+          isLoading={listQuery.isLoading}
+          selectedId={selectedId}
+          sort={sort}
+          jobOptions={jobOptions}
+          publicJobId={publicJobId}
+          hasActiveSearch={Boolean(search)}
+          hasLocationFilter={Boolean(location)}
+          onClearSearch={() => {
+            setSearchDraft("");
+            syncUrl({ q: "", page: 1 });
+          }}
+          onClearLocation={() => {
+            setLocationDraft("");
+          }}
+          onSortChange={(value) => {
+            setSort(value);
+            syncUrl({ sort: value, page: 1 });
+          }}
+          onJobChange={(jobId) => {
+            syncUrl({ jobId: jobId || "", page: 1 });
+          }}
+          onSelect={(id) => selectCandidate(id)}
+          onPageChange={(nextPage) => {
+            setPage(nextPage);
+            syncUrl({ page: nextPage });
+          }}
+          onOpenResume={(id) =>
+            selectCandidate(id, { tab: "resume", openMobile: true })
+          }
+          onScheduleInterview={(id) =>
+            selectCandidate(id, { tab: "interview", openMobile: true })
+          }
+        />
+
+        <div className="hidden xl:block">
+          <CandidatesDetailPanel
+            applicationId={selectedId}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            variant="panel"
+          />
+        </div>
+      </div>
+
+      {mobileDetailOpen && selectedId ? (
+        <div className="fixed inset-0 z-50 xl:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-foreground/40"
+            aria-label="Close candidate drawer"
+            onClick={() => setMobileDetailOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[92dvh] overflow-hidden rounded-t-2xl bg-hero-bg p-3 shadow-lg sm:inset-y-0 sm:right-0 sm:left-auto sm:max-h-none sm:w-[min(28rem,100%)] sm:rounded-none sm:p-4">
+            <CandidatesDetailPanel
+              applicationId={selectedId}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              onClose={() => setMobileDetailOpen(false)}
+              variant="drawer"
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -35,6 +35,13 @@ export type JobSeekerLanguage =
   | "tamil"
   | "malayalam";
 
+export type JobSeekerAvailabilityStatus =
+  | "immediate"
+  | "within_7"
+  | "within_15"
+  | "within_30"
+  | "currently_working";
+
 export type JobSeekerRegistrationStep =
   | "account"
   | "otp"
@@ -87,6 +94,7 @@ export type JobSeekerPublic = {
   experienceType?: JobSeekerExperienceType | null;
   experiences?: JobSeekerExperienceEntry[];
   languages?: JobSeekerLanguage[];
+  availabilityStatus?: JobSeekerAvailabilityStatus | null;
   isWhatsappVerified: boolean;
   registrationStatus: "PENDING" | "COMPLETED" | string;
   lastLoginAt?: string | null;
