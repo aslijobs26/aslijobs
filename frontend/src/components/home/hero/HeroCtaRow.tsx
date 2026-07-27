@@ -5,7 +5,7 @@ import { WhatsAppIcon } from "./HeroIcons";
 
 export function HeroCtaRow() {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-2.5 mobile:gap-2.5 sm:gap-4 md:grid-cols-2">
       {HERO_CTA_CARDS.map((card) => (
         <HeroCtaCard
           key={card.id}

@@ -17,7 +17,7 @@ const buttonVariants = {
 
 const actionClassName = (variant: HeroCtaCardProps["variant"]) =>
   cn(
-    "inline-flex h-11 w-full shrink-0 items-center justify-center rounded-xl px-5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 sm:w-auto lg:ml-auto",
+    "inline-flex h-11 min-h-11 w-full shrink-0 items-center justify-center rounded-xl px-5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 mobile:min-h-11 sm:w-auto lg:ml-auto",
     buttonVariants[variant],
   );
 
@@ -35,7 +35,7 @@ export function HeroCtaCard({
   return (
     <article
       className={cn(
-        "flex flex-col gap-4 rounded-2xl border border-border-subtle p-4 sm:p-5 lg:flex-row lg:items-center lg:gap-5",
+        "flex flex-col gap-3 rounded-2xl border border-border-subtle p-4 mobile:gap-3 mobile:p-4 sm:gap-4 sm:p-5 lg:flex-row lg:items-center lg:gap-5",
         cardVariants[variant],
       )}
     >
@@ -52,7 +52,7 @@ export function HeroCtaCard({
         </div>
 
         <div className="min-w-0">
-          <h3 className="text-base font-bold text-foreground sm:text-lg">
+          <h3 className="text-base font-bold text-foreground mobile:text-[0.9375rem] sm:text-lg">
             {title}
           </h3>
           <p className="mt-1 text-sm text-muted sm:text-[15px]">{description}</p>
