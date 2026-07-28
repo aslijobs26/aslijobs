@@ -33,10 +33,58 @@ export const EMPLOYER_TERMINAL_STATUSES = [
   "withdrawn",
 ] as const satisfies readonly EmployerApplicationStatus[];
 
+/**
+ * Allowed next statuses per current status.
+ * `interview_scheduled` is shown in the UI to open the schedule form; direct status update is blocked.
+ */
+const EMPLOYER_ALLOWED_TRANSITIONS: Record<
+  EmployerApplicationStatus,
+  readonly EmployerApplicationStatus[]
+> = {
+  submitted: ["viewed", "under_review", "rejected", "withdrawn"],
+  viewed: ["under_review", "shortlisted", "rejected", "withdrawn"],
+  under_review: ["shortlisted", "rejected", "withdrawn"],
+  shortlisted: ["interview_scheduled", "rejected", "withdrawn"],
+  interview_scheduled: ["interview_completed", "rejected", "withdrawn"],
+  interview_completed: ["offer_sent", "rejected", "withdrawn"],
+  offer_sent: ["selected", "joined", "rejected", "withdrawn"],
+  selected: ["joined", "rejected", "withdrawn"],
+  joined: [],
+  rejected: [],
+  withdrawn: [],
+};
+
 export function isEmployerTerminalStatus(
   status: string,
 ): status is (typeof EMPLOYER_TERMINAL_STATUSES)[number] {
   return (EMPLOYER_TERMINAL_STATUSES as readonly string[]).includes(status);
+}
+
+export function hasRequiredInterviewDetails(
+  interview: ApplicationInterview | null | undefined,
+): boolean {
+  if (!interview) {
+    return false;
+  }
+  return Boolean(
+    interview.date?.trim() &&
+      interview.time?.trim() &&
+      interview.mode &&
+      interview.interviewerName?.trim(),
+  );
+}
+
+export function hasRequiredOfferDetails(
+  offer: ApplicationOffer | null | undefined,
+): boolean {
+  if (!offer) {
+    return false;
+  }
+  return Boolean(
+    offer.offerDate?.trim() &&
+      offer.joiningDate?.trim() &&
+      offer.packageText?.trim(),
+  );
 }
 
 export function getAllowedEmployerStatusTransitions(
@@ -45,19 +93,7 @@ export function getAllowedEmployerStatusTransitions(
   if (isEmployerTerminalStatus(current)) {
     return [];
   }
-
-  const currentIndex = (
-    EMPLOYER_FORWARD_PIPELINE as readonly string[]
-  ).indexOf(current);
-  if (currentIndex < 0) {
-    return [];
-  }
-
-  return [
-    ...EMPLOYER_FORWARD_PIPELINE.slice(currentIndex + 1),
-    "rejected",
-    "withdrawn",
-  ];
+  return [...(EMPLOYER_ALLOWED_TRANSITIONS[current] ?? [])];
 }
 
 export const EMPLOYER_AVAILABILITY_FILTERS = [
@@ -147,6 +183,9 @@ export type EmployerApplicationDetail = {
   resumeSnapshot: ApplicationResumeSnapshot;
   employerNotes: string;
   employerNotesVisibleToSeeker: boolean;
+  employerNotesCreatedAt?: string | null;
+  employerNotesUpdatedAt?: string | null;
+  employerNotesUpdatedByName?: string | null;
   rejectReason: string;
   interview: ApplicationInterview;
   offer: ApplicationOffer;

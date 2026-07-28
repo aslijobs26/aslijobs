@@ -49,6 +49,12 @@ export type ApplicationInterview = {
   venue: string;
   instructions: string;
   interviewerName: string;
+  interviewerDesignation: string;
+  interviewerEmail: string;
+  interviewerPhone: string;
+  cancelledAt?: string | null;
+  cancellationReason?: string;
+  cancelledByName?: string;
 };
 
 export type ApplicationOffer = {

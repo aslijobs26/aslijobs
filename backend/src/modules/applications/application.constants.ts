@@ -51,6 +51,15 @@ export const WITHDRAWABLE_STATUSES = [
   "shortlisted",
 ] as const;
 
+export const INTERVIEW_CANCELLATION_REASON_OPTIONS = [
+  "Interviewer unavailable",
+  "Candidate unavailable",
+  "Position closed",
+  "Position filled",
+  "Scheduling conflict",
+  "Other",
+] as const;
+
 /**
  * Future notification hooks — no emitter wired in Phase 6.
  */
@@ -62,6 +71,7 @@ export const APPLICATION_EVENT_NAMES = {
   INTERVIEW_SCHEDULED: "application.interview_scheduled",
   INTERVIEW_UPDATED: "application.interview_updated",
   INTERVIEW_COMPLETED: "application.interview_completed",
+  INTERVIEW_CANCELLED: "application.interview_cancelled",
   OFFER_SENT: "application.offer_sent",
   SELECTED: "application.selected",
   REJECTED: "application.rejected",

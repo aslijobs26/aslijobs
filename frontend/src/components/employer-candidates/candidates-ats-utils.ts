@@ -1,4 +1,7 @@
-import type { EmployerApplicationStatus } from "@/types/employer-applications";
+import {
+  EMPLOYER_APPLICATION_STATUS_LABELS,
+  type EmployerApplicationStatus,
+} from "@/types/employer-applications";
 
 export function getCandidateInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -132,4 +135,42 @@ export function formatExpectedSalary(
     return `${formatted} / day`;
   }
   return `${formatted} / month`;
+}
+
+export function formatTimelineActivityTitle(input: {
+  status: EmployerApplicationStatus;
+  remark?: string | null;
+}): string {
+  const remark = input.remark?.trim() ?? "";
+  if (remark.startsWith("Interview Cancelled")) {
+    return "Interview Cancelled";
+  }
+  if (
+    remark.startsWith("Interview Scheduled") ||
+    remark.startsWith("Interview Rescheduled")
+  ) {
+    return remark;
+  }
+  return EMPLOYER_APPLICATION_STATUS_LABELS[input.status] ?? input.status;
+}
+
+/** Parses cancel remark: `Interview Cancelled by {name}. Reason: {reason}` */
+export function parseInterviewCancelledRemark(remark: string | null | undefined): {
+  byName: string;
+  reason: string;
+} | null {
+  const value = remark?.trim() ?? "";
+  if (!value.startsWith("Interview Cancelled")) {
+    return null;
+  }
+  const byMatch = /^Interview Cancelled by\s+(.+?)\.\s*Reason:\s*(.+)$/i.exec(
+    value,
+  );
+  if (byMatch) {
+    return {
+      byName: byMatch[1].trim(),
+      reason: byMatch[2].trim(),
+    };
+  }
+  return { byName: "", reason: value };
 }

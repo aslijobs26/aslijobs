@@ -40,6 +40,7 @@ export function notificationIcon(type: NotificationType): LucideIcon {
     case "interview_scheduled":
     case "interview_updated":
     case "interview_completed":
+    case "interview_cancelled":
       return CalendarDays;
     case "offer_sent":
     case "application_selected":

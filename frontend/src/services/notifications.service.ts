@@ -1,5 +1,9 @@
 import { apiClient } from "@/services/api-client";
 import type {
+  EmployerMessageConversationListResult,
+  EmployerMessageTimelineResult,
+} from "@/types/employer-messages";
+import type {
   NotificationCategoryFilter,
   NotificationListItem,
   NotificationListResult,
@@ -18,6 +22,7 @@ export async function fetchNotifications(options?: {
   search?: string;
   readStatus?: NotificationReadStatusFilter;
   category?: NotificationCategoryFilter;
+  referenceId?: string;
 }): Promise<NotificationListResult> {
   const response = await apiClient.get<ApiSuccess<NotificationListResult>>(
     "/notifications/me",
@@ -28,9 +33,48 @@ export async function fetchNotifications(options?: {
         search: options?.search || undefined,
         readStatus: options?.readStatus ?? "all",
         category: options?.category ?? "all",
+        referenceId: options?.referenceId || undefined,
       },
     },
   );
+
+  return response.data.data;
+}
+
+export async function fetchNotificationConversations(options?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  readStatus?: NotificationReadStatusFilter;
+  category?: NotificationCategoryFilter;
+}): Promise<EmployerMessageConversationListResult> {
+  const response = await apiClient.get<
+    ApiSuccess<EmployerMessageConversationListResult>
+  >("/notifications/me/conversations", {
+    params: {
+      page: options?.page ?? 1,
+      limit: options?.limit ?? 20,
+      search: options?.search || undefined,
+      readStatus: options?.readStatus ?? "all",
+      category: options?.category ?? "all",
+    },
+  });
+
+  return response.data.data;
+}
+
+export async function fetchConversationTimeline(
+  applicationId: string,
+  options?: { page?: number; limit?: number },
+): Promise<EmployerMessageTimelineResult> {
+  const response = await apiClient.get<
+    ApiSuccess<EmployerMessageTimelineResult>
+  >(`/notifications/me/conversations/${applicationId}/timeline`, {
+    params: {
+      page: options?.page ?? 1,
+      limit: options?.limit ?? 50,
+    },
+  });
 
   return response.data.data;
 }
@@ -50,6 +94,15 @@ export async function markNotificationAsRead(
   >(`/notifications/me/${notificationId}/read`);
 
   return response.data.data.notification;
+}
+
+export async function markConversationNotificationsAsRead(
+  applicationId: string,
+): Promise<number> {
+  const response = await apiClient.post<ApiSuccess<{ updatedCount: number }>>(
+    `/notifications/me/conversations/${applicationId}/read`,
+  );
+  return response.data.data.updatedCount;
 }
 
 export async function markAllNotificationsAsRead(): Promise<number> {

@@ -24,6 +24,7 @@ export const NOTIFICATION_TYPES = [
   "interview_scheduled",
   "interview_updated",
   "interview_completed",
+  "interview_cancelled",
   "offer_sent",
   "application_selected",
   "application_joined",

@@ -33,7 +33,12 @@ import {
   escapeEmployerLocationRegex,
   normalizeEmployerLocationQuery,
 } from "./employer-location-filter.js";
-import { assertValidEmployerStatusTransition } from "./employer-status-transition.js";
+import {
+  assertEmployerStatusChangeAllowed,
+  assertValidEmployerStatusTransition,
+  isEmployerTerminalStatus,
+  isStatusBeforeInterviewScheduled,
+} from "./employer-status-transition.js";
 import type {
   ApplicationHistoryActor,
   ApplicationInterview,
@@ -46,11 +51,25 @@ import type {
   EmployerApplicationListItem,
   EmployerApplicationStats,
   EmployerApplicationsPagination,
+  EmployerInterviewListItem,
+  EmployerInterviewJobTab,
+  EmployerInterviewStats,
+  EmployerInterviewStatusOverview,
   PublicApplicationSummary,
   SeekerApplicationDetail,
   SeekerApplicationListItem,
   SeekerApplicationStats,
 } from "./application.types.js";
+import {
+  buildEmployerInterviewBaseMatch,
+  buildEmployerInterviewSearchMatch,
+  endOfWeekSunday,
+  formatLocalDateString,
+  hasInterviewRescheduleRemark,
+  isInterviewDateInPeriod,
+  startOfWeekMonday,
+  type EmployerInterviewStatsPeriod,
+} from "./employer-interview-query.js";
 import { notificationService } from "../notifications/notification.service.js";
 import type { ApplicationNotificationContext } from "../notifications/notification.types.js";
 
@@ -282,6 +301,12 @@ function emptyInterview(): ApplicationInterview {
     venue: "",
     instructions: "",
     interviewerName: "",
+    interviewerDesignation: "",
+    interviewerEmail: "",
+    interviewerPhone: "",
+    cancelledAt: null,
+    cancellationReason: "",
+    cancelledByName: "",
   };
 }
 
@@ -294,11 +319,21 @@ function emptyOffer(): ApplicationOffer {
   };
 }
 
+function mapCancelledAt(value: unknown): string | null {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+  return null;
+}
+
 function mapInterview(value: unknown): ApplicationInterview {
   if (!value || typeof value !== "object") {
     return emptyInterview();
   }
-  const interview = value as Partial<ApplicationInterview>;
+  const interview = value as Record<string, unknown>;
   return {
     date: text(interview.date),
     time: text(interview.time),
@@ -307,7 +342,103 @@ function mapInterview(value: unknown): ApplicationInterview {
     venue: text(interview.venue),
     instructions: text(interview.instructions),
     interviewerName: text(interview.interviewerName),
+    interviewerDesignation: text(interview.interviewerDesignation),
+    interviewerEmail: text(interview.interviewerEmail),
+    interviewerPhone: text(interview.interviewerPhone),
+    cancelledAt: mapCancelledAt(interview.cancelledAt),
+    cancellationReason: text(interview.cancellationReason),
+    cancelledByName: text(interview.cancelledByName),
   };
+}
+
+/** Converts API interview shape to a mongoose-safe document (Date for cancelledAt). */
+function toInterviewDocument(interview: ApplicationInterview): {
+  date: string;
+  time: string;
+  mode: ApplicationInterview["mode"];
+  meetingLink: string;
+  venue: string;
+  instructions: string;
+  interviewerName: string;
+  interviewerDesignation: string;
+  interviewerEmail: string;
+  interviewerPhone: string;
+  cancelledAt: Date | null;
+  cancellationReason: string;
+  cancelledByName: string;
+} {
+  let cancelledAt: Date | null = null;
+  if (interview.cancelledAt) {
+    const parsed = new Date(interview.cancelledAt);
+    cancelledAt = Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  return {
+    date: interview.date,
+    time: interview.time,
+    mode: interview.mode,
+    meetingLink: interview.meetingLink,
+    venue: interview.venue,
+    instructions: interview.instructions,
+    interviewerName: interview.interviewerName,
+    interviewerDesignation: interview.interviewerDesignation,
+    interviewerEmail: interview.interviewerEmail,
+    interviewerPhone: interview.interviewerPhone,
+    cancelledAt,
+    cancellationReason: interview.cancellationReason,
+    cancelledByName: interview.cancelledByName,
+  };
+}
+
+function isInterviewCancelled(interview: ApplicationInterview): boolean {
+  return Boolean(interview.cancelledAt);
+}
+
+function normalizeInterviewForMode(
+  interview: ApplicationInterview,
+): ApplicationInterview {
+  const next: ApplicationInterview = {
+    ...interview,
+    date: text(interview.date),
+    time: text(interview.time),
+    mode: interview.mode || "",
+    meetingLink: text(interview.meetingLink),
+    venue: text(interview.venue),
+    instructions: text(interview.instructions),
+    interviewerName: text(interview.interviewerName),
+    interviewerDesignation: text(interview.interviewerDesignation),
+    interviewerEmail: text(interview.interviewerEmail),
+    interviewerPhone: text(interview.interviewerPhone),
+  };
+
+  if (next.mode === "online") {
+    next.venue = "";
+  } else if (next.mode === "offline") {
+    next.meetingLink = "";
+  } else if (next.mode === "phone") {
+    next.meetingLink = "";
+    next.venue = "";
+  }
+
+  return next;
+}
+
+function interviewsEqual(
+  left: ApplicationInterview,
+  right: ApplicationInterview,
+): boolean {
+  return (
+    left.date === right.date &&
+    left.time === right.time &&
+    left.mode === right.mode &&
+    left.meetingLink === right.meetingLink &&
+    left.venue === right.venue &&
+    left.instructions === right.instructions &&
+    left.interviewerName === right.interviewerName &&
+    left.interviewerDesignation === right.interviewerDesignation &&
+    left.interviewerEmail === right.interviewerEmail &&
+    left.interviewerPhone === right.interviewerPhone
+  );
 }
 
 function mapOffer(value: unknown): ApplicationOffer {
@@ -421,7 +552,19 @@ function buildApplicationEventContext(input: {
   jobTitle?: string;
   companyName?: string;
   candidateName?: string;
+  interview?: ApplicationInterview;
+  cancellationReason?: string;
 }): ApplicationNotificationContext {
+  const interview = input.interview
+    ? {
+        date: text(input.interview.date) || undefined,
+        time: text(input.interview.time) || undefined,
+        mode: text(input.interview.mode) || undefined,
+        meetingLink: text(input.interview.meetingLink) || undefined,
+        venue: text(input.interview.venue) || undefined,
+      }
+    : undefined;
+
   return {
     applicationId: input.applicationId,
     jobSeekerId: String(input.jobSeekerId),
@@ -430,6 +573,8 @@ function buildApplicationEventContext(input: {
     jobTitle: input.jobTitle?.trim() || "Job",
     companyName: input.companyName?.trim() || "",
     candidateName: input.candidateName?.trim() || undefined,
+    interview,
+    cancellationReason: input.cancellationReason?.trim() || undefined,
   };
 }
 
@@ -445,7 +590,10 @@ function interviewHasContent(interview: ApplicationInterview): boolean {
       interview.meetingLink ||
       interview.venue ||
       interview.instructions ||
-      interview.interviewerName,
+      interview.interviewerName ||
+      interview.interviewerDesignation ||
+      interview.interviewerEmail ||
+      interview.interviewerPhone,
   );
 }
 
@@ -526,6 +674,9 @@ export class ApplicationService {
         ],
         employerNotes: "",
         employerNotesVisibleToSeeker: false,
+        employerNotesCreatedAt: null,
+        employerNotesUpdatedAt: null,
+        employerNotesUpdatedByName: "",
         appliedAt,
       });
     } catch (error) {
@@ -624,6 +775,9 @@ export class ApplicationService {
       resumeSnapshot: unknown;
       employerNotes?: string;
       employerNotesVisibleToSeeker?: boolean;
+      employerNotesCreatedAt?: Date | null;
+      employerNotesUpdatedAt?: Date | null;
+      employerNotesUpdatedByName?: string | null;
       rejectReason?: string;
       interview?: unknown;
       offer?: unknown;
@@ -665,6 +819,15 @@ export class ApplicationService {
       employerNotes: application.employerNotes ?? "",
       employerNotesVisibleToSeeker:
         application.employerNotesVisibleToSeeker === true,
+      employerNotesCreatedAt: application.employerNotesCreatedAt
+        ? application.employerNotesCreatedAt.toISOString()
+        : null,
+      employerNotesUpdatedAt: application.employerNotesUpdatedAt
+        ? application.employerNotesUpdatedAt.toISOString()
+        : null,
+      employerNotesUpdatedByName: text(
+        application.employerNotesUpdatedByName,
+      ) || null,
       rejectReason: text(application.rejectReason),
       interview: mapInterview(application.interview),
       offer: mapOffer(application.offer),
@@ -1048,6 +1211,531 @@ export class ApplicationService {
     return { stats };
   }
 
+  private toEmployerInterviewListItem(app: {
+    _id: mongoose.Types.ObjectId;
+    publicJobId: string;
+    status: ApplicationStatus;
+    appliedAt: Date;
+    updatedAt?: Date;
+    resumeSnapshot?: unknown;
+    interview?: unknown;
+    statusHistory?: unknown;
+    job?: {
+      jobTitle?: string;
+      city?: string;
+      cityName?: string;
+      state?: string;
+      stateName?: string;
+    } | null;
+  }): EmployerInterviewListItem {
+    const snapshot = asSnapshot(app.resumeSnapshot);
+    const candidate = candidateFieldsFromSnapshot(snapshot);
+    const interview = mapInterview(app.interview);
+
+    return {
+      id: app._id.toString(),
+      publicJobId: app.publicJobId,
+      jobTitle: text(app.job?.jobTitle) || "Job",
+      jobLocation: app.job ? formatJobLocation(app.job) : "",
+      status: app.status,
+      wasRescheduled: hasInterviewRescheduleRemark(app.statusHistory),
+      isCancelled: isInterviewCancelled(interview),
+      cancellationReason: interview.cancellationReason,
+      cancelledAt: interview.cancelledAt,
+      candidateName: candidate.fullName || "Candidate",
+      candidatePhone: candidate.phone,
+      interviewDate: interview.date,
+      interviewTime: interview.time,
+      interviewMode: interview.mode,
+      interviewerName: interview.interviewerName,
+      interviewerDesignation: interview.interviewerDesignation,
+      meetingLink: interview.meetingLink,
+      venue: interview.venue,
+      appliedAt: app.appliedAt.toISOString(),
+      updatedAt: app.updatedAt ? app.updatedAt.toISOString() : null,
+    };
+  }
+
+  private resolveInterviewDateRange(input: {
+    quickDate?: string;
+    interviewFrom?: string;
+    interviewTo?: string;
+  }): { from: string; to: string } | null {
+    const today = new Date();
+    const todayStr = formatLocalDateString(today);
+
+    if (input.quickDate === "today") {
+      return { from: todayStr, to: todayStr };
+    }
+    if (input.quickDate === "tomorrow") {
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      const tomorrowStr = formatLocalDateString(tomorrow);
+      return { from: tomorrowStr, to: tomorrowStr };
+    }
+    if (input.quickDate === "this_week") {
+      return {
+        from: formatLocalDateString(startOfWeekMonday(today)),
+        to: formatLocalDateString(endOfWeekSunday(today)),
+      };
+    }
+    if (input.quickDate === "this_month") {
+      const from = new Date(today.getFullYear(), today.getMonth(), 1);
+      const to = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return {
+        from: formatLocalDateString(from),
+        to: formatLocalDateString(to),
+      };
+    }
+
+    const from = text(input.interviewFrom);
+    const to = text(input.interviewTo);
+    if (!from && !to) {
+      return null;
+    }
+    return {
+      from: from || "0000-01-01",
+      to: to || "9999-12-31",
+    };
+  }
+
+  async listInterviewsForEmployer(input: {
+    employerId: string;
+    publicJobId?: string;
+    status?: "interview_scheduled" | "interview_completed";
+    mode?: ApplicationInterview["mode"];
+    search?: string;
+    interviewer?: string;
+    interviewFrom?: string;
+    interviewTo?: string;
+    quickDate?: string;
+    sort?: "interview_asc" | "interview_desc" | "newest" | "oldest";
+    page?: number;
+    limit?: number;
+    rescheduledOnly?: boolean;
+    cancelledOnly?: boolean;
+  }): Promise<{
+    interviews: EmployerInterviewListItem[];
+    pagination: EmployerApplicationsPagination;
+  }> {
+    if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const page = input.page ?? 1;
+    const limit = input.limit ?? 10;
+    const match: Record<string, unknown> = buildEmployerInterviewBaseMatch(
+      new mongoose.Types.ObjectId(input.employerId),
+    );
+
+    if (input.publicJobId?.trim()) {
+      match.publicJobId = input.publicJobId.trim().toUpperCase();
+    }
+    if (input.status) {
+      match.status = input.status;
+    }
+    if (input.mode === "online" || input.mode === "offline" || input.mode === "phone") {
+      match["interview.mode"] = input.mode;
+    }
+
+    const interviewer = text(input.interviewer);
+    if (interviewer) {
+      match["interview.interviewerName"] = {
+        $regex: escapeRegex(interviewer),
+        $options: "i",
+      };
+    }
+
+    const dateRange = this.resolveInterviewDateRange(input);
+    if (dateRange) {
+      match["interview.date"] = {
+        $gte: dateRange.from,
+        $lte: dateRange.to,
+      };
+    }
+
+    const andFilters: Record<string, unknown>[] = [];
+    const searchMatch = buildEmployerInterviewSearchMatch(input.search);
+    if (searchMatch) {
+      andFilters.push(searchMatch);
+    }
+
+    if (input.cancelledOnly) {
+      andFilters.push({
+        "interview.cancelledAt": { $type: "date" },
+      });
+    } else if (input.status === "interview_scheduled" || input.rescheduledOnly) {
+      andFilters.push({
+        $or: [
+          { "interview.cancelledAt": null },
+          { "interview.cancelledAt": { $exists: false } },
+        ],
+      });
+    }
+
+    const sortKey = input.sort ?? "interview_asc";
+    const sortStage: Record<string, 1 | -1> =
+      sortKey === "interview_desc"
+        ? { "interview.date": -1, "interview.time": -1 }
+        : sortKey === "newest"
+          ? { appliedAt: -1 }
+          : sortKey === "oldest"
+            ? { appliedAt: 1 }
+            : { "interview.date": 1, "interview.time": 1 };
+
+    const pipeline: mongoose.PipelineStage[] = [
+      { $match: match },
+      {
+        $lookup: {
+          from: "jobs",
+          localField: "jobId",
+          foreignField: "_id",
+          as: "job",
+        },
+      },
+      {
+        $unwind: {
+          path: "$job",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    ];
+
+    if (andFilters.length > 0) {
+      pipeline.push({ $match: { $and: andFilters } });
+    }
+
+    if (input.rescheduledOnly) {
+      pipeline.push({
+        $match: {
+          statusHistory: {
+            $elemMatch: {
+              remark: { $regex: "^Interview Rescheduled" },
+            },
+          },
+        },
+      });
+    }
+
+    pipeline.push({ $sort: sortStage });
+    pipeline.push({
+      $facet: {
+        items: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+        totalCount: [{ $count: "count" }],
+      },
+    });
+
+    const [facet] = await ApplicationModel.aggregate<{
+      items: Array<{
+        _id: mongoose.Types.ObjectId;
+        publicJobId: string;
+        status: ApplicationStatus;
+        appliedAt: Date;
+        updatedAt?: Date;
+        resumeSnapshot?: unknown;
+        interview?: unknown;
+        statusHistory?: unknown;
+        job?: {
+          jobTitle?: string;
+          city?: string;
+          cityName?: string;
+          state?: string;
+          stateName?: string;
+        } | null;
+      }>;
+      totalCount: Array<{ count: number }>;
+    }>(pipeline);
+
+    const total = facet?.totalCount?.[0]?.count ?? 0;
+    const interviews = (facet?.items ?? []).map((app) =>
+      this.toEmployerInterviewListItem(app),
+    );
+
+    return {
+      interviews,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
+  async getInterviewStatsForEmployer(input: {
+    employerId: string;
+    publicJobId?: string;
+    period?: EmployerInterviewStatsPeriod;
+  }): Promise<{
+    stats: EmployerInterviewStats;
+    todaysSchedule: EmployerInterviewListItem[];
+    jobTabs: EmployerInterviewJobTab[];
+    statusOverview: EmployerInterviewStatusOverview;
+  }> {
+    if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const employerObjectId = new mongoose.Types.ObjectId(input.employerId);
+    const baseMatch = buildEmployerInterviewBaseMatch(employerObjectId);
+    const match: Record<string, unknown> = { ...baseMatch };
+    if (input.publicJobId?.trim()) {
+      match.publicJobId = input.publicJobId.trim().toUpperCase();
+    }
+    const period: EmployerInterviewStatsPeriod = input.period ?? "all_time";
+
+    const today = new Date();
+    const todayStr = formatLocalDateString(today);
+    const weekFrom = formatLocalDateString(startOfWeekMonday(today));
+    const weekTo = formatLocalDateString(endOfWeekSunday(today));
+
+    const [rows, jobTabRows, employerJobs] = await Promise.all([
+      ApplicationModel.aggregate<{
+        _id: mongoose.Types.ObjectId;
+        publicJobId: string;
+        status: ApplicationStatus;
+        appliedAt: Date;
+        updatedAt?: Date;
+        resumeSnapshot?: unknown;
+        interview?: {
+          date?: string;
+          time?: string;
+          mode?: string;
+        };
+        statusHistory?: unknown;
+        job?: {
+          jobTitle?: string;
+          city?: string;
+          cityName?: string;
+          state?: string;
+          stateName?: string;
+        } | null;
+      }>([
+        { $match: match },
+        {
+          $lookup: {
+            from: "jobs",
+            localField: "jobId",
+            foreignField: "_id",
+            as: "job",
+          },
+        },
+        {
+          $unwind: {
+            path: "$job",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            publicJobId: 1,
+            status: 1,
+            appliedAt: 1,
+            updatedAt: 1,
+            resumeSnapshot: 1,
+            interview: 1,
+            statusHistory: 1,
+            job: 1,
+          },
+        },
+      ]),
+      ApplicationModel.aggregate<{
+        _id: string;
+        count: number;
+        jobTitle: string;
+      }>([
+        { $match: baseMatch },
+        {
+          $lookup: {
+            from: "jobs",
+            localField: "jobId",
+            foreignField: "_id",
+            as: "job",
+          },
+        },
+        {
+          $unwind: {
+            path: "$job",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $group: {
+            _id: "$publicJobId",
+            count: { $sum: 1 },
+            jobTitle: {
+              $first: {
+                $ifNull: ["$job.jobTitle", "$publicJobId"],
+              },
+            },
+          },
+        },
+      ]),
+      JobModel.find({
+        employerId: employerObjectId,
+        status: { $ne: "draft" },
+      })
+        .select("jobId jobTitle")
+        .sort({ updatedAt: -1 })
+        .lean(),
+    ]);
+
+    const stats: EmployerInterviewStats = {
+      total: rows.length,
+      today: 0,
+      thisWeek: 0,
+      scheduled: 0,
+      completed: 0,
+      rescheduled: 0,
+      byMode: { online: 0, offline: 0, phone: 0 },
+    };
+
+    const todays: EmployerInterviewListItem[] = [];
+    let overviewScheduled = 0;
+    let overviewCompleted = 0;
+    let overviewRescheduled = 0;
+    let overviewCancelled = 0;
+    let overviewTotal = 0;
+
+    for (const row of rows) {
+      const interview = mapInterview(row.interview);
+      const date = interview.date;
+      const cancelled = isInterviewCancelled(interview);
+
+      if (!cancelled && date === todayStr) {
+        stats.today += 1;
+        todays.push(this.toEmployerInterviewListItem(row));
+      }
+      if (!cancelled && date >= weekFrom && date <= weekTo) {
+        stats.thisWeek += 1;
+      }
+      if (!cancelled && row.status === "interview_scheduled") {
+        stats.scheduled += 1;
+      }
+      if (row.status === "interview_completed") {
+        stats.completed += 1;
+      }
+      if (!cancelled && hasInterviewRescheduleRemark(row.statusHistory)) {
+        stats.rescheduled += 1;
+      }
+      if (!cancelled && interview.mode === "online") {
+        stats.byMode.online += 1;
+      } else if (!cancelled && interview.mode === "offline") {
+        stats.byMode.offline += 1;
+      } else if (!cancelled && interview.mode === "phone") {
+        stats.byMode.phone += 1;
+      }
+
+      if (isInterviewDateInPeriod(date, period, today)) {
+        overviewTotal += 1;
+        if (cancelled) {
+          overviewCancelled += 1;
+        } else if (row.status === "interview_scheduled") {
+          overviewScheduled += 1;
+        }
+        if (!cancelled && row.status === "interview_completed") {
+          overviewCompleted += 1;
+        }
+        if (!cancelled && hasInterviewRescheduleRemark(row.statusHistory)) {
+          overviewRescheduled += 1;
+        }
+      }
+    }
+
+    const toPercentage = (count: number): number => {
+      if (overviewTotal <= 0) {
+        return 0;
+      }
+      return Math.round((count / overviewTotal) * 100);
+    };
+
+    const statusOverview: EmployerInterviewStatusOverview = {
+      total: overviewTotal,
+      period,
+      statuses: [
+        {
+          key: "scheduled",
+          label: "Scheduled",
+          count: overviewScheduled,
+          percentage: toPercentage(overviewScheduled),
+        },
+        {
+          key: "completed",
+          label: "Completed",
+          count: overviewCompleted,
+          percentage: toPercentage(overviewCompleted),
+        },
+        {
+          key: "rescheduled",
+          label: "Rescheduled",
+          count: overviewRescheduled,
+          percentage: toPercentage(overviewRescheduled),
+        },
+        {
+          key: "cancelled",
+          label: "Cancelled",
+          count: overviewCancelled,
+          percentage: toPercentage(overviewCancelled),
+        },
+      ],
+    };
+
+    todays.sort((a, b) => {
+      const dateCmp = a.interviewDate.localeCompare(b.interviewDate);
+      if (dateCmp !== 0) {
+        return dateCmp;
+      }
+      return a.interviewTime.localeCompare(b.interviewTime);
+    });
+
+    const countByJobId = new Map(
+      jobTabRows.map((row) => [
+        text(row._id).toUpperCase(),
+        {
+          count: row.count,
+          jobTitle: text(row.jobTitle) || text(row._id) || "Job",
+        },
+      ]),
+    );
+
+    const jobTabsMap = new Map<string, EmployerInterviewJobTab>();
+    for (const job of employerJobs) {
+      const publicJobId = text(job.jobId).toUpperCase();
+      if (!publicJobId) {
+        continue;
+      }
+      const counted = countByJobId.get(publicJobId);
+      jobTabsMap.set(publicJobId, {
+        publicJobId,
+        jobTitle: text(job.jobTitle) || publicJobId,
+        count: counted?.count ?? 0,
+      });
+    }
+    for (const [publicJobId, counted] of countByJobId) {
+      if (!jobTabsMap.has(publicJobId)) {
+        jobTabsMap.set(publicJobId, {
+          publicJobId,
+          jobTitle: counted.jobTitle,
+          count: counted.count,
+        });
+      }
+    }
+
+    const jobTabs = [...jobTabsMap.values()].sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      return a.jobTitle.localeCompare(b.jobTitle);
+    });
+
+    return {
+      stats,
+      todaysSchedule: todays.slice(0, 20),
+      jobTabs,
+      statusOverview,
+    };
+  }
+
   private async loadEmployerDetail(input: {
     employerId: string;
     applicationId: string;
@@ -1137,6 +1825,7 @@ export class ApplicationService {
       publicJobId: string;
       jobId: unknown;
       resumeSnapshot?: unknown;
+      interview?: unknown;
     },
   ): Promise<void> {
     const [job, snapshot] = await Promise.all([
@@ -1144,6 +1833,7 @@ export class ApplicationService {
       Promise.resolve(asSnapshot(application.resumeSnapshot)),
     ]);
     const candidate = candidateFieldsFromSnapshot(snapshot);
+    const interview = mapInterview(application.interview);
 
     emitApplicationEvent(
       eventName,
@@ -1155,6 +1845,8 @@ export class ApplicationService {
         jobTitle: job?.jobTitle,
         companyName: job?.companyName,
         candidateName: candidate.fullName,
+        interview: interviewHasContent(interview) ? interview : undefined,
+        cancellationReason: interview.cancellationReason || undefined,
       }),
     );
   }
@@ -1169,10 +1861,21 @@ export class ApplicationService {
       input.employerId,
     );
 
+    if (input.status === "interview_scheduled") {
+      throw new AppError(
+        "Schedule an interview to set status to Interview Scheduled. Direct status update is not allowed.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
     if (application.status !== input.status) {
-      assertValidEmployerStatusTransition(
+      assertEmployerStatusChangeAllowed(
         application.status as ApplicationStatus,
         input.status,
+        {
+          interview: mapInterview(application.interview),
+          offer: mapOffer(application.offer),
+        },
       );
       const now = new Date();
       application.status = input.status;
@@ -1200,13 +1903,52 @@ export class ApplicationService {
     employerId: string;
     applicationId: string;
     notes: string;
+    employerNotesVisibleToSeeker: boolean;
+    updatedByName: string;
   }) {
     const application = await this.findOwnedApplicationOrThrow(
       input.applicationId,
       input.employerId,
     );
 
-    application.employerNotes = input.notes.trim();
+    if (isEmployerTerminalStatus(String(application.status))) {
+      throw new AppError(
+        "This candidate is in a terminal hiring status. Notes are read-only.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const nextNotes = input.notes.trim();
+    const nextVisible = input.employerNotesVisibleToSeeker === true;
+    const previousNotes = text(application.employerNotes);
+    const previousVisible = application.employerNotesVisibleToSeeker === true;
+
+    if (nextNotes === previousNotes && nextVisible === previousVisible) {
+      return this.loadEmployerDetail({
+        employerId: input.employerId,
+        applicationId: input.applicationId,
+        autoView: false,
+      });
+    }
+
+    const now = new Date();
+    const hasNotes = nextNotes.length > 0;
+
+    application.employerNotes = nextNotes;
+    application.employerNotesVisibleToSeeker = hasNotes ? nextVisible : false;
+
+    if (!hasNotes) {
+      application.employerNotesCreatedAt = null;
+      application.employerNotesUpdatedAt = null;
+      application.employerNotesUpdatedByName = "";
+    } else {
+      if (!application.employerNotesCreatedAt) {
+        application.employerNotesCreatedAt = now;
+      }
+      application.employerNotesUpdatedAt = now;
+      application.employerNotesUpdatedByName = input.updatedByName.trim();
+    }
+
     await application.save();
 
     return this.loadEmployerDetail({
@@ -1214,6 +1956,199 @@ export class ApplicationService {
       applicationId: input.applicationId,
       autoView: false,
     });
+  }
+
+  async updateInterviewForEmployer(input: {
+    employerId: string;
+    applicationId: string;
+    interview: ApplicationInterview;
+    updatedByName: string;
+  }): Promise<{
+    application: EmployerApplicationDetail;
+    action: "scheduled" | "updated";
+  }> {
+    const application = await this.findOwnedApplicationOrThrow(
+      input.applicationId,
+      input.employerId,
+    );
+
+    const currentStatus = application.status as ApplicationStatus;
+
+    if (isEmployerTerminalStatus(String(currentStatus))) {
+      throw new AppError(
+        "This application is in a terminal hiring status.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const previousInterview = mapInterview(application.interview);
+    if (isInterviewCancelled(previousInterview)) {
+      throw new AppError(
+        "This interview has been cancelled and cannot be edited. Schedule a new interview from a later workflow if needed.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const nextInterview: ApplicationInterview = {
+      ...normalizeInterviewForMode(mapInterview(input.interview)),
+      cancelledAt: null,
+      cancellationReason: "",
+      cancelledByName: "",
+    };
+
+    if (interviewsEqual(previousInterview, nextInterview)) {
+      const detail = await this.loadEmployerDetail({
+        employerId: input.employerId,
+        applicationId: input.applicationId,
+        autoView: false,
+      });
+      return {
+        application: detail.application,
+        action: currentStatus === "shortlisted" ? "scheduled" : "updated",
+      };
+    }
+
+    const now = new Date();
+    const actorName = text(input.updatedByName) || "Employer";
+    const shouldSchedule = currentStatus === "shortlisted";
+    let action: "scheduled" | "updated" = "updated";
+
+    if (
+      isStatusBeforeInterviewScheduled(currentStatus) &&
+      currentStatus !== "shortlisted"
+    ) {
+      throw new AppError(
+        "Shortlist the candidate before scheduling an interview.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    application.interview = toInterviewDocument(nextInterview);
+
+    if (shouldSchedule) {
+      assertValidEmployerStatusTransition(currentStatus, "interview_scheduled");
+      application.status = "interview_scheduled";
+      appendStatusHistory(application, {
+        status: "interview_scheduled",
+        at: now,
+        actorType: "employer",
+        remark: `Interview Scheduled by ${actorName}`,
+      });
+      action = "scheduled";
+    } else {
+      appendStatusHistory(application, {
+        status: currentStatus,
+        at: now,
+        actorType: "employer",
+        remark: `Interview Rescheduled by ${actorName}`,
+      });
+      action = "updated";
+    }
+
+    await application.save();
+
+    if (action === "scheduled") {
+      await this.emitForApplication(
+        APPLICATION_EVENT_NAMES.INTERVIEW_SCHEDULED,
+        application,
+      );
+    } else {
+      await this.emitForApplication(
+        APPLICATION_EVENT_NAMES.INTERVIEW_UPDATED,
+        application,
+      );
+    }
+
+    const detail = await this.loadEmployerDetail({
+      employerId: input.employerId,
+      applicationId: input.applicationId,
+      autoView: false,
+    });
+
+    return {
+      application: detail.application,
+      action,
+    };
+  }
+
+  async cancelInterviewForEmployer(input: {
+    employerId: string;
+    applicationId: string;
+    reason: string;
+    cancelledByName: string;
+  }): Promise<EmployerApplicationDetail> {
+    const application = await this.findOwnedApplicationOrThrow(
+      input.applicationId,
+      input.employerId,
+    );
+
+    const currentStatus = application.status as ApplicationStatus;
+    if (isEmployerTerminalStatus(String(currentStatus))) {
+      throw new AppError(
+        "This application is in a terminal hiring status.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    if (currentStatus !== "interview_scheduled") {
+      throw new AppError(
+        "Only scheduled interviews can be cancelled.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const interview = mapInterview(application.interview);
+    if (!interview.date) {
+      throw new AppError(
+        "No interview is scheduled for this candidate.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+    if (isInterviewCancelled(interview)) {
+      throw new AppError(
+        "This interview is already cancelled.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const reason = text(input.reason);
+    if (!reason) {
+      throw new AppError(
+        "Cancellation reason is required.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const now = new Date();
+    const actorName = text(input.cancelledByName) || "Employer";
+
+    application.interview = toInterviewDocument({
+      ...interview,
+      cancelledAt: now.toISOString(),
+      cancellationReason: reason,
+      cancelledByName: actorName,
+    });
+
+    appendStatusHistory(application, {
+      status: currentStatus,
+      at: now,
+      actorType: "employer",
+      remark: `Interview Cancelled by ${actorName}. Reason: ${reason}`,
+    });
+
+    await application.save();
+
+    await this.emitForApplication(
+      APPLICATION_EVENT_NAMES.INTERVIEW_CANCELLED,
+      application,
+    );
+
+    const detail = await this.loadEmployerDetail({
+      employerId: input.employerId,
+      applicationId: input.applicationId,
+      autoView: false,
+    });
+    return detail.application;
   }
 
   async updateHiringForEmployer(input: {
@@ -1235,7 +2170,7 @@ export class ApplicationService {
     let interviewUpdated = false;
 
     if (input.interview) {
-      const next = {
+      const next = normalizeInterviewForMode({
         ...mapInterview(application.interview),
         ...Object.fromEntries(
           Object.entries(input.interview).map(([key, value]) => [
@@ -1243,8 +2178,8 @@ export class ApplicationService {
             typeof value === "string" ? value.trim() : value,
           ]),
         ),
-      } as ApplicationInterview;
-      application.interview = next;
+      } as ApplicationInterview);
+      application.interview = toInterviewDocument(next);
       interviewUpdated = true;
     }
 
@@ -1270,9 +2205,13 @@ export class ApplicationService {
     }
 
     if (input.status && application.status !== input.status) {
-      assertValidEmployerStatusTransition(
+      assertEmployerStatusChangeAllowed(
         application.status as ApplicationStatus,
         input.status,
+        {
+          interview: mapInterview(application.interview),
+          offer: mapOffer(application.offer),
+        },
       );
       application.status = input.status;
       statusChanged = true;

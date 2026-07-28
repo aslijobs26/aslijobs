@@ -11,8 +11,12 @@ import type {
   EmployerLocationSuggestionsQuerySchema,
   ListEmployerApplicationStatsQuerySchema,
   ListEmployerApplicationsQuerySchema,
+  ListEmployerInterviewStatsQuerySchema,
+  ListEmployerInterviewsQuerySchema,
   ListSeekerApplicationsQuerySchema,
+  CancelApplicationInterviewSchema,
   UpdateApplicationHiringSchema,
+  UpdateApplicationInterviewSchema,
   UpdateApplicationNotesSchema,
   UpdateApplicationStatusSchema,
 } from "./application.validation.js";
@@ -31,6 +35,38 @@ function requireJobSeekerId(req: Request): string {
     throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
   }
   return jobSeekerId;
+}
+
+function readEmployerDisplayName(req: Request): string {
+  const employer = req.employer;
+  if (!employer) {
+    return "Employer";
+  }
+
+  const firstName =
+    typeof employer.firstName === "string" ? employer.firstName.trim() : "";
+  const lastName =
+    typeof employer.lastName === "string" ? employer.lastName.trim() : "";
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  if (fullName) {
+    return fullName;
+  }
+
+  const companyName =
+    typeof employer.companyName === "string" ? employer.companyName.trim() : "";
+  if (companyName) {
+    return companyName;
+  }
+
+  const establishmentName =
+    typeof employer.establishmentName === "string"
+      ? employer.establishmentName.trim()
+      : "";
+  if (establishmentName) {
+    return establishmentName;
+  }
+
+  return "Employer";
 }
 
 export class ApplicationController {
@@ -164,6 +200,56 @@ export class ApplicationController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Application stats retrieved.",
+      data: result,
+    });
+  };
+
+  listInterviewsForEmployer = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const employerId = requireEmployerId(req);
+    const query = req.query as unknown as ListEmployerInterviewsQuerySchema;
+
+    const result = await applicationService.listInterviewsForEmployer({
+      employerId,
+      publicJobId: query.publicJobId,
+      status: query.status,
+      mode: query.mode,
+      search: query.search,
+      interviewer: query.interviewer,
+      interviewFrom: query.interviewFrom,
+      interviewTo: query.interviewTo,
+      quickDate: query.quickDate,
+      sort: query.sort,
+      page: query.page,
+      limit: query.limit,
+      rescheduledOnly: query.rescheduledOnly,
+      cancelledOnly: query.cancelledOnly,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Interviews retrieved.",
+      data: result,
+    });
+  };
+
+  getInterviewStatsForEmployer = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const employerId = requireEmployerId(req);
+    const query =
+      req.query as unknown as ListEmployerInterviewStatsQuerySchema;
+
+    const result = await applicationService.getInterviewStatsForEmployer({
+      employerId,
+      publicJobId: query.publicJobId,
+      period: query.period,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Interview stats retrieved.",
       data: result,
     });
   };
@@ -310,11 +396,77 @@ export class ApplicationController {
       employerId,
       applicationId,
       notes: body.notes,
+      employerNotesVisibleToSeeker: body.employerNotesVisibleToSeeker === true,
+      updatedByName: readEmployerDisplayName(req),
     });
 
     sendSuccess(res, HTTP_STATUS.OK, {
-      message: "Notes saved.",
+      message: "Notes saved successfully.",
       data: result,
+    });
+  };
+
+  updateInterviewForEmployer = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const employerId = requireEmployerId(req);
+    const applicationId = String(req.params.applicationId ?? "");
+    const body = req.body as UpdateApplicationInterviewSchema;
+
+    const result = await applicationService.updateInterviewForEmployer({
+      employerId,
+      applicationId,
+      interview: {
+        date: body.date,
+        time: body.time,
+        mode: body.mode,
+        meetingLink: body.meetingLink,
+        venue: body.venue,
+        instructions: body.instructions,
+        interviewerName: body.interviewerName,
+        interviewerDesignation: body.interviewerDesignation,
+        interviewerEmail: body.interviewerEmail,
+        interviewerPhone: body.interviewerPhone,
+        cancelledAt: null,
+        cancellationReason: "",
+        cancelledByName: "",
+      },
+      updatedByName: readEmployerDisplayName(req),
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message:
+        result.action === "scheduled"
+          ? "Interview scheduled successfully."
+          : "Interview updated successfully.",
+      data: {
+        application: result.application,
+        action: result.action,
+      },
+    });
+  };
+
+  cancelInterviewForEmployer = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const employerId = requireEmployerId(req);
+    const applicationId = String(req.params.applicationId ?? "");
+    const body = req.body as CancelApplicationInterviewSchema;
+    const reason =
+      body.reason === "Other" ? body.otherReason.trim() : body.reason;
+
+    const result = await applicationService.cancelInterviewForEmployer({
+      employerId,
+      applicationId,
+      reason,
+      cancelledByName: readEmployerDisplayName(req),
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Interview cancelled successfully.",
+      data: { application: result },
     });
   };
 

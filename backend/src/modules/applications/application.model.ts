@@ -46,6 +46,12 @@ const interviewSchema = new Schema(
     venue: { type: String, trim: true, default: "" },
     instructions: { type: String, trim: true, default: "" },
     interviewerName: { type: String, trim: true, default: "" },
+    interviewerDesignation: { type: String, trim: true, default: "" },
+    interviewerEmail: { type: String, trim: true, default: "" },
+    interviewerPhone: { type: String, trim: true, default: "" },
+    cancelledAt: { type: Date, default: null },
+    cancellationReason: { type: String, trim: true, default: "" },
+    cancelledByName: { type: String, trim: true, default: "" },
   },
   { _id: false },
 );
@@ -137,6 +143,19 @@ const applicationSchema = new Schema(
     employerNotesVisibleToSeeker: {
       type: Boolean,
       default: false,
+    },
+    employerNotesCreatedAt: {
+      type: Date,
+      default: null,
+    },
+    employerNotesUpdatedAt: {
+      type: Date,
+      default: null,
+    },
+    employerNotesUpdatedByName: {
+      type: String,
+      trim: true,
+      default: "",
     },
     viewedAt: {
       type: Date,

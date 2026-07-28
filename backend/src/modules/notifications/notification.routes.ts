@@ -4,6 +4,9 @@ import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { notificationController } from "./notification.controller.js";
 import {
+  conversationReferenceParamsSchema,
+  listConversationTimelineQuerySchema,
+  listNotificationConversationsQuerySchema,
   listNotificationsQuerySchema,
   notificationIdParamsSchema,
 } from "./notification.validation.js";
@@ -15,6 +18,25 @@ notificationRouter.use(asyncHandler(requireNotificationRecipientAuth));
 notificationRouter.get(
   "/me/unread-count",
   asyncHandler(notificationController.unreadCount),
+);
+
+notificationRouter.get(
+  "/me/conversations",
+  validate(listNotificationConversationsQuerySchema, "query"),
+  asyncHandler(notificationController.listConversations),
+);
+
+notificationRouter.post(
+  "/me/conversations/:applicationId/read",
+  validate(conversationReferenceParamsSchema, "params"),
+  asyncHandler(notificationController.markConversationAsRead),
+);
+
+notificationRouter.get(
+  "/me/conversations/:applicationId/timeline",
+  validate(conversationReferenceParamsSchema, "params"),
+  validate(listConversationTimelineQuerySchema, "query"),
+  asyncHandler(notificationController.listConversationTimeline),
 );
 
 notificationRouter.get(

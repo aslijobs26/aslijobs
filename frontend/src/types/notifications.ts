@@ -18,6 +18,7 @@ export type NotificationType =
   | "interview_scheduled"
   | "interview_updated"
   | "interview_completed"
+  | "interview_cancelled"
   | "offer_sent"
   | "application_selected"
   | "application_joined"

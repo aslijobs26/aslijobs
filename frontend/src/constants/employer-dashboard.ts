@@ -52,7 +52,6 @@ export const EMPLOYER_DASHBOARD_NAV_ITEMS: EmployerDashboardNavItem[] = [
     label: "Messages",
     href: ROUTES.EMPLOYER_MESSAGES,
     icon: MessageSquare,
-    badge: 24,
   },
   {
     id: "saved-candidates",

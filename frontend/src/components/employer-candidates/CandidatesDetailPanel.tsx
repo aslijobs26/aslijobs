@@ -8,13 +8,18 @@ import {
   formatCandidateDate,
   formatCandidateDateTime,
   formatExpectedSalary,
+  formatTimelineActivityTitle,
   getCandidateInitials,
+  parseInterviewCancelledRemark,
 } from "@/components/employer-candidates/candidates-ats-utils";
+import { EmployerCandidateInterviewEditor } from "@/components/employer-candidates/EmployerCandidateInterviewEditor";
+import { EmployerCandidateNotesEditor } from "@/components/employer-candidates/EmployerCandidateNotesEditor";
 import { ResumePreview } from "@/components/job-seeker-resume/ResumePreview";
 import {
   downloadEmployerApplicationPdf,
   fetchEmployerApplication,
   updateEmployerApplicationHiring,
+  updateEmployerApplicationInterview,
   updateEmployerApplicationNotes,
   updateEmployerApplicationStatus,
 } from "@/services/employer-applications.service";
@@ -24,8 +29,8 @@ import {
   isEmployerTerminalStatus,
   type EmployerApplicationStatus,
 } from "@/types/employer-applications";
+import { resolveEmployerStatusSelect } from "@/components/employer-candidates/employer-status-select";
 import type {
-  ApplicationInterview,
   ApplicationOffer,
   ApplicationStatusHistoryEntry,
 } from "@/types/job-seeker-applications";
@@ -72,16 +77,6 @@ const TABS: { id: CandidatesDetailTab; label: string }[] = [
   { id: "interview", label: "Interview" },
   { id: "offer", label: "Offer" },
 ];
-
-const EMPTY_INTERVIEW: ApplicationInterview = {
-  date: "",
-  time: "",
-  mode: "",
-  meetingLink: "",
-  venue: "",
-  instructions: "",
-  interviewerName: "",
-};
 
 const EMPTY_OFFER: ApplicationOffer = {
   offerDate: "",
@@ -164,10 +159,6 @@ export function CandidatesDetailPanel({
   variant = "panel",
 }: CandidatesDetailPanelProps) {
   const queryClient = useQueryClient();
-  const [notesDraft, setNotesDraft] = useState("");
-  const [notesVisible, setNotesVisible] = useState(false);
-  const [interviewDraft, setInterviewDraft] =
-    useState<ApplicationInterview>(EMPTY_INTERVIEW);
   const [offerDraft, setOfferDraft] = useState<ApplicationOffer>(EMPTY_OFFER);
   const [rejectReason, setRejectReason] = useState("");
   const [isDownloading, setIsDownloading] = useState(false);
@@ -186,21 +177,22 @@ export function CandidatesDetailPanel({
 
   if (application && draftApplicationId !== application.id) {
     setDraftApplicationId(application.id);
-    setNotesDraft(application.employerNotes ?? "");
-    setNotesVisible(application.employerNotesVisibleToSeeker);
-    setInterviewDraft(application.interview ?? EMPTY_INTERVIEW);
     setOfferDraft(application.offer ?? EMPTY_OFFER);
     setRejectReason(application.rejectReason ?? "");
   }
 
   const invalidate = async () => {
-    await Promise.all([
+      await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employer", "applications"] }),
       queryClient.invalidateQueries({
         queryKey: ["employer", "application-stats"],
       }),
       queryClient.invalidateQueries({
         queryKey: ["employer", "application", applicationId],
+      }),
+      queryClient.invalidateQueries({ queryKey: ["employer", "interviews"] }),
+      queryClient.invalidateQueries({
+        queryKey: ["employer", "interview-stats"],
       }),
     ]);
   };
@@ -216,10 +208,28 @@ export function CandidatesDetailPanel({
   });
 
   const notesMutation = useMutation({
-    mutationFn: (notes: string) =>
-      updateEmployerApplicationNotes(applicationId!, notes),
+    mutationFn: (payload: {
+      notes: string;
+      employerNotesVisibleToSeeker: boolean;
+    }) => updateEmployerApplicationNotes(applicationId!, payload),
     onSuccess: async () => {
-      showAppToast("Notes saved", "success");
+      showAppToast("Notes saved successfully.", "success");
+      await invalidate();
+    },
+    onError: (error) => showAppToast(getErrorMessage(error), "error"),
+  });
+
+  const interviewMutation = useMutation({
+    mutationFn: (payload: Parameters<
+      typeof updateEmployerApplicationInterview
+    >[1]) => updateEmployerApplicationInterview(applicationId!, payload),
+    onSuccess: async (data) => {
+      showAppToast(
+        data.action === "scheduled"
+          ? "Interview scheduled successfully."
+          : "Interview updated successfully.",
+        "success",
+      );
       await invalidate();
     },
     onError: (error) => showAppToast(getErrorMessage(error), "error"),
@@ -228,10 +238,8 @@ export function CandidatesDetailPanel({
   const hiringMutation = useMutation({
     mutationFn: () =>
       updateEmployerApplicationHiring(applicationId!, {
-        interview: interviewDraft,
         offer: offerDraft,
         rejectReason,
-        employerNotesVisibleToSeeker: notesVisible,
       }),
     onSuccess: async () => {
       showAppToast("Hiring details saved", "success");
@@ -444,10 +452,30 @@ export function CandidatesDetailPanel({
                 disabled={statusMutation.isPending}
                 onChange={(event) => {
                   const next = event.target.value as EmployerApplicationStatus;
+                  event.target.value = "";
                   if (!next) {
                     return;
                   }
-                  statusMutation.mutate(next);
+                  const result = resolveEmployerStatusSelect({
+                    nextStatus: next,
+                    interview: application.interview,
+                    offer: application.offer,
+                  });
+                  if (result.action === "open_interview") {
+                    onTabChange("interview");
+                    showAppToast(result.message, "info");
+                    return;
+                  }
+                  if (result.action === "open_offer") {
+                    onTabChange("offer");
+                    showAppToast(result.message, "warning");
+                    return;
+                  }
+                  if (result.action === "blocked") {
+                    showAppToast(result.message, "warning");
+                    return;
+                  }
+                  statusMutation.mutate(result.status);
                 }}
                 className="w-full rounded-lg border border-primary/30 bg-primary-light px-2.5 py-2 text-sm font-semibold text-primary transition-[border-color,box-shadow,background-color] hover:border-primary/50 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -658,170 +686,70 @@ export function CandidatesDetailPanel({
             {(application.statusHistory ?? []).length === 0 ? (
               <li className="text-sm text-muted">No status updates yet.</li>
             ) : (
-              application.statusHistory.map((entry, index) => (
+              application.statusHistory.map((entry, index) => {
+                const cancelled = parseInterviewCancelledRemark(entry.remark);
+                return (
                 <li
                   key={`${entry.status}-${entry.at}-${index}`}
                   className="relative border-l-2 border-primary/20 pl-4"
                 >
                   <p className="text-sm font-semibold text-foreground">
-                    {EMPLOYER_APPLICATION_STATUS_LABELS[entry.status]}
+                    {formatTimelineActivityTitle({
+                      status: entry.status,
+                      remark: entry.remark,
+                    })}
                   </p>
                   <p className="text-xs text-muted">
                     {formatCandidateDateTime(entry.at)} ·{" "}
                     {actorLabel(entry.actorType)}
                   </p>
-                  {entry.remark ? (
+                  {cancelled ? (
+                    <div className="mt-1 space-y-0.5 text-xs text-muted">
+                      {cancelled.reason ? (
+                        <p>
+                          Reason{" "}
+                          <span className="font-medium text-foreground">
+                            {cancelled.reason}
+                          </span>
+                        </p>
+                      ) : null}
+                      {cancelled.byName ? (
+                        <p>
+                          By{" "}
+                          <span className="font-medium text-foreground">
+                            {cancelled.byName}
+                          </span>
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : entry.remark &&
+                    !entry.remark.startsWith("Interview Scheduled") &&
+                    !entry.remark.startsWith("Interview Rescheduled") ? (
                     <p className="mt-1 text-xs text-muted">{entry.remark}</p>
                   ) : null}
                 </li>
-              ))
+                );
+              })
             )}
           </ol>
         ) : null}
 
         {activeTab === "notes" ? (
-          <div>
-            <p className="text-xs text-muted">
-              Private by default. Clear the field and save to delete notes.
-            </p>
-            <textarea
-              rows={6}
-              value={notesDraft}
-              onChange={(event) => setNotesDraft(event.target.value)}
-              className="mt-3 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              placeholder="Add recruiter notes…"
-            />
-            <label className="mt-3 flex items-start gap-2 text-sm text-foreground">
-              <input
-                type="checkbox"
-                checked={notesVisible}
-                onChange={(event) => setNotesVisible(event.target.checked)}
-                className="mt-0.5 size-4 rounded border-border-subtle text-primary focus-visible:ring-2 focus-visible:ring-primary/30"
-              />
-              <span>Share notes with candidate</span>
-            </label>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={notesMutation.isPending}
-                onClick={() => notesMutation.mutate(notesDraft)}
-                className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              >
-                {notesMutation.isPending ? "Saving…" : "Save notes"}
-              </button>
-              <button
-                type="button"
-                disabled={notesMutation.isPending}
-                onClick={() => {
-                  setNotesDraft("");
-                  notesMutation.mutate("");
-                }}
-                className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              >
-                Delete notes
-              </button>
-              <button
-                type="button"
-                disabled={hiringMutation.isPending}
-                onClick={() => hiringMutation.mutate()}
-                className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              >
-                Save visibility
-              </button>
-            </div>
-          </div>
+          <EmployerCandidateNotesEditor
+            application={application}
+            isSaving={notesMutation.isPending}
+            compact
+            onSave={(payload) => notesMutation.mutate(payload)}
+          />
         ) : null}
 
         {activeTab === "interview" ? (
-          <div className="space-y-2">
-            <Field
-              id="panel-interview-date"
-              label="Date"
-              value={interviewDraft.date}
-              onChange={(value) =>
-                setInterviewDraft((current) => ({ ...current, date: value }))
-              }
-            />
-            <Field
-              id="panel-interview-time"
-              label="Time"
-              value={interviewDraft.time}
-              onChange={(value) =>
-                setInterviewDraft((current) => ({ ...current, time: value }))
-              }
-            />
-            <div>
-              <label
-                htmlFor="panel-interview-mode"
-                className="block text-xs font-medium text-muted"
-              >
-                Mode
-              </label>
-              <select
-                id="panel-interview-mode"
-                value={interviewDraft.mode}
-                onChange={(event) =>
-                  setInterviewDraft((current) => ({
-                    ...current,
-                    mode: event.target.value as ApplicationInterview["mode"],
-                  }))
-                }
-                className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              >
-                <option value="">Select</option>
-                <option value="online">Online</option>
-                <option value="offline">Offline</option>
-                <option value="phone">Phone</option>
-              </select>
-            </div>
-            <Field
-              id="panel-interview-link"
-              label="Meeting link"
-              value={interviewDraft.meetingLink}
-              onChange={(value) =>
-                setInterviewDraft((current) => ({
-                  ...current,
-                  meetingLink: value,
-                }))
-              }
-            />
-            <Field
-              id="panel-interview-venue"
-              label="Venue"
-              value={interviewDraft.venue}
-              onChange={(value) =>
-                setInterviewDraft((current) => ({ ...current, venue: value }))
-              }
-            />
-            <div>
-              <label
-                htmlFor="panel-interview-instructions"
-                className="block text-xs font-medium text-muted"
-              >
-                Instructions
-              </label>
-              <textarea
-                id="panel-interview-instructions"
-                rows={3}
-                value={interviewDraft.instructions}
-                onChange={(event) =>
-                  setInterviewDraft((current) => ({
-                    ...current,
-                    instructions: event.target.value,
-                  }))
-                }
-                className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              />
-            </div>
-            <button
-              type="button"
-              disabled={hiringMutation.isPending}
-              onClick={() => hiringMutation.mutate()}
-              className="mt-2 inline-flex w-full min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              {hiringMutation.isPending ? "Saving…" : "Save interview"}
-            </button>
-          </div>
+          <EmployerCandidateInterviewEditor
+            application={application}
+            isSaving={interviewMutation.isPending}
+            compact
+            onSave={(payload) => interviewMutation.mutate(payload)}
+          />
         ) : null}
 
         {activeTab === "offer" ? (

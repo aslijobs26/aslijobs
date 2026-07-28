@@ -65,6 +65,8 @@ export type EmployerRegisterCompanyProfileData = {
 export type EmployerRegisterSelectOption = {
   value: string;
   label: string;
+  /** Optional trailing count (e.g. interview totals) shown right-aligned. */
+  count?: number;
 };
 
 export type EmployerRegisterTestimonial = {

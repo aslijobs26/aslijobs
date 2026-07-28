@@ -9,6 +9,7 @@ import type {
   EmployerApplicationsPagination,
   EmployerHiringUpdatePayload,
 } from "@/types/employer-applications";
+import type { ApplicationInterview } from "@/types/job-seeker-applications";
 
 type ApiSuccess<T> = {
   success: true;
@@ -107,11 +108,59 @@ export async function updateEmployerApplicationStatus(
 
 export async function updateEmployerApplicationNotes(
   applicationId: string,
-  notes: string,
+  payload: {
+    notes: string;
+    employerNotesVisibleToSeeker: boolean;
+  },
 ): Promise<EmployerApplicationDetail> {
   const response = await apiClient.patch<
     ApiSuccess<{ application: EmployerApplicationDetail }>
-  >(`/applications/employer/${applicationId}/notes`, { notes });
+  >(`/applications/employer/${applicationId}/notes`, {
+    notes: payload.notes,
+    employerNotesVisibleToSeeker: payload.employerNotesVisibleToSeeker,
+  });
+
+  return response.data.data.application;
+}
+
+export async function updateEmployerApplicationInterview(
+  applicationId: string,
+  payload: ApplicationInterview,
+): Promise<{
+  application: EmployerApplicationDetail;
+  action: "scheduled" | "updated";
+}> {
+  const response = await apiClient.patch<
+    ApiSuccess<{
+      application: EmployerApplicationDetail;
+      action: "scheduled" | "updated";
+    }>
+  >(`/applications/employer/${applicationId}/interview`, payload);
+
+  return response.data.data;
+}
+
+export type CancelEmployerInterviewPayload = {
+  reason:
+    | "Interviewer unavailable"
+    | "Candidate unavailable"
+    | "Position closed"
+    | "Position filled"
+    | "Scheduling conflict"
+    | "Other";
+  otherReason?: string;
+};
+
+export async function cancelEmployerApplicationInterview(
+  applicationId: string,
+  payload: CancelEmployerInterviewPayload,
+): Promise<EmployerApplicationDetail> {
+  const response = await apiClient.patch<
+    ApiSuccess<{ application: EmployerApplicationDetail }>
+  >(`/applications/employer/${applicationId}/interview/cancel`, {
+    reason: payload.reason,
+    otherReason: payload.otherReason ?? "",
+  });
 
   return response.data.data.application;
 }

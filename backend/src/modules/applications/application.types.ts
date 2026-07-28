@@ -31,6 +31,13 @@ export type ApplicationInterview = {
   venue: string;
   instructions: string;
   interviewerName: string;
+  interviewerDesignation: string;
+  interviewerEmail: string;
+  interviewerPhone: string;
+  /** ISO timestamp when cancelled; null/empty when active. */
+  cancelledAt: string | null;
+  cancellationReason: string;
+  cancelledByName: string;
 };
 
 export type ApplicationOffer = {
@@ -105,6 +112,68 @@ export type EmployerApplicationsPagination = {
   totalPages: number;
 };
 
+export type EmployerInterviewListItem = {
+  id: string;
+  publicJobId: string;
+  jobTitle: string;
+  jobLocation: string;
+  status: ApplicationStatus;
+  wasRescheduled: boolean;
+  isCancelled: boolean;
+  cancellationReason: string;
+  cancelledAt: string | null;
+  candidateName: string;
+  candidatePhone: string;
+  interviewDate: string;
+  interviewTime: string;
+  interviewMode: ApplicationInterviewMode | "";
+  interviewerName: string;
+  interviewerDesignation: string;
+  meetingLink: string;
+  venue: string;
+  appliedAt: string;
+  updatedAt: string | null;
+};
+
+export type EmployerInterviewStats = {
+  total: number;
+  today: number;
+  thisWeek: number;
+  scheduled: number;
+  completed: number;
+  rescheduled: number;
+  byMode: {
+    online: number;
+    offline: number;
+    phone: number;
+  };
+};
+
+export type EmployerInterviewStatusOverviewKey =
+  | "scheduled"
+  | "completed"
+  | "rescheduled"
+  | "cancelled";
+
+export type EmployerInterviewStatusOverviewItem = {
+  key: EmployerInterviewStatusOverviewKey;
+  label: string;
+  count: number;
+  percentage: number;
+};
+
+export type EmployerInterviewStatusOverview = {
+  total: number;
+  period: string;
+  statuses: EmployerInterviewStatusOverviewItem[];
+};
+
+export type EmployerInterviewJobTab = {
+  publicJobId: string;
+  jobTitle: string;
+  count: number;
+};
+
 export type EmployerApplicationDetail = {
   id: string;
   publicJobId: string;
@@ -116,6 +185,9 @@ export type EmployerApplicationDetail = {
   resumeSnapshot: ApplicationResumeSnapshot;
   employerNotes: string;
   employerNotesVisibleToSeeker: boolean;
+  employerNotesCreatedAt: string | null;
+  employerNotesUpdatedAt: string | null;
+  employerNotesUpdatedByName: string | null;
   rejectReason: string;
   interview: ApplicationInterview;
   offer: ApplicationOffer;

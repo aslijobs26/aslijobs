@@ -7,11 +7,15 @@ import { applicationController } from "./application.controller.js";
 import {
   applicationIdParamsSchema,
   applyToJobSchema,
+  cancelApplicationInterviewSchema,
   employerLocationSuggestionsQuerySchema,
   listEmployerApplicationStatsQuerySchema,
   listEmployerApplicationsQuerySchema,
+  listEmployerInterviewStatsQuerySchema,
+  listEmployerInterviewsQuerySchema,
   listSeekerApplicationsQuerySchema,
   updateApplicationHiringSchema,
+  updateApplicationInterviewSchema,
   updateApplicationNotesSchema,
   updateApplicationStatusSchema,
 } from "./application.validation.js";
@@ -89,6 +93,20 @@ applicationRouter.get(
 );
 
 applicationRouter.get(
+  "/employer/interviews/stats",
+  asyncHandler(requireEmployerAuth),
+  validate(listEmployerInterviewStatsQuerySchema, "query"),
+  asyncHandler(applicationController.getInterviewStatsForEmployer),
+);
+
+applicationRouter.get(
+  "/employer/interviews",
+  asyncHandler(requireEmployerAuth),
+  validate(listEmployerInterviewsQuerySchema, "query"),
+  asyncHandler(applicationController.listInterviewsForEmployer),
+);
+
+applicationRouter.get(
   "/employer",
   asyncHandler(requireEmployerAuth),
   validate(listEmployerApplicationsQuerySchema, "query"),
@@ -123,6 +141,22 @@ applicationRouter.patch(
   validate(applicationIdParamsSchema, "params"),
   validate(updateApplicationNotesSchema, "body"),
   asyncHandler(applicationController.updateNotesForEmployer),
+);
+
+applicationRouter.patch(
+  "/employer/:applicationId/interview",
+  asyncHandler(requireEmployerAuth),
+  validate(applicationIdParamsSchema, "params"),
+  validate(updateApplicationInterviewSchema, "body"),
+  asyncHandler(applicationController.updateInterviewForEmployer),
+);
+
+applicationRouter.patch(
+  "/employer/:applicationId/interview/cancel",
+  asyncHandler(requireEmployerAuth),
+  validate(applicationIdParamsSchema, "params"),
+  validate(cancelApplicationInterviewSchema, "body"),
+  asyncHandler(applicationController.cancelInterviewForEmployer),
 );
 
 applicationRouter.patch(

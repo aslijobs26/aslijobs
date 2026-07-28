@@ -4,6 +4,9 @@ import { AppError } from "../../middleware/error.middleware.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { notificationService } from "./notification.service.js";
 import type {
+  ConversationReferenceParamsSchema,
+  ListConversationTimelineQuerySchema,
+  ListNotificationConversationsQuerySchema,
   ListNotificationsQuerySchema,
   NotificationIdParamsSchema,
 } from "./notification.validation.js";
@@ -31,10 +34,35 @@ export class NotificationController {
       search: query.search,
       readStatus: query.readStatus,
       category: query.category,
+      referenceId: query.referenceId,
     });
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Notifications retrieved.",
+      data: result,
+    });
+  };
+
+  listConversations = async (req: Request, res: Response): Promise<void> => {
+    const recipient = requireRecipient(req);
+    if (recipient.recipientType !== "employer") {
+      throw new AppError("Forbidden", HTTP_STATUS.FORBIDDEN);
+    }
+
+    const query =
+      req.query as unknown as ListNotificationConversationsQuerySchema;
+
+    const result = await notificationService.listConversationsForEmployer({
+      employerId: recipient.recipientId,
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      readStatus: query.readStatus,
+      category: query.category,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Conversations retrieved.",
       data: result,
     });
   };
@@ -60,6 +88,50 @@ export class NotificationController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Notification marked as read.",
+      data: result,
+    });
+  };
+
+  markConversationAsRead = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const recipient = requireRecipient(req);
+    const params = req.params as unknown as ConversationReferenceParamsSchema;
+
+    const result = await notificationService.markConversationAsRead({
+      ...recipient,
+      applicationId: params.applicationId,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Conversation marked as read.",
+      data: result,
+    });
+  };
+
+  listConversationTimeline = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const recipient = requireRecipient(req);
+    if (recipient.recipientType !== "employer") {
+      throw new AppError("Forbidden", HTTP_STATUS.FORBIDDEN);
+    }
+
+    const params = req.params as unknown as ConversationReferenceParamsSchema;
+    const query = req.query as unknown as ListConversationTimelineQuerySchema;
+
+    const result =
+      await notificationService.listConversationTimelineForEmployer({
+        employerId: recipient.recipientId,
+        applicationId: params.applicationId,
+        page: query.page,
+        limit: query.limit,
+      });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Conversation timeline retrieved.",
       data: result,
     });
   };

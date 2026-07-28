@@ -25,6 +25,8 @@ type EmployerRegisterSearchableSelectProps = {
   hideLabel?: boolean;
   /** Hide the search input inside the dropdown panel. */
   hideSearch?: boolean;
+  /** Placeholder for the in-panel search input. */
+  searchPlaceholder?: string;
   /** Optional classes merged onto the trigger button (e.g. match toolbar inputs). */
   triggerClassName?: string;
   /** Allow typing a value that is not in the preset options. */
@@ -55,6 +57,7 @@ export function EmployerRegisterSearchableSelect({
   required = false,
   hideLabel = false,
   hideSearch = false,
+  searchPlaceholder,
   allowCustom = false,
   initialVisibleCount,
   triggerClassName,
@@ -291,8 +294,18 @@ export function EmployerRegisterSearchableSelect({
           }}
           onKeyDown={handleTriggerKeyDown}
         >
-          <span className="employer-register-searchable-select-value">
-            {displayValue}
+          <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+            <span className="employer-register-searchable-select-value">
+              {displayValue}
+            </span>
+            {typeof selectedOption?.count === "number" ? (
+              <span
+                className="shrink-0 tabular-nums text-sm font-semibold text-muted"
+                aria-hidden="true"
+              >
+                {selectedOption.count}
+              </span>
+            ) : null}
           </span>
           <ChevronDown
             className="employer-register-searchable-select-chevron"
@@ -322,7 +335,8 @@ export function EmployerRegisterSearchableSelect({
                   onChange={(event) => setQuery(event.target.value)}
                   onKeyDown={handleSearchKeyDown}
                   placeholder={
-                    allowCustom ? "Search or type to add..." : "Search..."
+                    searchPlaceholder ??
+                    (allowCustom ? "Search or type to add..." : "Search...")
                   }
                   className="employer-register-searchable-select-search-input"
                   autoFocus
@@ -386,13 +400,23 @@ export function EmployerRegisterSearchableSelect({
                         <span className="employer-register-searchable-select-option-label">
                           {option.label}
                         </span>
-                        {isSelected ? (
-                          <Check
-                            className="size-4 shrink-0"
-                            strokeWidth={2.25}
-                            aria-hidden="true"
-                          />
-                        ) : null}
+                        <span className="flex shrink-0 items-center gap-2">
+                          {typeof option.count === "number" ? (
+                            <span
+                              className="tabular-nums text-sm font-semibold text-muted"
+                              aria-label={`${option.count} interviews`}
+                            >
+                              {option.count}
+                            </span>
+                          ) : null}
+                          {isSelected ? (
+                            <Check
+                              className="size-4 shrink-0"
+                              strokeWidth={2.25}
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                        </span>
                       </button>
                     </li>
                   );

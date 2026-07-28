@@ -36,8 +36,50 @@ export type NotificationListItem = {
   createdAt: string;
 };
 
+/** Employer Messages timeline bubble alignment. */
+export type NotificationConversationDirection = "incoming" | "outgoing";
+
+export type NotificationConversationTimelineItem = NotificationListItem & {
+  direction: NotificationConversationDirection;
+};
+
+export type NotificationConversationTimelineResult = {
+  notifications: NotificationConversationTimelineItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 export type NotificationListResult = {
   notifications: NotificationListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  unreadCount: number;
+};
+
+/** Employer Messages: one conversation per application. */
+export type NotificationConversationListItem = {
+  applicationId: string;
+  publicJobId: string;
+  jobTitle: string;
+  candidateName: string;
+  candidatePhone: string;
+  applicationStatus: string;
+  latestNotification: NotificationListItem;
+  unreadCount: number;
+  messageCount: number;
+  lastActivityAt: string;
+};
+
+export type NotificationConversationListResult = {
+  conversations: NotificationConversationListItem[];
   pagination: {
     page: number;
     limit: number;
@@ -62,6 +104,14 @@ export type CreateNotificationInput = {
   metadata?: Record<string, unknown>;
 };
 
+export type ApplicationNotificationInterviewSummary = {
+  date?: string;
+  time?: string;
+  mode?: string;
+  meetingLink?: string;
+  venue?: string;
+};
+
 export type ApplicationNotificationContext = {
   applicationId: string;
   jobSeekerId: string;
@@ -70,4 +120,6 @@ export type ApplicationNotificationContext = {
   jobTitle: string;
   companyName: string;
   candidateName?: string;
+  interview?: ApplicationNotificationInterviewSummary;
+  cancellationReason?: string;
 };

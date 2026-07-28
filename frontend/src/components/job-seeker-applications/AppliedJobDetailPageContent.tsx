@@ -1,5 +1,6 @@
 "use client";
 
+import { ApplicationInterviewDetails } from "@/components/applications/ApplicationInterviewDetails";
 import { ResumePreview } from "@/components/job-seeker-resume/ResumePreview";
 import { ROUTES } from "@/constants/routes";
 import {
@@ -11,6 +12,7 @@ import {
   type ApplicationStatus,
   type ApplicationStatusHistoryEntry,
 } from "@/types/job-seeker-applications";
+import { isResumeJson } from "@/types/job-seeker-resume";
 import { cn } from "@/utils/cn";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -126,6 +128,9 @@ export function AppliedJobDetailPageContent({
   }
 
   const application = detailQuery.data;
+  const candidatePhone = readCandidatePhoneFromSnapshot(
+    application.resumeSnapshot.resumeJson,
+  );
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
@@ -212,30 +217,12 @@ export function AppliedJobDetailPageContent({
               <h2 className="text-sm font-semibold text-foreground">
                 Interview details
               </h2>
-              <dl className="mt-3 space-y-2 text-sm">
-                <DetailRow label="Date" value={application.interview.date || "—"} />
-                <DetailRow label="Time" value={application.interview.time || "—"} />
-                <DetailRow
-                  label="Mode"
-                  value={application.interview.mode || "—"}
+              <div className="mt-3">
+                <ApplicationInterviewDetails
+                  interview={application.interview}
+                  candidatePhone={candidatePhone}
                 />
-                <DetailRow
-                  label="Interviewer"
-                  value={application.interview.interviewerName || "—"}
-                />
-                <DetailRow
-                  label="Meeting link"
-                  value={application.interview.meetingLink || "—"}
-                />
-                <DetailRow
-                  label="Venue"
-                  value={application.interview.venue || "—"}
-                />
-                <DetailRow
-                  label="Instructions"
-                  value={application.interview.instructions || "—"}
-                />
-              </dl>
+              </div>
             </section>
           ) : null}
 
@@ -338,4 +325,17 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       </dd>
     </div>
   );
+}
+
+function readCandidatePhoneFromSnapshot(
+  resumeJson: Parameters<typeof isResumeJson>[0],
+): string | null {
+  if (!isResumeJson(resumeJson)) {
+    return null;
+  }
+  const phone =
+    resumeJson.header.phone?.trim() ||
+    resumeJson.sections.contact.phone?.trim() ||
+    "";
+  return phone || null;
 }

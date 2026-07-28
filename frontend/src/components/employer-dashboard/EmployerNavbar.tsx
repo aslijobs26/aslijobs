@@ -9,7 +9,7 @@ import {
 } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/utils/cn";
-import { ChevronDown, Globe, Menu, Plus } from "lucide-react";
+import { ChevronDown, Globe, Menu } from "lucide-react";
 import Link from "next/link";
 
 type EmployerNavbarProps = {
@@ -44,27 +44,13 @@ export function EmployerNavbar({
       <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
         <Link
           href={ROUTES.POST_JOB}
-          className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-primary-soft px-2.5 text-xs font-semibold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-10 sm:gap-1.5 sm:px-4 sm:text-sm"
+          className="inline-flex h-9 shrink-0 items-center rounded-lg bg-primary-soft px-2.5 text-xs font-semibold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-10 sm:px-4 sm:text-sm"
           aria-label={EMPLOYER_DASHBOARD_POST_JOB_LABEL}
         >
-          <Plus
-            className="size-3.5 shrink-0 sm:size-4"
-            strokeWidth={2.5}
-            aria-hidden="true"
-          />
           <span className="whitespace-nowrap sm:hidden">Post Job</span>
           <span className="hidden whitespace-nowrap sm:inline">
             {EMPLOYER_DASHBOARD_POST_JOB_LABEL}
           </span>
-          <span
-            className="ml-0.5 hidden h-4 w-px bg-surface/30 sm:block"
-            aria-hidden="true"
-          />
-          <ChevronDown
-            className="hidden size-3.5 shrink-0 sm:block"
-            strokeWidth={2.5}
-            aria-hidden="true"
-          />
         </Link>
 
         <NotificationBell viewAllHref={ROUTES.EMPLOYER_NOTIFICATIONS} />
