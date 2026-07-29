@@ -44,6 +44,11 @@ export type EmployerMessageConversationListResult = {
     totalPages: number;
   };
   unreadCount: number;
+  jobFacets: Array<{
+    publicJobId: string;
+    jobTitle: string;
+    count: number;
+  }>;
 };
 
 export type EmployerMessagesFilter =

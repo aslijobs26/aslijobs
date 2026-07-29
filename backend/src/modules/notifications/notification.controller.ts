@@ -59,6 +59,16 @@ export class NotificationController {
       search: query.search,
       readStatus: query.readStatus,
       category: query.category,
+      publicJobId: query.publicJobId,
+      applicationStatus: query.applicationStatus,
+      hasType: query.hasType,
+      employerAction: query.employerAction,
+      candidateAction: query.candidateAction,
+      conversationType: query.conversationType,
+      quickDate: query.quickDate,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+      sort: query.sort,
     });
 
     sendSuccess(res, HTTP_STATUS.OK, {

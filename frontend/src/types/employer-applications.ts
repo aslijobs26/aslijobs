@@ -41,9 +41,26 @@ const EMPLOYER_ALLOWED_TRANSITIONS: Record<
   EmployerApplicationStatus,
   readonly EmployerApplicationStatus[]
 > = {
-  submitted: ["viewed", "under_review", "rejected", "withdrawn"],
-  viewed: ["under_review", "shortlisted", "rejected", "withdrawn"],
-  under_review: ["shortlisted", "rejected", "withdrawn"],
+  submitted: [
+    "under_review",
+    "shortlisted",
+    "interview_scheduled",
+    "rejected",
+    "withdrawn",
+  ],
+  viewed: [
+    "under_review",
+    "shortlisted",
+    "interview_scheduled",
+    "rejected",
+    "withdrawn",
+  ],
+  under_review: [
+    "shortlisted",
+    "interview_scheduled",
+    "rejected",
+    "withdrawn",
+  ],
   shortlisted: ["interview_scheduled", "rejected", "withdrawn"],
   interview_scheduled: ["interview_completed", "rejected", "withdrawn"],
   interview_completed: ["offer_sent", "rejected", "withdrawn"],

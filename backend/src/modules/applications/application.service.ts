@@ -1995,8 +1995,12 @@ export class ApplicationService {
       cancellationReason: "",
       cancelledByName: "",
     };
+    const shouldSchedule = isStatusBeforeInterviewScheduled(currentStatus);
 
-    if (interviewsEqual(previousInterview, nextInterview)) {
+    if (
+      interviewsEqual(previousInterview, nextInterview) &&
+      !shouldSchedule
+    ) {
       const detail = await this.loadEmployerDetail({
         employerId: input.employerId,
         applicationId: input.applicationId,
@@ -2004,24 +2008,13 @@ export class ApplicationService {
       });
       return {
         application: detail.application,
-        action: currentStatus === "shortlisted" ? "scheduled" : "updated",
+        action: "updated",
       };
     }
 
     const now = new Date();
     const actorName = text(input.updatedByName) || "Employer";
-    const shouldSchedule = currentStatus === "shortlisted";
     let action: "scheduled" | "updated" = "updated";
-
-    if (
-      isStatusBeforeInterviewScheduled(currentStatus) &&
-      currentStatus !== "shortlisted"
-    ) {
-      throw new AppError(
-        "Shortlist the candidate before scheduling an interview.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
 
     application.interview = toInterviewDocument(nextInterview);
 

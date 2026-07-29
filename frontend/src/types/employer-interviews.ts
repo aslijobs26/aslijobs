@@ -194,7 +194,7 @@ export function interviewDisplayStatus(item: EmployerInterviewListItem): {
     };
   }
   return {
-    label: "Confirmed",
+    label: "Scheduled",
     className: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   };
 }

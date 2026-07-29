@@ -255,14 +255,14 @@ export function CandidatesExportModal({
           }
         }}
       />
-      <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+      <div className="absolute inset-0 flex items-end justify-center sm:items-center sm:p-6">
         <div
           ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
           tabIndex={-1}
-          className="flex max-h-[min(90vh,40rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-[0_20px_50px_rgba(15,23,42,0.18)] outline-none"
+          className="flex max-h-[min(92dvh,40rem)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-border-subtle bg-surface shadow-[0_20px_50px_rgba(15,23,42,0.18)] outline-none sm:rounded-2xl"
         >
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-5 py-4">
             <h2
@@ -276,13 +276,13 @@ export function CandidatesExportModal({
               onClick={onClose}
               disabled={exporting}
               aria-label="Close"
-              className="inline-flex size-10 items-center justify-center rounded-full border border-border-subtle text-muted transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50"
+              className="inline-flex size-11 items-center justify-center rounded-full border border-border-subtle text-muted transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50 sm:size-10"
             >
               <X className="size-5" strokeWidth={2} aria-hidden="true" />
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-5">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-5 scrollbar-hidden">
             <fieldset>
               <legend className="text-sm font-semibold text-foreground">
                 Format
@@ -479,12 +479,12 @@ export function CandidatesExportModal({
             </div>
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border-subtle px-5 py-4">
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border-subtle px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:pb-4">
             <button
               type="button"
               onClick={onClose}
               disabled={exporting}
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-4 text-sm font-semibold text-muted transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border-subtle bg-surface px-4 text-sm font-semibold text-muted transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50 sm:min-h-10 sm:w-auto"
             >
               Cancel
             </button>
@@ -499,7 +499,7 @@ export function CandidatesExportModal({
                 Boolean(dateError) ||
                 previewLoading
               }
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50 sm:min-h-10 sm:w-auto"
             >
               {exporting ? "Exporting…" : "Export"}
             </button>

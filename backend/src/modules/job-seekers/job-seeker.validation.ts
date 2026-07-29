@@ -44,6 +44,44 @@ const dateOfBirthSchema = z
     );
   }, "Enter a valid date of birth in the past");
 
+function getLocalTodayIsoDate() {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${today.getFullYear()}-${month}-${day}`;
+}
+
+function isValidCalendarIsoDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return false;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() + 1 === month &&
+    date.getUTCDate() === day
+  );
+}
+
+const experienceDateSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
+  .refine(
+    (value) => isValidCalendarIsoDate(value),
+    "Enter a valid calendar date",
+  )
+  .refine(
+    (value) => value <= getLocalTodayIsoDate(),
+    "Date cannot be in the future",
+  );
+
 const optionalText = z.string().trim().optional().default("");
 
 const educationSchema = z
@@ -113,7 +151,7 @@ const experienceEntrySchema = z.object({
   companyName: z.string().trim().min(1, "Company name is required"),
   jobRole: z.string().trim().min(1, "Job role is required"),
   industry: z.string().trim().min(1, "Industry is required"),
-  startDate: z.string().trim().min(1, "Start date is required"),
+  startDate: experienceDateSchema,
   endDate: z.string().trim().optional().default(""),
   currentlyWorking: z.boolean().optional().default(false),
   duration: z.string().trim().optional().default(""),
@@ -192,6 +230,31 @@ export const completeJobSeekerRegistrationSchema = z
             code: "custom",
             path: ["experiences", index, "endDate"],
             message: "End date is required unless currently working",
+          });
+          return;
+        }
+
+        if (entry.currentlyWorking) {
+          return;
+        }
+
+        const endDateResult = experienceDateSchema.safeParse(entry.endDate);
+        if (!endDateResult.success) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["experiences", index, "endDate"],
+            message:
+              endDateResult.error.issues[0]?.message ??
+              "Enter a valid end date",
+          });
+          return;
+        }
+
+        if (entry.endDate < entry.startDate) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["experiences", index, "endDate"],
+            message: "End date cannot be before start date",
           });
         }
       });

@@ -40,6 +40,7 @@ import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Calendar,
+  ChevronDown,
   Download,
   FileText,
   MessageCircle,
@@ -47,7 +48,7 @@ import {
   Printer,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 export type CandidatesDetailTab =
   | "profile"
@@ -63,6 +64,7 @@ type CandidatesDetailPanelProps = {
   applicationId: string | null;
   activeTab: CandidatesDetailTab;
   onTabChange: (tab: CandidatesDetailTab) => void;
+  onScheduleInterview?: (applicationId: string) => void;
   onClose?: () => void;
   variant?: "panel" | "drawer";
 };
@@ -151,10 +153,146 @@ function ProfileField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function PanelStatusSelect({
+  currentStatus,
+  disabled,
+  interview,
+  offer,
+  onOpenInterview,
+  onOpenOffer,
+  onSelectStatus,
+  isDrawer = false,
+}: {
+  currentStatus: EmployerApplicationStatus;
+  disabled: boolean;
+  interview: Parameters<typeof resolveEmployerStatusSelect>[0]["interview"];
+  offer: Parameters<typeof resolveEmployerStatusSelect>[0]["offer"];
+  onOpenInterview: () => void;
+  onOpenOffer: () => void;
+  onSelectStatus: (status: EmployerApplicationStatus) => void;
+  isDrawer?: boolean;
+}) {
+  const listboxId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const options = getAllowedEmployerStatusTransitions(currentStatus);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  const handleSelect = (next: EmployerApplicationStatus) => {
+    setOpen(false);
+    const result = resolveEmployerStatusSelect({
+      nextStatus: next,
+      interview,
+      offer,
+    });
+    if (result.action === "open_interview") {
+      onOpenInterview();
+      showAppToast(result.message, "info");
+      return;
+    }
+    if (result.action === "open_offer") {
+      onOpenOffer();
+      showAppToast(result.message, "warning");
+      return;
+    }
+    if (result.action === "blocked") {
+      showAppToast(result.message, "warning");
+      return;
+    }
+    onSelectStatus(result.status);
+  };
+
+  return (
+    <div ref={rootRef} className="relative w-full">
+      <label className="sr-only" htmlFor="panel-status">
+        Application status
+      </label>
+      <button
+        id="panel-status"
+        type="button"
+        disabled={disabled || options.length === 0}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        onClick={() => setOpen((current) => !current)}
+        className={cn(
+          "flex w-full items-center justify-between gap-2 rounded-lg border border-primary bg-primary-light px-3 text-left text-sm font-semibold text-primary shadow-sm transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60",
+          isDrawer ? "min-h-11" : "h-9",
+        )}
+      >
+        <span className="truncate">Update status…</span>
+        <ChevronDown
+          className={cn(
+            "size-4 shrink-0 transition-transform",
+            open && "rotate-180",
+          )}
+          aria-hidden="true"
+        />
+      </button>
+
+      {open ? (
+        <ul
+          id={listboxId}
+          role="listbox"
+          aria-label="Update application status"
+          className={cn(
+            "absolute z-30 mt-1.5 w-full overflow-y-auto overscroll-contain rounded-lg border border-border-subtle bg-surface p-1.5 shadow-lg",
+            isDrawer
+              ? "max-h-[min(16rem,calc(100dvh-14rem))]"
+              : "max-h-64",
+          )}
+        >
+          {options.map((status) => (
+            <li key={status} role="option" aria-selected={false}>
+              <button
+                type="button"
+                onClick={() => handleSelect(status)}
+                className={cn(
+                  "flex w-full items-center rounded-md px-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:bg-primary-light focus-visible:text-primary focus-visible:ring-2 focus-visible:ring-primary/30",
+                  isDrawer ? "min-h-11 py-2.5" : "py-2",
+                )}
+              >
+                {status === "interview_scheduled"
+                  ? "Interview Schedule"
+                  : EMPLOYER_APPLICATION_STATUS_LABELS[status]}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 export function CandidatesDetailPanel({
   applicationId,
   activeTab,
   onTabChange,
+  onScheduleInterview,
   onClose,
   variant = "panel",
 }: CandidatesDetailPanelProps) {
@@ -324,16 +462,26 @@ export function CandidatesDetailPanel({
   const experienceLabel = application.candidate.experienceLabel || "—";
   const availabilityLabel = application.candidate.availability || "—";
 
+  const isDrawer = variant === "drawer";
+  const headerActionClassName = cn(
+    "inline-flex items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+    isDrawer ? "size-11" : "size-8",
+  );
+  const headerActionMutedClassName = cn(
+    "inline-flex items-center justify-center rounded-lg text-muted",
+    isDrawer ? "size-11" : "size-8",
+  );
+
   return (
     <aside
       className={cn(
-        "flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface",
+        "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface",
         variant === "panel" &&
           "sticky top-20 max-h-[calc(100dvh-6rem)] lg:w-[22rem] xl:w-[24rem]",
-        variant === "drawer" && "h-full max-h-[90dvh] w-full",
+        variant === "drawer" && "h-full w-full border-0 shadow-none",
       )}
     >
-      <div className="shrink-0 border-b border-border-subtle p-4">
+      <div className="relative z-20 shrink-0 border-b border-border-subtle p-4">
         <div className="flex items-start gap-3">
           <span
             className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-surface"
@@ -355,7 +503,10 @@ export function CandidatesDetailPanel({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="inline-flex size-8 items-center justify-center rounded-lg text-muted hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-lg text-muted hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                    isDrawer ? "size-11" : "size-8",
+                  )}
                   aria-label="Close candidate details"
                 >
                   <X className="size-4" aria-hidden="true" />
@@ -384,14 +535,14 @@ export function CandidatesDetailPanel({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="WhatsApp candidate"
-                    className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    className={headerActionClassName}
                   >
                     <MessageCircle className="size-4" aria-hidden="true" />
                   </a>
                 ) : (
                   <span
                     aria-label="WhatsApp unavailable"
-                    className="inline-flex size-8 items-center justify-center rounded-lg text-muted"
+                    className={headerActionMutedClassName}
                   >
                     <MessageCircle className="size-4" aria-hidden="true" />
                   </span>
@@ -400,14 +551,14 @@ export function CandidatesDetailPanel({
                   <a
                     href={telHref}
                     aria-label="Call candidate"
-                    className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    className={headerActionClassName}
                   >
                     <Phone className="size-4" aria-hidden="true" />
                   </a>
                 ) : (
                   <span
                     aria-label="Call unavailable"
-                    className="inline-flex size-8 items-center justify-center rounded-lg text-muted"
+                    className={headerActionMutedClassName}
                   >
                     <Phone className="size-4" aria-hidden="true" />
                   </span>
@@ -416,15 +567,21 @@ export function CandidatesDetailPanel({
                   type="button"
                   onClick={() => onTabChange("resume")}
                   aria-label="View resume"
-                  className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  className={headerActionClassName}
                 >
                   <FileText className="size-4" aria-hidden="true" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => onTabChange("interview")}
+                  onClick={() => {
+                    if (onScheduleInterview) {
+                      onScheduleInterview(application.id);
+                      return;
+                    }
+                    onTabChange("interview");
+                  }}
                   aria-label="Schedule interview"
-                  className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  className={headerActionClassName}
                 >
                   <Calendar className="size-4" aria-hidden="true" />
                 </button>
@@ -442,55 +599,22 @@ export function CandidatesDetailPanel({
               <p className="mt-0.5 text-xs text-muted">Hiring Completed</p>
             </div>
           ) : (
-            <>
-              <label className="sr-only" htmlFor="panel-status">
-                Application status
-              </label>
-              <select
-                id="panel-status"
-                value=""
-                disabled={statusMutation.isPending}
-                onChange={(event) => {
-                  const next = event.target.value as EmployerApplicationStatus;
-                  event.target.value = "";
-                  if (!next) {
-                    return;
-                  }
-                  const result = resolveEmployerStatusSelect({
-                    nextStatus: next,
-                    interview: application.interview,
-                    offer: application.offer,
-                  });
-                  if (result.action === "open_interview") {
-                    onTabChange("interview");
-                    showAppToast(result.message, "info");
-                    return;
-                  }
-                  if (result.action === "open_offer") {
-                    onTabChange("offer");
-                    showAppToast(result.message, "warning");
-                    return;
-                  }
-                  if (result.action === "blocked") {
-                    showAppToast(result.message, "warning");
-                    return;
-                  }
-                  statusMutation.mutate(result.status);
-                }}
-                className="w-full rounded-lg border border-primary/30 bg-primary-light px-2.5 py-2 text-sm font-semibold text-primary transition-[border-color,box-shadow,background-color] hover:border-primary/50 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <option value="" disabled>
-                  Update status…
-                </option>
-                {getAllowedEmployerStatusTransitions(application.status).map(
-                  (status) => (
-                    <option key={status} value={status}>
-                      {EMPLOYER_APPLICATION_STATUS_LABELS[status]}
-                    </option>
-                  ),
-                )}
-              </select>
-            </>
+            <PanelStatusSelect
+              currentStatus={application.status}
+              disabled={statusMutation.isPending}
+              interview={application.interview}
+              offer={application.offer}
+              isDrawer={isDrawer}
+              onOpenInterview={() => {
+                if (onScheduleInterview) {
+                  onScheduleInterview(application.id);
+                  return;
+                }
+                onTabChange("interview");
+              }}
+              onOpenOffer={() => onTabChange("offer")}
+              onSelectStatus={(status) => statusMutation.mutate(status)}
+            />
           )}
         </div>
       </div>
@@ -508,7 +632,8 @@ export function CandidatesDetailPanel({
             aria-selected={activeTab === tab.id}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+              "shrink-0 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+              isDrawer ? "min-h-11 px-3 py-2.5" : "py-1.5",
               activeTab === tab.id
                 ? "bg-primary-soft text-surface"
                 : "text-muted hover:bg-primary-light hover:text-foreground",
@@ -519,7 +644,7 @@ export function CandidatesDetailPanel({
         ))}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 scrollbar-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 scrollbar-hidden">
         {activeTab === "profile" ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             <ProfileField label="Name" value={application.candidate.fullName} />

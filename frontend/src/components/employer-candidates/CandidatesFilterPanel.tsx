@@ -44,6 +44,10 @@ type CandidatesFilterPanelProps = {
   onAppliedToChange: (value: string) => void;
   onClearAdvanced: () => void;
   className?: string;
+  /** Prefix control IDs when the panel is mounted twice (desktop + mobile sheet). */
+  idPrefix?: string;
+  /** Mobile sheet presentation uses larger touch targets without changing desktop. */
+  presentation?: "sidebar" | "sheet";
 };
 
 const QUICK_FILTERS: {
@@ -71,7 +75,6 @@ const QUICK_FILTERS: {
     label: EMPLOYER_APPLICATION_STATUS_LABELS.offer_sent,
     statsKey: "offer_sent",
   },
-  { key: "selected", label: "Selected", statsKey: "selected" },
   { key: "joined", label: "Joined", statsKey: "joined" },
   { key: "rejected", label: "Rejected", statsKey: "rejected" },
   { key: "withdrawn", label: "Withdrawn", statsKey: "withdrawn" },
@@ -100,7 +103,10 @@ export function CandidatesFilterPanel({
   onAppliedToChange,
   onClearAdvanced,
   className,
+  idPrefix = "",
+  presentation = "sidebar",
 }: CandidatesFilterPanelProps) {
+  const isSheet = presentation === "sheet";
   const hasAdvanced =
     Boolean(location) ||
     Boolean(experience) ||
@@ -148,15 +154,24 @@ export function CandidatesFilterPanel({
                 }
               }}
               placeholder="Search name, skills, job, location, phone…"
-              className="h-11 w-full rounded-xl border border-border bg-surface pl-4 pr-12 text-sm text-foreground shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20"
+              className={cn(
+                "h-11 w-full rounded-xl border border-border bg-surface pl-4 pr-12 text-sm text-foreground shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20",
+                isSheet && "min-h-11",
+              )}
             />
             <button
               type="button"
               onClick={onSearchSubmit}
               aria-label="Search candidates"
-              className="absolute top-1/2 right-2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-lg bg-primary text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className={cn(
+                "absolute top-1/2 right-2 inline-flex -translate-y-1/2 items-center justify-center rounded-lg bg-primary text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                isSheet ? "size-10" : "size-8",
+              )}
             >
-              <Search className="size-3.5" aria-hidden="true" />
+              <Search
+                className={isSheet ? "size-4" : "size-3.5"}
+                aria-hidden="true"
+              />
             </button>
           </span>
         </label>
@@ -178,7 +193,8 @@ export function CandidatesFilterPanel({
                 aria-selected={isActive}
                 onClick={() => onFilterChange(item.key)}
                 className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                  "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                  isSheet ? "min-h-11 py-2.5" : "py-2",
                   isActive
                     ? "bg-primary-soft text-surface"
                     : "text-foreground hover:bg-primary-light",
@@ -209,7 +225,12 @@ export function CandidatesFilterPanel({
             <button
               type="button"
               onClick={onClearAdvanced}
-              className="text-xs font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className={cn(
+                "font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                isSheet
+                  ? "inline-flex min-h-10 items-center rounded-lg px-2 text-sm"
+                  : "text-xs",
+              )}
             >
               Clear
             </button>
@@ -217,9 +238,10 @@ export function CandidatesFilterPanel({
         </div>
 
         <div className="mt-3 space-y-3">
-          <label className="block" htmlFor="candidates-location-filter">
+          <label className="block" htmlFor={`${idPrefix}candidates-location-filter`}>
             <span className="text-xs font-medium text-muted">Location</span>
             <CandidatesLocationAutocomplete
+              id={`${idPrefix}candidates-location-filter`}
               value={location}
               publicJobId={publicJobId}
               onChange={onLocationChange}
@@ -229,7 +251,7 @@ export function CandidatesFilterPanel({
             <span className="text-xs font-medium text-muted">Experience</span>
             <div className="mt-1">
               <EmployerRegisterSearchableSelect
-                id="candidates-experience-filter"
+                id={`${idPrefix}candidates-experience-filter`}
                 label="Experience"
                 hideLabel
                 value={experience}
@@ -247,14 +269,17 @@ export function CandidatesFilterPanel({
               value={skills}
               onChange={(event) => onSkillsChange(event.target.value)}
               placeholder="Comma-separated"
-              className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className={cn(
+                "mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                isSheet && "min-h-11",
+              )}
             />
           </label>
           <label className="block">
             <span className="text-xs font-medium text-muted">Availability</span>
             <div className="mt-1">
               <EmployerRegisterSearchableSelect
-                id="candidates-availability-filter"
+                id={`${idPrefix}candidates-availability-filter`}
                 label="Availability"
                 hideLabel
               value={availability}
@@ -274,7 +299,10 @@ export function CandidatesFilterPanel({
                 type="date"
                 value={appliedFrom}
                 onChange={(event) => onAppliedFromChange(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className={cn(
+                  "mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                  isSheet && "min-h-11",
+                )}
               />
             </label>
             <label className="block">
@@ -283,7 +311,10 @@ export function CandidatesFilterPanel({
                 type="date"
                 value={appliedTo}
                 onChange={(event) => onAppliedToChange(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className={cn(
+                  "mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                  isSheet && "min-h-11",
+                )}
               />
             </label>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { EmployerApplicationStats } from "@/types/employer-applications";
+import { cn } from "@/utils/cn";
 import { Briefcase, FileText, Star, Users } from "lucide-react";
 
 type CandidatesKpiStripProps = {
@@ -24,7 +25,7 @@ export function CandidatesKpiStrip({
   isLoading,
 }: CandidatesKpiStripProps) {
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap">
       {KPI_ITEMS.map((item) => {
         const Icon = item.icon;
         const value = stats?.[item.key];
@@ -32,7 +33,10 @@ export function CandidatesKpiStrip({
         return (
           <div
             key={item.key}
-            className="flex w-full max-w-40 flex-col rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:w-40"
+            className={cn(
+              "flex h-full min-h-[5.5rem] flex-col rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md",
+              "lg:h-auto lg:w-40 lg:max-w-40 lg:min-h-0",
+            )}
           >
             <div className="flex items-center justify-between gap-2">
               <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">

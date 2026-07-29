@@ -9,6 +9,7 @@ import {
   fetchNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
+  notificationQueryKeys,
 } from "@/services/notifications.service";
 import type { NotificationListItem } from "@/types/notifications";
 import { cn } from "@/utils/cn";
@@ -23,29 +24,28 @@ type NotificationBellProps = {
   className?: string;
 };
 
-const UNREAD_QUERY_KEY = ["notifications", "unread-count"] as const;
-const RECENT_QUERY_KEY = ["notifications", "recent"] as const;
-
 export function NotificationBell({
   viewAllHref,
   className,
 }: NotificationBellProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const recipientScope = viewAllHref.startsWith("/employer/")
+    ? "employer"
+    : "job-seeker";
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   const unreadQuery = useQuery({
-    queryKey: UNREAD_QUERY_KEY,
+    queryKey: notificationQueryKeys.unreadCount(recipientScope),
     queryFn: fetchNotificationUnreadCount,
-    staleTime: 20_000,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 
   const recentQuery = useQuery({
-    queryKey: RECENT_QUERY_KEY,
+    queryKey: notificationQueryKeys.recent(recipientScope),
     queryFn: () =>
       fetchNotifications({
         page: 1,
@@ -59,16 +59,24 @@ export function NotificationBell({
   const markReadMutation = useMutation({
     mutationFn: markNotificationAsRead,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: UNREAD_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.unreadCount(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.recent(recipientScope),
+      });
     },
   });
 
   const markAllMutation = useMutation({
     mutationFn: markAllNotificationsAsRead,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: UNREAD_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.unreadCount(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.recent(recipientScope),
+      });
     },
   });
 

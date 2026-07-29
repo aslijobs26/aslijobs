@@ -407,6 +407,223 @@ function buildSearchFilter(search: string) {
   };
 }
 
+function startOfLocalDay(date: Date): Date {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function endOfLocalDay(date: Date): Date {
+  const next = new Date(date);
+  next.setHours(23, 59, 59, 999);
+  return next;
+}
+
+function parseIsoDateOnly(value: string): Date | null {
+  const trimmed = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return null;
+  }
+  const parsed = new Date(`${trimmed}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed;
+}
+
+function resolveEmployerJobsPostedRange(
+  query: ListEmployerJobsQuery,
+  nowInput: Date = new Date(),
+): { from?: Date; to?: Date } | null {
+  const now = new Date(nowInput);
+
+  if (!query.postedQuick) {
+    return null;
+  }
+
+  if (query.postedQuick === "custom") {
+    const fromRaw = parseIsoDateOnly(query.postedFrom);
+    const toRaw = parseIsoDateOnly(query.postedTo);
+    if (!fromRaw && !toRaw) {
+      return null;
+    }
+    return {
+      from: fromRaw ? startOfLocalDay(fromRaw) : undefined,
+      to: toRaw ? endOfLocalDay(toRaw) : undefined,
+    };
+  }
+
+  switch (query.postedQuick) {
+    case "today":
+      return {
+        from: startOfLocalDay(now),
+        to: endOfLocalDay(now),
+      };
+    case "last_7_days": {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 6);
+      return {
+        from: startOfLocalDay(from),
+        to: endOfLocalDay(now),
+      };
+    }
+    case "last_30_days": {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 29);
+      return {
+        from: startOfLocalDay(from),
+        to: endOfLocalDay(now),
+      };
+    }
+    case "last_90_days": {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 89);
+      return {
+        from: startOfLocalDay(from),
+        to: endOfLocalDay(now),
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+function buildPostedDateFilter(from?: Date, to?: Date) {
+  if (!from && !to) {
+    return {};
+  }
+
+  const comparisons: Record<string, unknown>[] = [];
+  if (from) {
+    comparisons.push({
+      $gte: [{ $ifNull: ["$publishedAt", "$createdAt"] }, from],
+    });
+  }
+  if (to) {
+    comparisons.push({
+      $lte: [{ $ifNull: ["$publishedAt", "$createdAt"] }, to],
+    });
+  }
+
+  return {
+    $expr: {
+      $and: comparisons,
+    },
+  };
+}
+
+function buildApplicationsBandFilter(
+  bands: ListEmployerJobsQuery["applications"],
+) {
+  if (!bands || bands.length === 0) {
+    return {};
+  }
+
+  const clauses: Record<string, unknown>[] = [];
+
+  for (const band of bands) {
+    switch (band) {
+      case "0":
+        clauses.push({ applications: 0 });
+        break;
+      case "1-10":
+        clauses.push({ applications: { $gte: 1, $lte: 10 } });
+        break;
+      case "11-25":
+        clauses.push({ applications: { $gte: 11, $lte: 25 } });
+        break;
+      case "26-50":
+        clauses.push({ applications: { $gte: 26, $lte: 50 } });
+        break;
+      case "51+":
+        clauses.push({ applications: { $gte: 51 } });
+        break;
+      default:
+        break;
+    }
+  }
+
+  if (clauses.length === 0) {
+    return {};
+  }
+
+  if (clauses.length === 1) {
+    return clauses[0];
+  }
+
+  return { $or: clauses };
+}
+
+function buildEmployerJobsAdvancedFilter(query: ListEmployerJobsQuery) {
+  const andClauses: Record<string, unknown>[] = [];
+
+  if (query.jobId) {
+    andClauses.push({ jobId: query.jobId });
+  }
+
+  if (query.jobType.length > 0) {
+    andClauses.push({ jobType: { $in: query.jobType } });
+  }
+
+  if (query.workMode.length > 0) {
+    andClauses.push({ workMode: { $in: query.workMode } });
+  }
+
+  if (query.experience.length > 0) {
+    andClauses.push({ experience: { $in: query.experience } });
+  }
+
+  if (query.city.length === 1) {
+    andClauses.push({ city: query.city[0] });
+  } else if (query.city.length > 1) {
+    andClauses.push({ city: { $in: query.city } });
+  }
+
+  if (query.state) {
+    andClauses.push({ state: query.state });
+  }
+
+  if (query.businessCategory.length > 0) {
+    andClauses.push({
+      businessCategory: { $in: query.businessCategory },
+    });
+  }
+
+  const salaryFilter = buildSalaryFilter(query.minSalary, query.maxSalary);
+  if (Object.keys(salaryFilter).length > 0) {
+    andClauses.push(salaryFilter);
+  }
+
+  const postedRange = resolveEmployerJobsPostedRange(query);
+  if (postedRange) {
+    const postedFilter = buildPostedDateFilter(postedRange.from, postedRange.to);
+    if (Object.keys(postedFilter).length > 0) {
+      andClauses.push(postedFilter);
+    }
+  }
+
+  const applicationsFilter = buildApplicationsBandFilter(query.applications);
+  if (Object.keys(applicationsFilter).length > 0) {
+    andClauses.push(applicationsFilter);
+  }
+
+  if (
+    query.minVacancies !== undefined ||
+    query.maxVacancies !== undefined
+  ) {
+    const vacanciesFilter: Record<string, number> = {};
+    if (query.minVacancies !== undefined) {
+      vacanciesFilter.$gte = query.minVacancies;
+    }
+    if (query.maxVacancies !== undefined) {
+      vacanciesFilter.$lte = query.maxVacancies;
+    }
+    andClauses.push({ vacancies: vacanciesFilter });
+  }
+
+  return andClauses.filter((clause) => Object.keys(clause).length > 0);
+}
+
 function toMonthlySalaryExpr(fieldPath: string) {
   return {
     $cond: [
@@ -772,18 +989,26 @@ export class JobService {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
-    const filter: Record<string, unknown> = {
-      employerId: new mongoose.Types.ObjectId(employerId),
-      ...buildSearchFilter(query.search),
-    };
+    const andClauses: Record<string, unknown>[] = [
+      { employerId: new mongoose.Types.ObjectId(employerId) },
+      buildSearchFilter(query.search),
+      ...buildEmployerJobsAdvancedFilter(query),
+    ];
 
     if (query.status) {
-      filter.status = query.status;
+      andClauses.push({ status: query.status });
     }
+
+    const cleaned = andClauses.filter(
+      (clause) => Object.keys(clause).length > 0,
+    );
+
+    const filter: Record<string, unknown> =
+      cleaned.length === 1 ? cleaned[0]! : { $and: cleaned };
 
     const skip = (query.page - 1) * query.limit;
 
-    const [jobs, total, statusCounts] = await Promise.all([
+    const [jobs, total, statusCounts, jobOptions] = await Promise.all([
       JobModel.find(filter)
         .sort({ publishedAt: -1, createdAt: -1 })
         .skip(skip)
@@ -802,6 +1027,12 @@ export class JobService {
           },
         },
       ]),
+      JobModel.find({
+        employerId: new mongoose.Types.ObjectId(employerId),
+      })
+        .select("jobId jobTitle status")
+        .sort({ publishedAt: -1, createdAt: -1 })
+        .lean(),
     ]);
 
     const countsByStatus = Object.fromEntries(
@@ -829,6 +1060,11 @@ export class JobService {
         all,
         ...countsByStatus,
       },
+      jobOptions: jobOptions.map((job) => ({
+        jobId: job.jobId,
+        jobTitle: job.jobTitle,
+        status: job.status,
+      })),
     };
   }
 

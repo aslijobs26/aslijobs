@@ -87,6 +87,11 @@ export type NotificationConversationListResult = {
     totalPages: number;
   };
   unreadCount: number;
+  jobFacets: Array<{
+    publicJobId: string;
+    jobTitle: string;
+    count: number;
+  }>;
 };
 
 export type CreateNotificationInput = {

@@ -243,6 +243,10 @@ export function InterviewScheduleModal({
           : "Interview updated successfully.",
         "success",
       );
+      queryClient.setQueryData(
+        ["employer", "application", selectedId],
+        data.application,
+      );
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["employer", "interviews"],
@@ -251,10 +255,10 @@ export function InterviewScheduleModal({
           queryKey: ["employer", "interview-stats"],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["employer", "application", selectedId],
+          queryKey: ["employer", "applications"],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["employer", "applications"],
+          queryKey: ["employer", "application-stats"],
         }),
       ]);
       onSaved?.(selectedId!);
@@ -291,14 +295,14 @@ export function InterviewScheduleModal({
               id={titleId}
               className="text-base font-semibold text-foreground"
             >
-              {applicationId || (selectedId && hasExistingInterview)
-                ? "Edit interview"
-                : "Schedule interview"}
+              {hasExistingInterview ? "Edit interview" : "Schedule interview"}
             </h2>
             <p className="mt-0.5 text-xs text-muted">
               {selectedId && hasExistingInterview
                 ? "Update or reschedule the existing interview. A new interview is not created."
-                : "Select a candidate, then schedule their interview."}
+                : selectedId
+                  ? "Add the interview details for this candidate."
+                  : "Select a candidate, then schedule their interview."}
             </p>
           </div>
           <button

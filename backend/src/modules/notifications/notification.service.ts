@@ -289,6 +289,72 @@ function buildUnifiedConversationTimeline(
   });
 }
 
+function resolveConversationDateRange(input: {
+  quickDate: string;
+  dateFrom: string;
+  dateTo: string;
+}): { from: Date; to: Date } | null {
+  const now = new Date();
+  const startOfDay = (date: Date) => {
+    const next = new Date(date);
+    next.setHours(0, 0, 0, 0);
+    return next;
+  };
+  const endOfDay = (date: Date) => {
+    const next = new Date(date);
+    next.setHours(23, 59, 59, 999);
+    return next;
+  };
+
+  switch (input.quickDate) {
+    case "today":
+      return { from: startOfDay(now), to: endOfDay(now) };
+    case "yesterday": {
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      return { from: startOfDay(yesterday), to: endOfDay(yesterday) };
+    }
+    case "last_7_days": {
+      const from = startOfDay(now);
+      from.setDate(from.getDate() - 6);
+      return { from, to: endOfDay(now) };
+    }
+    case "last_30_days": {
+      const from = startOfDay(now);
+      from.setDate(from.getDate() - 29);
+      return { from, to: endOfDay(now) };
+    }
+    case "this_month": {
+      const from = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
+      return { from, to: endOfDay(now) };
+    }
+    case "last_month": {
+      const from = startOfDay(
+        new Date(now.getFullYear(), now.getMonth() - 1, 1),
+      );
+      const to = endOfDay(new Date(now.getFullYear(), now.getMonth(), 0));
+      return { from, to };
+    }
+    case "custom": {
+      const fromRaw = input.dateFrom.trim();
+      const toRaw = input.dateTo.trim();
+      if (!fromRaw && !toRaw) {
+        return null;
+      }
+      const from = fromRaw
+        ? startOfDay(new Date(`${fromRaw}T00:00:00`))
+        : new Date(0);
+      const to = toRaw ? endOfDay(new Date(`${toRaw}T00:00:00`)) : endOfDay(now);
+      if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+        return null;
+      }
+      return { from, to };
+    }
+    default:
+      return null;
+  }
+}
+
 /**
  * Future channel adapters (WhatsApp / email / push) should plug in here
  * without changing domain callers.
@@ -484,6 +550,16 @@ export class NotificationService {
     search: string;
     readStatus: "all" | "unread" | "read";
     category: "all" | NotificationCategory;
+    publicJobId?: string;
+    applicationStatus?: string;
+    hasType?: string;
+    employerAction?: string;
+    candidateAction?: string;
+    conversationType?: string;
+    quickDate?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    sort?: string;
   }): Promise<NotificationConversationListResult> {
     if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
@@ -501,7 +577,28 @@ export class NotificationService {
       match.category = input.category;
     }
 
+    const dateRange = resolveConversationDateRange({
+      quickDate: input.quickDate ?? "all",
+      dateFrom: input.dateFrom ?? "",
+      dateTo: input.dateTo ?? "",
+    });
+    if (dateRange) {
+      match.createdAt = {
+        $gte: dateRange.from,
+        $lte: dateRange.to,
+      };
+    }
+
     const search = input.search.trim();
+    const publicJobId = input.publicJobId?.trim() ?? "";
+    const applicationStatus = input.applicationStatus?.trim() ?? "all";
+    const conversationType = input.conversationType?.trim() ?? "all";
+    const sort = input.sort?.trim() || "newest";
+    const typeFilters = [
+      input.hasType,
+      input.employerAction,
+      input.candidateAction,
+    ].filter((value): value is string => Boolean(value && value !== "all"));
 
     const pipeline: mongoose.PipelineStage[] = [
       { $match: match },
@@ -516,6 +613,7 @@ export class NotificationService {
             },
           },
           messageCount: { $sum: 1 },
+          types: { $addToSet: "$type" },
         },
       },
     ];
@@ -524,6 +622,12 @@ export class NotificationService {
       pipeline.push({ $match: { unreadCount: { $gt: 0 } } });
     } else if (input.readStatus === "read") {
       pipeline.push({ $match: { unreadCount: 0 } });
+    }
+
+    if (typeFilters.length === 1) {
+      pipeline.push({ $match: { types: typeFilters[0] } });
+    } else if (typeFilters.length > 1) {
+      pipeline.push({ $match: { types: { $all: typeFilters } } });
     }
 
     pipeline.push(
@@ -569,36 +673,64 @@ export class NotificationService {
       },
     );
 
+    const postMatch: Record<string, unknown> = {};
+    if (publicJobId) {
+      postMatch["application.publicJobId"] = publicJobId;
+    }
+    if (applicationStatus !== "all") {
+      postMatch["application.status"] = applicationStatus;
+    }
+    if (conversationType === "active") {
+      postMatch["application.status"] = {
+        $nin: ["joined", "rejected", "withdrawn"],
+      };
+    } else if (conversationType === "completed") {
+      postMatch["application.status"] = "joined";
+    } else if (conversationType === "rejected") {
+      postMatch["application.status"] = "rejected";
+    } else if (conversationType === "withdrawn") {
+      postMatch["application.status"] = "withdrawn";
+    }
+
     if (search) {
       const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      pipeline.push({
-        $match: {
-          $or: [
-            {
-              "application.resumeSnapshot.resumeJson.header.fullName": {
-                $regex: escaped,
-                $options: "i",
-              },
-            },
-            {
-              "application.resumeSnapshot.resumeJson.header.phone": {
-                $regex: escaped,
-                $options: "i",
-              },
-            },
-            { "job.jobTitle": { $regex: escaped, $options: "i" } },
-            { "application.publicJobId": { $regex: escaped, $options: "i" } },
-            { "latest.title": { $regex: escaped, $options: "i" } },
-            { "latest.body": { $regex: escaped, $options: "i" } },
-          ],
+      postMatch.$or = [
+        {
+          "application.resumeSnapshot.resumeJson.header.fullName": {
+            $regex: escaped,
+            $options: "i",
+          },
         },
-      });
+        {
+          "application.resumeSnapshot.resumeJson.header.phone": {
+            $regex: escaped,
+            $options: "i",
+          },
+        },
+        { "job.jobTitle": { $regex: escaped, $options: "i" } },
+        { "application.publicJobId": { $regex: escaped, $options: "i" } },
+        { "latest.title": { $regex: escaped, $options: "i" } },
+        { "latest.body": { $regex: escaped, $options: "i" } },
+      ];
+    }
+
+    if (Object.keys(postMatch).length > 0) {
+      pipeline.push({ $match: postMatch });
+    }
+
+    let sortStage: Record<string, 1 | -1> = { "latest.createdAt": -1 };
+    if (sort === "oldest") {
+      sortStage = { "latest.createdAt": 1 };
+    } else if (sort === "most_notifications") {
+      sortStage = { messageCount: -1, "latest.createdAt": -1 };
+    } else if (sort === "unread_first") {
+      sortStage = { unreadCount: -1, "latest.createdAt": -1 };
     }
 
     pipeline.push({
       $facet: {
         items: [
-          { $sort: { "latest.createdAt": -1 } },
+          { $sort: sortStage },
           { $skip: (input.page - 1) * input.limit },
           { $limit: input.limit },
         ],
@@ -672,6 +804,75 @@ export class NotificationService {
       readAt: null,
     });
 
+    const jobFacetRows = await NotificationModel.aggregate<{
+      publicJobId: string;
+      jobTitle: string;
+      count: number;
+    }>([
+      {
+        $match: {
+          recipientType: "employer",
+          recipientId: employerObjectId,
+          referenceType: "application",
+          referenceId: { $nin: ["", null] },
+        },
+      },
+      {
+        $group: {
+          _id: "$referenceId",
+        },
+      },
+      {
+        $addFields: {
+          applicationObjectId: {
+            $convert: {
+              input: "$_id",
+              to: "objectId",
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "applications",
+          localField: "applicationObjectId",
+          foreignField: "_id",
+          as: "application",
+        },
+      },
+      { $unwind: { path: "$application", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "jobs",
+          localField: "application.jobId",
+          foreignField: "_id",
+          as: "job",
+        },
+      },
+      { $unwind: { path: "$job", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: {
+            publicJobId: { $ifNull: ["$application.publicJobId", ""] },
+            jobTitle: { $ifNull: ["$job.jobTitle", "Job"] },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $match: { "_id.publicJobId": { $ne: "" } } },
+      { $sort: { count: -1 } },
+      {
+        $project: {
+          _id: 0,
+          publicJobId: "$_id.publicJobId",
+          jobTitle: "$_id.jobTitle",
+          count: 1,
+        },
+      },
+    ]);
+
     return {
       conversations,
       pagination: {
@@ -681,6 +882,7 @@ export class NotificationService {
         totalPages: Math.max(1, Math.ceil(total / input.limit)),
       },
       unreadCount,
+      jobFacets: jobFacetRows,
     };
   }
 

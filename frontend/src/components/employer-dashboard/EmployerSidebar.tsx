@@ -14,12 +14,19 @@ import {
   EMPLOYER_DASHBOARD_SIDEBAR_WIDTH,
 } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
+import {
+  fetchNotificationUnreadCount,
+  notificationQueryKeys,
+} from "@/services/notifications.service";
+import type { EmployerDashboardNavItem } from "@/types/employer-dashboard";
 import { cn } from "@/utils/cn";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronsLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { CSSProperties } from "react";
+import { useMemo, type CSSProperties } from "react";
+
 type EmployerSidebarProps = {
   collapsed: boolean;
   mobileOpen: boolean;
@@ -39,6 +46,28 @@ export function EmployerSidebar({
   const isHelpCenterActive =
     pathname === ROUTES.EMPLOYER_HELP_CENTER ||
     pathname.startsWith(`${ROUTES.EMPLOYER_HELP_CENTER}/`);
+
+  const messagesUnreadQuery = useQuery({
+    queryKey: notificationQueryKeys.unreadCount("employer"),
+    queryFn: fetchNotificationUnreadCount,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  });
+
+  const navItems = useMemo<EmployerDashboardNavItem[]>(() => {
+    const unread = messagesUnreadQuery.data ?? 0;
+    return EMPLOYER_DASHBOARD_NAV_ITEMS.map((item) => {
+      if (item.id !== "messages") {
+        return item;
+      }
+      return {
+        ...item,
+        badge: unread > 0 ? unread : undefined,
+      };
+    });
+  }, [messagesUnreadQuery.data]);
 
   return (
     <>
@@ -123,7 +152,7 @@ export function EmployerSidebar({
           aria-label="Primary"
         >
           <ul className="flex flex-col gap-1">
-            {EMPLOYER_DASHBOARD_NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <li key={item.id}>
                 <EmployerSidebarItem
                   item={item}
@@ -159,7 +188,11 @@ export function EmployerSidebar({
                 aria-current={isHelpCenterActive ? "page" : undefined}
                 className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-primary-soft transition-colors hover:border-primary-soft/40 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               >
-                <HelpIcon className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
+                <HelpIcon
+                  className="size-4 shrink-0"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
                 {EMPLOYER_DASHBOARD_HELP_CTA}
               </Link>
             </div>

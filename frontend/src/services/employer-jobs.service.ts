@@ -21,6 +21,21 @@ export type ListEmployerJobsParams = {
   search?: string;
   page?: number;
   limit?: number;
+  jobId?: string;
+  jobType?: string;
+  workMode?: string;
+  experience?: string;
+  minSalary?: number;
+  maxSalary?: number;
+  city?: string;
+  state?: string;
+  businessCategory?: string;
+  postedQuick?: string;
+  postedFrom?: string;
+  postedTo?: string;
+  applications?: string;
+  minVacancies?: number;
+  maxVacancies?: number;
 };
 
 export async function createEmployerJob(payload: CreateJobPayload) {

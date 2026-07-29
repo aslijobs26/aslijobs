@@ -43,8 +43,15 @@ export type EmployerJobCounts = {
   expired: number;
 };
 
+export type EmployerJobListOption = {
+  jobId: string;
+  jobTitle: string;
+  status: JobStatus;
+};
+
 export type EmployerJobsListResponse = {
   jobs: EmployerJobListItem[];
+  jobOptions: EmployerJobListOption[];
   pagination: {
     page: number;
     limit: number;

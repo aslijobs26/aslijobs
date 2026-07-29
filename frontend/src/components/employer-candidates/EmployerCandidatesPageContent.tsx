@@ -9,6 +9,8 @@ import {
 } from "@/components/employer-candidates/CandidatesFilterPanel";
 import { CandidatesKpiStrip } from "@/components/employer-candidates/CandidatesKpiStrip";
 import { CandidatesListPanel } from "@/components/employer-candidates/CandidatesListPanel";
+import { CandidatesMobileFiltersSheet } from "@/components/employer-candidates/CandidatesMobileFiltersSheet";
+import { InterviewScheduleModal } from "@/components/employer-interviews/InterviewScheduleModal";
 import {
   fetchEmployerApplicationStats,
   fetchEmployerApplications,
@@ -18,11 +20,10 @@ import type {
   EmployerApplicationStatus,
   EmployerAvailabilityFilterValue,
 } from "@/types/employer-applications";
-import { cn } from "@/utils/cn";
 import { useQuery } from "@tanstack/react-query";
-import { Filter } from "lucide-react";
+import { Download, Filter } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -59,6 +60,9 @@ export function EmployerCandidatesPageContent() {
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [scheduleApplicationId, setScheduleApplicationId] = useState<
+    string | null
+  >(null);
 
   const [locationDraft, setLocationDraft] = useState("");
   const [experienceDraft, setExperienceDraft] = useState("");
@@ -218,6 +222,7 @@ export function EmployerCandidatesPageContent() {
       .map((job) => ({
         publicJobId: job.jobId,
         jobTitle: job.jobTitle,
+        applications: job.applications,
       }))
       .filter((job) => Boolean(job.publicJobId));
   }, [jobsQuery.data]);
@@ -236,14 +241,20 @@ export function EmployerCandidatesPageContent() {
     syncUrl({ selected: id });
   };
 
+  const openScheduleInterview = (applicationId: string) => {
+    setLocalSelectedId(applicationId);
+    setScheduleApplicationId(applicationId);
+    syncUrl({ selected: applicationId });
+  };
+
   const handleFilterChange = (filter: CandidatesQuickFilter) => {
     setQuickFilter(filter);
     syncUrl({ status: filter, page: 1 });
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-3 py-5 sm:px-5 lg:px-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
+    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 lg:overflow-x-visible lg:px-6 lg:pb-5">
+      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Candidates
@@ -268,12 +279,13 @@ export function EmployerCandidatesPageContent() {
             </p>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <button
             type="button"
             onClick={() => setExportModalOpen(true)}
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-primary bg-primary-light px-5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:w-auto sm:min-w-[7.5rem]"
           >
+            <Download className="size-4 shrink-0" aria-hidden="true" />
             Export
           </button>
         </div>
@@ -307,21 +319,16 @@ export function EmployerCandidatesPageContent() {
       <div className="mt-4 lg:hidden">
         <button
           type="button"
-          onClick={() => setMobileFiltersOpen((open) => !open)}
-          className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground"
+          onClick={() => setMobileFiltersOpen(true)}
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           <Filter className="size-4" aria-hidden="true" />
-          {mobileFiltersOpen ? "Hide filters" : "Show filters"}
+          Filters
         </button>
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[16rem_minmax(0,1fr)_24rem] lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <div
-          className={cn(
-            "lg:block",
-            mobileFiltersOpen ? "block" : "hidden",
-          )}
-        >
+        <div className="hidden lg:block">
           <div className="lg:sticky lg:top-20">
             <CandidatesFilterPanel
               stats={statsQuery.data}
@@ -392,9 +399,7 @@ export function EmployerCandidatesPageContent() {
           onOpenResume={(id) =>
             selectCandidate(id, { tab: "resume", openMobile: true })
           }
-          onScheduleInterview={(id) =>
-            selectCandidate(id, { tab: "interview", openMobile: true })
-          }
+          onScheduleInterview={openScheduleInterview}
         />
 
         <div className="hidden xl:block">
@@ -402,30 +407,149 @@ export function EmployerCandidatesPageContent() {
             applicationId={selectedId}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            onScheduleInterview={openScheduleInterview}
             variant="panel"
           />
         </div>
       </div>
 
+      <CandidatesMobileFiltersSheet
+        open={mobileFiltersOpen}
+        onClose={() => setMobileFiltersOpen(false)}
+        stats={statsQuery.data}
+        activeFilter={quickFilter}
+        onFilterChange={handleFilterChange}
+        searchDraft={searchDraft}
+        location={locationDraft}
+        experience={experienceDraft}
+        skills={skillsDraft}
+        availability={availabilityDraft}
+        appliedFrom={appliedFrom}
+        appliedTo={appliedTo}
+        publicJobId={publicJobId}
+        searchInputRef={searchInputRef}
+        onSearchDraftChange={setSearchDraft}
+        onSearchSubmit={() => {
+          const nextSearch = normalizeSearch(searchDraft);
+          setSearchDraft(nextSearch);
+          syncUrl({ q: nextSearch, page: 1 });
+        }}
+        onLocationChange={setLocationDraft}
+        onExperienceChange={setExperienceDraft}
+        onSkillsChange={setSkillsDraft}
+        onAvailabilityChange={setAvailabilityDraft}
+        onAppliedFromChange={setAppliedFrom}
+        onAppliedToChange={setAppliedTo}
+        onClearAdvanced={() => {
+          setLocationDraft("");
+          setExperienceDraft("");
+          setSkillsDraft("");
+          setAvailabilityDraft("");
+          setAppliedFrom("");
+          setAppliedTo("");
+        }}
+        onClearAll={() => {
+          setQuickFilter("all");
+          setSearchDraft("");
+          setLocationDraft("");
+          setExperienceDraft("");
+          setSkillsDraft("");
+          setAvailabilityDraft("");
+          setAppliedFrom("");
+          setAppliedTo("");
+          syncUrl({ status: "all", q: "", page: 1 });
+        }}
+      />
+
       {mobileDetailOpen && selectedId ? (
-        <div className="fixed inset-0 z-50 xl:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-foreground/40"
-            aria-label="Close candidate drawer"
-            onClick={() => setMobileDetailOpen(false)}
-          />
-          <div className="absolute inset-x-0 bottom-0 max-h-[92dvh] overflow-hidden rounded-t-2xl bg-hero-bg p-3 shadow-lg sm:inset-y-0 sm:right-0 sm:left-auto sm:max-h-none sm:w-[min(28rem,100%)] sm:rounded-none sm:p-4">
-            <CandidatesDetailPanel
-              applicationId={selectedId}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              onClose={() => setMobileDetailOpen(false)}
-              variant="drawer"
-            />
-          </div>
-        </div>
+        <MobileCandidateDetailDrawer
+          applicationId={selectedId}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onScheduleInterview={openScheduleInterview}
+          onClose={() => setMobileDetailOpen(false)}
+        />
       ) : null}
+
+      {scheduleApplicationId ? (
+        <InterviewScheduleModal
+          applicationId={scheduleApplicationId}
+          onClose={() => setScheduleApplicationId(null)}
+          onSaved={() => setActiveTab("interview")}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function MobileCandidateDetailDrawer({
+  applicationId,
+  activeTab,
+  onTabChange,
+  onScheduleInterview,
+  onClose,
+}: {
+  applicationId: string;
+  activeTab: CandidatesDetailTab;
+  onTabChange: (tab: CandidatesDetailTab) => void;
+  onScheduleInterview: (applicationId: string) => void;
+  onClose: () => void;
+}) {
+  const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    const focusTimer = window.setTimeout(() => {
+      panelRef.current?.focus();
+    }, 20);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+      window.clearTimeout(focusTimer);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 xl:hidden" role="presentation">
+      <button
+        type="button"
+        className="absolute inset-0 bg-foreground/40"
+        aria-label="Close candidate drawer"
+        onClick={onClose}
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="absolute inset-x-0 bottom-0 flex h-[min(92dvh,100%)] max-h-[92dvh] min-h-0 flex-col overflow-hidden rounded-t-2xl bg-hero-bg p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg outline-none sm:inset-y-0 sm:right-0 sm:left-auto sm:h-dvh sm:max-h-none sm:w-[min(28rem,100%)] sm:rounded-none sm:p-4 sm:pb-4"
+      >
+        <span id={titleId} className="sr-only">
+          Candidate details
+        </span>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <CandidatesDetailPanel
+            applicationId={applicationId}
+            activeTab={activeTab}
+            onTabChange={onTabChange}
+            onScheduleInterview={onScheduleInterview}
+            onClose={onClose}
+            variant="drawer"
+          />
+        </div>
+      </div>
     </div>
   );
 }

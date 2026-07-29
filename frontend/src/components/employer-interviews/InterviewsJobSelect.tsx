@@ -50,6 +50,7 @@ export function InterviewsJobSelect({
         disabled={isLoading}
         hideSearch={jobTabs.length < JOB_SEARCH_THRESHOLD}
         searchPlaceholder="Search Job..."
+        countLabel="interviews"
         triggerClassName={interviewsToolbarSelectTriggerClassName}
       />
     </div>

@@ -277,6 +277,13 @@ function renderEducationFields(
   );
 }
 
+function getLocalTodayIso() {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${today.getFullYear()}-${month}-${day}`;
+}
+
 export function JobSeekerRegisterEducationExperienceStep({
   education,
   experienceType,
@@ -290,6 +297,8 @@ export function JobSeekerRegisterEducationExperienceStep({
   onLanguagesChange,
   onAvailabilityStatusChange,
 }: JobSeekerRegisterEducationExperienceStepProps) {
+  const todayIso = getLocalTodayIso();
+
   const updateEducation = (patch: Partial<JobSeekerEducation>) => {
     onEducationChange({ ...education, ...patch });
   };
@@ -441,8 +450,17 @@ export function JobSeekerRegisterEducationExperienceStep({
                       value={entry.startDate}
                       placeholder="DD/MM/YYYY"
                       compact
+                      maxDate={todayIso}
+                      disabled={disabled}
                       onChange={(startDate) =>
-                        updateExperience(index, { startDate })
+                        updateExperience(index, {
+                          startDate,
+                          endDate:
+                            entry.endDate &&
+                            entry.endDate < startDate
+                              ? ""
+                              : entry.endDate,
+                        })
                       }
                       aria-label="Experience start date"
                     />
@@ -454,16 +472,29 @@ export function JobSeekerRegisterEducationExperienceStep({
                     >
                       End Date{entry.currentlyWorking ? "" : "*"}
                     </label>
-                    <PostJobDatePicker
-                      id={`js-exp-end-${index}`}
-                      value={entry.endDate}
-                      placeholder="DD/MM/YYYY"
-                      compact
-                      onChange={(endDate) =>
-                        updateExperience(index, { endDate })
-                      }
-                      aria-label="Experience end date"
-                    />
+                    {entry.currentlyWorking ? (
+                      <div
+                        id={`js-exp-end-${index}`}
+                        className="flex h-12 w-full items-center rounded-md border border-border bg-hero-bg px-3.5 text-sm font-medium text-muted"
+                        aria-label="Experience end date Present"
+                      >
+                        Present
+                      </div>
+                    ) : (
+                      <PostJobDatePicker
+                        id={`js-exp-end-${index}`}
+                        value={entry.endDate}
+                        placeholder="DD/MM/YYYY"
+                        compact
+                        minDate={entry.startDate || undefined}
+                        maxDate={todayIso}
+                        disabled={disabled}
+                        onChange={(endDate) =>
+                          updateExperience(index, { endDate })
+                        }
+                        aria-label="Experience end date"
+                      />
+                    )}
                   </div>
                 </div>
                 <label className="inline-flex items-center gap-2 text-sm text-foreground">

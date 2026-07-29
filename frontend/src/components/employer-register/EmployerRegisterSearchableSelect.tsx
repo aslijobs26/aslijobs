@@ -29,6 +29,8 @@ type EmployerRegisterSearchableSelectProps = {
   searchPlaceholder?: string;
   /** Optional classes merged onto the trigger button (e.g. match toolbar inputs). */
   triggerClassName?: string;
+  /** Accessible noun used for option counts, for example "applications". */
+  countLabel?: string;
   /** Allow typing a value that is not in the preset options. */
   allowCustom?: boolean;
   /**
@@ -61,6 +63,7 @@ export function EmployerRegisterSearchableSelect({
   allowCustom = false,
   initialVisibleCount,
   triggerClassName,
+  countLabel = "items",
 }: EmployerRegisterSearchableSelectProps) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -404,7 +407,7 @@ export function EmployerRegisterSearchableSelect({
                           {typeof option.count === "number" ? (
                             <span
                               className="tabular-nums text-sm font-semibold text-muted"
-                              aria-label={`${option.count} interviews`}
+                              aria-label={`${option.count} ${countLabel}`}
                             >
                               {option.count}
                             </span>

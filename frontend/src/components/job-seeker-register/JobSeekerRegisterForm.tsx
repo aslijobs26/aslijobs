@@ -298,6 +298,9 @@ export function JobSeekerRegisterForm() {
         return;
       }
 
+      const today = new Date();
+      const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
       for (const [index, entry] of experiences.entries()) {
         if (!entry.companyName.trim()) {
           setErrorMessage(`Experience ${index + 1}: company name is required`);
@@ -315,9 +318,41 @@ export function JobSeekerRegisterForm() {
           setErrorMessage(`Experience ${index + 1}: start date is required`);
           return;
         }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.startDate)) {
+          setErrorMessage(
+            `Experience ${index + 1}: start date must be a valid date`,
+          );
+          return;
+        }
+        if (entry.startDate > todayIso) {
+          setErrorMessage(
+            `Experience ${index + 1}: start date cannot be in the future`,
+          );
+          return;
+        }
         if (!entry.currentlyWorking && !entry.endDate) {
           setErrorMessage(`Experience ${index + 1}: end date is required`);
           return;
+        }
+        if (!entry.currentlyWorking && entry.endDate) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.endDate)) {
+            setErrorMessage(
+              `Experience ${index + 1}: end date must be a valid date`,
+            );
+            return;
+          }
+          if (entry.endDate > todayIso) {
+            setErrorMessage(
+              `Experience ${index + 1}: end date cannot be in the future`,
+            );
+            return;
+          }
+          if (entry.endDate < entry.startDate) {
+            setErrorMessage(
+              `Experience ${index + 1}: end date cannot be before start date`,
+            );
+            return;
+          }
         }
         if (!entry.salary.trim()) {
           setErrorMessage(`Experience ${index + 1}: salary is required`);

@@ -57,6 +57,7 @@ type PostJobDatePickerProps = {
   maxDate?: string;
   /** Smaller calendar panel — used by Job Seeker registration DOB. */
   compact?: boolean;
+  disabled?: boolean;
   onChange: (value: string) => void;
   "aria-label"?: string;
 };
@@ -178,6 +179,7 @@ export function PostJobDatePicker({
   minDate,
   maxDate,
   compact = false,
+  disabled = false,
   onChange,
   "aria-label": ariaLabel,
 }: PostJobDatePickerProps) {
@@ -292,7 +294,17 @@ export function PostJobDatePicker({
     };
   }, [isOpen, panelView]);
 
+  useEffect(() => {
+    if (disabled && isOpen) {
+      setIsOpen(false);
+    }
+  }, [disabled, isOpen]);
+
   const openCalendar = () => {
+    if (disabled) {
+      return;
+    }
+
     const nextMonth =
       selectedDate ??
       (maximumIso ? parseIsoDate(maximumIso) : null) ??
@@ -329,6 +341,56 @@ export function PostJobDatePicker({
     return false;
   };
 
+  const isMonthDisabled = (year: number, month: number) => {
+    const monthStart = `${year}-${padTwo(month + 1)}-01`;
+    const monthEndDate = new Date(year, month + 1, 0);
+    const monthEnd = toIsoDate(monthEndDate);
+
+    if (maximumIso !== null && monthStart > maximumIso) {
+      return true;
+    }
+
+    if (minimumIso !== null && monthEnd < minimumIso) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const isYearDisabled = (year: number) => {
+    if (maximumIso !== null && year > Number(maximumIso.slice(0, 4))) {
+      return true;
+    }
+
+    if (minimumIso !== null && year < Number(minimumIso.slice(0, 4))) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const previousMonthDate = new Date(
+    visibleMonth.year,
+    visibleMonth.month - 1,
+    1,
+  );
+  const nextMonthDate = new Date(visibleMonth.year, visibleMonth.month + 1, 1);
+  const canNavigatePreviousMonth =
+    minimumIso === null ||
+    !isMonthDisabled(
+      previousMonthDate.getFullYear(),
+      previousMonthDate.getMonth(),
+    );
+  const canNavigateNextMonth =
+    maximumIso === null ||
+    !isMonthDisabled(nextMonthDate.getFullYear(), nextMonthDate.getMonth());
+  const canNavigatePreviousYearRange =
+    minimumIso === null ||
+    yearRangeStart - 1 >= Number(minimumIso.slice(0, 4));
+  const canNavigateNextYearRange =
+    maximumIso === null ||
+    yearRangeStart + YEAR_PAGE_SIZE <= Number(maximumIso.slice(0, 4));
+
   const handleSelectDate = (isoDate: string) => {
     if (isDateDisabled(isoDate)) {
       return;
@@ -341,6 +403,9 @@ export function PostJobDatePicker({
   };
 
   const goToPreviousMonth = () => {
+    if (!canNavigatePreviousMonth) {
+      return;
+    }
     setVisibleMonth((current) => {
       const date = new Date(current.year, current.month - 1, 1);
       return { year: date.getFullYear(), month: date.getMonth() };
@@ -348,6 +413,9 @@ export function PostJobDatePicker({
   };
 
   const goToNextMonth = () => {
+    if (!canNavigateNextMonth) {
+      return;
+    }
     setVisibleMonth((current) => {
       const date = new Date(current.year, current.month + 1, 1);
       return { year: date.getFullYear(), month: date.getMonth() };
@@ -355,11 +423,17 @@ export function PostJobDatePicker({
   };
 
   const selectMonth = (month: number) => {
+    if (isMonthDisabled(visibleMonth.year, month)) {
+      return;
+    }
     setVisibleMonth((current) => ({ ...current, month }));
     setPanelView("days");
   };
 
   const selectYear = (year: number) => {
+    if (isYearDisabled(year)) {
+      return;
+    }
     setVisibleMonth((current) => ({ ...current, year }));
     setPanelView("days");
   };
@@ -374,10 +448,16 @@ export function PostJobDatePicker({
   };
 
   const goToPreviousYearRange = () => {
+    if (!canNavigatePreviousYearRange) {
+      return;
+    }
     setYearRangeStart((current) => current - YEAR_PAGE_SIZE);
   };
 
   const goToNextYearRange = () => {
+    if (!canNavigateNextYearRange) {
+      return;
+    }
     setYearRangeStart((current) => current + YEAR_PAGE_SIZE);
   };
 
@@ -437,7 +517,12 @@ export function PostJobDatePicker({
                     <button
                       type="button"
                       onClick={goToPreviousMonth}
-                      className={navButtonClassName}
+                      disabled={!canNavigatePreviousMonth}
+                      className={cn(
+                        navButtonClassName,
+                        !canNavigatePreviousMonth &&
+                          "cursor-not-allowed opacity-40 hover:border-border",
+                      )}
                       aria-label="Previous month"
                     >
                       <ChevronLeft
@@ -470,7 +555,12 @@ export function PostJobDatePicker({
                     <button
                       type="button"
                       onClick={goToNextMonth}
-                      className={navButtonClassName}
+                      disabled={!canNavigateNextMonth}
+                      className={cn(
+                        navButtonClassName,
+                        !canNavigateNextMonth &&
+                          "cursor-not-allowed opacity-40 hover:border-border",
+                      )}
                       aria-label="Next month"
                     >
                       <ChevronRight
@@ -493,7 +583,12 @@ export function PostJobDatePicker({
                     <button
                       type="button"
                       onClick={goToPreviousYearRange}
-                      className={navButtonClassName}
+                      disabled={!canNavigatePreviousYearRange}
+                      className={cn(
+                        navButtonClassName,
+                        !canNavigatePreviousYearRange &&
+                          "cursor-not-allowed opacity-40 hover:border-border",
+                      )}
                       aria-label="Previous years"
                     >
                       <ChevronLeft
@@ -508,7 +603,12 @@ export function PostJobDatePicker({
                     <button
                       type="button"
                       onClick={goToNextYearRange}
-                      className={navButtonClassName}
+                      disabled={!canNavigateNextYearRange}
+                      className={cn(
+                        navButtonClassName,
+                        !canNavigateNextYearRange &&
+                          "cursor-not-allowed opacity-40 hover:border-border",
+                      )}
                       aria-label="Next years"
                     >
                       <ChevronRight
@@ -584,45 +684,60 @@ export function PostJobDatePicker({
 
                 {panelView === "months" ? (
                   <div className="grid h-full grid-cols-3 grid-rows-4 gap-0.5">
-                    {SHORT_MONTH_NAMES.map((monthName, monthIndex) => (
-                      <button
-                        key={monthName}
-                        type="button"
-                        onClick={() => selectMonth(monthIndex)}
-                        aria-label={MONTH_NAMES[monthIndex]}
-                        aria-pressed={visibleMonth.month === monthIndex}
-                        className={cn(
-                          gridCellClassName,
-                          visibleMonth.month === monthIndex
-                            ? "bg-primary-soft text-surface"
-                            : "text-foreground hover:bg-primary-light",
-                        )}
-                      >
-                        {monthName}
-                      </button>
-                    ))}
+                    {SHORT_MONTH_NAMES.map((monthName, monthIndex) => {
+                      const monthDisabled = isMonthDisabled(
+                        visibleMonth.year,
+                        monthIndex,
+                      );
+                      return (
+                        <button
+                          key={monthName}
+                          type="button"
+                          disabled={monthDisabled}
+                          onClick={() => selectMonth(monthIndex)}
+                          aria-label={MONTH_NAMES[monthIndex]}
+                          aria-pressed={visibleMonth.month === monthIndex}
+                          className={cn(
+                            gridCellClassName,
+                            visibleMonth.month === monthIndex
+                              ? "bg-primary-soft text-surface"
+                              : "text-foreground hover:bg-primary-light",
+                            monthDisabled &&
+                              "cursor-not-allowed text-muted opacity-50 hover:bg-transparent",
+                          )}
+                        >
+                          {monthName}
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : null}
 
                 {panelView === "years" ? (
                   <div className="grid h-full grid-cols-3 grid-rows-4 gap-0.5">
-                    {yearPageYears.map((year) => (
-                      <button
-                        key={year}
-                        type="button"
-                        onClick={() => selectYear(year)}
-                        aria-pressed={visibleMonth.year === year}
-                        className={cn(
-                          gridCellClassName,
-                          "tabular-nums",
-                          visibleMonth.year === year
-                            ? "bg-primary-soft text-surface"
-                            : "text-foreground hover:bg-primary-light",
-                        )}
-                      >
-                        {year}
-                      </button>
-                    ))}
+                    {yearPageYears.map((year) => {
+                      const yearDisabled = isYearDisabled(year);
+                      return (
+                        <button
+                          key={year}
+                          type="button"
+                          disabled={yearDisabled}
+                          onClick={() => selectYear(year)}
+                          aria-pressed={visibleMonth.year === year}
+                          className={cn(
+                            gridCellClassName,
+                            "tabular-nums",
+                            visibleMonth.year === year
+                              ? "bg-primary-soft text-surface"
+                              : "text-foreground hover:bg-primary-light",
+                            yearDisabled &&
+                              "cursor-not-allowed text-muted opacity-50 hover:bg-transparent",
+                          )}
+                        >
+                          {year}
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : null}
               </div>
@@ -638,12 +753,25 @@ export function PostJobDatePicker({
         ref={triggerRef}
         id={id}
         type="button"
+        disabled={disabled}
         aria-label={ariaLabel}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={isOpen ? listboxId : undefined}
-        onClick={() => (isOpen ? setIsOpen(false) : openCalendar())}
+        onClick={() => {
+          if (disabled) {
+            return;
+          }
+          if (isOpen) {
+            setIsOpen(false);
+            return;
+          }
+          openCalendar();
+        }}
         onKeyDown={(event) => {
+          if (disabled) {
+            return;
+          }
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             openCalendar();
@@ -652,6 +780,8 @@ export function PostJobDatePicker({
         className={cn(
           postJobDateFieldShellClassName,
           "pointer-events-auto w-full cursor-pointer text-left transition-colors hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+          disabled &&
+            "cursor-not-allowed opacity-60 hover:border-border focus-visible:ring-0",
         )}
       >
         <span className={cn("truncate", !value && "text-muted")}>

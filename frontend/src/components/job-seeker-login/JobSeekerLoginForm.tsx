@@ -45,9 +45,21 @@ const EMPTY_OTP_DIGITS = Array.from(
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (isAxiosError(error)) {
-    const message = error.response?.data?.message;
-    if (typeof message === "string" && message.trim()) {
-      return message;
+    const data = error.response?.data;
+
+    if (typeof data === "string" && data.trim()) {
+      return data.trim();
+    }
+
+    if (data && typeof data === "object" && "message" in data) {
+      const message = (data as { message?: unknown }).message;
+      if (typeof message === "string" && message.trim()) {
+        return message;
+      }
+    }
+
+    if (error.response?.status === 429) {
+      return "Too many requests, please try again later.";
     }
   }
 

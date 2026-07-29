@@ -66,6 +66,8 @@ type MeResponse = {
   employer: EmployerLoginPublic;
 };
 
+export const employerProfileQueryKey = ["employer", "me"] as const;
+
 function logDevelopmentOtp(phoneNumber: string, otp?: string) {
   if (!otp) {
     return;

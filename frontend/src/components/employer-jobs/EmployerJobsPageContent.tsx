@@ -5,6 +5,17 @@ import { EmployerJobsQuickActions } from "@/components/employer-jobs/EmployerJob
 import { EmployerJobsStats } from "@/components/employer-jobs/EmployerJobsStats";
 import { EmployerJobsTable } from "@/components/employer-jobs/EmployerJobsTable";
 import { EmployerJobsToolbar } from "@/components/employer-jobs/EmployerJobsToolbar";
+import { JobsFiltersShell } from "@/components/employer-jobs/JobsFiltersShell";
+import {
+  buildEmployerJobsFilterChips,
+  countActiveEmployerJobsFilters,
+  DEFAULT_EMPLOYER_JOBS_FILTERS,
+  loadEmployerJobsFiltersFromSession,
+  removeEmployerJobsFilterChip,
+  saveEmployerJobsFiltersToSession,
+  toListEmployerJobsFilterParams,
+  type EmployerJobsFiltersState,
+} from "@/components/employer-jobs/jobs-filters";
 import {
   EMPLOYER_JOBS_DEFAULT_PAGE_SIZE,
   EMPLOYER_JOBS_QUERY_KEYS,
@@ -17,9 +28,14 @@ import {
   fetchEmployerJobs,
   updateEmployerJobStatus,
 } from "@/services/employer-jobs.service";
-import type { JobStatus, JobStatusAction, EmployerJobsListResponse } from "@/types/employer-jobs";
+import type {
+  EmployerJobsListResponse,
+  JobStatus,
+  JobStatusAction,
+} from "@/types/employer-jobs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 function toStatusFilter(
   tab: EmployerJobsStatusTabId,
@@ -34,6 +50,10 @@ export function EmployerJobsPageContent() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(EMPLOYER_JOBS_DEFAULT_PAGE_SIZE);
+  const [appliedFilters, setAppliedFilters] = useState<EmployerJobsFiltersState>(
+    () => loadEmployerJobsFiltersFromSession(),
+  );
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const isFirstSearchDebounce = useRef(true);
 
   useEffect(() => {
@@ -54,12 +74,18 @@ export function EmployerJobsPageContent() {
     };
   }, [searchInput]);
 
+  const filterParams = useMemo(
+    () => toListEmployerJobsFilterParams(appliedFilters),
+    [appliedFilters],
+  );
+
   const statusFilter = toStatusFilter(statusTab);
   const listParams = {
     status: statusFilter,
     search: debouncedSearch || undefined,
     page,
     limit,
+    ...filterParams,
   };
 
   const jobsQuery = useQuery({
@@ -128,6 +154,30 @@ export function EmployerJobsPageContent() {
     },
   });
 
+  const commitFilters = useCallback((next: EmployerJobsFiltersState) => {
+    setAppliedFilters(next);
+    saveEmployerJobsFiltersToSession(next);
+    setPage(1);
+  }, []);
+
+  const handleApplyFilters = useCallback(
+    (next: EmployerJobsFiltersState) => {
+      commitFilters(next);
+    },
+    [commitFilters],
+  );
+
+  const handleClearFilters = useCallback(() => {
+    commitFilters({ ...DEFAULT_EMPLOYER_JOBS_FILTERS });
+  }, [commitFilters]);
+
+  const handleRemoveChip = useCallback(
+    (chipId: string) => {
+      commitFilters(removeEmployerJobsFilterChip(appliedFilters, chipId));
+    },
+    [appliedFilters, commitFilters],
+  );
+
   const handleTabChange = (tab: EmployerJobsStatusTabId) => {
     setStatusTab(tab);
     setPage(1);
@@ -143,6 +193,8 @@ export function EmployerJobsPageContent() {
   const pagination = jobsQuery.data?.pagination;
   const counts = jobsQuery.data?.counts;
   const stats = statsQuery.data?.stats;
+  const activeFilterCount = countActiveEmployerJobsFilters(appliedFilters);
+  const filterChips = buildEmployerJobsFilterChips(appliedFilters);
 
   return (
     <div className="flex flex-1 flex-col gap-4 px-3 py-4 sm:gap-4 sm:px-5 sm:py-5 lg:px-6 lg:py-5 xl:px-7">
@@ -154,8 +206,11 @@ export function EmployerJobsPageContent() {
             activeTab={statusTab}
             counts={counts}
             searchValue={searchInput}
+            activeFilterCount={activeFilterCount}
+            filtersOpen={filtersOpen}
             onTabChange={handleTabChange}
             onSearchChange={setSearchInput}
+            onOpenFilters={() => setFiltersOpen(true)}
           />
 
           <EmployerJobsStats
@@ -173,6 +228,26 @@ export function EmployerJobsPageContent() {
                 : undefined
             }
           />
+
+          {filterChips.length > 0 ? (
+            <div
+              className="-mt-1 flex flex-wrap items-center gap-1.5"
+              aria-label="Active job filters"
+            >
+              {filterChips.map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => handleRemoveChip(chip.id)}
+                  className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[0.6875rem] font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                >
+                  <span className="truncate">{chip.label}</span>
+                  <X className="size-3 shrink-0" aria-hidden="true" />
+                  <span className="sr-only">Remove {chip.label} filter</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <EmployerJobsTable
             jobs={jobs}
@@ -199,6 +274,15 @@ export function EmployerJobsPageContent() {
 
         <EmployerJobsQuickActions />
       </div>
+
+      <JobsFiltersShell
+        open={filtersOpen}
+        filters={appliedFilters}
+        jobOptions={jobsQuery.data?.jobOptions ?? []}
+        onClose={() => setFiltersOpen(false)}
+        onApply={handleApplyFilters}
+        onClear={handleClearFilters}
+      />
     </div>
   );
 }

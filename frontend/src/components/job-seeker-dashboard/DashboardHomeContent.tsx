@@ -10,7 +10,10 @@ import {
   fetchSeekerApplications,
 } from "@/services/job-seeker-applications.service";
 import { fetchMyResume } from "@/services/job-seeker-resume.service";
-import { fetchNotificationUnreadCount } from "@/services/notifications.service";
+import {
+  fetchNotificationUnreadCount,
+  notificationQueryKeys,
+} from "@/services/notifications.service";
 import {
   APPLICATION_STATUS_LABELS,
   type ApplicationStatus,
@@ -148,7 +151,7 @@ export function DashboardHomeContent() {
   });
 
   const unreadQuery = useQuery({
-    queryKey: ["notifications", "unread-count"],
+    queryKey: notificationQueryKeys.unreadCount("job-seeker"),
     queryFn: fetchNotificationUnreadCount,
     staleTime: 30_000,
   });

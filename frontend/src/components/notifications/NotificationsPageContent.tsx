@@ -8,6 +8,7 @@ import {
   fetchNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
+  notificationQueryKeys,
 } from "@/services/notifications.service";
 import type {
   NotificationCategoryFilter,
@@ -17,7 +18,7 @@ import type {
 import { cn } from "@/utils/cn";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type NotificationsPageContentProps = {
@@ -51,7 +52,11 @@ export function NotificationsPageContent({
   title = "Notifications",
 }: NotificationsPageContentProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
+  const recipientScope = pathname.startsWith("/employer/")
+    ? "employer"
+    : "job-seeker";
   const [searchInput, setSearchInput] = useState("");
   const [readStatus, setReadStatus] =
     useState<NotificationReadStatusFilter>("all");
@@ -65,8 +70,7 @@ export function NotificationsPageContent({
 
   const listQuery = useQuery({
     queryKey: [
-      "notifications",
-      "list",
+      ...notificationQueryKeys.list(recipientScope),
       page,
       debouncedSearch,
       readStatus,
@@ -86,14 +90,30 @@ export function NotificationsPageContent({
   const markReadMutation = useMutation({
     mutationFn: markNotificationAsRead,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.list(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.unreadCount(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.recent(recipientScope),
+      });
     },
   });
 
   const markAllMutation = useMutation({
     mutationFn: markAllNotificationsAsRead,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.list(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.unreadCount(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.recent(recipientScope),
+      });
     },
   });
 

@@ -49,17 +49,24 @@ export function EmployerSidebarItem({
             <span
               className={cn(
                 "inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-none",
-                isActive
-                  ? "bg-surface text-primary-soft"
-                  : "bg-primary-soft text-surface",
+                item.id === "messages"
+                  ? "bg-pin-state text-surface"
+                  : isActive
+                    ? "bg-surface text-primary-soft"
+                    : "bg-primary-soft text-surface",
               )}
             >
-              {item.badge}
+              {item.badge > 99 ? "99+" : item.badge}
             </span>
           ) : null}
         </>
       ) : item.badge !== undefined ? (
-        <span className="absolute right-1 top-1 size-2 rounded-full bg-primary-soft" />
+        <span
+          className={cn(
+            "absolute right-1 top-1 size-2 rounded-full",
+            item.id === "messages" ? "bg-pin-state" : "bg-primary-soft",
+          )}
+        />
       ) : null}
     </Link>
   );

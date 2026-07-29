@@ -155,6 +155,39 @@ body {
   }
 }
 
+/** Thin subtle scrollbar for independently scrolling panels (Messages columns). */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-muted) 28%, transparent)
+    transparent;
+  overscroll-behavior: contain;
+
+  &:hover,
+  &:focus-within {
+    scrollbar-color: color-mix(in srgb, var(--color-muted) 50%, transparent)
+      transparent;
+  }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: color-mix(in srgb, var(--color-muted) 28%, transparent);
+  }
+
+  &:hover::-webkit-scrollbar-thumb,
+  &:focus-within::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--color-muted) 50%, transparent);
+  }
+}
+
 @utility bg-social-instagram {
   background-image: linear-gradient(
     45deg,

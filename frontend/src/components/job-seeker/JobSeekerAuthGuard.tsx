@@ -2,34 +2,36 @@
 
 import { ROUTES } from "@/constants/routes";
 import { fetchAuthenticatedJobSeeker } from "@/services/job-seeker-login.service";
+import { isUnauthorizedAuthError } from "@/utils/auth-errors";
 import {
   clearJobSeekerAuthSession,
   getJobSeekerAccessToken,
 } from "@/utils/job-seeker-auth-storage";
 import { buildJobSeekerLoginHref } from "@/utils/safe-return-url";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 type JobSeekerAuthGuardProps = {
   children: ReactNode;
 };
 
-type AuthStatus = "checking" | "authenticated";
+type AuthStatus = "checking" | "authenticated" | "transient_error";
 
 export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
   const router = useRouter();
   const [status, setStatus] = useState<AuthStatus>("checking");
+  const [retryToken, setRetryToken] = useState(0);
+
+  const redirectUnauthenticated = useCallback(() => {
+    clearJobSeekerAuthSession();
+    const returnUrl = `${window.location.pathname}${window.location.search}`;
+    router.replace(
+      buildJobSeekerLoginHref(returnUrl || ROUTES.JOB_SEEKER_MY_RESUME),
+    );
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;
-
-    const redirectUnauthenticated = () => {
-      clearJobSeekerAuthSession();
-      const returnUrl = `${window.location.pathname}${window.location.search}`;
-      router.replace(
-        buildJobSeekerLoginHref(returnUrl || ROUTES.JOB_SEEKER_MY_RESUME),
-      );
-    };
 
     const verifySession = async () => {
       const accessToken = getJobSeekerAccessToken();
@@ -44,10 +46,17 @@ export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
         if (!cancelled) {
           setStatus("authenticated");
         }
-      } catch {
-        if (!cancelled) {
-          redirectUnauthenticated();
+      } catch (error) {
+        if (cancelled) {
+          return;
         }
+
+        if (isUnauthorizedAuthError(error)) {
+          redirectUnauthenticated();
+          return;
+        }
+
+        setStatus("transient_error");
       }
     };
 
@@ -65,7 +74,31 @@ export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
       cancelled = true;
       window.removeEventListener("pageshow", handlePageShow);
     };
-  }, [router]);
+  }, [redirectUnauthenticated, retryToken]);
+
+  if (status === "transient_error") {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-hero-bg px-6 text-center">
+        <p className="text-sm font-medium text-foreground">
+          Unable to verify your session right now.
+        </p>
+        <p className="max-w-sm text-sm text-muted">
+          This is usually temporary (network or rate limiting). Your login was
+          not cleared.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setStatus("checking");
+            setRetryToken((current) => current + 1);
+          }}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   if (status !== "authenticated") {
     return (

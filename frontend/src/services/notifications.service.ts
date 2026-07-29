@@ -16,6 +16,25 @@ type ApiSuccess<T> = {
   data: T;
 };
 
+export type NotificationRecipientScope = "employer" | "job-seeker";
+
+export const notificationQueryKeys = {
+  unreadCount: (scope: NotificationRecipientScope) =>
+    ["notifications", scope, "unread-count"] as const,
+  recent: (scope: NotificationRecipientScope) =>
+    ["notifications", scope, "recent"] as const,
+  list: (scope: NotificationRecipientScope) =>
+    ["notifications", scope, "list"] as const,
+};
+
+export const employerMessageQueryKeys = {
+  all: ["employer", "messages"] as const,
+  conversations: ["employer", "messages", "conversations"] as const,
+  stats: ["employer", "messages", "stats"] as const,
+  timeline: (applicationId: string | null) =>
+    ["employer", "messages", "timeline", applicationId] as const,
+};
+
 export async function fetchNotifications(options?: {
   page?: number;
   limit?: number;
@@ -47,6 +66,16 @@ export async function fetchNotificationConversations(options?: {
   search?: string;
   readStatus?: NotificationReadStatusFilter;
   category?: NotificationCategoryFilter;
+  publicJobId?: string;
+  applicationStatus?: string;
+  hasType?: string;
+  employerAction?: string;
+  candidateAction?: string;
+  conversationType?: string;
+  quickDate?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sort?: string;
 }): Promise<EmployerMessageConversationListResult> {
   const response = await apiClient.get<
     ApiSuccess<EmployerMessageConversationListResult>
@@ -57,6 +86,16 @@ export async function fetchNotificationConversations(options?: {
       search: options?.search || undefined,
       readStatus: options?.readStatus ?? "all",
       category: options?.category ?? "all",
+      publicJobId: options?.publicJobId || undefined,
+      applicationStatus: options?.applicationStatus ?? "all",
+      hasType: options?.hasType ?? "all",
+      employerAction: options?.employerAction ?? "all",
+      candidateAction: options?.candidateAction ?? "all",
+      conversationType: options?.conversationType ?? "all",
+      quickDate: options?.quickDate ?? "all",
+      dateFrom: options?.dateFrom || undefined,
+      dateTo: options?.dateTo || undefined,
+      sort: options?.sort ?? "newest",
     },
   });
 

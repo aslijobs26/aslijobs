@@ -1,7 +1,7 @@
 /**
- * Employer hiring pipeline: sequential status transitions.
+ * Employer hiring pipeline: forward-only transitions.
  * Terminal statuses lock further employer changes.
- * Interview Scheduled must be set via the interview scheduling API, not direct status update.
+ * Earlier stages may enter Interview Scheduled only through the interview API.
  */
 
 import { HTTP_STATUS } from "../../constants/http-status.js";
@@ -44,9 +44,27 @@ const EMPLOYER_ALLOWED_TRANSITIONS: Record<
   ApplicationStatus,
   readonly ApplicationStatus[]
 > = {
-  submitted: ["viewed", "under_review", "rejected", "withdrawn"],
-  viewed: ["under_review", "shortlisted", "rejected", "withdrawn"],
-  under_review: ["shortlisted", "rejected", "withdrawn"],
+  submitted: [
+    "viewed",
+    "under_review",
+    "shortlisted",
+    "interview_scheduled",
+    "rejected",
+    "withdrawn",
+  ],
+  viewed: [
+    "under_review",
+    "shortlisted",
+    "interview_scheduled",
+    "rejected",
+    "withdrawn",
+  ],
+  under_review: [
+    "shortlisted",
+    "interview_scheduled",
+    "rejected",
+    "withdrawn",
+  ],
   shortlisted: ["interview_scheduled", "rejected", "withdrawn"],
   interview_scheduled: ["interview_completed", "rejected", "withdrawn"],
   interview_completed: ["offer_sent", "rejected", "withdrawn"],

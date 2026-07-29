@@ -15,8 +15,11 @@ type EmployerJobsToolbarProps = {
   activeTab: EmployerJobsStatusTabId;
   counts?: EmployerJobCounts;
   searchValue: string;
+  activeFilterCount: number;
+  filtersOpen: boolean;
   onTabChange: (tab: EmployerJobsStatusTabId) => void;
   onSearchChange: (value: string) => void;
+  onOpenFilters: () => void;
 };
 
 function getTabCount(
@@ -33,8 +36,11 @@ export function EmployerJobsToolbar({
   activeTab,
   counts,
   searchValue,
+  activeFilterCount,
+  filtersOpen,
   onTabChange,
   onSearchChange,
+  onOpenFilters,
 }: EmployerJobsToolbarProps) {
   return (
     <section
@@ -89,13 +95,22 @@ export function EmployerJobsToolbar({
       <div className="flex w-full shrink-0 items-center gap-2 lg:w-auto">
         <button
           type="button"
-          disabled
-          aria-disabled="true"
-          title="Filters coming soon"
-          className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-semibold text-muted opacity-70"
+          onClick={onOpenFilters}
+          aria-expanded={filtersOpen}
+          aria-haspopup="dialog"
+          className={cn(
+            "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+            activeFilterCount > 0 || filtersOpen
+              ? "border-primary bg-primary-light text-primary"
+              : "border-border bg-surface text-muted hover:border-primary/40 hover:bg-primary-light/50 hover:text-foreground",
+          )}
         >
           <Filter className="size-3.5" aria-hidden="true" strokeWidth={2} />
-          {EMPLOYER_JOBS_FILTERS_LABEL}
+          <span>
+            {activeFilterCount > 0
+              ? `${EMPLOYER_JOBS_FILTERS_LABEL} (${activeFilterCount})`
+              : EMPLOYER_JOBS_FILTERS_LABEL}
+          </span>
         </button>
 
         <label className="relative min-w-0 flex-1 lg:w-[17.5rem] lg:flex-none">

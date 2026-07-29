@@ -118,8 +118,7 @@ function formatScheduleTime(time: string): string {
 }
 
 function scheduleBadgeLabel(item: EmployerInterviewListItem): string {
-  const status = interviewDisplayStatus(item);
-  return status.label === "Confirmed" ? "Scheduled" : status.label;
+  return interviewDisplayStatus(item).label;
 }
 
 export function InterviewsTodaySchedule({

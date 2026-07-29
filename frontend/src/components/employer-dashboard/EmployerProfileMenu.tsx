@@ -8,14 +8,14 @@ import {
 } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
 import {
+  employerProfileQueryKey,
   fetchAuthenticatedEmployer,
   type EmployerLoginPublic,
 } from "@/services/employer-login.service";
 import { cn } from "@/utils/cn";
-import {
-  clearEmployerAuthSession,
-  getEmployerAccessToken,
-} from "@/utils/employer-auth-storage";
+import { clearEmployerAuthSession } from "@/utils/employer-auth-storage";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
+import { useQuery } from "@tanstack/react-query";
 import {
   Briefcase,
   Building2,
@@ -109,6 +109,46 @@ function getCompanyStartingInitials(displayName: string): string {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
+function getEmployerAvatarUrl(employer: EmployerLoginPublic): string | null {
+  if (employer.accountType === "individual") {
+    return employer.profilePhoto?.url ?? employer.companyLogo?.url ?? null;
+  }
+
+  return employer.companyLogo?.url ?? employer.profilePhoto?.url ?? null;
+}
+
+function EmployerProfileAvatar({
+  initials,
+  imageUrl,
+}: {
+  initials: string;
+  imageUrl: string | null;
+}) {
+  const [hasImageError, setHasImageError] = useState(false);
+  const resolvedImageUrl = resolveMediaUrl(imageUrl);
+
+  if (resolvedImageUrl && !hasImageError) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- backend upload URL; not a Next Image domain asset
+      <img
+        src={resolvedImageUrl}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onError={() => setHasImageError(true)}
+        className="inline-flex size-9 shrink-0 rounded-lg object-cover"
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return (
+    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-sm font-bold text-surface">
+      {initials}
+    </span>
+  );
+}
+
 export function EmployerProfileMenu({
   className,
   compact = false,
@@ -119,12 +159,21 @@ export function EmployerProfileMenu({
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [companyName, setCompanyName] = useState(
-    EMPLOYER_DASHBOARD_COMPANY_NAME,
-  );
-  const [avatarInitials, setAvatarInitials] = useState(
-    EMPLOYER_DASHBOARD_AVATAR_INITIALS,
-  );
+  const employerProfileQuery = useQuery({
+    queryKey: employerProfileQueryKey,
+    queryFn: async () => {
+      const { employer } = await fetchAuthenticatedEmployer();
+      return employer;
+    },
+    staleTime: 5 * 60_000,
+  });
+  const companyName = employerProfileQuery.data
+    ? getEmployerDisplayName(employerProfileQuery.data)
+    : EMPLOYER_DASHBOARD_COMPANY_NAME;
+  const avatarInitials = getCompanyStartingInitials(companyName);
+  const avatarImageUrl = employerProfileQuery.data
+    ? getEmployerAvatarUrl(employerProfileQuery.data)
+    : null;
 
   const profileMenuLinks = useMemo(() => {
     const primaryLink = isEmployerWorkspacePath(pathname)
@@ -141,32 +190,6 @@ export function EmployerProfileMenu({
 
     return [primaryLink, ...PROFILE_MENU_SECONDARY_LINKS];
   }, [pathname]);
-
-  useEffect(() => {
-    if (!getEmployerAccessToken()) {
-      return;
-    }
-
-    let cancelled = false;
-
-    void fetchAuthenticatedEmployer()
-      .then(({ employer }) => {
-        if (cancelled) {
-          return;
-        }
-
-        const displayName = getEmployerDisplayName(employer);
-        setCompanyName(displayName);
-        setAvatarInitials(getCompanyStartingInitials(displayName));
-      })
-      .catch(() => {
-        // Keep fallback placeholder values when session is unavailable.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (!isOpen) {
@@ -223,9 +246,10 @@ export function EmployerProfileMenu({
         onClick={() => setIsOpen((current) => !current)}
         onKeyDown={handleTriggerKeyDown}
       >
-        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-sm font-bold text-surface">
-          {avatarInitials}
-        </span>
+        <EmployerProfileAvatar
+          initials={avatarInitials}
+          imageUrl={avatarImageUrl}
+        />
 
         {!compact ? (
           <>

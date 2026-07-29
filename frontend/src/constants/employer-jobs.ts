@@ -170,6 +170,21 @@ export const EMPLOYER_JOBS_QUERY_KEYS = {
     search?: string;
     page: number;
     limit: number;
+    jobId?: string;
+    jobType?: string;
+    workMode?: string;
+    experience?: string;
+    minSalary?: number;
+    maxSalary?: number;
+    city?: string;
+    state?: string;
+    businessCategory?: string;
+    postedQuick?: string;
+    postedFrom?: string;
+    postedTo?: string;
+    applications?: string;
+    minVacancies?: number;
+    maxVacancies?: number;
   }) => [...EMPLOYER_JOBS_QUERY_KEYS.lists(), params] as const,
   stats: () => [...EMPLOYER_JOBS_QUERY_KEYS.all, "stats"] as const,
 };
