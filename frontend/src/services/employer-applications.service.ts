@@ -73,12 +73,16 @@ export async function fetchEmployerLocationSuggestions(
 
 export async function fetchEmployerApplicationStats(options?: {
   publicJobId?: string;
+  appliedFrom?: string;
+  appliedTo?: string;
 }): Promise<EmployerApplicationStats> {
   const response = await apiClient.get<
     ApiSuccess<{ stats: EmployerApplicationStats }>
   >("/applications/employer/stats", {
     params: {
       publicJobId: options?.publicJobId || undefined,
+      appliedFrom: options?.appliedFrom || undefined,
+      appliedTo: options?.appliedTo || undefined,
     },
   });
 

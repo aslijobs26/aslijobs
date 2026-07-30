@@ -15,7 +15,7 @@ import {
   updateEmployerActiveJob,
   updateEmployerJobDraft,
 } from "@/services/employer-jobs.service";
-import { fetchEmployerProfile } from "@/services/employer-profile.service";
+import { ensureEmployerProfile } from "@/hooks/useEmployerProfile";
 import type { CreatedJobResponse, JobStatus } from "@/types/employer-jobs";
 import { buildJobPostedSuccessSummary } from "@/utils/build-job-posted-success-summary";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
@@ -205,7 +205,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
 
     const loadEmployerAccountType = async () => {
       try {
-        const profile = await fetchEmployerProfile();
+        const profile = await ensureEmployerProfile(queryClient);
         if (cancelled) {
           return;
         }
@@ -273,7 +273,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
     return () => {
       cancelled = true;
     };
-  }, [draftJobId]);
+  }, [draftJobId, queryClient]);
 
   const buildDraftSignature = useCallback(
     (data: PostJobWizardFormData, step: PostJobActiveStep) =>

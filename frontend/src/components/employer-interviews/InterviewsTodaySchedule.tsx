@@ -158,7 +158,7 @@ export function InterviewsTodaySchedule({
           "min-h-0",
           /* Exactly 3 rows visible; 4th+ scrolls (hidden scrollbar). */
           hasItems &&
-            "max-h-[calc(3*5.5rem)] overflow-y-auto overscroll-contain scrollbar-hidden",
+            "lg:max-h-[calc(3*5.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:scrollbar-hidden",
         )}
       >
         {isLoading ? (

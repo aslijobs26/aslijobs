@@ -39,8 +39,8 @@ import {
 
 const JOB_SEARCH_SCROLL_KEY = "asli-job-search-scroll";
 
-/** Three-column split (filters + cards + sticky details) requires xl+. */
-const SPLIT_VIEW_MEDIA_QUERY = "(min-width: 1280px)";
+/** Three-column split (filters + cards + sticky details) starts at lg (1024px+). */
+const SPLIT_VIEW_MEDIA_QUERY = "(min-width: 1024px)";
 
 function subscribeToSplitViewMedia(onStoreChange: () => void) {
   const media = window.matchMedia(SPLIT_VIEW_MEDIA_QUERY);
@@ -317,7 +317,7 @@ export function JobSearchPageContent() {
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start xl:grid-cols-[250px_minmax(0,1fr)]">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[210px_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[250px_minmax(0,1fr)] xl:gap-6">
         <div className="hidden md:block lg:sticky lg:top-24 lg:self-start">
           <JobSearchFiltersSidebar
             state={urlState}
@@ -341,7 +341,7 @@ export function JobSearchPageContent() {
 
             <JobSearchWhatsAppBanner />
 
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] xl:gap-5">
               <div className="min-w-0 space-y-4">
                 <JobSearchJobList
                   jobs={jobs}
@@ -375,7 +375,7 @@ export function JobSearchPageContent() {
               </div>
 
               {isSplitView ? (
-                <div className="hidden min-w-0 xl:block">
+                <div className="hidden min-w-0 lg:block">
                   <div className="sticky top-24 flex max-h-[calc(100vh-7rem)] flex-col overflow-hidden">
                     {detailJobId ? (
                       <JobSearchOverviewPanel

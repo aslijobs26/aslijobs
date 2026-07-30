@@ -31,11 +31,11 @@ export function EmployerJobsStats({
         return (
           <article
             key={card.key}
-            className="flex h-full min-h-[6.75rem] flex-col rounded-xl border border-border-subtle bg-surface px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:min-h-[7.25rem] sm:px-4 sm:py-3.5"
+            className="group flex h-full min-h-[6.75rem] flex-col rounded-xl border border-border-subtle bg-surface px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow,transform] duration-200 hover:border-primary/20 hover:shadow-md motion-safe:hover:-translate-y-0.5 sm:min-h-[7.25rem] sm:px-4 sm:py-3.5"
           >
             <div
               className={cn(
-                "inline-flex size-8 items-center justify-center rounded-lg sm:size-9",
+                "inline-flex size-8 items-center justify-center rounded-lg transition-transform duration-200 motion-safe:group-hover:scale-105 sm:size-9",
                 card.iconWrapClassName,
               )}
               aria-hidden="true"

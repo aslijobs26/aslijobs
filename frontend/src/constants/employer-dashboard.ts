@@ -116,7 +116,7 @@ export const EMPLOYER_DASHBOARD_POST_JOB_LABEL = "Post Job";
 
 export const EMPLOYER_DASHBOARD_LANGUAGE_LABEL = "English";
 
-export const EMPLOYER_DASHBOARD_COMPANY_NAME = "ABC Industries";
+export const EMPLOYER_DASHBOARD_ACCOUNT_NAME = "Employer Account";
 export const EMPLOYER_DASHBOARD_ROLE_LABEL = "Employer";
 export const EMPLOYER_DASHBOARD_AVATAR_INITIALS = "AI";
 

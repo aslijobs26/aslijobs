@@ -13,11 +13,32 @@ const KPI_ITEMS: {
   key: keyof EmployerApplicationStats;
   label: string;
   icon: typeof Users;
+  iconClassName: string;
 }[] = [
-  { key: "total", label: "Total Candidates", icon: Users },
-  { key: "submitted", label: "New Applications", icon: FileText },
-  { key: "shortlisted", label: "Shortlisted", icon: Star },
-  { key: "interview_scheduled", label: "Interview Scheduled", icon: Briefcase },
+  {
+    key: "total",
+    label: "Total Candidates",
+    icon: Users,
+    iconClassName: "bg-primary-light text-primary",
+  },
+  {
+    key: "submitted",
+    label: "New Applications",
+    icon: FileText,
+    iconClassName: "bg-benefit-verified-surface text-benefit-verified-icon",
+  },
+  {
+    key: "shortlisted",
+    label: "Shortlisted",
+    icon: Star,
+    iconClassName: "bg-benefit-free-surface text-benefit-free-icon",
+  },
+  {
+    key: "interview_scheduled",
+    label: "Interview Scheduled",
+    icon: Briefcase,
+    iconClassName: "bg-benefit-languages-surface text-benefit-languages-icon",
+  },
 ];
 
 export function CandidatesKpiStrip({
@@ -39,7 +60,12 @@ export function CandidatesKpiStrip({
             )}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
+              <span
+                className={cn(
+                  "inline-flex size-7 shrink-0 items-center justify-center rounded-lg",
+                  item.iconClassName,
+                )}
+              >
                 <Icon className="size-3.5" aria-hidden="true" />
               </span>
             </div>

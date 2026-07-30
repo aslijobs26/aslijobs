@@ -1,5 +1,6 @@
 import multer from "multer";
 import {
+  EMPLOYER_COMPANY_MEDIA_MAX_COUNT,
   EMPLOYER_DOCUMENT_MAX_SIZE_BYTES,
   EMPLOYER_DOCUMENT_MIME_TYPES,
 } from "../constants/employer.constants.js";
@@ -48,6 +49,7 @@ export const employerIndividualIdentityUpload = employerUploadBase.fields([
 export const employerProfileUpdateUpload = employerUploadBase.fields([
   { name: "companyLogo", maxCount: 1 },
   { name: "profilePhoto", maxCount: 1 },
+  { name: "companyMedia", maxCount: EMPLOYER_COMPANY_MEDIA_MAX_COUNT },
 ]);
 
 export function getUploadedFile(
@@ -59,4 +61,15 @@ export function getUploadedFile(
   }
 
   return files[fieldName]?.[0];
+}
+
+export function getUploadedFiles(
+  files: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] } | undefined,
+  fieldName: string,
+): Express.Multer.File[] {
+  if (!files || Array.isArray(files)) {
+    return [];
+  }
+
+  return files[fieldName] ?? [];
 }

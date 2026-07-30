@@ -203,13 +203,21 @@ export function JobSearchJobCard({
   return (
     <article
       onClick={onSelect}
+      aria-current={selected ? "true" : undefined}
       className={cn(
-        "cursor-pointer rounded-[20px] border border-[#E8ECF0] bg-surface p-4 shadow-[0_2px_12px_rgba(15,23,42,0.04)] transition-all duration-200 sm:p-5",
+        "relative cursor-pointer overflow-hidden rounded-[20px] border p-4 shadow-[0_2px_12px_rgba(15,23,42,0.04)] transition-all duration-200 sm:p-5",
         selected
-          ? "border-primary/50 bg-primary/[0.03] shadow-[0_4px_16px_rgba(14,133,133,0.1)]"
-          : "hover:border-[#D5DBE3] hover:shadow-[0_4px_18px_rgba(15,23,42,0.07)]",
+          ? "border-primary-soft/60 bg-job-card-selected-surface shadow-[0_6px_20px_rgba(0,186,165,0.16)]"
+          : "border-[#E8ECF0] bg-surface hover:border-primary/20 hover:shadow-[0_10px_28px_rgba(15,23,42,0.12)] motion-safe:hover:-translate-y-0.5",
       )}
     >
+      {selected ? (
+        <span
+          className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary-soft to-brand-accent"
+          aria-hidden="true"
+        />
+      ) : null}
+
       {/* Header */}
       <div className="flex items-start gap-3">
         <div

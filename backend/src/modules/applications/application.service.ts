@@ -1157,6 +1157,8 @@ export class ApplicationService {
   async getStatsForEmployer(input: {
     employerId: string;
     publicJobId?: string;
+    appliedFrom?: string;
+    appliedTo?: string;
   }): Promise<{ stats: EmployerApplicationStats }> {
     if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
@@ -1168,6 +1170,24 @@ export class ApplicationService {
 
     if (input.publicJobId?.trim()) {
       match.publicJobId = input.publicJobId.trim().toUpperCase();
+    }
+
+    const appliedAt: Record<string, Date> = {};
+    if (input.appliedFrom?.trim()) {
+      const from = new Date(input.appliedFrom);
+      if (!Number.isNaN(from.getTime())) {
+        appliedAt.$gte = from;
+      }
+    }
+    if (input.appliedTo?.trim()) {
+      const to = new Date(input.appliedTo);
+      if (!Number.isNaN(to.getTime())) {
+        to.setHours(23, 59, 59, 999);
+        appliedAt.$lte = to;
+      }
+    }
+    if (Object.keys(appliedAt).length > 0) {
+      match.appliedAt = appliedAt;
     }
 
     const rows = await ApplicationModel.aggregate<{

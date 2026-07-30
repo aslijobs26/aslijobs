@@ -6,4 +6,6 @@ export type EmployerDashboardNavItem = {
   href: string;
   icon: LucideIcon;
   badge?: number;
+  /** One-time onboarding indicator. Separate from numeric notifications. */
+  showOnboardingDot?: boolean;
 };

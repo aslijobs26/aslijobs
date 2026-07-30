@@ -18,13 +18,18 @@ export function EmployerSidebarItem({
   onNavigate,
 }: EmployerSidebarItemProps) {
   const Icon = item.icon;
+  const hasOnboardingDot = Boolean(item.showOnboardingDot);
+  const ariaLabel = hasOnboardingDot
+    ? `${item.label}, your profile needs attention`
+    : undefined;
 
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
       aria-current={isActive ? "page" : undefined}
-      title={collapsed ? item.label : undefined}
+      aria-label={ariaLabel}
+      title={collapsed ? (ariaLabel ?? item.label) : undefined}
       className={cn(
         "group relative flex items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
         collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
@@ -45,6 +50,12 @@ export function EmployerSidebarItem({
       {!collapsed ? (
         <>
           <span className="min-w-0 flex-1 truncate">{item.label}</span>
+          {hasOnboardingDot ? (
+            <span
+              className="size-2 shrink-0 animate-pulse rounded-full bg-primary ring-4 ring-primary/20 transition-opacity duration-300"
+              aria-hidden="true"
+            />
+          ) : null}
           {item.badge !== undefined ? (
             <span
               className={cn(
@@ -60,12 +71,17 @@ export function EmployerSidebarItem({
             </span>
           ) : null}
         </>
-      ) : item.badge !== undefined ? (
+      ) : hasOnboardingDot || item.badge !== undefined ? (
         <span
           className={cn(
-            "absolute right-1 top-1 size-2 rounded-full",
-            item.id === "messages" ? "bg-pin-state" : "bg-primary-soft",
+            "absolute right-1 top-1 size-2 rounded-full transition-opacity duration-300",
+            hasOnboardingDot
+              ? "animate-pulse bg-primary ring-4 ring-primary/20"
+              : item.id === "messages"
+                ? "bg-pin-state"
+                : "bg-primary-soft",
           )}
+          aria-hidden="true"
         />
       ) : null}
     </Link>

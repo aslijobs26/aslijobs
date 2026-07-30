@@ -24,6 +24,7 @@ import {
   CalendarPlus,
   ChevronLeft,
   ChevronRight,
+  Eye,
   Phone,
   Video,
 } from "lucide-react";
@@ -208,6 +209,259 @@ function AgendaList({
   );
 }
 
+function MobileInterviewList({
+  day,
+  items,
+  onSelect,
+  onScheduleInterview,
+}: {
+  day: Date;
+  items: EmployerInterviewListItem[];
+  onSelect: (id: string) => void;
+  onScheduleInterview: () => void;
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="rounded-xl border border-border-subtle bg-hero-bg/60 px-4 py-6 text-center">
+        <p className="text-sm font-semibold text-foreground">
+          No interviews scheduled.
+        </p>
+        <p className="mt-1 text-xs text-muted">
+          There are no interviews for {formatDayHeading(day)}.
+        </p>
+        <button
+          type="button"
+          onClick={onScheduleInterview}
+          className="mt-4 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
+          <CalendarPlus className="size-4" aria-hidden="true" />
+          Schedule Interview
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <section aria-labelledby="mobile-selected-day-heading">
+      <h3
+        id="mobile-selected-day-heading"
+        className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted"
+      >
+        {formatDayHeading(day)}
+      </h3>
+      <ol className="space-y-3">
+        {items.map((item) => {
+          const status = interviewDisplayStatus(item);
+          const type = resolveInterviewTypeDisplay({
+            mode: item.interviewMode,
+            meetingLink: item.meetingLink,
+          });
+
+          return (
+            <li
+              key={item.id}
+              className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm"
+            >
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-foreground">
+                    {item.candidateName}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-muted">
+                    {item.jobTitle || "Untitled job"}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 rounded-md px-2 py-1 text-[0.6875rem] font-semibold ring-1 ring-inset",
+                    status.className,
+                  )}
+                >
+                  {status.label}
+                </span>
+              </div>
+
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border-subtle pt-3 text-xs">
+                <div className="min-w-0">
+                  <dt className="text-muted">Time</dt>
+                  <dd className="mt-0.5 truncate font-semibold tabular-nums text-foreground">
+                    {formatInterviewTime12h(item.interviewTime)}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-muted">Interview type</dt>
+                  <dd className="mt-0.5 flex min-w-0 items-center gap-1 font-semibold text-foreground">
+                    <ModeIcon mode={item.interviewMode} />
+                    <span className="truncate">{type.label}</span>
+                  </dd>
+                </div>
+                <div className="col-span-2 min-w-0">
+                  <dt className="text-muted">Interviewer</dt>
+                  <dd className="mt-0.5 truncate font-semibold text-foreground">
+                    {item.interviewerName || "Not assigned"}
+                    {item.interviewerDesignation
+                      ? ` · ${item.interviewerDesignation}`
+                      : ""}
+                  </dd>
+                </div>
+              </dl>
+
+              <button
+                type="button"
+                onClick={() => onSelect(item.id)}
+                className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-primary bg-primary-light px-3 text-sm font-semibold text-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                aria-label={`View interview details for ${item.candidateName}`}
+              >
+                <Eye className="size-4" aria-hidden="true" />
+                View details
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+function MobileWeekCalendar({
+  days,
+  byDate,
+  selectedDay,
+  today,
+  onSelectDay,
+}: {
+  days: Date[];
+  byDate: Map<string, EmployerInterviewListItem[]>;
+  selectedDay: Date;
+  today: Date;
+  onSelectDay: (day: Date) => void;
+}) {
+  return (
+    <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-border-subtle bg-border-subtle">
+      {days.map((day) => {
+        const key = toIsoDate(day);
+        const count = byDate.get(key)?.length ?? 0;
+        const selected = isSameDay(day, selectedDay);
+        const isToday = isSameDay(day, today);
+
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onSelectDay(day)}
+            aria-pressed={selected}
+            aria-label={`${formatDayHeading(day)}, ${count} ${count === 1 ? "interview" : "interviews"}`}
+            className={cn(
+              "flex min-h-16 min-w-0 flex-col items-center justify-center bg-surface px-0.5 py-2 text-center focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
+              selected && "bg-primary-light",
+            )}
+          >
+            <span className="text-[0.5625rem] font-semibold uppercase text-muted sm:text-[0.625rem]">
+              {WEEKDAY_LABELS[(day.getDay() + 6) % 7]}
+            </span>
+            <span
+              className={cn(
+                "mt-1 inline-flex size-7 items-center justify-center rounded-full text-xs font-bold",
+                isToday
+                  ? "bg-primary text-surface"
+                  : selected
+                    ? "text-primary"
+                    : "text-foreground",
+              )}
+            >
+              {day.getDate()}
+            </span>
+            <span
+              className={cn(
+                "mt-1 h-1.5 min-w-1.5 rounded-full",
+                count > 0 ? "bg-primary px-1" : "bg-transparent",
+              )}
+              aria-hidden="true"
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MobileMonthCalendar({
+  days,
+  anchor,
+  byDate,
+  selectedDay,
+  today,
+  onSelectDay,
+}: {
+  days: Date[];
+  anchor: Date;
+  byDate: Map<string, EmployerInterviewListItem[]>;
+  selectedDay: Date;
+  today: Date;
+  onSelectDay: (day: Date) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1 grid grid-cols-7">
+        {WEEKDAY_LABELS.map((label) => (
+          <div
+            key={label}
+            className="py-1 text-center text-[0.5625rem] font-semibold uppercase text-muted sm:text-[0.625rem]"
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-border-subtle bg-border-subtle">
+        {days.map((day) => {
+          const key = toIsoDate(day);
+          const count = byDate.get(key)?.length ?? 0;
+          const inMonth = day.getMonth() === anchor.getMonth();
+          const selected = isSameDay(day, selectedDay);
+          const isToday = isSameDay(day, today);
+
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onSelectDay(day)}
+              aria-pressed={selected}
+              aria-label={`${formatDayHeading(day)}, ${count} ${count === 1 ? "interview" : "interviews"}`}
+              className={cn(
+                "flex min-h-12 min-w-0 flex-col items-center justify-center bg-surface px-0.5 py-1.5 focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:min-h-14",
+                !inMonth && "bg-hero-bg/60",
+                selected && "bg-primary-light",
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-flex size-6 items-center justify-center rounded-full text-xs font-semibold",
+                  isToday
+                    ? "bg-primary text-surface"
+                    : selected
+                      ? "text-primary"
+                      : inMonth
+                        ? "text-foreground"
+                        : "text-muted",
+                )}
+              >
+                {day.getDate()}
+              </span>
+              <span
+                className={cn(
+                  "mt-0.5 h-1.5 min-w-1.5 rounded-full",
+                  count > 0 ? "bg-primary px-1" : "bg-transparent",
+                )}
+                aria-hidden="true"
+              />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function InterviewsCalendar({
   interviews,
   isLoading,
@@ -218,19 +472,24 @@ export function InterviewsCalendar({
   onRangeChange,
 }: InterviewsCalendarProps) {
   const [mode, setMode] = useState<InterviewsCalendarMode>("month");
+  const [mobileMode, setMobileMode] =
+    useState<InterviewsCalendarMode>("day");
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()));
+  const [selectedDay, setSelectedDay] = useState(() =>
+    startOfDay(new Date()),
+  );
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
+    const media = window.matchMedia("(max-width: 1023px)");
     const sync = () => setIsMobile(media.matches);
     sync();
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, []);
 
-  const effectiveMode: InterviewsCalendarMode = isMobile ? "day" : mode;
-  const showAgenda = isMobile || effectiveMode === "day";
+  const effectiveMode: InterviewsCalendarMode = isMobile ? mobileMode : mode;
+  const showAgenda = !isMobile && effectiveMode === "day";
 
   useEffect(() => {
     const rangeMode = isMobile ? "month" : mode;
@@ -255,6 +514,7 @@ export function InterviewsCalendar({
   const today = startOfDay(new Date());
   const monthDays = useMemo(() => getMonthGridDays(anchor), [anchor]);
   const weekDays = useMemo(() => getWeekDays(anchor), [anchor]);
+  const selectedItems = byDate.get(toIsoDate(selectedDay)) ?? [];
 
   const headerLabel =
     effectiveMode === "week"
@@ -263,15 +523,26 @@ export function InterviewsCalendar({
         ? formatDayHeading(anchor)
         : formatMonthYear(anchor);
 
-  const goToday = () => setAnchor(startOfDay(new Date()));
-  const goPrev = () =>
-    setAnchor((current) =>
-      shiftCalendarAnchor(isMobile ? "month" : mode, current, -1),
-    );
-  const goNext = () =>
-    setAnchor((current) =>
-      shiftCalendarAnchor(isMobile ? "month" : mode, current, 1),
-    );
+  const goToday = () => {
+    const next = startOfDay(new Date());
+    setAnchor(next);
+    setSelectedDay(next);
+  };
+  const navigate = (direction: -1 | 1) => {
+    const next = shiftCalendarAnchor(effectiveMode, anchor, direction);
+    setAnchor(next);
+    if (isMobile) {
+      setSelectedDay(
+        effectiveMode === "week" ? getWeekDays(next)[0]! : next,
+      );
+    }
+  };
+  const goPrev = () => navigate(-1);
+  const goNext = () => navigate(1);
+  const selectMobileMode = (nextMode: InterviewsCalendarMode) => {
+    setMobileMode(nextMode);
+    setAnchor(selectedDay);
+  };
 
   const emptyState = (
     <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -290,8 +561,8 @@ export function InterviewsCalendar({
   );
 
   return (
-    <section className="flex min-h-[32rem] flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface">
-      <header className="flex shrink-0 flex-col gap-3 border-b border-border-subtle p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+    <section className="flex min-w-0 flex-1 flex-col rounded-xl border border-border-subtle bg-surface lg:min-h-[32rem] lg:overflow-hidden">
+      <header className="hidden shrink-0 flex-col gap-3 border-b border-border-subtle p-3 sm:p-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex overflow-hidden rounded-lg border border-border-subtle">
             <button
@@ -323,43 +594,117 @@ export function InterviewsCalendar({
           </h2>
         </div>
 
-        {!isMobile ? (
-          <div
-            className="inline-flex overflow-hidden rounded-lg border border-border-subtle"
-            role="tablist"
-            aria-label="Calendar view mode"
-          >
-            {(["month", "week", "day"] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                role="tab"
-                aria-selected={mode === option}
-                onClick={() => setMode(option)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-semibold capitalize",
-                  mode === option
-                    ? "bg-primary text-surface"
-                    : "bg-surface text-muted hover:bg-primary-light/40 hover:text-foreground",
-                )}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <div
+          className="inline-flex overflow-hidden rounded-lg border border-border-subtle"
+          role="tablist"
+          aria-label="Calendar view mode"
+        >
+          {(["month", "week", "day"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              role="tab"
+              aria-selected={mode === option}
+              onClick={() => setMode(option)}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold capitalize",
+                mode === option
+                  ? "bg-primary text-surface"
+                  : "bg-surface text-muted hover:bg-primary-light/40 hover:text-foreground",
+              )}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4">
-        {isLoading ? (
-          <div className="grid grid-cols-7 gap-1" aria-hidden="true">
-            {Array.from({ length: 28 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-20 animate-pulse rounded-lg bg-primary-light/40"
-              />
-            ))}
+      <header className="border-b border-border-subtle p-3 lg:hidden">
+        <div
+          className="grid grid-cols-3 overflow-hidden rounded-lg border border-border-subtle"
+          role="tablist"
+          aria-label="Calendar view mode"
+        >
+          {(["day", "week", "month"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              role="tab"
+              aria-selected={mobileMode === option}
+              onClick={() => selectMobileMode(option)}
+              className={cn(
+                "min-h-11 px-2 text-sm font-semibold",
+                mobileMode === option
+                  ? "bg-primary text-surface"
+                  : "bg-surface text-muted hover:bg-primary-light/40 hover:text-foreground",
+              )}
+            >
+              {option === "day"
+                ? "Today"
+                : option === "week"
+                  ? "Week"
+                  : "Month"}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
+          <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-border-subtle">
+            <button
+              type="button"
+              onClick={goPrev}
+              className="inline-flex size-11 items-center justify-center text-muted hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30"
+              aria-label={`Previous ${mobileMode === "day" ? "day" : mobileMode}`}
+            >
+              <ChevronLeft className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={goNext}
+              className="inline-flex size-11 items-center justify-center border-l border-border-subtle text-muted hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30"
+              aria-label={`Next ${mobileMode === "day" ? "day" : mobileMode}`}
+            >
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </button>
           </div>
+          <h2 className="min-w-0 flex-1 truncate text-center text-sm font-bold text-foreground">
+            {headerLabel}
+          </h2>
+          <button
+            type="button"
+            onClick={goToday}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            Today
+          </button>
+        </div>
+      </header>
+
+      <div className="p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-auto">
+        {isLoading ? (
+          <>
+            <div className="space-y-3 lg:hidden" aria-hidden="true">
+              <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-border-subtle">
+                {Array.from({ length: mobileMode === "month" ? 42 : 7 }).map(
+                  (_, index) => (
+                    <div
+                      key={index}
+                      className="h-12 animate-pulse bg-primary-light/40"
+                    />
+                  ),
+                )}
+              </div>
+              <div className="h-36 animate-pulse rounded-xl bg-primary-light/40" />
+            </div>
+            <div className="hidden grid-cols-7 gap-1 lg:grid" aria-hidden="true">
+              {Array.from({ length: 28 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-20 animate-pulse rounded-lg bg-primary-light/40"
+                />
+              ))}
+            </div>
+          </>
         ) : isError ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <p className="text-sm font-medium text-foreground">
@@ -372,6 +717,33 @@ export function InterviewsCalendar({
             >
               Retry
             </button>
+          </div>
+        ) : isMobile ? (
+          <div className="space-y-4">
+            {mobileMode === "week" ? (
+              <MobileWeekCalendar
+                days={weekDays}
+                byDate={byDate}
+                selectedDay={selectedDay}
+                today={today}
+                onSelectDay={setSelectedDay}
+              />
+            ) : mobileMode === "month" ? (
+              <MobileMonthCalendar
+                days={monthDays}
+                anchor={anchor}
+                byDate={byDate}
+                selectedDay={selectedDay}
+                today={today}
+                onSelectDay={setSelectedDay}
+              />
+            ) : null}
+            <MobileInterviewList
+              day={selectedDay}
+              items={selectedItems}
+              onSelect={onSelect}
+              onScheduleInterview={onScheduleInterview}
+            />
           </div>
         ) : showAgenda ? (
           interviews.length === 0 ? (

@@ -2,7 +2,7 @@ import { EmployerProfilePageContent } from "@/components/employer-profile/Employ
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Company Profile | AsliJobs",
+  title: "Employer Profile | AsliJobs",
   description: "Manage your employer profile on AsliJobs",
 };
 

@@ -17,11 +17,8 @@ import { MessagesFilterPanel } from "@/components/employer-messages/MessagesFilt
 import { MessagesMobileFiltersSheet } from "@/components/employer-messages/MessagesMobileFiltersSheet";
 import { MessagesStatsCards } from "@/components/employer-messages/MessagesStatsCards";
 import { ROUTES } from "@/constants/routes";
-import {
-  employerProfileQueryKey,
-  fetchAuthenticatedEmployer,
-  type EmployerLoginPublic,
-} from "@/services/employer-login.service";
+import { useEmployerProfile } from "@/hooks/useEmployerProfile";
+import type { EmployerLoginPublic } from "@/services/employer-login.service";
 import {
   employerMessageQueryKeys,
   fetchConversationTimeline,
@@ -507,14 +504,7 @@ export function EmployerMessagesPageContent() {
   const selectedApplicationId =
     searchParams.get("applicationId")?.trim() || null;
 
-  const employerProfileQuery = useQuery({
-    queryKey: employerProfileQueryKey,
-    queryFn: async () => {
-      const { employer } = await fetchAuthenticatedEmployer();
-      return employer;
-    },
-    staleTime: 5 * 60_000,
-  });
+  const employerProfileQuery = useEmployerProfile();
 
   const employerName = employerProfileQuery.data
     ? getEmployerAvatarName(employerProfileQuery.data)

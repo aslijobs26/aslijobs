@@ -1,7 +1,10 @@
 import type { NextFunction, Request, Response } from "express";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
-import { getUploadedFile } from "../../middleware/employer-document-upload.middleware.js";
+import {
+  getUploadedFile,
+  getUploadedFiles,
+} from "../../middleware/employer-document-upload.middleware.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { employerService } from "./employer.service.js";
 import type {
@@ -111,6 +114,7 @@ export class EmployerController {
       {
         companyLogo: getUploadedFile(req.files, "companyLogo"),
         profilePhoto: getUploadedFile(req.files, "profilePhoto"),
+        companyMedia: getUploadedFiles(req.files, "companyMedia"),
       },
     );
 

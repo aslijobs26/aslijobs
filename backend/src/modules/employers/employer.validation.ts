@@ -11,6 +11,23 @@ const whatsappNumberSchema = z
   .trim()
   .regex(/^\d{10}$/, "WhatsApp number must be exactly 10 digits");
 
+const optionalUrlSchema = z
+  .string()
+  .trim()
+  .max(500)
+  .refine((value) => {
+    if (!value) {
+      return true;
+    }
+    try {
+      const url = new URL(value);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Enter a valid http or https URL")
+  .optional();
+
 export const registerEmployerSchema = z
   .object({
     accountType: z.enum(EMPLOYER_ACCOUNT_TYPES),
@@ -117,12 +134,24 @@ export const updateEmployerProfileSchema = z
     establishmentName: z.string().trim().min(1).optional(),
     industry: z.string().trim().min(1).optional(),
     businessCategory: z.string().trim().min(1).optional(),
+    companyDescription: z.string().trim().max(3000).optional(),
+    website: optionalUrlSchema,
+    foundedYear: z
+      .preprocess(
+        (value) => (value === "" ? null : value),
+        z.coerce.number().int().min(1800).max(2100).nullable(),
+      )
+      .optional(),
+    companyType: z.string().trim().max(100).optional(),
+    gstNumber: z.string().trim().max(30).optional(),
+    panNumber: z.string().trim().max(20).optional(),
+    registrationNumber: z.string().trim().max(100).optional(),
     minimumEmployees: z.coerce.number().int().min(0).optional(),
     maximumEmployees: z.coerce.number().int().min(0).optional(),
-    companyAddress: z.string().trim().min(1).optional(),
-    pincode: z.string().trim().min(1).optional(),
-    city: z.string().trim().min(1).optional(),
-    state: z.string().trim().min(1).optional(),
+    companyAddress: z.string().trim().max(1000).optional(),
+    pincode: z.string().trim().max(20).optional(),
+    city: z.string().trim().max(150).optional(),
+    state: z.string().trim().max(150).optional(),
     emailAddress: z
       .string()
       .trim()
@@ -131,6 +160,21 @@ export const updateEmployerProfileSchema = z
       .or(z.literal("")),
     firstName: z.string().trim().min(1).optional(),
     lastName: z.string().trim().min(1).optional(),
+    contactDesignation: z.string().trim().max(150).optional(),
+    alternatePhone: z.string().trim().max(30).optional(),
+    aboutUs: z.string().trim().max(5000).optional(),
+    culture: z.string().trim().max(5000).optional(),
+    benefits: z.string().trim().max(5000).optional(),
+    vision: z.string().trim().max(1000).optional(),
+    mission: z.string().trim().max(1000).optional(),
+    values: z.string().trim().max(1000).optional(),
+    linkedinUrl: optionalUrlSchema,
+    facebookUrl: optionalUrlSchema,
+    instagramUrl: optionalUrlSchema,
+    twitterUrl: optionalUrlSchema,
+    youtubeUrl: optionalUrlSchema,
+    removeCompanyMediaPublicIds: z.string().max(10000).optional(),
+    companyMediaOrder: z.string().max(10000).optional(),
     removeCompanyLogo: z
       .union([z.boolean(), z.literal("true"), z.literal("false")])
       .optional()
@@ -139,6 +183,10 @@ export const updateEmployerProfileSchema = z
       .union([z.boolean(), z.literal("true"), z.literal("false")])
       .optional()
       .transform((value) => value === true || value === "true"),
+    companyProfileVisited: z
+      .union([z.literal(true), z.literal("true")])
+      .optional()
+      .transform((value) => (value ? true : undefined)),
   })
   .superRefine((data, ctx) => {
     if (

@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { env } from "../../config/env.js";
 import {
+  EMPLOYER_COMPANY_MEDIA_MAX_COUNT,
   EMPLOYER_IMAGE_MIME_TYPES,
   isBusinessEmployerAccountType,
 } from "../../constants/employer.constants.js";
@@ -57,19 +58,44 @@ function toPublicEmployer(employer: {
   lastName: string;
   industry?: string;
   businessCategory?: string;
+  companyDescription?: string;
+  website?: string;
+  foundedYear?: number | null;
+  companyType?: string;
+  gstNumber?: string;
+  panNumber?: string;
+  registrationNumber?: string;
   roles?: string;
   minimumEmployees?: number | null;
   maximumEmployees?: number | null;
   companyLogo?: EmployerImageAsset | null;
   profilePhoto?: EmployerImageAsset | null;
+  companyMedia?: EmployerImageAsset[];
+  aboutUs?: string;
+  culture?: string;
+  benefits?: string;
+  vision?: string;
+  mission?: string;
+  values?: string;
   companyAddress?: string;
   pincode?: string;
   city?: string;
   state?: string;
   emailAddress?: string;
+  contactDesignation?: string;
+  alternatePhone?: string;
+  socialLinks?: {
+    linkedin?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    youtube?: string;
+  } | null;
+  profileViews?: number;
   whatsappNumber: string;
   isWhatsappVerified: boolean;
   isProfileComplete: boolean;
+  companyProfileVisited?: boolean;
   registrationStatus: string;
   documentIds?: mongoose.Types.ObjectId[];
   createdAt?: Date;
@@ -84,19 +110,47 @@ function toPublicEmployer(employer: {
     lastName: employer.lastName,
     industry: employer.industry ?? "",
     businessCategory: employer.businessCategory ?? "",
+    companyDescription: employer.companyDescription ?? "",
+    website: employer.website ?? "",
+    foundedYear: employer.foundedYear ?? null,
+    companyType: employer.companyType ?? "",
+    gstNumber: employer.gstNumber ?? "",
+    panNumber: employer.panNumber ?? "",
+    registrationNumber: employer.registrationNumber ?? "",
     roles: employer.roles ?? "",
     minimumEmployees: employer.minimumEmployees ?? null,
     maximumEmployees: employer.maximumEmployees ?? null,
     companyLogo: toPublicImageAsset(employer.companyLogo),
     profilePhoto: toPublicImageAsset(employer.profilePhoto),
+    companyMedia: (employer.companyMedia ?? [])
+      .map((asset) => toPublicImageAsset(asset))
+      .filter((asset) => asset !== null),
+    companyMediaLimit: EMPLOYER_COMPANY_MEDIA_MAX_COUNT,
+    aboutUs: employer.aboutUs ?? "",
+    culture: employer.culture ?? "",
+    benefits: employer.benefits ?? "",
+    vision: employer.vision ?? "",
+    mission: employer.mission ?? "",
+    values: employer.values ?? "",
     companyAddress: employer.companyAddress ?? "",
     pincode: employer.pincode ?? "",
     city: employer.city ?? "",
     state: employer.state ?? "",
     emailAddress: employer.emailAddress ?? "",
+    contactDesignation: employer.contactDesignation ?? "",
+    alternatePhone: employer.alternatePhone ?? "",
+    socialLinks: {
+      linkedin: employer.socialLinks?.linkedin ?? "",
+      facebook: employer.socialLinks?.facebook ?? "",
+      instagram: employer.socialLinks?.instagram ?? "",
+      twitter: employer.socialLinks?.twitter ?? "",
+      youtube: employer.socialLinks?.youtube ?? "",
+    },
+    profileViews: employer.profileViews ?? 0,
     whatsappNumber: employer.whatsappNumber,
     isWhatsappVerified: employer.isWhatsappVerified,
     isProfileComplete: employer.isProfileComplete,
+    companyProfileVisited: employer.companyProfileVisited ?? false,
     registrationStatus: employer.registrationStatus,
     documentIds: (employer.documentIds ?? []).map((id) => id.toString()),
     createdAt: employer.createdAt,
@@ -178,6 +232,29 @@ function emptyImageAsset() {
     mimeType: "",
     fileSize: 0,
   };
+}
+
+function parseProfileAssetKeys(value: string | undefined, label: string): string[] {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (
+      !Array.isArray(parsed) ||
+      !parsed.every((entry) => typeof entry === "string")
+    ) {
+      throw new Error("Invalid list");
+    }
+    return [...new Set(parsed.map((entry) => entry.trim()).filter(Boolean))];
+  } catch {
+    throw new AppError(`${label} is invalid`, HTTP_STATUS.BAD_REQUEST);
+  }
+}
+
+function getImageAssetKey(asset: EmployerImageAsset): string {
+  return asset.publicId?.trim() || asset.storagePath?.trim() || "";
 }
 
 async function issueEmployerRegistrationSession(employer: {
@@ -761,6 +838,7 @@ export class EmployerService {
     files: {
       companyLogo?: Express.Multer.File;
       profilePhoto?: Express.Multer.File;
+      companyMedia?: Express.Multer.File[];
     } = {},
   ) {
     const employer = await findEmployerOrThrow(input.employerId);
@@ -776,6 +854,27 @@ export class EmployerService {
     }
     if (typeof input.businessCategory === "string") {
       employer.businessCategory = input.businessCategory;
+    }
+    if (typeof input.companyDescription === "string") {
+      employer.companyDescription = input.companyDescription;
+    }
+    if (typeof input.website === "string") {
+      employer.website = input.website;
+    }
+    if (typeof input.foundedYear === "number" || input.foundedYear === null) {
+      employer.foundedYear = input.foundedYear;
+    }
+    if (typeof input.companyType === "string") {
+      employer.companyType = input.companyType;
+    }
+    if (typeof input.gstNumber === "string") {
+      employer.gstNumber = input.gstNumber;
+    }
+    if (typeof input.panNumber === "string") {
+      employer.panNumber = input.panNumber;
+    }
+    if (typeof input.registrationNumber === "string") {
+      employer.registrationNumber = input.registrationNumber;
     }
     if (typeof input.minimumEmployees === "number") {
       employer.minimumEmployees = input.minimumEmployees;
@@ -803,6 +902,46 @@ export class EmployerService {
     }
     if (typeof input.lastName === "string") {
       employer.lastName = input.lastName;
+    }
+    if (typeof input.contactDesignation === "string") {
+      employer.contactDesignation = input.contactDesignation;
+    }
+    if (typeof input.alternatePhone === "string") {
+      employer.alternatePhone = input.alternatePhone;
+    }
+    if (typeof input.aboutUs === "string") {
+      employer.aboutUs = input.aboutUs;
+    }
+    if (typeof input.culture === "string") {
+      employer.culture = input.culture;
+    }
+    if (typeof input.benefits === "string") {
+      employer.benefits = input.benefits;
+    }
+    if (typeof input.vision === "string") {
+      employer.vision = input.vision;
+    }
+    if (typeof input.mission === "string") {
+      employer.mission = input.mission;
+    }
+    if (typeof input.values === "string") {
+      employer.values = input.values;
+    }
+    if (input.companyProfileVisited === true) {
+      employer.companyProfileVisited = true;
+    }
+
+    const socialLinkUpdates = {
+      linkedin: input.linkedinUrl,
+      facebook: input.facebookUrl,
+      instagram: input.instagramUrl,
+      twitter: input.twitterUrl,
+      youtube: input.youtubeUrl,
+    };
+    for (const [key, value] of Object.entries(socialLinkUpdates)) {
+      if (typeof value === "string") {
+        employer.set(`socialLinks.${key}`, value);
+      }
     }
 
     if (input.removeCompanyLogo) {
@@ -858,7 +997,86 @@ export class EmployerService {
       });
     }
 
+    const mediaFiles = files.companyMedia ?? [];
+    const removeMediaKeys = new Set(
+      parseProfileAssetKeys(
+        input.removeCompanyMediaPublicIds,
+        "Company media removal list",
+      ),
+    );
+    const requestedOrder = parseProfileAssetKeys(
+      input.companyMediaOrder,
+      "Company media order",
+    );
+
+    if (
+      mediaFiles.length > 0 &&
+      !isBusinessEmployerAccountType(
+        employer.accountType as EmployerAccountType,
+      )
+    ) {
+      throw new AppError(
+        "Company media is only available for Company / Business and Consultancy accounts",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const existingMedia = (employer.companyMedia ?? []) as EmployerImageAsset[];
+    const removedMedia = existingMedia.filter((asset) =>
+      removeMediaKeys.has(getImageAssetKey(asset)),
+    );
+    let retainedMedia = existingMedia.filter(
+      (asset) => !removeMediaKeys.has(getImageAssetKey(asset)),
+    );
+
+    if (
+      retainedMedia.length + mediaFiles.length >
+      EMPLOYER_COMPANY_MEDIA_MAX_COUNT
+    ) {
+      throw new AppError(
+        `Company media is limited to ${EMPLOYER_COMPANY_MEDIA_MAX_COUNT} images`,
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    if (requestedOrder.length > 0) {
+      const mediaByKey = new Map(
+        retainedMedia.map((asset) => [getImageAssetKey(asset), asset]),
+      );
+      const ordered = requestedOrder
+        .map((key) => mediaByKey.get(key))
+        .filter((asset): asset is EmployerImageAsset => Boolean(asset));
+      const orderedKeys = new Set(ordered.map(getImageAssetKey));
+      retainedMedia = [
+        ...ordered,
+        ...retainedMedia.filter(
+          (asset) => !orderedKeys.has(getImageAssetKey(asset)),
+        ),
+      ];
+    }
+
+    const uploadedMedia = await Promise.all(
+      mediaFiles.map((file, index) =>
+        uploadEmployerImageAsset({
+          file,
+          folder: `employer-company-media/${toEmployerStorageCode(employer._id)}`,
+          fileBaseName: `company-media-${Date.now()}-${index + 1}`,
+          label: "Company media",
+        }),
+      ),
+    );
+
+    if (
+      removeMediaKeys.size > 0 ||
+      requestedOrder.length > 0 ||
+      uploadedMedia.length > 0
+    ) {
+      employer.set("companyMedia", [...retainedMedia, ...uploadedMedia]);
+    }
+
     await employer.save();
+
+    await Promise.all(removedMedia.map((asset) => deleteEmployerImageAsset(asset)));
 
     return {
       employer: toPublicEmployer(employer),

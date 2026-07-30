@@ -29,6 +29,8 @@ type EmployerRegisterSearchableSelectProps = {
   searchPlaceholder?: string;
   /** Optional classes merged onto the trigger button (e.g. match toolbar inputs). */
   triggerClassName?: string;
+  /** Optional classes merged onto each option button (e.g. compact period filters). */
+  optionClassName?: string;
   /** Accessible noun used for option counts, for example "applications". */
   countLabel?: string;
   /** Allow typing a value that is not in the preset options. */
@@ -63,6 +65,7 @@ export function EmployerRegisterSearchableSelect({
   allowCustom = false,
   initialVisibleCount,
   triggerClassName,
+  optionClassName,
   countLabel = "items",
 }: EmployerRegisterSearchableSelectProps) {
   const listboxId = useId();
@@ -360,7 +363,10 @@ export function EmployerRegisterSearchableSelect({
                 <li role="option" aria-selected={false}>
                   <button
                     type="button"
-                    className="employer-register-searchable-select-option employer-register-searchable-select-option--custom"
+                    className={cn(
+                      "employer-register-searchable-select-option employer-register-searchable-select-option--custom",
+                      optionClassName,
+                    )}
                     onClick={() => selectOption(trimmedQuery)}
                   >
                     <span className="employer-register-searchable-select-option-label">
@@ -397,6 +403,7 @@ export function EmployerRegisterSearchableSelect({
                           "employer-register-searchable-select-option",
                           isSelected &&
                             "employer-register-searchable-select-option--selected",
+                          optionClassName,
                         )}
                         onClick={() => selectOption(option.value, option.label)}
                       >

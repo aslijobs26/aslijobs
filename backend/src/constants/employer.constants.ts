@@ -3,6 +3,7 @@ export const OTP_EXPIRY_MINUTES = 5;
 export const OTP_MAX_ATTEMPTS = 5;
 
 export const EMPLOYER_DOCUMENT_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+export const EMPLOYER_COMPANY_MEDIA_MAX_COUNT = 10;
 
 export const EMPLOYER_DOCUMENT_MIME_TYPES = [
   "application/pdf",

@@ -14,6 +14,7 @@ import {
   EMPLOYER_DASHBOARD_SIDEBAR_WIDTH,
 } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
+import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import {
   fetchNotificationUnreadCount,
   notificationQueryKeys,
@@ -50,24 +51,43 @@ export function EmployerSidebar({
   const messagesUnreadQuery = useQuery({
     queryKey: notificationQueryKeys.unreadCount("employer"),
     queryFn: fetchNotificationUnreadCount,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
+
+  const profileQuery = useEmployerProfile();
+
+  const showCompanyProfileOnboardingDot =
+    profileQuery.data?.companyProfileVisited === false;
 
   const navItems = useMemo<EmployerDashboardNavItem[]>(() => {
     const unread = messagesUnreadQuery.data ?? 0;
     return EMPLOYER_DASHBOARD_NAV_ITEMS.map((item) => {
-      if (item.id !== "messages") {
-        return item;
+      if (item.id === "messages") {
+        return {
+          ...item,
+          badge: unread > 0 ? unread : undefined,
+        };
       }
-      return {
-        ...item,
-        badge: unread > 0 ? unread : undefined,
-      };
+      if (item.id === "company-profile") {
+        return {
+          ...item,
+          label:
+            profileQuery.data?.accountType === "individual"
+              ? "Individual Profile"
+              : item.label,
+          showOnboardingDot: showCompanyProfileOnboardingDot || undefined,
+        };
+      }
+      return item;
     });
-  }, [messagesUnreadQuery.data]);
+  }, [
+    messagesUnreadQuery.data,
+    profileQuery.data?.accountType,
+    showCompanyProfileOnboardingDot,
+  ]);
 
   return (
     <>

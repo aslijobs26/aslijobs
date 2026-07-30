@@ -1,10 +1,7 @@
 "use client";
 
 import { ROUTES } from "@/constants/routes";
-import {
-  employerProfileQueryKey,
-  fetchAuthenticatedEmployer,
-} from "@/services/employer-login.service";
+import { ensureEmployerProfile } from "@/hooks/useEmployerProfile";
 import { isUnauthorizedAuthError } from "@/utils/auth-errors";
 import {
   clearEmployerAuthSession,
@@ -45,14 +42,8 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
       }
 
       try {
-        await queryClient.fetchQuery({
-          queryKey: employerProfileQueryKey,
-          queryFn: async () => {
-            const { employer } = await fetchAuthenticatedEmployer();
-            return employer;
-          },
-          staleTime: 5 * 60_000,
-        });
+        // ensureQueryData reuses the shared ["employer","me"] cache when fresh.
+        await ensureEmployerProfile(queryClient);
         if (!cancelled) {
           setStatus("authenticated");
         }

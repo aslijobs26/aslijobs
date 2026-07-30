@@ -2,20 +2,16 @@
 
 import {
   EMPLOYER_DASHBOARD_AVATAR_INITIALS,
-  EMPLOYER_DASHBOARD_COMPANY_NAME,
+  EMPLOYER_DASHBOARD_ACCOUNT_NAME,
   EMPLOYER_DASHBOARD_PROFILE_MENU_LOGOUT,
   EMPLOYER_DASHBOARD_ROLE_LABEL,
 } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
-import {
-  employerProfileQueryKey,
-  fetchAuthenticatedEmployer,
-  type EmployerLoginPublic,
-} from "@/services/employer-login.service";
+import { useEmployerProfile } from "@/hooks/useEmployerProfile";
+import type { EmployerLoginPublic } from "@/services/employer-login.service";
 import { cn } from "@/utils/cn";
 import { clearEmployerAuthSession } from "@/utils/employer-auth-storage";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
-import { useQuery } from "@tanstack/react-query";
 import {
   Briefcase,
   Building2,
@@ -79,6 +75,16 @@ function isEmployerWorkspacePath(pathname: string): boolean {
 }
 
 function getEmployerDisplayName(employer: EmployerLoginPublic): string {
+  const fullName = `${employer.firstName} ${employer.lastName}`.trim();
+
+  if (employer.accountType === "individual") {
+    return (
+      employer.establishmentName.trim() ||
+      fullName ||
+      EMPLOYER_DASHBOARD_ACCOUNT_NAME
+    );
+  }
+
   if (
     (employer.accountType === "company" ||
       employer.accountType === "consultancy") &&
@@ -87,15 +93,14 @@ function getEmployerDisplayName(employer: EmployerLoginPublic): string {
     return employer.companyName.trim();
   }
 
-  const fullName = `${employer.firstName} ${employer.lastName}`.trim();
   if (fullName) {
     return fullName;
   }
 
-  return employer.companyName.trim() || EMPLOYER_DASHBOARD_COMPANY_NAME;
+  return employer.companyName.trim() || EMPLOYER_DASHBOARD_ACCOUNT_NAME;
 }
 
-function getCompanyStartingInitials(displayName: string): string {
+function getEmployerInitials(displayName: string): string {
   const parts = displayName.trim().split(/\s+/).filter(Boolean);
 
   if (parts.length === 0) {
@@ -136,14 +141,14 @@ function EmployerProfileAvatar({
         loading="lazy"
         decoding="async"
         onError={() => setHasImageError(true)}
-        className="inline-flex size-9 shrink-0 rounded-lg object-cover"
+        className="inline-flex size-9 shrink-0 rounded-full object-cover"
         aria-hidden="true"
       />
     );
   }
 
   return (
-    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-sm font-bold text-surface">
+    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-surface">
       {initials}
     </span>
   );
@@ -159,18 +164,11 @@ export function EmployerProfileMenu({
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const employerProfileQuery = useQuery({
-    queryKey: employerProfileQueryKey,
-    queryFn: async () => {
-      const { employer } = await fetchAuthenticatedEmployer();
-      return employer;
-    },
-    staleTime: 5 * 60_000,
-  });
-  const companyName = employerProfileQuery.data
+  const employerProfileQuery = useEmployerProfile();
+  const displayName = employerProfileQuery.data
     ? getEmployerDisplayName(employerProfileQuery.data)
-    : EMPLOYER_DASHBOARD_COMPANY_NAME;
-  const avatarInitials = getCompanyStartingInitials(companyName);
+    : EMPLOYER_DASHBOARD_ACCOUNT_NAME;
+  const avatarInitials = getEmployerInitials(displayName);
   const avatarImageUrl = employerProfileQuery.data
     ? getEmployerAvatarUrl(employerProfileQuery.data)
     : null;
@@ -188,8 +186,15 @@ export function EmployerProfileMenu({
           icon: Home,
         };
 
-    return [primaryLink, ...PROFILE_MENU_SECONDARY_LINKS];
-  }, [pathname]);
+    const secondaryLinks = PROFILE_MENU_SECONDARY_LINKS.map((item) =>
+      item.href === ROUTES.EMPLOYER_COMPANY_PROFILE &&
+      employerProfileQuery.data?.accountType === "individual"
+        ? { ...item, label: "Individual Profile" }
+        : item,
+    );
+
+    return [primaryLink, ...secondaryLinks];
+  }, [employerProfileQuery.data?.accountType, pathname]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -255,7 +260,7 @@ export function EmployerProfileMenu({
           <>
             <span className="hidden min-w-0 text-left md:block">
               <span className="block max-w-[9.5rem] truncate text-sm font-semibold text-foreground">
-                {companyName}
+                {displayName}
               </span>
               <span className="block truncate text-xs text-muted">
                 {EMPLOYER_DASHBOARD_ROLE_LABEL}
@@ -286,7 +291,7 @@ export function EmployerProfileMenu({
       >
         <div className="border-b border-border-subtle px-3 py-2 md:hidden">
           <p className="truncate text-sm font-semibold text-foreground">
-            {companyName}
+            {displayName}
           </p>
           <p className="truncate text-xs text-muted">
             {EMPLOYER_DASHBOARD_ROLE_LABEL}

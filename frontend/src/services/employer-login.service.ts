@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/api-client";
+import type { EmployerImageAssetPublic } from "@/services/employer-register.service";
 import { setEmployerAuthSession } from "@/utils/employer-auth-storage";
 
 type ApiSuccess<T> = {
@@ -11,41 +12,53 @@ export type EmployerLoginPublic = {
   id: string;
   accountType: "company" | "consultancy" | "individual";
   companyName: string;
-  establishmentName?: string;
+  establishmentName: string;
   firstName: string;
   lastName: string;
-  industry?: string;
-  businessCategory?: string;
-  minimumEmployees?: number | null;
-  maximumEmployees?: number | null;
-  companyLogo?: {
-    url: string;
-    storagePath: string;
-    publicId: string;
-    storageProvider: string;
-    originalName: string;
-    mimeType: string;
-    fileSize: number;
-  } | null;
-  profilePhoto?: {
-    url: string;
-    storagePath: string;
-    publicId: string;
-    storageProvider: string;
-    originalName: string;
-    mimeType: string;
-    fileSize: number;
-  } | null;
-  companyAddress?: string;
-  pincode?: string;
-  city?: string;
-  state?: string;
+  industry: string;
+  businessCategory: string;
+  companyDescription: string;
+  website: string;
+  foundedYear: number | null;
+  companyType: string;
+  gstNumber: string;
+  panNumber: string;
+  registrationNumber: string;
+  minimumEmployees: number | null;
+  maximumEmployees: number | null;
+  companyLogo: EmployerImageAssetPublic | null;
+  profilePhoto: EmployerImageAssetPublic | null;
+  companyMedia: EmployerImageAssetPublic[];
+  companyMediaLimit: number;
+  aboutUs: string;
+  culture: string;
+  benefits: string;
+  vision: string;
+  mission: string;
+  values: string;
+  companyAddress: string;
+  pincode: string;
+  city: string;
+  state: string;
   emailAddress: string;
+  contactDesignation: string;
+  alternatePhone: string;
+  socialLinks: {
+    linkedin: string;
+    facebook: string;
+    instagram: string;
+    twitter: string;
+    youtube: string;
+  };
+  profileViews: number;
   whatsappNumber: string;
   isWhatsappVerified: boolean;
   isProfileComplete: boolean;
+  companyProfileVisited: boolean;
   registrationStatus: string;
   lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type SendLoginOtpResponse = {

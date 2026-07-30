@@ -1,184 +1,343 @@
 "use client";
 
-import { EmployerJobsStats } from "@/components/employer-jobs/EmployerJobsStats";
+import { DashboardAcademyCard } from "@/components/employer-dashboard-home/DashboardAcademyCard";
+import { DashboardJobsOverview } from "@/components/employer-dashboard-home/DashboardJobsOverview";
+import { DashboardNotifications } from "@/components/employer-dashboard-home/DashboardNotifications";
+import { DashboardProfileCompletion } from "@/components/employer-dashboard-home/DashboardProfileCompletion";
+import { DashboardRecentApplications } from "@/components/employer-dashboard-home/DashboardRecentApplications";
+import { DashboardRecruitmentFunnel } from "@/components/employer-dashboard-home/DashboardRecruitmentFunnel";
+import { DashboardStatCards } from "@/components/employer-dashboard-home/DashboardStatCards";
+import { DashboardSupportCard } from "@/components/employer-dashboard-home/DashboardSupportCard";
+import { DashboardWelcomeBanner } from "@/components/employer-dashboard-home/DashboardWelcomeBanner";
 import {
-  EMPLOYER_DASHBOARD_HOME_SUBTITLE,
-  EMPLOYER_DASHBOARD_HOME_TITLE,
-  EMPLOYER_DASHBOARD_POST_JOB_CTA,
-  EMPLOYER_DASHBOARD_RECENT_JOBS_EMPTY,
-  EMPLOYER_DASHBOARD_RECENT_JOBS_TITLE,
-  EMPLOYER_DASHBOARD_VIEW_ALL_JOBS,
-  EMPLOYER_JOB_STATUS_LABELS,
-  EMPLOYER_JOB_STATUS_PILL_CLASS,
-  EMPLOYER_JOB_TYPE_LABELS,
+  EMPLOYER_DASHBOARD_HOME_QUERY_KEYS,
+  type EmployerDashboardFunnelPeriod,
+  type EmployerDashboardStatKey,
+} from "@/constants/employer-dashboard-home";
+import {
+  EMPLOYER_JOBS_DELETE_CONFIRM,
   EMPLOYER_JOBS_QUERY_KEYS,
 } from "@/constants/employer-jobs";
-import { ROUTES } from "@/constants/routes";
-import { fetchEmployerJobStats } from "@/services/employer-jobs.service";
-import { cn } from "@/utils/cn";
+import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import {
-  formatEmployerJobCount,
-  formatEmployerJobLocation,
-  formatEmployerJobPostedAbsolute,
-  getEmployerJobPostedAt,
-} from "@/utils/employer-jobs-format";
-import { useQuery } from "@tanstack/react-query";
-import { Briefcase, Plus } from "lucide-react";
-import Link from "next/link";
+  deleteEmployerJob,
+  fetchEmployerJobStats,
+  fetchEmployerJobs,
+} from "@/services/employer-jobs.service";
+import {
+  fetchEmployerApplicationStats,
+  fetchEmployerApplications,
+} from "@/services/employer-applications.service";
+import {
+  fetchNotifications,
+  notificationQueryKeys,
+} from "@/services/notifications.service";
+import type { EmployerApplicationStats } from "@/types/employer-applications";
+import { calculateEmployerProfileCompletion } from "@/utils/employer-profile-completion";
+import {
+  buildEmployerDashboardFunnelFromStats,
+  buildEmployerDashboardMetricValues,
+  buildEmployerDashboardSourceSlices,
+  calculateEmployerDashboardConversionRate,
+  calculateEmployerDashboardGrowth,
+  getEmployerDashboardDisplayName,
+  getEmployerDashboardMonthRange,
+  getEmployerDashboardWeekRanges,
+  type EmployerDashboardGrowth,
+} from "@/utils/employer-dashboard-home";
+import { showAppToast } from "@/utils/share-job";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import dynamic from "next/dynamic";
+import { useMemo, useState } from "react";
+
+const LazySourcesPerformance = dynamic(
+  () =>
+    import("@/components/employer-dashboard-home/DashboardSourcesPerformance").then(
+      (module) => module.DashboardSourcesPerformance,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[22rem] animate-pulse rounded-xl border border-border-subtle bg-surface" />
+    ),
+  },
+);
+
+function metricFromStats(
+  stats: EmployerApplicationStats,
+  key: Exclude<EmployerDashboardStatKey, "activeJobs">,
+): number {
+  switch (key) {
+    case "applications":
+      return stats.total;
+    case "shortlisted":
+      return stats.shortlisted;
+    case "interviews":
+      return stats.interview_scheduled + stats.interview_completed;
+    case "hired":
+      return stats.selected + stats.joined;
+  }
+}
+
+/**
+ * Week-over-week growth using TWO stats aggregations (+ optional jobs counts).
+ * Previously this fired ~14 separate list?limit=1 calls and exhausted the API
+ * rate limit, which then surfaced as 429s on unrelated endpoints like /me.
+ */
+async function fetchGrowthMetrics(): Promise<
+  Partial<Record<EmployerDashboardStatKey, EmployerDashboardGrowth>>
+> {
+  const weeks = getEmployerDashboardWeekRanges();
+
+  const [currentStats, previousStats, jobsCurrent, jobsPrevious] =
+    await Promise.all([
+      fetchEmployerApplicationStats({
+        appliedFrom: weeks.currentFrom,
+        appliedTo: weeks.currentTo,
+      }),
+      fetchEmployerApplicationStats({
+        appliedFrom: weeks.previousFrom,
+        appliedTo: weeks.previousTo,
+      }),
+      fetchEmployerJobs({
+        postedFrom: weeks.currentFrom.slice(0, 10),
+        postedTo: weeks.currentTo.slice(0, 10),
+        page: 1,
+        limit: 1,
+      }),
+      fetchEmployerJobs({
+        postedFrom: weeks.previousFrom.slice(0, 10),
+        postedTo: weeks.previousTo.slice(0, 10),
+        page: 1,
+        limit: 1,
+      }),
+    ]);
+
+  return {
+    activeJobs: calculateEmployerDashboardGrowth(
+      jobsCurrent.pagination.total,
+      jobsPrevious.pagination.total,
+    ),
+    applications: calculateEmployerDashboardGrowth(
+      metricFromStats(currentStats, "applications"),
+      metricFromStats(previousStats, "applications"),
+    ),
+    shortlisted: calculateEmployerDashboardGrowth(
+      metricFromStats(currentStats, "shortlisted"),
+      metricFromStats(previousStats, "shortlisted"),
+    ),
+    interviews: calculateEmployerDashboardGrowth(
+      metricFromStats(currentStats, "interviews"),
+      metricFromStats(previousStats, "interviews"),
+    ),
+    hired: calculateEmployerDashboardGrowth(
+      metricFromStats(currentStats, "hired"),
+      metricFromStats(previousStats, "hired"),
+    ),
+  };
+}
+
+async function fetchFunnelStages(
+  period: EmployerDashboardFunnelPeriod,
+): Promise<ReturnType<typeof buildEmployerDashboardFunnelFromStats>> {
+  if (period === "all") {
+    const stats = await fetchEmployerApplicationStats();
+    return buildEmployerDashboardFunnelFromStats(stats);
+  }
+
+  const range = getEmployerDashboardMonthRange(period);
+  const stats = await fetchEmployerApplicationStats({
+    appliedFrom: range.from,
+    appliedTo: range.to,
+  });
+  return buildEmployerDashboardFunnelFromStats(stats);
+}
 
 export function EmployerDashboardHome() {
-  const statsQuery = useQuery({
+  const queryClient = useQueryClient();
+  const [funnelPeriod, setFunnelPeriod] =
+    useState<EmployerDashboardFunnelPeriod>("this_month");
+
+  const profileQuery = useEmployerProfile();
+
+  const jobStatsQuery = useQuery({
     queryKey: EMPLOYER_JOBS_QUERY_KEYS.stats(),
     queryFn: fetchEmployerJobStats,
+    staleTime: 60_000,
   });
 
-  const stats = statsQuery.data?.stats;
-  const recentJobs = statsQuery.data?.recentJobs ?? [];
+  const applicationStatsQuery = useQuery({
+    queryKey: EMPLOYER_DASHBOARD_HOME_QUERY_KEYS.applicationStats(),
+    queryFn: () => fetchEmployerApplicationStats(),
+    staleTime: 60_000,
+  });
+
+  const recentApplicationsQuery = useQuery({
+    queryKey: EMPLOYER_DASHBOARD_HOME_QUERY_KEYS.recentApplications(),
+    queryFn: () =>
+      fetchEmployerApplications({
+        page: 1,
+        limit: 6,
+        sort: "newest",
+      }),
+    staleTime: 60_000,
+  });
+
+  const notificationsQuery = useQuery({
+    queryKey: [...notificationQueryKeys.recent("employer"), "dashboard"],
+    queryFn: () =>
+      fetchNotifications({
+        page: 1,
+        limit: 4,
+        readStatus: "all",
+      }),
+    staleTime: 30_000,
+  });
+
+  const growthQuery = useQuery({
+    queryKey: EMPLOYER_DASHBOARD_HOME_QUERY_KEYS.growth(),
+    queryFn: fetchGrowthMetrics,
+    staleTime: 5 * 60_000,
+  });
+
+  const funnelQuery = useQuery({
+    queryKey: EMPLOYER_DASHBOARD_HOME_QUERY_KEYS.funnel(funnelPeriod),
+    queryFn: () => fetchFunnelStages(funnelPeriod),
+    staleTime: 60_000,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteEmployerJob,
+    onSuccess: async () => {
+      showAppToast("Job deleted.", "success");
+      await queryClient.invalidateQueries({
+        queryKey: EMPLOYER_JOBS_QUERY_KEYS.all,
+      });
+    },
+    onError: () => {
+      showAppToast("Unable to delete job.", "error");
+    },
+  });
+
+  const profile = profileQuery.data;
+  const profileCompletion = profile
+    ? calculateEmployerProfileCompletion(profile)
+    : null;
+  const displayName = profile
+    ? getEmployerDashboardDisplayName(profile)
+    : "Employer";
+
+  const metricValues = useMemo(
+    () =>
+      buildEmployerDashboardMetricValues({
+        activeJobs: jobStatsQuery.data?.stats.activeJobs ?? 0,
+        applicationStats: applicationStatsQuery.data,
+      }),
+    [applicationStatsQuery.data, jobStatsQuery.data?.stats.activeJobs],
+  );
+
+  const recentJobs = jobStatsQuery.data?.recentJobs ?? [];
+
+  const funnelStages =
+    funnelQuery.data ??
+    (applicationStatsQuery.data
+      ? buildEmployerDashboardFunnelFromStats(applicationStatsQuery.data)
+      : []);
+  const conversionRate = calculateEmployerDashboardConversionRate(funnelStages);
+
+  const sourceSlices = buildEmployerDashboardSourceSlices({
+    totalApplications: applicationStatsQuery.data?.total ?? 0,
+  });
+
+  const handleDeleteJob = (jobId: string) => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(EMPLOYER_JOBS_DELETE_CONFIRM)
+    ) {
+      return;
+    }
+    deleteMutation.mutate(jobId);
+  };
 
   return (
-    <div className="flex flex-1 flex-col gap-5 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.75rem]">
-            {EMPLOYER_DASHBOARD_HOME_TITLE}
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">
-            {EMPLOYER_DASHBOARD_HOME_SUBTITLE}
-          </p>
-        </div>
+    <div className="flex flex-1 flex-col gap-4 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)]">
+        <div className="min-w-0 space-y-4">
+          <DashboardWelcomeBanner
+            displayName={displayName}
+            isLoading={profileQuery.isLoading}
+          />
 
-        <Link
-          href={ROUTES.POST_JOB}
-          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary-soft px-4 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <Plus className="size-4" aria-hidden="true" strokeWidth={2.5} />
-          {EMPLOYER_DASHBOARD_POST_JOB_CTA}
-        </Link>
-      </header>
+          <DashboardStatCards
+            values={metricValues}
+            growth={growthQuery.data ?? {}}
+            isLoading={
+              jobStatsQuery.isLoading || applicationStatsQuery.isLoading
+            }
+          />
 
-      <EmployerJobsStats
-        isLoading={statsQuery.isLoading}
-        values={
-          stats
-            ? {
-                activeJobs: stats.activeJobs,
-                applications: stats.applications,
-                shortlisted: stats.shortlisted,
-                interviews: stats.interviews,
-                hired: stats.hired,
-                views: stats.views,
-              }
-            : undefined
-        }
-      />
-
-      <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-        <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
-          <h2 className="text-base font-bold text-foreground">
-            {EMPLOYER_DASHBOARD_RECENT_JOBS_TITLE}
-          </h2>
-          <Link
-            href={ROUTES.EMPLOYER_JOBS}
-            className="text-sm font-semibold text-primary-soft transition-colors hover:text-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          >
-            {EMPLOYER_DASHBOARD_VIEW_ALL_JOBS}
-          </Link>
-        </div>
-
-        {statsQuery.isLoading ? (
-          <div className="space-y-3 px-4 py-5 sm:px-5">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-14 animate-pulse rounded-lg bg-border-subtle"
-                aria-hidden="true"
-              />
-            ))}
-          </div>
-        ) : statsQuery.isError ? (
-          <div className="px-4 py-12 text-center sm:px-5">
-            <p className="text-sm font-semibold text-foreground">
-              Unable to load dashboard data
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                void statsQuery.refetch();
+          <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(16rem,0.95fr)]">
+            <DashboardJobsOverview
+              jobs={recentJobs}
+              isLoading={jobStatsQuery.isLoading}
+              isError={jobStatsQuery.isError}
+              isDeleting={deleteMutation.isPending}
+              onRetry={() => {
+                void jobStatsQuery.refetch();
               }}
-              className="mt-3 inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              Try again
-            </button>
+              onDelete={handleDeleteJob}
+            />
+            <DashboardRecruitmentFunnel
+              stages={funnelStages}
+              conversionRate={conversionRate}
+              period={funnelPeriod}
+              onPeriodChange={setFunnelPeriod}
+              isLoading={funnelQuery.isLoading && !funnelQuery.data}
+            />
           </div>
-        ) : recentJobs.length === 0 ? (
-          <div className="flex flex-col items-center px-4 py-12 text-center sm:px-5">
-            <span
-              className="inline-flex size-11 items-center justify-center rounded-full bg-primary-light text-primary-soft"
-              aria-hidden="true"
-            >
-              <Briefcase className="size-5" />
-            </span>
-            <p className="mt-3 text-sm font-semibold text-foreground">
-              {EMPLOYER_DASHBOARD_RECENT_JOBS_EMPTY}
-            </p>
-            <Link
-              href={ROUTES.POST_JOB}
-              className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary-soft px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              {EMPLOYER_DASHBOARD_POST_JOB_CTA}
-            </Link>
+
+          <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(16rem,0.95fr)]">
+            <DashboardRecentApplications
+              applications={recentApplicationsQuery.data?.applications ?? []}
+              isLoading={recentApplicationsQuery.isLoading}
+              isError={recentApplicationsQuery.isError}
+              onRetry={() => {
+                void recentApplicationsQuery.refetch();
+              }}
+            />
+            <LazySourcesPerformance
+              slices={sourceSlices}
+              total={applicationStatsQuery.data?.total ?? 0}
+              isLoading={applicationStatsQuery.isLoading}
+            />
           </div>
-        ) : (
-          <ul className="divide-y divide-border-subtle">
-            {recentJobs.map((job) => {
-              const location = formatEmployerJobLocation(
-                job.cityName,
-                job.stateName,
-                job.city,
-                job.state,
-              );
+        </div>
 
-              return (
-                <li key={job.id}>
-                  <Link
-                    href={ROUTES.EMPLOYER_JOBS}
-                    className="flex flex-col gap-2 px-4 py-3.5 transition-colors hover:bg-hero-bg/50 focus-visible:bg-hero-bg/50 focus-visible:outline-none sm:flex-row sm:items-center sm:justify-between sm:px-5"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">
-                        {job.jobTitle}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs text-muted">
-                        {job.jobType
-                          ? EMPLOYER_JOB_TYPE_LABELS[job.jobType]
-                          : "—"}{" "}
-                        · {location} ·{" "}
-                        {formatEmployerJobPostedAbsolute(
-                          getEmployerJobPostedAt(job),
-                        )}
-                      </p>
-                    </div>
+        <aside className="min-w-0 space-y-4">
+          {profileCompletion ? (
+            <DashboardProfileCompletion
+              percentage={profileCompletion.percentage}
+              isComplete={profileCompletion.isComplete}
+              isIndividual={profile?.accountType === "individual"}
+            />
+          ) : (
+            <div className="h-28 animate-pulse rounded-xl border border-border-subtle bg-surface" />
+          )}
 
-                    <div className="flex shrink-0 flex-wrap items-center gap-3">
-                      <span className="text-xs text-muted">
-                        {formatEmployerJobCount(job.applications)} applications
-                      </span>
-                      <span
-                        className={cn(
-                          "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                          EMPLOYER_JOB_STATUS_PILL_CLASS[job.status],
-                        )}
-                      >
-                        {EMPLOYER_JOB_STATUS_LABELS[job.status]}
-                      </span>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+          <DashboardNotifications
+            notifications={notificationsQuery.data?.notifications ?? []}
+            unreadCount={notificationsQuery.data?.unreadCount ?? 0}
+            isLoading={notificationsQuery.isLoading}
+          />
+
+          <DashboardAcademyCard />
+          <DashboardSupportCard />
+        </aside>
+      </div>
     </div>
   );
 }

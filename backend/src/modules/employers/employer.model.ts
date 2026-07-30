@@ -47,6 +47,42 @@ const employerSchema = new Schema(
       trim: true,
       default: "",
     },
+    companyDescription: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    website: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    foundedYear: {
+      type: Number,
+      default: null,
+    },
+    companyType: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    gstNumber: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: "",
+    },
+    panNumber: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: "",
+    },
+    registrationNumber: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     roles: {
       type: String,
       trim: true,
@@ -78,6 +114,47 @@ const employerSchema = new Schema(
       mimeType: { type: String, default: "" },
       fileSize: { type: Number, default: 0 },
     },
+    companyMedia: [
+      {
+        url: { type: String, default: "" },
+        storagePath: { type: String, default: "" },
+        publicId: { type: String, default: "" },
+        storageProvider: { type: String, default: "" },
+        originalName: { type: String, default: "" },
+        mimeType: { type: String, default: "" },
+        fileSize: { type: Number, default: 0 },
+      },
+    ],
+    aboutUs: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    culture: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    benefits: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    vision: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    mission: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    values: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     companyAddress: {
       type: String,
       trim: true,
@@ -104,6 +181,28 @@ const employerSchema = new Schema(
       lowercase: true,
       default: "",
     },
+    contactDesignation: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    alternatePhone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    socialLinks: {
+      linkedin: { type: String, trim: true, default: "" },
+      facebook: { type: String, trim: true, default: "" },
+      instagram: { type: String, trim: true, default: "" },
+      twitter: { type: String, trim: true, default: "" },
+      youtube: { type: String, trim: true, default: "" },
+    },
+    profileViews: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
     whatsappNumber: {
       type: String,
       required: true,
@@ -119,6 +218,10 @@ const employerSchema = new Schema(
       type: Boolean,
       default: false,
       index: true,
+    },
+    companyProfileVisited: {
+      type: Boolean,
+      default: false,
     },
     registrationStatus: {
       type: String,

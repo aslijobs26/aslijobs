@@ -35,12 +35,50 @@ function YouTubeIcon(props: SocialIconProps) {
   );
 }
 
+function XTwitterIcon(props: SocialIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <path d="M18.244 2H21.5l-7.5 8.57L22.5 22h-6.56l-5.14-6.72L5.3 22H2.04l8.02-9.16L1.5 2h6.72l4.64 6.16L18.244 2zm-1.15 18h1.82L7.01 3.94H5.06L17.094 20z" />
+    </svg>
+  );
+}
+
+function WebsiteIcon(props: SocialIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm7.46 6h-3.06a15.7 15.7 0 0 0-1.36-3.46A8.03 8.03 0 0 1 19.46 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14a8.05 8.05 0 0 1 0-4h3.48a17.4 17.4 0 0 0-.16 2c0 .68.05 1.35.16 2H4.26zm.28 2h3.06a15.7 15.7 0 0 0 1.36 3.46A8.03 8.03 0 0 1 4.54 16zM8.08 8H4.54a8.03 8.03 0 0 1 4.42-3.46A15.7 15.7 0 0 0 8.08 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66a15.4 15.4 0 0 1-.16-2c0-.68.05-1.35.16-2h4.68c.11.65.16 1.32.16 2s-.05 1.35-.16 2zm.26 5.46A15.7 15.7 0 0 0 15.92 16h3.06a8.03 8.03 0 0 1-4.38 3.46zM16.26 14h3.48a8.05 8.05 0 0 0 0-4h-3.48c.11.65.16 1.32.16 2s-.05 1.35-.16 2z" />
+    </svg>
+  );
+}
+
 const iconMap = {
   facebook: FacebookIcon,
   instagram: InstagramIcon,
   linkedin: LinkedInIcon,
   youtube: YouTubeIcon,
 } as const;
+
+export type EmployerSocialBrand =
+  | SocialPlatform
+  | "twitter"
+  | "website";
+
+export function EmployerSocialBrandIcon({
+  brand,
+  className,
+}: {
+  brand: EmployerSocialBrand;
+  className?: string;
+}) {
+  if (brand === "twitter") {
+    return <XTwitterIcon className={className} />;
+  }
+  if (brand === "website") {
+    return <WebsiteIcon className={className} />;
+  }
+  const Icon = iconMap[brand];
+  return <Icon className={className} />;
+}
 
 export function SocialIcon({
   platform,

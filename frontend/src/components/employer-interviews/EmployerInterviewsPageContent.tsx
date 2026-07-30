@@ -224,6 +224,17 @@ export function EmployerInterviewsPageContent() {
     setScheduleModalOpen(true);
   };
 
+  const clearInterviewFilters = () => {
+    setQuickDate("");
+    setStatus("");
+    setMode("");
+    setInterviewerDraft("");
+    setInterviewFrom("");
+    setInterviewTo("");
+    setSearchDraft("");
+    setSelectedPublicJobId(null);
+  };
+
   const handleCalendarRangeChange = useCallback(
     (range: { from: string; to: string; mode: InterviewsCalendarMode }) => {
       setCalendarRange((current) => {
@@ -313,19 +324,8 @@ export function EmployerInterviewsPageContent() {
         />
       </div>
 
-      <div className="mt-4 lg:hidden">
-        <button
-          type="button"
-          onClick={() => setMobileFiltersOpen((open) => !open)}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <Filter className="size-4" aria-hidden="true" />
-          {mobileFiltersOpen ? "Hide filters" : "Show filters"}
-        </button>
-      </div>
-
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-stretch lg:grid-cols-1">
-        <div className="flex min-h-[32rem] min-w-0 flex-col gap-4 xl:min-h-[calc(100dvh-13rem)]">
+        <div className="flex min-h-0 min-w-0 flex-col gap-4 lg:min-h-[32rem] xl:min-h-[calc(100dvh-13rem)]">
           <div className="shrink-0 rounded-xl border border-border-subtle bg-surface p-3 sm:p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <InterviewsJobSelect
@@ -346,7 +346,36 @@ export function EmployerInterviewsPageContent() {
                 className={`${interviewsToolbarControlClassName} shrink-0 sm:max-w-sm`}
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen((open) => !open)}
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
+              aria-expanded={mobileFiltersOpen}
+            >
+              <Filter className="size-4" aria-hidden="true" />
+              {mobileFiltersOpen ? "Hide filters" : "Show filters"}
+            </button>
           </div>
+
+          {mobileFiltersOpen ? (
+            <div className="lg:hidden">
+              <InterviewsFilterPanel
+                quickDate={quickDate}
+                status={status}
+                mode={mode}
+                interviewer={interviewerDraft}
+                interviewFrom={interviewFrom}
+                interviewTo={interviewTo}
+                onQuickDateChange={setQuickDate}
+                onStatusChange={setStatus}
+                onModeChange={setMode}
+                onInterviewerChange={setInterviewerDraft}
+                onInterviewFromChange={setInterviewFrom}
+                onInterviewToChange={setInterviewTo}
+                onClear={clearInterviewFilters}
+              />
+            </div>
+          ) : null}
 
           {view === "calendar" ? (
             <InterviewsCalendar
@@ -393,30 +422,23 @@ export function EmployerInterviewsPageContent() {
         <aside
           className={cn("space-y-4", !mobileFiltersOpen && "hidden lg:block")}
         >
-          <InterviewsFilterPanel
-            quickDate={quickDate}
-            status={status}
-            mode={mode}
-            interviewer={interviewerDraft}
-            interviewFrom={interviewFrom}
-            interviewTo={interviewTo}
-            onQuickDateChange={setQuickDate}
-            onStatusChange={setStatus}
-            onModeChange={setMode}
-            onInterviewerChange={setInterviewerDraft}
-            onInterviewFromChange={setInterviewFrom}
-            onInterviewToChange={setInterviewTo}
-            onClear={() => {
-              setQuickDate("");
-              setStatus("");
-              setMode("");
-              setInterviewerDraft("");
-              setInterviewFrom("");
-              setInterviewTo("");
-              setSearchDraft("");
-              setSelectedPublicJobId(null);
-            }}
-          />
+          <div className="hidden lg:block">
+            <InterviewsFilterPanel
+              quickDate={quickDate}
+              status={status}
+              mode={mode}
+              interviewer={interviewerDraft}
+              interviewFrom={interviewFrom}
+              interviewTo={interviewTo}
+              onQuickDateChange={setQuickDate}
+              onStatusChange={setStatus}
+              onModeChange={setMode}
+              onInterviewerChange={setInterviewerDraft}
+              onInterviewFromChange={setInterviewFrom}
+              onInterviewToChange={setInterviewTo}
+              onClear={clearInterviewFilters}
+            />
+          </div>
           <InterviewsTodaySchedule
             items={statsQuery.data?.todaysSchedule ?? []}
             isLoading={statsQuery.isLoading}

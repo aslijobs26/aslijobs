@@ -1,0 +1,97 @@
+"use client";
+
+import welcomeIllustration from "@/assets/employer-dashboard/welcome-banner-illustration-v4.png";
+import {
+  EMPLOYER_DASHBOARD_HERO_ROW_HEIGHT_CLASS,
+  EMPLOYER_DASHBOARD_POST_JOB_LABEL,
+  EMPLOYER_DASHBOARD_SEARCH_CANDIDATES_LABEL,
+  EMPLOYER_DASHBOARD_WELCOME_BADGE,
+  EMPLOYER_DASHBOARD_WELCOME_TAGLINE,
+} from "@/constants/employer-dashboard-home";
+import { ROUTES } from "@/constants/routes";
+import { Plus, Search } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+
+type DashboardWelcomeBannerProps = {
+  displayName: string;
+  isLoading?: boolean;
+};
+
+export function DashboardWelcomeBanner({
+  displayName,
+  isLoading = false,
+}: DashboardWelcomeBannerProps) {
+  return (
+    <section
+      className={`relative overflow-hidden rounded-2xl border border-border-subtle bg-employer-welcome-surface shadow-sm ${EMPLOYER_DASHBOARD_HERO_ROW_HEIGHT_CLASS}`}
+    >
+      <div className="pointer-events-none absolute -left-16 -top-20 size-56 rounded-full bg-primary-light/70" aria-hidden="true" />
+      <div className="pointer-events-none absolute -bottom-24 -right-10 size-64 rounded-full bg-primary-light/40 sm:hidden" aria-hidden="true" />
+
+      <div className="relative z-10 flex h-full min-h-[13.5rem] flex-col justify-between gap-4 p-4 sm:min-h-[15.5rem] sm:gap-5 sm:p-6 lg:p-7">
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 hidden w-[38%] bg-employer-welcome-surface sm:block md:w-[42%] lg:w-[40%]"
+          aria-hidden="true"
+        >
+          <Image
+            src={welcomeIllustration}
+            alt=""
+            fill
+            className="object-contain object-right md:object-cover md:object-center"
+            sizes="(max-width: 767px) 38vw, (max-width: 1023px) 42vw, 40vw"
+            priority
+          />
+        </div>
+
+        <div className="relative z-10 min-w-0 max-w-xl sm:max-w-[62%] md:max-w-[58%]">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-light px-2.5 py-1 text-[0.6875rem] font-semibold text-primary sm:text-xs">
+            <span aria-hidden="true">👋</span>
+            {EMPLOYER_DASHBOARD_WELCOME_BADGE}
+          </span>
+
+          {isLoading ? (
+            <div className="mt-3 space-y-2">
+              <div className="h-7 w-40 animate-pulse rounded-lg bg-hero-bg sm:h-8 sm:w-56" />
+              <div className="h-7 w-48 animate-pulse rounded-lg bg-hero-bg sm:h-8 sm:w-64" />
+            </div>
+          ) : (
+            <h1 className="mt-3 text-xl font-bold leading-[1.2] tracking-tight text-foreground sm:text-[1.75rem] lg:text-[1.875rem]">
+              <span className="block">Welcome back,</span>
+              <span className="block truncate text-primary">
+                {displayName}!
+                <span aria-hidden="true"> 👋</span>
+              </span>
+            </h1>
+          )}
+
+          <p className="mt-2 text-sm leading-relaxed text-muted sm:mt-2.5 sm:text-[0.9375rem]">
+            {EMPLOYER_DASHBOARD_WELCOME_TAGLINE}
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2.5 sm:mt-5 sm:gap-3">
+            <Link
+              href={ROUTES.POST_JOB}
+              className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl bg-primary px-3.5 text-sm font-semibold text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:px-4"
+            >
+              <span className="inline-flex size-6 items-center justify-center rounded-md bg-surface/20">
+                <Plus className="size-3.5" aria-hidden="true" strokeWidth={2.5} />
+              </span>
+              {EMPLOYER_DASHBOARD_POST_JOB_LABEL}
+            </Link>
+            <Link
+              href={ROUTES.EMPLOYER_CANDIDATES}
+              className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-border-subtle bg-surface px-3.5 text-sm font-semibold text-foreground shadow-sm transition-colors hover:border-primary/30 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:px-4"
+            >
+              <span className="inline-flex size-6 items-center justify-center rounded-md bg-primary-light text-primary">
+                <Search className="size-3.5" aria-hidden="true" />
+              </span>
+              {EMPLOYER_DASHBOARD_SEARCH_CANDIDATES_LABEL}
+            </Link>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  );
+}

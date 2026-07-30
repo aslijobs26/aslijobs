@@ -71,6 +71,8 @@ export const listEmployerApplicationStatsQuerySchema = z.object({
     .trim()
     .transform((value) => value.toUpperCase())
     .optional(),
+  appliedFrom: z.string().trim().optional(),
+  appliedTo: z.string().trim().optional(),
 });
 
 export const listSeekerApplicationsQuerySchema = z.object({

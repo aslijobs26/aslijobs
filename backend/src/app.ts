@@ -60,21 +60,51 @@ app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
-    standardHeaders: true,
-    legacyHeaders: false,
-  }),
-);
 
 if (env.STORAGE_PROVIDER === "local") {
+  // Serve uploads BEFORE the API rate limiter so avatars/logos/resumes do not
+  // consume the shared request budget used by authenticated dashboard traffic.
   app.use(
     "/uploads",
     express.static(path.resolve(process.cwd(), env.UPLOAD_DIR)),
   );
 }
+
+/**
+ * General API rate limit.
+ * Auth OTP endpoints keep their own stricter dedicated limiters and are skipped
+ * here so a busy dashboard cannot block legitimate login attempts.
+ * Max is intentionally unchanged — request storms must be fixed at the source.
+ */
+const AUTH_OTP_PATH_SUFFIXES = [
+  "/employers/login/send-otp",
+  "/employers/login/resend-otp",
+  "/employers/login/verify-otp",
+  "/jobseekers/login/send-otp",
+  "/jobseekers/login/resend-otp",
+  "/jobseekers/login/verify-otp",
+] as const;
+
+const apiRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    const pathName = req.path;
+    if (pathName === "/health" || pathName === "/api/v1/health") {
+      return true;
+    }
+    return AUTH_OTP_PATH_SUFFIXES.some(
+      (suffix) =>
+        pathName === suffix ||
+        pathName === `/api/v1${suffix}` ||
+        pathName.endsWith(suffix),
+    );
+  },
+});
+
+app.use("/api/v1", apiRateLimit);
 
 app.get("/api/v1/health", (_req, res) => {
   res.json({

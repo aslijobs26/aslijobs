@@ -196,6 +196,8 @@ export class ApplicationController {
     const result = await applicationService.getStatsForEmployer({
       employerId,
       publicJobId: query.publicJobId,
+      appliedFrom: query.appliedFrom,
+      appliedTo: query.appliedTo,
     });
 
     sendSuccess(res, HTTP_STATUS.OK, {

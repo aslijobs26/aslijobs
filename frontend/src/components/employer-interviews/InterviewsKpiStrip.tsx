@@ -1,6 +1,7 @@
 "use client";
 
 import type { EmployerInterviewStats } from "@/types/employer-interviews";
+import { cn } from "@/utils/cn";
 import { CalendarDays, CheckCircle2, Clock3, RefreshCw } from "lucide-react";
 
 type InterviewsKpiStripProps = {
@@ -15,11 +16,32 @@ const KPI_ITEMS: {
   >;
   label: string;
   icon: typeof CalendarDays;
+  iconClassName: string;
 }[] = [
-  { key: "today", label: "Today's Interviews", icon: CalendarDays },
-  { key: "thisWeek", label: "This Week", icon: Clock3 },
-  { key: "scheduled", label: "Scheduled", icon: RefreshCw },
-  { key: "completed", label: "Completed", icon: CheckCircle2 },
+  {
+    key: "today",
+    label: "Today's Interviews",
+    icon: CalendarDays,
+    iconClassName: "bg-primary-light text-primary",
+  },
+  {
+    key: "thisWeek",
+    label: "This Week",
+    icon: Clock3,
+    iconClassName: "bg-benefit-verified-surface text-benefit-verified-icon",
+  },
+  {
+    key: "scheduled",
+    label: "Scheduled",
+    icon: RefreshCw,
+    iconClassName: "bg-resource-interview-surface text-resource-interview-icon",
+  },
+  {
+    key: "completed",
+    label: "Completed",
+    icon: CheckCircle2,
+    iconClassName: "bg-benefit-whatsapp-surface text-benefit-whatsapp-icon",
+  },
 ];
 
 export function InterviewsKpiStrip({
@@ -38,7 +60,12 @@ export function InterviewsKpiStrip({
             className="flex w-full max-w-40 flex-col rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:w-40"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
+              <span
+                className={cn(
+                  "inline-flex size-7 shrink-0 items-center justify-center rounded-lg",
+                  item.iconClassName,
+                )}
+              >
                 <Icon className="size-3.5" aria-hidden="true" />
               </span>
             </div>

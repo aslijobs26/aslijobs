@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { env } from "../../config/env.js";
 import {
+  EMPLOYER_COMPANY_MEDIA_MAX_COUNT,
   OTP_MAX_ATTEMPTS,
   isBusinessEmployerAccountType,
 } from "../../constants/employer.constants.js";
@@ -24,6 +25,13 @@ function toLoginEmployer(employer: {
   lastName: string;
   industry?: string;
   businessCategory?: string;
+  companyDescription?: string;
+  website?: string;
+  foundedYear?: number | null;
+  companyType?: string;
+  gstNumber?: string;
+  panNumber?: string;
+  registrationNumber?: string;
   minimumEmployees?: number | null;
   maximumEmployees?: number | null;
   companyLogo?: {
@@ -44,14 +52,40 @@ function toLoginEmployer(employer: {
     mimeType?: string;
     fileSize?: number;
   } | null;
+  companyMedia?: Array<{
+    url?: string;
+    storagePath?: string;
+    publicId?: string;
+    storageProvider?: string;
+    originalName?: string;
+    mimeType?: string;
+    fileSize?: number;
+  }>;
+  aboutUs?: string;
+  culture?: string;
+  benefits?: string;
+  vision?: string;
+  mission?: string;
+  values?: string;
   companyAddress?: string;
   pincode?: string;
   city?: string;
   state?: string;
   emailAddress?: string;
+  contactDesignation?: string;
+  alternatePhone?: string;
+  socialLinks?: {
+    linkedin?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    youtube?: string;
+  } | null;
+  profileViews?: number;
   whatsappNumber: string;
   isWhatsappVerified: boolean;
   isProfileComplete: boolean;
+  companyProfileVisited?: boolean;
   registrationStatus: string;
   lastLoginAt?: Date | null;
   createdAt?: Date;
@@ -95,18 +129,46 @@ function toLoginEmployer(employer: {
     lastName: employer.lastName,
     industry: employer.industry ?? "",
     businessCategory: employer.businessCategory ?? "",
+    companyDescription: employer.companyDescription ?? "",
+    website: employer.website ?? "",
+    foundedYear: employer.foundedYear ?? null,
+    companyType: employer.companyType ?? "",
+    gstNumber: employer.gstNumber ?? "",
+    panNumber: employer.panNumber ?? "",
+    registrationNumber: employer.registrationNumber ?? "",
     minimumEmployees: employer.minimumEmployees ?? null,
     maximumEmployees: employer.maximumEmployees ?? null,
     companyLogo: toImage(employer.companyLogo),
     profilePhoto: toImage(employer.profilePhoto),
+    companyMedia: (employer.companyMedia ?? [])
+      .map((asset) => toImage(asset))
+      .filter((asset) => asset !== null),
+    companyMediaLimit: EMPLOYER_COMPANY_MEDIA_MAX_COUNT,
+    aboutUs: employer.aboutUs ?? "",
+    culture: employer.culture ?? "",
+    benefits: employer.benefits ?? "",
+    vision: employer.vision ?? "",
+    mission: employer.mission ?? "",
+    values: employer.values ?? "",
     companyAddress: employer.companyAddress ?? "",
     pincode: employer.pincode ?? "",
     city: employer.city ?? "",
     state: employer.state ?? "",
     emailAddress: employer.emailAddress ?? "",
+    contactDesignation: employer.contactDesignation ?? "",
+    alternatePhone: employer.alternatePhone ?? "",
+    socialLinks: {
+      linkedin: employer.socialLinks?.linkedin ?? "",
+      facebook: employer.socialLinks?.facebook ?? "",
+      instagram: employer.socialLinks?.instagram ?? "",
+      twitter: employer.socialLinks?.twitter ?? "",
+      youtube: employer.socialLinks?.youtube ?? "",
+    },
+    profileViews: employer.profileViews ?? 0,
     whatsappNumber: employer.whatsappNumber,
     isWhatsappVerified: employer.isWhatsappVerified,
     isProfileComplete: employer.isProfileComplete,
+    companyProfileVisited: employer.companyProfileVisited ?? false,
     registrationStatus: employer.registrationStatus,
     lastLoginAt: employer.lastLoginAt ?? null,
     createdAt: employer.createdAt,

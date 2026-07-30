@@ -29,6 +29,7 @@
   --color-employer-button-hover: #1d4ed8;
   --color-employer-icon: #2563eb;
   --color-employer-icon-surface: #ffffff;
+  --color-employer-welcome-surface: #fdfdfd;
   --color-nav: #2d2d2d;
   --color-foreground: #1a2b3c;
   --color-muted: #5a6570;
@@ -121,6 +122,16 @@ body {
     var(--color-surface) 0%,
     color-mix(in srgb, var(--color-primary-soft) 14%, white) 55%,
     color-mix(in srgb, var(--color-primary-soft) 22%, white) 100%
+  );
+}
+
+/* Selected job card: soft AsliJobs logo gradient (mint teal -> brand yellow). */
+@utility bg-job-card-selected-surface {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary-soft) 14%, white) 0%,
+    color-mix(in srgb, var(--color-primary-soft) 7%, white) 45%,
+    color-mix(in srgb, var(--color-brand-accent) 16%, white) 100%
   );
 }
 
