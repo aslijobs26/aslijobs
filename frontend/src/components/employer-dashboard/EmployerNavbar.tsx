@@ -3,6 +3,7 @@
 import { EmployerProfileMenu } from "@/components/employer-dashboard/EmployerProfileMenu";
 import { EmployerSearchBar } from "@/components/employer-dashboard/EmployerSearchBar";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { Can } from "@/components/rbac/Can";
 import {
   EMPLOYER_DASHBOARD_LANGUAGE_LABEL,
   EMPLOYER_DASHBOARD_POST_JOB_LABEL,
@@ -42,16 +43,18 @@ export function EmployerNavbar({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
-        <Link
-          href={ROUTES.POST_JOB}
-          className="inline-flex h-9 shrink-0 items-center rounded-lg bg-primary-soft px-2.5 text-xs font-semibold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-10 sm:px-4 sm:text-sm"
-          aria-label={EMPLOYER_DASHBOARD_POST_JOB_LABEL}
-        >
-          <span className="whitespace-nowrap sm:hidden">Post Job</span>
-          <span className="hidden whitespace-nowrap sm:inline">
-            {EMPLOYER_DASHBOARD_POST_JOB_LABEL}
-          </span>
-        </Link>
+        <Can module="jobs" action="create">
+          <Link
+            href={ROUTES.POST_JOB}
+            className="inline-flex h-9 shrink-0 items-center rounded-lg bg-primary-soft px-2.5 text-xs font-semibold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-10 sm:px-4 sm:text-sm"
+            aria-label={EMPLOYER_DASHBOARD_POST_JOB_LABEL}
+          >
+            <span className="whitespace-nowrap sm:hidden">Post Job</span>
+            <span className="hidden whitespace-nowrap sm:inline">
+              {EMPLOYER_DASHBOARD_POST_JOB_LABEL}
+            </span>
+          </Link>
+        </Can>
 
         <NotificationBell viewAllHref={ROUTES.EMPLOYER_NOTIFICATIONS} />
 

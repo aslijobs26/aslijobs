@@ -1,13 +1,11 @@
-import {
-  createEmployerModuleMetadata,
-  EmployerModulePage,
-} from "@/components/employer-dashboard/EmployerModulePage";
+import { TeamManagementPageContent } from "@/components/employer-team-management/TeamManagementPageContent";
+import type { Metadata } from "next";
 
-export const metadata = createEmployerModuleMetadata({
-  title: "Team Management",
-  description: "Manage your hiring team on AsliJobs",
-});
+export const metadata: Metadata = {
+  title: "Team Management | AsliJobs",
+  description: "Manage your hiring team organization on AsliJobs",
+};
 
 export default function EmployerTeamManagementPage() {
-  return <EmployerModulePage title="Team Management" />;
+  return <TeamManagementPageContent />;
 }

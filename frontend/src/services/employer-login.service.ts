@@ -1,6 +1,5 @@
 import { apiClient } from "@/services/api-client";
 import type { EmployerImageAssetPublic } from "@/services/employer-register.service";
-import { setEmployerAuthSession } from "@/utils/employer-auth-storage";
 
 type ApiSuccess<T> = {
   success: true;
@@ -125,11 +124,9 @@ export async function verifyEmployerLoginOtp(
   );
 
   const data = response.data.data;
-  setEmployerAuthSession({
-    accessToken: data.accessToken,
-    refreshToken: data.refreshToken,
-  });
 
+  // Tokens and React Query cache are established by the caller via
+  // establishEmployerClientSession so login never inherits a prior employer's cache.
   return data;
 }
 

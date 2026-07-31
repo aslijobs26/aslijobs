@@ -5,6 +5,14 @@ export type EmployerJwtPayload = {
   whatsappNumber: string;
 };
 
+export type TeamMemberJwtPayload = {
+  sub: string;
+  role: "team_member";
+  employerId: string;
+};
+
+export type WorkspaceJwtPayload = EmployerJwtPayload | TeamMemberJwtPayload;
+
 export type JobSeekerJwtPayload = {
   sub: string;
   role: "job_seeker";

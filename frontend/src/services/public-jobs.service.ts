@@ -38,6 +38,8 @@ export type PublicJobListItem = {
   createdAt: string;
   /** True when the logged-in job seeker already applied to this job. */
   isApplied?: boolean;
+  /** Unique authenticated job-seeker views (denormalized Job.views). */
+  views?: number;
 };
 
 export type PublicJobDetail = PublicJobListItem & {

@@ -49,6 +49,13 @@ const envSchema = z.object({
    * (e.g. preview deployments). Trailing slashes are stripped.
    */
   CORS_ALLOWED_ORIGINS: z.string().optional().default(""),
+  /** Resend API key for transactional email (team invitations). */
+  RESEND_API_KEY: z.string().optional().default(""),
+  /** From address for transactional email, e.g. AsliJobs <onboarding@resend.dev> */
+  EMAIL_FROM: z
+    .string()
+    .min(3)
+    .default("AsliJobs <onboarding@resend.dev>"),
   OTP_PROVIDER: z.enum(["console", "whatsapp"]).default("console"),
   STORAGE_PROVIDER: z.enum(["local", "cloudinary"]).default("local"),
   UPLOAD_DIR: z.string().default("uploads"),
@@ -61,6 +68,11 @@ const envSchema = z.object({
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
   META_APP_ID: z.string().optional(),
   META_APP_SECRET: z.string().optional(),
+  /**
+   * Minutes before the same visitor (guest or job seeker) can count
+   * another view on the same job. Default: 30.
+   */
+  JOB_VIEW_COOLDOWN_MINUTES: z.coerce.number().int().min(1).default(30),
 });
 
 const parsed = envSchema.safeParse(process.env);

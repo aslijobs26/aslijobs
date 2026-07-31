@@ -125,6 +125,13 @@ export function EmployerCandidateDetailPageContent({
       void queryClient.invalidateQueries({
         queryKey: ["employer", "applications"],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["employer", "application-stats"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["employer-jobs"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["employer-dashboard-home"],
+      });
       showAppToast("Application status updated.");
     },
     onError: (error) => {
@@ -186,6 +193,13 @@ export function EmployerCandidateDetailPageContent({
       queryClient.setQueryData(["employer", "application", applicationId], data);
       void queryClient.invalidateQueries({
         queryKey: ["employer", "applications"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["employer", "application-stats"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["employer-jobs"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["employer-dashboard-home"],
       });
       showAppToast("Hiring details saved.");
     },

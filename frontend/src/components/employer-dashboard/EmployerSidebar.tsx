@@ -13,8 +13,10 @@ import {
   EMPLOYER_DASHBOARD_SIDEBAR_COLLAPSED_WIDTH,
   EMPLOYER_DASHBOARD_SIDEBAR_WIDTH,
 } from "@/constants/employer-dashboard";
+import { NAV_ITEM_PERMISSION_MODULE } from "@/constants/employer-rbac";
 import { ROUTES } from "@/constants/routes";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
+import { useCan } from "@/providers/employer-permission-provider";
 import {
   fetchNotificationUnreadCount,
   notificationQueryKeys,
@@ -58,6 +60,7 @@ export function EmployerSidebar({
   });
 
   const profileQuery = useEmployerProfile();
+  const { can, isLoading: permissionsLoading } = useCan();
 
   const showCompanyProfileOnboardingDot =
     profileQuery.data?.companyProfileVisited === false;
@@ -82,11 +85,22 @@ export function EmployerSidebar({
         };
       }
       return item;
+    }).filter((item) => {
+      if (permissionsLoading) {
+        return true;
+      }
+      const moduleKey = NAV_ITEM_PERMISSION_MODULE[item.id];
+      if (!moduleKey) {
+        return true;
+      }
+      return can(moduleKey, "read");
     });
   }, [
     messagesUnreadQuery.data,
     profileQuery.data?.accountType,
     showCompanyProfileOnboardingDot,
+    can,
+    permissionsLoading,
   ]);
 
   return (

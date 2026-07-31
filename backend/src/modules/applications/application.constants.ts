@@ -51,6 +51,23 @@ export const WITHDRAWABLE_STATUSES = [
   "shortlisted",
 ] as const;
 
+/**
+ * Employer My Jobs / job-row "Shortlisted" column.
+ * Exact current status only — matches Candidates KPI / application stats.
+ */
+export const EMPLOYER_JOB_SHORTLISTED_STATUSES = [
+  "shortlisted",
+] as const satisfies ReadonlyArray<(typeof APPLICATION_STATUSES)[number]>;
+
+/**
+ * Employer My Jobs / dashboard "Hired" column.
+ * There is no `hired` application status — Selected + Joined are the hire outcomes.
+ */
+export const EMPLOYER_JOB_HIRED_STATUSES = [
+  "selected",
+  "joined",
+] as const satisfies ReadonlyArray<(typeof APPLICATION_STATUSES)[number]>;
+
 export const INTERVIEW_CANCELLATION_REASON_OPTIONS = [
   "Interviewer unavailable",
   "Candidate unavailable",

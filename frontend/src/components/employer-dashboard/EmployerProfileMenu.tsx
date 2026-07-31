@@ -10,7 +10,7 @@ import { ROUTES } from "@/constants/routes";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import type { EmployerLoginPublic } from "@/services/employer-login.service";
 import { cn } from "@/utils/cn";
-import { clearEmployerAuthSession } from "@/utils/employer-auth-storage";
+import { clearEmployerClientSession } from "@/utils/employer-session";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import {
   Briefcase,
@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useEffect,
   useId,
@@ -160,6 +161,7 @@ export function EmployerProfileMenu({
   onLogout,
 }: EmployerProfileMenuProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const pathname = usePathname();
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -234,9 +236,11 @@ export function EmployerProfileMenu({
 
   const handleLogout = () => {
     setIsOpen(false);
-    clearEmployerAuthSession();
-    onLogout?.();
-    router.replace(ROUTES.HOME);
+    void (async () => {
+      await clearEmployerClientSession(queryClient);
+      onLogout?.();
+      router.replace(ROUTES.HOME);
+    })();
   };
 
   return (

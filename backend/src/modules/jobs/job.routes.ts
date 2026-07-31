@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireEmployerAuth } from "../../middleware/auth.middleware.js";
+import { requirePermission } from "../../middleware/permission.middleware.js";
 import { optionalJobSeekerAuth } from "../../middleware/job-seeker-auth.middleware.js";
 import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
@@ -44,6 +45,7 @@ jobRouter.get(
 jobRouter.post(
   "/",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "create")),
   validate(createJobSchema, "body"),
   asyncHandler(jobController.create),
 );
@@ -51,6 +53,7 @@ jobRouter.post(
 jobRouter.post(
   "/draft",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "create")),
   validate(saveDraftJobSchema, "body"),
   asyncHandler(jobController.createDraft),
 );
@@ -58,6 +61,7 @@ jobRouter.post(
 jobRouter.get(
   "/mine",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "read")),
   validate(listEmployerJobsQuerySchema, "query"),
   asyncHandler(jobController.listMine),
 );
@@ -65,12 +69,14 @@ jobRouter.get(
 jobRouter.get(
   "/mine/stats",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "read")),
   asyncHandler(jobController.stats),
 );
 
 jobRouter.get(
   "/:jobId",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "read")),
   validate(jobIdParamsSchema, "params"),
   asyncHandler(jobController.getById),
 );
@@ -78,6 +84,7 @@ jobRouter.get(
 jobRouter.put(
   "/:jobId",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "update")),
   validate(jobIdParamsSchema, "params"),
   validate(updateActiveJobSchema, "body"),
   asyncHandler(jobController.updateActive),
@@ -86,6 +93,7 @@ jobRouter.put(
 jobRouter.patch(
   "/:jobId/draft",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "update")),
   validate(jobIdParamsSchema, "params"),
   validate(saveDraftJobSchema, "body"),
   asyncHandler(jobController.updateDraft),
@@ -94,6 +102,7 @@ jobRouter.patch(
 jobRouter.put(
   "/:jobId/publish",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "update")),
   validate(jobIdParamsSchema, "params"),
   validate(publishDraftJobSchema, "body"),
   asyncHandler(jobController.publishDraft),
@@ -102,6 +111,7 @@ jobRouter.put(
 jobRouter.patch(
   "/:jobId/status",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "update")),
   validate(jobIdParamsSchema, "params"),
   validate(updateJobStatusSchema, "body"),
   asyncHandler(jobController.updateStatus),
@@ -110,6 +120,7 @@ jobRouter.patch(
 jobRouter.delete(
   "/:jobId",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "delete")),
   validate(jobIdParamsSchema, "params"),
   asyncHandler(jobController.remove),
 );

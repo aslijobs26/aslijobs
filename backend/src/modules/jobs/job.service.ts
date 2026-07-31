@@ -11,6 +11,13 @@ import { EmployerModel } from "../employers/employer.model.js";
 import { ApplicationModel } from "../applications/application.model.js";
 import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
+import { jobViewService } from "./job-view.service.js";
+import {
+  emptyEmployerJobApplicationMetrics,
+  loadEmployerApplicationMetricsTotals,
+  loadEmployerJobApplicationMetricsByJobIds,
+  type EmployerJobApplicationMetrics,
+} from "./employer-job-application-metrics.js";
 import type {
   CreateJobInput,
   DraftWizardSnapshot,
@@ -77,7 +84,10 @@ function normalizeSalaryPeriod(value: unknown): SalaryPeriod {
   return value === "per-year" ? "per-year" : "per-month";
 }
 
-function toJobPublic(job: JobDocument) {
+function toJobPublic(
+  job: JobDocument,
+  metrics?: EmployerJobApplicationMetrics,
+) {
   return {
     id: job._id.toString(),
     jobId: job.jobId,
@@ -131,10 +141,10 @@ function toJobPublic(job: JobDocument) {
     completedStep: job.completedStep ?? 1,
     lastEditedAt: job.lastEditedAt ?? job.updatedAt,
     wizardSnapshot: job.wizardSnapshot ?? null,
-    applications: job.applications,
-    shortlisted: job.shortlisted,
+    applications: metrics?.applications ?? job.applications ?? 0,
+    shortlisted: metrics?.shortlisted ?? 0,
     interviews: job.interviews,
-    hired: job.hired,
+    hired: metrics?.hired ?? 0,
     views: job.views,
     bookmarks: job.bookmarks,
     shares: job.shares,
@@ -144,7 +154,12 @@ function toJobPublic(job: JobDocument) {
   };
 }
 
-function toEmployerJobListItem(job: JobDocument) {
+function toEmployerJobListItem(
+  job: JobDocument,
+  metrics?: EmployerJobApplicationMetrics,
+) {
+  const applicationMetrics = metrics ?? emptyEmployerJobApplicationMetrics();
+
   return {
     id: job._id.toString(),
     jobId: job.jobId,
@@ -155,10 +170,10 @@ function toEmployerJobListItem(job: JobDocument) {
     cityName: job.cityName,
     state: job.state,
     stateName: job.stateName,
-    applications: job.applications,
-    shortlisted: job.shortlisted,
+    applications: applicationMetrics.applications,
+    shortlisted: applicationMetrics.shortlisted,
     interviews: job.interviews,
-    hired: job.hired,
+    hired: applicationMetrics.hired,
     views: job.views,
     status: job.status,
     publishedAt: toIsoDateString(job.publishedAt),
@@ -793,6 +808,7 @@ function toPublicJobListItem(
     applyWhatsAppNumber: toPublicApplyWhatsAppNumber(job.contactMobile),
     createdAt: job.createdAt,
     isApplied: options?.isApplied === true,
+    views: job.views ?? 0,
   };
 }
 
@@ -1035,6 +1051,12 @@ export class JobService {
         .lean(),
     ]);
 
+    const applicationMetricsByJobId =
+      await loadEmployerJobApplicationMetricsByJobIds(
+        employerId,
+        jobs.map((job) => job._id.toString()),
+      );
+
     const countsByStatus = Object.fromEntries(
       JOB_STATUSES.map((status) => [status, 0]),
     ) as Record<JobStatus, number>;
@@ -1049,7 +1071,12 @@ export class JobService {
     );
 
     return {
-      jobs: jobs.map((job) => toEmployerJobListItem(job)),
+      jobs: jobs.map((job) =>
+        toEmployerJobListItem(
+          job,
+          applicationMetricsByJobId.get(job._id.toString()),
+        ),
+      ),
       pagination: {
         page: query.page,
         limit: query.limit,
@@ -1075,49 +1102,47 @@ export class JobService {
 
     const employerObjectId = new mongoose.Types.ObjectId(employerId);
 
-    const [aggregateResult, recentJobs, statusCounts] = await Promise.all([
-      JobModel.aggregate<{
-        activeJobs: number;
-        applications: number;
-        shortlisted: number;
-        interviews: number;
-        hired: number;
-        views: number;
-      }>([
-        { $match: { employerId: employerObjectId } },
-        {
-          $group: {
-            _id: null,
-            activeJobs: {
-              $sum: {
-                $cond: [{ $eq: ["$status", "active"] }, 1, 0],
+    const [jobTotalsResult, applicationTotals, recentJobs, statusCounts] =
+      await Promise.all([
+        JobModel.aggregate<{
+          activeJobs: number;
+          interviews: number;
+          views: number;
+        }>([
+          { $match: { employerId: employerObjectId } },
+          {
+            $group: {
+              _id: null,
+              activeJobs: {
+                $sum: {
+                  $cond: [{ $eq: ["$status", "active"] }, 1, 0],
+                },
               },
+              interviews: { $sum: "$interviews" },
+              views: { $sum: "$views" },
             },
-            applications: { $sum: "$applications" },
-            shortlisted: { $sum: "$shortlisted" },
-            interviews: { $sum: "$interviews" },
-            hired: { $sum: "$hired" },
-            views: { $sum: "$views" },
           },
-        },
-      ]),
-      JobModel.find({ employerId: employerObjectId })
-        .sort({ publishedAt: -1, createdAt: -1 })
-        .limit(5),
-      JobModel.aggregate<{ _id: JobStatus; count: number }>([
-        { $match: { employerId: employerObjectId } },
-        { $group: { _id: "$status", count: { $sum: 1 } } },
-      ]),
-    ]);
+        ]),
+        loadEmployerApplicationMetricsTotals(employerId),
+        JobModel.find({ employerId: employerObjectId })
+          .sort({ publishedAt: -1, createdAt: -1 })
+          .limit(5),
+        JobModel.aggregate<{ _id: JobStatus; count: number }>([
+          { $match: { employerId: employerObjectId } },
+          { $group: { _id: "$status", count: { $sum: 1 } } },
+        ]),
+      ]);
 
-    const totals = aggregateResult[0] ?? {
+    const jobTotals = jobTotalsResult[0] ?? {
       activeJobs: 0,
-      applications: 0,
-      shortlisted: 0,
       interviews: 0,
-      hired: 0,
       views: 0,
     };
+
+    const recentJobMetrics = await loadEmployerJobApplicationMetricsByJobIds(
+      employerId,
+      recentJobs.map((job) => job._id.toString()),
+    );
 
     const countsByStatus = Object.fromEntries(
       JOB_STATUSES.map((status) => [status, 0]),
@@ -1129,19 +1154,24 @@ export class JobService {
 
     return {
       stats: {
-        activeJobs: totals.activeJobs,
-        applications: totals.applications,
-        shortlisted: totals.shortlisted,
-        interviews: totals.interviews,
-        hired: totals.hired,
-        views: totals.views,
+        activeJobs: jobTotals.activeJobs,
+        applications: applicationTotals.applications,
+        shortlisted: applicationTotals.shortlisted,
+        interviews: jobTotals.interviews,
+        hired: applicationTotals.hired,
+        views: jobTotals.views,
         totalJobs: Object.values(countsByStatus).reduce(
           (sum, count) => sum + count,
           0,
         ),
         countsByStatus,
       },
-      recentJobs: recentJobs.map((job) => toEmployerJobListItem(job)),
+      recentJobs: recentJobs.map((job) =>
+        toEmployerJobListItem(
+          job,
+          recentJobMetrics.get(job._id.toString()),
+        ),
+      ),
     };
   }
 
@@ -1203,8 +1233,13 @@ export class JobService {
 
   async getOwnedJob(employerId: string, jobMongoId: string) {
     const job = await this.findOwnedJobOrThrow(employerId, jobMongoId);
+    const metricsByJobId = await loadEmployerJobApplicationMetricsByJobIds(
+      employerId,
+      [job._id.toString()],
+    );
+
     return {
-      job: toJobPublic(job),
+      job: toJobPublic(job, metricsByJobId.get(job._id.toString())),
     };
   }
 
@@ -1328,7 +1363,11 @@ export class JobService {
 
   async getPublicActiveJobByPublicId(
     publicJobId: string,
-    jobSeekerId?: string,
+    options?: {
+      jobSeekerId?: string;
+      visitorType?: "guest" | "jobSeeker";
+      visitorId?: string;
+    },
   ) {
     const job = await JobModel.findOne({
       jobId: publicJobId.toUpperCase(),
@@ -1337,6 +1376,22 @@ export class JobService {
 
     if (!job) {
       throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const jobSeekerId = options?.jobSeekerId;
+    let views = job.views ?? 0;
+
+    if (options?.visitorId && options.visitorType) {
+      const recorded = await jobViewService.recordJobView({
+        jobMongoId: job._id.toString(),
+        publicJobId: job.jobId,
+        visitorType: options.visitorType,
+        visitorId: options.visitorId,
+      });
+
+      if (recorded) {
+        views += 1;
+      }
     }
 
     const appliedIds = await getAppliedJobMongoIdSet(jobSeekerId, [
@@ -1348,6 +1403,7 @@ export class JobService {
         ...toPublicJobListItem(job, {
           isApplied: appliedIds.has(job._id.toString()),
         }),
+        views,
         address: job.address,
         landmark: job.landmark,
         languages: job.languages,

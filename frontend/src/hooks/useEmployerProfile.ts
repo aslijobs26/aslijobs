@@ -5,6 +5,7 @@ import {
   fetchAuthenticatedEmployer,
   type EmployerLoginPublic,
 } from "@/services/employer-login.service";
+import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import {
   useQuery,
   type QueryClient,
@@ -41,9 +42,13 @@ export function useEmployerProfile(
     "enabled" | "select"
   >,
 ): UseQueryResult<EmployerLoginPublic, Error> {
+  const hasAccessToken =
+    typeof window !== "undefined" && Boolean(getEmployerAccessToken());
+
   return useQuery({
     ...employerProfileQueryOptions,
     ...options,
+    enabled: (options?.enabled ?? true) && hasAccessToken,
   });
 }
 

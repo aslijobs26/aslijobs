@@ -6,6 +6,8 @@ import type {
   EmployerJwtPayload,
   IssuedTokenPair,
   JobSeekerJwtPayload,
+  TeamMemberJwtPayload,
+  WorkspaceJwtPayload,
 } from "./jwt.types.js";
 
 function parseDurationToMs(duration: string): number {
@@ -37,47 +39,76 @@ function parseDurationToMs(duration: string): number {
   }
 }
 
+function issueTokenPair(tokenPayload: WorkspaceJwtPayload): IssuedTokenPair {
+  const accessTokenExpiresAt = new Date(
+    Date.now() + parseDurationToMs(env.JWT_ACCESS_EXPIRES_IN),
+  );
+  const refreshTokenExpiresAt = new Date(
+    Date.now() + parseDurationToMs(env.JWT_REFRESH_EXPIRES_IN),
+  );
+
+  const accessToken = jwt.sign(tokenPayload, env.JWT_ACCESS_SECRET, {
+    expiresIn: env.JWT_ACCESS_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+  });
+
+  const refreshToken = jwt.sign(
+    { ...tokenPayload, typ: "refresh" },
+    env.JWT_REFRESH_SECRET,
+    {
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+    },
+  );
+
+  return {
+    accessToken,
+    refreshToken,
+    accessTokenExpiresAt,
+    refreshTokenExpiresAt,
+  };
+}
+
 export class JwtService {
   issueEmployerTokens(
     payload: Omit<EmployerJwtPayload, "role">,
   ): IssuedTokenPair {
-    const accessTokenExpiresAt = new Date(
-      Date.now() + parseDurationToMs(env.JWT_ACCESS_EXPIRES_IN),
-    );
-    const refreshTokenExpiresAt = new Date(
-      Date.now() + parseDurationToMs(env.JWT_REFRESH_EXPIRES_IN),
-    );
-
-    const tokenPayload: EmployerJwtPayload = {
+    return issueTokenPair({
       ...payload,
       role: "employer",
-    };
-
-    const accessToken = jwt.sign(tokenPayload, env.JWT_ACCESS_SECRET, {
-      expiresIn: env.JWT_ACCESS_EXPIRES_IN as jwt.SignOptions["expiresIn"],
     });
+  }
 
-    const refreshToken = jwt.sign(
-      { ...tokenPayload, typ: "refresh" },
-      env.JWT_REFRESH_SECRET,
-      {
-        expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
-      },
-    );
-
-    return {
-      accessToken,
-      refreshToken,
-      accessTokenExpiresAt,
-      refreshTokenExpiresAt,
-    };
+  issueTeamMemberTokens(
+    payload: Omit<TeamMemberJwtPayload, "role">,
+  ): IssuedTokenPair {
+    return issueTokenPair({
+      ...payload,
+      role: "team_member",
+    });
   }
 
   verifyAccessToken(token: string): EmployerJwtPayload {
-    try {
-      const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as EmployerJwtPayload;
+    const decoded = this.verifyWorkspaceAccessToken(token);
+    if (decoded.role !== "employer") {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+    return decoded;
+  }
 
-      if (decoded.role !== "employer" || !decoded.sub) {
+  verifyWorkspaceAccessToken(token: string): WorkspaceJwtPayload {
+    try {
+      const decoded = jwt.verify(
+        token,
+        env.JWT_ACCESS_SECRET,
+      ) as WorkspaceJwtPayload;
+
+      if (
+        !decoded.sub ||
+        (decoded.role !== "employer" && decoded.role !== "team_member")
+      ) {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
+      if (decoded.role === "team_member" && !decoded.employerId) {
         throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
       }
 
@@ -105,6 +136,30 @@ export class JwtService {
       ) as EmployerJwtPayload & { typ?: string };
 
       if (decoded.role !== "employer" || !decoded.sub) {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
+      return decoded;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+  }
+
+  verifyWorkspaceRefreshToken(token: string): WorkspaceJwtPayload {
+    try {
+      const decoded = jwt.verify(
+        token,
+        env.JWT_REFRESH_SECRET,
+      ) as WorkspaceJwtPayload & { typ?: string };
+
+      if (
+        !decoded.sub ||
+        (decoded.role !== "employer" && decoded.role !== "team_member")
+      ) {
         throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
       }
 

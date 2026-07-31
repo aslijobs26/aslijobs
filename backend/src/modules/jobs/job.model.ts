@@ -322,6 +322,11 @@ const jobSchema = new Schema(
       default: 0,
       min: 0,
     },
+    /**
+     * Denormalized job view counter (guest + job-seeker views).
+     * Source of truth for cooldown / uniqueness is the `job_views` collection;
+     * this counter is incremented atomically when a view is counted.
+     */
     views: {
       type: Number,
       required: true,

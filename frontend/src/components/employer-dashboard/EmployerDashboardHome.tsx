@@ -6,7 +6,9 @@ import { DashboardNotifications } from "@/components/employer-dashboard-home/Das
 import { DashboardProfileCompletion } from "@/components/employer-dashboard-home/DashboardProfileCompletion";
 import { DashboardRecentApplications } from "@/components/employer-dashboard-home/DashboardRecentApplications";
 import { DashboardRecruitmentFunnel } from "@/components/employer-dashboard-home/DashboardRecruitmentFunnel";
+import { DashboardRecruiterPerformance } from "@/components/employer-dashboard-home/DashboardRecruiterPerformance";
 import { DashboardStatCards } from "@/components/employer-dashboard-home/DashboardStatCards";
+import { DashboardSubscriptionOverview } from "@/components/employer-dashboard-home/DashboardSubscriptionOverview";
 import { DashboardSupportCard } from "@/components/employer-dashboard-home/DashboardSupportCard";
 import { DashboardWelcomeBanner } from "@/components/employer-dashboard-home/DashboardWelcomeBanner";
 import {
@@ -280,17 +282,18 @@ export function EmployerDashboardHome() {
             }
           />
 
-          <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(16rem,0.95fr)]">
-            <DashboardJobsOverview
-              jobs={recentJobs}
-              isLoading={jobStatsQuery.isLoading}
-              isError={jobStatsQuery.isError}
-              isDeleting={deleteMutation.isPending}
-              onRetry={() => {
-                void jobStatsQuery.refetch();
-              }}
-              onDelete={handleDeleteJob}
-            />
+          <DashboardJobsOverview
+            jobs={recentJobs}
+            isLoading={jobStatsQuery.isLoading}
+            isError={jobStatsQuery.isError}
+            isDeleting={deleteMutation.isPending}
+            onRetry={() => {
+              void jobStatsQuery.refetch();
+            }}
+            onDelete={handleDeleteJob}
+          />
+
+          <div className="grid items-stretch gap-4 xl:grid-cols-2">
             <DashboardRecruitmentFunnel
               stages={funnelStages}
               conversionRate={conversionRate}
@@ -298,6 +301,7 @@ export function EmployerDashboardHome() {
               onPeriodChange={setFunnelPeriod}
               isLoading={funnelQuery.isLoading && !funnelQuery.data}
             />
+            <DashboardRecruiterPerformance />
           </div>
 
           <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(16rem,0.95fr)]">
@@ -315,9 +319,11 @@ export function EmployerDashboardHome() {
               isLoading={applicationStatsQuery.isLoading}
             />
           </div>
+
+          <DashboardSubscriptionOverview />
         </div>
 
-        <aside className="min-w-0 space-y-4">
+        <aside className="min-w-0 space-y-4 xl:sticky xl:top-20 xl:self-start">
           {profileCompletion ? (
             <DashboardProfileCompletion
               percentage={profileCompletion.percentage}

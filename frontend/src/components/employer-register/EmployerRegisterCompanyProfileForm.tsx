@@ -24,8 +24,10 @@ import type {
   EmployerRegisterDocumentPreview,
   EmployerRegisterImagePreview,
 } from "@/types/employer-register";
+import { establishEmployerClientSession } from "@/utils/employer-session";
 import { CloudUpload, FileText, ShieldCheck, X } from "lucide-react";
 import { isAxiosError } from "axios";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useId,
   useRef,
@@ -74,6 +76,7 @@ export function EmployerRegisterCompanyProfileForm({
   initialCompanyName = "",
   onContinue,
 }: EmployerRegisterCompanyProfileFormProps) {
+  const queryClient = useQueryClient();
   const isConsultancy = accountType === "consultancy";
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -216,12 +219,16 @@ export function EmployerRegisterCompanyProfileForm({
     setErrorMessage(null);
 
     try {
-      await completeEmployerCompanyProfile({
+      const session = await completeEmployerCompanyProfile({
         employerId,
         profile: formData,
         documentType: formData.verificationDocument,
         documentFile: documentPreview.file,
         companyLogoFile: companyLogoPreview?.file,
+      });
+      await establishEmployerClientSession(queryClient, {
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
       });
       onContinue?.();
     } catch (error) {

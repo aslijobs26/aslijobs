@@ -74,6 +74,8 @@ export type UpdateEmployerProfileInput = {
 };
 
 export async function fetchEmployerProfile() {
+  // Same endpoint as login "me" — callers should prefer useEmployerProfile /
+  // React Query cache for reads. Kept for rare non-hook paths.
   const response = await apiClient.get<ApiSuccess<MeResponse>>("/employers/me");
   return response.data.data.employer;
 }

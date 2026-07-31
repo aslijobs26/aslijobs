@@ -21,7 +21,9 @@ import {
   sendEmployerLoginOtp,
   verifyEmployerLoginOtp,
 } from "@/services/employer-login.service";
+import { establishEmployerClientSession } from "@/utils/employer-session";
 import { isAxiosError } from "axios";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -59,6 +61,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export function EmployerLoginForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [isOtpVisible, setIsOtpVisible] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
@@ -136,7 +139,15 @@ export function EmployerLoginForm() {
     setErrorMessage(null);
 
     try {
-      await verifyEmployerLoginOtp(whatsappNumber, otpDigits.join(""));
+      const session = await verifyEmployerLoginOtp(
+        whatsappNumber,
+        otpDigits.join(""),
+      );
+      await establishEmployerClientSession(queryClient, {
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+        employer: session.employer,
+      });
       router.replace(ROUTES.EMPLOYER_DASHBOARD);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Invalid OTP"));

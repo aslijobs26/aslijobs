@@ -1,5 +1,4 @@
 import { apiClient } from "@/services/api-client";
-import { setEmployerAuthSession } from "@/utils/employer-auth-storage";
 import { getCompanyStrengthRange } from "@/constants/employer-register";
 import type {
   EmployerRegisterAccountType,
@@ -209,11 +208,8 @@ export async function completeEmployerCompanyProfile(input: {
   });
 
   const data = response.data.data;
-  setEmployerAuthSession({
-    accessToken: data.accessToken,
-    refreshToken: data.refreshToken,
-  });
 
+  // Session tokens are applied by the caller via establishEmployerClientSession.
   return data;
 }
 
@@ -240,10 +236,7 @@ export async function completeEmployerIndividualIdentity(input: {
   });
 
   const data = response.data.data;
-  setEmployerAuthSession({
-    accessToken: data.accessToken,
-    refreshToken: data.refreshToken,
-  });
 
+  // Session tokens are applied by the caller via establishEmployerClientSession.
   return data;
 }

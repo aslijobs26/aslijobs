@@ -27,7 +27,9 @@ import type {
   EmployerRegisterImagePreview,
 } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
+import { establishEmployerClientSession } from "@/utils/employer-session";
 import { isAxiosError } from "axios";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { EmployerRegisterDocumentVerification } from "./EmployerRegisterDocumentVerification";
 import { EmployerRegisterOtpSection } from "./EmployerRegisterOtpSection";
@@ -75,6 +77,7 @@ export function EmployerRegisterForm({
     employerId: string,
   ) => void;
 }) {
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState<EmployerRegisterFormData>(
     EMPLOYER_REGISTER_INITIAL_FORM_DATA,
   );
@@ -223,11 +226,15 @@ export function EmployerRegisterForm({
       setErrorMessage(null);
 
       try {
-        await completeEmployerIndividualIdentity({
+        const session = await completeEmployerIndividualIdentity({
           employerId,
           documentType,
           documentFile: documentPreview.file,
           profilePhotoFile: profilePhotoPreview?.file,
+        });
+        await establishEmployerClientSession(queryClient, {
+          accessToken: session.accessToken,
+          refreshToken: session.refreshToken,
         });
         onContinue(formData, accountType, employerId);
       } catch (error) {

@@ -1,16 +1,17 @@
 "use client";
 
 import { ROUTES } from "@/constants/routes";
-import { ensureEmployerProfile } from "@/hooks/useEmployerProfile";
-import { isUnauthorizedAuthError } from "@/utils/auth-errors";
 import {
-  clearEmployerAuthSession,
-  getEmployerAccessToken,
-} from "@/utils/employer-auth-storage";
+  employerProfileQueryOptions,
+  fetchEmployerProfileQuery,
+} from "@/hooks/useEmployerProfile";
+import { isUnauthorizedAuthError } from "@/utils/auth-errors";
+import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
+import { clearEmployerClientSession } from "@/utils/employer-session";
 import { buildEmployerLoginHref } from "@/utils/safe-return-url";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 type EmployerAuthGuardProps = {
   children: ReactNode;
@@ -18,32 +19,49 @@ type EmployerAuthGuardProps = {
 
 type AuthStatus = "checking" | "authenticated" | "transient_error";
 
+/**
+ * Workspace gate: verifies a token exists and that the shared employer profile
+ * query can resolve. Uses React Query cache (staleTime) so remounts / effect
+ * re-entry do not spam GET /employers/me.
+ */
 export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<AuthStatus>("checking");
   const [retryToken, setRetryToken] = useState(0);
 
-  const redirectUnauthenticated = useCallback(() => {
-    clearEmployerAuthSession();
-    const returnUrl = `${window.location.pathname}${window.location.search}`;
-    router.replace(buildEmployerLoginHref(returnUrl || ROUTES.POST_JOB));
-  }, [router]);
+  const routerRef = useRef(router);
+  const queryClientRef = useRef(queryClient);
+  routerRef.current = router;
+  queryClientRef.current = queryClient;
 
   useEffect(() => {
     let cancelled = false;
+
+    const redirectUnauthenticated = async () => {
+      await clearEmployerClientSession(queryClientRef.current);
+      const returnUrl = `${window.location.pathname}${window.location.search}`;
+      routerRef.current.replace(
+        buildEmployerLoginHref(returnUrl || ROUTES.POST_JOB),
+      );
+    };
 
     const verifyEmployerSession = async () => {
       const accessToken = getEmployerAccessToken();
 
       if (!accessToken) {
-        redirectUnauthenticated();
+        await redirectUnauthenticated();
         return;
       }
 
       try {
-        // ensureQueryData reuses the shared ["employer","me"] cache when fresh.
-        await ensureEmployerProfile(queryClient);
+        // Prefer cache within staleTime. Login / employer switch already clears
+        // the query cache, so a new session still hits the network once.
+        await queryClientRef.current.ensureQueryData({
+          queryKey: employerProfileQueryOptions.queryKey,
+          queryFn: fetchEmployerProfileQuery,
+          staleTime: employerProfileQueryOptions.staleTime,
+        });
         if (!cancelled) {
           setStatus("authenticated");
         }
@@ -52,10 +70,8 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
           return;
         }
 
-        // Only a genuine auth rejection should destroy the session.
-        // 429 / 5xx / network blips must keep the token and allow retry.
         if (isUnauthorizedAuthError(error)) {
-          redirectUnauthenticated();
+          await redirectUnauthenticated();
           return;
         }
 
@@ -63,12 +79,18 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
       }
     };
 
+    setStatus("checking");
     void verifyEmployerSession();
 
     const handlePageShow = (event: PageTransitionEvent) => {
-      if (event.persisted || !getEmployerAccessToken()) {
-        void verifyEmployerSession();
+      // Only re-check after bfcache restore; avoid duplicate /me on normal shows.
+      if (!event.persisted) {
+        return;
       }
+      if (!cancelled) {
+        setStatus("checking");
+      }
+      void verifyEmployerSession();
     };
 
     window.addEventListener("pageshow", handlePageShow);
@@ -77,7 +99,7 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
       cancelled = true;
       window.removeEventListener("pageshow", handlePageShow);
     };
-  }, [queryClient, redirectUnauthenticated, retryToken]);
+  }, [retryToken]);
 
   if (status === "transient_error") {
     return (

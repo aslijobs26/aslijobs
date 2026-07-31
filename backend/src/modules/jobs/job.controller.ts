@@ -3,6 +3,10 @@ import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { jobService } from "./job.service.js";
+import {
+  resolveJobViewVisitor,
+  setJobViewGuestCookie,
+} from "./job-view.visitor.js";
 import type {
   CreateJobInput,
   ListEmployerJobsQuery,
@@ -182,10 +186,17 @@ export class JobController {
 
   getPublicByPublicId = async (req: Request, res: Response): Promise<void> => {
     const { publicJobId } = req.params as { publicJobId: string };
-    const result = await jobService.getPublicActiveJobByPublicId(
-      publicJobId,
-      req.jobSeekerId,
-    );
+    const visitor = resolveJobViewVisitor(req, req.jobSeekerId);
+
+    const result = await jobService.getPublicActiveJobByPublicId(publicJobId, {
+      jobSeekerId: req.jobSeekerId,
+      visitorType: visitor.visitorType,
+      visitorId: visitor.visitorId,
+    });
+
+    if (visitor.shouldSetGuestCookie) {
+      setJobViewGuestCookie(res, visitor.visitorId);
+    }
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Job fetched successfully.",

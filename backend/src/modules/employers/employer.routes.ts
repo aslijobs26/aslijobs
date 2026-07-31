@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireEmployerAuth } from "../../middleware/auth.middleware.js";
+import { requirePermission } from "../../middleware/permission.middleware.js";
 import {
   employerCompanyProfileUpload,
   employerIndividualIdentityUpload,
@@ -59,6 +60,7 @@ employerRouter.get(
 employerRouter.patch(
   "/me/profile",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("company_profile", "update")),
   employerProfileUpdateUpload,
   validate(updateEmployerProfileSchema, "body"),
   asyncHandler(employerController.updateProfile),

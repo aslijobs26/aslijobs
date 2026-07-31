@@ -332,6 +332,9 @@ export function CandidatesDetailPanel({
       queryClient.invalidateQueries({
         queryKey: ["employer", "interview-stats"],
       }),
+      // My Jobs / dashboard job rows derive shortlisted & hired from applications.
+      queryClient.invalidateQueries({ queryKey: ["employer-jobs"] }),
+      queryClient.invalidateQueries({ queryKey: ["employer-dashboard-home"] }),
     ]);
   };
 

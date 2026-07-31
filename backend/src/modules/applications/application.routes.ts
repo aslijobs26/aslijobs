@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireEmployerAuth } from "../../middleware/auth.middleware.js";
+import { requirePermission } from "../../middleware/permission.middleware.js";
 import { requireJobSeekerAuth } from "../../middleware/job-seeker-auth.middleware.js";
 import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
@@ -61,6 +62,7 @@ applicationRouter.post(
 applicationRouter.get(
   "/employer/stats",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "read")),
   validate(listEmployerApplicationStatsQuerySchema, "query"),
   asyncHandler(applicationController.getStatsForEmployer),
 );
@@ -68,6 +70,7 @@ applicationRouter.get(
 applicationRouter.post(
   "/employer/export/preview",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "export")),
   validate(employerExportBodySchema, "body"),
   asyncHandler(applicationController.previewExportForEmployer),
 );
@@ -75,6 +78,7 @@ applicationRouter.post(
 applicationRouter.post(
   "/employer/export",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "export")),
   validate(employerExportBodySchema, "body"),
   asyncHandler(applicationController.exportForEmployer),
 );
@@ -88,6 +92,7 @@ applicationRouter.get(
 applicationRouter.get(
   "/employer/location-suggestions",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "read")),
   validate(employerLocationSuggestionsQuerySchema, "query"),
   asyncHandler(applicationController.suggestLocationsForEmployer),
 );
@@ -95,6 +100,7 @@ applicationRouter.get(
 applicationRouter.get(
   "/employer/interviews/stats",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("interviews", "read")),
   validate(listEmployerInterviewStatsQuerySchema, "query"),
   asyncHandler(applicationController.getInterviewStatsForEmployer),
 );
@@ -102,6 +108,7 @@ applicationRouter.get(
 applicationRouter.get(
   "/employer/interviews",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("interviews", "read")),
   validate(listEmployerInterviewsQuerySchema, "query"),
   asyncHandler(applicationController.listInterviewsForEmployer),
 );
@@ -109,6 +116,7 @@ applicationRouter.get(
 applicationRouter.get(
   "/employer",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "read")),
   validate(listEmployerApplicationsQuerySchema, "query"),
   asyncHandler(applicationController.listForEmployer),
 );
@@ -116,6 +124,7 @@ applicationRouter.get(
 applicationRouter.get(
   "/employer/:applicationId",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "read")),
   validate(applicationIdParamsSchema, "params"),
   asyncHandler(applicationController.getForEmployer),
 );
@@ -123,6 +132,7 @@ applicationRouter.get(
 applicationRouter.get(
   "/employer/:applicationId/pdf",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "export")),
   validate(applicationIdParamsSchema, "params"),
   asyncHandler(applicationController.downloadPdfForEmployer),
 );
@@ -130,6 +140,7 @@ applicationRouter.get(
 applicationRouter.patch(
   "/employer/:applicationId/status",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "update")),
   validate(applicationIdParamsSchema, "params"),
   validate(updateApplicationStatusSchema, "body"),
   asyncHandler(applicationController.updateStatusForEmployer),
@@ -138,6 +149,7 @@ applicationRouter.patch(
 applicationRouter.patch(
   "/employer/:applicationId/notes",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "update")),
   validate(applicationIdParamsSchema, "params"),
   validate(updateApplicationNotesSchema, "body"),
   asyncHandler(applicationController.updateNotesForEmployer),
@@ -146,6 +158,7 @@ applicationRouter.patch(
 applicationRouter.patch(
   "/employer/:applicationId/interview",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("interviews", "update")),
   validate(applicationIdParamsSchema, "params"),
   validate(updateApplicationInterviewSchema, "body"),
   asyncHandler(applicationController.updateInterviewForEmployer),
@@ -154,6 +167,7 @@ applicationRouter.patch(
 applicationRouter.patch(
   "/employer/:applicationId/interview/cancel",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("interviews", "update")),
   validate(applicationIdParamsSchema, "params"),
   validate(cancelApplicationInterviewSchema, "body"),
   asyncHandler(applicationController.cancelInterviewForEmployer),
@@ -162,6 +176,7 @@ applicationRouter.patch(
 applicationRouter.patch(
   "/employer/:applicationId/hiring",
   asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "update")),
   validate(applicationIdParamsSchema, "params"),
   validate(updateApplicationHiringSchema, "body"),
   asyncHandler(applicationController.updateHiringForEmployer),

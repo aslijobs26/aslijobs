@@ -187,8 +187,10 @@ applicationSchema.index({
   "resumeSnapshot.resumeJson.header.fullName": 1,
 });
 applicationSchema.index({ jobId: 1, appliedAt: -1 });
+applicationSchema.index({ jobId: 1, status: 1 });
 applicationSchema.index({ jobSeekerId: 1, appliedAt: -1 });
 applicationSchema.index({ jobSeekerId: 1, status: 1 });
+applicationSchema.index({ employerId: 1, jobId: 1, status: 1 });
 
 export type ApplicationDocumentLean = InferSchemaType<
   typeof applicationSchema

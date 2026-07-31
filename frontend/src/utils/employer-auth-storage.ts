@@ -2,11 +2,20 @@ const ACCESS_TOKEN_KEY = "aslijobs_employer_access_token";
 const REFRESH_TOKEN_KEY = "aslijobs_employer_refresh_token";
 
 export const EMPLOYER_ACCESS_TOKEN_STORAGE_KEY = ACCESS_TOKEN_KEY;
+export const EMPLOYER_AUTH_CHANGE_EVENT = "aslijobs:employer-auth-change";
 
 export type EmployerAuthSession = {
   accessToken: string;
   refreshToken: string;
 };
+
+function notifyEmployerAuthChange(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new Event(EMPLOYER_AUTH_CHANGE_EVENT));
+}
 
 export function getEmployerAccessToken(): string | null {
   if (typeof window === "undefined") {
@@ -27,9 +36,11 @@ export function getEmployerRefreshToken(): string | null {
 export function setEmployerAuthSession(session: EmployerAuthSession): void {
   window.localStorage.setItem(ACCESS_TOKEN_KEY, session.accessToken);
   window.localStorage.setItem(REFRESH_TOKEN_KEY, session.refreshToken);
+  notifyEmployerAuthChange();
 }
 
 export function clearEmployerAuthSession(): void {
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+  notifyEmployerAuthChange();
 }

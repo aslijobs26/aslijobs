@@ -8,6 +8,7 @@ import { BRAND_TAGLINE } from "@/constants/brand";
 import { ROUTES } from "@/constants/routes";
 import {
   EMPLOYER_ACCESS_TOKEN_STORAGE_KEY,
+  EMPLOYER_AUTH_CHANGE_EVENT,
   getEmployerAccessToken,
 } from "@/utils/employer-auth-storage";
 import {
@@ -52,11 +53,19 @@ export function Navbar() {
       syncAuthState();
     };
 
+    const handleEmployerAuthChange = () => {
+      syncAuthState();
+    };
+
     window.addEventListener("pageshow", handlePageShow);
     window.addEventListener("storage", handleStorage);
     window.addEventListener(
       JOB_SEEKER_AUTH_CHANGE_EVENT,
       handleJobSeekerAuthChange,
+    );
+    window.addEventListener(
+      EMPLOYER_AUTH_CHANGE_EVENT,
+      handleEmployerAuthChange,
     );
 
     return () => {
@@ -65,6 +74,10 @@ export function Navbar() {
       window.removeEventListener(
         JOB_SEEKER_AUTH_CHANGE_EVENT,
         handleJobSeekerAuthChange,
+      );
+      window.removeEventListener(
+        EMPLOYER_AUTH_CHANGE_EVENT,
+        handleEmployerAuthChange,
       );
     };
   }, []);

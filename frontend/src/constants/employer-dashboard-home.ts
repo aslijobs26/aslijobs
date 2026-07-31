@@ -170,3 +170,50 @@ export const EMPLOYER_DASHBOARD_ACADEMY_TITLE = "asliJobs Academy";
 export const EMPLOYER_DASHBOARD_ACADEMY_DESCRIPTION =
   "Learn best hiring practices";
 export const EMPLOYER_DASHBOARD_ACADEMY_CTA = "Coming soon";
+
+/** UI placeholder until recruiter interview performance API exists. */
+export const EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_TITLE =
+  "Recruiter Performance (Interviewed)";
+
+export const EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_Y_MAX = 20;
+export const EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_Y_STEP = 5;
+
+export const EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_PLACEHOLDER = [
+  { id: "amit", name: "Amit", interviewed: 13 },
+  { id: "priya", name: "Priya", interviewed: 16 },
+  { id: "rahul", name: "Rahul", interviewed: 13 },
+  { id: "neha", name: "Neha", interviewed: 12 },
+  { id: "vikram", name: "Vikram", interviewed: 10 },
+  { id: "suman", name: "Suman", interviewed: 10 },
+  { id: "arjun", name: "Arjun", interviewed: 17 },
+  { id: "kavita", name: "Kavita", interviewed: 11 },
+] as const;
+
+/** UI placeholder until subscription APIs exist. */
+export const EMPLOYER_DASHBOARD_SUBSCRIPTION_OVERVIEW = {
+  title: "Subscription Overview",
+  subtitle: "Manage your plan and track usage.",
+  planName: "Growth Plan",
+  planStatus: "Active",
+  renewsOnLabel: "Renews on",
+  renewsOn: "Jun 28, 2024",
+  jobPostsUsed: { used: 45, limit: 100 },
+  activeJobPosts: { used: 12, limit: 20 },
+  applications: { used: 2856, limitLabel: "Unlimited", isUnlimited: true },
+  benefitsTitle: "Plan Benefits",
+  benefits: [
+    "Post Up to 100 Jobs",
+    "Unlimited Applications",
+    "Advanced Analytics",
+    "Priority Support",
+  ],
+  upgradeLabel: "Upgrade Plan",
+  billingTitle: "Billing Details",
+  nextBillingLabel: "Next Billing",
+  nextBilling: "Jun 28, 2024",
+  amountLabel: "Amount",
+  amount: "₹ 4,999",
+  paymentMethodLabel: "Payment Method",
+  paymentMethodMasked: "**** **** **** 4242",
+  manageLabel: "Manage",
+} as const;

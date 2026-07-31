@@ -8,6 +8,10 @@ export const ROUTES = {
   jobPublic: (publicJobId: string) => `/jobs/${publicJobId}`,
   EMPLOYER_REGISTER: "/employer/register",
   EMPLOYER_LOGIN: "/employer/login",
+  EMPLOYER_MEMBER_LOGIN: "/employer/member-login",
+  TEAM_ACCEPT_INVITATION: "/team/accept-invitation",
+  TEAM_MEMBER_LOGIN: "/team-member/login",
+  EMPLOYER_UNAUTHORIZED: "/employer/unauthorized",
   EMPLOYER_DASHBOARD: "/employer/dashboard",
   EMPLOYER_JOBS: "/employer/jobs",
   EMPLOYER_CANDIDATES: "/employer/candidates",
@@ -22,6 +26,12 @@ export const ROUTES = {
   EMPLOYER_SUBSCRIPTION: "/employer/subscription",
   EMPLOYER_COMPANY_PROFILE: "/employer/company-profile",
   EMPLOYER_TEAM_MANAGEMENT: "/employer/team-management",
+  employerTeamDepartment: (departmentId: string) =>
+    `/employer/team-management/departments/${departmentId}`,
+  employerTeamMember: (memberId: string) =>
+    `/employer/team-management/members/${memberId}`,
+  employerTeamRole: (roleId: string) =>
+    `/employer/team-management/roles/${roleId}`,
   EMPLOYER_SETTINGS: "/employer/settings",
   EMPLOYER_HELP_CENTER: "/employer/help-center",
   JOB_SEEKER_REGISTER: "/job-seeker/register",
