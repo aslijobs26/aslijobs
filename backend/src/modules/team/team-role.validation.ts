@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { isKnownField } from "./field-access.catalog.js";
 import {
   TEAM_PERMISSION_ACTIONS,
   TEAM_PERMISSION_MODULES,
+  type TeamPermissionModule,
 } from "./team-permissions.js";
 import {
   TEAM_ACCESS_LEVELS,
@@ -37,14 +39,53 @@ const modulePermissionSchema = z.object({
   fields: z.record(z.string(), z.boolean()).optional(),
 });
 
+/** Partial module maps (create/update may send a subset). Zod 4 z.record(enum) requires all keys. */
 const permissionsMatrixSchema = z
-  .record(z.enum(TEAM_PERMISSION_MODULES), modulePermissionSchema.partial())
+  .partialRecord(
+    z.enum(TEAM_PERMISSION_MODULES),
+    modulePermissionSchema.partial(),
+  )
   .optional();
 
+const fieldAccessLevelSchema = z.union([
+  z.enum(["hidden", "view", "mask", "edit"]),
+  z.boolean(),
+]);
+
+/**
+ * Field access is sparse by design (only catalog modules).
+ * Must use partialRecord — Zod 4 z.record(enum) treats missing keys as undefined.
+ */
 const fieldAccessSchema = z
-  .record(z.enum(TEAM_PERMISSION_MODULES), z.record(z.string(), z.boolean()))
+  .partialRecord(
+    z.enum(TEAM_PERMISSION_MODULES),
+    z.record(z.string().min(1).max(80), fieldAccessLevelSchema),
+  )
   .nullable()
-  .optional();
+  .optional()
+  .superRefine((value, ctx) => {
+    if (value == null) {
+      return;
+    }
+    for (const [moduleKey, fields] of Object.entries(value)) {
+      if (!fields) continue;
+      for (const fieldKey of Object.keys(fields)) {
+        if (!isKnownField(moduleKey as TeamPermissionModule, fieldKey)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Unknown fieldAccess field: ${moduleKey}.${fieldKey}`,
+            path: [moduleKey, fieldKey],
+          });
+        }
+      }
+    }
+  });
+
+/** Full permission matrix for PATCH /roles/:id/permissions — every module required. */
+const completePermissionsMatrixSchema = z.record(
+  z.enum(TEAM_PERMISSION_MODULES),
+  modulePermissionSchema,
+);
 
 export const roleIdParamsSchema = z.object({
   roleId: objectIdSchema,
@@ -87,10 +128,7 @@ export const updateRoleSchema = z
   });
 
 export const updateRolePermissionsSchema = z.object({
-  permissions: z.record(
-    z.enum(TEAM_PERMISSION_MODULES),
-    modulePermissionSchema.partial(),
-  ),
+  permissions: completePermissionsMatrixSchema,
   fieldAccess: fieldAccessSchema,
 });
 

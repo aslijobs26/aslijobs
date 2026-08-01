@@ -1,15 +1,21 @@
+import {
+  coerceFieldAccessLevel,
+  getCatalogField,
+  normalizeFieldAccessMap,
+  type FieldAccessLevel,
+} from "../team/field-access.catalog.js";
+import { generatePermissionsFromAccessLevel } from "../team/team-access-templates.js";
 import type {
   ModulePermission,
   RoleFieldAccessMap,
   RolePermissionsMatrix,
-  TeamPermissionAction,
   TeamPermissionModule,
 } from "../team/team-permissions.js";
 import {
-  createPermissionsForAccessLevel,
   normalizePermissionsMatrix,
   TEAM_PERMISSION_MODULES,
 } from "../team/team-permissions.js";
+import type { TeamAccessLevel } from "../team/team.constants.js";
 
 export type RbacPrincipalType = "owner" | "member";
 
@@ -40,6 +46,8 @@ const CRUD_ACTIONS: Exclude<RbacAction, "fullAccess">[] = [
   "export",
 ];
 
+const READ_LEVELS: FieldAccessLevel[] = ["view", "mask", "edit"];
+
 export function buildOwnerRbacContext(employerId: string): ResolvedRbacContext {
   return {
     principalType: "owner",
@@ -48,7 +56,7 @@ export function buildOwnerRbacContext(employerId: string): ResolvedRbacContext {
     roleId: null,
     roleName: "Owner",
     isSuperAdmin: true,
-    permissions: createPermissionsForAccessLevel("full_access"),
+    permissions: generatePermissionsFromAccessLevel("full_access"),
     fieldAccess: null,
   };
 }
@@ -65,6 +73,16 @@ export function buildMemberRbacContext(input: {
 }): ResolvedRbacContext {
   const isSuperAdmin =
     input.isSystem && input.roleName.trim().toLowerCase() === "admin";
+  const accessLevel = (input.accessLevel as TeamAccessLevel | undefined) ??
+    "custom";
+
+  const permissions =
+    input.permissions == null
+      ? generatePermissionsFromAccessLevel(accessLevel)
+      : normalizePermissionsMatrix(
+          input.permissions as RolePermissionsMatrix | null,
+          accessLevel,
+        );
 
   return {
     principalType: "member",
@@ -73,12 +91,8 @@ export function buildMemberRbacContext(input: {
     roleId: input.roleId,
     roleName: input.roleName,
     isSuperAdmin,
-    permissions: normalizePermissionsMatrix(
-      input.permissions as RolePermissionsMatrix | null,
-      (input.accessLevel as "full_access" | "limited" | "view_only" | "custom") ??
-        "custom",
-    ),
-    fieldAccess: (input.fieldAccess as RoleFieldAccessMap | null) ?? null,
+    permissions,
+    fieldAccess: normalizeFieldAccessMap(input.fieldAccess),
   };
 }
 
@@ -112,6 +126,55 @@ export function canPerform(
   return moduleAllows(modulePermission, action);
 }
 
+function resolveRawFieldLevel(
+  context: ResolvedRbacContext,
+  moduleKey: TeamPermissionModule,
+  fieldKey: string,
+): FieldAccessLevel | null {
+  const fromFieldAccess = context.fieldAccess?.[moduleKey]?.[fieldKey];
+  const coercedFromMap = coerceFieldAccessLevel(fromFieldAccess);
+  if (coercedFromMap) {
+    return coercedFromMap;
+  }
+
+  const fromModuleFields = context.permissions[moduleKey]?.fields?.[fieldKey];
+  return coerceFieldAccessLevel(fromModuleFields);
+}
+
+/**
+ * Resolve the effective field access level for a module field.
+ * Super-admin always gets `edit`. Without module read access → `hidden`.
+ * Unset fields inherit module access as `edit`.
+ */
+export function getFieldLevel(
+  context: ResolvedRbacContext,
+  moduleKey: TeamPermissionModule,
+  fieldKey: string,
+): FieldAccessLevel {
+  if (context.isSuperAdmin) {
+    return "edit";
+  }
+
+  if (!canPerform(context, moduleKey, "read")) {
+    return "hidden";
+  }
+
+  const resolved = resolveRawFieldLevel(context, moduleKey, fieldKey);
+  if (resolved) {
+    return resolved;
+  }
+
+  return "edit";
+}
+
+export function isFieldMasked(
+  context: ResolvedRbacContext,
+  moduleKey: TeamPermissionModule,
+  fieldKey: string,
+): boolean {
+  return getFieldLevel(context, moduleKey, fieldKey) === "mask";
+}
+
 export function canAccessField(
   context: ResolvedRbacContext,
   moduleKey: TeamPermissionModule,
@@ -122,22 +185,27 @@ export function canAccessField(
     return true;
   }
 
-  if (!canPerform(context, moduleKey, mode === "write" ? "update" : "read")) {
+  if (mode === "write") {
+    if (!canPerform(context, moduleKey, "update")) {
+      return false;
+    }
+    return getFieldLevel(context, moduleKey, fieldKey) === "edit";
+  }
+
+  if (!canPerform(context, moduleKey, "read")) {
     return false;
   }
 
-  const fromFieldAccess = context.fieldAccess?.[moduleKey]?.[fieldKey];
-  if (typeof fromFieldAccess === "boolean") {
-    return fromFieldAccess;
-  }
+  return READ_LEVELS.includes(getFieldLevel(context, moduleKey, fieldKey));
+}
 
-  const fromModuleFields = context.permissions[moduleKey]?.fields?.[fieldKey];
-  if (typeof fromModuleFields === "boolean") {
-    return fromModuleFields;
-  }
-
-  // Field-level map not configured → inherit module access.
-  return true;
+export function canExportField(
+  context: ResolvedRbacContext,
+  moduleKey: TeamPermissionModule,
+  fieldKey: string,
+): boolean {
+  const level = getFieldLevel(context, moduleKey, fieldKey);
+  return level === "view" || level === "edit";
 }
 
 export function listAllowedModules(
@@ -172,13 +240,17 @@ export function serializeRbacContext(context: ResolvedRbacContext) {
         };
         return accumulator;
       },
-      {} as Record<
-        TeamPermissionModule,
-        Record<RbacAction, boolean>
-      >,
+      {} as Record<TeamPermissionModule, Record<RbacAction, boolean>>,
     ),
   };
 }
 
-export type { TeamPermissionAction, TeamPermissionModule, ModulePermission };
+export function getCatalogMaskStrategy(
+  moduleKey: TeamPermissionModule,
+  fieldKey: string,
+) {
+  return getCatalogField(moduleKey, fieldKey)?.maskStrategy ?? "generic";
+}
+
+export type { TeamPermissionModule, ModulePermission };
 export { CRUD_ACTIONS, TEAM_PERMISSION_MODULES };

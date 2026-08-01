@@ -4,6 +4,7 @@ import {
   exportEmployerApplications,
   previewEmployerApplicationsExport,
 } from "@/services/employer-applications.service";
+import { useCan } from "@/providers/employer-permission-provider";
 import {
   EMPLOYER_EXPORT_DEFAULT_FIELDS,
   EMPLOYER_EXPORT_FIELD_LABELS,
@@ -22,6 +23,12 @@ import { cn } from "@/utils/cn";
 import { showAppToast } from "@/utils/share-job";
 import { X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+
+const EXPORT_FIELD_TO_CATALOG: Partial<Record<EmployerExportField, string>> = {
+  phone: "phone",
+  location: "location",
+  resume: "resume",
+};
 
 type JobOption = {
   publicJobId: string;
@@ -81,6 +88,18 @@ export function CandidatesExportModal({
 }: CandidatesExportModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const { getFieldLevel } = useCan();
+
+  const availableExportFields = useMemo(
+    () =>
+      EMPLOYER_EXPORT_FIELDS.filter((field) => {
+        const catalogField = EXPORT_FIELD_TO_CATALOG[field];
+        if (!catalogField) return true;
+        const level = getFieldLevel("candidates", catalogField);
+        return level === "view" || level === "edit";
+      }),
+    [getFieldLevel],
+  );
 
   const [format, setFormat] = useState<EmployerExportFormat>("xlsx");
   const [publicJobId, setPublicJobId] = useState(filters.publicJobId ?? "");
@@ -90,13 +109,25 @@ export function CandidatesExportModal({
     );
   const [appliedFrom, setAppliedFrom] = useState(filters.appliedFrom ?? "");
   const [appliedTo, setAppliedTo] = useState(filters.appliedTo ?? "");
-  const [fields, setFields] = useState<EmployerExportField[]>([
-    ...EMPLOYER_EXPORT_DEFAULT_FIELDS,
-  ]);
+  const [fields, setFields] = useState<EmployerExportField[]>(() =>
+    EMPLOYER_EXPORT_DEFAULT_FIELDS.filter((field) =>
+      availableExportFields.includes(field),
+    ),
+  );
   const [previewTotal, setPreviewTotal] = useState<number | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    setFields((current) => {
+      const next = current.filter((field) =>
+        availableExportFields.includes(field),
+      );
+      if (next.length > 0) return next;
+      return [...availableExportFields];
+    });
+  }, [availableExportFields]);
 
   const isCustomDateRange = quickDateFilter === "custom";
 
@@ -414,7 +445,7 @@ export function CandidatesExportModal({
                 Fields to export
               </legend>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {EMPLOYER_EXPORT_FIELDS.map((field) => {
+                {availableExportFields.map((field) => {
                   const checked = fields.includes(field);
                   return (
                     <label

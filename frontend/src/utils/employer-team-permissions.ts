@@ -4,9 +4,7 @@ import type {
   TeamAccessLevel,
   TeamPermissionModule,
 } from "@/types/employer-team";
-import {
-  PERMISSION_MODULES,
-} from "@/constants/employer-team-management";
+import { PERMISSION_MODULES } from "@/constants/employer-team-management";
 
 function emptyModule(): ModulePermission {
   return {
@@ -32,27 +30,18 @@ function fullModule(): ModulePermission {
   };
 }
 
-function readOnlyModule(): ModulePermission {
+function modulePermission(
+  partial: Partial<Omit<ModulePermission, "fields">>,
+): ModulePermission {
   return {
     fullAccess: false,
     create: false,
-    read: true,
+    read: false,
     update: false,
     delete: false,
     export: false,
     fields: {},
-  };
-}
-
-function limitedModule(): ModulePermission {
-  return {
-    fullAccess: false,
-    create: true,
-    read: true,
-    update: true,
-    delete: false,
-    export: true,
-    fields: {},
+    ...partial,
   };
 }
 
@@ -63,25 +52,80 @@ export function createEmptyPermissionsMatrix(): RolePermissionsMatrix {
   }, {} as RolePermissionsMatrix);
 }
 
-export function createPermissionsForAccessLevel(
-  accessLevel: TeamAccessLevel,
+const NONE = modulePermission({});
+const READ = modulePermission({ read: true });
+const READ_UPDATE = modulePermission({ read: true, update: true });
+const READ_CREATE_UPDATE = modulePermission({
+  create: true,
+  read: true,
+  update: true,
+});
+const READ_EXPORT = modulePermission({ read: true, export: true });
+
+function buildMatrix(
+  overrides: Partial<Record<TeamPermissionModule, ModulePermission>>,
 ): RolePermissionsMatrix {
   const matrix = createEmptyPermissionsMatrix();
   for (const moduleKey of PERMISSION_MODULES) {
-    if (accessLevel === "full_access") {
-      matrix[moduleKey] = fullModule();
-    } else if (accessLevel === "view_only") {
-      matrix[moduleKey] = readOnlyModule();
-    } else if (accessLevel === "limited") {
-      matrix[moduleKey] =
-        moduleKey === "settings" || moduleKey === "subscription"
-          ? readOnlyModule()
-          : limitedModule();
-    } else {
-      matrix[moduleKey] = limitedModule();
-    }
+    matrix[moduleKey] = overrides[moduleKey] ?? NONE;
   }
   return matrix;
+}
+
+export const FULL_ACCESS_TEMPLATE: RolePermissionsMatrix = buildMatrix(
+  Object.fromEntries(PERMISSION_MODULES.map((key) => [key, fullModule()])) as Record<
+    TeamPermissionModule,
+    ModulePermission
+  >,
+);
+
+export const VIEW_ONLY_TEMPLATE: RolePermissionsMatrix = buildMatrix(
+  Object.fromEntries(PERMISSION_MODULES.map((key) => [key, READ])) as Record<
+    TeamPermissionModule,
+    ModulePermission
+  >,
+);
+
+export const LIMITED_TEMPLATE: RolePermissionsMatrix = buildMatrix({
+  dashboard: READ,
+  jobs: READ_CREATE_UPDATE,
+  candidates: READ_UPDATE,
+  interviews: READ_UPDATE,
+  messages: READ,
+  campaigns: READ,
+  reports: READ_EXPORT,
+  subscription: NONE,
+  company_profile: NONE,
+  team_management: NONE,
+  settings: NONE,
+});
+
+export const EMPTY_TEMPLATE: RolePermissionsMatrix =
+  createEmptyPermissionsMatrix();
+
+export function createPermissionsForAccessLevel(
+  accessLevel: TeamAccessLevel,
+): RolePermissionsMatrix {
+  switch (accessLevel) {
+    case "full_access":
+      return structuredClone(FULL_ACCESS_TEMPLATE);
+    case "view_only":
+      return structuredClone(VIEW_ONLY_TEMPLATE);
+    case "limited":
+      return structuredClone(LIMITED_TEMPLATE);
+    case "custom":
+    default:
+      return structuredClone(EMPTY_TEMPLATE);
+  }
+}
+
+export function shouldReplacePermissionsOnAccessLevelChange(
+  previousLevel: TeamAccessLevel,
+  nextLevel: TeamAccessLevel,
+): boolean {
+  if (previousLevel === nextLevel) return false;
+  if (nextLevel === "custom") return false;
+  return true;
 }
 
 export function applyFullAccessToggle(
@@ -135,4 +179,62 @@ export function getModuleKeys(
   matrix: RolePermissionsMatrix,
 ): TeamPermissionModule[] {
   return PERMISSION_MODULES.filter((key) => key in matrix);
+}
+
+/**
+ * Build a complete permissions payload for PATCH /roles/:id/permissions.
+ * Every module and every action is always present as a boolean (never undefined).
+ */
+export function normalizePermissionsForSave(
+  matrix: RolePermissionsMatrix | null | undefined,
+): RolePermissionsMatrix {
+  const source = matrix ?? createEmptyPermissionsMatrix();
+  return PERMISSION_MODULES.reduce((accumulator, moduleKey) => {
+    const modulePermissionValue = source[moduleKey] ?? emptyModule();
+    accumulator[moduleKey] = {
+      fullAccess: Boolean(modulePermissionValue.fullAccess),
+      create: Boolean(modulePermissionValue.create),
+      read: Boolean(modulePermissionValue.read),
+      update: Boolean(modulePermissionValue.update),
+      delete: Boolean(modulePermissionValue.delete),
+      export: Boolean(modulePermissionValue.export),
+      fields:
+        modulePermissionValue.fields &&
+        typeof modulePermissionValue.fields === "object"
+          ? modulePermissionValue.fields
+          : {},
+    };
+    return accumulator;
+  }, {} as RolePermissionsMatrix);
+}
+
+/**
+ * Serialize field-access draft for API.
+ * Never returns undefined — uses {} when there is nothing to persist.
+ */
+export function normalizeFieldAccessForSave(
+  draft: Partial<
+    Record<TeamPermissionModule, Partial<Record<string, string>>>
+  > | null | undefined,
+): Record<string, Record<string, string>> {
+  if (!draft || typeof draft !== "object") {
+    return {};
+  }
+
+  const result: Record<string, Record<string, string>> = {};
+  for (const [moduleKey, fields] of Object.entries(draft)) {
+    if (!fields || typeof fields !== "object") {
+      continue;
+    }
+    const cleaned: Record<string, string> = {};
+    for (const [fieldKey, level] of Object.entries(fields)) {
+      if (typeof level === "string" && level.length > 0) {
+        cleaned[fieldKey] = level;
+      }
+    }
+    if (Object.keys(cleaned).length > 0) {
+      result[moduleKey] = cleaned;
+    }
+  }
+  return result;
 }

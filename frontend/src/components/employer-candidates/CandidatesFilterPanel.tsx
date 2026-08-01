@@ -3,6 +3,7 @@
 import { CandidatesLocationAutocomplete } from "@/components/employer-candidates/CandidatesLocationAutocomplete";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import { POST_JOB_EXPERIENCE_OPTIONS } from "@/constants/post-job";
+import { useCan } from "@/providers/employer-permission-provider";
 import {
   EMPLOYER_APPLICATION_STATUS_LABELS,
   EMPLOYER_AVAILABILITY_FILTER_LABELS,
@@ -106,9 +107,12 @@ export function CandidatesFilterPanel({
   idPrefix = "",
   presentation = "sidebar",
 }: CandidatesFilterPanelProps) {
+  const { getFieldLevel } = useCan();
+  const canFilterByLocation =
+    getFieldLevel("candidates", "location") !== "hidden";
   const isSheet = presentation === "sheet";
   const hasAdvanced =
-    Boolean(location) ||
+    (canFilterByLocation && Boolean(location)) ||
     Boolean(experience) ||
     Boolean(skills) ||
     Boolean(availability) ||
@@ -238,15 +242,17 @@ export function CandidatesFilterPanel({
         </div>
 
         <div className="mt-3 space-y-3">
-          <label className="block" htmlFor={`${idPrefix}candidates-location-filter`}>
-            <span className="text-xs font-medium text-muted">Location</span>
-            <CandidatesLocationAutocomplete
-              id={`${idPrefix}candidates-location-filter`}
-              value={location}
-              publicJobId={publicJobId}
-              onChange={onLocationChange}
-            />
-          </label>
+          {canFilterByLocation ? (
+            <label className="block" htmlFor={`${idPrefix}candidates-location-filter`}>
+              <span className="text-xs font-medium text-muted">Location</span>
+              <CandidatesLocationAutocomplete
+                id={`${idPrefix}candidates-location-filter`}
+                value={location}
+                publicJobId={publicJobId}
+                onChange={onLocationChange}
+              />
+            </label>
+          ) : null}
           <label className="block">
             <span className="text-xs font-medium text-muted">Experience</span>
             <div className="mt-1">

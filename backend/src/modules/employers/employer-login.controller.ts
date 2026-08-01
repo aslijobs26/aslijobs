@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
+import { sanitizeCompanyProfileDto } from "../rbac/field-access.response.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { employerLoginService } from "./employer-login.service.js";
 import type {
@@ -53,7 +54,10 @@ export class EmployerLoginController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Employer profile fetched successfully.",
-      data: result,
+      data: sanitizeCompanyProfileDto(
+        req.rbac,
+        structuredClone(result) as unknown as Record<string, unknown>,
+      ),
     });
   };
 }

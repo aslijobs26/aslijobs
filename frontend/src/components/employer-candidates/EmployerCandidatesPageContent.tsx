@@ -11,11 +11,13 @@ import { CandidatesKpiStrip } from "@/components/employer-candidates/CandidatesK
 import { CandidatesListPanel } from "@/components/employer-candidates/CandidatesListPanel";
 import { CandidatesMobileFiltersSheet } from "@/components/employer-candidates/CandidatesMobileFiltersSheet";
 import { InterviewScheduleModal } from "@/components/employer-interviews/InterviewScheduleModal";
+import { Can } from "@/components/rbac/Can";
 import {
   fetchEmployerApplicationStats,
   fetchEmployerApplications,
 } from "@/services/employer-applications.service";
 import { fetchEmployerJobs } from "@/services/employer-jobs.service";
+import { useCan } from "@/providers/employer-permission-provider";
 import type {
   EmployerApplicationStatus,
   EmployerAvailabilityFilterValue,
@@ -39,6 +41,9 @@ export function EmployerCandidatesPageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const { can } = useCan();
+  const canExportCandidates = can("candidates", "export");
+  const canScheduleInterview = can("interviews", "create");
 
   const publicJobId =
     searchParams.get("jobId")?.trim().toUpperCase() || undefined;
@@ -202,6 +207,8 @@ export function EmployerCandidatesPageContent() {
         appliedFrom: appliedFrom || undefined,
         appliedTo: appliedTo || undefined,
       }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
     placeholderData: (previous) => previous,
   });
 
@@ -242,6 +249,9 @@ export function EmployerCandidatesPageContent() {
   };
 
   const openScheduleInterview = (applicationId: string) => {
+    if (!canScheduleInterview) {
+      return;
+    }
     setLocalSelectedId(applicationId);
     setScheduleApplicationId(applicationId);
     syncUrl({ selected: applicationId });
@@ -280,18 +290,20 @@ export function EmployerCandidatesPageContent() {
           ) : null}
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <button
-            type="button"
-            onClick={() => setExportModalOpen(true)}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-primary bg-primary-light px-5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:w-auto sm:min-w-[7.5rem]"
-          >
-            <Download className="size-4 shrink-0" aria-hidden="true" />
-            Export
-          </button>
+          <Can module="candidates" action="export">
+            <button
+              type="button"
+              onClick={() => setExportModalOpen(true)}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-primary bg-primary-light px-5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:w-auto sm:min-w-[7.5rem]"
+            >
+              <Download className="size-4 shrink-0" aria-hidden="true" />
+              Export
+            </button>
+          </Can>
         </div>
       </header>
 
-      {exportModalOpen ? (
+      {exportModalOpen && canExportCandidates ? (
         <CandidatesExportModal
           onClose={() => setExportModalOpen(false)}
           jobOptions={jobOptions}

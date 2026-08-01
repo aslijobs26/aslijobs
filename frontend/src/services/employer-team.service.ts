@@ -175,9 +175,18 @@ export async function fetchTeamMember(memberId: string) {
 
 export async function inviteTeamMember(payload: InviteMemberPayload) {
   const response = await apiClient.post<
-    ApiSuccess<{ member: TeamMemberListItem }>
+    ApiSuccess<{
+      member: TeamMemberListItem;
+      emailDelivered: boolean;
+      emailError: string | null;
+    }>
   >("/team/members/invite", payload);
-  return response.data.data.member;
+  return {
+    member: response.data.data.member,
+    emailDelivered: response.data.data.emailDelivered,
+    emailError: response.data.data.emailError,
+    message: response.data.message ?? "",
+  };
 }
 
 export async function updateTeamMember(
@@ -232,10 +241,18 @@ export async function removeTeamMember(memberId: string) {
 }
 
 export async function resendTeamInvitation(memberId: string) {
-  const response = await apiClient.post<ApiSuccess<unknown>>(
-    `/team/members/${memberId}/resend-invitation`,
-  );
-  return response.data.data;
+  const response = await apiClient.post<
+    ApiSuccess<{
+      invitation: unknown;
+      emailDelivered: boolean;
+      emailError: string | null;
+    }>
+  >(`/team/members/${memberId}/resend-invitation`);
+  return {
+    emailDelivered: response.data.data.emailDelivered,
+    emailError: response.data.data.emailError,
+    message: response.data.message ?? "",
+  };
 }
 
 export async function cancelTeamInvitation(memberId: string) {
@@ -306,12 +323,17 @@ export async function updateRolePermissions(
   roleId: string,
   payload: {
     permissions: TeamRoleDetails["permissions"];
-    fieldAccess?: TeamRoleDetails["fieldAccess"];
+    fieldAccess?: TeamRoleDetails["fieldAccess"] | Record<string, unknown>;
   },
 ) {
+  const body = {
+    permissions: payload.permissions,
+    fieldAccess:
+      payload.fieldAccess === undefined ? {} : payload.fieldAccess,
+  };
   const response = await apiClient.patch<ApiSuccess<TeamRoleDetails>>(
     `/team/roles/${roleId}/permissions`,
-    payload,
+    body,
   );
   return response.data.data;
 }

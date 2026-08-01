@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
+import { sanitizeJobDto } from "../rbac/field-access.response.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { jobService } from "./job.service.js";
 import {
@@ -42,10 +43,16 @@ export class JobController {
 
     const query = req.query as unknown as ListEmployerJobsQuery;
     const result = await jobService.listEmployerJobs(employerId, query);
+    const jobs = result.jobs.map((job) =>
+      sanitizeJobDto(
+        req.rbac,
+        structuredClone(job) as unknown as Record<string, unknown>,
+      ),
+    );
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Jobs fetched successfully.",
-      data: result,
+      data: { ...result, jobs },
     });
   };
 
@@ -57,10 +64,16 @@ export class JobController {
     }
 
     const result = await jobService.getEmployerJobStats(employerId);
+    const recentJobs = result.recentJobs.map((job) =>
+      sanitizeJobDto(
+        req.rbac,
+        structuredClone(job) as unknown as Record<string, unknown>,
+      ),
+    );
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Job statistics fetched successfully.",
-      data: result,
+      data: { ...result, recentJobs },
     });
   };
 
@@ -110,10 +123,14 @@ export class JobController {
 
     const { jobId } = req.params as { jobId: string };
     const result = await jobService.getOwnedJob(employerId, jobId);
+    const job = sanitizeJobDto(
+      req.rbac,
+      structuredClone(result.job) as unknown as Record<string, unknown>,
+    );
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Job fetched successfully.",
-      data: result,
+      data: { ...result, job },
     });
   };
 

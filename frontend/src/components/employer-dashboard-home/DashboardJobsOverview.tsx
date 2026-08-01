@@ -1,10 +1,12 @@
 "use client";
 
+import { Can } from "@/components/rbac/Can";
 import {
   EMPLOYER_JOB_STATUS_LABELS,
   EMPLOYER_JOB_STATUS_PILL_CLASS,
 } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
+import { useCan } from "@/providers/employer-permission-provider";
 import type { EmployerJobListItem } from "@/types/employer-jobs";
 import { cn } from "@/utils/cn";
 import {
@@ -35,16 +37,23 @@ export function DashboardJobsOverview({
   onRetry,
   onDelete,
 }: DashboardJobsOverviewProps) {
+  const { can } = useCan();
+  const canUpdateJobs = can("jobs", "update");
+  const canDeleteJobs = can("jobs", "delete");
+  const canCreateJobs = can("jobs", "create");
+
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
         <h2 className="text-base font-bold text-foreground">Jobs Overview</h2>
-        <Link
-          href={ROUTES.EMPLOYER_JOBS}
-          className="text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          View All
-        </Link>
+        <Can module="jobs" action="read">
+          <Link
+            href={ROUTES.EMPLOYER_JOBS}
+            className="text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            View All
+          </Link>
+        </Can>
       </div>
 
       {isLoading ? (
@@ -82,12 +91,14 @@ export function DashboardJobsOverview({
           <p className="mt-1 text-xs text-muted">
             Post your first job to start hiring.
           </p>
-          <Link
-            href={ROUTES.POST_JOB}
-            className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          >
-            Post New Job
-          </Link>
+          {canCreateJobs ? (
+            <Link
+              href={ROUTES.POST_JOB}
+              className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              Post New Job
+            </Link>
+          ) : null}
         </div>
       ) : null}
 
@@ -171,13 +182,15 @@ export function DashboardJobsOverview({
                         >
                           <Eye className="size-4" aria-hidden="true" />
                         </a>
-                        <Link
-                          href={`${ROUTES.POST_JOB}/${job.id}`}
-                          className="inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                          aria-label={`Edit ${job.jobTitle}`}
-                        >
-                          <Pencil className="size-4" aria-hidden="true" />
-                        </Link>
+                        {canUpdateJobs ? (
+                          <Link
+                            href={`${ROUTES.POST_JOB}/${job.id}`}
+                            className="inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                            aria-label={`Edit ${job.jobTitle}`}
+                          >
+                            <Pencil className="size-4" aria-hidden="true" />
+                          </Link>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => {
@@ -193,15 +206,17 @@ export function DashboardJobsOverview({
                         >
                           <Share2 className="size-4" aria-hidden="true" />
                         </button>
-                        <button
-                          type="button"
-                          disabled={isDeleting}
-                          onClick={() => onDelete?.(job.id)}
-                          className="inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-red-50 hover:text-pin-state focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
-                          aria-label={`Delete ${job.jobTitle}`}
-                        >
-                          <Trash2 className="size-4" aria-hidden="true" />
-                        </button>
+                        {canDeleteJobs ? (
+                          <button
+                            type="button"
+                            disabled={isDeleting}
+                            onClick={() => onDelete?.(job.id)}
+                            className="inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-red-50 hover:text-pin-state focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+                            aria-label={`Delete ${job.jobTitle}`}
+                          >
+                            <Trash2 className="size-4" aria-hidden="true" />
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

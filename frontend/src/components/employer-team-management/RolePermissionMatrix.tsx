@@ -165,10 +165,13 @@ export function RolePermissionMatrix({
                           />
                         ) : checked ? (
                           <span
-                            className="inline-flex size-5 items-center justify-center rounded border border-primary/30 bg-primary-light text-primary"
+                            className="inline-flex size-5 items-center justify-center rounded border border-primary bg-primary text-surface"
                             aria-label="Allowed"
                           >
-                            <Check className="size-3.5" aria-hidden="true" />
+                            <Check
+                              className="size-3 stroke-[2.5]"
+                              aria-hidden="true"
+                            />
                           </span>
                         ) : (
                           <span
@@ -188,8 +191,8 @@ export function RolePermissionMatrix({
 
       <ul className="flex flex-wrap gap-4 text-xs text-muted">
         <li className="inline-flex items-center gap-1.5">
-          <span className="inline-flex size-4 items-center justify-center rounded border border-primary/30 bg-primary-light text-primary">
-            <Check className="size-3" aria-hidden="true" />
+          <span className="inline-flex size-4 items-center justify-center rounded border border-primary bg-primary text-surface">
+            <Check className="size-2.5 stroke-[2.5]" aria-hidden="true" />
           </span>
           Allowed
         </li>

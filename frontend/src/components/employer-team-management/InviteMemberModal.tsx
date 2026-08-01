@@ -320,7 +320,7 @@ export function InviteMemberModal({
               <option value="">Select role</option>
               {assignableRoles.map((role) => (
                 <option key={role.id} value={role.id}>
-                  {role.name}
+                  {role.name} ({ACCESS_LEVEL_LABELS[role.accessLevel]})
                 </option>
               ))}
             </select>

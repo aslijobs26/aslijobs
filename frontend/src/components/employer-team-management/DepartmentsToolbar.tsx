@@ -26,7 +26,7 @@ type DepartmentsToolbarProps = {
   filtersOpen: boolean;
   onToggleFilters: () => void;
   activeFilterCount: number;
-  onAddDepartment: () => void;
+  onAddDepartment?: () => void;
 };
 
 export function DepartmentsToolbar({
@@ -74,14 +74,16 @@ export function DepartmentsToolbar({
           ) : null}
         </button>
       </div>
-      <button
-        type="button"
-        onClick={onAddDepartment}
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-      >
-        <Plus className="size-4" aria-hidden="true" strokeWidth={2.5} />
-        Add Department
-      </button>
+      {onAddDepartment ? (
+        <button
+          type="button"
+          onClick={onAddDepartment}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
+          <Plus className="size-4" aria-hidden="true" strokeWidth={2.5} />
+          Add Department
+        </button>
+      ) : null}
     </div>
   );
 }

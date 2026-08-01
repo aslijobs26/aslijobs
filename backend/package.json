@@ -7,7 +7,10 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/modules/rbac/*.test.ts",
+    "test:field-access": "tsx --test src/modules/rbac/field-access.test.ts",
+    "test:access-level": "tsx --test src/modules/rbac/access-level-templates.test.ts"
   },
   "dependencies": {
     "axios": "^1.18.1",

@@ -3,16 +3,24 @@
 import { DepartmentFormModal } from "@/components/employer-team-management/DepartmentFormModal";
 import { DepartmentsPagination } from "@/components/employer-team-management/DepartmentsPagination";
 import { EmployerProfileDialog } from "@/components/employer-profile/EmployerProfileDialog";
+import {
+  FieldAccessMatrix,
+  fieldAccessMapsEqual,
+  hydrateFieldAccessDraft,
+} from "@/components/employer-team-management/FieldAccessMatrix";
 import { RoleFormModal } from "@/components/employer-team-management/RoleFormModal";
 import { RolePermissionMatrix } from "@/components/employer-team-management/RolePermissionMatrix";
 import { RolesTable } from "@/components/employer-team-management/RolesTable";
+import type { RoleFieldAccessMap } from "@/constants/employer-field-access";
 import {
   DEPARTMENT_COLOR_ICON_WRAP,
   EMPLOYER_TEAM_DEFAULT_PAGE_SIZE,
   EMPLOYER_TEAM_QUERY_KEYS,
   EMPLOYER_TEAM_SEARCH_DEBOUNCE_MS,
+  ACCESS_LEVEL_LABELS,
 } from "@/constants/employer-team-management";
 import { ROUTES } from "@/constants/routes";
+import { useCan } from "@/providers/employer-permission-provider";
 import {
   activateRole,
   archiveRole,
@@ -38,7 +46,11 @@ import type {
 import { cn } from "@/utils/cn";
 import { getTeamApiErrorMessage } from "@/utils/employer-team";
 import { invalidateEmployerAccessCaches } from "@/utils/employer-rbac-cache";
-import { createPermissionsForAccessLevel } from "@/utils/employer-team-permissions";
+import {
+  createPermissionsForAccessLevel,
+  normalizeFieldAccessForSave,
+  normalizePermissionsForSave,
+} from "@/utils/employer-team-permissions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -88,6 +100,10 @@ export function RolesTabPanel({
   onNavigateToDepartments,
 }: RolesTabPanelProps) {
   const queryClient = useQueryClient();
+  const { can } = useCan();
+  const canCreateRole = can("team_management", "create");
+  const canUpdateRole = can("team_management", "update");
+  const canDeleteRole = can("team_management", "delete");
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -97,8 +113,15 @@ export function RolesTabPanel({
   const [matrixDraft, setMatrixDraft] = useState<RolePermissionsMatrix | null>(
     null,
   );
+  const [fieldAccessDraft, setFieldAccessDraft] =
+    useState<RoleFieldAccessMap | null>(null);
   const [matrixEditing, setMatrixEditing] = useState(false);
   const [matrixTab, setMatrixTab] = useState<"module" | "field">("module");
+  const [unsavedConfirm, setUnsavedConfirm] = useState<{
+    kind: "tab" | "role";
+    nextTab?: "module" | "field";
+    nextRoleId?: string | null;
+  } | null>(null);
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editing, setEditing] = useState<TeamRoleListItem | null>(null);
   const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
@@ -178,8 +201,62 @@ export function RolesTabPanel({
   useEffect(() => {
     if (detailsQuery.data && !matrixEditing) {
       setMatrixDraft(detailsQuery.data.permissions);
+      setFieldAccessDraft(
+        hydrateFieldAccessDraft(detailsQuery.data.fieldAccess),
+      );
     }
   }, [detailsQuery.data, matrixEditing]);
+
+  const isFieldDirty = useMemo(() => {
+    if (!matrixEditing || !fieldAccessDraft || !detailsQuery.data) {
+      return false;
+    }
+    return !fieldAccessMapsEqual(
+      fieldAccessDraft,
+      hydrateFieldAccessDraft(detailsQuery.data.fieldAccess),
+    );
+  }, [detailsQuery.data, fieldAccessDraft, matrixEditing]);
+
+  const isModuleDirty = useMemo(() => {
+    if (!matrixEditing || !matrixDraft || !detailsQuery.data) {
+      return false;
+    }
+    return (
+      JSON.stringify(matrixDraft) !==
+      JSON.stringify(detailsQuery.data.permissions)
+    );
+  }, [detailsQuery.data, matrixDraft, matrixEditing]);
+
+  const isMatrixDirty = isFieldDirty || isModuleDirty;
+
+  const discardMatrixEdits = () => {
+    setMatrixDraft(
+      detailsQuery.data?.permissions ??
+        createPermissionsForAccessLevel("limited"),
+    );
+    setFieldAccessDraft(
+      hydrateFieldAccessDraft(detailsQuery.data?.fieldAccess ?? null),
+    );
+    setMatrixEditing(false);
+    setUnsavedConfirm(null);
+  };
+
+  const requestRoleChange = (nextRoleId: string | null) => {
+    if (isMatrixDirty) {
+      setUnsavedConfirm({ kind: "role", nextRoleId });
+      return;
+    }
+    setSelectedRoleId(nextRoleId);
+    setMatrixEditing(false);
+  };
+
+  const requestTabChange = (nextTab: "module" | "field") => {
+    if (isMatrixDirty && nextTab !== matrixTab) {
+      setUnsavedConfirm({ kind: "tab", nextTab });
+      return;
+    }
+    setMatrixTab(nextTab);
+  };
 
   const invalidateTeamQueries = async () => {
     await invalidateEmployerAccessCaches(queryClient);
@@ -224,13 +301,17 @@ export function RolesTabPanel({
   });
 
   const permissionsMutation = useMutation({
-    mutationFn: () =>
-      updateRolePermissions(selectedRoleId!, {
-        permissions: matrixDraft!,
-      }),
+    mutationFn: () => {
+      const payload = {
+        permissions: normalizePermissionsForSave(matrixDraft),
+        fieldAccess: normalizeFieldAccessForSave(fieldAccessDraft),
+      };
+      return updateRolePermissions(selectedRoleId!, payload);
+    },
     onSuccess: async () => {
       setMatrixEditing(false);
       setActionError(null);
+      setUnsavedConfirm(null);
       await invalidateTeamQueries();
     },
     onError: (error) => setActionError(getTeamApiErrorMessage(error)),
@@ -370,18 +451,20 @@ export function RolesTabPanel({
                 Create and manage roles for your team.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setEditing(null);
-                setFormError(null);
-                setModalMode("create");
-              }}
-              className="inline-flex h-8 shrink-0 items-center gap-1 self-start rounded-lg border border-primary bg-surface px-2.5 text-xs font-semibold text-primary hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              <Plus className="size-3.5" aria-hidden="true" />
-              Create Role
-            </button>
+            {canCreateRole ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(null);
+                  setFormError(null);
+                  setModalMode("create");
+                }}
+                className="inline-flex h-8 shrink-0 items-center gap-1 self-start rounded-lg border border-primary bg-surface px-2.5 text-xs font-semibold text-primary hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              >
+                <Plus className="size-3.5" aria-hidden="true" />
+                Create Role
+              </button>
+            ) : null}
           </div>
 
           <div className="border-b border-border-subtle p-4">
@@ -406,6 +489,9 @@ export function RolesTabPanel({
               selectedRoleId={selectedRoleId}
               isLoading={rolesQuery.isLoading}
               isError={rolesQuery.isError}
+              canUpdate={canUpdateRole}
+              canDelete={canDeleteRole}
+              canCreate={canCreateRole}
               onRetry={() => void rolesQuery.refetch()}
               onSelect={(role) => {
                 setSelectedRoleId(role.id);
@@ -469,8 +555,7 @@ export function RolesTabPanel({
               <select
                 value={selectedRoleId ?? ""}
                 onChange={(event) => {
-                  setSelectedRoleId(event.target.value || null);
-                  setMatrixEditing(false);
+                  requestRoleChange(event.target.value || null);
                 }}
                 className="h-9 min-w-[9rem] rounded-lg border border-border-subtle bg-surface px-2 text-sm font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 aria-label="Select Role"
@@ -480,7 +565,7 @@ export function RolesTabPanel({
                 ) : null}
                 {roles.map((role) => (
                   <option key={role.id} value={role.id}>
-                    {role.name}
+                    {role.name} ({ACCESS_LEVEL_LABELS[role.accessLevel]})
                   </option>
                 ))}
               </select>
@@ -496,7 +581,7 @@ export function RolesTabPanel({
               type="button"
               role="tab"
               aria-selected={matrixTab === "module"}
-              onClick={() => setMatrixTab("module")}
+              onClick={() => requestTabChange("module")}
               className={cn(
                 "relative pb-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
                 matrixTab === "module" ? "text-primary" : "text-muted hover:text-foreground",
@@ -514,7 +599,7 @@ export function RolesTabPanel({
               type="button"
               role="tab"
               aria-selected={matrixTab === "field"}
-              onClick={() => setMatrixTab("field")}
+              onClick={() => requestTabChange("field")}
               className={cn(
                 "relative pb-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
                 matrixTab === "field" ? "text-primary" : "text-muted hover:text-foreground",
@@ -532,14 +617,51 @@ export function RolesTabPanel({
 
           <div className="min-w-0 flex-1">
             {matrixTab === "field" ? (
-              <div className="rounded-lg border border-dashed border-border-subtle bg-hero-bg/50 px-3 py-10 text-center">
-                <p className="text-sm font-semibold text-foreground">
-                  Field-level access
-                </p>
-                <p className="mt-1 text-xs text-muted">
-                  Field-level access is stored with the role for RBAC.
-                </p>
-              </div>
+              !selectedRoleId ? (
+                <div className="rounded-lg border border-dashed border-border-subtle bg-hero-bg/50 px-3 py-10 text-center">
+                  <p className="text-sm font-semibold text-foreground">
+                    Select a role
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    Choose a role to configure field-level access.
+                  </p>
+                </div>
+              ) : (
+                <FieldAccessMatrix
+                  value={
+                    fieldAccessDraft ??
+                    hydrateFieldAccessDraft(detailsQuery.data?.fieldAccess)
+                  }
+                  editable={matrixEditing}
+                  isLoading={detailsQuery.isLoading}
+                  errorMessage={
+                    detailsQuery.isError
+                      ? getTeamApiErrorMessage(detailsQuery.error)
+                      : null
+                  }
+                  copyRoles={roles
+                    .filter((role) => role.id !== selectedRoleId)
+                    .map((role) => ({ id: role.id, name: role.name }))}
+                  onChange={setFieldAccessDraft}
+                  onReset={() =>
+                    setFieldAccessDraft(
+                      hydrateFieldAccessDraft(
+                        detailsQuery.data?.fieldAccess ?? null,
+                      ),
+                    )
+                  }
+                  onCopyFromRole={async (roleId) => {
+                    try {
+                      const details = await fetchRoleDetails(roleId);
+                      setFieldAccessDraft(
+                        hydrateFieldAccessDraft(details.fieldAccess),
+                      );
+                    } catch (error) {
+                      setActionError(getTeamApiErrorMessage(error));
+                    }
+                  }}
+                />
+              )
             ) : detailsQuery.isLoading || !matrixDraft ? (
               <div className="h-64 animate-pulse rounded-lg bg-hero-bg" />
             ) : (
@@ -559,8 +681,9 @@ export function RolesTabPanel({
                 aria-hidden="true"
               />
               <span>
-                Changes to permissions will be applied to all users assigned to
-                this role.
+                {isMatrixDirty
+                  ? "You have unsaved permission changes for this role."
+                  : "Changes to permissions will be applied to all users assigned to this role."}
               </span>
             </p>
             {matrixEditing ? (
@@ -568,27 +691,27 @@ export function RolesTabPanel({
                 <button
                   type="button"
                   disabled={permissionsMutation.isPending}
-                  onClick={() => {
-                    setMatrixDraft(
-                      detailsQuery.data?.permissions ??
-                        createPermissionsForAccessLevel("limited"),
-                    );
-                    setMatrixEditing(false);
-                  }}
+                  onClick={discardMatrixEdits}
                   className="inline-flex h-9 items-center justify-center rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground hover:bg-hero-bg"
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  disabled={permissionsMutation.isPending || !matrixDraft}
-                  onClick={() => permissionsMutation.mutate()}
-                  className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-sm font-semibold text-surface hover:bg-primary-hover disabled:opacity-50"
-                >
-                  {permissionsMutation.isPending ? "Saving..." : "Save"}
-                </button>
+                {canUpdateRole ? (
+                  <button
+                    type="button"
+                    disabled={
+                      permissionsMutation.isPending ||
+                      !matrixDraft ||
+                      !fieldAccessDraft
+                    }
+                    onClick={() => permissionsMutation.mutate()}
+                    className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-sm font-semibold text-surface hover:bg-primary-hover disabled:opacity-50"
+                  >
+                    {permissionsMutation.isPending ? "Saving..." : "Save"}
+                  </button>
+                ) : null}
               </div>
-            ) : (
+            ) : canUpdateRole ? (
               <button
                 type="button"
                 disabled={!detailsQuery.data}
@@ -598,10 +721,52 @@ export function RolesTabPanel({
                 <Pencil className="size-3.5" aria-hidden="true" />
                 Edit Permissions
               </button>
-            )}
+            ) : null}
           </div>
         </aside>
       </div>
+
+      {unsavedConfirm
+        ? createPortal(
+            <EmployerProfileDialog
+              title="Unsaved changes"
+              description="You have unsaved permission changes. Discard them and continue?"
+              onClose={() => setUnsavedConfirm(null)}
+              footer={
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setUnsavedConfirm(null)}
+                    className="inline-flex h-10 items-center rounded-lg border border-border-subtle px-4 text-sm font-semibold"
+                  >
+                    Keep editing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const pending = unsavedConfirm;
+                      discardMatrixEdits();
+                      if (pending.kind === "tab" && pending.nextTab) {
+                        setMatrixTab(pending.nextTab);
+                      }
+                      if (pending.kind === "role") {
+                        setSelectedRoleId(pending.nextRoleId ?? null);
+                      }
+                    }}
+                    className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover"
+                  >
+                    Discard
+                  </button>
+                </div>
+              }
+            >
+              <p className="text-sm text-muted">
+                Leaving this view without saving will discard your latest edits.
+              </p>
+            </EmployerProfileDialog>,
+            document.body,
+          )
+        : null}
 
       {modalMode ? (
         <RoleFormModal

@@ -45,6 +45,8 @@ type DepartmentsTableProps = {
   departments: DepartmentListItem[];
   isLoading?: boolean;
   isError?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
   onRetry?: () => void;
   onEdit: (department: DepartmentListItem) => void;
   onDeactivate: (department: DepartmentListItem) => void;
@@ -55,6 +57,8 @@ export function DepartmentsTable({
   departments,
   isLoading = false,
   isError = false,
+  canUpdate = true,
+  canDelete = true,
   onRetry,
   onEdit,
   onDeactivate,
@@ -214,19 +218,25 @@ export function DepartmentsTable({
                           >
                             <Eye className="size-4" aria-hidden="true" />
                           </Link>
-                          <button
-                            type="button"
-                            onClick={() => onEdit(department)}
-                            className="inline-flex size-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                            aria-label={`Edit ${department.name}`}
-                          >
-                            <Pencil className="size-4" aria-hidden="true" />
-                          </button>
-                          <DepartmentActionsMenu
-                            department={department}
-                            onDeactivate={onDeactivate}
-                            onDelete={onDelete}
-                          />
+                          {canUpdate ? (
+                            <button
+                              type="button"
+                              onClick={() => onEdit(department)}
+                              className="inline-flex size-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                              aria-label={`Edit ${department.name}`}
+                            >
+                              <Pencil className="size-4" aria-hidden="true" />
+                            </button>
+                          ) : null}
+                          {canUpdate || canDelete ? (
+                            <DepartmentActionsMenu
+                              department={department}
+                              canUpdate={canUpdate}
+                              canDelete={canDelete}
+                              onDeactivate={onDeactivate}
+                              onDelete={onDelete}
+                            />
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -241,10 +251,14 @@ export function DepartmentsTable({
 
 function DepartmentActionsMenu({
   department,
+  canUpdate,
+  canDelete,
   onDeactivate,
   onDelete,
 }: {
   department: DepartmentListItem;
+  canUpdate: boolean;
+  canDelete: boolean;
   onDeactivate: (department: DepartmentListItem) => void;
   onDelete: (department: DepartmentListItem) => void;
 }) {
@@ -293,7 +307,7 @@ function DepartmentActionsMenu({
           role="menu"
           className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
         >
-          {department.status === "active" ? (
+          {department.status === "active" && canUpdate ? (
             <button
               type="button"
               role="menuitem"
@@ -307,18 +321,20 @@ function DepartmentActionsMenu({
               Deactivate
             </button>
           ) : null}
-          <button
-            type="button"
-            role="menuitem"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-            onClick={() => {
-              setOpen(false);
-              onDelete(department);
-            }}
-          >
-            <Trash2 className="size-3.5" aria-hidden="true" />
-            Delete
-          </button>
+          {canDelete ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+              onClick={() => {
+                setOpen(false);
+                onDelete(department);
+              }}
+            >
+              <Trash2 className="size-3.5" aria-hidden="true" />
+              Delete
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>

@@ -19,6 +19,14 @@ export const TEAM_INVITATION_STATUSES = [
 ] as const;
 export type TeamInvitationStatus = (typeof TEAM_INVITATION_STATUSES)[number];
 
+export const TEAM_INVITATION_EMAIL_DELIVERY_STATUSES = [
+  "pending",
+  "sent",
+  "failed",
+] as const;
+export type TeamInvitationEmailDeliveryStatus =
+  (typeof TEAM_INVITATION_EMAIL_DELIVERY_STATUSES)[number];
+
 export const TEAM_ACCESS_LEVELS = [
   "full_access",
   "limited",
@@ -36,6 +44,7 @@ export const TEAM_ACTIVITY_TYPES = [
   "invitation_cancelled",
   "invitation_accepted",
   "invitation_expired",
+  "invitation_email_failed",
   "department_created",
   "department_updated",
   "department_deleted",
@@ -44,6 +53,9 @@ export const TEAM_ACTIVITY_TYPES = [
   "role_created",
   "role_updated",
   "permission_changed",
+  "field_access_updated",
+  "access_level_changed",
+  "permissions_regenerated",
   "role_assigned",
   "role_archived",
   "role_deactivated",

@@ -15,6 +15,7 @@ import {
   EMPLOYER_JOBS_SEARCH_CANDIDATES_TITLE,
 } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
+import { Can } from "@/components/rbac/Can";
 import {
   ChevronRight,
   FileStack,
@@ -35,19 +36,21 @@ export function EmployerJobsQuickActions() {
           {EMPLOYER_JOBS_QUICK_ACTIONS_TITLE}
         </h2>
         <ul className="mt-2.5 space-y-0.5">
-          <li>
-            <Link
-              href={ROUTES.POST_JOB}
-              className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              <PlusCircle className="size-4 shrink-0" aria-hidden="true" />
-              <span className="min-w-0 flex-1">{EMPLOYER_JOBS_QUICK_ACTION_POST}</span>
-              <ChevronRight
-                className="size-3.5 shrink-0 opacity-70"
-                aria-hidden="true"
-              />
-            </Link>
-          </li>
+          <Can module="jobs" action="create">
+            <li>
+              <Link
+                href={ROUTES.POST_JOB}
+                className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              >
+                <PlusCircle className="size-4 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1">{EMPLOYER_JOBS_QUICK_ACTION_POST}</span>
+                <ChevronRight
+                  className="size-3.5 shrink-0 opacity-70"
+                  aria-hidden="true"
+                />
+              </Link>
+            </li>
+          </Can>
           <li>
             <DisabledQuickAction icon={<Upload className="size-4" />}>
               {EMPLOYER_JOBS_QUICK_ACTION_IMPORT}
@@ -90,26 +93,28 @@ export function EmployerJobsQuickActions() {
         </button>
       </section>
 
-      <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-        <div
-          className="mb-2.5 inline-flex size-9 items-center justify-center rounded-full bg-sky-50 text-sky-600"
-          aria-hidden="true"
-        >
-          <Search className="size-4" strokeWidth={2} />
-        </div>
-        <h2 className="text-sm font-bold text-foreground">
-          {EMPLOYER_JOBS_SEARCH_CANDIDATES_TITLE}
-        </h2>
-        <p className="mt-1 text-xs leading-relaxed text-muted">
-          {EMPLOYER_JOBS_SEARCH_CANDIDATES_DESCRIPTION}
-        </p>
-        <Link
-          href={ROUTES.EMPLOYER_CANDIDATES}
-          className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-primary-soft px-4 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          {EMPLOYER_JOBS_SEARCH_CANDIDATES_CTA}
-        </Link>
-      </section>
+      <Can module="candidates" action="read">
+        <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <div
+            className="mb-2.5 inline-flex size-9 items-center justify-center rounded-full bg-sky-50 text-sky-600"
+            aria-hidden="true"
+          >
+            <Search className="size-4" strokeWidth={2} />
+          </div>
+          <h2 className="text-sm font-bold text-foreground">
+            {EMPLOYER_JOBS_SEARCH_CANDIDATES_TITLE}
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted">
+            {EMPLOYER_JOBS_SEARCH_CANDIDATES_DESCRIPTION}
+          </p>
+          <Link
+            href={ROUTES.EMPLOYER_CANDIDATES}
+            className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-primary-soft px-4 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            {EMPLOYER_JOBS_SEARCH_CANDIDATES_CTA}
+          </Link>
+        </section>
+      </Can>
 
       <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <h2 className="text-sm font-bold text-foreground">

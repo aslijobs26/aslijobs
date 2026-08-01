@@ -54,7 +54,7 @@ export function EmployerSidebar({
     queryKey: notificationQueryKeys.unreadCount("employer"),
     queryFn: fetchNotificationUnreadCount,
     staleTime: 60_000,
-    refetchInterval: 120_000,
+    refetchInterval: 180_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
   });
@@ -86,12 +86,13 @@ export function EmployerSidebar({
       }
       return item;
     }).filter((item) => {
-      if (permissionsLoading) {
-        return true;
-      }
       const moduleKey = NAV_ITEM_PERMISSION_MODULE[item.id];
       if (!moduleKey) {
         return true;
+      }
+      // Never flash unauthorized modules while the RBAC session loads.
+      if (permissionsLoading) {
+        return false;
       }
       return can(moduleKey, "read");
     });

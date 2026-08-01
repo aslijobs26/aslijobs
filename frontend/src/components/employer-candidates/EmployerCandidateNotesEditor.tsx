@@ -17,6 +17,7 @@ type EmployerCandidateNotesEditorProps = {
   }) => void;
   className?: string;
   compact?: boolean;
+  canWrite?: boolean;
 };
 
 export function EmployerCandidateNotesEditor({
@@ -25,6 +26,7 @@ export function EmployerCandidateNotesEditor({
   onSave,
   className,
   compact = false,
+  canWrite = true,
 }: EmployerCandidateNotesEditorProps) {
   const [notesDraft, setNotesDraft] = useState(application.employerNotes ?? "");
   const [notesVisible, setNotesVisible] = useState(
@@ -42,12 +44,14 @@ export function EmployerCandidateNotesEditor({
   ]);
 
   const isTerminal = isEmployerTerminalStatus(application.status);
+  const isReadOnly = isTerminal || !canWrite;
   const savedNotes = application.employerNotes ?? "";
   const savedVisible = application.employerNotesVisibleToSeeker === true;
   const isDirty =
     notesDraft.trim() !== savedNotes.trim() || notesVisible !== savedVisible;
   const isOverLimit = notesDraft.length > EMPLOYER_NOTES_MAX_LENGTH;
-  const canSave = !isTerminal && !isSaving && isDirty && !isOverLimit;
+  const canSave =
+    canWrite && !isTerminal && !isSaving && isDirty && !isOverLimit;
 
   const handleSave = () => {
     if (!canSave) {
@@ -60,7 +64,7 @@ export function EmployerCandidateNotesEditor({
   };
 
   const handleDelete = () => {
-    if (isTerminal || isSaving) {
+    if (isReadOnly || isSaving) {
       return;
     }
     setNotesDraft("");
@@ -89,9 +93,11 @@ export function EmployerCandidateNotesEditor({
         >
           {savedVisible ? "SHARED WITH CANDIDATE" : "PRIVATE"}
         </span>
-        {isTerminal ? (
+        {isReadOnly ? (
           <span className="text-xs text-muted">
-            This candidate is in a terminal hiring status. Notes are read-only.
+            {isTerminal
+              ? "This candidate is in a terminal hiring status. Notes are read-only."
+              : "You do not have permission to edit notes."}
           </span>
         ) : (
           <span className="text-xs text-muted">
@@ -108,7 +114,7 @@ export function EmployerCandidateNotesEditor({
         rows={compact ? 6 : 5}
         value={notesDraft}
         maxLength={EMPLOYER_NOTES_MAX_LENGTH}
-        disabled={isTerminal || isSaving}
+        disabled={isReadOnly || isSaving}
         onChange={(event) =>
           setNotesDraft(event.target.value.slice(0, EMPLOYER_NOTES_MAX_LENGTH))
         }
@@ -136,7 +142,7 @@ export function EmployerCandidateNotesEditor({
         <input
           type="checkbox"
           checked={notesVisible}
-          disabled={isTerminal || isSaving}
+          disabled={isReadOnly || isSaving}
           onChange={(event) => setNotesVisible(event.target.checked)}
           className="mt-0.5 size-4 rounded border-border-subtle text-primary focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed"
         />
@@ -166,30 +172,32 @@ export function EmployerCandidateNotesEditor({
         </div>
       </dl>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={!canSave}
-          onClick={handleSave}
-          className={cn(
-            "inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60",
-            !compact && "min-h-10 w-full text-sm sm:w-auto",
-          )}
-        >
-          {isSaving ? "Saving…" : "Save notes"}
-        </button>
-        <button
-          type="button"
-          disabled={isTerminal || isSaving || (!hasSavedNotes && !notesDraft)}
-          onClick={handleDelete}
-          className={cn(
-            "inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60",
-            !compact && "min-h-10 w-full text-sm sm:w-auto",
-          )}
-        >
-          Delete notes
-        </button>
-      </div>
+      {canWrite ? (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={!canSave}
+            onClick={handleSave}
+            className={cn(
+              "inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60",
+              !compact && "min-h-10 w-full text-sm sm:w-auto",
+            )}
+          >
+            {isSaving ? "Saving…" : "Save notes"}
+          </button>
+          <button
+            type="button"
+            disabled={isReadOnly || isSaving || (!hasSavedNotes && !notesDraft)}
+            onClick={handleDelete}
+            className={cn(
+              "inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60",
+              !compact && "min-h-10 w-full text-sm sm:w-auto",
+            )}
+          >
+            Delete notes
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

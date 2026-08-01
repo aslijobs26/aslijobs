@@ -1,6 +1,7 @@
 "use client";
 
 import welcomeIllustration from "@/assets/employer-dashboard/welcome-banner-illustration-v4.png";
+import { Can } from "@/components/rbac/Can";
 import {
   EMPLOYER_DASHBOARD_HERO_ROW_HEIGHT_CLASS,
   EMPLOYER_DASHBOARD_POST_JOB_LABEL,
@@ -72,27 +73,34 @@ export function DashboardWelcomeBanner({
           </div>
 
           <div className="mt-4 flex flex-nowrap items-center gap-1.5 sm:mt-5 sm:max-w-[62%] sm:gap-3 md:max-w-[58%]">
-            <Link
-              href={ROUTES.POST_JOB}
-              className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-2.5 text-[0.6875rem] font-semibold text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm"
-            >
-              <span className="inline-flex size-5 items-center justify-center rounded-md bg-surface/20 sm:size-6">
-                <Plus className="size-3 sm:size-3.5" aria-hidden="true" strokeWidth={2.5} />
-              </span>
-              {EMPLOYER_DASHBOARD_POST_JOB_LABEL}
-            </Link>
-            <Link
-              href={ROUTES.EMPLOYER_CANDIDATES}
-              className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border-subtle bg-surface px-2.5 text-[0.6875rem] font-semibold text-foreground shadow-sm transition-colors hover:border-primary/30 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm"
-            >
-              <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary-light text-primary sm:size-6">
-                <Search className="size-3 sm:size-3.5" aria-hidden="true" />
-              </span>
-              {EMPLOYER_DASHBOARD_SEARCH_CANDIDATES_LABEL}
-            </Link>
+            <Can module="jobs" action="create">
+              <Link
+                href={ROUTES.POST_JOB}
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-2.5 text-[0.6875rem] font-semibold text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm"
+              >
+                <span className="inline-flex size-5 items-center justify-center rounded-md bg-surface/20 sm:size-6">
+                  <Plus
+                    className="size-3 sm:size-3.5"
+                    aria-hidden="true"
+                    strokeWidth={2.5}
+                  />
+                </span>
+                {EMPLOYER_DASHBOARD_POST_JOB_LABEL}
+              </Link>
+            </Can>
+            <Can module="candidates" action="read">
+              <Link
+                href={ROUTES.EMPLOYER_CANDIDATES}
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border-subtle bg-surface px-2.5 text-[0.6875rem] font-semibold text-foreground shadow-sm transition-colors hover:border-primary/30 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm"
+              >
+                <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary-light text-primary sm:size-6">
+                  <Search className="size-3 sm:size-3.5" aria-hidden="true" />
+                </span>
+                {EMPLOYER_DASHBOARD_SEARCH_CANDIDATES_LABEL}
+              </Link>
+            </Can>
           </div>
         </div>
-
       </div>
     </section>
   );

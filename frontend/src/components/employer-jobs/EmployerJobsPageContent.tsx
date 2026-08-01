@@ -91,13 +91,17 @@ export function EmployerJobsPageContent() {
   const jobsQuery = useQuery({
     queryKey: EMPLOYER_JOBS_QUERY_KEYS.list(listParams),
     queryFn: () => fetchEmployerJobs(listParams),
-    refetchOnMount: "always",
+    staleTime: 45_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
   const statsQuery = useQuery({
     queryKey: EMPLOYER_JOBS_QUERY_KEYS.stats(),
     queryFn: fetchEmployerJobStats,
-    refetchOnMount: "always",
+    staleTime: 60_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
   const invalidateJobsData = async () => {

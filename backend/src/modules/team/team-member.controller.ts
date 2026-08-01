@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
+import { sanitizeTeamMemberDto } from "../rbac/field-access.response.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import type {
   AcceptInvitationInput,
@@ -21,6 +22,16 @@ function requireEmployerId(req: Request): string {
   return req.employerId;
 }
 
+function sanitizeMemberPayload(
+  req: Request,
+  member: unknown,
+): Record<string, unknown> {
+  return sanitizeTeamMemberDto(
+    req.rbac,
+    structuredClone(member) as Record<string, unknown>,
+  );
+}
+
 export class TeamMemberController {
   list = async (req: Request, res: Response): Promise<void> => {
     const employerId = requireEmployerId(req);
@@ -28,7 +39,12 @@ export class TeamMemberController {
     const result = await teamMemberService.listMembers(employerId, query);
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Team members fetched successfully.",
-      data: result,
+      data: {
+        ...result,
+        members: result.members.map((member) =>
+          sanitizeMemberPayload(req, member),
+        ),
+      },
     });
   };
 
@@ -38,7 +54,7 @@ export class TeamMemberController {
     const result = await teamMemberService.getMember(employerId, memberId);
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Team member fetched successfully.",
-      data: result,
+      data: sanitizeMemberPayload(req, result),
     });
   };
 
@@ -47,7 +63,9 @@ export class TeamMemberController {
     const body = req.body as InviteMemberInput;
     const result = await teamMemberService.inviteMember(employerId, body);
     sendSuccess(res, HTTP_STATUS.CREATED, {
-      message: "Invitation sent successfully.",
+      message: result.emailDelivered
+        ? "Invitation sent successfully."
+        : "Invitation created but email delivery failed. Use Resend Invitation after email is configured.",
       data: result,
     });
   };
@@ -139,7 +157,9 @@ export class TeamMemberController {
       memberId,
     );
     sendSuccess(res, HTTP_STATUS.OK, {
-      message: "Invitation resent successfully.",
+      message: result.emailDelivered
+        ? "Invitation resent successfully."
+        : "Invitation updated but email delivery failed. Fix email configuration, then use Resend Invitation again.",
       data: result,
     });
   };

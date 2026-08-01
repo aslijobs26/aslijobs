@@ -3,6 +3,7 @@
 import { RolePermissionMatrix } from "@/components/employer-team-management/RolePermissionMatrix";
 import {
   ACCESS_LEVEL_LABELS,
+  ACCESS_LEVEL_PILL_CLASS,
   EMPLOYER_TEAM_QUERY_KEYS,
   ROLE_COLOR_ICON_WRAP,
   ROLE_STATUS_PILL_CLASS,
@@ -140,8 +141,15 @@ export function RoleDetailsPageContent({ roleId }: RoleDetailsPageContentProps) 
           <dl className="grid grid-cols-2 gap-3 text-sm sm:min-w-[14rem]">
             <div>
               <dt className="text-xs text-muted">Access Level</dt>
-              <dd className="font-semibold text-foreground">
-                {ACCESS_LEVEL_LABELS[role.accessLevel]}
+              <dd className="mt-1">
+                <span
+                  className={cn(
+                    "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                    ACCESS_LEVEL_PILL_CLASS[role.accessLevel],
+                  )}
+                >
+                  {ACCESS_LEVEL_LABELS[role.accessLevel]}
+                </span>
               </dd>
             </div>
             <div>

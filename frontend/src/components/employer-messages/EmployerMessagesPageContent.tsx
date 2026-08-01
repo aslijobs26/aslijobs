@@ -17,6 +17,7 @@ import { MessagesFilterPanel } from "@/components/employer-messages/MessagesFilt
 import { MessagesMobileFiltersSheet } from "@/components/employer-messages/MessagesMobileFiltersSheet";
 import { MessagesStatsCards } from "@/components/employer-messages/MessagesStatsCards";
 import { ROUTES } from "@/constants/routes";
+import { useCan } from "@/providers/employer-permission-provider";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import type { EmployerLoginPublic } from "@/services/employer-login.service";
 import {
@@ -418,6 +419,9 @@ function ActionsMenu({
   applicationId: string;
   phoneHref: string | null;
 }) {
+  const { can } = useCan();
+  const canSendOffer = can("messages", "update");
+  const canScheduleInterview = can("interviews", "create");
   const [open, setOpen] = useState(false);
   const candidateHref = ROUTES.employerCandidateDetail(applicationId);
 
@@ -464,20 +468,24 @@ function ActionsMenu({
             >
               View resume
             </Link>
-            <Link
-              href={candidateHref}
-              className="block min-h-11 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-hero-bg lg:min-h-0 lg:py-2 lg:text-xs"
-              onClick={() => setOpen(false)}
-            >
-              Schedule interview
-            </Link>
-            <Link
-              href={candidateHref}
-              className="block min-h-11 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-hero-bg lg:min-h-0 lg:py-2 lg:text-xs"
-              onClick={() => setOpen(false)}
-            >
-              Send offer
-            </Link>
+            {canScheduleInterview ? (
+              <Link
+                href={candidateHref}
+                className="block min-h-11 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-hero-bg lg:min-h-0 lg:py-2 lg:text-xs"
+                onClick={() => setOpen(false)}
+              >
+                Schedule interview
+              </Link>
+            ) : null}
+            {canSendOffer ? (
+              <Link
+                href={candidateHref}
+                className="block min-h-11 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-hero-bg lg:min-h-0 lg:py-2 lg:text-xs"
+                onClick={() => setOpen(false)}
+              >
+                Send offer
+              </Link>
+            ) : null}
           </div>
         </>
       ) : null}
@@ -695,7 +703,7 @@ export function EmployerMessagesPageContent() {
     enabled: tab !== "starred",
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
-    refetchOnMount: "always",
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
 
@@ -707,7 +715,7 @@ export function EmployerMessagesPageContent() {
   const unreadHeartbeatQuery = useQuery({
     queryKey: notificationQueryKeys.unreadCount("employer"),
     queryFn: fetchNotificationUnreadCount,
-    staleTime: 30_000,
+    staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
@@ -807,7 +815,7 @@ export function EmployerMessagesPageContent() {
     enabled: Boolean(selectedApplicationId),
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
-    refetchOnMount: "always",
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
 

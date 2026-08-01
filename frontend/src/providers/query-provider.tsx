@@ -32,9 +32,15 @@ export function QueryProvider({ children }: QueryProviderProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
+            // Prefer cache within staleTime. Explicit "always" refetch must be
+            // rare — it burns the shared API rate budget and surfaces as 429 on
+            // unrelated endpoints (including /employers/me).
             staleTime: 60 * 1000,
+            gcTime: 30 * 60 * 1000,
             retry: shouldRetryQuery,
             refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+            refetchOnMount: true,
           },
         },
       }),

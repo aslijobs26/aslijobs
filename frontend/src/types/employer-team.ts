@@ -124,6 +124,8 @@ export type TeamInvitationStatus =
   | "cancelled"
   | "rejected";
 
+export type TeamInvitationEmailDeliveryStatus = "pending" | "sent" | "failed";
+
 export type TeamAccessLevel =
   | "full_access"
   | "limited"
@@ -177,6 +179,12 @@ export type TeamPermissionModule =
   | "team_management"
   | "settings";
 
+export type FieldAccessLevel = "hidden" | "view" | "mask" | "edit";
+
+export type RoleFieldAccessMap = Partial<
+  Record<TeamPermissionModule, Partial<Record<string, FieldAccessLevel>>>
+>;
+
 export type ModulePermission = {
   fullAccess: boolean;
   create: boolean;
@@ -208,9 +216,7 @@ export type TeamRoleListItem = {
 
 export type TeamRoleDetails = TeamRoleListItem & {
   permissions: RolePermissionsMatrix;
-  fieldAccess: Partial<
-    Record<TeamPermissionModule, Record<string, boolean>>
-  > | null;
+  fieldAccess: RoleFieldAccessMap | null;
   createdBy: string;
   updatedBy: string;
   members: Array<{
@@ -299,9 +305,7 @@ export type RbacSession = {
   roleName: string;
   isSuperAdmin: boolean;
   permissions: RolePermissionsMatrix;
-  fieldAccess: Partial<
-    Record<TeamPermissionModule, Record<string, boolean>>
-  > | null;
+  fieldAccess: RoleFieldAccessMap | null;
   allowedModules: TeamPermissionModule[];
   allowedActions: Record<
     TeamPermissionModule,
@@ -368,6 +372,7 @@ export type TeamMemberListItem = {
   designation: string;
   status: TeamMemberStatus;
   invitationStatus: TeamInvitationStatus | "";
+  emailDeliveryStatus: TeamInvitationEmailDeliveryStatus | null;
   accessLevel: TeamAccessLevel;
   department: { id: string; name: string; status: string } | null;
   role: TeamRoleSummary | null;

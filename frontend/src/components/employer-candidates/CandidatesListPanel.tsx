@@ -9,6 +9,7 @@ import {
 } from "@/components/employer-candidates/candidates-ats-utils";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import { ROUTES } from "@/constants/routes";
+import { useCan } from "@/providers/employer-permission-provider";
 import {
   EMPLOYER_APPLICATION_STATUS_LABELS,
   type EmployerApplicationListItem,
@@ -71,8 +72,18 @@ function CandidateMobileCard({
   onOpenResume: (id: string) => void;
   onScheduleInterview: (id: string) => void;
 }) {
-  const whatsappHref = buildWhatsAppHref(item.candidatePhone ?? "");
-  const telHref = buildTelHref(item.candidatePhone ?? "");
+  const { can, canField, getFieldLevel } = useCan();
+  const canViewPhone = canField("candidates", "phone");
+  const phoneLevel = getFieldLevel("candidates", "phone");
+  const canViewResume = canField("candidates", "resume");
+  const canViewLocation = canField("candidates", "location");
+  const canScheduleInterview =
+    can("interviews", "create") || can("candidates", "update");
+  const rawPhone = item.candidatePhone ?? "";
+  const whatsappHref =
+    canViewPhone && phoneLevel !== "mask" ? buildWhatsAppHref(rawPhone) : null;
+  const telHref =
+    canViewPhone && phoneLevel !== "mask" ? buildTelHref(rawPhone) : null;
 
   return (
     <article
@@ -116,7 +127,7 @@ function CandidateMobileCard({
                 Experience: {item.candidateExperienceLabel}
               </span>
             ) : null}
-            {item.candidateLocation ? (
+            {canViewLocation && item.candidateLocation ? (
               <span className="truncate">Location: {item.candidateLocation}</span>
             ) : null}
             {item.candidateAvailability ? (
@@ -156,6 +167,7 @@ function CandidateMobileCard({
             <span className="text-[10px] font-semibold leading-none">Call</span>
           </a>
         ) : null}
+        {canViewResume ? (
         <button
           type="button"
           aria-label="View resume"
@@ -168,18 +180,21 @@ function CandidateMobileCard({
           <FileText className={actionIconClassName} aria-hidden="true" />
           <span className="text-[10px] font-semibold leading-none">Resume</span>
         </button>
-        <button
-          type="button"
-          aria-label="Schedule interview"
-          className={actionButtonClassName}
-          onClick={(event) => {
-            event.stopPropagation();
-            onScheduleInterview(item.id);
-          }}
-        >
-          <Calendar className={actionIconClassName} aria-hidden="true" />
-          <span className="text-[10px] font-semibold leading-none">Interview</span>
-        </button>
+        ) : null}
+        {canScheduleInterview ? (
+          <button
+            type="button"
+            aria-label="Schedule interview"
+            className={actionButtonClassName}
+            onClick={(event) => {
+              event.stopPropagation();
+              onScheduleInterview(item.id);
+            }}
+          >
+            <Calendar className={actionIconClassName} aria-hidden="true" />
+            <span className="text-[10px] font-semibold leading-none">Interview</span>
+          </button>
+        ) : null}
         <button
           type="button"
           aria-label="Open status and details"
@@ -217,8 +232,18 @@ function CandidateDesktopRow({
   onOpenResume: (id: string) => void;
   onScheduleInterview: (id: string) => void;
 }) {
-  const whatsappHref = buildWhatsAppHref(item.candidatePhone ?? "");
-  const telHref = buildTelHref(item.candidatePhone ?? "");
+  const { can, canField, getFieldLevel } = useCan();
+  const canViewPhone = canField("candidates", "phone");
+  const phoneLevel = getFieldLevel("candidates", "phone");
+  const canViewResume = canField("candidates", "resume");
+  const canViewLocation = canField("candidates", "location");
+  const canScheduleInterview =
+    can("interviews", "create") || can("candidates", "update");
+  const rawPhone = item.candidatePhone ?? "";
+  const whatsappHref =
+    canViewPhone && phoneLevel !== "mask" ? buildWhatsAppHref(rawPhone) : null;
+  const telHref =
+    canViewPhone && phoneLevel !== "mask" ? buildTelHref(rawPhone) : null;
 
   return (
     <div className="flex items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
@@ -258,7 +283,7 @@ function CandidateDesktopRow({
           <span className="mt-1 block truncate text-xs text-muted">
             {[
               item.candidateExperienceLabel || null,
-              item.candidateLocation || null,
+              canViewLocation ? item.candidateLocation || null : null,
             ]
               .filter(Boolean)
               .join(" | ")}
@@ -289,28 +314,32 @@ function CandidateDesktopRow({
             <MessageCircle className="size-4" aria-hidden="true" />
           </a>
         ) : null}
-        <button
-          type="button"
-          aria-label="View resume"
-          className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpenResume(item.id);
-          }}
-        >
-          <FileText className="size-4" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          aria-label="Schedule interview"
-          className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          onClick={(event) => {
-            event.stopPropagation();
-            onScheduleInterview(item.id);
-          }}
-        >
-          <Calendar className="size-4" aria-hidden="true" />
-        </button>
+        {canViewResume ? (
+          <button
+            type="button"
+            aria-label="View resume"
+            className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenResume(item.id);
+            }}
+          >
+            <FileText className="size-4" aria-hidden="true" />
+          </button>
+        ) : null}
+        {canScheduleInterview ? (
+          <button
+            type="button"
+            aria-label="Schedule interview"
+            className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            onClick={(event) => {
+              event.stopPropagation();
+              onScheduleInterview(item.id);
+            }}
+          >
+            <Calendar className="size-4" aria-hidden="true" />
+          </button>
+        ) : null}
         <Link
           href={ROUTES.employerCandidateDetail(item.id)}
           aria-label="Open full profile"

@@ -46,6 +46,8 @@ export function InterviewsStatusOverview() {
   const overviewQuery = useQuery({
     queryKey: ["employer", "interview-stats", "overview", period],
     queryFn: () => fetchEmployerInterviewStats({ period }),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const overview = overviewQuery.data?.statusOverview;

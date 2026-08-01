@@ -8,7 +8,9 @@ import {
 } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
+import { useCanOptional } from "@/providers/employer-permission-provider";
 import type { EmployerLoginPublic } from "@/services/employer-login.service";
+import type { TeamPermissionModule } from "@/types/employer-team";
 import { cn } from "@/utils/cn";
 import { clearEmployerClientSession } from "@/utils/employer-session";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
@@ -39,23 +41,31 @@ type EmployerProfileMenuProps = {
   onLogout?: () => void;
 };
 
-const PROFILE_MENU_SECONDARY_LINKS = [
+const PROFILE_MENU_SECONDARY_LINKS: Array<{
+  label: string;
+  href: string;
+  icon: typeof Briefcase;
+  module: TeamPermissionModule | null;
+}> = [
   {
     label: "My Jobs",
     href: ROUTES.EMPLOYER_JOBS,
     icon: Briefcase,
+    module: "jobs",
   },
   {
     label: "Company Profile",
     href: ROUTES.EMPLOYER_COMPANY_PROFILE,
     icon: Building2,
+    module: "company_profile",
   },
   {
     label: "Settings",
     href: ROUTES.EMPLOYER_SETTINGS,
     icon: Settings,
+    module: "settings",
   },
-] as const;
+];
 
 function isEmployerWorkspacePath(pathname: string): boolean {
   if (
@@ -167,6 +177,7 @@ export function EmployerProfileMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const employerProfileQuery = useEmployerProfile();
+  const { can, isLoading: permissionsLoading, hasProvider } = useCanOptional();
   const displayName = employerProfileQuery.data
     ? getEmployerDisplayName(employerProfileQuery.data)
     : EMPLOYER_DASHBOARD_ACCOUNT_NAME;
@@ -176,27 +187,55 @@ export function EmployerProfileMenu({
     : null;
 
   const profileMenuLinks = useMemo(() => {
-    const primaryLink = isEmployerWorkspacePath(pathname)
-      ? {
-          label: "Website",
-          href: ROUTES.HOME,
-          icon: Globe,
-        }
-      : {
-          label: "Dashboard",
-          href: ROUTES.EMPLOYER_DASHBOARD,
-          icon: Home,
-        };
+    const primaryLink =
+      isEmployerWorkspacePath(pathname)
+        ? {
+            label: "Website",
+            href: ROUTES.HOME,
+            icon: Globe,
+            module: null as TeamPermissionModule | null,
+          }
+        : !hasProvider || can("dashboard", "read")
+          ? {
+              label: "Dashboard",
+              href: ROUTES.EMPLOYER_DASHBOARD,
+              icon: Home,
+              module: "dashboard" as TeamPermissionModule | null,
+            }
+          : {
+              label: "Website",
+              href: ROUTES.HOME,
+              icon: Globe,
+              module: null as TeamPermissionModule | null,
+            };
 
     const secondaryLinks = PROFILE_MENU_SECONDARY_LINKS.map((item) =>
       item.href === ROUTES.EMPLOYER_COMPANY_PROFILE &&
       employerProfileQuery.data?.accountType === "individual"
         ? { ...item, label: "Individual Profile" }
         : item,
-    );
+    ).filter((item) => {
+      if (!item.module) {
+        return true;
+      }
+      // Public site has no RBAC provider — show links; workspace route guard enforces.
+      if (!hasProvider) {
+        return true;
+      }
+      if (permissionsLoading) {
+        return false;
+      }
+      return can(item.module, "read");
+    });
 
     return [primaryLink, ...secondaryLinks];
-  }, [employerProfileQuery.data?.accountType, pathname]);
+  }, [
+    can,
+    employerProfileQuery.data?.accountType,
+    hasProvider,
+    pathname,
+    permissionsLoading,
+  ]);
 
   useEffect(() => {
     if (!isOpen) {

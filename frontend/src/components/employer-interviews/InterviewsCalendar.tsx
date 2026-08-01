@@ -36,7 +36,7 @@ type InterviewsCalendarProps = {
   isError: boolean;
   onRetry: () => void;
   onSelect: (applicationId: string) => void;
-  onScheduleInterview: () => void;
+  onScheduleInterview?: () => void;
   onRangeChange: (range: {
     from: string;
     to: string;
@@ -218,7 +218,7 @@ function MobileInterviewList({
   day: Date;
   items: EmployerInterviewListItem[];
   onSelect: (id: string) => void;
-  onScheduleInterview: () => void;
+  onScheduleInterview?: () => void;
 }) {
   if (items.length === 0) {
     return (
@@ -229,14 +229,16 @@ function MobileInterviewList({
         <p className="mt-1 text-xs text-muted">
           There are no interviews for {formatDayHeading(day)}.
         </p>
-        <button
-          type="button"
-          onClick={onScheduleInterview}
-          className="mt-4 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          <CalendarPlus className="size-4" aria-hidden="true" />
-          Schedule Interview
-        </button>
+        {onScheduleInterview ? (
+          <button
+            type="button"
+            onClick={onScheduleInterview}
+            className="mt-4 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            <CalendarPlus className="size-4" aria-hidden="true" />
+            Schedule Interview
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -549,14 +551,16 @@ export function InterviewsCalendar({
       <p className="text-sm font-medium text-foreground">
         No interviews scheduled.
       </p>
-      <button
-        type="button"
-        onClick={onScheduleInterview}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-      >
-        <CalendarPlus className="size-3.5" aria-hidden="true" />
-        Schedule Interview
-      </button>
+      {onScheduleInterview ? (
+        <button
+          type="button"
+          onClick={onScheduleInterview}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
+          <CalendarPlus className="size-3.5" aria-hidden="true" />
+          Schedule Interview
+        </button>
+      ) : null}
     </div>
   );
 

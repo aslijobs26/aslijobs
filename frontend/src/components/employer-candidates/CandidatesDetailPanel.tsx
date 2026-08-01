@@ -30,6 +30,7 @@ import {
   type EmployerApplicationStatus,
 } from "@/types/employer-applications";
 import { resolveEmployerStatusSelect } from "@/components/employer-candidates/employer-status-select";
+import { useCan } from "@/providers/employer-permission-provider";
 import type {
   ApplicationOffer,
   ApplicationStatusHistoryEntry,
@@ -48,7 +49,7 @@ import {
   Printer,
   X,
 } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 export type CandidatesDetailTab =
   | "profile"
@@ -297,6 +298,48 @@ export function CandidatesDetailPanel({
   variant = "panel",
 }: CandidatesDetailPanelProps) {
   const queryClient = useQueryClient();
+  const { can, canField, getFieldLevel } = useCan();
+  const canViewPhone = canField("candidates", "phone");
+  const phoneLevel = getFieldLevel("candidates", "phone");
+  const canUsePhone = canViewPhone && phoneLevel !== "mask";
+  const canViewResume = canField("candidates", "resume");
+  const canScheduleInterview = can("interviews", "create");
+  const canUpdateCandidates = can("candidates", "update");
+  const canViewExpectedSalary = canField("candidates", "expected_salary");
+  const canViewLocation = canField("candidates", "location");
+  const canViewDob = canField("candidates", "dob");
+  const canViewNotes = canField("candidates", "notes");
+  const canWriteNotes = canField("candidates", "notes", "write");
+  const canViewOffer = canField("candidates", "offer_amount");
+  const canWriteOffer = canField("candidates", "offer_amount", "write");
+  const canViewInterview =
+    can("interviews", "read") ||
+    can("interviews", "create") ||
+    can("interviews", "update");
+
+  const visibleTabs = useMemo(
+    () =>
+      TABS.filter((tab) => {
+        if (tab.id === "resume") return canViewResume;
+        if (tab.id === "notes") return canViewNotes;
+        if (tab.id === "offer") return canViewOffer;
+        if (tab.id === "interview") return canViewInterview;
+        return true;
+      }),
+    [
+      canViewResume,
+      canViewNotes,
+      canViewOffer,
+      canViewInterview,
+    ],
+  );
+
+  useEffect(() => {
+    if (!visibleTabs.some((tab) => tab.id === activeTab)) {
+      onTabChange(visibleTabs[0]?.id ?? "profile");
+    }
+  }, [activeTab, onTabChange, visibleTabs]);
+
   const [offerDraft, setOfferDraft] = useState<ApplicationOffer>(EMPTY_OFFER);
   const [rejectReason, setRejectReason] = useState("");
   const [isDownloading, setIsDownloading] = useState(false);
@@ -456,8 +499,12 @@ export function CandidatesDetailPanel({
   const location =
     application.candidate.preferredJobLocation?.trim() || "—";
   const age = ageFromDateOfBirth(application.candidate.dateOfBirth ?? null);
-  const whatsappHref = buildWhatsAppHref(application.candidate.phone);
-  const telHref = buildTelHref(application.candidate.phone);
+  const whatsappHref = canUsePhone
+    ? buildWhatsAppHref(application.candidate.phone)
+    : null;
+  const telHref = canUsePhone
+    ? buildTelHref(application.candidate.phone)
+    : null;
   const education = sections?.education ?? [];
   const experience = sections?.experience ?? [];
   const skills = sections?.skills ?? [];
@@ -468,10 +515,6 @@ export function CandidatesDetailPanel({
   const isDrawer = variant === "drawer";
   const headerActionClassName = cn(
     "inline-flex items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-    isDrawer ? "size-11" : "size-8",
-  );
-  const headerActionMutedClassName = cn(
-    "inline-flex items-center justify-center rounded-lg text-muted",
     isDrawer ? "size-11" : "size-8",
   );
 
@@ -532,7 +575,7 @@ export function CandidatesDetailPanel({
                 </span>
               </p>
               <div className="flex shrink-0 items-center gap-1">
-                {whatsappHref ? (
+                {canUsePhone && whatsappHref ? (
                   <a
                     href={whatsappHref}
                     target="_blank"
@@ -542,15 +585,8 @@ export function CandidatesDetailPanel({
                   >
                     <MessageCircle className="size-4" aria-hidden="true" />
                   </a>
-                ) : (
-                  <span
-                    aria-label="WhatsApp unavailable"
-                    className={headerActionMutedClassName}
-                  >
-                    <MessageCircle className="size-4" aria-hidden="true" />
-                  </span>
-                )}
-                {telHref ? (
+                ) : null}
+                {canUsePhone && telHref ? (
                   <a
                     href={telHref}
                     aria-label="Call candidate"
@@ -558,36 +594,33 @@ export function CandidatesDetailPanel({
                   >
                     <Phone className="size-4" aria-hidden="true" />
                   </a>
-                ) : (
-                  <span
-                    aria-label="Call unavailable"
-                    className={headerActionMutedClassName}
+                ) : null}
+                {canViewResume ? (
+                  <button
+                    type="button"
+                    onClick={() => onTabChange("resume")}
+                    aria-label="View resume"
+                    className={headerActionClassName}
                   >
-                    <Phone className="size-4" aria-hidden="true" />
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onTabChange("resume")}
-                  aria-label="View resume"
-                  className={headerActionClassName}
-                >
-                  <FileText className="size-4" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onScheduleInterview) {
-                      onScheduleInterview(application.id);
-                      return;
-                    }
-                    onTabChange("interview");
-                  }}
-                  aria-label="Schedule interview"
-                  className={headerActionClassName}
-                >
-                  <Calendar className="size-4" aria-hidden="true" />
-                </button>
+                    <FileText className="size-4" aria-hidden="true" />
+                  </button>
+                ) : null}
+                {canScheduleInterview ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onScheduleInterview) {
+                        onScheduleInterview(application.id);
+                        return;
+                      }
+                      onTabChange("interview");
+                    }}
+                    aria-label="Schedule interview"
+                    className={headerActionClassName}
+                  >
+                    <Calendar className="size-4" aria-hidden="true" />
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>
@@ -601,7 +634,7 @@ export function CandidatesDetailPanel({
               </p>
               <p className="mt-0.5 text-xs text-muted">Hiring Completed</p>
             </div>
-          ) : (
+          ) : canUpdateCandidates ? (
             <PanelStatusSelect
               currentStatus={application.status}
               disabled={statusMutation.isPending}
@@ -609,15 +642,27 @@ export function CandidatesDetailPanel({
               offer={application.offer}
               isDrawer={isDrawer}
               onOpenInterview={() => {
-                if (onScheduleInterview) {
+                if (onScheduleInterview && canScheduleInterview) {
                   onScheduleInterview(application.id);
                   return;
                 }
-                onTabChange("interview");
+                if (canViewInterview) {
+                  onTabChange("interview");
+                }
               }}
-              onOpenOffer={() => onTabChange("offer")}
+              onOpenOffer={() => {
+                if (canViewOffer) {
+                  onTabChange("offer");
+                }
+              }}
               onSelectStatus={(status) => statusMutation.mutate(status)}
             />
+          ) : (
+            <div className="rounded-lg border border-border-subtle bg-hero-bg px-2.5 py-2">
+              <p className="text-sm font-semibold text-foreground">
+                {EMPLOYER_APPLICATION_STATUS_LABELS[application.status]}
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -627,7 +672,7 @@ export function CandidatesDetailPanel({
         role="tablist"
         aria-label="Candidate detail sections"
       >
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -651,16 +696,22 @@ export function CandidatesDetailPanel({
         {activeTab === "profile" ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             <ProfileField label="Name" value={application.candidate.fullName} />
-            <ProfileField label="Age" value={age ?? "Not available"} />
+            {canViewDob ? (
+              <ProfileField label="Age" value={age ?? "Not available"} />
+            ) : null}
             <ProfileField label="Experience" value={experienceLabel} />
-            <ProfileField label="Location" value={location} />
-            <ProfileField
-              label="Expected Salary"
-              value={formatExpectedSalary(
-                application.candidate.expectedSalary,
-                application.candidate.expectedSalaryPeriod,
-              )}
-            />
+            {canViewLocation ? (
+              <ProfileField label="Location" value={location} />
+            ) : null}
+            {canViewExpectedSalary ? (
+              <ProfileField
+                label="Expected Salary"
+                value={formatExpectedSalary(
+                  application.candidate.expectedSalary,
+                  application.candidate.expectedSalaryPeriod,
+                )}
+              />
+            ) : null}
             <ProfileField
               label="Languages"
               value={
@@ -867,71 +918,85 @@ export function CandidatesDetailPanel({
             application={application}
             isSaving={notesMutation.isPending}
             compact
+            canWrite={canWriteNotes && canUpdateCandidates}
             onSave={(payload) => notesMutation.mutate(payload)}
           />
         ) : null}
 
         {activeTab === "interview" ? (
-          <EmployerCandidateInterviewEditor
-            application={application}
-            isSaving={interviewMutation.isPending}
-            compact
-            onSave={(payload) => interviewMutation.mutate(payload)}
-          />
+          canScheduleInterview || can("interviews", "update") ? (
+            <EmployerCandidateInterviewEditor
+              application={application}
+              isSaving={interviewMutation.isPending}
+              compact
+              onSave={(payload) => interviewMutation.mutate(payload)}
+            />
+          ) : (
+            <p className="text-sm text-muted">
+              You do not have permission to schedule or update interviews.
+            </p>
+          )
         ) : null}
 
         {activeTab === "offer" ? (
           <div className="space-y-2">
-            <Field
-              id="panel-offer-date"
-              label="Offer date"
-              value={offerDraft.offerDate}
-              onChange={(value) =>
-                setOfferDraft((current) => ({ ...current, offerDate: value }))
-              }
-            />
-            <Field
-              id="panel-joining-date"
-              label="Joining date"
-              value={offerDraft.joiningDate}
-              onChange={(value) =>
-                setOfferDraft((current) => ({
-                  ...current,
-                  joiningDate: value,
-                }))
-              }
-            />
-            <Field
-              id="panel-offer-package"
-              label="Salary / package"
-              value={offerDraft.packageText}
-              onChange={(value) =>
-                setOfferDraft((current) => ({
-                  ...current,
-                  packageText: value,
-                }))
-              }
-            />
-            <div>
-              <label
-                htmlFor="panel-offer-notes"
-                className="block text-xs font-medium text-muted"
-              >
-                Offer notes
-              </label>
-              <textarea
-                id="panel-offer-notes"
-                rows={3}
-                value={offerDraft.notes}
-                onChange={(event) =>
-                  setOfferDraft((current) => ({
-                    ...current,
-                    notes: event.target.value,
-                  }))
-                }
-                className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              />
-            </div>
+            {canViewOffer ? (
+              <>
+                <Field
+                  id="panel-offer-date"
+                  label="Offer date"
+                  value={offerDraft.offerDate}
+                  onChange={(value) =>
+                    setOfferDraft((current) => ({
+                      ...current,
+                      offerDate: value,
+                    }))
+                  }
+                />
+                <Field
+                  id="panel-joining-date"
+                  label="Joining date"
+                  value={offerDraft.joiningDate}
+                  onChange={(value) =>
+                    setOfferDraft((current) => ({
+                      ...current,
+                      joiningDate: value,
+                    }))
+                  }
+                />
+                <Field
+                  id="panel-offer-package"
+                  label="Salary / package"
+                  value={offerDraft.packageText}
+                  onChange={(value) =>
+                    setOfferDraft((current) => ({
+                      ...current,
+                      packageText: value,
+                    }))
+                  }
+                />
+                <div>
+                  <label
+                    htmlFor="panel-offer-notes"
+                    className="block text-xs font-medium text-muted"
+                  >
+                    Offer notes
+                  </label>
+                  <textarea
+                    id="panel-offer-notes"
+                    rows={3}
+                    value={offerDraft.notes}
+                    onChange={(event) =>
+                      setOfferDraft((current) => ({
+                        ...current,
+                        notes: event.target.value,
+                      }))
+                    }
+                    className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  />
+                </div>
+              </>
+            ) : null}
             <div>
               <label
                 htmlFor="panel-reject-reason"
@@ -947,14 +1012,16 @@ export function CandidatesDetailPanel({
                 className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               />
             </div>
-            <button
-              type="button"
-              disabled={hiringMutation.isPending}
-              onClick={() => hiringMutation.mutate()}
-              className="mt-2 inline-flex w-full min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              {hiringMutation.isPending ? "Saving…" : "Save offer details"}
-            </button>
+            {canWriteOffer && canUpdateCandidates ? (
+              <button
+                type="button"
+                disabled={hiringMutation.isPending}
+                onClick={() => hiringMutation.mutate()}
+                className="mt-2 inline-flex w-full min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              >
+                {hiringMutation.isPending ? "Saving…" : "Save offer details"}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>

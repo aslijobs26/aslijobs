@@ -31,6 +31,7 @@ import type {
 } from "@/types/employer-team";
 import { getTeamApiErrorMessage } from "@/utils/employer-team";
 import { invalidateEmployerAccessCaches } from "@/utils/employer-rbac-cache";
+import { useCan } from "@/providers/employer-permission-provider";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Filter, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -53,6 +54,8 @@ type MembersTabPanelProps = {
 
 export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
   const queryClient = useQueryClient();
+  const { can } = useCan();
+  const canCreateMember = can("team_management", "create");
   const employerProfileQuery = useEmployerProfile();
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -127,11 +130,20 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
 
   const inviteMutation = useMutation({
     mutationFn: inviteTeamMember,
-    onSuccess: async () => {
-      setFormError(null);
+    onSuccess: async (result) => {
       setModalMode(null);
       setInvitePrefill({});
       await invalidateAll();
+      if (!result.emailDelivered) {
+        setActionError(
+          result.message ||
+            result.emailError ||
+            "Invitation created but email delivery failed. Use Resend Invitation after email is configured.",
+        );
+        return;
+      }
+      setFormError(null);
+      setActionError(null);
     },
     onError: (error) => setFormError(getTeamApiErrorMessage(error)),
   });
@@ -167,10 +179,29 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
       if (type === "cancel") return cancelTeamInvitation(member.id);
       return removeTeamMember(member.id);
     },
-    onSuccess: async () => {
-      setActionError(null);
+    onSuccess: async (result, variables) => {
       setConfirmRemove(null);
       await invalidateAll();
+      if (
+        variables.type === "resend" &&
+        result &&
+        typeof result === "object" &&
+        "emailDelivered" in result &&
+        result.emailDelivered === false
+      ) {
+        const resendResult = result as {
+          emailDelivered: boolean;
+          emailError: string | null;
+          message: string;
+        };
+        setActionError(
+          resendResult.message ||
+            resendResult.emailError ||
+            "Invitation updated but email delivery failed.",
+        );
+        return;
+      }
+      setActionError(null);
     },
     onError: (error) => setActionError(getTeamApiErrorMessage(error)),
   });
@@ -216,19 +247,21 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
               )}
             </button>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setFormError(null);
-              setEditing(null);
-              setInvitePrefill({});
-              setModalMode("invite");
-            }}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          >
-            <Plus className="size-4" aria-hidden="true" strokeWidth={2.5} />
-            Invite Member
-          </button>
+          {canCreateMember ? (
+            <button
+              type="button"
+              onClick={() => {
+                setFormError(null);
+                setEditing(null);
+                setInvitePrefill({});
+                setModalMode("invite");
+              }}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              <Plus className="size-4" aria-hidden="true" strokeWidth={2.5} />
+              Invite Member
+            </button>
+          ) : null}
         </div>
 
         {filtersOpen ? (

@@ -28,6 +28,7 @@ import {
   getEmployerJobPostedAt,
 } from "@/utils/employer-jobs-format";
 import { ROUTES } from "@/constants/routes";
+import { useCan } from "@/providers/employer-permission-provider";
 import {
   buildAbsolutePublicJobUrl,
   shareOrCopyText,
@@ -212,6 +213,17 @@ function EmployerJobsTableRow({
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { can } = useCan();
+  const canUpdateJobs = can("jobs", "update");
+  const canDeleteJobs = can("jobs", "delete");
+  const canViewCandidates = can("candidates", "read");
+  const hasMoreActions =
+    (canUpdateJobs &&
+      (job.status === "active" ||
+        job.status === "paused" ||
+        job.status === "draft" ||
+        job.status === "closed")) ||
+    canDeleteJobs;
 
   useEffect(() => {
     if (!menuOpen) {
@@ -309,13 +321,17 @@ function EmployerJobsTableRow({
         </span>
       </td>
       <td className={cn(BODY_CELL_CLASS, "text-center text-[11px] font-semibold text-foreground xl:text-[12px]")}>
-        <Link
-          href={`${ROUTES.EMPLOYER_CANDIDATES}?jobId=${encodeURIComponent(job.jobId)}`}
-          className="text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          aria-label={`View ${formatEmployerJobCount(job.applications)} applications for ${job.jobTitle}`}
-        >
-          {formatEmployerJobCount(job.applications)}
-        </Link>
+        {canViewCandidates ? (
+          <Link
+            href={`${ROUTES.EMPLOYER_CANDIDATES}?jobId=${encodeURIComponent(job.jobId)}`}
+            className="text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            aria-label={`View ${formatEmployerJobCount(job.applications)} applications for ${job.jobTitle}`}
+          >
+            {formatEmployerJobCount(job.applications)}
+          </Link>
+        ) : (
+          formatEmployerJobCount(job.applications)
+        )}
       </td>
       <td className={cn(BODY_CELL_CLASS, "text-center text-[11px] font-semibold text-foreground xl:text-[12px]")}>
         {formatEmployerJobCount(job.shortlisted)}
@@ -351,7 +367,8 @@ function EmployerJobsTableRow({
           <IconActionButton label="View job" disabled title="Coming soon">
             <Eye className="size-3.5" />
           </IconActionButton>
-          {job.status === "draft" || job.status === "active" ? (
+          {canUpdateJobs &&
+          (job.status === "draft" || job.status === "active") ? (
             <Link
               href={ROUTES.postJobEdit(job.id)}
               aria-label={
@@ -361,13 +378,9 @@ function EmployerJobsTableRow({
             >
               <Pencil className="size-3.5" />
             </Link>
-          ) : (
-            <IconActionButton label="Edit job" disabled title="Coming soon">
-              <Pencil className="size-3.5" />
-            </IconActionButton>
-          )}
+          ) : null}
 
-          {primaryAction ? (
+          {canUpdateJobs && primaryAction ? (
             <IconActionButton
               label={primaryAction.label}
               disabled={disabled}
@@ -392,70 +405,70 @@ function EmployerJobsTableRow({
             >
               <Share2 className="size-3.5" />
             </IconActionButton>
-          ) : (
-            <IconActionButton label="Share job" disabled title="Coming soon">
-              <Share2 className="size-3.5" />
-            </IconActionButton>
-          )}
+          ) : null}
 
-          <div ref={rootRef} className="relative">
-            <IconActionButton
-              label="More actions"
-              disabled={disabled}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              aria-controls={menuId}
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              <MoreVertical className="size-3.5" />
-            </IconActionButton>
-
-            {menuOpen ? (
-              <div
-                id={menuId}
-                role="menu"
-                tabIndex={-1}
-                onKeyDown={handleMenuKeyDown}
-                className="absolute top-full right-0 z-20 mt-1 min-w-[9.5rem] overflow-hidden rounded-lg border border-border bg-surface py-1 text-sm shadow-lg"
+          {hasMoreActions ? (
+            <div ref={rootRef} className="relative">
+              <IconActionButton
+                label="More actions"
+                disabled={disabled}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                aria-controls={menuId}
+                onClick={() => setMenuOpen((open) => !open)}
               >
-                {canClose ? (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-hero-bg focus-visible:bg-hero-bg focus-visible:outline-none"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onStatusAction(job.id, "close");
-                    }}
-                  >
-                    Close job
-                  </button>
-                ) : null}
-                {canReactivate ? (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-hero-bg focus-visible:bg-hero-bg focus-visible:outline-none"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onStatusAction(job.id, "reactivate");
-                    }}
-                  >
-                    Activate job
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 focus-visible:bg-red-50 focus-visible:outline-none"
-                  onClick={handleDelete}
+                <MoreVertical className="size-3.5" />
+              </IconActionButton>
+
+              {menuOpen ? (
+                <div
+                  id={menuId}
+                  role="menu"
+                  tabIndex={-1}
+                  onKeyDown={handleMenuKeyDown}
+                  className="absolute top-full right-0 z-20 mt-1 min-w-[9.5rem] overflow-hidden rounded-lg border border-border bg-surface py-1 text-sm shadow-lg"
                 >
-                  <Trash2 className="size-3.5" aria-hidden="true" />
-                  Delete
-                </button>
-              </div>
-            ) : null}
-          </div>
+                  {canUpdateJobs && canClose ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-hero-bg focus-visible:bg-hero-bg focus-visible:outline-none"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onStatusAction(job.id, "close");
+                      }}
+                    >
+                      Close job
+                    </button>
+                  ) : null}
+                  {canUpdateJobs && canReactivate ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-hero-bg focus-visible:bg-hero-bg focus-visible:outline-none"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onStatusAction(job.id, "reactivate");
+                      }}
+                    >
+                      Activate job
+                    </button>
+                  ) : null}
+                  {canDeleteJobs ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 focus-visible:bg-red-50 focus-visible:outline-none"
+                      onClick={handleDelete}
+                    >
+                      <Trash2 className="size-3.5" aria-hidden="true" />
+                      Delete
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </td>
     </tr>

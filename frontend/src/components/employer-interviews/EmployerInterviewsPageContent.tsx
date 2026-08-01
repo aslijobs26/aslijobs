@@ -23,6 +23,8 @@ import {
   fetchEmployerInterviewStats,
   fetchEmployerInterviews,
 } from "@/services/employer-interviews.service";
+import { Can } from "@/components/rbac/Can";
+import { useCan } from "@/providers/employer-permission-provider";
 import { cn } from "@/utils/cn";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -64,6 +66,9 @@ function parseViewParam(value: string | null): InterviewsPageView {
 
 export function EmployerInterviewsPageContent() {
   const queryClient = useQueryClient();
+  const { can } = useCan();
+  const canCreateInterview = can("interviews", "create");
+  const canUpdateInterview = can("interviews", "update");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -159,6 +164,8 @@ export function EmployerInterviewsPageContent() {
         sort,
       }),
     enabled: view === "list",
+    staleTime: 45_000,
+    refetchOnWindowFocus: false,
   });
 
   const calendarQuery = useQuery({
@@ -181,11 +188,15 @@ export function EmployerInterviewsPageContent() {
       }),
     enabled:
       view === "calendar" && Boolean(calendarRange?.from && calendarRange?.to),
+    staleTime: 45_000,
+    refetchOnWindowFocus: false,
   });
 
   const statsQuery = useQuery({
     queryKey: ["employer", "interview-stats"],
     queryFn: () => fetchEmployerInterviewStats(),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const jobTabs = statsQuery.data?.jobTabs ?? [];
@@ -220,6 +231,13 @@ export function EmployerInterviewsPageContent() {
   };
 
   const openScheduleModal = (applicationId?: string | null) => {
+    if (applicationId) {
+      if (!canUpdateInterview && !canCreateInterview) {
+        return;
+      }
+    } else if (!canCreateInterview) {
+      return;
+    }
     setEditApplicationId(applicationId ?? null);
     setScheduleModalOpen(true);
   };
@@ -306,14 +324,16 @@ export function EmployerInterviewsPageContent() {
               List View
             </button>
           </span>
-          <button
-            type="button"
-            onClick={() => openScheduleModal(null)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            Schedule Interview
-          </button>
+          <Can module="interviews" action="create">
+            <button
+              type="button"
+              onClick={() => openScheduleModal(null)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              Schedule Interview
+            </button>
+          </Can>
         </div>
       </header>
 
@@ -384,7 +404,7 @@ export function EmployerInterviewsPageContent() {
               isError={calendarQuery.isError}
               onRetry={() => void calendarQuery.refetch()}
               onSelect={(id) => openCandidate(id, "interview")}
-              onScheduleInterview={() => openScheduleModal(null)}
+              onScheduleInterview={canCreateInterview ? () => openScheduleModal(null) : undefined}
               onRangeChange={handleCalendarRangeChange}
             />
           ) : (
@@ -407,14 +427,14 @@ export function EmployerInterviewsPageContent() {
                   ? "Schedule an interview for a candidate on this job to see it here."
                   : "Schedule an interview from a candidate profile to see it here."
               }
-              onScheduleInterview={() => openScheduleModal(null)}
+              onScheduleInterview={canCreateInterview ? () => openScheduleModal(null) : undefined}
               onRetry={() => void listQuery.refetch()}
               onPageChange={setPage}
               onSortChange={setSort}
               onRowOpen={(id) => openCandidate(id, "profile")}
-              onEditInterview={(id) => openScheduleModal(id)}
+              onEditInterview={canUpdateInterview ? (id) => openScheduleModal(id) : undefined}
               onCompleteStatus={(id) => completeMutation.mutate(id)}
-              onCancelInterview={(id) => setCancelApplicationId(id)}
+              onCancelInterview={canUpdateInterview ? (id) => setCancelApplicationId(id) : undefined}
             />
           )}
         </div>
@@ -443,7 +463,7 @@ export function EmployerInterviewsPageContent() {
             items={statsQuery.data?.todaysSchedule ?? []}
             isLoading={statsQuery.isLoading}
             onSelect={(id) => openCandidate(id, "interview")}
-            onScheduleInterview={() => openScheduleModal(null)}
+            onScheduleInterview={canCreateInterview ? () => openScheduleModal(null) : undefined}
             onViewAll={() => {
               setView("list");
               setQuickDate("today");

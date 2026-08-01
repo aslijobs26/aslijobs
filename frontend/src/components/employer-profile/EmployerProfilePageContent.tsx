@@ -19,6 +19,7 @@ import {
   EMPLOYER_REGISTER_INDUSTRY_OPTIONS,
 } from "@/constants/employer-register";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
+import { useCan } from "@/providers/employer-permission-provider";
 import { employerProfileQueryKey } from "@/services/employer-login.service";
 import {
   updateEmployerProfile,
@@ -263,6 +264,10 @@ function EmptyCopy({ children }: { children: ReactNode }) {
 
 export function EmployerProfilePageContent() {
   const queryClient = useQueryClient();
+  const { can, canField } = useCan();
+  const canUpdateProfile = can("company_profile", "update");
+  const canViewGst = canField("company_profile", "gst");
+  const canViewPan = canField("company_profile", "pan");
   const visitMutationAttemptedRef = useRef(false);
   const [aboutTab, setAboutTab] = useState<AboutTab>("about");
   const [editSection, setEditSection] =
@@ -519,7 +524,7 @@ export function EmployerProfilePageContent() {
                   ? "Company Information"
                   : "Professional Information"
               }
-              onEdit={() => openEditor("company")}
+              onEdit={canUpdateProfile ? () => openEditor("company") : undefined}
             />
             <div className="p-4">
               <div className="flex flex-col gap-4 sm:flex-row">
@@ -602,14 +607,18 @@ export function EmployerProfilePageContent() {
                     label="Company Type"
                     value={valueOrDash(profile.companyType)}
                   />
-                  <MetadataItem
-                    label="GST Number"
-                    value={valueOrDash(profile.gstNumber)}
-                  />
-                  <MetadataItem
-                    label="PAN Number"
-                    value={valueOrDash(profile.panNumber)}
-                  />
+                  {canViewGst ? (
+                    <MetadataItem
+                      label="GST Number"
+                      value={valueOrDash(profile.gstNumber)}
+                    />
+                  ) : null}
+                  {canViewPan ? (
+                    <MetadataItem
+                      label="PAN Number"
+                      value={valueOrDash(profile.panNumber)}
+                    />
+                  ) : null}
                   <MetadataItem
                     label="Registration Number"
                     value={valueOrDash(profile.registrationNumber)}
@@ -626,7 +635,7 @@ export function EmployerProfilePageContent() {
           >
             <CardHeader
               title={isBusinessProfile ? "About Company" : "About Me"}
-              onEdit={() => openEditor("about")}
+              onEdit={canUpdateProfile ? () => openEditor("about") : undefined}
             />
             <div className="grid min-w-0 md:grid-cols-[9rem_minmax(0,1fr)]">
               <div
@@ -826,7 +835,7 @@ export function EmployerProfilePageContent() {
             >
               <CardHeader
                 title="Company Media"
-                onEdit={openMediaEditor}
+                onEdit={canUpdateProfile ? openMediaEditor : undefined}
                 editLabel="Edit company media"
               />
               <div className="p-4">
@@ -851,7 +860,8 @@ export function EmployerProfilePageContent() {
                           />
                         </button>
                       ))}
-                      {media.length < profile.companyMediaLimit ? (
+                      {canUpdateProfile &&
+                      media.length < profile.companyMediaLimit ? (
                         <button
                           type="button"
                           onClick={openMediaEditor}
@@ -880,15 +890,17 @@ export function EmployerProfilePageContent() {
                       Help candidates understand your workplace and team.{" "}
                       {EMPLOYER_REGISTER_IMAGE_UPLOAD_HINT}.
                     </p>
-                    <button
-                      type="button"
-                      onClick={openMediaEditor}
-                      className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary-light/30 px-4 text-sm font-semibold text-primary hover:border-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                      aria-label="Add company media"
-                    >
-                      <Plus className="size-4" aria-hidden="true" />
-                      Add More
-                    </button>
+                    {canUpdateProfile ? (
+                      <button
+                        type="button"
+                        onClick={openMediaEditor}
+                        className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary-light/30 px-4 text-sm font-semibold text-primary hover:border-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                        aria-label="Add company media"
+                      >
+                        <Plus className="size-4" aria-hidden="true" />
+                        Add More
+                      </button>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -958,7 +970,7 @@ export function EmployerProfilePageContent() {
           >
             <CardHeader
               title="Contact Information"
-              onEdit={() => openEditor("contact")}
+              onEdit={canUpdateProfile ? () => openEditor("contact") : undefined}
             />
             <dl className="space-y-3 p-4">
               {[
@@ -1025,7 +1037,7 @@ export function EmployerProfilePageContent() {
           >
             <CardHeader
               title={isBusinessProfile ? "Social Links" : "Professional Links"}
-              onEdit={() => openEditor("social")}
+              onEdit={canUpdateProfile ? () => openEditor("social") : undefined}
             />
             <div className="divide-y divide-border-subtle px-4">
               {activeSocialItems.length > 0 ? (

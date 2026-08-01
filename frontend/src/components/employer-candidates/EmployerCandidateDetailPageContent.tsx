@@ -3,11 +3,13 @@
 import { EmployerCandidateInterviewEditor } from "@/components/employer-candidates/EmployerCandidateInterviewEditor";
 import { EmployerCandidateNotesEditor } from "@/components/employer-candidates/EmployerCandidateNotesEditor";
 import {
+  formatExpectedSalary,
   formatTimelineActivityTitle,
   parseInterviewCancelledRemark,
 } from "@/components/employer-candidates/candidates-ats-utils";
 import { ResumePreview } from "@/components/job-seeker-resume/ResumePreview";
 import { ROUTES } from "@/constants/routes";
+import { useCan } from "@/providers/employer-permission-provider";
 import {
   downloadEmployerApplicationPdf,
   fetchEmployerApplication,
@@ -96,6 +98,20 @@ export function EmployerCandidateDetailPageContent({
   applicationId,
 }: EmployerCandidateDetailPageContentProps) {
   const queryClient = useQueryClient();
+  const { can, canField, getFieldLevel } = useCan();
+  const canExportCandidates = can("candidates", "export");
+  const canViewResume = canField("candidates", "resume");
+  const canUpdateCandidates = can("candidates", "update");
+  const canScheduleInterview = can("interviews", "create");
+  const canUpdateInterview = can("interviews", "update");
+  const canViewLocation = canField("candidates", "location");
+  const canViewExpectedSalary = canField("candidates", "expected_salary");
+  const canViewPhone =
+    canField("candidates", "phone") &&
+    getFieldLevel("candidates", "phone") !== "mask";
+  const canWriteNotes = canField("candidates", "notes", "write");
+  const canViewOffer = canField("candidates", "offer_amount");
+  const canWriteOffer = canField("candidates", "offer_amount", "write");
   const [rejectReason, setRejectReason] = useState("");
   const [offerDraft, setOfferDraft] = useState<ApplicationOffer>(EMPTY_OFFER);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -308,24 +324,47 @@ export function EmployerCandidateDetailPageContent({
               {experienceLabel}
             </dd>
           </div>
-          <div>
-            <dt className="inline">Location: </dt>
-            <dd className="inline font-semibold text-foreground">
-              {application.candidate.preferredJobLocation?.trim() || "—"}
-            </dd>
-          </div>
+          {canViewLocation ? (
+            <div>
+              <dt className="inline">Location: </dt>
+              <dd className="inline font-semibold text-foreground">
+                {application.candidate.preferredJobLocation?.trim() || "—"}
+              </dd>
+            </div>
+          ) : null}
+          {canViewExpectedSalary ? (
+            <div>
+              <dt className="inline">Expected salary: </dt>
+              <dd className="inline font-semibold text-foreground">
+                {formatExpectedSalary(
+                  application.candidate.expectedSalary,
+                  application.candidate.expectedSalaryPeriod,
+                )}
+              </dd>
+            </div>
+          ) : null}
+          {canViewPhone ? (
+            <div>
+              <dt className="inline">Phone: </dt>
+              <dd className="inline font-semibold text-foreground">
+                {application.candidate.phone?.trim() || "—"}
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt className="inline">Applied: </dt>
             <dd className="inline font-semibold text-foreground">
               {formatDateTime(application.appliedAt)}
             </dd>
           </div>
-          <div>
-            <dt className="inline">Resume version: </dt>
-            <dd className="inline font-semibold text-foreground">
-              v{application.resumeVersion}
-            </dd>
-          </div>
+          {canViewResume ? (
+            <div>
+              <dt className="inline">Resume version: </dt>
+              <dd className="inline font-semibold text-foreground">
+                v{application.resumeVersion}
+              </dd>
+            </div>
+          ) : null}
         </dl>
       </header>
 
@@ -384,15 +423,19 @@ export function EmployerCandidateDetailPageContent({
             </ol>
           </section>
 
-          <ResumePreview resumeJson={application.resumeSnapshot.resumeJson} />
+          {canViewResume ? (
+            <ResumePreview resumeJson={application.resumeSnapshot.resumeJson} />
+          ) : null}
         </div>
 
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24">
+          {canViewResume || canExportCandidates ? (
           <section className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">
             <h2 className="text-sm font-semibold text-foreground">
               Resume Actions
             </h2>
             <div className="mt-3 space-y-2">
+              {canViewResume ? (
               <button
                 type="button"
                 onClick={() => {
@@ -405,6 +448,8 @@ export function EmployerCandidateDetailPageContent({
               >
                 Preview Resume
               </button>
+              ) : null}
+              {canExportCandidates || canViewResume ? (
               <button
                 type="button"
                 disabled={isDownloading}
@@ -414,6 +459,8 @@ export function EmployerCandidateDetailPageContent({
                 <Download className="size-4" aria-hidden="true" />
                 {isDownloading ? "Downloading…" : "Download PDF"}
               </button>
+              ) : null}
+              {canViewResume ? (
               <button
                 type="button"
                 onClick={() => window.print()}
@@ -422,8 +469,10 @@ export function EmployerCandidateDetailPageContent({
                 <Printer className="size-4" aria-hidden="true" />
                 Print Resume
               </button>
+              ) : null}
             </div>
           </section>
+          ) : null}
 
           <section className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">
             <h2 className="text-sm font-semibold text-foreground">
@@ -442,7 +491,7 @@ export function EmployerCandidateDetailPageContent({
                 </p>
                 <p className="mt-0.5 text-xs text-muted">Hiring Completed</p>
               </div>
-            ) : (
+            ) : canUpdateCandidates ? (
               <select
                 id="application-status"
                 className="mt-1.5 w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
@@ -492,9 +541,16 @@ export function EmployerCandidateDetailPageContent({
                   ),
                 )}
               </select>
+            ) : (
+              <div className="mt-1.5 rounded-lg border border-border-subtle bg-hero-bg px-3 py-2">
+                <p className="text-sm font-semibold text-foreground">
+                  {EMPLOYER_APPLICATION_STATUS_LABELS[application.status]}
+                </p>
+              </div>
             )}
           </section>
 
+          {canScheduleInterview || canUpdateInterview ? (
           <section
             id="employer-candidate-interview-section"
             className="resume-no-print scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4"
@@ -510,7 +566,9 @@ export function EmployerCandidateDetailPageContent({
               />
             </div>
           </section>
+          ) : null}
 
+          {canViewOffer ? (
           <section
             id="employer-candidate-offer-section"
             className="resume-no-print scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4"
@@ -571,7 +629,9 @@ export function EmployerCandidateDetailPageContent({
               </div>
             </div>
           </section>
+          ) : null}
 
+          {canUpdateCandidates ? (
           <section className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">
             <h2 className="text-sm font-semibold text-foreground">
               Rejection reason
@@ -588,6 +648,7 @@ export function EmployerCandidateDetailPageContent({
               placeholder="Optional reason shared with the candidate timeline"
             />
           </section>
+          ) : null}
 
           <section className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">
             <h2 className="text-sm font-semibold text-foreground">Notes</h2>
@@ -595,9 +656,11 @@ export function EmployerCandidateDetailPageContent({
               <EmployerCandidateNotesEditor
                 application={application}
                 isSaving={notesMutation.isPending}
+                canWrite={canWriteNotes && canUpdateCandidates}
                 onSave={(payload) => notesMutation.mutate(payload)}
               />
             </div>
+            {canWriteOffer && canUpdateCandidates ? (
             <button
               type="button"
               disabled={hiringMutation.isPending}
@@ -608,6 +671,7 @@ export function EmployerCandidateDetailPageContent({
                 ? "Saving…"
                 : "Save offer / rejection"}
             </button>
+            ) : null}
           </section>
         </aside>
       </div>

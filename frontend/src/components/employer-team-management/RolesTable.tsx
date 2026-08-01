@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  ACCESS_LEVEL_LABELS,
+  ACCESS_LEVEL_PILL_CLASS,
   ROLE_COLOR_ICON_WRAP,
   ROLE_STATUS_PILL_CLASS,
 } from "@/constants/employer-team-management";
@@ -51,6 +53,9 @@ type RolesTableProps = {
   selectedRoleId?: string | null;
   isLoading?: boolean;
   isError?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
+  canCreate?: boolean;
   onRetry?: () => void;
   onSelect: (role: TeamRoleListItem) => void;
   onEdit: (role: TeamRoleListItem) => void;
@@ -66,6 +71,9 @@ export function RolesTable({
   selectedRoleId,
   isLoading = false,
   isError = false,
+  canUpdate = true,
+  canDelete = true,
+  canCreate = true,
   onRetry,
   onSelect,
   onEdit,
@@ -96,10 +104,11 @@ export function RolesTable({
 
   return (
     <div className="min-w-0 overflow-x-auto overscroll-x-contain scrollbar-hidden">
-      <table className="min-w-[36rem] w-full border-collapse text-left">
+      <table className="min-w-[42rem] w-full border-collapse text-left">
         <thead>
           <tr className="border-b border-border-subtle text-xs font-semibold uppercase tracking-wide text-muted">
             <th className="px-3 py-2.5 sm:px-4">Role Name</th>
+            <th className="px-3 py-2.5">Access</th>
             <th className="px-3 py-2.5">Members</th>
             <th className="px-3 py-2.5">Description</th>
             <th className="px-3 py-2.5">Status</th>
@@ -110,7 +119,7 @@ export function RolesTable({
           {isLoading
             ? Array.from({ length: 6 }).map((_, index) => (
                 <tr key={`skeleton-${index}`} className="border-b border-border-subtle">
-                  {Array.from({ length: 5 }).map((__, cell) => (
+                  {Array.from({ length: 6 }).map((__, cell) => (
                     <td key={cell} className="px-3 py-3">
                       <div className="h-4 w-full max-w-[7rem] animate-pulse rounded bg-hero-bg" />
                     </td>
@@ -121,7 +130,7 @@ export function RolesTable({
 
           {!isLoading && roles.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-3 py-10 text-center text-sm text-muted">
+              <td colSpan={6} className="px-3 py-10 text-center text-sm text-muted">
                 No roles found. Create a role to get started.
               </td>
             </tr>
@@ -158,6 +167,16 @@ export function RolesTable({
                         </span>
                       </div>
                     </td>
+                    <td className="px-3 py-3">
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                          ACCESS_LEVEL_PILL_CLASS[role.accessLevel],
+                        )}
+                      >
+                        {ACCESS_LEVEL_LABELS[role.accessLevel]}
+                      </span>
+                    </td>
                     <td className="px-3 py-3 text-sm tabular-nums text-foreground">
                       {role.memberCount}
                     </td>
@@ -180,6 +199,9 @@ export function RolesTable({
                     >
                       <RoleRowActions
                         role={role}
+                        canUpdate={canUpdate}
+                        canDelete={canDelete}
+                        canCreate={canCreate}
                         onEdit={onEdit}
                         onDuplicate={onDuplicate}
                         onArchive={onArchive}
@@ -200,6 +222,9 @@ export function RolesTable({
 
 function RoleRowActions({
   role,
+  canUpdate,
+  canDelete,
+  canCreate,
   onEdit,
   onDuplicate,
   onArchive,
@@ -208,6 +233,9 @@ function RoleRowActions({
   onDelete,
 }: {
   role: TeamRoleListItem;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canCreate: boolean;
   onEdit: (role: TeamRoleListItem) => void;
   onDuplicate: (role: TeamRoleListItem) => void;
   onArchive: (role: TeamRoleListItem) => void;
@@ -339,46 +367,52 @@ function RoleRowActions({
                 <Eye className="size-3.5" aria-hidden="true" />
                 View
               </Link>
-              <button
-                type="button"
-                role="menuitem"
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-hero-bg"
-                onClick={() => closeAndRun(() => onEdit(role))}
-              >
-                <Pencil className="size-3.5" aria-hidden="true" />
-                Edit
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-hero-bg"
-                onClick={() => closeAndRun(() => onDuplicate(role))}
-              >
-                <Copy className="size-3.5" aria-hidden="true" />
-                Duplicate
-              </button>
-              {role.status === "active" ? (
+              {canUpdate ? (
                 <button
                   type="button"
                   role="menuitem"
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-hero-bg"
-                  onClick={() => closeAndRun(() => onDeactivate(role))}
+                  onClick={() => closeAndRun(() => onEdit(role))}
                 >
-                  <Power className="size-3.5" aria-hidden="true" />
-                  Deactivate
+                  <Pencil className="size-3.5" aria-hidden="true" />
+                  Edit
                 </button>
-              ) : (
+              ) : null}
+              {canCreate ? (
                 <button
                   type="button"
                   role="menuitem"
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-hero-bg"
-                  onClick={() => closeAndRun(() => onActivate(role))}
+                  onClick={() => closeAndRun(() => onDuplicate(role))}
                 >
-                  <Power className="size-3.5" aria-hidden="true" />
-                  Activate
+                  <Copy className="size-3.5" aria-hidden="true" />
+                  Duplicate
                 </button>
-              )}
-              {!role.isSystem && role.status !== "archived" ? (
+              ) : null}
+              {canUpdate ? (
+                role.status === "active" ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-hero-bg"
+                    onClick={() => closeAndRun(() => onDeactivate(role))}
+                  >
+                    <Power className="size-3.5" aria-hidden="true" />
+                    Deactivate
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground hover:bg-hero-bg"
+                    onClick={() => closeAndRun(() => onActivate(role))}
+                  >
+                    <Power className="size-3.5" aria-hidden="true" />
+                    Activate
+                  </button>
+                )
+              ) : null}
+              {!role.isSystem && role.status !== "archived" && canDelete ? (
                 <button
                   type="button"
                   role="menuitem"
@@ -389,7 +423,7 @@ function RoleRowActions({
                   Archive
                 </button>
               ) : null}
-              {!role.isSystem ? (
+              {!role.isSystem && canDelete ? (
                 <button
                   type="button"
                   role="menuitem"

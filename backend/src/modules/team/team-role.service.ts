@@ -17,7 +17,6 @@ import { TeamActivityModel } from "./team-activity.model.js";
 import { recordTeamActivity } from "./team-activity.service.js";
 import { TeamMemberModel } from "./team-member.model.js";
 import {
-  createPermissionsForAccessLevel,
   normalizePermissionsMatrix,
   TEAM_PERMISSION_ACTIONS,
   TEAM_PERMISSION_MODULE_LABELS,
@@ -25,6 +24,15 @@ import {
   type RoleFieldAccessMap,
   type RolePermissionsMatrix,
 } from "./team-permissions.js";
+import {
+  accessLevelTemplateLabel,
+  generatePermissionsFromAccessLevel,
+  shouldReplacePermissionsOnAccessLevelChange,
+} from "./team-access-templates.js";
+import {
+  getFieldAccessCatalogMeta,
+  normalizeFieldAccessMap,
+} from "./field-access.catalog.js";
 import { TeamRoleModel } from "./team-role.model.js";
 import type {
   PermissionMatrixMeta,
@@ -128,7 +136,7 @@ class TeamRoleService {
         isSystem: true,
         color: role.color,
         icon: role.icon,
-        permissions: createPermissionsForAccessLevel(role.accessLevel),
+        permissions: generatePermissionsFromAccessLevel(role.accessLevel),
         fieldAccess: null,
         createdBy: employerObjectId,
         updatedBy: employerObjectId,
@@ -164,7 +172,7 @@ class TeamRoleService {
             $set: {
               permissions:
                 role.permissions ??
-                createPermissionsForAccessLevel(accessLevel),
+                generatePermissionsFromAccessLevel(accessLevel),
               color: role.color || defaults?.color || "primary",
               icon: role.icon || defaults?.icon || "shield",
               isSystem: SYSTEM_ROLE_NAME_SET.has(role.nameLower)
@@ -353,7 +361,7 @@ class TeamRoleService {
     return {
       ...mapRoleListItem(role, memberCount),
       permissions,
-      fieldAccess: (role.fieldAccess as RoleFieldAccessMap | null) ?? null,
+      fieldAccess: normalizeFieldAccessMap(role.fieldAccess),
       createdBy: String(role.createdBy),
       updatedBy: String(role.updatedBy),
       members: members.map((member) => {
@@ -400,7 +408,9 @@ class TeamRoleService {
     await this.assertUniqueName(employerId, nameLower);
 
     let permissions: RolePermissionsMatrix;
-    let fieldAccess: RoleFieldAccessMap | null = input.fieldAccess ?? null;
+    let fieldAccess: RoleFieldAccessMap | null = normalizeFieldAccessMap(
+      input.fieldAccess ?? null,
+    );
     let accessLevel = input.accessLevel;
     let color = input.color;
     let icon = input.icon;
@@ -418,8 +428,8 @@ class TeamRoleService {
       );
       fieldAccess =
         input.fieldAccess !== undefined
-          ? (input.fieldAccess ?? null)
-          : ((source.fieldAccess as RoleFieldAccessMap | null) ?? null);
+          ? normalizeFieldAccessMap(input.fieldAccess)
+          : normalizeFieldAccessMap(source.fieldAccess);
       accessLevel = input.accessLevel || (source.accessLevel as TeamAccessLevel);
       color = input.color || ((source.color || "primary") as TeamRoleColor);
       icon = input.icon || ((source.icon || "shield") as TeamRoleIcon);
@@ -432,7 +442,7 @@ class TeamRoleService {
         accessLevel,
       );
     } else {
-      permissions = createPermissionsForAccessLevel(accessLevel);
+      permissions = generatePermissionsFromAccessLevel(accessLevel);
     }
 
     try {
@@ -457,9 +467,13 @@ class TeamRoleService {
       await recordTeamActivity({
         employerId,
         type: "role_created",
-        message: `Role "${name}" created`,
+        message: `Role "${name}" created using ${accessLevelTemplateLabel(accessLevel)} template`,
         roleId: created._id,
         actorEmployerId: employerId,
+        metadata: {
+          accessLevel,
+          templateApplied: !input.cloneRoleId && !input.permissions,
+        },
       });
 
       return mapRoleListItem(created, 0);
@@ -476,8 +490,11 @@ class TeamRoleService {
   ): Promise<TeamRoleListItem> {
     const role = await this.findOwnedRoleOrThrow(employerId, roleId);
     const previousPermissions = JSON.stringify(role.permissions);
+    const previousAccessLevel = role.accessLevel as TeamAccessLevel;
     let nameChanged = false;
     let permissionsChanged = false;
+    let accessLevelChanged = false;
+    let permissionsRegenerated = false;
 
     if (input.name !== undefined) {
       const name = input.name.trim();
@@ -508,9 +525,6 @@ class TeamRoleService {
     if (input.description !== undefined) {
       role.description = input.description;
     }
-    if (input.accessLevel !== undefined) {
-      role.accessLevel = input.accessLevel;
-    }
     if (input.status !== undefined) {
       if (role.isSystem && input.status === "archived") {
         throw new AppError(
@@ -533,20 +547,43 @@ class TeamRoleService {
       );
       permissionsChanged =
         JSON.stringify(role.permissions) !== previousPermissions;
-    } else if (
-      input.accessLevel !== undefined &&
-      (role.permissions == null || role.accessLevel !== input.accessLevel)
-    ) {
-      // Only regenerate defaults when access level changes and permissions not sent.
-      if (input.permissions === undefined && nameChanged === false) {
-        // keep existing matrix unless empty
-        if (role.permissions == null) {
-          role.permissions = createPermissionsForAccessLevel(input.accessLevel);
-        }
+      if (input.accessLevel !== undefined) {
+        accessLevelChanged = input.accessLevel !== previousAccessLevel;
+        role.accessLevel = input.accessLevel;
+      } else if (permissionsChanged) {
+        accessLevelChanged = previousAccessLevel !== "custom";
+        role.accessLevel = "custom";
+      }
+    } else if (input.accessLevel !== undefined) {
+      const nextAccessLevel = input.accessLevel;
+      accessLevelChanged = nextAccessLevel !== previousAccessLevel;
+      role.accessLevel = nextAccessLevel;
+
+      if (
+        accessLevelChanged &&
+        shouldReplacePermissionsOnAccessLevelChange(
+          previousAccessLevel,
+          nextAccessLevel,
+        )
+      ) {
+        role.permissions = generatePermissionsFromAccessLevel(nextAccessLevel);
+        permissionsChanged = true;
+        permissionsRegenerated = true;
+      } else if (role.permissions == null) {
+        role.permissions = generatePermissionsFromAccessLevel(nextAccessLevel);
+        permissionsChanged = true;
+        permissionsRegenerated = true;
       }
     }
+    let fieldAccessChanged = false;
+    let previousFieldAccess: RoleFieldAccessMap | null = null;
+    let nextFieldAccess: RoleFieldAccessMap | null = null;
     if (input.fieldAccess !== undefined) {
-      role.fieldAccess = input.fieldAccess;
+      previousFieldAccess = normalizeFieldAccessMap(role.fieldAccess);
+      nextFieldAccess = normalizeFieldAccessMap(input.fieldAccess);
+      role.fieldAccess = nextFieldAccess;
+      fieldAccessChanged =
+        JSON.stringify(previousFieldAccess) !== JSON.stringify(nextFieldAccess);
     }
 
     role.updatedBy = toObjectId(employerId);
@@ -564,15 +601,54 @@ class TeamRoleService {
       message: `Role "${role.name}" updated`,
       roleId: role._id,
       actorEmployerId: employerId,
+      metadata: nameChanged ? { nameChanged: true } : null,
     });
 
-    if (permissionsChanged) {
+    if (accessLevelChanged) {
+      await recordTeamActivity({
+        employerId,
+        type: "access_level_changed",
+        message: `Role "${role.name}" switched from ${accessLevelTemplateLabel(previousAccessLevel)} to ${accessLevelTemplateLabel(role.accessLevel as TeamAccessLevel)}`,
+        roleId: role._id,
+        actorEmployerId: employerId,
+        metadata: {
+          from: previousAccessLevel,
+          to: role.accessLevel,
+          permissionsReplaced: permissionsRegenerated,
+        },
+      });
+    }
+
+    if (permissionsRegenerated) {
+      await recordTeamActivity({
+        employerId,
+        type: "permissions_regenerated",
+        message: `Permissions regenerated for role "${role.name}" from ${accessLevelTemplateLabel(role.accessLevel as TeamAccessLevel)} template`,
+        roleId: role._id,
+        actorEmployerId: employerId,
+        metadata: { accessLevel: role.accessLevel },
+      });
+    } else if (permissionsChanged) {
       await recordTeamActivity({
         employerId,
         type: "permission_changed",
         message: `Permissions updated for role "${role.name}"`,
         roleId: role._id,
         actorEmployerId: employerId,
+      });
+    }
+
+    if (fieldAccessChanged) {
+      await recordTeamActivity({
+        employerId,
+        type: "field_access_updated",
+        message: `Field access updated for role "${role.name}"`,
+        roleId: role._id,
+        actorEmployerId: employerId,
+        metadata: {
+          oldValue: previousFieldAccess,
+          newValue: nextFieldAccess,
+        },
       });
     }
 
@@ -584,26 +660,76 @@ class TeamRoleService {
     employerId: string,
     roleId: string,
     input: UpdateRolePermissionsInput,
+    auditContext?: {
+      actorMemberId?: string | null;
+      ip?: string | null;
+      userAgent?: string | null;
+    },
   ): Promise<TeamRoleDetails> {
     const role = await this.findOwnedRoleOrThrow(employerId, roleId);
+    const previousFieldAccess = normalizeFieldAccessMap(role.fieldAccess);
+    const previousAccessLevel = role.accessLevel as TeamAccessLevel;
     role.permissions = normalizePermissionsMatrix(
       input.permissions,
       role.accessLevel as TeamAccessLevel,
     );
     if (input.fieldAccess !== undefined) {
-      role.fieldAccess = input.fieldAccess;
+      role.fieldAccess = normalizeFieldAccessMap(input.fieldAccess);
     }
     role.accessLevel = "custom";
     role.updatedBy = toObjectId(employerId);
     await role.save();
 
+    if (previousAccessLevel !== "custom") {
+      await recordTeamActivity({
+        employerId,
+        type: "access_level_changed",
+        message: `Role "${role.name}" switched from ${accessLevelTemplateLabel(previousAccessLevel)} to Custom Access`,
+        roleId: role._id,
+        actorEmployerId: employerId,
+        memberId: auditContext?.actorMemberId ?? null,
+        metadata: {
+          from: previousAccessLevel,
+          to: "custom",
+          permissionsReplaced: false,
+          reason: "manual_permission_edit",
+        },
+      });
+    }
+
     await recordTeamActivity({
       employerId,
       type: "permission_changed",
-      message: `Permissions updated for role "${role.name}"`,
+      message: `Manual permission edit for role "${role.name}"`,
       roleId: role._id,
       actorEmployerId: employerId,
+      memberId: auditContext?.actorMemberId ?? null,
+      metadata: {
+        ip: auditContext?.ip ?? null,
+        userAgent: auditContext?.userAgent ?? null,
+      },
     });
+
+    const nextFieldAccess = normalizeFieldAccessMap(role.fieldAccess);
+    if (
+      input.fieldAccess !== undefined &&
+      JSON.stringify(previousFieldAccess) !== JSON.stringify(nextFieldAccess)
+    ) {
+      await recordTeamActivity({
+        employerId,
+        type: "field_access_updated",
+        message: `Field access updated for role "${role.name}"`,
+        roleId: role._id,
+        actorEmployerId: employerId,
+        memberId: auditContext?.actorMemberId ?? null,
+        metadata: {
+          oldValue: previousFieldAccess,
+          newValue: nextFieldAccess,
+          ip: auditContext?.ip ?? null,
+          userAgent: auditContext?.userAgent ?? null,
+        },
+      });
+    }
 
     return this.getRoleDetails(employerId, roleId);
   }
@@ -758,6 +884,7 @@ class TeamRoleService {
             ? "Full Access"
             : key.charAt(0).toUpperCase() + key.slice(1),
       })),
+      fieldAccess: getFieldAccessCatalogMeta(),
     };
   }
 

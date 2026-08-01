@@ -333,7 +333,7 @@ function AcceptInvitationContent() {
         title="Invitation Invalid"
         description={
           preview.message ||
-          "This invitation link is invalid. Ask your employer to resend the invitation."
+          "This invitation link is invalid or has been replaced by a newer invitation. Open the latest invitation email, or ask your employer to resend."
         }
         tone="error"
       />

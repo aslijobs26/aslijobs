@@ -59,11 +59,13 @@ export type RolePermissionsMatrix = Record<
   ModulePermission
 >;
 
+export type FieldAccessLevel = "hidden" | "view" | "mask" | "edit";
+
 export type RoleFieldAccessMap = Partial<
-  Record<TeamPermissionModule, Record<string, boolean>>
+  Record<TeamPermissionModule, Partial<Record<string, FieldAccessLevel>>>
 >;
 
-function emptyModulePermission(): ModulePermission {
+export function emptyModulePermission(): ModulePermission {
   return {
     fullAccess: false,
     create: false,
@@ -75,7 +77,7 @@ function emptyModulePermission(): ModulePermission {
   };
 }
 
-function fullModulePermission(): ModulePermission {
+export function fullModulePermission(): ModulePermission {
   return {
     fullAccess: true,
     create: true,
@@ -87,7 +89,7 @@ function fullModulePermission(): ModulePermission {
   };
 }
 
-function readOnlyModulePermission(): ModulePermission {
+export function readOnlyModulePermission(): ModulePermission {
   return {
     fullAccess: false,
     create: false,
@@ -99,46 +101,11 @@ function readOnlyModulePermission(): ModulePermission {
   };
 }
 
-function limitedModulePermission(): ModulePermission {
-  return {
-    fullAccess: false,
-    create: true,
-    read: true,
-    update: true,
-    delete: false,
-    export: true,
-    fields: {},
-  };
-}
-
 export function createEmptyPermissionsMatrix(): RolePermissionsMatrix {
   return TEAM_PERMISSION_MODULES.reduce((accumulator, moduleKey) => {
     accumulator[moduleKey] = emptyModulePermission();
     return accumulator;
   }, {} as RolePermissionsMatrix);
-}
-
-export function createPermissionsForAccessLevel(
-  accessLevel: TeamAccessLevel,
-): RolePermissionsMatrix {
-  const matrix = createEmptyPermissionsMatrix();
-
-  for (const moduleKey of TEAM_PERMISSION_MODULES) {
-    if (accessLevel === "full_access") {
-      matrix[moduleKey] = fullModulePermission();
-    } else if (accessLevel === "view_only") {
-      matrix[moduleKey] = readOnlyModulePermission();
-    } else if (accessLevel === "limited") {
-      matrix[moduleKey] =
-        moduleKey === "settings" || moduleKey === "subscription"
-          ? readOnlyModulePermission()
-          : limitedModulePermission();
-    } else {
-      matrix[moduleKey] = limitedModulePermission();
-    }
-  }
-
-  return matrix;
 }
 
 export function normalizeModulePermission(
@@ -173,19 +140,23 @@ export function normalizeModulePermission(
   };
 }
 
+/**
+ * Normalize a partial matrix. Missing modules default to empty (unchecked).
+ * Access-level templates are applied separately via team-access-templates.
+ */
 export function normalizePermissionsMatrix(
   input: Partial<Record<string, Partial<ModulePermission>>> | null | undefined,
-  accessLevel: TeamAccessLevel = "custom",
+  _accessLevel: TeamAccessLevel = "custom",
 ): RolePermissionsMatrix {
-  const fallback = createPermissionsForAccessLevel(accessLevel);
+  const empty = createEmptyPermissionsMatrix();
   if (!input || typeof input !== "object") {
-    return fallback;
+    return empty;
   }
 
   const matrix = createEmptyPermissionsMatrix();
   for (const moduleKey of TEAM_PERMISSION_MODULES) {
     matrix[moduleKey] = normalizeModulePermission(
-      input[moduleKey] ?? fallback[moduleKey],
+      input[moduleKey] ?? empty[moduleKey],
     );
   }
   return matrix;

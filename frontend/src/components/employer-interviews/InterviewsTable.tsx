@@ -37,9 +37,9 @@ type InterviewsTableProps = {
   onPageChange: (page: number) => void;
   onSortChange: (sort: "interview_asc" | "interview_desc") => void;
   onRowOpen: (applicationId: string) => void;
-  onEditInterview: (applicationId: string) => void;
+  onEditInterview?: (applicationId: string) => void;
   onCompleteStatus: (applicationId: string) => void;
-  onCancelInterview: (applicationId: string) => void;
+  onCancelInterview?: (applicationId: string) => void;
 };
 
 const COLUMN_COUNT = 8;
@@ -339,7 +339,7 @@ export function InterviewsTable({
                           >
                             Open candidate
                           </button>
-                          {!item.isCancelled ? (
+                          {!item.isCancelled && onEditInterview ? (
                             <button
                               type="button"
                               role="menuitem"
@@ -367,7 +367,8 @@ export function InterviewsTable({
                             </button>
                           ) : null}
                           {item.status === "interview_scheduled" &&
-                          !item.isCancelled ? (
+                          !item.isCancelled &&
+                          onCancelInterview ? (
                             <button
                               type="button"
                               role="menuitem"

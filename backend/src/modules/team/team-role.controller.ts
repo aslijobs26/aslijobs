@@ -105,6 +105,11 @@ export class TeamRoleController {
       employerId,
       roleId,
       body,
+      {
+        actorMemberId: req.rbac?.memberId ?? null,
+        ip: req.ip ?? null,
+        userAgent: req.get("user-agent") ?? null,
+      },
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {

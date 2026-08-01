@@ -40,7 +40,7 @@ export function NotificationBell({
   const unreadQuery = useQuery({
     queryKey: notificationQueryKeys.unreadCount(recipientScope),
     queryFn: fetchNotificationUnreadCount,
-    staleTime: 30_000,
+    staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
@@ -53,7 +53,8 @@ export function NotificationBell({
         readStatus: "all",
       }),
     enabled: isOpen,
-    staleTime: 15_000,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const markReadMutation = useMutation({

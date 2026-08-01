@@ -5,6 +5,8 @@ import {
   getUploadedFile,
   getUploadedFiles,
 } from "../../middleware/employer-document-upload.middleware.js";
+import { assertFieldsEditable } from "../rbac/field-access.guards.js";
+import { sanitizeCompanyProfileDto } from "../rbac/field-access.response.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { employerService } from "./employer.service.js";
 import type {
@@ -106,6 +108,13 @@ export class EmployerController {
     }
 
     const body = req.body as UpdateEmployerProfileSchema;
+    const editableFields: string[] = [];
+    if (typeof body.gstNumber === "string") editableFields.push("gst");
+    if (typeof body.panNumber === "string") editableFields.push("pan");
+    if (editableFields.length > 0) {
+      assertFieldsEditable(req.rbac, "company_profile", editableFields);
+    }
+
     const result = await employerService.updateEmployerProfile(
       {
         employerId,
@@ -120,7 +129,10 @@ export class EmployerController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Employer profile updated successfully",
-      data: result,
+      data: sanitizeCompanyProfileDto(
+        req.rbac,
+        structuredClone(result) as unknown as Record<string, unknown>,
+      ),
     });
   };
 }

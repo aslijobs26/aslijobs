@@ -1,6 +1,7 @@
 "use client";
 
 import { EMPLOYER_TEAM_QUERY_KEYS } from "@/constants/employer-team-management";
+import { useCan } from "@/providers/employer-permission-provider";
 import {
   fetchDepartments,
   fetchTeamRoles,
@@ -51,6 +52,8 @@ export function TeamMembersSidebar({
   onInvite,
   onOpenRoles,
 }: TeamMembersSidebarProps) {
+  const { can } = useCan();
+  const canInviteMember = can("team_management", "create");
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -105,6 +108,7 @@ export function TeamMembersSidebar({
 
   return (
     <aside className="space-y-4">
+      {canInviteMember ? (
       <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
         <h3 className="text-sm font-bold text-foreground">Invite Team Member</h3>
         <p className="mt-1 text-xs text-muted">
@@ -166,6 +170,7 @@ export function TeamMembersSidebar({
           Send Invitation
         </button>
       </section>
+      ) : null}
 
       <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
         <h3 className="text-sm font-bold text-foreground">Team by Role</h3>

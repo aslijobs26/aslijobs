@@ -1,5 +1,8 @@
 import { Schema, model, type InferSchemaType, type Types } from "mongoose";
-import { TEAM_INVITATION_STATUSES } from "./team.constants.js";
+import {
+  TEAM_INVITATION_EMAIL_DELIVERY_STATUSES,
+  TEAM_INVITATION_STATUSES,
+} from "./team.constants.js";
 
 const teamInvitationSchema = new Schema(
   {
@@ -62,6 +65,26 @@ const teamInvitationSchema = new Schema(
       enum: TEAM_INVITATION_STATUSES,
       default: "pending",
       index: true,
+    },
+    emailDeliveryStatus: {
+      type: String,
+      enum: TEAM_INVITATION_EMAIL_DELIVERY_STATUSES,
+      default: "pending",
+      index: true,
+    },
+    emailLastError: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    emailProviderMessageId: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    emailSentAt: {
+      type: Date,
+      default: null,
     },
     expiresAt: {
       type: Date,

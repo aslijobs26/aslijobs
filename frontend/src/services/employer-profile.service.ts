@@ -1,5 +1,8 @@
 import { apiClient } from "@/services/api-client";
-import type { EmployerLoginPublic } from "@/services/employer-login.service";
+import {
+  fetchAuthenticatedEmployer,
+  type EmployerLoginPublic,
+} from "@/services/employer-login.service";
 
 type ApiSuccess<T> = {
   success: true;
@@ -19,10 +22,6 @@ export type EmployerProfilePublic = EmployerLoginPublic & {
   pincode: string;
   city: string;
   state: string;
-};
-
-type MeResponse = {
-  employer: EmployerProfilePublic;
 };
 
 type UpdateProfileResponse = {
@@ -74,10 +73,10 @@ export type UpdateEmployerProfileInput = {
 };
 
 export async function fetchEmployerProfile() {
-  // Same endpoint as login "me" — callers should prefer useEmployerProfile /
-  // React Query cache for reads. Kept for rare non-hook paths.
-  const response = await apiClient.get<ApiSuccess<MeResponse>>("/employers/me");
-  return response.data.data.employer;
+  // Delegate to the shared login "me" client so there is one HTTP path.
+  // Prefer useEmployerProfile / ensureEmployerProfile for cached reads.
+  const { employer } = await fetchAuthenticatedEmployer();
+  return employer;
 }
 
 export async function updateEmployerProfile(input: UpdateEmployerProfileInput) {

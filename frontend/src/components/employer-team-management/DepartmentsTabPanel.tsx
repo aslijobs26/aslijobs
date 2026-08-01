@@ -29,11 +29,16 @@ import type {
 } from "@/types/employer-team";
 import { getTeamApiErrorMessage } from "@/utils/employer-team";
 import { invalidateEmployerAccessCaches } from "@/utils/employer-rbac-cache";
+import { useCan } from "@/providers/employer-permission-provider";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export function DepartmentsTabPanel() {
   const queryClient = useQueryClient();
+  const { can } = useCan();
+  const canCreateDepartment = can("team_management", "create");
+  const canUpdateDepartment = can("team_management", "update");
+  const canDeleteDepartment = can("team_management", "delete");
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -180,11 +185,15 @@ export function DepartmentsTabPanel() {
         filtersOpen={filtersOpen}
         onToggleFilters={() => setFiltersOpen((current) => !current)}
         activeFilterCount={activeFilterCount}
-        onAddDepartment={() => {
-          setFormError(null);
-          setEditing(null);
-          setModalMode("create");
-        }}
+        onAddDepartment={
+          canCreateDepartment
+            ? () => {
+                setFormError(null);
+                setEditing(null);
+                setModalMode("create");
+              }
+            : undefined
+        }
       />
 
       {filtersOpen ? (
@@ -207,6 +216,8 @@ export function DepartmentsTabPanel() {
           departments={departmentsQuery.data?.departments ?? []}
           isLoading={departmentsQuery.isLoading}
           isError={departmentsQuery.isError}
+          canUpdate={canUpdateDepartment}
+          canDelete={canDeleteDepartment}
           onRetry={() => {
             void departmentsQuery.refetch();
           }}

@@ -1,6 +1,20 @@
 import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
+import {
+  assertFieldReadable,
+  assertFieldsEditable,
+  assertSearchFiltersAllowed,
+} from "../rbac/field-access.guards.js";
+import {
+  EMPLOYER_EXPORT_CATALOG_MAP,
+  filterExportFieldsByAccess,
+} from "../rbac/field-access.sanitize.js";
+import {
+  sanitizeCandidateDetail,
+  sanitizeCandidateListItem,
+  sanitizeInterviewListItem,
+} from "../rbac/field-access.response.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { applicationService } from "./application.service.js";
 import { employerExportService } from "./employer-export.service.js";
@@ -20,6 +34,7 @@ import type {
   UpdateApplicationNotesSchema,
   UpdateApplicationStatusSchema,
 } from "./application.validation.js";
+import type { EmployerExportField } from "./employer-export.types.js";
 
 function requireEmployerId(req: Request): string {
   const employerId = req.employerId?.trim();
@@ -147,6 +162,10 @@ export class ApplicationController {
     const employerId = requireEmployerId(req);
     const query = req.query as unknown as ListEmployerApplicationsQuerySchema;
 
+    assertSearchFiltersAllowed(req.rbac, "candidates", [
+      { field: "location", active: Boolean(query.location?.trim()) },
+    ]);
+
     const result = await applicationService.listForEmployer({
       employerId,
       publicJobId: query.publicJobId,
@@ -163,9 +182,16 @@ export class ApplicationController {
       appliedTo: query.appliedTo,
     });
 
+    const applications = result.applications.map((item) =>
+      sanitizeCandidateListItem(
+        req.rbac,
+        { ...item } as unknown as Record<string, unknown>,
+      ),
+    );
+
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Applications retrieved.",
-      data: result,
+      data: { ...result, applications },
     });
   };
 
@@ -230,9 +256,16 @@ export class ApplicationController {
       cancelledOnly: query.cancelledOnly,
     });
 
+    const interviews = result.interviews.map((item) =>
+      sanitizeInterviewListItem(
+        req.rbac,
+        { ...item } as unknown as Record<string, unknown>,
+      ),
+    );
+
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Interviews retrieved.",
-      data: result,
+      data: { ...result, interviews },
     });
   };
 
@@ -263,6 +296,10 @@ export class ApplicationController {
     const employerId = requireEmployerId(req);
     const body = req.body as EmployerExportBodySchema;
 
+    assertSearchFiltersAllowed(req.rbac, "candidates", [
+      { field: "location", active: Boolean(body.location?.trim()) },
+    ]);
+
     const result = await employerExportService.preview({
       employerId,
       format: body.format,
@@ -289,10 +326,28 @@ export class ApplicationController {
     const employerId = requireEmployerId(req);
     const body = req.body as EmployerExportBodySchema;
 
+    assertSearchFiltersAllowed(req.rbac, "candidates", [
+      { field: "location", active: Boolean(body.location?.trim()) },
+    ]);
+
+    const allowedFields = filterExportFieldsByAccess(
+      req.rbac,
+      "candidates",
+      body.fields as EmployerExportField[],
+      EMPLOYER_EXPORT_CATALOG_MAP as Partial<Record<EmployerExportField, string>>,
+    );
+
+    if (allowedFields.length === 0) {
+      throw new AppError(
+        "No exportable fields are available for your role.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+
     const file = await employerExportService.export({
       employerId,
       format: body.format,
-      fields: body.fields,
+      fields: allowedFields,
       publicJobId: body.publicJobId || undefined,
       status: body.status,
       search: body.search,
@@ -323,9 +378,14 @@ export class ApplicationController {
       applicationId,
     });
 
+    const application = sanitizeCandidateDetail(
+      req.rbac,
+      structuredClone(result.application) as unknown as Record<string, unknown>,
+    );
+
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Application retrieved.",
-      data: result,
+      data: { application },
     });
   };
 
@@ -335,6 +395,8 @@ export class ApplicationController {
   ): Promise<void> => {
     const employerId = requireEmployerId(req);
     const applicationId = String(req.params.applicationId ?? "");
+
+    assertFieldReadable(req.rbac, "candidates", "resume");
 
     const pdf = await applicationService.downloadSnapshotPdfForEmployer({
       employerId,
@@ -354,6 +416,7 @@ export class ApplicationController {
     req: Request,
     res: Response,
   ): Promise<void> => {
+    assertFieldReadable(req.rbac, "candidates", "resume");
     const token = String(req.params.token ?? "");
     const pdf = await employerResumeAccessService.openResumePdfFromToken(token);
 
@@ -394,6 +457,8 @@ export class ApplicationController {
     const applicationId = String(req.params.applicationId ?? "");
     const body = req.body as UpdateApplicationNotesSchema;
 
+    assertFieldsEditable(req.rbac, "candidates", ["notes"]);
+
     const result = await applicationService.updateNotesForEmployer({
       employerId,
       applicationId,
@@ -404,7 +469,15 @@ export class ApplicationController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Notes saved successfully.",
-      data: result,
+      data: {
+        application: sanitizeCandidateDetail(
+          req.rbac,
+          structuredClone(result.application) as unknown as Record<
+            string,
+            unknown
+          >,
+        ),
+      },
     });
   };
 
@@ -479,6 +552,10 @@ export class ApplicationController {
     const employerId = requireEmployerId(req);
     const applicationId = String(req.params.applicationId ?? "");
     const body = req.body as UpdateApplicationHiringSchema;
+
+    if (body.offer !== undefined) {
+      assertFieldsEditable(req.rbac, "candidates", ["offer_amount"]);
+    }
 
     const result = await applicationService.updateHiringForEmployer({
       employerId,

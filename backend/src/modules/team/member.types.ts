@@ -1,5 +1,6 @@
 import type {
   TeamAccessLevel,
+  TeamInvitationEmailDeliveryStatus,
   TeamInvitationStatus,
   TeamMemberStatus,
 } from "./team.constants.js";
@@ -30,6 +31,7 @@ export type TeamMemberListItem = {
   designation: string;
   status: TeamMemberStatus;
   invitationStatus: TeamInvitationStatus | "";
+  emailDeliveryStatus: TeamInvitationEmailDeliveryStatus | null;
   accessLevel: TeamAccessLevel;
   department: TeamDepartmentSummary;
   role: TeamRoleSummary | null;
@@ -57,6 +59,8 @@ export type TeamInvitationListItem = {
   email: string;
   fullName: string;
   status: TeamInvitationStatus;
+  emailDeliveryStatus: TeamInvitationEmailDeliveryStatus;
+  emailLastError: string;
   departmentId: string;
   roleId: string;
   memberId: string;
@@ -64,6 +68,15 @@ export type TeamInvitationListItem = {
   lastSentAt: string;
   resendCount: number;
   createdAt: string;
+};
+
+export type InviteMemberResult = {
+  member: TeamMemberListItem;
+  invitation: TeamInvitationListItem;
+  emailDelivered: boolean;
+  emailError: string | null;
+  /** Present only in development to support local acceptance testing. */
+  debugAcceptUrl?: string;
 };
 
 export type TeamInvitationPreviewState =

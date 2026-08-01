@@ -3,6 +3,7 @@
 import { EmployerProfileDialog } from "@/components/employer-profile/EmployerProfileDialog";
 import {
   ACCESS_LEVEL_LABELS,
+  ACCESS_LEVEL_PILL_CLASS,
   EMPLOYER_TEAM_QUERY_KEYS,
   ROLE_COLOR_OPTIONS,
   ROLE_ICON_OPTIONS,
@@ -16,6 +17,7 @@ import type {
   TeamRoleListItem,
 } from "@/types/employer-team";
 import { cn } from "@/utils/cn";
+import { shouldReplacePermissionsOnAccessLevelChange } from "@/utils/employer-team-permissions";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
@@ -58,6 +60,9 @@ export function RoleFormModal({
 }: RoleFormModalProps) {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<CreateRolePayload | null>(
+    null,
+  );
 
   const rolesQuery = useQuery({
     queryKey: EMPLOYER_TEAM_QUERY_KEYS.roles(),
@@ -80,24 +85,25 @@ export function RoleFormModal({
       return;
     }
     setForm(EMPTY);
+    setPendingPayload(null);
   }, [mode, role]);
 
-  const handleSubmit = () => {
+  const buildPayload = (): CreateRolePayload | null => {
     const name = form.name.trim();
     if (name.length < 2) {
       setFieldError("Role name must be at least 2 characters.");
-      return;
+      return null;
     }
     if (name.length > 60) {
       setFieldError("Role name must be at most 60 characters.");
-      return;
+      return null;
     }
     if (form.description.length > 300) {
       setFieldError("Description must be at most 300 characters.");
-      return;
+      return null;
     }
     setFieldError(null);
-    onSubmit({
+    return {
       name,
       description: form.description.trim(),
       accessLevel: form.accessLevel,
@@ -107,203 +113,280 @@ export function RoleFormModal({
       ...(mode === "create" && form.cloneRoleId
         ? { cloneRoleId: form.cloneRoleId }
         : {}),
-    });
+    };
+  };
+
+  const handleSubmit = () => {
+    const payload = buildPayload();
+    if (!payload) return;
+
+    if (
+      mode === "edit" &&
+      role &&
+      shouldReplacePermissionsOnAccessLevelChange(
+        role.accessLevel,
+        form.accessLevel,
+      )
+    ) {
+      setPendingPayload(payload);
+      return;
+    }
+
+    onSubmit(payload);
   };
 
   return (
-    <EmployerProfileDialog
-      title={mode === "create" ? "Create Role" : "Edit Role"}
-      description={
-        mode === "create"
-          ? "Define a role and optionally clone permissions from an existing role."
-          : "Update role details. Permission matrix can be edited from the roles panel."
-      }
-      onClose={onClose}
-      footer={
-        <div className="flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="inline-flex h-10 items-center rounded-lg border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50"
-          >
-            {isSubmitting
-              ? mode === "create"
-                ? "Creating..."
-                : "Saving..."
-              : mode === "create"
-                ? "Create Role"
-                : "Save Changes"}
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        {fieldError || errorMessage ? (
-          <p
-            role="alert"
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-          >
-            {fieldError || errorMessage}
-          </p>
-        ) : null}
-
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-foreground">
-            Role Name <span className="text-red-600">*</span>
-          </span>
-          <input
-            value={form.name}
-            disabled={mode === "edit" && Boolean(role?.isSystem)}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, name: event.target.value }))
-            }
-            className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-hero-bg disabled:text-muted"
-          />
-        </label>
-
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-foreground">
-            Description
-          </span>
-          <textarea
-            value={form.description}
-            rows={3}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                description: event.target.value,
-              }))
-            }
-            className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
-        </label>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-foreground">
-              Access Level
-            </span>
-            <select
-              value={form.accessLevel}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  accessLevel: event.target.value as TeamAccessLevel,
-                }))
-              }
-              className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+    <>
+      <EmployerProfileDialog
+        title={mode === "create" ? "Create Role" : "Edit Role"}
+        description={
+          mode === "create"
+            ? "Choose an Access Level to generate a permission template. You can fine-tune the matrix after creation."
+            : "Update role details. Changing Access Level to Full, Limited, or View Only replaces the permission matrix."
+        }
+        onClose={onClose}
+        footer={
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="inline-flex h-10 items-center rounded-lg border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50"
             >
-              {(Object.keys(ACCESS_LEVEL_LABELS) as TeamAccessLevel[]).map(
-                (level) => (
-                  <option key={level} value={level}>
-                    {ACCESS_LEVEL_LABELS[level]}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-foreground">
-              Status
-            </span>
-            <select
-              value={form.status}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  status: event.target.value as "active" | "inactive",
-                }))
-              }
-              className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50"
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </label>
-        </div>
-
-        <fieldset>
-          <legend className="mb-1.5 text-sm font-medium text-foreground">
-            Role Color
-          </legend>
-          <div className="flex flex-wrap gap-2">
-            {ROLE_COLOR_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-label={option.label}
-                aria-pressed={form.color === option.value}
-                onClick={() =>
-                  setForm((current) => ({ ...current, color: option.value }))
-                }
-                className={cn(
-                  "size-8 rounded-full border-2 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                  option.swatchClassName,
-                  form.color === option.value
-                    ? "scale-110 border-foreground"
-                    : "border-transparent",
-                )}
-              />
-            ))}
+              {isSubmitting
+                ? mode === "create"
+                  ? "Creating..."
+                  : "Saving..."
+                : mode === "create"
+                  ? "Create Role"
+                  : "Save Changes"}
+            </button>
           </div>
-        </fieldset>
+        }
+      >
+        <div className="space-y-4">
+          {fieldError || errorMessage ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            >
+              {fieldError || errorMessage}
+            </p>
+          ) : null}
 
-        <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-foreground">
-            Role Icon
-          </span>
-          <select
-            value={form.icon}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                icon: event.target.value as TeamRoleIcon,
-              }))
-            }
-            className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            {ROLE_ICON_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {mode === "create" ? (
           <label className="block text-sm">
             <span className="mb-1.5 block font-medium text-foreground">
-              Clone Existing Role
+              Role Name <span className="text-red-600">*</span>
             </span>
-            <select
-              value={form.cloneRoleId}
+            <input
+              value={form.name}
+              disabled={mode === "edit" && Boolean(role?.isSystem)}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, name: event.target.value }))
+              }
+              className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-hero-bg disabled:text-muted"
+            />
+          </label>
+
+          <label className="block text-sm">
+            <span className="mb-1.5 block font-medium text-foreground">
+              Description
+            </span>
+            <textarea
+              value={form.description}
+              rows={3}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
-                  cloneRoleId: event.target.value,
+                  description: event.target.value,
+                }))
+              }
+              className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-foreground">
+                Access Level
+              </span>
+              <select
+                value={form.accessLevel}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    accessLevel: event.target.value as TeamAccessLevel,
+                  }))
+                }
+                className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                {(Object.keys(ACCESS_LEVEL_LABELS) as TeamAccessLevel[]).map(
+                  (level) => (
+                    <option key={level} value={level}>
+                      {ACCESS_LEVEL_LABELS[level]}
+                    </option>
+                  ),
+                )}
+              </select>
+              <span
+                className={cn(
+                  "mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                  ACCESS_LEVEL_PILL_CLASS[form.accessLevel],
+                )}
+              >
+                {ACCESS_LEVEL_LABELS[form.accessLevel]}
+              </span>
+              <p className="mt-1.5 text-xs text-muted">
+                {form.accessLevel === "full_access"
+                  ? "Enables every module and action."
+                  : form.accessLevel === "view_only"
+                    ? "Read-only across the application."
+                    : form.accessLevel === "limited"
+                      ? "Hiring-manager template. Admin modules stay disabled."
+                      : "Starts empty. Configure permissions manually after create."}
+              </p>
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-foreground">
+                Status
+              </span>
+              <select
+                value={form.status}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    status: event.target.value as "active" | "inactive",
+                  }))
+                }
+                className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </label>
+          </div>
+
+          <fieldset>
+            <legend className="mb-1.5 text-sm font-medium text-foreground">
+              Role Color
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {ROLE_COLOR_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-label={option.label}
+                  aria-pressed={form.color === option.value}
+                  onClick={() =>
+                    setForm((current) => ({ ...current, color: option.value }))
+                  }
+                  className={cn(
+                    "size-8 rounded-full border-2 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                    option.swatchClassName,
+                    form.color === option.value
+                      ? "scale-110 border-foreground"
+                      : "border-transparent",
+                  )}
+                />
+              ))}
+            </div>
+          </fieldset>
+
+          <label className="block text-sm">
+            <span className="mb-1.5 block font-medium text-foreground">
+              Role Icon
+            </span>
+            <select
+              value={form.icon}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  icon: event.target.value as TeamRoleIcon,
                 }))
               }
               className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             >
-              <option value="">None</option>
-              {(rolesQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
+              {ROLE_ICON_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
           </label>
-        ) : null}
-      </div>
-    </EmployerProfileDialog>
+
+          {mode === "create" ? (
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-medium text-foreground">
+                Clone Existing Role
+              </span>
+              <select
+                value={form.cloneRoleId}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    cloneRoleId: event.target.value,
+                  }))
+                }
+                className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">None</option>
+                {(rolesQuery.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
+      </EmployerProfileDialog>
+
+      {pendingPayload ? (
+        <EmployerProfileDialog
+          title="Replace permission matrix?"
+          description="Changing Access Level will replace the current permission matrix."
+          onClose={() => setPendingPayload(null)}
+          footer={
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingPayload(null)}
+                className="inline-flex h-10 items-center rounded-lg border border-border-subtle px-4 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  const payload = pendingPayload;
+                  setPendingPayload(null);
+                  onSubmit(payload);
+                }}
+                className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover disabled:opacity-50"
+              >
+                Replace
+              </button>
+            </div>
+          }
+        >
+          <p className="text-sm text-muted">
+            Current permissions for this role will be overwritten with the{" "}
+            <span className="font-semibold text-foreground">
+              {ACCESS_LEVEL_LABELS[pendingPayload.accessLevel ?? "custom"]}
+            </span>{" "}
+            template. Field-level access is not changed.
+          </p>
+        </EmployerProfileDialog>
+      ) : null}
+    </>
   );
 }

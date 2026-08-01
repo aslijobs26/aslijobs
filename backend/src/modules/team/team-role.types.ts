@@ -62,4 +62,8 @@ export type RolesListResponse = {
 export type PermissionMatrixMeta = {
   modules: Array<{ key: string; label: string }>;
   actions: Array<{ key: string; label: string }>;
+  fieldAccess?: {
+    levels: Array<{ key: string; label: string }>;
+    catalog: unknown;
+  };
 };

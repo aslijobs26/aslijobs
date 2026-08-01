@@ -2,7 +2,11 @@ import { config } from "dotenv";
 import { z } from "zod";
 import { normalizeOrigin } from "../utils/cors-origins.js";
 
-config();
+/**
+ * Always prefer values from backend/.env over stale shell/IDE-injected env.
+ * tsx watch does not reload .env; Cursor/dotenv may pre-inject older values.
+ */
+config({ override: true });
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(5000),
@@ -51,11 +55,12 @@ const envSchema = z.object({
   CORS_ALLOWED_ORIGINS: z.string().optional().default(""),
   /** Resend API key for transactional email (team invitations). */
   RESEND_API_KEY: z.string().optional().default(""),
-  /** From address for transactional email, e.g. AsliJobs <onboarding@resend.dev> */
-  EMAIL_FROM: z
-    .string()
-    .min(3)
-    .default("AsliJobs <onboarding@resend.dev>"),
+  /**
+   * Transactional From address. Must use a domain verified in Resend.
+   * Example: AsliJobs <noreply@aslijobs.com>
+   * Never use Resend testing addresses for production delivery.
+   */
+  EMAIL_FROM: z.string().optional().default(""),
   OTP_PROVIDER: z.enum(["console", "whatsapp"]).default("console"),
   STORAGE_PROVIDER: z.enum(["local", "cloudinary"]).default("local"),
   UPLOAD_DIR: z.string().default("uploads"),

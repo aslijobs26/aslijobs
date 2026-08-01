@@ -6,6 +6,7 @@ import { MembersTabPanel } from "@/components/employer-team-management/MembersTa
 import { RolesTabPanel } from "@/components/employer-team-management/RolesTabPanel";
 import { TeamManagementStatsCards } from "@/components/employer-team-management/TeamManagementStatsCards";
 import { TeamManagementTabs } from "@/components/employer-team-management/TeamManagementTabs";
+import { Can } from "@/components/rbac/Can";
 import {
   EMPLOYER_TEAM_DEFAULT_TAB,
   EMPLOYER_TEAM_PAGE_SUBTITLE,
@@ -28,6 +29,7 @@ export function TeamManagementPageContent() {
   );
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteNotice, setInviteNotice] = useState<string | null>(null);
 
   const statsQuery = useQuery({
     queryKey: EMPLOYER_TEAM_QUERY_KEYS.stats(),
@@ -37,10 +39,19 @@ export function TeamManagementPageContent() {
 
   const inviteMutation = useMutation({
     mutationFn: inviteTeamMember,
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       setInviteError(null);
       setInviteOpen(false);
       await invalidateEmployerAccessCaches(queryClient);
+      if (!result.emailDelivered) {
+        setInviteNotice(
+          result.message ||
+            result.emailError ||
+            "Invitation created but email delivery failed. Use Resend Invitation after email is configured.",
+        );
+        return;
+      }
+      setInviteNotice(null);
     },
     onError: (error) => setInviteError(getTeamApiErrorMessage(error)),
   });
@@ -57,25 +68,29 @@ export function TeamManagementPageContent() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab("roles")}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          >
-            <TableProperties className="size-4" aria-hidden="true" />
-            Permission Matrix
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setInviteError(null);
-              setInviteOpen(true);
-            }}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          >
-            <Plus className="size-4" aria-hidden="true" strokeWidth={2.5} />
-            Invite Member
-          </button>
+          <Can module="team_management" action="read">
+            <button
+              type="button"
+              onClick={() => setActiveTab("roles")}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              <TableProperties className="size-4" aria-hidden="true" />
+              Permission Matrix
+            </button>
+          </Can>
+          <Can module="team_management" action="create">
+            <button
+              type="button"
+              onClick={() => {
+                setInviteError(null);
+                setInviteOpen(true);
+              }}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              <Plus className="size-4" aria-hidden="true" strokeWidth={2.5} />
+              Invite Member
+            </button>
+          </Can>
         </div>
       </header>
 
@@ -84,6 +99,14 @@ export function TeamManagementPageContent() {
         isLoading={statsQuery.isLoading}
       />
 
+      {inviteNotice ? (
+        <p
+          role="status"
+          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+        >
+          {inviteNotice}
+        </p>
+      ) : null}
       <div className="space-y-4">
         <TeamManagementTabs activeTab={activeTab} onChange={setActiveTab} />
 

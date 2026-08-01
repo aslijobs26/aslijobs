@@ -11,6 +11,7 @@ import { DashboardStatCards } from "@/components/employer-dashboard-home/Dashboa
 import { DashboardSubscriptionOverview } from "@/components/employer-dashboard-home/DashboardSubscriptionOverview";
 import { DashboardSupportCard } from "@/components/employer-dashboard-home/DashboardSupportCard";
 import { DashboardWelcomeBanner } from "@/components/employer-dashboard-home/DashboardWelcomeBanner";
+import { Can } from "@/components/rbac/Can";
 import {
   EMPLOYER_DASHBOARD_HOME_QUERY_KEYS,
   type EmployerDashboardFunnelPeriod,
@@ -21,10 +22,10 @@ import {
   EMPLOYER_JOBS_QUERY_KEYS,
 } from "@/constants/employer-jobs";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
+import { useCan } from "@/providers/employer-permission-provider";
 import {
   deleteEmployerJob,
   fetchEmployerJobStats,
-  fetchEmployerJobs,
 } from "@/services/employer-jobs.service";
 import {
   fetchEmployerApplicationStats,
@@ -86,44 +87,33 @@ function metricFromStats(
 }
 
 /**
- * Week-over-week growth using TWO stats aggregations (+ optional jobs counts).
- * Previously this fired ~14 separate list?limit=1 calls and exhausted the API
- * rate limit, which then surfaced as 429s on unrelated endpoints like /me.
+ * Week-over-week growth using TWO application-stats aggregations.
+ * Job WoW previously required two list?limit=1 calls and contributed to
+ * burning the shared API rate limit (429s then appeared on /employers/me).
+ * Active-jobs growth uses a stable "live" label without extra requests.
  */
 async function fetchGrowthMetrics(): Promise<
   Partial<Record<EmployerDashboardStatKey, EmployerDashboardGrowth>>
 > {
   const weeks = getEmployerDashboardWeekRanges();
 
-  const [currentStats, previousStats, jobsCurrent, jobsPrevious] =
-    await Promise.all([
-      fetchEmployerApplicationStats({
-        appliedFrom: weeks.currentFrom,
-        appliedTo: weeks.currentTo,
-      }),
-      fetchEmployerApplicationStats({
-        appliedFrom: weeks.previousFrom,
-        appliedTo: weeks.previousTo,
-      }),
-      fetchEmployerJobs({
-        postedFrom: weeks.currentFrom.slice(0, 10),
-        postedTo: weeks.currentTo.slice(0, 10),
-        page: 1,
-        limit: 1,
-      }),
-      fetchEmployerJobs({
-        postedFrom: weeks.previousFrom.slice(0, 10),
-        postedTo: weeks.previousTo.slice(0, 10),
-        page: 1,
-        limit: 1,
-      }),
-    ]);
+  const [currentStats, previousStats] = await Promise.all([
+    fetchEmployerApplicationStats({
+      appliedFrom: weeks.currentFrom,
+      appliedTo: weeks.currentTo,
+    }),
+    fetchEmployerApplicationStats({
+      appliedFrom: weeks.previousFrom,
+      appliedTo: weeks.previousTo,
+    }),
+  ]);
 
   return {
-    activeJobs: calculateEmployerDashboardGrowth(
-      jobsCurrent.pagination.total,
-      jobsPrevious.pagination.total,
-    ),
+    activeJobs: {
+      percent: 0,
+      direction: "flat",
+      label: "Updated live",
+    },
     applications: calculateEmployerDashboardGrowth(
       metricFromStats(currentStats, "applications"),
       metricFromStats(previousStats, "applications"),
@@ -161,21 +151,31 @@ async function fetchFunnelStages(
 
 export function EmployerDashboardHome() {
   const queryClient = useQueryClient();
+  const { can, isLoading: permissionsLoading } = useCan();
   const [funnelPeriod, setFunnelPeriod] =
     useState<EmployerDashboardFunnelPeriod>("this_month");
 
   const profileQuery = useEmployerProfile();
+  const canJobs = !permissionsLoading && can("jobs", "read");
+  const canCandidates = !permissionsLoading && can("candidates", "read");
+  const canInterviews = !permissionsLoading && can("interviews", "read");
+  const canCompanyProfile =
+    !permissionsLoading && can("company_profile", "read");
 
   const jobStatsQuery = useQuery({
     queryKey: EMPLOYER_JOBS_QUERY_KEYS.stats(),
     queryFn: fetchEmployerJobStats,
     staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    enabled: canJobs,
   });
 
   const applicationStatsQuery = useQuery({
     queryKey: EMPLOYER_DASHBOARD_HOME_QUERY_KEYS.applicationStats(),
     queryFn: () => fetchEmployerApplicationStats(),
     staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    enabled: canCandidates,
   });
 
   const recentApplicationsQuery = useQuery({
@@ -187,29 +187,36 @@ export function EmployerDashboardHome() {
         sort: "newest",
       }),
     staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    enabled: canCandidates,
   });
 
   const notificationsQuery = useQuery({
-    queryKey: [...notificationQueryKeys.recent("employer"), "dashboard"],
+    queryKey: notificationQueryKeys.recent("employer"),
     queryFn: () =>
       fetchNotifications({
         page: 1,
-        limit: 4,
+        limit: 8,
         readStatus: "all",
       }),
-    staleTime: 30_000,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const growthQuery = useQuery({
     queryKey: EMPLOYER_DASHBOARD_HOME_QUERY_KEYS.growth(),
     queryFn: fetchGrowthMetrics,
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+    enabled: canCandidates,
   });
 
   const funnelQuery = useQuery({
     queryKey: EMPLOYER_DASHBOARD_HOME_QUERY_KEYS.funnel(funnelPeriod),
     queryFn: () => fetchFunnelStages(funnelPeriod),
-    staleTime: 60_000,
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: false,
+    enabled: canCandidates,
   });
 
   const deleteMutation = useMutation({
@@ -274,65 +281,82 @@ export function EmployerDashboardHome() {
             isLoading={profileQuery.isLoading}
           />
 
-          <DashboardStatCards
-            values={metricValues}
-            growth={growthQuery.data ?? {}}
-            isLoading={
-              jobStatsQuery.isLoading || applicationStatsQuery.isLoading
-            }
-          />
-
-          <DashboardJobsOverview
-            jobs={recentJobs}
-            isLoading={jobStatsQuery.isLoading}
-            isError={jobStatsQuery.isError}
-            isDeleting={deleteMutation.isPending}
-            onRetry={() => {
-              void jobStatsQuery.refetch();
-            }}
-            onDelete={handleDeleteJob}
-          />
-
-          <div className="grid items-stretch gap-4 xl:grid-cols-2">
-            <DashboardRecruitmentFunnel
-              stages={funnelStages}
-              conversionRate={conversionRate}
-              period={funnelPeriod}
-              onPeriodChange={setFunnelPeriod}
-              isLoading={funnelQuery.isLoading && !funnelQuery.data}
+          {(canJobs || canCandidates) && (
+            <DashboardStatCards
+              values={metricValues}
+              growth={growthQuery.data ?? {}}
+              isLoading={
+                (canJobs && jobStatsQuery.isLoading) ||
+                (canCandidates && applicationStatsQuery.isLoading)
+              }
             />
-            <DashboardRecruiterPerformance />
-          </div>
+          )}
 
-          <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(16rem,0.95fr)]">
-            <DashboardRecentApplications
-              applications={recentApplicationsQuery.data?.applications ?? []}
-              isLoading={recentApplicationsQuery.isLoading}
-              isError={recentApplicationsQuery.isError}
+          <Can module="jobs" action="read">
+            <DashboardJobsOverview
+              jobs={recentJobs}
+              isLoading={jobStatsQuery.isLoading}
+              isError={jobStatsQuery.isError}
+              isDeleting={deleteMutation.isPending}
               onRetry={() => {
-                void recentApplicationsQuery.refetch();
+                void jobStatsQuery.refetch();
               }}
+              onDelete={handleDeleteJob}
             />
-            <LazySourcesPerformance
-              slices={sourceSlices}
-              total={applicationStatsQuery.data?.total ?? 0}
-              isLoading={applicationStatsQuery.isLoading}
-            />
-          </div>
+          </Can>
 
-          <DashboardSubscriptionOverview />
+          {(canCandidates || canInterviews) && (
+            <div className="grid items-stretch gap-4 xl:grid-cols-2">
+              <Can module="candidates" action="read">
+                <DashboardRecruitmentFunnel
+                  stages={funnelStages}
+                  conversionRate={conversionRate}
+                  period={funnelPeriod}
+                  onPeriodChange={setFunnelPeriod}
+                  isLoading={funnelQuery.isLoading && !funnelQuery.data}
+                />
+              </Can>
+              <Can module="interviews" action="read">
+                <DashboardRecruiterPerformance />
+              </Can>
+            </div>
+          )}
+
+          <Can module="candidates" action="read">
+            <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(16rem,0.95fr)]">
+              <DashboardRecentApplications
+                applications={recentApplicationsQuery.data?.applications ?? []}
+                isLoading={recentApplicationsQuery.isLoading}
+                isError={recentApplicationsQuery.isError}
+                onRetry={() => {
+                  void recentApplicationsQuery.refetch();
+                }}
+              />
+              <LazySourcesPerformance
+                slices={sourceSlices}
+                total={applicationStatsQuery.data?.total ?? 0}
+                isLoading={applicationStatsQuery.isLoading}
+              />
+            </div>
+          </Can>
+
+          <Can module="subscription" action="read">
+            <DashboardSubscriptionOverview />
+          </Can>
         </div>
 
         <aside className="min-w-0 space-y-4 xl:sticky xl:top-20 xl:self-start">
-          {profileCompletion ? (
-            <DashboardProfileCompletion
-              percentage={profileCompletion.percentage}
-              isComplete={profileCompletion.isComplete}
-              isIndividual={profile?.accountType === "individual"}
-            />
-          ) : (
-            <div className="h-28 animate-pulse rounded-xl border border-border-subtle bg-surface" />
-          )}
+          {canCompanyProfile ? (
+            profileCompletion ? (
+              <DashboardProfileCompletion
+                percentage={profileCompletion.percentage}
+                isComplete={profileCompletion.isComplete}
+                isIndividual={profile?.accountType === "individual"}
+              />
+            ) : (
+              <div className="h-28 animate-pulse rounded-xl border border-border-subtle bg-surface" />
+            )
+          ) : null}
 
           <DashboardNotifications
             notifications={notificationsQuery.data?.notifications ?? []}

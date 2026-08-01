@@ -6,6 +6,7 @@ import {
   INVITATION_REJECTED_MESSAGE,
   TEAM_INVITATION_EXPIRY_DAYS,
   type TeamAccessLevel,
+  type TeamInvitationEmailDeliveryStatus,
   type TeamInvitationStatus,
   type TeamMemberStatus,
 } from "./team.constants.js";
@@ -34,6 +35,7 @@ import type {
   UpdateMemberInput,
 } from "./member.validation.js";
 import type {
+  InviteMemberResult,
   RoleDistributionSlice,
   TeamActivityItem,
   TeamInvitationListItem,
@@ -41,6 +43,7 @@ import type {
   TeamMemberListItem,
   TeamSidebarData,
 } from "./member.types.js";
+import { env } from "../../config/env.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { DepartmentModel } from "./department.model.js";
@@ -61,6 +64,39 @@ function invitationExpiryDate(): Date {
   return expires;
 }
 
+function mapInvitationListItem(invitation: {
+  _id: mongoose.Types.ObjectId;
+  email: string;
+  fullName: string;
+  status: TeamInvitationStatus | string;
+  emailDeliveryStatus?: TeamInvitationEmailDeliveryStatus | string;
+  emailLastError?: string;
+  departmentId: mongoose.Types.ObjectId;
+  roleId: mongoose.Types.ObjectId;
+  memberId: mongoose.Types.ObjectId;
+  expiresAt: Date;
+  lastSentAt: Date;
+  resendCount: number;
+  createdAt: Date;
+}): TeamInvitationListItem {
+  return {
+    id: String(invitation._id),
+    email: invitation.email,
+    fullName: invitation.fullName,
+    status: invitation.status as TeamInvitationStatus,
+    emailDeliveryStatus: (invitation.emailDeliveryStatus ||
+      "pending") as TeamInvitationEmailDeliveryStatus,
+    emailLastError: invitation.emailLastError ?? "",
+    departmentId: String(invitation.departmentId),
+    roleId: String(invitation.roleId),
+    memberId: String(invitation.memberId),
+    expiresAt: invitation.expiresAt.toISOString(),
+    lastSentAt: invitation.lastSentAt.toISOString(),
+    resendCount: invitation.resendCount,
+    createdAt: invitation.createdAt.toISOString(),
+  };
+}
+
 function mapMember(doc: {
   _id: mongoose.Types.ObjectId;
   fullName: string;
@@ -75,6 +111,7 @@ function mapMember(doc: {
   acceptedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  emailDeliveryStatus?: TeamInvitationEmailDeliveryStatus | string | null;
   department?: { _id: mongoose.Types.ObjectId; name: string; status: string } | null;
   role?: {
     _id: mongoose.Types.ObjectId;
@@ -92,6 +129,8 @@ function mapMember(doc: {
     designation: doc.designation ?? "",
     status: doc.status,
     invitationStatus: (doc.invitationStatus || "") as TeamInvitationStatus | "",
+    emailDeliveryStatus: (doc.emailDeliveryStatus ||
+      null) as TeamInvitationEmailDeliveryStatus | null,
     accessLevel: doc.accessLevel,
     department: doc.department
       ? {
@@ -189,9 +228,23 @@ class TeamMemberService {
         },
       },
       {
+        $lookup: {
+          from: "teaminvitations",
+          localField: "invitationId",
+          foreignField: "_id",
+          as: "invitationDocs",
+        },
+      },
+      {
         $addFields: {
           department: { $arrayElemAt: ["$departmentDocs", 0] },
           role: { $arrayElemAt: ["$roleDocs", 0] },
+          emailDeliveryStatus: {
+            $ifNull: [
+              { $arrayElemAt: ["$invitationDocs.emailDeliveryStatus", 0] },
+              null,
+            ],
+          },
         },
       },
     ];
@@ -221,7 +274,7 @@ class TeamMemberService {
           { $sort: sortStage },
           { $skip: skip },
           { $limit: query.limit },
-          { $project: { departmentDocs: 0, roleDocs: 0, passwordHash: 0 } },
+          { $project: { departmentDocs: 0, roleDocs: 0, invitationDocs: 0, passwordHash: 0 } },
         ],
         totalCount: [{ $count: "count" }],
       },
@@ -279,10 +332,12 @@ class TeamMemberService {
         .lean(),
     ]);
 
+    const latestInvitation = invitations[0] ?? null;
     const base = mapMember({
       ...member.toObject(),
       department: department ?? null,
       role: role ?? null,
+      emailDeliveryStatus: latestInvitation?.emailDeliveryStatus ?? null,
     });
 
     return {
@@ -304,7 +359,7 @@ class TeamMemberService {
   async inviteMember(
     employerId: string,
     input: InviteMemberInput,
-  ): Promise<{ member: TeamMemberListItem; invitation: TeamInvitationListItem }> {
+  ): Promise<InviteMemberResult> {
     await teamRoleService.ensureDefaultRoles(employerId);
     const employerObjectId = toObjectId(employerId);
     const email = input.email.trim().toLowerCase();
@@ -321,7 +376,7 @@ class TeamMemberService {
     if (existingMember) {
       if (existingMember.status === "invited") {
         throw new AppError(
-          "A pending invitation already exists for this email.",
+          "A pending invitation already exists for this email. Use Resend Invitation instead.",
           HTTP_STATUS.CONFLICT,
         );
       }
@@ -342,7 +397,7 @@ class TeamMemberService {
 
     if (pendingInvite) {
       throw new AppError(
-        "A pending invitation already exists for this email.",
+        "A pending invitation already exists for this email. Use Resend Invitation instead.",
         HTTP_STATUS.CONFLICT,
       );
     }
@@ -392,6 +447,10 @@ class TeamMemberService {
       message: input.message?.trim() ?? "",
       tokenHash,
       status: "pending",
+      emailDeliveryStatus: "pending",
+      emailLastError: "",
+      emailProviderMessageId: "",
+      emailSentAt: null,
       expiresAt,
       invitedBy: employerObjectId,
       resendCount: 0,
@@ -403,17 +462,6 @@ class TeamMemberService {
     member.invitationId = invitation._id;
     await member.save();
 
-    await recordTeamActivity({
-      employerId,
-      type: "invitation_sent",
-      message: `Invitation sent to ${member.fullName}`,
-      memberId: member._id,
-      departmentId: department._id,
-      roleId: role._id,
-      invitationId: invitation._id,
-      actorEmployerId: employerId,
-    });
-
     const emailContext = await this.resolveInvitationEmailContext({
       employerId,
       memberFullName: member.fullName,
@@ -424,7 +472,7 @@ class TeamMemberService {
       rawToken: token,
     });
 
-    await sendTeamInvitationEmail({
+    const delivery = await sendTeamInvitationEmail({
       toEmail: emailContext.toEmail,
       memberName: emailContext.memberName,
       employerName: emailContext.employerName,
@@ -436,22 +484,57 @@ class TeamMemberService {
       expiresInDays: TEAM_INVITATION_EXPIRY_DAYS,
     });
 
+    if (delivery.ok) {
+      invitation.emailDeliveryStatus = "sent";
+      invitation.emailLastError = "";
+      invitation.emailProviderMessageId = delivery.providerMessageId ?? "";
+      invitation.emailSentAt = new Date();
+      invitation.lastSentAt = new Date();
+      await invitation.save();
+
+      await recordTeamActivity({
+        employerId,
+        type: "invitation_sent",
+        message: `Invitation sent to ${member.fullName}`,
+        memberId: member._id,
+        departmentId: department._id,
+        roleId: role._id,
+        invitationId: invitation._id,
+        actorEmployerId: employerId,
+      });
+    } else {
+      invitation.emailDeliveryStatus = "failed";
+      invitation.emailLastError = delivery.errorMessage.slice(0, 1000);
+      invitation.emailProviderMessageId = "";
+      await invitation.save();
+
+      await recordTeamActivity({
+        employerId,
+        type: "invitation_email_failed",
+        message: `Invitation created for ${member.fullName}, but email delivery failed`,
+        memberId: member._id,
+        departmentId: department._id,
+        roleId: role._id,
+        invitationId: invitation._id,
+        actorEmployerId: employerId,
+        metadata: {
+          errorName: delivery.errorName,
+          errorMessage: delivery.errorMessage,
+          statusCode: delivery.statusCode,
+          isConfigurationError: delivery.isConfigurationError,
+        },
+      });
+    }
+
     const details = await this.getMember(employerId, String(member._id));
     return {
       member: details,
-      invitation: {
-        id: String(invitation._id),
-        email: invitation.email,
-        fullName: invitation.fullName,
-        status: invitation.status as TeamInvitationStatus,
-        departmentId: String(invitation.departmentId),
-        roleId: String(invitation.roleId),
-        memberId: String(invitation.memberId),
-        expiresAt: invitation.expiresAt.toISOString(),
-        lastSentAt: invitation.lastSentAt.toISOString(),
-        resendCount: invitation.resendCount,
-        createdAt: invitation.createdAt.toISOString(),
-      },
+      invitation: mapInvitationListItem(invitation),
+      emailDelivered: delivery.ok,
+      emailError: delivery.ok ? null : delivery.errorMessage,
+      ...(env.NODE_ENV === "development"
+        ? { debugAcceptUrl: emailContext.acceptUrl }
+        : {}),
     };
   }
 
@@ -659,7 +742,12 @@ class TeamMemberService {
   async resendInvitation(
     employerId: string,
     memberId: string,
-  ): Promise<TeamInvitationListItem> {
+  ): Promise<{
+    invitation: TeamInvitationListItem;
+    emailDelivered: boolean;
+    emailError: string | null;
+    debugAcceptUrl?: string;
+  }> {
     const member = await this.findOwnedMemberOrThrow(employerId, memberId);
     if (member.status !== "invited") {
       throw new AppError(
@@ -668,7 +756,7 @@ class TeamMemberService {
       );
     }
 
-    let invitation = await TeamInvitationModel.findOne({
+    const invitation = await TeamInvitationModel.findOne({
       employerId: toObjectId(employerId),
       memberId: member._id,
       isDeleted: false,
@@ -679,27 +767,25 @@ class TeamMemberService {
       throw new AppError("Invitation not found", HTTP_STATUS.NOT_FOUND);
     }
 
+    const previousTokenHash = String(invitation.tokenHash ?? "");
     const token = generateInvitationToken();
-    invitation.tokenHash = hashInvitationToken(token);
+    const tokenHash = hashInvitationToken(token);
+
+    invitation.tokenHash = tokenHash;
     invitation.status = "pending";
     invitation.expiresAt = invitationExpiryDate();
     invitation.lastSentAt = new Date();
     invitation.resendCount = (invitation.resendCount ?? 0) + 1;
     invitation.cancelledAt = null;
+    invitation.emailDeliveryStatus = "pending";
+    invitation.emailLastError = "";
+    invitation.emailProviderMessageId = "";
+    invitation.emailSentAt = null;
     await invitation.save();
 
     member.invitationStatus = "pending";
     member.invitationId = invitation._id;
     await member.save();
-
-    await recordTeamActivity({
-      employerId,
-      type: "invitation_resent",
-      message: `Invitation resent to ${member.fullName}`,
-      memberId: member._id,
-      invitationId: invitation._id,
-      actorEmployerId: employerId,
-    });
 
     const emailContext = await this.resolveInvitationEmailContext({
       employerId,
@@ -711,7 +797,19 @@ class TeamMemberService {
       rawToken: token,
     });
 
-    await sendTeamInvitationEmail({
+    console.info("[team-invite-resend]", {
+      memberId: String(member._id),
+      email: member.email,
+      tokenLength: token.length,
+      tokenHashPrefix: tokenHash.slice(0, 12),
+      previousTokenHashPrefix: previousTokenHash.slice(0, 12),
+      ...(env.NODE_ENV === "development"
+        ? { acceptUrl: emailContext.acceptUrl }
+        : {}),
+      expiresAt: invitation.expiresAt.toISOString(),
+    });
+
+    const delivery = await sendTeamInvitationEmail({
       toEmail: emailContext.toEmail,
       memberName: emailContext.memberName,
       employerName: emailContext.employerName,
@@ -723,18 +821,51 @@ class TeamMemberService {
       expiresInDays: TEAM_INVITATION_EXPIRY_DAYS,
     });
 
+    if (delivery.ok) {
+      invitation.emailDeliveryStatus = "sent";
+      invitation.emailLastError = "";
+      invitation.emailProviderMessageId = delivery.providerMessageId ?? "";
+      invitation.emailSentAt = new Date();
+      invitation.lastSentAt = new Date();
+      await invitation.save();
+
+      await recordTeamActivity({
+        employerId,
+        type: "invitation_resent",
+        message: `Invitation resent to ${member.fullName}`,
+        memberId: member._id,
+        invitationId: invitation._id,
+        actorEmployerId: employerId,
+      });
+    } else {
+      invitation.emailDeliveryStatus = "failed";
+      invitation.emailLastError = delivery.errorMessage.slice(0, 1000);
+      invitation.emailProviderMessageId = "";
+      await invitation.save();
+
+      await recordTeamActivity({
+        employerId,
+        type: "invitation_email_failed",
+        message: `Invitation resend for ${member.fullName} failed email delivery`,
+        memberId: member._id,
+        invitationId: invitation._id,
+        actorEmployerId: employerId,
+        metadata: {
+          errorName: delivery.errorName,
+          errorMessage: delivery.errorMessage,
+          statusCode: delivery.statusCode,
+          isConfigurationError: delivery.isConfigurationError,
+        },
+      });
+    }
+
     return {
-      id: String(invitation._id),
-      email: invitation.email,
-      fullName: invitation.fullName,
-      status: invitation.status as TeamInvitationStatus,
-      departmentId: String(invitation.departmentId),
-      roleId: String(invitation.roleId),
-      memberId: String(invitation.memberId),
-      expiresAt: invitation.expiresAt.toISOString(),
-      lastSentAt: invitation.lastSentAt.toISOString(),
-      resendCount: invitation.resendCount,
-      createdAt: invitation.createdAt.toISOString(),
+      invitation: mapInvitationListItem(invitation),
+      emailDelivered: delivery.ok,
+      emailError: delivery.ok ? null : delivery.errorMessage,
+      ...(env.NODE_ENV === "development"
+        ? { debugAcceptUrl: emailContext.acceptUrl }
+        : {}),
     };
   }
 
@@ -808,16 +939,29 @@ class TeamMemberService {
   }
 
   async previewInvitation(token: string): Promise<TeamInvitationPreview> {
-    const tokenHash = hashInvitationToken(token);
+    const normalizedToken = token.trim();
+    const tokenHash = hashInvitationToken(normalizedToken);
     const invitation = await TeamInvitationModel.findOne({
       tokenHash,
       isDeleted: false,
     }).lean();
 
+    console.info("[team-invite-preview]", {
+      receivedTokenLength: normalizedToken.length,
+      receivedTokenPrefix: normalizedToken.slice(0, 8),
+      receivedTokenSuffix: normalizedToken.slice(-8),
+      tokenHashPrefix: tokenHash.slice(0, 12),
+      found: Boolean(invitation),
+      invitationStatus: invitation?.status ?? null,
+      expiresAt: invitation?.expiresAt?.toISOString?.() ?? null,
+      email: invitation?.email ?? null,
+    });
+
     if (!invitation) {
       return {
         state: "invalid",
-        message: INVITATION_INVALID_MESSAGE,
+        message:
+          "This invitation link is invalid or has been replaced by a newer invitation. Open the latest invitation email, or ask your employer to resend.",
         fullName: null,
         email: null,
         companyName: null,
@@ -932,14 +1076,27 @@ class TeamMemberService {
   async acceptInvitation(
     input: AcceptInvitationInput,
   ): Promise<{ memberId: string; employerId: string }> {
-    const tokenHash = hashInvitationToken(input.token);
+    const normalizedToken = input.token.trim();
+    const tokenHash = hashInvitationToken(normalizedToken);
     const invitation = await TeamInvitationModel.findOne({
       tokenHash,
       isDeleted: false,
     });
 
+    console.info("[team-invite-accept]", {
+      receivedTokenLength: normalizedToken.length,
+      receivedTokenPrefix: normalizedToken.slice(0, 8),
+      tokenHashPrefix: tokenHash.slice(0, 12),
+      found: Boolean(invitation),
+      invitationStatus: invitation?.status ?? null,
+      expiresAt: invitation?.expiresAt?.toISOString?.() ?? null,
+    });
+
     if (!invitation) {
-      throw new AppError(INVITATION_INVALID_MESSAGE, HTTP_STATUS.BAD_REQUEST);
+      throw new AppError(
+        "This invitation link is invalid or has been replaced by a newer invitation. Open the latest invitation email, or ask your employer to resend.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
 
     this.assertInvitationAcceptable({
