@@ -65,6 +65,56 @@ export function requirePermission(
   };
 }
 
+export function requireAnyPermission(
+  moduleKey: TeamPermissionModule,
+  actions: RbacAction[],
+) {
+  return async (
+    req: Request,
+    _res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const context = req.rbac;
+      if (!context) {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
+      const allowed = actions.some((action) =>
+        canPerform(context, moduleKey, action),
+      );
+      if (!allowed) {
+        await recordTeamActivity({
+          employerId: context.employerId,
+          type: "permission_denied",
+          message: `Permission denied: ${moduleKey}.{${actions.join("|")}}`,
+          memberId: context.memberId,
+          roleId: context.roleId,
+          actorEmployerId:
+            context.principalType === "owner" ? context.employerId : null,
+          metadata: {
+            module: moduleKey,
+            actions,
+            principalType: context.principalType,
+            memberId: context.memberId,
+            path: req.originalUrl,
+            method: req.method,
+          },
+        }).catch(() => undefined);
+
+        throw new AppError(
+          "You do not have permission to perform this action.",
+          HTTP_STATUS.FORBIDDEN,
+        );
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
 export function requireFieldAccess(
   moduleKey: TeamPermissionModule,
   fieldKey: string,

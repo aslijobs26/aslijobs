@@ -150,3 +150,18 @@ export async function markAllNotificationsAsRead(): Promise<number> {
   );
   return response.data.data.updatedCount;
 }
+
+export async function deleteNotification(
+  notificationId: string,
+): Promise<void> {
+  await apiClient.delete<ApiSuccess<{ deleted: true }>>(
+    `/notifications/me/${notificationId}`,
+  );
+}
+
+export async function clearAllNotifications(): Promise<number> {
+  const response = await apiClient.post<ApiSuccess<{ clearedCount: number }>>(
+    "/notifications/me/clear-all",
+  );
+  return response.data.data.clearedCount;
+}

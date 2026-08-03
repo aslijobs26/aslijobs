@@ -1,15 +1,16 @@
 "use client";
 
 import { ROUTES } from "@/constants/routes";
-import { fetchAuthenticatedJobSeeker } from "@/services/job-seeker-login.service";
+import { ensureJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
 import { isUnauthorizedAuthError } from "@/utils/auth-errors";
 import {
   clearJobSeekerAuthSession,
   getJobSeekerAccessToken,
 } from "@/utils/job-seeker-auth-storage";
 import { buildJobSeekerLoginHref } from "@/utils/safe-return-url";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 type JobSeekerAuthGuardProps = {
   children: ReactNode;
@@ -19,6 +20,9 @@ type AuthStatus = "checking" | "authenticated" | "transient_error";
 
 export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const queryClientRef = useRef(queryClient);
+  queryClientRef.current = queryClient;
   const [status, setStatus] = useState<AuthStatus>("checking");
   const [retryToken, setRetryToken] = useState(0);
 
@@ -42,7 +46,7 @@ export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
       }
 
       try {
-        await fetchAuthenticatedJobSeeker();
+        await ensureJobSeekerProfile(queryClientRef.current);
         if (!cancelled) {
           setStatus("authenticated");
         }

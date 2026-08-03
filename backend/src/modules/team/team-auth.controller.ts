@@ -8,6 +8,7 @@ import { teamAuthService } from "./team-auth.service.js";
 export const teamMemberLoginSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(8).max(72),
+  employerId: z.string().trim().min(1).optional(),
 });
 
 export type TeamMemberLoginBody = z.infer<typeof teamMemberLoginSchema>;
@@ -32,7 +33,7 @@ export class TeamAuthController {
 
   session = async (req: Request, res: Response): Promise<void> => {
     const context = requireRbac(req);
-    const result = teamAuthService.getRbacSession(context);
+    const result = await teamAuthService.getRbacSession(context);
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "RBAC session fetched successfully.",

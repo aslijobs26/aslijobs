@@ -131,7 +131,7 @@ export class EmployerController {
       message: "Employer profile updated successfully",
       data: sanitizeCompanyProfileDto(
         req.rbac,
-        structuredClone(result) as unknown as Record<string, unknown>,
+        result as unknown as Record<string, unknown>,
       ),
     });
   };

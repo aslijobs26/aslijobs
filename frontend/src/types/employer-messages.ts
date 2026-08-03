@@ -44,6 +44,8 @@ export type EmployerMessageConversationListResult = {
     totalPages: number;
   };
   unreadCount: number;
+  activeHiringCount: number;
+  interviewWeekCount: number;
   jobFacets: Array<{
     publicJobId: string;
     jobTitle: string;

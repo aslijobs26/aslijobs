@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  employerMessageQueryKeys,
-  fetchNotificationConversations,
-} from "@/services/notifications.service";
 import { cn } from "@/utils/cn";
-import { useQuery } from "@tanstack/react-query";
 import {
   Briefcase,
   CalendarDays,
@@ -26,37 +21,22 @@ type MessagesStatCard = {
 type MessagesStatsCardsProps = {
   totalConversations: number | null;
   unreadConversations: number | null;
+  /** Optional KPI counts derived from the loaded conversation page / filters. */
+  activeHiringConversations?: number | null;
+  interviewWeekConversations?: number | null;
 };
 
+/**
+ * Stats strip for Messages. Does not issue extra API probes — values come from
+ * the parent conversation query (and optional derived counts) to avoid burning
+ * the shared rate-limit budget.
+ */
 export function MessagesStatsCards({
   totalConversations,
   unreadConversations,
+  activeHiringConversations = null,
+  interviewWeekConversations = null,
 }: MessagesStatsCardsProps) {
-  const activeQuery = useQuery({
-    queryKey: [...employerMessageQueryKeys.stats, "active"],
-    queryFn: () =>
-      fetchNotificationConversations({
-        page: 1,
-        limit: 1,
-        conversationType: "active",
-      }),
-    staleTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-  });
-
-  const interviewQuery = useQuery({
-    queryKey: [...employerMessageQueryKeys.stats, "interview-week"],
-    queryFn: () =>
-      fetchNotificationConversations({
-        page: 1,
-        limit: 1,
-        category: "interview",
-        quickDate: "last_7_days",
-      }),
-    staleTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-  });
-
   const cards: MessagesStatCard[] = [
     {
       id: "total",
@@ -78,51 +58,52 @@ export function MessagesStatsCards({
       id: "active",
       title: "Active Hiring",
       description: "In progress",
-      value: activeQuery.data?.pagination.total ?? null,
+      value: activeHiringConversations,
       icon: Briefcase,
-      iconClassName: "bg-benefit-verified-surface text-benefit-verified-icon",
+      iconClassName: "bg-primary-soft/20 text-primary",
     },
     {
       id: "interview",
-      title: "Interview Conversations",
+      title: "Interviews (7d)",
       description: "This week",
-      value: interviewQuery.data?.pagination.total ?? null,
+      value: interviewWeekConversations,
       icon: CalendarDays,
-      iconClassName: "bg-resource-resume-surface text-resource-resume-icon",
+      iconClassName: "bg-hero-bg text-muted",
     },
   ];
 
   return (
-    <section className="grid grid-cols-2 gap-2 sm:gap-2.5 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
           <article
             key={card.id}
-            className="flex h-full min-w-0 items-center gap-2 rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:gap-2.5 sm:px-3 sm:py-2.5"
+            className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
           >
-            <span
-              className={cn(
-                "inline-flex size-8 shrink-0 items-center justify-center rounded-lg sm:size-9",
-                card.iconClassName,
-              )}
-            >
-              <Icon className="size-3.5 sm:size-4" aria-hidden="true" />
-            </span>
-            <div className="min-w-0 leading-tight">
-              <p className="truncate text-[0.625rem] font-medium text-muted sm:text-[0.6875rem]">
-                {card.title}
-              </p>
-              <p className="mt-0.5 text-lg font-bold tracking-tight text-foreground sm:text-xl">
-                {card.value === null ? "—" : card.value}
-              </p>
-              <p className="mt-0.5 truncate text-[0.5625rem] text-muted sm:text-[0.625rem]">
-                {card.description}
-              </p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">
+                  {card.title}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">{card.description}</p>
+              </div>
+              <span
+                className={cn(
+                  "inline-flex size-9 shrink-0 items-center justify-center rounded-lg",
+                  card.iconClassName,
+                )}
+                aria-hidden="true"
+              >
+                <Icon className="size-4" strokeWidth={2} />
+              </span>
             </div>
+            <p className="mt-3 text-2xl font-bold text-foreground">
+              {card.value ?? 0}
+            </p>
           </article>
         );
       })}
-    </section>
+    </div>
   );
 }

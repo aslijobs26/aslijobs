@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { requireEmployerAuth } from "../../middleware/auth.middleware.js";
-import { requirePermission } from "../../middleware/permission.middleware.js";
+import {
+  requireAnyPermission,
+  requirePermission,
+} from "../../middleware/permission.middleware.js";
 import { requireJobSeekerAuth } from "../../middleware/job-seeker-auth.middleware.js";
 import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
@@ -158,7 +161,7 @@ applicationRouter.patch(
 applicationRouter.patch(
   "/employer/:applicationId/interview",
   asyncHandler(requireEmployerAuth),
-  asyncHandler(requirePermission("interviews", "update")),
+  asyncHandler(requireAnyPermission("interviews", ["create", "update"])),
   validate(applicationIdParamsSchema, "params"),
   validate(updateApplicationInterviewSchema, "body"),
   asyncHandler(applicationController.updateInterviewForEmployer),

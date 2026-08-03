@@ -4,6 +4,12 @@ import { jwtService } from "../modules/auth/jwt.service.js";
 import { EmployerModel } from "../modules/employers/employer.model.js";
 import { JobSeekerModel } from "../modules/job-seekers/job-seeker.model.js";
 import type { NotificationRecipientType } from "../modules/notifications/notification.types.js";
+import {
+  canPerform,
+  type RbacAction,
+} from "../modules/rbac/rbac.engine.js";
+import { rbacService } from "../modules/rbac/rbac.service.js";
+import { recordTeamActivity } from "../modules/team/team-activity.service.js";
 import { AppError } from "./error.middleware.js";
 
 declare global {
@@ -26,7 +32,11 @@ function extractBearerToken(req: Request): string | null {
 }
 
 /**
- * Accepts either job-seeker or employer access token for notification APIs.
+ * Accepts job-seeker, employer owner, or team-member workspace tokens.
+ *
+ * Employer workspace principals (owner + team member) resolve to the employer
+ * recipient id so conversation APIs stay scoped to the employer workspace.
+ * Team members also receive req.rbac for Messages permission checks.
  */
 export async function requireNotificationRecipientAuth(
   req: Request,
@@ -51,18 +61,45 @@ export async function requireNotificationRecipientAuth(
       next();
       return;
     } catch {
-      // Fall through to employer verification.
+      // Fall through to employer workspace verification.
     }
 
-    const employerPayload = jwtService.verifyAccessToken(token);
-    const employer = await EmployerModel.findById(employerPayload.sub);
+    const workspacePayload = jwtService.verifyWorkspaceAccessToken(token);
+
+    if (workspacePayload.role === "employer") {
+      const employer = await EmployerModel.findById(workspacePayload.sub);
+      if (!employer) {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
+      const employerId = employer._id.toString();
+      req.notificationRecipientType = "employer";
+      req.notificationRecipientId = employerId;
+      req.employerId = employerId;
+      req.teamMemberId = undefined;
+      req.workspacePrincipal = "owner";
+      req.rbac = rbacService.resolveOwnerContext(employerId);
+      next();
+      return;
+    }
+
+    const employerId = workspacePayload.employerId;
+    const employer = await EmployerModel.findById(employerId);
     if (!employer) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
+    const rbac = await rbacService.resolveMemberContext(
+      employerId,
+      workspacePayload.sub,
+    );
+
     req.notificationRecipientType = "employer";
-    req.notificationRecipientId = employer._id.toString();
-    req.employerId = employer._id.toString();
+    req.notificationRecipientId = employerId;
+    req.employerId = employerId;
+    req.teamMemberId = workspacePayload.sub;
+    req.workspacePrincipal = "member";
+    req.rbac = rbac;
     next();
   } catch (error) {
     next(
@@ -71,4 +108,56 @@ export async function requireNotificationRecipientAuth(
         : new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED),
     );
   }
+}
+
+/**
+ * Employer Messages module gate for conversation APIs.
+ * Job seekers receive 403 (not employer workspace). Missing Messages permission → 403.
+ */
+export function requireEmployerMessagesAccess(action: RbacAction = "read") {
+  return async (
+    req: Request,
+    _res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      if (req.notificationRecipientType !== "employer") {
+        throw new AppError("Forbidden", HTTP_STATUS.FORBIDDEN);
+      }
+
+      const context = req.rbac;
+      if (!context) {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
+      if (!canPerform(context, "messages", action)) {
+        await recordTeamActivity({
+          employerId: context.employerId,
+          type: "permission_denied",
+          message: `Permission denied: messages.${action}`,
+          memberId: context.memberId,
+          roleId: context.roleId,
+          actorEmployerId:
+            context.principalType === "owner" ? context.employerId : null,
+          metadata: {
+            module: "messages",
+            action,
+            principalType: context.principalType,
+            memberId: context.memberId,
+            path: req.originalUrl,
+            method: req.method,
+          },
+        }).catch(() => undefined);
+
+        throw new AppError(
+          "You do not have permission to perform this action.",
+          HTTP_STATUS.FORBIDDEN,
+        );
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
 }

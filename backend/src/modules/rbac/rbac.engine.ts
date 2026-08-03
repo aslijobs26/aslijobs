@@ -242,8 +242,19 @@ export function serializeRbacContext(context: ResolvedRbacContext) {
       },
       {} as Record<TeamPermissionModule, Record<RbacAction, boolean>>,
     ),
+    actor: null as RbacSessionActor | null,
   };
 }
+
+export type RbacSessionActor = {
+  fullName: string;
+  email: string;
+  roleName: string;
+  departmentName: string | null;
+  companyName: string;
+  status: string;
+  lastActiveAt: string | null;
+};
 
 export function getCatalogMaskStrategy(
   moduleKey: TeamPermissionModule,

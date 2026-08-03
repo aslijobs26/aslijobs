@@ -11,18 +11,56 @@ import type { ResolvedRbacContext } from "../rbac/rbac.engine.js";
 export type TeamMemberLoginInput = {
   email: string;
   password: string;
+  /** Required when the same email is active on multiple employer accounts. */
+  employerId?: string;
 };
 
 class TeamAuthService {
   async login(input: TeamMemberLoginInput) {
     const email = input.email.trim().toLowerCase();
-    const member = await TeamMemberModel.findOne({
+    const employerFilter = input.employerId?.trim();
+
+    const members = await TeamMemberModel.find({
       email,
       isDeleted: false,
       status: "active",
+      ...(employerFilter ? { employerId: employerFilter } : {}),
     }).select("+passwordHash");
 
-    if (!member || !member.passwordHash) {
+    if (members.length === 0) {
+      throw new AppError("Invalid email or password.", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    if (members.length > 1 && !employerFilter) {
+      const employerIds = members.map((member) => String(member.employerId));
+      const employers = await EmployerModel.find({
+        _id: { $in: employerIds },
+      })
+        .select("_id companyName establishmentName accountType")
+        .lean();
+
+      const options = employers.map((employer) => {
+        const companyName =
+          employer.accountType === "individual"
+            ? employer.establishmentName?.trim() ||
+              employer.companyName?.trim() ||
+              "Organization"
+            : employer.companyName?.trim() || "Organization";
+        return {
+          employerId: String(employer._id),
+          companyName,
+        };
+      });
+
+      throw new AppError(
+        "Multiple organizations found for this email. Select an organization to continue.",
+        HTTP_STATUS.CONFLICT,
+        { code: "MULTI_EMPLOYER_LOGIN", employers: options },
+      );
+    }
+
+    const member = members[0]!;
+    if (!member.passwordHash) {
       throw new AppError("Invalid email or password.", HTTP_STATUS.UNAUTHORIZED);
     }
 
@@ -48,6 +86,8 @@ class TeamAuthService {
     });
 
     member.lastActiveAt = new Date();
+    member.refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
+    member.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt;
     await member.save();
 
     await recordTeamActivity({
@@ -73,12 +113,12 @@ class TeamAuthService {
         companyName: employer.companyName ?? "",
         accountType: employer.accountType,
       },
-      rbac: rbacService.getSessionPayload(rbac),
+      rbac: await rbacService.getWorkspaceSession(rbac),
     };
   }
 
-  getRbacSession(context: ResolvedRbacContext) {
-    return rbacService.getSessionPayload(context);
+  async getRbacSession(context: ResolvedRbacContext) {
+    return rbacService.getWorkspaceSession(context);
   }
 }
 

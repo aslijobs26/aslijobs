@@ -25,6 +25,7 @@ export const ROUTES = {
   EMPLOYER_REPORTS: "/employer/reports",
   EMPLOYER_SUBSCRIPTION: "/employer/subscription",
   EMPLOYER_COMPANY_PROFILE: "/employer/company-profile",
+  EMPLOYER_TEAM_MEMBER_PROFILE: "/employer/team-member/profile",
   EMPLOYER_TEAM_MANAGEMENT: "/employer/team-management",
   employerTeamDepartment: (departmentId: string) =>
     `/employer/team-management/departments/${departmentId}`,

@@ -25,6 +25,7 @@ import { TeamMemberModel } from "./team-member.model.js";
 import { TeamRoleModel } from "./team-role.model.js";
 import { teamRoleService } from "./team-role.service.js";
 import { EmployerModel } from "../employers/employer.model.js";
+import { rbacService } from "../rbac/rbac.service.js";
 import type { TeamInvitationPreview } from "./member.types.js";
 import type {
   AcceptInvitationInput,
@@ -41,6 +42,7 @@ import type {
   TeamInvitationListItem,
   TeamMemberDetails,
   TeamMemberListItem,
+  TeamMemberSelfProfile,
   TeamSidebarData,
 } from "./member.types.js";
 import { env } from "../../config/env.js";
@@ -356,6 +358,40 @@ class TeamMemberService {
     };
   }
 
+  /**
+   * Own profile for the authenticated team member. Always scoped to memberId
+   * from the session — never accepts an arbitrary ID from the client.
+   */
+  async getMyProfile(
+    employerId: string,
+    memberId: string,
+  ): Promise<TeamMemberSelfProfile> {
+    const [details, employer] = await Promise.all([
+      this.getMember(employerId, memberId),
+      EmployerModel.findById(employerId)
+        .select("companyName establishmentName accountType firstName lastName")
+        .lean(),
+    ]);
+
+    const companyName =
+      employer?.accountType === "individual"
+        ? employer.establishmentName?.trim() ||
+          employer.companyName?.trim() ||
+          ""
+        : employer?.companyName?.trim() || "";
+
+    const ownerName = employer
+      ? `${employer.firstName ?? ""} ${employer.lastName ?? ""}`.trim()
+      : "";
+    const createdByLabel = ownerName || companyName || "Organization Admin";
+
+    return {
+      ...details,
+      companyName,
+      createdByLabel,
+    };
+  }
+
   async inviteMember(
     employerId: string,
     input: InviteMemberInput,
@@ -661,6 +697,7 @@ class TeamMemberService {
       });
     }
 
+    rbacService.invalidateMember(employerId, memberId);
     return this.getMember(employerId, memberId);
   }
 

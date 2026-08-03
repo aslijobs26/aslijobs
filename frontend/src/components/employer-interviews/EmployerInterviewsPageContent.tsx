@@ -67,7 +67,8 @@ function parseViewParam(value: string | null): InterviewsPageView {
 export function EmployerInterviewsPageContent() {
   const queryClient = useQueryClient();
   const { can } = useCan();
-  const canCreateInterview = can("interviews", "create");
+  const canCreateInterview =
+    can("interviews", "create") || can("interviews", "update");
   const canUpdateInterview = can("interviews", "update");
   const router = useRouter();
   const pathname = usePathname();

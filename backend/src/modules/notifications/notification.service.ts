@@ -4,6 +4,11 @@ import { AppError } from "../../middleware/error.middleware.js";
 import { APPLICATION_EVENT_NAMES } from "../applications/application.constants.js";
 import { NOTIFICATION_CHANNEL_DEFAULTS } from "./notification.constants.js";
 import { NotificationModel } from "./notification.model.js";
+import {
+  buildActiveInboxFilter,
+  computeReadExpiresAt,
+  computeUnreadExpiresAt,
+} from "./notification.retention.js";
 import type {
   ApplicationNotificationContext,
   CreateNotificationInput,
@@ -379,6 +384,7 @@ export class NotificationService {
       throw new AppError("Invalid recipient", HTTP_STATUS.BAD_REQUEST);
     }
 
+    const now = new Date();
     const notification = await NotificationModel.create({
       recipientType: input.recipientType,
       recipientId: input.recipientId,
@@ -396,6 +402,8 @@ export class NotificationService {
       },
       metadata: input.metadata ?? {},
       readAt: null,
+      deletedAt: null,
+      expiresAt: computeUnreadExpiresAt(now),
     });
 
     await deliverChannels(notification._id.toString(), input.channels);
@@ -410,42 +418,62 @@ export class NotificationService {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
-    const filter: Record<string, unknown> = {
-      recipientType: input.recipientType,
-      recipientId: input.recipientId,
-    };
+    const now = new Date();
+    const filterClauses: Record<string, unknown>[] = [
+      {
+        recipientType: input.recipientType,
+        recipientId: input.recipientId,
+      },
+      buildActiveInboxFilter(now),
+    ];
 
     if (input.readStatus === "unread") {
-      filter.readAt = null;
+      filterClauses.push({ readAt: null });
     } else if (input.readStatus === "read") {
-      filter.readAt = { $ne: null };
+      filterClauses.push({ readAt: { $ne: null } });
     }
 
     if (input.category !== "all") {
-      filter.category = input.category;
+      filterClauses.push({ category: input.category });
     }
 
     const referenceId = input.referenceId?.trim() ?? "";
     if (referenceId) {
-      filter.referenceType = "application";
-      filter.referenceId = referenceId;
+      filterClauses.push({
+        referenceType: "application",
+        referenceId,
+      });
     }
 
     const search = input.search.trim();
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { body: { $regex: search, $options: "i" } },
-      ];
+      filterClauses.push({
+        $or: [
+          { title: { $regex: search, $options: "i" } },
+          { body: { $regex: search, $options: "i" } },
+        ],
+      });
     }
+
+    const filter: Record<string, unknown> =
+      filterClauses.length === 1
+        ? filterClauses[0]!
+        : { $and: filterClauses };
+
+    const unreadFilter: Record<string, unknown> = {
+      $and: [
+        {
+          recipientType: input.recipientType,
+          recipientId: input.recipientId,
+          readAt: null,
+        },
+        buildActiveInboxFilter(now),
+      ],
+    };
 
     const [total, unreadCount, rows] = await Promise.all([
       NotificationModel.countDocuments(filter),
-      NotificationModel.countDocuments({
-        recipientType: input.recipientType,
-        recipientId: input.recipientId,
-        readAt: null,
-      }),
+      NotificationModel.countDocuments(unreadFilter),
       NotificationModel.find(filter)
         .sort({ createdAt: -1 })
         .skip((input.page - 1) * input.limit)
@@ -481,9 +509,14 @@ export class NotificationService {
     }
 
     const unreadCount = await NotificationModel.countDocuments({
-      recipientType: input.recipientType,
-      recipientId: input.recipientId,
-      readAt: null,
+      $and: [
+        {
+          recipientType: input.recipientType,
+          recipientId: input.recipientId,
+          readAt: null,
+        },
+        buildActiveInboxFilter(),
+      ],
     });
 
     return { unreadCount };
@@ -501,10 +534,16 @@ export class NotificationService {
       throw new AppError("Notification not found", HTTP_STATUS.NOT_FOUND);
     }
 
+    const now = new Date();
     const notification = await NotificationModel.findOne({
-      _id: input.notificationId,
-      recipientType: input.recipientType,
-      recipientId: input.recipientId,
+      $and: [
+        {
+          _id: input.notificationId,
+          recipientType: input.recipientType,
+          recipientId: input.recipientId,
+        },
+        buildActiveInboxFilter(now),
+      ],
     });
 
     if (!notification) {
@@ -512,7 +551,9 @@ export class NotificationService {
     }
 
     if (!notification.readAt) {
-      notification.readAt = new Date();
+      const readAt = new Date();
+      notification.readAt = readAt;
+      notification.expiresAt = computeReadExpiresAt(readAt);
       await notification.save();
     }
 
@@ -527,16 +568,81 @@ export class NotificationService {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
+    const readAt = new Date();
     const result = await NotificationModel.updateMany(
       {
-        recipientType: input.recipientType,
-        recipientId: input.recipientId,
-        readAt: null,
+        $and: [
+          {
+            recipientType: input.recipientType,
+            recipientId: input.recipientId,
+            readAt: null,
+          },
+          buildActiveInboxFilter(readAt),
+        ],
       },
-      { $set: { readAt: new Date() } },
+      {
+        $set: {
+          readAt,
+          expiresAt: computeReadExpiresAt(readAt),
+        },
+      },
     );
 
     return { updatedCount: result.modifiedCount };
+  }
+
+  async deleteForRecipient(input: {
+    recipientType: NotificationRecipientType;
+    recipientId: string;
+    notificationId: string;
+  }): Promise<{ deleted: true }> {
+    if (
+      !mongoose.Types.ObjectId.isValid(input.recipientId) ||
+      !mongoose.Types.ObjectId.isValid(input.notificationId)
+    ) {
+      throw new AppError("Notification not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const result = await NotificationModel.updateOne(
+      {
+        _id: input.notificationId,
+        recipientType: input.recipientType,
+        recipientId: input.recipientId,
+        deletedAt: null,
+      },
+      { $set: { deletedAt: new Date() } },
+    );
+
+    if (result.matchedCount === 0) {
+      throw new AppError("Notification not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    return { deleted: true };
+  }
+
+  async clearAllForRecipient(input: {
+    recipientType: NotificationRecipientType;
+    recipientId: string;
+  }): Promise<{ clearedCount: number }> {
+    if (!mongoose.Types.ObjectId.isValid(input.recipientId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const now = new Date();
+    const result = await NotificationModel.updateMany(
+      {
+        $and: [
+          {
+            recipientType: input.recipientType,
+            recipientId: input.recipientId,
+          },
+          buildActiveInboxFilter(now),
+        ],
+      },
+      { $set: { deletedAt: now } },
+    );
+
+    return { clearedCount: result.modifiedCount };
   }
 
   /**
@@ -566,6 +672,7 @@ export class NotificationService {
     }
 
     const employerObjectId = new mongoose.Types.ObjectId(input.employerId);
+    const inboxNow = new Date();
     const match: Record<string, unknown> = {
       recipientType: "employer",
       recipientId: employerObjectId,
@@ -600,6 +707,8 @@ export class NotificationService {
       input.candidateAction,
     ].filter((value): value is string => Boolean(value && value !== "all"));
 
+    // Messages history keeps all application notifications (including expired /
+    // soft-deleted). Unread badges only count active inbox rows.
     const pipeline: mongoose.PipelineStage[] = [
       { $match: match },
       { $sort: { createdAt: -1 } },
@@ -609,7 +718,28 @@ export class NotificationService {
           latest: { $first: "$$ROOT" },
           unreadCount: {
             $sum: {
-              $cond: [{ $eq: ["$readAt", null] }, 1, 0],
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$readAt", null] },
+                    {
+                      $or: [
+                        { $eq: ["$deletedAt", null] },
+                        { $not: ["$deletedAt"] },
+                      ],
+                    },
+                    {
+                      $or: [
+                        { $gt: ["$expiresAt", inboxNow] },
+                        { $eq: ["$expiresAt", null] },
+                        { $not: ["$expiresAt"] },
+                      ],
+                    },
+                  ],
+                },
+                1,
+                0,
+              ],
             },
           },
           messageCount: { $sum: 1 },
@@ -798,80 +928,143 @@ export class NotificationService {
       };
     });
 
-    const unreadCount = await NotificationModel.countDocuments({
-      recipientType: "employer",
-      recipientId: employerObjectId,
-      readAt: null,
-    });
+    const weekAgo = new Date(inboxNow.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const terminalStatuses = ["joined", "rejected", "withdrawn"] as const;
 
-    const jobFacetRows = await NotificationModel.aggregate<{
-      publicJobId: string;
-      jobTitle: string;
-      count: number;
-    }>([
-      {
-        $match: {
-          recipientType: "employer",
-          recipientId: employerObjectId,
-          referenceType: "application",
-          referenceId: { $nin: ["", null] },
-        },
-      },
-      {
-        $group: {
-          _id: "$referenceId",
-        },
-      },
-      {
-        $addFields: {
-          applicationObjectId: {
-            $convert: {
-              input: "$_id",
-              to: "objectId",
-              onError: null,
-              onNull: null,
+    const [unreadCount, jobFacetRows, activeHiringRows, interviewWeekRows] =
+      await Promise.all([
+        NotificationModel.countDocuments({
+          $and: [
+            {
+              recipientType: "employer",
+              recipientId: employerObjectId,
+              readAt: null,
+            },
+            buildActiveInboxFilter(inboxNow),
+          ],
+        }),
+        NotificationModel.aggregate<{
+          publicJobId: string;
+          jobTitle: string;
+          count: number;
+        }>([
+          {
+            $match: {
+              recipientType: "employer",
+              recipientId: employerObjectId,
+              referenceType: "application",
+              referenceId: { $nin: ["", null] },
             },
           },
-        },
-      },
-      {
-        $lookup: {
-          from: "applications",
-          localField: "applicationObjectId",
-          foreignField: "_id",
-          as: "application",
-        },
-      },
-      { $unwind: { path: "$application", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: "jobs",
-          localField: "application.jobId",
-          foreignField: "_id",
-          as: "job",
-        },
-      },
-      { $unwind: { path: "$job", preserveNullAndEmptyArrays: true } },
-      {
-        $group: {
-          _id: {
-            publicJobId: { $ifNull: ["$application.publicJobId", ""] },
-            jobTitle: { $ifNull: ["$job.jobTitle", "Job"] },
+          {
+            $group: {
+              _id: "$referenceId",
+            },
           },
-          count: { $sum: 1 },
-        },
-      },
-      { $match: { "_id.publicJobId": { $ne: "" } } },
-      { $sort: { count: -1 } },
-      {
-        $project: {
-          _id: 0,
-          publicJobId: "$_id.publicJobId",
-          jobTitle: "$_id.jobTitle",
-          count: 1,
-        },
-      },
-    ]);
+          {
+            $addFields: {
+              applicationObjectId: {
+                $convert: {
+                  input: "$_id",
+                  to: "objectId",
+                  onError: null,
+                  onNull: null,
+                },
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: "applications",
+              localField: "applicationObjectId",
+              foreignField: "_id",
+              as: "application",
+            },
+          },
+          { $unwind: { path: "$application", preserveNullAndEmptyArrays: true } },
+          {
+            $lookup: {
+              from: "jobs",
+              localField: "application.jobId",
+              foreignField: "_id",
+              as: "job",
+            },
+          },
+          { $unwind: { path: "$job", preserveNullAndEmptyArrays: true } },
+          {
+            $group: {
+              _id: {
+                publicJobId: { $ifNull: ["$application.publicJobId", ""] },
+                jobTitle: { $ifNull: ["$job.jobTitle", "Job"] },
+              },
+              count: { $sum: 1 },
+            },
+          },
+          { $match: { "_id.publicJobId": { $ne: "" } } },
+          { $sort: { count: -1 } },
+          {
+            $project: {
+              _id: 0,
+              publicJobId: "$_id.publicJobId",
+              jobTitle: "$_id.jobTitle",
+              count: 1,
+            },
+          },
+        ]),
+        NotificationModel.aggregate<{ count: number }>([
+          {
+            $match: {
+              recipientType: "employer",
+              recipientId: employerObjectId,
+              referenceType: "application",
+              referenceId: { $nin: ["", null] },
+            },
+          },
+          { $group: { _id: "$referenceId" } },
+          {
+            $addFields: {
+              applicationObjectId: {
+                $convert: {
+                  input: "$_id",
+                  to: "objectId",
+                  onError: null,
+                  onNull: null,
+                },
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: "applications",
+              localField: "applicationObjectId",
+              foreignField: "_id",
+              as: "application",
+            },
+          },
+          { $unwind: { path: "$application", preserveNullAndEmptyArrays: false } },
+          {
+            $match: {
+              "application.employerId": employerObjectId,
+              "application.status": { $nin: [...terminalStatuses] },
+            },
+          },
+          { $count: "count" },
+        ]),
+        NotificationModel.aggregate<{ count: number }>([
+          {
+            $match: {
+              recipientType: "employer",
+              recipientId: employerObjectId,
+              referenceType: "application",
+              category: "interview",
+              createdAt: { $gte: weekAgo },
+              referenceId: { $nin: ["", null] },
+            },
+          },
+          { $group: { _id: "$referenceId" } },
+          { $count: "count" },
+        ]),
+      ]);
 
     return {
       conversations,
@@ -882,6 +1075,8 @@ export class NotificationService {
         totalPages: Math.max(1, Math.ceil(total / input.limit)),
       },
       unreadCount,
+      activeHiringCount: activeHiringRows[0]?.count ?? 0,
+      interviewWeekCount: interviewWeekRows[0]?.count ?? 0,
       jobFacets: jobFacetRows,
     };
   }
@@ -898,6 +1093,7 @@ export class NotificationService {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
+    const readAt = new Date();
     const result = await NotificationModel.updateMany(
       {
         recipientType: input.recipientType,
@@ -905,8 +1101,14 @@ export class NotificationService {
         referenceType: "application",
         referenceId: input.applicationId,
         readAt: null,
+        deletedAt: null,
       },
-      { $set: { readAt: new Date() } },
+      {
+        $set: {
+          readAt,
+          expiresAt: computeReadExpiresAt(readAt),
+        },
+      },
     );
 
     return { updatedCount: result.modifiedCount };
@@ -941,11 +1143,15 @@ export class NotificationService {
       throw new AppError("Application not found", HTTP_STATUS.NOT_FOUND);
     }
 
+    // Cap scan size — conversation threads are typically small; unbounded
+    // load would degrade under long-running hiring threads.
+    const TIMELINE_SCAN_CAP = 1_000;
     const rows = await NotificationModel.find({
       referenceType: "application",
       referenceId: input.applicationId,
     })
       .sort({ createdAt: 1 })
+      .limit(TIMELINE_SCAN_CAP)
       .lean();
 
     const unified = buildUnifiedConversationTimeline(

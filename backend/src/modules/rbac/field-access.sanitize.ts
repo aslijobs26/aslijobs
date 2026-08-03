@@ -17,6 +17,19 @@ export type FieldPathBinding = {
   path: string;
 };
 
+/**
+ * Deep-clone DTOs for in-place field sanitization.
+ * Avoid structuredClone — job wizardSnapshot / Mixed Mongo values can throw
+ * DataCloneError and take down GET /jobs/:id with a 500.
+ */
+function cloneDtoForSanitize<T extends Record<string, unknown>>(dto: T): T {
+  try {
+    return JSON.parse(JSON.stringify(dto)) as T;
+  } catch {
+    return { ...dto };
+  }
+}
+
 function setPathValue(
   target: Record<string, unknown>,
   path: string,
@@ -73,10 +86,12 @@ function getPathValue(target: Record<string, unknown>, path: string): unknown {
 }
 
 /**
- * Sanitize a DTO in-place according to field access levels.
+ * Sanitize a DTO according to field access levels.
  * - hidden: remove property
  * - mask: replace with masked string (never raw)
  * - view/edit: leave as-is
+ *
+ * Mutates a clone so callers can pass live response objects safely.
  */
 export function sanitizeDtoByFieldAccess<T extends Record<string, unknown>>(
   context: ResolvedRbacContext | undefined | null,
@@ -88,24 +103,26 @@ export function sanitizeDtoByFieldAccess<T extends Record<string, unknown>>(
     return dto;
   }
 
+  const sanitized = cloneDtoForSanitize(dto);
+
   for (const binding of bindings) {
     const level = getFieldLevel(context, moduleKey, binding.field);
     if (level === "hidden") {
-      deletePathValue(dto, binding.path);
+      deletePathValue(sanitized, binding.path);
       continue;
     }
     if (level === "mask") {
-      const current = getPathValue(dto, binding.path);
+      const current = getPathValue(sanitized, binding.path);
       if (current === undefined) {
         continue;
       }
       const strategy =
         getCatalogField(moduleKey, binding.field)?.maskStrategy ?? "generic";
-      setPathValue(dto, binding.path, maskByStrategy(strategy, current));
+      setPathValue(sanitized, binding.path, maskByStrategy(strategy, current));
     }
   }
 
-  return dto;
+  return sanitized;
 }
 
 export function filterExportFieldsByAccess<T extends string>(
@@ -198,6 +215,12 @@ export const TEAM_MEMBER_FIELD_BINDINGS: FieldPathBinding[] = [
 ];
 
 export const COMPANY_PROFILE_FIELD_BINDINGS: FieldPathBinding[] = [
+  { field: "gst", path: "employer.gstNumber" },
+  { field: "pan", path: "employer.panNumber" },
+  { field: "registration_number", path: "employer.registrationNumber" },
+  { field: "bank_account", path: "employer.bankAccountNumber" },
+  { field: "billing_address", path: "employer.billingAddress" },
+  // Flat shapes (defensive) if any caller sanitizes employer object alone.
   { field: "gst", path: "gstNumber" },
   { field: "pan", path: "panNumber" },
   { field: "registration_number", path: "registrationNumber" },

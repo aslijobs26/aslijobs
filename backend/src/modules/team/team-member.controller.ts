@@ -28,7 +28,7 @@ function sanitizeMemberPayload(
 ): Record<string, unknown> {
   return sanitizeTeamMemberDto(
     req.rbac,
-    structuredClone(member) as Record<string, unknown>,
+    member as Record<string, unknown>,
   );
 }
 
@@ -55,6 +55,30 @@ export class TeamMemberController {
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Team member fetched successfully.",
       data: sanitizeMemberPayload(req, result),
+    });
+  };
+
+  /**
+   * Own profile only — resolves from the authenticated team member session.
+   * Does not accept a member ID and does not apply team_management field masks
+   * (members must always see their own contact details).
+   */
+  getMe = async (req: Request, res: Response): Promise<void> => {
+    const employerId = requireEmployerId(req);
+    if (req.workspacePrincipal !== "member" || !req.teamMemberId) {
+      throw new AppError(
+        "This endpoint is only available to team members.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+
+    const result = await teamMemberService.getMyProfile(
+      employerId,
+      req.teamMemberId,
+    );
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Your profile fetched successfully.",
+      data: result,
     });
   };
 

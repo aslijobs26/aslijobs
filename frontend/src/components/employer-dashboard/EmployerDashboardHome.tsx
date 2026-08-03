@@ -216,7 +216,8 @@ export function EmployerDashboardHome() {
     queryFn: () => fetchFunnelStages(funnelPeriod),
     staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
-    enabled: canCandidates,
+    // "all" reuses applicationStatsQuery — avoid a duplicate stats aggregation.
+    enabled: canCandidates && funnelPeriod !== "all",
   });
 
   const deleteMutation = useMutation({

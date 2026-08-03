@@ -380,7 +380,7 @@ export class ApplicationController {
 
     const application = sanitizeCandidateDetail(
       req.rbac,
-      structuredClone(result.application) as unknown as Record<string, unknown>,
+      result.application as unknown as Record<string, unknown>,
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {
@@ -472,10 +472,7 @@ export class ApplicationController {
       data: {
         application: sanitizeCandidateDetail(
           req.rbac,
-          structuredClone(result.application) as unknown as Record<
-            string,
-            unknown
-          >,
+          result.application as unknown as Record<string, unknown>,
         ),
       },
     });

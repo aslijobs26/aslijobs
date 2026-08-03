@@ -34,6 +34,7 @@ import {
   normalizeFieldAccessMap,
 } from "./field-access.catalog.js";
 import { TeamRoleModel } from "./team-role.model.js";
+import { rbacService } from "../rbac/rbac.service.js";
 import type {
   PermissionMatrixMeta,
   RolesListResponse,
@@ -731,6 +732,7 @@ class TeamRoleService {
       });
     }
 
+    rbacService.invalidateEmployer(employerId);
     return this.getRoleDetails(employerId, roleId);
   }
 
@@ -791,6 +793,7 @@ class TeamRoleService {
       actorEmployerId: employerId,
     });
 
+    rbacService.invalidateEmployer(employerId);
     const count = await this.countMembersForRole(employerId, roleId);
     return mapRoleListItem(role, count);
   }
@@ -812,6 +815,7 @@ class TeamRoleService {
       actorEmployerId: employerId,
     });
 
+    rbacService.invalidateEmployer(employerId);
     const count = await this.countMembersForRole(employerId, roleId);
     return mapRoleListItem(role, count);
   }
@@ -833,6 +837,7 @@ class TeamRoleService {
       actorEmployerId: employerId,
     });
 
+    rbacService.invalidateEmployer(employerId);
     const count = await this.countMembersForRole(employerId, roleId);
     return mapRoleListItem(role, count);
   }

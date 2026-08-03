@@ -84,6 +84,15 @@ function normalizeSalaryPeriod(value: unknown): SalaryPeriod {
   return value === "per-year" ? "per-year" : "per-month";
 }
 
+function toObjectIdString(
+  value: { toString(): string } | null | undefined,
+): string {
+  if (value == null) {
+    return "";
+  }
+  return value.toString();
+}
+
 function toJobPublic(
   job: JobDocument,
   metrics?: EmployerJobApplicationMetrics,
@@ -91,8 +100,8 @@ function toJobPublic(
   return {
     id: job._id.toString(),
     jobId: job.jobId,
-    employerId: job.employerId.toString(),
-    companyId: job.companyId.toString(),
+    employerId: toObjectIdString(job.employerId),
+    companyId: toObjectIdString(job.companyId),
     companyName: job.companyName,
     industry: job.industry ?? "",
     businessCategory: job.businessCategory ?? "",
@@ -148,7 +157,7 @@ function toJobPublic(
     views: job.views,
     bookmarks: job.bookmarks,
     shares: job.shares,
-    createdBy: job.createdBy.toString(),
+    createdBy: toObjectIdString(job.createdBy),
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   };

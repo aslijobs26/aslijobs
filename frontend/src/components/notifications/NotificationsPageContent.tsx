@@ -5,6 +5,8 @@ import {
   notificationIcon,
 } from "@/components/notifications/notification-utils";
 import {
+  clearAllNotifications,
+  deleteNotification,
   fetchNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
@@ -17,7 +19,7 @@ import type {
 } from "@/types/notifications";
 import { cn } from "@/utils/cn";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Trash2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -117,9 +119,40 @@ export function NotificationsPageContent({
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: deleteNotification,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.list(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.unreadCount(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.recent(recipientScope),
+      });
+    },
+  });
+
+  const clearAllMutation = useMutation({
+    mutationFn: clearAllNotifications,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.list(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.unreadCount(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.recent(recipientScope),
+      });
+    },
+  });
+
   const notifications = listQuery.data?.notifications ?? [];
   const pagination = listQuery.data?.pagination;
   const unreadCount = listQuery.data?.unreadCount ?? 0;
+  const hasInboxItems = (pagination?.total ?? notifications.length) > 0;
 
   const openNotification = async (notification: NotificationListItem) => {
     if (!notification.isRead) {
@@ -134,6 +167,17 @@ export function NotificationsPageContent({
     }
   };
 
+  const handleClearAll = () => {
+    if (
+      !window.confirm(
+        "Clear all notifications from your inbox? Conversation history is not affected.",
+      )
+    ) {
+      return;
+    }
+    clearAllMutation.mutate();
+  };
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -145,14 +189,24 @@ export function NotificationsPageContent({
             Stay updated on applications, interviews, and offers.
           </p>
         </div>
-        <button
-          type="button"
-          disabled={unreadCount === 0 || markAllMutation.isPending}
-          onClick={() => markAllMutation.mutate()}
-          className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Mark all as read
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={!hasInboxItems || clearAllMutation.isPending}
+            onClick={handleClearAll}
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Clear all
+          </button>
+          <button
+            type="button"
+            disabled={unreadCount === 0 || markAllMutation.isPending}
+            onClick={() => markAllMutation.mutate()}
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Mark all as read
+          </button>
+        </div>
       </header>
 
       <div className="mt-5 flex flex-col gap-3">
@@ -289,6 +343,16 @@ export function NotificationsPageContent({
                           Mark as read
                         </button>
                       ) : null}
+                      <button
+                        type="button"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => deleteMutation.mutate(notification.id)}
+                        aria-label={`Delete notification: ${notification.title}`}
+                        className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Trash2 className="size-3.5" aria-hidden="true" />
+                        Delete
+                      </button>
                     </div>
                   </div>
                 </div>

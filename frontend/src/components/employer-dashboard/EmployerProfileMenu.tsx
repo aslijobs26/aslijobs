@@ -10,7 +10,10 @@ import { ROUTES } from "@/constants/routes";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import { useCanOptional } from "@/providers/employer-permission-provider";
 import type { EmployerLoginPublic } from "@/services/employer-login.service";
-import type { TeamPermissionModule } from "@/types/employer-team";
+import type {
+  RbacSessionActor,
+  TeamPermissionModule,
+} from "@/types/employer-team";
 import { cn } from "@/utils/cn";
 import { clearEmployerClientSession } from "@/utils/employer-session";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
@@ -22,6 +25,7 @@ import {
   Home,
   LogOut,
   Settings,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -41,31 +45,40 @@ type EmployerProfileMenuProps = {
   onLogout?: () => void;
 };
 
-const PROFILE_MENU_SECONDARY_LINKS: Array<{
+type ProfileMenuLink = {
   label: string;
   href: string;
   icon: typeof Briefcase;
   module: TeamPermissionModule | null;
-}> = [
-  {
-    label: "My Jobs",
-    href: ROUTES.EMPLOYER_JOBS,
-    icon: Briefcase,
-    module: "jobs",
-  },
-  {
-    label: "Company Profile",
-    href: ROUTES.EMPLOYER_COMPANY_PROFILE,
-    icon: Building2,
-    module: "company_profile",
-  },
-  {
-    label: "Settings",
-    href: ROUTES.EMPLOYER_SETTINGS,
-    icon: Settings,
-    module: "settings",
-  },
-];
+};
+
+const PROFILE_MENU_JOBS_LINK: ProfileMenuLink = {
+  label: "My Jobs",
+  href: ROUTES.EMPLOYER_JOBS,
+  icon: Briefcase,
+  module: "jobs",
+};
+
+const PROFILE_MENU_COMPANY_LINK: ProfileMenuLink = {
+  label: "Company Profile",
+  href: ROUTES.EMPLOYER_COMPANY_PROFILE,
+  icon: Building2,
+  module: "company_profile",
+};
+
+const PROFILE_MENU_MY_PROFILE_LINK: ProfileMenuLink = {
+  label: "My Profile",
+  href: ROUTES.EMPLOYER_TEAM_MEMBER_PROFILE,
+  icon: User,
+  module: null,
+};
+
+const PROFILE_MENU_SETTINGS_LINK: ProfileMenuLink = {
+  label: "Settings",
+  href: ROUTES.EMPLOYER_SETTINGS,
+  icon: Settings,
+  module: "settings",
+};
 
 function isEmployerWorkspacePath(pathname: string): boolean {
   if (
@@ -165,6 +178,14 @@ function EmployerProfileAvatar({
   );
 }
 
+type ProfileIdentity = {
+  primaryName: string;
+  secondaryLabel: string;
+  avatarInitials: string;
+  avatarImageUrl: string | null;
+  actor: RbacSessionActor | null;
+};
+
 export function EmployerProfileMenu({
   className,
   compact = false,
@@ -177,16 +198,61 @@ export function EmployerProfileMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const employerProfileQuery = useEmployerProfile();
-  const { can, isLoading: permissionsLoading, hasProvider } = useCanOptional();
-  const displayName = employerProfileQuery.data
-    ? getEmployerDisplayName(employerProfileQuery.data)
-    : EMPLOYER_DASHBOARD_ACCOUNT_NAME;
-  const avatarInitials = getEmployerInitials(displayName);
-  const avatarImageUrl = employerProfileQuery.data
-    ? getEmployerAvatarUrl(employerProfileQuery.data)
-    : null;
+  const {
+    can,
+    isLoading: permissionsLoading,
+    hasProvider,
+    session,
+  } = useCanOptional();
+
+  const identity = useMemo<ProfileIdentity>(() => {
+    const employer = employerProfileQuery.data;
+    const organizationName = employer
+      ? getEmployerDisplayName(employer)
+      : EMPLOYER_DASHBOARD_ACCOUNT_NAME;
+    const employerAvatarUrl = employer ? getEmployerAvatarUrl(employer) : null;
+
+    const actor =
+      session?.principalType === "member" && session.actor
+        ? session.actor
+        : null;
+
+    if (actor) {
+      const memberName =
+        actor.fullName.trim() || EMPLOYER_DASHBOARD_ACCOUNT_NAME;
+      const roleName = actor.roleName.trim() || session?.roleName || "Member";
+      const companyName =
+        actor.companyName.trim() || organizationName || "Organization";
+
+      return {
+        // Company is the primary workplace identity for team members.
+        primaryName: companyName,
+        secondaryLabel: `${memberName} • ${roleName}`,
+        avatarInitials: getEmployerInitials(memberName),
+        avatarImageUrl: null,
+        actor: {
+          ...actor,
+          fullName: memberName,
+          roleName,
+          companyName,
+        },
+      };
+    }
+
+    return {
+      primaryName: organizationName,
+      secondaryLabel: EMPLOYER_DASHBOARD_ROLE_LABEL,
+      avatarInitials: getEmployerInitials(organizationName),
+      avatarImageUrl: employerAvatarUrl,
+      actor: null,
+    };
+  }, [employerProfileQuery.data, session]);
 
   const profileMenuLinks = useMemo(() => {
+    const isTeamMember = Boolean(
+      session?.principalType === "member" && session.actor,
+    );
+
     const primaryLink =
       isEmployerWorkspacePath(pathname)
         ? {
@@ -209,12 +275,24 @@ export function EmployerProfileMenu({
               module: null as TeamPermissionModule | null,
             };
 
-    const secondaryLinks = PROFILE_MENU_SECONDARY_LINKS.map((item) =>
-      item.href === ROUTES.EMPLOYER_COMPANY_PROFILE &&
-      employerProfileQuery.data?.accountType === "individual"
-        ? { ...item, label: "Individual Profile" }
-        : item,
-    ).filter((item) => {
+    const secondaryLinks: ProfileMenuLink[] = isTeamMember
+      ? [
+          PROFILE_MENU_JOBS_LINK,
+          PROFILE_MENU_MY_PROFILE_LINK,
+          PROFILE_MENU_SETTINGS_LINK,
+        ]
+      : [
+          PROFILE_MENU_JOBS_LINK,
+          employerProfileQuery.data?.accountType === "individual"
+            ? {
+                ...PROFILE_MENU_COMPANY_LINK,
+                label: "Individual Profile",
+              }
+            : PROFILE_MENU_COMPANY_LINK,
+          PROFILE_MENU_SETTINGS_LINK,
+        ];
+
+    const filteredSecondary = secondaryLinks.filter((item) => {
       if (!item.module) {
         return true;
       }
@@ -228,13 +306,14 @@ export function EmployerProfileMenu({
       return can(item.module, "read");
     });
 
-    return [primaryLink, ...secondaryLinks];
+    return [primaryLink, ...filteredSecondary];
   }, [
     can,
     employerProfileQuery.data?.accountType,
     hasProvider,
     pathname,
     permissionsLoading,
+    session,
   ]);
 
   useEffect(() => {
@@ -282,12 +361,17 @@ export function EmployerProfileMenu({
     })();
   };
 
+  const actor = identity.actor;
+  const ariaLabel = actor
+    ? `Team member profile menu for ${actor.fullName} at ${identity.primaryName}`
+    : "Employer profile menu";
+
   return (
     <div ref={rootRef} className={cn("relative", className)}>
       <button
         type="button"
         className="inline-flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        aria-label="Employer profile menu"
+        aria-label={ariaLabel}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-controls={menuId}
@@ -295,18 +379,18 @@ export function EmployerProfileMenu({
         onKeyDown={handleTriggerKeyDown}
       >
         <EmployerProfileAvatar
-          initials={avatarInitials}
-          imageUrl={avatarImageUrl}
+          initials={identity.avatarInitials}
+          imageUrl={identity.avatarImageUrl}
         />
 
         {!compact ? (
           <>
             <span className="hidden min-w-0 text-left md:block">
               <span className="block max-w-[9.5rem] truncate text-sm font-semibold text-foreground">
-                {displayName}
+                {identity.primaryName}
               </span>
-              <span className="block truncate text-xs text-muted">
-                {EMPLOYER_DASHBOARD_ROLE_LABEL}
+              <span className="block max-w-[9.5rem] truncate text-xs text-muted">
+                {identity.secondaryLabel}
               </span>
             </span>
             <ChevronDown
@@ -324,21 +408,40 @@ export function EmployerProfileMenu({
       <div
         id={menuId}
         role="menu"
-        aria-label="Employer profile options"
+        aria-label={ariaLabel}
         className={cn(
-          "absolute right-0 z-50 mt-2 w-52 origin-top-right rounded-lg border border-border-subtle bg-surface p-1.5 shadow-sm transition-[opacity,transform,visibility] duration-200 ease-out",
+          "absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-lg border border-border-subtle bg-surface p-1.5 shadow-sm transition-[opacity,transform,visibility] duration-200 ease-out",
           isOpen
             ? "visible translate-y-0 scale-100 opacity-100"
             : "invisible -translate-y-1 scale-95 opacity-0 pointer-events-none",
         )}
       >
-        <div className="border-b border-border-subtle px-3 py-2 md:hidden">
-          <p className="truncate text-sm font-semibold text-foreground">
-            {displayName}
-          </p>
-          <p className="truncate text-xs text-muted">
-            {EMPLOYER_DASHBOARD_ROLE_LABEL}
-          </p>
+        <div className="border-b border-border-subtle px-3 py-2">
+          {actor ? (
+            <div className="min-w-0">
+              <div className="mb-2">
+                <EmployerProfileAvatar
+                  initials={identity.avatarInitials}
+                  imageUrl={identity.avatarImageUrl}
+                />
+              </div>
+              <p className="truncate text-sm font-semibold text-foreground">
+                {actor.companyName}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-muted">
+                {identity.secondaryLabel}
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="truncate text-sm font-semibold text-foreground">
+                {identity.primaryName}
+              </p>
+              <p className="truncate text-xs text-muted">
+                {EMPLOYER_DASHBOARD_ROLE_LABEL}
+              </p>
+            </>
+          )}
         </div>
 
         {profileMenuLinks.map((item) => {

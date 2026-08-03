@@ -135,6 +135,10 @@ export class JwtService {
         env.JWT_REFRESH_SECRET,
       ) as EmployerJwtPayload & { typ?: string };
 
+      if (decoded.typ !== "refresh") {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
       if (decoded.role !== "employer" || !decoded.sub) {
         throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
       }
@@ -156,10 +160,18 @@ export class JwtService {
         env.JWT_REFRESH_SECRET,
       ) as WorkspaceJwtPayload & { typ?: string };
 
+      if (decoded.typ !== "refresh") {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
       if (
         !decoded.sub ||
         (decoded.role !== "employer" && decoded.role !== "team_member")
       ) {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
+      if (decoded.role === "team_member" && !decoded.employerId) {
         throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
       }
 
@@ -235,6 +247,10 @@ export class JwtService {
         token,
         env.JWT_REFRESH_SECRET,
       ) as JobSeekerJwtPayload & { typ?: string };
+
+      if (decoded.typ !== "refresh") {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
 
       if (decoded.role !== "job_seeker" || !decoded.sub) {
         throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);

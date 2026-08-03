@@ -67,8 +67,6 @@ export function MembersTable({
   const canViewEmail = canField("team_management", "email");
   const canViewRole = canField("team_management", "role");
   const canViewDepartment = canField("team_management", "department");
-  const canViewPhone = canField("team_management", "phone");
-  const canViewDesignation = canField("team_management", "designation");
   const canUpdateMember = can("team_management", "update");
   const canCreateMember = can("team_management", "create");
   const canDeleteMember = can("team_management", "delete");
@@ -157,16 +155,6 @@ export function MembersTable({
                         <p className="truncate text-xs text-muted">
                           {canViewEmail ? member.email : "—"}
                         </p>
-                        {canViewPhone && member.phone ? (
-                          <p className="truncate text-xs text-muted">
-                            {member.phone}
-                          </p>
-                        ) : null}
-                        {canViewDesignation && member.designation ? (
-                          <p className="truncate text-xs text-muted">
-                            {member.designation}
-                          </p>
-                        ) : null}
                       </div>
                     </div>
                   </td>

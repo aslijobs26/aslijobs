@@ -87,6 +87,10 @@ export type NotificationConversationListResult = {
     totalPages: number;
   };
   unreadCount: number;
+  /** Applications still in an active hiring status (not joined/rejected/withdrawn). */
+  activeHiringCount: number;
+  /** Distinct applications with interview activity in the last 7 days. */
+  interviewWeekCount: number;
   jobFacets: Array<{
     publicJobId: string;
     jobTitle: string;

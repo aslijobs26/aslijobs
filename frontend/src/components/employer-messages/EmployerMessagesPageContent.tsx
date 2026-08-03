@@ -421,7 +421,8 @@ function ActionsMenu({
 }) {
   const { can } = useCan();
   const canSendOffer = can("messages", "update");
-  const canScheduleInterview = can("interviews", "create");
+  const canScheduleInterview =
+    can("interviews", "create") || can("interviews", "update");
   const [open, setOpen] = useState(false);
   const candidateHref = ROUTES.employerCandidateDetail(applicationId);
 
@@ -1061,6 +1062,8 @@ export function EmployerMessagesPageContent() {
 
   const totalConversations = conversationsQuery.data?.pagination.total ?? 0;
   const unreadTotal = conversationsQuery.data?.unreadCount ?? 0;
+  const activeHiringCount = conversationsQuery.data?.activeHiringCount ?? 0;
+  const interviewWeekCount = conversationsQuery.data?.interviewWeekCount ?? 0;
   const jobFacets = conversationsQuery.data?.jobFacets ?? [];
   const showTimeline = Boolean(selectedApplicationId);
 
@@ -1244,12 +1247,10 @@ export function EmployerMessagesPageContent() {
             )}
           >
             <MessagesStatsCards
-              totalConversations={
-                conversationsQuery.data?.pagination.total ?? null
-              }
-              unreadConversations={
-                conversationsQuery.data?.unreadCount ?? null
-              }
+              totalConversations={totalConversations}
+              unreadConversations={unreadTotal}
+              activeHiringConversations={activeHiringCount}
+              interviewWeekConversations={interviewWeekCount}
             />
           </div>
 

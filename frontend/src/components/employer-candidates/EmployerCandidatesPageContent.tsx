@@ -43,7 +43,8 @@ export function EmployerCandidatesPageContent() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { can } = useCan();
   const canExportCandidates = can("candidates", "export");
-  const canScheduleInterview = can("interviews", "create");
+  const canScheduleInterview =
+    can("interviews", "create") || can("interviews", "update");
 
   const publicJobId =
     searchParams.get("jobId")?.trim().toUpperCase() || undefined;

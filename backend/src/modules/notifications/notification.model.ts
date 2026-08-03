@@ -91,6 +91,23 @@ const notificationSchema = new Schema(
       default: null,
       index: true,
     },
+    /**
+     * Inbox visibility end. Recalculated on read (unread → read retention window).
+     * Conversation/timeline APIs ignore this field so Messages history stays intact.
+     */
+    expiresAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    /**
+     * Soft-dismiss from inbox (Clear All / Delete). Does not remove conversation history.
+     */
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -105,6 +122,15 @@ notificationSchema.index({
   readAt: 1,
   createdAt: -1,
 });
+notificationSchema.index({
+  recipientType: 1,
+  recipientId: 1,
+  deletedAt: 1,
+  expiresAt: -1,
+  createdAt: -1,
+});
+notificationSchema.index({ expiresAt: 1, referenceType: 1 });
+notificationSchema.index({ deletedAt: 1, referenceType: 1 });
 
 export type NotificationDocumentLean = InferSchemaType<
   typeof notificationSchema

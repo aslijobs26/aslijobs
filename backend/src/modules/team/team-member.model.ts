@@ -91,6 +91,16 @@ const teamMemberSchema = new Schema(
       default: "",
       select: false,
     },
+    refreshTokenHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    refreshTokenExpiresAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
     isDeleted: {
       type: Boolean,
       default: false,

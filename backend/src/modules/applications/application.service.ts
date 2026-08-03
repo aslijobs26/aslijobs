@@ -2269,8 +2269,9 @@ export class ApplicationService {
     }
 
     const page = input.page ?? 1;
-    const limit = input.limit ?? 20;
+    const limit = Math.min(input.limit ?? 20, 100);
     const sortDir = input.sort === "oldest" ? 1 : -1;
+    const search = text(input.search).toLowerCase();
 
     const filter: Record<string, unknown> = {
       jobSeekerId: input.jobSeekerId,
@@ -2280,8 +2281,76 @@ export class ApplicationService {
       filter.status = input.status;
     }
 
+    // Fast path: no search → paginate in Mongo (O(page) instead of O(N)).
+    if (!search) {
+      const [total, applications] = await Promise.all([
+        ApplicationModel.countDocuments(filter),
+        ApplicationModel.find(filter)
+          .sort({ appliedAt: sortDir })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .lean(),
+      ]);
+
+      const jobIds = [...new Set(applications.map((app) => String(app.jobId)))];
+      const employerIds = [
+        ...new Set(applications.map((app) => String(app.employerId))),
+      ];
+
+      const [jobs, employers] = await Promise.all([
+        JobModel.find({ _id: { $in: jobIds } })
+          .select(
+            "jobTitle companyName jobId city cityName state stateName salaryType salaryPeriod fixedSalary minimumSalary maximumSalary",
+          )
+          .lean(),
+        EmployerModel.find({ _id: { $in: employerIds } })
+          .select("companyLogo")
+          .lean(),
+      ]);
+
+      const jobMap = new Map(jobs.map((job) => [String(job._id), job]));
+      const employerMap = new Map(
+        employers.map((employer) => [String(employer._id), employer]),
+      );
+
+      const items: SeekerApplicationListItem[] = applications.map((app) => {
+        const job = jobMap.get(String(app.jobId));
+        const employer = employerMap.get(String(app.employerId));
+        const history = mapStatusHistory(app.statusHistory);
+        const lastStatusUpdatedAt =
+          history.length > 0 ? history[history.length - 1]!.at : null;
+
+        return {
+          id: app._id.toString(),
+          publicJobId: app.publicJobId,
+          jobTitle: job?.jobTitle?.trim() || "Job",
+          companyName: job?.companyName?.trim() || "",
+          companyLogoUrl: text(employer?.companyLogo?.url),
+          location: job ? formatJobLocation(job) : "",
+          salaryLabel: job ? formatSalaryLabel(job) : "Not disclosed",
+          status: app.status as ApplicationStatus,
+          resumeVersion: app.resumeVersion,
+          appliedAt: app.appliedAt.toISOString(),
+          lastStatusUpdatedAt,
+        };
+      });
+
+      return {
+        applications: items,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / limit)),
+        },
+      };
+    }
+
+    // Search path: still needs job/company text, but hard-cap scanned rows.
+    const SCAN_CAP = 2_000;
     const applications = await ApplicationModel.find(filter)
       .sort({ appliedAt: sortDir })
+      .limit(SCAN_CAP)
       .lean();
 
     const jobIds = [...new Set(applications.map((app) => String(app.jobId)))];
@@ -2305,8 +2374,6 @@ export class ApplicationService {
       employers.map((employer) => [String(employer._id), employer]),
     );
 
-    const search = text(input.search).toLowerCase();
-
     let items: SeekerApplicationListItem[] = applications.map((app) => {
       const job = jobMap.get(String(app.jobId));
       const employer = employerMap.get(String(app.employerId));
@@ -2329,14 +2396,12 @@ export class ApplicationService {
       };
     });
 
-    if (search) {
-      items = items.filter(
-        (item) =>
-          item.jobTitle.toLowerCase().includes(search) ||
-          item.companyName.toLowerCase().includes(search) ||
-          item.publicJobId.toLowerCase().includes(search),
-      );
-    }
+    items = items.filter(
+      (item) =>
+        item.jobTitle.toLowerCase().includes(search) ||
+        item.companyName.toLowerCase().includes(search) ||
+        item.publicJobId.toLowerCase().includes(search),
+    );
 
     const total = items.length;
     const start = (page - 1) * limit;

@@ -49,12 +49,47 @@ export function sanitizeJobDto(
   context: ResolvedRbacContext | undefined,
   job: Record<string, unknown>,
 ) {
-  return sanitizeDtoByFieldAccess(
+  const sanitized = sanitizeDtoByFieldAccess(
     context,
     "jobs",
     job,
     JOB_PUBLIC_FIELD_BINDINGS,
-  );
+  ) as Record<string, unknown>;
+
+  if (!context || context.isSuperAdmin) {
+    return sanitized;
+  }
+
+  const snapshot = sanitized.wizardSnapshot;
+  if (snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)) {
+    sanitized.wizardSnapshot = sanitizeDtoByFieldAccess(
+      context,
+      "jobs",
+      snapshot as Record<string, unknown>,
+      [
+        { field: "salary", path: "fixedSalary" },
+        { field: "salary", path: "minimumSalary" },
+        { field: "salary", path: "maximumSalary" },
+        { field: "salary", path: "salaryType" },
+        { field: "salary", path: "salaryPeriod" },
+        { field: "salary", path: "jobInformation.fixedSalary" },
+        { field: "salary", path: "jobInformation.minimumSalary" },
+        { field: "salary", path: "jobInformation.maximumSalary" },
+        { field: "benefits", path: "perks" },
+        { field: "benefits", path: "jobInformation.perks" },
+        { field: "job_description", path: "description" },
+        { field: "job_description", path: "jobInformation.description" },
+        { field: "hiring_manager", path: "contactPersonName" },
+        { field: "hiring_manager", path: "contactEmail" },
+        { field: "hiring_manager", path: "contactMobile" },
+        { field: "hiring_manager", path: "interview.contactPersonName" },
+        { field: "hiring_manager", path: "interview.contactEmail" },
+        { field: "hiring_manager", path: "interview.contactMobile" },
+      ],
+    );
+  }
+
+  return sanitized;
 }
 
 export function sanitizeTeamMemberDto(

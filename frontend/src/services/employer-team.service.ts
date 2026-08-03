@@ -15,6 +15,7 @@ import type {
   TeamMemberDetails,
   TeamMemberListItem,
   TeamMemberOption,
+  TeamMemberSelfProfile,
   TeamRoleDetails,
   TeamRoleListItem,
   TeamRoleSummary,
@@ -169,6 +170,14 @@ export async function fetchTeamMembers(params: ListMembersParams = {}) {
 export async function fetchTeamMember(memberId: string) {
   const response = await apiClient.get<ApiSuccess<TeamMemberDetails>>(
     `/team/members/${memberId}`,
+  );
+  return response.data.data;
+}
+
+/** Own profile for the authenticated team member — no arbitrary ID. */
+export async function fetchTeamMemberMe() {
+  const response = await apiClient.get<ApiSuccess<TeamMemberSelfProfile>>(
+    "/team/members/me",
   );
   return response.data.data;
 }

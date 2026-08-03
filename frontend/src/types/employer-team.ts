@@ -297,6 +297,16 @@ export type RbacActionKey =
   | "delete"
   | "export";
 
+export type RbacSessionActor = {
+  fullName: string;
+  email: string;
+  roleName: string;
+  departmentName: string | null;
+  companyName: string;
+  status: string;
+  lastActiveAt: string | null;
+};
+
 export type RbacSession = {
   principalType: "owner" | "member";
   employerId: string;
@@ -311,6 +321,8 @@ export type RbacSession = {
     TeamPermissionModule,
     Record<RbacActionKey, boolean>
   >;
+  /** Authenticated member identity only (null for employer owner). */
+  actor: RbacSessionActor | null;
 };
 
 export type TeamMemberLoginResponse = {
@@ -393,6 +405,12 @@ export type TeamMemberDetails = TeamMemberListItem & {
     cancelledAt: string | null;
     resendCount: number;
   }>;
+};
+
+/** Authenticated team member's own profile (session-scoped). */
+export type TeamMemberSelfProfile = TeamMemberDetails & {
+  companyName: string;
+  createdByLabel: string;
 };
 
 export type MembersListResponse = {

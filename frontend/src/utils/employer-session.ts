@@ -7,6 +7,7 @@ import {
   setEmployerAuthSession,
   type EmployerAuthSession,
 } from "@/utils/employer-auth-storage";
+import { logoutWorkspaceServerSession } from "@/services/api-client";
 import type { QueryClient } from "@tanstack/react-query";
 
 /**
@@ -22,12 +23,13 @@ export async function resetEmployerClientCache(
 }
 
 /**
- * Full employer logout cleanup: stop pending requests, clear cached employer
- * data, and remove auth tokens. Must run on every logout / forced unauth path.
+ * Full employer logout cleanup: revoke refresh server-side when possible,
+ * stop pending requests, clear cached employer data, and remove auth tokens.
  */
 export async function clearEmployerClientSession(
   queryClient: QueryClient,
 ): Promise<void> {
+  await logoutWorkspaceServerSession();
   await resetEmployerClientCache(queryClient);
   clearEmployerAuthSession();
 }

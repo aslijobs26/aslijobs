@@ -301,10 +301,6 @@ export class EmployerLoginService {
     employer.lastLoginAt = new Date();
     await employer.save();
 
-    console.log(
-      `[LOGIN] employerId=${employer._id.toString()} whatsapp=${employer.whatsappNumber} at=${employer.lastLoginAt.toISOString()}`,
-    );
-
     return {
       employer: toLoginEmployer(employer),
       accessToken: tokens.accessToken,

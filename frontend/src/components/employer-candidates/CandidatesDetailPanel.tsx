@@ -303,7 +303,8 @@ export function CandidatesDetailPanel({
   const phoneLevel = getFieldLevel("candidates", "phone");
   const canUsePhone = canViewPhone && phoneLevel !== "mask";
   const canViewResume = canField("candidates", "resume");
-  const canScheduleInterview = can("interviews", "create");
+  const canScheduleInterview =
+    can("interviews", "create") || can("interviews", "update");
   const canUpdateCandidates = can("candidates", "update");
   const canViewExpectedSalary = canField("candidates", "expected_salary");
   const canViewLocation = canField("candidates", "location");

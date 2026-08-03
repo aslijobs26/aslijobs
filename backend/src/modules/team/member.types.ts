@@ -54,6 +54,12 @@ export type TeamMemberDetails = TeamMemberListItem & {
   }>;
 };
 
+/** Authenticated member's own profile (session-scoped). */
+export type TeamMemberSelfProfile = TeamMemberDetails & {
+  companyName: string;
+  createdByLabel: string;
+};
+
 export type TeamInvitationListItem = {
   id: string;
   email: string;

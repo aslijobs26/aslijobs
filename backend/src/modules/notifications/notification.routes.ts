@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { requireNotificationRecipientAuth } from "../../middleware/notification-auth.middleware.js";
+import {
+  requireEmployerMessagesAccess,
+  requireNotificationRecipientAuth,
+} from "../../middleware/notification-auth.middleware.js";
 import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { notificationController } from "./notification.controller.js";
@@ -22,18 +25,21 @@ notificationRouter.get(
 
 notificationRouter.get(
   "/me/conversations",
+  asyncHandler(requireEmployerMessagesAccess("read")),
   validate(listNotificationConversationsQuerySchema, "query"),
   asyncHandler(notificationController.listConversations),
 );
 
 notificationRouter.post(
   "/me/conversations/:applicationId/read",
+  asyncHandler(requireEmployerMessagesAccess("read")),
   validate(conversationReferenceParamsSchema, "params"),
   asyncHandler(notificationController.markConversationAsRead),
 );
 
 notificationRouter.get(
   "/me/conversations/:applicationId/timeline",
+  asyncHandler(requireEmployerMessagesAccess("read")),
   validate(conversationReferenceParamsSchema, "params"),
   validate(listConversationTimelineQuerySchema, "query"),
   asyncHandler(notificationController.listConversationTimeline),
@@ -48,6 +54,17 @@ notificationRouter.get(
 notificationRouter.post(
   "/me/read-all",
   asyncHandler(notificationController.markAllAsRead),
+);
+
+notificationRouter.post(
+  "/me/clear-all",
+  asyncHandler(notificationController.clearAll),
+);
+
+notificationRouter.delete(
+  "/me/:notificationId",
+  validate(notificationIdParamsSchema, "params"),
+  asyncHandler(notificationController.deleteOne),
 );
 
 notificationRouter.post(

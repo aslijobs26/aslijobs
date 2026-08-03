@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
+import { assertJobWriteFieldsAllowed } from "./job-write-field-access.js";
 import { sanitizeJobDto } from "../rbac/field-access.response.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { jobService } from "./job.service.js";
@@ -26,11 +27,18 @@ export class JobController {
     }
 
     const body = req.body as CreateJobInput;
+    assertJobWriteFieldsAllowed(req.rbac, body);
     const result = await jobService.createJob(employerId, body);
 
     sendSuccess(res, HTTP_STATUS.CREATED, {
       message: "Job posted successfully.",
-      data: result,
+      data: {
+        ...result,
+        job: sanitizeJobDto(
+          req.rbac,
+          result.job as unknown as Record<string, unknown>,
+        ),
+      },
     });
   };
 
@@ -44,10 +52,7 @@ export class JobController {
     const query = req.query as unknown as ListEmployerJobsQuery;
     const result = await jobService.listEmployerJobs(employerId, query);
     const jobs = result.jobs.map((job) =>
-      sanitizeJobDto(
-        req.rbac,
-        structuredClone(job) as unknown as Record<string, unknown>,
-      ),
+      sanitizeJobDto(req.rbac, job as unknown as Record<string, unknown>),
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {
@@ -65,10 +70,7 @@ export class JobController {
 
     const result = await jobService.getEmployerJobStats(employerId);
     const recentJobs = result.recentJobs.map((job) =>
-      sanitizeJobDto(
-        req.rbac,
-        structuredClone(job) as unknown as Record<string, unknown>,
-      ),
+      sanitizeJobDto(req.rbac, job as unknown as Record<string, unknown>),
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {
@@ -94,7 +96,13 @@ export class JobController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Job status updated successfully.",
-      data: result,
+      data: {
+        ...result,
+        job: sanitizeJobDto(
+          req.rbac,
+          result.job as unknown as Record<string, unknown>,
+        ),
+      },
     });
   };
 
@@ -125,7 +133,7 @@ export class JobController {
     const result = await jobService.getOwnedJob(employerId, jobId);
     const job = sanitizeJobDto(
       req.rbac,
-      structuredClone(result.job) as unknown as Record<string, unknown>,
+      result.job as unknown as Record<string, unknown>,
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {
@@ -142,11 +150,18 @@ export class JobController {
     }
 
     const body = req.body as SaveDraftJobInput;
+    assertJobWriteFieldsAllowed(req.rbac, body);
     const result = await jobService.createDraft(employerId, body);
 
     sendSuccess(res, HTTP_STATUS.CREATED, {
       message: "Draft saved successfully.",
-      data: result,
+      data: {
+        ...result,
+        job: sanitizeJobDto(
+          req.rbac,
+          result.job as unknown as Record<string, unknown>,
+        ),
+      },
     });
   };
 
@@ -159,11 +174,18 @@ export class JobController {
 
     const { jobId } = req.params as { jobId: string };
     const body = req.body as SaveDraftJobInput;
+    assertJobWriteFieldsAllowed(req.rbac, body);
     const result = await jobService.updateDraft(employerId, jobId, body);
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Draft updated successfully.",
-      data: result,
+      data: {
+        ...result,
+        job: sanitizeJobDto(
+          req.rbac,
+          result.job as unknown as Record<string, unknown>,
+        ),
+      },
     });
   };
 
@@ -176,11 +198,18 @@ export class JobController {
 
     const { jobId } = req.params as { jobId: string };
     const body = req.body as CreateJobInput;
+    assertJobWriteFieldsAllowed(req.rbac, body);
     const result = await jobService.publishDraft(employerId, jobId, body);
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Job published successfully.",
-      data: result,
+      data: {
+        ...result,
+        job: sanitizeJobDto(
+          req.rbac,
+          result.job as unknown as Record<string, unknown>,
+        ),
+      },
     });
   };
 
@@ -193,11 +222,18 @@ export class JobController {
 
     const { jobId } = req.params as { jobId: string };
     const body = req.body as CreateJobInput;
+    assertJobWriteFieldsAllowed(req.rbac, body);
     const result = await jobService.updateActiveJob(employerId, jobId, body);
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Job updated successfully.",
-      data: result,
+      data: {
+        ...result,
+        job: sanitizeJobDto(
+          req.rbac,
+          result.job as unknown as Record<string, unknown>,
+        ),
+      },
     });
   };
 

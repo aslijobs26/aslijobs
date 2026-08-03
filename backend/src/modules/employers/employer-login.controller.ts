@@ -56,7 +56,7 @@ export class EmployerLoginController {
       message: "Employer profile fetched successfully.",
       data: sanitizeCompanyProfileDto(
         req.rbac,
-        structuredClone(result) as unknown as Record<string, unknown>,
+        result as unknown as Record<string, unknown>,
       ),
     });
   };

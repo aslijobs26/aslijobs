@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireEmployerAuth } from "../../middleware/auth.middleware.js";
 import { requirePermission } from "../../middleware/permission.middleware.js";
 import { teamInvitationAcceptRateLimit } from "../../middleware/team-invitation-rate-limit.middleware.js";
+import { teamMemberLoginRateLimit } from "../../middleware/team-member-login-rate-limit.middleware.js";
 import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { departmentController } from "./department.controller.js";
@@ -56,6 +57,7 @@ teamRouter.post(
 
 teamRouter.post(
   "/auth/login",
+  teamMemberLoginRateLimit,
   validate(teamMemberLoginSchema, "body"),
   asyncHandler(teamAuthController.login),
 );
@@ -174,6 +176,9 @@ teamRouter.get(
   validate(listMemberOptionsQuerySchema, "query"),
   asyncHandler(departmentController.listMemberOptions),
 );
+
+/** Authenticated team member's own profile — no team_management permission required. */
+teamRouter.get("/members/me", asyncHandler(teamMemberController.getMe));
 
 teamRouter.get(
   "/members",

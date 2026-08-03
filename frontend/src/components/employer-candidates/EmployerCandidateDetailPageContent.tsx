@@ -102,7 +102,8 @@ export function EmployerCandidateDetailPageContent({
   const canExportCandidates = can("candidates", "export");
   const canViewResume = canField("candidates", "resume");
   const canUpdateCandidates = can("candidates", "update");
-  const canScheduleInterview = can("interviews", "create");
+  const canScheduleInterview =
+    can("interviews", "create") || can("interviews", "update");
   const canUpdateInterview = can("interviews", "update");
   const canViewLocation = canField("candidates", "location");
   const canViewExpectedSalary = canField("candidates", "expected_salary");

@@ -42,6 +42,7 @@ export const EMPLOYER_TEAM_QUERY_KEYS = {
     [...EMPLOYER_TEAM_QUERY_KEYS.all, "members", params] as const,
   member: (id: string) =>
     [...EMPLOYER_TEAM_QUERY_KEYS.all, "member", id] as const,
+  memberMe: () => [...EMPLOYER_TEAM_QUERY_KEYS.all, "member", "me"] as const,
   roles: () => [...EMPLOYER_TEAM_QUERY_KEYS.all, "roles"] as const,
   rolesManage: (params: unknown) =>
     [...EMPLOYER_TEAM_QUERY_KEYS.all, "roles-manage", params] as const,

@@ -78,7 +78,9 @@ function CandidateMobileCard({
   const canViewResume = canField("candidates", "resume");
   const canViewLocation = canField("candidates", "location");
   const canScheduleInterview =
-    can("interviews", "create") || can("candidates", "update");
+    can("interviews", "create") ||
+    can("interviews", "update") ||
+    can("candidates", "update");
   const rawPhone = item.candidatePhone ?? "";
   const whatsappHref =
     canViewPhone && phoneLevel !== "mask" ? buildWhatsAppHref(rawPhone) : null;
@@ -238,7 +240,9 @@ function CandidateDesktopRow({
   const canViewResume = canField("candidates", "resume");
   const canViewLocation = canField("candidates", "location");
   const canScheduleInterview =
-    can("interviews", "create") || can("candidates", "update");
+    can("interviews", "create") ||
+    can("interviews", "update") ||
+    can("candidates", "update");
   const rawPhone = item.candidatePhone ?? "";
   const whatsappHref =
     canViewPhone && phoneLevel !== "mask" ? buildWhatsAppHref(rawPhone) : null;

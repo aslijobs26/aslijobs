@@ -8,10 +8,16 @@ import path from "node:path";
 import { env } from "./config/env.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
+import { requestIdMiddleware } from "./middleware/request-id.middleware.js";
 import apiRouter from "./routes/index.js";
 import { buildAllowedCorsOrigins } from "./utils/cors-origins.js";
 
 const app = express();
+
+// Required so express-rate-limit keys by real client IP behind reverse proxies.
+app.set("trust proxy", 1);
+
+app.use(requestIdMiddleware);
 
 const allowedCorsOrigins = buildAllowedCorsOrigins({
   frontendUrl: env.FRONTEND_URL,
@@ -83,6 +89,10 @@ const AUTH_OTP_PATH_SUFFIXES = [
   "/jobseekers/login/send-otp",
   "/jobseekers/login/resend-otp",
   "/jobseekers/login/verify-otp",
+  "/auth/workspace/refresh",
+  "/auth/job-seeker/refresh",
+  "/auth/workspace/logout",
+  "/auth/job-seeker/logout",
 ] as const;
 
 const apiRateLimit = rateLimit({
@@ -110,6 +120,12 @@ app.get("/api/v1/health", (_req, res) => {
   res.json({
     success: true,
     message: "AsliJobs API is running",
+    data: {
+      status: "ok",
+      uptimeSeconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+      environment: env.NODE_ENV,
+    },
   });
 });
 

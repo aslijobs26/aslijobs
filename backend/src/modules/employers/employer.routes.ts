@@ -10,6 +10,7 @@ import {
   employerLoginSendOtpRateLimit,
   employerLoginVerifyOtpRateLimit,
 } from "../../middleware/employer-login-rate-limit.middleware.js";
+import { employerRegistrationContinuationRateLimit } from "../../middleware/employer-registration-rate-limit.middleware.js";
 import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { employerController } from "./employer.controller.js";
@@ -74,12 +75,14 @@ employerRouter.post(
 
 employerRouter.post(
   "/:employerId/otp/resend",
+  employerRegistrationContinuationRateLimit,
   validate(employerIdParamsSchema, "params"),
   asyncHandler(employerController.resendOtp),
 );
 
 employerRouter.post(
   "/:employerId/otp/verify",
+  employerRegistrationContinuationRateLimit,
   validate(employerIdParamsSchema, "params"),
   validate(verifyEmployerOtpSchema, "body"),
   asyncHandler(employerController.verifyOtp),
@@ -87,6 +90,7 @@ employerRouter.post(
 
 employerRouter.post(
   "/:employerId/company-profile",
+  employerRegistrationContinuationRateLimit,
   validate(employerIdParamsSchema, "params"),
   employerCompanyProfileUpload,
   validate(completeCompanyProfileSchema, "body"),
@@ -95,6 +99,7 @@ employerRouter.post(
 
 employerRouter.post(
   "/:employerId/identity-document",
+  employerRegistrationContinuationRateLimit,
   validate(employerIdParamsSchema, "params"),
   employerIndividualIdentityUpload,
   validate(completeIndividualIdentitySchema, "body"),

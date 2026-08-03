@@ -155,6 +155,31 @@ export class NotificationController {
       data: result,
     });
   };
+
+  deleteOne = async (req: Request, res: Response): Promise<void> => {
+    const recipient = requireRecipient(req);
+    const params = req.params as unknown as NotificationIdParamsSchema;
+
+    const result = await notificationService.deleteForRecipient({
+      ...recipient,
+      notificationId: params.notificationId,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Notification deleted.",
+      data: result,
+    });
+  };
+
+  clearAll = async (req: Request, res: Response): Promise<void> => {
+    const recipient = requireRecipient(req);
+    const result = await notificationService.clearAllForRecipient(recipient);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "All notifications cleared.",
+      data: result,
+    });
+  };
 }
 
 export const notificationController = new NotificationController();
