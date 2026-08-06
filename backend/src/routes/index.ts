@@ -6,6 +6,8 @@ import jobRouter from "../modules/jobs/job.routes.js";
 import jobSeekerRouter from "../modules/job-seekers/job-seeker.routes.js";
 import notificationRouter from "../modules/notifications/notification.routes.js";
 import resumeRouter from "../modules/resumes/resume.routes.js";
+import savedCandidateRouter from "../modules/saved-candidates/saved-candidate.routes.js";
+import savedJobRouter from "../modules/saved-jobs/saved-job.routes.js";
 import teamRouter from "../modules/team/team.routes.js";
 
 const apiRouter = Router();
@@ -16,6 +18,8 @@ apiRouter.use("/jobs", jobRouter);
 apiRouter.use("/jobseekers", jobSeekerRouter);
 apiRouter.use("/resumes", resumeRouter);
 apiRouter.use("/applications", applicationRouter);
+apiRouter.use("/saved-jobs", savedJobRouter);
+apiRouter.use("/saved-candidates", savedCandidateRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/team", teamRouter);
 

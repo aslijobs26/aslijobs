@@ -1,11 +1,13 @@
 import { Schema, model, type InferSchemaType, type Types } from "mongoose";
 import { RESUME_STATUSES } from "../resumes/resume.constants.js";
+import { SAVED_CANDIDATE_PRIORITIES } from "../saved-candidates/saved-candidate.constants.js";
 import {
   APPLICATION_DEFAULT_STATUS,
   APPLICATION_HISTORY_ACTORS,
   APPLICATION_INTERVIEW_MODES,
   APPLICATION_STATUSES,
 } from "./application.constants.js";
+import { APPLICATION_SHORTLIST_NEXT_ACTIONS } from "./application-shortlist.constants.js";
 
 const statusHistoryEntrySchema = new Schema(
   {
@@ -62,6 +64,52 @@ const offerSchema = new Schema(
     joiningDate: { type: String, trim: true, default: "" },
     packageText: { type: String, trim: true, default: "" },
     notes: { type: String, trim: true, default: "" },
+  },
+  { _id: false },
+);
+
+const shortlistSchema = new Schema(
+  {
+    priority: {
+      type: String,
+      enum: SAVED_CANDIDATE_PRIORITIES,
+      required: true,
+      default: "medium",
+    },
+    tags: {
+      type: [
+        {
+          type: String,
+          trim: true,
+          maxlength: 40,
+        },
+      ],
+      default: [],
+    },
+    notes: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    nextAction: {
+      type: String,
+      enum: APPLICATION_SHORTLIST_NEXT_ACTIONS,
+      required: true,
+      default: "none",
+    },
+    shortlistedAt: {
+      type: Date,
+      default: null,
+    },
+    shortlistedByTeamMemberId: {
+      type: Schema.Types.ObjectId,
+      default: null,
+    },
+    shortlistedByName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
   },
   { _id: false },
 );
@@ -129,6 +177,10 @@ const applicationSchema = new Schema(
     offer: {
       type: offerSchema,
       default: () => ({}),
+    },
+    shortlist: {
+      type: shortlistSchema,
+      default: null,
     },
     rejectReason: {
       type: String,

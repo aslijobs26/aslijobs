@@ -77,6 +77,15 @@ export function isEmployerTerminalStatus(
   return (EMPLOYER_TERMINAL_STATUSES as readonly string[]).includes(status);
 }
 
+/** True when status is Shortlisted or any later hiring-pipeline stage. */
+export function isEmployerShortlistedOrLaterStatus(status: string): boolean {
+  const shortlistedIndex = EMPLOYER_FORWARD_PIPELINE.indexOf("shortlisted");
+  const statusIndex = (
+    EMPLOYER_FORWARD_PIPELINE as readonly string[]
+  ).indexOf(status);
+  return statusIndex >= shortlistedIndex;
+}
+
 export function hasRequiredInterviewDetails(
   interview: ApplicationInterview | null | undefined,
 ): boolean {
@@ -189,6 +198,28 @@ export type EmployerApplicationsPagination = {
   totalPages: number;
 };
 
+export type ApplicationShortlistNextAction =
+  | "none"
+  | "schedule_interview"
+  | "send_message"
+  | "call_candidate";
+
+export type ApplicationShortlistDetails = {
+  priority: "high" | "medium" | "low";
+  tags: string[];
+  notes: string;
+  nextAction: ApplicationShortlistNextAction;
+  shortlistedAt: string | null;
+  shortlistedByName: string | null;
+};
+
+export type ApplicationSavedCandidatePrefill = {
+  id: string;
+  priority: "high" | "medium" | "low";
+  tags: string[];
+  notes: string;
+};
+
 export type EmployerApplicationDetail = {
   id: string;
   publicJobId: string;
@@ -206,6 +237,8 @@ export type EmployerApplicationDetail = {
   rejectReason: string;
   interview: ApplicationInterview;
   offer: ApplicationOffer;
+  shortlist?: ApplicationShortlistDetails | null;
+  savedCandidate?: ApplicationSavedCandidatePrefill | null;
   statusHistory: ApplicationStatusHistoryEntry[];
   appliedAt: string;
   viewedAt: string | null;
@@ -227,6 +260,20 @@ export type EmployerApplicationDetail = {
     expectedSalaryPeriod?: string | null;
     dateOfBirth?: string | null;
   };
+};
+
+export type ShortlistCandidatePayload = {
+  priority: "high" | "medium" | "low";
+  tags: string[];
+  notes: string;
+  nextAction: ApplicationShortlistNextAction;
+  alsoSave: boolean;
+};
+
+export type ShortlistCandidateResult = {
+  application: EmployerApplicationDetail;
+  saved: boolean;
+  nextAction: ApplicationShortlistNextAction;
 };
 
 export type EmployerHiringUpdatePayload = {

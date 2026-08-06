@@ -3,6 +3,7 @@
 import { JobSeekerAuthGuard } from "@/components/job-seeker/JobSeekerAuthGuard";
 import { JobSeekerSidebar } from "@/components/job-seeker-dashboard/JobSeekerSidebar";
 import { JobSeekerTopBar } from "@/components/job-seeker-dashboard/JobSeekerTopBar";
+import { FloatingBottomNav } from "@/components/layout/FloatingBottomNav";
 import {
   JOB_SEEKER_DASHBOARD_SIDEBAR_COLLAPSED_WIDTH,
   JOB_SEEKER_DASHBOARD_SIDEBAR_WIDTH,
@@ -73,6 +74,7 @@ export function JobSeekerDashboardLayout({
           <JobSeekerTopBar onSidebarToggle={handleSidebarToggle} />
           <main className="flex flex-1 flex-col">{children}</main>
         </div>
+        <FloatingBottomNav />
       </div>
     </JobSeekerAuthGuard>
   );

@@ -7,6 +7,7 @@ import {
   updateEmployerApplicationInterview,
 } from "@/services/employer-applications.service";
 import { fetchEmployerInterviews } from "@/services/employer-interviews.service";
+import { savedCandidatesQueryKeys } from "@/services/saved-candidates.service";
 import {
   isEmployerTerminalStatus,
   type EmployerApplicationDetail,
@@ -259,6 +260,9 @@ export function InterviewScheduleModal({
         }),
         queryClient.invalidateQueries({
           queryKey: ["employer", "application-stats"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: savedCandidatesQueryKeys.all,
         }),
       ]);
       onSaved?.(selectedId!);

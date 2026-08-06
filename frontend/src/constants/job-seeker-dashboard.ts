@@ -30,7 +30,7 @@ export const JOB_SEEKER_DASHBOARD_NAV_ITEMS: JobSeekerDashboardNavItem[] = [
   },
   {
     id: "applied-jobs",
-    label: "Applied Jobs",
+    label: "My Applications",
     href: ROUTES.JOB_SEEKER_APPLIED_JOBS,
     icon: Briefcase,
   },

@@ -174,6 +174,28 @@ export type EmployerInterviewJobTab = {
   count: number;
 };
 
+export type ApplicationShortlistNextAction =
+  | "none"
+  | "schedule_interview"
+  | "send_message"
+  | "call_candidate";
+
+export type ApplicationShortlistDetails = {
+  priority: "high" | "medium" | "low";
+  tags: string[];
+  notes: string;
+  nextAction: ApplicationShortlistNextAction;
+  shortlistedAt: string | null;
+  shortlistedByName: string | null;
+};
+
+export type ApplicationSavedCandidatePrefill = {
+  id: string;
+  priority: "high" | "medium" | "low";
+  tags: string[];
+  notes: string;
+};
+
 export type EmployerApplicationDetail = {
   id: string;
   publicJobId: string;
@@ -191,6 +213,8 @@ export type EmployerApplicationDetail = {
   rejectReason: string;
   interview: ApplicationInterview;
   offer: ApplicationOffer;
+  shortlist: ApplicationShortlistDetails | null;
+  savedCandidate: ApplicationSavedCandidatePrefill | null;
   statusHistory: ApplicationStatusHistoryEntry[];
   appliedAt: string;
   viewedAt: string | null;
@@ -223,6 +247,15 @@ export type SeekerApplicationListItem = {
   companyLogoUrl: string;
   location: string;
   salaryLabel: string;
+  /** Midpoint / fixed salary for client sorting; null when undisclosed. */
+  salarySortValue: number | null;
+  workMode: string;
+  jobType: string;
+  /** Part-time schedule label when available (e.g. fixed timings). */
+  shiftLabel: string;
+  interviewDate: string;
+  interviewTime: string;
+  canWithdraw: boolean;
   status: ApplicationStatus;
   resumeVersion: number;
   appliedAt: string;
@@ -238,6 +271,7 @@ export type SeekerApplicationStats = {
   selected: number;
   rejected: number;
   joined: number;
+  withdrawn: number;
 };
 
 export type SeekerApplicationDetail = {

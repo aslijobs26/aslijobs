@@ -5,6 +5,7 @@ import { EmployerDashboardPlaceholder } from "@/components/employer-dashboard/Em
 import { EmployerNavbar } from "@/components/employer-dashboard/EmployerNavbar";
 import { EmployerSearchBar } from "@/components/employer-dashboard/EmployerSearchBar";
 import { EmployerSidebar } from "@/components/employer-dashboard/EmployerSidebar";
+import { FloatingBottomNav } from "@/components/layout/FloatingBottomNav";
 import { EmployerPermissionRouteGuard } from "@/components/rbac/EmployerPermissionRouteGuard";
 import {
   EMPLOYER_DASHBOARD_SIDEBAR_COLLAPSED_WIDTH,
@@ -89,6 +90,7 @@ export function EmployerDashboardLayout({
               </EmployerPermissionRouteGuard>
             </main>
           </div>
+          <FloatingBottomNav />
         </div>
       </EmployerPermissionProvider>
     </EmployerAuthGuard>

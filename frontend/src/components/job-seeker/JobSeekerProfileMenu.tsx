@@ -161,7 +161,7 @@ export function JobSeekerProfileMenu({
 
           <div className="p-1.5">
             <Link
-              href={ROUTES.JOB_SEEKER_DASHBOARD}
+              href={ROUTES.JOB_SEEKER_PROFILE}
               role="menuitem"
               className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               onClick={() => setIsOpen(false)}
@@ -185,7 +185,7 @@ export function JobSeekerProfileMenu({
               onClick={() => setIsOpen(false)}
             >
               <Briefcase className="size-4 text-primary" aria-hidden="true" />
-              Applied Jobs
+              My Applications
             </Link>
             <Link
               href={ROUTES.JOB_SEEKER_MY_RESUME}

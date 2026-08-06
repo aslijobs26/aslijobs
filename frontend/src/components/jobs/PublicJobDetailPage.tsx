@@ -5,12 +5,20 @@ import { JobDetailsPageLayout } from "@/components/jobs/JobDetailsPageLayout";
 import { ROUTES } from "@/constants/routes";
 import { fetchPublicActiveJobByPublicId } from "@/services/public-jobs.service";
 import {
+  fetchSavedJobIds,
+  removeSavedJob,
+  saveJob,
+  savedJobsQueryKeys,
+} from "@/services/saved-jobs.service";
+import {
   getJobSeekerAccessToken,
   JOB_SEEKER_AUTH_CHANGE_EVENT,
 } from "@/utils/job-seeker-auth-storage";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { buildJobSeekerLoginHref } from "@/utils/safe-return-url";
+import { showAppToast } from "@/utils/share-job";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 const JOB_SEARCH_RETURN_KEY = "asli-job-search-return";
 
@@ -51,13 +59,15 @@ function readReturnPath(): string {
 
 export function PublicJobDetailPage({ publicJobId }: PublicJobDetailPageProps) {
   const router = useRouter();
-  const [bookmarked, setBookmarked] = useState(false);
+  const pathname = usePathname();
+  const queryClient = useQueryClient();
   const [seekerAuthEpoch, setSeekerAuthEpoch] = useState(0);
   const isMobile = useSyncExternalStore(
     subscribeToMobileMedia,
     getMobileSnapshot,
     getServerMobileSnapshot,
   );
+  const isSeekerAuthenticated = Boolean(getJobSeekerAccessToken()?.trim());
 
   useEffect(() => {
     const bump = () => setSeekerAuthEpoch((value) => value + 1);
@@ -78,6 +88,18 @@ export function PublicJobDetailPage({ publicJobId }: PublicJobDetailPageProps) {
     retry: false,
   });
 
+  const savedIdsQuery = useQuery({
+    queryKey: savedJobsQueryKeys.ids(),
+    queryFn: fetchSavedJobIds,
+    enabled: isSeekerAuthenticated,
+    staleTime: 30_000,
+  });
+
+  const bookmarked = useMemo(
+    () => (savedIdsQuery.data ?? []).includes(publicJobId),
+    [savedIdsQuery.data, publicJobId],
+  );
+
   const handleBack = useCallback(() => {
     const returnPath = readReturnPath();
     try {
@@ -88,7 +110,41 @@ export function PublicJobDetailPage({ publicJobId }: PublicJobDetailPageProps) {
     router.push(returnPath);
   }, [router]);
 
-  const toggleBookmark = () => setBookmarked((current) => !current);
+  const toggleBookmark = () => {
+    if (!getJobSeekerAccessToken()?.trim()) {
+      showAppToast("Please login as a Job Seeker to save jobs.", "error", 3200);
+      router.push(buildJobSeekerLoginHref(pathname));
+      return;
+    }
+
+    const previousIds = savedIdsQuery.data ?? [];
+    const nextIds = bookmarked
+      ? previousIds.filter((id) => id !== publicJobId)
+      : [...previousIds, publicJobId];
+
+    queryClient.setQueryData(savedJobsQueryKeys.ids(), nextIds);
+
+    void (async () => {
+      try {
+        if (bookmarked) {
+          await removeSavedJob(publicJobId);
+          showAppToast("Removed from saved jobs");
+        } else {
+          await saveJob(publicJobId);
+          showAppToast("Job saved");
+        }
+        void queryClient.invalidateQueries({ queryKey: savedJobsQueryKeys.all });
+      } catch {
+        queryClient.setQueryData(savedJobsQueryKeys.ids(), previousIds);
+        showAppToast(
+          bookmarked
+            ? "Couldn’t remove saved job. Please try again."
+            : "Couldn’t save job. Please try again.",
+          "error",
+        );
+      }
+    })();
+  };
 
   if (isMobile) {
     return (

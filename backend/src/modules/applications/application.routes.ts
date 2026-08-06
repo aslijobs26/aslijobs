@@ -18,6 +18,7 @@ import {
   listEmployerInterviewStatsQuerySchema,
   listEmployerInterviewsQuerySchema,
   listSeekerApplicationsQuerySchema,
+  shortlistApplicationSchema,
   updateApplicationHiringSchema,
   updateApplicationInterviewSchema,
   updateApplicationNotesSchema,
@@ -147,6 +148,15 @@ applicationRouter.patch(
   validate(applicationIdParamsSchema, "params"),
   validate(updateApplicationStatusSchema, "body"),
   asyncHandler(applicationController.updateStatusForEmployer),
+);
+
+applicationRouter.post(
+  "/employer/:applicationId/shortlist",
+  asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("candidates", "update")),
+  validate(applicationIdParamsSchema, "params"),
+  validate(shortlistApplicationSchema, "body"),
+  asyncHandler(applicationController.shortlistForEmployer),
 );
 
 applicationRouter.patch(

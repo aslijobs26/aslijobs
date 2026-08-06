@@ -13,12 +13,14 @@ import {
   jobSeekerLoginSendOtpSchema,
   jobSeekerLoginVerifyOtpSchema,
 } from "./job-seeker-login.validation.js";
+import { jobSeekerProfilePhotoUpload } from "./job-seeker-photo-upload.middleware.js";
 import {
   completeJobSeekerRegistrationSchema,
   registerJobSeekerSchema,
   resendJobSeekerOtpSchema,
   saveJobSeekerPreferencesSchema,
   searchJobSeekerRolesQuerySchema,
+  updateJobSeekerProfileSchema,
   verifyJobSeekerOtpSchema,
 } from "./job-seeker.validation.js";
 
@@ -49,6 +51,26 @@ jobSeekerRouter.get(
   "/me",
   asyncHandler(requireJobSeekerAuth),
   asyncHandler(jobSeekerLoginController.me),
+);
+
+jobSeekerRouter.patch(
+  "/me",
+  asyncHandler(requireJobSeekerAuth),
+  validate(updateJobSeekerProfileSchema, "body"),
+  asyncHandler(jobSeekerController.updateProfile),
+);
+
+jobSeekerRouter.post(
+  "/me/photo",
+  asyncHandler(requireJobSeekerAuth),
+  jobSeekerProfilePhotoUpload,
+  asyncHandler(jobSeekerController.updateProfilePhoto),
+);
+
+jobSeekerRouter.delete(
+  "/me/photo",
+  asyncHandler(requireJobSeekerAuth),
+  asyncHandler(jobSeekerController.deleteProfilePhoto),
 );
 
 jobSeekerRouter.get(

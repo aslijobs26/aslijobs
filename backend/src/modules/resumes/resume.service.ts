@@ -86,6 +86,8 @@ function toProfileForResume(jobSeeker: {
   experienceType?: string | null;
   experiences?: unknown[];
   languages?: string[];
+  professionalSummary?: string | null;
+  skills?: string[];
 }): JobSeekerProfileForResume {
   return {
     id: jobSeeker._id.toString(),
@@ -107,6 +109,8 @@ function toProfileForResume(jobSeeker: {
     experiences: (jobSeeker.experiences ??
       []) as JobSeekerProfileForResume["experiences"],
     languages: jobSeeker.languages ?? [],
+    professionalSummary: jobSeeker.professionalSummary ?? "",
+    skills: Array.isArray(jobSeeker.skills) ? jobSeeker.skills : [],
   };
 }
 

@@ -4,6 +4,7 @@ import { ResumeActions } from "@/components/job-seeker-resume/ResumeActions";
 import { ResumeMetadataPanel } from "@/components/job-seeker-resume/ResumeMetadataPanel";
 import { ResumePreview } from "@/components/job-seeker-resume/ResumePreview";
 import { ResumeStatusBadge } from "@/components/job-seeker-resume/ResumeStatusBadge";
+import { JOB_SEEKER_RESUME_QUERY_KEY } from "@/constants/job-seeker-profile";
 import {
   downloadMyResumePdf,
   fetchMyResume,
@@ -13,8 +14,6 @@ import { isResumeJson, type PublicResume } from "@/types/job-seeker-resume";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-
-const MY_RESUME_QUERY_KEY = ["job-seeker", "my-resume"] as const;
 
 function formatDate(value: string | null | undefined): string {
   if (!value) {
@@ -55,14 +54,14 @@ export function MyResumePageContent() {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const resumeQuery = useQuery({
-    queryKey: MY_RESUME_QUERY_KEY,
+    queryKey: JOB_SEEKER_RESUME_QUERY_KEY,
     queryFn: fetchMyResume,
   });
 
   const regenerateMutation = useMutation({
     mutationFn: regenerateMyResume,
     onSuccess: (resume) => {
-      queryClient.setQueryData(MY_RESUME_QUERY_KEY, resume);
+      queryClient.setQueryData(JOB_SEEKER_RESUME_QUERY_KEY, resume);
       showAppToast("Resume updated successfully.");
     },
     onError: (error) => {

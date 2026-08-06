@@ -8,6 +8,8 @@ import type {
   EmployerApplicationsListParams,
   EmployerApplicationsPagination,
   EmployerHiringUpdatePayload,
+  ShortlistCandidatePayload,
+  ShortlistCandidateResult,
 } from "@/types/employer-applications";
 import type { ApplicationInterview } from "@/types/job-seeker-applications";
 
@@ -108,6 +110,18 @@ export async function updateEmployerApplicationStatus(
   >(`/applications/employer/${applicationId}/status`, { status });
 
   return response.data.data.application;
+}
+
+export async function shortlistEmployerApplication(
+  applicationId: string,
+  payload: ShortlistCandidatePayload,
+): Promise<ShortlistCandidateResult> {
+  const response = await apiClient.post<ApiSuccess<ShortlistCandidateResult>>(
+    `/applications/employer/${encodeURIComponent(applicationId)}/shortlist`,
+    payload,
+  );
+
+  return response.data.data;
 }
 
 export async function updateEmployerApplicationNotes(

@@ -123,6 +123,8 @@ export type JobSeekerProfileForResume = {
   experienceType?: string | null;
   experiences?: ResumeJsonExperienceEntry[] | Record<string, unknown>[];
   languages?: string[];
+  professionalSummary?: string | null;
+  skills?: string[];
 };
 
 export type ProfileCompletenessBreakdown = {

@@ -14,6 +14,12 @@ import {
   fetchPublicActiveJobByPublicId,
   fetchPublicActiveJobs,
 } from "@/services/public-jobs.service";
+import {
+  fetchSavedJobIds,
+  removeSavedJob,
+  saveJob,
+  savedJobsQueryKeys,
+} from "@/services/saved-jobs.service";
 import type { JobSearchUrlState } from "@/types/job-search";
 import {
   buildFetchPublicJobsParams,
@@ -22,7 +28,8 @@ import {
   jobSearchStateToSearchParams,
   parseJobSearchUrlState,
 } from "@/utils/job-search-url";
-import { useQuery } from "@tanstack/react-query";
+import { showAppToast } from "@/utils/share-job";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   useCallback,
@@ -36,6 +43,7 @@ import {
   getJobSeekerAccessToken,
   JOB_SEEKER_AUTH_CHANGE_EVENT,
 } from "@/utils/job-seeker-auth-storage";
+import { buildJobSeekerLoginHref } from "@/utils/safe-return-url";
 
 const JOB_SEARCH_SCROLL_KEY = "asli-job-search-scroll";
 
@@ -64,6 +72,7 @@ export function JobSearchPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const isSplitView = useSyncExternalStore(
     subscribeToSplitViewMedia,
     getSplitViewSnapshot,
@@ -75,8 +84,36 @@ export function JobSearchPageContent() {
     [searchParams],
   );
 
-  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(
-    () => new Set(),
+  const [seekerAuthEpoch, setSeekerAuthEpoch] = useState(0);
+  const isSeekerAuthenticated = Boolean(getJobSeekerAccessToken()?.trim());
+
+  useEffect(() => {
+    const bump = () => setSeekerAuthEpoch((value) => value + 1);
+    window.addEventListener(JOB_SEEKER_AUTH_CHANGE_EVENT, bump);
+    window.addEventListener("storage", bump);
+    return () => {
+      window.removeEventListener(JOB_SEEKER_AUTH_CHANGE_EVENT, bump);
+      window.removeEventListener("storage", bump);
+    };
+  }, []);
+
+  const savedIdsQuery = useQuery({
+    queryKey: savedJobsQueryKeys.ids(),
+    queryFn: fetchSavedJobIds,
+    enabled: isSeekerAuthenticated,
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (!isSeekerAuthenticated) {
+      return;
+    }
+    void queryClient.invalidateQueries({ queryKey: savedJobsQueryKeys.ids() });
+  }, [seekerAuthEpoch, isSeekerAuthenticated, queryClient]);
+
+  const bookmarkedIds = useMemo(
+    () => new Set(savedIdsQuery.data ?? []),
+    [savedIdsQuery.data],
   );
 
   const replaceUrlState = useCallback(
@@ -120,17 +157,6 @@ export function JobSearchPageContent() {
     () => buildFetchPublicJobsParams(urlState),
     [urlState],
   );
-
-  const [seekerAuthEpoch, setSeekerAuthEpoch] = useState(0);
-  useEffect(() => {
-    const bump = () => setSeekerAuthEpoch((value) => value + 1);
-    window.addEventListener(JOB_SEEKER_AUTH_CHANGE_EVENT, bump);
-    window.addEventListener("storage", bump);
-    return () => {
-      window.removeEventListener(JOB_SEEKER_AUTH_CHANGE_EVENT, bump);
-      window.removeEventListener("storage", bump);
-    };
-  }, []);
 
   const seekerAuthKey = getJobSeekerAccessToken() ? "seeker" : "anon";
 
@@ -250,15 +276,40 @@ export function JobSearchPageContent() {
   };
 
   const handleToggleBookmark = (jobId: string) => {
-    setBookmarkedIds((current) => {
-      const next = new Set(current);
-      if (next.has(jobId)) {
-        next.delete(jobId);
-      } else {
-        next.add(jobId);
+    if (!getJobSeekerAccessToken()?.trim()) {
+      showAppToast("Please login as a Job Seeker to save jobs.", "error", 3200);
+      router.push(buildJobSeekerLoginHref(pathname));
+      return;
+    }
+
+    const isSaved = bookmarkedIds.has(jobId);
+    const previousIds = savedIdsQuery.data ?? [];
+    const nextIds = isSaved
+      ? previousIds.filter((id) => id !== jobId)
+      : [...previousIds, jobId];
+
+    queryClient.setQueryData(savedJobsQueryKeys.ids(), nextIds);
+
+    void (async () => {
+      try {
+        if (isSaved) {
+          await removeSavedJob(jobId);
+          showAppToast("Removed from saved jobs");
+        } else {
+          await saveJob(jobId);
+          showAppToast("Job saved");
+        }
+        void queryClient.invalidateQueries({ queryKey: savedJobsQueryKeys.all });
+      } catch {
+        queryClient.setQueryData(savedJobsQueryKeys.ids(), previousIds);
+        showAppToast(
+          isSaved
+            ? "Couldn’t remove saved job. Please try again."
+            : "Couldn’t save job. Please try again.",
+          "error",
+        );
       }
-      return next;
-    });
+    })();
   };
 
   const handleClearAll = () => {

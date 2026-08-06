@@ -11,6 +11,7 @@ import type {
 import type {
   CompleteJobSeekerRegistrationSchema,
   SaveJobSeekerPreferencesSchema,
+  UpdateJobSeekerProfileSchema,
 } from "./job-seeker.validation.js";
 
 export type JobSeekerRegistrationStatus =
@@ -50,6 +51,8 @@ export type SaveJobSeekerPreferencesInput = SaveJobSeekerPreferencesSchema;
 
 export type CompleteJobSeekerRegistrationInput =
   CompleteJobSeekerRegistrationSchema;
+
+export type UpdateJobSeekerProfileInput = UpdateJobSeekerProfileSchema;
 
 export type JobSeekerLoginSendOtpInput = {
   whatsappNumber: string;

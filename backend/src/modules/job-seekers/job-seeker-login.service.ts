@@ -7,48 +7,11 @@ import { AppError } from "../../middleware/error.middleware.js";
 import { jwtService } from "../auth/jwt.service.js";
 import { otpService } from "../otp/otp.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
+import { toPublicJobSeeker } from "./job-seeker.serializer.js";
 import type {
   JobSeekerLoginSendOtpInput,
   JobSeekerLoginVerifyOtpInput,
 } from "./job-seeker.types.js";
-
-function toLoginJobSeeker(jobSeeker: {
-  _id: mongoose.Types.ObjectId;
-  fullName: string;
-  whatsappNumber: string;
-  dateOfBirth?: Date | null;
-  gender?: string | null;
-  pincode?: string;
-  city?: string;
-  state?: string;
-  jobRole?: string;
-  preferredJobLocation?: string;
-  isWhatsappVerified: boolean;
-  registrationStatus: string;
-  lastLoginAt?: Date | null;
-  createdAt?: Date;
-  updatedAt?: Date;
-}) {
-  return {
-    id: jobSeeker._id.toString(),
-    fullName: jobSeeker.fullName,
-    whatsappNumber: jobSeeker.whatsappNumber,
-    dateOfBirth: jobSeeker.dateOfBirth
-      ? jobSeeker.dateOfBirth.toISOString().slice(0, 10)
-      : null,
-    gender: jobSeeker.gender ?? null,
-    pincode: jobSeeker.pincode ?? "",
-    city: jobSeeker.city ?? "",
-    state: jobSeeker.state ?? "",
-    jobRole: jobSeeker.jobRole ?? "",
-    preferredJobLocation: jobSeeker.preferredJobLocation ?? "",
-    isWhatsappVerified: jobSeeker.isWhatsappVerified,
-    registrationStatus: jobSeeker.registrationStatus,
-    lastLoginAt: jobSeeker.lastLoginAt ?? null,
-    createdAt: jobSeeker.createdAt,
-    updatedAt: jobSeeker.updatedAt,
-  };
-}
 
 async function findLoginEligibleJobSeeker(whatsappNumber: string) {
   const jobSeeker = await JobSeekerModel.findOne({ whatsappNumber }).select(
@@ -154,7 +117,7 @@ export class JobSeekerLoginService {
     await jobSeeker.save();
 
     return {
-      jobSeeker: toLoginJobSeeker(jobSeeker),
+      jobSeeker: toPublicJobSeeker(jobSeeker),
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
@@ -174,7 +137,7 @@ export class JobSeekerLoginService {
     }
 
     return {
-      jobSeeker: toLoginJobSeeker(jobSeeker),
+      jobSeeker: toPublicJobSeeker(jobSeeker),
     };
   }
 }

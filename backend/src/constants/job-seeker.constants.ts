@@ -68,6 +68,30 @@ export const JOB_SEEKER_AVAILABILITY_STATUS_LABELS: Record<
 
 export const JOB_SEEKER_SALARY_PERIODS = ["per-month", "per-year"] as const;
 
+export const JOB_SEEKER_PROFILE_VISIBILITY = [
+  "visible",
+  "private",
+  "recruiter_only",
+] as const;
+
+export const JOB_SEEKER_PROFILE_VISIBILITY_LABELS: Record<
+  (typeof JOB_SEEKER_PROFILE_VISIBILITY)[number],
+  string
+> = {
+  visible: "Visible to Employers",
+  private: "Private",
+  recruiter_only: "Recruiter Only",
+};
+
+export const JOB_SEEKER_IMAGE_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+] as const;
+
+export const JOB_SEEKER_PROFILE_PHOTO_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+
 export const JOB_SEEKER_JOB_ROLES = [
   "Delivery Boy",
   "Driver",

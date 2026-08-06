@@ -77,16 +77,97 @@ export const listEmployerApplicationStatsQuerySchema = z.object({
 
 export const listSeekerApplicationsQuerySchema = z.object({
   status: z.enum(APPLICATION_STATUSES).optional(),
+  /** Comma-separated statuses for grouped filters (e.g. applied, interview). */
+  statuses: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .transform((value) =>
+      value
+        ? value
+            .split(",")
+            .map((part) => part.trim())
+            .filter(Boolean)
+        : [],
+    )
+    .pipe(z.array(z.enum(APPLICATION_STATUSES))),
   search: z.string().trim().optional().default(""),
-  sort: z.enum(["newest", "oldest"]).optional().default("newest"),
+  sort: z
+    .enum([
+      "newest",
+      "oldest",
+      "updated",
+      "salary_high",
+      "salary_low",
+      "company",
+    ])
+    .optional()
+    .default("newest"),
+  location: z.string().trim().optional().default(""),
+  company: z.string().trim().optional().default(""),
+  jobType: z.string().trim().optional().default(""),
+  workMode: z.string().trim().optional().default(""),
+  shift: z.string().trim().optional().default(""),
+  minSalary: z.coerce.number().finite().nonnegative().optional(),
+  appliedFrom: z.string().trim().optional().default(""),
+  appliedTo: z.string().trim().optional().default(""),
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(50).optional().default(20),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
 
 export const updateApplicationStatusSchema = z.object({
   status: z.enum(APPLICATION_STATUSES, {
     message: "Select a valid application status",
   }),
+});
+
+const shortlistTagSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(40)
+  .regex(
+    /^[a-zA-Z0-9][a-zA-Z0-9 _-]*$/,
+    "Tags may only include letters, numbers, spaces, hyphens, and underscores",
+  );
+
+function normalizeShortlistTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const tag of tags) {
+    const normalized = tag.trim().replace(/\s+/g, " ");
+    const key = normalized.toLowerCase();
+    if (!normalized || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(normalized);
+  }
+  return result;
+}
+
+export const shortlistApplicationSchema = z.object({
+  priority: z.enum(["high", "medium", "low"], {
+    message: "Select a priority",
+  }),
+  tags: z
+    .array(shortlistTagSchema)
+    .max(12)
+    .transform(normalizeShortlistTags)
+    .optional()
+    .default([]),
+  notes: z
+    .string()
+    .trim()
+    .max(2000, "Notes must be 2000 characters or fewer")
+    .optional()
+    .default(""),
+  nextAction: z
+    .enum(["none", "schedule_interview", "send_message", "call_candidate"])
+    .optional()
+    .default("none"),
+  alsoSave: z.boolean().optional().default(true),
 });
 
 export const updateApplicationNotesSchema = z.object({
@@ -341,6 +422,9 @@ export type ListSeekerApplicationsQuerySchema = z.infer<
 >;
 export type UpdateApplicationStatusSchema = z.infer<
   typeof updateApplicationStatusSchema
+>;
+export type ShortlistApplicationSchema = z.infer<
+  typeof shortlistApplicationSchema
 >;
 export type UpdateApplicationNotesSchema = z.infer<
   typeof updateApplicationNotesSchema

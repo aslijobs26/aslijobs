@@ -104,11 +104,11 @@ export function Navbar() {
               alt=""
               width={213}
               height={70}
-              className="block h-[38px] w-auto mobile:h-[34px] sm:h-[38px] lg:h-[60px]"
+              className="block h-[32px] w-auto mobile:h-[30px] sm:h-[34px] lg:h-[52px]"
               priority
               aria-hidden
             />
-            <p className="max-w-[9.5rem] truncate whitespace-nowrap text-[7px] font-bold leading-tight text-muted mobile:max-w-[8.75rem] sm:max-w-none sm:text-[9px] lg:text-[10px]">
+            <p className="max-w-[9.5rem] truncate whitespace-nowrap text-[7px] font-bold leading-tight text-muted mobile:max-w-[8.75rem] sm:max-w-none sm:text-[8px] lg:text-[9px]">
               {BRAND_TAGLINE}
             </p>
           </Link>

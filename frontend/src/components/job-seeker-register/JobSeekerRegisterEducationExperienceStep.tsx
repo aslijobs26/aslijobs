@@ -30,6 +30,8 @@ export const EMPTY_EDUCATION: JobSeekerEducation = {
   degree: "",
   specialization: "",
   passingYear: "",
+  percentage: "",
+  cgpa: "",
 };
 
 export function createEmptyExperience(): JobSeekerExperienceEntry {
@@ -43,6 +45,8 @@ export function createEmptyExperience(): JobSeekerExperienceEntry {
     duration: "",
     salary: "",
     location: "",
+    responsibilities: "",
+    achievements: "",
   };
 }
 

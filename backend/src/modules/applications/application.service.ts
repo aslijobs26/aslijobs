@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { HTTP_STATUS } from "../../constants/http-status.js";
+import { buildListPagination } from "../../utils/pagination.js";
 import {
   JOB_SEEKER_AVAILABILITY_STATUS_LABELS,
   JOB_SEEKER_AVAILABILITY_STATUSES,
@@ -44,6 +45,9 @@ import type {
   ApplicationInterview,
   ApplicationOffer,
   ApplicationResumeSnapshot,
+  ApplicationSavedCandidatePrefill,
+  ApplicationShortlistDetails,
+  ApplicationShortlistNextAction,
   ApplicationStatus,
   ApplicationStatusHistoryEntry,
   ApplyToJobInput,
@@ -60,6 +64,9 @@ import type {
   SeekerApplicationListItem,
   SeekerApplicationStats,
 } from "./application.types.js";
+import { SavedCandidateModel } from "../saved-candidates/saved-candidate.model.js";
+import { savedCandidateService } from "../saved-candidates/saved-candidate.service.js";
+import type { SavedCandidatePriority } from "../saved-candidates/saved-candidate.types.js";
 import {
   buildEmployerInterviewBaseMatch,
   buildEmployerInterviewSearchMatch,
@@ -290,6 +297,122 @@ function formatJobLocation(job: {
   const city = text(job.cityName) || text(job.city);
   const state = text(job.stateName) || text(job.state);
   return [city, state].filter(Boolean).join(", ");
+}
+
+function salarySortValue(job: {
+  salaryType?: string;
+  fixedSalary?: number | null;
+  minimumSalary?: number | null;
+  maximumSalary?: number | null;
+} | null | undefined): number | null {
+  if (!job) {
+    return null;
+  }
+  if (job.salaryType === "fixed" && typeof job.fixedSalary === "number") {
+    return job.fixedSalary;
+  }
+  if (
+    typeof job.minimumSalary === "number" &&
+    typeof job.maximumSalary === "number"
+  ) {
+    return (job.minimumSalary + job.maximumSalary) / 2;
+  }
+  if (typeof job.minimumSalary === "number") {
+    return job.minimumSalary;
+  }
+  if (typeof job.maximumSalary === "number") {
+    return job.maximumSalary;
+  }
+  if (typeof job.fixedSalary === "number") {
+    return job.fixedSalary;
+  }
+  return null;
+}
+
+function formatShiftLabel(job: {
+  partTimeSchedule?: string;
+  partTimeStartTime?: string;
+  partTimeEndTime?: string;
+} | null | undefined): string {
+  if (!job) {
+    return "";
+  }
+  const start = text(job.partTimeStartTime);
+  const end = text(job.partTimeEndTime);
+  if (start && end) {
+    return `${start} – ${end}`;
+  }
+  const schedule = text(job.partTimeSchedule);
+  if (schedule === "fixed-timings") {
+    return "Fixed timings";
+  }
+  if (schedule === "flexible-hours") {
+    return "Flexible hours";
+  }
+  return schedule;
+}
+
+function mapSeekerListItem(input: {
+  app: {
+    _id: { toString(): string };
+    publicJobId: string;
+    jobId: unknown;
+    employerId: unknown;
+    status: string;
+    resumeVersion: number;
+    appliedAt: Date;
+    statusHistory?: unknown;
+    interview?: unknown;
+  };
+  job:
+    | {
+        jobTitle?: string;
+        companyName?: string;
+        cityName?: string;
+        city?: string;
+        stateName?: string;
+        state?: string;
+        salaryType?: string;
+        salaryPeriod?: string;
+        fixedSalary?: number | null;
+        minimumSalary?: number | null;
+        maximumSalary?: number | null;
+        workMode?: string;
+        jobType?: string;
+        partTimeSchedule?: string;
+        partTimeStartTime?: string;
+        partTimeEndTime?: string;
+      }
+    | undefined;
+  employer: { companyLogo?: { url?: string } | null } | undefined;
+}): SeekerApplicationListItem {
+  const { app, job, employer } = input;
+  const history = mapStatusHistory(app.statusHistory);
+  const lastStatusUpdatedAt =
+    history.length > 0 ? history[history.length - 1]!.at : null;
+  const interview = mapInterview(app.interview);
+  const status = app.status as ApplicationStatus;
+
+  return {
+    id: app._id.toString(),
+    publicJobId: app.publicJobId,
+    jobTitle: job?.jobTitle?.trim() || "Job",
+    companyName: job?.companyName?.trim() || "",
+    companyLogoUrl: text(employer?.companyLogo?.url),
+    location: job ? formatJobLocation(job) : "",
+    salaryLabel: job ? formatSalaryLabel(job) : "Not disclosed",
+    salarySortValue: salarySortValue(job),
+    workMode: text(job?.workMode),
+    jobType: text(job?.jobType),
+    shiftLabel: formatShiftLabel(job),
+    interviewDate: interview.date,
+    interviewTime: interview.time,
+    canWithdraw: canWithdraw(status),
+    status,
+    resumeVersion: app.resumeVersion,
+    appliedAt: app.appliedAt.toISOString(),
+    lastStatusUpdatedAt,
+  };
 }
 
 function emptyInterview(): ApplicationInterview {
@@ -765,6 +888,57 @@ export class ApplicationService {
     return application;
   }
 
+  private mapShortlistDetails(
+    shortlist: unknown,
+  ): ApplicationShortlistDetails | null {
+    if (!shortlist || typeof shortlist !== "object") {
+      return null;
+    }
+    const value = shortlist as {
+      priority?: string;
+      tags?: unknown;
+      notes?: string;
+      nextAction?: string;
+      shortlistedAt?: Date | string | null;
+      shortlistedByName?: string | null;
+    };
+    if (
+      value.priority !== "high" &&
+      value.priority !== "medium" &&
+      value.priority !== "low"
+    ) {
+      return null;
+    }
+    const nextAction =
+      value.nextAction === "schedule_interview" ||
+      value.nextAction === "send_message" ||
+      value.nextAction === "call_candidate" ||
+      value.nextAction === "none"
+        ? value.nextAction
+        : "none";
+    const tags = Array.isArray(value.tags)
+      ? value.tags
+          .filter((tag): tag is string => typeof tag === "string")
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      : [];
+    const shortlistedAt =
+      value.shortlistedAt instanceof Date
+        ? value.shortlistedAt.toISOString()
+        : typeof value.shortlistedAt === "string" && value.shortlistedAt
+          ? value.shortlistedAt
+          : null;
+
+    return {
+      priority: value.priority,
+      tags,
+      notes: text(value.notes),
+      nextAction,
+      shortlistedAt,
+      shortlistedByName: text(value.shortlistedByName) || null,
+    };
+  }
+
   private toEmployerDetail(
     application: {
       _id: mongoose.Types.ObjectId;
@@ -781,6 +955,7 @@ export class ApplicationService {
       rejectReason?: string;
       interview?: unknown;
       offer?: unknown;
+      shortlist?: unknown;
       statusHistory?: unknown;
       appliedAt: Date;
       viewedAt?: Date | null;
@@ -791,6 +966,7 @@ export class ApplicationService {
     job: { jobTitle?: string; companyName?: string } | null,
     availabilityStatus?: string | null,
     preferredJobLocation?: string | null,
+    savedCandidate?: ApplicationSavedCandidatePrefill | null,
   ): EmployerApplicationDetail {
     const snapshot = asSnapshot(application.resumeSnapshot);
     if (!snapshot) {
@@ -831,6 +1007,8 @@ export class ApplicationService {
       rejectReason: text(application.rejectReason),
       interview: mapInterview(application.interview),
       offer: mapOffer(application.offer),
+      shortlist: this.mapShortlistDetails(application.shortlist),
+      savedCandidate: savedCandidate ?? null,
       statusHistory: mapStatusHistory(application.statusHistory),
       appliedAt: application.appliedAt.toISOString(),
       viewedAt: application.viewedAt
@@ -1788,12 +1966,34 @@ export class ApplicationService {
       .select("availabilityStatus preferredJobLocation")
       .lean();
 
+    const savedRow = await SavedCandidateModel.findOne({
+      employerId: application.employerId,
+      applicationId: application._id,
+    })
+      .select("_id priority tags notes")
+      .lean();
+
+    const savedCandidate: ApplicationSavedCandidatePrefill | null = savedRow
+      ? {
+          id: savedRow._id.toString(),
+          priority: savedRow.priority as SavedCandidatePriority,
+          tags: Array.isArray(savedRow.tags)
+            ? savedRow.tags
+                .filter((tag): tag is string => typeof tag === "string")
+                .map((tag) => tag.trim())
+                .filter(Boolean)
+            : [],
+          notes: typeof savedRow.notes === "string" ? savedRow.notes : "",
+        }
+      : null;
+
     return {
       application: this.toEmployerDetail(
         application,
         job,
         jobSeeker?.availabilityStatus ?? null,
         jobSeeker?.preferredJobLocation ?? null,
+        savedCandidate,
       ),
     };
   }
@@ -1888,6 +2088,13 @@ export class ApplicationService {
       );
     }
 
+    if (input.status === "shortlisted") {
+      throw new AppError(
+        "Use Shortlist Candidate to set status to Shortlisted. Direct status update is not allowed.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
     if (application.status !== input.status) {
       assertEmployerStatusChangeAllowed(
         application.status as ApplicationStatus,
@@ -1917,6 +2124,111 @@ export class ApplicationService {
       applicationId: input.applicationId,
       autoView: false,
     });
+  }
+
+  async shortlistForEmployer(input: {
+    employerId: string;
+    applicationId: string;
+    priority: SavedCandidatePriority;
+    tags: string[];
+    notes: string;
+    nextAction: ApplicationShortlistNextAction;
+    alsoSave: boolean;
+    actor: {
+      teamMemberId?: string | null;
+      displayName: string;
+    };
+  }): Promise<{
+    application: EmployerApplicationDetail;
+    saved: boolean;
+    nextAction: ApplicationShortlistNextAction;
+  }> {
+    const application = await this.findOwnedApplicationOrThrow(
+      input.applicationId,
+      input.employerId,
+    );
+
+    const currentStatus = application.status as ApplicationStatus;
+    const alreadyShortlisted = currentStatus === "shortlisted";
+
+    if (!alreadyShortlisted) {
+      assertEmployerStatusChangeAllowed(currentStatus, "shortlisted", {
+        interview: mapInterview(application.interview),
+        offer: mapOffer(application.offer),
+      });
+    }
+
+    const now = new Date();
+    const existingShortlist = this.mapShortlistDetails(application.shortlist);
+    const shortlistedAt = existingShortlist?.shortlistedAt
+      ? new Date(existingShortlist.shortlistedAt)
+      : now;
+
+    application.shortlist = {
+      priority: input.priority,
+      tags: input.tags,
+      notes: input.notes,
+      nextAction: input.nextAction,
+      shortlistedAt,
+      shortlistedByTeamMemberId: input.actor.teamMemberId
+        ? new mongoose.Types.ObjectId(input.actor.teamMemberId)
+        : null,
+      shortlistedByName: input.actor.displayName,
+    };
+
+    if (!alreadyShortlisted) {
+      application.status = "shortlisted";
+      appendStatusHistory(application, {
+        status: "shortlisted",
+        at: now,
+        actorType: "employer",
+        remark: "Candidate shortlisted",
+      });
+    }
+
+    await application.save();
+
+    if (!alreadyShortlisted) {
+      const eventName = eventNameForStatus("shortlisted");
+      if (eventName) {
+        await this.emitForApplication(eventName, application);
+      }
+    }
+
+    const existingSaved = await SavedCandidateModel.findOne({
+      employerId: application.employerId,
+      applicationId: application._id,
+    })
+      .select("_id")
+      .lean();
+
+    let saved = Boolean(existingSaved);
+    if (input.alsoSave || existingSaved) {
+      await savedCandidateService.upsertForApplication({
+        employerId: input.employerId,
+        applicationId: input.applicationId,
+        actor: {
+          teamMemberId: input.actor.teamMemberId || undefined,
+          displayName: input.actor.displayName,
+        },
+        priority: input.priority,
+        tags: input.tags,
+        notes: input.notes,
+      });
+      saved = true;
+    }
+
+    const detail = await this.loadEmployerDetail({
+      employerId: input.employerId,
+      applicationId: input.applicationId,
+      autoView: false,
+    });
+
+    return {
+      application: detail.application,
+      saved,
+      nextAction: input.nextAction,
+    };
   }
 
   async updateNotesForEmployer(input: {
@@ -2259,8 +2571,23 @@ export class ApplicationService {
   async listForSeeker(input: {
     jobSeekerId: string;
     status?: ApplicationStatus;
+    statuses?: ApplicationStatus[];
     search?: string;
-    sort?: "newest" | "oldest";
+    sort?:
+      | "newest"
+      | "oldest"
+      | "updated"
+      | "salary_high"
+      | "salary_low"
+      | "company";
+    location?: string;
+    company?: string;
+    jobType?: string;
+    workMode?: string;
+    shift?: string;
+    minSalary?: number;
+    appliedFrom?: string;
+    appliedTo?: string;
     page?: number;
     limit?: number;
   }) {
@@ -2268,153 +2595,332 @@ export class ApplicationService {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
-    const page = input.page ?? 1;
+    const requestedPage = input.page ?? 1;
     const limit = Math.min(input.limit ?? 20, 100);
-    const sortDir = input.sort === "oldest" ? 1 : -1;
     const search = text(input.search).toLowerCase();
+    const location = text(input.location).toLowerCase();
+    const company = text(input.company).toLowerCase();
+    const jobType = text(input.jobType).toLowerCase();
+    const workMode = text(input.workMode).toLowerCase();
+    const shift = text(input.shift).toLowerCase();
+    const minSalary =
+      typeof input.minSalary === "number" && Number.isFinite(input.minSalary)
+        ? input.minSalary
+        : null;
 
-    const filter: Record<string, unknown> = {
-      jobSeekerId: input.jobSeekerId,
+    const appMatch: Record<string, unknown> = {
+      jobSeekerId: new mongoose.Types.ObjectId(input.jobSeekerId),
     };
 
-    if (input.status) {
-      filter.status = input.status;
+    if (input.statuses && input.statuses.length > 0) {
+      appMatch.status = { $in: input.statuses };
+    } else if (input.status) {
+      appMatch.status = input.status;
     }
 
-    // Fast path: no search → paginate in Mongo (O(page) instead of O(N)).
-    if (!search) {
-      const [total, applications] = await Promise.all([
-        ApplicationModel.countDocuments(filter),
-        ApplicationModel.find(filter)
-          .sort({ appliedAt: sortDir })
-          .skip((page - 1) * limit)
-          .limit(limit)
-          .lean(),
-      ]);
+    const appliedFrom = text(input.appliedFrom);
+    const appliedTo = text(input.appliedTo);
+    if (appliedFrom || appliedTo) {
+      const appliedAt: Record<string, Date> = {};
+      if (appliedFrom) {
+        const from = new Date(`${appliedFrom}T00:00:00`);
+        if (!Number.isNaN(from.getTime())) {
+          appliedAt.$gte = from;
+        }
+      }
+      if (appliedTo) {
+        const to = new Date(`${appliedTo}T23:59:59.999`);
+        if (!Number.isNaN(to.getTime())) {
+          appliedAt.$lte = to;
+        }
+      }
+      if (Object.keys(appliedAt).length > 0) {
+        appMatch.appliedAt = appliedAt;
+      }
+    }
 
-      const jobIds = [...new Set(applications.map((app) => String(app.jobId)))];
-      const employerIds = [
-        ...new Set(applications.map((app) => String(app.employerId))),
+    const escapeRegex = (value: string) =>
+      value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const postLookupMatch: Record<string, unknown> = {};
+    if (search) {
+      postLookupMatch.$or = [
+        { "job.jobTitle": { $regex: escapeRegex(search), $options: "i" } },
+        { "job.companyName": { $regex: escapeRegex(search), $options: "i" } },
+        { publicJobId: { $regex: escapeRegex(search), $options: "i" } },
+        { locationLabel: { $regex: escapeRegex(search), $options: "i" } },
       ];
-
-      const [jobs, employers] = await Promise.all([
-        JobModel.find({ _id: { $in: jobIds } })
-          .select(
-            "jobTitle companyName jobId city cityName state stateName salaryType salaryPeriod fixedSalary minimumSalary maximumSalary",
-          )
-          .lean(),
-        EmployerModel.find({ _id: { $in: employerIds } })
-          .select("companyLogo")
-          .lean(),
-      ]);
-
-      const jobMap = new Map(jobs.map((job) => [String(job._id), job]));
-      const employerMap = new Map(
-        employers.map((employer) => [String(employer._id), employer]),
-      );
-
-      const items: SeekerApplicationListItem[] = applications.map((app) => {
-        const job = jobMap.get(String(app.jobId));
-        const employer = employerMap.get(String(app.employerId));
-        const history = mapStatusHistory(app.statusHistory);
-        const lastStatusUpdatedAt =
-          history.length > 0 ? history[history.length - 1]!.at : null;
-
-        return {
-          id: app._id.toString(),
-          publicJobId: app.publicJobId,
-          jobTitle: job?.jobTitle?.trim() || "Job",
-          companyName: job?.companyName?.trim() || "",
-          companyLogoUrl: text(employer?.companyLogo?.url),
-          location: job ? formatJobLocation(job) : "",
-          salaryLabel: job ? formatSalaryLabel(job) : "Not disclosed",
-          status: app.status as ApplicationStatus,
-          resumeVersion: app.resumeVersion,
-          appliedAt: app.appliedAt.toISOString(),
-          lastStatusUpdatedAt,
-        };
-      });
-
-      return {
-        applications: items,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.max(1, Math.ceil(total / limit)),
-        },
+    }
+    if (location) {
+      postLookupMatch.locationLabel = {
+        $regex: escapeRegex(location),
+        $options: "i",
+      };
+    }
+    if (company) {
+      postLookupMatch["job.companyName"] = {
+        $regex: escapeRegex(company),
+        $options: "i",
       };
     }
 
-    // Search path: still needs job/company text, but hard-cap scanned rows.
-    const SCAN_CAP = 2_000;
-    const applications = await ApplicationModel.find(filter)
-      .sort({ appliedAt: sortDir })
-      .limit(SCAN_CAP)
-      .lean();
+    const exprParts: Record<string, unknown>[] = [];
+    if (jobType) {
+      exprParts.push({
+        $eq: [{ $toLower: { $ifNull: ["$job.jobType", ""] } }, jobType],
+      });
+    }
+    if (workMode) {
+      exprParts.push({
+        $eq: [{ $toLower: { $ifNull: ["$job.workMode", ""] } }, workMode],
+      });
+    }
+    if (exprParts.length === 1) {
+      postLookupMatch.$expr = exprParts[0];
+    } else if (exprParts.length > 1) {
+      postLookupMatch.$expr = { $and: exprParts };
+    }
 
-    const jobIds = [...new Set(applications.map((app) => String(app.jobId)))];
-    const employerIds = [
-      ...new Set(applications.map((app) => String(app.employerId))),
+    if (shift) {
+      postLookupMatch.shiftLabel = {
+        $regex: `^${escapeRegex(shift)}$`,
+        $options: "i",
+      };
+    }
+    if (minSalary != null && minSalary > 0) {
+      postLookupMatch.salarySortValue = { $gte: minSalary };
+    }
+
+    const enrichStages: mongoose.PipelineStage[] = [
+      { $match: appMatch },
+      {
+        $lookup: {
+          from: "jobs",
+          localField: "jobId",
+          foreignField: "_id",
+          as: "job",
+        },
+      },
+      { $unwind: { path: "$job", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "employers",
+          localField: "employerId",
+          foreignField: "_id",
+          as: "employer",
+        },
+      },
+      { $unwind: { path: "$employer", preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          locationLabel: {
+            $trim: {
+              input: {
+                $concat: [
+                  {
+                    $ifNull: ["$job.cityName", { $ifNull: ["$job.city", ""] }],
+                  },
+                  {
+                    $cond: [
+                      {
+                        $and: [
+                          {
+                            $gt: [
+                              {
+                                $strLenCP: {
+                                  $ifNull: [
+                                    "$job.cityName",
+                                    { $ifNull: ["$job.city", ""] },
+                                  ],
+                                },
+                              },
+                              0,
+                            ],
+                          },
+                          {
+                            $gt: [
+                              {
+                                $strLenCP: {
+                                  $ifNull: [
+                                    "$job.stateName",
+                                    { $ifNull: ["$job.state", ""] },
+                                  ],
+                                },
+                              },
+                              0,
+                            ],
+                          },
+                        ],
+                      },
+                      ", ",
+                      "",
+                    ],
+                  },
+                  {
+                    $ifNull: [
+                      "$job.stateName",
+                      { $ifNull: ["$job.state", ""] },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          shiftLabel: {
+            $let: {
+              vars: {
+                start: { $ifNull: ["$job.partTimeStartTime", ""] },
+                end: { $ifNull: ["$job.partTimeEndTime", ""] },
+                schedule: { $ifNull: ["$job.partTimeSchedule", ""] },
+              },
+              in: {
+                $cond: [
+                  {
+                    $and: [
+                      { $gt: [{ $strLenCP: "$$start" }, 0] },
+                      { $gt: [{ $strLenCP: "$$end" }, 0] },
+                    ],
+                  },
+                  { $concat: ["$$start", " – ", "$$end"] },
+                  {
+                    $cond: [
+                      { $eq: ["$$schedule", "fixed-timings"] },
+                      "Fixed timings",
+                      {
+                        $cond: [
+                          { $eq: ["$$schedule", "flexible-hours"] },
+                          "Flexible hours",
+                          "$$schedule",
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          salarySortValue: {
+            $switch: {
+              branches: [
+                {
+                  case: {
+                    $and: [
+                      { $eq: ["$job.salaryType", "fixed"] },
+                      { $ne: ["$job.fixedSalary", null] },
+                    ],
+                  },
+                  then: "$job.fixedSalary",
+                },
+                {
+                  case: {
+                    $and: [
+                      { $ne: ["$job.minimumSalary", null] },
+                      { $ne: ["$job.maximumSalary", null] },
+                    ],
+                  },
+                  then: {
+                    $divide: [
+                      { $add: ["$job.minimumSalary", "$job.maximumSalary"] },
+                      2,
+                    ],
+                  },
+                },
+                {
+                  case: { $ne: ["$job.minimumSalary", null] },
+                  then: "$job.minimumSalary",
+                },
+                {
+                  case: { $ne: ["$job.maximumSalary", null] },
+                  then: "$job.maximumSalary",
+                },
+                {
+                  case: { $ne: ["$job.fixedSalary", null] },
+                  then: "$job.fixedSalary",
+                },
+              ],
+              default: null,
+            },
+          },
+          lastStatusUpdatedAt: {
+            $ifNull: [
+              { $arrayElemAt: ["$statusHistory.at", -1] },
+              "$appliedAt",
+            ],
+          },
+        },
+      },
     ];
 
-    const [jobs, employers] = await Promise.all([
-      JobModel.find({ _id: { $in: jobIds } })
-        .select(
-          "jobTitle companyName jobId city cityName state stateName salaryType salaryPeriod fixedSalary minimumSalary maximumSalary",
-        )
-        .lean(),
-      EmployerModel.find({ _id: { $in: employerIds } })
-        .select("companyLogo")
-        .lean(),
+    if (Object.keys(postLookupMatch).length > 0) {
+      enrichStages.push({ $match: postLookupMatch } as mongoose.PipelineStage);
+    }
+
+    let sortStage: Record<string, 1 | -1>;
+    switch (input.sort) {
+      case "oldest":
+        sortStage = { appliedAt: 1, _id: 1 };
+        break;
+      case "updated":
+        sortStage = { lastStatusUpdatedAt: -1, appliedAt: -1, _id: -1 };
+        break;
+      case "salary_high":
+        sortStage = { salarySortValue: -1, appliedAt: -1, _id: -1 };
+        break;
+      case "salary_low":
+        sortStage = { salarySortValue: 1, appliedAt: -1, _id: -1 };
+        break;
+      case "company":
+        sortStage = { "job.companyName": 1, appliedAt: -1, _id: -1 };
+        break;
+      case "newest":
+      default:
+        sortStage = { appliedAt: -1, _id: -1 };
+        break;
+    }
+
+    const countRows = await ApplicationModel.aggregate<{ total: number }>([
+      ...enrichStages,
+      { $count: "total" },
     ]);
+    const total = countRows[0]?.total ?? 0;
+    const pagination = buildListPagination(requestedPage, limit, total);
+    const skip = (pagination.page - 1) * pagination.limit;
 
-    const jobMap = new Map(jobs.map((job) => [String(job._id), job]));
-    const employerMap = new Map(
-      employers.map((employer) => [String(employer._id), employer]),
+    type AggApp = {
+      _id: mongoose.Types.ObjectId;
+      publicJobId: string;
+      jobId: unknown;
+      employerId: unknown;
+      status: string;
+      resumeVersion: number;
+      appliedAt: Date;
+      statusHistory?: unknown;
+      interview?: unknown;
+      job?: Parameters<typeof mapSeekerListItem>[0]["job"];
+      employer?: { companyLogo?: { url?: string } | null };
+    };
+
+    const pageItems =
+      total === 0
+        ? []
+        : await ApplicationModel.aggregate<AggApp>([
+            ...enrichStages,
+            { $sort: sortStage },
+            { $skip: skip },
+            { $limit: pagination.limit },
+          ]);
+
+    const items: SeekerApplicationListItem[] = pageItems.map((app) =>
+      mapSeekerListItem({
+        app,
+        job: app.job,
+        employer: app.employer,
+      }),
     );
-
-    let items: SeekerApplicationListItem[] = applications.map((app) => {
-      const job = jobMap.get(String(app.jobId));
-      const employer = employerMap.get(String(app.employerId));
-      const history = mapStatusHistory(app.statusHistory);
-      const lastStatusUpdatedAt =
-        history.length > 0 ? history[history.length - 1]!.at : null;
-
-      return {
-        id: app._id.toString(),
-        publicJobId: app.publicJobId,
-        jobTitle: job?.jobTitle?.trim() || "Job",
-        companyName: job?.companyName?.trim() || "",
-        companyLogoUrl: text(employer?.companyLogo?.url),
-        location: job ? formatJobLocation(job) : "",
-        salaryLabel: job ? formatSalaryLabel(job) : "Not disclosed",
-        status: app.status as ApplicationStatus,
-        resumeVersion: app.resumeVersion,
-        appliedAt: app.appliedAt.toISOString(),
-        lastStatusUpdatedAt,
-      };
-    });
-
-    items = items.filter(
-      (item) =>
-        item.jobTitle.toLowerCase().includes(search) ||
-        item.companyName.toLowerCase().includes(search) ||
-        item.publicJobId.toLowerCase().includes(search),
-    );
-
-    const total = items.length;
-    const start = (page - 1) * limit;
-    const paged = items.slice(start, start + limit);
 
     return {
-      applications: paged,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / limit)),
-      },
+      applications: items,
+      pagination,
     };
   }
 
@@ -2452,6 +2958,7 @@ export class ApplicationService {
         selected: byStatus.get("selected") ?? 0,
         rejected: byStatus.get("rejected") ?? 0,
         joined: byStatus.get("joined") ?? 0,
+        withdrawn: byStatus.get("withdrawn") ?? 0,
       },
     };
   }

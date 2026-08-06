@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerJobPreviewModal } from "@/components/employer-jobs/EmployerJobPreviewModal";
 import { EmployerJobsHeader } from "@/components/employer-jobs/EmployerJobsHeader";
 import { EmployerJobsQuickActions } from "@/components/employer-jobs/EmployerJobsQuickActions";
 import { EmployerJobsStats } from "@/components/employer-jobs/EmployerJobsStats";
@@ -54,6 +55,7 @@ export function EmployerJobsPageContent() {
     () => loadEmployerJobsFiltersFromSession(),
   );
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [previewJobId, setPreviewJobId] = useState<string | null>(null);
   const isFirstSearchDebounce = useRef(true);
 
   useEffect(() => {
@@ -273,6 +275,7 @@ export function EmployerJobsPageContent() {
             onDelete={(jobId) => {
               deleteMutation.mutate(jobId);
             }}
+            onPreview={setPreviewJobId}
           />
         </div>
 
@@ -287,6 +290,13 @@ export function EmployerJobsPageContent() {
         onApply={handleApplyFilters}
         onClear={handleClearFilters}
       />
+
+      {previewJobId ? (
+        <EmployerJobPreviewModal
+          jobMongoId={previewJobId}
+          onClose={() => setPreviewJobId(null)}
+        />
+      ) : null}
     </div>
   );
 }

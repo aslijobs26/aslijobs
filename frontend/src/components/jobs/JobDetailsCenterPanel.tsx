@@ -52,6 +52,8 @@ type JobDetailsCenterPanelProps = {
   bookmarked: boolean;
   onToggleBookmark: () => void;
   onRetry?: () => void;
+  /** When true, apply/save/share actions are disabled (employer preview). */
+  previewMode?: boolean;
 };
 
 const DESCRIPTION_COLLAPSE_CHARS = 420;
@@ -122,6 +124,7 @@ export function JobDetailsCenterPanel({
   bookmarked,
   onToggleBookmark,
   onRetry,
+  previewMode = false,
 }: JobDetailsCenterPanelProps) {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
@@ -213,6 +216,9 @@ export function JobDetailsCenterPanel({
       : `${descriptionText.slice(0, DESCRIPTION_COLLAPSE_CHARS).trimEnd()}…`;
 
   const handleShare = () => {
+    if (previewMode) {
+      return;
+    }
     void shareOrCopyText({
       title: job.jobTitle,
       text: `${job.jobTitle} at ${job.companyName}`,
@@ -222,7 +228,7 @@ export function JobDetailsCenterPanel({
   };
 
   const handleApplyClick = () => {
-    if (isApplying || isApplied) {
+    if (previewMode || isApplying || isApplied) {
       return;
     }
     setIsApplying(true);
@@ -247,6 +253,13 @@ export function JobDetailsCenterPanel({
       .finally(() => {
         setIsApplying(false);
       });
+  };
+
+  const handleBookmarkClick = () => {
+    if (previewMode) {
+      return;
+    }
+    onToggleBookmark();
   };
 
   return (
@@ -289,35 +302,37 @@ export function JobDetailsCenterPanel({
             ) : null}
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={handleShare}
-              aria-label="Share job"
-              className="inline-flex size-9 items-center justify-center rounded-lg border border-border-subtle text-muted transition-colors hover:border-primary/25 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              <Share2 className="size-4" strokeWidth={2} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={onToggleBookmark}
-              aria-label={bookmarked ? "Remove bookmark" : "Save job"}
-              aria-pressed={bookmarked}
-              className={cn(
-                "inline-flex size-9 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                bookmarked
-                  ? "border-primary bg-primary-light text-primary"
-                  : "border-border-subtle text-muted hover:border-primary/25 hover:text-foreground",
-              )}
-            >
-              <Bookmark
-                className="size-4"
-                strokeWidth={2}
-                fill={bookmarked ? "currentColor" : "none"}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
+          {previewMode ? null : (
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={handleShare}
+                aria-label="Share job"
+                className="inline-flex size-9 items-center justify-center rounded-lg border border-border-subtle text-muted transition-colors hover:border-primary/25 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              >
+                <Share2 className="size-4" strokeWidth={2} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={handleBookmarkClick}
+                aria-label={bookmarked ? "Remove bookmark" : "Save job"}
+                aria-pressed={bookmarked}
+                className={cn(
+                  "inline-flex size-9 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                  bookmarked
+                    ? "border-primary bg-primary-light text-primary"
+                    : "border-border-subtle text-muted hover:border-primary/25 hover:text-foreground",
+                )}
+              >
+                <Bookmark
+                  className="size-4"
+                  strokeWidth={2}
+                  fill={bookmarked ? "currentColor" : "none"}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+          )}
         </header>
 
         <div className="mt-6 border-t border-border-subtle pt-5" aria-label="Job information">
@@ -513,46 +528,52 @@ export function JobDetailsCenterPanel({
         ) : null}
       </div>
 
-      <div className="sticky bottom-0 border-t border-border-subtle bg-surface/95 px-5 py-4 backdrop-blur-md sm:px-7">
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-          <JobApplyButton
-            isApplied={isApplied}
-            isApplying={isApplying}
-            onClick={handleApplyClick}
-            className="inline-flex h-11 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-            appliedClassName="h-11 flex-[1.4] text-sm"
-            startIcon={
-              <Send className="size-4" strokeWidth={2.25} aria-hidden="true" />
-            }
-          />
-          <button
-            type="button"
-            onClick={handleShare}
-            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          >
-            <Share2 className="size-4" aria-hidden="true" />
-            Share Job
-          </button>
-          <button
-            type="button"
-            onClick={onToggleBookmark}
-            aria-pressed={bookmarked}
-            className={cn(
-              "inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-              bookmarked
-                ? "border-primary bg-primary-light text-primary"
-                : "border-border-subtle bg-surface text-foreground hover:border-primary/30",
-            )}
-          >
-            <Bookmark
-              className="size-4"
-              fill={bookmarked ? "currentColor" : "none"}
-              aria-hidden="true"
+      {previewMode ? null : (
+        <div className="sticky bottom-0 border-t border-border-subtle bg-surface/95 px-5 py-4 backdrop-blur-md sm:px-7">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <JobApplyButton
+              isApplied={isApplied}
+              isApplying={isApplying}
+              onClick={handleApplyClick}
+              className="inline-flex h-11 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              appliedClassName="h-11 flex-[1.4] text-sm"
+              startIcon={
+                <Send
+                  className="size-4"
+                  strokeWidth={2.25}
+                  aria-hidden="true"
+                />
+              }
             />
-            {bookmarked ? "Saved" : "Save Job"}
-          </button>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              <Share2 className="size-4" aria-hidden="true" />
+              Share Job
+            </button>
+            <button
+              type="button"
+              onClick={handleBookmarkClick}
+              aria-pressed={bookmarked}
+              className={cn(
+                "inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                bookmarked
+                  ? "border-primary bg-primary-light text-primary"
+                  : "border-border-subtle bg-surface text-foreground hover:border-primary/30",
+              )}
+            >
+              <Bookmark
+                className="size-4"
+                fill={bookmarked ? "currentColor" : "none"}
+                aria-hidden="true"
+              />
+              {bookmarked ? "Saved" : "Save Job"}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </article>
   );
 }

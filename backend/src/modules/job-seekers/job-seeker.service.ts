@@ -9,73 +9,107 @@ import { JobModel } from "../jobs/job.model.js";
 import { otpService } from "../otp/otp.service.js";
 import { resumeService } from "../resumes/resume.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
+import { toPublicJobSeeker } from "./job-seeker.serializer.js";
 import type {
   CompleteJobSeekerRegistrationInput,
   RegisterJobSeekerInput,
   ResendJobSeekerOtpInput,
   SaveJobSeekerPreferencesInput,
+  UpdateJobSeekerProfileInput,
   VerifyJobSeekerOtpInput,
 } from "./job-seeker.types.js";
 import type { SearchJobSeekerRolesQuery } from "./job-seeker.validation.js";
+import { storageService } from "../storage/storage.service.js";
+import { JOB_SEEKER_IMAGE_MIME_TYPES } from "../../constants/job-seeker.constants.js";
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function toPublicJobSeeker(jobSeeker: {
-  _id: mongoose.Types.ObjectId;
-  fullName: string;
-  whatsappNumber: string;
-  dateOfBirth?: Date | null;
-  gender?: string | null;
-  pincode?: string;
-  city?: string;
-  state?: string;
-  jobRole?: string;
-  jobType?: string | null;
-  workMode?: string | null;
-  preferredJobLocation?: string;
-  expectedSalary?: number | null;
-  expectedSalaryPeriod?: string | null;
-  education?: Record<string, unknown> | null;
-  experienceType?: string | null;
-  experiences?: unknown[];
-  languages?: string[];
-  availabilityStatus?: string | null;
-  isWhatsappVerified: boolean;
-  registrationStatus: string;
-  lastLoginAt?: Date | null;
-  createdAt?: Date;
-  updatedAt?: Date;
-}) {
+function emptyImageAsset() {
   return {
-    id: jobSeeker._id.toString(),
-    fullName: jobSeeker.fullName,
-    whatsappNumber: jobSeeker.whatsappNumber,
-    dateOfBirth: jobSeeker.dateOfBirth
-      ? jobSeeker.dateOfBirth.toISOString().slice(0, 10)
-      : null,
-    gender: jobSeeker.gender ?? null,
-    pincode: jobSeeker.pincode ?? "",
-    city: jobSeeker.city ?? "",
-    state: jobSeeker.state ?? "",
-    jobRole: jobSeeker.jobRole ?? "",
-    jobType: jobSeeker.jobType ?? null,
-    workMode: jobSeeker.workMode ?? null,
-    preferredJobLocation: jobSeeker.preferredJobLocation ?? "",
-    expectedSalary: jobSeeker.expectedSalary ?? null,
-    expectedSalaryPeriod: jobSeeker.expectedSalaryPeriod ?? "per-month",
-    education: jobSeeker.education ?? null,
-    experienceType: jobSeeker.experienceType ?? null,
-    experiences: jobSeeker.experiences ?? [],
-    languages: jobSeeker.languages ?? [],
-    availabilityStatus: jobSeeker.availabilityStatus ?? null,
-    isWhatsappVerified: jobSeeker.isWhatsappVerified,
-    registrationStatus: jobSeeker.registrationStatus,
-    lastLoginAt: jobSeeker.lastLoginAt ?? null,
-    createdAt: jobSeeker.createdAt,
-    updatedAt: jobSeeker.updatedAt,
+    url: "",
+    storagePath: "",
+    publicId: "",
+    storageProvider: "",
+    originalName: "",
+    mimeType: "",
+    fileSize: 0,
   };
+}
+
+async function uploadJobSeekerImageAsset(input: {
+  file: Express.Multer.File;
+  folder: string;
+  fileBaseName: string;
+}) {
+  if (
+    !(JOB_SEEKER_IMAGE_MIME_TYPES as readonly string[]).includes(
+      input.file.mimetype,
+    )
+  ) {
+    throw new AppError(
+      "Profile photo must be a PNG, JPG, JPEG, or WEBP image",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+
+  try {
+    const storedFile = await storageService.upload({
+      buffer: input.file.buffer,
+      originalName: input.file.originalname,
+      mimeType: input.file.mimetype,
+      folder: input.folder,
+      fileBaseName: input.fileBaseName,
+    });
+
+    return {
+      url: storedFile.url ?? "",
+      storagePath: storedFile.storagePath,
+      publicId: storedFile.publicId ?? "",
+      storageProvider: storedFile.storageProvider,
+      originalName: storedFile.originalName,
+      mimeType: storedFile.mimeType,
+      fileSize: storedFile.fileSize,
+    };
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError("Upload failed", HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+}
+
+async function deleteJobSeekerImageAsset(asset?: {
+  storagePath?: string;
+  publicId?: string;
+  storageProvider?: string;
+} | null) {
+  if (!asset?.storagePath) {
+    return;
+  }
+
+  const provider =
+    asset.storageProvider === "cloudinary" ? "cloudinary" : "local";
+
+  try {
+    await storageService.delete({
+      storagePath: asset.storagePath,
+      publicId: asset.publicId || undefined,
+      storageProvider: provider,
+    });
+  } catch {
+    // Best-effort cleanup.
+  }
+}
+
+async function refreshResumeAfterProfileChange(jobSeekerId: string) {
+  try {
+    await resumeService.markOutdated(jobSeekerId, "profile_updated");
+    await resumeService.generateFromProfile(jobSeekerId);
+  } catch (error) {
+    console.error("Resume refresh after profile update failed:", error);
+  }
 }
 
 async function findJobSeekerOrThrow(jobSeekerId: string) {
@@ -400,6 +434,173 @@ export class JobSeekerService {
       refreshToken: tokens.refreshToken,
       accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
       refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
+    };
+  }
+
+  async updateAuthenticatedProfile(
+    jobSeekerId: string,
+    input: UpdateJobSeekerProfileInput,
+  ) {
+    const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
+
+    if (
+      !jobSeeker.isWhatsappVerified ||
+      jobSeeker.registrationStatus !== "COMPLETED"
+    ) {
+      throw new AppError(
+        "Complete your registration before updating your profile",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    if (input.fullName !== undefined) {
+      jobSeeker.fullName = input.fullName;
+    }
+    if (input.dateOfBirth !== undefined) {
+      jobSeeker.dateOfBirth = input.dateOfBirth
+        ? new Date(`${input.dateOfBirth}T00:00:00.000Z`)
+        : null;
+    }
+    if (input.gender !== undefined) {
+      jobSeeker.gender = input.gender;
+    }
+    if (input.pincode !== undefined) {
+      jobSeeker.pincode = input.pincode;
+    }
+    if (input.city !== undefined) {
+      jobSeeker.city = input.city;
+    }
+    if (input.state !== undefined) {
+      jobSeeker.state = input.state;
+    }
+    if (input.jobRole !== undefined) {
+      jobSeeker.jobRole = input.jobRole;
+    }
+    if (input.jobType !== undefined) {
+      jobSeeker.jobType = input.jobType;
+    }
+    if (input.workMode !== undefined) {
+      jobSeeker.workMode = input.workMode;
+    }
+    if (input.preferredJobLocation !== undefined) {
+      jobSeeker.preferredJobLocation = input.preferredJobLocation;
+    }
+    if (input.expectedSalary !== undefined) {
+      jobSeeker.expectedSalary = input.expectedSalary;
+    }
+    if (input.expectedSalaryPeriod !== undefined) {
+      jobSeeker.expectedSalaryPeriod = input.expectedSalaryPeriod;
+    }
+    if (input.education !== undefined) {
+      jobSeeker.set("education", input.education);
+    }
+    if (input.experienceType !== undefined) {
+      jobSeeker.experienceType = input.experienceType;
+    }
+    if (input.experiences !== undefined) {
+      jobSeeker.set("experiences", input.experiences);
+    }
+    if (input.languages !== undefined) {
+      jobSeeker.languages = input.languages;
+    }
+    if (input.availabilityStatus !== undefined) {
+      jobSeeker.availabilityStatus = input.availabilityStatus;
+    }
+    if (input.professionalSummary !== undefined) {
+      jobSeeker.professionalSummary = input.professionalSummary;
+    }
+    if (input.skills !== undefined) {
+      jobSeeker.skills = input.skills;
+    }
+    if (input.profileVisibility !== undefined) {
+      jobSeeker.profileVisibility = input.profileVisibility;
+    }
+
+    if (
+      jobSeeker.experienceType === "experienced" &&
+      (!Array.isArray(jobSeeker.experiences) || jobSeeker.experiences.length < 1)
+    ) {
+      throw new AppError(
+        "Add at least one work experience for experienced profiles",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    if (jobSeeker.experienceType === "fresher") {
+      jobSeeker.set("experiences", []);
+    }
+
+    await jobSeeker.save();
+    await refreshResumeAfterProfileChange(jobSeeker._id.toString());
+
+    return {
+      jobSeeker: toPublicJobSeeker(jobSeeker),
+    };
+  }
+
+  async updateProfilePhoto(
+    jobSeekerId: string,
+    file: Express.Multer.File | undefined,
+  ) {
+    if (!file) {
+      throw new AppError("Profile photo is required", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
+
+    if (
+      !jobSeeker.isWhatsappVerified ||
+      jobSeeker.registrationStatus !== "COMPLETED"
+    ) {
+      throw new AppError(
+        "Complete your registration before uploading a photo",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const previousPhoto = {
+      storagePath: jobSeeker.profilePhoto?.storagePath ?? "",
+      publicId: jobSeeker.profilePhoto?.publicId ?? "",
+      storageProvider: jobSeeker.profilePhoto?.storageProvider ?? "",
+    };
+
+    const uploaded = await uploadJobSeekerImageAsset({
+      file,
+      folder: `job-seekers/${jobSeeker._id.toString()}/profile`,
+      fileBaseName: "profile-photo",
+    });
+
+    jobSeeker.set("profilePhoto", uploaded);
+    await jobSeeker.save();
+
+    if (previousPhoto.storagePath) {
+      await deleteJobSeekerImageAsset(previousPhoto);
+    }
+
+    return {
+      jobSeeker: toPublicJobSeeker(jobSeeker),
+    };
+  }
+
+  async deleteProfilePhoto(jobSeekerId: string) {
+    const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
+
+    if (
+      !jobSeeker.isWhatsappVerified ||
+      jobSeeker.registrationStatus !== "COMPLETED"
+    ) {
+      throw new AppError(
+        "Complete your registration before updating your photo",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    await deleteJobSeekerImageAsset(jobSeeker.profilePhoto);
+    jobSeeker.set("profilePhoto", emptyImageAsset());
+    await jobSeeker.save();
+
+    return {
+      jobSeeker: toPublicJobSeeker(jobSeeker),
     };
   }
 }

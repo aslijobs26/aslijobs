@@ -42,6 +42,12 @@ export const EMPLOYER_DASHBOARD_NAV_ITEMS: EmployerDashboardNavItem[] = [
     icon: Users,
   },
   {
+    id: "saved-candidates",
+    label: "Shortlisted Candidates",
+    href: ROUTES.EMPLOYER_SAVED_CANDIDATES,
+    icon: Star,
+  },
+  {
     id: "interviews",
     label: "Interviews",
     href: ROUTES.EMPLOYER_INTERVIEWS,
@@ -52,12 +58,6 @@ export const EMPLOYER_DASHBOARD_NAV_ITEMS: EmployerDashboardNavItem[] = [
     label: "Messages",
     href: ROUTES.EMPLOYER_MESSAGES,
     icon: MessageSquare,
-  },
-  {
-    id: "saved-candidates",
-    label: "Saved Candidates",
-    href: ROUTES.EMPLOYER_SAVED_CANDIDATES,
-    icon: Star,
   },
   {
     id: "campaigns",

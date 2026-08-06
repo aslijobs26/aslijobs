@@ -86,6 +86,11 @@ export function generateProfessionalSummary(
   profile: JobSeekerProfileForResume,
   experiences: ResumeJsonExperienceEntry[],
 ): string {
+  const customSummary = text(profile.professionalSummary);
+  if (customSummary) {
+    return customSummary;
+  }
+
   const jobRole = text(profile.jobRole) || "a suitable role";
   const primary = pickPrimaryExperience(experiences);
   const industry = primary ? text(primary.industry) : "";
@@ -172,6 +177,16 @@ export function deriveSkillsFromProfile(
   profile: JobSeekerProfileForResume,
   experiences: ResumeJsonExperienceEntry[],
 ): string[] {
+  const explicitSkills = Array.isArray(profile.skills)
+    ? profile.skills
+        .map((skill) => text(skill))
+        .filter((skill): skill is string => skill.length > 0)
+    : [];
+
+  if (explicitSkills.length > 0) {
+    return [...new Set(explicitSkills)];
+  }
+
   const skills = new Set<string>();
 
   const add = (value: unknown) => {

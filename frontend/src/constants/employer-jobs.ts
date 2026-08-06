@@ -187,6 +187,8 @@ export const EMPLOYER_JOBS_QUERY_KEYS = {
     maxVacancies?: number;
   }) => [...EMPLOYER_JOBS_QUERY_KEYS.lists(), params] as const,
   stats: () => [...EMPLOYER_JOBS_QUERY_KEYS.all, "stats"] as const,
+  detail: (jobMongoId: string) =>
+    [...EMPLOYER_JOBS_QUERY_KEYS.all, "detail", jobMongoId] as const,
 };
 
 export const EMPLOYER_DASHBOARD_HOME_TITLE = "Dashboard";

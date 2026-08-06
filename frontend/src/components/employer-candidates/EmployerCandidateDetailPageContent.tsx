@@ -7,6 +7,8 @@ import {
   formatTimelineActivityTitle,
   parseInterviewCancelledRemark,
 } from "@/components/employer-candidates/candidates-ats-utils";
+import { resolveEmployerStatusSelect } from "@/components/employer-candidates/employer-status-select";
+import { SaveCandidateModal } from "@/components/employer-saved-candidates/SaveCandidateModal";
 import { ResumePreview } from "@/components/job-seeker-resume/ResumePreview";
 import { ROUTES } from "@/constants/routes";
 import { useCan } from "@/providers/employer-permission-provider";
@@ -18,13 +20,13 @@ import {
   updateEmployerApplicationNotes,
   updateEmployerApplicationStatus,
 } from "@/services/employer-applications.service";
+import { savedCandidatesQueryKeys } from "@/services/saved-candidates.service";
 import {
   EMPLOYER_APPLICATION_STATUS_LABELS,
   getAllowedEmployerStatusTransitions,
   isEmployerTerminalStatus,
   type EmployerApplicationStatus,
 } from "@/types/employer-applications";
-import { resolveEmployerStatusSelect } from "@/components/employer-candidates/employer-status-select";
 import type {
   ApplicationOffer,
   ApplicationStatusHistoryEntry,
@@ -116,6 +118,7 @@ export function EmployerCandidateDetailPageContent({
   const [rejectReason, setRejectReason] = useState("");
   const [offerDraft, setOfferDraft] = useState<ApplicationOffer>(EMPTY_OFFER);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [shortlistOpen, setShortlistOpen] = useState(false);
 
   const detailQuery = useQuery({
     queryKey: ["employer", "application", applicationId],
@@ -510,6 +513,11 @@ export function EmployerCandidateDetailPageContent({
                     interview: application.interview,
                     offer: application.offer,
                   });
+                  if (result.action === "open_shortlist") {
+                    setShortlistOpen(true);
+                    showAppToast(result.message, "info");
+                    return;
+                  }
                   if (result.action === "open_interview") {
                     document
                       .getElementById("employer-candidate-interview-section")
@@ -549,6 +557,15 @@ export function EmployerCandidateDetailPageContent({
                 </p>
               </div>
             )}
+            {canUpdateCandidates && application.status === "shortlisted" ? (
+              <button
+                type="button"
+                onClick={() => setShortlistOpen(true)}
+                className="mt-2 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              >
+                Edit shortlist details
+              </button>
+            ) : null}
           </section>
 
           {canScheduleInterview || canUpdateInterview ? (
@@ -676,6 +693,46 @@ export function EmployerCandidateDetailPageContent({
           </section>
         </aside>
       </div>
+
+      {shortlistOpen ? (
+        <SaveCandidateModal
+          application={{
+            applicationId: application.id,
+            candidateName: application.candidate.fullName,
+            jobTitle: application.jobTitle,
+            experience: application.candidate.experienceLabel,
+            location:
+              application.candidate.preferredJobLocation?.trim() ||
+              [application.candidate.city, application.candidate.state]
+                .filter(Boolean)
+                .join(", "),
+          }}
+          mode={application.savedCandidate ? "edit" : "save"}
+          savedCandidateId={application.savedCandidate?.id}
+          shortlistOnSave
+          initialValues={
+            application.shortlist
+              ? {
+                  priority: application.shortlist.priority,
+                  tags: application.shortlist.tags,
+                  notes: application.shortlist.notes,
+                }
+              : application.savedCandidate
+                ? {
+                    priority: application.savedCandidate.priority,
+                    tags: application.savedCandidate.tags,
+                    notes: application.savedCandidate.notes,
+                  }
+                : undefined
+          }
+          onClose={() => setShortlistOpen(false)}
+          onSuccess={() => {
+            void queryClient.invalidateQueries({
+              queryKey: savedCandidatesQueryKeys.all,
+            });
+          }}
+        />
+      ) : null}
     </div>
   );
 }

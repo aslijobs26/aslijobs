@@ -3,8 +3,9 @@
 import {
   getStatsChipCount,
 } from "@/components/job-seeker-applications/applied-jobs-utils";
+import { JOB_SEEKER_RESUME_QUERY_KEY } from "@/constants/job-seeker-profile";
 import { ROUTES } from "@/constants/routes";
-import { fetchAuthenticatedJobSeeker } from "@/services/job-seeker-login.service";
+import { useJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
 import {
   fetchSeekerApplicationStats,
   fetchSeekerApplications,
@@ -132,11 +133,7 @@ function QuickAction({ href, label, icon: Icon }: QuickActionProps) {
 }
 
 export function DashboardHomeContent() {
-  const profileQuery = useQuery({
-    queryKey: ["job-seeker", "me"],
-    queryFn: fetchAuthenticatedJobSeeker,
-    staleTime: 60_000,
-  });
+  const profileQuery = useJobSeekerProfile();
 
   const statsQuery = useQuery({
     queryKey: ["job-seeker", "application-stats"],
@@ -145,7 +142,7 @@ export function DashboardHomeContent() {
   });
 
   const resumeQuery = useQuery({
-    queryKey: ["job-seeker", "resume"],
+    queryKey: JOB_SEEKER_RESUME_QUERY_KEY,
     queryFn: fetchMyResume,
     staleTime: 60_000,
   });
@@ -167,7 +164,7 @@ export function DashboardHomeContent() {
     staleTime: 20_000,
   });
 
-  const jobSeeker = profileQuery.data?.jobSeeker;
+  const jobSeeker = profileQuery.data;
   const fullName = jobSeeker?.fullName?.trim() || "Job Seeker";
   const locationLabel = [jobSeeker?.city, jobSeeker?.state]
     .filter(Boolean)
@@ -265,7 +262,7 @@ export function DashboardHomeContent() {
           />
           <SummaryCard
             href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
-            label="Applied Jobs"
+            label="My Applications"
             value={String(appliedCount)}
             hint="Total applications"
             icon={Briefcase}
@@ -307,7 +304,7 @@ export function DashboardHomeContent() {
           />
           <QuickAction
             href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
-            label="Applied Jobs"
+            label="My Applications"
             icon={Briefcase}
           />
           <QuickAction

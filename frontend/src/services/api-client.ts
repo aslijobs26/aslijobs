@@ -79,6 +79,7 @@ function resolveAuthRealm(
     requestUrl.includes("/resumes") ||
     requestUrl.includes("/applications/apply") ||
     requestUrl.includes("/applications/me") ||
+    requestUrl.includes("/saved-jobs") ||
     isPublicJobsRequest;
 
   if (isPublicJobsRequest) {

@@ -91,6 +91,19 @@ export function buildTelHref(phone: string): string | null {
   return `tel:+${digits.length === 10 ? `91${digits}` : digits}`;
 }
 
+export function buildSmsHref(phone: string): string | null {
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) {
+    return null;
+  }
+  const withCountry =
+    digits.length === 10 ? `91${digits}` : digits.replace(/^0+/, "");
+  if (withCountry.length < 10) {
+    return null;
+  }
+  return `sms:+${withCountry}`;
+}
+
 export function ageFromDateOfBirth(
   dateOfBirth: string | null | undefined,
 ): string | null {

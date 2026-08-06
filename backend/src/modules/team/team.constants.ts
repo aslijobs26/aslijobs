@@ -70,6 +70,7 @@ export const TEAM_ACTIVITY_TYPES = [
   "member_updated",
   "member_login",
   "member_logout",
+  "saved_candidates_exported",
 ] as const;
 export type TeamActivityType = (typeof TEAM_ACTIVITY_TYPES)[number];
 

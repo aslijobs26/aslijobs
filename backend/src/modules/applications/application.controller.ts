@@ -29,6 +29,7 @@ import type {
   ListEmployerInterviewsQuerySchema,
   ListSeekerApplicationsQuerySchema,
   CancelApplicationInterviewSchema,
+  ShortlistApplicationSchema,
   UpdateApplicationHiringSchema,
   UpdateApplicationInterviewSchema,
   UpdateApplicationNotesSchema,
@@ -106,8 +107,17 @@ export class ApplicationController {
     const result = await applicationService.listForSeeker({
       jobSeekerId,
       status: query.status,
+      statuses: query.statuses,
       search: query.search,
       sort: query.sort,
+      location: query.location,
+      company: query.company,
+      jobType: query.jobType,
+      workMode: query.workMode,
+      shift: query.shift,
+      minSalary: query.minSalary,
+      appliedFrom: query.appliedFrom,
+      appliedTo: query.appliedTo,
       page: query.page,
       limit: query.limit,
     });
@@ -446,6 +456,44 @@ export class ApplicationController {
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Application status updated.",
       data: result,
+    });
+  };
+
+  shortlistForEmployer = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const employerId = requireEmployerId(req);
+    const applicationId = String(req.params.applicationId ?? "");
+    const body = req.body as ShortlistApplicationSchema;
+
+    const result = await applicationService.shortlistForEmployer({
+      employerId,
+      applicationId,
+      priority: body.priority,
+      tags: body.tags,
+      notes: body.notes,
+      nextAction: body.nextAction,
+      alsoSave: body.alsoSave !== false,
+      actor: {
+        teamMemberId: req.teamMemberId,
+        displayName: readEmployerDisplayName(req),
+      },
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message:
+        result.application.status === "shortlisted"
+          ? "Candidate shortlisted successfully."
+          : "Shortlist details updated.",
+      data: {
+        application: sanitizeCandidateDetail(
+          req.rbac,
+          result.application as unknown as Record<string, unknown>,
+        ),
+        saved: result.saved,
+        nextAction: result.nextAction,
+      },
     });
   };
 

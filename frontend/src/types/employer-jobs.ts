@@ -231,6 +231,7 @@ export type EmployerJobDetail = {
   contactEmail: string;
   contactMobile: string;
   status: JobStatus;
+  publishedAt?: string | null;
   completedStep: 1 | 2 | 3;
   lastEditedAt: string;
   wizardSnapshot: PostJobWizardSnapshot | null;

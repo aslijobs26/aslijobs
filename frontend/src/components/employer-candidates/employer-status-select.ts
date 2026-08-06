@@ -10,6 +10,7 @@ import type {
 
 export type EmployerStatusSelectResult =
   | { action: "mutate"; status: EmployerApplicationStatus }
+  | { action: "open_shortlist"; message: string }
   | { action: "open_interview"; message: string }
   | { action: "open_offer"; message: string }
   | { action: "blocked"; message: string };
@@ -24,6 +25,14 @@ export function resolveEmployerStatusSelect(input: {
   offer: ApplicationOffer;
 }): EmployerStatusSelectResult {
   const { nextStatus, interview, offer } = input;
+
+  if (nextStatus === "shortlisted") {
+    return {
+      action: "open_shortlist",
+      message:
+        "Save the candidate with priority, tags, and notes to set status to Shortlisted.",
+    };
+  }
 
   if (nextStatus === "interview_scheduled") {
     return {

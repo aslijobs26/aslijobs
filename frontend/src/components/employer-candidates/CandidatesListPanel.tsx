@@ -8,22 +8,24 @@ import {
   getCandidateInitials,
 } from "@/components/employer-candidates/candidates-ats-utils";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
+import { WhatsAppIcon } from "@/components/home/hero/HeroIcons";
 import { ROUTES } from "@/constants/routes";
 import { useCan } from "@/providers/employer-permission-provider";
 import {
   EMPLOYER_APPLICATION_STATUS_LABELS,
+  isEmployerShortlistedOrLaterStatus,
   type EmployerApplicationListItem,
   type EmployerApplicationsPagination,
 } from "@/types/employer-applications";
 import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
 import {
+  Bookmark,
   Calendar,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
   FileText,
-  MessageCircle,
   Phone,
   UserRound,
 } from "lucide-react";
@@ -44,6 +46,8 @@ type CandidatesListPanelProps = {
   publicJobId: string | undefined;
   hasActiveSearch?: boolean;
   hasLocationFilter?: boolean;
+  savedByApplicationId?: Record<string, string>;
+  canSave?: boolean;
   onClearSearch?: () => void;
   onClearLocation?: () => void;
   onSortChange: (value: "newest" | "oldest" | "updated") => void;
@@ -52,6 +56,7 @@ type CandidatesListPanelProps = {
   onPageChange: (page: number) => void;
   onOpenResume: (id: string) => void;
   onScheduleInterview: (id: string) => void;
+  onToggleSave?: (applicationId: string, isSaved: boolean) => void;
 };
 
 const actionButtonClassName =
@@ -62,15 +67,21 @@ const actionIconClassName = "size-3.5 shrink-0";
 function CandidateMobileCard({
   item,
   isSelected,
+  isSaved,
+  canSave,
   onSelect,
   onOpenResume,
   onScheduleInterview,
+  onToggleSave,
 }: {
   item: EmployerApplicationListItem;
   isSelected: boolean;
+  isSaved: boolean;
+  canSave: boolean;
   onSelect: (id: string) => void;
   onOpenResume: (id: string) => void;
   onScheduleInterview: (id: string) => void;
+  onToggleSave?: (applicationId: string, isSaved: boolean) => void;
 }) {
   const { can, canField, getFieldLevel } = useCan();
   const canViewPhone = canField("candidates", "phone");
@@ -90,14 +101,35 @@ function CandidateMobileCard({
   return (
     <article
       className={cn(
-        "rounded-xl border border-border-subtle bg-surface p-4 shadow-sm transition-colors",
+        "relative rounded-xl border border-border-subtle bg-surface p-4 shadow-sm transition-colors",
         isSelected && "border-primary/30 bg-primary-light/30",
       )}
     >
+      {canSave && onToggleSave ? (
+        <button
+          type="button"
+          aria-label={
+            isSaved
+              ? `Remove ${item.candidateName} from shortlisted candidates`
+              : `Shortlist ${item.candidateName}`
+          }
+          aria-pressed={isSaved}
+          className="absolute right-3 top-3 z-10 inline-flex size-9 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleSave(item.id, isSaved);
+          }}
+        >
+          <Bookmark
+            className={cn("size-4", isSaved && "fill-current")}
+            aria-hidden="true"
+          />
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={() => onSelect(item.id)}
-        className="flex w-full min-w-0 gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        className="flex w-full min-w-0 gap-3 pr-10 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
       >
         <span
           className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-surface"
@@ -154,8 +186,8 @@ function CandidateMobileCard({
             className={actionButtonClassName}
             onClick={(event) => event.stopPropagation()}
           >
-            <MessageCircle className={actionIconClassName} aria-hidden="true" />
-            <span className="text-[10px] font-semibold leading-none">Message</span>
+            <WhatsAppIcon className="text-sm leading-none" />
+            <span className="text-[10px] font-semibold leading-none">WhatsApp</span>
           </a>
         ) : null}
         {telHref ? (
@@ -225,14 +257,20 @@ function CandidateMobileCard({
 
 function CandidateDesktopRow({
   item,
+  isSaved,
+  canSave,
   onSelect,
   onOpenResume,
   onScheduleInterview,
+  onToggleSave,
 }: {
   item: EmployerApplicationListItem;
+  isSaved: boolean;
+  canSave: boolean;
   onSelect: (id: string) => void;
   onOpenResume: (id: string) => void;
   onScheduleInterview: (id: string) => void;
+  onToggleSave?: (applicationId: string, isSaved: boolean) => void;
 }) {
   const { can, canField, getFieldLevel } = useCan();
   const canViewPhone = canField("candidates", "phone");
@@ -296,6 +334,27 @@ function CandidateDesktopRow({
       </button>
 
       <div className="flex shrink-0 flex-col items-end justify-center gap-1 self-center sm:flex-row sm:items-center">
+        {canSave && onToggleSave ? (
+          <button
+            type="button"
+            aria-label={
+              isSaved
+                ? `Remove ${item.candidateName} from shortlisted candidates`
+                : `Shortlist ${item.candidateName}`
+            }
+            aria-pressed={isSaved}
+            className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleSave(item.id, isSaved);
+            }}
+          >
+            <Bookmark
+              className={cn("size-4", isSaved && "fill-current")}
+              aria-hidden="true"
+            />
+          </button>
+        ) : null}
         {telHref ? (
           <a
             href={telHref}
@@ -312,10 +371,10 @@ function CandidateDesktopRow({
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`WhatsApp ${item.candidateName}`}
-            className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex size-8 items-center justify-center rounded-lg text-whatsapp hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             onClick={(event) => event.stopPropagation()}
           >
-            <MessageCircle className="size-4" aria-hidden="true" />
+            <WhatsAppIcon className="text-base leading-none" />
           </a>
         ) : null}
         {canViewResume ? (
@@ -367,6 +426,8 @@ export function CandidatesListPanel({
   publicJobId,
   hasActiveSearch = false,
   hasLocationFilter = false,
+  savedByApplicationId = {},
+  canSave = false,
   onClearSearch,
   onClearLocation,
   onSortChange,
@@ -375,6 +436,7 @@ export function CandidatesListPanel({
   onPageChange,
   onOpenResume,
   onScheduleInterview,
+  onToggleSave,
 }: CandidatesListPanelProps) {
   const page = pagination?.page ?? 1;
   const totalPages = pagination?.totalPages ?? 1;
@@ -523,22 +585,33 @@ export function CandidatesListPanel({
         ) : (
           <>
             <ul className="space-y-3 p-3 lg:hidden">
-              {applications.map((item) => (
-                <li key={item.id}>
-                  <CandidateMobileCard
-                    item={item}
-                    isSelected={selectedId === item.id}
-                    onSelect={onSelect}
-                    onOpenResume={onOpenResume}
-                    onScheduleInterview={onScheduleInterview}
-                  />
-                </li>
-              ))}
+              {applications.map((item) => {
+                const isSaved =
+                  Boolean(savedByApplicationId[item.id]) ||
+                  isEmployerShortlistedOrLaterStatus(item.status);
+                return (
+                  <li key={item.id}>
+                    <CandidateMobileCard
+                      item={item}
+                      isSelected={selectedId === item.id}
+                      isSaved={isSaved}
+                      canSave={canSave}
+                      onSelect={onSelect}
+                      onOpenResume={onOpenResume}
+                      onScheduleInterview={onScheduleInterview}
+                      onToggleSave={onToggleSave}
+                    />
+                  </li>
+                );
+              })}
             </ul>
 
             <ul className="hidden lg:block">
               {applications.map((item) => {
                 const isSelected = selectedId === item.id;
+                const isSaved =
+                  Boolean(savedByApplicationId[item.id]) ||
+                  isEmployerShortlistedOrLaterStatus(item.status);
                 return (
                   <li
                     key={item.id}
@@ -551,9 +624,12 @@ export function CandidatesListPanel({
                   >
                     <CandidateDesktopRow
                       item={item}
+                      isSaved={isSaved}
+                      canSave={canSave}
                       onSelect={onSelect}
                       onOpenResume={onOpenResume}
                       onScheduleInterview={onScheduleInterview}
+                      onToggleSave={onToggleSave}
                     />
                   </li>
                 );

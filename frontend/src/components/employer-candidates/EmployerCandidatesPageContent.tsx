@@ -11,18 +11,29 @@ import { CandidatesKpiStrip } from "@/components/employer-candidates/CandidatesK
 import { CandidatesListPanel } from "@/components/employer-candidates/CandidatesListPanel";
 import { CandidatesMobileFiltersSheet } from "@/components/employer-candidates/CandidatesMobileFiltersSheet";
 import { InterviewScheduleModal } from "@/components/employer-interviews/InterviewScheduleModal";
+import { getSavedCandidatesApiErrorMessage } from "@/components/employer-saved-candidates/saved-candidates-utils";
+import { SaveCandidateModal } from "@/components/employer-saved-candidates/SaveCandidateModal";
 import { Can } from "@/components/rbac/Can";
 import {
+  fetchEmployerApplication,
   fetchEmployerApplicationStats,
   fetchEmployerApplications,
 } from "@/services/employer-applications.service";
 import { fetchEmployerJobs } from "@/services/employer-jobs.service";
+import {
+  fetchSavedCandidateApplicationIds,
+  removeSavedCandidateByApplication,
+  savedCandidatesQueryKeys,
+} from "@/services/saved-candidates.service";
 import { useCan } from "@/providers/employer-permission-provider";
 import type {
+  EmployerApplicationListItem,
   EmployerApplicationStatus,
   EmployerAvailabilityFilterValue,
 } from "@/types/employer-applications";
-import { useQuery } from "@tanstack/react-query";
+import type { SavedCandidateApplicationSummary } from "@/types/saved-candidates";
+import { showAppToast } from "@/utils/share-job";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Filter } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -36,13 +47,27 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return debounced;
 }
 
+function toSaveCandidateSummary(
+  item: EmployerApplicationListItem,
+): SavedCandidateApplicationSummary {
+  return {
+    applicationId: item.id,
+    candidateName: item.candidateName,
+    jobTitle: item.jobTitle,
+    experience: item.candidateExperienceLabel,
+    location: item.candidateLocation,
+  };
+}
+
 export function EmployerCandidatesPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const { can } = useCan();
   const canExportCandidates = can("candidates", "export");
+  const canSaveCandidates = can("candidates", "update");
   const canScheduleInterview =
     can("interviews", "create") || can("interviews", "update");
 
@@ -69,6 +94,12 @@ export function EmployerCandidatesPageContent() {
   const [scheduleApplicationId, setScheduleApplicationId] = useState<
     string | null
   >(null);
+  const [saveModalState, setSaveModalState] = useState<{
+    application: SavedCandidateApplicationSummary;
+    shortlistOnSave?: boolean;
+    mode: "save" | "edit";
+    savedCandidateId?: string;
+  } | null>(null);
 
   const [locationDraft, setLocationDraft] = useState("");
   const [experienceDraft, setExperienceDraft] = useState("");
@@ -219,10 +250,33 @@ export function EmployerCandidatesPageContent() {
     staleTime: 60_000,
   });
 
+  const savedIdsQuery = useQuery({
+    queryKey: savedCandidatesQueryKeys.ids(),
+    queryFn: fetchSavedCandidateApplicationIds,
+    enabled: canSaveCandidates,
+    staleTime: 30_000,
+  });
+
+  const unsaveMutation = useMutation({
+    mutationFn: (applicationId: string) =>
+      removeSavedCandidateByApplication(applicationId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: savedCandidatesQueryKeys.all,
+      });
+      showAppToast("Removed from saved candidates.");
+    },
+    onError: (error) => {
+      showAppToast(getSavedCandidatesApiErrorMessage(error), "error");
+    },
+  });
+
   const applications = listQuery.data?.applications ?? [];
   const pagination = listQuery.data?.pagination;
   const selectedId =
     selectedFromUrl || localSelectedId || applications[0]?.id || null;
+  const savedByApplicationId =
+    savedIdsQuery.data?.savedByApplicationId ?? {};
 
   const jobOptions = useMemo(() => {
     const jobs = jobsQuery.data?.jobs ?? [];
@@ -256,6 +310,75 @@ export function EmployerCandidatesPageContent() {
     setLocalSelectedId(applicationId);
     setScheduleApplicationId(applicationId);
     syncUrl({ selected: applicationId });
+  };
+
+  const openShortlistCandidate = (applicationId: string) => {
+    if (!canSaveCandidates) {
+      return;
+    }
+
+    const savedCandidateId = savedByApplicationId[applicationId];
+    const openWithSummary = (summary: SavedCandidateApplicationSummary) => {
+      setLocalSelectedId(applicationId);
+      setSaveModalState({
+        application: summary,
+        shortlistOnSave: true,
+        mode: savedCandidateId ? "edit" : "save",
+        savedCandidateId,
+      });
+      syncUrl({ selected: applicationId });
+    };
+
+    const item = applications.find((app) => app.id === applicationId);
+    if (item) {
+      openWithSummary(toSaveCandidateSummary(item));
+      return;
+    }
+
+    void fetchEmployerApplication(applicationId)
+      .then((detail) => {
+        openWithSummary({
+          applicationId: detail.id,
+          candidateName: detail.candidate.fullName,
+          jobTitle: detail.jobTitle,
+          experience: detail.candidate.experienceLabel,
+          location:
+            detail.candidate.preferredJobLocation?.trim() ||
+            [detail.candidate.city, detail.candidate.state]
+              .filter(Boolean)
+              .join(", "),
+        });
+      })
+      .catch((error) => {
+        showAppToast(getSavedCandidatesApiErrorMessage(error), "error");
+      });
+  };
+
+  const handleToggleSave = (applicationId: string, isSaved: boolean) => {
+    if (!canSaveCandidates) {
+      return;
+    }
+
+    const savedCandidateId = savedByApplicationId[applicationId];
+
+    if (isSaved) {
+      // Filled from shortlisted status without a saved row — open shortlist editor.
+      if (!savedCandidateId) {
+        openShortlistCandidate(applicationId);
+        return;
+      }
+      const item = applications.find((app) => app.id === applicationId);
+      const name = item?.candidateName ?? "this candidate";
+      if (
+        window.confirm(`Remove ${name} from your shortlisted candidates?`)
+      ) {
+        unsaveMutation.mutate(applicationId);
+      }
+      return;
+    }
+
+    // Bookmark click for non-shortlisted candidates opens shortlist/save flow.
+    openShortlistCandidate(applicationId);
   };
 
   const handleFilterChange = (filter: CandidatesQuickFilter) => {
@@ -413,6 +536,9 @@ export function EmployerCandidatesPageContent() {
             selectCandidate(id, { tab: "resume", openMobile: true })
           }
           onScheduleInterview={openScheduleInterview}
+          savedByApplicationId={savedByApplicationId}
+          canSave={canSaveCandidates}
+          onToggleSave={handleToggleSave}
         />
 
         <div className="hidden xl:block">
@@ -421,6 +547,7 @@ export function EmployerCandidatesPageContent() {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             onScheduleInterview={openScheduleInterview}
+            onOpenShortlist={openShortlistCandidate}
             variant="panel"
           />
         </div>
@@ -480,6 +607,7 @@ export function EmployerCandidatesPageContent() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           onScheduleInterview={openScheduleInterview}
+          onOpenShortlist={openShortlistCandidate}
           onClose={() => setMobileDetailOpen(false)}
         />
       ) : null}
@@ -491,6 +619,21 @@ export function EmployerCandidatesPageContent() {
           onSaved={() => setActiveTab("interview")}
         />
       ) : null}
+
+      {saveModalState ? (
+        <SaveCandidateModal
+          application={saveModalState.application}
+          mode={saveModalState.mode}
+          savedCandidateId={saveModalState.savedCandidateId}
+          shortlistOnSave={saveModalState.shortlistOnSave}
+          onClose={() => setSaveModalState(null)}
+          onSuccess={() => {
+            void queryClient.invalidateQueries({
+              queryKey: savedCandidatesQueryKeys.all,
+            });
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -500,12 +643,14 @@ function MobileCandidateDetailDrawer({
   activeTab,
   onTabChange,
   onScheduleInterview,
+  onOpenShortlist,
   onClose,
 }: {
   applicationId: string;
   activeTab: CandidatesDetailTab;
   onTabChange: (tab: CandidatesDetailTab) => void;
   onScheduleInterview: (applicationId: string) => void;
+  onOpenShortlist: (applicationId: string) => void;
   onClose: () => void;
 }) {
   const titleId = useId();
@@ -558,6 +703,7 @@ function MobileCandidateDetailDrawer({
             activeTab={activeTab}
             onTabChange={onTabChange}
             onScheduleInterview={onScheduleInterview}
+            onOpenShortlist={onOpenShortlist}
             onClose={onClose}
             variant="drawer"
           />

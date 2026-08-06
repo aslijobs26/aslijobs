@@ -148,27 +148,35 @@ export function NotificationBell({
         <div
           id={menuId}
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_8px_24px_rgba(26,43,60,0.12)]"
+          className={cn(
+            "absolute right-0 z-50 mt-2 overflow-hidden rounded-xl border border-border-subtle bg-surface",
+            "shadow-[0_8px_24px_rgba(26,43,60,0.12)]",
+            // Mobile: compact panel that stays inside the viewport
+            "w-[min(14rem,calc(100vw-3rem))]",
+            "sm:w-[min(22rem,calc(100vw-1.5rem))]",
+          )}
         >
-          <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2.5">
-            <p className="text-sm font-semibold text-foreground">Notifications</p>
+          <div className="flex items-center justify-between border-b border-border-subtle px-2 py-1.5 sm:px-3 sm:py-2.5">
+            <p className="text-[11px] font-semibold text-foreground sm:text-sm">
+              Notifications
+            </p>
             <button
               type="button"
               disabled={unreadCount === 0 || markAllMutation.isPending}
               onClick={() => markAllMutation.mutate()}
-              className="text-xs font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="text-[10px] font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
             >
               Mark all read
             </button>
           </div>
 
-          <div className="max-h-80 overflow-y-auto scrollbar-hidden">
+          <div className="max-h-40 overflow-y-auto scrollbar-hidden sm:max-h-80">
             {recentQuery.isLoading ? (
-              <p className="px-3 py-8 text-center text-sm text-muted">
+              <p className="px-2.5 py-5 text-center text-[11px] text-muted sm:px-3 sm:py-8 sm:text-sm">
                 Loading…
               </p>
             ) : notifications.length === 0 ? (
-              <p className="px-3 py-8 text-center text-sm text-muted">
+              <p className="px-2.5 py-5 text-center text-[11px] text-muted sm:px-3 sm:py-8 sm:text-sm">
                 No notifications yet.
               </p>
             ) : (
@@ -182,21 +190,21 @@ export function NotificationBell({
                         role="menuitem"
                         onClick={() => void openNotification(notification)}
                         className={cn(
-                          "flex w-full gap-3 px-3 py-3 text-left transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
+                          "flex w-full gap-2 px-2 py-2 text-left transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:gap-3 sm:px-3 sm:py-3",
                           !notification.isRead && "bg-primary-light/25",
                         )}
                       >
-                        <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
-                          <Icon className="size-4" aria-hidden="true" />
+                        <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary sm:size-8 sm:rounded-lg">
+                          <Icon className="size-3 sm:size-4" aria-hidden="true" />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-foreground">
+                          <span className="block truncate text-[11px] font-semibold leading-snug text-foreground sm:text-sm">
                             {notification.title}
                           </span>
-                          <span className="mt-0.5 line-clamp-2 text-xs text-muted">
+                          <span className="mt-0.5 line-clamp-1 text-[10px] leading-snug text-muted sm:line-clamp-2 sm:text-xs">
                             {notification.body}
                           </span>
-                          <span className="mt-1 block text-[11px] text-muted">
+                          <span className="mt-0.5 block text-[9px] text-muted sm:mt-1 sm:text-[11px]">
                             {formatNotificationTime(notification.createdAt)}
                           </span>
                         </span>
@@ -208,12 +216,12 @@ export function NotificationBell({
             )}
           </div>
 
-          <div className="border-t border-border-subtle p-2">
+          <div className="border-t border-border-subtle p-1 sm:p-2">
             <Link
               href={viewAllHref}
               role="menuitem"
               onClick={() => setIsOpen(false)}
-              className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold text-primary hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="flex w-full items-center justify-center rounded-lg px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:px-3 sm:py-2 sm:text-sm"
             >
               View all notifications
             </Link>

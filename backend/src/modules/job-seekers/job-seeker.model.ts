@@ -6,10 +6,21 @@ import {
   JOB_SEEKER_JOB_TYPES,
   JOB_SEEKER_LANGUAGES,
   JOB_SEEKER_AVAILABILITY_STATUSES,
+  JOB_SEEKER_PROFILE_VISIBILITY,
   JOB_SEEKER_REGISTRATION_STATUSES,
   JOB_SEEKER_SALARY_PERIODS,
   JOB_SEEKER_WORK_MODES,
 } from "../../constants/job-seeker.constants.js";
+
+const imageAssetSchema = {
+  url: { type: String, default: "" },
+  storagePath: { type: String, default: "" },
+  publicId: { type: String, default: "" },
+  storageProvider: { type: String, default: "" },
+  originalName: { type: String, default: "" },
+  mimeType: { type: String, default: "" },
+  fileSize: { type: Number, default: 0 },
+};
 
 const educationSchema = new Schema(
   {
@@ -28,6 +39,8 @@ const educationSchema = new Schema(
     degree: { type: String, trim: true, default: "" },
     specialization: { type: String, trim: true, default: "" },
     passingYear: { type: String, trim: true, default: "" },
+    percentage: { type: String, trim: true, default: "" },
+    cgpa: { type: String, trim: true, default: "" },
   },
   { _id: false },
 );
@@ -43,6 +56,8 @@ const experienceEntrySchema = new Schema(
     duration: { type: String, trim: true, default: "" },
     salary: { type: String, trim: true, default: "" },
     location: { type: String, trim: true, default: "" },
+    responsibilities: { type: String, trim: true, default: "" },
+    achievements: { type: String, trim: true, default: "" },
   },
   { _id: false },
 );
@@ -143,6 +158,25 @@ const jobSeekerSchema = new Schema(
       required: false,
       default: null,
       index: true,
+    },
+    professionalSummary: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    skills: {
+      type: [String],
+      default: [],
+    },
+    profileVisibility: {
+      type: String,
+      enum: JOB_SEEKER_PROFILE_VISIBILITY,
+      default: "visible",
+      index: true,
+    },
+    profilePhoto: {
+      type: imageAssetSchema,
+      default: () => ({}),
     },
     isWhatsappVerified: {
       type: Boolean,

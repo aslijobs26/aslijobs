@@ -82,6 +82,13 @@ export type SeekerApplicationListItem = {
   companyLogoUrl: string;
   location: string;
   salaryLabel: string;
+  salarySortValue: number | null;
+  workMode: string;
+  jobType: string;
+  shiftLabel: string;
+  interviewDate: string;
+  interviewTime: string;
+  canWithdraw: boolean;
   status: ApplicationStatus;
   resumeVersion: number;
   appliedAt: string;
@@ -97,6 +104,7 @@ export type SeekerApplicationStats = {
   selected: number;
   rejected: number;
   joined: number;
+  withdrawn: number;
 };
 
 export type SeekerApplicationDetail = {
@@ -128,4 +136,6 @@ export type SeekerApplicationsPagination = {
   limit: number;
   total: number;
   totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 };

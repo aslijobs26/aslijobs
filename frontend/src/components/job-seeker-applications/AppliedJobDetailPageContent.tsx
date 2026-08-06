@@ -121,7 +121,7 @@ export function AppliedJobDetailPageContent({
           href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
           className="mt-6 inline-flex text-sm font-semibold text-primary underline underline-offset-2"
         >
-          Back to applied jobs
+          Back to My Applications
         </Link>
       </div>
     );
@@ -131,6 +131,15 @@ export function AppliedJobDetailPageContent({
   const candidatePhone = readCandidatePhoneFromSnapshot(
     application.resumeSnapshot.resumeJson,
   );
+  const status = application.status as ApplicationStatus;
+  const jobHref = ROUTES.jobPublic(application.publicJobId);
+  const meetingLink = application.interview?.meetingLink?.trim() || "";
+  const canJoinInterview =
+    status === "interview_scheduled" && Boolean(meetingLink);
+  const showPrepareInterview =
+    status === "shortlisted" ||
+    status === "interview_scheduled" ||
+    status === "interview_completed";
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
@@ -140,7 +149,7 @@ export function AppliedJobDetailPageContent({
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to applied jobs
+          Back to My Applications
         </Link>
       </div>
 
@@ -160,28 +169,97 @@ export function AppliedJobDetailPageContent({
             </p>
           </div>
           <span className="inline-flex rounded-full bg-primary-light/60 px-2.5 py-1 text-xs font-semibold text-foreground ring-1 ring-inset ring-border-subtle">
-            {APPLICATION_STATUS_LABELS[application.status as ApplicationStatus]}
+            {APPLICATION_STATUS_LABELS[status]}
           </span>
         </div>
 
-        {application.canWithdraw ? (
-          <button
-            type="button"
-            disabled={withdrawMutation.isPending}
-            onClick={() => {
-              if (
-                window.confirm(
-                  "Withdraw this application? You cannot undo this action.",
-                )
-              ) {
-                withdrawMutation.mutate();
-              }
-            }}
-            className="mt-4 inline-flex rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 disabled:opacity-60"
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            href={jobHref}
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            {withdrawMutation.isPending ? "Withdrawing…" : "Withdraw application"}
-          </button>
-        ) : null}
+            View Job
+          </Link>
+
+          {showPrepareInterview ? (
+            <Link
+              href={ROUTES.JOB_SEEKER_MY_RESUME}
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              Prepare Interview
+            </Link>
+          ) : null}
+
+          {canJoinInterview ? (
+            <a
+              href={meetingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              Join Interview
+            </a>
+          ) : null}
+
+          {application.interview &&
+          (status === "interview_scheduled" ||
+            status === "interview_completed") ? (
+            <a
+              href="#interview-details"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              View Schedule
+            </a>
+          ) : null}
+
+          {status === "offer_sent" && application.offer ? (
+            <a
+              href="#offer-details"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              View Offer
+            </a>
+          ) : null}
+
+          {status === "rejected" && application.rejectReason ? (
+            <a
+              href="#rejection-feedback"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              View Feedback
+            </a>
+          ) : null}
+
+          {status === "withdrawn" ? (
+            <Link
+              href={jobHref}
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              View Job to Reapply
+            </Link>
+          ) : null}
+
+          {application.canWithdraw ? (
+            <button
+              type="button"
+              disabled={withdrawMutation.isPending}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Withdraw this application? You cannot undo this action.",
+                  )
+                ) {
+                  withdrawMutation.mutate();
+                }
+              }}
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-pin-state/30 bg-primary-light px-3.5 py-2 text-sm font-semibold text-pin-state hover:bg-primary-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30 disabled:opacity-60"
+            >
+              {withdrawMutation.isPending
+                ? "Withdrawing…"
+                : "Withdraw Application"}
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
@@ -213,7 +291,10 @@ export function AppliedJobDetailPageContent({
           </section>
 
           {application.interview ? (
-            <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
+            <section
+              id="interview-details"
+              className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4 sm:p-5"
+            >
               <h2 className="text-sm font-semibold text-foreground">
                 Interview details
               </h2>
@@ -227,7 +308,10 @@ export function AppliedJobDetailPageContent({
           ) : null}
 
           {application.offer ? (
-            <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
+            <section
+              id="offer-details"
+              className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4 sm:p-5"
+            >
               <h2 className="text-sm font-semibold text-foreground">
                 Offer details
               </h2>
@@ -250,7 +334,10 @@ export function AppliedJobDetailPageContent({
           ) : null}
 
           {application.rejectReason ? (
-            <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
+            <section
+              id="rejection-feedback"
+              className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4 sm:p-5"
+            >
               <h2 className="text-sm font-semibold text-foreground">
                 Rejection reason
               </h2>

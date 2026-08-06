@@ -31,6 +31,8 @@ type EmployerRegisterSearchableSelectProps = {
   triggerClassName?: string;
   /** Optional classes merged onto each option button (e.g. compact period filters). */
   optionClassName?: string;
+  /** Optional classes merged onto the dropdown panel. */
+  panelClassName?: string;
   /** Accessible noun used for option counts, for example "applications". */
   countLabel?: string;
   /** Allow typing a value that is not in the preset options. */
@@ -66,6 +68,7 @@ export function EmployerRegisterSearchableSelect({
   initialVisibleCount,
   triggerClassName,
   optionClassName,
+  panelClassName,
   countLabel = "items",
 }: EmployerRegisterSearchableSelectProps) {
   const listboxId = useId();
@@ -113,9 +116,11 @@ export function EmployerRegisterSearchableSelect({
 
     const matchedOptions = !normalizedQuery
       ? allOptions
-      : allOptions.filter((option) =>
-          option.label.toLowerCase().includes(normalizedQuery),
-        );
+      : allOptions.filter((option) => {
+          const haystack = `${option.label} ${option.description ?? ""} ${option.value}`
+            .toLowerCase();
+          return haystack.includes(normalizedQuery);
+        });
 
     if (normalizedQuery || initialVisibleCount == null) {
       return matchedOptions;
@@ -326,6 +331,7 @@ export function EmployerRegisterSearchableSelect({
               "employer-register-searchable-select-panel",
               placement === "up" &&
                 "employer-register-searchable-select-panel--up",
+              panelClassName,
             )}
           >
             {hideSearch ? null : (
@@ -408,7 +414,12 @@ export function EmployerRegisterSearchableSelect({
                         onClick={() => selectOption(option.value, option.label)}
                       >
                         <span className="employer-register-searchable-select-option-label">
-                          {option.label}
+                          <span className="block font-medium">{option.label}</span>
+                          {option.description ? (
+                            <span className="mt-0.5 block text-[11px] font-normal text-muted">
+                              {option.description}
+                            </span>
+                          ) : null}
                         </span>
                         <span className="flex shrink-0 items-center gap-2">
                           {typeof option.count === "number" ? (

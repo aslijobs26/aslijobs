@@ -68,6 +68,7 @@ type EmployerJobsTableProps = {
   onLimitChange: (limit: number) => void;
   onStatusAction: (jobId: string, action: JobStatusAction) => void;
   onDelete: (jobId: string) => void;
+  onPreview: (jobMongoId: string) => void;
 };
 
 const COLUMN_WIDTHS = [
@@ -103,6 +104,7 @@ export function EmployerJobsTable({
   onLimitChange,
   onStatusAction,
   onDelete,
+  onPreview,
 }: EmployerJobsTableProps) {
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -175,6 +177,7 @@ export function EmployerJobsTable({
                   disabled={isMutating}
                   onStatusAction={onStatusAction}
                   onDelete={onDelete}
+                  onPreview={onPreview}
                 />
               ))
             )}
@@ -202,6 +205,7 @@ type EmployerJobsTableRowProps = {
   disabled: boolean;
   onStatusAction: (jobId: string, action: JobStatusAction) => void;
   onDelete: (jobId: string) => void;
+  onPreview: (jobMongoId: string) => void;
 };
 
 function EmployerJobsTableRow({
@@ -209,11 +213,13 @@ function EmployerJobsTableRow({
   disabled,
   onStatusAction,
   onDelete,
+  onPreview,
 }: EmployerJobsTableRowProps) {
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { can } = useCan();
+  const canReadJobs = can("jobs", "read");
   const canUpdateJobs = can("jobs", "update");
   const canDeleteJobs = can("jobs", "delete");
   const canViewCandidates = can("candidates", "read");
@@ -364,9 +370,16 @@ function EmployerJobsTableRow({
       </td>
       <td className={BODY_CELL_CLASS}>
         <div className="flex items-center justify-start gap-1.5">
-          <IconActionButton label="View job" disabled title="Coming soon">
-            <Eye className="size-3.5" />
-          </IconActionButton>
+          {canReadJobs ? (
+            <IconActionButton
+              label="Preview job"
+              disabled={disabled}
+              title="Preview job posting"
+              onClick={() => onPreview(job.id)}
+            >
+              <Eye className="size-3.5" />
+            </IconActionButton>
+          ) : null}
           {canUpdateJobs &&
           (job.status === "draft" || job.status === "active") ? (
             <Link

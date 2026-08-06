@@ -66,8 +66,11 @@ type CandidatesDetailPanelProps = {
   activeTab: CandidatesDetailTab;
   onTabChange: (tab: CandidatesDetailTab) => void;
   onScheduleInterview?: (applicationId: string) => void;
+  onOpenShortlist?: (applicationId: string) => void;
   onClose?: () => void;
   variant?: "panel" | "drawer";
+  /** When set, only these tabs are shown (still subject to RBAC). */
+  allowedTabs?: readonly CandidatesDetailTab[];
 };
 
 const TABS: { id: CandidatesDetailTab; label: string }[] = [
@@ -159,6 +162,7 @@ function PanelStatusSelect({
   disabled,
   interview,
   offer,
+  onOpenShortlist,
   onOpenInterview,
   onOpenOffer,
   onSelectStatus,
@@ -168,6 +172,7 @@ function PanelStatusSelect({
   disabled: boolean;
   interview: Parameters<typeof resolveEmployerStatusSelect>[0]["interview"];
   offer: Parameters<typeof resolveEmployerStatusSelect>[0]["offer"];
+  onOpenShortlist: () => void;
   onOpenInterview: () => void;
   onOpenOffer: () => void;
   onSelectStatus: (status: EmployerApplicationStatus) => void;
@@ -210,6 +215,11 @@ function PanelStatusSelect({
       interview,
       offer,
     });
+    if (result.action === "open_shortlist") {
+      onOpenShortlist();
+      showAppToast(result.message, "info");
+      return;
+    }
     if (result.action === "open_interview") {
       onOpenInterview();
       showAppToast(result.message, "info");
@@ -294,8 +304,10 @@ export function CandidatesDetailPanel({
   activeTab,
   onTabChange,
   onScheduleInterview,
+  onOpenShortlist,
   onClose,
   variant = "panel",
+  allowedTabs,
 }: CandidatesDetailPanelProps) {
   const queryClient = useQueryClient();
   const { can, canField, getFieldLevel } = useCan();
@@ -321,6 +333,9 @@ export function CandidatesDetailPanel({
   const visibleTabs = useMemo(
     () =>
       TABS.filter((tab) => {
+        if (allowedTabs && !allowedTabs.includes(tab.id)) {
+          return false;
+        }
         if (tab.id === "resume") return canViewResume;
         if (tab.id === "notes") return canViewNotes;
         if (tab.id === "offer") return canViewOffer;
@@ -328,6 +343,7 @@ export function CandidatesDetailPanel({
         return true;
       }),
     [
+      allowedTabs,
       canViewResume,
       canViewNotes,
       canViewOffer,
@@ -636,28 +652,42 @@ export function CandidatesDetailPanel({
               <p className="mt-0.5 text-xs text-muted">Hiring Completed</p>
             </div>
           ) : canUpdateCandidates ? (
-            <PanelStatusSelect
-              currentStatus={application.status}
-              disabled={statusMutation.isPending}
-              interview={application.interview}
-              offer={application.offer}
-              isDrawer={isDrawer}
-              onOpenInterview={() => {
-                if (onScheduleInterview && canScheduleInterview) {
-                  onScheduleInterview(application.id);
-                  return;
-                }
-                if (canViewInterview) {
-                  onTabChange("interview");
-                }
-              }}
-              onOpenOffer={() => {
-                if (canViewOffer) {
-                  onTabChange("offer");
-                }
-              }}
-              onSelectStatus={(status) => statusMutation.mutate(status)}
-            />
+            <div className="space-y-2">
+              <PanelStatusSelect
+                currentStatus={application.status}
+                disabled={statusMutation.isPending}
+                interview={application.interview}
+                offer={application.offer}
+                isDrawer={isDrawer}
+                onOpenShortlist={() => {
+                  onOpenShortlist?.(application.id);
+                }}
+                onOpenInterview={() => {
+                  if (onScheduleInterview && canScheduleInterview) {
+                    onScheduleInterview(application.id);
+                    return;
+                  }
+                  if (canViewInterview) {
+                    onTabChange("interview");
+                  }
+                }}
+                onOpenOffer={() => {
+                  if (canViewOffer) {
+                    onTabChange("offer");
+                  }
+                }}
+                onSelectStatus={(status) => statusMutation.mutate(status)}
+              />
+              {application.status === "shortlisted" && onOpenShortlist ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenShortlist(application.id)}
+                  className="text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                >
+                  Edit shortlist details
+                </button>
+              ) : null}
+            </div>
           ) : (
             <div className="rounded-lg border border-border-subtle bg-hero-bg px-2.5 py-2">
               <p className="text-sm font-semibold text-foreground">
@@ -668,30 +698,32 @@ export function CandidatesDetailPanel({
         </div>
       </div>
 
-      <div
-        className="flex shrink-0 gap-1 overflow-x-auto border-b border-border-subtle px-2 py-2 scrollbar-hidden"
-        role="tablist"
-        aria-label="Candidate detail sections"
-      >
-        {visibleTabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className={cn(
-              "shrink-0 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-              isDrawer ? "min-h-11 px-3 py-2.5" : "py-1.5",
-              activeTab === tab.id
-                ? "bg-primary-soft text-surface"
-                : "text-muted hover:bg-primary-light hover:text-foreground",
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {visibleTabs.length > 1 ? (
+        <div
+          className="flex shrink-0 gap-1 overflow-x-auto border-b border-border-subtle px-2 py-2 scrollbar-hidden"
+          role="tablist"
+          aria-label="Candidate detail sections"
+        >
+          {visibleTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={cn(
+                "shrink-0 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                isDrawer ? "min-h-11 px-3 py-2.5" : "py-1.5",
+                activeTab === tab.id
+                  ? "bg-primary-soft text-surface"
+                  : "text-muted hover:bg-primary-light hover:text-foreground",
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 scrollbar-hidden">
         {activeTab === "profile" ? (
