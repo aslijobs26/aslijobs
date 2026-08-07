@@ -1,6 +1,8 @@
 "use client";
 
 import { EmployerJobPreviewModal } from "@/components/employer-jobs/EmployerJobPreviewModal";
+import { EmployerJobsBulkDeleteModal } from "@/components/employer-jobs/EmployerJobsBulkDeleteModal";
+import { EmployerJobsBulkToolbar } from "@/components/employer-jobs/EmployerJobsBulkToolbar";
 import { EmployerJobsHeader } from "@/components/employer-jobs/EmployerJobsHeader";
 import { EmployerJobsQuickActions } from "@/components/employer-jobs/EmployerJobsQuickActions";
 import { EmployerJobsStats } from "@/components/employer-jobs/EmployerJobsStats";
@@ -23,17 +25,23 @@ import {
   EMPLOYER_JOBS_SEARCH_DEBOUNCE_MS,
   type EmployerJobsStatusTabId,
 } from "@/constants/employer-jobs";
+import { useCan } from "@/providers/employer-permission-provider";
 import {
+  bulkDeleteEmployerJobs,
   deleteEmployerJob,
   fetchEmployerJobStats,
   fetchEmployerJobs,
+  invalidateEmployerJobCascadeCaches,
   updateEmployerJobStatus,
+  type BulkDeleteEmployerJobsPayload,
 } from "@/services/employer-jobs.service";
 import type {
   EmployerJobsListResponse,
   JobStatus,
   JobStatusAction,
 } from "@/types/employer-jobs";
+import { resolveEmptyPageFallback } from "@/utils/list-pagination";
+import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -44,8 +52,13 @@ function toStatusFilter(
   return tab === "all" ? undefined : tab;
 }
 
+type SelectionMode = "ids" | "filtered" | "all";
+
 export function EmployerJobsPageContent() {
   const queryClient = useQueryClient();
+  const { can } = useCan();
+  const canDeleteJobs = can("jobs", "delete");
+
   const [statusTab, setStatusTab] = useState<EmployerJobsStatusTabId>("all");
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -56,6 +69,11 @@ export function EmployerJobsPageContent() {
   );
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [previewJobId, setPreviewJobId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>("ids");
+  const [deleteModal, setDeleteModal] = useState<"selected" | "all" | null>(
+    null,
+  );
   const isFirstSearchDebounce = useRef(true);
 
   useEffect(() => {
@@ -90,6 +108,21 @@ export function EmployerJobsPageContent() {
     ...filterParams,
   };
 
+  const filterScopeKey = useMemo(
+    () =>
+      JSON.stringify({
+        status: statusFilter ?? null,
+        search: debouncedSearch || null,
+        ...filterParams,
+      }),
+    [debouncedSearch, filterParams, statusFilter],
+  );
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setSelectionMode("ids");
+  }, [filterScopeKey]);
+
   const jobsQuery = useQuery({
     queryKey: EMPLOYER_JOBS_QUERY_KEYS.list(listParams),
     queryFn: () => fetchEmployerJobs(listParams),
@@ -107,10 +140,13 @@ export function EmployerJobsPageContent() {
   });
 
   const invalidateJobsData = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: EMPLOYER_JOBS_QUERY_KEYS.all,
-    });
+    await invalidateEmployerJobCascadeCaches(queryClient);
   };
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectionMode("ids");
+  }, []);
 
   const statusMutation = useMutation({
     mutationFn: ({
@@ -121,8 +157,6 @@ export function EmployerJobsPageContent() {
       action: JobStatusAction;
     }) => updateEmployerJobStatus(jobId, action),
     onSuccess: async (data, variables) => {
-      // Immediately apply reactivate timestamps so Posted On updates without
-      // waiting on a possibly cached list response.
       if (variables.action === "reactivate") {
         const nextPublishedAt = data.job.publishedAt ?? new Date().toISOString();
 
@@ -155,8 +189,52 @@ export function EmployerJobsPageContent() {
 
   const deleteMutation = useMutation({
     mutationFn: (jobId: string) => deleteEmployerJob(jobId),
-    onSuccess: async () => {
+    onSuccess: async (_data, jobId) => {
+      setSelectedIds((current) => {
+        if (!current.has(jobId)) {
+          return current;
+        }
+        const next = new Set(current);
+        next.delete(jobId);
+        return next;
+      });
       await invalidateJobsData();
+      const total = Math.max(0, (jobsQuery.data?.pagination.total ?? 1) - 1);
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+      setPage((current) => resolveEmptyPageFallback(current, totalPages));
+      showAppToast("Job deleted successfully.", "success");
+    },
+    onError: () => {
+      showAppToast("Unable to delete job. Please try again.", "error");
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (payload: BulkDeleteEmployerJobsPayload) =>
+      bulkDeleteEmployerJobs(payload),
+    onSuccess: async (result) => {
+      setDeleteModal(null);
+      clearSelection();
+      await invalidateJobsData();
+      const remaining = Math.max(
+        0,
+        (jobsQuery.data?.pagination.total ?? result.deletedCount) -
+          result.deletedCount,
+      );
+      const totalPages = Math.max(1, Math.ceil(remaining / limit));
+      setPage((current) => resolveEmptyPageFallback(current, totalPages));
+      const orphanApps = result.orphanCleanup?.deletedApplicationsCount ?? 0;
+      showAppToast(
+        result.deletedCount === 0
+          ? orphanApps > 0
+            ? `Cleaned ${orphanApps} orphan application(s) and related hiring data.`
+            : "No jobs were deleted."
+          : `${result.deletedCount} job(s) deleted successfully.`,
+        "success",
+      );
+    },
+    onError: () => {
+      showAppToast("Unable to delete jobs. Please try again.", "error");
     },
   });
 
@@ -194,13 +272,111 @@ export function EmployerJobsPageContent() {
     setPage(1);
   };
 
-  const isMutating = statusMutation.isPending || deleteMutation.isPending;
   const jobs = jobsQuery.data?.jobs ?? [];
   const pagination = jobsQuery.data?.pagination;
   const counts = jobsQuery.data?.counts;
   const stats = statsQuery.data?.stats;
   const activeFilterCount = countActiveEmployerJobsFilters(appliedFilters);
   const filterChips = buildEmployerJobsFilterChips(appliedFilters);
+  const filteredTotal = pagination?.total ?? 0;
+  const totalJobs = stats?.totalJobs ?? counts?.all ?? filteredTotal;
+  const applicationCount = stats?.applications ?? 0;
+
+  const pageIds = useMemo(() => jobs.map((job) => job.id), [jobs]);
+  const allPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+  const somePageSelected = pageIds.some((id) => selectedIds.has(id));
+  const selectionLocked =
+    selectionMode === "filtered" || selectionMode === "all";
+
+  const selectedCount =
+    selectionMode === "all"
+      ? totalJobs
+      : selectionMode === "filtered"
+        ? filteredTotal
+        : selectedIds.size;
+
+  const handleToggleRow = (jobId: string) => {
+    if (selectionLocked) {
+      return;
+    }
+    setSelectionMode("ids");
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(jobId)) {
+        next.delete(jobId);
+      } else {
+        next.add(jobId);
+      }
+      return next;
+    });
+  };
+
+  const handleTogglePage = (checked: boolean) => {
+    if (selectionLocked) {
+      setSelectionMode("ids");
+    }
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        for (const id of pageIds) {
+          next.add(id);
+        }
+      } else {
+        for (const id of pageIds) {
+          next.delete(id);
+        }
+      }
+      return next;
+    });
+    setSelectionMode("ids");
+  };
+
+  const buildFilteredPayloadFilters = () => ({
+    status: statusFilter,
+    search: debouncedSearch || undefined,
+    ...filterParams,
+  });
+
+  const handleConfirmBulkDelete = (confirmText?: string) => {
+    if (deleteModal === "all") {
+      if (confirmText !== "DELETE") {
+        return;
+      }
+      bulkDeleteMutation.mutate({
+        mode: "all",
+        confirmText: "DELETE",
+      });
+      return;
+    }
+
+    if (selectionMode === "filtered") {
+      bulkDeleteMutation.mutate({
+        mode: "filtered",
+        filters: buildFilteredPayloadFilters(),
+      });
+      return;
+    }
+
+    if (selectionMode === "all") {
+      bulkDeleteMutation.mutate({
+        mode: "all",
+        confirmText: "DELETE",
+      });
+      return;
+    }
+
+    const ids = [...selectedIds];
+    if (ids.length === 0) {
+      return;
+    }
+    bulkDeleteMutation.mutate({ mode: "ids", ids });
+  };
+
+  const isMutating =
+    statusMutation.isPending ||
+    deleteMutation.isPending ||
+    bulkDeleteMutation.isPending;
 
   return (
     <div className="flex flex-1 flex-col gap-4 px-3 py-4 sm:gap-4 sm:px-5 sm:py-5 lg:px-6 lg:py-5 xl:px-7">
@@ -255,6 +431,28 @@ export function EmployerJobsPageContent() {
             </div>
           ) : null}
 
+          {canDeleteJobs && selectedCount > 0 ? (
+            <EmployerJobsBulkToolbar
+              selectedCount={selectedCount}
+              filteredTotal={filteredTotal}
+              isFilteredSelection={selectionMode === "filtered"}
+              isAllSelection={selectionMode === "all"}
+              canDelete={canDeleteJobs}
+              isDeleting={bulkDeleteMutation.isPending}
+              onClearSelection={clearSelection}
+              onSelectFiltered={() => {
+                setSelectionMode("filtered");
+                setSelectedIds(new Set());
+              }}
+              onDeleteSelected={() => setDeleteModal("selected")}
+              onDeleteAll={() => {
+                setSelectionMode("all");
+                setSelectedIds(new Set());
+                setDeleteModal("all");
+              }}
+            />
+          ) : null}
+
           <EmployerJobsTable
             jobs={jobs}
             isLoading={jobsQuery.isLoading}
@@ -264,6 +462,11 @@ export function EmployerJobsPageContent() {
             limit={pagination?.limit ?? limit}
             total={pagination?.total ?? 0}
             totalPages={pagination?.totalPages ?? 1}
+            canSelect={canDeleteJobs}
+            selectedIds={selectedIds}
+            allPageSelected={allPageSelected}
+            somePageSelected={somePageSelected}
+            selectionLocked={selectionLocked}
             onRetry={() => {
               void jobsQuery.refetch();
             }}
@@ -276,6 +479,8 @@ export function EmployerJobsPageContent() {
               deleteMutation.mutate(jobId);
             }}
             onPreview={setPreviewJobId}
+            onToggleRow={handleToggleRow}
+            onTogglePage={handleTogglePage}
           />
         </div>
 
@@ -295,6 +500,30 @@ export function EmployerJobsPageContent() {
         <EmployerJobPreviewModal
           jobMongoId={previewJobId}
           onClose={() => setPreviewJobId(null)}
+        />
+      ) : null}
+
+      {deleteModal ? (
+        <EmployerJobsBulkDeleteModal
+          variant={deleteModal === "all" ? "all" : "selected"}
+          jobCount={
+            deleteModal === "all"
+              ? totalJobs
+              : selectionMode === "filtered"
+                ? filteredTotal
+                : selectedIds.size
+          }
+          applicationCount={applicationCount}
+          isSubmitting={bulkDeleteMutation.isPending}
+          onClose={() => {
+            if (!bulkDeleteMutation.isPending) {
+              setDeleteModal(null);
+              if (selectionMode === "all") {
+                clearSelection();
+              }
+            }
+          }}
+          onConfirm={handleConfirmBulkDelete}
         />
       ) : null}
     </div>

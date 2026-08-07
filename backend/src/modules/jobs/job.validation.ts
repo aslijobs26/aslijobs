@@ -658,6 +658,122 @@ export const saveDraftJobSchema = z
 
 export const publishDraftJobSchema = createJobSchema;
 
+const mongoObjectIdString = z
+  .string()
+  .trim()
+  .regex(/^[a-fA-F0-9]{24}$/, "Invalid job id");
+
+/** Shared filter fields for bulk delete of filtered jobs (same as list, no pagination). */
+const employerJobsBulkFilterSchema = z
+  .object({
+    status: z.enum(JOB_STATUSES).optional(),
+    search: z.string().trim().optional().default(""),
+    jobId: z
+      .string()
+      .trim()
+      .regex(/^AJ-\d{4}-\d{6}$/i, "Invalid public job id")
+      .transform((value) => value.toUpperCase())
+      .optional(),
+    jobType: z
+      .string()
+      .optional()
+      .transform((value) => parseCsvEnumValues(JOB_TYPES, value)),
+    workMode: z
+      .string()
+      .optional()
+      .transform((value) => parseCsvEnumValues(WORK_MODES, value)),
+    experience: z
+      .string()
+      .optional()
+      .transform((value) => parseCsvEnumValues(JOB_EXPERIENCE_LEVELS, value)),
+    minSalary: optionalNonNegativeNumber,
+    maxSalary: optionalNonNegativeNumber,
+    city: z
+      .string()
+      .optional()
+      .transform((value) => parseLocationSlugs(value)),
+    state: z
+      .string()
+      .optional()
+      .transform((value) => {
+        if (!value?.trim()) {
+          return undefined;
+        }
+        return toPublicLocationSlug(value) || undefined;
+      }),
+    businessCategory: z
+      .string()
+      .optional()
+      .transform((value) => parseCsvSlugs(value)),
+    postedQuick: z.enum(EMPLOYER_JOBS_POSTED_QUICK_FILTERS).optional(),
+    postedFrom: z.string().trim().optional().default(""),
+    postedTo: z.string().trim().optional().default(""),
+    applications: z
+      .string()
+      .optional()
+      .transform((value) =>
+        parseCsvEnumValues(EMPLOYER_JOBS_APPLICATION_BANDS, value),
+      ),
+    minVacancies: optionalNonNegativeInt,
+    maxVacancies: optionalNonNegativeInt,
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.minSalary !== undefined &&
+      data.maxSalary !== undefined &&
+      data.minSalary > data.maxSalary
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["maxSalary"],
+        message: "Maximum salary must be greater than or equal to minimum salary",
+      });
+    }
+
+    if (
+      data.minVacancies !== undefined &&
+      data.maxVacancies !== undefined &&
+      data.minVacancies > data.maxVacancies
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["maxVacancies"],
+        message:
+          "Maximum openings must be greater than or equal to minimum openings",
+      });
+    }
+
+    if (data.postedQuick === "custom") {
+      if (!data.postedFrom && !data.postedTo) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["postedFrom"],
+          message: "Custom date range requires a start or end date",
+        });
+      }
+    }
+  });
+
+export const bulkDeleteJobsBodySchema = z.discriminatedUnion("mode", [
+  z.object({
+    mode: z.literal("ids"),
+    ids: z.array(mongoObjectIdString).min(1).max(500),
+  }),
+  z.object({
+    mode: z.literal("filtered"),
+    filters: employerJobsBulkFilterSchema,
+  }),
+  z.object({
+    mode: z.literal("all"),
+    confirmText: z
+      .string()
+      .trim()
+      .refine((value) => value === "DELETE", {
+        message: "Type DELETE to confirm deleting all jobs",
+      }),
+  }),
+]);
+
 export type CreateJobInput = z.infer<typeof createJobSchema>;
 export type ListEmployerJobsQuery = z.infer<typeof listEmployerJobsQuerySchema>;
 export type PublicJobsQuery = z.infer<typeof publicJobsQuerySchema>;
@@ -668,3 +784,5 @@ export type PublishDraftJobInput = z.infer<typeof publishDraftJobSchema>;
 export type UpdateActiveJobInput = z.infer<typeof updateActiveJobSchema>;
 export type DraftWizardSnapshot = z.infer<typeof draftWizardSnapshotSchema>;
 export type PublicJobIdParams = z.infer<typeof publicJobIdParamsSchema>;
+export type BulkDeleteJobsBody = z.infer<typeof bulkDeleteJobsBodySchema>;
+export type EmployerJobsBulkFilter = z.infer<typeof employerJobsBulkFilterSchema>;

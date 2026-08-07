@@ -71,6 +71,8 @@ export const TEAM_ACTIVITY_TYPES = [
   "member_login",
   "member_logout",
   "saved_candidates_exported",
+  "jobs_bulk_deleted",
+  "job_deleted",
 ] as const;
 export type TeamActivityType = (typeof TEAM_ACTIVITY_TYPES)[number];
 

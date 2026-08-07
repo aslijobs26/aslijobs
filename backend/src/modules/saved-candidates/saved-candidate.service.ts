@@ -4,6 +4,7 @@ import { AppError } from "../../middleware/error.middleware.js";
 import { buildListPagination } from "../../utils/pagination.js";
 import { ApplicationModel } from "../applications/application.model.js";
 import type { ApplicationResumeSnapshot } from "../applications/application.types.js";
+import { ensureEmployerJobRelationsConsistent } from "../jobs/job-cascade-delete.js";
 import {
   buildEmployerAvailabilityMatch,
   parseEmployerAvailabilityFilter,
@@ -140,11 +141,11 @@ function percentChange(current: number, previous: number): number | null {
   return Math.round(((current - previous) / previous) * 100);
 }
 
-function normalizePriority(value: unknown): SavedCandidatePriority {
+function normalizePriority(value: unknown): SavedCandidatePriority | null {
   if (value === "high" || value === "medium" || value === "low") {
     return value;
   }
-  return "medium";
+  return null;
 }
 
 function mapListItem(doc: {
@@ -162,6 +163,10 @@ function mapListItem(doc: {
   application?: {
     status?: string;
     resumeSnapshot?: unknown;
+    interview?: {
+      date?: string | null;
+      cancelledAt?: Date | string | null;
+    } | null;
   };
   job?: {
     jobTitle?: string;
@@ -214,6 +219,11 @@ function mapListItem(doc: {
         : null,
     isWhatsappVerified: Boolean(doc.jobSeekerDoc?.isWhatsappVerified),
     applicationStatus: text(doc.application?.status) || "submitted",
+    hasActiveInterview: Boolean(
+      text(doc.application?.interview?.date) &&
+        !doc.application?.interview?.cancelledAt,
+    ),
+    interviewDate: text(doc.application?.interview?.date) || null,
     expectedSalary:
       typeof doc.jobSeekerDoc?.expectedSalary === "number"
         ? doc.jobSeekerDoc.expectedSalary
@@ -343,7 +353,7 @@ export class SavedCandidateService {
       savedCandidate: {
         id: created._id.toString(),
         applicationId: created.applicationId.toString(),
-        priority: created.priority as SavedCandidatePriority,
+        priority: normalizePriority(created.priority),
       },
       created: true,
     };
@@ -390,7 +400,7 @@ export class SavedCandidateService {
     employerId: string;
     applicationId: string;
     actor: SavedCandidateActor;
-    priority: SavedCandidatePriority;
+    priority: SavedCandidatePriority | null;
     tags: string[];
     notes: string;
   }) {
@@ -810,7 +820,8 @@ export class SavedCandidateService {
               { case: { $eq: ["$priority", "medium"] }, then: 1 },
               { case: { $eq: ["$priority", "low"] }, then: 2 },
             ],
-            default: 1,
+            // Null / missing priority sorts after explicit values.
+            default: 3,
           },
         },
       },
@@ -844,7 +855,112 @@ export class SavedCandidateService {
     return { items, pagination };
   }
 
+  /**
+   * Creates missing saved-candidate rows for applications currently in
+   * Shortlisted status so the Shortlisted Candidates page stays complete.
+   */
+  async ensureSavedRowsForShortlistedApplications(
+    employerId: string,
+  ): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const employerObjectId = new mongoose.Types.ObjectId(employerId);
+
+    const shortlistedApps = await ApplicationModel.find({
+      employerId: employerObjectId,
+      status: "shortlisted",
+    })
+      .select("_id jobSeekerId jobId publicJobId shortlist")
+      .lean();
+
+    if (shortlistedApps.length === 0) {
+      return;
+    }
+
+    const applicationIds = shortlistedApps.map((app) => app._id);
+    const existingRows = await SavedCandidateModel.find({
+      employerId: employerObjectId,
+      applicationId: { $in: applicationIds },
+    })
+      .select("applicationId")
+      .lean();
+
+    const existingIds = new Set(
+      existingRows.map((row) => row.applicationId.toString()),
+    );
+    const missingApps = shortlistedApps.filter(
+      (app) => !existingIds.has(app._id.toString()),
+    );
+
+    if (missingApps.length === 0) {
+      return;
+    }
+
+    const now = new Date();
+    try {
+      await SavedCandidateModel.insertMany(
+        missingApps.map((app) => {
+          const shortlist =
+            app.shortlist && typeof app.shortlist === "object"
+              ? (app.shortlist as {
+                  priority?: string | null;
+                  tags?: string[];
+                  notes?: string;
+                  shortlistedAt?: Date | null;
+                  shortlistedByTeamMemberId?: mongoose.Types.ObjectId | null;
+                  shortlistedByName?: string | null;
+                })
+              : null;
+
+          // Never invent priority for historical / incomplete shortlist rows.
+          const priority = normalizePriority(shortlist?.priority);
+
+          const shortlistedAt =
+            shortlist?.shortlistedAt instanceof Date
+              ? shortlist.shortlistedAt
+              : now;
+
+          const actorName = text(shortlist?.shortlistedByName) || "Employer";
+
+          return {
+            employerId: employerObjectId,
+            applicationId: app._id,
+            jobSeekerId: app.jobSeekerId,
+            jobId: app.jobId,
+            publicJobId: app.publicJobId,
+            savedAt: shortlistedAt,
+            priority,
+            tags: Array.isArray(shortlist?.tags) ? shortlist.tags : [],
+            notes: text(shortlist?.notes),
+            createdByTeamMemberId: shortlist?.shortlistedByTeamMemberId ?? null,
+            createdByName: actorName,
+            updatedByTeamMemberId: shortlist?.shortlistedByTeamMemberId ?? null,
+            updatedByName: actorName,
+          };
+        }),
+        { ordered: false },
+      );
+    } catch (error) {
+      // Parallel requests may race on the unique employerId+applicationId index.
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? (error as { code?: number }).code
+          : undefined;
+      if (code !== 11000) {
+        throw error;
+      }
+    }
+  }
+
   async list(employerId: string, query: ListSavedCandidatesQuerySchema) {
+    await ensureEmployerJobRelationsConsistent(employerId);
+
+    if (text(query.applicationStatus) === "shortlisted") {
+      await this.ensureSavedRowsForShortlistedApplications(employerId);
+    }
+
     const result = await this.queryItems(employerId, query);
     return {
       savedCandidates: result.items,
@@ -859,6 +975,10 @@ export class SavedCandidateService {
     employerId: string,
     query: Omit<ListSavedCandidatesQuerySchema, "page" | "limit">,
   ): Promise<{ items: SavedCandidateListItem[]; total: number }> {
+    if (text(query.applicationStatus) === "shortlisted") {
+      await this.ensureSavedRowsForShortlistedApplications(employerId);
+    }
+
     const result = await this.queryItems(employerId, {
       ...query,
       page: 1,

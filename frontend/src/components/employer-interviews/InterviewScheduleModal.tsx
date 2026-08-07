@@ -262,7 +262,13 @@ export function InterviewScheduleModal({
           queryKey: ["employer", "application-stats"],
         }),
         queryClient.invalidateQueries({
+          queryKey: ["employer", "application", selectedId],
+        }),
+        queryClient.invalidateQueries({
           queryKey: savedCandidatesQueryKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["employer-dashboard-home"],
         }),
       ]);
       onSaved?.(selectedId!);

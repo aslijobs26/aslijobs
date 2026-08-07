@@ -65,7 +65,12 @@ const EMPLOYER_ALLOWED_TRANSITIONS: Record<
     "rejected",
     "withdrawn",
   ],
-  shortlisted: ["interview_scheduled", "rejected", "withdrawn"],
+  shortlisted: [
+    "interview_scheduled",
+    "interview_completed",
+    "rejected",
+    "withdrawn",
+  ],
   interview_scheduled: ["interview_completed", "rejected", "withdrawn"],
   interview_completed: ["offer_sent", "rejected", "withdrawn"],
   offer_sent: ["selected", "joined", "rejected", "withdrawn"],
@@ -201,7 +206,8 @@ export function assertEmployerStatusChangeAllowed(
   assertValidEmployerStatusTransition(from, to);
 
   if (to === "interview_completed") {
-    if (from !== "interview_scheduled") {
+    // Interview activity may exist while hiring status is still Shortlisted.
+    if (from !== "interview_scheduled" && from !== "shortlisted") {
       throw new AppError(
         "Schedule and complete an interview before marking it as completed.",
         HTTP_STATUS.BAD_REQUEST,

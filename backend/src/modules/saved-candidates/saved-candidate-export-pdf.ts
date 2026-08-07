@@ -83,7 +83,7 @@ function computeStats(rows: SavedCandidateExportRow[]): PdfStats {
   let immediateJoiners = 0;
 
   for (const row of rows) {
-    if (row.priority.toLowerCase() === "high") {
+    if (row.priority.trim().toLowerCase() === "high") {
       highPriority += 1;
     }
     if (interviewReadyStatuses.has(row.applicationStatus)) {
@@ -695,7 +695,15 @@ function drawDetailPages(
       .font("Helvetica-Bold")
       .fontSize(9)
       .text(
-        `${flatten(row.priority)} Priority  ·  ${flatten(row.experience)}  ·  ${flatten(row.location)}`,
+        [
+          flatten(row.priority)
+            ? `${flatten(row.priority)} Priority`
+            : null,
+          flatten(row.experience) || null,
+          flatten(row.location) || null,
+        ]
+          .filter(Boolean)
+          .join("  ·  "),
         textX,
         doc.y + 4,
         { width: width - avatarSize - 16 },

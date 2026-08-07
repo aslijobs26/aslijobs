@@ -26,6 +26,7 @@ import { useCan } from "@/providers/employer-permission-provider";
 import {
   deleteEmployerJob,
   fetchEmployerJobStats,
+  invalidateEmployerJobCascadeCaches,
 } from "@/services/employer-jobs.service";
 import {
   fetchEmployerApplicationStats,
@@ -224,9 +225,7 @@ export function EmployerDashboardHome() {
     mutationFn: deleteEmployerJob,
     onSuccess: async () => {
       showAppToast("Job deleted.", "success");
-      await queryClient.invalidateQueries({
-        queryKey: EMPLOYER_JOBS_QUERY_KEYS.all,
-      });
+      await invalidateEmployerJobCascadeCaches(queryClient);
     },
     onError: () => {
       showAppToast("Unable to delete job.", "error");

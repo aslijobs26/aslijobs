@@ -32,9 +32,12 @@ export type SavedCandidateListItem = {
   candidateAvailabilityStatus: string | null;
   isWhatsappVerified: boolean;
   applicationStatus: string;
+  /** True when application has an active (non-cancelled) interview date. */
+  hasActiveInterview: boolean;
+  interviewDate: string | null;
   expectedSalary: number | null;
   expectedSalaryPeriod: string | null;
-  priority: SavedCandidatePriority;
+  priority: SavedCandidatePriority | null;
   tags: string[];
   notes: string;
   savedAt: string;

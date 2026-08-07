@@ -63,13 +63,34 @@ type EmployerJobsTableProps = {
   limit: number;
   total: number;
   totalPages: number;
+  canSelect?: boolean;
+  selectedIds: ReadonlySet<string>;
+  allPageSelected: boolean;
+  somePageSelected: boolean;
+  selectionLocked?: boolean;
   onRetry: () => void;
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
   onStatusAction: (jobId: string, action: JobStatusAction) => void;
   onDelete: (jobId: string) => void;
   onPreview: (jobMongoId: string) => void;
+  onToggleRow: (jobId: string) => void;
+  onTogglePage: (checked: boolean) => void;
 };
+
+const COLUMN_WIDTHS_WITH_SELECT = [
+  "w-[3.5%]",
+  "w-[14%]",
+  "w-[10%]",
+  "w-[11%]",
+  "w-[9%]",
+  "w-[8%]",
+  "w-[7%]",
+  "w-[7%]",
+  "w-[8%]",
+  "w-[10%]",
+  "w-[12.5%]",
+] as const;
 
 const COLUMN_WIDTHS = [
   "w-[15%]",
@@ -99,24 +120,78 @@ export function EmployerJobsTable({
   limit,
   total,
   totalPages,
+  canSelect = false,
+  selectedIds,
+  allPageSelected,
+  somePageSelected,
+  selectionLocked = false,
   onRetry,
   onPageChange,
   onLimitChange,
   onStatusAction,
   onDelete,
   onPreview,
+  onToggleRow,
+  onTogglePage,
 }: EmployerJobsTableProps) {
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+  const columnCount =
+    EMPLOYER_JOBS_TABLE_COLUMNS.length + (canSelect ? 1 : 0);
+  const columnWidths = canSelect ? COLUMN_WIDTHS_WITH_SELECT : COLUMN_WIDTHS;
+
+  useEffect(() => {
+    if (!headerCheckboxRef.current) {
+      return;
+    }
+    headerCheckboxRef.current.indeterminate =
+      somePageSelected && !allPageSelected && !selectionLocked;
+  }, [allPageSelected, selectionLocked, somePageSelected]);
+
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto text-[11px] leading-snug xl:text-[12px] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        <table className="w-full min-w-[64rem] table-fixed border-collapse text-left">
+        <table
+          className={cn(
+            "w-full table-fixed border-collapse text-left",
+            canSelect ? "min-w-[68rem]" : "min-w-[64rem]",
+          )}
+        >
           <colgroup>
-            {COLUMN_WIDTHS.map((widthClass, index) => (
-              <col key={EMPLOYER_JOBS_TABLE_COLUMNS[index]} className={widthClass} />
+            {columnWidths.map((widthClass, index) => (
+              <col
+                key={
+                  canSelect && index === 0
+                    ? "select"
+                    : EMPLOYER_JOBS_TABLE_COLUMNS[canSelect ? index - 1 : index]
+                }
+                className={widthClass}
+              />
             ))}
           </colgroup>
           <thead>
             <tr className="border-b border-border-subtle bg-hero-bg/70">
+              {canSelect ? (
+                <th scope="col" className={HEADER_CELL_CLASS}>
+                  <span className="sr-only">Select jobs</span>
+                  <input
+                    ref={headerCheckboxRef}
+                    type="checkbox"
+                    checked={
+                      selectionLocked ||
+                      (allPageSelected && jobs.length > 0)
+                    }
+                    disabled={
+                      isLoading ||
+                      isError ||
+                      jobs.length === 0 ||
+                      isMutating
+                    }
+                    onChange={(event) => onTogglePage(event.target.checked)}
+                    className="size-3.5 rounded border-border text-primary focus:ring-primary/30"
+                    aria-label="Select all jobs on this page"
+                  />
+                </th>
+              ) : null}
               {EMPLOYER_JOBS_TABLE_COLUMNS.map((column) => (
                 <th key={column} scope="col" className={HEADER_CELL_CLASS}>
                   {column}
@@ -128,7 +203,7 @@ export function EmployerJobsTable({
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={EMPLOYER_JOBS_TABLE_COLUMNS.length}
+                  colSpan={columnCount}
                   className="px-4 py-14 text-center text-sm text-muted"
                 >
                   {EMPLOYER_JOBS_LOADING_LABEL}
@@ -137,7 +212,7 @@ export function EmployerJobsTable({
             ) : isError ? (
               <tr>
                 <td
-                  colSpan={EMPLOYER_JOBS_TABLE_COLUMNS.length}
+                  colSpan={columnCount}
                   className="px-4 py-14 text-center"
                 >
                   <p className="text-base font-semibold text-foreground">
@@ -158,7 +233,7 @@ export function EmployerJobsTable({
             ) : jobs.length === 0 ? (
               <tr>
                 <td
-                  colSpan={EMPLOYER_JOBS_TABLE_COLUMNS.length}
+                  colSpan={columnCount}
                   className="px-4 py-14 text-center"
                 >
                   <p className="text-base font-semibold text-foreground">
@@ -175,6 +250,10 @@ export function EmployerJobsTable({
                   key={job.id}
                   job={job}
                   disabled={isMutating}
+                  canSelect={canSelect}
+                  selected={selectionLocked || selectedIds.has(job.id)}
+                  selectionLocked={selectionLocked}
+                  onToggleRow={onToggleRow}
                   onStatusAction={onStatusAction}
                   onDelete={onDelete}
                   onPreview={onPreview}
@@ -203,6 +282,10 @@ export function EmployerJobsTable({
 type EmployerJobsTableRowProps = {
   job: EmployerJobListItem;
   disabled: boolean;
+  canSelect: boolean;
+  selected: boolean;
+  selectionLocked: boolean;
+  onToggleRow: (jobId: string) => void;
   onStatusAction: (jobId: string, action: JobStatusAction) => void;
   onDelete: (jobId: string) => void;
   onPreview: (jobMongoId: string) => void;
@@ -211,6 +294,10 @@ type EmployerJobsTableRowProps = {
 function EmployerJobsTableRow({
   job,
   disabled,
+  canSelect,
+  selected,
+  selectionLocked,
+  onToggleRow,
   onStatusAction,
   onDelete,
   onPreview,
@@ -302,7 +389,25 @@ function EmployerJobsTableRow({
   const canReactivate = job.status === "closed";
 
   return (
-    <tr className="border-b border-border-subtle last:border-b-0 hover:bg-hero-bg/35">
+    <tr
+      className={cn(
+        "border-b border-border-subtle last:border-b-0 hover:bg-hero-bg/35",
+        selected && "bg-primary/5",
+      )}
+    >
+      {canSelect ? (
+        <td className={BODY_CELL_CLASS}>
+          <input
+            type="checkbox"
+            checked={selected}
+            disabled={disabled || selectionLocked}
+            onChange={() => onToggleRow(job.id)}
+            onClick={(event) => event.stopPropagation()}
+            className="size-3.5 rounded border-border text-primary focus:ring-primary/30"
+            aria-label={`Select ${job.jobTitle}`}
+          />
+        </td>
+      ) : null}
       <td className={BODY_CELL_CLASS}>
         <div className="min-w-0">
           <p className="truncate text-[11px] font-semibold leading-snug text-foreground xl:text-[12px]">

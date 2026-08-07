@@ -21,8 +21,6 @@ export const ROUTES = {
   EMPLOYER_MESSAGES: "/employer/messages",
   EMPLOYER_SAVED_CANDIDATES: "/employer/saved-candidates",
   EMPLOYER_CAMPAIGNS: "/employer/campaigns",
-  EMPLOYER_ANALYTICS: "/employer/analytics",
-  EMPLOYER_REPORTS: "/employer/reports",
   EMPLOYER_SUBSCRIPTION: "/employer/subscription",
   EMPLOYER_COMPANY_PROFILE: "/employer/company-profile",
   EMPLOYER_TEAM_MEMBER_PROFILE: "/employer/team-member/profile",

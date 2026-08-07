@@ -6,6 +6,7 @@ import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { jobController } from "./job.controller.js";
 import {
+  bulkDeleteJobsBodySchema,
   createJobSchema,
   jobIdParamsSchema,
   listEmployerJobsQuerySchema,
@@ -71,6 +72,14 @@ jobRouter.get(
   asyncHandler(requireEmployerAuth),
   asyncHandler(requirePermission("jobs", "read")),
   asyncHandler(jobController.stats),
+);
+
+jobRouter.post(
+  "/bulk-delete",
+  asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("jobs", "delete")),
+  validate(bulkDeleteJobsBodySchema, "body"),
+  asyncHandler(jobController.bulkRemove),
 );
 
 jobRouter.get(

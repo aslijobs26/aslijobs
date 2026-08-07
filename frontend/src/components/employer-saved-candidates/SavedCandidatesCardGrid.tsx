@@ -242,11 +242,12 @@ function SavedCandidateCard({
   const canWriteNotes = canField("candidates", "notes", "write");
   const canScheduleInterview =
     can("interviews", "create") || can("interviews", "update");
-  const interviewScheduled = hasSavedCandidateInterviewScheduled(
-    item.applicationStatus,
-  );
+  const interviewScheduled = hasSavedCandidateInterviewScheduled({
+    hasActiveInterview: item.hasActiveInterview,
+    applicationStatus: item.applicationStatus,
+  });
 
-  const priority = item.priority ?? "medium";
+  const priority = item.priority;
   const visibleTags = item.tags.slice(0, 3);
   const extraTagCount = Math.max(0, item.tags.length - visibleTags.length);
   const notesPreview = item.notes.trim();
@@ -271,7 +272,7 @@ function SavedCandidateCard({
       <span
         className={cn(
           "absolute inset-y-0 left-0 w-1",
-          priorityAccentClass(priority),
+          priority ? priorityAccentClass(priority) : "bg-border-subtle",
         )}
         aria-hidden="true"
       />
@@ -300,14 +301,16 @@ function SavedCandidateCard({
                   <span className="text-muted"> · {item.publicJobId}</span>
                 </p>
               </div>
-              <span
-                className={cn(
-                  "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset",
-                  priorityBadgeClass(priority),
-                )}
-              >
-                {getSavedCandidatePriorityLabel(priority)}
-              </span>
+              {priority ? (
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset",
+                    priorityBadgeClass(priority),
+                  )}
+                >
+                  {getSavedCandidatePriorityLabel(priority)}
+                </span>
+              ) : null}
             </div>
 
             <ul className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-muted">

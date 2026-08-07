@@ -191,6 +191,18 @@ export function EmployerCandidateDetailPageContent({
       void queryClient.invalidateQueries({
         queryKey: ["employer", "application-stats"],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["employer", "interviews"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["employer", "interview-stats"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: savedCandidatesQueryKeys.all,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["employer-dashboard-home"],
+      });
       showAppToast(
         data.action === "scheduled"
           ? "Interview scheduled successfully."

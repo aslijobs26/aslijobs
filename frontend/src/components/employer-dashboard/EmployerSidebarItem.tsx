@@ -59,7 +59,7 @@ export function EmployerSidebarItem({
           {item.badge !== undefined ? (
             <span
               className={cn(
-                "inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-none",
+                "inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none tabular-nums",
                 item.id === "messages"
                   ? "bg-pin-state text-surface"
                   : isActive

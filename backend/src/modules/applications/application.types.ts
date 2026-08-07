@@ -181,7 +181,7 @@ export type ApplicationShortlistNextAction =
   | "call_candidate";
 
 export type ApplicationShortlistDetails = {
-  priority: "high" | "medium" | "low";
+  priority: "high" | "medium" | "low" | null;
   tags: string[];
   notes: string;
   nextAction: ApplicationShortlistNextAction;
@@ -191,7 +191,7 @@ export type ApplicationShortlistDetails = {
 
 export type ApplicationSavedCandidatePrefill = {
   id: string;
-  priority: "high" | "medium" | "low";
+  priority: "high" | "medium" | "low" | null;
   tags: string[];
   notes: string;
 };

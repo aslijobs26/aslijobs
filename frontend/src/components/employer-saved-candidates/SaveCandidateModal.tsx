@@ -3,7 +3,6 @@
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import { getSavedCandidatesApiErrorMessage } from "@/components/employer-saved-candidates/saved-candidates-utils";
 import {
-  DEFAULT_SAVED_CANDIDATE_PRIORITY,
   SAVED_CANDIDATE_PRESET_TAG_LABELS,
   SAVED_CANDIDATE_PRESET_TAG_VALUES,
   SAVED_CANDIDATE_PRIORITIES,
@@ -42,7 +41,7 @@ const prioritySelectOptions: EmployerRegisterSelectOption[] =
 export type SaveCandidateModalMode = "save" | "edit";
 
 export type SaveCandidateModalInitialValues = {
-  priority?: SavedCandidatePriority;
+  priority?: SavedCandidatePriority | null;
   tags?: string[];
   notes?: string;
 };
@@ -84,8 +83,8 @@ export function SaveCandidateModal({
   const customTagId = useId();
   const queryClient = useQueryClient();
 
-  const [priority, setPriority] = useState<SavedCandidatePriority>(
-    initialValues?.priority ?? DEFAULT_SAVED_CANDIDATE_PRIORITY,
+  const [priority, setPriority] = useState<SavedCandidatePriority | "">(
+    initialValues?.priority ?? "",
   );
   const [selectedTags, setSelectedTags] = useState<string[]>(
     initialValues?.tags ?? [],
@@ -126,7 +125,7 @@ export function SaveCandidateModal({
     }
 
     if (initialValues) {
-      setPriority(initialValues.priority ?? DEFAULT_SAVED_CANDIDATE_PRIORITY);
+      setPriority(initialValues.priority ?? "");
       setSelectedTags(initialValues.tags ?? []);
       setNotes(initialValues.notes ?? "");
       setHydratedForId(application.applicationId);
@@ -139,11 +138,7 @@ export function SaveCandidateModal({
 
     const saved = prefillQuery.data.savedCandidate;
     const shortlist = prefillQuery.data.shortlist;
-    setPriority(
-      shortlist?.priority ??
-        saved?.priority ??
-        DEFAULT_SAVED_CANDIDATE_PRIORITY,
-    );
+    setPriority(shortlist?.priority ?? saved?.priority ?? "");
     setSelectedTags(shortlist?.tags ?? saved?.tags ?? []);
     setNotes(shortlist?.notes ?? saved?.notes ?? "");
     setHydratedForId(application.applicationId);
@@ -157,6 +152,10 @@ export function SaveCandidateModal({
 
   const mutation = useMutation({
     mutationFn: async () => {
+      if (priority !== "high" && priority !== "medium" && priority !== "low") {
+        throw new Error("Select a priority.");
+      }
+
       const payload = {
         priority,
         tags: selectedTags,
@@ -470,7 +469,18 @@ export function SaveCandidateModal({
           <button
             type="button"
             disabled={mutation.isPending}
-            onClick={() => mutation.mutate()}
+            onClick={() => {
+              if (
+                priority !== "high" &&
+                priority !== "medium" &&
+                priority !== "low"
+              ) {
+                setFormError("Select a priority.");
+                return;
+              }
+              setFormError(null);
+              mutation.mutate();
+            }}
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
           >
             {mutation.isPending ? "Saving…" : confirmLabel}

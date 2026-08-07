@@ -140,6 +140,8 @@ export function SavedCandidatesPageContent() {
       location: location || undefined,
       experience: experience || undefined,
       availability: availability || undefined,
+      // Shortlisted Candidates page: only applications in Shortlisted status.
+      applicationStatus: "shortlisted" as const,
       priority: priority || undefined,
       tag: tag || undefined,
       sort,
@@ -616,6 +618,7 @@ export function SavedCandidatesPageContent() {
             location: location || undefined,
             experience: experience || undefined,
             availability: availability || undefined,
+            applicationStatus: "shortlisted",
             priority: priority || undefined,
             tag: tag || undefined,
             sort,

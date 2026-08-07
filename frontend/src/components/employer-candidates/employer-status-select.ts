@@ -38,7 +38,7 @@ export function resolveEmployerStatusSelect(input: {
     return {
       action: "open_interview",
       message:
-        "Fill interview details and save to set status to Interview Scheduled.",
+        "Fill interview details and save to schedule the interview. Hiring status stays Shortlisted until you change it.",
     };
   }
 

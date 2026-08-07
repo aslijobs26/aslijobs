@@ -214,7 +214,9 @@ function toExportRow(
       ? `${item.jobTitle}\n${item.publicJobId}`
       : item.jobTitle || "—",
     savedDate: formatExportDateTime(item.savedAt),
-    priority: SAVED_CANDIDATE_PRIORITY_LABELS[item.priority],
+    priority: item.priority
+      ? SAVED_CANDIDATE_PRIORITY_LABELS[item.priority]
+      : "",
     tags: formatTags(item.tags),
     notes: item.notes?.trim() || "—",
     createdBy: item.createdByName?.trim() || "—",

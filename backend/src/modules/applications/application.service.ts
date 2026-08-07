@@ -8,6 +8,7 @@ import {
 import { AppError } from "../../middleware/error.middleware.js";
 import { EmployerModel } from "../employers/employer.model.js";
 import { JobModel } from "../jobs/job.model.js";
+import { ensureEmployerJobRelationsConsistent } from "../jobs/job-cascade-delete.js";
 import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
 import { generateResumePdfFromJson } from "../resumes/pdf/index.js";
 import { resumeService } from "../resumes/resume.service.js";
@@ -36,9 +37,7 @@ import {
 } from "./employer-location-filter.js";
 import {
   assertEmployerStatusChangeAllowed,
-  assertValidEmployerStatusTransition,
   isEmployerTerminalStatus,
-  isStatusBeforeInterviewScheduled,
 } from "./employer-status-transition.js";
 import type {
   ApplicationHistoryActor,
@@ -902,13 +901,12 @@ export class ApplicationService {
       shortlistedAt?: Date | string | null;
       shortlistedByName?: string | null;
     };
-    if (
-      value.priority !== "high" &&
-      value.priority !== "medium" &&
-      value.priority !== "low"
-    ) {
-      return null;
-    }
+    const priority =
+      value.priority === "high" ||
+      value.priority === "medium" ||
+      value.priority === "low"
+        ? value.priority
+        : null;
     const nextAction =
       value.nextAction === "schedule_interview" ||
       value.nextAction === "send_message" ||
@@ -930,7 +928,7 @@ export class ApplicationService {
           : null;
 
     return {
-      priority: value.priority,
+      priority,
       tags,
       notes: text(value.notes),
       nextAction,
@@ -1063,6 +1061,8 @@ export class ApplicationService {
     if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
+
+    await ensureEmployerJobRelationsConsistent(input.employerId);
 
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
@@ -1342,6 +1342,8 @@ export class ApplicationService {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
+    await ensureEmployerJobRelationsConsistent(input.employerId);
+
     const match: Record<string, unknown> = {
       employerId: new mongoose.Types.ObjectId(input.employerId),
     };
@@ -1520,6 +1522,8 @@ export class ApplicationService {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
+    await ensureEmployerJobRelationsConsistent(input.employerId);
+
     const page = input.page ?? 1;
     const limit = input.limit ?? 10;
     const match: Record<string, unknown> = buildEmployerInterviewBaseMatch(
@@ -1529,8 +1533,12 @@ export class ApplicationService {
     if (input.publicJobId?.trim()) {
       match.publicJobId = input.publicJobId.trim().toUpperCase();
     }
-    if (input.status) {
-      match.status = input.status;
+    if (input.status === "interview_completed") {
+      match.status = "interview_completed";
+    } else if (input.status === "interview_scheduled") {
+      // Active interviews by activity (interview.date), not hiring status —
+      // shortlisted candidates with a scheduled interview still appear here.
+      match.status = { $ne: "interview_completed" };
     }
     if (input.mode === "online" || input.mode === "offline" || input.mode === "phone") {
       match["interview.mode"] = input.mode;
@@ -1807,7 +1815,7 @@ export class ApplicationService {
       if (!cancelled && date >= weekFrom && date <= weekTo) {
         stats.thisWeek += 1;
       }
-      if (!cancelled && row.status === "interview_scheduled") {
+      if (!cancelled && row.status !== "interview_completed") {
         stats.scheduled += 1;
       }
       if (row.status === "interview_completed") {
@@ -1828,11 +1836,10 @@ export class ApplicationService {
         overviewTotal += 1;
         if (cancelled) {
           overviewCancelled += 1;
-        } else if (row.status === "interview_scheduled") {
-          overviewScheduled += 1;
-        }
-        if (!cancelled && row.status === "interview_completed") {
+        } else if (row.status === "interview_completed") {
           overviewCompleted += 1;
+        } else {
+          overviewScheduled += 1;
         }
         if (!cancelled && hasInterviewRescheduleRemark(row.statusHistory)) {
           overviewRescheduled += 1;
@@ -1973,10 +1980,17 @@ export class ApplicationService {
       .select("_id priority tags notes")
       .lean();
 
+    const savedPriority =
+      savedRow?.priority === "high" ||
+      savedRow?.priority === "medium" ||
+      savedRow?.priority === "low"
+        ? savedRow.priority
+        : null;
+
     const savedCandidate: ApplicationSavedCandidatePrefill | null = savedRow
       ? {
           id: savedRow._id.toString(),
-          priority: savedRow.priority as SavedCandidatePriority,
+          priority: savedPriority,
           tags: Array.isArray(savedRow.tags)
             ? savedRow.tags
                 .filter((tag): tag is string => typeof tag === "string")
@@ -2133,7 +2147,7 @@ export class ApplicationService {
     tags: string[];
     notes: string;
     nextAction: ApplicationShortlistNextAction;
-    alsoSave: boolean;
+    alsoSave?: boolean;
     actor: {
       teamMemberId?: string | null;
       displayName: string;
@@ -2143,6 +2157,7 @@ export class ApplicationService {
     saved: boolean;
     nextAction: ApplicationShortlistNextAction;
   }> {
+    void input.alsoSave;
     const application = await this.findOwnedApplicationOrThrow(
       input.applicationId,
       input.employerId,
@@ -2195,28 +2210,20 @@ export class ApplicationService {
       }
     }
 
-    const existingSaved = await SavedCandidateModel.findOne({
-      employerId: application.employerId,
-      applicationId: application._id,
-    })
-      .select("_id")
-      .lean();
-
-    let saved = Boolean(existingSaved);
-    if (input.alsoSave || existingSaved) {
-      await savedCandidateService.upsertForApplication({
-        employerId: input.employerId,
-        applicationId: input.applicationId,
-        actor: {
-          teamMemberId: input.actor.teamMemberId || undefined,
-          displayName: input.actor.displayName,
-        },
-        priority: input.priority,
-        tags: input.tags,
-        notes: input.notes,
-      });
-      saved = true;
-    }
+    // Shortlisted Candidates page lists saved rows filtered by status=shortlisted.
+    // Always upsert so shortlisted applicants appear there.
+    await savedCandidateService.upsertForApplication({
+      employerId: input.employerId,
+      applicationId: input.applicationId,
+      actor: {
+        teamMemberId: input.actor.teamMemberId || undefined,
+        displayName: input.actor.displayName,
+      },
+      priority: input.priority,
+      tags: input.tags,
+      notes: input.notes,
+    });
+    const saved = true;
 
     const detail = await this.loadEmployerDetail({
       employerId: input.employerId,
@@ -2327,12 +2334,14 @@ export class ApplicationService {
       cancellationReason: "",
       cancelledByName: "",
     };
-    const shouldSchedule = isStatusBeforeInterviewScheduled(currentStatus);
 
-    if (
-      interviewsEqual(previousInterview, nextInterview) &&
-      !shouldSchedule
-    ) {
+    // First schedule = no prior active interview date. Reschedule/update keeps hiring status.
+    const isFirstSchedule = !text(previousInterview.date);
+    const action: "scheduled" | "updated" = isFirstSchedule
+      ? "scheduled"
+      : "updated";
+
+    if (interviewsEqual(previousInterview, nextInterview) && !isFirstSchedule) {
       const detail = await this.loadEmployerDetail({
         employerId: input.employerId,
         applicationId: input.applicationId,
@@ -2346,29 +2355,20 @@ export class ApplicationService {
 
     const now = new Date();
     const actorName = text(input.updatedByName) || "Employer";
-    let action: "scheduled" | "updated" = "updated";
 
     application.interview = toInterviewDocument(nextInterview);
 
-    if (shouldSchedule) {
-      assertValidEmployerStatusTransition(currentStatus, "interview_scheduled");
-      application.status = "interview_scheduled";
-      appendStatusHistory(application, {
-        status: "interview_scheduled",
-        at: now,
-        actorType: "employer",
-        remark: `Interview Scheduled by ${actorName}`,
-      });
-      action = "scheduled";
-    } else {
-      appendStatusHistory(application, {
-        status: currentStatus,
-        at: now,
-        actorType: "employer",
-        remark: `Interview Rescheduled by ${actorName}`,
-      });
-      action = "updated";
-    }
+    // Scheduling an interview creates/updates the interview activity only.
+    // Hiring status stays unchanged (e.g. Shortlisted) until the employer
+    // explicitly advances the pipeline.
+    appendStatusHistory(application, {
+      status: currentStatus,
+      at: now,
+      actorType: "employer",
+      remark: isFirstSchedule
+        ? `Interview Scheduled by ${actorName}`
+        : `Interview Rescheduled by ${actorName}`,
+    });
 
     await application.save();
 
@@ -2411,13 +2411,6 @@ export class ApplicationService {
     if (isEmployerTerminalStatus(String(currentStatus))) {
       throw new AppError(
         "This application is in a terminal hiring status.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
-    }
-
-    if (currentStatus !== "interview_scheduled") {
-      throw new AppError(
-        "Only scheduled interviews can be cancelled.",
         HTTP_STATUS.BAD_REQUEST,
       );
     }

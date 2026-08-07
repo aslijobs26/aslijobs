@@ -535,7 +535,6 @@ export function EmployerCandidatesPageContent() {
           onOpenResume={(id) =>
             selectCandidate(id, { tab: "resume", openMobile: true })
           }
-          onScheduleInterview={openScheduleInterview}
           savedByApplicationId={savedByApplicationId}
           canSave={canSaveCandidates}
           onToggleSave={handleToggleSave}

@@ -23,6 +23,7 @@ import {
   updateEmployerApplicationNotes,
   updateEmployerApplicationStatus,
 } from "@/services/employer-applications.service";
+import { savedCandidatesQueryKeys } from "@/services/saved-candidates.service";
 import {
   EMPLOYER_APPLICATION_STATUS_LABELS,
   getAllowedEmployerStatusTransitions,
@@ -395,6 +396,9 @@ export function CandidatesDetailPanel({
       // My Jobs / dashboard job rows derive shortlisted & hired from applications.
       queryClient.invalidateQueries({ queryKey: ["employer-jobs"] }),
       queryClient.invalidateQueries({ queryKey: ["employer-dashboard-home"] }),
+      queryClient.invalidateQueries({
+        queryKey: savedCandidatesQueryKeys.all,
+      }),
     ]);
   };
 

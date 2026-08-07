@@ -10,6 +10,7 @@ import {
   setJobViewGuestCookie,
 } from "./job-view.visitor.js";
 import type {
+  BulkDeleteJobsBody,
   CreateJobInput,
   ListEmployerJobsQuery,
   PublicJobsQuery,
@@ -17,6 +18,22 @@ import type {
   SimilarPublicJobsQuery,
   UpdateJobStatusInput,
 } from "./job.validation.js";
+
+function resolveClientIp(req: Request): string | null {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",")[0]?.trim() || null;
+  }
+  return req.ip ?? null;
+}
+
+function resolveActorDisplayName(req: Request): string {
+  const companyName =
+    typeof req.employer?.companyName === "string"
+      ? req.employer.companyName.trim()
+      : "";
+  return companyName || "Employer";
+}
 
 export class JobController {
   create = async (req: Request, res: Response): Promise<void> => {
@@ -114,10 +131,48 @@ export class JobController {
     }
 
     const { jobId } = req.params as { jobId: string };
-    const result = await jobService.deleteJob(employerId, jobId);
+    const result = await jobService.deleteJob(employerId, jobId, {
+      teamMemberId: req.teamMemberId,
+      displayName: resolveActorDisplayName(req),
+      ip: resolveClientIp(req),
+    });
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Job deleted successfully.",
+      data: result,
+    });
+  };
+
+  bulkRemove = async (req: Request, res: Response): Promise<void> => {
+    const employerId = req.employerId;
+
+    if (!employerId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const body = req.body as BulkDeleteJobsBody;
+    const result = await jobService.bulkDeleteJobs({
+      employerId,
+      body,
+      actor: {
+        teamMemberId: req.teamMemberId,
+        displayName: resolveActorDisplayName(req),
+        ip: resolveClientIp(req),
+      },
+    });
+
+    const orphanApps =
+      "orphanCleanup" in result && result.orphanCleanup
+        ? result.orphanCleanup.deletedApplicationsCount
+        : 0;
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message:
+        result.deletedCount === 0
+          ? orphanApps > 0
+            ? `No jobs remained. Cleaned ${orphanApps} orphan application(s) and related hiring data.`
+            : "No jobs matched the delete request."
+          : `${result.deletedCount} job(s) deleted successfully.`,
       data: result,
     });
   };

@@ -21,7 +21,6 @@ import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
 import {
   Bookmark,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -55,7 +54,6 @@ type CandidatesListPanelProps = {
   onSelect: (id: string) => void;
   onPageChange: (page: number) => void;
   onOpenResume: (id: string) => void;
-  onScheduleInterview: (id: string) => void;
   onToggleSave?: (applicationId: string, isSaved: boolean) => void;
 };
 
@@ -71,7 +69,6 @@ function CandidateMobileCard({
   canSave,
   onSelect,
   onOpenResume,
-  onScheduleInterview,
   onToggleSave,
 }: {
   item: EmployerApplicationListItem;
@@ -80,18 +77,13 @@ function CandidateMobileCard({
   canSave: boolean;
   onSelect: (id: string) => void;
   onOpenResume: (id: string) => void;
-  onScheduleInterview: (id: string) => void;
   onToggleSave?: (applicationId: string, isSaved: boolean) => void;
 }) {
-  const { can, canField, getFieldLevel } = useCan();
+  const { canField, getFieldLevel } = useCan();
   const canViewPhone = canField("candidates", "phone");
   const phoneLevel = getFieldLevel("candidates", "phone");
   const canViewResume = canField("candidates", "resume");
   const canViewLocation = canField("candidates", "location");
-  const canScheduleInterview =
-    can("interviews", "create") ||
-    can("interviews", "update") ||
-    can("candidates", "update");
   const rawPhone = item.candidatePhone ?? "";
   const whatsappHref =
     canViewPhone && phoneLevel !== "mask" ? buildWhatsAppHref(rawPhone) : null;
@@ -215,20 +207,6 @@ function CandidateMobileCard({
           <span className="text-[10px] font-semibold leading-none">Resume</span>
         </button>
         ) : null}
-        {canScheduleInterview ? (
-          <button
-            type="button"
-            aria-label="Schedule interview"
-            className={actionButtonClassName}
-            onClick={(event) => {
-              event.stopPropagation();
-              onScheduleInterview(item.id);
-            }}
-          >
-            <Calendar className={actionIconClassName} aria-hidden="true" />
-            <span className="text-[10px] font-semibold leading-none">Interview</span>
-          </button>
-        ) : null}
         <button
           type="button"
           aria-label="Open status and details"
@@ -261,7 +239,6 @@ function CandidateDesktopRow({
   canSave,
   onSelect,
   onOpenResume,
-  onScheduleInterview,
   onToggleSave,
 }: {
   item: EmployerApplicationListItem;
@@ -269,18 +246,13 @@ function CandidateDesktopRow({
   canSave: boolean;
   onSelect: (id: string) => void;
   onOpenResume: (id: string) => void;
-  onScheduleInterview: (id: string) => void;
   onToggleSave?: (applicationId: string, isSaved: boolean) => void;
 }) {
-  const { can, canField, getFieldLevel } = useCan();
+  const { canField, getFieldLevel } = useCan();
   const canViewPhone = canField("candidates", "phone");
   const phoneLevel = getFieldLevel("candidates", "phone");
   const canViewResume = canField("candidates", "resume");
   const canViewLocation = canField("candidates", "location");
-  const canScheduleInterview =
-    can("interviews", "create") ||
-    can("interviews", "update") ||
-    can("candidates", "update");
   const rawPhone = item.candidatePhone ?? "";
   const whatsappHref =
     canViewPhone && phoneLevel !== "mask" ? buildWhatsAppHref(rawPhone) : null;
@@ -390,19 +362,6 @@ function CandidateDesktopRow({
             <FileText className="size-4" aria-hidden="true" />
           </button>
         ) : null}
-        {canScheduleInterview ? (
-          <button
-            type="button"
-            aria-label="Schedule interview"
-            className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            onClick={(event) => {
-              event.stopPropagation();
-              onScheduleInterview(item.id);
-            }}
-          >
-            <Calendar className="size-4" aria-hidden="true" />
-          </button>
-        ) : null}
         <Link
           href={ROUTES.employerCandidateDetail(item.id)}
           aria-label="Open full profile"
@@ -435,7 +394,6 @@ export function CandidatesListPanel({
   onSelect,
   onPageChange,
   onOpenResume,
-  onScheduleInterview,
   onToggleSave,
 }: CandidatesListPanelProps) {
   const page = pagination?.page ?? 1;
@@ -598,7 +556,6 @@ export function CandidatesListPanel({
                       canSave={canSave}
                       onSelect={onSelect}
                       onOpenResume={onOpenResume}
-                      onScheduleInterview={onScheduleInterview}
                       onToggleSave={onToggleSave}
                     />
                   </li>
@@ -628,7 +585,6 @@ export function CandidatesListPanel({
                       canSave={canSave}
                       onSelect={onSelect}
                       onOpenResume={onOpenResume}
-                      onScheduleInterview={onScheduleInterview}
                       onToggleSave={onToggleSave}
                     />
                   </li>

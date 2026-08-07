@@ -29,8 +29,6 @@ export const SAVED_CANDIDATE_PRIORITY_LABELS: Record<
   low: "Low Priority",
 };
 
-export const DEFAULT_SAVED_CANDIDATE_PRIORITY: SavedCandidatePriority = "medium";
-
 export const SAVED_CANDIDATE_PRESET_TAG_VALUES: SavedCandidatePresetTag[] = [
   "immediate_joiner",
   "good_fit",
@@ -99,8 +97,11 @@ export function getSavedCandidateTagLabel(tag: string): string {
 }
 
 export function getSavedCandidatePriorityLabel(
-  priority: SavedCandidatePriority,
+  priority: SavedCandidatePriority | null | undefined,
 ): string {
+  if (!priority) {
+    return "";
+  }
   return SAVED_CANDIDATE_PRIORITY_LABELS[priority];
 }
 

@@ -25,7 +25,7 @@ export function SavedCandidateTagsModal({
       mode="edit"
       savedCandidateId={item.id}
       initialValues={{
-        priority: item.priority ?? "medium",
+        priority: item.priority,
         tags: item.tags ?? [],
         notes: item.notes ?? "",
       }}

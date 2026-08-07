@@ -61,7 +61,12 @@ const EMPLOYER_ALLOWED_TRANSITIONS: Record<
     "rejected",
     "withdrawn",
   ],
-  shortlisted: ["interview_scheduled", "rejected", "withdrawn"],
+  shortlisted: [
+    "interview_scheduled",
+    "interview_completed",
+    "rejected",
+    "withdrawn",
+  ],
   interview_scheduled: ["interview_completed", "rejected", "withdrawn"],
   interview_completed: ["offer_sent", "rejected", "withdrawn"],
   offer_sent: ["selected", "joined", "rejected", "withdrawn"],
@@ -205,7 +210,7 @@ export type ApplicationShortlistNextAction =
   | "call_candidate";
 
 export type ApplicationShortlistDetails = {
-  priority: "high" | "medium" | "low";
+  priority: "high" | "medium" | "low" | null;
   tags: string[];
   notes: string;
   nextAction: ApplicationShortlistNextAction;
@@ -215,7 +220,7 @@ export type ApplicationShortlistDetails = {
 
 export type ApplicationSavedCandidatePrefill = {
   id: string;
-  priority: "high" | "medium" | "low";
+  priority: "high" | "medium" | "low" | null;
   tags: string[];
   notes: string;
 };

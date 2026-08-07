@@ -352,7 +352,7 @@ export function InterviewsTable({
                               Edit / Reschedule
                             </button>
                           ) : null}
-                          {item.status === "interview_scheduled" &&
+                          {item.status !== "interview_completed" &&
                           !item.isCancelled ? (
                             <button
                               type="button"
@@ -366,7 +366,7 @@ export function InterviewsTable({
                               Mark completed
                             </button>
                           ) : null}
-                          {item.status === "interview_scheduled" &&
+                          {item.status !== "interview_completed" &&
                           !item.isCancelled &&
                           onCancelInterview ? (
                             <button

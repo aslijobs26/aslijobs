@@ -89,11 +89,15 @@ export function triggerBlobDownload(blob: Blob, fileName: string) {
 }
 
 /** True when an interview has been scheduled for this application. */
-export function hasSavedCandidateInterviewScheduled(
-  applicationStatus: string,
-): boolean {
+export function hasSavedCandidateInterviewScheduled(input: {
+  hasActiveInterview?: boolean;
+  applicationStatus?: string;
+}): boolean {
+  if (typeof input.hasActiveInterview === "boolean") {
+    return input.hasActiveInterview;
+  }
   return (
-    applicationStatus === "interview_scheduled" ||
-    applicationStatus === "interview_completed"
+    input.applicationStatus === "interview_scheduled" ||
+    input.applicationStatus === "interview_completed"
   );
 }

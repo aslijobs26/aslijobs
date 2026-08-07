@@ -42,9 +42,9 @@ const savedCandidateSchema = new Schema(
     },
     priority: {
       type: String,
-      enum: SAVED_CANDIDATE_PRIORITIES,
-      required: true,
-      default: "medium",
+      enum: [...SAVED_CANDIDATE_PRIORITIES, null],
+      required: false,
+      default: null,
       index: true,
     },
     tags: {

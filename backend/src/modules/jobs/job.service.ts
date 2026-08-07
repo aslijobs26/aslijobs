@@ -13,14 +13,22 @@ import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
 import { jobViewService } from "./job-view.service.js";
 import {
+  cascadeDeleteOwnedJobs,
+  ensureEmployerJobRelationsConsistent,
+  purgeOrphanJobRelationsForEmployer,
+} from "./job-cascade-delete.js";
+import {
   emptyEmployerJobApplicationMetrics,
   loadEmployerApplicationMetricsTotals,
   loadEmployerJobApplicationMetricsByJobIds,
   type EmployerJobApplicationMetrics,
 } from "./employer-job-application-metrics.js";
+import { recordTeamActivity } from "../team/team-activity.service.js";
 import type {
+  BulkDeleteJobsBody,
   CreateJobInput,
   DraftWizardSnapshot,
+  EmployerJobsBulkFilter,
   ListEmployerJobsQuery,
   PublicJobsQuery,
   SaveDraftJobInput,
@@ -1009,28 +1017,56 @@ export class JobService {
     };
   }
 
-  async listEmployerJobs(employerId: string, query: ListEmployerJobsQuery) {
-    if (!mongoose.Types.ObjectId.isValid(employerId)) {
-      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
-    }
+  private buildEmployerJobsListFilter(
+    employerId: string,
+    query: Pick<ListEmployerJobsQuery, "status" | "search"> &
+      Partial<EmployerJobsBulkFilter>,
+  ): Record<string, unknown> {
+    const normalizedQuery = {
+      page: 1,
+      limit: 10,
+      status: query.status,
+      search: query.search ?? "",
+      jobId: query.jobId,
+      jobType: query.jobType ?? [],
+      workMode: query.workMode ?? [],
+      experience: query.experience ?? [],
+      minSalary: query.minSalary,
+      maxSalary: query.maxSalary,
+      city: query.city ?? [],
+      state: query.state,
+      businessCategory: query.businessCategory ?? [],
+      postedQuick: query.postedQuick,
+      postedFrom: query.postedFrom ?? "",
+      postedTo: query.postedTo ?? "",
+      applications: query.applications ?? [],
+      minVacancies: query.minVacancies,
+      maxVacancies: query.maxVacancies,
+    } as ListEmployerJobsQuery;
 
     const andClauses: Record<string, unknown>[] = [
       { employerId: new mongoose.Types.ObjectId(employerId) },
-      buildSearchFilter(query.search),
-      ...buildEmployerJobsAdvancedFilter(query),
+      buildSearchFilter(normalizedQuery.search),
+      ...buildEmployerJobsAdvancedFilter(normalizedQuery),
     ];
 
-    if (query.status) {
-      andClauses.push({ status: query.status });
+    if (normalizedQuery.status) {
+      andClauses.push({ status: normalizedQuery.status });
     }
 
     const cleaned = andClauses.filter(
       (clause) => Object.keys(clause).length > 0,
     );
 
-    const filter: Record<string, unknown> =
-      cleaned.length === 1 ? cleaned[0]! : { $and: cleaned };
+    return cleaned.length === 1 ? cleaned[0]! : { $and: cleaned };
+  }
 
+  async listEmployerJobs(employerId: string, query: ListEmployerJobsQuery) {
+    if (!mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const filter = this.buildEmployerJobsListFilter(employerId, query);
     const skip = (query.page - 1) * query.limit;
 
     const [jobs, total, statusCounts, jobOptions] = await Promise.all([
@@ -1108,6 +1144,9 @@ export class JobService {
     if (!mongoose.Types.ObjectId.isValid(employerId)) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
+
+    // Auto-heal legacy orphans so dashboard counters never stay stale.
+    await ensureEmployerJobRelationsConsistent(employerId);
 
     const employerObjectId = new mongoose.Types.ObjectId(employerId);
 
@@ -1230,13 +1269,173 @@ export class JobService {
     };
   }
 
-  async deleteJob(employerId: string, jobMongoId: string) {
-    const job = await this.findOwnedJobOrThrow(employerId, jobMongoId);
-    await job.deleteOne();
+  async deleteJob(
+    employerId: string,
+    jobMongoId: string,
+    actor?: {
+      teamMemberId?: string | null;
+      displayName?: string;
+      ip?: string | null;
+    },
+  ) {
+    await this.findOwnedJobOrThrow(employerId, jobMongoId);
+
+    const cascade = await cascadeDeleteOwnedJobs({
+      employerId,
+      jobObjectIds: [new mongoose.Types.ObjectId(jobMongoId)],
+    });
+
+    if (cascade.deletedJobIds.length === 0) {
+      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    // Heal any legacy orphans left by older job-only deletes.
+    await purgeOrphanJobRelationsForEmployer(employerId);
+
+    const publicJobId = cascade.publicJobIds[0] ?? jobMongoId;
+
+    try {
+      await recordTeamActivity({
+        employerId,
+        type: "job_deleted",
+        message: `Deleted job ${publicJobId} and cascaded related hiring data.`,
+        memberId: actor?.teamMemberId ?? null,
+        metadata: {
+          deletedCount: 1,
+          deletedIds: cascade.deletedJobIds,
+          publicJobIds: cascade.publicJobIds,
+          mode: "single",
+          deletedBy: actor?.displayName || null,
+          ip: actor?.ip || null,
+          deletedAt: new Date().toISOString(),
+          deletedApplicationsCount: cascade.deletedApplicationsCount,
+          deletedInterviewsCount: cascade.deletedInterviewsCount,
+          deletedSavedCandidatesCount: cascade.deletedSavedCandidatesCount,
+          deletedShortlistedCount: cascade.deletedShortlistedCount,
+          deletedNotificationsCount: cascade.deletedNotificationsCount,
+          deletedSavedJobsCount: cascade.deletedSavedJobsCount,
+          deletedJobViewsCount: cascade.deletedJobViewsCount,
+          deletedTeamActivitiesCount: cascade.deletedTeamActivitiesCount,
+        },
+      });
+    } catch {
+      // Audit failure must not block deletion.
+    }
 
     return {
       id: jobMongoId,
       deleted: true,
+      cascade: {
+        deletedApplicationsCount: cascade.deletedApplicationsCount,
+        deletedInterviewsCount: cascade.deletedInterviewsCount,
+        deletedSavedCandidatesCount: cascade.deletedSavedCandidatesCount,
+        deletedShortlistedCount: cascade.deletedShortlistedCount,
+        deletedNotificationsCount: cascade.deletedNotificationsCount,
+      },
+    };
+  }
+
+  async bulkDeleteJobs(input: {
+    employerId: string;
+    body: BulkDeleteJobsBody;
+    actor: {
+      teamMemberId?: string | null;
+      displayName: string;
+      ip?: string | null;
+    };
+  }) {
+    const { employerId, body, actor } = input;
+
+    if (!mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const employerObjectId = new mongoose.Types.ObjectId(employerId);
+    let filter: Record<string, unknown>;
+
+    if (body.mode === "ids") {
+      const uniqueIds = [...new Set(body.ids)];
+      filter = {
+        employerId: employerObjectId,
+        _id: {
+          $in: uniqueIds.map((id) => new mongoose.Types.ObjectId(id)),
+        },
+      };
+    } else if (body.mode === "filtered") {
+      filter = this.buildEmployerJobsListFilter(employerId, body.filters);
+    } else {
+      filter = { employerId: employerObjectId };
+    }
+
+    const jobs = await JobModel.find(filter).select("_id jobId").lean();
+    if (jobs.length === 0) {
+      // Jobs already gone (legacy delete): still purge orphan hiring data.
+      const orphanCleanup = await purgeOrphanJobRelationsForEmployer(employerId);
+      return {
+        deletedCount: 0,
+        deletedIds: [] as string[],
+        mode: body.mode,
+        orphanCleanup: {
+          deletedApplicationsCount: orphanCleanup.deletedApplicationsCount,
+          deletedInterviewsCount: orphanCleanup.deletedInterviewsCount,
+          deletedSavedCandidatesCount:
+            orphanCleanup.deletedSavedCandidatesCount,
+          deletedShortlistedCount: orphanCleanup.deletedShortlistedCount,
+          deletedNotificationsCount: orphanCleanup.deletedNotificationsCount,
+        },
+      };
+    }
+
+    const objectIds = jobs.map((job) => job._id);
+    const cascade = await cascadeDeleteOwnedJobs({
+      employerId,
+      jobObjectIds: objectIds,
+    });
+
+    const orphanCleanup = await purgeOrphanJobRelationsForEmployer(employerId);
+
+    try {
+      await recordTeamActivity({
+        employerId,
+        type: "jobs_bulk_deleted",
+        message: `Bulk deleted ${cascade.deletedJobIds.length} job(s) (${body.mode}) with cascade cleanup.`,
+        memberId: actor.teamMemberId ?? null,
+        metadata: {
+          deletedCount: cascade.deletedJobIds.length,
+          deletedIds: cascade.deletedJobIds.slice(0, 200),
+          publicJobIds: cascade.publicJobIds.slice(0, 200),
+          truncated: cascade.deletedJobIds.length > 200,
+          mode: body.mode,
+          filters: body.mode === "filtered" ? body.filters : null,
+          deletedBy: actor.displayName,
+          ip: actor.ip || null,
+          deletedAt: new Date().toISOString(),
+          deletedApplicationsCount: cascade.deletedApplicationsCount,
+          deletedInterviewsCount: cascade.deletedInterviewsCount,
+          deletedSavedCandidatesCount: cascade.deletedSavedCandidatesCount,
+          deletedShortlistedCount: cascade.deletedShortlistedCount,
+          deletedNotificationsCount: cascade.deletedNotificationsCount,
+          deletedSavedJobsCount: cascade.deletedSavedJobsCount,
+          deletedJobViewsCount: cascade.deletedJobViewsCount,
+          deletedTeamActivitiesCount: cascade.deletedTeamActivitiesCount,
+          orphanApplicationsPurged: orphanCleanup.deletedApplicationsCount,
+        },
+      });
+    } catch {
+      // Audit failure must not block deletion.
+    }
+
+    return {
+      deletedCount: cascade.deletedJobIds.length,
+      deletedIds: cascade.deletedJobIds,
+      mode: body.mode,
+      cascade: {
+        deletedApplicationsCount: cascade.deletedApplicationsCount,
+        deletedInterviewsCount: cascade.deletedInterviewsCount,
+        deletedSavedCandidatesCount: cascade.deletedSavedCandidatesCount,
+        deletedShortlistedCount: cascade.deletedShortlistedCount,
+        deletedNotificationsCount: cascade.deletedNotificationsCount,
+      },
     };
   }
 

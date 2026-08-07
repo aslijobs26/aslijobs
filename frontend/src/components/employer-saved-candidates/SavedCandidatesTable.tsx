@@ -74,20 +74,22 @@ const PRIORITY_SHORT_LABELS: Record<SavedCandidatePriority, string> = {
 function PriorityBadge({
   priority,
 }: {
-  priority: SavedCandidatePriority | undefined;
+  priority: SavedCandidatePriority | null | undefined;
 }) {
-  const value = priority ?? "medium";
-  const fullLabel = getSavedCandidatePriorityLabel(value);
+  if (!priority) {
+    return null;
+  }
+  const fullLabel = getSavedCandidatePriorityLabel(priority);
   return (
     <span
       title={fullLabel}
       aria-label={fullLabel}
       className={cn(
         "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-[10px] font-semibold leading-none ring-1 ring-inset",
-        priorityBadgeClass(value),
+        priorityBadgeClass(priority),
       )}
     >
-      {PRIORITY_SHORT_LABELS[value]}
+      {PRIORITY_SHORT_LABELS[priority]}
     </span>
   );
 }
@@ -311,9 +313,10 @@ function SavedCandidateTableRow({
   const canWriteNotes = canField("candidates", "notes", "write");
   const canScheduleInterview =
     can("interviews", "create") || can("interviews", "update");
-  const interviewScheduled = hasSavedCandidateInterviewScheduled(
-    item.applicationStatus,
-  );
+  const interviewScheduled = hasSavedCandidateInterviewScheduled({
+    hasActiveInterview: item.hasActiveInterview,
+    applicationStatus: item.applicationStatus,
+  });
 
   const whatsappHref =
     canViewPhone && phoneLevel !== "mask"

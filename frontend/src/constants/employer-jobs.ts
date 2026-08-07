@@ -30,8 +30,41 @@ export const EMPLOYER_JOBS_ERROR_DESCRIPTION =
   "Something went wrong while loading your job posts. Please try again.";
 export const EMPLOYER_JOBS_RETRY_LABEL = "Try again";
 
-export const EMPLOYER_JOBS_DELETE_CONFIRM =
-  "Are you sure you want to delete this job? This action cannot be undone.";
+export const EMPLOYER_JOBS_CASCADE_DELETE_ITEMS = [
+  "Job Details",
+  "Applications",
+  "Saved Candidates",
+  "Shortlisted Candidates",
+  "Interview Records",
+  "Interview Calendar Events",
+  "Notifications",
+  "Related Analytics",
+] as const;
+
+export const EMPLOYER_JOBS_DELETE_CONFIRM = [
+  "Deleting this job will permanently remove:",
+  "",
+  ...EMPLOYER_JOBS_CASCADE_DELETE_ITEMS.map((item) => `• ${item}`),
+  "",
+  "This action cannot be undone.",
+].join("\n");
+
+export const EMPLOYER_JOBS_BULK_DELETE_TITLE = "Delete Jobs";
+export const EMPLOYER_JOBS_BULK_DELETE_DESCRIPTION =
+  "Are you sure you want to permanently delete the selected jobs?";
+export const EMPLOYER_JOBS_BULK_DELETE_WARNING =
+  "Deleting these jobs will permanently remove all related applications, saved and shortlisted candidates, interviews, calendar events, notifications, and analytics. This action cannot be undone.";
+export const EMPLOYER_JOBS_BULK_DELETE_CONFIRM_LABEL = "Delete Jobs";
+export const EMPLOYER_JOBS_DELETE_ALL_TITLE = "Delete All Jobs";
+export const EMPLOYER_JOBS_DELETE_ALL_DESCRIPTION =
+  "You are about to permanently delete all jobs belonging to your company.";
+export const EMPLOYER_JOBS_DELETE_ALL_CONFIRM_HINT =
+  "Type DELETE to confirm.";
+export const EMPLOYER_JOBS_DELETE_ALL_CONFIRM_LABEL = "Delete All Jobs";
+export const EMPLOYER_JOBS_BULK_CLEAR_SELECTION = "Clear Selection";
+export const EMPLOYER_JOBS_BULK_SELECT_FILTERED = "Select All Filtered Jobs";
+export const EMPLOYER_JOBS_BULK_DELETE_SELECTED = "Delete Selected";
+export const EMPLOYER_JOBS_BULK_DELETE_ALL = "Delete All Jobs";
 
 export const EMPLOYER_JOB_TYPE_LABELS = {
   "full-time": "Full Time",

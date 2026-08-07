@@ -24,6 +24,7 @@ import type {
   NotificationType,
 } from "./notification.types.js";
 import { ApplicationModel } from "../applications/application.model.js";
+import { ensureEmployerJobRelationsConsistent } from "../jobs/job-cascade-delete.js";
 
 type ListNotificationsInput = {
   recipientType: NotificationRecipientType;
@@ -662,14 +663,16 @@ export class NotificationService {
     employerAction?: string;
     candidateAction?: string;
     conversationType?: string;
-    quickDate?: string;
     dateFrom?: string;
     dateTo?: string;
+    quickDate?: string;
     sort?: string;
   }): Promise<NotificationConversationListResult> {
     if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
+
+    await ensureEmployerJobRelationsConsistent(input.employerId);
 
     const employerObjectId = new mongoose.Types.ObjectId(input.employerId);
     const inboxNow = new Date();

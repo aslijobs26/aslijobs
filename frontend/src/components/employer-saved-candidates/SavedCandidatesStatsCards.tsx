@@ -28,7 +28,7 @@ type KpiConfig = {
 const KPI_ITEMS: KpiConfig[] = [
   {
     key: "totalSaved",
-    label: "Total Saved",
+    label: "Total Shortlisted",
     icon: Users,
     iconClassName: "bg-primary-light text-primary",
     showChange: false,
