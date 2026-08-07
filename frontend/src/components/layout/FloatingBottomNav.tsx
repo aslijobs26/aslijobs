@@ -203,7 +203,7 @@ export function FloatingBottomNav() {
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary-light via-surface to-primary-light"
+          className="pointer-events-none absolute inset-0 bg-job-card-selected-surface"
         />
         <div
           className="relative z-10 flex h-[78px] w-full items-stretch px-1"
