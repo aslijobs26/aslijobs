@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type HeroCtaCardVariant = "whatsapp" | "employer";
+export type HeroCtaCardVariant = "whatsapp" | "employer" | "assist";
 
 export type HeroCtaCardProps = {
   title: string;

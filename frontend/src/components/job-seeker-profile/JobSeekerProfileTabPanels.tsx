@@ -32,15 +32,21 @@ import {
 } from "@/utils/job-seeker-profile";
 import { showAppToast } from "@/utils/share-job";
 import {
+  Banknote,
   Briefcase,
+  Building2,
+  Clock3,
   Download,
+  Globe2,
   GraduationCap,
   MapPin,
+  MessageCircle,
   Pencil,
   Plus,
   RefreshCw,
   Sparkles,
   Trash2,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import type { JobSeekerProfileEditModalState } from "./JobSeekerProfileEditModals";
@@ -80,7 +86,7 @@ function SectionCard({
   return (
     <section
       id={id}
-      className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5"
+      className="rounded-2xl border border-border-subtle bg-hero-bg/40 p-4 sm:p-5"
       aria-labelledby={id ? `${id}-heading` : undefined}
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -150,41 +156,59 @@ export function JobSeekerProfileTabPanels({
         </SectionCard>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          {[
-            {
-              label: "Current role",
-              value: jobSeeker.jobRole || "Not set",
-            },
-            {
-              label: "Experience",
-              value: experienceLabel || "Not set",
-            },
-            {
-              label: "Location",
-              value: locationLabel || "Not set",
-            },
-            {
-              label: "Expected salary",
-              value: formatExpectedSalary(jobSeeker) || "Not set",
-            },
-          ].map((card) => (
-            <div
-              key={card.label}
-              className="rounded-xl border border-border-subtle bg-hero-bg p-4"
-            >
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                {card.label}
-              </p>
-              <p className="mt-1 text-sm font-bold text-foreground">
-                {card.value}
-              </p>
-            </div>
-          ))}
+          {(
+            [
+              {
+                label: "Current role",
+                value: jobSeeker.jobRole || "Not set",
+                icon: Briefcase,
+              },
+              {
+                label: "Experience",
+                value: experienceLabel || "Not set",
+                icon: Clock3,
+              },
+              {
+                label: "Location",
+                value: locationLabel || "Not set",
+                icon: MapPin,
+              },
+              {
+                label: "Expected salary",
+                value: formatExpectedSalary(jobSeeker) || "Not set",
+                icon: Banknote,
+              },
+            ] as const
+          ).map((card) => {
+            const Icon = card.icon;
+            const isEmpty = card.value === "Not set";
+            return (
+              <div
+                key={card.label}
+                className="flex items-start gap-3 rounded-2xl border border-border-subtle bg-surface p-4"
+              >
+                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
+                  <Icon className="size-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-muted">{card.label}</p>
+                  <p
+                    className={cn(
+                      "mt-0.5 truncate text-sm font-bold",
+                      isEmpty ? "text-muted" : "text-foreground",
+                    )}
+                  >
+                    {card.value}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <SectionCard title="Latest experience">
           {latestExperience ? (
-            <div>
+            <div className="rounded-xl border border-border-subtle bg-surface p-3.5">
               <p className="text-sm font-bold text-foreground">
                 {latestExperience.jobRole} · {latestExperience.companyName}
               </p>
@@ -235,9 +259,9 @@ export function JobSeekerProfileTabPanels({
           )}
         </SectionCard>
 
-        <div className="rounded-xl border border-primary/20 bg-primary-light/50 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div className="rounded-2xl border border-primary/20 bg-primary-light/45 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
           <div className="flex items-start gap-3">
-            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-surface">
+            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-surface">
               <Sparkles className="size-5" aria-hidden="true" />
             </span>
             <div>
@@ -251,7 +275,7 @@ export function JobSeekerProfileTabPanels({
           </div>
           <button
             type="button"
-            className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-0 sm:w-auto"
+            className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-0 sm:w-auto"
             onClick={() =>
               showAppToast("AI profile insights are coming soon.", "info")
             }
@@ -519,65 +543,167 @@ export function JobSeekerProfileTabPanels({
   }
 
   if (activeTab === "preferences") {
+    const preferenceTiles: {
+      label: string;
+      value: string;
+      icon: LucideIcon;
+    }[] = [
+      {
+        label: "Job type",
+        value: jobTypeLabel(jobSeeker.jobType) || "Not set",
+        icon: Briefcase,
+      },
+      {
+        label: "Work mode",
+        value: workModeLabel(jobSeeker.workMode) || "Not set",
+        icon: Building2,
+      },
+      {
+        label: "Preferred location",
+        value: jobSeeker.preferredJobLocation || "Not set",
+        icon: MapPin,
+      },
+      {
+        label: "Expected salary",
+        value: formatExpectedSalary(jobSeeker) || "Not set",
+        icon: Banknote,
+      },
+      {
+        label: "Availability",
+        value: availabilityLabel(jobSeeker.availabilityStatus) || "Not set",
+        icon: Clock3,
+      },
+      {
+        label: "Current location",
+        value:
+          [jobSeeker.city, jobSeeker.state, jobSeeker.pincode]
+            .filter(Boolean)
+            .join(", ") || "Not set",
+        icon: MapPin,
+      },
+    ];
+
+    const languages = jobSeeker.languages ?? [];
+    const whatsappLabel =
+      formatWhatsappNumber(jobSeeker.whatsappNumber) || "Not set";
+
     return (
-      <SectionCard
-        title="Career preferences"
-        action={
-          <button
-            type="button"
-            className={iconButtonClassName}
-            onClick={() => onOpenModal({ type: "preferences" })}
-          >
-            <Pencil className="size-3.5" aria-hidden="true" />
-            Edit
-          </button>
-        }
-      >
-        <dl className="grid gap-4 sm:grid-cols-2">
-          {[
-            { label: "Job role", value: jobSeeker.jobRole || "—" },
-            { label: "Job type", value: jobTypeLabel(jobSeeker.jobType) || "—" },
-            { label: "Work mode", value: workModeLabel(jobSeeker.workMode) || "—" },
-            {
-              label: "Preferred location",
-              value: jobSeeker.preferredJobLocation || "—",
-            },
-            {
-              label: "Expected salary",
-              value: formatExpectedSalary(jobSeeker) || "—",
-            },
-            {
-              label: "Availability",
-              value: availabilityLabel(jobSeeker.availabilityStatus) || "—",
-            },
-            {
-              label: "Languages",
-              value:
-                jobSeeker.languages?.map(languageLabel).join(", ") || "—",
-            },
-            {
-              label: "Current location",
-              value:
-                [jobSeeker.city, jobSeeker.state, jobSeeker.pincode]
-                  .filter(Boolean)
-                  .join(", ") || "—",
-            },
-            {
-              label: "WhatsApp",
-              value: formatWhatsappNumber(jobSeeker.whatsappNumber) || "—",
-            },
-          ].map((row) => (
-            <div key={row.label}>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
-                {row.label}
-              </dt>
-              <dd className="mt-1 text-sm font-semibold text-foreground">
-                {row.value}
-              </dd>
+      <div className="space-y-4">
+        <SectionCard
+          title="Career preferences"
+          action={
+            <button
+              type="button"
+              className={iconButtonClassName}
+              onClick={() => onOpenModal({ type: "preferences" })}
+            >
+              <Pencil className="size-3.5" aria-hidden="true" />
+              Edit
+            </button>
+          }
+        >
+          <div className="rounded-xl border border-primary/15 bg-primary-light/50 px-4 py-4 sm:px-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+              Target role
+            </p>
+            <p className="mt-1 text-lg font-bold tracking-tight text-foreground">
+              {jobSeeker.jobRole.trim() || "Add your preferred job role"}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {jobTypeLabel(jobSeeker.jobType) ? (
+                <span className="inline-flex items-center rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-foreground">
+                  {jobTypeLabel(jobSeeker.jobType)}
+                </span>
+              ) : null}
+              {workModeLabel(jobSeeker.workMode) ? (
+                <span className="inline-flex items-center rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-foreground">
+                  {workModeLabel(jobSeeker.workMode)}
+                </span>
+              ) : null}
+              {jobSeeker.preferredJobLocation.trim() ? (
+                <span className="inline-flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-foreground">
+                  <MapPin className="size-3.5 text-primary" aria-hidden="true" />
+                  {jobSeeker.preferredJobLocation}
+                </span>
+              ) : null}
             </div>
-          ))}
-        </dl>
-      </SectionCard>
+          </div>
+
+          <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+            {preferenceTiles.map((tile) => {
+              const Icon = tile.icon;
+              const isEmpty = tile.value === "Not set";
+              return (
+                <div
+                  key={tile.label}
+                  className="flex items-start gap-3 rounded-xl border border-border-subtle bg-hero-bg/70 p-3.5"
+                >
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
+                    <Icon className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <dt className="text-xs font-medium text-muted">
+                      {tile.label}
+                    </dt>
+                    <dd
+                      className={cn(
+                        "mt-0.5 truncate text-sm font-semibold",
+                        isEmpty ? "text-muted" : "text-foreground",
+                      )}
+                    >
+                      {tile.value}
+                    </dd>
+                  </div>
+                </div>
+              );
+            })}
+          </dl>
+        </SectionCard>
+
+        <SectionCard title="Languages & contact">
+          <div className="space-y-4">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <Globe2 className="size-4 text-primary" aria-hidden="true" />
+                <p className="text-sm font-semibold text-foreground">
+                  Languages
+                </p>
+              </div>
+              {languages.length > 0 ? (
+                <ul className="flex flex-wrap gap-2">
+                  {languages.map((language) => (
+                    <li
+                      key={language}
+                      className="inline-flex items-center rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-foreground"
+                    >
+                      {languageLabel(language)}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted">No languages added yet.</p>
+              )}
+            </div>
+
+            <div className="flex items-start gap-3 rounded-xl border border-border-subtle bg-hero-bg/70 p-3.5">
+              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-resource-guide-icon-surface text-resource-guide-icon">
+                <MessageCircle className="size-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-muted">WhatsApp</p>
+                <p className="mt-0.5 text-sm font-semibold text-foreground">
+                  {whatsappLabel}
+                </p>
+                {jobSeeker.isWhatsappVerified ? (
+                  <p className="mt-1 text-xs font-medium text-resource-guide-icon">
+                    Verified for sign-in
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+      </div>
     );
   }
 

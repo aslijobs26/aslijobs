@@ -15,9 +15,17 @@ export const HERO_CTA_CARDS = [
   {
     id: "employer",
     variant: "employer" as const,
-    title: "Are you an Employer?",
-    description: "Post jobs, find verified candidates fast",
-    actionLabel: "Post a Job",
+    title: "Looking for Staff?",
+    description: "Post a job and hire the right people",
+    actionLabel: "Post a Job FREE",
     href: ROUTES.POST_JOB,
+  },
+  {
+    id: "assist",
+    variant: "assist" as const,
+    title: "Need Help Hiring?",
+    description: "Our experts will help you hire faster",
+    actionLabel: "Get Hire Assist",
+    href: ROUTES.CONTACT,
   },
 ] as const;

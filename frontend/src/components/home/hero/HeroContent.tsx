@@ -3,6 +3,7 @@ import {
   HERO_LANGUAGES,
   HERO_SUPPORTING,
 } from "@/constants/hero";
+import { WhatsAppIcon } from "./HeroIcons";
 
 export function HeroContent() {
   return (
@@ -15,9 +16,11 @@ export function HeroContent() {
 
       <p className="mt-4 max-w-lg text-base font-medium leading-relaxed text-muted mobile:mt-3 mobile:text-[0.9375rem] mobile:leading-[1.55] sm:text-lg lg:mt-5">
         {HERO_SUPPORTING.line1}
-        <br className="hidden mobile:inline sm:hidden" />
-        <span className="mobile:hidden sm:inline"> </span>
-        {HERO_SUPPORTING.line2}
+        <br />
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          {HERO_SUPPORTING.line2}
+          <WhatsAppIcon className="text-[1.05em] text-whatsapp" />
+        </span>
       </p>
 
       <div className="mt-6 mobile:mt-5 lg:mt-7">
@@ -30,7 +33,7 @@ export function HeroContent() {
         >
           {HERO_LANGUAGES.map((language) => (
             <li key={language}>
-              <span className="inline-flex min-h-9 items-center rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground shadow-sm mobile:min-h-9 mobile:px-3.5 mobile:py-2 mobile:text-[0.8125rem] sm:px-4 sm:py-2">
+              <span className="inline-flex min-h-9 items-center rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground mobile:min-h-9 mobile:px-3.5 mobile:py-2 mobile:text-[0.8125rem] sm:px-4 sm:py-2">
                 {language}
               </span>
             </li>

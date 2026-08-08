@@ -21,6 +21,8 @@
   --color-whatsapp-hover: #20ba5a;
   --color-whatsapp-dark: #128c7e;
   --color-whatsapp-darker: #0d6f63;
+  --color-stats-banner: #2f5a56;
+  --color-stats-banner-icon: #b8e086;
   --color-whatsapp-icon-surface: #ffffff;
   --color-employer-cta: #dce8fc;
   --color-employer-cta-mid: #d8e5fb;
@@ -30,6 +32,13 @@
   --color-employer-icon: #2563eb;
   --color-employer-icon-surface: #ffffff;
   --color-employer-welcome-surface: #fdfdfd;
+  --color-assist-cta: #fdf6e8;
+  --color-assist-cta-mid: #fcf2df;
+  --color-assist-cta-end: #faf0e6;
+  --color-assist-button: #e89b2c;
+  --color-assist-button-hover: #d18920;
+  --color-assist-icon: #ef8b3a;
+  --color-assist-icon-surface: #ffffff;
   --color-nav: #2d2d2d;
   --color-foreground: #1a2b3c;
   --color-muted: #5a6570;
@@ -113,6 +122,15 @@ body {
     var(--color-employer-cta) 0%,
     var(--color-employer-cta-mid) 50%,
     var(--color-employer-cta-end) 100%
+  );
+}
+
+@utility bg-assist-cta-surface {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-assist-cta) 0%,
+    var(--color-assist-cta-mid) 50%,
+    var(--color-assist-cta-end) 100%
   );
 }
 

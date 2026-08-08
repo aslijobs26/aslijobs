@@ -15,8 +15,8 @@ export const HERO_HEADING = {
 } as const;
 
 export const HERO_SUPPORTING = {
-  line1: "Search, apply and get hired – all in your language.",
-  line2: "Simple. Fast. Trusted.",
+  line1: "The fastest way to hire workers or find jobs.",
+  line2: "Simple • Multilingual • WhatsApp First",
 } as const;
 
 export const HERO_FEATURE_CARDS = [
@@ -61,6 +61,16 @@ export const HERO_SEARCH_DEFAULTS = {
   state: "",
   city: "",
 } as const;
+
+export const HERO_POPULAR_SEARCHES = [
+  "Delivery Boy",
+  "Driver",
+  "Helper",
+  "Cook",
+  "Sales Executive",
+  "Warehouse",
+  "Security Guard",
+] as const;
 
 export const HERO_STATE_OPTIONS = [{ value: "", label: "All States" }] as const;
 

@@ -1,7 +1,7 @@
 import { Container } from "@/components/layout/Container";
+import { HomeStatsBanner } from "./HomeStatsBanner";
 import { HowItWorksSection } from "./HowItWorksSection";
 import { JobSeekerResources } from "./JobSeekerResources";
-import { WhatsAppCtaBanner } from "./WhatsAppCtaBanner";
 import { WhyChooseSection } from "./WhyChooseSection";
 
 export function TrustResourcesSection() {
@@ -14,7 +14,7 @@ export function TrustResourcesSection() {
         <WhyChooseSection />
         <HowItWorksSection />
         <JobSeekerResources />
-        <WhatsAppCtaBanner />
+        <HomeStatsBanner />
       </Container>
     </section>
   );

@@ -14,7 +14,7 @@ import {
   notificationQueryKeys,
 } from "@/services/notifications.service";
 import {
-  fetchSavedJobsStats,
+  fetchSavedJobIds,
   savedJobsQueryKeys,
 } from "@/services/saved-jobs.service";
 import { cn } from "@/utils/cn";
@@ -28,6 +28,12 @@ import {
   JOB_SEEKER_AUTH_CHANGE_EVENT,
   getJobSeekerAccessToken,
 } from "@/utils/job-seeker-auth-storage";
+import {
+  ensureSavedNavSeenInitialized,
+  getUnseenSavedJobCount,
+  markSavedJobsAsSeen,
+  SAVED_NAV_SEEN_CHANGE_EVENT,
+} from "@/utils/job-seeker-saved-nav-badge";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -136,21 +142,56 @@ export function FloatingBottomNav() {
     refetchOnWindowFocus: false,
   });
 
-  const savedStatsQuery = useQuery({
-    queryKey: savedJobsQueryKeys.stats(),
-    queryFn: fetchSavedJobsStats,
+  const savedIdsQuery = useQuery({
+    queryKey: savedJobsQueryKeys.ids(),
+    queryFn: fetchSavedJobIds,
     enabled: audience === "job-seeker",
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
+
+  const [savedSeenVersion, setSavedSeenVersion] = useState(0);
+  const isSavedJobsPage =
+    pathname === ROUTES.JOB_SEEKER_SAVED_JOBS ||
+    pathname.startsWith(`${ROUTES.JOB_SEEKER_SAVED_JOBS}/`);
+
+  useEffect(() => {
+    const onSeenChange = () => {
+      setSavedSeenVersion((version) => version + 1);
+    };
+    window.addEventListener(SAVED_NAV_SEEN_CHANGE_EVENT, onSeenChange);
+    return () => {
+      window.removeEventListener(SAVED_NAV_SEEN_CHANGE_EVENT, onSeenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (audience !== "job-seeker" || !savedIdsQuery.data) {
+      return;
+    }
+
+    if (isSavedJobsPage) {
+      markSavedJobsAsSeen(savedIdsQuery.data);
+      return;
+    }
+
+    ensureSavedNavSeenInitialized(savedIdsQuery.data);
+  }, [audience, isSavedJobsPage, savedIdsQuery.data]);
 
   const badgeCounts = useMemo(
     () => ({
       messagesUnread: 0,
-      savedJobs: savedStatsQuery.data?.total ?? 0,
+      savedJobs: isSavedJobsPage
+        ? 0
+        : getUnseenSavedJobCount(savedIdsQuery.data ?? []),
       notificationsUnread: seekerNotificationsQuery.data ?? 0,
     }),
-    [savedStatsQuery.data?.total, seekerNotificationsQuery.data],
+    [
+      isSavedJobsPage,
+      savedIdsQuery.data,
+      savedSeenVersion,
+      seekerNotificationsQuery.data,
+    ],
   );
 
   const navItems = useMemo(() => {

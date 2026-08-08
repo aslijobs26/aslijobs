@@ -10,7 +10,6 @@ import { cn } from "@/utils/cn";
 import {
   Briefcase,
   Building2,
-  CheckCircle2,
   ChevronRight,
   Clock3,
   IdCard,
@@ -120,17 +119,8 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
               <h2 className="truncate text-[15px] font-bold leading-5 text-foreground">
                 {application.jobTitle}
               </h2>
-              <p className="flex min-w-0 items-center gap-1.5 text-xs leading-4 text-muted">
-                <span className="truncate">
-                  {application.companyName || "Company"}
-                </span>
-                <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-resource-guide-icon">
-                  <CheckCircle2
-                    className="size-3 shrink-0 fill-resource-guide-icon text-surface"
-                    aria-hidden="true"
-                  />
-                  Verified
-                </span>
+              <p className="truncate text-xs leading-4 text-muted">
+                {application.companyName || "Company"}
               </p>
               <p className="flex min-w-0 items-center gap-1 text-[11px] leading-4 text-muted">
                 <IdCard className="size-3 shrink-0" aria-hidden="true" />
@@ -231,17 +221,8 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
             <h2 className="truncate text-base font-semibold leading-6 text-foreground">
               {application.jobTitle}
             </h2>
-            <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-sm leading-5 text-muted">
-              <span className="truncate">
-                {application.companyName || "Company"}
-              </span>
-              <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-resource-guide-icon">
-                <CheckCircle2
-                  className="size-3.5 shrink-0 fill-resource-guide-icon text-surface"
-                  aria-hidden="true"
-                />
-                Verified
-              </span>
+            <p className="mt-1 truncate text-sm leading-5 text-muted">
+              {application.companyName || "Company"}
             </p>
             <p className="mt-1.5 flex items-center gap-1.5 text-xs leading-5 text-muted">
               <IdCard className="size-3.5 shrink-0" aria-hidden="true" />

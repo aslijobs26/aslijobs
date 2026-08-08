@@ -4,6 +4,7 @@ import {
   Bell,
   Bookmark,
   Briefcase,
+  CircleHelp,
   FileText,
   Home,
   Settings,
@@ -51,6 +52,12 @@ export const JOB_SEEKER_DASHBOARD_NAV_ITEMS: JobSeekerDashboardNavItem[] = [
     label: "Saved Jobs",
     href: ROUTES.JOB_SEEKER_SAVED_JOBS,
     icon: Bookmark,
+  },
+  {
+    id: "help-support",
+    label: "Help & Support",
+    href: ROUTES.JOB_SEEKER_HELP_SUPPORT,
+    icon: CircleHelp,
   },
   {
     id: "settings",

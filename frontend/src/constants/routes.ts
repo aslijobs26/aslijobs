@@ -44,6 +44,7 @@ export const ROUTES = {
   JOB_SEEKER_APPLICATION_SUCCESS: "/job-seeker/application-success",
   JOB_SEEKER_NOTIFICATIONS: "/job-seeker/notifications",
   JOB_SEEKER_SAVED_JOBS: "/job-seeker/saved-jobs",
+  JOB_SEEKER_HELP_SUPPORT: "/job-seeker/help-support",
   JOB_SEEKER_SETTINGS: "/job-seeker/settings",
   EMPLOYER_NOTIFICATIONS: "/employer/notifications",
   CONTACT: "/contact",

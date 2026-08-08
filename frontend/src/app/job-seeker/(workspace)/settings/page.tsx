@@ -1,16 +1,23 @@
 import type { Metadata } from "next";
-import { JobSeekerDashboardPlaceholder } from "@/components/job-seeker-dashboard/JobSeekerDashboardPlaceholder";
+import { JobSeekerSettingsPageContent } from "@/components/job-seeker-settings/JobSeekerSettingsPageContent";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Account Settings | AsliJobs",
-  description: "Job seeker account settings — coming soon.",
+  title: "Settings | AsliJobs",
+  description:
+    "Manage your job seeker account, preferences and privacy settings.",
 };
 
 export default function JobSeekerSettingsPage() {
   return (
-    <JobSeekerDashboardPlaceholder
-      title="Account Settings"
-      description="Account preferences and privacy settings will be available here in a future update."
-    />
+    <Suspense
+      fallback={
+        <div className="mx-auto w-full max-w-7xl px-4 py-16 text-center text-sm text-muted">
+          Loading settings…
+        </div>
+      }
+    >
+      <JobSeekerSettingsPageContent />
+    </Suspense>
   );
 }

@@ -7,17 +7,10 @@ import { JobCard } from "./JobCard";
 
 export function PopularJobsSection() {
   return (
-    <section aria-labelledby="popular-jobs-in-hyderabad">
+    <section aria-labelledby="trending-jobs-in-hyderabad">
       <DiscoverySectionHeader
-        title={
-          <>
-            <span className="text-hyderabad-dark">Popular</span>
-            <span className="text-whatsapp-blend"> Jobs in </span>
-            <span className="text-hyderabad">Hyderabad</span>
-          </>
-        }
-        titleId="popular-jobs-in-hyderabad"
-        titleClassName="font-black"
+        title="Trending jobs in Hyderabad"
+        titleId="trending-jobs-in-hyderabad"
         actionLabel="View all jobs →"
         actionHref={POPULAR_JOBS_VIEW_ALL_HREF}
       />
