@@ -13,15 +13,18 @@ function ensureToastHost() {
     return null;
   }
 
+  const hostClassName =
+    "pointer-events-none fixed inset-x-0 top-[4.25rem] z-[100] flex justify-center px-4 sm:top-4";
+
   if (toastHost && document.body.contains(toastHost)) {
+    toastHost.className = hostClassName;
     return toastHost;
   }
 
   toastHost = document.createElement("div");
   toastHost.setAttribute("aria-live", "polite");
   toastHost.setAttribute("aria-atomic", "true");
-  toastHost.className =
-    "pointer-events-none fixed inset-x-0 top-4 z-[100] flex justify-center px-4";
+  toastHost.className = hostClassName;
   document.body.appendChild(toastHost);
   return toastHost;
 }

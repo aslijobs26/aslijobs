@@ -1,12 +1,7 @@
-import type { Metadata } from "next";
-import { DashboardHomeContent } from "@/components/job-seeker-dashboard/DashboardHomeContent";
+import { ROUTES } from "@/constants/routes";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Job Seeker Dashboard | AsliJobs",
-  description:
-    "Your AsliJobs job seeker dashboard — applications, resume, notifications, and profile.",
-};
-
+/** Legacy URL — Job Seeker Dashboard page removed; send users to Profile. */
 export default function JobSeekerDashboardPage() {
-  return <DashboardHomeContent />;
+  redirect(ROUTES.JOB_SEEKER_PROFILE);
 }

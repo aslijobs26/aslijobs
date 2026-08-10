@@ -6,7 +6,6 @@ import {
   Briefcase,
   CircleHelp,
   FileText,
-  Home,
   Settings,
   UserRound,
 } from "lucide-react";
@@ -17,12 +16,6 @@ export const JOB_SEEKER_DASHBOARD_SIDEBAR_COLLAPSED_WIDTH = "4.5rem";
 export const JOB_SEEKER_DASHBOARD_LOGO_TAGLINE = "Asli Jobs. Asli People.";
 
 export const JOB_SEEKER_DASHBOARD_NAV_ITEMS: JobSeekerDashboardNavItem[] = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    href: ROUTES.JOB_SEEKER_DASHBOARD,
-    icon: Home,
-  },
   {
     id: "profile",
     label: "Profile",

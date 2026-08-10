@@ -1,5 +1,6 @@
 "use client";
 
+import { ApplyResumeChooserHost } from "@/components/job-seeker-resume/ApplyResumeChooserHost";
 import { isAxiosError } from "axios";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
@@ -47,6 +48,9 @@ export function QueryProvider({ children }: QueryProviderProps) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      {children}
+      <ApplyResumeChooserHost />
+    </QueryClientProvider>
   );
 }

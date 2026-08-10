@@ -73,7 +73,7 @@ export function NotificationsSettingsPanel() {
         action={
           <Link
             href={ROUTES.JOB_SEEKER_NOTIFICATIONS}
-            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
           >
             Open inbox
           </Link>
@@ -84,8 +84,10 @@ export function NotificationsSettingsPanel() {
             <Bell className="size-5" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground">Unread</p>
-            <p className="text-xs text-muted">
+            <p className="text-xs font-semibold text-foreground sm:text-sm">
+              Unread
+            </p>
+            <p className="text-[11px] text-muted sm:text-xs">
               {unreadQuery.isLoading
                 ? "Loading…"
                 : `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`}
@@ -96,7 +98,7 @@ export function NotificationsSettingsPanel() {
               type="button"
               disabled={unreadCount === 0 || markAllMutation.isPending}
               onClick={() => markAllMutation.mutate()}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             >
               <CheckCheck className="size-3.5" aria-hidden="true" />
               Mark all read
@@ -114,7 +116,7 @@ export function NotificationsSettingsPanel() {
                 }
                 clearAllMutation.mutate();
               }}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
             >
               <Trash2 className="size-3.5" aria-hidden="true" />
               Clear all
@@ -129,14 +131,18 @@ export function NotificationsSettingsPanel() {
       >
         <dl className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-border-subtle px-3 py-2.5">
-            <dt className="text-xs font-medium text-muted">Unread retention</dt>
-            <dd className="mt-0.5 text-sm font-semibold text-foreground">
+            <dt className="text-[11px] font-medium text-muted sm:text-xs">
+              Unread retention
+            </dt>
+            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm">
               {JOB_SEEKER_NOTIFICATION_RETENTION_POLICY.unreadDays} days
             </dd>
           </div>
           <div className="rounded-lg border border-border-subtle px-3 py-2.5">
-            <dt className="text-xs font-medium text-muted">Read retention</dt>
-            <dd className="mt-0.5 text-sm font-semibold text-foreground">
+            <dt className="text-[11px] font-medium text-muted sm:text-xs">
+              Read retention
+            </dt>
+            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm">
               {JOB_SEEKER_NOTIFICATION_RETENTION_POLICY.readDays} days
             </dd>
           </div>

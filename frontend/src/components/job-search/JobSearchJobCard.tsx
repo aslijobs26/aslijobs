@@ -221,7 +221,7 @@ export function JobSearchJobCard({
       {/* Header */}
       <div className="flex items-start gap-3">
         <div
-          className="flex size-11 shrink-0 items-center justify-center rounded-[12px] bg-primary-light text-[14px] font-semibold tracking-wide text-primary"
+          className="flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-primary-light text-[12px] font-semibold tracking-wide text-primary sm:size-11 sm:text-[14px]"
           aria-hidden="true"
         >
           {getCompanyInitials(job.companyName)}
@@ -231,10 +231,10 @@ export function JobSearchJobCard({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <h3 className="text-[16px] leading-snug font-semibold text-[#1F2937]">
+                <h3 className="text-sm leading-snug font-semibold text-[#1F2937] sm:text-[16px]">
                   {job.jobTitle}
                 </h3>
-                <span className="inline-flex items-center gap-1 text-[12px] leading-none font-medium text-[#0F8A4B]">
+                <span className="inline-flex items-center gap-1 text-[11px] leading-none font-medium text-[#0F8A4B] sm:text-[12px]">
                   <ShieldCheck
                     className="size-3.5"
                     strokeWidth={2}
@@ -243,14 +243,14 @@ export function JobSearchJobCard({
                   Verified
                 </span>
               </div>
-              <p className="mt-1 text-[13px] leading-snug font-normal text-[#6B7280]">
+              <p className="mt-1 text-xs leading-snug font-normal text-[#6B7280] sm:text-[13px]">
                 {job.companyName}
               </p>
             </div>
 
             <div className="flex shrink-0 items-center gap-2.5 pt-0.5">
               {posted ? (
-                <span className="text-[12px] leading-none font-normal text-[#9CA3AF]">
+                <span className="text-[11px] leading-none font-normal text-[#9CA3AF] sm:text-[12px]">
                   {posted}
                 </span>
               ) : null}
@@ -307,7 +307,7 @@ export function JobSearchJobCard({
           {tags.map((tag) => (
             <li
               key={tag.id}
-              className="inline-flex h-6 items-center gap-1 rounded-full bg-brand-accent/8 px-2 text-[11px] leading-none font-medium text-black"
+              className="inline-flex h-6 items-center gap-1 rounded-full bg-brand-accent/8 px-2 text-[10px] leading-none font-medium text-black sm:text-[11px]"
             >
               {tag.icon}
               {tag.label}
@@ -322,7 +322,7 @@ export function JobSearchJobCard({
           <button
             type="button"
             onClick={handleViewDetailsClick}
-            className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl border border-[#E5E7EB] bg-surface px-4 text-[13px] font-medium text-primary transition-colors hover:border-primary/35 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl border border-[#E5E7EB] bg-surface px-4 text-xs font-medium text-primary transition-colors hover:border-primary/35 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-[13px]"
           >
             View Details
             <ChevronRight
@@ -339,8 +339,8 @@ export function JobSearchJobCard({
               isApplied={isApplied}
               isApplying={isApplying}
               onClick={handleApplyClick}
-              className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl bg-primary-soft px-4 text-[13px] font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/40"
-              appliedClassName="h-9 w-full text-[13px] font-medium"
+              className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl bg-primary-soft px-4 text-xs font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/40 sm:text-[13px]"
+              appliedClassName="h-9 w-full text-xs font-medium sm:text-[13px]"
               endIcon={
                 <ChevronRight
                   className="size-3.5"

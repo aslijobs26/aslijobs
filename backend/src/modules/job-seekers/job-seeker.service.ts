@@ -526,7 +526,9 @@ export class JobSeekerService {
       );
     }
 
-    if (jobSeeker.experienceType === "fresher") {
+    // Only clear experiences when this request explicitly switches to fresher.
+    // Do not wipe experiences on unrelated partial updates (about/skills/preferences).
+    if (input.experienceType === "fresher") {
       jobSeeker.set("experiences", []);
     }
 

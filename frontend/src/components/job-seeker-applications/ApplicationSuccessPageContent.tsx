@@ -204,10 +204,10 @@ function ApplicationSuccessBody() {
             Continue Browsing Jobs
           </Link>
           <Link
-            href={ROUTES.JOB_SEEKER_DASHBOARD}
+            href={ROUTES.JOB_SEEKER_PROFILE}
             className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            Go to Dashboard
+            Go to Profile
           </Link>
 
           {whatsappUrl ? (

@@ -12,6 +12,7 @@ import { ensureEmployerJobRelationsConsistent } from "../jobs/job-cascade-delete
 import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
 import { generateResumePdfFromJson } from "../resumes/pdf/index.js";
 import { resumeService } from "../resumes/resume.service.js";
+import { uploadedResumeService } from "../resumes/uploaded-resume.service.js";
 import type { ResumeJson } from "../resumes/resume.types.js";
 import {
   APPLICATION_DEFAULT_STATUS,
@@ -90,6 +91,7 @@ function toPublicApplication(application: {
   _id: mongoose.Types.ObjectId;
   publicJobId: string;
   resumeVersion: number;
+  resumeSource?: string | null;
   appliedAt: Date;
   status: ApplicationStatus;
 }): PublicApplicationSummary {
@@ -97,6 +99,8 @@ function toPublicApplication(application: {
     id: application._id.toString(),
     publicJobId: application.publicJobId,
     resumeVersion: application.resumeVersion,
+    resumeSource:
+      application.resumeSource === "uploaded" ? "uploaded" : "generated",
     appliedAt: application.appliedAt.toISOString(),
     status: application.status,
   };
@@ -359,6 +363,7 @@ function mapSeekerListItem(input: {
     employerId: unknown;
     status: string;
     resumeVersion: number;
+    resumeSource?: string | null;
     appliedAt: Date;
     statusHistory?: unknown;
     interview?: unknown;
@@ -409,6 +414,8 @@ function mapSeekerListItem(input: {
     canWithdraw: canWithdraw(status),
     status,
     resumeVersion: app.resumeVersion,
+    resumeSource:
+      app.resumeSource === "uploaded" ? "uploaded" : "generated",
     appliedAt: app.appliedAt.toISOString(),
     lastStatusUpdatedAt,
   };
@@ -771,6 +778,36 @@ export class ApplicationService {
       );
     }
 
+    const resumePrefs = await uploadedResumeService.getForJobSeeker(
+      input.jobSeekerId,
+    );
+    const requestedSource = input.resumeSource ?? resumePrefs.defaultResumeSource;
+    const resumeSource =
+      requestedSource === "uploaded" && resumePrefs.uploadedResume
+        ? "uploaded"
+        : "generated";
+
+    if (requestedSource === "uploaded" && !resumePrefs.uploadedResume) {
+      throw new AppError(
+        "Upload a resume before applying with your own file",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const uploadedResumeSnapshot =
+      resumeSource === "uploaded"
+        ? await uploadedResumeService.getUploadedSnapshotForApply(
+            input.jobSeekerId,
+          )
+        : null;
+
+    if (resumeSource === "uploaded" && !uploadedResumeSnapshot) {
+      throw new AppError(
+        "Uploaded resume is not available. Please upload again.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
     const resumeSnapshot = buildResumeSnapshot(resume);
     const appliedAt = new Date();
 
@@ -784,7 +821,9 @@ export class ApplicationService {
         resumeId: resume.id,
         resumeVersion: resume.versionNumber,
         resumeStatus: resume.status,
+        resumeSource,
         resumeSnapshot,
+        uploadedResumeSnapshot,
         status: APPLICATION_DEFAULT_STATUS,
         statusHistory: [
           {
@@ -944,7 +983,9 @@ export class ApplicationService {
       status: ApplicationStatus | string;
       resumeVersion: number;
       resumeStatus: string;
+      resumeSource?: string | null;
       resumeSnapshot: unknown;
+      uploadedResumeSnapshot?: unknown;
       employerNotes?: string;
       employerNotesVisibleToSeeker?: boolean;
       employerNotesCreatedAt?: Date | null;
@@ -989,7 +1030,17 @@ export class ApplicationService {
       status: application.status as ApplicationStatus,
       resumeVersion: application.resumeVersion,
       resumeStatus: application.resumeStatus,
+      resumeSource:
+        application.resumeSource === "uploaded" ? "uploaded" : "generated",
       resumeSnapshot: snapshot,
+      uploadedResumeSnapshot:
+        application.resumeSource === "uploaded" &&
+        application.uploadedResumeSnapshot &&
+        typeof application.uploadedResumeSnapshot === "object"
+          ? (application.uploadedResumeSnapshot as NonNullable<
+              EmployerApplicationDetail["uploadedResumeSnapshot"]
+            >)
+          : null,
       employerNotes: application.employerNotes ?? "",
       employerNotesVisibleToSeeker:
         application.employerNotesVisibleToSeeker === true,
@@ -2031,6 +2082,48 @@ export class ApplicationService {
       input.employerId,
     );
 
+    if (
+      application.resumeSource === "uploaded" &&
+      application.uploadedResumeSnapshot &&
+      typeof application.uploadedResumeSnapshot === "object"
+    ) {
+      const uploaded = application.uploadedResumeSnapshot as {
+        url?: string;
+        originalName?: string;
+        mimeType?: string;
+      };
+      const fileUrl = uploaded.url?.trim() || "";
+      if (!fileUrl) {
+        throw new AppError(
+          "Uploaded resume file is not available for download",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new AppError(
+          "Could not download the uploaded resume file",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const fileName =
+        uploaded.originalName?.trim() || "candidate-uploaded-resume.pdf";
+      const mimeType =
+        uploaded.mimeType?.trim() ||
+        response.headers.get("content-type") ||
+        "application/octet-stream";
+
+      return {
+        buffer,
+        fileName,
+        mimeType,
+      };
+    }
+
     const snapshot = asSnapshot(application.resumeSnapshot);
     if (!snapshot) {
       throw new AppError(
@@ -2886,6 +2979,7 @@ export class ApplicationService {
       employerId: unknown;
       status: string;
       resumeVersion: number;
+      resumeSource?: string | null;
       appliedAt: Date;
       statusHistory?: unknown;
       interview?: unknown;
@@ -3001,7 +3095,17 @@ export class ApplicationService {
         jobType: text(job?.jobType),
         status,
         resumeVersion: application.resumeVersion,
+        resumeSource:
+          application.resumeSource === "uploaded" ? "uploaded" : "generated",
         resumeSnapshot: snapshot,
+        uploadedResumeSnapshot:
+          application.resumeSource === "uploaded" &&
+          application.uploadedResumeSnapshot &&
+          typeof application.uploadedResumeSnapshot === "object"
+            ? (application.uploadedResumeSnapshot as NonNullable<
+                SeekerApplicationDetail["uploadedResumeSnapshot"]
+              >)
+            : null,
         statusHistory: mapStatusHistory(application.statusHistory),
         interview: interviewHasContent(interview) ? interview : null,
         offer: offerHasContent(offer) ? offer : null,

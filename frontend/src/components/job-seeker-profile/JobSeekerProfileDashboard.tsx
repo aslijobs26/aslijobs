@@ -179,8 +179,21 @@ export function JobSeekerProfileDashboard() {
       if (!jobSeeker) {
         return;
       }
-      const experiences = [...(jobSeeker.experiences ?? [])];
-      experiences.splice(index, 1);
+      const experiences = (jobSeeker.experiences ?? [])
+        .filter((_, itemIndex) => itemIndex !== index)
+        .map((entry) => ({
+          companyName: entry.companyName.trim(),
+          jobRole: entry.jobRole.trim(),
+          industry: entry.industry.trim(),
+          startDate: entry.startDate.trim(),
+          endDate: entry.currentlyWorking ? "" : entry.endDate.trim(),
+          currentlyWorking: Boolean(entry.currentlyWorking),
+          duration: entry.duration.trim(),
+          salary: entry.salary.trim(),
+          location: entry.location.trim(),
+          responsibilities: (entry.responsibilities ?? "").trim(),
+          achievements: (entry.achievements ?? "").trim(),
+        }));
       await updateProfile({
         experiences,
         experienceType: experiences.length > 0 ? "experienced" : "fresher",
@@ -225,10 +238,10 @@ export function JobSeekerProfileDashboard() {
           We couldn&apos;t load your profile. Please try again.
         </p>
         <Link
-          href={ROUTES.JOB_SEEKER_DASHBOARD}
+          href={ROUTES.FIND_JOBS}
           className="mt-6 inline-flex text-sm font-semibold text-primary underline underline-offset-2"
         >
-          Back to dashboard
+          Browse jobs
         </Link>
       </div>
     );
@@ -245,98 +258,146 @@ export function JobSeekerProfileDashboard() {
       <header className="overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
         <div className="border-b border-border-subtle bg-primary-light/35 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
-              <JobSeekerProfilePhotoAvatar
-                jobSeeker={jobSeeker}
-                size="header"
-                isUploading={isPhotoUploading}
-                onUpload={async (file) => {
-                  setIsPhotoUploading(true);
-                  try {
-                    await uploadPhoto(file);
-                  } finally {
-                    setIsPhotoUploading(false);
-                  }
-                }}
-                onRemove={async () => {
-                  setIsPhotoUploading(true);
-                  try {
-                    await deletePhoto();
-                  } finally {
-                    setIsPhotoUploading(false);
-                  }
-                }}
-              />
-              <div className="min-w-0 pt-0.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.875rem]">
-                    {fullName}
-                  </h1>
-                  {jobSeeker.isWhatsappVerified ? (
-                    <span
-                      className="inline-flex items-center gap-1 rounded-md bg-resource-guide-icon-surface px-2 py-0.5 text-[11px] font-semibold text-resource-guide-icon"
-                      title="WhatsApp verified"
-                    >
-                      <BadgeCheck className="size-3.5" aria-hidden="true" />
-                      Verified
-                    </span>
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-3 sm:items-start sm:gap-4">
+                <JobSeekerProfilePhotoAvatar
+                  jobSeeker={jobSeeker}
+                  size="header"
+                  isUploading={isPhotoUploading}
+                  onUpload={async (file) => {
+                    setIsPhotoUploading(true);
+                    try {
+                      await uploadPhoto(file);
+                    } finally {
+                      setIsPhotoUploading(false);
+                    }
+                  }}
+                  onRemove={async () => {
+                    setIsPhotoUploading(true);
+                    try {
+                      await deletePhoto();
+                    } finally {
+                      setIsPhotoUploading(false);
+                    }
+                  }}
+                />
+                <div className="min-w-0 flex-1 sm:pt-0.5">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-[1.75rem]">
+                      {fullName}
+                    </h1>
+                    {jobSeeker.isWhatsappVerified ? (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full bg-resource-guide-icon-surface p-1 text-resource-guide-icon sm:rounded-md sm:px-2 sm:py-0.5 sm:text-[11px] sm:font-semibold"
+                        title="WhatsApp verified"
+                        aria-label="Verified"
+                      >
+                        <BadgeCheck className="size-3.5" aria-hidden="true" />
+                        <span className="hidden sm:inline" aria-hidden="true">
+                          Verified
+                        </span>
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs font-semibold text-foreground sm:text-sm">
+                    {jobSeeker.jobRole?.trim() || "Job Seeker"}
+                  </p>
+                  <ul className="mt-3 hidden flex-row flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted sm:flex">
+                    {locationLabel ? (
+                      <li className="inline-flex min-w-0 items-center gap-1.5">
+                        <MapPin
+                          className="size-3.5 shrink-0 text-primary"
+                          aria-hidden="true"
+                        />
+                        <span className="truncate">{locationLabel}</span>
+                      </li>
+                    ) : null}
+                    {phoneLabel ? (
+                      <li className="inline-flex min-w-0 items-center gap-1.5">
+                        <Phone
+                          className="size-3.5 shrink-0 text-primary"
+                          aria-hidden="true"
+                        />
+                        <span className="truncate">{phoneLabel}</span>
+                      </li>
+                    ) : null}
+                    {updatedLabel ? (
+                      <li className="hidden text-xs text-muted lg:inline">
+                        Updated {updatedLabel}
+                      </li>
+                    ) : null}
+                  </ul>
+                  {tags.length > 0 ? (
+                    <ul className="mt-3.5 hidden flex-wrap gap-2 sm:flex">
+                      {tags.map((tag) => (
+                        <li
+                          key={tag}
+                          className="rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-foreground"
+                        >
+                          {tag}
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
                 </div>
-                <p className="mt-1 text-sm font-semibold text-foreground">
-                  {jobSeeker.jobRole?.trim() || "Job Seeker"}
-                </p>
-                <ul className="mt-3 flex flex-col gap-1.5 text-sm text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1.5">
-                  {locationLabel ? (
-                    <li className="inline-flex min-w-0 items-center gap-1.5">
-                      <MapPin
-                        className="size-3.5 shrink-0 text-primary"
-                        aria-hidden="true"
-                      />
-                      <span className="truncate">{locationLabel}</span>
-                    </li>
-                  ) : null}
-                  {phoneLabel ? (
-                    <li className="inline-flex min-w-0 items-center gap-1.5">
-                      <Phone
-                        className="size-3.5 shrink-0 text-primary"
-                        aria-hidden="true"
-                      />
-                      <span className="truncate">{phoneLabel}</span>
-                    </li>
-                  ) : null}
-                  {updatedLabel ? (
-                    <li className="hidden text-xs text-muted lg:inline">
-                      Updated {updatedLabel}
-                    </li>
-                  ) : null}
-                </ul>
-                {tags.length > 0 ? (
-                  <ul className="mt-3.5 flex flex-wrap gap-2">
-                    {tags.map((tag) => (
-                      <li
-                        key={tag}
-                        className="rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-foreground"
-                      >
-                        {tag}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
               </div>
+
+              <ul className="mt-3 flex flex-col gap-1.5 text-xs text-muted sm:hidden">
+                {locationLabel ? (
+                  <li className="inline-flex min-w-0 items-center gap-1.5">
+                    <MapPin
+                      className="size-3.5 shrink-0 text-primary"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{locationLabel}</span>
+                  </li>
+                ) : null}
+                {phoneLabel ? (
+                  <li className="inline-flex min-w-0 items-center gap-1.5">
+                    <Phone
+                      className="size-3.5 shrink-0 text-primary"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{phoneLabel}</span>
+                  </li>
+                ) : null}
+              </ul>
+              {tags.length > 0 ? (
+                <ul className="mt-3 flex flex-wrap gap-2 sm:hidden">
+                  {tags.map((tag) => (
+                    <li
+                      key={tag}
+                      className="rounded-md border border-border-subtle bg-surface px-2 py-0.5 text-[11px] font-semibold text-foreground"
+                    >
+                      {tag}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
 
-            <div className="flex w-full shrink-0 items-center gap-3 rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm sm:w-auto sm:min-w-[14rem]">
-              <ProfileStrengthCircle percentage={strength.percent} size={64} />
+            <div className="flex w-full shrink-0 items-center gap-2.5 rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:w-auto sm:min-w-[14rem] sm:gap-3 sm:p-3.5">
+              <ProfileStrengthCircle
+                percentage={strength.percent}
+                size={58}
+                variant="soft"
+                className="sm:hidden"
+              />
+              <ProfileStrengthCircle
+                percentage={strength.percent}
+                size={64}
+                className="hidden sm:inline-flex"
+              />
               <div className="min-w-0">
-                <p className="text-sm font-bold text-foreground">
+                <p className="text-xs font-bold text-foreground sm:text-sm">
                   Profile {strength.percent}%
                 </p>
-                <p className="mt-0.5 text-xs leading-snug text-muted">
+                <p className="mt-0.5 text-[11px] leading-snug text-muted sm:text-xs">
                   {strength.message}
                 </p>
                 <button
                   type="button"
-                  className="mt-1.5 text-xs font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  className="mt-1.5 text-[11px] font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-xs"
                   onClick={() => setTab("preferences")}
                 >
                   Improve profile →
@@ -345,7 +406,7 @@ export function JobSeekerProfileDashboard() {
             </div>
           </div>
           {updatedLabel ? (
-            <p className="mt-4 text-xs text-muted lg:hidden">
+            <p className="mt-4 text-[11px] text-muted sm:text-xs lg:hidden">
               Last updated {updatedLabel}
             </p>
           ) : null}
@@ -371,7 +432,7 @@ export function JobSeekerProfileDashboard() {
                     aria-selected={selected}
                     aria-controls={`profile-panel-${tab}`}
                     className={cn(
-                      "inline-flex min-h-11 shrink-0 items-center border-b-[3px] px-3.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:px-4",
+                      "inline-flex min-h-10 shrink-0 items-center border-b-[3px] px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:px-4 sm:text-sm",
                       selected
                         ? "border-primary text-primary"
                         : "border-transparent text-muted hover:text-foreground",
@@ -422,6 +483,7 @@ export function JobSeekerProfileDashboard() {
             strengthMessage={strength.message}
             checklist={completion.checklist}
             completionPercent={completion.percent}
+            onOpenPersonal={() => setActiveModal({ type: "personal" })}
             onOpenPreferences={() => setActiveModal({ type: "preferences" })}
             onOpenVisibility={() => setActiveModal({ type: "visibility" })}
             onSelectTab={setTab}
@@ -433,6 +495,7 @@ export function JobSeekerProfileDashboard() {
 
       <JobSeekerProfileEditModals
         jobSeeker={jobSeeker}
+        resume={resume}
         activeModal={activeModal}
         isSaving={isProfileSaving}
         onClose={() => setActiveModal(null)}

@@ -33,7 +33,7 @@ export function JobSeekerTopBar({
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-foreground sm:text-base">
-          Job Seeker Dashboard
+          AsliJobs
         </p>
       </div>
 

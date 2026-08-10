@@ -64,13 +64,13 @@ export function PrivacySecurityPanel({
             <ShieldCheck className="size-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-resource-guide-icon">
+            <p className="text-xs font-semibold text-resource-guide-icon sm:text-sm">
               Your account is secure
             </p>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-xs text-muted sm:text-sm">
               Last login: {lastLoginLabel}
             </p>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-[11px] text-muted sm:text-xs">
               Password and two-factor options are not used because sign-in is
               WhatsApp OTP based.
             </p>
@@ -102,10 +102,10 @@ export function PrivacySecurityPanel({
                       : "border-border-subtle hover:bg-hero-bg/60",
                   )}
                 >
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-xs font-semibold text-foreground sm:text-sm">
                     {option.label}
                   </span>
-                  <span className="mt-0.5 text-xs text-muted">
+                  <span className="mt-0.5 text-[11px] text-muted sm:text-xs">
                     {option.description}
                   </span>
                 </button>
@@ -122,13 +122,13 @@ export function PrivacySecurityPanel({
         <div className="flex flex-wrap gap-2">
           <Link
             href={ROUTES.PRIVACY_POLICY}
-            className="inline-flex h-9 items-center rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex h-9 items-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
           >
             Privacy Policy
           </Link>
           <Link
             href={ROUTES.TERMS_AND_CONDITIONS}
-            className="inline-flex h-9 items-center rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex h-9 items-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
           >
             Terms & Conditions
           </Link>
@@ -140,7 +140,7 @@ export function PrivacySecurityPanel({
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-border-subtle px-4 text-sm font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-border-subtle px-4 text-xs font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:text-sm"
           >
             <LogOut className="size-4" aria-hidden="true" />
             Sign out
@@ -148,7 +148,7 @@ export function PrivacySecurityPanel({
           <button
             type="button"
             onClick={onDeactivate}
-            className="inline-flex h-10 items-center rounded-xl border border-pin-state/50 px-4 text-sm font-semibold text-pin-state transition-colors hover:bg-benefit-ai-matching-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30"
+            className="inline-flex h-9 items-center rounded-xl border border-pin-state/50 px-4 text-xs font-semibold text-pin-state transition-colors hover:bg-benefit-ai-matching-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30 sm:h-10 sm:text-sm"
           >
             Deactivate Account
           </button>

@@ -53,7 +53,7 @@ export function LanguageSettingsPanel() {
                   isActive && "bg-primary-light/40",
                 )}
               >
-                <span className="text-sm font-semibold text-foreground">
+                <span className="text-xs font-semibold text-foreground sm:text-sm">
                   {option.label}
                 </span>
                 {isActive ? (
@@ -68,7 +68,7 @@ export function LanguageSettingsPanel() {
           );
         })}
       </ul>
-      <p className="mt-3 text-xs text-muted">
+      <p className="mt-3 text-[11px] text-muted sm:text-xs">
         Full interface translation for every language is rolling out. Your
         preference is saved for this browser.
       </p>

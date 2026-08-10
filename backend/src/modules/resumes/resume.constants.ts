@@ -52,3 +52,21 @@ export const RESUME_EVENT_NAMES = {
   REGENERATION_REQUESTED: "resume.regeneration_requested",
   GENERATION_FAILED: "resume.generation_failed",
 } as const;
+
+/** Which resume is used when applying to jobs. */
+export const APPLICATION_RESUME_SOURCES = ["generated", "uploaded"] as const;
+
+export const JOB_SEEKER_UPLOADED_RESUME_MIME_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+] as const;
+
+export const JOB_SEEKER_UPLOADED_RESUME_EXTENSIONS = [
+  ".pdf",
+  ".doc",
+  ".docx",
+] as const;
+
+/** Align with employer document upload limit. */
+export const JOB_SEEKER_UPLOADED_RESUME_MAX_SIZE_BYTES = 5 * 1024 * 1024;

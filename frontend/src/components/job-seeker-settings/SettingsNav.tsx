@@ -31,7 +31,7 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
                   aria-selected={isActive}
                   onClick={() => onSelect(item.id)}
                   className={cn(
-                    "inline-flex items-center gap-2 border-b-[3px] px-3.5 py-3 text-sm font-semibold transition-colors sm:px-4",
+                    "inline-flex items-center gap-1.5 border-b-[3px] px-3 py-2.5 text-xs font-semibold transition-colors sm:gap-2 sm:px-4 sm:py-3 sm:text-sm",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
                     isActive
                       ? "border-primary text-primary"
@@ -40,7 +40,7 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
                 >
                   <Icon
                     className={cn(
-                      "size-[1.125rem] shrink-0",
+                      "size-4 shrink-0 sm:size-[1.125rem]",
                       isActive ? "text-primary" : "text-muted",
                     )}
                     strokeWidth={isActive ? 2.25 : 2}

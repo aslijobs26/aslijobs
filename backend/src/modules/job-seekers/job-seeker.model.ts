@@ -11,6 +11,7 @@ import {
   JOB_SEEKER_SALARY_PERIODS,
   JOB_SEEKER_WORK_MODES,
 } from "../../constants/job-seeker.constants.js";
+import { APPLICATION_RESUME_SOURCES } from "../resumes/resume.constants.js";
 
 const imageAssetSchema = {
   url: { type: String, default: "" },
@@ -21,6 +22,20 @@ const imageAssetSchema = {
   mimeType: { type: String, default: "" },
   fileSize: { type: Number, default: 0 },
 };
+
+const uploadedResumeSchema = new Schema(
+  {
+    url: { type: String, default: "" },
+    storagePath: { type: String, default: "" },
+    publicId: { type: String, default: "" },
+    storageProvider: { type: String, default: "" },
+    originalName: { type: String, trim: true, default: "" },
+    mimeType: { type: String, default: "" },
+    fileSize: { type: Number, default: 0 },
+    uploadedAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
 
 const educationSchema = new Schema(
   {
@@ -177,6 +192,16 @@ const jobSeekerSchema = new Schema(
     profilePhoto: {
       type: imageAssetSchema,
       default: () => ({}),
+    },
+    uploadedResume: {
+      type: uploadedResumeSchema,
+      default: null,
+    },
+    defaultResumeSource: {
+      type: String,
+      enum: APPLICATION_RESUME_SOURCES,
+      default: "generated",
+      index: true,
     },
     isWhatsappVerified: {
       type: Boolean,

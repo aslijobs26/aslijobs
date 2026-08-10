@@ -24,6 +24,11 @@ notificationRouter.get(
 );
 
 notificationRouter.get(
+  "/me/summary",
+  asyncHandler(notificationController.summary),
+);
+
+notificationRouter.get(
   "/me/conversations",
   asyncHandler(requireEmployerMessagesAccess("read")),
   validate(listNotificationConversationsQuerySchema, "query"),

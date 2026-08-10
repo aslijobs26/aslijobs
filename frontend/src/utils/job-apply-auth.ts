@@ -1,9 +1,15 @@
 import { ROUTES } from "@/constants/routes";
 import { applyToJob } from "@/services/job-seeker-apply.service";
+import { fetchMyResumeBundle } from "@/services/job-seeker-resume.service";
+import type { ApplicationResumeSource } from "@/types/job-seeker-resume";
 import {
   buildApplicationSuccessHref,
   storeApplicationSuccessWhatsAppContext,
 } from "@/utils/application-success";
+import {
+  closeApplyResumeChooser,
+  openApplyResumeChooser,
+} from "@/utils/apply-resume-chooser";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import {
   clearJobSeekerAuthSession,
@@ -135,6 +141,7 @@ export type ProtectedApplyInput = {
 export type ProtectedApplyResult =
   | { status: "redirected_to_login" }
   | { status: "blocked_employer" }
+  | { status: "cancelled" }
   | { status: "error"; message: string }
   | {
       status: "success";
@@ -168,7 +175,19 @@ export async function protectedApply(
   }
 
   try {
-    const result = await applyToJob(input.jobId);
+    const bundle = await fetchMyResumeBundle();
+    const resumeSource = await resolveApplyResumeSource({
+      jobTitle: input.jobTitle,
+      companyName: input.companyName,
+      defaultSource: bundle.defaultResumeSource,
+      uploadedResume: bundle.uploadedResume,
+    });
+
+    if (!resumeSource) {
+      return { status: "cancelled" };
+    }
+
+    const result = await applyToJob(input.jobId, resumeSource);
     const applicationId = result.application.id;
     const jobId = result.application.publicJobId || input.jobId;
 
@@ -196,6 +215,36 @@ export async function protectedApply(
     showAppToast(message, "error", 3500);
     return { status: "error", message };
   }
+}
+
+async function resolveApplyResumeSource(input: {
+  jobTitle: string;
+  companyName: string;
+  defaultSource: ApplicationResumeSource;
+  uploadedResume: Awaited<
+    ReturnType<typeof fetchMyResumeBundle>
+  >["uploadedResume"];
+}): Promise<ApplicationResumeSource | null> {
+  if (!input.uploadedResume) {
+    return "generated";
+  }
+
+  return new Promise((resolve) => {
+    openApplyResumeChooser({
+      jobTitle: input.jobTitle,
+      companyName: input.companyName,
+      defaultSource:
+        input.defaultSource === "uploaded" ? "uploaded" : "generated",
+      uploadedResume: input.uploadedResume!,
+      onConfirm: (source) => {
+        resolve(source);
+      },
+      onCancel: () => {
+        closeApplyResumeChooser();
+        resolve(null);
+      },
+    });
+  });
 }
 
 /** @deprecated Use protectedApply */

@@ -337,7 +337,7 @@ export function JobSearchPageContent() {
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 xl:px-10 lg:py-8">
-      <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
+      <h1 className="text-xl font-bold text-foreground sm:text-3xl">
         Search Jobs
       </h1>
 

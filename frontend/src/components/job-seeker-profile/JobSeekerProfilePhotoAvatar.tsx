@@ -32,7 +32,8 @@ export function JobSeekerProfilePhotoAvatar({
     : "";
 
   const dimension = size === "header" ? 96 : 80;
-  const sizeClass = size === "header" ? "size-24" : "size-20";
+  const sizeClass =
+    size === "header" ? "size-20 sm:size-24" : "size-16 sm:size-20";
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -61,7 +62,7 @@ export function JobSeekerProfilePhotoAvatar({
           />
         ) : (
           <span
-            className="flex size-full items-center justify-center text-2xl font-bold text-surface"
+            className="flex size-full items-center justify-center text-xl font-bold text-surface sm:text-2xl"
             aria-hidden="true"
           >
             {getInitials(fullName)}

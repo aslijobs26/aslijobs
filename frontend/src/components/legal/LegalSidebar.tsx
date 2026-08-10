@@ -33,10 +33,10 @@ export function LegalSidebar({
           onClick={() => setIsOpen((previous) => !previous)}
         >
           <span className="min-w-0">
-            <span className="block text-xs font-medium uppercase tracking-wide text-muted">
+            <span className="block text-[10px] font-medium uppercase tracking-wide text-muted sm:text-xs">
               On this page
             </span>
-            <span className="mt-0.5 block truncate text-xs font-medium text-foreground md:text-sm">
+            <span className="mt-0.5 block truncate text-[11px] font-medium text-foreground sm:text-xs md:text-sm">
               {activeLabel}
             </span>
           </span>

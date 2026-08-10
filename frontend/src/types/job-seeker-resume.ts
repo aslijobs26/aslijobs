@@ -123,6 +123,23 @@ export type PublicResume = {
   updatedAt?: string;
 };
 
+export type ApplicationResumeSource = "generated" | "uploaded";
+
+export type PublicUploadedResume = {
+  fileName: string;
+  fileUrl: string;
+  mimeType: string;
+  fileSize: number;
+  storageProvider: string;
+  uploadedAt: string | null;
+};
+
+export type JobSeekerResumeBundle = {
+  resume: PublicResume | null;
+  uploadedResume: PublicUploadedResume | null;
+  defaultResumeSource: ApplicationResumeSource;
+};
+
 export function isResumeJson(
   value: PublicResume["resumeJson"],
 ): value is ResumeJson {

@@ -287,17 +287,17 @@ export function JobSeekerHelpSupportPageContent() {
         <div className="flex min-w-0 flex-col gap-5 sm:gap-6">
           <header className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl lg:text-[1.75rem]">
+              <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-[1.75rem]">
                 {JOB_SEEKER_HELP_SUPPORT_TITLE}
               </h1>
               <BadgeCheck
-                className="size-5 shrink-0 text-primary-soft sm:size-6"
+                className="size-4 shrink-0 text-primary-soft sm:size-6"
                 strokeWidth={2}
                 aria-hidden
               />
               <span className="sr-only">Verified support</span>
             </div>
-            <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted sm:text-[15px]">
+            <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted sm:text-[15px]">
               {JOB_SEEKER_HELP_SUPPORT_SUBTITLE}
             </p>
           </header>
@@ -307,7 +307,7 @@ export function JobSeekerHelpSupportPageContent() {
               Search help
             </label>
             <Search
-              className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted"
+              className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted sm:size-[18px]"
               strokeWidth={2}
               aria-hidden
             />
@@ -321,7 +321,7 @@ export function JobSeekerHelpSupportPageContent() {
               }}
               onKeyDown={handleSearchKeyDown}
               placeholder={JOB_SEEKER_HELP_SEARCH_PLACEHOLDER}
-              className="h-11 w-full min-w-0 rounded-2xl border border-border bg-surface py-2 pr-4 pl-11 text-sm text-foreground shadow-sm outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 sm:h-12"
+              className="h-11 w-full min-w-0 rounded-2xl border border-border bg-surface py-2 pr-4 pl-11 text-xs text-foreground shadow-sm outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 sm:h-12 sm:text-sm"
               autoComplete="off"
             />
           </div>

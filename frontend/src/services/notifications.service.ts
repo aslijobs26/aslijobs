@@ -8,6 +8,7 @@ import type {
   NotificationListItem,
   NotificationListResult,
   NotificationReadStatusFilter,
+  NotificationSummary,
 } from "@/types/notifications";
 
 type ApiSuccess<T> = {
@@ -25,6 +26,8 @@ export const notificationQueryKeys = {
     ["notifications", scope, "recent"] as const,
   list: (scope: NotificationRecipientScope) =>
     ["notifications", scope, "list"] as const,
+  summary: (scope: NotificationRecipientScope) =>
+    ["notifications", scope, "summary"] as const,
 };
 
 export const employerMessageQueryKeys = {
@@ -123,6 +126,13 @@ export async function fetchNotificationUnreadCount(): Promise<number> {
     "/notifications/me/unread-count",
   );
   return response.data.data.unreadCount;
+}
+
+export async function fetchNotificationSummary(): Promise<NotificationSummary> {
+  const response = await apiClient.get<ApiSuccess<NotificationSummary>>(
+    "/notifications/me/summary",
+  );
+  return response.data.data;
 }
 
 export async function markNotificationAsRead(

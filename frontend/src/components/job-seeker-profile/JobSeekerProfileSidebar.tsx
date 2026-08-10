@@ -26,6 +26,7 @@ type JobSeekerProfileSidebarProps = {
   strengthPercent: number;
   strengthMessage: string;
   checklist: ProfileChecklistItem[];
+  onOpenPersonal: () => void;
   onOpenPreferences: () => void;
   onOpenVisibility: () => void;
   onSelectTab: (tab: JobSeekerProfileTab) => void;
@@ -39,6 +40,7 @@ export function JobSeekerProfileSidebar({
   strengthPercent,
   strengthMessage,
   checklist,
+  onOpenPersonal,
   onOpenPreferences,
   onOpenVisibility,
   onSelectTab,
@@ -71,10 +73,10 @@ export function JobSeekerProfileSidebar({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            onClick={onOpenPreferences}
+            className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:gap-2 sm:text-sm"
+            onClick={onOpenPersonal}
           >
-            <Pencil className="size-4" aria-hidden="true" />
+            <Pencil className="size-3.5 sm:size-4" aria-hidden="true" />
             Edit Profile
           </button>
           <div ref={menuRef} className="relative">
@@ -98,7 +100,7 @@ export function JobSeekerProfileSidebar({
                 <Link
                   href={ROUTES.JOB_SEEKER_MY_RESUME}
                   role="menuitem"
-                  className="block rounded-lg px-2.5 py-2 text-sm font-medium text-foreground hover:bg-primary-light"
+                  className="block rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-primary-light sm:text-sm"
                   onClick={() => setMenuOpen(false)}
                 >
                   My Resume
@@ -106,7 +108,7 @@ export function JobSeekerProfileSidebar({
                 <Link
                   href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
                   role="menuitem"
-                  className="block rounded-lg px-2.5 py-2 text-sm font-medium text-foreground hover:bg-primary-light"
+                  className="block rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-primary-light sm:text-sm"
                   onClick={() => setMenuOpen(false)}
                 >
                   My Applications
@@ -114,7 +116,7 @@ export function JobSeekerProfileSidebar({
                 <Link
                   href={ROUTES.JOB_SEEKER_SAVED_JOBS}
                   role="menuitem"
-                  className="block rounded-lg px-2.5 py-2 text-sm font-medium text-foreground hover:bg-primary-light"
+                  className="block rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-primary-light sm:text-sm"
                   onClick={() => setMenuOpen(false)}
                 >
                   Saved Jobs
@@ -122,7 +124,7 @@ export function JobSeekerProfileSidebar({
                 <Link
                   href={ROUTES.JOB_SEEKER_SETTINGS}
                   role="menuitem"
-                  className="block rounded-lg px-2.5 py-2 text-sm font-medium text-foreground hover:bg-primary-light"
+                  className="block rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-primary-light sm:text-sm"
                   onClick={() => setMenuOpen(false)}
                 >
                   Settings
@@ -137,22 +139,25 @@ export function JobSeekerProfileSidebar({
         className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
         aria-labelledby="profile-completion-heading"
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h2
               id="profile-completion-heading"
-              className="text-base font-bold text-foreground"
+              className="text-sm font-bold text-foreground sm:text-base"
             >
               Profile Completion
             </h2>
-            <p className="mt-1 text-sm font-semibold text-primary">
+            <p className="mt-1 text-xs font-semibold text-primary sm:text-sm">
               {completionPercent}% complete
             </p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted sm:text-xs">
+              {strengthMessage}
+            </p>
           </div>
-          <ProfileStrengthCircle percentage={strengthPercent} size={52} />
+          <ProfileStrengthCircle percentage={strengthPercent} size={60} />
         </div>
         <div
-          className="mt-3 h-2 overflow-hidden rounded-full bg-primary-light"
+          className="mt-4 h-2 overflow-hidden rounded-full bg-primary-light"
           role="progressbar"
           aria-label="Profile completion"
           aria-valuemin={0}
@@ -164,14 +169,11 @@ export function JobSeekerProfileSidebar({
             style={{ width: `${completionPercent}%` }}
           />
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted">
-          {strengthMessage}
-        </p>
         <ul className="mt-4 space-y-2">
           {checklist.map((item) => (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-2 rounded-xl border border-border-subtle bg-hero-bg/60 px-3 py-2.5 text-sm"
+              className="flex items-center justify-between gap-2 rounded-xl border border-border-subtle bg-hero-bg/60 px-3 py-2 text-xs sm:py-2.5 sm:text-sm"
             >
               <span className="inline-flex min-w-0 items-center gap-2">
                 <span
@@ -193,7 +195,7 @@ export function JobSeekerProfileSidebar({
               </span>
               <span
                 className={cn(
-                  "shrink-0 text-xs font-semibold",
+                  "shrink-0 text-[11px] font-semibold sm:text-xs",
                   item.completed ? "text-primary" : "text-muted",
                 )}
               >
@@ -204,7 +206,7 @@ export function JobSeekerProfileSidebar({
         </ul>
         <button
           type="button"
-          className="mt-3 text-xs font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="mt-3 text-[11px] font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-xs"
           onClick={() => onSelectTab("overview")}
         >
           View full progress →
@@ -217,7 +219,7 @@ export function JobSeekerProfileSidebar({
       >
         <h2
           id="quick-actions-heading"
-          className="text-base font-bold text-foreground"
+          className="text-sm font-bold text-foreground sm:text-base"
         >
           Quick actions
         </h2>
@@ -225,10 +227,10 @@ export function JobSeekerProfileSidebar({
           <li>
             <Link
               href={ROUTES.JOB_SEEKER_MY_RESUME}
-              className="flex min-h-11 items-center gap-2.5 rounded-xl border border-border-subtle bg-hero-bg/70 px-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="flex min-h-10 items-center gap-2 rounded-xl border border-border-subtle bg-hero-bg/70 px-3 text-xs font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:gap-2.5 sm:text-sm"
             >
-              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary">
-                <Sparkles className="size-4" aria-hidden="true" />
+              <span className="inline-flex size-7 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-8">
+                <Sparkles className="size-3.5 sm:size-4" aria-hidden="true" />
               </span>
               Resume Builder
             </Link>
@@ -236,10 +238,10 @@ export function JobSeekerProfileSidebar({
           <li>
             <Link
               href={ROUTES.JOB_SEEKER_MY_RESUME}
-              className="flex min-h-11 items-center gap-2.5 rounded-xl border border-border-subtle bg-hero-bg/70 px-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="flex min-h-10 items-center gap-2 rounded-xl border border-border-subtle bg-hero-bg/70 px-3 text-xs font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:gap-2.5 sm:text-sm"
             >
-              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary">
-                <Upload className="size-4" aria-hidden="true" />
+              <span className="inline-flex size-7 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-8">
+                <Upload className="size-3.5 sm:size-4" aria-hidden="true" />
               </span>
               Upload Resume
             </Link>
@@ -247,14 +249,14 @@ export function JobSeekerProfileSidebar({
           <li>
             <button
               type="button"
-              className="flex min-h-11 w-full items-center gap-2.5 rounded-xl border border-border-subtle bg-hero-bg/70 px-3 text-left text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="flex min-h-10 w-full items-center gap-2 rounded-xl border border-border-subtle bg-hero-bg/70 px-3 text-left text-xs font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:gap-2.5 sm:text-sm"
               onClick={() => {
                 onSelectTab("preferences");
                 onOpenPreferences();
               }}
             >
-              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary">
-                <FileText className="size-4" aria-hidden="true" />
+              <span className="inline-flex size-7 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-8">
+                <FileText className="size-3.5 sm:size-4" aria-hidden="true" />
               </span>
               Career Preferences
             </button>
@@ -269,13 +271,13 @@ export function JobSeekerProfileSidebar({
         <div className="flex items-center justify-between gap-2">
           <h2
             id="visibility-heading"
-            className="text-base font-bold text-foreground"
+            className="text-sm font-bold text-foreground sm:text-base"
           >
             Profile visibility
           </h2>
           <button
             type="button"
-            className="text-xs font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="text-[11px] font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-xs"
             onClick={onOpenVisibility}
           >
             Manage
@@ -287,7 +289,7 @@ export function JobSeekerProfileSidebar({
         <div className="relative mt-3">
           <select
             id="sidebar-visibility"
-            className="w-full appearance-none rounded-xl border border-border-subtle bg-hero-bg py-2.5 pl-3 pr-9 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+            className="w-full appearance-none rounded-xl border border-border-subtle bg-hero-bg py-2 pl-3 pr-9 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 sm:py-2.5 sm:text-sm"
             value={visibility}
             disabled={isSavingVisibility}
             onChange={(event) =>
@@ -307,7 +309,7 @@ export function JobSeekerProfileSidebar({
             aria-hidden="true"
           />
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted">
+        <p className="mt-2 text-[11px] leading-relaxed text-muted sm:text-xs">
           {
             JOB_SEEKER_PROFILE_VISIBILITY_OPTIONS.find(
               (option) => option.value === visibility,

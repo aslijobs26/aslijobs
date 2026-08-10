@@ -93,7 +93,7 @@ function FaqAccordionItem({
         >
           <span
             className={cn(
-              "text-[15px] leading-snug sm:text-base",
+              "text-sm leading-snug sm:text-base",
               isOpen
                 ? "font-bold text-primary"
                 : "font-semibold text-foreground",
@@ -123,7 +123,7 @@ function FaqAccordionItem({
         )}
       >
         <div className="overflow-hidden">
-          <p className="px-5 pt-1 pb-5 text-sm leading-relaxed text-muted sm:px-6 sm:pt-1.5 sm:pb-6 sm:text-[15px]">
+          <p className="px-5 pt-1 pb-5 text-xs leading-relaxed text-muted sm:px-6 sm:pt-1.5 sm:pb-6 sm:text-[15px]">
             {item.answer}
           </p>
         </div>
@@ -184,7 +184,7 @@ export function FaqsPageContent() {
     <main className="bg-hero-bg/40">
       <section className="border-b border-border-subtle bg-legal-hero-surface">
         <Container className="py-8 sm:py-10 lg:py-12">
-          <nav aria-label="Breadcrumb" className="text-sm text-muted">
+          <nav aria-label="Breadcrumb" className="text-xs text-muted sm:text-sm">
             <ol className="flex flex-wrap items-center gap-2">
               <li>
                 <Link
@@ -204,17 +204,17 @@ export function FaqsPageContent() {
           </nav>
 
           <div className="mx-auto mt-8 max-w-3xl text-center sm:mt-10">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
               {FAQ_PAGE_TITLE}
             </h1>
-            <p className="mt-4 text-sm leading-relaxed text-muted sm:text-base lg:text-lg">
+            <p className="mt-4 text-xs leading-relaxed text-muted sm:text-base lg:text-lg">
               {FAQ_PAGE_SUBTITLE}
             </p>
 
             <label className="relative mt-8 block text-left">
               <span className="sr-only">{FAQ_SEARCH_PLACEHOLDER}</span>
               <Search
-                className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted"
+                className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted sm:size-5"
                 strokeWidth={1.75}
                 aria-hidden="true"
               />
@@ -224,7 +224,7 @@ export function FaqsPageContent() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={FAQ_SEARCH_PLACEHOLDER}
-                className="h-12 w-full rounded-2xl border border-border bg-surface pr-4 pl-12 text-sm text-foreground shadow-[0_8px_24px_rgba(26,43,60,0.05)] outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 sm:h-14 sm:text-[15px]"
+                className="h-11 w-full rounded-2xl border border-border bg-surface pr-4 pl-11 text-xs text-foreground shadow-[0_8px_24px_rgba(26,43,60,0.05)] outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 sm:h-14 sm:pl-12 sm:text-[15px]"
               />
             </label>
           </div>
@@ -242,10 +242,10 @@ export function FaqsPageContent() {
                   aria-hidden="true"
                 />
               </span>
-              <h2 className="mt-5 text-xl font-bold text-foreground">
+              <h2 className="mt-5 text-lg font-bold text-foreground sm:text-xl">
                 {FAQ_EMPTY_TITLE}
               </h2>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+              <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted sm:text-sm">
                 {FAQ_EMPTY_DESCRIPTION}
               </p>
               <button
@@ -254,7 +254,7 @@ export function FaqsPageContent() {
                   setQuery("");
                   searchInputRef.current?.focus();
                 }}
-                className="mt-6 inline-flex h-11 items-center justify-center rounded-xl border border-border bg-surface px-5 text-sm font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="mt-6 inline-flex h-10 items-center justify-center rounded-xl border border-border bg-surface px-5 text-xs font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:text-sm"
               >
                 Clear search
               </button>
@@ -269,7 +269,7 @@ export function FaqsPageContent() {
                   <div className="mb-4 flex items-center gap-3 sm:mb-5">
                     <h2
                       id={`faq-${category.id}`}
-                      className="text-lg font-bold tracking-tight text-foreground sm:text-xl"
+                      className="text-base font-bold tracking-tight text-foreground sm:text-xl"
                     >
                       {category.title}
                     </h2>
@@ -299,10 +299,10 @@ export function FaqsPageContent() {
 
           <aside className="mt-12 overflow-hidden rounded-[1.5rem] border border-primary/15 bg-surface shadow-[0_16px_40px_rgba(26,43,60,0.07)] sm:mt-16">
             <div className="bg-legal-hero-surface px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-3xl">
                 {FAQ_HELP_TITLE}
               </h2>
-              <div className="mt-3 space-y-1 text-sm leading-relaxed text-muted sm:text-base">
+              <div className="mt-3 space-y-1 text-xs leading-relaxed text-muted sm:text-base">
                 {helpDescriptionLines.map((line) => (
                   <p key={line}>{line}</p>
                 ))}
@@ -311,7 +311,7 @@ export function FaqsPageContent() {
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
                   href={ROUTES.CONTACT}
-                  className="inline-flex h-12 items-center justify-center rounded-xl bg-primary px-6 text-sm font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-xs font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:px-6 sm:text-sm"
                 >
                   {FAQ_HELP_CONTACT_LABEL}
                 </Link>
@@ -319,7 +319,7 @@ export function FaqsPageContent() {
                   href={WHATSAPP_JOIN_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-surface px-6 text-sm font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-border bg-surface px-5 text-xs font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:px-6 sm:text-sm"
                 >
                   {FAQ_HELP_WHATSAPP_LABEL}
                 </a>

@@ -92,7 +92,7 @@ export function PreferencesSettingsPanel({
         action={
           <Link
             href={`${ROUTES.JOB_SEEKER_PROFILE}?tab=preferences`}
-            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-primary px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-primary px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
           >
             Edit preferences
           </Link>
@@ -104,8 +104,8 @@ export function PreferencesSettingsPanel({
               key={row.label}
               className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-3 px-4 py-3"
             >
-              <dt className="text-sm text-muted">{row.label}</dt>
-              <dd className="truncate text-right text-sm font-semibold text-foreground">
+              <dt className="text-xs text-muted sm:text-sm">{row.label}</dt>
+              <dd className="truncate text-right text-xs font-semibold text-foreground sm:text-sm">
                 {row.value}
               </dd>
             </div>
@@ -124,10 +124,12 @@ export function PreferencesSettingsPanel({
               className="flex items-start justify-between gap-4"
             >
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-xs font-semibold text-foreground sm:text-sm">
                   {row.label}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">{row.description}</p>
+                <p className="mt-0.5 text-[11px] text-muted sm:text-xs">
+                  {row.description}
+                </p>
               </div>
               <SettingsSwitch
                 label={row.label}

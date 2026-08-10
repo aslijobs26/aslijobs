@@ -87,6 +87,16 @@ export class NotificationController {
     });
   };
 
+  summary = async (req: Request, res: Response): Promise<void> => {
+    const recipient = requireRecipient(req);
+    const result = await notificationService.getSummaryForRecipient(recipient);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Notification summary retrieved.",
+      data: result,
+    });
+  };
+
   markAsRead = async (req: Request, res: Response): Promise<void> => {
     const recipient = requireRecipient(req);
     const params = req.params as unknown as NotificationIdParamsSchema;

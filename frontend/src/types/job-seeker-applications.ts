@@ -91,6 +91,7 @@ export type SeekerApplicationListItem = {
   canWithdraw: boolean;
   status: ApplicationStatus;
   resumeVersion: number;
+  resumeSource: "generated" | "uploaded";
   appliedAt: string;
   lastStatusUpdatedAt: string | null;
 };
@@ -119,7 +120,18 @@ export type SeekerApplicationDetail = {
   jobType: string;
   status: ApplicationStatus;
   resumeVersion: number;
+  resumeSource: "generated" | "uploaded";
   resumeSnapshot: ApplicationResumeSnapshot;
+  uploadedResumeSnapshot: {
+    url: string;
+    storagePath: string;
+    publicId: string;
+    storageProvider: string;
+    originalName: string;
+    mimeType: string;
+    fileSize: number;
+    uploadedAt: string | null;
+  } | null;
   statusHistory: ApplicationStatusHistoryEntry[];
   interview: ApplicationInterview | null;
   offer: ApplicationOffer | null;

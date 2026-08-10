@@ -22,10 +22,10 @@ type JobSearchBarProps = {
 };
 
 const controlClassName =
-  "relative flex h-12 w-full items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20";
+  "relative flex h-11 w-full items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 sm:h-12";
 
 const inputClassName =
-  "min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted";
+  "min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted sm:text-sm";
 
 function buildLocationLabel(cityInput: string, stateInput: string): string {
   if (cityInput && stateInput) {
@@ -100,7 +100,7 @@ export function JobSearchBar({
         <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
           <label
             htmlFor="job-search-keyword"
-            className="text-sm font-semibold text-foreground"
+            className="text-xs font-semibold text-foreground sm:text-sm"
           >
             What job are you looking for?
           </label>
@@ -125,7 +125,7 @@ export function JobSearchBar({
         <div className="flex min-w-0 flex-col gap-1.5">
           <label
             htmlFor="job-search-state"
-            className="text-sm font-semibold text-foreground"
+            className="text-xs font-semibold text-foreground sm:text-sm"
           >
             Select State
           </label>
@@ -135,6 +135,8 @@ export function JobSearchBar({
             value={stateInput}
             placeholder="e.g. Telangana"
             iconClassName="text-pin-state"
+            controlClassName={controlClassName}
+            inputClassName={inputClassName}
             onChange={(value) => {
               setStateInput(value);
               setSelectedState("");
@@ -155,7 +157,7 @@ export function JobSearchBar({
         <div className="flex min-w-0 flex-col gap-1.5">
           <label
             htmlFor="job-search-city"
-            className="text-sm font-semibold text-foreground"
+            className="text-xs font-semibold text-foreground sm:text-sm"
           >
             Select City
           </label>
@@ -172,6 +174,8 @@ export function JobSearchBar({
                 ? "e.g. Hyderabad"
                 : "Select a state first"
             }
+            controlClassName={controlClassName}
+            inputClassName={inputClassName}
             onChange={(value) => {
               setCityInput(value);
               setSelectedCity("");
@@ -200,7 +204,7 @@ export function JobSearchBar({
           </span>
           <button
             type="submit"
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 lg:min-w-[148px]"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-xs font-bold text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:text-sm lg:min-w-[148px]"
           >
             <Search className="size-[18px]" strokeWidth={2.5} aria-hidden="true" />
             Search Jobs
@@ -208,7 +212,7 @@ export function JobSearchBar({
           <button
             type="button"
             onClick={onClearAll}
-            className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
           >
             <RotateCcw className="size-3.5" strokeWidth={2} aria-hidden="true" />
             Clear all

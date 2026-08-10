@@ -107,23 +107,23 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
         )}
       >
         {/* —— Mobile card (< md) —— */}
-        <div className="relative p-4 pr-9 md:hidden">
+        <div className="relative p-3.5 pr-8 md:hidden">
           {/* Top: logo | text lines | status — equal top alignment */}
-          <div className="grid grid-cols-[3rem_minmax(0,1fr)_auto] items-start gap-x-3">
+          <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-start gap-x-2.5">
             <CompanyLogo
               logoUrl={application.companyLogoUrl}
-              className="size-12"
+              className="size-11"
             />
 
-            <div className="min-w-0 space-y-1">
-              <h2 className="truncate text-[15px] font-bold leading-5 text-foreground">
+            <div className="min-w-0 space-y-0.5">
+              <h2 className="truncate text-sm font-bold leading-5 text-foreground">
                 {application.jobTitle}
               </h2>
-              <p className="truncate text-xs leading-4 text-muted">
+              <p className="truncate text-[11px] leading-4 text-muted">
                 {application.companyName || "Company"}
               </p>
-              <p className="flex min-w-0 items-center gap-1 text-[11px] leading-4 text-muted">
-                <IdCard className="size-3 shrink-0" aria-hidden="true" />
+              <p className="flex min-w-0 items-center gap-1 text-[10px] leading-4 text-muted">
+                <IdCard className="size-2.5 shrink-0" aria-hidden="true" />
                 <span className="truncate">
                   Job ID: {application.publicJobId}
                 </span>
@@ -134,13 +134,13 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
               <span
                 className={statusBadgeClasses(
                   application.status,
-                  "gap-1 px-2 py-0.5 text-[10px]",
+                  "gap-0.5 px-1.5 py-0.5 text-[9px]",
                 )}
               >
-                <StatusIcon className="size-3 shrink-0" aria-hidden="true" />
+                <StatusIcon className="size-2.5 shrink-0" aria-hidden="true" />
                 {statusLabel}
               </span>
-              <p className="text-right text-[11px] leading-4 text-muted">
+              <p className="text-right text-[10px] leading-3.5 text-muted">
                 <span className="block whitespace-nowrap">
                   {statusContext.label}
                 </span>
@@ -152,40 +152,40 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
           </div>
 
           <div
-            className="mt-3 border-t border-border-subtle"
+            className="mt-2.5 border-t border-border-subtle"
             aria-hidden="true"
           />
 
-          {/* Bottom: same left edge as title column (logo 3rem + gap 0.75rem) */}
-          <div className="mt-3 space-y-1.5 pl-[3.75rem]">
-            <p className="flex min-w-0 items-baseline gap-x-1 leading-5">
-              <span className="truncate text-sm font-bold text-foreground">
+          {/* Bottom: same left edge as title column (logo 2.75rem + gap 0.625rem) */}
+          <div className="mt-2.5 space-y-1 pl-[3.375rem]">
+            <p className="flex min-w-0 items-baseline gap-x-1 leading-4">
+              <span className="truncate text-xs font-bold text-foreground">
                 {salaryAmount}
               </span>
               {salaryPeriod ? (
-                <span className="text-[11px] font-medium text-muted">
+                <span className="text-[10px] font-medium text-muted">
                   {salaryPeriod}
                 </span>
               ) : null}
             </p>
 
             {application.location || shiftLabel ? (
-              <p className="flex min-w-0 items-center gap-2 text-xs leading-4 text-muted">
+              <p className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted">
                 {application.location ? (
                   <span className="inline-flex min-w-0 items-center gap-1">
-                    <MapPin className="size-3 shrink-0" aria-hidden="true" />
+                    <MapPin className="size-2.5 shrink-0" aria-hidden="true" />
                     <span className="truncate">{application.location}</span>
                   </span>
                 ) : null}
                 {application.location && shiftLabel ? (
                   <span
-                    className="h-3 w-px shrink-0 bg-border"
+                    className="h-2.5 w-px shrink-0 bg-border"
                     aria-hidden="true"
                   />
                 ) : null}
                 {shiftLabel ? (
                   <span className="inline-flex shrink-0 items-center gap-1">
-                    <Clock3 className="size-3 shrink-0" aria-hidden="true" />
+                    <Clock3 className="size-2.5 shrink-0" aria-hidden="true" />
                     <span>{shiftLabel}</span>
                   </span>
                 ) : null}
@@ -193,15 +193,15 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
             ) : null}
 
             {employmentType ? (
-              <p className="flex items-center gap-1 text-xs leading-4 text-muted">
-                <Briefcase className="size-3 shrink-0" aria-hidden="true" />
+              <p className="flex items-center gap-1 text-[11px] leading-4 text-muted">
+                <Briefcase className="size-2.5 shrink-0" aria-hidden="true" />
                 <span className="truncate">{employmentType}</span>
               </p>
             ) : null}
           </div>
 
-          <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-muted">
-            <ChevronRight className="size-5" aria-hidden="true" />
+          <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-muted">
+            <ChevronRight className="size-4" aria-hidden="true" />
           </span>
         </div>
 

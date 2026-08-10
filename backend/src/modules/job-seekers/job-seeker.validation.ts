@@ -320,7 +320,10 @@ export const updateJobSeekerProfileSchema = z
       })
       .optional(),
     experiences: z.array(profileExperienceEntrySchema).optional(),
-    languages: z.array(z.enum(JOB_SEEKER_LANGUAGES)).optional(),
+    languages: z
+      .array(z.enum(JOB_SEEKER_LANGUAGES))
+      .min(1, "Select at least one language")
+      .optional(),
     availabilityStatus: z
       .enum(JOB_SEEKER_AVAILABILITY_STATUSES, {
         message: "Please select your availability status.",

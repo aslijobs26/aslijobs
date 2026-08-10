@@ -29,9 +29,6 @@ function isNavItemActive(pathname: string, href: string): boolean {
   if (pathname === href) {
     return true;
   }
-  if (href === ROUTES.JOB_SEEKER_DASHBOARD) {
-    return false;
-  }
   return pathname.startsWith(`${href}/`);
 }
 

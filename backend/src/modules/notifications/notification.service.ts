@@ -21,6 +21,7 @@ import type {
   NotificationListItem,
   NotificationListResult,
   NotificationRecipientType,
+  NotificationSummary,
   NotificationType,
 } from "./notification.types.js";
 import { ApplicationModel } from "../applications/application.model.js";
@@ -521,6 +522,59 @@ export class NotificationService {
     });
 
     return { unreadCount };
+  }
+
+  async getSummaryForRecipient(input: {
+    recipientType: NotificationRecipientType;
+    recipientId: string;
+  }): Promise<NotificationSummary> {
+    if (!mongoose.Types.ObjectId.isValid(input.recipientId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const now = new Date();
+    const baseFilter = {
+      $and: [
+        {
+          recipientType: input.recipientType,
+          recipientId: input.recipientId,
+        },
+        buildActiveInboxFilter(now),
+      ],
+    };
+
+    const [all, unread, categoryRows] = await Promise.all([
+      NotificationModel.countDocuments(baseFilter),
+      NotificationModel.countDocuments({
+        $and: [...baseFilter.$and, { readAt: null }],
+      }),
+      NotificationModel.aggregate<{ _id: NotificationCategory; count: number }>([
+        { $match: baseFilter },
+        { $group: { _id: "$category", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const byCategory: Record<NotificationCategory, number> = {
+      application: 0,
+      interview: 0,
+      offer: 0,
+      system: 0,
+    };
+
+    for (const row of categoryRows) {
+      if (row._id in byCategory) {
+        byCategory[row._id] = row.count;
+      }
+    }
+
+    return {
+      all,
+      unread,
+      application: byCategory.application,
+      interview: byCategory.interview,
+      offer: byCategory.offer,
+      system: byCategory.system,
+    };
   }
 
   async markAsRead(input: {

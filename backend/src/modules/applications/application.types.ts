@@ -57,15 +57,30 @@ export type ApplicationResumeSnapshot = {
   status: ResumeStatus;
 };
 
+export type ApplicationResumeSource = "generated" | "uploaded";
+
+export type ApplicationUploadedResumeSnapshot = {
+  url: string;
+  storagePath: string;
+  publicId: string;
+  storageProvider: string;
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string | null;
+};
+
 export type ApplyToJobInput = {
   jobSeekerId: string;
   publicJobId: string;
+  resumeSource?: ApplicationResumeSource;
 };
 
 export type PublicApplicationSummary = {
   id: string;
   publicJobId: string;
   resumeVersion: number;
+  resumeSource: ApplicationResumeSource;
   appliedAt: string;
   status: ApplicationStatus;
 };
@@ -204,7 +219,9 @@ export type EmployerApplicationDetail = {
   status: ApplicationStatus;
   resumeVersion: number;
   resumeStatus: ResumeStatus | string;
+  resumeSource: ApplicationResumeSource;
   resumeSnapshot: ApplicationResumeSnapshot;
+  uploadedResumeSnapshot: ApplicationUploadedResumeSnapshot | null;
   employerNotes: string;
   employerNotesVisibleToSeeker: boolean;
   employerNotesCreatedAt: string | null;
@@ -258,6 +275,7 @@ export type SeekerApplicationListItem = {
   canWithdraw: boolean;
   status: ApplicationStatus;
   resumeVersion: number;
+  resumeSource: ApplicationResumeSource;
   appliedAt: string;
   lastStatusUpdatedAt: string | null;
 };
@@ -286,7 +304,9 @@ export type SeekerApplicationDetail = {
   jobType: string;
   status: ApplicationStatus;
   resumeVersion: number;
+  resumeSource: ApplicationResumeSource;
   resumeSnapshot: ApplicationResumeSnapshot;
+  uploadedResumeSnapshot: ApplicationUploadedResumeSnapshot | null;
   statusHistory: ApplicationStatusHistoryEntry[];
   interview: ApplicationInterview | null;
   offer: ApplicationOffer | null;

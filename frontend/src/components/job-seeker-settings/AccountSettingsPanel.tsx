@@ -98,15 +98,15 @@ export function AccountSettingsPanel({
 
                 <div className="min-w-0 pt-0.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="truncate text-lg font-bold text-foreground">
+                    <h2 className="truncate text-base font-bold text-foreground sm:text-lg">
                       {fullName || "Job Seeker"}
                     </h2>
                     {isPhoneVerified ? <VerifiedBadge /> : null}
                   </div>
-                  <p className="mt-1.5 truncate text-sm text-muted">
+                  <p className="mt-1.5 truncate text-xs text-muted sm:text-sm">
                     {phone || "—"}
                   </p>
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-1 text-[11px] text-muted sm:text-xs">
                     Signed in with WhatsApp OTP
                   </p>
                 </div>
@@ -114,7 +114,7 @@ export function AccountSettingsPanel({
 
               <Link
                 href={ROUTES.JOB_SEEKER_PROFILE}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border-subtle bg-surface px-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border-subtle bg-surface px-3.5 text-xs font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
               >
                 <Pencil className="size-3.5" aria-hidden="true" />
                 Edit Profile
@@ -127,11 +127,11 @@ export function AccountSettingsPanel({
                   "grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] items-center gap-3 px-5 py-3.5";
                 const content = (
                   <>
-                    <dt className="text-sm font-medium text-muted">
+                    <dt className="text-xs font-medium text-muted sm:text-sm">
                       {row.label}
                     </dt>
                     <dd className="flex min-w-0 items-center justify-end gap-2 text-right">
-                      <span className="truncate text-sm font-semibold text-foreground">
+                      <span className="truncate text-xs font-semibold text-foreground sm:text-sm">
                         {row.value}
                       </span>
                       {row.verified ? <VerifiedBadge compact /> : null}

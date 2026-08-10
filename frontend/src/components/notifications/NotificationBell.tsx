@@ -11,7 +11,10 @@ import {
   markNotificationAsRead,
   notificationQueryKeys,
 } from "@/services/notifications.service";
-import type { NotificationListItem } from "@/types/notifications";
+import type {
+  NotificationListItem,
+  NotificationListResult,
+} from "@/types/notifications";
 import { cn } from "@/utils/cn";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
@@ -35,6 +38,7 @@ export function NotificationBell({
     : "job-seeker";
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const markedReadOnOpenRef = useRef(false);
   const [isOpen, setIsOpen] = useState(false);
 
   const unreadQuery = useQuery({
@@ -71,18 +75,63 @@ export function NotificationBell({
 
   const markAllMutation = useMutation({
     mutationFn: markAllNotificationsAsRead,
-    onSuccess: () => {
+    onMutate: async () => {
+      const unreadKey = notificationQueryKeys.unreadCount(recipientScope);
+      const recentKey = notificationQueryKeys.recent(recipientScope);
+
+      await queryClient.cancelQueries({ queryKey: unreadKey });
+      await queryClient.cancelQueries({ queryKey: recentKey });
+
+      const previousUnread = queryClient.getQueryData<number>(unreadKey);
+      const previousRecent =
+        queryClient.getQueryData<NotificationListResult>(recentKey);
+
+      queryClient.setQueryData(unreadKey, 0);
+      if (previousRecent) {
+        queryClient.setQueryData<NotificationListResult>(recentKey, {
+          ...previousRecent,
+          unreadCount: 0,
+          notifications: previousRecent.notifications.map((item) =>
+            item.isRead ? item : { ...item, isRead: true, readAt: item.readAt },
+          ),
+        });
+      }
+
+      return { previousUnread, previousRecent };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousUnread !== undefined) {
+        queryClient.setQueryData(
+          notificationQueryKeys.unreadCount(recipientScope),
+          context.previousUnread,
+        );
+      }
+      if (context?.previousRecent !== undefined) {
+        queryClient.setQueryData(
+          notificationQueryKeys.recent(recipientScope),
+          context.previousRecent,
+        );
+      }
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({
         queryKey: notificationQueryKeys.unreadCount(recipientScope),
       });
       void queryClient.invalidateQueries({
         queryKey: notificationQueryKeys.recent(recipientScope),
       });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.list(recipientScope),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.summary(recipientScope),
+      });
     },
   });
 
   useEffect(() => {
     if (!isOpen) {
+      markedReadOnOpenRef.current = false;
       return;
     }
 
@@ -105,6 +154,31 @@ export function NotificationBell({
       document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen]);
+
+  const markAllAsRead = markAllMutation.mutate;
+  const isMarkingAllAsRead = markAllMutation.isPending;
+
+  // Job seeker: clear the red badge as soon as the inbox panel is opened.
+  useEffect(() => {
+    if (!isOpen || recipientScope !== "job-seeker") {
+      return;
+    }
+    if (markedReadOnOpenRef.current) {
+      return;
+    }
+    if ((unreadQuery.data ?? 0) <= 0 || isMarkingAllAsRead) {
+      return;
+    }
+
+    markedReadOnOpenRef.current = true;
+    markAllAsRead();
+  }, [
+    isMarkingAllAsRead,
+    isOpen,
+    markAllAsRead,
+    recipientScope,
+    unreadQuery.data,
+  ]);
 
   const unreadCount = unreadQuery.data ?? 0;
   const notifications = recentQuery.data?.notifications ?? [];

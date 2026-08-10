@@ -72,7 +72,9 @@ export function JobSeekerDashboardLayout({
           }
         >
           <JobSeekerTopBar onSidebarToggle={handleSidebarToggle} />
-          <main className="flex flex-1 flex-col">{children}</main>
+          <main className="flex flex-1 flex-col pb-[calc(5.875rem+env(safe-area-inset-bottom)+1rem)] md:pb-0">
+            {children}
+          </main>
         </div>
         <FloatingBottomNav />
       </div>

@@ -52,6 +52,15 @@ export type NotificationListResult = {
   unreadCount: number;
 };
 
+export type NotificationSummary = {
+  all: number;
+  unread: number;
+  application: number;
+  interview: number;
+  offer: number;
+  system: number;
+};
+
 export type NotificationReadStatusFilter = "all" | "unread" | "read";
 
 export type NotificationCategoryFilter = "all" | NotificationCategory;

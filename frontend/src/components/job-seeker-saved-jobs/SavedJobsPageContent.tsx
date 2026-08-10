@@ -1,7 +1,10 @@
 "use client";
 
 import { SavedJobCard } from "@/components/job-seeker-saved-jobs/SavedJobCard";
-import { SavedJobsSidebar } from "@/components/job-seeker-saved-jobs/SavedJobsSidebar";
+import {
+  SavedJobsFiltersForm,
+  SavedJobsSidebar,
+} from "@/components/job-seeker-saved-jobs/SavedJobsSidebar";
 import { SavedJobsSortSelect } from "@/components/job-seeker-saved-jobs/SavedJobsSortSelect";
 import { SavedJobsStatsBar } from "@/components/job-seeker-saved-jobs/SavedJobsStatsBar";
 import {
@@ -34,10 +37,15 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Bookmark, Search } from "lucide-react";
+import { Bookmark, Filter, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
+
+function countActiveSavedFilters(filters: SavedJobsAdvancedFilters): number {
+  return Object.values(filters).filter((value) => value.trim().length > 0)
+    .length;
+}
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -100,6 +108,7 @@ export function SavedJobsPageContent() {
   );
 
   const [searchInput, setSearchInput] = useState(searchFromUrl);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] =
     useState<SavedJobsAdvancedFilters>(filtersFromUrl);
 
@@ -289,6 +298,18 @@ export function SavedJobsPageContent() {
     updateUrl({ page: Math.max(1, nextPage) });
   };
 
+  const activeFilterCount = countActiveSavedFilters(advancedFilters);
+
+  const applyFilters = (next: SavedJobsAdvancedFilters) => {
+    setAdvancedFilters(next);
+    updateUrl({ page: 1, filters: next });
+  };
+
+  const clearFilters = () => {
+    setAdvancedFilters(EMPTY_SAVED_JOBS_FILTERS);
+    updateUrl({ page: 1, filters: EMPTY_SAVED_JOBS_FILTERS });
+  };
+
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17.5rem] xl:grid-cols-[minmax(0,1fr)_19rem]">
@@ -315,13 +336,49 @@ export function SavedJobsPageContent() {
                 updateUrl({ tab: nextTab, page: 1 });
               }}
             />
-            <SavedJobsSortSelect
-              value={sort}
-              onChange={(nextSort) => {
-                updateUrl({ sort: nextSort, page: 1 });
-              }}
-            />
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((current) => !current)}
+                aria-expanded={filtersOpen}
+                aria-controls="saved-jobs-mobile-filters"
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-lg border bg-surface px-3 text-xs font-semibold shadow-sm transition-[border-color,background-color,box-shadow] lg:hidden",
+                  "outline-none hover:border-primary/25 hover:bg-primary-light/30",
+                  "focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
+                  filtersOpen || activeFilterCount > 0
+                    ? "border-primary text-primary"
+                    : "border-border text-foreground",
+                )}
+              >
+                <Filter className="size-3.5 shrink-0" aria-hidden="true" />
+                <span>Filters</span>
+                {activeFilterCount > 0 ? (
+                  <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-surface">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
+              </button>
+              <SavedJobsSortSelect
+                value={sort}
+                onChange={(nextSort) => {
+                  updateUrl({ sort: nextSort, page: 1 });
+                }}
+              />
+            </div>
           </div>
+
+          {filtersOpen ? (
+            <div id="saved-jobs-mobile-filters" className="mt-4 lg:hidden">
+              <SavedJobsFiltersForm
+                idPrefix="saved-filter-mobile"
+                filters={advancedFilters}
+                onChangeFilters={applyFilters}
+                onClearFilters={clearFilters}
+                onClose={() => setFiltersOpen(false)}
+              />
+            </div>
+          ) : null}
 
           <div className="mt-4">
             <div className="relative min-w-0">
@@ -339,7 +396,7 @@ export function SavedJobsPageContent() {
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Search by job title, company, location or skills"
                 className={cn(
-                  "h-11 w-full rounded-xl border border-border bg-surface py-2.5 pr-3 pl-10 text-sm text-foreground shadow-sm placeholder:text-muted",
+                  "h-11 w-full rounded-xl border border-border bg-surface py-2.5 pr-3 pl-10 text-xs text-foreground shadow-sm placeholder:text-muted sm:text-sm",
                   "outline-none transition-[border-color,box-shadow] hover:border-primary/25",
                   "focus:border-primary focus:ring-2 focus:ring-primary/20",
                 )}
@@ -427,14 +484,8 @@ export function SavedJobsPageContent() {
           <SavedJobsSidebar
             filters={advancedFilters}
             stats={stats}
-            onChangeFilters={(next) => {
-              setAdvancedFilters(next);
-              updateUrl({ page: 1, filters: next });
-            }}
-            onClearFilters={() => {
-              setAdvancedFilters(EMPTY_SAVED_JOBS_FILTERS);
-              updateUrl({ page: 1, filters: EMPTY_SAVED_JOBS_FILTERS });
-            }}
+            onChangeFilters={applyFilters}
+            onClearFilters={clearFilters}
           />
         </div>
       </div>

@@ -11,10 +11,10 @@ export function JobSearchWhatsAppBanner() {
           <WhatsAppIcon className="text-xl text-white" />
         </span>
         <div>
-          <p className="text-sm font-bold text-foreground">
+          <p className="text-xs font-bold text-foreground sm:text-sm">
             Get new jobs on WhatsApp
           </p>
-          <p className="mt-0.5 text-xs text-muted">
+          <p className="mt-0.5 text-[11px] text-muted sm:text-xs">
             Receive matching openings and apply faster.
           </p>
         </div>
@@ -23,7 +23,7 @@ export function JobSearchWhatsAppBanner() {
         href={WHATSAPP_JOIN_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+        className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 px-4 text-xs font-bold text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 sm:h-10 sm:text-sm"
       >
         Join Now
       </a>

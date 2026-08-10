@@ -26,11 +26,15 @@ export function ConnectedAppsPanel({ jobSeeker }: ConnectedAppsPanelProps) {
               <MessageCircle className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">WhatsApp</p>
-              <p className="mt-0.5 text-xs text-muted">
+              <p className="text-xs font-semibold text-foreground sm:text-sm">
+                WhatsApp
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted sm:text-xs">
                 Used for OTP sign-in and important updates.
               </p>
-              <p className="mt-1 truncate text-sm text-muted">{phone}</p>
+              <p className="mt-1 truncate text-xs text-muted sm:text-sm">
+                {phone}
+              </p>
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -55,7 +59,7 @@ export function ConnectedAppsPanel({ jobSeeker }: ConnectedAppsPanelProps) {
                 href={WHATSAPP_JOIN_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-9 items-center rounded-lg border border-primary px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="inline-flex h-9 items-center rounded-lg border border-primary px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
               >
                 Get help
               </a>
@@ -63,7 +67,7 @@ export function ConnectedAppsPanel({ jobSeeker }: ConnectedAppsPanelProps) {
           </div>
         </li>
       </ul>
-      <p className="mt-3 text-xs text-muted">
+      <p className="mt-3 text-[11px] text-muted sm:text-xs">
         Google and other social logins are not available for job seekers yet.
       </p>
     </SettingsSection>

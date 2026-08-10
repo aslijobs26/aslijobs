@@ -308,10 +308,10 @@ export function AppliedJobsPageContent({
       {showBackLink ? (
         <div className="mb-4">
           <Link
-            href={ROUTES.JOB_SEEKER_DASHBOARD}
+            href={ROUTES.JOB_SEEKER_PROFILE}
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            Back to dashboard
+            Back to profile
           </Link>
         </div>
       ) : null}
@@ -354,7 +354,7 @@ export function AppliedJobsPageContent({
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Search by Job Title or Company"
                 className={cn(
-                  "h-11 w-full rounded-xl border border-border bg-surface py-2.5 pr-3 pl-10 text-sm text-foreground shadow-sm placeholder:text-muted",
+                  "h-11 w-full rounded-xl border border-border bg-surface py-2.5 pr-3 pl-10 text-xs text-foreground shadow-sm placeholder:text-muted sm:text-sm",
                   "outline-none transition-[border-color,box-shadow] hover:border-primary/25",
                   "focus:border-primary focus:ring-2 focus:ring-primary/20",
                 )}
@@ -362,12 +362,12 @@ export function AppliedJobsPageContent({
               />
             </div>
 
-            <div className="flex shrink-0 items-center gap-2.5">
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
                 onClick={() => setFiltersOpen(true)}
                 className={cn(
-                  "inline-flex h-11 items-center gap-2 rounded-xl border bg-surface px-4 text-sm font-semibold shadow-sm transition-[border-color,background-color,box-shadow]",
+                  "inline-flex h-9 items-center gap-1.5 rounded-lg border bg-surface px-3 text-xs font-semibold shadow-sm transition-[border-color,background-color,box-shadow] sm:h-11 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm",
                   "outline-none hover:border-primary/25 hover:bg-primary-light/30",
                   "focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
                   activeFilterCount > 0
@@ -375,10 +375,13 @@ export function AppliedJobsPageContent({
                     : "border-border text-foreground",
                 )}
               >
-                <Filter className="size-4 shrink-0" aria-hidden="true" />
+                <Filter
+                  className="size-3.5 shrink-0 sm:size-4"
+                  aria-hidden="true"
+                />
                 <span>Filters</span>
                 {activeFilterCount > 0 ? (
-                  <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-surface">
+                  <span className="inline-flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-surface sm:size-5 sm:text-[10px]">
                     {activeFilterCount}
                   </span>
                 ) : null}

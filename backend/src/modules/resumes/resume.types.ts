@@ -1,8 +1,32 @@
 import type {
+  APPLICATION_RESUME_SOURCES,
   RESUME_GENERATION_SOURCES,
   RESUME_STATUSES,
   RESUME_TEMPLATE_IDS,
 } from "./resume.constants.js";
+
+export type ApplicationResumeSource =
+  (typeof APPLICATION_RESUME_SOURCES)[number];
+
+export type PublicUploadedResume = {
+  fileName: string;
+  fileUrl: string;
+  mimeType: string;
+  fileSize: number;
+  storageProvider: string;
+  uploadedAt: string | null;
+};
+
+export type UploadedResumeSnapshot = {
+  url: string;
+  storagePath: string;
+  publicId: string;
+  storageProvider: string;
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string | null;
+};
 
 export type ResumeStatus = (typeof RESUME_STATUSES)[number];
 

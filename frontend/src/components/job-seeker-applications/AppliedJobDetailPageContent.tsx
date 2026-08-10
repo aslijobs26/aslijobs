@@ -14,6 +14,7 @@ import {
 } from "@/types/job-seeker-applications";
 import { isResumeJson } from "@/types/job-seeker-resume";
 import { cn } from "@/utils/cn";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -146,37 +147,37 @@ export function AppliedJobDetailPageContent({
       <div className="mb-4">
         <Link
           href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
         >
-          <ArrowLeft className="size-4" aria-hidden="true" />
+          <ArrowLeft className="size-3.5 sm:size-4" aria-hidden="true" />
           Back to My Applications
         </Link>
       </div>
 
       <header className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <div className="flex flex-wrap items-start justify-between gap-2.5 sm:gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               {application.jobTitle}
             </h1>
-            <p className="mt-1 text-sm font-medium text-primary">
+            <p className="mt-1 text-xs font-medium text-primary sm:text-sm">
               {application.companyName || "Company"}
             </p>
-            <p className="mt-2 text-sm text-muted">
+            <p className="mt-1.5 text-xs text-muted sm:mt-2 sm:text-sm">
               {[application.location, application.salaryLabel]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
           </div>
-          <span className="inline-flex rounded-full bg-primary-light/60 px-2.5 py-1 text-xs font-semibold text-foreground ring-1 ring-inset ring-border-subtle">
+          <span className="inline-flex rounded-full bg-primary-light/60 px-2 py-0.5 text-[11px] font-semibold text-foreground ring-1 ring-inset ring-border-subtle sm:px-2.5 sm:py-1 sm:text-xs">
             {APPLICATION_STATUS_LABELS[status]}
           </span>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3.5 flex flex-wrap gap-2 sm:mt-4">
           <Link
             href={jobHref}
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
           >
             View Job
           </Link>
@@ -184,7 +185,7 @@ export function AppliedJobDetailPageContent({
           {showPrepareInterview ? (
             <Link
               href={ROUTES.JOB_SEEKER_MY_RESUME}
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
             >
               Prepare Interview
             </Link>
@@ -195,7 +196,7 @@ export function AppliedJobDetailPageContent({
               href={meetingLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
             >
               Join Interview
             </a>
@@ -206,7 +207,7 @@ export function AppliedJobDetailPageContent({
             status === "interview_completed") ? (
             <a
               href="#interview-details"
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
             >
               View Schedule
             </a>
@@ -215,7 +216,7 @@ export function AppliedJobDetailPageContent({
           {status === "offer_sent" && application.offer ? (
             <a
               href="#offer-details"
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
             >
               View Offer
             </a>
@@ -224,7 +225,7 @@ export function AppliedJobDetailPageContent({
           {status === "rejected" && application.rejectReason ? (
             <a
               href="#rejection-feedback"
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
             >
               View Feedback
             </a>
@@ -233,7 +234,7 @@ export function AppliedJobDetailPageContent({
           {status === "withdrawn" ? (
             <Link
               href={jobHref}
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
             >
               View Job to Reapply
             </Link>
@@ -252,7 +253,7 @@ export function AppliedJobDetailPageContent({
                   withdrawMutation.mutate();
                 }
               }}
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-pin-state/30 bg-primary-light px-3.5 py-2 text-sm font-semibold text-pin-state hover:bg-primary-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30 disabled:opacity-60"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg border border-pin-state/30 bg-primary-light px-3 py-1.5 text-xs font-semibold text-pin-state hover:bg-primary-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30 disabled:opacity-60 sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
             >
               {withdrawMutation.isPending
                 ? "Withdrawing…"
@@ -358,9 +359,30 @@ export function AppliedJobDetailPageContent({
 
           <section>
             <h2 className="mb-3 text-sm font-semibold text-foreground">
-              Submitted resume (snapshot)
+              Resume used
             </h2>
-            <ResumePreview resumeJson={application.resumeSnapshot.resumeJson} />
+            <p className="mb-3 text-sm text-muted">
+              {application.resumeSource === "uploaded"
+                ? `My Uploaded Resume${
+                    application.uploadedResumeSnapshot?.originalName
+                      ? ` · ${application.uploadedResumeSnapshot.originalName}`
+                      : ""
+                  }`
+                : `AsliJobs Resume · v${application.resumeVersion}`}
+            </p>
+            {application.resumeSource === "uploaded" &&
+            application.uploadedResumeSnapshot?.url ? (
+              <a
+                href={resolveMediaUrl(application.uploadedResumeSnapshot.url)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              >
+                Open submitted file
+              </a>
+            ) : (
+              <ResumePreview resumeJson={application.resumeSnapshot.resumeJson} />
+            )}
           </section>
         </div>
 
@@ -377,6 +399,14 @@ export function AppliedJobDetailPageContent({
               <DetailRow
                 label="Applied"
                 value={formatDateTime(application.appliedAt)}
+              />
+              <DetailRow
+                label="Resume used"
+                value={
+                  application.resumeSource === "uploaded"
+                    ? "My Uploaded Resume"
+                    : "AsliJobs Resume"
+                }
               />
               <DetailRow
                 label="Resume version"

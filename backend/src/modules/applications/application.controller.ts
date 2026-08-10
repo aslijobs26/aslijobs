@@ -92,6 +92,7 @@ export class ApplicationController {
     const result = await applicationService.applyToJob({
       jobSeekerId,
       publicJobId: body.publicJobId,
+      resumeSource: body.resumeSource,
     });
 
     sendSuccess(res, HTTP_STATUS.CREATED, {

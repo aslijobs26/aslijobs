@@ -32,6 +32,7 @@ import type {
   ApplicationStatusHistoryEntry,
 } from "@/types/job-seeker-applications";
 import { cn } from "@/utils/cn";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Download, Printer } from "lucide-react";
@@ -374,12 +375,22 @@ export function EmployerCandidateDetailPageContent({
             </dd>
           </div>
           {canViewResume ? (
-            <div>
-              <dt className="inline">Resume version: </dt>
-              <dd className="inline font-semibold text-foreground">
-                v{application.resumeVersion}
-              </dd>
-            </div>
+            <>
+              <div>
+                <dt className="inline">Resume used: </dt>
+                <dd className="inline font-semibold text-foreground">
+                  {application.resumeSource === "uploaded"
+                    ? "Uploaded Resume"
+                    : "AsliJobs Resume"}
+                </dd>
+              </div>
+              <div>
+                <dt className="inline">Resume version: </dt>
+                <dd className="inline font-semibold text-foreground">
+                  v{application.resumeVersion}
+                </dd>
+              </div>
+            </>
           ) : null}
         </dl>
       </header>
@@ -440,7 +451,28 @@ export function EmployerCandidateDetailPageContent({
           </section>
 
           {canViewResume ? (
-            <ResumePreview resumeJson={application.resumeSnapshot.resumeJson} />
+            application.resumeSource === "uploaded" &&
+            application.uploadedResumeSnapshot?.url ? (
+              <section className="rounded-xl border border-border-subtle bg-surface p-4">
+                <h2 className="text-sm font-semibold text-foreground">
+                  Submitted uploaded resume
+                </h2>
+                <p className="mt-2 text-sm text-muted">
+                  {application.uploadedResumeSnapshot.originalName ||
+                    "Candidate resume file"}
+                </p>
+                <a
+                  href={resolveMediaUrl(application.uploadedResumeSnapshot.url)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                >
+                  Open resume file
+                </a>
+              </section>
+            ) : (
+              <ResumePreview resumeJson={application.resumeSnapshot.resumeJson} />
+            )
           ) : null}
         </div>
 

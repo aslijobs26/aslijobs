@@ -64,6 +64,16 @@ export type NotificationListResult = {
   unreadCount: number;
 };
 
+/** Inbox totals for Notification Summary widgets (unfiltered by search). */
+export type NotificationSummary = {
+  all: number;
+  unread: number;
+  application: number;
+  interview: number;
+  offer: number;
+  system: number;
+};
+
 /** Employer Messages: one conversation per application. */
 export type NotificationConversationListItem = {
   applicationId: string;

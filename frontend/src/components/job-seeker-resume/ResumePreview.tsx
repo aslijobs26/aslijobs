@@ -16,10 +16,12 @@ function Section({
 }) {
   return (
     <section className="mt-5">
-      <h3 className="border-b border-foreground/20 pb-1 text-xs font-bold uppercase tracking-wide text-foreground">
+      <h3 className="border-b border-foreground/20 pb-1 text-[10px] font-bold uppercase tracking-wide text-foreground sm:text-xs">
         {title}
       </h3>
-      <div className="mt-2 text-sm leading-relaxed text-foreground">{children}</div>
+      <div className="mt-2 text-xs leading-relaxed text-foreground sm:text-sm">
+        {children}
+      </div>
     </section>
   );
 }
@@ -50,7 +52,7 @@ export function ResumePreview({ resume, resumeJson }: ResumePreviewProps) {
 
   if (!sourceJson || !isResumeJson(sourceJson)) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface p-6 text-sm text-muted">
+      <div className="rounded-xl border border-border-subtle bg-surface p-6 text-xs text-muted sm:text-sm">
         Resume content is not available yet.
       </div>
     );
@@ -66,13 +68,13 @@ export function ResumePreview({ resume, resumeJson }: ResumePreviewProps) {
       className="resume-print-root rounded-xl border border-border-subtle bg-surface p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)] sm:p-8"
     >
       <header className="border-b border-border-subtle pb-4">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+        <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
           {json.header.fullName || "Job Seeker"}
         </h2>
-        <p className="mt-1 text-sm font-medium text-primary">
+        <p className="mt-1 text-xs font-medium text-primary sm:text-sm">
           {json.sections.professionalHeadline || json.header.headline}
         </p>
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-[11px] text-muted sm:text-xs">
           {[
             json.header.phone || contact.phone,
             [json.header.city, json.header.state].filter(Boolean).join(", ") ||
@@ -107,7 +109,9 @@ export function ResumePreview({ resume, resumeJson }: ResumePreviewProps) {
             {json.sections.education.map((entry, index) => (
               <li key={`${entry.level}-${index}`}>
                 <p className="font-semibold">{formatEducationTitle(entry)}</p>
-                <p className="text-xs text-muted">{formatEducationMeta(entry)}</p>
+                <p className="text-[11px] text-muted sm:text-xs">
+                  {formatEducationMeta(entry)}
+                </p>
               </li>
             ))}
           </ul>
@@ -124,7 +128,7 @@ export function ResumePreview({ resume, resumeJson }: ResumePreviewProps) {
                 <p className="font-semibold">
                   {[entry.jobRole, entry.companyName].filter(Boolean).join(" — ")}
                 </p>
-                <p className="text-xs text-muted">
+                <p className="text-[11px] text-muted sm:text-xs">
                   {[
                     entry.industry,
                     [
@@ -162,7 +166,7 @@ export function ResumePreview({ resume, resumeJson }: ResumePreviewProps) {
       ) : null}
 
       <Section title="Career Preferences">
-        <ul className="space-y-1 text-sm">
+        <ul className="space-y-1 text-xs sm:text-sm">
           {prefs.preferredJobRole ? (
             <li>Preferred role: {prefs.preferredJobRole}</li>
           ) : null}
@@ -186,7 +190,7 @@ export function ResumePreview({ resume, resumeJson }: ResumePreviewProps) {
       </Section>
 
       <Section title="Contact Information">
-        <ul className="space-y-1 text-sm">
+        <ul className="space-y-1 text-xs sm:text-sm">
           {contact.fullName ? <li>Name: {contact.fullName}</li> : null}
           {contact.phone ? <li>Mobile: {contact.phone}</li> : null}
           {contact.city ? <li>City: {contact.city}</li> : null}

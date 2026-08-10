@@ -10,16 +10,19 @@ import { JOB_SEEKER_PROFILE_VISIBILITY_OPTIONS } from "@/constants/job-seeker-pr
 import {
   JOB_SEEKER_AVAILABILITY_STATUS_OPTIONS,
   JOB_SEEKER_EDUCATION_OPTIONS,
+  JOB_SEEKER_GENDER_OPTIONS,
   JOB_SEEKER_JOB_TYPE_OPTIONS,
   JOB_SEEKER_LANGUAGE_OPTIONS,
   JOB_SEEKER_REGISTER_SALARY_PERIOD_OPTIONS,
   JOB_SEEKER_WORK_MODE_OPTIONS,
 } from "@/constants/job-seeker-register";
+import type { PublicResume } from "@/types/job-seeker-resume";
 import type {
   JobSeekerAvailabilityStatus,
   JobSeekerEducation,
   JobSeekerEducationLevel,
   JobSeekerExperienceEntry,
+  JobSeekerGender,
   JobSeekerJobType,
   JobSeekerLanguage,
   JobSeekerProfileVisibility,
@@ -28,11 +31,17 @@ import type {
   UpdateJobSeekerProfileInput,
 } from "@/types/job-seeker";
 import { cn } from "@/utils/cn";
+import {
+  resolveProfessionalSummary,
+  resolveSkills,
+} from "@/utils/job-seeker-profile";
+import { showAppToast } from "@/utils/share-job";
 import { Check } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import { JobSeekerProfileDialog } from "./JobSeekerProfileDialog";
 
 export type JobSeekerProfileEditModalState =
+  | { type: "personal" }
   | { type: "about" }
   | { type: "experience"; mode: "create" | "edit"; index: number }
   | { type: "education" }
@@ -43,6 +52,7 @@ export type JobSeekerProfileEditModalState =
 
 type JobSeekerProfileEditModalsProps = {
   jobSeeker: JobSeekerPublic;
+  resume?: PublicResume | null;
   activeModal: JobSeekerProfileEditModalState;
   isSaving: boolean;
   onClose: () => void;
@@ -64,10 +74,12 @@ function DialogFooter({
   onClose,
   isSaving,
   submitLabel = "Save changes",
+  formId,
 }: {
   onClose: () => void;
   isSaving: boolean;
   submitLabel?: string;
+  formId: string;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -79,11 +91,34 @@ function DialogFooter({
       >
         Cancel
       </button>
-      <button type="submit" className={primaryButtonClassName} disabled={isSaving}>
+      <button
+        type="submit"
+        form={formId}
+        className={primaryButtonClassName}
+        disabled={isSaving}
+      >
         {isSaving ? "Saving…" : submitLabel}
       </button>
     </div>
   );
+}
+
+function normalizeExperienceEntry(
+  entry: JobSeekerExperienceEntry,
+): JobSeekerExperienceEntry {
+  return {
+    companyName: entry.companyName.trim(),
+    jobRole: entry.jobRole.trim(),
+    industry: entry.industry.trim(),
+    startDate: entry.startDate.trim(),
+    endDate: entry.currentlyWorking ? "" : entry.endDate.trim(),
+    currentlyWorking: Boolean(entry.currentlyWorking),
+    duration: entry.duration.trim(),
+    salary: entry.salary.trim(),
+    location: entry.location.trim(),
+    responsibilities: (entry.responsibilities ?? "").trim(),
+    achievements: (entry.achievements ?? "").trim(),
+  };
 }
 
 function renderEducationFields(
@@ -241,17 +276,18 @@ function getLocalTodayIso(): string {
 
 function AboutModal({
   jobSeeker,
+  resume,
   isSaving,
   onClose,
   onSave,
 }: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
-  const [summary, setSummary] = useState(
-    jobSeeker.professionalSummary?.trim() ?? "",
-  );
+  const formId = useId();
+  const resolvedSummary = resolveProfessionalSummary(jobSeeker, resume);
+  const [summary, setSummary] = useState(resolvedSummary);
 
   useEffect(() => {
-    setSummary(jobSeeker.professionalSummary?.trim() ?? "");
-  }, [jobSeeker.professionalSummary]);
+    setSummary(resolveProfessionalSummary(jobSeeker, resume));
+  }, [jobSeeker, resume]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -265,12 +301,14 @@ function AboutModal({
       description="Write a short professional summary employers will see on your profile."
       onClose={onClose}
       footer={
-        <form onSubmit={(event) => void handleSubmit(event)}>
-          <DialogFooter onClose={onClose} isSaving={isSaving} />
-        </form>
+        <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
       }
     >
-      <form className="space-y-3" onSubmit={(event) => void handleSubmit(event)}>
+      <form
+        id={formId}
+        className="space-y-3"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
         <label htmlFor="profile-summary" className={labelClassName}>
           Professional summary
         </label>
@@ -282,6 +320,108 @@ function AboutModal({
           className={`${inputClassName} min-h-[9rem] resize-y py-2.5`}
           placeholder="Describe your experience, strengths, and career goals…"
         />
+      </form>
+    </JobSeekerProfileDialog>
+  );
+}
+
+function PersonalModal({
+  jobSeeker,
+  isSaving,
+  onClose,
+  onSave,
+}: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
+  const formId = useId();
+  const [fullName, setFullName] = useState(jobSeeker.fullName ?? "");
+  const [dateOfBirth, setDateOfBirth] = useState(jobSeeker.dateOfBirth ?? "");
+  const [gender, setGender] = useState(jobSeeker.gender ?? "");
+
+  useEffect(() => {
+    setFullName(jobSeeker.fullName ?? "");
+    setDateOfBirth(jobSeeker.dateOfBirth ?? "");
+    setGender(jobSeeker.gender ?? "");
+  }, [jobSeeker.dateOfBirth, jobSeeker.fullName, jobSeeker.gender]);
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    const trimmedName = fullName.trim();
+    if (!trimmedName) {
+      showAppToast("Full name is required.", "error");
+      return;
+    }
+
+    const payload: UpdateJobSeekerProfileInput = {
+      fullName: trimmedName,
+    };
+    if (dateOfBirth.trim()) {
+      payload.dateOfBirth = dateOfBirth.trim();
+    }
+    if (gender) {
+      payload.gender = gender as JobSeekerGender;
+    }
+
+    await onSave(payload);
+    onClose();
+  };
+
+  return (
+    <JobSeekerProfileDialog
+      title="Personal details"
+      description="Update your name and basic personal information."
+      onClose={onClose}
+      footer={
+        <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
+      }
+    >
+      <form
+        id={formId}
+        className="grid gap-4 sm:grid-cols-2"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
+        <div className="space-y-1.5 sm:col-span-2">
+          <label htmlFor="profile-full-name" className={labelClassName}>
+            Full name*
+          </label>
+          <input
+            id="profile-full-name"
+            className={inputClassName}
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            required
+            autoComplete="name"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="profile-dob" className={labelClassName}>
+            Date of birth
+          </label>
+          <PostJobDatePicker
+            id="profile-dob"
+            value={dateOfBirth}
+            onChange={setDateOfBirth}
+            placeholder="Select date of birth"
+            compact
+            aria-label="Date of birth"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="profile-gender" className={labelClassName}>
+            Gender
+          </label>
+          <select
+            id="profile-gender"
+            className={inputClassName}
+            value={gender}
+            onChange={(event) => setGender(event.target.value)}
+          >
+            <option value="">Select gender</option>
+            {JOB_SEEKER_GENDER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </form>
     </JobSeekerProfileDialog>
   );
@@ -299,6 +439,7 @@ function ExperienceModal({
     { type: "experience" }
   >;
 }) {
+  const formId = useId();
   const todayIso = getLocalTodayIso();
   const initialEntry = useMemo(() => {
     if (activeModal.mode === "edit") {
@@ -321,11 +462,19 @@ function ExperienceModal({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const experiences = [...(jobSeeker.experiences ?? [])];
+    const normalizedEntry = normalizeExperienceEntry(entry);
+    if (!normalizedEntry.salary) {
+      showAppToast("Salary is required for work experience.", "error");
+      return;
+    }
+
+    const experiences = (jobSeeker.experiences ?? []).map((item) =>
+      normalizeExperienceEntry(item),
+    );
     if (activeModal.mode === "edit") {
-      experiences[activeModal.index] = entry;
+      experiences[activeModal.index] = normalizedEntry;
     } else {
-      experiences.push(entry);
+      experiences.push(normalizedEntry);
     }
     await onSave({
       experienceType: "experienced",
@@ -343,12 +492,11 @@ function ExperienceModal({
       onClose={onClose}
       wide
       footer={
-        <form onSubmit={(event) => void handleSubmit(event)}>
-          <DialogFooter onClose={onClose} isSaving={isSaving} />
-        </form>
+        <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
       }
     >
       <form
+        id={formId}
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={(event) => void handleSubmit(event)}
       >
@@ -461,12 +609,13 @@ function ExperienceModal({
         </div>
         <div className="space-y-1.5">
           <label htmlFor="exp-salary" className={labelClassName}>
-            Salary
+            Salary*
           </label>
           <input
             id="exp-salary"
             className={inputClassName}
             value={entry.salary}
+            required
             onChange={(event) =>
               patch({
                 salary: event.target.value.replace(/\D/g, "").slice(0, 8),
@@ -523,6 +672,7 @@ function EducationModal({
   onClose,
   onSave,
 }: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
+  const formId = useId();
   const [education, setEducation] = useState<JobSeekerEducation>(
     jobSeeker.education ?? { ...EMPTY_EDUCATION },
   );
@@ -543,12 +693,14 @@ function EducationModal({
       description="Update your highest qualification."
       onClose={onClose}
       footer={
-        <form onSubmit={(event) => void handleSubmit(event)}>
-          <DialogFooter onClose={onClose} isSaving={isSaving} />
-        </form>
+        <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
       }
     >
-      <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+      <form
+        id={formId}
+        className="space-y-4"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
         <EmployerRegisterSearchableSelect
           id="profile-edu-level"
           label="Education level*"
@@ -575,15 +727,18 @@ function EducationModal({
 
 function SkillsModal({
   jobSeeker,
+  resume,
   isSaving,
   onClose,
   onSave,
 }: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
-  const [raw, setRaw] = useState((jobSeeker.skills ?? []).join(", "));
+  const formId = useId();
+  const resolvedSkills = resolveSkills(jobSeeker, resume);
+  const [raw, setRaw] = useState(resolvedSkills.join(", "));
 
   useEffect(() => {
-    setRaw((jobSeeker.skills ?? []).join(", "));
-  }, [jobSeeker.skills]);
+    setRaw(resolveSkills(jobSeeker, resume).join(", "));
+  }, [jobSeeker, resume]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -602,12 +757,14 @@ function SkillsModal({
       description="Separate skills with commas."
       onClose={onClose}
       footer={
-        <form onSubmit={(event) => void handleSubmit(event)}>
-          <DialogFooter onClose={onClose} isSaving={isSaving} />
-        </form>
+        <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
       }
     >
-      <form className="space-y-3" onSubmit={(event) => void handleSubmit(event)}>
+      <form
+        id={formId}
+        className="space-y-3"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
         <label htmlFor="profile-skills" className={labelClassName}>
           Your skills
         </label>
@@ -630,6 +787,7 @@ function PreferencesModal({
   onClose,
   onSave,
 }: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
+  const formId = useId();
   const [jobRole, setJobRole] = useState(jobSeeker.jobRole ?? "");
   const [jobType, setJobType] = useState(jobSeeker.jobType ?? "");
   const [workMode, setWorkMode] = useState(jobSeeker.workMode ?? "");
@@ -682,12 +840,25 @@ function PreferencesModal({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    const trimmedRole = jobRole.trim();
+    const trimmedLocation = preferredJobLocation.trim();
+    if (!trimmedRole) {
+      showAppToast("Job role is required.", "error");
+      return;
+    }
+    if (!trimmedLocation) {
+      showAppToast("Preferred job location is required.", "error");
+      return;
+    }
+    if (languages.length < 1) {
+      showAppToast("Select at least one language.", "error");
+      return;
+    }
+
     const salaryNumber = Number(expectedSalary.replace(/\D/g, ""));
-    await onSave({
-      jobRole: jobRole.trim(),
-      jobType: (jobType || undefined) as JobSeekerJobType | undefined,
-      workMode: (workMode || undefined) as JobSeekerWorkMode | undefined,
-      preferredJobLocation: preferredJobLocation.trim(),
+    const payload: UpdateJobSeekerProfileInput = {
+      jobRole: trimmedRole,
+      preferredJobLocation: trimmedLocation,
       expectedSalary: salaryNumber > 0 ? salaryNumber : null,
       expectedSalaryPeriod:
         expectedSalaryPeriod === "per-year" ? "per-year" : "per-month",
@@ -697,7 +868,16 @@ function PreferencesModal({
       languages,
       availabilityStatus: (availabilityStatus ||
         null) as JobSeekerAvailabilityStatus | null,
-    });
+    };
+
+    if (jobType) {
+      payload.jobType = jobType as JobSeekerJobType;
+    }
+    if (workMode) {
+      payload.workMode = workMode as JobSeekerWorkMode;
+    }
+
+    await onSave(payload);
     onClose();
   };
 
@@ -708,12 +888,11 @@ function PreferencesModal({
       onClose={onClose}
       wide
       footer={
-        <form onSubmit={(event) => void handleSubmit(event)}>
-          <DialogFooter onClose={onClose} isSaving={isSaving} />
-        </form>
+        <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
       }
     >
       <form
+        id={formId}
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={(event) => void handleSubmit(event)}
       >
@@ -875,6 +1054,7 @@ function VisibilityModal({
   onClose,
   onSave,
 }: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
+  const formId = useId();
   const [visibility, setVisibility] = useState<JobSeekerProfileVisibility>(
     jobSeeker.profileVisibility ?? "visible",
   );
@@ -895,12 +1075,14 @@ function VisibilityModal({
       description="Control who can discover your profile."
       onClose={onClose}
       footer={
-        <form onSubmit={(event) => void handleSubmit(event)}>
-          <DialogFooter onClose={onClose} isSaving={isSaving} />
-        </form>
+        <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
       }
     >
-      <form className="space-y-3" onSubmit={(event) => void handleSubmit(event)}>
+      <form
+        id={formId}
+        className="space-y-3"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
         <fieldset className="space-y-2">
           <legend className="sr-only">Profile visibility</legend>
           {JOB_SEEKER_PROFILE_VISIBILITY_OPTIONS.map((option) => (
@@ -944,6 +1126,8 @@ export function JobSeekerProfileEditModals(props: JobSeekerProfileEditModalsProp
   }
 
   switch (activeModal.type) {
+    case "personal":
+      return <PersonalModal {...props} />;
     case "about":
       return <AboutModal {...props} />;
     case "experience":

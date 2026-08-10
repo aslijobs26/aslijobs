@@ -71,7 +71,7 @@ export function InterviewsKpiStrip({
             </div>
             <p className="mt-2 text-2xl font-bold leading-none tracking-tight text-foreground">
               {isLoading ? (
-                <span className="inline-block h-7 w-9 animate-pulse rounded bg-primary-light/50" />
+                <span className="inline-block h-7 w-9 animate-pulse rounded bg-primary-light/50"/>
               ) : (
                 (value ?? 0)
               )}

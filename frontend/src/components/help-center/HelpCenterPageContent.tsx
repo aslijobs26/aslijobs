@@ -120,7 +120,7 @@ function HelpAccordionItem({
         >
           <span
             className={cn(
-              "text-[15px] leading-snug sm:text-base",
+              "text-sm leading-snug sm:text-base",
               isOpen
                 ? "font-bold text-primary"
                 : "font-semibold text-foreground",
@@ -150,7 +150,7 @@ function HelpAccordionItem({
         )}
       >
         <div className="overflow-hidden">
-          <p className="px-5 pt-1 pb-5 text-sm leading-[1.7] text-muted sm:px-6 sm:pt-1.5 sm:pb-6 sm:text-[15px]">
+          <p className="px-5 pt-1 pb-5 text-xs leading-[1.7] text-muted sm:px-6 sm:pt-1.5 sm:pb-6 sm:text-[15px]">
             {article.answer}
           </p>
         </div>
@@ -295,7 +295,7 @@ export function HelpCenterPageContent() {
     <main className="bg-hero-bg/40">
       <section className="border-b border-border-subtle bg-legal-hero-surface">
         <Container className="py-8 sm:py-10 lg:py-12">
-          <nav aria-label="Breadcrumb" className="text-sm text-muted">
+          <nav aria-label="Breadcrumb" className="text-xs text-muted sm:text-sm">
             <ol className="flex flex-wrap items-center gap-2">
               <li>
                 <Link
@@ -315,14 +315,14 @@ export function HelpCenterPageContent() {
           </nav>
 
           <div className="mx-auto mt-8 max-w-3xl text-center sm:mt-10">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
               {HELP_CENTER_PAGE_TITLE}
             </h1>
 
             <label className="relative mt-8 block text-left">
               <span className="sr-only">{HELP_CENTER_SEARCH_PLACEHOLDER}</span>
               <Search
-                className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted"
+                className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted sm:size-5"
                 strokeWidth={1.75}
                 aria-hidden="true"
               />
@@ -332,7 +332,7 @@ export function HelpCenterPageContent() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={HELP_CENTER_SEARCH_PLACEHOLDER}
-                className="h-12 w-full rounded-2xl border border-border bg-surface pr-4 pl-12 text-sm text-foreground shadow-[0_8px_24px_rgba(26,43,60,0.05)] outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 sm:h-14 sm:text-[15px]"
+                className="h-11 w-full rounded-2xl border border-border bg-surface pr-4 pl-11 text-xs text-foreground shadow-[0_8px_24px_rgba(26,43,60,0.05)] outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 sm:h-14 sm:pl-12 sm:text-[15px]"
               />
             </label>
           </div>
@@ -357,7 +357,7 @@ export function HelpCenterPageContent() {
                   aria-selected={isActive}
                   onClick={() => handleCategoryNavigate(category.id)}
                   className={cn(
-                    "inline-flex h-10 shrink-0 items-center rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                    "inline-flex h-9 shrink-0 items-center rounded-full border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:px-4 sm:text-sm",
                     isActive
                       ? "border-primary bg-primary text-white"
                       : "border-border bg-surface text-foreground hover:border-primary/30",
@@ -382,10 +382,10 @@ export function HelpCenterPageContent() {
                   aria-hidden="true"
                 />
               </span>
-              <h2 className="mt-5 text-xl font-bold text-foreground">
+              <h2 className="mt-5 text-lg font-bold text-foreground sm:text-xl">
                 {HELP_CENTER_EMPTY_TITLE}
               </h2>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+              <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted sm:text-sm">
                 {HELP_CENTER_EMPTY_DESCRIPTION}
               </p>
               <button
@@ -394,7 +394,7 @@ export function HelpCenterPageContent() {
                   setQuery("");
                   searchInputRef.current?.focus();
                 }}
-                className="mt-6 inline-flex h-11 items-center justify-center rounded-xl border border-border bg-surface px-5 text-sm font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="mt-6 inline-flex h-10 items-center justify-center rounded-xl border border-border bg-surface px-5 text-xs font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:text-sm"
               >
                 Clear search
               </button>
@@ -444,11 +444,11 @@ export function HelpCenterPageContent() {
                     <div className="mb-5">
                       <h2
                         id={`help-heading-${category.id}`}
-                        className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.75rem]"
+                        className="text-xl font-bold tracking-tight text-foreground sm:text-[1.75rem]"
                       >
                         {category.title}
                       </h2>
-                      <p className="mt-2 text-sm leading-relaxed text-muted sm:text-[15px]">
+                      <p className="mt-2 text-xs leading-relaxed text-muted sm:text-[15px]">
                         {category.description}
                       </p>
                       <div
@@ -475,10 +475,10 @@ export function HelpCenterPageContent() {
 
                 <aside className="overflow-hidden rounded-[1.5rem] border border-primary/15 bg-surface shadow-[0_16px_40px_rgba(26,43,60,0.07)]">
                   <div className="bg-legal-hero-surface px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
-                    <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                    <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-3xl">
                       {HELP_CENTER_SUPPORT_TITLE}
                     </h2>
-                    <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+                    <p className="mt-3 max-w-2xl text-xs leading-relaxed text-muted sm:text-base">
                       {HELP_CENTER_SUPPORT_DESCRIPTION}
                     </p>
 
@@ -487,19 +487,19 @@ export function HelpCenterPageContent() {
                         href={WHATSAPP_JOIN_URL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex h-12 items-center justify-center rounded-xl bg-primary px-6 text-sm font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-xs font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:px-6 sm:text-sm"
                       >
                         {HELP_CENTER_WHATSAPP_LABEL}
                       </a>
                       <Link
                         href={ROUTES.CONTACT}
-                        className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-surface px-6 text-sm font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                        className="inline-flex h-11 items-center justify-center rounded-xl border border-border bg-surface px-5 text-xs font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:px-6 sm:text-sm"
                       >
                         {HELP_CENTER_CALL_LABEL}
                       </Link>
                       <Link
                         href={ROUTES.CONTACT}
-                        className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-surface px-6 text-sm font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                        className="inline-flex h-11 items-center justify-center rounded-xl border border-border bg-surface px-5 text-xs font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:px-6 sm:text-sm"
                       >
                         {HELP_CENTER_EMAIL_LABEL}
                       </Link>

@@ -61,7 +61,7 @@ export function SavedJobsSortSelect({
           aria-label={`Sort saved jobs: ${selected.label}`}
           onClick={() => setIsOpen((current) => !current)}
           className={cn(
-            "inline-flex h-10 min-w-[11rem] items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 text-left text-sm font-semibold text-foreground shadow-sm",
+            "inline-flex h-9 min-w-[9.5rem] items-center justify-between gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-left text-xs font-semibold text-foreground shadow-sm sm:h-10 sm:min-w-[11rem] sm:gap-2 sm:rounded-xl sm:px-3 sm:text-sm",
             "outline-none transition-colors hover:border-primary/30",
             "focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
             isOpen && "border-primary ring-2 ring-primary/20",
@@ -70,7 +70,7 @@ export function SavedJobsSortSelect({
           <span className="truncate">{selected.label}</span>
           <ChevronDown
             className={cn(
-              "size-4 shrink-0 text-muted transition-transform",
+              "size-3.5 shrink-0 text-muted transition-transform sm:size-4",
               isOpen && "rotate-180",
             )}
             aria-hidden="true"
@@ -97,7 +97,7 @@ export function SavedJobsSortSelect({
                       setIsOpen(false);
                     }}
                     className={cn(
-                      "flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors",
+                      "flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs transition-colors sm:py-2.5 sm:text-sm",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
                       isSelected
                         ? "bg-primary-light font-semibold text-primary"

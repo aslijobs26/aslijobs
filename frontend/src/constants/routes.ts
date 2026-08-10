@@ -35,9 +35,11 @@ export const ROUTES = {
   EMPLOYER_HELP_CENTER: "/employer/help-center",
   JOB_SEEKER_REGISTER: "/job-seeker/register",
   JOB_SEEKER_LOGIN: "/job-seeker/login",
+  /** @deprecated Legacy path; redirects to profile. Prefer JOB_SEEKER_PROFILE. */
   JOB_SEEKER_DASHBOARD: "/job-seeker/dashboard",
   JOB_SEEKER_PROFILE: "/job-seeker/profile",
   JOB_SEEKER_MY_RESUME: "/job-seeker/my-resume",
+  JOB_SEEKER_UPLOADED_RESUME_PREVIEW: "/job-seeker/my-resume/uploaded-preview",
   JOB_SEEKER_APPLIED_JOBS: "/job-seeker/applied-jobs",
   jobSeekerApplicationDetail: (applicationId: string) =>
     `/job-seeker/applied-jobs/${applicationId}`,

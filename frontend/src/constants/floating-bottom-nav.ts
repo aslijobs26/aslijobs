@@ -110,7 +110,6 @@ export const FLOATING_BOTTOM_NAV_JOB_SEEKER: FloatingBottomNavItem[] = [
     icon: Home,
     activeIconClass: "bi bi-house-door-fill",
     exact: true,
-    matchPrefixes: [ROUTES.JOB_SEEKER_DASHBOARD],
   },
   {
     id: "jobs",

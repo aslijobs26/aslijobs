@@ -130,18 +130,18 @@ function SummaryField({
   }
 
   return (
-    <div className="min-w-0 py-2.5">
-      <p className="text-[10px] leading-none font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
+    <div className="min-w-0 py-2">
+      <p className="text-[9px] leading-none font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
         {label}
       </p>
-      <div className="mt-1.5">{children}</div>
+      <div className="mt-1">{children}</div>
     </div>
   );
 }
 
 function SummaryValue({ children }: { children: ReactNode }) {
   return (
-    <p className="text-[13px] leading-snug font-semibold break-words text-[#111827]">
+    <p className="text-[12px] leading-snug font-semibold break-words text-[#111827]">
       {children}
     </p>
   );
@@ -156,7 +156,7 @@ function OutlinePills({ values }: { values: string[] }) {
     <ul className="flex flex-wrap gap-1">
       {values.map((value) => (
         <li key={value}>
-          <span className="inline-flex h-5 max-w-full items-center truncate rounded-full border border-[#D1D5DB] bg-white px-2 text-[11px] leading-none font-medium text-[#374151]">
+          <span className="inline-flex h-[1.125rem] max-w-full items-center truncate rounded-full border border-[#D1D5DB] bg-white px-1.5 text-[10px] leading-none font-medium text-[#374151]">
             {value}
           </span>
         </li>
@@ -167,7 +167,7 @@ function OutlinePills({ values }: { values: string[] }) {
 
 function SectionHeading({ children }: { children: ReactNode }) {
   return (
-    <h2 className="text-[17px] leading-tight font-bold text-[#111827]">
+    <h2 className="text-[15px] leading-tight font-bold text-[#111827]">
       {children}
     </h2>
   );
@@ -175,7 +175,7 @@ function SectionHeading({ children }: { children: ReactNode }) {
 
 function SubHeading({ children }: { children: ReactNode }) {
   return (
-    <h3 className="text-[15px] leading-snug font-bold text-[#1F2937]">
+    <h3 className="text-[13px] leading-snug font-bold text-[#1F2937]">
       {children}
     </h3>
   );
@@ -229,22 +229,22 @@ export function JobSearchMobileJobDetails({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
-          <ArrowLeft className="size-4" aria-hidden="true" />
+          <ArrowLeft className="size-3.5" aria-hidden="true" />
           Back to jobs
         </button>
-        <h1 className="mt-3 text-lg font-bold text-foreground">
+        <h1 className="mt-3 text-base font-bold text-foreground">
           Job unavailable
         </h1>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-2 text-xs text-muted">
           Unable to load this job. It may have been closed or removed.
         </p>
         {onRetry ? (
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 inline-flex h-11 items-center rounded-xl bg-primary px-4 text-[15px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="mt-4 inline-flex h-10 items-center rounded-xl bg-primary px-4 text-[13px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             Try again
           </button>
@@ -383,9 +383,9 @@ export function JobSearchMobileJobDetails({
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex min-h-10 items-center gap-1.5 text-[15px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex min-h-9 items-center gap-1.5 text-[13px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            <ArrowLeft className="size-4" strokeWidth={2.25} aria-hidden="true" />
+            <ArrowLeft className="size-3.5" strokeWidth={2.25} aria-hidden="true" />
             Back to jobs
           </button>
           <div className="flex items-center gap-2">
@@ -422,26 +422,29 @@ export function JobSearchMobileJobDetails({
 
       <div className="overflow-x-hidden px-4 pt-4 pb-4">
         <header>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[26px] leading-[1.2] font-bold tracking-tight text-[#111827]">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h1 className="text-[20px] leading-[1.2] font-bold tracking-tight text-[#111827]">
               {job.jobTitle}
             </h1>
-            <span className="inline-flex h-7 items-center gap-1 rounded-full border border-primary/20 bg-[#EAF8F3] px-2.5 text-[12px] font-semibold text-primary">
+            <span
+              className="inline-flex size-6 items-center justify-center rounded-full border border-primary/20 bg-[#EAF8F3] text-primary"
+              title="Verified"
+              aria-label="Verified"
+            >
               <ShieldCheck
                 className="size-3.5"
                 strokeWidth={2.25}
                 aria-hidden="true"
               />
-              Verified
             </span>
           </div>
-          <p className="mt-2 text-[15px] leading-snug font-medium text-[#374151]">
+          <p className="mt-1.5 text-[13px] leading-snug font-medium text-[#374151]">
             {job.companyName}
           </p>
           {posted ? (
-            <p className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] text-[#9CA3AF]">
+            <p className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-[#9CA3AF]">
               <Clock3
-                className="size-3.5 shrink-0"
+                className="size-3 shrink-0"
                 strokeWidth={1.75}
                 aria-hidden="true"
               />
@@ -469,7 +472,7 @@ export function JobSearchMobileJobDetails({
         ) : null}
 
         <ContentSection title="Job Description">
-          <p className="text-[14px] font-semibold text-[#1F2937]">
+          <p className="text-[13px] font-semibold text-[#1F2937]">
             {job.jobTitle} Job Description
           </p>
 
@@ -485,7 +488,7 @@ export function JobSearchMobileJobDetails({
                 {parsedDescription.introParagraphs.map((paragraph, index) => (
                   <p
                     key={`intro-${index}`}
-                    className="mb-2 text-[14px] leading-[1.7] text-[#374151] last:mb-0"
+                    className="mb-2 text-[13px] leading-[1.65] text-[#374151] last:mb-0"
                   >
                     {paragraph}
                   </p>
@@ -497,13 +500,13 @@ export function JobSearchMobileJobDetails({
                     {section.paragraphs.map((paragraph, index) => (
                       <p
                         key={`${section.title}-p-${index}`}
-                        className="mt-1.5 text-[14px] leading-[1.7] text-[#374151]"
+                        className="mt-1.5 text-[13px] leading-[1.65] text-[#374151]"
                       >
                         {paragraph}
                       </p>
                     ))}
                     {section.bullets.length > 0 ? (
-                      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-[14px] leading-[1.7] text-[#374151]">
+                      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-[13px] leading-[1.65] text-[#374151]">
                         {section.bullets.map((bullet) => (
                           <li key={bullet}>{bullet}</li>
                         ))}
@@ -514,7 +517,7 @@ export function JobSearchMobileJobDetails({
 
                 {parsedDescription.introParagraphs.length === 0 &&
                 parsedDescription.sections.length === 0 ? (
-                  <p className="whitespace-pre-wrap text-[14px] leading-[1.7] text-[#374151]">
+                  <p className="whitespace-pre-wrap text-[13px] leading-[1.65] text-[#374151]">
                     {job.description.trim()}
                   </p>
                 ) : null}
@@ -528,7 +531,7 @@ export function JobSearchMobileJobDetails({
                 <button
                   type="button"
                   onClick={() => setDescriptionExpanded((current) => !current)}
-                  className="relative z-10 mt-1.5 inline-flex items-center gap-1 text-[14px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  className="relative z-10 mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 >
                   {descriptionExpanded ? "View less" : "View more"}
                   <ChevronDown
@@ -543,7 +546,7 @@ export function JobSearchMobileJobDetails({
               ) : null}
             </div>
           ) : (
-            <p className="mt-2 text-[14px] text-[#9CA3AF]">
+            <p className="mt-2 text-[13px] text-[#9CA3AF]">
               No description provided.
             </p>
           )}
@@ -551,7 +554,7 @@ export function JobSearchMobileJobDetails({
 
         {job.address || location || job.landmark ? (
           <ContentSection title="Address">
-            <div className="space-y-1 text-[14px] leading-[1.7] text-[#374151]">
+            <div className="space-y-1 text-[13px] leading-[1.65] text-[#374151]">
               {job.address ? <p>{job.address}</p> : null}
               {location ? <p>{location}</p> : null}
               {job.landmark ? <p>Landmark: {job.landmark}</p> : null}
@@ -563,10 +566,10 @@ export function JobSearchMobileJobDetails({
           <ContentSection title="Walk-in Details">
             <div className="space-y-3">
               <div>
-                <p className="text-[11px] font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
+                <p className="text-[10px] font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
                   Interview Address
                 </p>
-                <p className="mt-1 text-[14px] leading-snug font-semibold text-[#4B5563]">
+                <p className="mt-1 text-[13px] leading-snug font-semibold text-[#4B5563]">
                   {job.interviewAddress ||
                     location ||
                     "Address shared by recruiter"}
@@ -574,20 +577,20 @@ export function JobSearchMobileJobDetails({
               </div>
               {walkInDate ? (
                 <div>
-                  <p className="text-[11px] font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
+                  <p className="text-[10px] font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
                     Date
                   </p>
-                  <p className="mt-1 text-[14px] leading-snug font-semibold text-[#4B5563]">
+                  <p className="mt-1 text-[13px] leading-snug font-semibold text-[#4B5563]">
                     {walkInDate}
                   </p>
                 </div>
               ) : null}
               {walkInTime ? (
                 <div>
-                  <p className="text-[11px] font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
+                  <p className="text-[10px] font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
                     Time
                   </p>
-                  <p className="mt-1 text-[14px] leading-snug font-semibold text-[#4B5563]">
+                  <p className="mt-1 text-[13px] leading-snug font-semibold text-[#4B5563]">
                     {walkInTime}
                   </p>
                 </div>
@@ -598,7 +601,7 @@ export function JobSearchMobileJobDetails({
 
         {job.interviewInstructions?.trim() ? (
           <ContentSection title="Other Instructions">
-            <p className="whitespace-pre-wrap text-[14px] leading-[1.7] text-[#374151]">
+            <p className="whitespace-pre-wrap text-[13px] leading-[1.65] text-[#374151]">
               {job.interviewInstructions.trim()}
             </p>
           </ContentSection>
@@ -606,7 +609,7 @@ export function JobSearchMobileJobDetails({
 
         {job.contactPersonName || job.applyWhatsAppNumber ? (
           <ContentSection title="Recruiter">
-            <div className="space-y-1 text-[14px] leading-[1.7] text-[#374151]">
+            <div className="space-y-1 text-[13px] leading-[1.65] text-[#374151]">
               {job.contactPersonName ? (
                 <p className="font-semibold text-[#4B5563]">
                   {job.contactPersonName}
@@ -620,13 +623,13 @@ export function JobSearchMobileJobDetails({
         ) : null}
 
         <div className="mt-5 border-t border-[#EEF1F4] bg-white pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-          <div className="h-14">
+          <div className="h-12">
             <JobApplyButton
               isApplied={isApplied}
               isApplying={isApplying}
               onClick={handleApplyClick}
-              className="inline-flex h-full w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-2 text-[15px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              appliedClassName="h-full w-full text-[15px] font-bold"
+              className="inline-flex h-full w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-2 text-[14px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              appliedClassName="h-full w-full text-[14px] font-bold"
               startIcon={
                 <Send
                   className="size-4 shrink-0"

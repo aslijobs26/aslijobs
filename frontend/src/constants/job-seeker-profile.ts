@@ -1,5 +1,11 @@
 export const JOB_SEEKER_RESUME_QUERY_KEY = ["job-seeker", "my-resume"] as const;
 
+/** Generated + uploaded resume preferences for My Resume / apply chooser. */
+export const JOB_SEEKER_RESUME_BUNDLE_QUERY_KEY = [
+  "job-seeker",
+  "my-resume-bundle",
+] as const;
+
 export const JOB_SEEKER_PROFILE_VISIBILITY_OPTIONS = [
   {
     value: "visible",

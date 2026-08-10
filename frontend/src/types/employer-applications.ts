@@ -233,7 +233,18 @@ export type EmployerApplicationDetail = {
   status: EmployerApplicationStatus;
   resumeVersion: number;
   resumeStatus: string;
+  resumeSource?: "generated" | "uploaded";
   resumeSnapshot: ApplicationResumeSnapshot;
+  uploadedResumeSnapshot?: {
+    url: string;
+    storagePath: string;
+    publicId: string;
+    storageProvider: string;
+    originalName: string;
+    mimeType: string;
+    fileSize: number;
+    uploadedAt: string | null;
+  } | null;
   employerNotes: string;
   employerNotesVisibleToSeeker: boolean;
   employerNotesCreatedAt?: string | null;

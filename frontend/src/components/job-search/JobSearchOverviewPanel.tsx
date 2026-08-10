@@ -201,7 +201,7 @@ function DetailMultilineText({ text }: { text: string }) {
   }
 
   return (
-    <p className="whitespace-pre-wrap text-[15px] leading-[1.7] text-[#374151]">
+    <p className="whitespace-pre-wrap text-[14px] leading-[1.7] text-[#374151]">
       {trimmed}
     </p>
   );

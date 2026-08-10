@@ -11,7 +11,7 @@ function ContactLine({ line }: { line: string }) {
 
   if (separatorIndex === -1) {
     return (
-      <p className="text-base font-bold tracking-tight text-primary md:text-lg">
+      <p className="text-sm font-bold tracking-tight text-primary sm:text-base md:text-lg">
         {line}
       </p>
     );
@@ -24,7 +24,7 @@ function ContactLine({ line }: { line: string }) {
     value.startsWith("http://") || value.startsWith("https://");
 
   return (
-    <p className="grid gap-0.5 sm:grid-cols-[minmax(10rem,13.5rem)_minmax(0,1fr)] sm:gap-x-3 sm:gap-y-0">
+    <p className="grid gap-0.5 text-xs sm:grid-cols-[minmax(10rem,13.5rem)_minmax(0,1fr)] sm:gap-x-3 sm:gap-y-0 sm:text-sm md:text-base">
       <span className="font-semibold text-foreground">{label}:</span>
       {isEmail ? (
         <a
@@ -54,7 +54,7 @@ function ContactLine({ line }: { line: string }) {
 function LegalBlockContent({ block }: { block: LegalBlock }) {
   if (block.type === "paragraph") {
     return (
-      <p className="w-full text-sm leading-6 text-muted md:text-base md:leading-8 [&_a]:text-primary [&_a]:underline-offset-2 [&_a]:transition-colors [&_a]:hover:underline">
+      <p className="w-full text-xs leading-5 text-muted sm:text-sm sm:leading-6 md:text-base md:leading-8 [&_a]:text-primary [&_a]:underline-offset-2 [&_a]:transition-colors [&_a]:hover:underline">
         {block.text}
       </p>
     );
@@ -62,7 +62,7 @@ function LegalBlockContent({ block }: { block: LegalBlock }) {
 
   if (block.type === "list") {
     return (
-      <ul className="w-full list-disc space-y-2 pl-5 text-sm leading-6 text-muted md:text-base md:leading-8 [&_a]:text-primary [&_a]:underline-offset-2 [&_a]:transition-colors [&_a]:hover:underline">
+      <ul className="w-full list-disc space-y-2 pl-5 text-xs leading-5 text-muted sm:text-sm sm:leading-6 md:text-base md:leading-8 [&_a]:text-primary [&_a]:underline-offset-2 [&_a]:transition-colors [&_a]:hover:underline">
         {block.items.map((item) => (
           <li key={item}>{item}</li>
         ))}
@@ -71,7 +71,7 @@ function LegalBlockContent({ block }: { block: LegalBlock }) {
   }
 
   return (
-    <div className="w-full space-y-3 rounded-lg border border-primary/15 bg-primary-light px-4 py-4 text-sm leading-6 md:space-y-3.5 md:px-5 md:py-5 md:text-base md:leading-7">
+    <div className="w-full space-y-3 rounded-lg border border-primary/15 bg-primary-light px-4 py-4 text-xs leading-5 sm:text-sm sm:leading-6 md:space-y-3.5 md:px-5 md:py-5 md:text-base md:leading-7">
       {block.lines.map((line) => (
         <ContactLine key={line} line={line} />
       ))}
@@ -86,7 +86,7 @@ export function LegalSection({ id, title, blocks }: LegalSectionProps) {
       className="scroll-mt-28 space-y-5 border-b-2 border-border py-8 last:border-b-0 last:pb-0 sm:scroll-mt-32 sm:space-y-6 sm:py-10"
     >
       {title ? (
-        <h2 className="text-xl font-bold tracking-tight text-foreground md:text-[1.75rem]">
+        <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl md:text-[1.75rem]">
           {title}
         </h2>
       ) : null}

@@ -1,5 +1,10 @@
 import { apiClient } from "@/services/api-client";
-import type { PublicResume } from "@/types/job-seeker-resume";
+import type {
+  ApplicationResumeSource,
+  JobSeekerResumeBundle,
+  PublicResume,
+  PublicUploadedResume,
+} from "@/types/job-seeker-resume";
 
 type ApiSuccess<T> = {
   success: true;
@@ -7,19 +12,34 @@ type ApiSuccess<T> = {
   data: T;
 };
 
-type MyResumeResponse = {
-  resume: PublicResume | null;
-};
+type MyResumeResponse = JobSeekerResumeBundle;
 
 type RegenerateResumeResponse = {
   resume: PublicResume;
 };
 
-export async function fetchMyResume(): Promise<PublicResume | null> {
+type UploadedResumeMutationResponse = {
+  uploadedResume: PublicUploadedResume | null;
+  defaultResumeSource: ApplicationResumeSource;
+};
+
+export async function fetchMyResumeBundle(): Promise<JobSeekerResumeBundle> {
   const response = await apiClient.get<ApiSuccess<MyResumeResponse>>(
     "/resumes/me",
   );
-  return response.data.data.resume;
+  const data = response.data.data;
+  return {
+    resume: data.resume ?? null,
+    uploadedResume: data.uploadedResume ?? null,
+    defaultResumeSource:
+      data.defaultResumeSource === "uploaded" ? "uploaded" : "generated",
+  };
+}
+
+/** @deprecated Prefer fetchMyResumeBundle — kept for callers that only need generated resume. */
+export async function fetchMyResume(): Promise<PublicResume | null> {
+  const bundle = await fetchMyResumeBundle();
+  return bundle.resume;
 }
 
 export async function regenerateMyResume(): Promise<PublicResume> {
@@ -27,6 +47,39 @@ export async function regenerateMyResume(): Promise<PublicResume> {
     "/resumes/me/regenerate",
   );
   return response.data.data.resume;
+}
+
+export async function uploadMyResume(
+  file: File,
+): Promise<UploadedResumeMutationResponse> {
+  const formData = new FormData();
+  formData.append("resume", file);
+
+  const response = await apiClient.post<
+    ApiSuccess<UploadedResumeMutationResponse>
+  >("/resumes/me/upload", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return response.data.data;
+}
+
+export async function deleteMyUploadedResume(): Promise<UploadedResumeMutationResponse> {
+  const response = await apiClient.delete<
+    ApiSuccess<UploadedResumeMutationResponse>
+  >("/resumes/me/uploaded");
+  return response.data.data;
+}
+
+export async function setDefaultResumeSource(
+  source: ApplicationResumeSource,
+): Promise<UploadedResumeMutationResponse> {
+  const response = await apiClient.patch<
+    ApiSuccess<UploadedResumeMutationResponse>
+  >("/resumes/me/default-source", { source });
+  return response.data.data;
 }
 
 export async function downloadMyResumePdf(): Promise<{

@@ -289,7 +289,7 @@ function MobileBottomSheet({
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#EEF1F4] px-5 py-4">
           <h2
             id={titleId}
-            className="text-[18px] font-bold tracking-tight text-foreground"
+            className="text-base font-bold tracking-tight text-foreground"
           >
             {title}
           </h2>
@@ -334,7 +334,7 @@ function FilterPill({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow] duration-200",
+        "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow] duration-200",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
         active
           ? "border-primary bg-primary text-white shadow-sm"
@@ -348,7 +348,7 @@ function FilterPill({
       {count > 0 ? (
         <span
           className={cn(
-            "inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums",
+            "inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums",
             active ? "bg-white/20 text-white" : "bg-primary/10 text-primary",
           )}
         >
@@ -566,7 +566,7 @@ export function JobSearchMobileFilters({
               <button
                 type="button"
                 onClick={chip.onRemove}
-                className="inline-flex h-8 max-w-full items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 text-[12px] font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               >
                 <span className="truncate">{chip.label}</span>
                 <X className="size-3.5 shrink-0" strokeWidth={2.25} aria-hidden="true" />
@@ -587,14 +587,14 @@ export function JobSearchMobileFilters({
             <button
               type="button"
               onClick={handleReset}
-              className="inline-flex h-12 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-[15px] font-bold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-sm font-bold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
               Reset
             </button>
             <button
               type="button"
               onClick={handleApply}
-              className="inline-flex h-12 items-center justify-center rounded-xl bg-primary text-[15px] font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               {openSheet === "more" ? "Done" : "Apply Filters"}
             </button>

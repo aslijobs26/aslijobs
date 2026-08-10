@@ -1,6 +1,9 @@
 "use client";
 
-import { JOB_SEEKER_RESUME_QUERY_KEY } from "@/constants/job-seeker-profile";
+import {
+  JOB_SEEKER_RESUME_BUNDLE_QUERY_KEY,
+  JOB_SEEKER_RESUME_QUERY_KEY,
+} from "@/constants/job-seeker-profile";
 import {
   JOB_SEEKER_PROFILE_QUERY_KEY,
 } from "@/hooks/useJobSeekerProfile";
@@ -17,23 +20,26 @@ import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getApiErrorMessage } from "./get-api-error-message";
 
-export function useJobSeekerProfileMutations() {
+export function useJobSeekerProfileMutations(options?: {
+  successMessage?: string;
+}) {
   const queryClient = useQueryClient();
-
-  const invalidateRelated = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: JOB_SEEKER_PROFILE_QUERY_KEY }),
-      queryClient.invalidateQueries({ queryKey: JOB_SEEKER_RESUME_QUERY_KEY }),
-    ]);
-  };
+  const successMessage =
+    options?.successMessage ?? "Profile updated successfully.";
 
   const updateMutation = useMutation({
     mutationFn: (input: UpdateJobSeekerProfileInput) =>
       updateJobSeekerProfile(input),
     onSuccess: (jobSeeker: JobSeekerPublic) => {
+      // API response is the source of truth for profile cache.
       queryClient.setQueryData(JOB_SEEKER_PROFILE_QUERY_KEY, jobSeeker);
-      void invalidateRelated();
-      showAppToast("Profile updated successfully.", "success");
+      void queryClient.invalidateQueries({
+        queryKey: JOB_SEEKER_RESUME_QUERY_KEY,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: JOB_SEEKER_RESUME_BUNDLE_QUERY_KEY,
+      });
+      showAppToast(successMessage, "success");
     },
     onError: (error) => {
       showAppToast(

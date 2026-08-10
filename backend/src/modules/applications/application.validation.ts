@@ -12,6 +12,7 @@ export const applyToJobSchema = z.object({
     .trim()
     .min(1, "Job id is required")
     .transform((value) => value.toUpperCase()),
+  resumeSource: z.enum(["generated", "uploaded"]).optional(),
 });
 
 export const listEmployerApplicationsQuerySchema = z.object({

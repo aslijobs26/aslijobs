@@ -49,12 +49,14 @@ export function ResumeMetadataPanel({ resume }: ResumeMetadataPanelProps) {
 
   return (
     <div className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">
-      <h3 className="text-sm font-semibold text-foreground">Resume Metadata</h3>
+      <h3 className="text-xs font-semibold text-foreground sm:text-sm">
+        Resume Metadata
+      </h3>
       <dl className="mt-3 space-y-2.5">
         {rows.map((row) => (
           <div
             key={row.label}
-            className="flex items-start justify-between gap-3 text-sm"
+            className="flex items-start justify-between gap-3 text-xs sm:text-sm"
           >
             <dt className="text-muted">{row.label}</dt>
             <dd className="text-right font-medium capitalize text-foreground">

@@ -28,7 +28,12 @@ function resolveResourceType(
     return "video";
   }
 
-  if (mimeType === "application/pdf") {
+  if (
+    mimeType === "application/pdf" ||
+    mimeType === "application/msword" ||
+    mimeType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
     return "raw";
   }
 

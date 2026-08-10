@@ -341,10 +341,10 @@ export function JobSeekerSettingsPageContent() {
     <>
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         <header className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.875rem]">
+          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-[1.875rem]">
             Settings
           </h1>
-          <p className="mt-1.5 text-sm text-muted">
+          <p className="mt-1.5 text-xs text-muted sm:text-sm">
             Manage your account, preferences and privacy settings
           </p>
         </header>

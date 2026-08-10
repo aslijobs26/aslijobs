@@ -84,7 +84,7 @@ export function TableOfContents({
                 onClick={(event) => handleClick(event, item.id)}
                 aria-current={isActive ? "location" : undefined}
                 className={cn(
-                  "block rounded-lg border-l-[3px] px-3 py-2.5 text-xs font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 md:text-sm",
+                  "block rounded-lg border-l-[3px] px-3 py-2 text-[11px] font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:py-2.5 sm:text-xs md:text-sm",
                   isActive
                     ? "border-primary bg-primary-light/80 text-primary"
                     : "border-transparent text-muted hover:bg-primary-light/40 hover:text-primary",

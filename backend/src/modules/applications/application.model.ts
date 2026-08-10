@@ -156,9 +156,19 @@ const applicationSchema = new Schema(
       enum: RESUME_STATUSES,
       required: true,
     },
+    resumeSource: {
+      type: String,
+      enum: ["generated", "uploaded"],
+      default: "generated",
+      index: true,
+    },
     resumeSnapshot: {
       type: Schema.Types.Mixed,
       required: true,
+    },
+    uploadedResumeSnapshot: {
+      type: Schema.Types.Mixed,
+      default: null,
     },
     status: {
       type: String,
