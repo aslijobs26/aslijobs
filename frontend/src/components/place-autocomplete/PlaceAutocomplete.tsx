@@ -86,6 +86,8 @@ export function PlaceAutocomplete({
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const committedValueRef = useRef(value.trim());
+  const isTypingRef = useRef(false);
   const [isOpen, setIsOpen] = useState(false);
   const [status, setStatus] = useState<DropdownStatus>("idle");
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
@@ -93,33 +95,37 @@ export function PlaceAutocomplete({
 
   const copy = COPY[mode];
 
+  const closeSuggestions = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setSuggestions([]);
+    setStatus("idle");
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
   useEffect(() => {
     if (disabled) {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      setSuggestions([]);
-      setStatus("idle");
-      setIsOpen(false);
-      setHighlightedIndex(-1);
+      isTypingRef.current = false;
+      closeSuggestions();
       return;
     }
 
     const query = value.trim();
 
+    if (!isTypingRef.current) {
+      committedValueRef.current = query;
+      closeSuggestions();
+      return;
+    }
+
     if (query.length < MIN_QUERY_LENGTH) {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      setSuggestions([]);
-      setStatus("idle");
-      setIsOpen(false);
-      setHighlightedIndex(-1);
+      closeSuggestions();
       return;
     }
 
     if (mode === "city" && !selectedState.trim()) {
-      setSuggestions([]);
-      setStatus("idle");
-      setIsOpen(false);
+      closeSuggestions();
       return;
     }
 
@@ -138,7 +144,7 @@ export function PlaceAutocomplete({
 
       void request
         .then((results) => {
-          if (controller.signal.aborted) {
+          if (controller.signal.aborted || !isTypingRef.current) {
             return;
           }
 
@@ -148,7 +154,7 @@ export function PlaceAutocomplete({
           setIsOpen(true);
         })
         .catch((error: unknown) => {
-          if (controller.signal.aborted) {
+          if (controller.signal.aborted || !isTypingRef.current) {
             return;
           }
 
@@ -205,11 +211,10 @@ export function PlaceAutocomplete({
   }, [isOpen]);
 
   const selectSuggestion = (suggestion: PlaceSuggestion) => {
+    isTypingRef.current = false;
+    committedValueRef.current = suggestion.label.trim();
     onSelect(suggestion);
-    setIsOpen(false);
-    setSuggestions([]);
-    setStatus("idle");
-    setHighlightedIndex(-1);
+    closeSuggestions();
   };
 
   const handleInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -283,13 +288,21 @@ export function PlaceAutocomplete({
           value={value}
           disabled={disabled}
           onChange={(event) => {
-            onChange(event.target.value);
+            const nextValue = event.target.value;
+            isTypingRef.current = true;
+            if (nextValue.trim() !== committedValueRef.current) {
+              committedValueRef.current = "";
+            }
+            onChange(nextValue);
             if (!disabled) {
               setIsOpen(true);
             }
           }}
           onFocus={() => {
-            if (!disabled && value.trim().length >= MIN_QUERY_LENGTH) {
+            if (disabled || !isTypingRef.current) {
+              return;
+            }
+            if (value.trim().length >= MIN_QUERY_LENGTH) {
               setIsOpen(true);
             }
           }}
@@ -334,6 +347,7 @@ export function PlaceAutocomplete({
                       : "text-foreground hover:bg-primary-light",
                   )}
                   onMouseEnter={() => setHighlightedIndex(index)}
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => selectSuggestion(suggestion)}
                 >
                   <MapPin

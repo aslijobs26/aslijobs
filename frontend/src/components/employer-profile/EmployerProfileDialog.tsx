@@ -66,16 +66,16 @@ export function EmployerProfileDialog({
             wide ? "sm:max-w-4xl" : "sm:max-w-2xl",
           )}
         >
-          <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border-subtle px-4 py-4 sm:px-5">
+          <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-4 py-3 sm:gap-4 sm:px-5 sm:py-4">
             <div className="min-w-0">
               <h2
                 id={titleId}
-                className="text-lg font-bold tracking-tight text-foreground"
+                className="text-base font-bold tracking-tight text-foreground sm:text-lg"
               >
                 {title}
               </h2>
               {description ? (
-                <p id={descriptionId} className="mt-1 text-sm text-muted">
+                <p id={descriptionId} className="mt-0.5 text-xs text-muted sm:mt-1 sm:text-sm">
                   {description}
                 </p>
               ) : null}

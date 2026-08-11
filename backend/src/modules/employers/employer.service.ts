@@ -32,7 +32,23 @@ type EmployerImageAsset = {
   originalName?: string;
   mimeType?: string;
   fileSize?: number;
+  updatedAt?: Date | string | null;
 };
+
+function toPublicImageUpdatedAt(
+  value: Date | string | null | undefined,
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
 
 function toPublicImageAsset(asset?: EmployerImageAsset | null) {
   if (!asset?.url && !asset?.storagePath) {
@@ -47,6 +63,7 @@ function toPublicImageAsset(asset?: EmployerImageAsset | null) {
     originalName: asset.originalName ?? "",
     mimeType: asset.mimeType ?? "",
     fileSize: asset.fileSize ?? 0,
+    updatedAt: toPublicImageUpdatedAt(asset.updatedAt),
   };
 }
 
@@ -195,6 +212,7 @@ async function uploadEmployerImageAsset(input: {
       originalName: storedFile.originalName,
       mimeType: storedFile.mimeType,
       fileSize: storedFile.fileSize,
+      updatedAt: new Date(),
     };
   } catch (error) {
     if (error instanceof AppError) {
@@ -232,6 +250,7 @@ function emptyImageAsset() {
     originalName: "",
     mimeType: "",
     fileSize: 0,
+    updatedAt: null as Date | null,
   };
 }
 
@@ -998,15 +1017,10 @@ export class EmployerService {
             ? "Consultancy logo"
             : "Company logo",
       });
+      employer.markModified("companyLogo");
     }
 
     if (files.profilePhoto) {
-      if (employer.accountType !== "individual") {
-        throw new AppError(
-          "Profile photo is only available for Individual accounts",
-          HTTP_STATUS.BAD_REQUEST,
-        );
-      }
       const employerCode = toEmployerStorageCode(employer._id);
       await deleteEmployerImageAsset(employer.profilePhoto);
       employer.profilePhoto = await uploadEmployerImageAsset({
@@ -1015,6 +1029,7 @@ export class EmployerService {
         fileBaseName: "profile-photo",
         label: "Profile photo",
       });
+      employer.markModified("profilePhoto");
     }
 
     const mediaFiles = files.companyMedia ?? [];

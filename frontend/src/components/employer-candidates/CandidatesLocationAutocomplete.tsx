@@ -24,6 +24,7 @@ export function CandidatesLocationAutocomplete({
 }: CandidatesLocationAutocompleteProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const committedValueRef = useRef("");
   const [isOpen, setIsOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -110,10 +111,18 @@ export function CandidatesLocationAutocomplete({
         placeholder="Search city or state"
         className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
         onChange={(event) => {
-          onChange(event.target.value);
+          const nextValue = event.target.value;
+          if (nextValue.trim() !== committedValueRef.current) {
+            committedValueRef.current = "";
+          }
+          onChange(nextValue);
           setIsOpen(true);
         }}
-        onFocus={() => setIsOpen(true)}
+        onFocus={() => {
+          if (value.trim() !== committedValueRef.current) {
+            setIsOpen(true);
+          }
+        }}
       />
       {showDropdown ? (
         <ul
@@ -142,6 +151,7 @@ export function CandidatesLocationAutocomplete({
                     )}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => {
+                      committedValueRef.current = suggestion.trim();
                       onChange(suggestion);
                       setIsOpen(false);
                     }}

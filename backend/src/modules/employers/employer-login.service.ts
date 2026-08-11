@@ -101,6 +101,7 @@ function toLoginEmployer(employer: {
           originalName?: string;
           mimeType?: string;
           fileSize?: number;
+          updatedAt?: Date | string | null;
         }
       | null
       | undefined,
@@ -108,6 +109,13 @@ function toLoginEmployer(employer: {
     if (!asset?.url && !asset?.storagePath) {
       return null;
     }
+
+    const updatedAt =
+      asset.updatedAt instanceof Date
+        ? asset.updatedAt.toISOString()
+        : typeof asset.updatedAt === "string" && asset.updatedAt
+          ? asset.updatedAt
+          : null;
 
     return {
       url: asset.url ?? "",
@@ -117,6 +125,7 @@ function toLoginEmployer(employer: {
       originalName: asset.originalName ?? "",
       mimeType: asset.mimeType ?? "",
       fileSize: asset.fileSize ?? 0,
+      updatedAt,
     };
   };
 

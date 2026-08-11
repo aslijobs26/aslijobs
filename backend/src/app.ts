@@ -72,7 +72,16 @@ if (env.STORAGE_PROVIDER === "local") {
   // consume the shared request budget used by authenticated dashboard traffic.
   app.use(
     "/uploads",
-    express.static(path.resolve(process.cwd(), env.UPLOAD_DIR)),
+    express.static(path.resolve(process.cwd(), env.UPLOAD_DIR), {
+      etag: true,
+      lastModified: true,
+      setHeaders(res) {
+        res.setHeader(
+          "Cache-Control",
+          "public, max-age=86400, stale-while-revalidate=604800",
+        );
+      },
+    }),
   );
 }
 

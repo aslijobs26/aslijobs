@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { ApplicationModel } from "../applications/application.model.js";
+import { resolveEmployerPosterImageUrl } from "../employers/employer-poster-image.js";
 import { EmployerModel } from "../employers/employer.model.js";
 import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
 import { JobModel } from "../jobs/job.model.js";
@@ -526,7 +527,9 @@ async function loadEnrichedSavedJobs(
           $in: employerIds.map((id) => new mongoose.Types.ObjectId(id)),
         },
       })
-        .select("companyLogo registrationStatus")
+        .select(
+          "accountType companyLogo.url companyLogo.updatedAt profilePhoto.url profilePhoto.updatedAt registrationStatus",
+        )
         .lean()
     : [];
 
@@ -560,13 +563,28 @@ async function loadEnrichedSavedJobs(
 
     const employerKey = (job.employerId ?? job.companyId)?.toString() ?? "";
     const employer = employerMap.get(employerKey);
-    const logoUrl =
-      employer &&
-      employer.companyLogo &&
-      typeof employer.companyLogo === "object" &&
-      "url" in employer.companyLogo
-        ? text((employer.companyLogo as { url?: string }).url)
-        : "";
+    const logoUrl = employer
+      ? resolveEmployerPosterImageUrl({
+          accountType:
+            typeof employer.accountType === "string"
+              ? employer.accountType
+              : undefined,
+          companyLogo:
+            employer.companyLogo && typeof employer.companyLogo === "object"
+              ? (employer.companyLogo as {
+                  url?: string;
+                  updatedAt?: Date | string | null;
+                })
+              : null,
+          profilePhoto:
+            employer.profilePhoto && typeof employer.profilePhoto === "object"
+              ? (employer.profilePhoto as {
+                  url?: string;
+                  updatedAt?: Date | string | null;
+                })
+              : null,
+        })
+      : "";
 
     const registrationStatus =
       employer && typeof employer.registrationStatus === "string"

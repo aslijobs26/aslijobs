@@ -1,10 +1,12 @@
 "use client";
 
 import { EmployerProfileDialog } from "@/components/employer-profile/EmployerProfileDialog";
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import {
   ACCESS_LEVEL_LABELS,
   ACCESS_LEVEL_PILL_CLASS,
   EMPLOYER_TEAM_QUERY_KEYS,
+  EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME,
   ROLE_COLOR_OPTIONS,
   ROLE_ICON_OPTIONS,
 } from "@/constants/employer-team-management";
@@ -19,7 +21,7 @@ import type {
 import { cn } from "@/utils/cn";
 import { shouldReplacePermissionsOnAccessLevelChange } from "@/utils/employer-team-permissions";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type RoleFormModalProps = {
   mode: "create" | "edit";
@@ -49,6 +51,15 @@ const EMPTY: FormState = {
   icon: "shield",
   cloneRoleId: "",
 };
+
+const ROLE_ACCESS_LEVEL_OPTIONS = (
+  Object.entries(ACCESS_LEVEL_LABELS) as [TeamAccessLevel, string][]
+).map(([value, label]) => ({ value, label }));
+
+const ROLE_STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
 
 export function RoleFormModal({
   mode,
@@ -87,6 +98,17 @@ export function RoleFormModal({
     setForm(EMPTY);
     setPendingPayload(null);
   }, [mode, role]);
+
+  const cloneRoleOptions = useMemo(
+    () => [
+      { value: "", label: "None" },
+      ...(rolesQuery.data ?? []).map((item) => ({
+        value: item.id,
+        label: item.name,
+      })),
+    ],
+    [rolesQuery.data],
+  );
 
   const buildPayload = (): CreateRolePayload | null => {
     const name = form.name.trim();
@@ -214,28 +236,26 @@ export function RoleFormModal({
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm">
+            <div className="block text-sm">
               <span className="mb-1.5 block font-medium text-foreground">
                 Access Level
               </span>
-              <select
+              <EmployerRegisterSearchableSelect
+                id="role-access-level"
+                label="Access Level"
+                hideLabel
                 value={form.accessLevel}
-                onChange={(event) =>
+                placeholder="Select access level"
+                options={ROLE_ACCESS_LEVEL_OPTIONS}
+                onChange={(value) =>
                   setForm((current) => ({
                     ...current,
-                    accessLevel: event.target.value as TeamAccessLevel,
+                    accessLevel: value as TeamAccessLevel,
                   }))
                 }
-                className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                {(Object.keys(ACCESS_LEVEL_LABELS) as TeamAccessLevel[]).map(
-                  (level) => (
-                    <option key={level} value={level}>
-                      {ACCESS_LEVEL_LABELS[level]}
-                    </option>
-                  ),
-                )}
-              </select>
+                hideSearch
+                triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+              />
               <span
                 className={cn(
                   "mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
@@ -253,25 +273,28 @@ export function RoleFormModal({
                       ? "Hiring-manager template. Admin modules stay disabled."
                       : "Starts empty. Configure permissions manually after create."}
               </p>
-            </label>
-            <label className="block text-sm">
+            </div>
+            <div className="block text-sm">
               <span className="mb-1.5 block font-medium text-foreground">
                 Status
               </span>
-              <select
+              <EmployerRegisterSearchableSelect
+                id="role-status"
+                label="Status"
+                hideLabel
                 value={form.status}
-                onChange={(event) =>
+                placeholder="Select status"
+                options={ROLE_STATUS_OPTIONS}
+                onChange={(value) =>
                   setForm((current) => ({
                     ...current,
-                    status: event.target.value as "active" | "inactive",
+                    status: value as "active" | "inactive",
                   }))
                 }
-                className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </label>
+                hideSearch
+                triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+              />
+            </div>
           </div>
 
           <fieldset>
@@ -300,51 +323,50 @@ export function RoleFormModal({
             </div>
           </fieldset>
 
-          <label className="block text-sm">
+          <div className="block text-sm">
             <span className="mb-1.5 block font-medium text-foreground">
               Role Icon
             </span>
-            <select
+            <EmployerRegisterSearchableSelect
+              id="role-icon"
+              label="Role Icon"
+              hideLabel
               value={form.icon}
-              onChange={(event) =>
+              placeholder="Select icon"
+              options={[...ROLE_ICON_OPTIONS]}
+              onChange={(value) =>
                 setForm((current) => ({
                   ...current,
-                  icon: event.target.value as TeamRoleIcon,
+                  icon: value as TeamRoleIcon,
                 }))
               }
-              className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            >
-              {ROLE_ICON_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              hideSearch
+              triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+            />
+          </div>
 
           {mode === "create" ? (
-            <label className="block text-sm">
+            <div className="block text-sm">
               <span className="mb-1.5 block font-medium text-foreground">
                 Clone Existing Role
               </span>
-              <select
+              <EmployerRegisterSearchableSelect
+                id="role-clone"
+                label="Clone Existing Role"
+                hideLabel
                 value={form.cloneRoleId}
-                onChange={(event) =>
+                placeholder="None"
+                options={cloneRoleOptions}
+                onChange={(value) =>
                   setForm((current) => ({
                     ...current,
-                    cloneRoleId: event.target.value,
+                    cloneRoleId: value,
                   }))
                 }
-                className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">None</option>
-                {(rolesQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                searchPlaceholder="Search role"
+                triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+              />
+            </div>
           ) : null}
         </div>
       </EmployerProfileDialog>

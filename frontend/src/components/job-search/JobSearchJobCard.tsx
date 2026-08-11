@@ -1,5 +1,6 @@
 "use client";
 
+import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import { protectedApply } from "@/utils/job-apply-auth";
 import { cn } from "@/utils/cn";
@@ -11,7 +12,6 @@ import {
   formatJobSearchPerk,
   formatJobSearchRelativeTime,
   formatJobSearchSalary,
-  getCompanyInitials,
 } from "@/utils/job-search-format";
 import {
   Bookmark,
@@ -220,12 +220,11 @@ export function JobSearchJobCard({
 
       {/* Header */}
       <div className="flex items-start gap-3">
-        <div
-          className="flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-primary-light text-[12px] font-semibold tracking-wide text-primary sm:size-11 sm:text-[14px]"
-          aria-hidden="true"
-        >
-          {getCompanyInitials(job.companyName)}
-        </div>
+        <JobPosterAvatar
+          companyName={job.companyName}
+          imageUrl={job.companyLogoUrl}
+          className="size-10 rounded-[12px] text-[12px] sm:size-11 sm:text-[14px]"
+        />
 
         <div className="min-w-0 flex-1 pt-0.5">
           <div className="flex items-start justify-between gap-3">
@@ -303,11 +302,11 @@ export function JobSearchJobCard({
 
       {/* Tags */}
       {tags.length > 0 ? (
-        <ul className="mt-3 flex flex-wrap gap-x-2 gap-y-1.5">
+        <ul className="mt-3 flex flex-wrap gap-x-1.5 gap-y-1 sm:gap-x-2 sm:gap-y-1.5">
           {tags.map((tag) => (
             <li
               key={tag.id}
-              className="inline-flex h-6 items-center gap-1 rounded-full bg-brand-accent/8 px-2 text-[10px] leading-none font-medium text-black sm:text-[11px]"
+              className="inline-flex h-5 items-center gap-0.5 rounded-full bg-brand-accent/8 px-1.5 text-[9px] leading-none font-medium text-black [&_svg]:size-2.5 sm:h-6 sm:gap-1 sm:px-2 sm:text-[11px] sm:[&_svg]:size-3"
             >
               {tag.icon}
               {tag.label}

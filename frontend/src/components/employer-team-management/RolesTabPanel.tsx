@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import { DepartmentFormModal } from "@/components/employer-team-management/DepartmentFormModal";
 import { DepartmentsPagination } from "@/components/employer-team-management/DepartmentsPagination";
 import { EmployerProfileDialog } from "@/components/employer-profile/EmployerProfileDialog";
@@ -18,6 +19,7 @@ import {
   EMPLOYER_TEAM_QUERY_KEYS,
   EMPLOYER_TEAM_SEARCH_DEBOUNCE_MS,
   ACCESS_LEVEL_LABELS,
+  EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME,
 } from "@/constants/employer-team-management";
 import { ROUTES } from "@/constants/routes";
 import { useCan } from "@/providers/employer-permission-provider";
@@ -185,6 +187,14 @@ export function RolesTabPanel({
   });
 
   const roles = rolesQuery.data?.roles ?? [];
+  const permissionRoleOptions = useMemo(
+    () =>
+      roles.map((role) => ({
+        value: role.id,
+        label: `${role.name} (${ACCESS_LEVEL_LABELS[role.accessLevel]})`,
+      })),
+    [roles],
+  );
 
   useEffect(() => {
     if (!selectedRoleId && roles.length > 0) {
@@ -550,26 +560,24 @@ export function RolesTabPanel({
                 Manage permissions for the selected role.
               </p>
             </div>
-            <label className="block shrink-0">
-              <span className="sr-only">Select Role</span>
-              <select
+            <div className="w-full min-w-[9rem] sm:w-56">
+              <EmployerRegisterSearchableSelect
+                id="permissions-selected-role"
+                label="Select Role"
+                hideLabel
                 value={selectedRoleId ?? ""}
-                onChange={(event) => {
-                  requestRoleChange(event.target.value || null);
+                placeholder="Select Role"
+                options={permissionRoleOptions}
+                onChange={(value) => {
+                  requestRoleChange(value || null);
                 }}
-                className="h-9 min-w-[9rem] rounded-lg border border-border-subtle bg-surface px-2 text-sm font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                aria-label="Select Role"
-              >
-                {roles.length === 0 ? (
-                  <option value="">Select Role</option>
-                ) : null}
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name} ({ACCESS_LEVEL_LABELS[role.accessLevel]})
-                  </option>
-                ))}
-              </select>
-            </label>
+                searchPlaceholder="Search role"
+                triggerClassName={cn(
+                  EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME,
+                  "!h-9",
+                )}
+              />
+            </div>
           </div>
 
           <div

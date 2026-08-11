@@ -9,6 +9,7 @@ import { APPLICATION_STATUS_LABELS } from "@/types/job-seeker-applications";
 import { getApplicationSuccessWhatsAppContext } from "@/utils/application-success";
 import { cn } from "@/utils/cn";
 import { formatJobSearchJobType } from "@/utils/job-search-format";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { buildJobApplyWhatsAppUrl } from "@/utils/job-search-whatsapp";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, CheckCircle2 } from "lucide-react";
@@ -113,6 +114,7 @@ function ApplicationSuccessBody() {
     formatJobSearchJobType(application.jobType) ||
     formatJobSearchJobType(application.workMode) ||
     "—";
+  const companyLogoUrl = resolveMediaUrl(application.companyLogoUrl);
 
   return (
     <main className="min-h-dvh bg-hero-bg">
@@ -133,10 +135,10 @@ function ApplicationSuccessBody() {
         <section className="mt-8 w-full rounded-xl border border-border-subtle bg-surface p-4 shadow-[0_2px_10px_rgba(26,43,60,0.04)] sm:p-6">
           <div className="flex gap-3 sm:gap-4">
             <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-light/60 ring-1 ring-border-subtle">
-              {application.companyLogoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- employer CDN hosts vary
+              {companyLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- employer upload URL
                 <img
-                  src={application.companyLogoUrl}
+                  src={companyLogoUrl}
                   alt=""
                   className="size-full object-cover"
                 />

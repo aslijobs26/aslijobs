@@ -11,6 +11,9 @@ const whatsappNumberSchema = z
   .trim()
   .regex(/^\d{10}$/, "WhatsApp number must be exactly 10 digits");
 
+const emptyToUndefined = (value: unknown) =>
+  value === "" || value === undefined || value === null ? undefined : value;
+
 const optionalUrlSchema = z
   .string()
   .trim()
@@ -27,6 +30,11 @@ const optionalUrlSchema = z
     }
   }, "Enter a valid http or https URL")
   .optional();
+
+const optionalNonEmptyString = z.preprocess(
+  emptyToUndefined,
+  z.string().trim().min(1).optional(),
+);
 
 export const registerEmployerSchema = z
   .object({
@@ -130,10 +138,10 @@ export const completeIndividualIdentitySchema = z.object({
 
 export const updateEmployerProfileSchema = z
   .object({
-    companyName: z.string().trim().min(1).optional(),
-    establishmentName: z.string().trim().min(1).optional(),
-    industry: z.string().trim().min(1).optional(),
-    businessCategory: z.string().trim().min(1).optional(),
+    companyName: optionalNonEmptyString,
+    establishmentName: optionalNonEmptyString,
+    industry: optionalNonEmptyString,
+    businessCategory: optionalNonEmptyString,
     companyDescription: z.string().trim().max(3000).optional(),
     website: optionalUrlSchema,
     foundedYear: z
@@ -158,8 +166,8 @@ export const updateEmployerProfileSchema = z
       .email("Enter a valid email address")
       .optional()
       .or(z.literal("")),
-    firstName: z.string().trim().min(1).optional(),
-    lastName: z.string().trim().min(1).optional(),
+    firstName: optionalNonEmptyString,
+    lastName: optionalNonEmptyString,
     contactDesignation: z.string().trim().max(150).optional(),
     alternatePhone: z.string().trim().max(30).optional(),
     aboutUs: z.string().trim().max(5000).optional(),

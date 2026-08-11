@@ -5,6 +5,7 @@ import type { SavedJobListItem } from "@/types/saved-jobs";
 import { formatJobSearchJobType } from "@/utils/job-search-format";
 import { protectedApply } from "@/utils/job-apply-auth";
 import { cn } from "@/utils/cn";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { showAppToast } from "@/utils/share-job";
 import {
   Bookmark,
@@ -23,6 +24,40 @@ import {
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { formatSavedOnDate, perkToneClasses } from "./saved-jobs-utils";
+
+function SavedJobCompanyLogo({
+  logoUrl,
+  className,
+}: {
+  logoUrl: string;
+  className?: string;
+}) {
+  const resolvedUrl = resolveMediaUrl(logoUrl);
+  const [failedUrl, setFailedUrl] = useState("");
+  const showImage = Boolean(resolvedUrl) && failedUrl !== resolvedUrl;
+
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 items-center justify-center overflow-hidden",
+        className,
+      )}
+    >
+      {showImage ? (
+        // eslint-disable-next-line @next/next/no-img-element -- employer upload URL
+        <img
+          key={resolvedUrl}
+          src={resolvedUrl}
+          alt=""
+          className="size-full object-contain p-1.5"
+          onError={() => setFailedUrl(resolvedUrl)}
+        />
+      ) : (
+        <Building2 className="size-5 text-primary" aria-hidden="true" />
+      )}
+    </div>
+  );
+}
 
 type SavedJobCardProps = {
   job: SavedJobListItem;
@@ -165,21 +200,10 @@ export function SavedJobCard({
       {/* —— Mobile card (< md / 768px) —— */}
       <div className="md:hidden">
         <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-start gap-x-3">
-          <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-resource-guide-surface ring-1 ring-resource-guide-icon/15">
-            {job.companyLogoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- employer CDN hosts vary
-              <img
-                src={job.companyLogoUrl}
-                alt=""
-                className="size-full object-contain p-1.5"
-              />
-            ) : (
-              <Building2
-                className="size-5 text-resource-guide-icon"
-                aria-hidden="true"
-              />
-            )}
-          </div>
+          <SavedJobCompanyLogo
+            logoUrl={job.companyLogoUrl}
+            className="size-14 rounded-2xl bg-resource-guide-surface ring-1 ring-resource-guide-icon/15"
+          />
 
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -378,18 +402,10 @@ export function SavedJobCard({
       {/* —— Desktop / tablet card (md+) — unchanged —— */}
       <div className="hidden md:block">
         <div className="flex items-start gap-3 sm:gap-4">
-          <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-workflow-neutral-surface ring-1 ring-border-subtle sm:size-14">
-            {job.companyLogoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- employer CDN hosts vary
-              <img
-                src={job.companyLogoUrl}
-                alt=""
-                className="size-full object-contain p-1.5"
-              />
-            ) : (
-              <Building2 className="size-5 text-primary" aria-hidden="true" />
-            )}
-          </div>
+          <SavedJobCompanyLogo
+            logoUrl={job.companyLogoUrl}
+            className="size-12 rounded-lg bg-workflow-neutral-surface ring-1 ring-border-subtle sm:size-14"
+          />
 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">

@@ -7,6 +7,7 @@ import {
 } from "../../constants/job.constants.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
+import { resolveEmployerPosterImageUrl } from "../employers/employer-poster-image.js";
 import { EmployerModel } from "../employers/employer.model.js";
 import { ApplicationModel } from "../applications/application.model.js";
 import { JobCounterModel } from "./job-counter.model.js";
@@ -729,20 +730,104 @@ function buildSalaryFilter(minSalary?: number, maxSalary?: number) {
   };
 }
 
+function uniqueLocationSlugs(values: readonly string[]): string[] {
+  const slugs: string[] = [];
+  for (const value of values) {
+    const slug = toLocationSlug(value);
+    if (!slug || slugs.includes(slug)) {
+      continue;
+    }
+    slugs.push(slug);
+  }
+  return slugs;
+}
+
+function buildLocationNameRegexes(slugs: readonly string[]): RegExp[] {
+  return slugs.map((slug) => {
+    const pattern = escapeRegex(slug).replace(/\\-/g, "[-\\s_]+");
+    return new RegExp(`^${pattern}$`, "i");
+  });
+}
+
+function buildNormalizedLocationFilter(
+  slugs: readonly string[],
+  slugField: "city" | "state",
+  nameField: "cityName" | "stateName",
+): Record<string, unknown> {
+  const normalized = uniqueLocationSlugs(slugs);
+  if (normalized.length === 0) {
+    return {};
+  }
+
+  const nameRegexes = buildLocationNameRegexes(normalized);
+
+  return {
+    $or: [
+      { [slugField]: { $in: normalized } },
+      { [slugField]: { $in: nameRegexes } },
+      { [nameField]: { $in: nameRegexes } },
+    ],
+  };
+}
+
+function shouldUseCityAsLocationPriority(query: PublicJobsQuery): boolean {
+  return Boolean(query.state) && query.city.length > 0;
+}
+
+function locationTokenExpr(fieldPath: string) {
+  return {
+    $replaceAll: {
+      input: {
+        $replaceAll: {
+          input: {
+            $trim: {
+              input: { $toLower: { $ifNull: [fieldPath, ""] } },
+            },
+          },
+          find: " ",
+          replacement: "-",
+        },
+      },
+      find: "_",
+      replacement: "-",
+    },
+  };
+}
+
+function buildExactSelectedCityMatchExpr(citySlugs: readonly string[]) {
+  const normalized = uniqueLocationSlugs(citySlugs);
+  return {
+    $or: [
+      { $in: [locationTokenExpr("$city"), normalized] },
+      { $in: [locationTokenExpr("$cityName"), normalized] },
+    ],
+  };
+}
+
+function buildLocationRelevanceRankExpr(citySlugs: readonly string[]) {
+  return {
+    $cond: [buildExactSelectedCityMatchExpr(citySlugs), 2, 1],
+  };
+}
+
 function buildPublicJobsFilter(query: PublicJobsQuery) {
   const andClauses: Record<string, unknown>[] = [
     { status: "active" },
     buildSearchFilter(query.search),
   ];
 
-  if (query.city.length === 1) {
-    andClauses.push({ city: query.city[0] });
-  } else if (query.city.length > 1) {
-    andClauses.push({ city: { $in: query.city } });
+  const cityIsPrioritySignal = shouldUseCityAsLocationPriority(query);
+
+  if (!cityIsPrioritySignal && query.city.length > 0) {
+    andClauses.push(
+      buildNormalizedLocationFilter(query.city, "city", "cityName"),
+    );
   }
 
   if (query.state) {
-    andClauses.push({ state: query.state });
+    andClauses.push(
+      buildNormalizedLocationFilter([query.state], "state", "stateName"),
+    );
   }
 
   if (query.jobType.length > 0) {
@@ -796,9 +881,53 @@ function toPublicApplyWhatsAppNumber(
   return digits;
 }
 
+
+function getJobEmployerId(job: { employerId?: unknown; companyId?: unknown }): string {
+  const employerId = job.employerId;
+  if (employerId && mongoose.Types.ObjectId.isValid(String(employerId))) {
+    return String(employerId);
+  }
+
+  const companyId = job.companyId;
+  if (companyId && mongoose.Types.ObjectId.isValid(String(companyId))) {
+    return String(companyId);
+  }
+
+  return "";
+}
+
+async function loadEmployerPosterImageMap(
+  jobs: Array<{ employerId?: unknown; companyId?: unknown }>,
+): Promise<Map<string, string>> {
+  const employerIds = [
+    ...new Set(jobs.map(getJobEmployerId).filter(Boolean)),
+  ];
+
+  if (employerIds.length === 0) {
+    return new Map();
+  }
+
+  const employers = await EmployerModel.find({
+    _id: {
+      $in: employerIds.map((id) => new mongoose.Types.ObjectId(id)),
+    },
+  })
+    .select(
+      "accountType companyLogo.url companyLogo.updatedAt profilePhoto.url profilePhoto.updatedAt",
+    )
+    .lean();
+
+  return new Map(
+    employers.map((employer) => [
+      employer._id.toString(),
+      resolveEmployerPosterImageUrl(employer),
+    ]),
+  );
+}
+
 function toPublicJobListItem(
   job: JobDocument,
-  options?: { isApplied?: boolean },
+  options?: { isApplied?: boolean; companyLogoUrl?: string },
 ) {
   return {
     id: job._id.toString(),
@@ -826,6 +955,7 @@ function toPublicJobListItem(
     createdAt: job.createdAt,
     isApplied: options?.isApplied === true,
     views: job.views ?? 0,
+    companyLogoUrl: options?.companyLogoUrl?.trim() || "",
   };
 }
 
@@ -1605,11 +1735,13 @@ export class JobService {
     const appliedIds = await getAppliedJobMongoIdSet(jobSeekerId, [
       job._id.toString(),
     ]);
+    const posterImageMap = await loadEmployerPosterImageMap([job]);
 
     return {
       job: {
         ...toPublicJobListItem(job, {
           isApplied: appliedIds.has(job._id.toString()),
+          companyLogoUrl: posterImageMap.get(getJobEmployerId(job)) ?? "",
         }),
         views,
         address: job.address,
@@ -1725,10 +1857,15 @@ export class JobService {
       jobSeekerId,
       rankedEntries.map((entry) => entry.candidate._id.toString()),
     );
+    const posterImageMap = await loadEmployerPosterImageMap(
+      rankedEntries.map((entry) => entry.candidate),
+    );
 
     const ranked = rankedEntries.map((entry) =>
       toPublicJobListItem(entry.candidate, {
         isApplied: appliedIds.has(entry.candidate._id.toString()),
+        companyLogoUrl:
+          posterImageMap.get(getJobEmployerId(entry.candidate)) ?? "",
       }),
     );
 
@@ -1753,6 +1890,8 @@ export class JobService {
     const useSalarySort =
       query.sort === "salary_desc" || query.sort === "salary_asc";
     const salaryDirection = query.sort === "salary_asc" ? 1 : -1;
+    const useLocationRelevanceSort =
+      query.sort === "relevant" && shouldUseCityAsLocationPriority(query);
 
     const jobsPromise = useSalarySort
       ? JobModel.aggregate([
@@ -1770,10 +1909,32 @@ export class JobService {
         ]).then((docs) =>
           docs.map((doc) => JobModel.hydrate(doc) as JobDocument),
         )
-      : JobModel.find(filter)
-          .sort({ publishedAt: -1, createdAt: -1 })
-          .skip(skip)
-          .limit(query.limit);
+      : useLocationRelevanceSort
+        ? JobModel.aggregate([
+            { $match: filter },
+            {
+              $addFields: {
+                locationRelevanceRank: buildLocationRelevanceRankExpr(
+                  query.city,
+                ),
+              },
+            },
+            {
+              $sort: {
+                locationRelevanceRank: -1,
+                publishedAt: -1,
+                createdAt: -1,
+              },
+            },
+            { $skip: skip },
+            { $limit: query.limit },
+          ]).then((docs) =>
+            docs.map((doc) => JobModel.hydrate(doc) as JobDocument),
+          )
+        : JobModel.find(filter)
+            .sort({ publishedAt: -1, createdAt: -1 })
+            .skip(skip)
+            .limit(query.limit);
 
     const [jobDocs, total, cityFacets] = await Promise.all([
       jobsPromise,
@@ -1798,10 +1959,12 @@ export class JobService {
       jobSeekerId,
       jobDocs.map((job) => job._id.toString()),
     );
+    const posterImageMap = await loadEmployerPosterImageMap(jobDocs);
 
     const jobs = jobDocs.map((job) =>
       toPublicJobListItem(job, {
         isApplied: appliedIds.has(job._id.toString()),
+        companyLogoUrl: posterImageMap.get(getJobEmployerId(job)) ?? "",
       }),
     );
 

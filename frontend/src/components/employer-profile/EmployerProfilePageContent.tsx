@@ -30,6 +30,7 @@ import { fetchEmployerJobStats } from "@/services/employer-jobs.service";
 import type { EmployerImageAssetPublic } from "@/services/employer-register.service";
 import { cn } from "@/utils/cn";
 import { calculateEmployerProfileCompletion } from "@/utils/employer-profile-completion";
+import { resolveEmployerPosterImageUrl } from "@/utils/employer-poster-image";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -395,11 +396,9 @@ export function EmployerProfilePageContent() {
   }
 
   const displayName = getDisplayName(profile);
-  const logoAsset =
-    profile.accountType === "individual"
-      ? profile.profilePhoto
-      : profile.companyLogo;
-  const logoUrl = resolveMediaUrl(logoAsset?.url);
+  const logoUrl = resolveMediaUrl(
+    resolveEmployerPosterImageUrl(profile) || null,
+  );
   const location = [profile.city, profile.state].filter(Boolean).join(", ");
   const industryLabel =
     EMPLOYER_REGISTER_INDUSTRY_OPTIONS.find(

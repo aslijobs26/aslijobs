@@ -1,9 +1,11 @@
 "use client";
 
 import { EmployerProfileDialog } from "@/components/employer-profile/EmployerProfileDialog";
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import {
   ACCESS_LEVEL_LABELS,
   EMPLOYER_TEAM_QUERY_KEYS,
+  EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME,
 } from "@/constants/employer-team-management";
 import {
   fetchDepartments,
@@ -43,6 +45,16 @@ type FormState = {
   message: string;
   status: "active" | "inactive" | "suspended";
 };
+
+const ACCESS_LEVEL_OPTIONS = (
+  Object.entries(ACCESS_LEVEL_LABELS) as [TeamAccessLevel, string][]
+).map(([value, label]) => ({ value, label }));
+
+const MEMBER_STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "suspended", label: "Suspended" },
+] as const;
 
 const EMPTY: FormState = {
   fullName: "",
@@ -96,6 +108,24 @@ export function InviteMemberModal({
         (currentRoleId !== undefined && role.id === currentRoleId),
     );
   }, [rolesQuery.data, mode, member?.role?.id]);
+
+  const departmentOptions = useMemo(
+    () =>
+      (departmentsQuery.data?.departments ?? []).map((department) => ({
+        value: department.id,
+        label: department.name,
+      })),
+    [departmentsQuery.data?.departments],
+  );
+
+  const roleOptions = useMemo(
+    () =>
+      assignableRoles.map((role) => ({
+        value: role.id,
+        label: `${role.name} (${ACCESS_LEVEL_LABELS[role.accessLevel]})`,
+      })),
+    [assignableRoles],
+  );
 
   useEffect(() => {
     if (mode === "edit" && member) {
@@ -188,7 +218,7 @@ export function InviteMemberModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-border-subtle bg-surface px-4 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50 sm:text-sm"
           >
             Cancel
           </button>
@@ -196,7 +226,7 @@ export function InviteMemberModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50"
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-50 sm:text-sm"
           >
             {isSubmitting
               ? mode === "invite"
@@ -209,17 +239,17 @@ export function InviteMemberModal({
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-3.5 sm:space-y-4">
         {(fieldError || errorMessage) && (
           <p
             role="alert"
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:text-sm"
           >
             {fieldError || errorMessage}
           </p>
         )}
 
-        <label className="block text-sm">
+        <label className="block text-xs sm:text-sm">
           <span className="mb-1.5 block font-medium text-foreground">
             Full Name <span className="text-red-600">*</span>
           </span>
@@ -232,7 +262,7 @@ export function InviteMemberModal({
           />
         </label>
 
-        <label className="block text-sm">
+        <label className="block text-xs sm:text-sm">
           <span className="mb-1.5 block font-medium text-foreground">
             Email {mode === "invite" ? <span className="text-red-600">*</span> : null}
           </span>
@@ -248,7 +278,7 @@ export function InviteMemberModal({
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm">
+          <label className="block text-xs sm:text-sm">
             <span className="mb-1.5 block font-medium text-foreground">Phone</span>
             <input
               value={form.phone}
@@ -258,7 +288,7 @@ export function InviteMemberModal({
               className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </label>
-          <label className="block text-sm">
+          <label className="block text-xs sm:text-sm">
             <span className="mb-1.5 block font-medium text-foreground">
               Designation
             </span>
@@ -276,101 +306,98 @@ export function InviteMemberModal({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm">
+          <div className="block text-xs sm:text-sm">
             <span className="mb-1.5 block font-medium text-foreground">
               Department <span className="text-red-600">*</span>
             </span>
-            <select
+            <EmployerRegisterSearchableSelect
+              id="invite-member-department"
+              label="Department"
+              hideLabel
               value={form.departmentId}
-              onChange={(event) =>
+              placeholder="Select department"
+              options={departmentOptions}
+              onChange={(value) =>
                 setForm((current) => ({
                   ...current,
-                  departmentId: event.target.value,
+                  departmentId: value,
                 }))
               }
-              className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">Select department</option>
-              {(departmentsQuery.data?.departments ?? []).map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm">
+              searchPlaceholder="Search department"
+              triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+            />
+          </div>
+          <div className="block text-xs sm:text-sm">
             <span className="mb-1.5 block font-medium text-foreground">
               Role <span className="text-red-600">*</span>
             </span>
-            <select
+            <EmployerRegisterSearchableSelect
+              id="invite-member-role"
+              label="Role"
+              hideLabel
               value={form.roleId}
-              onChange={(event) => {
-                const roleId = event.target.value;
-                const role = assignableRoles.find(
-                  (item) => item.id === roleId,
-                );
+              placeholder="Select role"
+              options={roleOptions}
+              onChange={(value) => {
+                const role = assignableRoles.find((item) => item.id === value);
                 setForm((current) => ({
                   ...current,
-                  roleId,
+                  roleId: value,
                   accessLevel: role?.accessLevel ?? current.accessLevel,
                 }));
               }}
-              className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">Select role</option>
-              {assignableRoles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name} ({ACCESS_LEVEL_LABELS[role.accessLevel]})
-                </option>
-              ))}
-            </select>
-          </label>
+              searchPlaceholder="Search role"
+              triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+            />
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm">
+          <div className="block text-xs sm:text-sm">
             <span className="mb-1.5 block font-medium text-foreground">
               Access Level
             </span>
-            <select
+            <EmployerRegisterSearchableSelect
+              id="invite-member-access-level"
+              label="Access Level"
+              hideLabel
               value={form.accessLevel}
-              onChange={(event) =>
+              placeholder="Select access level"
+              options={ACCESS_LEVEL_OPTIONS}
+              onChange={(value) =>
                 setForm((current) => ({
                   ...current,
-                  accessLevel: event.target.value as TeamAccessLevel,
+                  accessLevel: value as TeamAccessLevel,
                 }))
               }
-              className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            >
-              {Object.entries(ACCESS_LEVEL_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+              hideSearch
+              triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+            />
+          </div>
           {mode === "edit" ? (
-            <label className="block text-sm">
+            <div className="block text-xs sm:text-sm">
               <span className="mb-1.5 block font-medium text-foreground">
                 Status
               </span>
-              <select
+              <EmployerRegisterSearchableSelect
+                id="invite-member-status"
+                label="Status"
+                hideLabel
                 value={form.status}
-                onChange={(event) =>
+                placeholder="Select status"
+                options={[...MEMBER_STATUS_OPTIONS]}
+                onChange={(value) =>
                   setForm((current) => ({
                     ...current,
-                    status: event.target.value as FormState["status"],
+                    status: value as FormState["status"],
                   }))
                 }
-                className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-              </select>
-            </label>
+                hideSearch
+                triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+              />
+            </div>
           ) : (
-            <label className="block text-sm">
+            <label className="block text-xs sm:text-sm">
               <span className="mb-1.5 block font-medium text-foreground">
                 Invitation Message
               </span>

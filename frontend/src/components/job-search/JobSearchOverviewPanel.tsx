@@ -1,5 +1,6 @@
 "use client";
 
+import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
 import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkeletons";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
@@ -16,7 +17,6 @@ import {
   formatJobSearchWalkInDateRange,
   formatJobSearchWalkInTimeRange,
   formatJobSearchWorkMode,
-  getCompanyInitials,
 } from "@/utils/job-search-format";
 import { protectedApply } from "@/utils/job-apply-auth";
 import {
@@ -437,19 +437,17 @@ export function JobSearchOverviewPanel({
         ) : null}
 
         <header className="flex items-start gap-2.5">
-          <div
+          <JobPosterAvatar
+            companyName={job.companyName}
+            imageUrl={job.companyLogoUrl}
             className={cn(
-              "flex shrink-0 items-center justify-center font-bold text-foreground transition-all motion-reduce:transition-none",
+              "font-bold text-foreground transition-all motion-reduce:transition-none",
               SUMMARY_MOTION,
               isSummaryCollapsed
                 ? "size-9 rounded-[11px] text-xs"
                 : "size-10 rounded-[12px] text-sm sm:size-11",
             )}
-            style={{ backgroundColor: ICON_SURFACE }}
-            aria-hidden="true"
-          >
-            {getCompanyInitials(job.companyName)}
-          </div>
+          />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <h2

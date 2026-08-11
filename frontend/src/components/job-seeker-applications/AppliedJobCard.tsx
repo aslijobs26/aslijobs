@@ -7,6 +7,7 @@ import {
   formatJobSearchWorkMode,
 } from "@/utils/job-search-format";
 import { cn } from "@/utils/cn";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import {
   Briefcase,
   Building2,
@@ -16,6 +17,7 @@ import {
   MapPin,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import {
   applicationStatusIcon,
   buildStatusContext,
@@ -49,6 +51,10 @@ function CompanyLogo({
   logoUrl: string;
   className?: string;
 }) {
+  const resolvedUrl = resolveMediaUrl(logoUrl);
+  const [failedUrl, setFailedUrl] = useState("");
+  const showImage = Boolean(resolvedUrl) && failedUrl !== resolvedUrl;
+
   return (
     <div
       className={cn(
@@ -56,12 +62,14 @@ function CompanyLogo({
         className,
       )}
     >
-      {logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- employer CDN hosts vary
+      {showImage ? (
+        // eslint-disable-next-line @next/next/no-img-element -- employer upload URL
         <img
-          src={logoUrl}
+          key={resolvedUrl}
+          src={resolvedUrl}
           alt=""
           className="size-full object-contain p-1.5"
+          onError={() => setFailedUrl(resolvedUrl)}
         />
       ) : (
         <Building2 className="size-5 text-primary" aria-hidden="true" />

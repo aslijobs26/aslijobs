@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import { InviteMemberModal } from "@/components/employer-team-management/InviteMemberModal";
 import { MembersTable } from "@/components/employer-team-management/MembersTable";
 import { TeamMembersSidebar } from "@/components/employer-team-management/TeamMembersSidebar";
@@ -9,6 +10,7 @@ import {
   EMPLOYER_TEAM_DEFAULT_PAGE_SIZE,
   EMPLOYER_TEAM_QUERY_KEYS,
   EMPLOYER_TEAM_SEARCH_DEBOUNCE_MS,
+  EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME,
 } from "@/constants/employer-team-management";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import {
@@ -35,6 +37,14 @@ import { useCan } from "@/providers/employer-permission-provider";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Filter, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+const MEMBER_FILTER_STATUS_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "invited", label: "Invited" },
+  { value: "inactive", label: "Inactive" },
+  { value: "suspended", label: "Suspended" },
+];
 
 type MemberFilters = {
   departmentId: string;
@@ -123,6 +133,28 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
     queryFn: fetchTeamRoles,
     staleTime: 30_000,
   });
+
+  const departmentFilterOptions = useMemo(
+    () => [
+      { value: "", label: "All" },
+      ...(departmentsQuery.data?.departments ?? []).map((item) => ({
+        value: item.id,
+        label: item.name,
+      })),
+    ],
+    [departmentsQuery.data?.departments],
+  );
+
+  const roleFilterOptions = useMemo(
+    () => [
+      { value: "", label: "All" },
+      ...(rolesQuery.data ?? []).map((item) => ({
+        value: item.id,
+        label: item.name,
+      })),
+    ],
+    [rolesQuery.data],
+  );
 
   const invalidateAll = async () => {
     await invalidateEmployerAccessCaches(queryClient);
@@ -278,70 +310,68 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
               </button>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <label className="block text-sm">
+              <div className="block text-sm">
                 <span className="mb-1.5 block font-medium">Department</span>
-                <select
+                <EmployerRegisterSearchableSelect
+                  id="members-filter-department"
+                  label="Department"
+                  hideLabel
                   value={filters.departmentId}
-                  onChange={(event) => {
+                  placeholder="All"
+                  options={departmentFilterOptions}
+                  onChange={(value) => {
                     setFilters((current) => ({
                       ...current,
-                      departmentId: event.target.value,
+                      departmentId: value,
                     }));
                     setPage(1);
                   }}
-                  className="h-10 w-full rounded-lg border border-border-subtle px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">All</option>
-                  {(departmentsQuery.data?.departments ?? []).map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm">
+                  searchPlaceholder="Search department"
+                  triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+                />
+              </div>
+              <div className="block text-sm">
                 <span className="mb-1.5 block font-medium">Role</span>
-                <select
+                <EmployerRegisterSearchableSelect
+                  id="members-filter-role"
+                  label="Role"
+                  hideLabel
                   value={filters.roleId}
-                  onChange={(event) => {
+                  placeholder="All"
+                  options={roleFilterOptions}
+                  onChange={(value) => {
                     setFilters((current) => ({
                       ...current,
-                      roleId: event.target.value,
+                      roleId: value,
                     }));
                     setPage(1);
                   }}
-                  className="h-10 w-full rounded-lg border border-border-subtle px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">All</option>
-                  {(rolesQuery.data ?? []).map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm">
+                  searchPlaceholder="Search role"
+                  triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+                />
+              </div>
+              <div className="block text-sm">
                 <span className="mb-1.5 block font-medium">Status</span>
-                <select
+                <EmployerRegisterSearchableSelect
+                  id="members-filter-status"
+                  label="Status"
+                  hideLabel
                   value={filters.status ?? ""}
-                  onChange={(event) => {
+                  placeholder="All"
+                  options={MEMBER_FILTER_STATUS_OPTIONS}
+                  onChange={(value) => {
                     setFilters((current) => ({
                       ...current,
-                      status: (event.target.value || undefined) as
+                      status: (value || undefined) as
                         | TeamMemberStatus
                         | undefined,
                     }));
                     setPage(1);
                   }}
-                  className="h-10 w-full rounded-lg border border-border-subtle px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">All</option>
-                  <option value="active">Active</option>
-                  <option value="invited">Invited</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="suspended">Suspended</option>
-                </select>
-              </label>
+                  hideSearch
+                  triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+                />
+              </div>
             </div>
             <button
               type="button"

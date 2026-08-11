@@ -6,6 +6,7 @@ import {
   JOB_SEEKER_AVAILABILITY_STATUSES,
 } from "../../constants/job-seeker.constants.js";
 import { AppError } from "../../middleware/error.middleware.js";
+import { resolveEmployerPosterImageUrl } from "../employers/employer-poster-image.js";
 import { EmployerModel } from "../employers/employer.model.js";
 import { JobModel } from "../jobs/job.model.js";
 import { ensureEmployerJobRelationsConsistent } from "../jobs/job-cascade-delete.js";
@@ -388,7 +389,13 @@ function mapSeekerListItem(input: {
         partTimeEndTime?: string;
       }
     | undefined;
-  employer: { companyLogo?: { url?: string } | null } | undefined;
+  employer:
+    | {
+        accountType?: string;
+        companyLogo?: { url?: string; updatedAt?: Date | string | null } | null;
+        profilePhoto?: { url?: string; updatedAt?: Date | string | null } | null;
+      }
+    | undefined;
 }): SeekerApplicationListItem {
   const { app, job, employer } = input;
   const history = mapStatusHistory(app.statusHistory);
@@ -402,7 +409,7 @@ function mapSeekerListItem(input: {
     publicJobId: app.publicJobId,
     jobTitle: job?.jobTitle?.trim() || "Job",
     companyName: job?.companyName?.trim() || "",
-    companyLogoUrl: text(employer?.companyLogo?.url),
+    companyLogoUrl: resolveEmployerPosterImageUrl(employer),
     location: job ? formatJobLocation(job) : "",
     salaryLabel: job ? formatSalaryLabel(job) : "Not disclosed",
     salarySortValue: salarySortValue(job),
@@ -2984,7 +2991,11 @@ export class ApplicationService {
       statusHistory?: unknown;
       interview?: unknown;
       job?: Parameters<typeof mapSeekerListItem>[0]["job"];
-      employer?: { companyLogo?: { url?: string } | null };
+      employer?: {
+        accountType?: string;
+        companyLogo?: { url?: string; updatedAt?: Date | string | null } | null;
+        profilePhoto?: { url?: string; updatedAt?: Date | string | null } | null;
+      };
     };
 
     const pageItems =
@@ -3074,7 +3085,9 @@ export class ApplicationService {
         )
         .lean(),
       EmployerModel.findById(application.employerId)
-        .select("companyLogo")
+        .select(
+          "accountType companyLogo.url companyLogo.updatedAt profilePhoto.url profilePhoto.updatedAt",
+        )
         .lean(),
     ]);
 
@@ -3088,7 +3101,7 @@ export class ApplicationService {
         publicJobId: application.publicJobId,
         jobTitle: job?.jobTitle?.trim() || "Job",
         companyName: job?.companyName?.trim() || "",
-        companyLogoUrl: text(employer?.companyLogo?.url),
+        companyLogoUrl: resolveEmployerPosterImageUrl(employer),
         location: job ? formatJobLocation(job) : "",
         salaryLabel: job ? formatSalaryLabel(job) : "Not disclosed",
         workMode: text(job?.workMode),

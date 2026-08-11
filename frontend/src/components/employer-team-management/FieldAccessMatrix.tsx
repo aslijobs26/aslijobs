@@ -12,6 +12,8 @@ import {
   type FieldAccessLevel,
   type RoleFieldAccessMap,
 } from "@/constants/employer-field-access";
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
+import { EMPLOYER_TEAM_SELECT_TRIGGER_COMPACT_CLASSNAME } from "@/constants/employer-team-management";
 import { cn } from "@/utils/cn";
 import {
   ChevronDown,
@@ -298,23 +300,25 @@ export function FieldAccessMatrix({
 
         {editable && copyRoles.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-hero-bg/40 p-2">
-            <label className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <span className="shrink-0 text-xs font-medium text-muted">
                 Copy from
               </span>
-              <select
+              <EmployerRegisterSearchableSelect
+                id="field-access-copy-role"
+                label="Copy from"
+                hideLabel
                 value={copyRoleId}
-                onChange={(event) => setCopyRoleId(event.target.value)}
-                className="h-8 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">Select role</option>
-                {copyRoles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                placeholder="Select role"
+                options={copyRoles.map((role) => ({
+                  value: role.id,
+                  label: role.name,
+                }))}
+                onChange={setCopyRoleId}
+                searchPlaceholder="Search role"
+                triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_COMPACT_CLASSNAME}
+              />
+            </div>
             <button
               type="button"
               disabled={!copyRoleId}

@@ -39,6 +39,7 @@ import {
 } from "@/types/employer-applications";
 import type { NotificationType } from "@/types/notifications";
 import { cn } from "@/utils/cn";
+import { resolveEmployerPosterImageUrl } from "@/utils/employer-poster-image";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -235,11 +236,7 @@ function getEmployerAvatarName(employer: EmployerLoginPublic): string {
 }
 
 function getEmployerAvatarUrl(employer: EmployerLoginPublic): string | null {
-  if (employer.accountType === "individual") {
-    return employer.profilePhoto?.url ?? employer.companyLogo?.url ?? null;
-  }
-
-  return employer.companyLogo?.url ?? employer.profilePhoto?.url ?? null;
+  return resolveEmployerPosterImageUrl(employer) || null;
 }
 
 function ConversationAvatar({

@@ -59,6 +59,7 @@ import {
   ShieldCheck,
   Ticket,
   UserRound,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -445,9 +446,10 @@ export function JobSeekerHelpSupportPageContent() {
                   <button
                     type="button"
                     onClick={() => setActiveTopicId(null)}
-                    className="text-xs font-semibold text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    aria-label="Close"
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30"
                   >
-                    Close
+                    <X className="size-4" strokeWidth={2.5} aria-hidden="true" />
                   </button>
                 </div>
                 <ul className="space-y-2">

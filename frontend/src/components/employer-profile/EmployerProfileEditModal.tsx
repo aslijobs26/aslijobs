@@ -265,11 +265,13 @@ export function EmployerProfileEditModal({
 
     if (section === "company") {
       if (!isBusiness) {
+        const establishmentName = draft.establishmentName.trim();
+        const website = draft.website.trim();
         await onSave({
-          establishmentName: draft.establishmentName.trim(),
-          industry: draft.industry,
+          ...(establishmentName ? { establishmentName } : {}),
+          ...(draft.industry ? { industry: draft.industry } : {}),
           companyDescription: draft.companyDescription.trim(),
-          website: draft.website.trim(),
+          ...(website ? { website } : {}),
           profilePhotoFile: photoPreview?.file,
           removeProfilePhoto:
             removePhoto && !photoPreview?.file ? true : undefined,

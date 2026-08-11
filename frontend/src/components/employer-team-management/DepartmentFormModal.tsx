@@ -1,10 +1,12 @@
 "use client";
 
 import { EmployerProfileDialog } from "@/components/employer-profile/EmployerProfileDialog";
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import {
   DEPARTMENT_COLOR_OPTIONS,
   DEPARTMENT_ICON_OPTIONS,
   EMPLOYER_TEAM_QUERY_KEYS,
+  EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME,
 } from "@/constants/employer-team-management";
 import { fetchTeamMemberOptions } from "@/services/employer-team.service";
 import type {
@@ -14,7 +16,7 @@ import type {
 } from "@/types/employer-team";
 import { cn } from "@/utils/cn";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type DepartmentFormModalProps = {
   mode: "create" | "edit";
@@ -48,6 +50,11 @@ const EMPTY_FORM: FormState = {
   color: "primary",
   icon: "building",
 };
+
+const DEPARTMENT_STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
 
 export function DepartmentFormModal({
   mode,
@@ -83,6 +90,17 @@ export function DepartmentFormModal({
     }
     setForm(EMPTY_FORM);
   }, [mode, department]);
+
+  const headMemberOptions = useMemo(
+    () => [
+      { value: "", label: "No Head Assigned" },
+      ...(membersQuery.data ?? []).map((member) => ({
+        value: member.id,
+        label: `${member.fullName} (${member.email})`,
+      })),
+    ],
+    [membersQuery.data],
+  );
 
   const handleSubmit = () => {
     const name = form.name.trim();
@@ -189,22 +207,25 @@ export function DepartmentFormModal({
             />
           </label>
 
-          <label className="block text-sm">
+          <div className="block text-sm">
             <span className="mb-1.5 block font-medium text-foreground">Status</span>
-            <select
+            <EmployerRegisterSearchableSelect
+              id="department-status"
+              label="Status"
+              hideLabel
               value={form.status}
-              onChange={(event) =>
+              placeholder="Select status"
+              options={DEPARTMENT_STATUS_OPTIONS}
+              onChange={(value) =>
                 setForm((current) => ({
                   ...current,
-                  status: event.target.value as DepartmentStatus,
+                  status: value as DepartmentStatus,
                 }))
               }
-              className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </label>
+              hideSearch
+              triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+            />
+          </div>
         </div>
 
         <label className="block text-sm">
@@ -229,34 +250,33 @@ export function DepartmentFormModal({
           </span>
         </label>
 
-        <label className="block text-sm">
+        <div className="block text-sm">
           <span className="mb-1.5 block font-medium text-foreground">
             Department Head
           </span>
-          <select
+          <EmployerRegisterSearchableSelect
+            id="department-head"
+            label="Department Head"
+            hideLabel
             value={form.headMemberId}
-            onChange={(event) =>
+            placeholder="No Head Assigned"
+            options={headMemberOptions}
+            onChange={(value) =>
               setForm((current) => ({
                 ...current,
-                headMemberId: event.target.value,
+                headMemberId: value,
               }))
             }
-            className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">No Head Assigned</option>
-            {(membersQuery.data ?? []).map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.fullName} ({member.email})
-              </option>
-            ))}
-          </select>
+            searchPlaceholder="Search member"
+            triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+          />
           {!membersQuery.isLoading && (membersQuery.data?.length ?? 0) === 0 ? (
             <span className="mt-1 block text-xs text-muted">
               No active team members yet. Heads can be assigned after members
               are added.
             </span>
           ) : null}
-        </label>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
@@ -319,25 +339,25 @@ export function DepartmentFormModal({
           </div>
         </fieldset>
 
-        <label className="block text-sm">
+        <div className="block text-sm">
           <span className="mb-1.5 block font-medium text-foreground">Icon</span>
-          <select
-            value={form.icon}
-            onChange={(event) =>
+          <EmployerRegisterSearchableSelect
+            id="department-icon"
+            label="Icon"
+            hideLabel
+            value={form.icon ?? ""}
+            placeholder="Select icon"
+            options={[...DEPARTMENT_ICON_OPTIONS]}
+            onChange={(value) =>
               setForm((current) => ({
                 ...current,
-                icon: event.target.value as FormState["icon"],
+                icon: value as FormState["icon"],
               }))
             }
-            className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            {DEPARTMENT_ICON_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            hideSearch
+            triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+          />
+        </div>
       </div>
     </EmployerProfileDialog>
   );

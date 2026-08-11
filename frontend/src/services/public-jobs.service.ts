@@ -16,6 +16,8 @@ export type PublicJobListItem = {
   id: string;
   jobId: string;
   companyName: string;
+  /** Company logo, consultancy logo, or individual profile photo. */
+  companyLogoUrl?: string;
   jobTitle: string;
   jobType: "full-time" | "part-time" | "contract";
   workMode: "office" | "field" | "both" | "home";

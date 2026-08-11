@@ -16,6 +16,7 @@ import type {
 } from "@/types/employer-team";
 import { cn } from "@/utils/cn";
 import { clearEmployerClientSession } from "@/utils/employer-session";
+import { resolveEmployerPosterImageUrl } from "@/utils/employer-poster-image";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import {
   Briefcase,
@@ -139,11 +140,7 @@ function getEmployerInitials(displayName: string): string {
 }
 
 function getEmployerAvatarUrl(employer: EmployerLoginPublic): string | null {
-  if (employer.accountType === "individual") {
-    return employer.profilePhoto?.url ?? employer.companyLogo?.url ?? null;
-  }
-
-  return employer.companyLogo?.url ?? employer.profilePhoto?.url ?? null;
+  return resolveEmployerPosterImageUrl(employer) || null;
 }
 
 function EmployerProfileAvatar({

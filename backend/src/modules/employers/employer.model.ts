@@ -104,6 +104,7 @@ const employerSchema = new Schema(
       originalName: { type: String, default: "" },
       mimeType: { type: String, default: "" },
       fileSize: { type: Number, default: 0 },
+      updatedAt: { type: Date, default: null },
     },
     profilePhoto: {
       url: { type: String, default: "" },
@@ -113,6 +114,7 @@ const employerSchema = new Schema(
       originalName: { type: String, default: "" },
       mimeType: { type: String, default: "" },
       fileSize: { type: Number, default: 0 },
+      updatedAt: { type: Date, default: null },
     },
     companyMedia: [
       {

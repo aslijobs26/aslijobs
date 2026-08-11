@@ -32,11 +32,15 @@ export function JobsLocationAutocomplete({
 }: JobsLocationAutocompleteProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const committedValueRef = useRef("");
   const [isOpen, setIsOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const trimmedQuery = value.trim();
-  const canSearch = isOpen && trimmedQuery.length >= MIN_QUERY;
+  const canSearch =
+    isOpen &&
+    trimmedQuery.length >= MIN_QUERY &&
+    trimmedQuery !== committedValueRef.current;
 
   useEffect(() => {
     if (!canSearch) {
@@ -103,9 +107,16 @@ export function JobsLocationAutocomplete({
         aria-controls={listId}
         aria-autocomplete="list"
         className={cn(inputClassName)}
-        onFocus={() => setIsOpen(true)}
+        onFocus={() => {
+          if (trimmedQuery !== committedValueRef.current) {
+            setIsOpen(true);
+          }
+        }}
         onChange={(event) => {
           const next = event.target.value;
+          if (next.trim() !== committedValueRef.current) {
+            committedValueRef.current = "";
+          }
           onInputChange(next);
           if (!next.trim()) {
             onClear();
@@ -143,6 +154,7 @@ export function JobsLocationAutocomplete({
                   )}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
+                    committedValueRef.current = suggestion.label.trim();
                     onSelect(createLocationSelection(suggestion));
                     setIsOpen(false);
                   }}

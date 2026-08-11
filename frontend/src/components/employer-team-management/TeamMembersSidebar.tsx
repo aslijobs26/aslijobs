@@ -1,6 +1,10 @@
 "use client";
 
-import { EMPLOYER_TEAM_QUERY_KEYS } from "@/constants/employer-team-management";
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
+import {
+  EMPLOYER_TEAM_QUERY_KEYS,
+  EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME,
+} from "@/constants/employer-team-management";
 import { useCan } from "@/providers/employer-permission-provider";
 import {
   fetchDepartments,
@@ -88,6 +92,18 @@ export function TeamMembersSidebar({
       (rolesQuery.data ?? []).filter((role) => isAssignableRole(role.status)),
     [rolesQuery.data],
   );
+  const roleOptions = useMemo(
+    () => roles.map((role) => ({ value: role.id, label: role.name })),
+    [roles],
+  );
+  const departmentOptions = useMemo(
+    () =>
+      (departmentsQuery.data?.departments ?? []).map((department) => ({
+        value: department.id,
+        label: department.name,
+      })),
+    [departmentsQuery.data?.departments],
+  );
 
   const donutGradient = useMemo(() => {
     if (slices.length === 0 || total <= 0) {
@@ -124,36 +140,32 @@ export function TeamMembersSidebar({
             className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </label>
-        <label className="mt-2 block text-sm">
-          <span className="sr-only">Role</span>
-          <select
+        <div className="mt-2">
+          <EmployerRegisterSearchableSelect
+            id="sidebar-invite-role"
+            label="Role"
+            hideLabel
             value={roleId}
-            onChange={(event) => setRoleId(event.target.value)}
-            className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">Select Role</option>
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="mt-2 block text-sm">
-          <span className="sr-only">Department</span>
-          <select
+            placeholder="Select Role"
+            options={roleOptions}
+            onChange={setRoleId}
+            searchPlaceholder="Search role"
+            triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+          />
+        </div>
+        <div className="mt-2">
+          <EmployerRegisterSearchableSelect
+            id="sidebar-invite-department"
+            label="Department"
+            hideLabel
             value={departmentId}
-            onChange={(event) => setDepartmentId(event.target.value)}
-            className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">Select Dept</option>
-            {(departmentsQuery.data?.departments ?? []).map((department) => (
-              <option key={department.id} value={department.id}>
-                {department.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            placeholder="Select Dept"
+            options={departmentOptions}
+            onChange={setDepartmentId}
+            searchPlaceholder="Search department"
+            triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+          />
+        </div>
         <button
           type="button"
           onClick={() => {

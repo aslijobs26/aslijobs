@@ -1,5 +1,7 @@
 "use client";
 
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
+import { EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME } from "@/constants/employer-team-management";
 import type { DepartmentStatus } from "@/types/employer-team";
 import { cn } from "@/utils/cn";
 import { Filter, Plus, Search, X } from "lucide-react";
@@ -19,6 +21,12 @@ export const DEFAULT_DEPARTMENT_FILTERS: DepartmentFiltersState = {
   memberCountMin: "",
   memberCountMax: "",
 };
+
+const DEPARTMENT_FILTER_STATUS_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
 
 type DepartmentsToolbarProps = {
   search: string;
@@ -116,25 +124,25 @@ export function DepartmentsFilterPanel({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="block text-sm">
+        <div className="block text-sm">
           <span className="mb-1.5 block font-medium text-foreground">Status</span>
-          <select
+          <EmployerRegisterSearchableSelect
+            id="departments-filter-status"
+            label="Status"
+            hideLabel
             value={filters.status ?? ""}
-            onChange={(event) =>
+            placeholder="All"
+            options={DEPARTMENT_FILTER_STATUS_OPTIONS}
+            onChange={(value) =>
               onChange({
                 ...filters,
-                status: (event.target.value || undefined) as
-                  | DepartmentStatus
-                  | undefined,
+                status: (value || undefined) as DepartmentStatus | undefined,
               })
             }
-            className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">All</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </label>
+            hideSearch
+            triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+          />
+        </div>
 
         <label className="block text-sm">
           <span className="mb-1.5 block font-medium text-foreground">

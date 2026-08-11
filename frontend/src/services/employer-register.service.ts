@@ -22,6 +22,7 @@ export type EmployerImageAssetPublic = {
   originalName: string;
   mimeType: string;
   fileSize: number;
+  updatedAt?: string | null;
 };
 
 export type EmployerPublic = {

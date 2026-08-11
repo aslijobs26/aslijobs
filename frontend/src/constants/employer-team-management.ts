@@ -262,3 +262,9 @@ export const PERMISSION_ACTIONS = [
   "delete",
   "export",
 ] as const;
+
+export const EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME =
+  "!h-10 w-full rounded-lg border-border-subtle bg-surface !text-sm shadow-none transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20";
+
+export const EMPLOYER_TEAM_SELECT_TRIGGER_COMPACT_CLASSNAME =
+  "!h-8 min-w-0 flex-1 rounded-md border-border-subtle bg-surface !text-xs shadow-none";

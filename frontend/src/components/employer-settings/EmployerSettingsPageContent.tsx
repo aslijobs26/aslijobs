@@ -20,6 +20,7 @@ import {
 import { ROUTES } from "@/constants/routes";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import { useCan } from "@/providers/employer-permission-provider";
+import { resolveEmployerPosterImageUrl } from "@/utils/employer-poster-image";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { getInitials } from "@/utils/employer-team";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -160,7 +161,7 @@ export function EmployerSettingsPageContent() {
     employer?.alternatePhone?.trim() ||
     "";
   const avatarUrl = resolveMediaUrl(
-    employer?.profilePhoto?.url ?? employer?.companyLogo?.url ?? null,
+    resolveEmployerPosterImageUrl(employer) || null,
   );
   const editHref =
     session?.principalType === "member"

@@ -20,6 +20,7 @@ import {
 } from "@/utils/share-job";
 import { Eye, Pencil, Share2, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type DashboardJobsOverviewProps = {
   jobs: EmployerJobListItem[];
@@ -38,11 +39,17 @@ export function DashboardJobsOverview({
   onRetry,
   onDelete,
 }: DashboardJobsOverviewProps) {
+  const router = useRouter();
   const { can } = useCan();
+  const canReadJobs = can("jobs", "read");
   const canUpdateJobs = can("jobs", "update");
   const canDeleteJobs =
     EMPLOYER_JOBS_DELETE_UI_ENABLED && can("jobs", "delete");
   const canCreateJobs = can("jobs", "create");
+
+  const openEmployerJobs = () => {
+    router.push(ROUTES.EMPLOYER_JOBS);
+  };
 
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
@@ -141,7 +148,27 @@ export function DashboardJobsOverview({
                 return (
                   <tr
                     key={job.id}
-                    className="transition-colors hover:bg-hero-bg/40"
+                    className={cn(
+                      "transition-colors hover:bg-hero-bg/40",
+                      canReadJobs && "cursor-pointer",
+                    )}
+                    tabIndex={canReadJobs ? 0 : undefined}
+                    aria-label={
+                      canReadJobs
+                        ? `Open ${job.jobTitle} on the jobs page`
+                        : undefined
+                    }
+                    onClick={canReadJobs ? openEmployerJobs : undefined}
+                    onKeyDown={
+                      canReadJobs
+                        ? (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              openEmployerJobs();
+                            }
+                          }
+                        : undefined
+                    }
                   >
                     <td className="px-3 py-3 first:pl-4 sm:px-4">
                       <p className="max-w-[12rem] truncate text-sm font-semibold text-foreground">
@@ -173,7 +200,11 @@ export function DashboardJobsOverview({
                     <td className="px-3 py-3 text-sm font-semibold tabular-nums text-foreground sm:px-4">
                       {formatEmployerJobCount(job.views)}
                     </td>
-                    <td className="px-3 py-3 last:pr-4 sm:px-4">
+                    <td
+                      className="px-3 py-3 last:pr-4 sm:px-4"
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
                       <div className="flex items-center gap-1">
                         <a
                           href={publicUrl}
