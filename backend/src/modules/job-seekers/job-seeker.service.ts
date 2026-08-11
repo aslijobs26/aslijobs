@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { env } from "../../config/env.js";
 import { OTP_MAX_ATTEMPTS } from "../../constants/employer.constants.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { JOB_SEEKER_JOB_ROLES } from "../../constants/job-seeker.constants.js";
@@ -220,7 +219,6 @@ export class JobSeekerService {
       jobSeeker: toPublicJobSeeker(jobSeeker),
       jobSeekerId: jobSeeker._id.toString(),
       otpExpiresAt: generated.expiresAt.toISOString(),
-      ...(env.NODE_ENV === "development" ? { otp: generated.otp } : {}),
     };
   }
 
@@ -260,7 +258,6 @@ export class JobSeekerService {
     return {
       jobSeekerId: jobSeeker._id.toString(),
       otpExpiresAt: generated.expiresAt.toISOString(),
-      ...(env.NODE_ENV === "development" ? { otp: generated.otp } : {}),
     };
   }
 

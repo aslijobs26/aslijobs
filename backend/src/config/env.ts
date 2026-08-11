@@ -67,18 +67,24 @@ const envSchema = z.object({
    * Temporary auth testing only. Must be the string "true" to enable.
    * Missing / any other value → disabled (safe default).
    */
-  OTP_TEST_MODE: z.preprocess(
-    (value) => value === "true",
-    z.boolean(),
-  ),
+  OTP_TEST_MODE: z.preprocess((value) => {
+    if (typeof value === "boolean") {
+      return value;
+    }
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
   /**
    * Fixed OTP accepted for any phone when OTP_TEST_MODE is enabled.
    * Must match the app OTP length (currently 4 digits). Never expose to clients.
    */
-  OTP_TEST_CODE: z.preprocess(
-    (value) => (typeof value === "string" ? value.trim() : ""),
-    z.string(),
-  ),
+  OTP_TEST_CODE: z.preprocess((value) => {
+    if (typeof value !== "string" && typeof value !== "number") {
+      return "";
+    }
+    return String(value).trim().replace(/^["']|["']$/g, "");
+  }, z.string()),
   STORAGE_PROVIDER: z.enum(["local", "cloudinary"]).default("local"),
   UPLOAD_DIR: z.string().default("uploads"),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),

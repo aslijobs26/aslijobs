@@ -40,8 +40,12 @@ export class WhatsAppService {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error("[WhatsAppService] Failed to send OTP message:", errorBody);
-      throw new Error("Failed to send WhatsApp OTP message");
+      // Do not fail registration/login when WhatsApp delivery fails.
+      // Console OTP (and OTP_TEST_MODE) remain available for verification.
+      console.error(
+        "[WhatsAppService] Failed to send OTP message; continuing with console OTP fallback:",
+        errorBody,
+      );
     }
   }
 }

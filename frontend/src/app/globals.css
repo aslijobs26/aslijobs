@@ -1752,13 +1752,13 @@ body:has(.employer-register-page) {
   }
 }
 
-/* Job Seeker register only: vertically center the form block */
+/* Job Seeker register: center when short; top-align when OTP/tall content so boxes stay visible */
 @media (width >= 1024px) {
   .employer-register-page.job-seeker-register-page
     .employer-register-form-section {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: safe center;
     align-items: center;
   }
 
@@ -1769,7 +1769,7 @@ body:has(.employer-register-page) {
     width: min(36.5rem, 100%);
     margin-block: auto;
     margin-inline: auto;
-    justify-content: center;
+    justify-content: flex-start;
     padding-top: 1.5rem;
     padding-bottom: 1.5rem;
   }
@@ -1777,7 +1777,7 @@ body:has(.employer-register-page) {
   .employer-register-page.job-seeker-register-page
     .employer-register-form-body {
     flex: 0 0 auto;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: stretch;
   }
 }

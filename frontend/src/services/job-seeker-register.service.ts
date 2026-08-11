@@ -14,7 +14,7 @@ import type {
 import { setJobSeekerAuthSession } from "@/utils/job-seeker-auth-storage";
 
 type ApiSuccess<T> = {
-  success: true;
+  success: boolean;
   message?: string;
   data: T;
 };
@@ -90,7 +90,17 @@ export async function registerJobSeekerAccount(
     { fullName, whatsappNumber },
   );
 
-  const data = response.data.data;
+  const payload = response.data;
+  const data = payload?.data;
+
+  if (!payload?.success || !data?.jobSeekerId) {
+    throw new Error(
+      typeof payload?.message === "string" && payload.message.trim()
+        ? payload.message
+        : "Failed to start registration",
+    );
+  }
+
   logDevelopmentOtp(whatsappNumber, data.otp);
   return data;
 }

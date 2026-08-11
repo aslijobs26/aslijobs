@@ -46,7 +46,7 @@ import type {
 } from "@/types/job-seeker";
 import { isAxiosError } from "axios";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 const EMPTY_OTP_DIGITS = Array.from(
   { length: JOB_SEEKER_REGISTER_OTP_LENGTH },
@@ -108,6 +108,7 @@ function validateEducation(education: JobSeekerEducation): string | null {
 
 export function JobSeekerRegisterForm() {
   const router = useRouter();
+  const otpSectionRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<RegisterStep>("account");
   const [jobSeekerId, setJobSeekerId] = useState<string | null>(null);
   const [fullName, setFullName] = useState("");
@@ -144,6 +145,21 @@ export function JobSeekerRegisterForm() {
   );
   const canSendOtp = fullName.trim().length > 0 && isWhatsappValid;
 
+  useEffect(() => {
+    if (step !== "otp") {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      otpSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [step]);
+
   const heading =
     step === "preferences"
       ? JOB_SEEKER_REGISTER_PREFERENCES_HEADING
@@ -165,8 +181,16 @@ export function JobSeekerRegisterForm() {
         fullName.trim(),
         whatsappNumber,
       );
+
+      if (!result?.jobSeekerId) {
+        setErrorMessage(
+          "OTP was sent but the registration session is incomplete. Please try again.",
+        );
+        return;
+      }
+
       setJobSeekerId(result.jobSeekerId);
-      setOtpDigits(EMPTY_OTP_DIGITS);
+      setOtpDigits([...EMPTY_OTP_DIGITS]);
       setStep("otp");
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Failed to send OTP"));
@@ -481,7 +505,11 @@ export function JobSeekerRegisterForm() {
         ) : null}
 
         {step === "otp" ? (
-          <div className="employer-register-otp-section">
+          <div
+            ref={otpSectionRef}
+            className="employer-register-otp-section"
+            data-testid="job-seeker-register-otp"
+          >
             <div className="employer-register-form-stack">
               <h2 className="employer-register-otp-heading">
                 {JOB_SEEKER_REGISTER_OTP_HEADING}
@@ -493,7 +521,10 @@ export function JobSeekerRegisterForm() {
 
             <EmployerRegisterOtpInput
               value={otpDigits}
-              onChange={setOtpDigits}
+              onChange={(next) => {
+                setOtpDigits(next);
+                setErrorMessage(null);
+              }}
               disabled={isSubmitting}
             />
 
