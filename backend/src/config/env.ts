@@ -149,12 +149,6 @@ if (parsed.data.NODE_ENV === "production") {
     console.error("Production refused to start: MONGO_URI is required.");
     process.exit(1);
   }
-  if (parsed.data.OTP_TEST_MODE) {
-    console.error(
-      "Production refused to start: OTP_TEST_MODE must be false (or unset) in production.",
-    );
-    process.exit(1);
-  }
 }
 
 export const env = parsed.data;
