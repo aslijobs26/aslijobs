@@ -15,7 +15,7 @@ export function PopularJobsSection() {
         actionHref={POPULAR_JOBS_VIEW_ALL_HREF}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
         {POPULAR_JOBS_HYDERABAD.map((job) => (
           <JobCard key={job.id} job={job} />
         ))}

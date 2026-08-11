@@ -6,6 +6,12 @@ export type PopularJob = {
   companyName: string;
   companyInitials: string;
   companyLogo?: StaticImageData;
+  /** When true, logo fills the badge edge-to-edge (no inner padding). */
+  companyLogoBleed?: boolean;
+  /** Tailwind/arbitrary background for the logo badge (e.g. brand color). */
+  companyLogoBadgeClassName?: string;
+  /** Extra image class for logo sizing inside the badge (e.g. padding). */
+  companyLogoImageClassName?: string;
   location: string;
   salaryMin: string;
   salaryMax: string;

@@ -1,5 +1,8 @@
 import amazonLogo from "@/assets/branding/amazon.png";
+import hdfcLogo from "@/assets/branding/hdfc.png";
 import swiggyLogo from "@/assets/branding/Swiggy_(2).png";
+import uberLogo from "@/assets/branding/uber.png";
+import vivoLogo from "@/assets/branding/vivo.png";
 import type { PopularJob } from "@/types/jobs-discovery";
 import { ROUTES } from "./routes";
 
@@ -29,6 +32,9 @@ export const POPULAR_JOBS_HYDERABAD: PopularJob[] = [
     title: "Driver",
     companyName: "Uber India",
     companyInitials: "U",
+    companyLogo: uberLogo,
+    companyLogoBleed: true,
+    companyLogoBadgeClassName: "bg-black",
     location: "Hyderabad",
     salaryMin: "₹18,000",
     salaryMax: "₹25,000",
@@ -56,6 +62,10 @@ export const POPULAR_JOBS_HYDERABAD: PopularJob[] = [
     title: "Telecaller",
     companyName: "HDFC Bank",
     companyInitials: "H",
+    companyLogo: hdfcLogo,
+    companyLogoBleed: true,
+    companyLogoBadgeClassName: "bg-white",
+    companyLogoImageClassName: "object-contain p-1.5 sm:p-1",
     location: "Hyderabad",
     salaryMin: "₹12,000",
     salaryMax: "₹18,000",
@@ -69,6 +79,10 @@ export const POPULAR_JOBS_HYDERABAD: PopularJob[] = [
     title: "Sales Executive",
     companyName: "Vivo India",
     companyInitials: "V",
+    companyLogo: vivoLogo,
+    companyLogoBleed: true,
+    companyLogoBadgeClassName: "bg-white",
+    companyLogoImageClassName: "object-contain p-2 sm:p-1.5",
     location: "Hyderabad",
     salaryMin: "₹16,000",
     salaryMax: "₹25,000",

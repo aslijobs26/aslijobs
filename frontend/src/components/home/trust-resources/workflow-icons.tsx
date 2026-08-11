@@ -3,10 +3,10 @@ import type { WorkflowIconKey } from "@/types/trust-resources";
 import { MessageCircle, Search, Send } from "lucide-react";
 import type { ReactNode } from "react";
 
-const iconClassName = "size-5";
+const iconClassName = "size-4 sm:size-5";
 
 const iconMap: Record<WorkflowIconKey, ReactNode> = {
-  whatsapp: <WhatsAppIcon className="text-xl" />,
+  whatsapp: <WhatsAppIcon className="text-lg sm:text-xl" />,
   language: (
     <MessageCircle
       className={iconClassName}

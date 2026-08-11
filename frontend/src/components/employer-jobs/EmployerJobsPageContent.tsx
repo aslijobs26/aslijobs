@@ -21,6 +21,7 @@ import {
 } from "@/components/employer-jobs/jobs-filters";
 import {
   EMPLOYER_JOBS_DEFAULT_PAGE_SIZE,
+  EMPLOYER_JOBS_DELETE_UI_ENABLED,
   EMPLOYER_JOBS_QUERY_KEYS,
   EMPLOYER_JOBS_SEARCH_DEBOUNCE_MS,
   type EmployerJobsStatusTabId,
@@ -57,7 +58,8 @@ type SelectionMode = "ids" | "filtered" | "all";
 export function EmployerJobsPageContent() {
   const queryClient = useQueryClient();
   const { can } = useCan();
-  const canDeleteJobs = can("jobs", "delete");
+  const canDeleteJobs =
+    EMPLOYER_JOBS_DELETE_UI_ENABLED && can("jobs", "delete");
 
   const [statusTab, setStatusTab] = useState<EmployerJobsStatusTabId>("all");
   const [searchInput, setSearchInput] = useState("");

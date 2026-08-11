@@ -462,13 +462,13 @@ export function EmployerProfilePageContent() {
           <div className="min-w-0">
             <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               {isBusinessProfile ? "Company Profile" : "Individual Profile"}
-            </h1>
+      </h1>
             <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted">
               {isBusinessProfile
                 ? "Manage your company information, branding and preferences."
                 : "Manage your professional information, profile photo and preferences."}
             </p>
-          </div>
+            </div>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center lg:shrink-0">
             <div className="relative min-w-[14.5rem] overflow-hidden rounded-xl border border-primary/20 bg-primary-light/40 p-3 shadow-xs">
@@ -495,7 +495,7 @@ export function EmployerProfilePageContent() {
                   </p>
                 </div>
               </div>
-            </div>
+                </div>
 
             <button
               type="button"
@@ -507,7 +507,7 @@ export function EmployerProfilePageContent() {
                 : "Preview Profile Page"}
               <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
             </button>
-          </div>
+                    </div>
         </div>
       </header>
 
@@ -540,8 +540,8 @@ export function EmployerProfilePageContent() {
                         {getInitials(displayName)}
                       </span>
                     }
-                  />
-                </div>
+                      />
+                    </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -625,7 +625,7 @@ export function EmployerProfilePageContent() {
                   />
                 </dl>
               ) : null}
-            </div>
+              </div>
           </section>
 
           <section
@@ -664,7 +664,7 @@ export function EmployerProfilePageContent() {
                     {tab.label}
                   </button>
                 ))}
-              </div>
+            </div>
 
               <div className="min-w-0 p-4">
                 {aboutTab === "about" ? (
@@ -725,7 +725,7 @@ export function EmployerProfilePageContent() {
                               <h3 className="text-sm font-bold text-foreground">
                                 {item.title}
                               </h3>
-                            </div>
+              </div>
                             <p className="mt-2 text-xs leading-5 text-muted">
                               {item.value || "Not provided"}
                             </p>
@@ -779,7 +779,7 @@ export function EmployerProfilePageContent() {
                           />
                         </button>
                       ))}
-                    </div>
+              </div>
                   ) : (
                     <EmptyCopy>No company media has been uploaded.</EmptyCopy>
                   )
@@ -814,7 +814,7 @@ export function EmployerProfilePageContent() {
                           </a>
                         );
                       })}
-                    </div>
+            </div>
                   ) : (
                     <EmptyCopy>
                       {isBusinessProfile
@@ -877,8 +877,8 @@ export function EmployerProfilePageContent() {
                       You can upload up to {profile.companyMediaLimit} images (
                       {EMPLOYER_REGISTER_IMAGE_UPLOAD_HINT}).
                     </p>
-                  </>
-                ) : (
+          </>
+        ) : (
                   <div className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-border-subtle bg-hero-bg/60 p-4 text-center">
                     <span className="inline-flex size-11 items-center justify-center rounded-xl bg-primary-light text-primary">
                       <Images className="size-5" aria-hidden="true" />
@@ -957,7 +957,7 @@ export function EmployerProfilePageContent() {
                         ? "…"
                         : valueOrDash(item.value)}
                     </dd>
-                  </div>
+              </div>
                 );
               })}
             </dl>
@@ -1024,7 +1024,7 @@ export function EmployerProfilePageContent() {
                     <dd className="break-words font-medium text-foreground">
                       {valueOrDash(item.value)}
                     </dd>
-                  </div>
+              </div>
                 );
               })}
             </dl>
@@ -1083,7 +1083,7 @@ export function EmployerProfilePageContent() {
             </div>
           </section>
         </aside>
-      </div>
+            </div>
 
       {editSection ? (
         <EmployerProfileEditModal
@@ -1145,8 +1145,8 @@ export function EmployerProfilePageContent() {
                       {getInitials(displayName)}
                     </span>
                   }
-                />
-              </div>
+          />
+        </div>
               <div className="min-w-0">
                 <h3 className="text-xl font-bold text-foreground">
                   {displayName}
@@ -1182,7 +1182,7 @@ export function EmployerProfilePageContent() {
             ) : null}
           </div>
         </EmployerProfileDialog>
-      ) : null}
+        ) : null}
 
       {previewImage && isBusinessProfile ? (
         <EmployerProfileDialog

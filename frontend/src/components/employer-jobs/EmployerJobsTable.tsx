@@ -6,6 +6,7 @@ import {
   EMPLOYER_JOB_STATUS_PILL_CLASS,
   EMPLOYER_JOB_TYPE_LABELS,
   EMPLOYER_JOBS_DELETE_CONFIRM,
+  EMPLOYER_JOBS_DELETE_UI_ENABLED,
   EMPLOYER_JOBS_EMPTY_DESCRIPTION,
   EMPLOYER_JOBS_EMPTY_TITLE,
   EMPLOYER_JOBS_ERROR_DESCRIPTION,
@@ -308,7 +309,8 @@ function EmployerJobsTableRow({
   const { can } = useCan();
   const canReadJobs = can("jobs", "read");
   const canUpdateJobs = can("jobs", "update");
-  const canDeleteJobs = can("jobs", "delete");
+  const canDeleteJobs =
+    EMPLOYER_JOBS_DELETE_UI_ENABLED && can("jobs", "delete");
   const canViewCandidates = can("candidates", "read");
   const hasMoreActions =
     (canUpdateJobs &&

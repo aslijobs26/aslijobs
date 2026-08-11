@@ -21,19 +21,19 @@ export function WorkflowStep({ step }: WorkflowStepProps) {
     <article className="flex min-w-0 flex-col items-center text-center">
       <div
         className={cn(
-          "mb-3 flex size-11 items-center justify-center rounded-xl sm:mb-4 sm:size-12",
+          "mb-2.5 flex size-10 items-center justify-center rounded-lg sm:mb-4 sm:size-12 sm:rounded-xl",
           workflowIconTileStyles[step.icon],
         )}
       >
         <WorkflowIcon icon={step.icon} />
       </div>
 
-      <h3 className="text-sm font-bold sm:text-base">
+      <h3 className="text-xs font-bold leading-snug sm:text-base">
         <span className="text-foreground">{step.stepNumber}. </span>
         <span className="text-primary">{step.title}</span>
       </h3>
 
-      <p className="mt-2 max-w-[14rem] whitespace-pre-line text-xs leading-relaxed text-muted sm:text-sm">
+      <p className="mt-1.5 max-w-[11.5rem] whitespace-pre-line text-[0.6875rem] leading-relaxed text-muted sm:mt-2 sm:max-w-[14rem] sm:text-sm">
         {step.description}
       </p>
     </article>

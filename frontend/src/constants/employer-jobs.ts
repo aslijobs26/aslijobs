@@ -12,6 +12,9 @@ import {
 export const EMPLOYER_JOBS_PAGE_TITLE = "Jobs";
 export const EMPLOYER_JOBS_PAGE_SUBTITLE =
   "Manage your job posts, track performance and find the right candidates.";
+
+/** Hide employer job delete UI for now. Set true to restore delete actions. */
+export const EMPLOYER_JOBS_DELETE_UI_ENABLED = false;
 export const EMPLOYER_JOBS_HOW_IT_WORKS_LABEL = "How it works?";
 
 export const EMPLOYER_JOBS_SEARCH_PLACEHOLDER =

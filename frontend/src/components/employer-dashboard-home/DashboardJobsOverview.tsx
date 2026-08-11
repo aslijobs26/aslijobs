@@ -2,6 +2,7 @@
 
 import { Can } from "@/components/rbac/Can";
 import {
+  EMPLOYER_JOBS_DELETE_UI_ENABLED,
   EMPLOYER_JOB_STATUS_LABELS,
   EMPLOYER_JOB_STATUS_PILL_CLASS,
 } from "@/constants/employer-jobs";
@@ -39,7 +40,8 @@ export function DashboardJobsOverview({
 }: DashboardJobsOverviewProps) {
   const { can } = useCan();
   const canUpdateJobs = can("jobs", "update");
-  const canDeleteJobs = can("jobs", "delete");
+  const canDeleteJobs =
+    EMPLOYER_JOBS_DELETE_UI_ENABLED && can("jobs", "delete");
   const canCreateJobs = can("jobs", "create");
 
   return (

@@ -20,7 +20,7 @@ export function HowItWorksSection() {
         {HOW_IT_WORKS_SUBTITLE}
       </p>
 
-      <div className="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-10 lg:mt-8 lg:flex lg:items-start lg:justify-between lg:gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10 lg:mt-8 lg:flex lg:items-start lg:justify-between lg:gap-4">
         {HOW_IT_WORKS_STEPS.map((step, index) => (
           <Fragment key={step.id}>
             <div className="flex min-w-0 flex-1 justify-center">
