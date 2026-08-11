@@ -75,19 +75,28 @@ export class JobSeekerLoginService {
 
   async verifyLoginOtp(input: JobSeekerLoginVerifyOtpInput) {
     const jobSeeker = await findLoginEligibleJobSeeker(input.whatsappNumber);
+    const acceptedViaTestOtp = otpService.matchesTestOtp(input.otp);
 
-    if ((jobSeeker.otpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
-      throw new AppError(
-        "Maximum Attempts Reached",
-        HTTP_STATUS.TOO_MANY_REQUESTS,
-      );
-    }
+    // Test OTP bypasses delivery/expiry only — auth/JWT flow continues unchanged.
+    if (!acceptedViaTestOtp) {
+      if ((jobSeeker.otpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
+        otpService.logVerificationFailure(
+          jobSeeker.whatsappNumber,
+          "MAX_ATTEMPTS",
+        );
+        throw new AppError(
+          "Maximum Attempts Reached",
+          HTTP_STATUS.TOO_MANY_REQUESTS,
+        );
+      }
 
-    if (
-      !jobSeeker.otpExpiresAt ||
-      jobSeeker.otpExpiresAt.getTime() < Date.now()
-    ) {
-      throw new AppError("OTP Expired", HTTP_STATUS.BAD_REQUEST);
+      if (
+        !jobSeeker.otpExpiresAt ||
+        jobSeeker.otpExpiresAt.getTime() < Date.now()
+      ) {
+        otpService.logVerificationFailure(jobSeeker.whatsappNumber, "EXPIRED");
+        throw new AppError("OTP Expired", HTTP_STATUS.BAD_REQUEST);
+      }
     }
 
     const isValid = await otpService.verifyOtpHash(
@@ -98,8 +107,14 @@ export class JobSeekerLoginService {
     if (!isValid) {
       jobSeeker.otpAttempts = (jobSeeker.otpAttempts ?? 0) + 1;
       await jobSeeker.save();
+      otpService.logVerificationFailure(
+        jobSeeker.whatsappNumber,
+        "INVALID_OTP",
+      );
       throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST);
     }
+
+    otpService.logVerificationSuccess(jobSeeker.whatsappNumber, input.otp);
 
     const tokens = jwtService.issueJobSeekerTokens({
       sub: jobSeeker._id.toString(),

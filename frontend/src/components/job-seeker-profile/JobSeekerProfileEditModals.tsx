@@ -6,7 +6,6 @@ import {
 } from "@/components/job-seeker-register/JobSeekerRegisterEducationExperienceStep";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import { PostJobDatePicker } from "@/components/post-job/PostJobDatePicker";
-import { JOB_SEEKER_PROFILE_VISIBILITY_OPTIONS } from "@/constants/job-seeker-profile";
 import {
   JOB_SEEKER_AVAILABILITY_STATUS_OPTIONS,
   JOB_SEEKER_EDUCATION_OPTIONS,
@@ -25,7 +24,6 @@ import type {
   JobSeekerGender,
   JobSeekerJobType,
   JobSeekerLanguage,
-  JobSeekerProfileVisibility,
   JobSeekerPublic,
   JobSeekerWorkMode,
   UpdateJobSeekerProfileInput,
@@ -47,7 +45,6 @@ export type JobSeekerProfileEditModalState =
   | { type: "education" }
   | { type: "skills" }
   | { type: "preferences" }
-  | { type: "visibility" }
   | null;
 
 type JobSeekerProfileEditModalsProps = {
@@ -1048,77 +1045,6 @@ function PreferencesModal({
   );
 }
 
-function VisibilityModal({
-  jobSeeker,
-  isSaving,
-  onClose,
-  onSave,
-}: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
-  const formId = useId();
-  const [visibility, setVisibility] = useState<JobSeekerProfileVisibility>(
-    jobSeeker.profileVisibility ?? "visible",
-  );
-
-  useEffect(() => {
-    setVisibility(jobSeeker.profileVisibility ?? "visible");
-  }, [jobSeeker.profileVisibility]);
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    await onSave({ profileVisibility: visibility });
-    onClose();
-  };
-
-  return (
-    <JobSeekerProfileDialog
-      title="Profile visibility"
-      description="Control who can discover your profile."
-      onClose={onClose}
-      footer={
-        <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
-      }
-    >
-      <form
-        id={formId}
-        className="space-y-3"
-        onSubmit={(event) => void handleSubmit(event)}
-      >
-        <fieldset className="space-y-2">
-          <legend className="sr-only">Profile visibility</legend>
-          {JOB_SEEKER_PROFILE_VISIBILITY_OPTIONS.map((option) => (
-            <label
-              key={option.value}
-              className={cn(
-                "flex cursor-pointer gap-3 rounded-xl border p-3 transition-colors",
-                visibility === option.value
-                  ? "border-primary bg-primary-light/60"
-                  : "border-border-subtle bg-hero-bg hover:border-primary/25",
-              )}
-            >
-              <input
-                type="radio"
-                name="profile-visibility"
-                value={option.value}
-                checked={visibility === option.value}
-                onChange={() => setVisibility(option.value)}
-                className="mt-1"
-              />
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-foreground">
-                  {option.label}
-                </span>
-                <span className="mt-0.5 block text-xs text-muted">
-                  {option.description}
-                </span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-      </form>
-    </JobSeekerProfileDialog>
-  );
-}
-
 export function JobSeekerProfileEditModals(props: JobSeekerProfileEditModalsProps) {
   const { activeModal } = props;
   if (!activeModal) {
@@ -1138,8 +1064,6 @@ export function JobSeekerProfileEditModals(props: JobSeekerProfileEditModalsProp
       return <SkillsModal {...props} />;
     case "preferences":
       return <PreferencesModal {...props} />;
-    case "visibility":
-      return <VisibilityModal {...props} />;
     default:
       return null;
   }

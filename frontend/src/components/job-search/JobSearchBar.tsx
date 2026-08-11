@@ -5,7 +5,10 @@ import type { JobSearchUrlState } from "@/types/job-search";
 import {
   resolveIndiaStateLabel,
 } from "@/services/nominatim-location.service";
-import { toJobSearchLocationSlug } from "@/utils/job-search-url";
+import {
+  formatJobSearchLocationLabel,
+  toJobSearchLocationSlug,
+} from "@/utils/job-search-url";
 import { RotateCcw, Search } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
@@ -49,7 +52,9 @@ export function JobSearchBar({
 }: JobSearchBarProps) {
   const initialStateLabel = resolveDisplayState(state.state);
   const initialCityLabel =
-    state.cities.length === 1 ? state.cities[0] ?? "" : "";
+    state.cities.length === 1
+      ? formatJobSearchLocationLabel(state.cities[0] ?? "")
+      : "";
 
   const [keyword, setKeyword] = useState(state.q);
   const [stateInput, setStateInput] = useState(initialStateLabel);
@@ -70,7 +75,11 @@ export function JobSearchBar({
     setSelectedState(state.state);
     setSelectedCity(state.cities.length === 1 ? state.cities[0] ?? "" : "");
     setStateInput(resolveDisplayState(state.state));
-    setCityInput(state.cities.length === 1 ? state.cities[0] ?? "" : "");
+    setCityInput(
+      state.cities.length === 1
+        ? formatJobSearchLocationLabel(state.cities[0] ?? "")
+        : "",
+    );
   }
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {

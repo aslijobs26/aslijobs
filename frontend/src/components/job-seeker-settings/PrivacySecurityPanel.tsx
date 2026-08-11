@@ -122,13 +122,13 @@ export function PrivacySecurityPanel({
         <div className="flex flex-wrap gap-2">
           <Link
             href={ROUTES.PRIVACY_POLICY}
-            className="inline-flex h-9 items-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
+            className="inline-flex h-9 items-center rounded-lg border border-primary px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
           >
             Privacy Policy
           </Link>
           <Link
             href={ROUTES.TERMS_AND_CONDITIONS}
-            className="inline-flex h-9 items-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
+            className="inline-flex h-9 items-center rounded-lg border border-primary px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
           >
             Terms & Conditions
           </Link>
@@ -140,7 +140,7 @@ export function PrivacySecurityPanel({
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-border-subtle px-4 text-xs font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:text-sm"
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-primary px-4 text-xs font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:text-sm"
           >
             <LogOut className="size-4" aria-hidden="true" />
             Sign out

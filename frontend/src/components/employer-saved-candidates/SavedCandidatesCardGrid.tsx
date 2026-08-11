@@ -63,8 +63,8 @@ type SavedCandidatesCardGridProps = {
   variant?: "compact" | "grid";
 };
 
-const iconActionClassName =
-  "inline-flex size-9 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+const mobileActionButtonClassName =
+  "inline-flex min-h-9 flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface px-1.5 text-[10px] font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:gap-1.5 sm:px-2 sm:text-[11px]";
 
 export function SavedCandidatesCardGrid({
   items,
@@ -150,14 +150,14 @@ function CardMoreMenu({
   }
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div className="relative shrink-0" ref={rootRef}>
       <button
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
         aria-label={`More actions for ${item.candidateName}`}
-        className={iconActionClassName}
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface text-primary transition-colors hover:border-primary/30 hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         onClick={(event) => {
           event.stopPropagation();
           setOpen((value) => !value);
@@ -169,7 +169,7 @@ function CardMoreMenu({
         <div
           id={menuId}
           role="menu"
-          className="absolute right-0 bottom-full z-20 mb-1 min-w-[10.5rem] rounded-xl border border-border-subtle bg-surface py-1 shadow-lg"
+          className="absolute right-0 bottom-full z-30 mb-1 min-w-[10.5rem] rounded-xl border border-border-subtle bg-surface py-1 shadow-lg"
         >
           {canUpdate ? (
             <button
@@ -260,10 +260,17 @@ function SavedCandidateCard({
     canViewPhone && phoneLevel !== "mask"
       ? buildTelHref(item.candidatePhone)
       : null;
+  const canShowMoreMenu = canUpdate || canWriteNotes;
+  const hasFooterActions =
+    Boolean(whatsappHref) ||
+    Boolean(telHref) ||
+    canScheduleInterview ||
+    canShowMoreMenu;
+
   return (
     <article
       className={cn(
-        "group relative overflow-hidden rounded-xl border bg-surface shadow-sm transition-[border-color,box-shadow,background-color]",
+        "group relative rounded-xl border bg-surface shadow-sm transition-[border-color,box-shadow,background-color]",
         isSelected
           ? "border-primary/40 shadow-md ring-1 ring-primary/15"
           : "border-border-subtle hover:border-primary/25 hover:shadow-md",
@@ -271,7 +278,7 @@ function SavedCandidateCard({
     >
       <span
         className={cn(
-          "absolute inset-y-0 left-0 w-1",
+          "absolute inset-y-0 left-0 z-[1] w-1 rounded-l-xl",
           priority ? priorityAccentClass(priority) : "bg-border-subtle",
         )}
         aria-hidden="true"
@@ -280,11 +287,11 @@ function SavedCandidateCard({
       <button
         type="button"
         onClick={() => actions.onSelect(item.applicationId)}
-        className="w-full min-w-0 px-4 py-4 pl-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30"
+        className="w-full min-w-0 px-3 py-3 pl-4.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:px-4 sm:py-4 sm:pl-5"
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2.5 sm:gap-3">
           <span
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-surface"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-bold text-surface sm:size-11 sm:text-sm"
             aria-hidden="true"
           >
             {getCandidateInitials(item.candidateName)}
@@ -293,10 +300,10 @@ function SavedCandidateCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="truncate text-sm font-bold tracking-tight text-foreground sm:text-[0.95rem]">
+                <h3 className="truncate text-xs font-bold tracking-tight text-foreground sm:text-[0.95rem]">
                   {item.candidateName}
                 </h3>
-                <p className="mt-0.5 truncate text-xs text-foreground">
+                <p className="mt-0.5 truncate text-[11px] text-foreground sm:text-xs">
                   <span className="font-semibold">{item.jobTitle}</span>
                   <span className="text-muted"> · {item.publicJobId}</span>
                 </p>
@@ -304,7 +311,7 @@ function SavedCandidateCard({
               {priority ? (
                 <span
                   className={cn(
-                    "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset",
+                    "inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 ring-inset sm:px-2 sm:text-[10px]",
                     priorityBadgeClass(priority),
                   )}
                 >
@@ -313,7 +320,7 @@ function SavedCandidateCard({
               ) : null}
             </div>
 
-            <ul className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-muted">
+            <ul className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted sm:mt-3 sm:gap-x-3 sm:gap-y-1.5 sm:text-[11px]">
               {item.candidateExperienceLabel ? (
                 <li className="inline-flex min-w-0 max-w-full items-center gap-1">
                   <Briefcase className="size-3 shrink-0" aria-hidden="true" />
@@ -335,7 +342,7 @@ function SavedCandidateCard({
             </ul>
 
             {visibleTags.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3">
                 {visibleTags.map((tag) => (
                   <span
                     key={tag}
@@ -353,7 +360,7 @@ function SavedCandidateCard({
             ) : null}
 
             {notesPreview ? (
-              <p className="mt-3 line-clamp-2 rounded-lg bg-hero-bg/70 px-2.5 py-2 text-[11px] leading-relaxed text-muted">
+              <p className="mt-2.5 line-clamp-2 rounded-lg bg-hero-bg/70 px-2.5 py-2 text-[11px] leading-relaxed text-muted sm:mt-3">
                 {notesPreview}
               </p>
             ) : null}
@@ -361,71 +368,81 @@ function SavedCandidateCard({
         </div>
       </button>
 
-      <div className="flex items-center justify-between gap-2 border-t border-border-subtle bg-hero-bg/40 px-3 py-2 pl-5">
-        <div className="flex items-center gap-0.5">
-          {whatsappHref ? (
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`WhatsApp ${item.candidateName}`}
-              className={iconActionClassName}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <WhatsAppIcon className="text-base leading-none" />
-            </a>
-          ) : null}
-          {telHref ? (
-            <a
-              href={telHref}
-              aria-label={`Call ${item.candidateName}`}
-              className={iconActionClassName}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <Phone className="size-4" aria-hidden="true" />
-            </a>
-          ) : null}
-          {canScheduleInterview ? (
-            <button
-              type="button"
-              aria-label={
-                interviewScheduled
-                  ? `View or update interview for ${item.candidateName}`
-                  : `Schedule interview for ${item.candidateName}`
-              }
-              aria-pressed={interviewScheduled}
-              title={
-                interviewScheduled
-                  ? "Interview scheduled"
-                  : "Schedule interview"
-              }
-              className={cn(
-                "inline-flex size-9 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                interviewScheduled
-                  ? "bg-primary-light text-primary hover:bg-primary-light/80"
-                  : "text-primary hover:bg-primary-light",
-              )}
-              onClick={(event) => {
-                event.stopPropagation();
-                actions.onScheduleInterview(item.applicationId);
-              }}
-            >
-              {interviewScheduled ? (
-                <CalendarCheck className="size-4" aria-hidden="true" strokeWidth={2.25} />
-              ) : (
-                <Calendar className="size-4" aria-hidden="true" />
-              )}
-            </button>
-          ) : null}
-        </div>
+      {hasFooterActions ? (
+        <div className="border-t border-border-subtle bg-hero-bg/50 px-3 py-2.5 pl-4 sm:px-3 sm:pl-5">
+          <div className="flex items-center gap-1.5">
+            {whatsappHref ? (
+              <a
+                href={whatsappHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`WhatsApp ${item.candidateName}`}
+                className={mobileActionButtonClassName}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <WhatsAppIcon className="text-sm leading-none" />
+                <span>WhatsApp</span>
+              </a>
+            ) : null}
+            {telHref ? (
+              <a
+                href={telHref}
+                aria-label={`Call ${item.candidateName}`}
+                className={mobileActionButtonClassName}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <Phone className="size-3.5" aria-hidden="true" />
+                <span>Call</span>
+              </a>
+            ) : null}
+            {canScheduleInterview ? (
+              <button
+                type="button"
+                aria-label={
+                  interviewScheduled
+                    ? `View or update interview for ${item.candidateName}`
+                    : `Schedule interview for ${item.candidateName}`
+                }
+                aria-pressed={interviewScheduled}
+                title={
+                  interviewScheduled
+                    ? "Interview scheduled"
+                    : "Schedule interview"
+                }
+                className={cn(
+                  mobileActionButtonClassName,
+                  interviewScheduled &&
+                    "border-primary/30 bg-primary-light text-primary",
+                )}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  actions.onScheduleInterview(item.applicationId);
+                }}
+              >
+                {interviewScheduled ? (
+                  <CalendarCheck
+                    className="size-3.5"
+                    aria-hidden="true"
+                    strokeWidth={2.25}
+                  />
+                ) : (
+                  <Calendar className="size-3.5" aria-hidden="true" />
+                )}
+                <span>{interviewScheduled ? "Scheduled" : "Interview"}</span>
+              </button>
+            ) : null}
 
-        <CardMoreMenu
-          item={item}
-          actions={actions}
-          canUpdate={canUpdate}
-          canWriteNotes={canWriteNotes}
-        />
-      </div>
+            {canShowMoreMenu ? (
+              <CardMoreMenu
+                item={item}
+                actions={actions}
+                canUpdate={canUpdate}
+                canWriteNotes={canWriteNotes}
+              />
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }

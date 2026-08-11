@@ -21,10 +21,10 @@ export function DataPrivacyPanel() {
               <Shield className="size-4" aria-hidden="true" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold text-foreground">
+              <span className="block text-xs font-semibold text-foreground sm:text-sm">
                 Privacy Policy
               </span>
-              <span className="mt-0.5 block text-xs text-muted">
+              <span className="mt-0.5 block text-[11px] text-muted sm:text-xs">
                 How AsliJobs collects and uses employer data.
               </span>
             </span>
@@ -39,17 +39,17 @@ export function DataPrivacyPanel() {
               <FileText className="size-4" aria-hidden="true" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold text-foreground">
+              <span className="block text-xs font-semibold text-foreground sm:text-sm">
                 Terms & Conditions
               </span>
-              <span className="mt-0.5 block text-xs text-muted">
+              <span className="mt-0.5 block text-[11px] text-muted sm:text-xs">
                 Terms of use for the AsliJobs platform.
               </span>
             </span>
           </Link>
         </li>
       </ul>
-      <p className="mt-4 text-xs text-muted">
+      <p className="mt-4 text-[11px] text-muted sm:text-xs">
         Download my data, delete account, and GDPR export tools will appear here
         when those APIs are implemented.
       </p>

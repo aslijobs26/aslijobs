@@ -63,6 +63,22 @@ const envSchema = z.object({
    */
   EMAIL_FROM: z.string().optional().default(""),
   OTP_PROVIDER: z.enum(["console", "whatsapp"]).default("console"),
+  /**
+   * Temporary auth testing only. Must be the string "true" to enable.
+   * Missing / any other value → disabled (safe default).
+   */
+  OTP_TEST_MODE: z.preprocess(
+    (value) => value === "true",
+    z.boolean(),
+  ),
+  /**
+   * Fixed OTP accepted for any phone when OTP_TEST_MODE is enabled.
+   * Must match the app OTP length (currently 4 digits). Never expose to clients.
+   */
+  OTP_TEST_CODE: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : ""),
+    z.string(),
+  ),
   STORAGE_PROVIDER: z.enum(["local", "cloudinary"]).default("local"),
   UPLOAD_DIR: z.string().default("uploads"),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
@@ -131,6 +147,12 @@ if (parsed.data.NODE_ENV === "production") {
   }
   if (!parsed.data.MONGO_URI?.trim()) {
     console.error("Production refused to start: MONGO_URI is required.");
+    process.exit(1);
+  }
+  if (parsed.data.OTP_TEST_MODE) {
+    console.error(
+      "Production refused to start: OTP_TEST_MODE must be false (or unset) in production.",
+    );
     process.exit(1);
   }
 }

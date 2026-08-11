@@ -37,14 +37,18 @@ export function SecurityPanel({
       >
         <dl className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-border-subtle px-3 py-2.5">
-            <dt className="text-xs font-medium text-muted">Sign-in method</dt>
-            <dd className="mt-0.5 text-sm font-semibold text-foreground">
+            <dt className="text-[11px] font-medium text-muted sm:text-xs">
+              Sign-in method
+            </dt>
+            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm">
               {isMember ? "Email & password (team member)" : "WhatsApp OTP"}
             </dd>
           </div>
           <div className="rounded-lg border border-border-subtle px-3 py-2.5">
-            <dt className="text-xs font-medium text-muted">Workspace role</dt>
-            <dd className="mt-0.5 text-sm font-semibold text-foreground">
+            <dt className="text-[11px] font-medium text-muted sm:text-xs">
+              Workspace role
+            </dt>
+            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm">
               {roleLabel}
             </dd>
           </div>
@@ -60,6 +64,7 @@ export function SecurityPanel({
             actionLabel: "Log out",
             onAction: handleLogout,
             icon: "logout",
+            tone: "danger",
           },
           {
             id: "password",

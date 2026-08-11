@@ -276,7 +276,7 @@ export function EmployerSettingsPageContent() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+    <div className="mx-auto w-full max-w-[1600px] px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:pt-5 md:pb-5 lg:px-6 lg:pb-6">
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(16rem,18.5rem)_minmax(0,1fr)] xl:grid-cols-[minmax(17rem,20rem)_minmax(0,1fr)]">
         <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
           <SettingsNav

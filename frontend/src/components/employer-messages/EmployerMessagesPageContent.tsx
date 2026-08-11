@@ -42,6 +42,7 @@ import { cn } from "@/utils/cn";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BadgeCheck,
   ChevronLeft,
   Filter,
   MessageSquare,
@@ -65,6 +66,12 @@ type ConversationTab = "all" | "unread" | "starred";
 
 /** Keeps the three-column workspace usable on very short viewports. */
 const MIN_WORKSPACE_HEIGHT_PX = 420;
+
+/**
+ * Matches FloatingBottomNav (`h-[78px]` + safe-area). Reserved when measuring
+ * the locked messaging shell on small screens so content is not clipped.
+ */
+const MOBILE_FLOATING_NAV_RESERVE_PX = 90;
 
 /** Treat "near bottom" as bottom so auto-scroll survives sub-pixel rounding. */
 const TIMELINE_BOTTOM_THRESHOLD_PX = 48;
@@ -176,27 +183,20 @@ function dayKey(value: string): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+function formatDaySeparatorDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
 function daySeparatorLabel(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "Older";
   }
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-
-  const sameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-
-  if (sameDay(date, today)) {
-    return "Today";
-  }
-  if (sameDay(date, yesterday)) {
-    return "Yesterday";
-  }
-  return "Earlier";
+  return formatDaySeparatorDate(date);
 }
 
 function statusLabel(status: string): string {
@@ -364,28 +364,28 @@ function MessageBubble({
       ) : null}
       <article
         className={cn(
-          "relative w-fit max-w-[min(85%,22rem)] min-w-[7.5rem] px-[9px] pt-1.5 pb-1.5 shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] lg:max-w-[65%] lg:min-w-[8.5rem]",
+          "relative w-fit max-w-[min(85%,22rem)] min-w-[7.5rem] px-2 pt-1 pb-1 shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] sm:px-[9px] sm:pt-1.5 sm:pb-1.5 lg:max-w-[65%] lg:min-w-[8.5rem]",
           employerSide
             ? "rounded-[7.5px] rounded-tr-none bg-whatsapp-cta text-foreground"
             : "rounded-[7.5px] rounded-tl-none bg-surface text-foreground",
         )}
       >
-        <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
+        <div className="mb-0.5 flex flex-wrap items-center gap-1 sm:gap-1.5">
           <Icon
-            className="size-3.5 shrink-0 text-primary"
+            className="size-3 shrink-0 text-primary sm:size-3.5"
             aria-hidden="true"
           />
-          <h3 className="text-[0.8125rem] font-semibold leading-[1.2] tracking-[0.01em] text-foreground">
+          <h3 className="text-xs font-semibold leading-[1.2] tracking-[0.01em] text-foreground sm:text-[0.8125rem]">
             {message.title}
           </h3>
-          <span className="inline-flex shrink-0 items-center rounded px-1.5 py-px text-[0.625rem] font-medium leading-4 text-primary">
+          <span className="inline-flex shrink-0 items-center rounded px-1 py-px text-[0.5625rem] font-medium leading-4 text-primary sm:px-1.5 sm:text-[0.625rem]">
             {badge}
           </span>
         </div>
-        <p className="whitespace-pre-wrap text-[0.875rem] leading-[1.35] text-foreground [overflow-wrap:anywhere]">
+        <p className="whitespace-pre-wrap text-xs leading-[1.35] text-foreground [overflow-wrap:anywhere] sm:text-[0.875rem]">
           {message.body}
           <span
-            className="float-right clear-both ml-3 mt-1 inline-flex h-[15px] items-center gap-[3px] text-[0.6875rem] leading-none text-muted"
+            className="float-right clear-both ml-2.5 mt-1 inline-flex h-[14px] items-center gap-[3px] text-[0.625rem] leading-none text-muted sm:ml-3 sm:h-[15px] sm:text-[0.6875rem]"
             aria-hidden="true"
           >
             <span>{formatBubbleTime(message.createdAt)}</span>
@@ -411,6 +411,9 @@ function MessageBubble({
     </li>
   );
 }
+
+const actionsMenuItemClassName =
+  "block min-h-10 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary-light/50 focus-visible:outline-none focus-visible:bg-primary-light/50 lg:min-h-0 lg:py-2 lg:text-xs";
 
 function ActionsMenu({
   applicationId,
@@ -445,11 +448,11 @@ function ActionsMenu({
             aria-label="Close menu"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute top-full right-0 z-20 mt-1 max-h-[min(20rem,70dvh)] min-w-44 overflow-y-auto overscroll-contain rounded-lg border border-border-subtle bg-surface py-1 shadow-lg">
+          <div className="absolute top-full right-0 z-20 mt-1.5 max-h-[min(18rem,60dvh)] min-w-[11.5rem] overflow-y-auto overscroll-contain rounded-xl border border-border-subtle bg-surface py-1.5 shadow-[0_10px_28px_rgba(26,43,60,0.14)] lg:mt-1 lg:min-w-44 lg:rounded-lg lg:py-1 lg:shadow-lg">
             {phoneHref ? (
               <a
                 href={phoneHref}
-                className="block min-h-11 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-hero-bg lg:min-h-0 lg:py-2 lg:text-xs"
+                className={actionsMenuItemClassName}
                 onClick={() => setOpen(false)}
               >
                 Call candidate
@@ -457,14 +460,14 @@ function ActionsMenu({
             ) : null}
             <Link
               href={candidateHref}
-              className="block min-h-11 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-hero-bg lg:min-h-0 lg:py-2 lg:text-xs"
+              className={actionsMenuItemClassName}
               onClick={() => setOpen(false)}
             >
               Open candidate profile
             </Link>
             <Link
               href={candidateHref}
-              className="block min-h-11 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-hero-bg lg:min-h-0 lg:py-2 lg:text-xs"
+              className={actionsMenuItemClassName}
               onClick={() => setOpen(false)}
             >
               View resume
@@ -472,7 +475,7 @@ function ActionsMenu({
             {canScheduleInterview ? (
               <Link
                 href={candidateHref}
-                className="block min-h-11 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-hero-bg lg:min-h-0 lg:py-2 lg:text-xs"
+                className={actionsMenuItemClassName}
                 onClick={() => setOpen(false)}
               >
                 Schedule interview
@@ -481,7 +484,7 @@ function ActionsMenu({
             {canSendOffer ? (
               <Link
                 href={candidateHref}
-                className="block min-h-11 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-hero-bg lg:min-h-0 lg:py-2 lg:text-xs"
+                className={actionsMenuItemClassName}
                 onClick={() => setOpen(false)}
               >
                 Send offer
@@ -561,9 +564,10 @@ export function EmployerMessagesPageContent() {
   );
 
   /**
-   * Messaging-app shell: the workspace claims exactly the space left below the
-   * navbar so the browser never scrolls — each column scrolls on its own.
-   * Measured instead of hardcoded because the mobile search bar changes the offset.
+   * Messaging-app shell on lg+ (and mobile conversation view): claim the
+   * remaining viewport so columns scroll internally.
+   * Mobile conversation-list view leaves height unlocked so the page can scroll
+   * naturally above the floating bottom nav.
    */
   useEffect(() => {
     const element = workspaceRef.current;
@@ -572,10 +576,29 @@ export function EmployerMessagesPageContent() {
     }
 
     const measure = () => {
-      const documentTop =
-        element.getBoundingClientRect().top + window.scrollY;
-      const available = window.innerHeight - documentTop;
-      setWorkspaceHeight(Math.max(MIN_WORKSPACE_HEIGHT_PX, available));
+      const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+      const lockShell = isDesktop || mobileShowTimeline;
+
+      if (!lockShell) {
+        setWorkspaceHeight(null);
+        return;
+      }
+
+      if (!isDesktop && mobileShowTimeline && window.scrollY !== 0) {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
+
+      const applyHeight = () => {
+        const top = element.getBoundingClientRect().top;
+        const hasFloatingNav = window.matchMedia("(max-width: 767px)").matches;
+        const bottomReserve = hasFloatingNav
+          ? MOBILE_FLOATING_NAV_RESERVE_PX
+          : 0;
+        const available = window.innerHeight - top - bottomReserve;
+        setWorkspaceHeight(Math.max(MIN_WORKSPACE_HEIGHT_PX, available));
+      };
+
+      requestAnimationFrame(applyHeight);
     };
 
     measure();
@@ -589,7 +612,7 @@ export function EmployerMessagesPageContent() {
       window.removeEventListener("orientationchange", measure);
       window.visualViewport?.removeEventListener("resize", measure);
     };
-  }, []);
+  }, [mobileShowTimeline]);
 
   useEffect(() => {
     if (!mobileFiltersOpen) {
@@ -662,44 +685,94 @@ export function EmployerMessagesPageContent() {
     debouncedCandidateSearch,
   ]);
 
+  const conversationFilterParams = {
+    search: debouncedCandidateSearch || undefined,
+    category: filters.category,
+    publicJobId: filters.publicJobId || undefined,
+    applicationStatus: filters.applicationStatus,
+    hasType: resolveMessagesHasType(filters),
+    employerAction: filters.employerAction,
+    candidateAction: filters.candidateAction,
+    conversationType: filters.conversationType,
+    quickDate: filters.quickDate,
+    dateFrom: filters.dateFrom || undefined,
+    dateTo: filters.dateTo || undefined,
+    sort: filters.sort,
+  } as const;
+
+  const conversationFilterKey = [
+    filters.publicJobId,
+    filters.category,
+    filters.applicationStatus,
+    filters.interviewStatus,
+    filters.offerStatus,
+    filters.quickDate,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.employerAction,
+    filters.candidateAction,
+    filters.conversationType,
+    filters.sort,
+    debouncedCandidateSearch,
+  ] as const;
+
+  /**
+   * Tab/KPI totals must stay stable when the list is filtered by Unread/Starred.
+   * `pagination.total` on the list query reflects the active readStatus only.
+   */
+  const allConversationsStatsQuery = useQuery({
+    queryKey: [
+      ...employerMessageQueryKeys.stats,
+      "all",
+      ...conversationFilterKey,
+    ],
+    queryFn: () =>
+      fetchNotificationConversations({
+        page: 1,
+        limit: 1,
+        readStatus: "all",
+        ...conversationFilterParams,
+      }),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+  });
+
+  const unreadConversationsStatsQuery = useQuery({
+    queryKey: [
+      ...employerMessageQueryKeys.stats,
+      "unread",
+      ...conversationFilterKey,
+    ],
+    queryFn: () =>
+      fetchNotificationConversations({
+        page: 1,
+        limit: 1,
+        readStatus: "unread",
+        ...conversationFilterParams,
+      }),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+  });
+
   const conversationsQuery = useQuery({
     queryKey: [
       ...employerMessageQueryKeys.conversations,
       tab,
-      filters.publicJobId,
-      filters.category,
-      filters.applicationStatus,
-      filters.interviewStatus,
-      filters.offerStatus,
-      filters.quickDate,
-      filters.dateFrom,
-      filters.dateTo,
+      ...conversationFilterKey,
       filters.unreadOnly,
-      filters.employerAction,
-      filters.candidateAction,
-      filters.conversationType,
-      filters.sort,
-      debouncedCandidateSearch,
       page,
     ],
     queryFn: () =>
       fetchNotificationConversations({
         page,
         limit: 20,
-        search: debouncedCandidateSearch || undefined,
         readStatus:
           tab === "unread" || filters.unreadOnly ? "unread" : "all",
-        category: filters.category,
-        publicJobId: filters.publicJobId || undefined,
-        applicationStatus: filters.applicationStatus,
-        hasType: resolveMessagesHasType(filters),
-        employerAction: filters.employerAction,
-        candidateAction: filters.candidateAction,
-        conversationType: filters.conversationType,
-        quickDate: filters.quickDate,
-        dateFrom: filters.dateFrom,
-        dateTo: filters.dateTo,
-        sort: filters.sort,
+        ...conversationFilterParams,
       }),
     enabled: tab !== "starred",
     staleTime: 5 * 60_000,
@@ -861,6 +934,9 @@ export function EmployerMessagesPageContent() {
             : current,
       );
 
+      void queryClient.invalidateQueries({
+        queryKey: employerMessageQueryKeys.stats,
+      });
     },
   });
 
@@ -1002,11 +1078,8 @@ export function EmployerMessagesPageContent() {
       items: EmployerMessageTimelineItem[];
     }[] = [];
     for (const item of timelineMessages) {
+      const key = dayKey(item.createdAt);
       const label = daySeparatorLabel(item.createdAt);
-      const key =
-        label === "Today" || label === "Yesterday"
-          ? dayKey(item.createdAt)
-          : "earlier";
       const last = groups[groups.length - 1];
       if (last && last.key === key) {
         last.items.push(item);
@@ -1060,11 +1133,28 @@ export function EmployerMessagesPageContent() {
     timelineAtBottomRef.current = true;
   }, [selectedApplicationId]);
 
-  const totalConversations = conversationsQuery.data?.pagination.total ?? 0;
-  const unreadTotal = conversationsQuery.data?.unreadCount ?? 0;
-  const activeHiringCount = conversationsQuery.data?.activeHiringCount ?? 0;
-  const interviewWeekCount = conversationsQuery.data?.interviewWeekCount ?? 0;
-  const jobFacets = conversationsQuery.data?.jobFacets ?? [];
+  const totalConversations =
+    allConversationsStatsQuery.data?.pagination.total ??
+    (tab === "all" && !filters.unreadOnly
+      ? (conversationsQuery.data?.pagination.total ?? 0)
+      : 0);
+  const unreadTotal =
+    unreadConversationsStatsQuery.data?.pagination.total ??
+    (tab === "unread" || filters.unreadOnly
+      ? (conversationsQuery.data?.pagination.total ?? 0)
+      : 0);
+  const activeHiringCount =
+    allConversationsStatsQuery.data?.activeHiringCount ??
+    conversationsQuery.data?.activeHiringCount ??
+    0;
+  const interviewWeekCount =
+    allConversationsStatsQuery.data?.interviewWeekCount ??
+    conversationsQuery.data?.interviewWeekCount ??
+    0;
+  const jobFacets =
+    allConversationsStatsQuery.data?.jobFacets ??
+    conversationsQuery.data?.jobFacets ??
+    [];
   const showTimeline = Boolean(selectedApplicationId);
 
   let timelineBody: ReactNode;
@@ -1089,7 +1179,7 @@ export function EmployerMessagesPageContent() {
     timelineBody = (
       <>
         <header className="sticky top-0 z-10 flex shrink-0 flex-col border-b border-border-subtle bg-surface/95 backdrop-blur-[2px]">
-          <div className="flex items-center gap-2 px-3 py-2.5 sm:gap-2.5 sm:px-5 sm:py-3.5 lg:px-6">
+          <div className="flex items-center gap-2 px-3.5 py-3.5 sm:gap-2.5 sm:px-5 sm:py-3.5 lg:px-6">
             <button
               type="button"
               className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
@@ -1098,17 +1188,26 @@ export function EmployerMessagesPageContent() {
             >
               <ChevronLeft className="size-6" aria-hidden="true" />
             </button>
-            <ConversationAvatar name={candidateName} />
+            <div className="relative shrink-0">
+              <ConversationAvatar name={candidateName} />
+              <span
+                className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center rounded-full bg-surface text-resource-guide-icon shadow-sm ring-1 ring-surface sm:hidden"
+                title="Verified"
+                aria-label="Verified"
+              >
+                <BadgeCheck className="size-3.5" aria-hidden="true" />
+              </span>
+            </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 <h2 className="truncate text-sm font-bold text-foreground">
                   {candidateName}
                 </h2>
-                <span className="rounded bg-primary-light px-1.5 py-px text-[0.5625rem] font-semibold leading-4 text-primary ring-1 ring-inset ring-primary/20">
+                <span className="hidden rounded bg-primary-light px-1.5 py-px text-[0.5625rem] font-semibold leading-4 text-primary ring-1 ring-inset ring-primary/20 sm:inline-flex">
                   {statusLabel(selectedConversation?.applicationStatus ?? "")}
                 </span>
               </div>
-              <p className="truncate text-[0.6875rem] font-medium text-muted">
+              <p className="truncate text-[0.625rem] font-medium text-muted sm:text-[0.6875rem]">
                 {selectedConversation?.jobTitle ?? "Job"}
                 {selectedConversation?.publicJobId
                   ? ` - ${selectedConversation.publicJobId}`
@@ -1203,15 +1302,23 @@ export function EmployerMessagesPageContent() {
     );
   }
 
+  const isLockedShell = workspaceHeight != null;
+
   return (
     <div
       ref={workspaceRef}
       style={
-        workspaceHeight
+        isLockedShell
           ? { height: workspaceHeight, maxHeight: workspaceHeight }
           : undefined
       }
-      className="mx-auto flex w-full max-w-[1600px] min-h-0 max-h-dvh flex-col overflow-hidden px-3 py-3 sm:px-4 lg:h-[calc(100dvh-4rem)] lg:max-h-[calc(100dvh-4rem)] lg:px-5"
+      className={cn(
+        "mx-auto flex w-full max-w-[1600px] min-h-0 flex-col px-3 py-3 sm:px-4 lg:px-5",
+        isLockedShell
+          ? "max-h-dvh overflow-hidden"
+          : "overflow-visible pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] lg:pb-3",
+        "lg:h-[calc(100dvh-4rem)] lg:max-h-[calc(100dvh-4rem)] lg:overflow-hidden",
+      )}
     >
       <header
         className={cn(
@@ -1220,10 +1327,10 @@ export function EmployerMessagesPageContent() {
         )}
       >
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-foreground">
+          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
             Messages
           </h1>
-          <p className="mt-0.5 text-xs text-muted sm:text-sm">
+          <p className="mt-0.5 text-[11px] leading-snug text-muted sm:text-sm">
             Review hiring notifications for each candidate application in one
             place.
           </p>
@@ -1231,15 +1338,27 @@ export function EmployerMessagesPageContent() {
         <button
           type="button"
           onClick={() => setMobileFiltersOpen(true)}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:hidden"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:hidden"
         >
-          <Filter className="size-4" aria-hidden="true" />
+          <Filter className="size-3.5" aria-hidden="true" />
           Filters
         </button>
       </header>
 
-      <div className="mt-2.5 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-2.5 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(14rem,20%)]">
-        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+      <div
+        className={cn(
+          "mt-2.5 grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(14rem,20%)]",
+          isLockedShell
+            ? "min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden"
+            : "flex-1",
+        )}
+      >
+        <div
+          className={cn(
+            "flex min-w-0 flex-col",
+            isLockedShell && "min-h-0 overflow-hidden",
+          )}
+        >
           <div
             className={cn(
               "shrink-0",
@@ -1256,12 +1375,18 @@ export function EmployerMessagesPageContent() {
 
           <div
             className={cn(
-              "mt-2.5 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:grid-cols-[minmax(16rem,31.25%)_minmax(0,1fr)]",
-              mobileShowTimeline && "mt-0 border-0 shadow-none lg:mt-2.5 lg:border lg:shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+              "mt-2.5 grid gap-0 rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:grid-cols-[minmax(16rem,31.25%)_minmax(0,1fr)]",
+              isLockedShell
+                ? "min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden"
+                : "flex-1",
+              mobileShowTimeline &&
+                "mt-0 border-0 shadow-none lg:mt-2.5 lg:border lg:shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
             )}
-          >            <section
+          >
+            <section
               className={cn(
-                "min-h-0 min-w-0 flex-col overflow-hidden border-border-subtle lg:border-r",
+                "min-w-0 flex-col border-border-subtle lg:border-r",
+                isLockedShell ? "min-h-0 overflow-hidden" : "overflow-visible",
                 mobileShowTimeline ? "hidden lg:flex" : "flex",
               )}
             >
@@ -1294,7 +1419,7 @@ export function EmployerMessagesPageContent() {
                     }
                   }}
                   className={cn(
-                    "inline-flex min-h-11 shrink-0 items-center gap-1 border-b-2 px-2.5 py-2 text-xs font-semibold lg:min-h-0 lg:px-2 lg:py-1.5 lg:text-[0.6875rem]",
+                    "inline-flex min-h-9 shrink-0 items-center gap-1 border-b-2 px-2 py-1.5 text-[11px] font-semibold sm:min-h-11 sm:px-2.5 sm:py-2 sm:text-xs lg:min-h-0 lg:px-2 lg:py-1.5 lg:text-[0.6875rem]",
                     tab === item.id
                       ? "border-primary text-primary"
                       : "border-transparent text-muted hover:text-foreground",
@@ -1304,7 +1429,7 @@ export function EmployerMessagesPageContent() {
                   {item.count !== null ? (
                     <span
                       className={cn(
-                        "inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[0.5625rem] font-bold",
+                        "inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[0.5rem] font-bold sm:text-[0.5625rem]",
                         tab === item.id
                           ? "bg-primary text-surface"
                           : "bg-hero-bg text-muted",
@@ -1332,7 +1457,7 @@ export function EmployerMessagesPageContent() {
                   })
                 }
                 placeholder="Search conversations..."
-                className="h-11 w-full rounded-full border border-border-subtle bg-hero-bg py-2 pr-3 pl-9 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-8 lg:py-1.5 lg:pl-8 lg:text-xs"
+                className="h-9 w-full rounded-full border border-border-subtle bg-hero-bg py-2 pr-3 pl-9 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:text-sm lg:h-8 lg:py-1.5 lg:pl-8 lg:text-xs"
               />
             </div>
 
@@ -1356,7 +1481,7 @@ export function EmployerMessagesPageContent() {
                     })
                   }
                   className={cn(
-                    "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors lg:px-2.5 lg:py-0.5 lg:text-[0.625rem]",
+                    "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors sm:px-3 sm:py-1.5 sm:text-xs lg:px-2.5 lg:py-0.5 lg:text-[0.625rem]",
                     filters.category === chip.id
                       ? "bg-primary text-surface"
                       : "bg-hero-bg text-muted hover:text-foreground",
@@ -1368,7 +1493,13 @@ export function EmployerMessagesPageContent() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+          <div
+            className={cn(
+              isLockedShell
+                ? "min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin"
+                : "overflow-visible",
+            )}
+          >
             {tab === "starred" ? (
               <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
                 <Star className="size-7 text-muted" aria-hidden="true" />
@@ -1446,7 +1577,7 @@ export function EmployerMessagesPageContent() {
                         <ConversationAvatar name={conversation.candidateName} />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-start justify-between gap-2">
-                            <span className="truncate text-[0.8125rem] font-bold text-foreground max-lg:text-sm">
+                            <span className="truncate text-xs font-bold text-foreground sm:text-sm lg:text-[0.8125rem]">
                               {conversation.candidateName}
                             </span>
                             <span className="shrink-0 text-[0.625rem] text-muted">
@@ -1455,7 +1586,7 @@ export function EmployerMessagesPageContent() {
                               )}
                             </span>
                           </span>
-                          <span className="mt-px block truncate text-xs font-medium text-muted lg:text-[0.6875rem]">
+                          <span className="mt-px block truncate text-[11px] font-medium text-muted sm:text-xs lg:text-[0.6875rem]">
                             {conversation.jobTitle}
                             <span className="hidden lg:inline">
                               {conversation.candidatePhone
@@ -1467,7 +1598,7 @@ export function EmployerMessagesPageContent() {
                             {statusLabel(conversation.applicationStatus)}
                           </span>
                           <span className="mt-0.5 flex items-center justify-between gap-2">
-                            <span className="truncate text-xs font-normal text-foreground/80 lg:text-[0.6875rem]">
+                            <span className="truncate text-[11px] font-normal text-foreground/80 sm:text-xs lg:text-[0.6875rem]">
                               {conversation.latestNotification.title}
                             </span>
                             {conversation.unreadCount > 0 ? (
@@ -1503,7 +1634,10 @@ export function EmployerMessagesPageContent() {
 
         <section
           className={cn(
-            "relative min-h-0 min-w-0 flex-col overflow-hidden bg-hero-bg",
+            "relative min-w-0 flex-col bg-hero-bg",
+            isLockedShell
+              ? "min-h-0 overflow-hidden"
+              : "min-h-[70dvh] overflow-hidden",
             mobileShowTimeline ? "flex" : "hidden lg:flex",
           )}
         >

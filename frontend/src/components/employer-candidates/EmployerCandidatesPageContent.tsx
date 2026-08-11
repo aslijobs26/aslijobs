@@ -387,18 +387,18 @@ export function EmployerCandidatesPageContent() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 lg:overflow-x-visible lg:px-6 lg:pb-5">
+    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-5 lg:overflow-x-visible lg:px-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-3xl">
             Candidates
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
+          <p className="mt-1 max-w-2xl text-xs text-muted sm:text-sm">
             Manage applicants, review resumes, schedule interviews and move
             candidates through the hiring pipeline.
           </p>
           {publicJobId ? (
-            <p className="mt-2 text-xs font-medium text-primary">
+            <p className="mt-2 text-[11px] font-medium text-primary sm:text-xs">
               Filtered by job {publicJobId}
               {" · "}
               <button
@@ -418,9 +418,12 @@ export function EmployerCandidatesPageContent() {
             <button
               type="button"
               onClick={() => setExportModalOpen(true)}
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-primary bg-primary-light px-5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:w-auto sm:min-w-[7.5rem]"
+              className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary-light px-4 text-xs font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:w-auto sm:min-w-[7.5rem] sm:gap-2 sm:px-5 sm:text-sm"
             >
-              <Download className="size-4 shrink-0" aria-hidden="true" />
+              <Download
+                className="size-3.5 shrink-0 sm:size-4"
+                aria-hidden="true"
+              />
               Export
             </button>
           </Can>
@@ -456,9 +459,9 @@ export function EmployerCandidatesPageContent() {
         <button
           type="button"
           onClick={() => setMobileFiltersOpen(true)}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
-          <Filter className="size-4" aria-hidden="true" />
+          <Filter className="size-3.5" aria-hidden="true" />
           Filters
         </button>
       </div>

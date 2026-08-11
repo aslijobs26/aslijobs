@@ -35,36 +35,54 @@ export function TeamManagementStatsCards({
   return (
     <section
       aria-label="Team management statistics"
-      className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4"
     >
       {EMPLOYER_TEAM_STAT_CARDS.map((card) => {
         const Icon = card.icon;
         const value = values[card.key];
+        const subtitle = card.subtitle(
+          value,
+          isLoading ? EMPTY_STATS : values,
+        );
 
         return (
           <article
             key={card.key}
-            className="flex min-h-[5.5rem] items-center gap-3 rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+            className={cn(
+              // Mobile: bordered surface KPI tile (readable on hero-bg pages)
+              "flex h-full min-h-[5.25rem] flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+              // sm+: horizontal employer stats card
+              "sm:min-h-[5.5rem] sm:flex-row sm:items-center sm:gap-3 sm:p-4 sm:shadow-sm",
+            )}
           >
             <div
               className={cn(
-                "inline-flex size-11 shrink-0 items-center justify-center rounded-full",
+                "inline-flex size-6 shrink-0 items-center justify-center rounded-lg sm:size-11 sm:rounded-full",
                 card.iconWrapClassName,
               )}
+              aria-hidden="true"
             >
-              <Icon className="size-5" aria-hidden="true" />
+              <Icon className="size-3 sm:size-5" strokeWidth={2} />
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-muted">{card.label}</p>
+
+            <div className="mt-1.5 flex min-w-0 flex-1 flex-col sm:mt-0">
+              <p className="text-[10px] font-medium leading-tight text-muted sm:text-sm">
+                {card.label}
+              </p>
+
               {isLoading ? (
-                <div className="mt-1 h-7 w-12 animate-pulse rounded bg-hero-bg" />
+                <div
+                  className="mt-auto h-5 w-9 animate-pulse rounded bg-border-subtle/80 sm:mt-1 sm:h-7 sm:w-12"
+                  aria-hidden="true"
+                />
               ) : (
-                <p className="mt-0.5 text-2xl font-bold tabular-nums leading-tight text-foreground">
+                <p className="mt-auto pt-1 text-lg font-bold tabular-nums leading-none tracking-tight text-foreground sm:mt-0.5 sm:pt-0 sm:text-2xl sm:leading-tight">
                   {value}
                 </p>
               )}
-              <p className="mt-0.5 text-xs text-muted">
-                {card.subtitle(value, isLoading ? EMPTY_STATS : values)}
+
+              <p className="mt-0.5 hidden text-xs text-muted sm:block">
+                {subtitle}
               </p>
             </div>
           </article>

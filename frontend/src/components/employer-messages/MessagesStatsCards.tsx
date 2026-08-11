@@ -73,32 +73,34 @@ export function MessagesStatsCards({
   ];
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
           <article
             key={card.id}
-            className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+            className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm sm:p-4"
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-2 sm:gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-[11px] font-semibold leading-tight text-foreground sm:text-sm">
                   {card.title}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">{card.description}</p>
+                <p className="mt-0.5 text-[10px] text-muted sm:text-xs">
+                  {card.description}
+                </p>
               </div>
               <span
                 className={cn(
-                  "inline-flex size-9 shrink-0 items-center justify-center rounded-lg",
+                  "inline-flex size-7 shrink-0 items-center justify-center rounded-lg sm:size-9",
                   card.iconClassName,
                 )}
                 aria-hidden="true"
               >
-                <Icon className="size-4" strokeWidth={2} />
+                <Icon className="size-3.5 sm:size-4" strokeWidth={2} />
               </span>
             </div>
-            <p className="mt-3 text-2xl font-bold text-foreground">
+            <p className="mt-2 text-xl font-bold text-foreground sm:mt-3 sm:text-2xl">
               {card.value ?? 0}
             </p>
           </article>

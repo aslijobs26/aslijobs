@@ -259,12 +259,6 @@ export function MyResumePageContent() {
         {resume ? (
           <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted sm:text-sm">
             <div>
-              <dt className="inline">Version: </dt>
-              <dd className="inline font-semibold text-foreground">
-                v{resume.versionNumber}
-              </dd>
-            </div>
-            <div>
               <dt className="inline">Generated: </dt>
               <dd className="inline font-semibold text-foreground">
                 {formatDate(resume.lastGeneratedAt)}

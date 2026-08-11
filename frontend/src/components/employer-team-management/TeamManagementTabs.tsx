@@ -32,7 +32,7 @@ export function TeamManagementTabs({
             id={`team-tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "relative shrink-0 px-3 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:px-4",
+              "relative shrink-0 px-2.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:px-4 sm:py-2.5 sm:text-sm",
               isActive
                 ? "text-foreground"
                 : "text-muted hover:text-foreground",

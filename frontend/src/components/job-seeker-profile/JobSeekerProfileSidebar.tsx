@@ -1,8 +1,6 @@
 "use client";
 
-import { JOB_SEEKER_PROFILE_VISIBILITY_OPTIONS } from "@/constants/job-seeker-profile";
 import { ROUTES } from "@/constants/routes";
-import type { JobSeekerPublic } from "@/types/job-seeker";
 import { cn } from "@/utils/cn";
 import type {
   JobSeekerProfileTab,
@@ -10,7 +8,6 @@ import type {
 } from "@/utils/job-seeker-profile";
 import {
   Check,
-  ChevronDown,
   FileText,
   MoreHorizontal,
   Pencil,
@@ -22,37 +19,27 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ProfileStrengthCircle } from "./ProfileStrengthCircle";
 
 type JobSeekerProfileSidebarProps = {
-  jobSeeker: JobSeekerPublic;
   strengthPercent: number;
   strengthMessage: string;
   checklist: ProfileChecklistItem[];
   onOpenPersonal: () => void;
   onOpenPreferences: () => void;
-  onOpenVisibility: () => void;
   onSelectTab: (tab: JobSeekerProfileTab) => void;
-  onVisibilityChange: (value: JobSeekerPublic["profileVisibility"]) => void;
-  isSavingVisibility: boolean;
   completionPercent: number;
 };
 
 export function JobSeekerProfileSidebar({
-  jobSeeker,
   strengthPercent,
   strengthMessage,
   checklist,
   onOpenPersonal,
   onOpenPreferences,
-  onOpenVisibility,
   onSelectTab,
-  onVisibilityChange,
-  isSavingVisibility,
   completionPercent,
 }: JobSeekerProfileSidebarProps) {
   const menuId = useId();
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  const visibility = jobSeeker.profileVisibility ?? "visible";
 
   useEffect(() => {
     if (!menuOpen) {
@@ -262,60 +249,6 @@ export function JobSeekerProfileSidebar({
             </button>
           </li>
         </ul>
-      </section>
-
-      <section
-        className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
-        aria-labelledby="visibility-heading"
-      >
-        <div className="flex items-center justify-between gap-2">
-          <h2
-            id="visibility-heading"
-            className="text-sm font-bold text-foreground sm:text-base"
-          >
-            Profile visibility
-          </h2>
-          <button
-            type="button"
-            className="text-[11px] font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-xs"
-            onClick={onOpenVisibility}
-          >
-            Manage
-          </button>
-        </div>
-        <label htmlFor="sidebar-visibility" className="sr-only">
-          Profile visibility
-        </label>
-        <div className="relative mt-3">
-          <select
-            id="sidebar-visibility"
-            className="w-full appearance-none rounded-xl border border-border-subtle bg-hero-bg py-2 pl-3 pr-9 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 sm:py-2.5 sm:text-sm"
-            value={visibility}
-            disabled={isSavingVisibility}
-            onChange={(event) =>
-              onVisibilityChange(
-                event.target.value as JobSeekerPublic["profileVisibility"],
-              )
-            }
-          >
-            {JOB_SEEKER_PROFILE_VISIBILITY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted"
-            aria-hidden="true"
-          />
-        </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-muted sm:text-xs">
-          {
-            JOB_SEEKER_PROFILE_VISIBILITY_OPTIONS.find(
-              (option) => option.value === visibility,
-            )?.description
-          }
-        </p>
       </section>
     </aside>
   );

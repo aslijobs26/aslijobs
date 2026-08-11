@@ -50,7 +50,7 @@ export function EmployerJobsToolbar({
       <div
         role="tablist"
         aria-label="Filter jobs by status"
-        className="flex min-w-0 flex-wrap items-center gap-1.5"
+        className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-1.5"
       >
         {EMPLOYER_JOBS_STATUS_TABS.map((tab) => {
           const isActive = tab === activeTab;
@@ -68,7 +68,7 @@ export function EmployerJobsToolbar({
               }
               onClick={() => onTabChange(tab)}
               className={cn(
-                "inline-flex h-10 items-center gap-1.5 rounded-md border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                "inline-flex h-8 items-center gap-1 rounded-md border px-2 text-[11px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-1.5 sm:px-3 sm:text-[13px]",
                 isActive
                   ? "border-primary-soft bg-primary-light text-primary-soft"
                   : "border-border bg-surface text-muted hover:border-primary-soft/40 hover:bg-primary-light/50 hover:text-foreground",
@@ -78,7 +78,7 @@ export function EmployerJobsToolbar({
               {count !== undefined ? (
                 <span
                   className={cn(
-                    "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums",
+                    "inline-flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums sm:size-5 sm:text-[11px]",
                     isActive
                       ? "bg-primary-soft/15 text-primary-soft"
                       : "bg-hero-bg text-muted",
@@ -99,7 +99,7 @@ export function EmployerJobsToolbar({
           aria-expanded={filtersOpen}
           aria-haspopup="dialog"
           className={cn(
-            "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+            "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:px-3 sm:text-sm",
             activeFilterCount > 0 || filtersOpen
               ? "border-primary bg-primary-light text-primary"
               : "border-border bg-surface text-muted hover:border-primary/40 hover:bg-primary-light/50 hover:text-foreground",
@@ -125,7 +125,7 @@ export function EmployerJobsToolbar({
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder={EMPLOYER_JOBS_SEARCH_PLACEHOLDER}
-            className="h-10 w-full rounded-lg border border-border bg-surface py-2 pr-3 pl-9 text-sm text-foreground placeholder:text-muted/80 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+            className="h-9 w-full rounded-lg border border-border bg-surface py-2 pr-3 pl-9 text-xs text-foreground placeholder:text-muted/80 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none sm:h-10 sm:text-sm"
           />
         </label>
       </div>

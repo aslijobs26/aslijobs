@@ -49,7 +49,7 @@ export function EmployerSearchBar({ className }: EmployerSearchBarProps) {
         type="search"
         disabled={disabled}
         placeholder={placeholder}
-        className="h-10 w-full rounded-full border border-border bg-surface py-2 pl-10 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-hero-bg disabled:text-muted"
+        className="h-9 w-full rounded-full border border-border bg-surface py-2 pl-10 pr-4 text-xs text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-hero-bg disabled:text-muted sm:h-10 sm:text-sm"
       />
     </label>
   );

@@ -32,7 +32,7 @@ export function UserAccessSettingsPanel({
         action={
           <Link
             href={ROUTES.EMPLOYER_TEAM_MANAGEMENT}
-            className="inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex min-h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-xs font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-9 sm:px-3 sm:text-sm"
           >
             Open Team Management
           </Link>

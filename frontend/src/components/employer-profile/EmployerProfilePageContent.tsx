@@ -456,7 +456,7 @@ export function EmployerProfilePageContent() {
   const profileCompletion = calculateEmployerProfileCompletion(profile);
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 py-5 pb-8 sm:px-5 lg:px-6">
+    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-8 lg:px-6">
       <header className="overflow-hidden rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">

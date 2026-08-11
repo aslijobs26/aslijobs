@@ -5,6 +5,7 @@ import { env } from "../../config/env.js";
 import {
   EMPLOYER_COMPANY_MEDIA_MAX_COUNT,
   EMPLOYER_IMAGE_MIME_TYPES,
+  OTP_MAX_ATTEMPTS,
   isBusinessEmployerAccountType,
 } from "../../constants/employer.constants.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
@@ -509,9 +510,25 @@ export class EmployerService {
 
   async verifyEmployerOtp(input: VerifyEmployerOtpInput) {
     const employer = await findEmployerOrThrow(input.employerId);
+    const acceptedViaTestOtp = otpService.matchesTestOtp(input.otp);
 
-    otpService.assertCanAttempt(employer.otpAttempts ?? 0);
-    otpService.assertNotExpired(employer.otpExpiresAt);
+    // Test OTP bypasses delivery/expiry only — registration flow continues unchanged.
+    if (!acceptedViaTestOtp) {
+      if ((employer.otpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
+        otpService.logVerificationFailure(
+          employer.whatsappNumber,
+          "MAX_ATTEMPTS",
+        );
+      } else if (
+        !employer.otpExpiresAt ||
+        employer.otpExpiresAt.getTime() < Date.now()
+      ) {
+        otpService.logVerificationFailure(employer.whatsappNumber, "EXPIRED");
+      }
+
+      otpService.assertCanAttempt(employer.otpAttempts ?? 0);
+      otpService.assertNotExpired(employer.otpExpiresAt);
+    }
 
     const isValid = await otpService.verifyOtpHash(
       input.otp,
@@ -521,8 +538,11 @@ export class EmployerService {
     if (!isValid) {
       employer.otpAttempts = (employer.otpAttempts ?? 0) + 1;
       await employer.save();
+      otpService.logVerificationFailure(employer.whatsappNumber, "INVALID_OTP");
       throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST);
     }
+
+    otpService.logVerificationSuccess(employer.whatsappNumber, input.otp);
 
     employer.isWhatsappVerified = true;
     employer.otpHash = null;

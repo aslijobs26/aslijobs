@@ -206,16 +206,6 @@ export function JobSeekerProfileDashboard() {
     await updateProfile({ education: null });
   }, [updateProfile]);
 
-  const handleVisibilityChange = useCallback(
-    async (value: NonNullable<typeof jobSeeker>["profileVisibility"]) => {
-      if (!value) {
-        return;
-      }
-      await updateProfile({ profileVisibility: value });
-    },
-    [updateProfile],
-  );
-
   if (profileQuery.isLoading) {
     return (
       <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -478,17 +468,13 @@ export function JobSeekerProfileDashboard() {
 
         <div className="min-w-0">
           <JobSeekerProfileSidebar
-            jobSeeker={jobSeeker}
             strengthPercent={strength.percent}
             strengthMessage={strength.message}
             checklist={completion.checklist}
             completionPercent={completion.percent}
             onOpenPersonal={() => setActiveModal({ type: "personal" })}
             onOpenPreferences={() => setActiveModal({ type: "preferences" })}
-            onOpenVisibility={() => setActiveModal({ type: "visibility" })}
             onSelectTab={setTab}
-            onVisibilityChange={(value) => void handleVisibilityChange(value)}
-            isSavingVisibility={isProfileSaving}
           />
         </div>
       </div>

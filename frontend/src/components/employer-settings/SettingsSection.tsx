@@ -30,18 +30,18 @@ export function SettingsSection({
         className,
       )}
     >
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <h2
             className={cn(
-              "text-base font-bold tracking-tight",
+              "text-sm font-bold tracking-tight sm:text-base",
               tone === "danger" ? "text-pin-state" : "text-foreground",
             )}
           >
             {title}
           </h2>
           {description ? (
-            <p className="mt-0.5 text-sm text-muted">{description}</p>
+            <p className="mt-0.5 text-xs text-muted sm:text-sm">{description}</p>
           ) : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}

@@ -273,7 +273,7 @@ export function EmployerDashboardHome() {
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-4 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+    <div className="flex flex-1 flex-col gap-4 px-4 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-6 sm:pt-6 md:pb-6 lg:px-8 lg:pb-5">
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)]">
         <div className="min-w-0 space-y-4">
           <DashboardWelcomeBanner

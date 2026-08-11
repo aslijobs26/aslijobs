@@ -1,4 +1,5 @@
 import { JOB_SEARCH_PAGE_SIZE } from "@/constants/job-search";
+import { ROUTES } from "@/constants/routes";
 import type { JobSearchUrlState } from "@/types/job-search";
 import type {
   FetchPublicJobsParams,
@@ -18,6 +19,51 @@ export function toJobSearchLocationSlug(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+/** Common alternate slugs so browse/search links still match stored job cities. */
+const JOB_SEARCH_CITY_ALIASES: Record<string, readonly string[]> = {
+  bangalore: ["bangalore", "bengaluru"],
+  bengaluru: ["bangalore", "bengaluru"],
+  vizag: ["vizag", "visakhapatnam"],
+  visakhapatnam: ["vizag", "visakhapatnam"],
+};
+
+export function expandJobSearchCitySlugs(cities: readonly string[]): string[] {
+  const expanded: string[] = [];
+
+  for (const city of cities) {
+    const slug = toJobSearchLocationSlug(city);
+    if (!slug) {
+      continue;
+    }
+
+    const aliases = JOB_SEARCH_CITY_ALIASES[slug] ?? [slug];
+    for (const alias of aliases) {
+      if (!expanded.includes(alias)) {
+        expanded.push(alias);
+      }
+    }
+  }
+
+  return expanded;
+}
+
+export function formatJobSearchLocationLabel(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/\s/.test(trimmed) || /[A-Z]/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return trimmed
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function parseCsv(value: string | null): string[] {
@@ -153,10 +199,7 @@ export function buildFetchPublicJobsParams(
       : undefined,
     city:
       state.cities.length > 0
-        ? state.cities
-            .map((city) => toJobSearchLocationSlug(city) || city)
-            .filter(Boolean)
-            .join(",")
+        ? expandJobSearchCitySlugs(state.cities).join(",")
         : undefined,
     jobType: state.jobType.length > 0 ? state.jobType.join(",") : undefined,
     experience:
@@ -187,6 +230,25 @@ export function createEmptyJobSearchUrlState(): JobSearchUrlState {
     page: 1,
     job: "",
   };
+}
+
+export function buildJobSearchHref(options: {
+  q?: string;
+  state?: string;
+  cities?: readonly string[];
+}): string {
+  const params = jobSearchStateToSearchParams({
+    ...createEmptyJobSearchUrlState(),
+    q: options.q?.trim() ?? "",
+    state: options.state?.trim()
+      ? toJobSearchLocationSlug(options.state) || options.state.trim()
+      : "",
+    cities: (options.cities ?? [])
+      .map((city) => toJobSearchLocationSlug(city) || city.trim())
+      .filter(Boolean),
+  });
+  const query = params.toString();
+  return query ? `${ROUTES.FIND_JOBS}?${query}` : ROUTES.FIND_JOBS;
 }
 
 export function hasActiveJobSearchFilters(state: JobSearchUrlState): boolean {

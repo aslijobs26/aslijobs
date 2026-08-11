@@ -46,7 +46,7 @@ export function CandidatesKpiStrip({
   isLoading,
 }: CandidatesKpiStripProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap">
+    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:flex lg:flex-wrap">
       {KPI_ITEMS.map((item) => {
         const Icon = item.icon;
         const value = stats?.[item.key];
@@ -55,28 +55,28 @@ export function CandidatesKpiStrip({
           <div
             key={item.key}
             className={cn(
-              "flex h-full min-h-[5.5rem] flex-col rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md",
+              "flex h-full min-h-[5rem] flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:min-h-[5.5rem] sm:px-3 sm:py-2.5",
               "lg:h-auto lg:w-40 lg:max-w-40 lg:min-h-0",
             )}
           >
             <div className="flex items-center justify-between gap-2">
               <span
                 className={cn(
-                  "inline-flex size-7 shrink-0 items-center justify-center rounded-lg",
+                  "inline-flex size-6 shrink-0 items-center justify-center rounded-lg sm:size-7",
                   item.iconClassName,
                 )}
               >
-                <Icon className="size-3.5" aria-hidden="true" />
+                <Icon className="size-3 sm:size-3.5" aria-hidden="true" />
               </span>
             </div>
-            <p className="mt-2 text-2xl font-bold leading-none tracking-tight text-foreground">
+            <p className="mt-1.5 text-xl font-bold leading-none tracking-tight text-foreground sm:mt-2 sm:text-2xl">
               {isLoading ? (
-                <span className="inline-block h-7 w-9 animate-pulse rounded bg-primary-light/50" />
+                <span className="inline-block h-6 w-8 animate-pulse rounded bg-primary-light/50 sm:h-7 sm:w-9" />
               ) : (
                 (value ?? 0)
               )}
             </p>
-            <p className="mt-1.5 text-xs font-semibold leading-tight text-muted">
+            <p className="mt-1 text-[10px] font-semibold leading-tight text-muted sm:mt-1.5 sm:text-xs">
               {item.label}
             </p>
           </div>

@@ -1,8 +1,14 @@
 "use client";
 
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import type { EmployerSettingsNavItem } from "@/constants/employer-settings";
+import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import type { EmployerSettingsSectionId } from "@/types/employer-settings";
 import { cn } from "@/utils/cn";
+import { useMemo } from "react";
+
+const settingsSectionSelectTriggerClassName =
+  "!h-9 w-full rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm";
 
 type SettingsNavProps = {
   items: EmployerSettingsNavItem[];
@@ -11,16 +17,26 @@ type SettingsNavProps = {
 };
 
 export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
+  const sectionOptions = useMemo<EmployerRegisterSelectOption[]>(
+    () =>
+      items.map((item) => ({
+        value: item.id,
+        label: item.label,
+        description: item.description,
+      })),
+    [items],
+  );
+
   return (
     <nav
       aria-label="Settings sections"
       className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4"
     >
       <div className="px-2 pb-3">
-        <h1 className="text-lg font-bold tracking-tight text-foreground">
+        <h1 className="text-base font-bold tracking-tight text-foreground sm:text-lg">
           Settings
         </h1>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-xs text-muted sm:text-sm">
           Manage your account, preferences and application settings.
         </p>
       </div>
@@ -57,7 +73,7 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
                 <span className="min-w-0">
                   <span
                     className={cn(
-                      "block text-sm font-semibold",
+                      "block text-xs font-semibold sm:text-sm",
                       isActive ? "text-primary" : "text-foreground",
                     )}
                   >
@@ -65,7 +81,7 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
                   </span>
                   <span
                     className={cn(
-                      "mt-0.5 block text-xs",
+                      "mt-0.5 block text-[11px] sm:text-xs",
                       isActive ? "text-primary/80" : "text-muted",
                     )}
                   >
@@ -79,24 +95,18 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
       </ul>
 
       <div className="lg:hidden">
-        <label htmlFor="settings-section-select" className="sr-only">
-          Settings section
-        </label>
-        <select
+        <EmployerRegisterSearchableSelect
           id="settings-section-select"
+          label="Settings section"
+          hideLabel
           value={activeId}
-          onChange={(event) =>
-            onSelect(event.target.value as EmployerSettingsSectionId)
-          }
-          className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2.5 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        >
-          {items.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hidden">
+          placeholder="Select section"
+          options={sectionOptions}
+          onChange={(value) => onSelect(value as EmployerSettingsSectionId)}
+          hideSearch
+          triggerClassName={settingsSectionSelectTriggerClassName}
+        />
+        <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hidden sm:gap-2">
           {items.map((item) => {
             const isActive = item.id === activeId;
             return (
@@ -105,7 +115,7 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
                 type="button"
                 onClick={() => onSelect(item.id)}
                 className={cn(
-                  "inline-flex shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                  "inline-flex shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:px-3 sm:text-xs",
                   isActive
                     ? "bg-primary text-surface"
                     : "bg-hero-bg text-foreground hover:bg-primary-light",

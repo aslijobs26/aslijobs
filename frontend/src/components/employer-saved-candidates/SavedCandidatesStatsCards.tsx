@@ -80,7 +80,7 @@ function ChangeBadge({
   return (
     <span
       className={cn(
-        "text-[10px] font-semibold leading-none sm:text-[11px]",
+        "text-[9px] font-semibold leading-none sm:text-[11px]",
         value > 0 && "text-emerald-600",
         value < 0 && "text-red-600",
         value === 0 && "text-muted",
@@ -96,7 +96,7 @@ export function SavedCandidatesStatsCards({
   isLoading,
 }: SavedCandidatesStatsCardsProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
       {KPI_ITEMS.map((item) => {
         const Icon = item.icon;
         const value = stats?.[item.key];
@@ -109,10 +109,10 @@ export function SavedCandidatesStatsCards({
           <div
             key={item.key}
             className={cn(
-              "flex min-h-[5.5rem] flex-col rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md",
+              "flex min-h-[5rem] flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:min-h-[5.5rem] sm:px-3 sm:py-2.5",
             )}
           >
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
               <span
                 className={cn(
                   "inline-flex size-6 shrink-0 items-center justify-center rounded-lg sm:size-7",
@@ -125,16 +125,16 @@ export function SavedCandidatesStatsCards({
                 <ChangeBadge changePercent={changeValue} />
               ) : null}
             </div>
-            <p className="mt-2 text-xl font-bold leading-none tracking-tight text-foreground sm:text-2xl xl:text-[1.75rem]">
+            <p className="mt-1.5 text-lg font-bold leading-none tracking-tight text-foreground sm:mt-2 sm:text-2xl xl:text-[1.75rem]">
               {isLoading ? (
-                <span className="inline-block h-6 w-8 animate-pulse rounded bg-primary-light/50 sm:h-7 sm:w-9" />
+                <span className="inline-block h-5 w-7 animate-pulse rounded bg-primary-light/50 sm:h-7 sm:w-9" />
               ) : typeof value === "number" ? (
                 value
               ) : (
                 0
               )}
             </p>
-            <p className="mt-1.5 text-[11px] font-semibold leading-tight text-muted sm:text-xs">
+            <p className="mt-1 text-[10px] font-semibold leading-tight text-muted sm:mt-1.5 sm:text-xs">
               {item.label}
             </p>
           </div>

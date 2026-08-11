@@ -5,6 +5,7 @@ import {
   OTP_LENGTH,
   OTP_MAX_ATTEMPTS,
 } from "../../constants/employer.constants.js";
+import { env } from "../../config/env.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { createOtpProvider } from "./otp.factory.js";
@@ -15,8 +16,30 @@ export type GeneratedOtp = {
   expiresAt: Date;
 };
 
+export type OtpVerificationMethod = "TEST_OTP" | "RANDOM_OTP";
+
 export class OtpService {
   private readonly provider = createOtpProvider();
+
+  /**
+   * Temporary testing fallback. Enabled only when OTP_TEST_MODE=true
+   * and OTP_TEST_CODE is a non-empty configured value.
+   */
+  isTestModeEnabled(): boolean {
+    return env.OTP_TEST_MODE === true && env.OTP_TEST_CODE.length > 0;
+  }
+
+  /**
+   * Returns true when the submitted OTP matches the configured test code
+   * and test mode is enabled. Never true when OTP_TEST_MODE is unset/false.
+   */
+  matchesTestOtp(otp: string): boolean {
+    if (!this.isTestModeEnabled()) {
+      return false;
+    }
+
+    return otp === env.OTP_TEST_CODE;
+  }
 
   generateOtpCode(): string {
     const max = 10 ** OTP_LENGTH;
@@ -68,12 +91,48 @@ export class OtpService {
     }
   }
 
-  async verifyOtpHash(otp: string, otpHash: string | null | undefined): Promise<boolean> {
+  /**
+   * Accepts either the configured test OTP (when enabled) or the hashed random OTP.
+   * Does not bypass login/register/JWT logic — callers continue the existing auth flow.
+   */
+  async verifyOtpHash(
+    otp: string,
+    otpHash: string | null | undefined,
+  ): Promise<boolean> {
+    if (this.matchesTestOtp(otp)) {
+      return true;
+    }
+
     if (!otpHash) {
       return false;
     }
 
     return bcrypt.compare(otp, otpHash);
+  }
+
+  resolveVerificationMethod(otp: string): OtpVerificationMethod {
+    return this.matchesTestOtp(otp) ? "TEST_OTP" : "RANDOM_OTP";
+  }
+
+  logVerificationSuccess(phoneNumber: string, otp: string): void {
+    console.log("================================================");
+    console.log("[AsliJobs OTP Verification]");
+    console.log(`Phone: ${phoneNumber}`);
+    console.log(`Method: ${this.resolveVerificationMethod(otp)}`);
+    console.log("Status: SUCCESS");
+    console.log("================================================");
+  }
+
+  logVerificationFailure(
+    phoneNumber: string,
+    reason: "INVALID_OTP" | "EXPIRED" | "MAX_ATTEMPTS",
+  ): void {
+    console.log("================================================");
+    console.log("[AsliJobs OTP Verification]");
+    console.log(`Phone: ${phoneNumber}`);
+    console.log("Status: FAILED");
+    console.log(`Reason: ${reason}`);
+    console.log("================================================");
   }
 }
 

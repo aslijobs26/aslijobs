@@ -277,17 +277,17 @@ export function EmployerInterviewsPageContent() {
   const cancelLookup = view === "calendar" ? calendarInterviews : interviews;
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-3 py-5 sm:px-5 lg:px-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+    <div className="mx-auto w-full max-w-[1600px] px-3 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-5 lg:px-6">
+      <header className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             Interviews
           </h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-xs text-muted sm:text-sm">
             Schedule, manage and track all interviews in one place.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <span
             className="inline-flex overflow-hidden rounded-lg border border-border-subtle bg-surface"
             role="tablist"
@@ -299,13 +299,16 @@ export function EmployerInterviewsPageContent() {
               aria-selected={view === "calendar"}
               onClick={() => setView("calendar")}
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
+                "inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs",
                 view === "calendar"
                   ? "bg-primary text-surface"
                   : "text-muted hover:bg-primary-light/40 hover:text-foreground",
               )}
             >
-              <CalendarDays className="size-3.5" aria-hidden="true" />
+              <CalendarDays
+                className="size-3 sm:size-3.5"
+                aria-hidden="true"
+              />
               Calendar View
             </button>
             <button
@@ -315,13 +318,13 @@ export function EmployerInterviewsPageContent() {
               aria-current={view === "list" ? "page" : undefined}
               onClick={() => setView("list")}
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
+                "inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs",
                 view === "list"
                   ? "bg-primary text-surface"
                   : "text-muted hover:bg-primary-light/40 hover:text-foreground",
               )}
             >
-              <List className="size-3.5" aria-hidden="true" />
+              <List className="size-3 sm:size-3.5" aria-hidden="true" />
               List View
             </button>
           </span>
@@ -329,9 +332,9 @@ export function EmployerInterviewsPageContent() {
             <button
               type="button"
               onClick={() => openScheduleModal(null)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:px-3 sm:py-2 sm:text-sm"
             >
-              <Plus className="size-4" aria-hidden="true" />
+              <Plus className="size-3.5 sm:size-4" aria-hidden="true" />
               Schedule Interview
             </button>
           </Can>
@@ -370,10 +373,10 @@ export function EmployerInterviewsPageContent() {
             <button
               type="button"
               onClick={() => setMobileFiltersOpen((open) => !open)}
-              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
+              className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
               aria-expanded={mobileFiltersOpen}
             >
-              <Filter className="size-4" aria-hidden="true" />
+              <Filter className="size-3.5" aria-hidden="true" />
               {mobileFiltersOpen ? "Hide filters" : "Show filters"}
             </button>
           </div>

@@ -1,11 +1,19 @@
+"use client";
+
+import indiaPromoImage from "@/assets/job-details-india-promo.png";
+import whatsappPromoImage from "@/assets/job-details-whatsapp-promo.png";
+import { ProfileStrengthCircle } from "@/components/job-seeker-profile/ProfileStrengthCircle";
 import { WHATSAPP_JOIN_URL } from "@/constants/cta";
 import {
   JOB_DETAILS_SAFETY_TIPS,
   JOB_DETAILS_WHY_POINTS,
 } from "@/constants/job-details-page";
+import { JOB_SEEKER_RESUME_QUERY_KEY } from "@/constants/job-seeker-profile";
 import { ROUTES } from "@/constants/routes";
-import indiaPromoImage from "@/assets/job-details-india-promo.png";
-import whatsappPromoImage from "@/assets/job-details-whatsapp-promo.png";
+import { useJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
+import { fetchMyResume } from "@/services/job-seeker-resume.service";
+import { computeProfileStrength } from "@/utils/job-seeker-profile";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -14,10 +22,11 @@ import {
   MessageCircle,
   ShieldCheck,
   Smartphone,
+  type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
+import { useMemo } from "react";
 
 const WHY_ICONS: Record<string, LucideIcon> = {
   "no-app": Smartphone,
@@ -28,6 +37,40 @@ const WHY_ICONS: Record<string, LucideIcon> = {
 
 export function JobDetailsRightRail() {
   const whatsappExternal = WHATSAPP_JOIN_URL.startsWith("http");
+  const profileQuery = useJobSeekerProfile();
+  const resumeQuery = useQuery({
+    queryKey: JOB_SEEKER_RESUME_QUERY_KEY,
+    queryFn: fetchMyResume,
+    enabled: Boolean(profileQuery.data),
+    staleTime: 60_000,
+  });
+
+  const strength = useMemo(() => {
+    if (!profileQuery.data) {
+      return { percent: 0, message: "Finish your profile to unlock better job matches." };
+    }
+    return computeProfileStrength(profileQuery.data, resumeQuery.data);
+  }, [profileQuery.data, resumeQuery.data]);
+
+  const isAuthenticated = Boolean(profileQuery.data);
+  const isProfileComplete = strength.percent >= 100;
+  const profileHref = isAuthenticated
+    ? ROUTES.JOB_SEEKER_PROFILE
+    : ROUTES.JOB_SEEKER_REGISTER;
+  const profileTitle = isProfileComplete
+    ? "Profile Complete"
+    : "Complete Your Profile";
+  const profileDescription = isAuthenticated
+    ? isProfileComplete
+      ? strength.message || "Your profile looks great for job matching."
+      : strength.message ||
+        "Finish your profile to unlock better job matches."
+    : "Finish your profile to unlock better job matches.";
+  const profileCtaLabel = isAuthenticated
+    ? isProfileComplete
+      ? "View Profile"
+      : "Complete Profile"
+    : "Complete Profile";
 
   return (
     <aside className="flex flex-col gap-3.5" aria-label="AsliJobs highlights">
@@ -61,48 +104,21 @@ export function JobDetailsRightRail() {
 
       <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-[0_1px_4px_rgba(26,43,60,0.04)]">
         <div className="flex items-center gap-3">
-          <div
-            className="relative grid size-12 place-items-center"
-            aria-hidden="true"
-          >
-            <svg viewBox="0 0 36 36" className="size-11 -rotate-90">
-              <circle
-                cx="18"
-                cy="18"
-                r="15"
-                fill="none"
-                className="stroke-primary-light"
-                strokeWidth="3"
-              />
-              <circle
-                cx="18"
-                cy="18"
-                r="15"
-                fill="none"
-                className="stroke-primary"
-                strokeWidth="3"
-                strokeDasharray={`${0.8 * 2 * Math.PI * 15} ${2 * Math.PI * 15}`}
-                strokeLinecap="round"
-              />
-            </svg>
-            <span className="absolute text-[10px] font-bold text-primary">
-              80%
-            </span>
-          </div>
+          <ProfileStrengthCircle percentage={strength.percent} size={48} />
           <div className="min-w-0">
             <h2 className="text-[13px] font-semibold text-foreground">
-              Complete Your Profile
+              {profileTitle}
             </h2>
             <p className="mt-1 text-[11px] leading-relaxed text-muted">
-              Finish your profile to unlock better job matches.
+              {profileDescription}
             </p>
           </div>
         </div>
         <Link
-          href={ROUTES.JOB_SEEKER_REGISTER}
+          href={profileHref}
           className="mt-3.5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-employer-button px-3 py-2 text-[13px] font-semibold text-surface transition-colors hover:bg-employer-button-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-employer-button/30"
         >
-          Complete Profile
+          {profileCtaLabel}
           <ArrowRight className="size-3.5" aria-hidden="true" />
         </Link>
       </section>

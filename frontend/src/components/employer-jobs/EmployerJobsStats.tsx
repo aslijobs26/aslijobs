@@ -31,11 +31,11 @@ export function EmployerJobsStats({
         return (
           <article
             key={card.key}
-            className="group flex h-full min-h-[6.75rem] flex-col rounded-xl border border-border-subtle bg-surface px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow,transform] duration-200 hover:border-primary/20 hover:shadow-md motion-safe:hover:-translate-y-0.5 sm:min-h-[7.25rem] sm:px-4 sm:py-3.5"
+            className="group flex h-full min-h-[6.75rem] flex-col rounded-xl border border-border-subtle bg-surface px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] duration-200 hover:border-primary/20 hover:shadow-md sm:min-h-[7.25rem] sm:px-4 sm:py-3.5"
           >
             <div
               className={cn(
-                "inline-flex size-8 items-center justify-center rounded-lg transition-transform duration-200 motion-safe:group-hover:scale-105 sm:size-9",
+                "inline-flex size-8 items-center justify-center rounded-lg sm:size-9",
                 card.iconWrapClassName,
               )}
               aria-hidden="true"
@@ -46,17 +46,17 @@ export function EmployerJobsStats({
               />
             </div>
 
-            <p className="mt-2.5 text-[11px] font-medium leading-tight text-muted sm:mt-3 sm:text-xs">
+            <p className="mt-2 text-[10px] font-medium leading-tight text-muted sm:mt-3 sm:text-xs">
               {card.label}
             </p>
 
             {isLoading ? (
               <div
-                className="mt-auto h-7 w-14 animate-pulse rounded bg-border-subtle"
+                className="mt-auto h-6 w-12 animate-pulse rounded bg-border-subtle sm:h-7 sm:w-14"
                 aria-hidden="true"
               />
             ) : (
-              <p className="mt-auto pt-1 text-xl font-bold tracking-tight text-foreground sm:text-[1.625rem] sm:leading-none">
+              <p className="mt-auto pt-1 text-lg font-bold tracking-tight text-foreground sm:text-[1.625rem] sm:leading-none">
                 {formatEmployerJobCount(value ?? 0)}
               </p>
             )}

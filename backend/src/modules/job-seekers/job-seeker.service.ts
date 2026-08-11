@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { env } from "../../config/env.js";
+import { OTP_MAX_ATTEMPTS } from "../../constants/employer.constants.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { JOB_SEEKER_JOB_ROLES } from "../../constants/job-seeker.constants.js";
 import { AppError } from "../../middleware/error.middleware.js";
@@ -273,8 +274,25 @@ export class JobSeekerService {
       );
     }
 
-    otpService.assertCanAttempt(jobSeeker.otpAttempts ?? 0);
-    otpService.assertNotExpired(jobSeeker.otpExpiresAt);
+    const acceptedViaTestOtp = otpService.matchesTestOtp(input.otp);
+
+    // Test OTP bypasses delivery/expiry only — registration flow continues unchanged.
+    if (!acceptedViaTestOtp) {
+      if ((jobSeeker.otpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
+        otpService.logVerificationFailure(
+          jobSeeker.whatsappNumber,
+          "MAX_ATTEMPTS",
+        );
+      } else if (
+        !jobSeeker.otpExpiresAt ||
+        jobSeeker.otpExpiresAt.getTime() < Date.now()
+      ) {
+        otpService.logVerificationFailure(jobSeeker.whatsappNumber, "EXPIRED");
+      }
+
+      otpService.assertCanAttempt(jobSeeker.otpAttempts ?? 0);
+      otpService.assertNotExpired(jobSeeker.otpExpiresAt);
+    }
 
     const isValid = await otpService.verifyOtpHash(
       input.otp,
@@ -284,8 +302,14 @@ export class JobSeekerService {
     if (!isValid) {
       jobSeeker.otpAttempts = (jobSeeker.otpAttempts ?? 0) + 1;
       await jobSeeker.save();
+      otpService.logVerificationFailure(
+        jobSeeker.whatsappNumber,
+        "INVALID_OTP",
+      );
       throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST);
     }
+
+    otpService.logVerificationSuccess(jobSeeker.whatsappNumber, input.otp);
 
     jobSeeker.isWhatsappVerified = true;
     jobSeeker.otpHash = null;

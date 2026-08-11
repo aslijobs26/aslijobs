@@ -36,7 +36,7 @@ export const JOB_SEEKER_HELP_SUPPORT_EMAIL =
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "support@aslijobs.com";
 
 export const JOB_SEEKER_HELP_SUPPORT_PHONE =
-  process.env.NEXT_PUBLIC_SUPPORT_PHONE?.trim() || "+91 40 1234 5678";
+  process.env.NEXT_PUBLIC_SUPPORT_PHONE?.trim() || "+91 92487 19057";
 
 export const JOB_SEEKER_HELP_SUPPORT_HOURS = "Mon - Sat, 9 AM - 6 PM";
 

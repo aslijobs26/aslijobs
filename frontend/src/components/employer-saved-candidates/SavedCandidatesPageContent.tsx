@@ -408,13 +408,13 @@ export function SavedCandidatesPageContent() {
   }, [mobileDetailOpen]);
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 lg:overflow-x-visible lg:px-6 lg:pb-5">
+    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 py-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-5 lg:overflow-x-visible lg:px-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl xl:text-3xl">
+          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl xl:text-3xl">
             Shortlisted Candidates
           </h1>
-          <p className="mt-1 max-w-2xl text-xs text-muted sm:text-sm">
+          <p className="mt-1 max-w-2xl text-[11px] leading-snug text-muted sm:text-sm">
             Candidates you&apos;ve shortlisted and saved for future
             opportunities.
           </p>

@@ -164,7 +164,7 @@ export const EMPLOYER_DASHBOARD_STAT_CARDS: EmployerDashboardStatCardConfig[] = 
 ];
 
 export const EMPLOYER_DASHBOARD_SUPPORT_PHONE =
-  process.env.NEXT_PUBLIC_SUPPORT_PHONE?.trim() || "";
+  process.env.NEXT_PUBLIC_SUPPORT_PHONE?.trim() || "+91 92487 19057";
 
 export const EMPLOYER_DASHBOARD_ACADEMY_TITLE = "asliJobs Academy";
 export const EMPLOYER_DASHBOARD_ACADEMY_DESCRIPTION =
