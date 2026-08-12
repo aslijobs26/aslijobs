@@ -7,16 +7,16 @@ export const FOOTER_NAV_GROUPS: FooterNavGroup[] = [
     id: "job-seekers",
     title: "For Job Seekers",
     links: [
-      { id: "find-jobs", label: "Find Jobs", href: ROUTES.FIND_JOBS },
+      { id: "find-jobs", label: "Find Jobs", href: ROUTES.JOB_SEEKER_FIND_JOBS },
       {
         id: "browse-by-city",
         label: "Browse by City",
-        href: `${ROUTES.FIND_JOBS}?view=cities`,
+        href: ROUTES.BROWSE_BY_CITY,
       },
       {
         id: "browse-by-state",
         label: "Browse by State",
-        href: `${ROUTES.FIND_JOBS}?view=states`,
+        href: ROUTES.BROWSE_BY_STATE,
       },
       {
         id: "job-categories",
@@ -26,7 +26,7 @@ export const FOOTER_NAV_GROUPS: FooterNavGroup[] = [
       {
         id: "job-seeker-guide",
         label: "Job Seeker Guide",
-        href: `${ROUTES.RESOURCES}?resource=job-seeker-guide`,
+        href: ROUTES.JOB_SEEKER_GUIDE,
       },
     ],
   },
@@ -34,17 +34,21 @@ export const FOOTER_NAV_GROUPS: FooterNavGroup[] = [
     id: "employers",
     title: "For Employers",
     links: [
-      { id: "post-a-job", label: "Post a Job", href: ROUTES.POST_JOB },
-      { id: "employer-login", label: "Employer Login", href: ROUTES.LOGIN },
+      { id: "post-a-job", label: "Post a Job", href: ROUTES.EMPLOYER_POST_A_JOB },
+      {
+        id: "employer-login",
+        label: "Employer Login",
+        href: ROUTES.EMPLOYER_LOGIN_INFO,
+      },
       {
         id: "pricing-plans",
         label: "Pricing Plans",
-        href: ROUTES.EMPLOYERS,
+        href: ROUTES.PRICING_PLANS,
       },
       {
         id: "employer-guide",
         label: "Employer Guide",
-        href: `${ROUTES.RESOURCES}?resource=employer-guide`,
+        href: ROUTES.EMPLOYER_GUIDE,
       },
     ],
   },

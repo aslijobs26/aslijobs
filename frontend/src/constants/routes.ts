@@ -51,7 +51,17 @@ export const ROUTES = {
   EMPLOYER_NOTIFICATIONS: "/employer/notifications",
   CONTACT: "/contact",
   EMPLOYERS: "/employer/register",
+  /** Informational content pages for job seekers (footer links). */
+  JOB_SEEKER_FIND_JOBS: "/find-jobs",
+  BROWSE_BY_CITY: "/browse-by-city",
+  BROWSE_BY_STATE: "/browse-by-state",
   JOB_CATEGORIES: "/job-categories",
+  JOB_SEEKER_GUIDE: "/job-seeker-guide",
+  /** Informational content pages for employers (footer links). */
+  EMPLOYER_POST_A_JOB: "/post-a-job",
+  EMPLOYER_LOGIN_INFO: "/employer-login-info",
+  PRICING_PLANS: "/pricing-plans",
+  EMPLOYER_GUIDE: "/employer-guide",
   RESOURCES: "/resources",
   FAQS: "/faqs",
   HELP_CENTER: "/help-center",

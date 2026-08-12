@@ -1,10 +1,6 @@
 import type { JobSeekerResource } from "@/types/trust-resources";
 import { ROUTES } from "./routes";
 
-function resourceHref(slug: string) {
-  return `${ROUTES.RESOURCES}?resource=${slug}`;
-}
-
 export const JOB_SEEKER_RESOURCES: JobSeekerResource[] = [
   {
     id: "job-seeker-guide",
@@ -14,7 +10,7 @@ export const JOB_SEEKER_RESOURCES: JobSeekerResource[] = [
     icon: "guide",
     surfaceVariant: "guide",
     iconVariant: "primary",
-    href: resourceHref("job-seeker-guide"),
+    href: ROUTES.JOB_SEEKER_GUIDE,
   },
   {
     id: "resume-builder",
@@ -23,7 +19,7 @@ export const JOB_SEEKER_RESOURCES: JobSeekerResource[] = [
     icon: "resume",
     surfaceVariant: "resume",
     iconVariant: "glow",
-    href: resourceHref("resume-builder"),
+    href: `${ROUTES.RESOURCES}?resource=resume-builder`,
   },
   {
     id: "interview-tips",
@@ -32,7 +28,7 @@ export const JOB_SEEKER_RESOURCES: JobSeekerResource[] = [
     icon: "interview",
     surfaceVariant: "interview",
     iconVariant: "surface",
-    href: resourceHref("interview-tips"),
+    href: `${ROUTES.RESOURCES}?resource=interview-tips`,
   },
   {
     id: "salary-guide",
@@ -41,7 +37,7 @@ export const JOB_SEEKER_RESOURCES: JobSeekerResource[] = [
     icon: "salary",
     surfaceVariant: "salary",
     iconVariant: "primary",
-    href: resourceHref("salary-guide"),
+    href: `${ROUTES.RESOURCES}?resource=salary-guide`,
   },
   {
     id: "career-advice",
@@ -50,6 +46,6 @@ export const JOB_SEEKER_RESOURCES: JobSeekerResource[] = [
     icon: "career",
     surfaceVariant: "career",
     iconVariant: "glow",
-    href: resourceHref("career-advice"),
+    href: `${ROUTES.RESOURCES}?resource=career-advice`,
   },
 ];
