@@ -7,6 +7,7 @@ import {
 } from "@/hooks/useEmployerProfile";
 import { isUnauthorizedAuthError } from "@/utils/auth-errors";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
+import { getJobSeekerAccessToken } from "@/utils/job-seeker-auth-storage";
 import { clearEmployerClientSession } from "@/utils/employer-session";
 import { buildEmployerLoginHref } from "@/utils/safe-return-url";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,9 +48,12 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
     };
 
     const verifyEmployerSession = async () => {
-      const accessToken = getEmployerAccessToken();
+      if (!getEmployerAccessToken()) {
+        if (getJobSeekerAccessToken()) {
+          routerRef.current.replace(ROUTES.JOB_SEEKER_DASHBOARD);
+          return;
+        }
 
-      if (!accessToken) {
         await redirectUnauthenticated();
         return;
       }

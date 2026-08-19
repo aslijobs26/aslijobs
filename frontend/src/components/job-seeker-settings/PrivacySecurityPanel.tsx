@@ -8,12 +8,13 @@ import type {
   JobSeekerProfileVisibility,
   JobSeekerPublic,
 } from "@/types/job-seeker";
-import { clearJobSeekerAuthSession } from "@/utils/job-seeker-auth-storage";
+import { clearJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { cn } from "@/utils/cn";
 import { showAppToast } from "@/utils/share-job";
 import { LogOut, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 type PrivacySecurityPanelProps = {
@@ -28,6 +29,7 @@ export function PrivacySecurityPanel({
   onDeactivate,
 }: PrivacySecurityPanelProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { updateProfile, isSaving } = useJobSeekerProfileMutations();
   const [visibility, setVisibility] = useState<JobSeekerProfileVisibility>(
     jobSeeker.profileVisibility ?? "visible",
@@ -48,9 +50,10 @@ export function PrivacySecurityPanel({
   };
 
   const handleLogout = () => {
-    clearJobSeekerAuthSession();
-    showAppToast("Signed out successfully", "success");
-    router.replace(ROUTES.JOB_SEEKER_LOGIN);
+    void clearJobSeekerClientSession(queryClient).finally(() => {
+      showAppToast("Signed out successfully", "success");
+      router.replace(ROUTES.JOB_SEEKER_LOGIN);
+    });
   };
 
   return (

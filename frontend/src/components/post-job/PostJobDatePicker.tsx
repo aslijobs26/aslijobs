@@ -46,6 +46,7 @@ const SHORT_MONTH_NAMES = [
 
 const YEAR_PAGE_SIZE = 12;
 const VIEWPORT_PADDING_PX = 16;
+const COMPACT_POPOVER_WIDTH_PX = 220;
 
 type PanelView = "days" | "months" | "years";
 
@@ -137,7 +138,9 @@ function getYearPageYears(startYear: number) {
 
 function getPopoverWidth(triggerWidth: number, compact = false) {
   const maxAvailableWidth = window.innerWidth - VIEWPORT_PADDING_PX * 2;
-  const preferredWidth = compact ? Math.min(triggerWidth, 220) : triggerWidth;
+  const preferredWidth = compact
+    ? COMPACT_POPOVER_WIDTH_PX
+    : triggerWidth;
 
   return Math.min(preferredWidth, maxAvailableWidth);
 }
@@ -779,6 +782,7 @@ export function PostJobDatePicker({
         }}
         className={cn(
           postJobDateFieldShellClassName,
+          compact ? "h-10 px-2.5 text-xs" : null,
           "pointer-events-auto w-full cursor-pointer text-left transition-colors hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
           disabled &&
             "cursor-not-allowed opacity-60 hover:border-border focus-visible:ring-0",

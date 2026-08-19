@@ -8,7 +8,6 @@ import {
   getCandidateInitials,
 } from "@/components/employer-candidates/candidates-ats-utils";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
-import { WhatsAppIcon } from "@/components/home/hero/HeroIcons";
 import { ROUTES } from "@/constants/routes";
 import { useCan } from "@/providers/employer-permission-provider";
 import {
@@ -25,6 +24,7 @@ import {
   ChevronRight,
   ExternalLink,
   FileText,
+  MessageCircle,
   Phone,
   UserRound,
 } from "lucide-react";
@@ -178,7 +178,7 @@ function CandidateMobileCard({
             className={actionButtonClassName}
             onClick={(event) => event.stopPropagation()}
           >
-            <WhatsAppIcon className="text-sm leading-none" />
+            <MessageCircle className={actionIconClassName} aria-hidden="true" />
             <span className="text-[10px] font-semibold leading-none">WhatsApp</span>
           </a>
         ) : null}
@@ -221,6 +221,8 @@ function CandidateMobileCard({
         </button>
         <Link
           href={ROUTES.employerCandidateDetail(item.id)}
+          target="_blank"
+          rel="noopener noreferrer"
           aria-label="Open full profile"
           className={cn(actionButtonClassName, "text-muted hover:text-primary")}
           onClick={(event) => event.stopPropagation()}
@@ -238,20 +240,17 @@ function CandidateDesktopRow({
   isSaved,
   canSave,
   onSelect,
-  onOpenResume,
   onToggleSave,
 }: {
   item: EmployerApplicationListItem;
   isSaved: boolean;
   canSave: boolean;
   onSelect: (id: string) => void;
-  onOpenResume: (id: string) => void;
   onToggleSave?: (applicationId: string, isSaved: boolean) => void;
 }) {
   const { canField, getFieldLevel } = useCan();
   const canViewPhone = canField("candidates", "phone");
   const phoneLevel = getFieldLevel("candidates", "phone");
-  const canViewResume = canField("candidates", "resume");
   const canViewLocation = canField("candidates", "location");
   const rawPhone = item.candidatePhone ?? "";
   const whatsappHref =
@@ -343,27 +342,16 @@ function CandidateDesktopRow({
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`WhatsApp ${item.candidateName}`}
-            className="inline-flex size-8 items-center justify-center rounded-lg text-whatsapp hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             onClick={(event) => event.stopPropagation()}
           >
-            <WhatsAppIcon className="text-base leading-none" />
+            <MessageCircle className="size-4" aria-hidden="true" />
           </a>
-        ) : null}
-        {canViewResume ? (
-          <button
-            type="button"
-            aria-label="View resume"
-            className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenResume(item.id);
-            }}
-          >
-            <FileText className="size-4" aria-hidden="true" />
-          </button>
         ) : null}
         <Link
           href={ROUTES.employerCandidateDetail(item.id)}
+          target="_blank"
+          rel="noopener noreferrer"
           aria-label="Open full profile"
           className="inline-flex size-8 items-center justify-center rounded-lg text-muted hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           onClick={(event) => event.stopPropagation()}
@@ -426,8 +414,8 @@ export function CandidatesListPanel({
     "!h-9 text-xs sm:!h-11 sm:text-sm rounded-xl border-border bg-surface shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary-soft focus-visible:ring-2 focus-visible:ring-primary-soft/20 lg:!h-11";
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col rounded-xl border border-border-subtle bg-surface lg:min-h-[calc(100dvh-14rem)]">
-      <div className="border-b border-border-subtle p-3 sm:p-4">
+    <section className="flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface lg:h-full">
+      <div className="shrink-0 border-b border-border-subtle p-3 sm:p-4">
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(8.5rem,10.5rem)]">
           <label className="min-w-0">
             <span className="mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs">
@@ -467,7 +455,7 @@ export function CandidatesListPanel({
         </div>
       </div>
 
-      <div className="border-b border-border-subtle px-3 py-2 sm:px-4">
+      <div className="shrink-0 border-b border-border-subtle px-3 py-2 sm:px-4">
         <p className="text-[11px] text-muted sm:text-xs">
           {isLoading
             ? "Loading candidates…"
@@ -475,7 +463,7 @@ export function CandidatesListPanel({
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 lg:overflow-y-auto lg:scrollbar-hidden">
+      <div className="min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain lg:scrollbar-hidden">
         {isLoading ? (
           <>
             <ul className="space-y-3 p-3 lg:hidden" aria-hidden="true">
@@ -584,7 +572,6 @@ export function CandidatesListPanel({
                       isSaved={isSaved}
                       canSave={canSave}
                       onSelect={onSelect}
-                      onOpenResume={onOpenResume}
                       onToggleSave={onToggleSave}
                     />
                   </li>
@@ -595,7 +582,7 @@ export function CandidatesListPanel({
         )}
       </div>
 
-      <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-border-subtle px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
+      <div className="flex shrink-0 flex-col gap-2 border-t border-border-subtle px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
         <p className="text-xs text-muted">
           Page {page} of {totalPages}
         </p>

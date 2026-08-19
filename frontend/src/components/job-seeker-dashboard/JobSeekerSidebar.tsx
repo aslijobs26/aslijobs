@@ -11,11 +11,12 @@ import {
 } from "@/constants/job-seeker-dashboard";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/utils/cn";
-import { clearJobSeekerAuthSession } from "@/utils/job-seeker-auth-storage";
+import { clearJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { ChevronsLeft, LogOut } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import type { CSSProperties } from "react";
 
 type JobSeekerSidebarProps = {
@@ -40,11 +41,13 @@ export function JobSeekerSidebar({
 }: JobSeekerSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleLogout = () => {
-    clearJobSeekerAuthSession();
-    onMobileClose();
-    router.replace(ROUTES.HOME);
+    void clearJobSeekerClientSession(queryClient).finally(() => {
+      onMobileClose();
+      router.replace(ROUTES.HOME);
+    });
   };
 
   return (

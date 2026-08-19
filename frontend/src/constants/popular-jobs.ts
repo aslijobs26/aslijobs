@@ -10,7 +10,7 @@ function jobHref(id: string) {
   return `${ROUTES.FIND_JOBS}?city=hyderabad&job=${id}`;
 }
 
-export const POPULAR_JOBS_VIEW_ALL_HREF = `${ROUTES.FIND_JOBS}?city=hyderabad`;
+export const POPULAR_JOBS_VIEW_ALL_HREF = ROUTES.FIND_JOBS;
 
 export const POPULAR_JOBS_HYDERABAD: PopularJob[] = [
   {

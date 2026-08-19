@@ -45,6 +45,8 @@ import type {
   JobSeekerWorkMode,
 } from "@/types/job-seeker";
 import { isAxiosError } from "axios";
+import { establishJobSeekerClientSession } from "@/utils/job-seeker-session";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
@@ -108,6 +110,7 @@ function validateEducation(education: JobSeekerEducation): string | null {
 
 export function JobSeekerRegisterForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const otpSectionRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<RegisterStep>("account");
   const [jobSeekerId, setJobSeekerId] = useState<string | null>(null);
@@ -403,13 +406,18 @@ export function JobSeekerRegisterForm() {
     setErrorMessage(null);
 
     try {
-      await completeJobSeekerRegistration({
+      const data = await completeJobSeekerRegistration({
         jobSeekerId,
         education,
         experienceType,
         experiences: experienceType === "experienced" ? experiences : [],
         languages,
         availabilityStatus,
+      });
+      await establishJobSeekerClientSession(queryClient, {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        jobSeeker: data.jobSeeker,
       });
       router.push(ROUTES.HOME);
     } catch (error) {

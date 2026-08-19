@@ -10,6 +10,7 @@ import {
 import { CandidatesKpiStrip } from "@/components/employer-candidates/CandidatesKpiStrip";
 import { CandidatesListPanel } from "@/components/employer-candidates/CandidatesListPanel";
 import { CandidatesMobileFiltersSheet } from "@/components/employer-candidates/CandidatesMobileFiltersSheet";
+import "@/components/employer-candidates/employer-candidates-page-layout.css";
 import { InterviewScheduleModal } from "@/components/employer-interviews/InterviewScheduleModal";
 import { getSavedCandidatesApiErrorMessage } from "@/components/employer-saved-candidates/saved-candidates-utils";
 import { SaveCandidateModal } from "@/components/employer-saved-candidates/SaveCandidateModal";
@@ -387,7 +388,11 @@ export function EmployerCandidatesPageContent() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-5 lg:overflow-x-visible lg:px-6">
+    <div
+      data-employer-candidates-page
+      className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col px-3 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-5 lg:h-full lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:px-6 lg:pb-4"
+    >
+      <div className="shrink-0">
       <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -465,45 +470,47 @@ export function EmployerCandidatesPageContent() {
           Filters
         </button>
       </div>
+      </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[16rem_minmax(0,1fr)_24rem] lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <div className="hidden lg:block">
-          <div className="lg:sticky lg:top-20">
-            <CandidatesFilterPanel
-              stats={statsQuery.data}
-              activeFilter={quickFilter}
-              onFilterChange={handleFilterChange}
-              searchDraft={searchDraft}
-              location={locationDraft}
-              experience={experienceDraft}
-              skills={skillsDraft}
-              availability={availabilityDraft}
-              appliedFrom={appliedFrom}
-              appliedTo={appliedTo}
-              publicJobId={publicJobId}
-              searchInputRef={searchInputRef}
-              onSearchDraftChange={setSearchDraft}
-              onSearchSubmit={() => {
-                const nextSearch = normalizeSearch(searchDraft);
-                setSearchDraft(nextSearch);
-                syncUrl({ q: nextSearch, page: 1 });
-              }}
-              onLocationChange={setLocationDraft}
-              onExperienceChange={setExperienceDraft}
-              onSkillsChange={setSkillsDraft}
-              onAvailabilityChange={setAvailabilityDraft}
-              onAppliedFromChange={setAppliedFrom}
-              onAppliedToChange={setAppliedTo}
-              onClearAdvanced={() => {
-                setLocationDraft("");
-                setExperienceDraft("");
-                setSkillsDraft("");
-                setAvailabilityDraft("");
-                setAppliedFrom("");
-                setAppliedTo("");
-              }}
-            />
-          </div>
+      <div
+        className="mt-4 grid min-h-0 flex-1 gap-4 lg:grid-cols-[15rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] xl:grid-cols-[16rem_minmax(0,1fr)_24rem]"
+      >
+        <div className="hidden h-full min-h-0 lg:block">
+          <CandidatesFilterPanel
+            stats={statsQuery.data}
+            activeFilter={quickFilter}
+            onFilterChange={handleFilterChange}
+            searchDraft={searchDraft}
+            location={locationDraft}
+            experience={experienceDraft}
+            skills={skillsDraft}
+            availability={availabilityDraft}
+            appliedFrom={appliedFrom}
+            appliedTo={appliedTo}
+            publicJobId={publicJobId}
+            searchInputRef={searchInputRef}
+            onSearchDraftChange={setSearchDraft}
+            onSearchSubmit={() => {
+              const nextSearch = normalizeSearch(searchDraft);
+              setSearchDraft(nextSearch);
+              syncUrl({ q: nextSearch, page: 1 });
+            }}
+            onLocationChange={setLocationDraft}
+            onExperienceChange={setExperienceDraft}
+            onSkillsChange={setSkillsDraft}
+            onAvailabilityChange={setAvailabilityDraft}
+            onAppliedFromChange={setAppliedFrom}
+            onAppliedToChange={setAppliedTo}
+            onClearAdvanced={() => {
+              setLocationDraft("");
+              setExperienceDraft("");
+              setSkillsDraft("");
+              setAvailabilityDraft("");
+              setAppliedFrom("");
+              setAppliedTo("");
+            }}
+            presentation="sidebar"
+          />
         </div>
 
         <CandidatesListPanel
@@ -543,7 +550,7 @@ export function EmployerCandidatesPageContent() {
           onToggleSave={handleToggleSave}
         />
 
-        <div className="hidden xl:block">
+        <div className="hidden h-full min-h-0 xl:block">
           <CandidatesDetailPanel
             applicationId={selectedId}
             activeTab={activeTab}

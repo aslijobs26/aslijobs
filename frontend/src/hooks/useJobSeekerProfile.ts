@@ -2,7 +2,7 @@
 
 import { fetchAuthenticatedJobSeeker } from "@/services/job-seeker-login.service";
 import type { JobSeekerPublic } from "@/types/job-seeker";
-import { getJobSeekerAccessToken } from "@/utils/job-seeker-auth-storage";
+import { isJobSeekerAuthActive } from "@/utils/auth-realm";
 import {
   useQuery,
   type QueryClient,
@@ -37,7 +37,7 @@ export function useJobSeekerProfile(
   >,
 ): UseQueryResult<JobSeekerPublic, Error> {
   const hasAccessToken =
-    typeof window !== "undefined" && Boolean(getJobSeekerAccessToken());
+    typeof window !== "undefined" && isJobSeekerAuthActive();
 
   return useQuery({
     ...jobSeekerProfileQueryOptions,

@@ -3,12 +3,21 @@ import {
   type EmployerLoginPublic,
 } from "@/services/employer-login.service";
 import {
+  logoutJobSeekerServerSession,
+  logoutWorkspaceServerSession,
+} from "@/services/api-client";
+import {
   clearEmployerAuthSession,
   setEmployerAuthSession,
   type EmployerAuthSession,
 } from "@/utils/employer-auth-storage";
-import { logoutWorkspaceServerSession } from "@/services/api-client";
+import { clearJobSeekerAuthSession } from "@/utils/job-seeker-auth-storage";
 import type { QueryClient } from "@tanstack/react-query";
+
+async function revokeJobSeekerSessionIfPresent(): Promise<void> {
+  await logoutJobSeekerServerSession();
+  clearJobSeekerAuthSession();
+}
 
 /**
  * Cancel in-flight requests and drop the entire React Query cache.
@@ -45,6 +54,7 @@ export async function establishEmployerClientSession(
     employer?: EmployerLoginPublic;
   },
 ): Promise<void> {
+  await revokeJobSeekerSessionIfPresent();
   await resetEmployerClientCache(queryClient);
   setEmployerAuthSession({
     accessToken: input.accessToken,

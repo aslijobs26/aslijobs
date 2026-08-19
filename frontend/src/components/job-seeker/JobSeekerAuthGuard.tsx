@@ -3,11 +3,13 @@
 import { ROUTES } from "@/constants/routes";
 import { ensureJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
 import { isUnauthorizedAuthError } from "@/utils/auth-errors";
+import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import {
   clearJobSeekerAuthSession,
   getJobSeekerAccessToken,
 } from "@/utils/job-seeker-auth-storage";
 import { buildJobSeekerLoginHref } from "@/utils/safe-return-url";
+import { clearJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -26,22 +28,28 @@ export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
   const [status, setStatus] = useState<AuthStatus>("checking");
   const [retryToken, setRetryToken] = useState(0);
 
-  const redirectUnauthenticated = useCallback(() => {
-    clearJobSeekerAuthSession();
+  const redirectUnauthenticated = useCallback(async () => {
+    await clearJobSeekerClientSession(queryClient);
     const returnUrl = `${window.location.pathname}${window.location.search}`;
     router.replace(
       buildJobSeekerLoginHref(returnUrl || ROUTES.JOB_SEEKER_MY_RESUME),
     );
-  }, [router]);
+  }, [queryClient, router]);
 
   useEffect(() => {
     let cancelled = false;
 
     const verifySession = async () => {
+      if (getEmployerAccessToken()) {
+        clearJobSeekerAuthSession();
+        router.replace(ROUTES.EMPLOYER_DASHBOARD);
+        return;
+      }
+
       const accessToken = getJobSeekerAccessToken();
 
       if (!accessToken) {
-        redirectUnauthenticated();
+        await redirectUnauthenticated();
         return;
       }
 
@@ -56,7 +64,7 @@ export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
         }
 
         if (isUnauthorizedAuthError(error)) {
-          redirectUnauthenticated();
+          await redirectUnauthenticated();
           return;
         }
 

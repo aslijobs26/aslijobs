@@ -21,12 +21,11 @@ import { cn } from "@/utils/cn";
 import {
   EMPLOYER_ACCESS_TOKEN_STORAGE_KEY,
   EMPLOYER_AUTH_CHANGE_EVENT,
-  getEmployerAccessToken,
 } from "@/utils/employer-auth-storage";
+import { getActiveAuthRealm } from "@/utils/auth-realm";
 import {
   JOB_SEEKER_ACCESS_TOKEN_STORAGE_KEY,
   JOB_SEEKER_AUTH_CHANGE_EVENT,
-  getJobSeekerAccessToken,
 } from "@/utils/job-seeker-auth-storage";
 import {
   ensureSavedNavSeenInitialized,
@@ -47,13 +46,8 @@ function formatBadgeCount(count: number): string {
 }
 
 function resolveAudience(): FloatingBottomNavAudience {
-  if (getEmployerAccessToken()) {
-    return "employer";
-  }
-  if (getJobSeekerAccessToken()) {
-    return "job-seeker";
-  }
-  return "public";
+  const realm = getActiveAuthRealm();
+  return realm ?? "public";
 }
 
 function resolveItemHref(

@@ -87,11 +87,19 @@ function isEmployerSessionPresent(): boolean {
   }
 
   const payload = decodeJwtPayload(token);
-  if (payload?.role === "employer" && !isExpired(payload.exp)) {
-    return true;
+  if (!payload) {
+    return false;
   }
 
-  return true;
+  if (payload.role !== "employer" && payload.role !== "team_member") {
+    return false;
+  }
+
+  if (typeof payload.sub !== "string" || !payload.sub.trim()) {
+    return false;
+  }
+
+  return !isExpired(payload.exp);
 }
 
 function buildApplyReturnUrl(jobId: string): string {

@@ -25,7 +25,9 @@ import {
   getSafeReturnUrl,
   JOB_SEEKER_LOGIN_RETURN_URL_QUERY,
 } from "@/utils/safe-return-url";
+import { establishJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { isAxiosError } from "axios";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -72,6 +74,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export function JobSeekerLoginForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [isOtpVisible, setIsOtpVisible] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
@@ -149,7 +152,15 @@ export function JobSeekerLoginForm() {
     setErrorMessage(null);
 
     try {
-      await verifyJobSeekerLoginOtp(whatsappNumber, otpDigits.join(""));
+      const data = await verifyJobSeekerLoginOtp(
+        whatsappNumber,
+        otpDigits.join(""),
+      );
+      await establishJobSeekerClientSession(queryClient, {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        jobSeeker: data.jobSeeker,
+      });
       const returnUrl = readLoginReturnUrl();
       router.push(returnUrl ?? ROUTES.HOME);
     } catch (error) {

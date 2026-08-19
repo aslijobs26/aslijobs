@@ -11,7 +11,6 @@ import type {
   JobSeekerSalaryPeriod,
   JobSeekerWorkMode,
 } from "@/types/job-seeker";
-import { setJobSeekerAuthSession } from "@/utils/job-seeker-auth-storage";
 
 type ApiSuccess<T> = {
   success: boolean;
@@ -160,10 +159,6 @@ export async function completeJobSeekerRegistration(
   >("/jobseekers/register/complete", payload);
 
   const data = response.data.data;
-  setJobSeekerAuthSession({
-    accessToken: data.accessToken,
-    refreshToken: data.refreshToken,
-  });
 
   return data;
 }

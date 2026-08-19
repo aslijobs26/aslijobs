@@ -166,7 +166,6 @@ export const EMPLOYER_JOB_STAT_CARDS: readonly EmployerJobStatConfig[] = [
 
 export const EMPLOYER_JOBS_QUICK_ACTIONS_TITLE = "Quick Actions";
 export const EMPLOYER_JOBS_QUICK_ACTION_POST = "Post New Job";
-export const EMPLOYER_JOBS_QUICK_ACTION_IMPORT = "Import Jobs in Bulk";
 export const EMPLOYER_JOBS_QUICK_ACTION_TEMPLATES = "Manage Job Templates";
 export const EMPLOYER_JOBS_QUICK_ACTION_WHATSAPP = "Post from WhatsApp";
 

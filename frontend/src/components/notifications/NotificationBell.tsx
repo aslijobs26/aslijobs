@@ -53,7 +53,7 @@ export function NotificationBell({
     queryFn: () =>
       fetchNotifications({
         page: 1,
-        limit: 8,
+        limit: 5,
         readStatus: "all",
       }),
     enabled: isOpen,
@@ -181,7 +181,7 @@ export function NotificationBell({
   ]);
 
   const unreadCount = unreadQuery.data ?? 0;
-  const notifications = recentQuery.data?.notifications ?? [];
+  const notifications = (recentQuery.data?.notifications ?? []).slice(0, 5);
 
   const openNotification = async (notification: NotificationListItem) => {
     if (!notification.isRead) {
@@ -244,7 +244,7 @@ export function NotificationBell({
             </button>
           </div>
 
-          <div className="max-h-40 overflow-y-auto scrollbar-hidden sm:max-h-80">
+          <div className="max-h-[12.5rem] overflow-y-auto overscroll-contain scrollbar-hidden sm:max-h-[19.5rem]">
             {recentQuery.isLoading ? (
               <p className="px-2.5 py-5 text-center text-[11px] text-muted sm:px-3 sm:py-8 sm:text-sm">
                 Loading…

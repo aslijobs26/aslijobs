@@ -2,42 +2,56 @@
 
 import type { EmployerApplicationStats } from "@/types/employer-applications";
 import { cn } from "@/utils/cn";
-import { Briefcase, FileText, Star, Users } from "lucide-react";
+import { Briefcase, CheckCircle2, FileText, Star, Users } from "lucide-react";
 
 type CandidatesKpiStripProps = {
   stats: EmployerApplicationStats | undefined;
   isLoading: boolean;
 };
 
-const KPI_ITEMS: {
-  key: keyof EmployerApplicationStats;
+type KpiItem = {
+  key: string;
   label: string;
   icon: typeof Users;
   iconClassName: string;
-}[] = [
+  getValue: (stats: EmployerApplicationStats | undefined) => number;
+};
+
+const KPI_ITEMS: KpiItem[] = [
   {
     key: "total",
     label: "Total Candidates",
     icon: Users,
     iconClassName: "bg-primary-light text-primary",
+    getValue: (stats) => stats?.total ?? 0,
   },
   {
     key: "submitted",
     label: "New Applications",
     icon: FileText,
     iconClassName: "bg-benefit-verified-surface text-benefit-verified-icon",
+    getValue: (stats) => stats?.submitted ?? 0,
   },
   {
     key: "shortlisted",
     label: "Shortlisted",
     icon: Star,
     iconClassName: "bg-benefit-free-surface text-benefit-free-icon",
+    getValue: (stats) => stats?.shortlisted ?? 0,
   },
   {
     key: "interview_scheduled",
     label: "Interview Scheduled",
     icon: Briefcase,
     iconClassName: "bg-benefit-languages-surface text-benefit-languages-icon",
+    getValue: (stats) => stats?.interview_scheduled ?? 0,
+  },
+  {
+    key: "hired",
+    label: "Hired",
+    icon: CheckCircle2,
+    iconClassName: "bg-benefit-whatsapp-surface text-benefit-whatsapp-icon",
+    getValue: (stats) => (stats?.selected ?? 0) + (stats?.joined ?? 0),
   },
 ];
 
@@ -49,7 +63,7 @@ export function CandidatesKpiStrip({
     <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:flex lg:flex-wrap">
       {KPI_ITEMS.map((item) => {
         const Icon = item.icon;
-        const value = stats?.[item.key];
+        const value = item.getValue(stats);
 
         return (
           <div
@@ -73,7 +87,7 @@ export function CandidatesKpiStrip({
               {isLoading ? (
                 <span className="inline-block h-6 w-8 animate-pulse rounded bg-primary-light/50 sm:h-7 sm:w-9" />
               ) : (
-                (value ?? 0)
+                value
               )}
             </p>
             <p className="mt-1 text-[10px] font-semibold leading-tight text-muted sm:mt-1.5 sm:text-xs">

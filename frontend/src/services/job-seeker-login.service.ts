@@ -1,6 +1,5 @@
 import { apiClient } from "@/services/api-client";
 import type { JobSeekerPublic } from "@/types/job-seeker";
-import { setJobSeekerAuthSession } from "@/utils/job-seeker-auth-storage";
 
 type ApiSuccess<T> = {
   success: true;
@@ -70,10 +69,6 @@ export async function verifyJobSeekerLoginOtp(
   );
 
   const data = response.data.data;
-  setJobSeekerAuthSession({
-    accessToken: data.accessToken,
-    refreshToken: data.refreshToken,
-  });
 
   return data;
 }

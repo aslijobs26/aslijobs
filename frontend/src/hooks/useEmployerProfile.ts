@@ -5,7 +5,7 @@ import {
   fetchAuthenticatedEmployer,
   type EmployerLoginPublic,
 } from "@/services/employer-login.service";
-import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
+import { isEmployerAuthActive } from "@/utils/auth-realm";
 import {
   useQuery,
   type QueryClient,
@@ -43,7 +43,7 @@ export function useEmployerProfile(
   >,
 ): UseQueryResult<EmployerLoginPublic, Error> {
   const hasAccessToken =
-    typeof window !== "undefined" && Boolean(getEmployerAccessToken());
+    typeof window !== "undefined" && isEmployerAuthActive();
 
   return useQuery({
     ...employerProfileQueryOptions,

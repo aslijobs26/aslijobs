@@ -3,7 +3,6 @@
 import { EmployerAuthGuard } from "@/components/employer-dashboard/EmployerAuthGuard";
 import { EmployerDashboardPlaceholder } from "@/components/employer-dashboard/EmployerDashboardPlaceholder";
 import { EmployerNavbar } from "@/components/employer-dashboard/EmployerNavbar";
-import { EmployerSearchBar } from "@/components/employer-dashboard/EmployerSearchBar";
 import { EmployerSidebar } from "@/components/employer-dashboard/EmployerSidebar";
 import { FloatingBottomNav } from "@/components/layout/FloatingBottomNav";
 import { EmployerPermissionRouteGuard } from "@/components/rbac/EmployerPermissionRouteGuard";
@@ -77,10 +76,6 @@ export function EmployerDashboardLayout({
             }
           >
             <EmployerNavbar onSidebarToggle={handleSidebarToggle} />
-
-            <div className="border-b border-border-subtle bg-surface px-3 py-3 md:hidden">
-              <EmployerSearchBar />
-            </div>
 
             <main className="flex flex-1 flex-col">
               <EmployerPermissionRouteGuard>

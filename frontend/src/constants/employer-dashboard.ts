@@ -95,9 +95,6 @@ export const EMPLOYER_DASHBOARD_HELP_CTA = "Contact Support";
 export const EMPLOYER_DASHBOARD_HELP_ICON = Headphones;
 export const EMPLOYER_DASHBOARD_HELP_CENTER_TITLE = "Help Center";
 
-export const EMPLOYER_DASHBOARD_SEARCH_PLACEHOLDER =
-  "Search candidates, jobs, applications...";
-
 export const EMPLOYER_DASHBOARD_POST_JOB_LABEL = "Post Job";
 
 export const EMPLOYER_DASHBOARD_LANGUAGE_LABEL = "English";

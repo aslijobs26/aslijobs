@@ -13,14 +13,12 @@ import {
   parseInterviewCancelledRemark,
 } from "@/components/employer-candidates/candidates-ats-utils";
 import { EmployerCandidateInterviewEditor } from "@/components/employer-candidates/EmployerCandidateInterviewEditor";
-import { EmployerCandidateNotesEditor } from "@/components/employer-candidates/EmployerCandidateNotesEditor";
 import { ResumePreview } from "@/components/job-seeker-resume/ResumePreview";
 import {
   downloadEmployerApplicationPdf,
   fetchEmployerApplication,
   updateEmployerApplicationHiring,
   updateEmployerApplicationInterview,
-  updateEmployerApplicationNotes,
   updateEmployerApplicationStatus,
 } from "@/services/employer-applications.service";
 import { savedCandidatesQueryKeys } from "@/services/saved-candidates.service";
@@ -58,7 +56,6 @@ export type CandidatesDetailTab =
   | "skills"
   | "resume"
   | "timeline"
-  | "notes"
   | "interview"
   | "offer";
 
@@ -74,13 +71,15 @@ type CandidatesDetailPanelProps = {
   allowedTabs?: readonly CandidatesDetailTab[];
 };
 
+const PANEL_DESKTOP_CLASSES =
+  "flex h-full min-h-0 w-full flex-col overflow-hidden xl:w-[24rem]";
+
 const TABS: { id: CandidatesDetailTab; label: string }[] = [
   { id: "profile", label: "Profile" },
   { id: "experience", label: "Experience" },
   { id: "skills", label: "Skills" },
   { id: "resume", label: "Resume" },
   { id: "timeline", label: "Timeline" },
-  { id: "notes", label: "Notes" },
   { id: "interview", label: "Interview" },
   { id: "offer", label: "Offer" },
 ];
@@ -322,8 +321,6 @@ export function CandidatesDetailPanel({
   const canViewExpectedSalary = canField("candidates", "expected_salary");
   const canViewLocation = canField("candidates", "location");
   const canViewDob = canField("candidates", "dob");
-  const canViewNotes = canField("candidates", "notes");
-  const canWriteNotes = canField("candidates", "notes", "write");
   const canViewOffer = canField("candidates", "offer_amount");
   const canWriteOffer = canField("candidates", "offer_amount", "write");
   const canViewInterview =
@@ -338,7 +335,6 @@ export function CandidatesDetailPanel({
           return false;
         }
         if (tab.id === "resume") return canViewResume;
-        if (tab.id === "notes") return canViewNotes;
         if (tab.id === "offer") return canViewOffer;
         if (tab.id === "interview") return canViewInterview;
         return true;
@@ -346,7 +342,6 @@ export function CandidatesDetailPanel({
     [
       allowedTabs,
       canViewResume,
-      canViewNotes,
       canViewOffer,
       canViewInterview,
     ],
@@ -412,18 +407,6 @@ export function CandidatesDetailPanel({
     onError: (error) => showAppToast(getErrorMessage(error), "error"),
   });
 
-  const notesMutation = useMutation({
-    mutationFn: (payload: {
-      notes: string;
-      employerNotesVisibleToSeeker: boolean;
-    }) => updateEmployerApplicationNotes(applicationId!, payload),
-    onSuccess: async () => {
-      showAppToast("Notes saved successfully.", "success");
-      await invalidate();
-    },
-    onError: (error) => showAppToast(getErrorMessage(error), "error"),
-  });
-
   const interviewMutation = useMutation({
     mutationFn: (payload: Parameters<
       typeof updateEmployerApplicationInterview
@@ -478,11 +461,11 @@ export function CandidatesDetailPanel({
     return (
       <aside
         className={cn(
-          "flex flex-col rounded-xl border border-border-subtle bg-surface",
-          variant === "panel" && "sticky top-20 max-h-[calc(100dvh-6rem)]",
+          "rounded-xl border border-border-subtle bg-surface",
+          variant === "panel" && PANEL_DESKTOP_CLASSES,
         )}
       >
-        <div className="flex flex-1 items-center justify-center p-8 text-center">
+        <div className="p-8 pb-9 text-center">
           <p className="text-sm text-muted">
             Select a candidate to preview their profile, resume, and hiring
             actions.
@@ -494,7 +477,12 @@ export function CandidatesDetailPanel({
 
   if (detailQuery.isLoading) {
     return (
-      <aside className="rounded-xl border border-border-subtle bg-surface p-6">
+      <aside
+        className={cn(
+          "rounded-xl border border-border-subtle bg-surface p-6",
+          variant === "panel" && PANEL_DESKTOP_CLASSES,
+        )}
+      >
         <div className="animate-pulse space-y-3">
           <div className="h-12 w-12 rounded-full bg-primary-light/50" />
           <div className="h-4 w-40 rounded bg-primary-light/40" />
@@ -507,7 +495,12 @@ export function CandidatesDetailPanel({
 
   if (detailQuery.isError || !application) {
     return (
-      <aside className="rounded-xl border border-border-subtle bg-surface p-6 text-center">
+      <aside
+        className={cn(
+          "rounded-xl border border-border-subtle bg-surface p-6 text-center",
+          variant === "panel" && PANEL_DESKTOP_CLASSES,
+        )}
+      >
         <p className="text-sm text-muted">
           {getErrorMessage(detailQuery.error ?? new Error("Not found"))}
         </p>
@@ -542,13 +535,19 @@ export function CandidatesDetailPanel({
   return (
     <aside
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface",
-        variant === "panel" &&
-          "sticky top-20 max-h-[calc(100dvh-6rem)] lg:w-[22rem] xl:w-[24rem]",
-        variant === "drawer" && "h-full w-full border-0 shadow-none",
+        "rounded-xl border border-border-subtle bg-surface",
+        variant === "panel" && PANEL_DESKTOP_CLASSES,
+        variant === "drawer" &&
+          "flex min-h-0 h-full w-full flex-col overflow-hidden border-0 shadow-none",
       )}
     >
-      <div className="relative z-20 shrink-0 border-b border-border-subtle p-4">
+      <div
+        className={cn(
+          "border-b border-border-subtle p-4",
+          "shrink-0",
+          variant === "drawer" && "relative z-20",
+        )}
+      >
         <div className="flex items-start gap-3">
           <span
             className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-surface"
@@ -704,7 +703,9 @@ export function CandidatesDetailPanel({
 
       {visibleTabs.length > 1 ? (
         <div
-          className="flex shrink-0 gap-1 overflow-x-auto border-b border-border-subtle px-2 py-2 scrollbar-hidden"
+          className={cn(
+            "flex shrink-0 gap-1 overflow-x-auto border-b border-border-subtle px-2 py-2 scrollbar-hidden",
+          )}
           role="tablist"
           aria-label="Candidate detail sections"
         >
@@ -729,7 +730,11 @@ export function CandidatesDetailPanel({
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 scrollbar-hidden">
+      <div
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-5 scrollbar-hidden",
+        )}
+      >
         {activeTab === "profile" ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             <ProfileField label="Name" value={application.candidate.fullName} />
@@ -948,16 +953,6 @@ export function CandidatesDetailPanel({
               })
             )}
           </ol>
-        ) : null}
-
-        {activeTab === "notes" ? (
-          <EmployerCandidateNotesEditor
-            application={application}
-            isSaving={notesMutation.isPending}
-            compact
-            canWrite={canWriteNotes && canUpdateCandidates}
-            onSave={(payload) => notesMutation.mutate(payload)}
-          />
         ) : null}
 
         {activeTab === "interview" ? (

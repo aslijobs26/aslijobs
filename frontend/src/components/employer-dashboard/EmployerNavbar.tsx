@@ -1,7 +1,6 @@
 "use client";
 
 import { EmployerProfileMenu } from "@/components/employer-dashboard/EmployerProfileMenu";
-import { EmployerSearchBar } from "@/components/employer-dashboard/EmployerSearchBar";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Can } from "@/components/rbac/Can";
 import {
@@ -37,10 +36,6 @@ export function EmployerNavbar({
       >
         <Menu className="size-5" strokeWidth={2} aria-hidden="true" />
       </button>
-
-      <div className="hidden min-w-0 flex-1 justify-center md:flex">
-        <EmployerSearchBar />
-      </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
         <Can module="jobs" action="create">

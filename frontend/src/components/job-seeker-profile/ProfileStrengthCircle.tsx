@@ -44,8 +44,7 @@ export function ProfileStrengthCircle({
     <div
       className={cn(
         "relative inline-flex shrink-0 items-center justify-center rounded-full",
-        isSoft &&
-          "bg-surface shadow-[0_2px_10px_rgba(26,43,60,0.1)] ring-[3px] ring-primary/12",
+        isSoft && "bg-surface",
         className,
       )}
       style={{ width: size, height: size }}

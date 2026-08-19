@@ -5,7 +5,6 @@ import {
   EMPLOYER_JOBS_NEED_HELP_CTA,
   EMPLOYER_JOBS_NEED_HELP_DESCRIPTION,
   EMPLOYER_JOBS_NEED_HELP_TITLE,
-  EMPLOYER_JOBS_QUICK_ACTION_IMPORT,
   EMPLOYER_JOBS_QUICK_ACTION_POST,
   EMPLOYER_JOBS_QUICK_ACTION_TEMPLATES,
   EMPLOYER_JOBS_QUICK_ACTION_WHATSAPP,
@@ -51,11 +50,11 @@ export function EmployerJobsQuickActions() {
               </Link>
             </li>
           </Can>
-          <li>
+          {/* <li>
             <DisabledQuickAction icon={<Upload className="size-4" />}>
               {EMPLOYER_JOBS_QUICK_ACTION_IMPORT}
             </DisabledQuickAction>
-          </li>
+          </li> */}
           <li>
             <DisabledQuickAction icon={<FileStack className="size-4" />}>
               {EMPLOYER_JOBS_QUICK_ACTION_TEMPLATES}

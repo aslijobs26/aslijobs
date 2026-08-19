@@ -1,3 +1,4 @@
+import { HeroEmployerPostJobLink } from "@/components/home/hero/HeroEmployerPostJobLink";
 import type { HiringSolution, HiringSolutionVariant } from "@/types/hiring-solutions";
 import { cn } from "@/utils/cn";
 import {
@@ -78,6 +79,10 @@ type HiringSolutionCardProps = {
 
 export function HiringSolutionCard({ solution }: HiringSolutionCardProps) {
   const theme = themeStyles[solution.id];
+  const actionClassName = cn(
+    "inline-flex h-11 min-h-11 w-full items-center justify-center rounded-xl border-2 bg-surface px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2",
+    theme.button,
+  );
 
   return (
     <article
@@ -113,15 +118,15 @@ export function HiringSolutionCard({ solution }: HiringSolutionCardProps) {
         ))}
       </ul>
 
-      <Link
-        href={solution.href}
-        className={cn(
-          "inline-flex h-11 min-h-11 w-full items-center justify-center rounded-xl border-2 bg-surface px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2",
-          theme.button,
-        )}
-      >
-        {solution.actionLabel}
-      </Link>
+      {solution.id === "free-job-post" ? (
+        <HeroEmployerPostJobLink className={actionClassName}>
+          {solution.actionLabel}
+        </HeroEmployerPostJobLink>
+      ) : (
+        <Link href={solution.href} className={actionClassName}>
+          {solution.actionLabel}
+        </Link>
+      )}
     </article>
   );
 }

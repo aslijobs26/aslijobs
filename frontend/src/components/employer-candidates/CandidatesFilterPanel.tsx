@@ -2,6 +2,7 @@
 
 import { CandidatesLocationAutocomplete } from "@/components/employer-candidates/CandidatesLocationAutocomplete";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
+import { PostJobDatePicker } from "@/components/post-job/PostJobDatePicker";
 import { POST_JOB_EXPERIENCE_OPTIONS } from "@/constants/post-job";
 import { useCan } from "@/providers/employer-permission-provider";
 import {
@@ -14,7 +15,7 @@ import {
 } from "@/types/employer-applications";
 import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
-import { Search } from "lucide-react";
+import { Filter, Search } from "lucide-react";
 import { useMemo, type RefObject } from "react";
 
 export type CandidatesQuickFilter =
@@ -76,10 +77,15 @@ const QUICK_FILTERS: {
     label: EMPLOYER_APPLICATION_STATUS_LABELS.offer_sent,
     statsKey: "offer_sent",
   },
-  { key: "joined", label: "Joined", statsKey: "joined" },
+  { key: "joined", label: "Hired", statsKey: "joined" },
   { key: "rejected", label: "Rejected", statsKey: "rejected" },
   { key: "withdrawn", label: "Withdrawn", statsKey: "withdrawn" },
 ];
+
+function getLocalTodayIso() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+}
 
 export function CandidatesFilterPanel({
   stats,
@@ -134,11 +140,15 @@ export function CandidatesFilterPanel({
       })),
     [],
   );
+  const todayIso = useMemo(() => getLocalTodayIso(), []);
+  const appliedFromMaxDate = appliedTo.trim() || todayIso;
 
   return (
     <aside
       className={cn(
         "rounded-xl border border-border-subtle bg-surface p-3 sm:p-4",
+        !isSheet &&
+          "lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:overflow-y-auto lg:overscroll-contain lg:scrollbar-hidden",
         className,
       )}
     >
@@ -182,44 +192,47 @@ export function CandidatesFilterPanel({
       </div>
 
       <div className="mt-5 border-t border-border-subtle pt-4">
-      <h2 className="text-sm font-bold text-foreground">Quick Filters</h2>
-      <ul className="mt-3 flex flex-col gap-1" role="listbox" aria-label="Status filters">
-        {QUICK_FILTERS.map((item) => {
-          const count =
-            item.statsKey && stats ? stats[item.statsKey] : undefined;
-          const isActive = activeFilter === item.key;
+        <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
+          <Filter className="h-4 w-4 text-primary-soft" />
+          Quick Filters
+        </h2>
+        <ul className="mt-3 flex flex-col gap-1" role="listbox" aria-label="Status filters">
+          {QUICK_FILTERS.map((item) => {
+            const count =
+              item.statsKey && stats ? stats[item.statsKey] : undefined;
+            const isActive = activeFilter === item.key;
 
-          return (
-            <li key={item.key}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={isActive}
-                onClick={() => onFilterChange(item.key)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                  isSheet ? "min-h-11 py-2.5" : "py-2",
-                  isActive
-                    ? "bg-primary-soft text-surface"
-                    : "text-foreground hover:bg-primary-light",
-                )}
-              >
-                <span className="min-w-0 truncate">{item.label}</span>
-                <span
+            return (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={isActive}
+                  onClick={() => onFilterChange(item.key)}
                   className={cn(
-                    "inline-flex min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
+                    "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                    isSheet ? "min-h-11 py-2.5" : "py-2",
                     isActive
-                      ? "bg-surface/20 text-surface"
-                      : "bg-primary-light text-muted",
+                      ? "bg-primary-soft text-surface"
+                      : "text-foreground hover:bg-primary-light",
                   )}
                 >
-                  {typeof count === "number" ? count : "—"}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                  <span className="min-w-0 truncate">{item.label}</span>
+                  <span
+                    className={cn(
+                      "inline-flex min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
+                      isActive
+                        ? "bg-surface/20 text-surface"
+                        : "bg-primary-light text-muted",
+                    )}
+                  >
+                    {typeof count === "number" ? count : "—"}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
       <div className="mt-5 border-t border-border-subtle pt-4">
@@ -298,30 +311,40 @@ export function CandidatesFilterPanel({
               />
             </div>
           </label>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="block">
+          <div
+            className={cn(
+              "grid gap-2",
+              isSheet ? "grid-cols-2" : "grid-cols-1",
+            )}
+          >
+            <label className="block" htmlFor={`${idPrefix}candidates-applied-from`}>
               <span className="text-xs font-medium text-muted">Applied from</span>
-              <input
-                type="date"
-                value={appliedFrom}
-                onChange={(event) => onAppliedFromChange(event.target.value)}
-                className={cn(
-                  "mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                  isSheet && "min-h-11",
-                )}
-              />
+              <div className={cn("mt-1", isSheet && "min-h-11")}>
+                <PostJobDatePicker
+                  id={`${idPrefix}candidates-applied-from`}
+                  value={appliedFrom}
+                  placeholder="From date"
+                  maxDate={appliedFromMaxDate}
+                  compact
+                  aria-label="Applied from"
+                  onChange={onAppliedFromChange}
+                />
+              </div>
             </label>
-            <label className="block">
+            <label className="block" htmlFor={`${idPrefix}candidates-applied-to`}>
               <span className="text-xs font-medium text-muted">Applied to</span>
-              <input
-                type="date"
-                value={appliedTo}
-                onChange={(event) => onAppliedToChange(event.target.value)}
-                className={cn(
-                  "mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                  isSheet && "min-h-11",
-                )}
-              />
+              <div className={cn("mt-1", isSheet && "min-h-11")}>
+                <PostJobDatePicker
+                  id={`${idPrefix}candidates-applied-to`}
+                  value={appliedTo}
+                  placeholder="To date"
+                  minDate={appliedFrom.trim() || undefined}
+                  maxDate={todayIso}
+                  compact
+                  aria-label="Applied to"
+                  onChange={onAppliedToChange}
+                />
+              </div>
             </label>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { ROUTES } from "@/constants/routes";
 import { useJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
 import { cn } from "@/utils/cn";
-import { clearJobSeekerAuthSession } from "@/utils/job-seeker-auth-storage";
+import { clearJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { getInitials } from "@/utils/job-seeker-profile";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import {
@@ -15,6 +15,7 @@ import {
   LogOut,
   UserRound,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -36,6 +37,7 @@ export function JobSeekerProfileMenu({
   onLogout,
 }: JobSeekerProfileMenuProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -79,10 +81,11 @@ export function JobSeekerProfileMenu({
   }, [isOpen]);
 
   const handleLogout = () => {
-    clearJobSeekerAuthSession();
-    setIsOpen(false);
-    onLogout?.();
-    router.replace(ROUTES.HOME);
+    void clearJobSeekerClientSession(queryClient).finally(() => {
+      setIsOpen(false);
+      onLogout?.();
+      router.replace(ROUTES.HOME);
+    });
   };
 
   const handleTriggerKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {

@@ -9,12 +9,14 @@ import { ROUTES } from "@/constants/routes";
 import {
   EMPLOYER_ACCESS_TOKEN_STORAGE_KEY,
   EMPLOYER_AUTH_CHANGE_EVENT,
-  getEmployerAccessToken,
 } from "@/utils/employer-auth-storage";
+import {
+  isEmployerAuthActive,
+  isJobSeekerAuthActive,
+} from "@/utils/auth-realm";
 import {
   JOB_SEEKER_ACCESS_TOKEN_STORAGE_KEY,
   JOB_SEEKER_AUTH_CHANGE_EVENT,
-  getJobSeekerAccessToken,
 } from "@/utils/job-seeker-auth-storage";
 import Image from "next/image";
 import Link from "next/link";
@@ -28,8 +30,8 @@ export function Navbar() {
     useState(false);
 
   const syncAuthState = () => {
-    setIsEmployerAuthenticated(Boolean(getEmployerAccessToken()));
-    setIsJobSeekerAuthenticated(Boolean(getJobSeekerAccessToken()));
+    setIsEmployerAuthenticated(isEmployerAuthActive());
+    setIsJobSeekerAuthenticated(isJobSeekerAuthActive());
   };
 
   useEffect(() => {
