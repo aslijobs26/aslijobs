@@ -1,1 +1,115 @@
 @import "tailwindcss";
+
+:root,
+html[data-theme="light"] {
+  --ds-primary: #0e8585;
+  --ds-primary-hover: #0b6f6f;
+  --ds-primary-soft: #00baa5;
+  --ds-primary-soft-hover: #00a896;
+  --ds-primary-light: #e8f5f5;
+  --ds-brand-accent: #ffd54f;
+  --ds-whatsapp: #25d366;
+  --ds-nav: #2d2d2d;
+  --ds-foreground: #1a2b3c;
+  --ds-muted: #5a6570;
+  --ds-hero-bg: #f4f7f8;
+  --ds-surface: #ffffff;
+  --ds-border: #e5e7eb;
+  --ds-border-subtle: #eef1f3;
+  --ds-success: #16a34a;
+  --ds-warning: #ea580c;
+  --ds-danger: #dc2626;
+  --ds-pin-state: #e53935;
+  --ds-chart-accent: #2563eb;
+  --ds-chart-accent-alt: #7c3aed;
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --ds-primary: #14a3a3;
+  --ds-primary-hover: #1bb8b8;
+  --ds-primary-soft: #00baa5;
+  --ds-primary-soft-hover: #00d4bc;
+  --ds-primary-light: color-mix(in srgb, var(--ds-primary) 16%, transparent);
+  --ds-brand-accent: #ffd54f;
+  --ds-whatsapp: #25d366;
+  --ds-nav: #c5d0db;
+  --ds-foreground: #e8eef3;
+  --ds-muted: #8b9aab;
+  --ds-hero-bg: #0b1017;
+  --ds-surface: #141c26;
+  --ds-border: #2a3644;
+  --ds-border-subtle: #1e2834;
+  --ds-success: #22c55e;
+  --ds-warning: #f97316;
+  --ds-danger: #ef4444;
+  --ds-pin-state: #ef4444;
+  --ds-chart-accent: #3b82f6;
+  --ds-chart-accent-alt: #8b5cf6;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-primary: var(--ds-primary);
+  --color-primary-hover: var(--ds-primary-hover);
+  --color-primary-soft: var(--ds-primary-soft);
+  --color-primary-soft-hover: var(--ds-primary-soft-hover);
+  --color-primary-light: var(--ds-primary-light);
+  --color-brand-accent: var(--ds-brand-accent);
+  --color-whatsapp: var(--ds-whatsapp);
+  --color-nav: var(--ds-nav);
+  --color-foreground: var(--ds-foreground);
+  --color-muted: var(--ds-muted);
+  --color-hero-bg: var(--ds-hero-bg);
+  --color-surface: var(--ds-surface);
+  --color-border: var(--ds-border);
+  --color-border-subtle: var(--ds-border-subtle);
+  --color-success: var(--ds-success);
+  --color-warning: var(--ds-warning);
+  --color-danger: var(--ds-danger);
+  --color-pin-state: var(--ds-pin-state);
+  --color-chart-accent: var(--ds-chart-accent);
+  --color-chart-accent-alt: var(--ds-chart-accent-alt);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-theme-transition] *,
+  html[data-theme-transition] *::before,
+  html[data-theme-transition] *::after {
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      color 0.25s ease,
+      fill 0.25s ease,
+      stroke 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--ds-hero-bg);
+  color: var(--ds-foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+@utility scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}

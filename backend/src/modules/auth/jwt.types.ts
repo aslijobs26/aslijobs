@@ -19,6 +19,13 @@ export type JobSeekerJwtPayload = {
   whatsappNumber: string;
 };
 
+export type OperationsTeamJwtPayload = {
+  sub: string;
+  role: "operations_team";
+  teamRole: string;
+  mobileNumber: string;
+};
+
 export type IssuedTokenPair = {
   accessToken: string;
   refreshToken: string;

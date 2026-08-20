@@ -6,6 +6,7 @@ import type {
   EmployerJwtPayload,
   IssuedTokenPair,
   JobSeekerJwtPayload,
+  OperationsTeamJwtPayload,
   TeamMemberJwtPayload,
   WorkspaceJwtPayload,
 } from "./jwt.types.js";
@@ -253,6 +254,87 @@ export class JwtService {
       }
 
       if (decoded.role !== "job_seeker" || !decoded.sub) {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
+      return decoded;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+  }
+
+  issueOperationsTeamTokens(
+    payload: Omit<OperationsTeamJwtPayload, "role">,
+  ): IssuedTokenPair {
+    const accessTokenExpiresAt = new Date(
+      Date.now() + parseDurationToMs(env.JWT_ACCESS_EXPIRES_IN),
+    );
+    const refreshTokenExpiresAt = new Date(
+      Date.now() + parseDurationToMs(env.JWT_REFRESH_EXPIRES_IN),
+    );
+
+    const tokenPayload: OperationsTeamJwtPayload = {
+      ...payload,
+      role: "operations_team",
+    };
+
+    const accessToken = jwt.sign(tokenPayload, env.JWT_ACCESS_SECRET, {
+      expiresIn: env.JWT_ACCESS_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+    });
+
+    const refreshToken = jwt.sign(
+      { ...tokenPayload, typ: "refresh" },
+      env.JWT_REFRESH_SECRET,
+      {
+        expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+      },
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      accessTokenExpiresAt,
+      refreshTokenExpiresAt,
+    };
+  }
+
+  verifyOperationsTeamAccessToken(token: string): OperationsTeamJwtPayload {
+    try {
+      const decoded = jwt.verify(
+        token,
+        env.JWT_ACCESS_SECRET,
+      ) as OperationsTeamJwtPayload;
+
+      if (decoded.role !== "operations_team" || !decoded.sub) {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
+      return decoded;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+  }
+
+  verifyOperationsTeamRefreshToken(token: string): OperationsTeamJwtPayload {
+    try {
+      const decoded = jwt.verify(
+        token,
+        env.JWT_REFRESH_SECRET,
+      ) as OperationsTeamJwtPayload & { typ?: string };
+
+      if (decoded.typ !== "refresh") {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
+      if (decoded.role !== "operations_team" || !decoded.sub) {
         throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
       }
 
