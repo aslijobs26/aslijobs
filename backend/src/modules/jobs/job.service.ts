@@ -1127,6 +1127,10 @@ export class JobService {
       contactEmail: input.contactEmail,
       contactMobile: input.contactMobile,
       status: input.status,
+      listingPaymentStatus: input.status === "draft" ? "pending" : "paid",
+      listingPackageLabel: "",
+      listingValidUntil: null,
+      isFeatured: false,
       completedStep: input.status === "draft" ? 1 : 3,
       lastEditedAt: new Date(),
       wizardSnapshot: null,
@@ -1602,6 +1606,10 @@ export class JobService {
       companyId: employerObjectId,
       ...denormalized,
       status: "draft",
+      listingPaymentStatus: "pending",
+      listingPackageLabel: "",
+      listingValidUntil: null,
+      isFeatured: false,
       completedStep: input.completedStep,
       lastEditedAt: now,
       wizardSnapshot: input.wizardSnapshot,
@@ -1663,6 +1671,12 @@ export class JobService {
     applyCreateInputToJob(job, input);
     const now = new Date();
     job.status = "active";
+    if (
+      job.listingPaymentStatus === "pending" ||
+      job.listingPaymentStatus === "unpaid"
+    ) {
+      job.listingPaymentStatus = "paid";
+    }
     job.completedStep = 3;
     job.lastEditedAt = now;
     job.wizardSnapshot = null;

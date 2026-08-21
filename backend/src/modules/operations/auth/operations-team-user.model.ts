@@ -19,6 +19,15 @@ const operationsTeamUserSchema = new Schema(
       index: true,
       match: /^\d{10}$/,
     },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      unique: true,
+      sparse: true,
+      index: true,
+      default: null,
+    },
     passwordHash: {
       type: String,
       required: true,

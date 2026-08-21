@@ -212,6 +212,7 @@ export const OPERATIONS_DASHBOARD_MOCK: OperationsDashboardData = {
       value: "12,842",
       trendLabel: "+6.2% vs last month",
       trendDirection: "up",
+      accentTone: "primary",
     },
     {
       id: "snap-2",
@@ -219,6 +220,7 @@ export const OPERATIONS_DASHBOARD_MOCK: OperationsDashboardData = {
       value: "2,48,531",
       trendLabel: "+11.4% vs last month",
       trendDirection: "up",
+      accentTone: "teal",
     },
     {
       id: "snap-3",
@@ -226,6 +228,7 @@ export const OPERATIONS_DASHBOARD_MOCK: OperationsDashboardData = {
       value: "8,915",
       trendLabel: "+4.8% vs last month",
       trendDirection: "up",
+      accentTone: "warning",
     },
     {
       id: "snap-4",
@@ -233,6 +236,7 @@ export const OPERATIONS_DASHBOARD_MOCK: OperationsDashboardData = {
       value: "1,86,542",
       trendLabel: "+9.1% vs last month",
       trendDirection: "up",
+      accentTone: "violet",
     },
     {
       id: "snap-5",
@@ -240,6 +244,7 @@ export const OPERATIONS_DASHBOARD_MOCK: OperationsDashboardData = {
       value: "24,318",
       trendLabel: "+7.3% vs last month",
       trendDirection: "up",
+      accentTone: "whatsapp",
     },
     {
       id: "snap-6",
@@ -247,6 +252,7 @@ export const OPERATIONS_DASHBOARD_MOCK: OperationsDashboardData = {
       value: "5,842",
       trendLabel: "+5.6% vs last month",
       trendDirection: "up",
+      accentTone: "success",
     },
   ],
 };

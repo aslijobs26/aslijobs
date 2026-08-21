@@ -18,10 +18,10 @@ export function OperationsDashboardPage() {
       title="Operations Dashboard"
       subtitle="Real-time overview of hiring operations."
     >
-      <div className="flex w-full min-w-0 flex-col gap-3 sm:gap-4">
+      <div className="flex w-full min-w-0 flex-col gap-2 sm:gap-2.5">
         <OperationsKpiStrip metrics={data.kpis} />
 
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:gap-4">
+        <div className="grid grid-cols-1 gap-2 xl:grid-cols-12 xl:gap-2.5">
           <div className="min-w-0 xl:col-span-6">
             <PriorityQueueSection items={data.priorityQueue} />
           </div>
@@ -37,7 +37,7 @@ export function OperationsDashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 xl:gap-4">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4 xl:gap-2.5">
           <JourneyAlertsSection alerts={data.journeyAlerts} />
           <WhatsAppActivitySection metrics={data.whatsappActivity} />
           <TeamWorkloadSection members={data.teamWorkload} />

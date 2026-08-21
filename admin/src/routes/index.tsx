@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { OperationsAuthGuard } from "../components/operations/auth/OperationsAuthGuard";
 import { OPERATIONS_ROUTES } from "../constants/operations-routes";
 import { OperationsDashboardPage } from "./operations-dashboard-page";
+import { OperationsJobsPage } from "./operations-jobs-page";
+import { OperationsJobsPostPage } from "./operations-jobs-post-page";
 import { OperationsLoginPage } from "./operations-login-page";
 import { OperationsPlaceholderPage } from "./operations-placeholder-page";
 
@@ -56,7 +58,11 @@ export function AppRoutes() {
       />
       <Route
         path={OPERATIONS_ROUTES.JOBS}
-        element={protectedRoute(<OperationsPlaceholderPage title="Jobs" />)}
+        element={protectedRoute(<OperationsJobsPage />)}
+      />
+      <Route
+        path={OPERATIONS_ROUTES.JOBS_POST}
+        element={protectedRoute(<OperationsJobsPostPage />)}
       />
       <Route
         path={OPERATIONS_ROUTES.VERIFICATIONS}

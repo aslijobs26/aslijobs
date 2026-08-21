@@ -10,6 +10,7 @@ export const OPERATIONS_ROUTES = {
   EMPLOYERS: "/operations/employers",
   CANDIDATES: "/operations/candidates",
   JOBS: "/operations/jobs",
+  JOBS_POST: "/operations/jobs/post",
   VERIFICATIONS: "/operations/verifications",
   ESCALATIONS: "/operations/escalations",
   TEAM_MANAGEMENT: "/operations/team",

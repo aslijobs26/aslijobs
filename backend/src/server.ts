@@ -52,6 +52,10 @@ async function shutdown(signal: string): Promise<void> {
 
 async function startServer(): Promise<void> {
   await connectDB();
+  const { ensureDefaultOperationsAdmin } = await import(
+    "./modules/operations/auth/ensure-default-operations-admin.js"
+  );
+  await ensureDefaultOperationsAdmin();
   logEmailConfigurationStatus();
   stopNotificationRetention = startNotificationRetentionScheduler();
 

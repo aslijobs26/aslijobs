@@ -1,0 +1,36 @@
+/**
+ * Page-scoped compact density for the Operations Dashboard.
+ * Targets ~80% of the default scale so the UI matches the reference at 100% zoom.
+ * Does not use CSS zoom/transform — only typography, spacing, and control sizing.
+ */
+
+.operations-dashboard-density {
+  --operations-density-radius: 0.625rem;
+  --operations-density-gap: 0.5rem;
+}
+
+.operations-dashboard-density .operations-density-card {
+  border-radius: var(--operations-density-radius);
+}
+
+.operations-dashboard-density .operations-density-card > header {
+  padding: 0.5rem 0.75rem;
+}
+
+.operations-dashboard-density .operations-density-card > header h2 {
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+.operations-dashboard-density .operations-density-card > header p {
+  font-size: 0.625rem;
+  line-height: 1.3;
+}
+
+.operations-dashboard-density .operations-density-card > div:last-child {
+  padding: 0.625rem 0.75rem;
+}
+
+.operations-dashboard-density .operations-density-card-flush > div:last-child {
+  padding: 0;
+}

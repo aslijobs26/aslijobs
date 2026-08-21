@@ -4,6 +4,7 @@ import {
   JOB_EXPERIENCE_LEVELS,
   JOB_GENDERS,
   JOB_LANGUAGES,
+  JOB_LISTING_PAYMENT_STATUSES,
   JOB_PERKS,
   JOB_STATUSES,
   JOB_TYPES,
@@ -269,6 +270,33 @@ const jobSchema = new Schema(
       enum: JOB_STATUSES,
       required: true,
       default: "active",
+      index: true,
+    },
+    /**
+     * Listing package payment state for employer paid job posts.
+     * Source of truth for Operations payment filters/KPIs.
+     */
+    listingPaymentStatus: {
+      type: String,
+      enum: JOB_LISTING_PAYMENT_STATUSES,
+      required: true,
+      default: "paid",
+      index: true,
+    },
+    listingPackageLabel: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    listingValidUntil: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    isFeatured: {
+      type: Boolean,
+      required: true,
+      default: false,
       index: true,
     },
     completedStep: {

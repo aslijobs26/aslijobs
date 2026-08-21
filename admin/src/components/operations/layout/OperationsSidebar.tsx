@@ -1,7 +1,7 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronsLeft, LogOut } from "lucide-react";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import {
   MOCK_OPERATIONS_USER,
   OPERATIONS_BRAND,
@@ -9,20 +9,23 @@ import {
 } from "../../../constants/operations-navigation";
 import {
   OPERATIONS_SIDEBAR_COLLAPSED_WIDTH,
+  OPERATIONS_SIDEBAR_COLLAPSED_WIDTH_COMPACT,
   OPERATIONS_SIDEBAR_WIDTH,
+  OPERATIONS_SIDEBAR_WIDTH_COMPACT,
+  type OperationsLayoutDensity,
 } from "../../../constants/operations-layout";
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
 import { logoutOperationsTeam } from "../../../services/operations-auth.service";
 import { getOperationsAuthUser } from "../../../utils/operations-auth-storage";
 import { cn } from "../../../utils/cn";
 import { clearOperationsClientSession } from "../../../utils/operations-session";
-import type { CSSProperties } from "react";
 
 interface OperationsSidebarProps {
   collapsed: boolean;
   onCollapseToggle: () => void;
   mobileOpen: boolean;
   onMobileClose: () => void;
+  density?: OperationsLayoutDensity;
 }
 
 function isNavItemActive(pathname: string, href: string) {
@@ -47,11 +50,19 @@ export function OperationsSidebar({
   onCollapseToggle,
   mobileOpen,
   onMobileClose,
+  density = "compact",
 }: OperationsSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const isCompact = density === "compact";
+  const sidebarWidth = isCompact
+    ? OPERATIONS_SIDEBAR_WIDTH_COMPACT
+    : OPERATIONS_SIDEBAR_WIDTH;
+  const sidebarCollapsedWidth = isCompact
+    ? OPERATIONS_SIDEBAR_COLLAPSED_WIDTH_COMPACT
+    : OPERATIONS_SIDEBAR_COLLAPSED_WIDTH;
   const sessionUser = getOperationsAuthUser();
   const displayName = sessionUser?.fullName ?? MOCK_OPERATIONS_USER.name;
   const displayRole = sessionUser?.role ?? MOCK_OPERATIONS_USER.role;
@@ -88,68 +99,124 @@ export function OperationsSidebar({
         aria-label="Operations navigation"
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex h-dvh flex-col border-r border-border-subtle bg-surface transition-[width,transform] duration-200 ease-out",
+          "w-[min(18rem,calc(100vw-2.5rem))]",
           collapsed
             ? "lg:w-[var(--operations-sidebar-collapsed-width)]"
             : "lg:w-[var(--operations-sidebar-width)]",
-          "w-[var(--operations-sidebar-width)]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
         style={
           {
-            "--operations-sidebar-width": OPERATIONS_SIDEBAR_WIDTH,
-            "--operations-sidebar-collapsed-width":
-              OPERATIONS_SIDEBAR_COLLAPSED_WIDTH,
+            "--operations-sidebar-width": sidebarWidth,
+            "--operations-sidebar-collapsed-width": sidebarCollapsedWidth,
           } as CSSProperties
         }
       >
+        {/* Brand */}
         <div
           className={cn(
-            "flex shrink-0 flex-col border-b border-border-subtle",
-            collapsed ? "items-center px-2 py-4" : "px-4 py-4",
+            "flex shrink-0 items-center border-b border-border-subtle",
+            collapsed
+              ? isCompact
+                ? "justify-center px-1.5 py-2.5"
+                : "justify-center px-2 py-3.5"
+              : isCompact
+                ? "gap-2 px-3 py-2.5"
+                : "gap-2 px-3.5 py-3.5",
           )}
         >
           <div
             className={cn(
+              "min-w-0",
               collapsed
                 ? "inline-flex items-center justify-center"
-                : "inline-flex flex-col items-start gap-0.5",
+                : "inline-flex flex-1 flex-col items-start gap-0.5",
             )}
           >
             {collapsed ? (
               <img
                 src="/asli-logo-icon.svg"
                 alt="AsliJobs"
-                className="size-9 object-contain"
+                className={cn("object-contain", isCompact ? "size-7" : "size-8")}
               />
             ) : (
               <>
                 <img
                   src="/AsliLogo.svg"
                   alt="AsliJobs"
-                  className="block h-9 w-auto max-w-full object-contain object-left"
+                  className={cn(
+                    "block w-auto max-w-full object-contain object-left",
+                    isCompact ? "h-[1.625rem]" : "h-8",
+                  )}
                 />
-                <span className="whitespace-nowrap text-[10px] font-medium leading-tight text-primary-soft">
+                <span
+                  className={cn(
+                    "whitespace-nowrap font-medium leading-tight text-primary-soft",
+                    isCompact ? "text-[9px]" : "text-[10px]",
+                  )}
+                >
                   {OPERATIONS_BRAND.tagline}
                 </span>
               </>
             )}
           </div>
+
+          {!collapsed ? (
+            <button
+              type="button"
+              onClick={onCollapseToggle}
+              className={cn(
+                "hidden shrink-0 items-center justify-center rounded-md text-muted transition-colors",
+                "hover:bg-hero-bg hover:text-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                "lg:inline-flex",
+                isCompact ? "size-7" : "size-8",
+              )}
+              aria-label="Collapse sidebar"
+            >
+              <ChevronsLeft
+                className={cn(isCompact ? "size-3.5" : "size-4")}
+                strokeWidth={2}
+                aria-hidden="true"
+              />
+            </button>
+          ) : null}
         </div>
 
+        {/* Navigation */}
         <nav
           className={cn(
-            "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain py-3 scrollbar-hidden",
-            collapsed ? "px-2" : "px-3",
+            "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-hidden",
+            isCompact ? "px-2 py-2.5" : "px-2.5 py-3",
+            collapsed && (isCompact ? "px-1.5" : "px-2"),
           )}
+          aria-label="Primary"
         >
-          {OPERATIONS_NAV_SECTIONS.map((section) => (
-            <div key={section.id} className="mb-4 last:mb-0">
-              {!collapsed && (
-                <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
+          {OPERATIONS_NAV_SECTIONS.map((section, sectionIndex) => (
+            <div
+              key={section.id}
+              className={cn(
+                sectionIndex > 0 && "mt-3 border-t border-border-subtle/80 pt-3",
+                isCompact ? "mb-1" : "mb-1.5",
+              )}
+            >
+              {!collapsed ? (
+                <p
+                  className={cn(
+                    "mb-1.5 px-2.5 font-semibold uppercase tracking-[0.08em] text-muted/80",
+                    isCompact ? "text-[9px]" : "text-[10px]",
+                  )}
+                >
                   {section.label}
                 </p>
-              )}
-              <ul className="flex flex-col gap-1">
+              ) : sectionIndex > 0 ? (
+                <div
+                  className="mx-auto mb-1.5 h-px w-5 bg-border-subtle"
+                  aria-hidden="true"
+                />
+              ) : null}
+
+              <ul className={cn("flex flex-col", isCompact ? "gap-0.5" : "gap-1")}>
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const active = isNavItemActive(location.pathname, item.href);
@@ -163,43 +230,70 @@ export function OperationsSidebar({
                         title={collapsed ? item.label : undefined}
                         aria-current={active ? "page" : undefined}
                         className={cn(
-                          "group relative flex items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                          collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
+                          "group relative flex items-center rounded-md font-medium transition-colors",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                          isCompact ? "text-[12px]" : "text-sm",
+                          collapsed
+                            ? isCompact
+                              ? "justify-center px-1.5 py-1.5"
+                              : "justify-center px-2 py-2"
+                            : isCompact
+                              ? "gap-2 px-2 py-1.5"
+                              : "gap-2.5 px-2.5 py-2",
                           active
-                            ? "bg-primary-soft text-surface"
-                            : "text-nav hover:bg-primary-light hover:text-foreground",
+                            ? "bg-primary-light text-primary"
+                            : "text-nav hover:bg-hero-bg hover:text-foreground",
                         )}
                       >
-                        <Icon
+                        {active && !collapsed ? (
+                          <span
+                            className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-primary-soft"
+                            aria-hidden="true"
+                          />
+                        ) : null}
+
+                        <span
                           className={cn(
-                            "size-[1.125rem] shrink-0",
+                            "inline-flex shrink-0 items-center justify-center rounded-md transition-colors",
+                            isCompact ? "size-6" : "size-7",
                             active
-                              ? "text-surface"
+                              ? "bg-primary-soft/15 text-primary-soft"
                               : "text-muted group-hover:text-foreground",
                           )}
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        />
-                        {!collapsed && (
+                        >
+                          <Icon
+                            className={cn(isCompact ? "size-3.5" : "size-4")}
+                            strokeWidth={2}
+                            aria-hidden="true"
+                          />
+                        </span>
+
+                        {!collapsed ? (
                           <>
-                            <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                            {item.badge !== undefined && (
+                            <span className="min-w-0 flex-1 truncate leading-tight">
+                              {item.label}
+                            </span>
+                            {item.badge !== undefined ? (
                               <span
                                 className={cn(
-                                  "inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none tabular-nums",
+                                  "inline-flex shrink-0 items-center justify-center rounded-full font-semibold leading-none tabular-nums",
+                                  isCompact
+                                    ? "h-4 min-w-4 px-1 text-[9px]"
+                                    : "h-5 min-w-5 px-1 text-[10px]",
                                   active
-                                    ? "bg-surface text-primary-soft"
+                                    ? "bg-primary-soft/15 text-primary-soft"
                                     : "bg-primary-soft text-surface",
                                 )}
                               >
                                 {item.badge > 99 ? "99+" : item.badge}
                               </span>
-                            )}
+                            ) : null}
                           </>
-                        )}
+                        ) : null}
+
                         {collapsed && item.badge !== undefined ? (
                           <span
-                            className="absolute right-1 top-1 size-2 rounded-full bg-primary-soft"
+                            className="absolute right-1 top-1 size-1.5 rounded-full bg-primary-soft"
                             aria-hidden="true"
                           />
                         ) : null}
@@ -212,62 +306,139 @@ export function OperationsSidebar({
           ))}
         </nav>
 
+        {/* Footer */}
         <div
           className={cn(
             "mt-auto shrink-0 border-t border-border-subtle",
-            collapsed ? "p-2" : "p-3",
+            collapsed
+              ? isCompact
+                ? "p-1.5"
+                : "p-2"
+              : isCompact
+                ? "p-2"
+                : "p-2.5",
           )}
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-xl bg-hero-bg",
-              collapsed ? "justify-center p-2" : "p-3",
+              "rounded-xl border border-border-subtle/80 bg-hero-bg/70",
+              collapsed
+                ? isCompact
+                  ? "flex flex-col items-center gap-1 p-1.5"
+                  : "flex flex-col items-center gap-1.5 p-2"
+                : isCompact
+                  ? "p-2"
+                  : "p-2.5",
             )}
           >
-            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-light text-xs font-semibold text-primary">
-              {displayInitials}
-            </span>
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {displayName}
-                </p>
-                <p className="truncate text-xs text-muted">{displayRole}</p>
-                <p className="mt-0.5 flex items-center gap-1 text-[11px] text-success">
-                  <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
-                  {MOCK_OPERATIONS_USER.status}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-2 flex flex-col gap-1">
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
+            <div
               className={cn(
-                "inline-flex w-full items-center justify-center gap-2 rounded-lg p-2 text-sm font-medium text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60",
-                collapsed ? "px-2" : "px-3",
+                "flex items-center",
+                collapsed ? "justify-center" : "gap-2",
               )}
-              aria-label="Log out"
             >
-              <LogOut className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
-              {!collapsed ? (isLoggingOut ? "Signing out..." : "Log out") : null}
-            </button>
+              <span
+                className={cn(
+                  "relative inline-flex shrink-0 items-center justify-center rounded-full bg-primary-light font-semibold text-primary ring-2 ring-surface",
+                  isCompact ? "size-7 text-[10px]" : "size-8 text-xs",
+                )}
+              >
+                {displayInitials}
+                <span
+                  className="absolute bottom-0 right-0 size-2 rounded-full border-2 border-surface bg-success"
+                  aria-hidden="true"
+                  title={MOCK_OPERATIONS_USER.status}
+                />
+              </span>
 
-            <button
-              type="button"
-              onClick={onCollapseToggle}
-              className="hidden w-full items-center justify-center rounded-lg p-2 text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:inline-flex"
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              <ChevronsLeft
-                className={cn("size-4 transition-transform", collapsed && "rotate-180")}
-                strokeWidth={2}
-                aria-hidden="true"
-              />
-            </button>
+              {!collapsed ? (
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={cn(
+                      "truncate font-semibold text-foreground",
+                      isCompact ? "text-xs" : "text-sm",
+                    )}
+                  >
+                    {displayName}
+                  </p>
+                  <p
+                    className={cn(
+                      "truncate text-muted",
+                      isCompact ? "text-[10px]" : "text-[11px]",
+                    )}
+                  >
+                    {displayRole}
+                  </p>
+                </div>
+              ) : null}
+
+              {!collapsed ? (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className={cn(
+                    "inline-flex shrink-0 items-center justify-center rounded-md text-muted transition-colors",
+                    "hover:bg-surface hover:text-danger",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                    "disabled:cursor-not-allowed disabled:opacity-60",
+                    isCompact ? "size-7" : "size-8",
+                  )}
+                  aria-label={isLoggingOut ? "Signing out" : "Log out"}
+                >
+                  <LogOut
+                    className={cn(isCompact ? "size-3.5" : "size-4")}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                </button>
+              ) : null}
+            </div>
+
+            {collapsed ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-md text-muted transition-colors",
+                    "hover:bg-surface hover:text-danger",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                    "disabled:cursor-not-allowed disabled:opacity-60",
+                    isCompact ? "size-7" : "size-8",
+                  )}
+                  aria-label={isLoggingOut ? "Signing out" : "Log out"}
+                >
+                  <LogOut
+                    className={cn(isCompact ? "size-3.5" : "size-4")}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={onCollapseToggle}
+                  className={cn(
+                    "hidden items-center justify-center rounded-md text-muted transition-colors",
+                    "hover:bg-surface hover:text-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                    "lg:inline-flex",
+                    isCompact ? "size-7" : "size-8",
+                  )}
+                  aria-label="Expand sidebar"
+                >
+                  <ChevronsLeft
+                    className={cn(
+                      "rotate-180",
+                      isCompact ? "size-3.5" : "size-4",
+                    )}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
       </aside>

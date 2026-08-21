@@ -4,6 +4,7 @@ export interface OperationsAuthUser {
   id: string;
   fullName: string;
   email: string;
+  mobileNumber?: string;
   role: OperationsTeamRole;
 }
 

@@ -74,12 +74,21 @@ export interface EscalationBreakdownItem {
   colorToken: EscalationChartColorToken;
 }
 
+export type SnapshotAccentTone =
+  | "primary"
+  | "teal"
+  | "success"
+  | "warning"
+  | "violet"
+  | "whatsapp";
+
 export interface OperationsSnapshotMetric {
   id: string;
   label: string;
   value: string;
   trendLabel: string;
   trendDirection: TrendDirection;
+  accentTone: SnapshotAccentTone;
 }
 
 export interface OperationsDashboardData {

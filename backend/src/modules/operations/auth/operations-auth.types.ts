@@ -1,8 +1,17 @@
 import type { OperationsTeamUserDocument } from "./operations-team-user.model.js";
 
 export type OperationsTeamLoginInput = {
-  mobileNumber: string;
+  email?: string;
+  mobileNumber?: string;
   password: string;
+};
+
+export type OperationsTeamAuthUser = {
+  id: string;
+  fullName: string;
+  email: string;
+  mobileNumber: string;
+  role: OperationsTeamUserDocument["role"];
 };
 
 export type OperationsTeamLoginResponse = {
@@ -10,19 +19,9 @@ export type OperationsTeamLoginResponse = {
   refreshToken: string;
   accessTokenExpiresAt: string;
   refreshTokenExpiresAt: string;
-  user: {
-    id: string;
-    fullName: string;
-    mobileNumber: string;
-    role: OperationsTeamUserDocument["role"];
-  };
+  user: OperationsTeamAuthUser;
 };
 
 export type OperationsTeamSessionResponse = {
-  user: {
-    id: string;
-    fullName: string;
-    mobileNumber: string;
-    role: OperationsTeamUserDocument["role"];
-  };
+  user: OperationsTeamAuthUser;
 };

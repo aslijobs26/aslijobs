@@ -4,23 +4,45 @@ import { AppError } from "../../../middleware/error.middleware.js";
 import { jwtService } from "../../auth/jwt.service.js";
 import { OperationsTeamUserModel } from "./operations-team-user.model.js";
 import type {
+  OperationsTeamAuthUser,
   OperationsTeamLoginInput,
   OperationsTeamLoginResponse,
   OperationsTeamSessionResponse,
 } from "./operations-auth.types.js";
 
+function toAuthUser(user: {
+  _id: { toString(): string };
+  fullName: string;
+  email?: string | null;
+  mobileNumber: string;
+  role: OperationsTeamAuthUser["role"];
+}): OperationsTeamAuthUser {
+  return {
+    id: String(user._id),
+    fullName: user.fullName,
+    email: user.email?.trim().toLowerCase() || "",
+    mobileNumber: user.mobileNumber,
+    role: user.role,
+  };
+}
+
 class OperationsAuthService {
   async login(input: OperationsTeamLoginInput): Promise<OperationsTeamLoginResponse> {
-    const mobileNumber = input.mobileNumber.trim();
+    const email = input.email?.trim().toLowerCase() ?? "";
+    const mobileNumber = input.mobileNumber?.trim() ?? "";
 
     const user = await OperationsTeamUserModel.findOne({
-      mobileNumber,
       status: "active",
+      ...(email
+        ? { email }
+        : { mobileNumber }),
     }).select("+passwordHash");
 
     if (!user?.passwordHash) {
       throw new AppError(
-        "Invalid mobile number or password.",
+        email
+          ? "Invalid email or password."
+          : "Invalid mobile number or password.",
         HTTP_STATUS.UNAUTHORIZED,
       );
     }
@@ -28,7 +50,9 @@ class OperationsAuthService {
     const valid = await bcrypt.compare(input.password, user.passwordHash);
     if (!valid) {
       throw new AppError(
-        "Invalid mobile number or password.",
+        email
+          ? "Invalid email or password."
+          : "Invalid mobile number or password.",
         HTTP_STATUS.UNAUTHORIZED,
       );
     }
@@ -49,12 +73,7 @@ class OperationsAuthService {
       refreshToken: tokens.refreshToken,
       accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
       refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
-      user: {
-        id: String(user._id),
-        fullName: user.fullName,
-        mobileNumber: user.mobileNumber,
-        role: user.role,
-      },
+      user: toAuthUser(user),
     };
   }
 
@@ -95,12 +114,7 @@ class OperationsAuthService {
       refreshToken: tokens.refreshToken,
       accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
       refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
-      user: {
-        id: String(user._id),
-        fullName: user.fullName,
-        mobileNumber: user.mobileNumber,
-        role: user.role,
-      },
+      user: toAuthUser(user),
     };
   }
 
@@ -115,12 +129,7 @@ class OperationsAuthService {
     }
 
     return {
-      user: {
-        id: String(user._id),
-        fullName: user.fullName,
-        mobileNumber: user.mobileNumber,
-        role: user.role,
-      },
+      user: toAuthUser(user),
     };
   }
 

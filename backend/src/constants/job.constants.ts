@@ -16,6 +16,14 @@ export const JOB_STATUSES = [
   "expired",
 ] as const;
 
+/** Job listing package payment states for paid posting packages. */
+export const JOB_LISTING_PAYMENT_STATUSES = [
+  "pending",
+  "paid",
+  "unpaid",
+  "not_applicable",
+] as const;
+
 export const JOB_PERKS = [
   "travel_allowance",
   "food_meals",
@@ -75,4 +83,6 @@ export type PartTimeSchedule = (typeof PART_TIME_SCHEDULES)[number];
 export type SalaryType = (typeof SALARY_TYPES)[number];
 export type SalaryPeriod = (typeof SALARY_PERIODS)[number];
 export type JobStatus = (typeof JOB_STATUSES)[number];
+export type JobListingPaymentStatus =
+  (typeof JOB_LISTING_PAYMENT_STATUSES)[number];
 export type JobStatusAction = (typeof JOB_STATUS_ACTIONS)[number];
