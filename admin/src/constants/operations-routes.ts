@@ -28,3 +28,7 @@ export const OPERATIONS_ROUTES = {
 
 export type OperationsRoute =
   (typeof OPERATIONS_ROUTES)[keyof typeof OPERATIONS_ROUTES];
+
+export function operationsJobDetailPath(jobId: string): string {
+  return `${OPERATIONS_ROUTES.JOBS}/${encodeURIComponent(jobId)}`;
+}

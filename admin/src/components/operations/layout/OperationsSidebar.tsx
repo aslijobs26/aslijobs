@@ -1,6 +1,6 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronsLeft, LogOut } from "lucide-react";
+import { ChevronsLeft, LogOut, X } from "lucide-react";
 import { useState, type CSSProperties } from "react";
 import {
   MOCK_OPERATIONS_USER,
@@ -181,6 +181,25 @@ export function OperationsSidebar({
               />
             </button>
           ) : null}
+
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className={cn(
+              "inline-flex shrink-0 items-center justify-center rounded-md text-muted transition-colors",
+              "hover:bg-hero-bg hover:text-foreground",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+              "lg:hidden",
+              isCompact ? "size-8" : "size-9",
+            )}
+            aria-label="Close navigation menu"
+          >
+            <X
+              className={cn(isCompact ? "size-4" : "size-5")}
+              strokeWidth={2}
+              aria-hidden="true"
+            />
+          </button>
         </div>
 
         {/* Navigation */}

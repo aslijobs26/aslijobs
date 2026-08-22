@@ -1,15 +1,14 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import {
-  BadgeCheck,
-  Briefcase,
-  Copy,
-  MapPin,
-  MoreVertical,
-} from "lucide-react";
+import { BadgeCheck, Briefcase, MapPin } from "lucide-react";
+import { type ReactNode } from "react";
 import { OperationsBadge } from "../../ui/OperationsBadge";
-import type { OperationsJobListItem } from "../../../types/operations-jobs";
+import { EmployerLogo } from "../../ui/EmployerLogo";
+import type {
+  OperationsJobListItem,
+  OperationsJobStatusAction,
+} from "../../../types/operations-jobs";
 import { cn } from "../../../utils/cn";
-import { resolveMediaUrl } from "../../../utils/resolve-media-url";
+import { JobsMobileJobCard } from "./JobsMobileJobCard";
+import { JobsRowActions } from "./JobsRowActions";
 
 interface JobsTableSectionProps {
   jobs: OperationsJobListItem[];
@@ -17,6 +16,11 @@ interface JobsTableSectionProps {
   isError: boolean;
   errorMessage?: string;
   onRetry?: () => void;
+  pendingStatusJobId?: string | null;
+  onStatusAction?: (
+    job: OperationsJobListItem,
+    action: OperationsJobStatusAction,
+  ) => void;
 }
 
 const CATEGORY_TONES = [
@@ -112,112 +116,6 @@ function paymentBadgeClass(
   }
 }
 
-function employerInitials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
-function EmployerLogo({
-  name,
-  logoUrl,
-}: {
-  name: string;
-  logoUrl: string;
-}) {
-  const [failed, setFailed] = useState(false);
-  const resolvedUrl = resolveMediaUrl(logoUrl);
-
-  useEffect(() => {
-    setFailed(false);
-  }, [logoUrl]);
-
-  if (!resolvedUrl || failed) {
-    return (
-      <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-light text-[10px] font-semibold text-primary ring-1 ring-border-subtle/80">
-        {employerInitials(name)}
-      </span>
-    );
-  }
-
-  return (
-    <img
-      src={resolvedUrl}
-      alt=""
-      className="size-7 shrink-0 rounded-full object-cover ring-1 ring-border-subtle/80"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
-function RowActions({ jobId }: { jobId: string }) {
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handlePointer = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointer);
-    return () => document.removeEventListener("mousedown", handlePointer);
-  }, [open]);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(jobId);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setCopied(false);
-    }
-    setOpen(false);
-  };
-
-  return (
-    <div className="relative" ref={menuRef}>
-      <button
-        type="button"
-        aria-label={`Actions for ${jobId}`}
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-        className={cn(
-          "inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors",
-          "hover:bg-hero-bg hover:text-foreground",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-          open && "bg-hero-bg text-foreground",
-        )}
-      >
-        <MoreVertical className="size-3.5" aria-hidden="true" />
-      </button>
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-20 mt-1.5 min-w-[9.5rem] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-[0_10px_30px_color-mix(in_srgb,var(--color-foreground)_12%,transparent)]"
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleCopy}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-primary-light hover:text-primary"
-          >
-            <Copy className="size-3.5 shrink-0" aria-hidden="true" />
-            {copied ? "Copied" : "Copy Job ID"}
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function TableMessage({
   children,
   colSpan = 10,
@@ -245,6 +143,8 @@ export function JobsTableSection({
   isError,
   errorMessage,
   onRetry,
+  pendingStatusJobId,
+  onStatusAction,
 }: JobsTableSectionProps) {
   const emptyState = (
     <div className="mx-auto flex max-w-xs flex-col items-center gap-2 text-center">
@@ -286,9 +186,36 @@ export function JobsTableSection({
   );
 
   return (
-    <>
-      {/* Mobile card list */}
-      <div className="md:hidden">
+    <div className="min-w-0 max-w-full">
+      {/* Mobile card list (< sm) */}
+      <div className="sm:hidden">
+        {isLoading ? <div className="px-3 py-12">{loadingState}</div> : null}
+        {!isLoading && isError ? <div className="px-3 py-12">{errorState}</div> : null}
+        {!isLoading && !isError && jobs.length === 0 ? (
+          <div className="px-3 py-12">{emptyState}</div>
+        ) : null}
+        {!isLoading && !isError && jobs.length > 0 ? (
+          <ul className="flex flex-col gap-2.5 p-2.5">
+            {jobs.map((job) => (
+              <li key={job.id}>
+                <JobsMobileJobCard
+                  job={job}
+                  pendingStatusJobId={pendingStatusJobId}
+                  onStatusAction={onStatusAction}
+                  formatJobType={formatJobType}
+                  formatPostedDate={formatPostedDate}
+                  statusBadgeVariant={statusBadgeVariant}
+                  paymentBadgeClass={paymentBadgeClass}
+                  categoryTone={categoryTone}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
+      {/* Tablet list (sm – lg) */}
+      <div className="hidden sm:block lg:hidden">
         {isLoading ? <div className="px-4 py-12">{loadingState}</div> : null}
         {!isLoading && isError ? <div className="px-4 py-12">{errorState}</div> : null}
         {!isLoading && !isError && jobs.length === 0 ? (
@@ -326,7 +253,11 @@ export function JobsTableSection({
                         {formatJobType(job.jobType)}
                       </p>
                     </div>
-                    <RowActions jobId={job.jobId} />
+                    <JobsRowActions
+                      job={job}
+                      pendingStatusJobId={pendingStatusJobId}
+                      onStatusAction={onStatusAction}
+                    />
                   </div>
 
                   <div className="mt-2.5 flex items-center gap-2">
@@ -389,9 +320,9 @@ export function JobsTableSection({
         ) : null}
       </div>
 
-      {/* Desktop / tablet table */}
-      <div className="hidden overflow-x-auto overscroll-x-contain scrollbar-hidden md:block">
-        <table className="w-full min-w-[980px] border-collapse text-left text-xs leading-snug">
+      {/* Desktop table with contained horizontal scroll */}
+      <div className="hidden min-w-0 max-w-full overflow-x-auto overscroll-x-contain scrollbar-hidden lg:block">
+        <table className="w-full min-w-[920px] border-collapse text-left text-xs leading-snug xl:min-w-[980px]">
           <thead>
             <tr className="border-y border-border-subtle bg-hero-bg/40">
               <th className={thClassName}>Job ID</th>
@@ -549,7 +480,11 @@ export function JobsTableSection({
                     </td>
 
                     <td className={cn(tdClassName, "text-right")}>
-                      <RowActions jobId={job.jobId} />
+                      <JobsRowActions
+                      job={job}
+                      pendingStatusJobId={pendingStatusJobId}
+                      onStatusAction={onStatusAction}
+                    />
                     </td>
                   </tr>
                 );
@@ -557,6 +492,6 @@ export function JobsTableSection({
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 }

@@ -7,12 +7,35 @@ import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationB
 import { JobsTableSection } from "../components/operations/jobs/JobsTableSection";
 import { JobsTabs } from "../components/operations/jobs/JobsTabs";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
-import { useOperationsJobs } from "../hooks/use-operations-jobs";
+import {
+  useOperationsJobs,
+  useUpdateOperationsJobStatusMutation,
+} from "../hooks/use-operations-jobs";
 import type {
+  OperationsJobListItem,
+  OperationsJobStatusAction,
   OperationsJobTab,
   OperationsJobsInsight,
   OperationsJobsListResult,
 } from "../types/operations-jobs";
+
+function statusActionConfirmMessage(
+  job: OperationsJobListItem,
+  action: OperationsJobStatusAction,
+): string | null {
+  switch (action) {
+    case "pause":
+      return `Pause job ${job.jobId}? It will be hidden from candidates until activated again.`;
+    case "resume":
+    case "publish":
+    case "reactivate":
+      return `Activate job ${job.jobId}? It will become live for candidates.`;
+    case "close":
+      return `Close job ${job.jobId}? Candidates will no longer be able to apply.`;
+    default:
+      return null;
+  }
+}
 
 const EMPTY_RESULT: OperationsJobsListResult = {
   kpis: {
@@ -137,6 +160,7 @@ export function OperationsJobsPage() {
   );
 
   const jobsQuery = useOperationsJobs(queryParams);
+  const statusMutation = useUpdateOperationsJobStatusMutation();
   const data = jobsQuery.data ?? EMPTY_RESULT;
 
   const errorMessage = (() => {
@@ -183,6 +207,37 @@ export function OperationsJobsPage() {
     setPage(1);
   };
 
+  const handleStatusAction = (
+    job: OperationsJobListItem,
+    action: OperationsJobStatusAction,
+  ) => {
+    if (statusMutation.isPending) {
+      return;
+    }
+
+    const confirmMessage = statusActionConfirmMessage(job, action);
+    if (confirmMessage && !window.confirm(confirmMessage)) {
+      return;
+    }
+
+    statusMutation.mutate(
+      { jobId: job.jobId, action },
+      {
+        onError: (error) => {
+          if (isAxiosError(error)) {
+            const message = error.response?.data?.message;
+            if (typeof message === "string" && message.trim()) {
+              window.alert(message.trim());
+              return;
+            }
+          }
+
+          window.alert("Failed to update job status.");
+        },
+      },
+    );
+  };
+
   const handleInsightSelect = (insight: OperationsJobsInsight) => {
     if (insight.tab === "paused_inactive") {
       setTab("all");
@@ -209,7 +264,7 @@ export function OperationsJobsPage() {
       title="Jobs"
       subtitle="Manage all job postings across employers."
     >
-      <div className="flex w-full min-w-0 flex-col gap-2 sm:gap-2.5">
+      <div className="flex w-full min-w-0 flex-col gap-2.5">
         <JobsKpiStrip kpis={data.kpis} isLoading={jobsQuery.isLoading} />
 
         <JobsInsightsStrip
@@ -225,8 +280,8 @@ export function OperationsJobsPage() {
           onExport={() => exportJobsCsv(data)}
         />
 
-        <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-          <div className="border-b border-border-subtle px-2.5 py-2 sm:px-3.5 sm:py-3">
+        <div className="min-w-0 max-w-full rounded-xl border border-border-subtle bg-surface shadow-sm">
+          <div className="min-w-0 border-b border-border-subtle px-2.5 py-2 sm:px-3.5 sm:py-3">
             <JobsTabs
               activeTab={tab}
               counts={data.counts}
@@ -239,6 +294,10 @@ export function OperationsJobsPage() {
             isError={jobsQuery.isError}
             errorMessage={errorMessage}
             onRetry={() => void jobsQuery.refetch()}
+            pendingStatusJobId={
+              statusMutation.isPending ? statusMutation.variables?.jobId : null
+            }
+            onStatusAction={handleStatusAction}
           />
         </div>
 

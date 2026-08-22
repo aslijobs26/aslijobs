@@ -60,3 +60,28 @@ export async function requireOperationsAuth(
     );
   }
 }
+
+const OPERATIONS_JOB_WRITE_ROLES: OperationsTeamRole[] = [
+  "SUPER_ADMIN",
+  "OPERATIONS",
+];
+
+export function requireOperationsJobWriteAccess(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): void {
+  const role = req.operationsTeamRole;
+
+  if (!role || !OPERATIONS_JOB_WRITE_ROLES.includes(role)) {
+    next(
+      new AppError(
+        "You do not have permission to manage jobs.",
+        HTTP_STATUS.FORBIDDEN,
+      ),
+    );
+    return;
+  }
+
+  next();
+}

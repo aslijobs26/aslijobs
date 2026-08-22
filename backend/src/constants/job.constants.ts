@@ -77,6 +77,8 @@ export const JOB_STATUS_ACTIONS = [
   "reactivate",
 ] as const;
 
+export const JOB_CREATION_SOURCES = ["employer", "operations"] as const;
+
 export type JobType = (typeof JOB_TYPES)[number];
 export type WorkMode = (typeof WORK_MODES)[number];
 export type PartTimeSchedule = (typeof PART_TIME_SCHEDULES)[number];
@@ -86,3 +88,4 @@ export type JobStatus = (typeof JOB_STATUSES)[number];
 export type JobListingPaymentStatus =
   (typeof JOB_LISTING_PAYMENT_STATUSES)[number];
 export type JobStatusAction = (typeof JOB_STATUS_ACTIONS)[number];
+export type JobCreationSource = (typeof JOB_CREATION_SOURCES)[number];

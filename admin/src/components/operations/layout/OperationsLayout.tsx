@@ -89,7 +89,7 @@ export function OperationsLayout({
         />
         <main
           className={cn(
-            "min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto",
+            "min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain scrollbar-hidden",
             isCompact
               ? "px-2 py-2 sm:px-3 sm:py-2.5 lg:px-3.5 lg:py-2.5"
               : "px-2.5 py-2.5 sm:px-4 sm:py-4 lg:px-5 lg:py-4",

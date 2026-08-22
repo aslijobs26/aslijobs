@@ -13,6 +13,7 @@ interface JobsPaginationBarProps {
   pagination: OperationsJobsPagination;
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
+  ariaLabel?: string;
 }
 
 /**
@@ -56,6 +57,7 @@ export function JobsPaginationBar({
   pagination,
   onPageChange,
   onLimitChange,
+  ariaLabel = "Jobs pagination",
 }: JobsPaginationBarProps) {
   const { page, limit, total, totalPages, hasNextPage, hasPreviousPage } = pagination;
   const from = total === 0 ? 0 : (page - 1) * limit + 1;
@@ -63,16 +65,16 @@ export function JobsPaginationBar({
   const pageItems = buildPageItems(page, totalPages);
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-center text-[11px] text-muted sm:text-left">
+    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <p className="min-w-0 text-center text-[11px] text-muted sm:text-left">
         {from.toLocaleString("en-IN")} to {to.toLocaleString("en-IN")} of{" "}
         {total.toLocaleString("en-IN")}
       </p>
 
-      <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+      <div className="flex min-w-0 flex-col gap-2 min-[480px]:flex-row min-[480px]:flex-wrap min-[480px]:items-center min-[480px]:justify-end sm:gap-2">
         <nav
           className="flex max-w-full flex-wrap items-center justify-center gap-1.5"
-          aria-label="Jobs pagination"
+          aria-label={ariaLabel}
         >
           <button
             type="button"

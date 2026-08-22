@@ -18,7 +18,7 @@ const TABS: { id: OperationsJobTab; label: string; shortLabel: string }[] = [
 export function JobsTabs({ activeTab, counts, onChange }: JobsTabsProps) {
   return (
     <div
-      className="-mx-0.5 flex min-w-0 items-center gap-1.5 overflow-x-auto px-0.5 pb-0.5 scrollbar-hidden sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0"
+      className="-mx-0.5 flex min-w-0 items-center gap-1.5 overflow-x-auto px-0.5 pb-0.5 scrollbar-hidden sm:gap-2 lg:flex-wrap lg:overflow-visible lg:pb-0"
       role="tablist"
       aria-label="Job status tabs"
     >
@@ -36,7 +36,7 @@ export function JobsTabs({ activeTab, counts, onChange }: JobsTabsProps) {
             aria-label={`${tab.label}, ${countLabel}`}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2 text-[11px] font-semibold whitespace-nowrap transition-colors",
+              "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold whitespace-nowrap transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
               "sm:h-9 sm:px-3 sm:text-xs",
               selected

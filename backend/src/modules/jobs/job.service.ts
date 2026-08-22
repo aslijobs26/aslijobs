@@ -2021,6 +2021,204 @@ export class JobService {
 
     return job;
   }
+
+  async findJobByPublicId(publicJobId: string) {
+    const normalized = publicJobId.trim().toUpperCase();
+    const job = await JobModel.findOne({ jobId: normalized });
+
+    if (!job) {
+      throw new AppError("Job not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    return job;
+  }
+
+  private async resolveOperationsEmployer(employerId: string | null | undefined) {
+    if (employerId == null || employerId.trim() === "") {
+      return null;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError("Invalid employer id.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const employer = await EmployerModel.findById(employerId);
+    if (!employer) {
+      throw new AppError("Employer not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    return employer;
+  }
+
+  private assertOperationsDraftWritable(job: JobDocument): void {
+    if (job.creationSource !== "operations") {
+      throw new AppError(
+        "Only operations-created jobs can be edited from the operations dashboard.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+
+    if (job.status !== "draft") {
+      throw new AppError(
+        "Only draft jobs can be edited from the post job form.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+  }
+
+  async createOperationsDraft(
+    operationsUserId: string,
+    input: SaveDraftJobInput,
+    employerId?: string | null,
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(operationsUserId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const employer = await this.resolveOperationsEmployer(employerId ?? null);
+    const employerObjectId = employer?._id ?? null;
+    const jobId = await generateJobId();
+    const denormalized = denormalizeDraftFields(input.wizardSnapshot);
+    const now = new Date();
+
+    const job = await JobModel.create({
+      jobId,
+      employerId: employerObjectId,
+      companyId: employerObjectId,
+      ...denormalized,
+      status: "draft",
+      listingPaymentStatus: "pending",
+      listingPackageLabel: "",
+      listingValidUntil: null,
+      isFeatured: false,
+      completedStep: input.completedStep,
+      lastEditedAt: now,
+      wizardSnapshot: input.wizardSnapshot,
+      publishedAt: null,
+      lastStatusChangedAt: null,
+      applications: 0,
+      shortlisted: 0,
+      interviews: 0,
+      hired: 0,
+      views: 0,
+      bookmarks: 0,
+      shares: 0,
+      createdBy: employerObjectId,
+      creationSource: "operations",
+      createdByOperationsUserId: new mongoose.Types.ObjectId(operationsUserId),
+    });
+
+    return {
+      job: toJobPublic(job),
+    };
+  }
+
+  async updateOperationsDraft(
+    operationsUserId: string,
+    publicJobId: string,
+    input: SaveDraftJobInput,
+    employerId?: string | null,
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(operationsUserId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const job = await this.findJobByPublicId(publicJobId);
+    this.assertOperationsDraftWritable(job);
+
+    const employer = await this.resolveOperationsEmployer(
+      employerId === undefined ? job.employerId?.toString() ?? null : employerId,
+    );
+    const employerObjectId = employer?._id ?? null;
+    const denormalized = denormalizeDraftFields(input.wizardSnapshot);
+
+    Object.assign(job, denormalized);
+    job.employerId = employerObjectId;
+    job.companyId = employerObjectId;
+    job.createdBy = employerObjectId;
+    job.completedStep = input.completedStep;
+    job.lastEditedAt = new Date();
+    job.wizardSnapshot = input.wizardSnapshot;
+    job.status = "draft";
+    job.listingPaymentStatus = "pending";
+    job.publishedAt = null;
+    await job.save();
+
+    return {
+      job: toJobPublic(job),
+    };
+  }
+
+  async assignOperationsJobEmployer(
+    operationsUserId: string,
+    publicJobId: string,
+    employerId: string,
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(operationsUserId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const job = await this.findJobByPublicId(publicJobId);
+    this.assertOperationsDraftWritable(job);
+
+    const employer = await this.resolveOperationsEmployer(employerId);
+    if (!employer) {
+      throw new AppError(
+        "Employer assignment is required.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    job.employerId = employer._id;
+    job.companyId = employer._id;
+    job.createdBy = employer._id;
+    job.lastEditedAt = new Date();
+    await job.save();
+
+    return {
+      job: toJobPublic(job),
+    };
+  }
+
+  async publishOperationsDraft(
+    operationsUserId: string,
+    publicJobId: string,
+    input: CreateJobInput,
+  ) {
+    if (!mongoose.Types.ObjectId.isValid(operationsUserId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const job = await this.findJobByPublicId(publicJobId);
+    this.assertOperationsDraftWritable(job);
+
+    if (!job.employerId) {
+      throw new AppError(
+        "Assign an employer before publishing this job.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    applyCreateInputToJob(job, input);
+    const now = new Date();
+    job.status = "active";
+    if (
+      job.listingPaymentStatus === "pending" ||
+      job.listingPaymentStatus === "unpaid"
+    ) {
+      job.listingPaymentStatus = "paid";
+    }
+    job.completedStep = 3;
+    job.lastEditedAt = now;
+    job.wizardSnapshot = null;
+    job.publishedAt = now;
+    job.lastStatusChangedAt = now;
+    await job.save();
+
+    return {
+      job: toJobPublic(job),
+    };
+  }
 }
 
 export const jobService = new JobService();

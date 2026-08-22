@@ -11,6 +11,10 @@ import {
   getOperationsRefreshToken,
   setOperationsAuthSession,
 } from "../utils/operations-auth-storage";
+import {
+  isOperationsSessionTransientError,
+  shouldClearSessionOnRefreshError,
+} from "../utils/operations-session-errors";
 
 type RetryConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
@@ -61,8 +65,15 @@ async function refreshAccessToken(): Promise<string | null> {
       refreshToken: nextRefreshToken,
     });
     return accessToken;
-  } catch {
-    clearOperationsAuthSession();
+  } catch (error) {
+    if (shouldClearSessionOnRefreshError(error)) {
+      clearOperationsAuthSession();
+    }
+
+    if (isOperationsSessionTransientError(error)) {
+      throw error;
+    }
+
     return null;
   }
 }
@@ -81,11 +92,13 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as RetryConfig | undefined;
+    const requestUrl = originalRequest?.url ?? "";
 
     if (
       !originalRequest ||
       originalRequest._retry ||
-      error.response?.status !== 401
+      error.response?.status !== 401 ||
+      requestUrl.includes("/operations/auth/refresh")
     ) {
       return Promise.reject(error);
     }
@@ -98,15 +111,19 @@ apiClient.interceptors.response.use(
       });
     }
 
-    const accessToken = await refreshPromise;
-    if (!accessToken) {
-      return Promise.reject(error);
+    try {
+      const accessToken = await refreshPromise;
+      if (!accessToken) {
+        return Promise.reject(error);
+      }
+
+      const headers = AxiosHeaders.from(originalRequest.headers);
+      headers.set("Authorization", `Bearer ${accessToken}`);
+      originalRequest.headers = headers;
+
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      return Promise.reject(refreshError);
     }
-
-    const headers = AxiosHeaders.from(originalRequest.headers);
-    headers.set("Authorization", `Bearer ${accessToken}`);
-    originalRequest.headers = headers;
-
-    return apiClient(originalRequest);
   },
 );

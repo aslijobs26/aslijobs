@@ -10,6 +10,7 @@ import { apiClient } from "../services/api-client";
 import {
   getOperationsAccessToken,
   getOperationsAuthUser,
+  setOperationsAuthUser,
 } from "../utils/operations-auth-storage";
 import type {
   OperationsAuthUser,
@@ -95,8 +96,11 @@ export async function fetchOperationsSession(): Promise<OperationsSessionRespons
     `${OPERATIONS_AUTH_BASE}/session`,
   );
 
+  const user = mapAuthUser(response.data.data.user);
+  setOperationsAuthUser(user);
+
   return {
-    user: mapAuthUser(response.data.data.user),
+    user,
   };
 }
 

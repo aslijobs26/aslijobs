@@ -51,6 +51,7 @@ async function shutdown(signal: string): Promise<void> {
 }
 
 async function startServer(): Promise<void> {
+  console.log("Connecting to MongoDB...");
   await connectDB();
   const { ensureDefaultOperationsAdmin } = await import(
     "./modules/operations/auth/ensure-default-operations-admin.js"

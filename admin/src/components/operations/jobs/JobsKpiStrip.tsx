@@ -72,33 +72,33 @@ function formatCount(value: number): string {
 
 export function JobsKpiStrip({ kpis, isLoading }: JobsKpiStripProps) {
   return (
-    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2 lg:grid-cols-6 xl:gap-3">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
       {KPI_CONFIG.map((item) => {
         const Icon = item.icon;
 
         return (
           <article
             key={item.id}
-            className="rounded-lg border border-border-subtle bg-surface px-2.5 py-2.5 shadow-sm sm:px-3.5 sm:py-3.5 xl:px-4 xl:py-4"
+            className="min-w-0 rounded-lg border border-border-subtle bg-surface px-2.5 py-2.5 shadow-sm sm:px-3 sm:py-3 xl:px-4 xl:py-4"
           >
-            <div className="flex items-start justify-between gap-1.5 sm:gap-2 xl:gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-[10px] leading-tight text-muted sm:text-[11px] xl:text-xs">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] leading-snug text-muted sm:text-[11px] xl:text-xs">
                   {item.label}
                 </p>
-                <p className="mt-1 text-base font-bold leading-none text-foreground sm:text-xl xl:mt-1.5 xl:text-2xl">
+                <p className="mt-1 text-lg font-bold leading-none text-foreground sm:text-xl xl:mt-1.5 xl:text-2xl">
                   {isLoading ? "—" : formatCount(kpis[item.id])}
                 </p>
               </div>
               <span
                 className={cn(
-                  "inline-flex size-7 shrink-0 items-center justify-center rounded-md sm:size-9 xl:size-10 xl:rounded-lg",
+                  "inline-flex size-8 shrink-0 items-center justify-center rounded-md sm:size-9 xl:size-10 xl:rounded-lg",
                   item.iconWrap,
                 )}
               >
                 <Icon
                   className={cn(
-                    "size-3.5 sm:size-[1.125rem] xl:size-5",
+                    "size-3.5 sm:size-4 xl:size-5",
                     item.iconColor,
                   )}
                   aria-hidden="true"

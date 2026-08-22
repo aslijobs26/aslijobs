@@ -5,6 +5,7 @@ import {
   JOB_GENDERS,
   JOB_LANGUAGES,
   JOB_LISTING_PAYMENT_STATUSES,
+  JOB_CREATION_SOURCES,
   JOB_PERKS,
   JOB_STATUSES,
   JOB_TYPES,
@@ -26,13 +27,15 @@ const jobSchema = new Schema(
     employerId: {
       type: Schema.Types.ObjectId,
       ref: "Employer",
-      required: true,
+      required: false,
+      default: null,
       index: true,
     },
     companyId: {
       type: Schema.Types.ObjectId,
       ref: "Employer",
-      required: true,
+      required: false,
+      default: null,
       index: true,
     },
     companyName: {
@@ -376,7 +379,21 @@ const jobSchema = new Schema(
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "Employer",
+      required: false,
+      default: null,
+      index: true,
+    },
+    creationSource: {
+      type: String,
+      enum: JOB_CREATION_SOURCES,
       required: true,
+      default: "employer",
+      index: true,
+    },
+    createdByOperationsUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsTeamUser",
+      default: null,
       index: true,
     },
   },
