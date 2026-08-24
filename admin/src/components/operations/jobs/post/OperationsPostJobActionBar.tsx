@@ -28,23 +28,30 @@ export function OperationsPostJobActionBar({
   onPublish,
 }: OperationsPostJobActionBarProps) {
   const isLastStep = activeStep === 3;
+  const secondaryButtonClassName =
+    "inline-flex h-11 items-center justify-center rounded-md border border-primary-soft bg-surface px-6 text-sm font-bold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:min-w-[120px]";
+  const primaryButtonClassName =
+    "inline-flex h-11 items-center justify-center rounded-md bg-primary-soft px-8 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:bg-primary-soft-hover disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:min-w-[148px]";
 
   return (
-    <div className="sticky bottom-0 z-10 -mx-2 mt-1 border-t border-border-subtle bg-surface/95 px-2 py-2.5 backdrop-blur-sm sm:-mx-3 sm:px-3 lg:-mx-3.5 lg:px-3.5">
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col-reverse gap-3 pt-3 sm:flex-row sm:justify-end sm:pt-4">
+      <div className="flex w-full flex-col-reverse gap-3 sm:w-auto sm:flex-row sm:justify-end">
         <Link
           to={OPERATIONS_ROUTES.JOBS}
-          className="inline-flex h-9 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3.5 text-xs font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className={cn(secondaryButtonClassName, "w-full border-border text-foreground sm:w-auto")}
         >
           Cancel
         </Link>
 
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+        <div className="flex w-full flex-col-reverse gap-3 sm:w-auto sm:flex-row sm:justify-end">
           <button
             type="button"
             disabled={isSubmitting || activeStep === 1}
             onClick={onBack}
-            className="inline-flex h-9 items-center rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+            className={cn(
+              secondaryButtonClassName,
+              "w-full border-border text-foreground sm:w-auto",
+            )}
           >
             Back
           </button>
@@ -52,12 +59,15 @@ export function OperationsPostJobActionBar({
             type="button"
             disabled={isSubmitting}
             onClick={onSaveDraft}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+            className={cn(
+              secondaryButtonClassName,
+              "w-full gap-2 border-border px-5 text-foreground sm:w-auto sm:min-w-[148px]",
+            )}
           >
             {isSavingDraft ? (
-              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Save className="size-3.5" aria-hidden="true" />
+              <Save className="size-4" aria-hidden="true" />
             )}
             Save Draft
           </button>
@@ -66,10 +76,10 @@ export function OperationsPostJobActionBar({
               type="button"
               disabled={isSubmitting}
               onClick={onContinue}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary-soft px-3.5 text-xs font-semibold text-surface shadow-[0_1px_2px_rgba(0,186,165,0.35)] transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+              className={cn(primaryButtonClassName, "w-full gap-2 sm:w-auto sm:min-w-[156px]")}
             >
               Continue
-              <ArrowRight className="size-3.5" aria-hidden="true" />
+              <ArrowRight className="size-4" aria-hidden="true" />
             </button>
           ) : (
             <button
@@ -77,14 +87,15 @@ export function OperationsPostJobActionBar({
               disabled={isSubmitting || !publishReady}
               onClick={onPublish}
               className={cn(
-                "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold text-surface shadow-[0_1px_2px_rgba(0,186,165,0.35)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50",
+                primaryButtonClassName,
+                "w-full gap-2 sm:w-auto sm:min-w-[156px]",
                 publishReady
-                  ? "bg-primary-soft hover:bg-primary-soft-hover"
-                  : "bg-muted/40 text-muted shadow-none",
+                  ? ""
+                  : "bg-muted/40 text-muted hover:bg-muted/40",
               )}
             >
               {isPublishing ? (
-                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : null}
               Publish Job
             </button>

@@ -120,6 +120,7 @@ function escapeRegex(value: string): string {
 
 function buildListFilter(
   query: ListOperationsJobsQuery,
+  categoryEmployerIds: string[] = [],
 ): Record<string, unknown> {
   const andClauses: Record<string, unknown>[] = [];
 
@@ -127,22 +128,25 @@ function buildListFilter(
     case "live":
       andClauses.push({ status: "active" });
       break;
-    case "pending_payment":
-      andClauses.push({
-        listingPaymentStatus: { $in: PENDING_PAYMENT_STATUSES },
-      });
+    case "paused":
+      andClauses.push({ status: "paused" });
+      break;
+    case "draft":
+      andClauses.push({ status: "draft" });
       break;
     case "expired":
       andClauses.push({ status: "expired" });
       break;
-    case "drafts":
-      andClauses.push({ status: "draft" });
+    case "closed":
+      andClauses.push({ status: "closed" });
       break;
     default:
       break;
   }
 
-  if (query.status) {
+  // Status dropdown is only applied on the All Status tab so it cannot
+  // conflict with a lifecycle tab that already filters by status.
+  if (query.status && query.tab === "all") {
     andClauses.push({ status: query.status });
   }
 
@@ -151,12 +155,21 @@ function buildListFilter(
   }
 
   if (query.category) {
-    andClauses.push({
-      businessCategory: {
-        $regex: `^${escapeRegex(query.category)}$`,
-        $options: "i",
-      },
-    });
+    const categoryPattern = {
+      $regex: `^${escapeRegex(query.category)}$`,
+      $options: "i",
+    };
+    const categoryOr: Record<string, unknown>[] = [
+      { businessCategory: categoryPattern },
+    ];
+    if (categoryEmployerIds.length > 0) {
+      const employerObjectIds = categoryEmployerIds.map(
+        (id) => new mongoose.Types.ObjectId(id),
+      );
+      categoryOr.push({ employerId: { $in: employerObjectIds } });
+      categoryOr.push({ companyId: { $in: employerObjectIds } });
+    }
+    andClauses.push({ $or: categoryOr });
   }
 
   if (query.location) {
@@ -275,8 +288,9 @@ async function loadApplicationTotalsByJobIds(
 }
 
 async function loadFilterOptions(): Promise<OperationsJobsFilterOptions> {
-  const [categories, stateRows] = await Promise.all([
+  const [jobCategories, employerCategories, stateRows] = await Promise.all([
     JobModel.distinct("businessCategory"),
+    EmployerModel.distinct("businessCategory"),
     JobModel.distinct("stateName"),
   ]);
 
@@ -285,11 +299,16 @@ async function loadFilterOptions(): Promise<OperationsJobsFilterOptions> {
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
 
+  const categories = [
+    ...new Set(
+      [...jobCategories, ...employerCategories]
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+
   return {
-    categories: categories
-      .map((value) => String(value ?? "").trim())
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b)),
+    categories,
     locations,
   };
 }
@@ -352,7 +371,8 @@ async function loadKpisAndCounts(): Promise<{
     0,
   );
   const liveJobs = countsByStatus.active;
-  const activeJobs = countsByStatus.active + countsByStatus.paused;
+  // Align with employer dashboard: "active" means live listings only.
+  const activeJobs = countsByStatus.active;
 
   const kpis: OperationsJobsKpis = {
     totalJobs,
@@ -366,9 +386,10 @@ async function loadKpisAndCounts(): Promise<{
   const counts: OperationsJobsTabCounts = {
     all: totalJobs,
     live: liveJobs,
-    pending_payment: pendingPaymentJobs,
+    paused: countsByStatus.paused,
+    draft: countsByStatus.draft,
     expired: countsByStatus.expired,
-    drafts: countsByStatus.draft,
+    closed: countsByStatus.closed,
   };
 
   const insights: OperationsJobsInsight[] = [
@@ -400,24 +421,39 @@ async function loadKpisAndCounts(): Promise<{
       id: "drafts",
       label: "Draft jobs",
       count: draftJobs,
-      tab: "drafts",
+      tab: "draft",
     },
   ];
 
   return { kpis, counts, insights };
 }
 
+type OperationsEmployerListProjection = {
+  _id: mongoose.Types.ObjectId;
+  companyName?: string;
+  accountType?: string;
+  companyLogo?: { url?: string } | null;
+  profilePhoto?: { url?: string } | null;
+  isWhatsappVerified?: boolean;
+  registrationStatus?: string;
+  businessCategory?: string;
+  industry?: string;
+};
+
+function resolveBusinessCategory(
+  job: JobDocument,
+  employer: OperationsEmployerListProjection | null,
+): string {
+  return (
+    job.businessCategory?.trim() ||
+    employer?.businessCategory?.trim() ||
+    ""
+  );
+}
+
 function toListItem(
   job: JobDocument,
-  employer: {
-    _id: mongoose.Types.ObjectId;
-    companyName?: string;
-    accountType?: string;
-    companyLogo?: { url?: string } | null;
-    profilePhoto?: { url?: string } | null;
-    isWhatsappVerified?: boolean;
-    registrationStatus?: string;
-  } | null,
+  employer: OperationsEmployerListProjection | null,
   applications: number,
   applicationsToday: number,
 ): OperationsJobListItem {
@@ -443,7 +479,8 @@ function toListItem(
     paymentStatusLabel: paymentStatusLabel(paymentStatus),
     listingPackageLabel: job.listingPackageLabel?.trim() || "",
     listingValidUntil: toIso(job.listingValidUntil),
-    businessCategory: job.businessCategory?.trim() || "",
+    businessCategory: resolveBusinessCategory(job, employer),
+    vacancies: job.vacancies ?? 0,
     cityName,
     stateName,
     locationLabel,
@@ -764,15 +801,7 @@ function buildActivity(job: JobDocument): OperationsJobActivityItem[] {
 
 function toDetail(
   job: JobDocument,
-  employer: {
-    _id: mongoose.Types.ObjectId;
-    companyName?: string;
-    accountType?: string;
-    companyLogo?: { url?: string } | null;
-    profilePhoto?: { url?: string } | null;
-    isWhatsappVerified?: boolean;
-    registrationStatus?: string;
-  } | null,
+  employer: OperationsEmployerListProjection | null,
   applications: number,
   applicationsToday: number,
   shortlisted: number,
@@ -815,7 +844,7 @@ function toDetail(
     companyId: job.companyId ? String(job.companyId) : "",
     companyName: job.companyName?.trim() || "",
     industry: job.industry?.trim() || "",
-    businessCategory: job.businessCategory?.trim() || "",
+    businessCategory: resolveBusinessCategory(job, employer),
     companySize: job.companySize?.trim() || "",
     jobTitle: job.jobTitle?.trim() || "Untitled job",
     jobType: job.jobType || "",
@@ -949,7 +978,20 @@ export const operationsJobsService = {
   async listJobs(
     query: ListOperationsJobsQuery,
   ): Promise<OperationsJobsListResult> {
-    const filter = buildListFilter(query);
+    const categoryEmployerIds = query.category
+      ? (
+          await EmployerModel.find({
+            businessCategory: {
+              $regex: `^${escapeRegex(query.category)}$`,
+              $options: "i",
+            },
+          })
+            .select("_id")
+            .lean()
+        ).map((employer) => String(employer._id))
+      : [];
+
+    const filter = buildListFilter(query, categoryEmployerIds);
     const sort = buildSort(query.sort);
     const skip = (query.page - 1) * query.limit;
 
@@ -962,7 +1004,12 @@ export const operationsJobsService = {
 
     const jobIds = jobs.map((job) => job._id.toString());
     const employerIds = [
-      ...new Set(jobs.map((job) => String(job.employerId))),
+      ...new Set(
+        jobs.flatMap((job) => [
+          String(job.employerId ?? ""),
+          String(job.companyId ?? ""),
+        ]),
+      ),
     ].filter((id) => mongoose.Types.ObjectId.isValid(id));
 
     const [applicationTotals, applicationsToday, employers] = await Promise.all(
@@ -975,7 +1022,7 @@ export const operationsJobsService = {
           },
         })
           .select(
-            "companyName accountType companyLogo profilePhoto isWhatsappVerified registrationStatus",
+            "companyName accountType companyLogo profilePhoto isWhatsappVerified registrationStatus businessCategory industry",
           )
           .lean(),
       ],
@@ -994,9 +1041,13 @@ export const operationsJobsService = {
       filterOptions,
       jobs: jobs.map((job) => {
         const id = job._id.toString();
+        const employer =
+          employersById.get(String(job.employerId ?? "")) ??
+          employersById.get(String(job.companyId ?? "")) ??
+          null;
         return toListItem(
           job,
-          employersById.get(String(job.employerId)) ?? null,
+          employer,
           applicationTotals.get(id) ?? job.applications ?? 0,
           applicationsToday.get(id) ?? 0,
         );
@@ -1011,13 +1062,19 @@ export const operationsJobsService = {
   async getJobDetail(publicJobId: string): Promise<OperationsJobDetail> {
     const job = await findJobByPublicId(publicJobId);
     const jobMongoId = job._id.toString();
+    const employerLookupId =
+      (job.employerId && String(job.employerId)) ||
+      (job.companyId && String(job.companyId)) ||
+      "";
 
     const [employer, applicationsTodayMap, statusCounts] = await Promise.all([
-      EmployerModel.findById(job.employerId)
-        .select(
-          "companyName accountType companyLogo profilePhoto isWhatsappVerified registrationStatus",
-        )
-        .lean(),
+      employerLookupId && mongoose.Types.ObjectId.isValid(employerLookupId)
+        ? EmployerModel.findById(employerLookupId)
+            .select(
+              "companyName accountType companyLogo profilePhoto isWhatsappVerified registrationStatus businessCategory industry",
+            )
+            .lean()
+        : Promise.resolve(null),
       loadApplicationsTodayByJobIds([jobMongoId]),
       loadApplicationStatusCounts(jobMongoId),
     ]);

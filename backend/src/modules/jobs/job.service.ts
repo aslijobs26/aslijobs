@@ -2081,6 +2081,13 @@ export class JobService {
     const denormalized = denormalizeDraftFields(input.wizardSnapshot);
     const now = new Date();
 
+    if (!denormalized.businessCategory && employer?.businessCategory?.trim()) {
+      denormalized.businessCategory = employer.businessCategory.trim();
+    }
+    if (!denormalized.industry && employer?.industry?.trim()) {
+      denormalized.industry = employer.industry.trim();
+    }
+
     const job = await JobModel.create({
       jobId,
       employerId: employerObjectId,
@@ -2132,6 +2139,13 @@ export class JobService {
     const employerObjectId = employer?._id ?? null;
     const denormalized = denormalizeDraftFields(input.wizardSnapshot);
 
+    if (!denormalized.businessCategory && employer?.businessCategory?.trim()) {
+      denormalized.businessCategory = employer.businessCategory.trim();
+    }
+    if (!denormalized.industry && employer?.industry?.trim()) {
+      denormalized.industry = employer.industry.trim();
+    }
+
     Object.assign(job, denormalized);
     job.employerId = employerObjectId;
     job.companyId = employerObjectId;
@@ -2172,6 +2186,19 @@ export class JobService {
     job.employerId = employer._id;
     job.companyId = employer._id;
     job.createdBy = employer._id;
+    if (!job.companyName?.trim()) {
+      job.companyName =
+        employer.companyName?.trim() ||
+        employer.establishmentName?.trim() ||
+        job.companyName ||
+        "";
+    }
+    if (!job.businessCategory?.trim() && employer.businessCategory?.trim()) {
+      job.businessCategory = employer.businessCategory.trim();
+    }
+    if (!job.industry?.trim() && employer.industry?.trim()) {
+      job.industry = employer.industry.trim();
+    }
     job.lastEditedAt = new Date();
     await job.save();
 

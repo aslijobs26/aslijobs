@@ -8,11 +8,12 @@ interface JobsTabsProps {
 }
 
 const TABS: { id: OperationsJobTab; label: string; shortLabel: string }[] = [
-  { id: "all", label: "All Jobs", shortLabel: "All" },
+  { id: "all", label: "All Status", shortLabel: "All" },
   { id: "live", label: "Live", shortLabel: "Live" },
-  { id: "pending_payment", label: "Pending Payment", shortLabel: "Pending" },
+  { id: "paused", label: "Paused", shortLabel: "Paused" },
+  { id: "draft", label: "Draft", shortLabel: "Draft" },
   { id: "expired", label: "Expired", shortLabel: "Expired" },
-  { id: "drafts", label: "Drafts", shortLabel: "Drafts" },
+  { id: "closed", label: "Closed", shortLabel: "Closed" },
 ];
 
 export function JobsTabs({ activeTab, counts, onChange }: JobsTabsProps) {
@@ -36,12 +37,12 @@ export function JobsTabs({ activeTab, counts, onChange }: JobsTabsProps) {
             aria-label={`${tab.label}, ${countLabel}`}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold whitespace-nowrap transition-colors",
+              "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold whitespace-nowrap transition-[colors,box-shadow,border-color]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
               "sm:h-9 sm:px-3 sm:text-xs",
               selected
-                ? "border-primary-soft bg-primary-light text-primary-soft"
-                : "border-border bg-surface text-muted hover:border-primary-soft/40 hover:bg-primary-light/50 hover:text-foreground",
+                ? "ops-brand-border-glow border-primary-soft bg-primary-light text-primary-soft"
+                : "ops-brand-border-glow border-border bg-surface text-muted hover:border-primary-soft/40 hover:bg-primary-light/50 hover:text-foreground",
             )}
           >
             <span className="sm:hidden">{tab.shortLabel}</span>

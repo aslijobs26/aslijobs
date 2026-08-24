@@ -23,23 +23,6 @@ interface JobsTableSectionProps {
   ) => void;
 }
 
-const CATEGORY_TONES = [
-  "text-primary-soft",
-  "text-chart-accent-alt",
-  "text-warning",
-  "text-chart-accent",
-  "text-success",
-] as const;
-
-function categoryTone(category: string): string {
-  if (!category) return "text-muted";
-  let hash = 0;
-  for (let index = 0; index < category.length; index += 1) {
-    hash = (hash + category.charCodeAt(index) * (index + 1)) % CATEGORY_TONES.length;
-  }
-  return CATEGORY_TONES[hash] ?? "text-muted";
-}
-
 function formatJobType(jobType: string): string {
   if (!jobType) return "—";
   return jobType
@@ -206,7 +189,6 @@ export function JobsTableSection({
                   formatPostedDate={formatPostedDate}
                   statusBadgeVariant={statusBadgeVariant}
                   paymentBadgeClass={paymentBadgeClass}
-                  categoryTone={categoryTone}
                 />
               </li>
             ))}
@@ -291,16 +273,9 @@ export function JobsTableSection({
                     >
                       {job.paymentStatusLabel}
                     </span>
-                    {job.businessCategory ? (
-                      <span
-                        className={cn(
-                          "truncate text-[11px] font-medium",
-                          categoryTone(job.businessCategory),
-                        )}
-                      >
-                        {job.businessCategory}
-                      </span>
-                    ) : null}
+                    <span className="truncate text-[11px] font-medium tabular-nums text-muted">
+                      {job.vacancies.toLocaleString("en-IN")} vacancies
+                    </span>
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
@@ -324,11 +299,11 @@ export function JobsTableSection({
       <div className="hidden min-w-0 max-w-full overflow-x-auto overscroll-x-contain scrollbar-hidden lg:block">
         <table className="w-full min-w-[920px] border-collapse text-left text-xs leading-snug xl:min-w-[980px]">
           <thead>
-            <tr className="border-y border-border-subtle bg-hero-bg/40">
+            <tr className="ops-brand-border-glow border-y border-border-subtle bg-hero-bg/40">
               <th className={thClassName}>Job ID</th>
               <th className={thClassName}>Job Title</th>
               <th className={thClassName}>Employer</th>
-              <th className={thClassName}>Category</th>
+              <th className={thClassName}>Vacancies</th>
               <th className={thClassName}>Location</th>
               <th className={thClassName}>Posted On</th>
               <th className={thClassName}>Applications</th>
@@ -413,11 +388,10 @@ export function JobsTableSection({
                     <td
                       className={cn(
                         tdClassName,
-                        "max-w-[8.5rem] truncate font-medium",
-                        categoryTone(job.businessCategory),
+                        "whitespace-nowrap font-semibold tabular-nums text-foreground",
                       )}
                     >
-                      {job.businessCategory || "—"}
+                      {job.vacancies.toLocaleString("en-IN")}
                     </td>
 
                     <td className={cn(tdClassName, "max-w-[9rem] text-muted")}>

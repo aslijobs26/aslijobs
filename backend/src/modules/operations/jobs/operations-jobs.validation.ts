@@ -13,9 +13,10 @@ import {
 export const OPERATIONS_JOB_TABS = [
   "all",
   "live",
-  "pending_payment",
+  "paused",
+  "draft",
   "expired",
-  "drafts",
+  "closed",
 ] as const;
 
 export const listOperationsJobsQuerySchema = z.object({

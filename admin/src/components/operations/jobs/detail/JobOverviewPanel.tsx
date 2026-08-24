@@ -4,7 +4,6 @@ import {
   Eye,
   GraduationCap,
   MessageCircle,
-  Phone,
   UserRound,
   Users,
   type LucideIcon,
@@ -336,9 +335,9 @@ export function JobOverviewPanel({
               tone="bg-whatsapp/10 text-whatsapp"
             />
             <PerformanceMetric
-              label="Employer Calls"
-              value="—"
-              icon={Phone}
+              label="Today's Applications"
+              value={formatMetricCount(job.analytics.applicationsToday)}
+              icon={Users}
               tone="bg-success/10 text-success"
             />
           </div>

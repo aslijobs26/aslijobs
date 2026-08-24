@@ -49,9 +49,10 @@ const EMPTY_RESULT: OperationsJobsListResult = {
   counts: {
     all: 0,
     live: 0,
-    pending_payment: 0,
+    paused: 0,
+    draft: 0,
     expired: 0,
-    drafts: 0,
+    closed: 0,
   },
   insights: [],
   filterOptions: {
@@ -73,7 +74,6 @@ const DEFAULT_FILTERS: JobsFiltersState = {
   search: "",
   status: "",
   paymentStatus: "",
-  category: "",
   location: "",
 };
 
@@ -83,7 +83,7 @@ function exportJobsCsv(result: OperationsJobsListResult): void {
     "Job Title",
     "Job Type",
     "Employer",
-    "Category",
+    "Vacancies",
     "Location",
     "Status",
     "Payment Status",
@@ -96,7 +96,7 @@ function exportJobsCsv(result: OperationsJobsListResult): void {
     job.jobTitle,
     job.jobType,
     job.employer.companyName,
-    job.businessCategory,
+    String(job.vacancies),
     job.locationLabel,
     job.statusLabel,
     job.paymentStatusLabel,
@@ -144,7 +144,6 @@ export function OperationsJobsPage() {
       search: debouncedSearch,
       status: filters.status,
       paymentStatus: filters.paymentStatus,
-      category: filters.category,
       location: filters.location,
     }),
     [
@@ -154,7 +153,6 @@ export function OperationsJobsPage() {
       debouncedSearch,
       filters.status,
       filters.paymentStatus,
-      filters.category,
       filters.location,
     ],
   );
@@ -193,6 +191,10 @@ export function OperationsJobsPage() {
 
   const handleFiltersChange = (next: Partial<JobsFiltersState>) => {
     setFilters((current) => ({ ...current, ...next }));
+    // Status dropdown filters only apply on All Status; jump back to All when used.
+    if (next.status !== undefined && next.status !== "") {
+      setTab("all");
+    }
     setPage(1);
   };
 
@@ -204,6 +206,10 @@ export function OperationsJobsPage() {
 
   const handleTabChange = (nextTab: OperationsJobTab) => {
     setTab(nextTab);
+    // Lifecycle tabs own status filtering; clear the dropdown to avoid conflicts.
+    if (nextTab !== "all") {
+      setFilters((current) => ({ ...current, status: "" }));
+    }
     setPage(1);
   };
 
@@ -240,21 +246,26 @@ export function OperationsJobsPage() {
 
   const handleInsightSelect = (insight: OperationsJobsInsight) => {
     if (insight.tab === "paused_inactive") {
+      setTab("paused");
+      setFilters((current) => ({
+        ...current,
+        status: "",
+        paymentStatus: "",
+      }));
+    } else if (insight.tab === "pending_payment") {
       setTab("all");
       setFilters((current) => ({
         ...current,
-        status: "paused",
-        paymentStatus: "",
+        status: "",
+        paymentStatus: "pending",
       }));
     } else {
       setTab(insight.tab);
-      if (insight.tab === "pending_payment") {
-        setFilters((current) => ({
-          ...current,
-          status: "",
-          paymentStatus: "",
-        }));
-      }
+      setFilters((current) => ({
+        ...current,
+        status: "",
+        paymentStatus: "",
+      }));
     }
     setPage(1);
   };

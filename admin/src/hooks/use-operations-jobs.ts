@@ -16,6 +16,8 @@ export function useOperationsJobs(params: OperationsJobsListParams) {
     queryKey: [...OPERATIONS_JOBS_QUERY_KEY, params],
     queryFn: () => fetchOperationsJobs(params),
     placeholderData: (previous) => previous,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 }
 

@@ -1,4 +1,5 @@
 import type { OperationsJobDetail } from "../../../../types/operations-jobs";
+import { formatBusinessCategoryLabel } from "../../../../constants/operations-post-job-company-options";
 
 export function formatOperationsDateTime(iso: string | null | undefined): string {
   if (!iso) {
@@ -309,7 +310,11 @@ export function jobPostingInformationRows(
   }
 
   pushRow(rows, "Industry", job.industry);
-  pushRow(rows, "Business Category", job.businessCategory);
+  pushRow(
+    rows,
+    "Business Category",
+    formatBusinessCategoryLabel(job.businessCategory),
+  );
   pushRow(
     rows,
     "Company Size",

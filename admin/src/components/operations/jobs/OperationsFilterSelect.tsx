@@ -36,7 +36,7 @@ const DROPDOWN_PANEL_ESTIMATED_HEIGHT_PX = 240;
 const DROPDOWN_PANEL_COMPACT_ROW_HEIGHT_PX = 32;
 
 const triggerBaseClassName =
-  "flex h-8 w-full min-w-[7.5rem] cursor-pointer items-center justify-between gap-1.5 rounded-md border border-border-subtle bg-surface px-2.5 text-left text-[11px] font-medium text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+  "ops-brand-border-glow flex h-8 w-full min-w-[7.5rem] cursor-pointer items-center justify-between gap-1.5 rounded-md border border-border-subtle bg-surface px-2.5 text-left text-[11px] font-medium text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
 
 function normalizeOptionKey(value: string) {
   return value.trim().toLowerCase();

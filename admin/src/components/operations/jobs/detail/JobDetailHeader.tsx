@@ -6,13 +6,13 @@ import {
   MapPin,
   Pencil,
   Plus,
-  Share2,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import { EmployerLogo } from "../../../ui/EmployerLogo";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
+import { formatBusinessCategoryLabel } from "../../../../constants/operations-post-job-company-options";
 import type { OperationsJobDetail } from "../../../../types/operations-jobs";
 import { cn } from "../../../../utils/cn";
 import {
@@ -23,7 +23,6 @@ import {
 interface JobDetailHeaderProps {
   job: OperationsJobDetail;
   isClosing?: boolean;
-  onShare: () => void;
   onEdit: () => void;
   onCloseJob: () => void;
 }
@@ -80,7 +79,6 @@ function StatMetric({
 export function JobDetailHeader({
   job,
   isClosing,
-  onShare,
   onEdit,
   onCloseJob,
 }: JobDetailHeaderProps) {
@@ -195,7 +193,7 @@ export function JobDetailHeader({
             <div className="mt-3">
               <FieldLabel>Job Category</FieldLabel>
               <p className="mt-2 break-words text-[13px] font-medium text-foreground">
-                {job.businessCategory || "—"}
+                {formatBusinessCategoryLabel(job.businessCategory) || "—"}
               </p>
             </div>
           </HeaderColumn>
@@ -203,14 +201,6 @@ export function JobDetailHeader({
 
         <aside className="flex shrink-0 flex-col gap-3 border-t border-border-subtle pt-4 lg:min-w-[12rem] lg:border-t-0 lg:border-l lg:pl-5 lg:pt-0">
           <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
-            <button
-              type="button"
-              onClick={onShare}
-              className={ghostActionClassName}
-            >
-              <Share2 className="size-3.5" aria-hidden="true" />
-              Share Job
-            </button>
             <button
               type="button"
               onClick={onEdit}

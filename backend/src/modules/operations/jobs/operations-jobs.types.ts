@@ -26,6 +26,7 @@ export type OperationsJobListItem = {
   listingPackageLabel: string;
   listingValidUntil: string | null;
   businessCategory: string;
+  vacancies: number;
   cityName: string;
   stateName: string;
   locationLabel: string;
@@ -48,16 +49,17 @@ export type OperationsJobsKpis = {
 export type OperationsJobsTabCounts = {
   all: number;
   live: number;
-  pending_payment: number;
+  paused: number;
+  draft: number;
   expired: number;
-  drafts: number;
+  closed: number;
 };
 
 export type OperationsJobsInsight = {
   id: string;
   label: string;
   count: number;
-  tab: OperationsJobTab | "paused_inactive";
+  tab: OperationsJobTab | "paused_inactive" | "pending_payment";
 };
 
 export type OperationsJobsFilterOptions = {

@@ -27,7 +27,6 @@ export async function fetchOperationsJobs(
         search: params.search || undefined,
         status: params.status || undefined,
         paymentStatus: params.paymentStatus || undefined,
-        category: params.category || undefined,
         location: params.location || undefined,
       },
     },

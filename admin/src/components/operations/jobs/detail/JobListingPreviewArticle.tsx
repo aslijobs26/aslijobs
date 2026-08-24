@@ -27,9 +27,9 @@ function PreviewSection({
   children: ReactNode;
 }) {
   return (
-    <section className="mt-4 border-t border-border-subtle pt-4">
-      <h4 className="text-xs font-semibold text-foreground">{title}</h4>
-      <div className="mt-2">{children}</div>
+    <section className="mt-5 border-t border-border-subtle pt-5">
+      <h4 className="text-sm font-bold text-foreground">{title}</h4>
+      <div className="mt-2.5">{children}</div>
     </section>
   );
 }
@@ -37,19 +37,19 @@ function PreviewSection({
 function WalkInField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[10px] font-medium tracking-[0.04em] text-muted uppercase">
+      <p className="text-[10px] font-medium tracking-[0.06em] text-muted uppercase">
         {label}
       </p>
-      <p className="mt-0.5 text-xs leading-relaxed text-muted">{value}</p>
+      <p className="mt-0.5 text-sm leading-relaxed text-muted">{value}</p>
     </div>
   );
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-surface p-2.5 ring-1 ring-border-subtle">
+    <div className="rounded-lg bg-[color-mix(in_srgb,var(--color-foreground)_5.5%,var(--color-surface))] px-3 py-2.5">
       <p className="text-[10px] text-muted">{label}</p>
-      <p className="mt-0.5 text-xs font-semibold text-foreground">{value}</p>
+      <p className="mt-0.5 text-xs font-bold text-foreground">{value}</p>
     </div>
   );
 }
@@ -80,26 +80,27 @@ export function JobListingPreviewArticle({
   return (
     <article
       className={cn(
-        "rounded-xl border border-border-subtle bg-hero-bg/40 p-4 sm:p-5",
+        "job-preview-card rounded-2xl border border-border-subtle p-5 shadow-sm sm:p-7",
         className,
       )}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3.5">
         <EmployerLogo
           name={job.employer.companyName}
           logoUrl={job.employer.logoUrl}
           size="lg"
+          className="size-12 rounded-xl bg-[#EEFFFB] text-primary-soft ring-0"
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-semibold text-foreground">
+            <h3 className="text-base font-bold leading-tight tracking-tight text-foreground sm:text-lg">
               {job.jobTitle.trim() || "Job Title"}
             </h3>
             <OperationsBadge variant={jobDetailStatusTone(job.status)}>
               {job.statusLabel}
             </OperationsBadge>
           </div>
-          <p className="mt-1 flex items-center gap-1 text-sm font-medium text-foreground">
+          <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-foreground">
             {job.employer.companyName || "Employer not assigned"}
             {showVerified ? (
               <BadgeCheck
@@ -108,7 +109,7 @@ export function JobListingPreviewArticle({
               />
             ) : null}
           </p>
-          <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted">
+          <div className="mt-1.5 flex flex-wrap gap-3 text-xs text-muted">
             <span className="inline-flex min-w-0 items-center gap-1">
               <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
               <span className="truncate">{job.locationLabel.trim() || "—"}</span>
@@ -121,29 +122,29 @@ export function JobListingPreviewArticle({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <StatCard label="Experience" value={job.experienceLabel.trim() || "—"} />
         <StatCard label="Salary" value={salaryDisplay} />
         <StatCard label="Education" value={job.educationLabel.trim() || "—"} />
         <StatCard label="Openings" value={openingsDisplay} />
       </div>
 
-      <div className="mt-4">
-        <h4 className="text-xs font-semibold text-foreground">About the role</h4>
+      <div className="mt-6">
+        <h4 className="text-sm font-bold text-foreground">About the role</h4>
         {paragraphs.length > 0 ? (
-          <div className="mt-2 space-y-2 text-xs leading-relaxed text-muted">
+          <div className="mt-2.5 space-y-2 text-sm leading-relaxed text-muted">
             {paragraphs.map((paragraph) => (
               <p key={paragraph.slice(0, 32)}>{paragraph}</p>
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-xs text-muted">{emptyDescriptionMessage}</p>
+          <p className="mt-2.5 text-sm text-muted">{emptyDescriptionMessage}</p>
         )}
       </div>
 
       {hasAddress ? (
         <PreviewSection title="Address">
-          <div className="space-y-1 text-xs leading-relaxed text-muted">
+          <div className="space-y-1 text-sm leading-relaxed text-muted">
             {job.address.trim() ? <p>{job.address}</p> : null}
             {job.locationLabel.trim() ? <p>{job.locationLabel}</p> : null}
             {job.landmark.trim() ? <p>Landmark: {job.landmark}</p> : null}
@@ -153,7 +154,7 @@ export function JobListingPreviewArticle({
 
       {hasWalkIn ? (
         <PreviewSection title="Walk-in Details">
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             <WalkInField
               label="Interview Address"
               value={
@@ -170,12 +171,14 @@ export function JobListingPreviewArticle({
 
       {hasRecruiter ? (
         <PreviewSection title="Recruiter">
-          <div className="space-y-0.5 text-xs leading-relaxed text-muted">
+          <div className="space-y-0.5 text-sm leading-relaxed">
             {job.contactPersonName.trim() ? (
-              <p>{job.contactPersonName}</p>
+              <p className="font-semibold text-foreground">
+                {job.contactPersonName}
+              </p>
             ) : null}
             {job.contactMobile.trim() ? (
-              <p>WhatsApp: {job.contactMobile}</p>
+              <p className="text-muted">WhatsApp: {job.contactMobile}</p>
             ) : null}
           </div>
         </PreviewSection>
@@ -183,11 +186,11 @@ export function JobListingPreviewArticle({
 
       {job.perks.length > 0 ? (
         <PreviewSection title="Perks">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {job.perks.map((perk) => (
               <span
                 key={perk}
-                className="rounded-full bg-surface px-2.5 py-1 text-[11px] font-medium text-foreground ring-1 ring-border-subtle"
+                className="rounded-full bg-hero-bg px-3 py-1 text-xs font-medium capitalize text-muted"
               >
                 {perkLabel(perk)}
               </span>

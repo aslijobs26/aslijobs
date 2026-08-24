@@ -1,36 +1,14 @@
 import type { OperationsJobDetail } from "../../../../types/operations-jobs";
-
-import { OperationsCard } from "../../../ui/OperationsCard";
-
 import { JobListingPreviewArticle } from "./JobListingPreviewArticle";
 
-
-
 interface JobPreviewPanelProps {
-
   job: OperationsJobDetail;
-
 }
-
-
 
 export function JobPreviewPanel({ job }: JobPreviewPanelProps) {
-
   return (
-
-    <OperationsCard
-
-      title="Job Preview"
-
-      subtitle="How this job appears using stored listing data."
-
-    >
-
-      <JobListingPreviewArticle job={job} />
-
-    </OperationsCard>
-
+    <div className="job-preview-canvas -m-2.5 flex min-h-[32rem] justify-center px-3 py-6 sm:-m-3.5 sm:px-8 sm:py-10">
+      <JobListingPreviewArticle job={job} className="w-full max-w-[40rem]" />
+    </div>
   );
-
 }
-

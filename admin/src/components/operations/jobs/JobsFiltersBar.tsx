@@ -14,7 +14,6 @@ export interface JobsFiltersState {
   search: string;
   status: "" | OperationsJobStatus;
   paymentStatus: "" | OperationsJobPaymentStatus;
-  category: string;
   location: string;
 }
 
@@ -46,7 +45,7 @@ const PAYMENT_OPTIONS: {
 ];
 
 const controlSurfaceClassName =
-  "border-border-subtle bg-hero-bg/60 shadow-none hover:bg-surface hover:shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+  "border-border-subtle bg-hero-bg/60 ops-brand-border-glow hover:bg-surface";
 
 const filterTriggerClassName = cn(
   "!h-10 !w-full !min-w-0 !rounded-lg sm:!h-9",
@@ -57,14 +56,16 @@ function FilterField({
   label,
   children,
 }: {
-  label: string;
+  label?: string;
   children: ReactNode;
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1 xl:min-w-[7.5rem] xl:flex-1">
-      <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">
-        {label}
-      </span>
+      {label ? (
+        <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">
+          {label}
+        </span>
+      ) : null}
       {children}
     </div>
   );
@@ -81,19 +82,10 @@ export function JobsFiltersBar({
     filters.search,
     filters.status,
     filters.paymentStatus,
-    filters.category,
     filters.location,
   ].filter(Boolean).length;
 
   const hasActiveFilters = activeFilterCount > 0;
-
-  const categoryOptions = [
-    { value: "", label: "All Category" },
-    ...filterOptions.categories.map((category) => ({
-      value: category,
-      label: category,
-    })),
-  ];
 
   const locationOptions = [
     { value: "", label: "All States" },
@@ -104,9 +96,9 @@ export function JobsFiltersBar({
   ];
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm sm:p-3.5">
+    <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm ops-brand-border-glow sm:p-3.5">
       <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-end xl:gap-2.5">
-        <label className="block w-full min-w-0 xl:w-auto xl:min-w-[10rem] xl:max-w-[14rem] xl:shrink-0">
+        <label className="block w-full min-w-0 xl:w-[22rem] xl:min-w-[20rem] xl:max-w-[26rem] xl:shrink-0">
           <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted">
             Search
           </span>
@@ -122,7 +114,7 @@ export function JobsFiltersBar({
               onChange={(event) => onChange({ search: event.target.value })}
               placeholder="Search jobs…"
               className={cn(
-                "h-10 w-full rounded-lg border border-border-subtle bg-hero-bg/60 py-2 pl-9 pr-3 text-xs font-medium text-foreground outline-none transition-[border-color,box-shadow,background-color] placeholder:font-normal placeholder:text-muted sm:h-9",
+                "ops-brand-border-glow h-10 w-full rounded-lg border border-border-subtle bg-hero-bg/60 py-2 pl-9 pr-3 text-xs font-medium text-foreground outline-none transition-[border-color,box-shadow,background-color] placeholder:font-normal placeholder:text-muted sm:h-9",
                 "hover:border-primary/25 hover:bg-surface",
                 "focus-visible:border-primary focus-visible:bg-surface focus-visible:ring-2 focus-visible:ring-primary/30",
               )}
@@ -165,17 +157,6 @@ export function JobsFiltersBar({
             />
           </FilterField>
 
-          <FilterField label="Category">
-            <OperationsFilterSelect
-              label="Job category"
-              value={filters.category}
-              options={categoryOptions}
-              className="w-full min-w-0"
-              triggerClassName={filterTriggerClassName}
-              onChange={(value) => onChange({ category: value })}
-            />
-          </FilterField>
-
           <FilterField label="State">
             <OperationsFilterSelect
               label="State"
@@ -212,7 +193,7 @@ export function JobsFiltersBar({
           <button
             type="button"
             onClick={onExport}
-            className="inline-flex h-10 min-w-0 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface px-1.5 text-[11px] font-semibold text-foreground transition-colors hover:border-primary/25 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-9 sm:flex-none sm:gap-1.5 sm:px-3 sm:text-xs"
+            className="inline-flex h-10 min-w-0 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface px-1.5 text-[11px] font-semibold text-foreground transition-colors ops-brand-border-glow hover:border-primary/25 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-9 sm:flex-none sm:gap-1.5 sm:px-3 sm:text-xs"
           >
             <Download className="size-3.5 shrink-0" aria-hidden="true" />
             <span className="truncate">Export</span>

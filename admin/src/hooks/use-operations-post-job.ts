@@ -22,6 +22,15 @@ export function useOperationsEmployersSearch(search: string, enabled = true) {
   });
 }
 
+export function useOperationsEmployersList(enabled = true) {
+  return useQuery({
+    queryKey: [...OPERATIONS_EMPLOYERS_QUERY_KEY, "__all__"],
+    queryFn: () => searchOperationsEmployers({ search: "", limit: 50 }),
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
 function invalidateJobQueries(
   queryClient: ReturnType<typeof useQueryClient>,
   jobId?: string,

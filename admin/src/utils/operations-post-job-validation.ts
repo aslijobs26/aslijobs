@@ -9,100 +9,184 @@ export function validateOperationsPostJobStep(
   const { jobInformation, locationAndSalary, candidateAndInterview } = formData;
 
   if (step === 1) {
+    if (!jobInformation.companyDetails.trim()) {
+      errors.companyDetails = "Company Name is required.";
+    }
+    if (!jobInformation.companySize.trim()) {
+      errors.companySize = "Please select Company Size.";
+    }
+    if (!jobInformation.industry.trim()) {
+      errors.industry = "Please select Industry.";
+    }
+    if (!jobInformation.businessCategory.trim()) {
+      errors.businessCategory = "Please select Business Category.";
+    }
     if (!jobInformation.jobTitle.trim()) {
-      errors.jobTitle = "Job title is required.";
+      errors.jobTitle = "Job Title is required.";
     }
     if (!jobInformation.jobType) {
-      errors.jobType = "Job type is required.";
+      errors.jobType = "Please select Job Type.";
+    }
+    if (jobInformation.jobType === "contract") {
+      if (!jobInformation.contractPeriodFrom.trim()) {
+        errors.contractPeriodFrom = "Contract Period is required.";
+      }
+      if (!jobInformation.contractPeriodTo.trim()) {
+        errors.contractPeriodTo = "Contract Period is required.";
+      }
+    }
+    if (jobInformation.jobType === "part-time") {
+      if (!jobInformation.partTimeSchedule) {
+        errors.partTimeSchedule = "Please select Part Time Schedule.";
+      } else if (jobInformation.partTimeSchedule === "fixed-timings") {
+        if (!jobInformation.partTimeStartTime.trim()) {
+          errors.partTimeStartTime = "Start Time is required.";
+        }
+        if (!jobInformation.partTimeEndTime.trim()) {
+          errors.partTimeEndTime = "End Time is required.";
+        }
+      } else if (!jobInformation.partTimeFlexibleHours.trim()) {
+        errors.partTimeFlexibleHours = "Flexible hours are required.";
+      }
     }
     if (!jobInformation.workMode) {
-      errors.workMode = "Work mode is required.";
+      errors.workMode = "Please select Work Mode.";
     }
     if (!jobInformation.vacancies.trim() || Number(jobInformation.vacancies) < 1) {
-      errors.vacancies = "At least one vacancy is required.";
+      errors.vacancies = "Please enter Number of Vacancies.";
     }
     if (!jobInformation.jobDescription.trim()) {
-      errors.jobDescription = "Job description is required.";
+      errors.jobDescription = "Job Description is required.";
     } else if (
       jobInformation.jobDescription.length > OPERATIONS_POST_JOB_LONG_TEXT_MAX_LENGTH
     ) {
-      errors.jobDescription = `Description must be ${OPERATIONS_POST_JOB_LONG_TEXT_MAX_LENGTH} characters or less.`;
+      errors.jobDescription = `Job Description must be ${OPERATIONS_POST_JOB_LONG_TEXT_MAX_LENGTH} characters or less.`;
     }
   }
 
   if (step === 2) {
     if (!locationAndSalary.state.trim()) {
-      errors.state = "State is required.";
+      errors.state = "Please select State.";
     }
     if (!locationAndSalary.city.trim()) {
-      errors.city = "City is required.";
+      errors.city = "Please enter City.";
     }
     if (!locationAndSalary.address.trim()) {
-      errors.address = "Job address is required.";
+      errors.address = "Please enter Address.";
     }
     if (!locationAndSalary.salaryType) {
-      errors.salaryType = "Salary type is required.";
+      errors.salaryType = "Please select Salary Type.";
     }
     if (!locationAndSalary.salaryPeriod) {
-      errors.salaryPeriod = "Salary period is required.";
+      errors.salaryPeriod = "Please select Salary Period.";
     }
     if (
       locationAndSalary.salaryType === "fixed" &&
       !locationAndSalary.incentives.trim()
     ) {
-      errors.incentives = "Fixed salary is required.";
+      errors.incentives = "Please enter Fixed Salary.";
     }
     if (locationAndSalary.salaryType === "range") {
       if (!locationAndSalary.salaryMin.trim()) {
-        errors.salaryMin = "Minimum salary is required.";
+        errors.salaryMin = "Minimum Salary is required.";
       }
       if (!locationAndSalary.salaryMax.trim()) {
-        errors.salaryMax = "Maximum salary is required.";
+        errors.salaryMax = "Maximum Salary is required.";
       }
-      if (
-        Number(locationAndSalary.salaryMax) <= Number(locationAndSalary.salaryMin)
-      ) {
-        errors.salaryMax = "Maximum salary must be greater than minimum salary.";
+      if (locationAndSalary.salaryMin.trim() && locationAndSalary.salaryMax.trim()) {
+        if (
+          Number(locationAndSalary.salaryMax) <= Number(locationAndSalary.salaryMin)
+        ) {
+          errors.salaryMax = "Maximum Salary must be greater than Minimum Salary.";
+        }
       }
     }
   }
 
   if (step === 3) {
     if (candidateAndInterview.education.length === 0) {
-      errors.education = "Select at least one education level.";
+      errors.education = "Please select Education.";
     }
     if (!candidateAndInterview.experienceRequired) {
-      errors.experienceRequired = "Experience is required.";
+      errors.experienceRequired = "Please select Experience.";
+    }
+    if (
+      candidateAndInterview.additionalRequirements.language &&
+      candidateAndInterview.languages.length === 0
+    ) {
+      errors.languages = "Please select Language.";
+    }
+    if (
+      candidateAndInterview.additionalRequirements.gender &&
+      candidateAndInterview.gender.length === 0
+    ) {
+      errors.gender = "Please select Gender.";
+    }
+    if (candidateAndInterview.additionalRequirements.age) {
+      if (!candidateAndInterview.ageMin.trim()) {
+        errors.ageMin = "Minimum Age is required.";
+      }
+      if (!candidateAndInterview.ageMax.trim()) {
+        errors.ageMax = "Maximum Age is required.";
+      }
+      if (
+        candidateAndInterview.ageMin.trim() &&
+        candidateAndInterview.ageMax.trim() &&
+        Number(candidateAndInterview.ageMin) > Number(candidateAndInterview.ageMax)
+      ) {
+        errors.ageMax = "Maximum Age must be greater than Minimum Age.";
+      }
     }
     if (!candidateAndInterview.contactName.trim()) {
-      errors.contactName = "Contact name is required.";
+      errors.contactName = "Contact Person Name is required.";
     }
     if (!candidateAndInterview.contactEmail.trim()) {
-      errors.contactEmail = "Contact email is required.";
+      errors.contactEmail = "Please enter a valid Email Address.";
     } else if (
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateAndInterview.contactEmail.trim())
     ) {
-      errors.contactEmail = "Enter a valid email address.";
+      errors.contactEmail = "Please enter a valid Email Address.";
     }
     if (!/^\d{10}$/.test(candidateAndInterview.contactMobile.trim())) {
-      errors.contactMobile = "Mobile number must be 10 digits.";
+      errors.contactMobile = "Please enter Mobile Number.";
     }
     if (candidateAndInterview.walkIn === "yes") {
       if (!candidateAndInterview.walkInAddress.trim()) {
-        errors.walkInAddress = "Walk-in address is required.";
+        errors.walkInAddress = "Interview Address is required.";
       }
       if (!candidateAndInterview.walkInStartDate) {
-        errors.walkInStartDate = "Walk-in start date is required.";
+        errors.walkInStartDate = "Please select Walk-in Start Date.";
       }
       if (!candidateAndInterview.walkInEndDate) {
-        errors.walkInEndDate = "Walk-in end date is required.";
+        errors.walkInEndDate = "Please select Walk-in End Date.";
       }
       if (!candidateAndInterview.walkInStartTime) {
-        errors.walkInStartTime = "Walk-in start time is required.";
+        errors.walkInStartTime = "Please select Walk-in Start Time.";
       }
       if (!candidateAndInterview.walkInEndTime) {
-        errors.walkInEndTime = "Walk-in end time is required.";
+        errors.walkInEndTime = "Please select Walk-in End Time.";
       }
+      if (
+        candidateAndInterview.walkInStartDate &&
+        candidateAndInterview.walkInEndDate &&
+        candidateAndInterview.walkInEndDate < candidateAndInterview.walkInStartDate
+      ) {
+        errors.walkInEndDate = "Walk-in End Date must be on or after Start Date.";
+      }
+      if (
+        candidateAndInterview.walkInStartTime &&
+        candidateAndInterview.walkInEndTime &&
+        candidateAndInterview.walkInEndTime <= candidateAndInterview.walkInStartTime
+      ) {
+        errors.walkInEndTime = "Walk-in End Time must be greater than Start Time.";
+      }
+    }
+    if (
+      candidateAndInterview.otherInstructions.trim() &&
+      candidateAndInterview.otherInstructions.length >
+        OPERATIONS_POST_JOB_LONG_TEXT_MAX_LENGTH
+    ) {
+      errors.otherInstructions = `Other Instructions must be ${OPERATIONS_POST_JOB_LONG_TEXT_MAX_LENGTH} characters or less.`;
     }
   }
 

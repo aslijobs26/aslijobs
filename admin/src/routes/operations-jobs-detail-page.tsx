@@ -13,7 +13,6 @@ import { JobPreviewPanel } from "../components/operations/jobs/detail/JobPreview
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import {
   OPERATIONS_ROUTES,
-  operationsJobDetailPath,
 } from "../constants/operations-routes";
 import {
   useOperationsJobApplications,
@@ -66,33 +65,6 @@ export function OperationsJobsDetailPage() {
 
     return "Failed to load job details.";
   }, [detailQuery.error]);
-
-  const handleShare = async () => {
-    if (!job) {
-      return;
-    }
-
-    const shareText = `${job.jobTitle} (${job.jobId}) at ${job.employer.companyName}`;
-    const shareUrl =
-      typeof window !== "undefined"
-        ? `${window.location.origin}${operationsJobDetailPath(job.jobId)}`
-        : job.jobId;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: job.jobTitle,
-          text: shareText,
-          url: shareUrl,
-        });
-        return;
-      }
-
-      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-    } catch {
-      // User cancelled share or clipboard blocked — ignore.
-    }
-  };
 
   const handleEdit = () => {
     if (!job) {
@@ -182,7 +154,6 @@ export function OperationsJobsDetailPage() {
             <JobDetailHeader
               job={job}
               isClosing={statusMutation.isPending}
-              onShare={() => void handleShare()}
               onEdit={handleEdit}
               onCloseJob={handleCloseJob}
             />

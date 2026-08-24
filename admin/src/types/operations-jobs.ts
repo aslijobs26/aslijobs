@@ -14,9 +14,10 @@ export type OperationsJobPaymentStatus =
 export type OperationsJobTab =
   | "all"
   | "live"
-  | "pending_payment"
+  | "paused"
+  | "draft"
   | "expired"
-  | "drafts";
+  | "closed";
 
 export type OperationsJobStatusAction =
   | "publish"
@@ -47,6 +48,7 @@ export interface OperationsJobListItem {
   listingPackageLabel: string;
   listingValidUntil: string | null;
   businessCategory: string;
+  vacancies: number;
   cityName: string;
   stateName: string;
   locationLabel: string;
@@ -69,16 +71,17 @@ export interface OperationsJobsKpis {
 export interface OperationsJobsTabCounts {
   all: number;
   live: number;
-  pending_payment: number;
+  paused: number;
+  draft: number;
   expired: number;
-  drafts: number;
+  closed: number;
 }
 
 export interface OperationsJobsInsight {
   id: string;
   label: string;
   count: number;
-  tab: OperationsJobTab | "paused_inactive";
+  tab: OperationsJobTab | "paused_inactive" | "pending_payment";
 }
 
 export interface OperationsJobsFilterOptions {
@@ -111,7 +114,6 @@ export interface OperationsJobsListParams {
   search: string;
   status: "" | OperationsJobStatus;
   paymentStatus: "" | OperationsJobPaymentStatus;
-  category: string;
   location: string;
 }
 

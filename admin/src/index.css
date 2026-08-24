@@ -114,3 +114,30 @@ body {
     height: 0;
   }
 }
+
+/* Soft AsliJobs teal border — dark mode only */
+@utility ops-brand-border-glow {
+  border-color: var(--color-border-subtle);
+
+  html[data-theme="dark"] & {
+    border-color: color-mix(in srgb, var(--ds-primary-soft) 55%, var(--ds-border)) !important;
+    box-shadow: none !important;
+  }
+}
+
+@utility job-preview-canvas {
+  background-color: #ffffff;
+
+  html[data-theme="dark"] & {
+    background-color: var(--ds-hero-bg);
+  }
+}
+
+@utility job-preview-card {
+  background-color: color-mix(in srgb, white 72%, var(--color-hero-bg) 28%);
+
+  html[data-theme="dark"] & {
+    background-color: var(--ds-surface);
+    border-color: var(--ds-border);
+  }
+}

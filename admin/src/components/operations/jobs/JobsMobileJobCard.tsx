@@ -23,7 +23,6 @@ interface JobsMobileJobCardProps {
   paymentBadgeClass: (
     status: OperationsJobListItem["listingPaymentStatus"],
   ) => string;
-  categoryTone: (category: string) => string;
 }
 
 export function JobsMobileJobCard({
@@ -34,7 +33,6 @@ export function JobsMobileJobCard({
   formatPostedDate,
   statusBadgeVariant,
   paymentBadgeClass,
-  categoryTone,
 }: JobsMobileJobCardProps) {
   const posted = formatPostedDate(job.publishedAt ?? job.createdAt);
   const showVerified =
@@ -91,16 +89,9 @@ export function JobsMobileJobCard({
                 />
               ) : null}
             </p>
-            {job.businessCategory ? (
-              <p
-                className={cn(
-                  "mt-0.5 truncate text-[11px] font-medium",
-                  categoryTone(job.businessCategory),
-                )}
-              >
-                {job.businessCategory}
-              </p>
-            ) : null}
+            <p className="mt-0.5 truncate text-[11px] font-medium tabular-nums text-muted">
+              {job.vacancies.toLocaleString("en-IN")} vacancies
+            </p>
           </div>
         </div>
 

@@ -62,23 +62,23 @@ export function JobsInsightsStrip({ insights, onSelect }: JobsInsightsStripProps
           <article
             key={insight.id}
             className={cn(
-              "flex min-w-0 items-start gap-2 rounded-lg border border-border-subtle bg-surface px-2.5 py-2.5 shadow-sm sm:px-3",
+              "flex min-w-0 items-start gap-3 rounded-lg border border-border-subtle bg-surface px-3.5 py-4 shadow-sm sm:px-4 sm:py-5",
               isTrailingSingle && "min-[540px]:col-span-2 xl:col-span-1",
             )}
           >
             <span
               className={cn(
-                "inline-flex size-8 shrink-0 items-center justify-center rounded-md",
+                "inline-flex size-9 shrink-0 items-center justify-center rounded-md",
                 visual.wrap,
               )}
             >
-              <Icon className={cn("size-3.5", visual.color)} aria-hidden="true" />
+              <Icon className={cn("size-4", visual.color)} aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] leading-snug text-muted sm:text-xs">
                 {insight.label}
               </p>
-              <div className="mt-1 flex flex-wrap items-end justify-between gap-x-2 gap-y-1">
+              <div className="mt-2 flex flex-wrap items-end justify-between gap-x-2 gap-y-1">
                 <p className="text-base font-bold leading-none text-foreground sm:text-lg">
                   {insight.count.toLocaleString("en-IN")}
                 </p>

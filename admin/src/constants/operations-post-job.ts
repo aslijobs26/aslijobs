@@ -91,6 +91,7 @@ export const OPERATIONS_POST_JOB_INITIAL_STEP = 1 satisfies OperationsPostJobAct
 export interface OperationsPostJobOption<T extends string = string> {
   value: T;
   label: string;
+  description?: string;
 }
 
 export const OPERATIONS_POST_JOB_TYPE_OPTIONS: OperationsPostJobOption<OperationsPostJobType>[] =
@@ -102,10 +103,26 @@ export const OPERATIONS_POST_JOB_TYPE_OPTIONS: OperationsPostJobOption<Operation
 
 export const OPERATIONS_POST_JOB_WORK_MODE_OPTIONS: OperationsPostJobOption<OperationsPostJobWorkMode>[] =
   [
-    { value: "office", label: "Work From Office" },
-    { value: "field", label: "Field Work" },
-    { value: "both", label: "Office & Field Work" },
-    { value: "home", label: "Work From Home" },
+    {
+      value: "office",
+      label: "Work From Office",
+      description: "Employee works from the office.",
+    },
+    {
+      value: "field",
+      label: "Field Work",
+      description: "Employee works at different field locations.",
+    },
+    {
+      value: "both",
+      label: "Office & Field Work",
+      description: "Employee works from both the office & field locations.",
+    },
+    {
+      value: "home",
+      label: "Work From Home",
+      description: "Employee works remotely from home.",
+    },
   ];
 
 export const OPERATIONS_POST_JOB_SALARY_TYPE_OPTIONS = [
@@ -171,6 +188,12 @@ export const OPERATIONS_POST_JOB_GENDER_OPTIONS: OperationsPostJobOption<Operati
     { value: "other", label: "Other" },
   ];
 
+export const OPERATIONS_POST_JOB_ADDITIONAL_REQUIREMENT_TOGGLES = [
+  { key: "language" as const, label: "Language" },
+  { key: "gender" as const, label: "Gender" },
+  { key: "age" as const, label: "Age" },
+];
+
 export const OPERATIONS_POST_JOB_WALK_IN_TIME_OPTIONS = [
   { value: "09:00", label: "9:00 AM" },
   { value: "10:00", label: "10:00 AM" },
@@ -223,6 +246,19 @@ export function parseContractPeriodStoredValue(value: string): {
 } {
   if (!value) {
     return { amount: "", unit: "months" };
+  }
+  const legacyValue: Record<
+    string,
+    { amount: string; unit: (typeof OPERATIONS_POST_JOB_CONTRACT_PERIOD_UNITS)[number]["value"] }
+  > = {
+    "1_month": { amount: "1", unit: "months" },
+    "3_months": { amount: "3", unit: "months" },
+    "6_months": { amount: "6", unit: "months" },
+    "12_months": { amount: "12", unit: "months" },
+    "24_months": { amount: "24", unit: "months" },
+  };
+  if (legacyValue[value]) {
+    return legacyValue[value];
   }
   const match = value.match(/^(\d+)_(days|months|years)$/);
   if (match) {

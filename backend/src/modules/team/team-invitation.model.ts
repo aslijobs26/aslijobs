@@ -58,7 +58,6 @@ const teamInvitationSchema = new Schema(
     tokenHash: {
       type: String,
       required: true,
-      index: true,
     },
     status: {
       type: String,
