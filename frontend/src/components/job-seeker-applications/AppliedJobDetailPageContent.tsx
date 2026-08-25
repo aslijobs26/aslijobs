@@ -1,5 +1,6 @@
 "use client";
 
+import { JobSeekerApplicationDetailSkeleton } from "@/components/job-seeker-dashboard/skeletons/JobSeekerPageSkeletons";
 import { ApplicationInterviewDetails } from "@/components/applications/ApplicationInterviewDetails";
 import { ResumePreview } from "@/components/job-seeker-resume/ResumePreview";
 import { ROUTES } from "@/constants/routes";
@@ -100,15 +101,7 @@ export function AppliedJobDetailPageContent({
   });
 
   if (detailQuery.isLoading) {
-    return (
-      <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 rounded bg-primary-light/50" />
-          <div className="h-4 w-72 max-w-full rounded bg-primary-light/30" />
-          <div className="mt-6 h-64 rounded-xl bg-primary-light/25" />
-        </div>
-      </div>
-    );
+    return <JobSeekerApplicationDetailSkeleton />;
   }
 
   if (detailQuery.isError || !detailQuery.data) {

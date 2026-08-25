@@ -1,5 +1,6 @@
 "use client";
 
+import { JobSeekerWorkspaceShellSkeleton } from "@/components/job-seeker-dashboard/skeletons/JobSeekerPageSkeletons";
 import { ROUTES } from "@/constants/routes";
 import { ensureJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
 import { isUnauthorizedAuthError } from "@/utils/auth-errors";
@@ -113,11 +114,7 @@ export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
   }
 
   if (status !== "authenticated") {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-hero-bg px-6">
-        <p className="text-sm text-muted">Checking authentication...</p>
-      </div>
-    );
+    return <JobSeekerWorkspaceShellSkeleton />;
   }
 
   return <>{children}</>;

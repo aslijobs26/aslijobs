@@ -15,7 +15,6 @@ export function useOperationsJobs(params: OperationsJobsListParams) {
   return useQuery({
     queryKey: [...OPERATIONS_JOBS_QUERY_KEY, params],
     queryFn: () => fetchOperationsJobs(params),
-    placeholderData: (previous) => previous,
     refetchOnWindowFocus: true,
     staleTime: 0,
   });
@@ -28,10 +27,12 @@ export function useUpdateOperationsJobStatusMutation() {
     mutationFn: ({
       jobId,
       action,
+      reason,
     }: {
       jobId: string;
       action: OperationsJobStatusAction;
-    }) => updateOperationsJobStatus(jobId, action),
+      reason?: string;
+    }) => updateOperationsJobStatus(jobId, action, reason),
     onSuccess: async (_data, { jobId }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: OPERATIONS_JOBS_QUERY_KEY }),

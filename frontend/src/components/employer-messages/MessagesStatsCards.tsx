@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonKpiValue } from "@/components/shared/skeletons/SkeletonBone";
 import { cn } from "@/utils/cn";
 import {
   Briefcase,
@@ -24,6 +25,7 @@ type MessagesStatsCardsProps = {
   /** Optional KPI counts derived from the loaded conversation page / filters. */
   activeHiringConversations?: number | null;
   interviewWeekConversations?: number | null;
+  isLoading?: boolean;
 };
 
 /**
@@ -36,6 +38,7 @@ export function MessagesStatsCards({
   unreadConversations,
   activeHiringConversations = null,
   interviewWeekConversations = null,
+  isLoading = false,
 }: MessagesStatsCardsProps) {
   const cards: MessagesStatCard[] = [
     {
@@ -100,9 +103,13 @@ export function MessagesStatsCards({
                 <Icon className="size-3.5 sm:size-4" strokeWidth={2} />
               </span>
             </div>
-            <p className="mt-2 text-xl font-bold text-foreground sm:mt-3 sm:text-2xl">
-              {card.value ?? 0}
-            </p>
+            {isLoading ? (
+              <SkeletonKpiValue className="mt-2 sm:mt-3" />
+            ) : (
+              <p className="mt-2 text-xl font-bold text-foreground sm:mt-3 sm:text-2xl">
+                {card.value ?? 0}
+              </p>
+            )}
           </article>
         );
       })}

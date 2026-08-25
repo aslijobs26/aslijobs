@@ -24,7 +24,8 @@ export type NotificationType =
   | "application_joined"
   | "application_rejected"
   | "application_withdrawn"
-  | "candidate_withdrawn";
+  | "candidate_withdrawn"
+  | "job_closed";
 
 export type NotificationListItem = {
   id: string;

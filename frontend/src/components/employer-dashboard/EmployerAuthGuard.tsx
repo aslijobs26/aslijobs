@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerWorkspaceShellSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
 import { ROUTES } from "@/constants/routes";
 import {
   employerProfileQueryOptions,
@@ -130,11 +131,7 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
   }
 
   if (status !== "authenticated") {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-hero-bg px-6">
-        <p className="text-sm text-muted">Checking authentication...</p>
-      </div>
-    );
+    return <EmployerWorkspaceShellSkeleton />;
   }
 
   return <>{children}</>;

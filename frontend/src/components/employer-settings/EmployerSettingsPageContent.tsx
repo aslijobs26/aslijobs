@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerSettingsPageSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
 import { AccountSettingsPanel } from "@/components/employer-settings/AccountSettingsPanel";
 import { ActivityLogsPanel } from "@/components/employer-settings/ActivityLogsPanel";
 import { ApplicationSettingsPanel } from "@/components/employer-settings/ApplicationSettingsPanel";
@@ -174,11 +175,7 @@ export function EmployerSettingsPageContent() {
       : can("company_profile", "update");
 
   if (permissionsLoading || employerProfileQuery.isLoading) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-4 py-16">
-        <p className="text-sm text-muted">Loading settings...</p>
-      </div>
-    );
+    return <EmployerSettingsPageSkeleton />;
   }
 
   if (employerProfileQuery.isError || !employer) {

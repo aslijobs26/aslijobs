@@ -71,9 +71,20 @@ export type ListOperationsJobApplicationsQuery = z.infer<
   typeof listOperationsJobApplicationsQuerySchema
 >;
 
-export const updateOperationsJobStatusBodySchema = z.object({
-  action: z.enum(JOB_STATUS_ACTIONS),
-});
+export const updateOperationsJobStatusBodySchema = z
+  .object({
+    action: z.enum(JOB_STATUS_ACTIONS),
+    reason: z.string().trim().max(2000).optional().default(""),
+  })
+  .superRefine((value, ctx) => {
+    if (value.action === "close" && !value.reason.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Reason for closing this job is required.",
+        path: ["reason"],
+      });
+    }
+  });
 
 export type UpdateOperationsJobStatusBody = z.infer<
   typeof updateOperationsJobStatusBodySchema

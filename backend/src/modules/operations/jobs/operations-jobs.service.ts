@@ -25,6 +25,8 @@ import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-i
 import { EmployerModel } from "../../employers/employer.model.js";
 import { JobModel, type JobDocument } from "../../jobs/job.model.js";
 import { jobService } from "../../jobs/job.service.js";
+import { notificationService } from "../../notifications/notification.service.js";
+import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
 import type {
   OperationsJobActivityItem,
   OperationsJobAnalytics,
@@ -775,7 +777,18 @@ function buildActivity(job: JobDocument): OperationsJobActivityItem[] {
   }
 
   const lastStatusChangedAt = toIso(job.lastStatusChangedAt);
-  if (lastStatusChangedAt) {
+  const closedAt = toIso(job.closedAt);
+  if (closedAt) {
+    const reason = job.closedReason?.trim();
+    events.push({
+      id: "closed",
+      type: "closed",
+      label: reason
+        ? `Job closed. Reason: ${reason}`
+        : "Status set to Closed",
+      at: closedAt,
+    });
+  } else if (lastStatusChangedAt) {
     events.push({
       id: "status-changed",
       type: "status_changed",
@@ -909,6 +922,9 @@ function toDetail(
     publishedAt: toIso(job.publishedAt),
     reactivatedAt: toIso(job.reactivatedAt),
     lastStatusChangedAt: toIso(job.lastStatusChangedAt),
+    closedReason: job.closedReason?.trim() || "",
+    closedAt: toIso(job.closedAt),
+    employerNotified: Boolean(job.closeNotificationSentAt),
     createdAt: toIso(job.createdAt) ?? new Date().toISOString(),
     updatedAt: toIso(job.updatedAt) ?? new Date().toISOString(),
     wizardSnapshot: job.wizardSnapshot ?? null,
@@ -1198,6 +1214,8 @@ export const operationsJobsService = {
   async updateJobStatus(
     publicJobId: string,
     action: JobStatusAction,
+    operationsUserId: string,
+    reason = "",
   ): Promise<OperationsJobDetail> {
     const job = await findJobByPublicId(publicJobId);
 
@@ -1205,6 +1223,14 @@ export const operationsJobsService = {
       throw new AppError(
         "Assign an employer before publishing this job.",
         HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    if (action === "close") {
+      return this.closeJobWithEmployerNotification(
+        job,
+        operationsUserId,
+        reason,
       );
     }
 
@@ -1233,6 +1259,101 @@ export const operationsJobsService = {
 
     if (updateResult.matchedCount === 0) {
       throw new AppError("Job not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    return this.getJobDetail(job.jobId);
+  },
+
+  async closeJobWithEmployerNotification(
+    job: JobDocument,
+    operationsUserId: string,
+    reason: string,
+  ): Promise<OperationsJobDetail> {
+    if (!mongoose.Types.ObjectId.isValid(operationsUserId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const trimmedReason = reason.trim();
+    if (!trimmedReason) {
+      throw new AppError(
+        "Reason for closing this job is required.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const employerId =
+      (job.employerId && String(job.employerId)) ||
+      (job.companyId && String(job.companyId)) ||
+      "";
+
+    if (!employerId || !mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError(
+        "Assign an employer before closing this job.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const now = new Date();
+    const alreadyClosed = job.status === "closed";
+    const alreadyNotified = Boolean(job.closeNotificationSentAt);
+    const closedByOperations = Boolean(job.closedByOperationsUserId);
+
+    if (alreadyClosed && (alreadyNotified || !closedByOperations)) {
+      throw new AppError("Job is already closed.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    if (!alreadyClosed) {
+      const updateResult = await JobModel.updateOne(
+        { _id: job._id, status: { $ne: "closed" } },
+        {
+          $set: {
+            status: "closed",
+            lastStatusChangedAt: now,
+            closedReason: trimmedReason,
+            closedAt: now,
+            closedFromStatus: job.status,
+            closedByOperationsUserId: new mongoose.Types.ObjectId(
+              operationsUserId,
+            ),
+          },
+        },
+      );
+
+      if (updateResult.matchedCount === 0) {
+        throw new AppError("Job is already closed.", HTTP_STATUS.BAD_REQUEST);
+      }
+    }
+
+    const actor = await OperationsTeamUserModel.findById(operationsUserId)
+      .select("fullName role")
+      .lean();
+    const closedByLabel = actor?.fullName?.trim()
+      ? `${actor.fullName.trim()} (Operations)`
+      : "Operations";
+
+    try {
+      const notifyResult = await notificationService.notifyEmployerJobClosed({
+        employerId,
+        jobMongoId: job._id.toString(),
+        publicJobId: job.jobId,
+        jobTitle: job.jobTitle?.trim() || "Untitled job",
+        reason: alreadyClosed
+          ? job.closedReason?.trim() || trimmedReason
+          : trimmedReason,
+        closedByLabel,
+      });
+
+      if (notifyResult.created || notifyResult.alreadySent) {
+        await JobModel.updateOne(
+          { _id: job._id },
+          { $set: { closeNotificationSentAt: now } },
+        );
+      }
+    } catch (error) {
+      console.error(
+        `[operations] employer close notification failed for ${job.jobId}`,
+        error,
+      );
     }
 
     return this.getJobDetail(job.jobId);

@@ -1,3 +1,4 @@
+import { EmployerProfilePageSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 
@@ -12,11 +13,7 @@ const EmployerProfilePageContent = dynamic(
       (module) => module.EmployerProfilePageContent,
     ),
   {
-    loading: () => (
-      <div className="flex min-h-[40vh] items-center justify-center px-6">
-        <p className="text-sm text-muted">Loading profile…</p>
-      </div>
-    ),
+    loading: () => <EmployerProfilePageSkeleton />,
   },
 );
 

@@ -329,6 +329,30 @@ const jobSchema = new Schema(
       type: Date,
       default: null,
     },
+    closedReason: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    closedAt: {
+      type: Date,
+      default: null,
+    },
+    closedFromStatus: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    closedByOperationsUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsTeamUser",
+      default: null,
+      index: true,
+    },
+    closeNotificationSentAt: {
+      type: Date,
+      default: null,
+    },
     applications: {
       type: Number,
       required: true,

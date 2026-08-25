@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
+import { Check } from "lucide-react";
 import { JobsFiltersBar, type JobsFiltersState } from "../components/operations/jobs/JobsFiltersBar";
+import { CloseJobConfirmDialog } from "../components/operations/jobs/detail/CloseJobConfirmDialog";
 import { JobsInsightsStrip } from "../components/operations/jobs/JobsInsightsStrip";
 import { JobsKpiStrip } from "../components/operations/jobs/JobsKpiStrip";
+import { JobsPageSkeleton } from "../components/operations/jobs/JobsPageSkeleton";
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
 import { JobsTableSection } from "../components/operations/jobs/JobsTableSection";
 import { JobsTabs } from "../components/operations/jobs/JobsTabs";
@@ -31,44 +34,11 @@ function statusActionConfirmMessage(
     case "reactivate":
       return `Activate job ${job.jobId}? It will become live for candidates.`;
     case "close":
-      return `Close job ${job.jobId}? Candidates will no longer be able to apply.`;
+      return null;
     default:
       return null;
   }
 }
-
-const EMPTY_RESULT: OperationsJobsListResult = {
-  kpis: {
-    totalJobs: 0,
-    activeJobs: 0,
-    pendingPaymentJobs: 0,
-    liveJobs: 0,
-    expiredJobs: 0,
-    draftJobs: 0,
-  },
-  counts: {
-    all: 0,
-    live: 0,
-    paused: 0,
-    draft: 0,
-    expired: 0,
-    closed: 0,
-  },
-  insights: [],
-  filterOptions: {
-    categories: [],
-    locations: [],
-  },
-  jobs: [],
-  pagination: {
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPreviousPage: false,
-  },
-};
 
 const DEFAULT_FILTERS: JobsFiltersState = {
   search: "",
@@ -127,6 +97,11 @@ export function OperationsJobsPage() {
   const [limit, setLimit] = useState(10);
   const [filters, setFilters] = useState<JobsFiltersState>(DEFAULT_FILTERS);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [closeTarget, setCloseTarget] = useState<OperationsJobListItem | null>(
+    null,
+  );
+  const [closeError, setCloseError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -159,7 +134,9 @@ export function OperationsJobsPage() {
 
   const jobsQuery = useOperationsJobs(queryParams);
   const statusMutation = useUpdateOperationsJobStatusMutation();
-  const data = jobsQuery.data ?? EMPTY_RESULT;
+  const data = jobsQuery.data;
+  const isPageLoading = jobsQuery.isPending || (jobsQuery.isFetching && !data);
+  const isSoftRefreshing = Boolean(data) && jobsQuery.isFetching && !jobsQuery.isPending;
 
   const errorMessage = (() => {
     if (!jobsQuery.error) {
@@ -221,6 +198,12 @@ export function OperationsJobsPage() {
       return;
     }
 
+    if (action === "close") {
+      setCloseError(null);
+      setCloseTarget(job);
+      return;
+    }
+
     const confirmMessage = statusActionConfirmMessage(job, action);
     if (confirmMessage && !window.confirm(confirmMessage)) {
       return;
@@ -243,6 +226,48 @@ export function OperationsJobsPage() {
       },
     );
   };
+
+  const handleConfirmCloseJob = (reason: string) => {
+    if (!closeTarget) {
+      return;
+    }
+
+    statusMutation.mutate(
+      { jobId: closeTarget.jobId, action: "close", reason },
+      {
+        onSuccess: (result) => {
+          setCloseTarget(null);
+          setCloseError(null);
+          setStatusMessage(
+            result.message || "Job closed and employer notified successfully.",
+          );
+        },
+        onError: (error) => {
+          if (isAxiosError(error)) {
+            const message = error.response?.data?.message;
+            if (typeof message === "string" && message.trim()) {
+              setCloseError(message.trim());
+              return;
+            }
+          }
+
+          setCloseError("Failed to close this job. Please try again.");
+        },
+      },
+    );
+  };
+
+  useEffect(() => {
+    if (!statusMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setStatusMessage(null);
+    }, 3500);
+
+    return () => window.clearTimeout(timer);
+  }, [statusMessage]);
 
   const handleInsightSelect = (insight: OperationsJobsInsight) => {
     if (insight.tab === "paused_inactive") {
@@ -275,52 +300,119 @@ export function OperationsJobsPage() {
       title="Jobs"
       subtitle="Manage all job postings across employers."
     >
-      <div className="flex w-full min-w-0 flex-col gap-2.5">
-        <JobsKpiStrip kpis={data.kpis} isLoading={jobsQuery.isLoading} />
+      {isPageLoading ? (
+        <JobsPageSkeleton rowCount={limit} />
+      ) : jobsQuery.isError && !data ? (
+        <div className="rounded-xl border border-border-subtle bg-surface px-4 py-16 text-center shadow-sm">
+          <p className="text-sm font-medium text-danger">
+            {errorMessage ?? "Failed to load jobs."}
+          </p>
+          <button
+            type="button"
+            onClick={() => void jobsQuery.refetch()}
+            className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            Retry
+          </button>
+        </div>
+      ) : data ? (
+        <div className="relative flex w-full min-w-0 flex-col gap-2.5">
+          {isSoftRefreshing ? (
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden rounded-full"
+              aria-hidden="true"
+            >
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-primary-soft" />
+            </div>
+          ) : null}
 
-        <JobsInsightsStrip
-          insights={data.insights}
-          onSelect={handleInsightSelect}
-        />
+          <JobsKpiStrip kpis={data.kpis} />
 
-        <JobsFiltersBar
-          filters={filters}
-          filterOptions={data.filterOptions}
-          onChange={handleFiltersChange}
-          onClear={handleClearFilters}
-          onExport={() => exportJobsCsv(data)}
-        />
+          <JobsInsightsStrip
+            insights={data.insights}
+            onSelect={handleInsightSelect}
+          />
 
-        <div className="min-w-0 max-w-full rounded-xl border border-border-subtle bg-surface shadow-sm">
-          <div className="min-w-0 border-b border-border-subtle px-2.5 py-2 sm:px-3.5 sm:py-3">
-            <JobsTabs
-              activeTab={tab}
-              counts={data.counts}
-              onChange={handleTabChange}
+          <JobsFiltersBar
+            filters={filters}
+            filterOptions={data.filterOptions}
+            onChange={handleFiltersChange}
+            onClear={handleClearFilters}
+            onExport={() => exportJobsCsv(data)}
+          />
+
+          <div
+            className="relative min-w-0 max-w-full rounded-xl border border-border-subtle bg-surface shadow-sm"
+            aria-busy={isSoftRefreshing || undefined}
+          >
+            {isSoftRefreshing ? (
+              <div
+                className="absolute inset-0 z-10 rounded-xl bg-surface/40"
+                aria-hidden="true"
+              />
+            ) : null}
+            <div className="min-w-0 border-b border-border-subtle px-2.5 py-2 sm:px-3.5 sm:py-3">
+              <JobsTabs
+                activeTab={tab}
+                counts={data.counts}
+                onChange={handleTabChange}
+              />
+            </div>
+            <JobsTableSection
+              jobs={data.jobs}
+              isLoading={false}
+              isError={jobsQuery.isError}
+              errorMessage={errorMessage}
+              onRetry={() => void jobsQuery.refetch()}
+              pendingStatusJobId={
+                statusMutation.isPending ? statusMutation.variables?.jobId : null
+              }
+              onStatusAction={handleStatusAction}
             />
           </div>
-          <JobsTableSection
-            jobs={data.jobs}
-            isLoading={jobsQuery.isLoading}
-            isError={jobsQuery.isError}
-            errorMessage={errorMessage}
-            onRetry={() => void jobsQuery.refetch()}
-            pendingStatusJobId={
-              statusMutation.isPending ? statusMutation.variables?.jobId : null
-            }
-            onStatusAction={handleStatusAction}
+
+          <JobsPaginationBar
+            pagination={data.pagination}
+            onPageChange={setPage}
+            onLimitChange={(nextLimit) => {
+              setLimit(nextLimit);
+              setPage(1);
+            }}
           />
         </div>
+      ) : null}
 
-        <JobsPaginationBar
-          pagination={data.pagination}
-          onPageChange={setPage}
-          onLimitChange={(nextLimit) => {
-            setLimit(nextLimit);
-            setPage(1);
+      {closeTarget ? (
+        <CloseJobConfirmDialog
+          open
+          jobTitle={closeTarget.jobTitle}
+          jobId={closeTarget.jobId}
+          isSubmitting={statusMutation.isPending}
+          errorMessage={closeError}
+          onCancel={() => {
+            if (!statusMutation.isPending) {
+              setCloseTarget(null);
+              setCloseError(null);
+            }
           }}
+          onConfirm={handleConfirmCloseJob}
         />
-      </div>
+      ) : null}
+
+      {statusMessage ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed bottom-5 left-1/2 z-50 -translate-x-1/2 sm:bottom-6"
+        >
+          <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-surface px-4 py-2.5 text-xs font-semibold text-foreground shadow-lg">
+            <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary-light text-primary">
+              <Check className="size-3" strokeWidth={3} aria-hidden="true" />
+            </span>
+            {statusMessage}
+          </div>
+        </div>
+      ) : null}
     </OperationsLayout>
   );
 }

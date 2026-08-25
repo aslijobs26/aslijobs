@@ -85,7 +85,9 @@ export function JobDetailHeader({
   const [copied, setCopied] = useState(false);
   const showVerified =
     job.employer.isWhatsappVerified || job.employer.registrationCompleted;
-  const canClose = job.status !== "closed" && job.status !== "draft";
+  const canClose =
+    (job.status !== "closed" && job.status !== "draft") ||
+    (job.status === "closed" && !job.employerNotified && Boolean(job.closedReason));
   const statusTone = jobDetailStatusTone(job.status);
 
   const handleCopyJobId = async () => {
@@ -221,7 +223,11 @@ export function JobDetailHeader({
               )}
             >
               <Plus className="size-3.5" aria-hidden="true" />
-              {isClosing ? "Closing…" : "Close Job"}
+              {isClosing
+                ? "Closing…"
+                : job.status === "closed" && !job.employerNotified && job.closedReason
+                  ? "Send notification"
+                  : "Close Job"}
             </button>
           </div>
 

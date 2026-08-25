@@ -67,13 +67,20 @@ export async function fetchOperationsJobApplications(
 export async function updateOperationsJobStatus(
   jobId: string,
   action: OperationsJobStatusAction,
-): Promise<OperationsJobDetail> {
-  const response = await apiClient.patch<{ data: OperationsJobDetail }>(
-    `${OPERATIONS_JOBS_BASE}/${encodeURIComponent(jobId)}/status`,
-    { action },
-  );
+  reason?: string,
+): Promise<{ job: OperationsJobDetail; message: string }> {
+  const response = await apiClient.patch<{
+    data: OperationsJobDetail;
+    message?: string;
+  }>(`${OPERATIONS_JOBS_BASE}/${encodeURIComponent(jobId)}/status`, {
+    action,
+    reason: reason?.trim() || undefined,
+  });
 
-  return response.data.data;
+  return {
+    job: response.data.data,
+    message: response.data.message?.trim() || "Job status updated successfully.",
+  };
 }
 
 export async function createOperationsJobDraft(

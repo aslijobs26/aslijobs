@@ -39,8 +39,8 @@ export function useUpdateOperationsJobStatus(jobId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (action: OperationsJobStatusAction) =>
-      updateOperationsJobStatus(jobId!, action),
+    mutationFn: (input: { action: OperationsJobStatusAction; reason?: string }) =>
+      updateOperationsJobStatus(jobId!, input.action, input.reason),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({

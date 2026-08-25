@@ -48,13 +48,28 @@ export const operationsJobsController = {
   async updateStatus(req: Request, res: Response): Promise<void> {
     const { jobId } = req.params as OperationsJobPublicIdParams;
     const body = req.body as UpdateOperationsJobStatusBody;
+    const operationsUserId = req.operationsUserId;
+
+    if (!operationsUserId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
     const result = await operationsJobsService.updateJobStatus(
       jobId,
       body.action,
+      operationsUserId,
+      body.reason,
     );
 
+    const closedSuccessfully = body.action === "close" && result.status === "closed";
+    const message = closedSuccessfully
+      ? result.employerNotified
+        ? "Job closed and employer notified successfully."
+        : "Job closed. The employer notification could not be sent. You can retry Close Job to send it."
+      : "Job status updated successfully.";
+
     sendSuccess(res, HTTP_STATUS.OK, {
-      message: "Job status updated successfully.",
+      message,
       data: result,
     });
   },

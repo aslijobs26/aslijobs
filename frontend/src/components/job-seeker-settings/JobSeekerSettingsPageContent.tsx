@@ -1,5 +1,6 @@
 "use client";
 
+import { JobSeekerSettingsPageSkeleton } from "@/components/job-seeker-dashboard/skeletons/JobSeekerPageSkeletons";
 import { AccountSettingsPanel } from "@/components/job-seeker-settings/AccountSettingsPanel";
 import { ConnectedAppsPanel } from "@/components/job-seeker-settings/ConnectedAppsPanel";
 import { DeactivateAccountModal } from "@/components/job-seeker-settings/DeactivateAccountModal";
@@ -240,30 +241,7 @@ export function JobSeekerSettingsPageContent() {
   }, [jobSeeker]);
 
   if (profileQuery.isLoading) {
-    return (
-      <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-        <div className="h-8 w-40 animate-pulse rounded-lg bg-border-subtle" />
-        <div className="mt-2 h-4 w-72 max-w-full animate-pulse rounded bg-border-subtle" />
-        <div className="mt-6 flex gap-3 overflow-hidden">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div
-              key={index}
-              className="h-10 w-28 shrink-0 animate-pulse rounded-lg bg-border-subtle"
-            />
-          ))}
-        </div>
-        <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)]">
-          <div className="space-y-4">
-            <div className="h-64 animate-pulse rounded-2xl border border-border-subtle bg-surface" />
-            <div className="h-24 animate-pulse rounded-2xl border border-border-subtle bg-surface" />
-          </div>
-          <div className="space-y-4">
-            <div className="h-40 animate-pulse rounded-2xl border border-border-subtle bg-surface" />
-            <div className="h-48 animate-pulse rounded-2xl border border-border-subtle bg-surface" />
-          </div>
-        </div>
-      </div>
-    );
+    return <JobSeekerSettingsPageSkeleton />;
   }
 
   if (profileQuery.isError || !jobSeeker) {

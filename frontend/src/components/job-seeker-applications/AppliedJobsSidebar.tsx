@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonBone } from "@/components/shared/skeletons/SkeletonBone";
 import { WHATSAPP_JOIN_URL } from "@/constants/cta";
 import { ROUTES } from "@/constants/routes";
 import type { NotificationListItem } from "@/types/notifications";
@@ -366,22 +367,31 @@ export function AppliedJobsSidebar({
         <div className="mt-4 rounded-lg bg-primary-light/50 px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-muted">Success Rate</p>
-            <p className="text-sm font-bold tabular-nums text-foreground">
-              {statsLoading ? "—" : `${successRate}%`}
-            </p>
+            {statsLoading ? (
+              <SkeletonBone className="h-5 w-10 rounded" />
+            ) : (
+              <p className="text-sm font-bold tabular-nums text-foreground">
+                {`${successRate}%`}
+              </p>
+            )}
           </div>
           <div
             className="mt-2 h-2 overflow-hidden rounded-full bg-primary-light"
             role="progressbar"
-            aria-valuenow={successRate}
+            aria-valuenow={statsLoading ? undefined : successRate}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label="Application success rate"
+            aria-busy={statsLoading}
           >
-            <div
-              className="h-full rounded-full bg-primary transition-[width] duration-300"
-              style={{ width: `${Math.min(100, Math.max(0, successRate))}%` }}
-            />
+            {statsLoading ? (
+              <SkeletonBone className="h-full w-2/5 rounded-full" />
+            ) : (
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-300"
+                style={{ width: `${Math.min(100, Math.max(0, successRate))}%` }}
+              />
+            )}
           </div>
         </div>
       </section>

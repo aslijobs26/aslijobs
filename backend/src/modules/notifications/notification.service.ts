@@ -25,6 +25,7 @@ import type {
   NotificationType,
 } from "./notification.types.js";
 import { ApplicationModel } from "../applications/application.model.js";
+import { JobModel } from "../jobs/job.model.js";
 import { ensureEmployerJobRelationsConsistent } from "../jobs/job-cascade-delete.js";
 
 type ListNotificationsInput = {
@@ -108,6 +109,7 @@ function conversationDirectionForType(
     case "application_submitted":
     case "candidate_withdrawn":
     case "application_withdrawn":
+    case "job_closed":
       return "incoming";
     default:
       return "outgoing";
@@ -733,7 +735,7 @@ export class NotificationService {
     const match: Record<string, unknown> = {
       recipientType: "employer",
       recipientId: employerObjectId,
-      referenceType: "application",
+      referenceType: { $in: ["application", "job"] },
       referenceId: { $nin: ["", null] },
     };
 
@@ -858,6 +860,21 @@ export class NotificationService {
           preserveNullAndEmptyArrays: true,
         },
       },
+      {
+        $lookup: {
+          from: "jobs",
+          localField: "applicationObjectId",
+          foreignField: "_id",
+          as: "directJob",
+        },
+      },
+      {
+        $addFields: {
+          job: {
+            $ifNull: ["$job", { $arrayElemAt: ["$directJob", 0] }],
+          },
+        },
+      },
     );
 
     const postMatch: Record<string, unknown> = {};
@@ -895,6 +912,7 @@ export class NotificationService {
           },
         },
         { "job.jobTitle": { $regex: escaped, $options: "i" } },
+        { "job.jobId": { $regex: escaped, $options: "i" } },
         { "application.publicJobId": { $regex: escaped, $options: "i" } },
         { "latest.title": { $regex: escaped, $options: "i" } },
         { "latest.body": { $regex: escaped, $options: "i" } },
@@ -952,7 +970,7 @@ export class NotificationService {
             };
           };
         };
-        job?: { jobTitle?: string };
+        job?: { jobTitle?: string; jobId?: string };
       }>;
       totalCount: Array<{ count: number }>;
     }>(pipeline);
@@ -962,8 +980,10 @@ export class NotificationService {
       facet?.items ?? []
     ).map((row) => {
       const header = row.application?.resumeSnapshot?.resumeJson?.header;
-      const candidateName =
-        typeof header?.fullName === "string" && header.fullName.trim()
+      const isOperationsJobThread = !row.application?.status;
+      const candidateName = isOperationsJobThread
+        ? "Operations"
+        : typeof header?.fullName === "string" && header.fullName.trim()
           ? header.fullName.trim()
           : "Candidate";
       const candidatePhone =
@@ -971,7 +991,10 @@ export class NotificationService {
 
       return {
         applicationId: String(row._id),
-        publicJobId: row.application?.publicJobId?.trim() || "",
+        publicJobId:
+          row.application?.publicJobId?.trim() ||
+          row.job?.jobId?.trim() ||
+          "",
         jobTitle: row.job?.jobTitle?.trim() || "Job",
         candidateName,
         candidatePhone,
@@ -1155,7 +1178,7 @@ export class NotificationService {
       {
         recipientType: input.recipientType,
         recipientId: input.recipientId,
-        referenceType: "application",
+        referenceType: { $in: ["application", "job"] },
         referenceId: input.applicationId,
         readAt: null,
         deletedAt: null,
@@ -1196,16 +1219,34 @@ export class NotificationService {
       .select("_id")
       .lean();
 
-    if (!application) {
-      throw new AppError("Application not found", HTTP_STATUS.NOT_FOUND);
+    const job = application
+      ? null
+      : await JobModel.findOne({
+          _id: input.applicationId,
+          $or: [
+            { employerId: new mongoose.Types.ObjectId(input.employerId) },
+            { companyId: new mongoose.Types.ObjectId(input.employerId) },
+          ],
+        })
+          .select("_id")
+          .lean();
+
+    if (!application && !job) {
+      throw new AppError("Conversation not found", HTTP_STATUS.NOT_FOUND);
     }
+
+    const referenceType = application ? "application" : "job";
 
     // Cap scan size — conversation threads are typically small; unbounded
     // load would degrade under long-running hiring threads.
     const TIMELINE_SCAN_CAP = 1_000;
     const rows = await NotificationModel.find({
-      referenceType: "application",
+      referenceType,
       referenceId: input.applicationId,
+      $or: [
+        { recipientType: "employer", recipientId: input.employerId },
+        ...(application ? [{ recipientType: "job_seeker" }] : []),
+      ],
     })
       .sort({ createdAt: 1 })
       .limit(TIMELINE_SCAN_CAP)
@@ -1621,6 +1662,69 @@ export class NotificationService {
     for (const job of jobs) {
       await this.createNotification(job);
     }
+  }
+
+  /**
+   * One employer-owned inbox message for an Operations job close.
+   * Idempotent on employer + job so retries do not duplicate the thread.
+   */
+  async notifyEmployerJobClosed(input: {
+    employerId: string;
+    jobMongoId: string;
+    publicJobId: string;
+    jobTitle: string;
+    reason: string;
+    closedByLabel: string;
+  }): Promise<{ created: boolean; alreadySent: boolean }> {
+    if (
+      !mongoose.Types.ObjectId.isValid(input.employerId) ||
+      !mongoose.Types.ObjectId.isValid(input.jobMongoId)
+    ) {
+      throw new AppError("Invalid employer or job.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const existing = await NotificationModel.findOne({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "job_closed",
+      referenceType: "job",
+      referenceId: input.jobMongoId,
+    })
+      .select("_id")
+      .lean();
+
+    if (existing) {
+      return { created: false, alreadySent: true };
+    }
+
+    const title = "Job closed notification";
+    const jobTitle = input.jobTitle.trim() || "Untitled job";
+    const body = [
+      `Job Title: ${jobTitle}`,
+      `Job ID: ${input.publicJobId}`,
+      `Closure reason: ${input.reason.trim()}`,
+      `Closed by: ${input.closedByLabel.trim() || "Operations"}`,
+    ].join("\n");
+
+    await this.createNotification({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "job_closed",
+      category: "system",
+      title,
+      body,
+      priority: "high",
+      referenceType: "job",
+      referenceId: input.jobMongoId,
+      actionPath: "/employer/jobs",
+      metadata: {
+        publicJobId: input.publicJobId,
+        jobTitle,
+        closedBy: input.closedByLabel,
+      },
+    });
+
+    return { created: true, alreadySent: false };
   }
 }
 

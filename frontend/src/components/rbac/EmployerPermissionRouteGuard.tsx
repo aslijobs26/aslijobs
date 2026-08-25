@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerRouteLoadingSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
 import {
   EMPLOYER_UNAUTHORIZED_PATH,
   ROUTE_PERMISSION_RULES,
@@ -78,11 +79,7 @@ export function EmployerPermissionRouteGuard({
   }, [isError, isLoading, pathname, session]);
 
   if (isLoading) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
-        <p className="text-sm text-muted">Loading permissions...</p>
-      </div>
-    );
+    return <EmployerRouteLoadingSkeleton pathname={pathname} />;
   }
 
   if (isError) {

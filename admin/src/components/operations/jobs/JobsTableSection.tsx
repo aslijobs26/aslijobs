@@ -89,13 +89,13 @@ function paymentBadgeClass(
 ): string {
   switch (status) {
     case "paid":
-      return "bg-success/10 text-success";
+      return "bg-success/10 text-success dark:bg-success/90 dark:text-[#022c22]";
     case "pending":
-      return "bg-warning/10 text-warning";
+      return "bg-warning/10 text-warning dark:bg-warning/20 dark:text-warning";
     case "unpaid":
-      return "bg-danger/10 text-danger";
+      return "bg-danger/10 text-danger dark:bg-danger/20 dark:text-danger";
     default:
-      return "bg-border-subtle text-muted";
+      return "bg-border-subtle text-muted dark:bg-border/60 dark:text-muted";
   }
 }
 

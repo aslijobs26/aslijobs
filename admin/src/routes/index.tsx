@@ -1,6 +1,8 @@
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { OperationsAuthGuard } from "../components/operations/auth/OperationsAuthGuard";
 import { OPERATIONS_ROUTES } from "../constants/operations-routes";
+import { OperationsCandidatesDetailPage } from "./operations-candidates-detail-page";
+import { OperationsCandidatesPage } from "./operations-candidates-page";
 import { OperationsDashboardPage } from "./operations-dashboard-page";
 import { OperationsJobsDetailPage } from "./operations-jobs-detail-page";
 import { OperationsJobsPage } from "./operations-jobs-page";
@@ -52,7 +54,11 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.CANDIDATES}
-          element={<OperationsPlaceholderPage title="Candidates" />}
+          element={<OperationsCandidatesPage />}
+        />
+        <Route
+          path={`${OPERATIONS_ROUTES.CANDIDATES}/:jobSeekerId`}
+          element={<OperationsCandidatesDetailPage />}
         />
         <Route path={OPERATIONS_ROUTES.JOBS} element={<OperationsJobsPage />} />
         <Route path={OPERATIONS_ROUTES.JOBS_POST} element={<OperationsJobsPostPage />} />

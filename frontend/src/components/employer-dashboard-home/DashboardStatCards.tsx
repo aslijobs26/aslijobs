@@ -9,12 +9,14 @@ type DashboardStatCardsProps = {
   values: Record<string, number>;
   growth: Partial<Record<string, EmployerDashboardGrowth>>;
   isLoading?: boolean;
+  isGrowthLoading?: boolean;
 };
 
 export function DashboardStatCards({
   values,
   growth,
   isLoading = false,
+  isGrowthLoading = false,
 }: DashboardStatCardsProps) {
   return (
     <section
@@ -53,7 +55,9 @@ export function DashboardStatCards({
               </p>
             )}
 
-            {!isLoading && trend ? (
+            {isGrowthLoading ? (
+              <div className="mt-auto h-3 w-20 animate-pulse rounded bg-border-subtle pt-2" />
+            ) : !isLoading && trend ? (
               <p
                 className={cn(
                   "mt-auto pt-2 text-[0.6875rem] font-medium",
@@ -67,7 +71,7 @@ export function DashboardStatCards({
               </p>
             ) : (
               <p className="mt-auto pt-2 text-[0.6875rem] font-medium text-muted">
-                {isLoading ? "…" : "Updated live"}
+                {isLoading ? null : "Updated live"}
               </p>
             )}
           </article>

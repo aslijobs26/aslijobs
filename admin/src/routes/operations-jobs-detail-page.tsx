@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
+import { CloseJobConfirmDialog } from "../components/operations/jobs/detail/CloseJobConfirmDialog";
 import { JobActivityPanel } from "../components/operations/jobs/detail/JobActivityPanel";
 import { JobApplicationsPanel } from "../components/operations/jobs/detail/JobApplicationsPanel";
 import { JobDetailHeader } from "../components/operations/jobs/detail/JobDetailHeader";
@@ -28,6 +29,9 @@ export function OperationsJobsDetailPage() {
   const [activeTab, setActiveTab] = useState<JobDetailTabId>("overview");
   const [applicationsPage, setApplicationsPage] = useState(1);
   const [applicationsLimit, setApplicationsLimit] = useState(10);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const detailQuery = useOperationsJobDetail(jobId);
   const applicationsQuery = useOperationsJobApplications(jobId, {
@@ -76,21 +80,66 @@ export function OperationsJobsDetailPage() {
     );
   };
 
-  const handleCloseJob = () => {
+  const handleOpenCloseDialog = () => {
     if (!job || statusMutation.isPending) {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Close job ${job.jobId}? Candidates will no longer be able to apply.`,
-    );
+    const canClose =
+      (job.status !== "closed" && job.status !== "draft") ||
+      (job.status === "closed" &&
+        !job.employerNotified &&
+        Boolean(job.closedReason));
 
-    if (!confirmed) {
+    if (!canClose) {
       return;
     }
 
-    statusMutation.mutate("close");
+    setCloseError(null);
+    setCloseDialogOpen(true);
   };
+
+  const handleConfirmCloseJob = (reason: string) => {
+    if (!job) {
+      return;
+    }
+
+    statusMutation.mutate(
+      { action: "close", reason },
+      {
+        onSuccess: (result) => {
+          setCloseDialogOpen(false);
+          setCloseError(null);
+          setStatusMessage(
+            result.message || "Job closed and employer notified successfully.",
+          );
+        },
+        onError: (error) => {
+          if (isAxiosError(error)) {
+            const message = error.response?.data?.message;
+            if (typeof message === "string" && message.trim()) {
+              setCloseError(message.trim());
+              return;
+            }
+          }
+
+          setCloseError("Failed to close this job. Please try again.");
+        },
+      },
+    );
+  };
+
+  useEffect(() => {
+    if (!statusMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setStatusMessage(null);
+    }, 3500);
+
+    return () => window.clearTimeout(timer);
+  }, [statusMessage]);
 
   return (
     <OperationsLayout
@@ -155,7 +204,7 @@ export function OperationsJobsDetailPage() {
               job={job}
               isClosing={statusMutation.isPending}
               onEdit={handleEdit}
-              onCloseJob={handleCloseJob}
+              onCloseJob={handleOpenCloseDialog}
             />
 
             <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
@@ -173,7 +222,7 @@ export function OperationsJobsDetailPage() {
                     <JobOverviewPanel
                       job={job}
                       isClosing={statusMutation.isPending}
-                      onCloseJob={handleCloseJob}
+                      onCloseJob={handleOpenCloseDialog}
                     />
                     <JobApplicationsPanel
                       applications={applicationsQuery.data?.applications ?? []}
@@ -219,6 +268,44 @@ export function OperationsJobsDetailPage() {
           </>
         ) : null}
       </div>
+
+      {job ? (
+        <CloseJobConfirmDialog
+          open={closeDialogOpen}
+          jobTitle={job.jobTitle}
+          jobId={job.jobId}
+          defaultReason={job.closedReason}
+          isSubmitting={statusMutation.isPending}
+          submitLabel={
+            job.status === "closed" && !job.employerNotified
+              ? "Send notification"
+              : "Close Job / Send"
+          }
+          errorMessage={closeError}
+          onCancel={() => {
+            if (!statusMutation.isPending) {
+              setCloseDialogOpen(false);
+              setCloseError(null);
+            }
+          }}
+          onConfirm={handleConfirmCloseJob}
+        />
+      ) : null}
+
+      {statusMessage ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed bottom-5 left-1/2 z-50 -translate-x-1/2 sm:bottom-6"
+        >
+          <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-surface px-4 py-2.5 text-xs font-semibold text-foreground shadow-lg">
+            <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary-light text-primary">
+              <Check className="size-3" strokeWidth={3} aria-hidden="true" />
+            </span>
+            {statusMessage}
+          </div>
+        </div>
+      ) : null}
     </OperationsLayout>
   );
 }

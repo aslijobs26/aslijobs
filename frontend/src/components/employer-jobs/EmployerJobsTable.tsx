@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerTableRowsSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
 import { EmployerJobsPagination } from "@/components/employer-jobs/EmployerJobsPagination";
 import {
   EMPLOYER_JOB_STATUS_LABELS,
@@ -11,7 +12,6 @@ import {
   EMPLOYER_JOBS_EMPTY_TITLE,
   EMPLOYER_JOBS_ERROR_DESCRIPTION,
   EMPLOYER_JOBS_ERROR_TITLE,
-  EMPLOYER_JOBS_LOADING_LABEL,
   EMPLOYER_JOBS_RETRY_LABEL,
   EMPLOYER_JOBS_TABLE_COLUMNS,
 } from "@/constants/employer-jobs";
@@ -202,14 +202,7 @@ export function EmployerJobsTable({
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td
-                  colSpan={columnCount}
-                  className="px-4 py-14 text-center text-sm text-muted"
-                >
-                  {EMPLOYER_JOBS_LOADING_LABEL}
-                </td>
-              </tr>
+              <EmployerTableRowsSkeleton rows={8} colSpan={columnCount} />
             ) : isError ? (
               <tr>
                 <td

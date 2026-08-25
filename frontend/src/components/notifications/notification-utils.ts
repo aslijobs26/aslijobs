@@ -82,6 +82,8 @@ export function notificationIcon(type: NotificationType): LucideIcon {
     case "application_withdrawn":
     case "candidate_withdrawn":
       return UserMinus;
+    case "job_closed":
+      return XCircle;
     case "application_received":
       return Briefcase;
     default:

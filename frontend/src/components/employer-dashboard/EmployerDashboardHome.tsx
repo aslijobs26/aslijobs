@@ -289,6 +289,7 @@ export function EmployerDashboardHome() {
                 (canJobs && jobStatsQuery.isLoading) ||
                 (canCandidates && applicationStatsQuery.isLoading)
               }
+              isGrowthLoading={canCandidates && growthQuery.isLoading}
             />
           )}
 
@@ -313,7 +314,12 @@ export function EmployerDashboardHome() {
                   conversionRate={conversionRate}
                   period={funnelPeriod}
                   onPeriodChange={setFunnelPeriod}
-                  isLoading={funnelQuery.isLoading && !funnelQuery.data}
+                  isLoading={
+                    funnelPeriod === "all"
+                      ? applicationStatsQuery.isLoading &&
+                        !applicationStatsQuery.data
+                      : funnelQuery.isLoading && !funnelQuery.data
+                  }
                 />
               </Can>
               <Can module="interviews" action="read">
@@ -360,7 +366,11 @@ export function EmployerDashboardHome() {
 
           <DashboardNotifications
             notifications={notificationsQuery.data?.notifications ?? []}
-            unreadCount={notificationsQuery.data?.unreadCount ?? 0}
+            unreadCount={
+              notificationsQuery.isLoading
+                ? 0
+                : (notificationsQuery.data?.unreadCount ?? 0)
+            }
             isLoading={notificationsQuery.isLoading}
           />
 

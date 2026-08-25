@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonBone } from "@/components/shared/skeletons/SkeletonBone";
 import type { EmployerDashboardNavItem } from "@/types/employer-dashboard";
 import { cn } from "@/utils/cn";
 import Link from "next/link";
@@ -56,7 +57,9 @@ export function EmployerSidebarItem({
               aria-hidden="true"
             />
           ) : null}
-          {item.badge !== undefined ? (
+          {item.badgeLoading ? (
+            <SkeletonBone className="size-4 shrink-0 rounded-full" />
+          ) : item.badge !== undefined ? (
             <span
               className={cn(
                 "inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none tabular-nums",
@@ -71,11 +74,13 @@ export function EmployerSidebarItem({
             </span>
           ) : null}
         </>
-      ) : hasOnboardingDot || item.badge !== undefined ? (
+      ) : hasOnboardingDot || item.badge !== undefined || item.badgeLoading ? (
         <span
           className={cn(
             "absolute right-1 top-1 size-2 rounded-full transition-opacity duration-300",
-            hasOnboardingDot
+            item.badgeLoading
+              ? "animate-pulse bg-border-subtle"
+              : hasOnboardingDot
               ? "animate-pulse bg-primary ring-4 ring-primary/20"
               : item.id === "messages"
                 ? "bg-pin-state"

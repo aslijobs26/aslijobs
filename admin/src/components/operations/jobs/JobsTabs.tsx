@@ -41,7 +41,7 @@ export function JobsTabs({ activeTab, counts, onChange }: JobsTabsProps) {
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
               "sm:h-9 sm:px-3 sm:text-xs",
               selected
-                ? "ops-brand-border-glow border-primary-soft bg-primary-light text-primary-soft"
+                ? "ops-brand-border-glow border-primary-soft bg-primary-light text-primary-soft dark:bg-primary-soft/15"
                 : "ops-brand-border-glow border-border bg-surface text-muted hover:border-primary-soft/40 hover:bg-primary-light/50 hover:text-foreground",
             )}
           >

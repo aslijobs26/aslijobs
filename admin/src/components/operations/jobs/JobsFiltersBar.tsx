@@ -201,7 +201,7 @@ export function JobsFiltersBar({
 
           <Link
             to={OPERATIONS_ROUTES.JOBS_POST}
-            className="inline-flex h-10 min-w-0 items-center justify-center gap-1 rounded-lg bg-primary-soft px-1.5 text-[11px] font-semibold text-surface shadow-[0_1px_2px_rgba(0,186,165,0.35)] transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-9 sm:flex-none sm:gap-1.5 sm:px-3.5 sm:text-xs"
+            className="inline-flex h-10 min-w-0 items-center justify-center gap-1 rounded-lg bg-primary-soft px-1.5 text-[11px] font-semibold text-surface shadow-[0_1px_2px_rgba(0,186,165,0.35)] transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 dark:text-[#042f2e] dark:shadow-[0_1px_2px_rgba(45,212,191,0.35)] sm:h-9 sm:flex-none sm:gap-1.5 sm:px-3.5 sm:text-xs"
           >
             <Plus className="size-3.5 shrink-0" strokeWidth={2.25} aria-hidden="true" />
             <span className="truncate">Post Job</span>

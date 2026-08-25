@@ -112,7 +112,7 @@ export function JobsPaginationBar({
                 className={cn(
                   pageButtonBase,
                   item === page
-                    ? "border-primary bg-primary-light text-foreground"
+                    ? "border-primary bg-primary-light text-foreground dark:border-primary-soft dark:bg-primary-soft dark:text-[#042f2e]"
                     : "border-border bg-surface text-foreground hover:bg-primary-light",
                 )}
               >

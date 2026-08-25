@@ -1,4 +1,5 @@
 import { createEmployerModuleMetadata } from "@/components/employer-dashboard/EmployerModulePage";
+import { EmployerSettingsPageSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
 import { EmployerSettingsPageContent } from "@/components/employer-settings/EmployerSettingsPageContent";
 import { Suspense } from "react";
 
@@ -9,13 +10,7 @@ export const metadata = createEmployerModuleMetadata({
 
 export default function EmployerSettingsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex flex-1 items-center justify-center px-4 py-16">
-          <p className="text-sm text-muted">Loading settings...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<EmployerSettingsPageSkeleton />}>
       <EmployerSettingsPageContent />
     </Suspense>
   );

@@ -32,3 +32,7 @@ export type OperationsRoute =
 export function operationsJobDetailPath(jobId: string): string {
   return `${OPERATIONS_ROUTES.JOBS}/${encodeURIComponent(jobId)}`;
 }
+
+export function operationsCandidateDetailPath(jobSeekerId: string): string {
+  return `${OPERATIONS_ROUTES.CANDIDATES}/${encodeURIComponent(jobSeekerId)}`;
+}

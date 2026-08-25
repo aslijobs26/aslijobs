@@ -177,7 +177,9 @@ export function JobOverviewPanel({
 }: JobOverviewPanelProps) {
   const parsedDescription = parseJobDescription(job.description);
   const jobInformationRows = jobPostingInformationRows(job);
-  const canClose = job.status !== "closed" && job.status !== "draft";
+  const canClose =
+    (job.status !== "closed" && job.status !== "draft") ||
+    (job.status === "closed" && !job.employerNotified && Boolean(job.closedReason));
   const daysRemaining =
     job.analytics.daysRemaining == null
       ? "—"
@@ -306,7 +308,11 @@ export function JobOverviewPanel({
                 : "cursor-not-allowed border-border-subtle text-muted",
             )}
           >
-            {isClosing ? "Closing…" : "Close Job"}
+            {isClosing
+              ? "Closing…"
+              : job.status === "closed" && !job.employerNotified && job.closedReason
+                ? "Send notification"
+                : "Close Job"}
           </button>
         </OperationsCard>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonBone } from "@/components/shared/skeletons/SkeletonBone";
 import asliLogo from "@/assets/AsliLogo.svg";
 import asliLogoMark from "@/assets/logos/Frame 130.png";
 import { EmployerSidebarItem } from "@/components/employer-dashboard/EmployerSidebarItem";
@@ -67,11 +68,17 @@ export function EmployerSidebar({
 
   const navItems = useMemo<EmployerDashboardNavItem[]>(() => {
     const unread = messagesUnreadQuery.data ?? 0;
+    const messagesBadgeLoading = messagesUnreadQuery.isLoading;
     return EMPLOYER_DASHBOARD_NAV_ITEMS.map((item) => {
       if (item.id === "messages") {
         return {
           ...item,
-          badge: unread > 0 ? unread : undefined,
+          badge: messagesBadgeLoading
+            ? undefined
+            : unread > 0
+              ? unread
+              : undefined,
+          badgeLoading: messagesBadgeLoading,
         };
       }
       if (item.id === "company-profile") {
@@ -98,6 +105,7 @@ export function EmployerSidebar({
     });
   }, [
     messagesUnreadQuery.data,
+    messagesUnreadQuery.isLoading,
     profileQuery.data?.accountType,
     showCompanyProfileOnboardingDot,
     can,
@@ -187,19 +195,39 @@ export function EmployerSidebar({
           aria-label="Primary"
         >
           <ul className="flex flex-col gap-1">
-            {navItems.map((item) => (
-              <li key={item.id}>
-                <EmployerSidebarItem
-                  item={item}
-                  isActive={
-                    pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`)
-                  }
-                  collapsed={collapsed}
-                  onNavigate={onMobileClose}
-                />
-              </li>
-            ))}
+            {permissionsLoading
+              ? EMPLOYER_DASHBOARD_NAV_ITEMS.map((item) => (
+                  <li key={item.id}>
+                    <div
+                      className={cn(
+                        "flex items-center rounded-lg",
+                        collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
+                      )}
+                      aria-hidden="true"
+                    >
+                      <SkeletonBone className="size-[1.125rem] shrink-0 rounded" />
+                      {!collapsed ? (
+                        <>
+                          <SkeletonBone className="h-4 flex-1 max-w-[8rem] rounded" />
+                          <SkeletonBone className="size-4 shrink-0 rounded-full" />
+                        </>
+                      ) : null}
+                    </div>
+                  </li>
+                ))
+              : navItems.map((item) => (
+                  <li key={item.id}>
+                    <EmployerSidebarItem
+                      item={item}
+                      isActive={
+                        pathname === item.href ||
+                        pathname.startsWith(`${item.href}/`)
+                      }
+                      collapsed={collapsed}
+                      onNavigate={onMobileClose}
+                    />
+                  </li>
+                ))}
           </ul>
         </nav>
 

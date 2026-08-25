@@ -1,5 +1,6 @@
 "use client";
 
+import { JobSeekerActivityListSkeleton } from "@/components/job-seeker-dashboard/skeletons/JobSeekerPageSkeletons";
 import { ResumeStatusBadge } from "@/components/job-seeker-resume/ResumeStatusBadge";
 import { ROUTES } from "@/constants/routes";
 import type { JobSeekerPublic } from "@/types/job-seeker";
@@ -726,7 +727,7 @@ export function JobSeekerProfileTabPanels({
       <div className="space-y-4">
         <SectionCard title="Recently applied">
           {isApplicationsLoading ? (
-            <p className="text-xs text-muted sm:text-sm">Loading applications…</p>
+            <JobSeekerActivityListSkeleton rows={3} />
           ) : applications.length === 0 ? (
             <p className="text-xs text-muted sm:text-sm">No applications yet.</p>
           ) : (
@@ -760,7 +761,7 @@ export function JobSeekerProfileTabPanels({
 
         <SectionCard title="Saved jobs">
           {isSavedJobsLoading ? (
-            <p className="text-xs text-muted sm:text-sm">Loading saved jobs…</p>
+            <JobSeekerActivityListSkeleton rows={3} />
           ) : savedJobs.length === 0 ? (
             <p className="text-xs text-muted sm:text-sm">No saved jobs yet.</p>
           ) : (
@@ -784,9 +785,7 @@ export function JobSeekerProfileTabPanels({
 
         <SectionCard title="Notifications">
           {isNotificationsLoading ? (
-            <p className="text-xs text-muted sm:text-sm">
-              Loading notifications…
-            </p>
+            <JobSeekerActivityListSkeleton rows={2} />
           ) : notifications.length === 0 ? (
             <p className="text-xs text-muted sm:text-sm">No notifications yet.</p>
           ) : (

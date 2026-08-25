@@ -41,27 +41,20 @@ interface OperationsBadgeProps {
 
 
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
-
-  default: "bg-primary-light text-primary",
-
-  employer: "bg-primary-light text-primary",
-
-  candidate: "bg-success/10 text-success",
-
-  job: "bg-warning/10 text-warning",
-
-  verification: "bg-primary-light text-primary-hover",
-
-  support: "bg-hero-bg text-muted",
-
-  high: "bg-danger/10 text-danger",
-
-  medium: "bg-warning/10 text-warning",
-
-  low: "bg-border-subtle text-muted",
-
+  default:
+    "bg-primary-light text-primary dark:bg-primary-soft/90 dark:text-[#042f2e]",
+  employer:
+    "bg-primary-light text-primary dark:bg-primary-soft/20 dark:text-primary-soft",
+  candidate:
+    "bg-success/10 text-success dark:bg-success/90 dark:text-[#022c22]",
+  job: "bg-warning/10 text-warning dark:bg-warning/20 dark:text-warning",
+  verification:
+    "bg-primary-light text-primary-hover dark:bg-chart-accent/20 dark:text-chart-accent",
+  support: "bg-hero-bg text-muted dark:bg-border-subtle dark:text-muted",
+  high: "bg-danger/10 text-danger dark:bg-danger/20 dark:text-danger",
+  medium: "bg-warning/10 text-warning dark:bg-warning/20 dark:text-warning",
+  low: "bg-border-subtle text-muted dark:bg-border/60 dark:text-muted",
   beta: "bg-brand-accent/20 text-foreground",
-
 };
 
 

@@ -111,6 +111,7 @@ function isEmployerAlignedNotification(type: NotificationType): boolean {
     case "application_submitted":
     case "candidate_withdrawn":
     case "application_withdrawn":
+    case "job_closed":
       return false;
     case "interview_scheduled":
     case "interview_updated":
@@ -159,6 +160,8 @@ function notificationBadgeLabel(type: NotificationType): string {
     case "application_withdrawn":
     case "candidate_withdrawn":
       return "Withdrawn";
+    case "job_closed":
+      return "Closed";
     default:
       return "Update";
   }
@@ -1148,6 +1151,9 @@ export function EmployerMessagesPageContent() {
     allConversationsStatsQuery.data?.interviewWeekCount ??
     conversationsQuery.data?.interviewWeekCount ??
     0;
+  const isMessagesStatsLoading =
+    (conversationsQuery.isLoading && !conversationsQuery.data) ||
+    (allConversationsStatsQuery.isLoading && !allConversationsStatsQuery.data);
   const jobFacets =
     allConversationsStatsQuery.data?.jobFacets ??
     conversationsQuery.data?.jobFacets ??
@@ -1367,6 +1373,7 @@ export function EmployerMessagesPageContent() {
               unreadConversations={unreadTotal}
               activeHiringConversations={activeHiringCount}
               interviewWeekConversations={interviewWeekCount}
+              isLoading={isMessagesStatsLoading}
             />
           </div>
 

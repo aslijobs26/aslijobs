@@ -1,4 +1,5 @@
 import { createEmployerModuleMetadata } from "@/components/employer-dashboard/EmployerModulePage";
+import { EmployerSplitPanelPageSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
@@ -14,23 +15,13 @@ const EmployerCandidatesPageContent = dynamic(
       (module) => module.EmployerCandidatesPageContent,
     ),
   {
-    loading: () => (
-      <div className="flex min-h-[40vh] items-center justify-center px-6">
-        <p className="text-sm text-muted">Loading candidates…</p>
-      </div>
-    ),
+    loading: () => <EmployerSplitPanelPageSkeleton />,
   },
 );
 
 export default function EmployerCandidatesPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[40vh] items-center justify-center px-6">
-          <p className="text-sm text-muted">Loading candidates…</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<EmployerSplitPanelPageSkeleton />}>
       <EmployerCandidatesPageContent />
     </Suspense>
   );

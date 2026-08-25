@@ -1,5 +1,6 @@
 "use client";
 
+import { JobSeekerProfilePageSkeleton } from "@/components/job-seeker-dashboard/skeletons/JobSeekerPageSkeletons";
 import { JOB_SEEKER_RESUME_QUERY_KEY } from "@/constants/job-seeker-profile";
 import { ROUTES } from "@/constants/routes";
 import { useJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
@@ -207,17 +208,7 @@ export function JobSeekerProfileDashboard() {
   }, [updateProfile]);
 
   if (profileQuery.isLoading) {
-    return (
-      <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="animate-pulse space-y-5">
-          <div className="h-36 rounded-2xl bg-primary-light/40" />
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(17.5rem,20rem)]">
-            <div className="h-96 rounded-2xl bg-primary-light/25" />
-            <div className="h-80 rounded-2xl bg-primary-light/25" />
-          </div>
-        </div>
-      </div>
-    );
+    return <JobSeekerProfilePageSkeleton />;
   }
 
   if (profileQuery.isError || !jobSeeker) {

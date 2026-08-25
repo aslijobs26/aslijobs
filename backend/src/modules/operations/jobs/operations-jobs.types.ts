@@ -165,6 +165,9 @@ export type OperationsJobDetail = {
   publishedAt: string | null;
   reactivatedAt: string | null;
   lastStatusChangedAt: string | null;
+  closedReason: string;
+  closedAt: string | null;
+  employerNotified: boolean;
   createdAt: string;
   updatedAt: string;
   wizardSnapshot: unknown;
