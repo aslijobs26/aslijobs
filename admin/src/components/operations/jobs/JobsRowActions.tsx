@@ -1,5 +1,12 @@
 import { Copy, Eye, MoreVertical, Pause, Play, Power, XCircle } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { operationsJobDetailPath } from "../../../constants/operations-routes";
 import type {
@@ -16,8 +23,37 @@ interface JobStatusMenuAction {
   tone?: "danger";
 }
 
-function jobStatusMenuActions(status: OperationsJobStatus): JobStatusMenuAction[] {
+const MENU_GAP_PX = 6;
+const MENU_ITEM_HEIGHT_PX = 36;
+const MENU_SEPARATOR_HEIGHT_PX = 9;
+const MENU_VERTICAL_PADDING_PX = 8;
+
+function jobStatusMenuActions(
+  status: OperationsJobStatus,
+  isLiveChangeReview: boolean,
+): JobStatusMenuAction[] {
+  if (isLiveChangeReview) {
+    return [
+      {
+        action: "approve",
+        label: "Approve & Publish Changes",
+        icon: Play,
+      },
+      {
+        action: "reject",
+        label: "Reject Changes",
+        icon: XCircle,
+        tone: "danger",
+      },
+    ];
+  }
+
   switch (status) {
+    case "pending_approval":
+      return [
+        { action: "approve", label: "Approve & Publish", icon: Play },
+        { action: "reject", label: "Reject Job", icon: XCircle, tone: "danger" },
+      ];
     case "active":
       return [
         { action: "pause", label: "Pause Job", icon: Pause },
@@ -33,9 +69,28 @@ function jobStatusMenuActions(status: OperationsJobStatus): JobStatusMenuAction[
     case "closed":
     case "expired":
       return [{ action: "reactivate", label: "Reactivate Job", icon: Power }];
+    case "rejected":
+      return [];
     default:
       return [];
   }
+}
+
+function estimateMenuHeight(
+  statusActionCount: number,
+  includeStatusActions: boolean,
+): number {
+  const baseItems = 2;
+  const statusItems =
+    includeStatusActions && statusActionCount > 0 ? statusActionCount : 0;
+  const separator =
+    includeStatusActions && statusActionCount > 0 ? MENU_SEPARATOR_HEIGHT_PX : 0;
+
+  return (
+    MENU_VERTICAL_PADDING_PX +
+    (baseItems + statusItems) * MENU_ITEM_HEIGHT_PX +
+    separator
+  );
 }
 
 interface JobsRowActionsProps {
@@ -55,9 +110,58 @@ export function JobsRowActions({
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const statusActions = jobStatusMenuActions(job.status);
+  const statusActions = jobStatusMenuActions(
+    job.status,
+    Boolean(job.isLiveChangeReview),
+  );
   const isUpdating = pendingStatusJobId === job.jobId;
+  const includeStatusActions = statusActions.length > 0 && Boolean(onStatusAction);
+  const menuHeightEstimate = estimateMenuHeight(
+    statusActions.length,
+    includeStatusActions,
+  );
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) {
+      return;
+    }
+
+    const updatePosition = () => {
+      if (!triggerRef.current) {
+        return;
+      }
+
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const shouldOpenUp =
+        spaceBelow < menuHeightEstimate + MENU_GAP_PX && spaceAbove > spaceBelow;
+
+      setMenuStyle({
+        position: "fixed",
+        top: shouldOpenUp
+          ? undefined
+          : rect.bottom + MENU_GAP_PX,
+        bottom: shouldOpenUp
+          ? window.innerHeight - rect.top + MENU_GAP_PX
+          : undefined,
+        right: window.innerWidth - rect.right,
+        zIndex: 1000,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, menuHeightEstimate]);
 
   useEffect(() => {
     if (!open) {
@@ -65,13 +169,28 @@ export function JobsRowActions({
     }
 
     const handlePointer = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        rootRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setOpen(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         setOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handlePointer);
-    return () => document.removeEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, [open]);
 
   const handleCopy = async () => {
@@ -95,12 +214,73 @@ export function JobsRowActions({
     onStatusAction?.(job, action);
   };
 
-  return (
-    <div className="relative shrink-0" ref={menuRef}>
+  const menu = open ? (
+    <div
+      ref={menuRef}
+      role="menu"
+      style={menuStyle}
+      className="min-w-[10.5rem] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-[0_10px_30px_color-mix(in_srgb,var(--color-foreground)_12%,transparent)]"
+    >
       <button
+        type="button"
+        role="menuitem"
+        onClick={handleView}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-primary-light hover:text-primary"
+      >
+        <Eye className="size-3.5 shrink-0" aria-hidden="true" />
+        View
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        onClick={() => void handleCopy()}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-primary-light hover:text-primary"
+      >
+        <Copy className="size-3.5 shrink-0" aria-hidden="true" />
+        {copied ? "Copied" : "Copy Job ID"}
+      </button>
+      {includeStatusActions ? (
+        <>
+          <div
+            className="my-1 border-t border-border-subtle"
+            role="separator"
+            aria-hidden="true"
+          />
+          {statusActions.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <button
+                key={item.action}
+                type="button"
+                role="menuitem"
+                disabled={isUpdating}
+                onClick={() => handleStatusAction(item.action)}
+                className={cn(
+                  "flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors disabled:cursor-wait disabled:opacity-60",
+                  item.tone === "danger"
+                    ? "text-danger hover:bg-danger/10"
+                    : "text-foreground hover:bg-primary-light hover:text-primary",
+                )}
+              >
+                <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                {isUpdating ? "Updating…" : item.label}
+              </button>
+            );
+          })}
+        </>
+      ) : null}
+    </div>
+  ) : null;
+
+  return (
+    <div className="relative shrink-0" ref={rootRef}>
+      <button
+        ref={triggerRef}
         type="button"
         aria-label={`Actions for ${job.jobId}`}
         aria-expanded={open}
+        aria-haspopup="menu"
         disabled={isUpdating}
         onClick={() => setOpen((current) => !current)}
         className={cn(
@@ -113,62 +293,9 @@ export function JobsRowActions({
       >
         <MoreVertical className="size-3.5" aria-hidden="true" />
       </button>
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-20 mt-1.5 min-w-[10.5rem] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-[0_10px_30px_color-mix(in_srgb,var(--color-foreground)_12%,transparent)]"
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleView}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-primary-light hover:text-primary"
-          >
-            <Eye className="size-3.5 shrink-0" aria-hidden="true" />
-            View
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => void handleCopy()}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-primary-light hover:text-primary"
-          >
-            <Copy className="size-3.5 shrink-0" aria-hidden="true" />
-            {copied ? "Copied" : "Copy Job ID"}
-          </button>
-          {statusActions.length > 0 && onStatusAction ? (
-            <>
-              <div
-                className="my-1 border-t border-border-subtle"
-                role="separator"
-                aria-hidden="true"
-              />
-              {statusActions.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <button
-                    key={item.action}
-                    type="button"
-                    role="menuitem"
-                    disabled={isUpdating}
-                    onClick={() => handleStatusAction(item.action)}
-                    className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors disabled:cursor-wait disabled:opacity-60",
-                      item.tone === "danger"
-                        ? "text-danger hover:bg-danger/10"
-                        : "text-foreground hover:bg-primary-light hover:text-primary",
-                    )}
-                  >
-                    <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-                    {isUpdating ? "Updating…" : item.label}
-                  </button>
-                );
-              })}
-            </>
-          ) : null}
-        </div>
-      ) : null}
+      {typeof document !== "undefined" && menu
+        ? createPortal(menu, document.body)
+        : null}
     </div>
   );
 }

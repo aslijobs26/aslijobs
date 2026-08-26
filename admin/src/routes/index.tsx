@@ -1,6 +1,8 @@
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { OperationsAuthGuard } from "../components/operations/auth/OperationsAuthGuard";
+import { OperationsPermissionRouteGuard } from "../components/operations/auth/OperationsPermissionRouteGuard";
 import { OPERATIONS_ROUTES } from "../constants/operations-routes";
+import { OperationsPermissionProvider } from "../providers/operations-permission-provider";
 import { OperationsCandidatesDetailPage } from "./operations-candidates-detail-page";
 import { OperationsCandidatesPage } from "./operations-candidates-page";
 import { OperationsDashboardPage } from "./operations-dashboard-page";
@@ -13,7 +15,11 @@ import { OperationsPlaceholderPage } from "./operations-placeholder-page";
 function OperationsProtectedLayout() {
   return (
     <OperationsAuthGuard>
-      <Outlet />
+      <OperationsPermissionProvider>
+        <OperationsPermissionRouteGuard>
+          <Outlet />
+        </OperationsPermissionRouteGuard>
+      </OperationsPermissionProvider>
     </OperationsAuthGuard>
   );
 }

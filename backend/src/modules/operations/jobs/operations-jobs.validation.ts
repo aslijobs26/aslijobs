@@ -12,11 +12,13 @@ import {
 
 export const OPERATIONS_JOB_TABS = [
   "all",
+  "pending_approval",
   "live",
   "paused",
   "draft",
   "expired",
   "closed",
+  "rejected",
 ] as const;
 
 export const listOperationsJobsQuerySchema = z.object({
@@ -81,6 +83,13 @@ export const updateOperationsJobStatusBodySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Reason for closing this job is required.",
+        path: ["reason"],
+      });
+    }
+    if (value.action === "reject" && !value.reason.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Reason for rejecting this job is required.",
         path: ["reason"],
       });
     }

@@ -195,6 +195,34 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
   },
 ];
 
+export const OPERATIONS_NAV_ITEM_PERMISSION_MODULE: Record<
+  string,
+  import("./operations-permissions").OperationsPermissionModule
+> = {
+  dashboard: "dashboard",
+  "my-work": "my_work",
+  "work-queue": "work_queue",
+  "whatsapp-inbox": "whatsapp",
+  "journey-alerts": "journey_alerts",
+  "support-tickets": "support",
+  employers: "employers",
+  candidates: "candidates",
+  jobs: "jobs",
+  verifications: "verifications",
+  escalations: "escalations",
+  team: "team",
+  departments: "departments",
+  roles: "roles",
+  "activity-log": "activity_logs",
+  subscriptions: "billing",
+  payments: "billing",
+  transactions: "billing",
+  refunds: "billing",
+  trust: "settings",
+  audit: "activity_logs",
+  policies: "settings",
+};
+
 export const OPERATIONS_BRAND = {
   name: "aslijobs",
   tagline: "India's Trusted WhatsApp Job Network",

@@ -9,11 +9,13 @@ interface JobsTabsProps {
 
 const TABS: { id: OperationsJobTab; label: string; shortLabel: string }[] = [
   { id: "all", label: "All Status", shortLabel: "All" },
+  { id: "pending_approval", label: "Pending Approval", shortLabel: "Pending" },
   { id: "live", label: "Live", shortLabel: "Live" },
   { id: "paused", label: "Paused", shortLabel: "Paused" },
   { id: "draft", label: "Draft", shortLabel: "Draft" },
   { id: "expired", label: "Expired", shortLabel: "Expired" },
   { id: "closed", label: "Closed", shortLabel: "Closed" },
+  { id: "rejected", label: "Rejected", shortLabel: "Rejected" },
 ];
 
 export function JobsTabs({ activeTab, counts, onChange }: JobsTabsProps) {

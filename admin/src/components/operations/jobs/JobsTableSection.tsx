@@ -74,8 +74,10 @@ function statusBadgeVariant(
       return "default";
     case "expired":
     case "closed":
+    case "rejected":
       return "high";
     case "paused":
+    case "pending_approval":
       return "medium";
     case "draft":
       return "low";
@@ -263,7 +265,11 @@ export function JobsTableSection({
                       variant={statusBadgeVariant(job.status)}
                       className="px-2 py-0.5 text-[10px]"
                     >
-                      {job.statusLabel}
+                      {job.isLiveChangeReview
+                        ? "Edited Live Job"
+                        : job.status === "pending_approval"
+                          ? "Pending"
+                          : job.statusLabel}
                     </OperationsBadge>
                     <span
                       className={cn(
@@ -429,7 +435,11 @@ export function JobsTableSection({
                         variant={statusBadgeVariant(job.status)}
                         className="px-2 py-0.5 text-[10px]"
                       >
-                        {job.statusLabel}
+                        {job.isLiveChangeReview
+                          ? "Edited Live Job"
+                          : job.status === "pending_approval"
+                            ? "Pending"
+                            : job.statusLabel}
                       </OperationsBadge>
                     </td>
 

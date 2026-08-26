@@ -1,5 +1,5 @@
 import { Download, Plus, RotateCcw, Search } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
 import type {
@@ -27,11 +27,13 @@ interface JobsFiltersBarProps {
 
 const STATUS_OPTIONS: { value: "" | OperationsJobStatus; label: string }[] = [
   { value: "", label: "All Status" },
+  { value: "pending_approval", label: "Pending Approval" },
   { value: "active", label: "Live" },
   { value: "paused", label: "Paused" },
   { value: "draft", label: "Draft" },
   { value: "expired", label: "Expired" },
   { value: "closed", label: "Closed" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 const PAYMENT_OPTIONS: {
@@ -78,14 +80,30 @@ export function JobsFiltersBar({
   onClear,
   onExport,
 }: JobsFiltersBarProps) {
+  const [searchInput, setSearchInput] = useState(filters.search);
+
+  useEffect(() => {
+    setSearchInput(filters.search);
+  }, [filters.search]);
+
+  const applySearch = () => {
+    onChange({ search: searchInput.trim() });
+  };
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    applySearch();
+  };
+
   const activeFilterCount = [
-    filters.search,
+    filters.search.trim() || searchInput.trim(),
     filters.status,
     filters.paymentStatus,
     filters.location,
   ].filter(Boolean).length;
 
   const hasActiveFilters = activeFilterCount > 0;
+  const canSubmitSearch = searchInput.trim() !== filters.search.trim();
 
   const locationOptions = [
     { value: "", label: "All States" },
@@ -98,29 +116,44 @@ export function JobsFiltersBar({
   return (
     <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm ops-brand-border-glow sm:p-3.5">
       <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-end xl:gap-2.5">
-        <label className="block w-full min-w-0 xl:w-[22rem] xl:min-w-[20rem] xl:max-w-[26rem] xl:shrink-0">
-          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted">
-            Search
-          </span>
-          <span className="sr-only">Search jobs</span>
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={filters.search}
-              onChange={(event) => onChange({ search: event.target.value })}
-              placeholder="Search jobs…"
-              className={cn(
-                "ops-brand-border-glow h-10 w-full rounded-lg border border-border-subtle bg-hero-bg/60 py-2 pl-9 pr-3 text-xs font-medium text-foreground outline-none transition-[border-color,box-shadow,background-color] placeholder:font-normal placeholder:text-muted sm:h-9",
-                "hover:border-primary/25 hover:bg-surface",
-                "focus-visible:border-primary focus-visible:bg-surface focus-visible:ring-2 focus-visible:ring-primary/30",
-              )}
-            />
-          </div>
-        </label>
+        <form
+          className="block w-full min-w-0 xl:w-[22rem] xl:min-w-[20rem] xl:max-w-[26rem] xl:shrink-0"
+          onSubmit={handleSearchSubmit}
+        >
+          <label className="block w-full min-w-0">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted">
+              Search
+            </span>
+            <span className="sr-only">Search jobs</span>
+            <div className="relative">
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search jobs…"
+                className={cn(
+                  "ops-brand-border-glow h-10 w-full rounded-lg border border-border-subtle bg-hero-bg/60 py-2 pl-3 pr-11 text-xs font-medium text-foreground outline-none transition-[border-color,box-shadow,background-color] placeholder:font-normal placeholder:text-muted sm:h-9",
+                  "hover:border-primary/25 hover:bg-surface",
+                  "focus-visible:border-primary focus-visible:bg-surface focus-visible:ring-2 focus-visible:ring-primary/30",
+                  "[appearance:textfield] [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden",
+                )}
+              />
+              <button
+                type="submit"
+                aria-label="Search jobs"
+                title="Search"
+                className={cn(
+                  "absolute top-1/2 right-1.5 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md transition-colors",
+                  "text-muted hover:bg-primary-light hover:text-primary",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                  canSubmitSearch && "text-primary",
+                )}
+              >
+                <Search className="size-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          </label>
+        </form>
 
         <div
           className="grid min-w-0 grid-cols-1 gap-2 min-[420px]:grid-cols-2 xl:flex xl:min-w-0 xl:flex-1 xl:gap-2"

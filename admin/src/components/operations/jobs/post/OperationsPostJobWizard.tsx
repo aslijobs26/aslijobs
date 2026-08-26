@@ -57,6 +57,7 @@ import {
   validateOperationsPostJobStep,
 } from "../../../../utils/operations-post-job-validation";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
+import { JobDescriptionEditor } from "../../../ui/JobDescriptionEditor";
 import { OperationsPostJobActionBar } from "./OperationsPostJobActionBar";
 import { OperationsPostJobEmployerSelect } from "./OperationsPostJobEmployerSelect";
 import { OperationsPostJobLivePreview } from "./OperationsPostJobLivePreview";
@@ -1054,33 +1055,24 @@ export function OperationsPostJobWizard() {
                   </FormField>
 
                   <FormField id="job-description" label="Job Description" error={errors.jobDescription}>
-                    <textarea
+                    <JobDescriptionEditor
                       id="job-description"
                       value={formData.jobInformation.jobDescription}
-                      onChange={(event) =>
+                      onChange={(next) =>
                         updateFormData((current) => ({
                           ...current,
                           jobInformation: {
                             ...current.jobInformation,
-                            jobDescription: event.target.value.slice(
-                              0,
-                              OPERATIONS_POST_JOB_LONG_TEXT_MAX_LENGTH,
-                            ),
+                            jobDescription: next,
                           },
                         }))
                       }
                       maxLength={OPERATIONS_POST_JOB_LONG_TEXT_MAX_LENGTH}
                       placeholder="Describe the job role, responsibilities and requirements."
-                      className={cn(
-                        textareaClassName,
-                        errors.jobDescription &&
-                          "border-red-500 focus:border-red-500 focus:ring-red-500/20",
-                      )}
+                      hasError={Boolean(errors.jobDescription)}
+                      aria-invalid={Boolean(errors.jobDescription)}
+                      aria-describedby="job-description-count"
                     />
-                    <p className="text-right text-xs text-muted">
-                      {formData.jobInformation.jobDescription.length}/
-                      {OPERATIONS_POST_JOB_LONG_TEXT_MAX_LENGTH}
-                    </p>
                   </FormField>
                 </div>
               </div>

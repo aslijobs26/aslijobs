@@ -4,6 +4,7 @@ import type {
   PostJobWizardFormData,
 } from "@/types/post-job";
 import { POST_JOB_LONG_TEXT_MAX_LENGTH } from "@/constants/post-job";
+import { getJobDescriptionPlainTextLength } from "@/utils/job-description-html";
 
 export type PostJobFieldErrors = Record<string, string>;
 
@@ -221,7 +222,8 @@ export function validateJobInformationStep(
   );
   if (
     formData.jobDescription.trim() &&
-    formData.jobDescription.length > POST_JOB_LONG_TEXT_MAX_LENGTH
+    getJobDescriptionPlainTextLength(formData.jobDescription) >
+      POST_JOB_LONG_TEXT_MAX_LENGTH
   ) {
     errors.jobDescription = `Job Description must be ${POST_JOB_LONG_TEXT_MAX_LENGTH} characters or less.`;
   }

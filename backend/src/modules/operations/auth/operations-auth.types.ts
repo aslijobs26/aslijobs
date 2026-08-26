@@ -1,4 +1,5 @@
 import type { OperationsTeamUserDocument } from "./operations-team-user.model.js";
+import type { OperationsPermissionMap } from "./operations-rbac.js";
 
 export type OperationsTeamLoginInput = {
   email?: string;
@@ -12,6 +13,8 @@ export type OperationsTeamAuthUser = {
   email: string;
   mobileNumber: string;
   role: OperationsTeamUserDocument["role"];
+  /** Resolved capability matrix for UI gates and future Team Management. */
+  permissions: OperationsPermissionMap;
 };
 
 export type OperationsTeamLoginResponse = {

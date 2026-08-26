@@ -62,11 +62,25 @@ export const operationsJobsController = {
     );
 
     const closedSuccessfully = body.action === "close" && result.status === "closed";
-    const message = closedSuccessfully
-      ? result.employerNotified
+    const approvedSuccessfully =
+      body.action === "approve" && result.status === "active";
+    const rejectedSuccessfully =
+      body.action === "reject" && result.status === "rejected";
+
+    let message = "Job status updated successfully.";
+    if (closedSuccessfully) {
+      message = result.employerNotified
         ? "Job closed and employer notified successfully."
-        : "Job closed. The employer notification could not be sent. You can retry Close Job to send it."
-      : "Job status updated successfully.";
+        : "Job closed. The employer notification could not be sent. You can retry Close Job to send it.";
+    } else if (approvedSuccessfully) {
+      message = result.reviewNotificationSent
+        ? "Job approved and published. Employer notified successfully."
+        : "Job approved and published. The employer notification could not be sent.";
+    } else if (rejectedSuccessfully) {
+      message = result.reviewNotificationSent
+        ? "Job rejected and employer notified successfully."
+        : "Job rejected. The employer notification could not be sent.";
+    }
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message,
@@ -109,7 +123,7 @@ export const operationsJobsController = {
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {
-      message: "Operations job draft updated successfully.",
+      message: "Job updated successfully.",
       data: result,
     });
   },

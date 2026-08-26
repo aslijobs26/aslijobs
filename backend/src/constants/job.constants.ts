@@ -10,10 +10,12 @@ export const SALARY_PERIODS = ["per-month", "per-year"] as const;
 
 export const JOB_STATUSES = [
   "draft",
+  "pending_approval",
   "active",
   "paused",
   "closed",
   "expired",
+  "rejected",
 ] as const;
 
 /** Job listing package payment states for paid posting packages. */
@@ -75,6 +77,20 @@ export const JOB_STATUS_ACTIONS = [
   "close",
   "expire",
   "reactivate",
+  "approve",
+  "reject",
+] as const;
+
+/** Stored decision after Operations review of an employer-submitted job. */
+export const JOB_REVIEW_DECISIONS = ["approved", "rejected"] as const;
+
+/**
+ * Review state for employer edits to an already-live job.
+ * Empty string means no live-change review is in progress.
+ */
+export const JOB_LIVE_CHANGE_REVIEW_STATUSES = [
+  "pending_approval",
+  "rejected",
 ] as const;
 
 export const JOB_CREATION_SOURCES = ["employer", "operations"] as const;
@@ -89,3 +105,6 @@ export type JobListingPaymentStatus =
   (typeof JOB_LISTING_PAYMENT_STATUSES)[number];
 export type JobStatusAction = (typeof JOB_STATUS_ACTIONS)[number];
 export type JobCreationSource = (typeof JOB_CREATION_SOURCES)[number];
+export type JobReviewDecision = (typeof JOB_REVIEW_DECISIONS)[number];
+export type JobLiveChangeReviewStatus =
+  (typeof JOB_LIVE_CHANGE_REVIEW_STATUSES)[number];

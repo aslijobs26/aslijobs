@@ -30,6 +30,13 @@ const KPI_CONFIG: {
     iconColor: "text-primary",
   },
   {
+    id: "pendingApprovalJobs",
+    label: "Pending Approval",
+    icon: Clock3,
+    iconWrap: "bg-warning/10",
+    iconColor: "text-warning",
+  },
+  {
     id: "activeJobs",
     label: "Active Jobs",
     icon: CheckCircle2,
@@ -40,8 +47,8 @@ const KPI_CONFIG: {
     id: "pendingPaymentJobs",
     label: "Pending Payment",
     icon: Clock3,
-    iconWrap: "bg-warning/10",
-    iconColor: "text-warning",
+    iconWrap: "bg-chart-accent-alt/10",
+    iconColor: "text-chart-accent-alt",
   },
   {
     id: "liveJobs",
@@ -61,8 +68,8 @@ const KPI_CONFIG: {
     id: "draftJobs",
     label: "Draft Jobs",
     icon: FileText,
-    iconWrap: "bg-chart-accent-alt/10",
-    iconColor: "text-chart-accent-alt",
+    iconWrap: "bg-muted/15",
+    iconColor: "text-muted",
   },
 ];
 
@@ -72,7 +79,7 @@ function formatCount(value: number): string {
 
 export function JobsKpiStrip({ kpis, isLoading }: JobsKpiStripProps) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-7">
       {KPI_CONFIG.map((item) => {
         const Icon = item.icon;
 

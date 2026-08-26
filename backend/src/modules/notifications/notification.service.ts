@@ -110,6 +110,8 @@ function conversationDirectionForType(
     case "candidate_withdrawn":
     case "application_withdrawn":
     case "job_closed":
+    case "job_approved":
+    case "job_rejected":
       return "incoming";
     default:
       return "outgoing";
@@ -1721,6 +1723,259 @@ export class NotificationService {
         publicJobId: input.publicJobId,
         jobTitle,
         closedBy: input.closedByLabel,
+      },
+    });
+
+    return { created: true, alreadySent: false };
+  }
+
+  /**
+   * Employer inbox notice when Operations approves a job listing.
+   * Idempotent on employer + job + type so retries do not duplicate.
+   */
+  async notifyEmployerJobApproved(input: {
+    employerId: string;
+    jobMongoId: string;
+    publicJobId: string;
+    jobTitle: string;
+    reviewedByLabel: string;
+  }): Promise<{ created: boolean; alreadySent: boolean }> {
+    if (
+      !mongoose.Types.ObjectId.isValid(input.employerId) ||
+      !mongoose.Types.ObjectId.isValid(input.jobMongoId)
+    ) {
+      throw new AppError("Invalid employer or job.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const existing = await NotificationModel.findOne({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "job_approved",
+      referenceType: "job",
+      referenceId: input.jobMongoId,
+    })
+      .select("_id")
+      .lean();
+
+    if (existing) {
+      await NotificationModel.deleteOne({ _id: existing._id });
+    }
+
+    const jobTitle = input.jobTitle.trim() || "Untitled job";
+    const body = [
+      `Job Title: ${jobTitle}`,
+      `Job ID: ${input.publicJobId}`,
+      `Status: Live`,
+      `Approved by: ${input.reviewedByLabel.trim() || "Operations"}`,
+      "Your job is now visible to candidates on AsliJobs.",
+    ].join("\n");
+
+    await this.createNotification({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "job_approved",
+      category: "system",
+      title: "Job approved and published",
+      body,
+      priority: "high",
+      referenceType: "job",
+      referenceId: input.jobMongoId,
+      actionPath: "/employer/jobs",
+      metadata: {
+        publicJobId: input.publicJobId,
+        jobTitle,
+        reviewedBy: input.reviewedByLabel,
+      },
+    });
+
+    return { created: true, alreadySent: false };
+  }
+
+  /**
+   * Employer inbox notice when Operations rejects a job listing.
+   */
+  async notifyEmployerJobRejected(input: {
+    employerId: string;
+    jobMongoId: string;
+    publicJobId: string;
+    jobTitle: string;
+    reason: string;
+    reviewedByLabel: string;
+  }): Promise<{ created: boolean; alreadySent: boolean }> {
+    if (
+      !mongoose.Types.ObjectId.isValid(input.employerId) ||
+      !mongoose.Types.ObjectId.isValid(input.jobMongoId)
+    ) {
+      throw new AppError("Invalid employer or job.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const existing = await NotificationModel.findOne({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "job_rejected",
+      referenceType: "job",
+      referenceId: input.jobMongoId,
+    })
+      .select("_id")
+      .lean();
+
+    if (existing) {
+      await NotificationModel.deleteOne({ _id: existing._id });
+    }
+
+    const jobTitle = input.jobTitle.trim() || "Untitled job";
+    const body = [
+      `Job Title: ${jobTitle}`,
+      `Job ID: ${input.publicJobId}`,
+      `Status: Rejected`,
+      `Rejection reason: ${input.reason.trim()}`,
+      `Reviewed by: ${input.reviewedByLabel.trim() || "Operations"}`,
+      "Update the job and resubmit it for Operations review.",
+    ].join("\n");
+
+    await this.createNotification({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "job_rejected",
+      category: "system",
+      title: "Job rejected",
+      body,
+      priority: "high",
+      referenceType: "job",
+      referenceId: input.jobMongoId,
+      actionPath: "/employer/jobs",
+      metadata: {
+        publicJobId: input.publicJobId,
+        jobTitle,
+        rejectionReason: input.reason.trim(),
+        reviewedBy: input.reviewedByLabel,
+      },
+    });
+
+    return { created: true, alreadySent: false };
+  }
+
+  /**
+   * Employer inbox notice when Operations approves edits to a live job.
+   */
+  async notifyEmployerLiveJobChangesApproved(input: {
+    employerId: string;
+    jobMongoId: string;
+    publicJobId: string;
+    jobTitle: string;
+    reviewedByLabel: string;
+  }): Promise<{ created: boolean; alreadySent: boolean }> {
+    if (
+      !mongoose.Types.ObjectId.isValid(input.employerId) ||
+      !mongoose.Types.ObjectId.isValid(input.jobMongoId)
+    ) {
+      throw new AppError("Invalid employer or job.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const existing = await NotificationModel.findOne({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "job_approved",
+      referenceType: "job",
+      referenceId: input.jobMongoId,
+    })
+      .select("_id")
+      .lean();
+
+    if (existing) {
+      await NotificationModel.deleteOne({ _id: existing._id });
+    }
+
+    const jobTitle = input.jobTitle.trim() || "Untitled job";
+    const body = [
+      `Job Title: ${jobTitle}`,
+      `Job ID: ${input.publicJobId}`,
+      `Status: Live`,
+      `Approved by: ${input.reviewedByLabel.trim() || "Operations"}`,
+      "Your job changes are now visible to candidates on AsliJobs.",
+    ].join("\n");
+
+    await this.createNotification({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "job_approved",
+      category: "system",
+      title: "Job changes approved and published",
+      body,
+      priority: "high",
+      referenceType: "job",
+      referenceId: input.jobMongoId,
+      actionPath: "/employer/jobs",
+      metadata: {
+        publicJobId: input.publicJobId,
+        jobTitle,
+        reviewedBy: input.reviewedByLabel,
+        reviewKind: "live_change",
+      },
+    });
+
+    return { created: true, alreadySent: false };
+  }
+
+  /**
+   * Employer inbox notice when Operations rejects edits to a live job.
+   */
+  async notifyEmployerLiveJobChangesRejected(input: {
+    employerId: string;
+    jobMongoId: string;
+    publicJobId: string;
+    jobTitle: string;
+    reason: string;
+    reviewedByLabel: string;
+  }): Promise<{ created: boolean; alreadySent: boolean }> {
+    if (
+      !mongoose.Types.ObjectId.isValid(input.employerId) ||
+      !mongoose.Types.ObjectId.isValid(input.jobMongoId)
+    ) {
+      throw new AppError("Invalid employer or job.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const existing = await NotificationModel.findOne({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "job_rejected",
+      referenceType: "job",
+      referenceId: input.jobMongoId,
+    })
+      .select("_id")
+      .lean();
+
+    if (existing) {
+      await NotificationModel.deleteOne({ _id: existing._id });
+    }
+
+    const jobTitle = input.jobTitle.trim() || "Untitled job";
+    const body = [
+      `Job Title: ${jobTitle}`,
+      `Job ID: ${input.publicJobId}`,
+      `Status: Live (previous version unchanged)`,
+      `Rejection reason: ${input.reason.trim()}`,
+      `Reviewed by: ${input.reviewedByLabel.trim() || "Operations"}`,
+      "Your live job is unchanged. Edit and resubmit the changes for Operations review.",
+    ].join("\n");
+
+    await this.createNotification({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "job_rejected",
+      category: "system",
+      title: "Job changes rejected",
+      body,
+      priority: "high",
+      referenceType: "job",
+      referenceId: input.jobMongoId,
+      actionPath: "/employer/jobs",
+      metadata: {
+        publicJobId: input.publicJobId,
+        jobTitle,
+        rejectionReason: input.reason.trim(),
+        reviewedBy: input.reviewedByLabel,
+        reviewKind: "live_change",
       },
     });
 

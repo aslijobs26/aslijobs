@@ -3,6 +3,13 @@ import { HTTP_STATUS } from "../constants/http-status.js";
 import { AppError } from "./error.middleware.js";
 import { jwtService } from "../modules/auth/jwt.service.js";
 import { OperationsTeamUserModel } from "../modules/operations/auth/operations-team-user.model.js";
+import type {
+  OperationsPermissionAction,
+  OperationsPermissionMap,
+  OperationsPermissionModule,
+} from "../modules/operations/auth/operations-rbac.js";
+import { canOperationsPermission } from "../modules/operations/auth/operations-rbac.js";
+import { resolveOperationsUserPermissions } from "../modules/operations/auth/operations-rbac.service.js";
 import type { OperationsTeamRole } from "../modules/operations/operations.constants.js";
 
 declare global {
@@ -11,6 +18,7 @@ declare global {
       operationsUserId?: string;
       operationsTeamRole?: OperationsTeamRole;
       operationsMobileNumber?: string;
+      operationsPermissions?: OperationsPermissionMap;
     }
   }
 }
@@ -51,6 +59,7 @@ export async function requireOperationsAuth(
     req.operationsUserId = String(user._id);
     req.operationsTeamRole = user.role;
     req.operationsMobileNumber = user.mobileNumber;
+    req.operationsPermissions = resolveOperationsUserPermissions(user.role);
     next();
   } catch (error) {
     next(
@@ -61,27 +70,68 @@ export async function requireOperationsAuth(
   }
 }
 
-const OPERATIONS_JOB_WRITE_ROLES: OperationsTeamRole[] = [
-  "SUPER_ADMIN",
-  "OPERATIONS",
-];
+/**
+ * Allow only the listed Operations team roles.
+ * Prefer `requireOperationsPermission` for new endpoints.
+ */
+export function requireOperationsRoles(
+  ...allowedRoles: OperationsTeamRole[]
+): (req: Request, res: Response, next: NextFunction) => void {
+  return (req, _res, next) => {
+    const role = req.operationsTeamRole;
 
+    if (!role || !allowedRoles.includes(role)) {
+      next(
+        new AppError(
+          "Access denied. You do not have permission to perform this action.",
+          HTTP_STATUS.FORBIDDEN,
+        ),
+      );
+      return;
+    }
+
+    next();
+  };
+}
+
+/**
+ * Permission-based API gate. SUPER_ADMIN always has full access via the matrix.
+ */
+export function requireOperationsPermission(
+  module: OperationsPermissionModule,
+  action: OperationsPermissionAction,
+): (req: Request, res: Response, next: NextFunction) => void {
+  return (req, _res, next) => {
+    const permissions = req.operationsPermissions;
+    const role = req.operationsTeamRole;
+
+    if (!role || !permissions) {
+      next(new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED));
+      return;
+    }
+
+    if (!canOperationsPermission(permissions, module, action)) {
+      next(
+        new AppError(
+          "Access denied. You do not have permission to perform this action.",
+          HTTP_STATUS.FORBIDDEN,
+        ),
+      );
+      return;
+    }
+
+    next();
+  };
+}
+
+/**
+ * Legacy alias — job write routes historically allowed SUPER_ADMIN | OPERATIONS.
+ * Implemented via the jobs:update permission so future Team Management stays consistent.
+ */
 export function requireOperationsJobWriteAccess(
   req: Request,
-  _res: Response,
+  res: Response,
   next: NextFunction,
 ): void {
-  const role = req.operationsTeamRole;
-
-  if (!role || !OPERATIONS_JOB_WRITE_ROLES.includes(role)) {
-    next(
-      new AppError(
-        "You do not have permission to manage jobs.",
-        HTTP_STATUS.FORBIDDEN,
-      ),
-    );
-    return;
-  }
-
-  next();
+  return requireOperationsPermission("jobs", "update")(req, res, next);
 }

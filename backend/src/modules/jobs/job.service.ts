@@ -167,6 +167,11 @@ function toJobPublic(
     bookmarks: job.bookmarks,
     shares: job.shares,
     createdBy: toObjectIdString(job.createdBy),
+    submittedForApprovalAt: toIsoDateString(job.submittedForApprovalAt),
+    reviewDecision: job.reviewDecision?.trim() || "",
+    reviewedAt: toIsoDateString(job.reviewedAt),
+    rejectionReason: job.rejectionReason?.trim() || "",
+    ...liveChangeReviewFields(job),
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   };
@@ -195,6 +200,16 @@ function toEmployerJobListItem(
     views: job.views,
     status: job.status,
     publishedAt: toIsoDateString(job.publishedAt),
+    submittedForApprovalAt: toIsoDateString(job.submittedForApprovalAt),
+    reviewDecision: job.reviewDecision?.trim() || "",
+    reviewedAt: toIsoDateString(job.reviewedAt),
+    rejectionReason: job.rejectionReason?.trim() || "",
+    liveChangeReviewStatus:
+      typeof job.liveChangeReviewStatus === "string"
+        ? job.liveChangeReviewStatus.trim()
+        : "",
+    liveChangeSubmittedAt: toIsoDateString(job.liveChangeSubmittedAt),
+    liveChangeRejectionReason: job.liveChangeRejectionReason?.trim() || "",
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   };
@@ -351,6 +366,169 @@ function applyCreateInputToJob(job: JobDocument, input: CreateJobInput) {
   job.contactMobile = input.contactMobile;
 }
 
+/** Serializable payload stored while a live-job edit awaits Operations review. */
+export function toPendingLiveRevisionPayload(
+  input: CreateJobInput,
+): CreateJobInput {
+  return {
+    companyName: input.companyName,
+    industry: input.industry ?? "",
+    businessCategory: input.businessCategory ?? "",
+    companySize: input.companySize ?? "",
+    jobTitle: input.jobTitle,
+    jobType: input.jobType,
+    contractPeriodFrom:
+      input.jobType === "contract" ? input.contractPeriodFrom : "",
+    contractPeriodTo:
+      input.jobType === "contract" ? input.contractPeriodTo : "",
+    partTimeSchedule:
+      input.jobType === "part-time" ? input.partTimeSchedule : "",
+    partTimeStartTime:
+      input.jobType === "part-time" ? input.partTimeStartTime : "",
+    partTimeEndTime:
+      input.jobType === "part-time" ? input.partTimeEndTime : "",
+    partTimeFlexibleHours:
+      input.jobType === "part-time" ? input.partTimeFlexibleHours : "",
+    workMode: input.workMode,
+    vacancies: input.vacancies,
+    description: input.description,
+    state: input.state,
+    stateName: input.stateName,
+    city: input.city,
+    cityName: input.cityName,
+    address: input.address,
+    landmark: input.landmark,
+    salaryType: input.salaryType,
+    salaryPeriod: input.salaryPeriod,
+    fixedSalary: input.salaryType === "fixed" ? input.fixedSalary : null,
+    minimumSalary: input.salaryType === "range" ? input.minimumSalary : null,
+    maximumSalary: input.salaryType === "range" ? input.maximumSalary : null,
+    perks: [...input.perks],
+    education: [...input.education],
+    experience: input.experience,
+    languages: [...input.languages],
+    gender: [...input.gender],
+    minimumAge: input.minimumAge,
+    maximumAge: input.maximumAge,
+    walkInEnabled: input.walkInEnabled,
+    interviewAddress: input.walkInEnabled ? input.interviewAddress : "",
+    walkInStartDate: input.walkInEnabled ? input.walkInStartDate : "",
+    walkInEndDate: input.walkInEnabled ? input.walkInEndDate : "",
+    walkInStartTime: input.walkInEnabled ? input.walkInStartTime : "",
+    walkInEndTime: input.walkInEnabled ? input.walkInEndTime : "",
+    interviewInstructions: input.interviewInstructions,
+    contactPersonName: input.contactPersonName,
+    contactEmail: input.contactEmail,
+    contactMobile: input.contactMobile,
+    status: "active",
+  };
+}
+
+function normalizeComparableValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return [...value].map(String).sort();
+  }
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  if (value === undefined) {
+    return null;
+  }
+  return value;
+}
+
+function liveJobMatchesCreateInput(
+  job: JobDocument,
+  input: CreateJobInput,
+): boolean {
+  const proposed = toPendingLiveRevisionPayload(input);
+  const current = toPendingLiveRevisionPayload({
+    companyName: job.companyName ?? "",
+    industry: job.industry ?? "",
+    businessCategory: job.businessCategory ?? "",
+    companySize: job.companySize ?? "",
+    jobTitle: job.jobTitle ?? "",
+    jobType: (job.jobType || "full-time") as CreateJobInput["jobType"],
+    contractPeriodFrom: job.contractPeriodFrom ?? "",
+    contractPeriodTo: job.contractPeriodTo ?? "",
+    partTimeSchedule: (job.partTimeSchedule ||
+      "") as CreateJobInput["partTimeSchedule"],
+    partTimeStartTime: job.partTimeStartTime ?? "",
+    partTimeEndTime: job.partTimeEndTime ?? "",
+    partTimeFlexibleHours: job.partTimeFlexibleHours ?? "",
+    workMode: (job.workMode || "office") as CreateJobInput["workMode"],
+    vacancies: job.vacancies ?? 1,
+    description: job.description ?? "",
+    state: job.state ?? "",
+    stateName: job.stateName ?? "",
+    city: job.city ?? "",
+    cityName: job.cityName ?? "",
+    address: job.address ?? "",
+    landmark: job.landmark ?? "",
+    salaryType: (job.salaryType || "fixed") as CreateJobInput["salaryType"],
+    salaryPeriod: normalizeSalaryPeriod(job.salaryPeriod),
+    fixedSalary: job.fixedSalary ?? null,
+    minimumSalary: job.minimumSalary ?? null,
+    maximumSalary: job.maximumSalary ?? null,
+    perks: (Array.isArray(job.perks)
+      ? job.perks.map(String)
+      : []) as CreateJobInput["perks"],
+    education: (Array.isArray(job.education)
+      ? job.education.map(String)
+      : []) as CreateJobInput["education"],
+    experience: (job.experience || "fresher") as CreateJobInput["experience"],
+    languages: (Array.isArray(job.languages)
+      ? job.languages.map(String)
+      : []) as CreateJobInput["languages"],
+    gender: (Array.isArray(job.gender)
+      ? job.gender.map(String)
+      : []) as CreateJobInput["gender"],
+    minimumAge: job.minimumAge ?? null,
+    maximumAge: job.maximumAge ?? null,
+    walkInEnabled: Boolean(job.walkInEnabled),
+    interviewAddress: job.interviewAddress ?? "",
+    walkInStartDate: job.walkInStartDate ?? "",
+    walkInEndDate: job.walkInEndDate ?? "",
+    walkInStartTime: job.walkInStartTime ?? "",
+    walkInEndTime: job.walkInEndTime ?? "",
+    interviewInstructions: job.interviewInstructions ?? "",
+    contactPersonName: job.contactPersonName ?? "",
+    contactEmail: job.contactEmail ?? "",
+    contactMobile: job.contactMobile ?? "",
+    status: "active",
+  });
+
+  const keys = Object.keys(proposed) as (keyof CreateJobInput)[];
+  return keys.every(
+    (key) =>
+      JSON.stringify(normalizeComparableValue(proposed[key])) ===
+      JSON.stringify(normalizeComparableValue(current[key])),
+  );
+}
+
+/** Apply a validated create-job payload onto a job document (used after Ops approves live edits). */
+export function applyApprovedCreateInputToJob(
+  job: JobDocument,
+  input: CreateJobInput,
+): void {
+  applyCreateInputToJob(job, input);
+}
+
+function liveChangeReviewFields(job: JobDocument) {
+  const liveChangeReviewStatus =
+    typeof job.liveChangeReviewStatus === "string"
+      ? job.liveChangeReviewStatus.trim()
+      : "";
+
+  return {
+    pendingLiveRevision: job.pendingLiveRevision ?? null,
+    liveChangeReviewStatus,
+    liveChangeSubmittedAt: toIsoDateString(job.liveChangeSubmittedAt),
+    liveChangeReviewedAt: toIsoDateString(job.liveChangeReviewedAt),
+    liveChangeRejectionReason: job.liveChangeRejectionReason?.trim() || "",
+  };
+}
+
 async function generateJobId(): Promise<string> {
   const year = new Date().getFullYear();
   const counterId = `job_${year}`;
@@ -371,13 +549,14 @@ function resolveStatusFromAction(
 ): JobStatus {
   switch (action) {
     case "publish":
-      if (currentStatus !== "draft" && currentStatus !== "paused") {
+      // Employer publish never goes Live — Operations must approve.
+      if (currentStatus !== "draft" && currentStatus !== "rejected") {
         throw new AppError(
-          "Only draft or paused jobs can be published",
+          "Only draft or rejected jobs can be submitted for approval",
           HTTP_STATUS.BAD_REQUEST,
         );
       }
-      return "active";
+      return "pending_approval";
     case "pause":
       if (currentStatus !== "active") {
         throw new AppError(
@@ -412,6 +591,12 @@ function resolveStatusFromAction(
         );
       }
       return "active";
+    case "approve":
+    case "reject":
+      throw new AppError(
+        "Only Operations can approve or reject jobs",
+        HTTP_STATUS.FORBIDDEN,
+      );
     default:
       throw new AppError("Invalid status action", HTTP_STATUS.BAD_REQUEST);
   }
@@ -1072,6 +1257,10 @@ export class JobService {
 
     const employerObjectId = employer._id;
     const jobId = await generateJobId();
+    const isDraft = input.status === "draft";
+    // Employer submissions require Operations approval before becoming Live.
+    const status: JobStatus = isDraft ? "draft" : "pending_approval";
+    const now = new Date();
 
     const job = await JobModel.create({
       jobId,
@@ -1126,16 +1315,19 @@ export class JobService {
       contactPersonName: input.contactPersonName,
       contactEmail: input.contactEmail,
       contactMobile: input.contactMobile,
-      status: input.status,
-      listingPaymentStatus: input.status === "draft" ? "pending" : "paid",
+      status,
+      listingPaymentStatus: isDraft ? "pending" : "paid",
       listingPackageLabel: "",
       listingValidUntil: null,
       isFeatured: false,
-      completedStep: input.status === "draft" ? 1 : 3,
-      lastEditedAt: new Date(),
+      completedStep: isDraft ? 1 : 3,
+      lastEditedAt: now,
       wizardSnapshot: null,
-      publishedAt: input.status === "draft" ? null : new Date(),
-      lastStatusChangedAt: input.status === "draft" ? null : new Date(),
+      publishedAt: null,
+      submittedForApprovalAt: isDraft ? null : now,
+      lastStatusChangedAt: isDraft ? null : now,
+      reviewDecision: "",
+      rejectionReason: "",
       applications: 0,
       shortlisted: 0,
       interviews: 0,
@@ -1144,6 +1336,7 @@ export class JobService {
       bookmarks: 0,
       shares: 0,
       createdBy: employerObjectId,
+      creationSource: "employer",
     });
 
     return {
@@ -1376,8 +1569,20 @@ export class JobService {
     if (action === "reactivate") {
       $set.publishedAt = now;
       $set.reactivatedAt = now;
-    } else if (action === "publish") {
-      $set.publishedAt = now;
+    } else if (action === "publish" && nextStatus === "pending_approval") {
+      $set.publishedAt = null;
+      $set.submittedForApprovalAt = now;
+      $set.reviewDecision = "";
+      $set.reviewedAt = null;
+      $set.reviewedByOperationsUserId = null;
+      $set.rejectionReason = "";
+      $set.reviewNotificationSentAt = null;
+      if (
+        job.listingPaymentStatus === "pending" ||
+        job.listingPaymentStatus === "unpaid"
+      ) {
+        $set.listingPaymentStatus = "paid";
+      }
     }
 
     const updateResult = await JobModel.updateOne(
@@ -1661,16 +1866,16 @@ export class JobService {
   ) {
     const job = await this.findOwnedJobOrThrow(employerId, jobMongoId);
 
-    if (job.status !== "draft") {
+    if (job.status !== "draft" && job.status !== "rejected") {
       throw new AppError(
-        "Only draft jobs can be published from the post job form",
+        "Only draft or rejected jobs can be submitted for approval from the post job form",
         HTTP_STATUS.BAD_REQUEST,
       );
     }
 
     applyCreateInputToJob(job, input);
     const now = new Date();
-    job.status = "active";
+    job.status = "pending_approval";
     if (
       job.listingPaymentStatus === "pending" ||
       job.listingPaymentStatus === "unpaid"
@@ -1680,8 +1885,14 @@ export class JobService {
     job.completedStep = 3;
     job.lastEditedAt = now;
     job.wizardSnapshot = null;
-    job.publishedAt = now;
+    job.publishedAt = null;
+    job.submittedForApprovalAt = now;
     job.lastStatusChangedAt = now;
+    job.reviewDecision = "";
+    job.reviewedAt = null;
+    job.reviewedByOperationsUserId = null;
+    job.rejectionReason = "";
+    job.reviewNotificationSentAt = null;
     await job.save();
 
     return {
@@ -1703,8 +1914,23 @@ export class JobService {
       );
     }
 
-    applyCreateInputToJob(job, input);
-    job.lastEditedAt = new Date();
+    if (liveJobMatchesCreateInput(job, input)) {
+      throw new AppError(
+        "No changes to submit for approval",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const now = new Date();
+    // Stage edits for Operations review — do not mutate live/public fields.
+    job.pendingLiveRevision = toPendingLiveRevisionPayload(input);
+    job.liveChangeReviewStatus = "pending_approval";
+    job.liveChangeSubmittedAt = now;
+    job.liveChangeReviewedAt = null;
+    job.liveChangeReviewedByOperationsUserId = null;
+    job.liveChangeRejectionReason = "";
+    job.liveChangeReviewNotificationSentAt = null;
+    job.lastEditedAt = now;
     job.wizardSnapshot = null;
     await job.save();
 
@@ -2131,12 +2357,12 @@ export class JobService {
     }
 
     const job = await this.findJobByPublicId(publicJobId);
-    this.assertOperationsDraftWritable(job);
 
+    const wasDraft = job.status === "draft";
     const employer = await this.resolveOperationsEmployer(
       employerId === undefined ? job.employerId?.toString() ?? null : employerId,
     );
-    const employerObjectId = employer?._id ?? null;
+    const employerObjectId = employer?._id ?? job.employerId ?? null;
     const denormalized = denormalizeDraftFields(input.wizardSnapshot);
 
     if (!denormalized.businessCategory && employer?.businessCategory?.trim()) {
@@ -2147,15 +2373,27 @@ export class JobService {
     }
 
     Object.assign(job, denormalized);
-    job.employerId = employerObjectId;
-    job.companyId = employerObjectId;
-    job.createdBy = employerObjectId;
+
+    if (employerObjectId) {
+      job.employerId = employerObjectId;
+      job.companyId = employerObjectId;
+      if (!job.createdBy) {
+        job.createdBy = employerObjectId;
+      }
+    }
+
     job.completedStep = input.completedStep;
     job.lastEditedAt = new Date();
     job.wizardSnapshot = input.wizardSnapshot;
-    job.status = "draft";
-    job.listingPaymentStatus = "pending";
-    job.publishedAt = null;
+
+    if (wasDraft) {
+      job.status = "draft";
+      if (job.creationSource === "operations") {
+        job.listingPaymentStatus = "pending";
+        job.publishedAt = null;
+      }
+    }
+
     await job.save();
 
     return {

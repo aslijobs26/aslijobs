@@ -32,6 +32,8 @@ export const NOTIFICATION_TYPES = [
   "application_withdrawn",
   "candidate_withdrawn",
   "job_closed",
+  "job_approved",
+  "job_rejected",
 ] as const;
 
 export const NOTIFICATION_CHANNEL_DEFAULTS = {

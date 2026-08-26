@@ -92,9 +92,10 @@ export function formatEmployerJobCount(value: number): string {
 
 export function getEmployerJobPostedAt(job: {
   publishedAt?: string | null;
+  submittedForApprovalAt?: string | null;
   createdAt: string;
 }): string {
-  return job.publishedAt ?? job.createdAt;
+  return job.publishedAt ?? job.submittedForApprovalAt ?? job.createdAt;
 }
 
 export function formatEmployerJobPostedAbsolute(isoDate: string): string {

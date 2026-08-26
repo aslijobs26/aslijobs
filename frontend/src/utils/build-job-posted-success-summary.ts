@@ -5,7 +5,6 @@ import {
   JOB_POSTED_SUCCESS_FALLBACK_LOCATION,
   JOB_POSTED_SUCCESS_FALLBACK_SALARY,
   JOB_POSTED_SUCCESS_FALLBACK_TITLE,
-  JOB_POSTED_SUCCESS_VISIBILITY_PUBLIC,
 } from "@/constants/job-posted-success";
 import type { EmployerJobDetail, JobStatus } from "@/types/employer-jobs";
 import type { JobPostedSuccessSummary } from "@/types/job-posted-success";
@@ -31,6 +30,7 @@ type JobPostedApiFields = Partial<
     | "maximumSalary"
     | "status"
     | "applications"
+    | "liveChangeReviewStatus"
   >
 > & {
   publishedAt?: string | null;
@@ -173,12 +173,22 @@ export function buildJobPostedSuccessSummary(
 
   const status: JobStatus =
     job?.status === "active" ||
+    job?.status === "pending_approval" ||
     job?.status === "draft" ||
     job?.status === "paused" ||
     job?.status === "closed" ||
-    job?.status === "expired"
+    job?.status === "expired" ||
+    job?.status === "rejected"
       ? job.status
-      : "active";
+      : "pending_approval";
+
+  const liveChangeReviewStatus =
+    typeof job?.liveChangeReviewStatus === "string"
+      ? job.liveChangeReviewStatus.trim()
+      : "";
+
+  const isLiveChangePending =
+    status === "active" && liveChangeReviewStatus === "pending_approval";
 
   return {
     jobMongoId: job?.id?.trim() || "",
@@ -200,11 +210,16 @@ export function buildJobPostedSuccessSummary(
         job?.jobType?.trim() || formData.jobInformation.jobType || "",
       ) || JOB_POSTED_SUCCESS_FALLBACK_JOB_TYPE,
     status,
+    liveChangeReviewStatus,
     publishedAt: job?.publishedAt ?? new Date().toISOString(),
     applications:
       typeof job?.applications === "number" && job.applications >= 0
         ? job.applications
         : 0,
-    visibility: JOB_POSTED_SUCCESS_VISIBILITY_PUBLIC,
+    visibility: isLiveChangePending
+      ? "Public"
+      : status === "active"
+        ? "Public"
+        : "Not public yet",
   };
 }

@@ -1,3 +1,5 @@
+import type { OperationsTeamRole } from "../operations/operations.constants.js";
+
 export type EmployerJwtPayload = {
   sub: string;
   role: "employer";
@@ -22,7 +24,7 @@ export type JobSeekerJwtPayload = {
 export type OperationsTeamJwtPayload = {
   sub: string;
   role: "operations_team";
-  teamRole: string;
+  teamRole: OperationsTeamRole;
   mobileNumber: string;
 };
 

@@ -24,7 +24,11 @@ import type {
 import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-image.js";
 import { EmployerModel } from "../../employers/employer.model.js";
 import { JobModel, type JobDocument } from "../../jobs/job.model.js";
-import { jobService } from "../../jobs/job.service.js";
+import {
+  applyApprovedCreateInputToJob,
+  jobService,
+} from "../../jobs/job.service.js";
+import { createJobSchema } from "../../jobs/job.validation.js";
 import { notificationService } from "../../notifications/notification.service.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
 import type {
@@ -88,6 +92,8 @@ function statusLabel(status: JobStatus): string {
   switch (status) {
     case "active":
       return "Live";
+    case "pending_approval":
+      return "Pending Approval";
     case "draft":
       return "Draft";
     case "paused":
@@ -96,6 +102,8 @@ function statusLabel(status: JobStatus): string {
       return "Closed";
     case "expired":
       return "Expired";
+    case "rejected":
+      return "Rejected";
     default:
       return status;
   }
@@ -127,6 +135,14 @@ function buildListFilter(
   const andClauses: Record<string, unknown>[] = [];
 
   switch (query.tab) {
+    case "pending_approval":
+      andClauses.push({
+        $or: [
+          { status: "pending_approval" },
+          { liveChangeReviewStatus: "pending_approval" },
+        ],
+      });
+      break;
     case "live":
       andClauses.push({ status: "active" });
       break;
@@ -141,6 +157,9 @@ function buildListFilter(
       break;
     case "closed":
       andClauses.push({ status: "closed" });
+      break;
+    case "rejected":
+      andClauses.push({ status: "rejected" });
       break;
     default:
       break;
@@ -327,6 +346,7 @@ async function loadKpisAndCounts(): Promise<{
     lowApplications,
     inactivePaused,
     draftJobs,
+    pendingLiveChangeReviews,
   ] = await Promise.all([
     JobModel.aggregate<{ _id: JobStatus; count: number }>([
       { $group: { _id: "$status", count: { $sum: 1 } } },
@@ -356,6 +376,9 @@ async function loadKpisAndCounts(): Promise<{
       ],
     }),
     JobModel.countDocuments({ status: "draft" }),
+    JobModel.countDocuments({
+      liveChangeReviewStatus: "pending_approval",
+    }),
   ]);
 
   const countsByStatus = Object.fromEntries(
@@ -375,10 +398,13 @@ async function loadKpisAndCounts(): Promise<{
   const liveJobs = countsByStatus.active;
   // Align with employer dashboard: "active" means live listings only.
   const activeJobs = countsByStatus.active;
+  const pendingApprovalJobs =
+    countsByStatus.pending_approval + pendingLiveChangeReviews;
 
   const kpis: OperationsJobsKpis = {
     totalJobs,
     activeJobs,
+    pendingApprovalJobs,
     pendingPaymentJobs,
     liveJobs,
     expiredJobs: countsByStatus.expired,
@@ -387,14 +413,22 @@ async function loadKpisAndCounts(): Promise<{
 
   const counts: OperationsJobsTabCounts = {
     all: totalJobs,
+    pending_approval: pendingApprovalJobs,
     live: liveJobs,
     paused: countsByStatus.paused,
     draft: countsByStatus.draft,
     expired: countsByStatus.expired,
     closed: countsByStatus.closed,
+    rejected: countsByStatus.rejected,
   };
 
   const insights: OperationsJobsInsight[] = [
+    {
+      id: "pending-approval",
+      label: "Jobs pending approval",
+      count: pendingApprovalJobs,
+      tab: "pending_approval",
+    },
     {
       id: "expiring-soon",
       label: "Jobs expiring in 7 days",
@@ -468,6 +502,11 @@ function toListItem(
   const cityName = job.cityName?.trim() || "";
   const stateName = job.stateName?.trim() || "";
   const locationLabel = [cityName, stateName].filter(Boolean).join(", ");
+  const liveChangeReviewStatus =
+    typeof job.liveChangeReviewStatus === "string"
+      ? job.liveChangeReviewStatus.trim()
+      : "";
+  const isLiveChangeReview = liveChangeReviewStatus === "pending_approval";
 
   return {
     id: job._id.toString(),
@@ -476,7 +515,9 @@ function toListItem(
     jobType: job.jobType || "",
     isFeatured: Boolean(job.isFeatured),
     status: job.status as JobStatus,
-    statusLabel: statusLabel(job.status as JobStatus),
+    statusLabel: isLiveChangeReview
+      ? "Changes Pending Approval"
+      : statusLabel(job.status as JobStatus),
     listingPaymentStatus: paymentStatus,
     paymentStatusLabel: paymentStatusLabel(paymentStatus),
     listingPackageLabel: job.listingPackageLabel?.trim() || "",
@@ -488,8 +529,11 @@ function toListItem(
     locationLabel,
     publishedAt: toIso(job.publishedAt),
     createdAt: toIso(job.createdAt) ?? new Date().toISOString(),
+    submittedForApprovalAt: toIso(job.submittedForApprovalAt),
     applications,
     applicationsToday,
+    isLiveChangeReview,
+    liveChangeReviewStatus,
     employer: {
       id:
         employer?._id?.toString() ??
@@ -684,6 +728,22 @@ function resolveStatusFromAction(
         );
       }
       return "active";
+    case "approve":
+      if (currentStatus !== "pending_approval") {
+        throw new AppError(
+          "Only jobs pending approval can be approved.",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+      return "active";
+    case "reject":
+      if (currentStatus !== "pending_approval") {
+        throw new AppError(
+          "Only jobs pending approval can be rejected.",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+      return "rejected";
     default:
       throw new AppError("Unsupported status action.", HTTP_STATUS.BAD_REQUEST);
   }
@@ -756,8 +816,76 @@ function buildActivity(job: JobDocument): OperationsJobActivityItem[] {
     });
   }
 
+  const submittedForApprovalAt = toIso(job.submittedForApprovalAt);
+  if (submittedForApprovalAt) {
+    events.push({
+      id: "submitted-for-approval",
+      type: "status_changed",
+      label: "Submitted for Operations approval",
+      at: submittedForApprovalAt,
+    });
+  }
+
+  const liveChangeSubmittedAt = toIso(job.liveChangeSubmittedAt);
+  if (liveChangeSubmittedAt) {
+    events.push({
+      id: "live-changes-submitted",
+      type: "status_changed",
+      label: "Live job changes submitted for Operations approval",
+      at: liveChangeSubmittedAt,
+    });
+  }
+
+  const reviewedAt = toIso(job.reviewedAt);
+  if (reviewedAt && job.reviewDecision === "approved") {
+    events.push({
+      id: "approved",
+      type: "published",
+      label: "Approved and published by Operations",
+      at: reviewedAt,
+    });
+  } else if (reviewedAt && job.reviewDecision === "rejected") {
+    const reason = job.rejectionReason?.trim();
+    events.push({
+      id: "rejected",
+      type: "status_changed",
+      label: reason
+        ? `Rejected by Operations. Reason: ${reason}`
+        : "Rejected by Operations",
+      at: reviewedAt,
+    });
+  }
+
+  const liveChangeReviewedAt = toIso(job.liveChangeReviewedAt);
+  const liveChangeReviewStatus =
+    typeof job.liveChangeReviewStatus === "string"
+      ? job.liveChangeReviewStatus.trim()
+      : "";
+  if (liveChangeReviewedAt && liveChangeReviewStatus === "rejected") {
+    const reason = job.liveChangeRejectionReason?.trim();
+    events.push({
+      id: "live-changes-rejected",
+      type: "status_changed",
+      label: reason
+        ? `Live job changes rejected. Reason: ${reason}`
+        : "Live job changes rejected by Operations",
+      at: liveChangeReviewedAt,
+    });
+  } else if (
+    liveChangeReviewedAt &&
+    !liveChangeReviewStatus &&
+    job.pendingLiveRevision == null
+  ) {
+    events.push({
+      id: "live-changes-approved",
+      type: "published",
+      label: "Live job changes approved and published",
+      at: liveChangeReviewedAt,
+    });
+  }
+
   const publishedAt = toIso(job.publishedAt);
-  if (publishedAt) {
+  if (publishedAt && job.reviewDecision !== "approved") {
     events.push({
       id: "published",
       type: "published",
@@ -788,7 +916,12 @@ function buildActivity(job: JobDocument): OperationsJobActivityItem[] {
         : "Status set to Closed",
       at: closedAt,
     });
-  } else if (lastStatusChangedAt) {
+  } else if (
+    lastStatusChangedAt &&
+    job.status !== "pending_approval" &&
+    job.reviewDecision !== "approved" &&
+    job.reviewDecision !== "rejected"
+  ) {
     events.push({
       id: "status-changed",
       type: "status_changed",
@@ -819,6 +952,7 @@ function toDetail(
   applicationsToday: number,
   shortlisted: number,
   hired: number,
+  reviewedByLabel = "",
 ): OperationsJobDetail {
   const paymentStatus = (JOB_LISTING_PAYMENT_STATUSES as readonly string[]).includes(
     String(job.listingPaymentStatus),
@@ -849,6 +983,11 @@ function toDetail(
   };
 
   const status = job.status as JobStatus;
+  const liveChangeReviewStatus =
+    typeof job.liveChangeReviewStatus === "string"
+      ? job.liveChangeReviewStatus.trim()
+      : "";
+  const isLiveChangeReview = liveChangeReviewStatus === "pending_approval";
 
   return {
     id: job._id.toString(),
@@ -908,13 +1047,20 @@ function toDetail(
     contactEmail: job.contactEmail || "",
     contactMobile: job.contactMobile || "",
     status,
-    statusLabel: statusLabel(status),
+    statusLabel: isLiveChangeReview
+      ? "Changes Pending Approval"
+      : statusLabel(status),
     listingPaymentStatus: paymentStatus,
     paymentStatusLabel: paymentStatusLabel(paymentStatus),
     listingPackageLabel: job.listingPackageLabel?.trim() || "",
     listingValidUntil,
     isFeatured: Boolean(job.isFeatured),
-    visibilityLabel: status === "draft" ? "Draft" : "Public",
+    visibilityLabel:
+      status === "draft" ||
+      status === "pending_approval" ||
+      status === "rejected"
+        ? "Not public"
+        : "Public",
     jobTypeLabel: jobTypeLabel(job.jobType || ""),
     workModeLabel: workModeLabel(job.workMode || ""),
     completedStep: job.completedStep ?? 1,
@@ -925,6 +1071,24 @@ function toDetail(
     closedReason: job.closedReason?.trim() || "",
     closedAt: toIso(job.closedAt),
     employerNotified: Boolean(job.closeNotificationSentAt),
+    submittedForApprovalAt: toIso(job.submittedForApprovalAt),
+    reviewDecision: job.reviewDecision?.trim() || "",
+    reviewedAt: toIso(job.reviewedAt),
+    reviewedByOperationsUserId: job.reviewedByOperationsUserId
+      ? String(job.reviewedByOperationsUserId)
+      : "",
+    reviewedByLabel,
+    rejectionReason: job.rejectionReason?.trim() || "",
+    reviewNotificationSent: Boolean(job.reviewNotificationSentAt),
+    pendingLiveRevision: job.pendingLiveRevision ?? null,
+    liveChangeReviewStatus,
+    liveChangeSubmittedAt: toIso(job.liveChangeSubmittedAt),
+    liveChangeReviewedAt: toIso(job.liveChangeReviewedAt),
+    liveChangeReviewedByOperationsUserId: job.liveChangeReviewedByOperationsUserId
+      ? String(job.liveChangeReviewedByOperationsUserId)
+      : "",
+    liveChangeRejectionReason: job.liveChangeRejectionReason?.trim() || "",
+    isLiveChangeReview,
     createdAt: toIso(job.createdAt) ?? new Date().toISOString(),
     updatedAt: toIso(job.updatedAt) ?? new Date().toISOString(),
     wizardSnapshot: job.wizardSnapshot ?? null,
@@ -1082,18 +1246,31 @@ export const operationsJobsService = {
       (job.employerId && String(job.employerId)) ||
       (job.companyId && String(job.companyId)) ||
       "";
+    const reviewerId = job.reviewedByOperationsUserId
+      ? String(job.reviewedByOperationsUserId)
+      : "";
 
-    const [employer, applicationsTodayMap, statusCounts] = await Promise.all([
-      employerLookupId && mongoose.Types.ObjectId.isValid(employerLookupId)
-        ? EmployerModel.findById(employerLookupId)
-            .select(
-              "companyName accountType companyLogo profilePhoto isWhatsappVerified registrationStatus businessCategory industry",
-            )
-            .lean()
-        : Promise.resolve(null),
-      loadApplicationsTodayByJobIds([jobMongoId]),
-      loadApplicationStatusCounts(jobMongoId),
-    ]);
+    const [employer, applicationsTodayMap, statusCounts, reviewer] =
+      await Promise.all([
+        employerLookupId && mongoose.Types.ObjectId.isValid(employerLookupId)
+          ? EmployerModel.findById(employerLookupId)
+              .select(
+                "companyName accountType companyLogo profilePhoto isWhatsappVerified registrationStatus businessCategory industry",
+              )
+              .lean()
+          : Promise.resolve(null),
+        loadApplicationsTodayByJobIds([jobMongoId]),
+        loadApplicationStatusCounts(jobMongoId),
+        reviewerId && mongoose.Types.ObjectId.isValid(reviewerId)
+          ? OperationsTeamUserModel.findById(reviewerId)
+              .select("fullName")
+              .lean()
+          : Promise.resolve(null),
+      ]);
+
+    const reviewedByLabel = reviewer?.fullName?.trim()
+      ? `${reviewer.fullName.trim()} (Operations)`
+      : "";
 
     return toDetail(
       job,
@@ -1102,6 +1279,7 @@ export const operationsJobsService = {
       applicationsTodayMap.get(jobMongoId) ?? 0,
       statusCounts.shortlisted || job.shortlisted || 0,
       statusCounts.hired || job.hired || 0,
+      reviewedByLabel,
     );
   },
 
@@ -1234,6 +1412,18 @@ export const operationsJobsService = {
       );
     }
 
+    if (action === "approve") {
+      return this.approveJobWithEmployerNotification(job, operationsUserId);
+    }
+
+    if (action === "reject") {
+      return this.rejectJobWithEmployerNotification(
+        job,
+        operationsUserId,
+        reason,
+      );
+    }
+
     const nextStatus = resolveStatusFromAction(job.status as JobStatus, action);
     const now = new Date();
 
@@ -1259,6 +1449,432 @@ export const operationsJobsService = {
 
     if (updateResult.matchedCount === 0) {
       throw new AppError("Job not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    return this.getJobDetail(job.jobId);
+  },
+
+  async approveJobWithEmployerNotification(
+    job: JobDocument,
+    operationsUserId: string,
+  ): Promise<OperationsJobDetail> {
+    if (!mongoose.Types.ObjectId.isValid(operationsUserId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const liveChangeReviewStatus =
+      typeof job.liveChangeReviewStatus === "string"
+        ? job.liveChangeReviewStatus.trim()
+        : "";
+    const isLiveChangeReview = liveChangeReviewStatus === "pending_approval";
+
+    if (job.status !== "pending_approval" && !isLiveChangeReview) {
+      throw new AppError(
+        "Only jobs pending approval can be approved.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    if (isLiveChangeReview) {
+      return this.approveLiveChangeWithEmployerNotification(
+        job,
+        operationsUserId,
+      );
+    }
+
+    const employerId =
+      (job.employerId && String(job.employerId)) ||
+      (job.companyId && String(job.companyId)) ||
+      "";
+
+    if (!employerId || !mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError(
+        "Assign an employer before approving this job.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const now = new Date();
+    const $set: Record<string, unknown> = {
+      status: "active",
+      lastStatusChangedAt: now,
+      publishedAt: now,
+      reviewDecision: "approved",
+      reviewedAt: now,
+      reviewedByOperationsUserId: new mongoose.Types.ObjectId(operationsUserId),
+      rejectionReason: "",
+    };
+
+    if (
+      job.listingPaymentStatus === "pending" ||
+      job.listingPaymentStatus === "unpaid"
+    ) {
+      $set.listingPaymentStatus = "paid";
+    }
+
+    const updateResult = await JobModel.updateOne(
+      { _id: job._id, status: "pending_approval" },
+      { $set },
+    );
+
+    if (updateResult.matchedCount === 0) {
+      throw new AppError(
+        "This job was already reviewed by another Operations user.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const actor = await OperationsTeamUserModel.findById(operationsUserId)
+      .select("fullName")
+      .lean();
+    const reviewedByLabel = actor?.fullName?.trim()
+      ? `${actor.fullName.trim()} (Operations)`
+      : "Operations";
+
+    try {
+      const notifyResult = await notificationService.notifyEmployerJobApproved({
+        employerId,
+        jobMongoId: job._id.toString(),
+        publicJobId: job.jobId,
+        jobTitle: job.jobTitle?.trim() || "Untitled job",
+        reviewedByLabel,
+      });
+
+      if (notifyResult.created || notifyResult.alreadySent) {
+        await JobModel.updateOne(
+          { _id: job._id },
+          { $set: { reviewNotificationSentAt: now } },
+        );
+      }
+    } catch {
+      // Approval succeeds even if notification fails; employer can still see Live status.
+    }
+
+    return this.getJobDetail(job.jobId);
+  },
+
+  async approveLiveChangeWithEmployerNotification(
+    job: JobDocument,
+    operationsUserId: string,
+  ): Promise<OperationsJobDetail> {
+    const employerId =
+      (job.employerId && String(job.employerId)) ||
+      (job.companyId && String(job.companyId)) ||
+      "";
+
+    if (!employerId || !mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError(
+        "Assign an employer before approving these changes.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const parsed = createJobSchema.safeParse(job.pendingLiveRevision);
+    if (!parsed.success) {
+      throw new AppError(
+        "Pending job changes are invalid. Ask the employer to resubmit.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const freshJob = await JobModel.findOne({
+      _id: job._id,
+      liveChangeReviewStatus: "pending_approval",
+    });
+
+    if (!freshJob || freshJob.status === "pending_approval") {
+      throw new AppError(
+        "This job was already reviewed by another Operations user.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const now = new Date();
+    applyApprovedCreateInputToJob(freshJob, parsed.data);
+    freshJob.pendingLiveRevision = null;
+    freshJob.liveChangeReviewStatus = "";
+    freshJob.liveChangeReviewedAt = now;
+    freshJob.liveChangeReviewedByOperationsUserId =
+      new mongoose.Types.ObjectId(operationsUserId);
+    freshJob.liveChangeRejectionReason = "";
+    freshJob.liveChangeReviewNotificationSentAt = null;
+    freshJob.lastEditedAt = now;
+
+    // Optimistic concurrency: only save if still pending approval.
+    const saveResult = await JobModel.updateOne(
+      {
+        _id: freshJob._id,
+        liveChangeReviewStatus: "pending_approval",
+      },
+      {
+        $set: {
+          companyName: freshJob.companyName,
+          industry: freshJob.industry,
+          businessCategory: freshJob.businessCategory,
+          companySize: freshJob.companySize,
+          jobTitle: freshJob.jobTitle,
+          jobType: freshJob.jobType,
+          contractPeriodFrom: freshJob.contractPeriodFrom,
+          contractPeriodTo: freshJob.contractPeriodTo,
+          partTimeSchedule: freshJob.partTimeSchedule,
+          partTimeStartTime: freshJob.partTimeStartTime,
+          partTimeEndTime: freshJob.partTimeEndTime,
+          partTimeFlexibleHours: freshJob.partTimeFlexibleHours,
+          workMode: freshJob.workMode,
+          vacancies: freshJob.vacancies,
+          description: freshJob.description,
+          state: freshJob.state,
+          stateName: freshJob.stateName,
+          city: freshJob.city,
+          cityName: freshJob.cityName,
+          address: freshJob.address,
+          landmark: freshJob.landmark,
+          salaryType: freshJob.salaryType,
+          salaryPeriod: freshJob.salaryPeriod,
+          fixedSalary: freshJob.fixedSalary,
+          minimumSalary: freshJob.minimumSalary,
+          maximumSalary: freshJob.maximumSalary,
+          perks: freshJob.perks,
+          education: freshJob.education,
+          experience: freshJob.experience,
+          languages: freshJob.languages,
+          gender: freshJob.gender,
+          minimumAge: freshJob.minimumAge,
+          maximumAge: freshJob.maximumAge,
+          walkInEnabled: freshJob.walkInEnabled,
+          interviewAddress: freshJob.interviewAddress,
+          walkInStartDate: freshJob.walkInStartDate,
+          walkInEndDate: freshJob.walkInEndDate,
+          walkInStartTime: freshJob.walkInStartTime,
+          walkInEndTime: freshJob.walkInEndTime,
+          interviewInstructions: freshJob.interviewInstructions,
+          contactPersonName: freshJob.contactPersonName,
+          contactEmail: freshJob.contactEmail,
+          contactMobile: freshJob.contactMobile,
+          pendingLiveRevision: null,
+          liveChangeReviewStatus: "",
+          liveChangeReviewedAt: now,
+          liveChangeReviewedByOperationsUserId: new mongoose.Types.ObjectId(
+            operationsUserId,
+          ),
+          liveChangeRejectionReason: "",
+          liveChangeReviewNotificationSentAt: null,
+          lastEditedAt: now,
+        },
+      },
+    );
+
+    if (saveResult.matchedCount === 0) {
+      throw new AppError(
+        "This job was already reviewed by another Operations user.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const actor = await OperationsTeamUserModel.findById(operationsUserId)
+      .select("fullName")
+      .lean();
+    const reviewedByLabel = actor?.fullName?.trim()
+      ? `${actor.fullName.trim()} (Operations)`
+      : "Operations";
+
+    try {
+      const notifyResult =
+        await notificationService.notifyEmployerLiveJobChangesApproved({
+          employerId,
+          jobMongoId: freshJob._id.toString(),
+          publicJobId: freshJob.jobId,
+          jobTitle: parsed.data.jobTitle.trim() || "Untitled job",
+          reviewedByLabel,
+        });
+
+      if (notifyResult.created || notifyResult.alreadySent) {
+        await JobModel.updateOne(
+          { _id: freshJob._id },
+          { $set: { liveChangeReviewNotificationSentAt: now } },
+        );
+      }
+    } catch {
+      // Approval succeeds even if notification fails.
+    }
+
+    return this.getJobDetail(freshJob.jobId);
+  },
+
+  async rejectJobWithEmployerNotification(
+    job: JobDocument,
+    operationsUserId: string,
+    reason: string,
+  ): Promise<OperationsJobDetail> {
+    if (!mongoose.Types.ObjectId.isValid(operationsUserId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const trimmedReason = reason.trim();
+    if (!trimmedReason) {
+      throw new AppError(
+        "Reason for rejecting this job is required.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const liveChangeReviewStatus =
+      typeof job.liveChangeReviewStatus === "string"
+        ? job.liveChangeReviewStatus.trim()
+        : "";
+    const isLiveChangeReview = liveChangeReviewStatus === "pending_approval";
+
+    if (job.status !== "pending_approval" && !isLiveChangeReview) {
+      throw new AppError(
+        "Only jobs pending approval can be rejected.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    if (isLiveChangeReview) {
+      return this.rejectLiveChangeWithEmployerNotification(
+        job,
+        operationsUserId,
+        trimmedReason,
+      );
+    }
+
+    const employerId =
+      (job.employerId && String(job.employerId)) ||
+      (job.companyId && String(job.companyId)) ||
+      "";
+
+    if (!employerId || !mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError(
+        "Assign an employer before rejecting this job.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const now = new Date();
+    const updateResult = await JobModel.updateOne(
+      { _id: job._id, status: "pending_approval" },
+      {
+        $set: {
+          status: "rejected",
+          lastStatusChangedAt: now,
+          publishedAt: null,
+          reviewDecision: "rejected",
+          reviewedAt: now,
+          reviewedByOperationsUserId: new mongoose.Types.ObjectId(
+            operationsUserId,
+          ),
+          rejectionReason: trimmedReason,
+        },
+      },
+    );
+
+    if (updateResult.matchedCount === 0) {
+      throw new AppError(
+        "This job was already reviewed by another Operations user.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const actor = await OperationsTeamUserModel.findById(operationsUserId)
+      .select("fullName")
+      .lean();
+    const reviewedByLabel = actor?.fullName?.trim()
+      ? `${actor.fullName.trim()} (Operations)`
+      : "Operations";
+
+    try {
+      const notifyResult = await notificationService.notifyEmployerJobRejected({
+        employerId,
+        jobMongoId: job._id.toString(),
+        publicJobId: job.jobId,
+        jobTitle: job.jobTitle?.trim() || "Untitled job",
+        reason: trimmedReason,
+        reviewedByLabel,
+      });
+
+      if (notifyResult.created || notifyResult.alreadySent) {
+        await JobModel.updateOne(
+          { _id: job._id },
+          { $set: { reviewNotificationSentAt: now } },
+        );
+      }
+    } catch {
+      // Rejection succeeds even if notification fails; employer still sees Rejected + reason.
+    }
+
+    return this.getJobDetail(job.jobId);
+  },
+
+  async rejectLiveChangeWithEmployerNotification(
+    job: JobDocument,
+    operationsUserId: string,
+    trimmedReason: string,
+  ): Promise<OperationsJobDetail> {
+    const employerId =
+      (job.employerId && String(job.employerId)) ||
+      (job.companyId && String(job.companyId)) ||
+      "";
+
+    if (!employerId || !mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError(
+        "Assign an employer before rejecting these changes.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const now = new Date();
+    const updateResult = await JobModel.updateOne(
+      {
+        _id: job._id,
+        liveChangeReviewStatus: "pending_approval",
+      },
+      {
+        $set: {
+          liveChangeReviewStatus: "rejected",
+          liveChangeReviewedAt: now,
+          liveChangeReviewedByOperationsUserId: new mongoose.Types.ObjectId(
+            operationsUserId,
+          ),
+          liveChangeRejectionReason: trimmedReason,
+          // Keep pendingLiveRevision so employer can edit and resubmit.
+        },
+      },
+    );
+
+    if (updateResult.matchedCount === 0) {
+      throw new AppError(
+        "This job was already reviewed by another Operations user.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const actor = await OperationsTeamUserModel.findById(operationsUserId)
+      .select("fullName")
+      .lean();
+    const reviewedByLabel = actor?.fullName?.trim()
+      ? `${actor.fullName.trim()} (Operations)`
+      : "Operations";
+
+    try {
+      const notifyResult =
+        await notificationService.notifyEmployerLiveJobChangesRejected({
+          employerId,
+          jobMongoId: job._id.toString(),
+          publicJobId: job.jobId,
+          jobTitle: job.jobTitle?.trim() || "Untitled job",
+          reason: trimmedReason,
+          reviewedByLabel,
+        });
+
+      if (notifyResult.created || notifyResult.alreadySent) {
+        await JobModel.updateOne(
+          { _id: job._id },
+          { $set: { liveChangeReviewNotificationSentAt: now } },
+        );
+      }
+    } catch {
+      // Rejection succeeds even if notification fails.
     }
 
     return this.getJobDetail(job.jobId);

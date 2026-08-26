@@ -103,7 +103,7 @@ export const createJobSchema = z
       .string()
       .trim()
       .regex(/^\d{10}$/, "Mobile number must be 10 digits"),
-    status: z.enum(JOB_STATUSES).optional().default("active"),
+    status: z.enum(["draft", "active"]).optional().default("active"),
   })
   .superRefine((data, ctx) => {
     if (data.jobType === "contract") {

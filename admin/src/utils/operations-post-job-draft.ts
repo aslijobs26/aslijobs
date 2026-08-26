@@ -5,6 +5,18 @@ import type {
 } from "../types/operations-post-job";
 import { OPERATIONS_POST_JOB_INITIAL_WIZARD_DATA } from "../constants/operations-post-job";
 
+function asText(value: string | null | undefined): string {
+  return typeof value === "string" ? value : value == null ? "" : String(value);
+}
+
+function normalizeMobile(value: string | null | undefined): string {
+  const digits = asText(value).replace(/\D/g, "");
+  if (digits.length >= 10) {
+    return digits.slice(-10);
+  }
+  return digits;
+}
+
 export function hasMeaningfulOperationsPostJobContent(
   formData: OperationsPostJobWizardFormData,
 ): boolean {
@@ -73,8 +85,9 @@ export function mapWizardDataToOperationsDraftPayload(
   };
 }
 
+/** Prefills the post-job wizard from persisted job fields (source of truth). */
 export function mapOperationsJobDetailToWizardState(job: {
-  wizardSnapshot: unknown;
+  wizardSnapshot?: unknown;
   completedStep: number;
   companyName: string;
   industry: string;
@@ -96,7 +109,7 @@ export function mapOperationsJobDetailToWizardState(job: {
   address: string;
   landmark: string;
   salaryType: string;
-  salaryPeriod: string;
+  salaryPeriod?: string;
   minimumSalary: number | null;
   maximumSalary: number | null;
   fixedSalary: number | null;
@@ -117,93 +130,142 @@ export function mapOperationsJobDetailToWizardState(job: {
   contactPersonName: string;
   contactEmail: string;
   contactMobile: string;
+  employer?: { companyName?: string };
 }): {
   formData: OperationsPostJobWizardFormData;
   activeStep: OperationsPostJobActiveStep;
 } {
-  const snapshot = job.wizardSnapshot as OperationsPostJobWizardFormData | null;
   const activeStep = ([1, 2, 3].includes(job.completedStep)
     ? job.completedStep
     : 1) as OperationsPostJobActiveStep;
 
-  if (snapshot?.jobInformation && snapshot.locationAndSalary) {
-    return {
-      formData: {
-        jobInformation: {
-          ...OPERATIONS_POST_JOB_INITIAL_WIZARD_DATA.jobInformation,
-          ...snapshot.jobInformation,
-        },
-        locationAndSalary: {
-          ...OPERATIONS_POST_JOB_INITIAL_WIZARD_DATA.locationAndSalary,
-          ...snapshot.locationAndSalary,
-        },
-        candidateAndInterview: {
-          ...OPERATIONS_POST_JOB_INITIAL_WIZARD_DATA.candidateAndInterview,
-          ...snapshot.candidateAndInterview,
-        },
+  const languages = Array.isArray(job.languages) ? job.languages : [];
+  const gender = Array.isArray(job.gender) ? job.gender : [];
+  const education = Array.isArray(job.education) ? job.education : [];
+  const perks = Array.isArray(job.perks) ? job.perks : [];
+  const hasAge = job.minimumAge != null || job.maximumAge != null;
+
+  const companyDetails =
+    asText(job.companyName).trim() ||
+    asText(job.employer?.companyName).trim() ||
+    "";
+
+  const fromJob: OperationsPostJobWizardFormData = {
+    jobInformation: {
+      ...OPERATIONS_POST_JOB_INITIAL_WIZARD_DATA.jobInformation,
+      companyDetails,
+      industry: asText(job.industry),
+      businessCategory: asText(job.businessCategory),
+      companySize: asText(job.companySize),
+      jobTitle: asText(job.jobTitle),
+      jobType:
+        job.jobType as OperationsPostJobWizardFormData["jobInformation"]["jobType"],
+      contractPeriodFrom: asText(job.contractPeriodFrom),
+      contractPeriodTo: asText(job.contractPeriodTo),
+      partTimeSchedule:
+        job.partTimeSchedule as OperationsPostJobWizardFormData["jobInformation"]["partTimeSchedule"],
+      partTimeStartTime: asText(job.partTimeStartTime),
+      partTimeEndTime: asText(job.partTimeEndTime),
+      partTimeFlexibleHours: asText(job.partTimeFlexibleHours),
+      workMode:
+        job.workMode as OperationsPostJobWizardFormData["jobInformation"]["workMode"],
+      vacancies: job.vacancies ? String(job.vacancies) : "",
+      jobDescription: asText(job.description),
+    },
+    locationAndSalary: {
+      ...OPERATIONS_POST_JOB_INITIAL_WIZARD_DATA.locationAndSalary,
+      state: asText(job.stateName),
+      city: asText(job.cityName),
+      address: asText(job.address),
+      landmark: asText(job.landmark),
+      salaryType:
+        job.salaryType as OperationsPostJobWizardFormData["locationAndSalary"]["salaryType"],
+      salaryPeriod: (asText(job.salaryPeriod).trim() ||
+        "per-month") as OperationsPostJobWizardFormData["locationAndSalary"]["salaryPeriod"],
+      salaryMin: job.minimumSalary != null ? String(job.minimumSalary) : "",
+      salaryMax: job.maximumSalary != null ? String(job.maximumSalary) : "",
+      incentives: job.fixedSalary != null ? String(job.fixedSalary) : "",
+      perks: perks as OperationsPostJobWizardFormData["locationAndSalary"]["perks"],
+    },
+    candidateAndInterview: {
+      ...OPERATIONS_POST_JOB_INITIAL_WIZARD_DATA.candidateAndInterview,
+      education:
+        education as OperationsPostJobWizardFormData["candidateAndInterview"]["education"],
+      experienceRequired:
+        asText(
+          job.experience,
+        ) as OperationsPostJobWizardFormData["candidateAndInterview"]["experienceRequired"],
+      languages:
+        languages as OperationsPostJobWizardFormData["candidateAndInterview"]["languages"],
+      gender:
+        gender as OperationsPostJobWizardFormData["candidateAndInterview"]["gender"],
+      ageMin: job.minimumAge != null ? String(job.minimumAge) : "",
+      ageMax: job.maximumAge != null ? String(job.maximumAge) : "",
+      additionalRequirements: {
+        language: languages.length > 0,
+        gender: gender.length > 0,
+        age: hasAge,
       },
-      activeStep,
-    };
+      walkIn: job.walkInEnabled ? "yes" : "no",
+      walkInAddress: asText(job.interviewAddress),
+      walkInStartDate: asText(job.walkInStartDate),
+      walkInEndDate: asText(job.walkInEndDate),
+      walkInStartTime: asText(job.walkInStartTime),
+      walkInEndTime: asText(job.walkInEndTime),
+      otherInstructions: asText(job.interviewInstructions),
+      contactName:
+        asText(job.contactPersonName).trim() || companyDetails || "",
+      contactEmail: asText(job.contactEmail),
+      contactMobile: normalizeMobile(job.contactMobile),
+    },
+  };
+
+  const snapshot = job.wizardSnapshot as OperationsPostJobWizardFormData | null;
+  if (!snapshot?.jobInformation || !snapshot.locationAndSalary) {
+    return { formData: fromJob, activeStep };
   }
 
+  // Prefer live job values; keep snapshot values only where the live job field is empty.
   return {
     formData: {
       jobInformation: {
-        ...OPERATIONS_POST_JOB_INITIAL_WIZARD_DATA.jobInformation,
-        companyDetails: job.companyName,
-        industry: job.industry,
-        businessCategory: job.businessCategory,
-        companySize: job.companySize,
-        jobTitle: job.jobTitle,
-        jobType: job.jobType as OperationsPostJobWizardFormData["jobInformation"]["jobType"],
-        contractPeriodFrom: job.contractPeriodFrom,
-        contractPeriodTo: job.contractPeriodTo,
-        partTimeSchedule:
-          job.partTimeSchedule as OperationsPostJobWizardFormData["jobInformation"]["partTimeSchedule"],
-        partTimeStartTime: job.partTimeStartTime,
-        partTimeEndTime: job.partTimeEndTime,
-        partTimeFlexibleHours: job.partTimeFlexibleHours,
-        workMode: job.workMode as OperationsPostJobWizardFormData["jobInformation"]["workMode"],
-        vacancies: job.vacancies ? String(job.vacancies) : "",
-        jobDescription: job.description,
+        ...snapshot.jobInformation,
+        ...fromJob.jobInformation,
+        industry:
+          fromJob.jobInformation.industry.trim() ||
+          asText(snapshot.jobInformation.industry),
+        businessCategory:
+          fromJob.jobInformation.businessCategory.trim() ||
+          asText(snapshot.jobInformation.businessCategory),
+        companySize:
+          fromJob.jobInformation.companySize.trim() ||
+          asText(snapshot.jobInformation.companySize),
+        companyDetails:
+          fromJob.jobInformation.companyDetails.trim() ||
+          asText(snapshot.jobInformation.companyDetails),
       },
       locationAndSalary: {
-        ...OPERATIONS_POST_JOB_INITIAL_WIZARD_DATA.locationAndSalary,
-        state: job.stateName,
-        city: job.cityName,
-        address: job.address,
-        landmark: job.landmark,
-        salaryType:
-          job.salaryType as OperationsPostJobWizardFormData["locationAndSalary"]["salaryType"],
+        ...snapshot.locationAndSalary,
+        ...fromJob.locationAndSalary,
         salaryPeriod:
-          job.salaryPeriod as OperationsPostJobWizardFormData["locationAndSalary"]["salaryPeriod"],
-        salaryMin: job.minimumSalary != null ? String(job.minimumSalary) : "",
-        salaryMax: job.maximumSalary != null ? String(job.maximumSalary) : "",
-        incentives: job.fixedSalary != null ? String(job.fixedSalary) : "",
-        perks: job.perks as OperationsPostJobWizardFormData["locationAndSalary"]["perks"],
+          fromJob.locationAndSalary.salaryPeriod ||
+          snapshot.locationAndSalary.salaryPeriod ||
+          "per-month",
       },
       candidateAndInterview: {
         ...OPERATIONS_POST_JOB_INITIAL_WIZARD_DATA.candidateAndInterview,
-        education:
-          job.education as OperationsPostJobWizardFormData["candidateAndInterview"]["education"],
-        experienceRequired:
-          job.experience as OperationsPostJobWizardFormData["candidateAndInterview"]["experienceRequired"],
-        languages:
-          job.languages as OperationsPostJobWizardFormData["candidateAndInterview"]["languages"],
-        gender:
-          job.gender as OperationsPostJobWizardFormData["candidateAndInterview"]["gender"],
-        ageMin: job.minimumAge != null ? String(job.minimumAge) : "",
-        ageMax: job.maximumAge != null ? String(job.maximumAge) : "",
-        walkIn: job.walkInEnabled ? "yes" : "no",
-        walkInAddress: job.interviewAddress,
-        walkInStartDate: job.walkInStartDate,
-        walkInEndDate: job.walkInEndDate,
-        walkInStartTime: job.walkInStartTime,
-        walkInEndTime: job.walkInEndTime,
-        otherInstructions: job.interviewInstructions,
-        contactName: job.contactPersonName,
-        contactEmail: job.contactEmail,
-        contactMobile: job.contactMobile,
+        ...snapshot.candidateAndInterview,
+        ...fromJob.candidateAndInterview,
+        additionalRequirements: fromJob.candidateAndInterview.additionalRequirements,
+        contactName:
+          fromJob.candidateAndInterview.contactName.trim() ||
+          asText(snapshot.candidateAndInterview?.contactName),
+        contactEmail:
+          fromJob.candidateAndInterview.contactEmail.trim() ||
+          asText(snapshot.candidateAndInterview?.contactEmail),
+        contactMobile:
+          fromJob.candidateAndInterview.contactMobile ||
+          normalizeMobile(snapshot.candidateAndInterview?.contactMobile),
       },
     },
     activeStep,

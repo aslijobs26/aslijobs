@@ -4,6 +4,14 @@ import {
   OPERATIONS_TEAM_USER_STATUSES,
 } from "../operations.constants.js";
 
+/**
+ * Operations internal team user.
+ *
+ * `role` is currently an enum string (SUPER_ADMIN, OPERATIONS, …).
+ * Team Management can later add custom role documents and an optional
+ * `customRoleId` ObjectId without removing this field — permission
+ * resolution already goes through `resolveOperationsUserPermissions`.
+ */
 const operationsTeamUserSchema = new Schema(
   {
     fullName: {

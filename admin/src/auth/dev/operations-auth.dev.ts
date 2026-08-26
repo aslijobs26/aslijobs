@@ -11,6 +11,10 @@ import type {
   OperationsSessionResponse,
 } from "../../types/operations-auth";
 import { OPERATIONS_TEAM_ROLES } from "../../types/roles";
+import {
+  buildSuperAdminPermissions,
+  resolveEffectiveOperationsPermissions,
+} from "../../constants/operations-permissions";
 
 const DEV_ADMIN_EMAIL = "admin@aslijobs.com";
 const DEV_ADMIN_PASSWORD = "Admin@123";
@@ -34,6 +38,7 @@ function createDevLoginResponse(): OperationsLoginResponse {
       fullName: "Operations Admin",
       email: DEV_ADMIN_EMAIL,
       role: OPERATIONS_TEAM_ROLES.SUPER_ADMIN,
+      permissions: buildSuperAdminPermissions(),
     },
   };
 }
@@ -61,7 +66,15 @@ export async function fetchDevOperationsSession(
     window.setTimeout(resolve, 120);
   });
 
-  return { user };
+  return {
+    user: {
+      ...user,
+      permissions: resolveEffectiveOperationsPermissions(
+        user.role,
+        user.permissions,
+      ),
+    },
+  };
 }
 
 export async function logoutDevOperationsTeam(): Promise<void> {

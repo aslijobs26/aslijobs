@@ -9,16 +9,16 @@ import {
 export const JOB_POSTED_SUCCESS_STORAGE_KEY =
   "aslijobs_job_posted_success_summary";
 
-export const JOB_POSTED_SUCCESS_HEADING_PREFIX = "Job Posted";
-export const JOB_POSTED_SUCCESS_HEADING_EMPHASIS = "Successfully!";
+export const JOB_POSTED_SUCCESS_HEADING_PREFIX = "Job Submitted";
+export const JOB_POSTED_SUCCESS_HEADING_EMPHASIS = "for Review!";
 export const JOB_POSTED_SUCCESS_SUBTITLE =
-  "Your job has been posted and is now live for job seekers.";
+  "Your job is pending Operations approval. It will go Live after the AsliJobs team reviews and publishes it.";
 export const JOB_POSTED_SUCCESS_WHATSAPP_BADGE =
-  "Job has also been shared on WhatsApp";
+  "You will be notified when your job is approved";
 
-export const JOB_POSTED_SUCCESS_WHATSAPP_TITLE = "Job is Live on WhatsApp!";
+export const JOB_POSTED_SUCCESS_WHATSAPP_TITLE = "Waiting for Operations Review";
 export const JOB_POSTED_SUCCESS_WHATSAPP_SUBTITLE =
-  "Job seekers can discover and apply for this job via WhatsApp.";
+  "Once approved, job seekers can discover and apply for this job on AsliJobs and WhatsApp.";
 export const JOB_POSTED_SUCCESS_WHATSAPP_CTA = "View on WhatsApp";
 export const JOB_POSTED_SUCCESS_WHATSAPP_COMING_SOON = "Coming Soon";
 
@@ -32,11 +32,18 @@ export const JOB_POSTED_SUCCESS_SUPPORT_SUBTITLE =
   "Our support team is here to help you find the right candidates.";
 export const JOB_POSTED_SUCCESS_SUPPORT_CTA = "Contact Support";
 
-export const JOB_POSTED_SUCCESS_STATUS_ACTIVE = "Active";
-export const JOB_POSTED_SUCCESS_VISIBILITY_PUBLIC = "Public";
+export const JOB_POSTED_SUCCESS_STATUS_ACTIVE = "Pending Approval";
+export const JOB_POSTED_SUCCESS_VISIBILITY_PUBLIC = "Not public yet";
 export const JOB_POSTED_SUCCESS_APPLICATIONS_SUFFIX = "(So far)";
 
-export const JOB_POSTED_SUCCESS_META_POSTED_ON = "Posted on";
+export const JOB_POSTED_SUCCESS_LIVE_CHANGE_HEADING_PREFIX = "Changes Submitted";
+export const JOB_POSTED_SUCCESS_LIVE_CHANGE_HEADING_EMPHASIS = "for Review!";
+export const JOB_POSTED_SUCCESS_LIVE_CHANGE_SUBTITLE =
+  "Your edits are pending Operations approval. The current live listing stays visible until the changes are approved.";
+export const JOB_POSTED_SUCCESS_LIVE_CHANGE_STATUS = "Changes Pending Approval";
+export const JOB_POSTED_SUCCESS_LIVE_CHANGE_VISIBILITY = "Live listing unchanged";
+
+export const JOB_POSTED_SUCCESS_META_POSTED_ON = "Submitted on";
 export const JOB_POSTED_SUCCESS_META_JOB_TYPE = "Job Type";
 export const JOB_POSTED_SUCCESS_META_APPLICATIONS = "Applications";
 export const JOB_POSTED_SUCCESS_META_VISIBILITY = "Visibility";
@@ -65,9 +72,9 @@ export const JOB_POSTED_SUCCESS_NEXT_STEPS: readonly JobPostedSuccessNextStep[] 
   [
     {
       id: "receive-applications",
-      title: "Receive Applications",
+      title: "Wait for Approval",
       description:
-        "You'll start receiving applications from interested candidates.",
+        "Operations will review your job. Once approved, it goes Live and candidates can apply.",
       icon: Users,
       tone: "guide",
     },

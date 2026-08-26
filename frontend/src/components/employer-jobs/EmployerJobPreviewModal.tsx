@@ -1,11 +1,13 @@
 "use client";
 
-import { JobDetailsCenterPanel } from "@/components/jobs/JobDetailsCenterPanel";
+import { EmployerJobPreviewArticle } from "@/components/employer-jobs/EmployerJobPreviewArticle";
 import { EMPLOYER_JOBS_QUERY_KEYS } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
+import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import { useCan } from "@/providers/employer-permission-provider";
 import { fetchEmployerJob } from "@/services/employer-jobs.service";
 import { cn } from "@/utils/cn";
+import { resolveEmployerPosterImageUrl } from "@/utils/employer-poster-image";
 import { mapEmployerJobDetailToPublicPreview } from "@/utils/map-employer-job-to-public-preview";
 import { useQuery } from "@tanstack/react-query";
 import { Eye, Pencil, X } from "lucide-react";
@@ -52,6 +54,11 @@ export function EmployerJobPreviewModal({
   });
 
   const employerJob = jobQuery.data?.job;
+  const employerProfileQuery = useEmployerProfile();
+  const companyLogoUrl = useMemo(
+    () => resolveEmployerPosterImageUrl(employerProfileQuery.data) || null,
+    [employerProfileQuery.data],
+  );
   const previewJob = useMemo(() => {
     if (!employerJob) {
       return undefined;
@@ -195,16 +202,14 @@ export function EmployerJobPreviewModal({
           </header>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-2 scrollbar-hidden sm:px-3 sm:pb-3 print:overflow-visible">
-            <JobDetailsCenterPanel
+            <EmployerJobPreviewArticle
               job={previewJob}
               isLoading={jobQuery.isLoading}
               isError={jobQuery.isError}
-              bookmarked={false}
-              onToggleBookmark={() => undefined}
+              companyLogoUrl={companyLogoUrl}
               onRetry={() => {
                 void jobQuery.refetch();
               }}
-              previewMode
             />
           </div>
 

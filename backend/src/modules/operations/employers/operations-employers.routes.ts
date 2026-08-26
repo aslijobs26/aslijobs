@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   requireOperationsAuth,
-  requireOperationsJobWriteAccess,
+  requireOperationsPermission,
 } from "../../../middleware/operations-auth.middleware.js";
 import { validate } from "../../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../../utils/async-handler.js";
@@ -14,7 +14,7 @@ import {
 export const operationsEmployersRouter = Router();
 
 operationsEmployersRouter.use(asyncHandler(requireOperationsAuth));
-operationsEmployersRouter.use(requireOperationsJobWriteAccess);
+operationsEmployersRouter.use(requireOperationsPermission("employers", "update"));
 
 operationsEmployersRouter.get(
   "/",

@@ -7,6 +7,8 @@ import {
   JOB_POSTED_SUCCESS_META_POSTED_ON,
   JOB_POSTED_SUCCESS_META_VISIBILITY,
   JOB_POSTED_SUCCESS_STATUS_ACTIVE,
+  JOB_POSTED_SUCCESS_LIVE_CHANGE_STATUS,
+  JOB_POSTED_SUCCESS_LIVE_CHANGE_VISIBILITY,
 } from "@/constants/job-posted-success";
 import type { JobPostedSuccessSummary } from "@/types/job-posted-success";
 import { formatJobPostedSuccessDate } from "@/utils/build-job-posted-success-summary";
@@ -27,10 +29,23 @@ type JobPostedSuccessSummaryCardProps = {
 export function JobPostedSuccessSummaryCard({
   summary,
 }: JobPostedSuccessSummaryCardProps) {
-  const statusLabel =
-    summary.status === "active"
+  const isLiveChangePending =
+    summary.status === "active" &&
+    summary.liveChangeReviewStatus === "pending_approval";
+
+  const statusLabel = isLiveChangePending
+    ? JOB_POSTED_SUCCESS_LIVE_CHANGE_STATUS
+    : summary.status === "pending_approval"
       ? JOB_POSTED_SUCCESS_STATUS_ACTIVE
-      : summary.status.charAt(0).toUpperCase() + summary.status.slice(1);
+      : summary.status === "active"
+        ? "Live"
+        : summary.status === "rejected"
+          ? "Rejected"
+          : summary.status.charAt(0).toUpperCase() + summary.status.slice(1);
+
+  const visibilityLabel = isLiveChangePending
+    ? JOB_POSTED_SUCCESS_LIVE_CHANGE_VISIBILITY
+    : summary.visibility;
 
   const metaItems = [
     {
@@ -54,7 +69,7 @@ export function JobPostedSuccessSummaryCard({
     {
       id: "visibility",
       label: JOB_POSTED_SUCCESS_META_VISIBILITY,
-      value: summary.visibility,
+      value: visibilityLabel,
       icon: Eye,
     },
   ] as const;

@@ -21,6 +21,8 @@ export function useOperationsJobDetail(jobId: string | undefined) {
     queryKey: [...OPERATIONS_JOB_DETAIL_QUERY_KEY, jobId],
     queryFn: () => fetchOperationsJobDetail(jobId!),
     enabled: Boolean(jobId),
+    staleTime: 30_000,
+    retry: false,
   });
 }
 
@@ -32,6 +34,8 @@ export function useOperationsJobApplications(
     queryKey: [...OPERATIONS_JOB_DETAIL_QUERY_KEY, jobId, "applications", params],
     queryFn: () => fetchOperationsJobApplications(jobId!, params),
     enabled: Boolean(jobId),
+    staleTime: 30_000,
+    retry: false,
   });
 }
 

@@ -186,7 +186,9 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
 
   const draftIdRef = useRef<string | null>(draftJobId ?? null);
   const isActiveEditMode = loadedJobStatus === "active";
-  const isDraftEditMode = loadedJobStatus === "draft";
+  const isRejectedEditMode = loadedJobStatus === "rejected";
+  const isDraftEditMode =
+    loadedJobStatus === "draft" || isRejectedEditMode;
   const formDataRef = useRef(formData);
   const activeStepRef = useRef(activeStep);
   const lastSavedSignatureRef = useRef("");
@@ -329,7 +331,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   }, [isActiveEditMode, queryClient]);
 
   const scheduleDraftAutosave = useCallback(() => {
-    if (skipAutosaveRef.current || isHydratingDraft || isActiveEditMode) {
+    if (skipAutosaveRef.current || isHydratingDraft || isActiveEditMode || isRejectedEditMode) {
       return;
     }
 
@@ -340,7 +342,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
     autosaveTimerRef.current = setTimeout(() => {
       void persistDraft();
     }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
-  }, [isActiveEditMode, isHydratingDraft, persistDraft]);
+  }, [isActiveEditMode, isHydratingDraft, isRejectedEditMode, persistDraft]);
 
   useEffect(() => {
     if (!draftJobId) {
@@ -360,10 +362,10 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
           return;
         }
 
-        if (result.job.status === "draft") {
+        if (result.job.status === "draft" || result.job.status === "rejected") {
           const restored = mapJobDetailToWizardState(result.job);
           draftIdRef.current = result.job.id;
-          setLoadedJobStatus("draft");
+          setLoadedJobStatus(result.job.status);
           setFormData(restored.formData);
           setActiveStep(restored.activeStep);
           lastSavedSignatureRef.current = buildDraftSignature(
@@ -387,7 +389,9 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
           return;
         }
 
-        setDraftLoadError("Only draft or active jobs can be edited here.");
+        setDraftLoadError(
+          "Only draft, rejected, or active jobs can be edited here.",
+        );
         setIsHydratingDraft(false);
       } catch (error) {
         if (cancelled) {
@@ -413,7 +417,12 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   }, [buildDraftSignature, draftJobId]);
 
   useEffect(() => {
-    if (isHydratingDraft || isSubmitting || isActiveEditMode) {
+    if (
+      isHydratingDraft ||
+      isSubmitting ||
+      isActiveEditMode ||
+      isRejectedEditMode
+    ) {
       return;
     }
 
@@ -422,13 +431,14 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
     formData,
     activeStep,
     isActiveEditMode,
+    isRejectedEditMode,
     isHydratingDraft,
     isSubmitting,
     scheduleDraftAutosave,
   ]);
 
   useEffect(() => {
-    if (isActiveEditMode) {
+    if (isActiveEditMode || isRejectedEditMode) {
       return;
     }
 
@@ -462,7 +472,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
 
       flushDraft();
     };
-  }, [isActiveEditMode, persistDraft]);
+  }, [isActiveEditMode, isRejectedEditMode, persistDraft]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });

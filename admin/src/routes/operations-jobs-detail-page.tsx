@@ -4,6 +4,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { CloseJobConfirmDialog } from "../components/operations/jobs/detail/CloseJobConfirmDialog";
 import { JobActivityPanel } from "../components/operations/jobs/detail/JobActivityPanel";
 import { JobApplicationsPanel } from "../components/operations/jobs/detail/JobApplicationsPanel";
+import { JobChangeReviewPanel } from "../components/operations/jobs/detail/JobChangeReviewPanel";
 import { JobDetailHeader } from "../components/operations/jobs/detail/JobDetailHeader";
 import {
   JobDetailTabs,
@@ -30,7 +31,9 @@ export function OperationsJobsDetailPage() {
   const [applicationsPage, setApplicationsPage] = useState(1);
   const [applicationsLimit, setApplicationsLimit] = useState(10);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [closeError, setCloseError] = useState<string | null>(null);
+  const [rejectError, setRejectError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const detailQuery = useOperationsJobDetail(jobId);
@@ -86,7 +89,9 @@ export function OperationsJobsDetailPage() {
     }
 
     const canClose =
-      (job.status !== "closed" && job.status !== "draft") ||
+      (job.status !== "closed" &&
+        job.status !== "draft" &&
+        job.status !== "pending_approval") ||
       (job.status === "closed" &&
         !job.employerNotified &&
         Boolean(job.closedReason));
@@ -97,6 +102,67 @@ export function OperationsJobsDetailPage() {
 
     setCloseError(null);
     setCloseDialogOpen(true);
+  };
+
+  const handleApproveJob = () => {
+    if (
+      !job ||
+      statusMutation.isPending ||
+      (job.status !== "pending_approval" && !job.isLiveChangeReview)
+    ) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      job.isLiveChangeReview
+        ? `Approve and publish changes for job ${job.jobId}? The live listing will be updated and the employer will be notified.`
+        : `Approve and publish job ${job.jobId}? It will become live for candidates and the employer will be notified.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    statusMutation.mutate(
+      { action: "approve" },
+      {
+        onSuccess: (result) => {
+          setStatusMessage(
+            result.message ||
+              (job.isLiveChangeReview
+                ? "Job changes approved and published successfully."
+                : "Job approved and published successfully."),
+          );
+        },
+        onError: (error) => {
+          if (isAxiosError(error)) {
+            const message = error.response?.data?.message;
+            if (typeof message === "string" && message.trim()) {
+              window.alert(message.trim());
+              return;
+            }
+          }
+
+          window.alert(
+            job.isLiveChangeReview
+              ? "Failed to approve these job changes."
+              : "Failed to approve this job.",
+          );
+        },
+      },
+    );
+  };
+
+  const handleOpenRejectDialog = () => {
+    if (
+      !job ||
+      statusMutation.isPending ||
+      (job.status !== "pending_approval" && !job.isLiveChangeReview)
+    ) {
+      return;
+    }
+
+    setRejectError(null);
+    setRejectDialogOpen(true);
   };
 
   const handleConfirmCloseJob = (reason: string) => {
@@ -124,6 +190,36 @@ export function OperationsJobsDetailPage() {
           }
 
           setCloseError("Failed to close this job. Please try again.");
+        },
+      },
+    );
+  };
+
+  const handleConfirmRejectJob = (reason: string) => {
+    if (!job) {
+      return;
+    }
+
+    statusMutation.mutate(
+      { action: "reject", reason },
+      {
+        onSuccess: (result) => {
+          setRejectDialogOpen(false);
+          setRejectError(null);
+          setStatusMessage(
+            result.message || "Job rejected and employer notified successfully.",
+          );
+        },
+        onError: (error) => {
+          if (isAxiosError(error)) {
+            const message = error.response?.data?.message;
+            if (typeof message === "string" && message.trim()) {
+              setRejectError(message.trim());
+              return;
+            }
+          }
+
+          setRejectError("Failed to reject this job. Please try again.");
         },
       },
     );
@@ -187,6 +283,38 @@ export function OperationsJobsDetailPage() {
 
         {job ? (
           <>
+            {job.status === "pending_approval" ? (
+              <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                This employer-submitted job is waiting for Operations review
+                before it can go Live.
+              </div>
+            ) : null}
+
+            {job.isLiveChangeReview ? (
+              <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                This is an edited live job. The current live listing stays
+                public until you approve these changes.
+              </div>
+            ) : null}
+
+            {job.status === "rejected" ? (
+              <div className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+                This job was rejected
+                {job.rejectionReason ? `: ${job.rejectionReason}` : "."}
+              </div>
+            ) : null}
+
+            {job.status === "active" &&
+            job.liveChangeReviewStatus === "rejected" ? (
+              <div className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+                Live job changes were rejected
+                {job.liveChangeRejectionReason
+                  ? `: ${job.liveChangeRejectionReason}`
+                  : "."}{" "}
+                The live listing was not changed.
+              </div>
+            ) : null}
+
             {job.status === "draft" ||
             job.status === "expired" ||
             job.status === "paused" ||
@@ -202,9 +330,17 @@ export function OperationsJobsDetailPage() {
 
             <JobDetailHeader
               job={job}
-              isClosing={statusMutation.isPending}
+              isClosing={statusMutation.isPending && closeDialogOpen}
+              isReviewing={
+                statusMutation.isPending &&
+                (rejectDialogOpen ||
+                  job.status === "pending_approval" ||
+                  Boolean(job.isLiveChangeReview))
+              }
               onEdit={handleEdit}
               onCloseJob={handleOpenCloseDialog}
+              onApproveJob={handleApproveJob}
+              onRejectJob={handleOpenRejectDialog}
             />
 
             <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
@@ -219,6 +355,11 @@ export function OperationsJobsDetailPage() {
               <div className="p-2.5 sm:p-3.5">
                 {activeTab === "overview" ? (
                   <div className="flex flex-col gap-2.5">
+                    {job.isLiveChangeReview ||
+                    (job.liveChangeReviewStatus === "rejected" &&
+                      job.pendingLiveRevision) ? (
+                      <JobChangeReviewPanel job={job} />
+                    ) : null}
                     <JobOverviewPanel
                       job={job}
                       isClosing={statusMutation.isPending}
@@ -289,6 +430,42 @@ export function OperationsJobsDetailPage() {
             }
           }}
           onConfirm={handleConfirmCloseJob}
+        />
+      ) : null}
+
+      {job ? (
+        <CloseJobConfirmDialog
+          open={rejectDialogOpen}
+          jobTitle={job.jobTitle}
+          jobId={job.jobId}
+          isSubmitting={statusMutation.isPending}
+          title={
+            job.isLiveChangeReview
+              ? "Reject these changes?"
+              : "Reject this job?"
+          }
+          description={
+            job.isLiveChangeReview
+              ? "The live listing will stay unchanged. The employer will be notified with your rejection reason and can edit and resubmit."
+              : "This job will not go Live. The employer will be notified with your rejection reason."
+          }
+          reasonLabel="Reason for rejection"
+          reasonPlaceholder={
+            job.isLiveChangeReview
+              ? "Enter why these changes are being rejected. This reason is sent to the employer."
+              : "Enter why this job is being rejected. This reason is sent to the employer."
+          }
+          submitLabel={
+            job.isLiveChangeReview ? "Reject Changes" : "Reject Job"
+          }
+          errorMessage={rejectError}
+          onCancel={() => {
+            if (!statusMutation.isPending) {
+              setRejectDialogOpen(false);
+              setRejectError(null);
+            }
+          }}
+          onConfirm={handleConfirmRejectJob}
         />
       ) : null}
 

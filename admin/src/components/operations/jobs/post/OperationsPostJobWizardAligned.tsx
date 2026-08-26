@@ -46,10 +46,11 @@ import {
   mapWizardDataToOperationsDraftPayload,
 } from "../../../../utils/operations-post-job-draft";
 import {
-  validateOperationsPostJobForPublish,
-  validateOperationsPostJobStep,
+  validateOperationsAlignedPostJobForPublish,
+  validateOperationsAlignedPostJobStep,
 } from "../../../../utils/operations-post-job-validation";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
+import { JobDescriptionEditor } from "../../../ui/JobDescriptionEditor";
 import { OperationsPostJobEmployerSelect } from "./OperationsPostJobEmployerSelect";
 import { OperationsPostJobWhatsAppPreview } from "./OperationsPostJobWhatsAppPreview";
 import { OperationsPostJobPlaceAutocomplete } from "./OperationsPostJobPlaceAutocomplete";
@@ -178,18 +179,63 @@ export function OperationsPostJobWizardAligned() {
     if (!editJobId || !detailQuery.data || initialized) return;
     const mapped = mapOperationsJobDetailToWizardState(detailQuery.data);
     setFormData(mapped.formData);
-    setActiveStep(mapped.activeStep);
+    setActiveStep(1);
     setSavedJobId(detailQuery.data.jobId);
+    setErrors({});
+    setActionError(null);
     if (detailQuery.data.employerAssigned && detailQuery.data.employer.id) {
       void fetchOperationsEmployerById(detailQuery.data.employer.id)
-        .then(setSelectedEmployer)
+        .then((employer) => {
+          setSelectedEmployer(employer);
+          setFormData((current) => ({
+            ...current,
+            jobInformation: {
+              ...current.jobInformation,
+              companyDetails:
+                current.jobInformation.companyDetails.trim() ||
+                employer.displayName ||
+                employer.companyName ||
+                employer.establishmentName ||
+                "",
+            },
+            candidateAndInterview: {
+              ...current.candidateAndInterview,
+              contactName:
+                current.candidateAndInterview.contactName.trim() ||
+                employer.displayName ||
+                employer.companyName ||
+                "",
+              contactEmail:
+                current.candidateAndInterview.contactEmail.trim() ||
+                employer.emailAddress ||
+                "",
+              contactMobile:
+                current.candidateAndInterview.contactMobile ||
+                (employer.whatsappNumber || "").replace(/\D/g, "").slice(-10),
+            },
+          }));
+        })
         .catch(() => undefined);
     }
     setInitialized(true);
   }, [detailQuery.data, editJobId, initialized]);
 
-  const previewJob = useMemo(() => mapWizardDataToPreviewDetail(formData, selectedEmployer), [formData, selectedEmployer]);
-  const publishValidationErrors = useMemo(() => validateOperationsPostJobForPublish(formData), [formData]);
+  const isEditMode = Boolean(editJobId);
+  const existingJobStatus = detailQuery.data?.status;
+  const isEditingNonDraft =
+    isEditMode && Boolean(existingJobStatus) && existingJobStatus !== "draft";
+
+  const previewJob = useMemo(() => {
+    const mapped = mapWizardDataToPreviewDetail(formData, selectedEmployer);
+    if (existingJobStatus) {
+      return { ...mapped, status: existingJobStatus };
+    }
+    return mapped;
+  }, [formData, selectedEmployer, existingJobStatus]);
+  const publishValidationErrors = useMemo(
+    () => validateOperationsAlignedPostJobForPublish(formData),
+    [formData],
+  );
   const publishReady = Object.keys(publishValidationErrors).length === 0 && Boolean(selectedEmployer?.id);
   const workflowState = resolveOperationsPostJobWorkflowState({
     employerAssigned: Boolean(selectedEmployer?.id),
@@ -215,12 +261,15 @@ export function OperationsPostJobWizardAligned() {
     }
 
     for (let step = activeStep; step < targetStep; step += 1) {
-      const stepErrors = validateOperationsPostJobStep(
+      const stepErrors = validateOperationsAlignedPostJobStep(
         step as OperationsPostJobActiveStep,
         formData,
       );
       if (Object.keys(stepErrors).length > 0) {
         if (step === activeStep) {
+          setErrors(stepErrors);
+        } else {
+          setActiveStep(step as OperationsPostJobActiveStep);
           setErrors(stepErrors);
         }
         return;
@@ -232,11 +281,12 @@ export function OperationsPostJobWizardAligned() {
   }
 
   function handleContinue() {
-    const stepErrors = validateOperationsPostJobStep(activeStep, formData);
+    const stepErrors = validateOperationsAlignedPostJobStep(activeStep, formData);
     setErrors(stepErrors);
     if (Object.keys(stepErrors).length > 0) {
       return;
     }
+    setActionError(null);
     setActiveStep((step) => (step + 1) as OperationsPostJobActiveStep);
   }
 
@@ -262,10 +312,65 @@ export function OperationsPostJobWizardAligned() {
     try {
       const result = await persistDraft(activeStep);
       if (result) {
-        setStatusMessage("Draft saved successfully.");
+        setStatusMessage(
+          isEditingNonDraft ? "Job updated successfully." : "Draft saved successfully.",
+        );
       }
     } catch (error) {
-      setActionError(getApiErrorMessage(error, "Unable to save draft."));
+      setActionError(
+        getApiErrorMessage(
+          error,
+          isEditingNonDraft ? "Unable to update job." : "Unable to save draft.",
+        ),
+      );
+    }
+  }
+
+  async function handleSaveChanges() {
+    const allErrors = validateOperationsAlignedPostJobForPublish(formData);
+    setErrors(allErrors);
+    if (Object.keys(allErrors).length > 0) {
+      const firstInvalidStep = ([1, 2, 3] as const).find(
+        (step) =>
+          Object.keys(validateOperationsAlignedPostJobStep(step, formData))
+            .length > 0,
+      );
+      if (firstInvalidStep) {
+        setActiveStep(firstInvalidStep);
+      }
+      setActionError("Complete all required fields before saving changes.");
+      return;
+    }
+    if (!selectedEmployer?.id && !detailQuery.data?.employerAssigned) {
+      setActionError("Assign an employer before saving this job.");
+      return;
+    }
+
+    setActionError(null);
+    setStatusMessage(null);
+    try {
+      if (!savedJobId) {
+        throw new Error("Job id is missing.");
+      }
+
+      await persistDraft(3);
+
+      if (
+        selectedEmployer?.id &&
+        detailQuery.data?.employer.id &&
+        selectedEmployer.id !== detailQuery.data.employer.id &&
+        existingJobStatus === "draft"
+      ) {
+        await assignEmployerMutation.mutateAsync({
+          jobId: savedJobId,
+          employerId: selectedEmployer.id,
+        });
+      }
+
+      setStatusMessage("Job updated successfully.");
+      navigate(operationsJobDetailPath(savedJobId));
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, "Unable to update job."));
     }
   }
 
@@ -280,7 +385,7 @@ export function OperationsPostJobWizardAligned() {
   }, [statusMessage]);
 
   async function handlePublish() {
-    const allErrors = validateOperationsPostJobForPublish(formData);
+    const allErrors = validateOperationsAlignedPostJobForPublish(formData);
     setErrors(allErrors);
     if (!selectedEmployer?.id) {
       setActionError("Assign an employer before publishing this job.");
@@ -313,6 +418,23 @@ export function OperationsPostJobWizardAligned() {
     return (
       <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-border-subtle bg-surface">
         <Loader2 className="size-5 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (editJobId && detailQuery.isError) {
+    return (
+      <div className="rounded-xl border border-border-subtle bg-surface px-4 py-16 text-center shadow-sm">
+        <p className="text-sm font-medium text-danger">
+          {getApiErrorMessage(detailQuery.error, "Unable to load this job for editing.")}
+        </p>
+        <button
+          type="button"
+          onClick={() => void detailQuery.refetch()}
+          className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -430,7 +552,24 @@ export function OperationsPostJobWizardAligned() {
                   <input className={inputClass} type="number" min={1} placeholder="Select number of vacancies" value={formData.jobInformation.vacancies} onChange={(e) => updateFormData((c) => ({ ...c, jobInformation: { ...c.jobInformation, vacancies: e.target.value } }))} />
                 </Field>
                 <Field label="Job Description" required error={errors.jobDescription}>
-                  <textarea className={textareaClass} placeholder="Describe the job role, responsibilities and requirements." value={formData.jobInformation.jobDescription} onChange={(e) => updateFormData((c) => ({ ...c, jobInformation: { ...c.jobInformation, jobDescription: e.target.value } }))} maxLength={OPERATIONS_POST_JOB_LONG_TEXT_MAX_LENGTH} />
+                  <JobDescriptionEditor
+                    id="job-description"
+                    value={formData.jobInformation.jobDescription}
+                    onChange={(next) =>
+                      updateFormData((c) => ({
+                        ...c,
+                        jobInformation: {
+                          ...c.jobInformation,
+                          jobDescription: next,
+                        },
+                      }))
+                    }
+                    maxLength={OPERATIONS_POST_JOB_LONG_TEXT_MAX_LENGTH}
+                    placeholder="Describe the job role, responsibilities and requirements."
+                    hasError={Boolean(errors.jobDescription)}
+                    aria-invalid={Boolean(errors.jobDescription)}
+                    aria-describedby="job-description-count"
+                  />
                 </Field>
               </div>
             ) : null}
@@ -736,15 +875,68 @@ export function OperationsPostJobWizardAligned() {
           {actionError ? <p className="rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-xs font-medium text-danger">{actionError}</p> : null}
 
           <div className="flex flex-wrap justify-end gap-2">
-            <button className="inline-flex h-11 items-center justify-center rounded-md border border-primary-soft bg-surface px-6 text-sm font-bold text-primary-soft" disabled={activeStep === 1 || isSubmitting} onClick={() => {
-              setErrors({});
-              setActiveStep((s) => Math.max(1, s - 1) as OperationsPostJobActiveStep);
-            }}>Back</button>
-            <button className="inline-flex h-11 items-center justify-center rounded-md border border-border-subtle bg-surface px-6 text-sm font-bold text-foreground" disabled={isSubmitting} onClick={() => void handleSaveDraft()}>Save Draft</button>
-            {activeStep < 3 ? (
-              <button className="inline-flex h-11 items-center justify-center rounded-md bg-primary-soft px-8 text-sm font-bold text-white" disabled={isSubmitting} onClick={handleContinue}>Continue</button>
+            <button
+              type="button"
+              className="inline-flex h-11 items-center justify-center rounded-md border border-primary-soft bg-surface px-6 text-sm font-bold text-primary-soft"
+              disabled={activeStep === 1 || isSubmitting}
+              onClick={() => {
+                setErrors({});
+                setActiveStep((s) => Math.max(1, s - 1) as OperationsPostJobActiveStep);
+              }}
+            >
+              Back
+            </button>
+            {isEditingNonDraft ? (
+              <>
+                {activeStep < 3 ? (
+                  <button
+                    type="button"
+                    className="inline-flex h-11 items-center justify-center rounded-md border border-border-subtle bg-surface px-6 text-sm font-bold text-foreground"
+                    disabled={isSubmitting}
+                    onClick={handleContinue}
+                  >
+                    Continue
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="inline-flex h-11 items-center justify-center rounded-md bg-primary-soft px-8 text-sm font-bold text-white disabled:opacity-50"
+                  disabled={isSubmitting}
+                  onClick={() => void handleSaveChanges()}
+                >
+                  {isSubmitting ? "Saving…" : "Save Changes"}
+                </button>
+              </>
             ) : (
-              <button className="inline-flex h-11 items-center justify-center rounded-md bg-primary-soft px-8 text-sm font-bold text-white disabled:opacity-50" disabled={isSubmitting || !publishReady} onClick={() => void handlePublish()}>Publish Job</button>
+              <>
+                <button
+                  type="button"
+                  className="inline-flex h-11 items-center justify-center rounded-md border border-border-subtle bg-surface px-6 text-sm font-bold text-foreground"
+                  disabled={isSubmitting}
+                  onClick={() => void handleSaveDraft()}
+                >
+                  Save Draft
+                </button>
+                {activeStep < 3 ? (
+                  <button
+                    type="button"
+                    className="inline-flex h-11 items-center justify-center rounded-md bg-primary-soft px-8 text-sm font-bold text-white"
+                    disabled={isSubmitting}
+                    onClick={handleContinue}
+                  >
+                    Continue
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="inline-flex h-11 items-center justify-center rounded-md bg-primary-soft px-8 text-sm font-bold text-white disabled:opacity-50"
+                    disabled={isSubmitting || !publishReady}
+                    onClick={() => void handlePublish()}
+                  >
+                    Publish Job
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

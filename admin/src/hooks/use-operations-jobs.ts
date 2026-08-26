@@ -15,8 +15,11 @@ export function useOperationsJobs(params: OperationsJobsListParams) {
   return useQuery({
     queryKey: [...OPERATIONS_JOBS_QUERY_KEY, params],
     queryFn: () => fetchOperationsJobs(params),
+    // Avoid staleTime: 0 + window-refetch loops that spam the Vite proxy with
+    // duplicate requests whenever the backend briefly restarts (502).
+    staleTime: 30_000,
     refetchOnWindowFocus: true,
-    staleTime: 0,
+    retry: false,
   });
 }
 

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   MOCK_OPERATIONS_USER,
   OPERATIONS_BRAND,
+  OPERATIONS_NAV_ITEM_PERMISSION_MODULE,
   OPERATIONS_NAV_SECTIONS,
   type OperationsNavSection,
 } from "../../../constants/operations-navigation";
@@ -16,6 +17,7 @@ import {
   type OperationsLayoutDensity,
 } from "../../../constants/operations-layout";
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
+import { useOperationsPermissions } from "../../../hooks/use-operations-permissions";
 import { logoutOperationsTeam } from "../../../services/operations-auth.service";
 import { getOperationsAuthUser } from "../../../utils/operations-auth-storage";
 import { cn } from "../../../utils/cn";
@@ -79,11 +81,29 @@ export function OperationsSidebar({
     ? OPERATIONS_SIDEBAR_COLLAPSED_WIDTH_COMPACT
     : OPERATIONS_SIDEBAR_COLLAPSED_WIDTH;
   const sessionUser = getOperationsAuthUser();
+  const { can, isLoading: permissionsLoading } = useOperationsPermissions();
   const displayName = sessionUser?.fullName ?? MOCK_OPERATIONS_USER.name;
   const displayRole = sessionUser?.role ?? MOCK_OPERATIONS_USER.role;
   const displayInitials = sessionUser
     ? getInitials(sessionUser.fullName)
     : MOCK_OPERATIONS_USER.initials;
+
+  const visibleNavSections = useMemo(() => {
+    return OPERATIONS_NAV_SECTIONS.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        const moduleKey = OPERATIONS_NAV_ITEM_PERMISSION_MODULE[item.id];
+        if (!moduleKey) {
+          return true;
+        }
+        // Avoid flashing unauthorized links while permissions resolve.
+        if (permissionsLoading) {
+          return false;
+        }
+        return can(moduleKey, "read");
+      }),
+    })).filter((section) => section.items.length > 0);
+  }, [can, permissionsLoading]);
 
   const activeCollapsibleSectionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -278,7 +298,7 @@ export function OperationsSidebar({
           )}
           aria-label="Primary"
         >
-          {OPERATIONS_NAV_SECTIONS.map((section, sectionIndex) => {
+          {visibleNavSections.map((section, sectionIndex) => {
             const isCollapsible = COLLAPSIBLE_SECTION_IDS.has(section.id);
             const sectionExpanded = isSectionExpanded(section);
             const sectionPanelId = `ops-nav-section-${section.id}`;

@@ -5,6 +5,10 @@ import {
   EMPLOYER_JOBS_DELETE_UI_ENABLED,
   EMPLOYER_JOB_STATUS_LABELS,
   EMPLOYER_JOB_STATUS_PILL_CLASS,
+  EMPLOYER_LIVE_CHANGE_PENDING_LABEL_SHORT,
+  EMPLOYER_LIVE_CHANGE_PENDING_TITLE,
+  EMPLOYER_LIVE_CHANGE_REJECTED_LABEL_SHORT,
+  EMPLOYER_LIVE_CHANGE_REJECTED_TITLE,
 } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
 import { useCan } from "@/providers/employer-permission-provider";
@@ -179,14 +183,53 @@ export function DashboardJobsOverview({
                       </p>
                     </td>
                     <td className="px-3 py-3 sm:px-4">
-                      <span
-                        className={cn(
-                          "inline-flex rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold",
-                          EMPLOYER_JOB_STATUS_PILL_CLASS[job.status],
-                        )}
-                      >
-                        {EMPLOYER_JOB_STATUS_LABELS[job.status]}
-                      </span>
+                      {job.status === "active" &&
+                      (job.liveChangeReviewStatus === "pending_approval" ||
+                        job.liveChangeReviewStatus === "rejected") ? (
+                        <div
+                          className={cn(
+                            "inline-flex max-w-full flex-col gap-0.5 rounded-lg px-2 py-1 ring-1 ring-inset",
+                            job.liveChangeReviewStatus === "pending_approval"
+                              ? "bg-amber-50/80 ring-amber-200/80"
+                              : "bg-red-50/70 ring-red-200/70",
+                          )}
+                          title={
+                            job.liveChangeReviewStatus === "pending_approval"
+                              ? EMPLOYER_LIVE_CHANGE_PENDING_TITLE
+                              : EMPLOYER_LIVE_CHANGE_REJECTED_TITLE
+                          }
+                        >
+                          <span
+                            className={cn(
+                              "inline-flex w-fit rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold",
+                              EMPLOYER_JOB_STATUS_PILL_CLASS.active,
+                            )}
+                          >
+                            {EMPLOYER_JOB_STATUS_LABELS.active}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-[0.625rem] font-semibold leading-snug",
+                              job.liveChangeReviewStatus === "pending_approval"
+                                ? "text-amber-800"
+                                : "text-red-700",
+                            )}
+                          >
+                            {job.liveChangeReviewStatus === "pending_approval"
+                              ? EMPLOYER_LIVE_CHANGE_PENDING_LABEL_SHORT
+                              : EMPLOYER_LIVE_CHANGE_REJECTED_LABEL_SHORT}
+                          </span>
+                        </div>
+                      ) : (
+                        <span
+                          className={cn(
+                            "inline-flex w-fit rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold",
+                            EMPLOYER_JOB_STATUS_PILL_CLASS[job.status],
+                          )}
+                        >
+                          {EMPLOYER_JOB_STATUS_LABELS[job.status]}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-sm font-semibold tabular-nums text-foreground sm:px-4">
                       {formatEmployerJobCount(job.applications)}

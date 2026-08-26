@@ -40,6 +40,34 @@ export function expandPublicSiteOrigins(frontendUrl: string): string[] {
   return [...origins];
 }
 
+/**
+ * For local development, browsers may send Origin as either localhost or
+ * 127.0.0.1 depending on how the admin/Vite URL was opened. Allow both.
+ */
+export function expandLocalhostOrigins(origin: string): string[] {
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) {
+    return [];
+  }
+
+  const origins = new Set<string>([normalized]);
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.hostname === "localhost") {
+      origins.add(`${parsed.protocol}//127.0.0.1${parsed.port ? `:${parsed.port}` : ""}`);
+    } else if (parsed.hostname === "127.0.0.1") {
+      origins.add(
+        `${parsed.protocol}//localhost${parsed.port ? `:${parsed.port}` : ""}`,
+      );
+    }
+  } catch {
+    return [normalized];
+  }
+
+  return [...origins];
+}
+
 export function buildAllowedCorsOrigins(input: {
   frontendUrl: string;
   adminUrl: string;
@@ -51,15 +79,23 @@ export function buildAllowedCorsOrigins(input: {
     allowed.add(origin);
   }
 
+  for (const origin of expandLocalhostOrigins(input.frontendUrl)) {
+    allowed.add(origin);
+  }
+
   const adminOrigin = normalizeOrigin(input.adminUrl);
   if (adminOrigin) {
-    allowed.add(adminOrigin);
+    for (const origin of expandLocalhostOrigins(adminOrigin)) {
+      allowed.add(origin);
+    }
   }
 
   for (const extra of input.extraOrigins ?? []) {
     const normalized = normalizeOrigin(extra);
     if (normalized) {
-      allowed.add(normalized);
+      for (const origin of expandLocalhostOrigins(normalized)) {
+        allowed.add(origin);
+      }
     }
   }
 

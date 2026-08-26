@@ -9,7 +9,8 @@ export type JobPostedSuccessSummary = {
   salaryLabel: string;
   jobTypeLabel: string;
   status: JobStatus;
+  liveChangeReviewStatus?: string;
   publishedAt: string | null;
   applications: number;
-  visibility: "Public";
+  visibility: "Public" | "Not public yet";
 };

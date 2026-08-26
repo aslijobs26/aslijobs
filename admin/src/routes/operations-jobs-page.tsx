@@ -33,7 +33,12 @@ function statusActionConfirmMessage(
     case "publish":
     case "reactivate":
       return `Activate job ${job.jobId}? It will become live for candidates.`;
+    case "approve":
+      return job.isLiveChangeReview
+        ? `Approve and publish changes for job ${job.jobId}? The live listing will be updated and the employer will be notified.`
+        : `Approve and publish job ${job.jobId}? It will become live for candidates and the employer will be notified.`;
     case "close":
+    case "reject":
       return null;
     default:
       return null;
@@ -96,27 +101,22 @@ export function OperationsJobsPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [filters, setFilters] = useState<JobsFiltersState>(DEFAULT_FILTERS);
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [closeTarget, setCloseTarget] = useState<OperationsJobListItem | null>(
     null,
   );
+  const [rejectTarget, setRejectTarget] = useState<OperationsJobListItem | null>(
+    null,
+  );
   const [closeError, setCloseError] = useState<string | null>(null);
+  const [rejectError, setRejectError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setDebouncedSearch(filters.search.trim());
-    }, 300);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [filters.search]);
 
   const queryParams = useMemo(
     () => ({
       page,
       limit,
       tab,
-      search: debouncedSearch,
+      search: filters.search.trim(),
       status: filters.status,
       paymentStatus: filters.paymentStatus,
       location: filters.location,
@@ -125,7 +125,7 @@ export function OperationsJobsPage() {
       page,
       limit,
       tab,
-      debouncedSearch,
+      filters.search,
       filters.status,
       filters.paymentStatus,
       filters.location,
@@ -177,7 +177,6 @@ export function OperationsJobsPage() {
 
   const handleClearFilters = () => {
     setFilters(DEFAULT_FILTERS);
-    setDebouncedSearch("");
     setPage(1);
   };
 
@@ -204,6 +203,12 @@ export function OperationsJobsPage() {
       return;
     }
 
+    if (action === "reject") {
+      setRejectError(null);
+      setRejectTarget(job);
+      return;
+    }
+
     const confirmMessage = statusActionConfirmMessage(job, action);
     if (confirmMessage && !window.confirm(confirmMessage)) {
       return;
@@ -212,6 +217,13 @@ export function OperationsJobsPage() {
     statusMutation.mutate(
       { jobId: job.jobId, action },
       {
+        onSuccess: (result) => {
+          if (action === "approve") {
+            setStatusMessage(
+              result.message || "Job approved and published successfully.",
+            );
+          }
+        },
         onError: (error) => {
           if (isAxiosError(error)) {
             const message = error.response?.data?.message;
@@ -252,6 +264,36 @@ export function OperationsJobsPage() {
           }
 
           setCloseError("Failed to close this job. Please try again.");
+        },
+      },
+    );
+  };
+
+  const handleConfirmRejectJob = (reason: string) => {
+    if (!rejectTarget) {
+      return;
+    }
+
+    statusMutation.mutate(
+      { jobId: rejectTarget.jobId, action: "reject", reason },
+      {
+        onSuccess: (result) => {
+          setRejectTarget(null);
+          setRejectError(null);
+          setStatusMessage(
+            result.message || "Job rejected and employer notified successfully.",
+          );
+        },
+        onError: (error) => {
+          if (isAxiosError(error)) {
+            const message = error.response?.data?.message;
+            if (typeof message === "string" && message.trim()) {
+              setRejectError(message.trim());
+              return;
+            }
+          }
+
+          setRejectError("Failed to reject this job. Please try again.");
         },
       },
     );
@@ -396,6 +438,42 @@ export function OperationsJobsPage() {
             }
           }}
           onConfirm={handleConfirmCloseJob}
+        />
+      ) : null}
+
+      {rejectTarget ? (
+        <CloseJobConfirmDialog
+          open
+          jobTitle={rejectTarget.jobTitle}
+          jobId={rejectTarget.jobId}
+          isSubmitting={statusMutation.isPending}
+          title={
+            rejectTarget.isLiveChangeReview
+              ? "Reject these changes?"
+              : "Reject this job?"
+          }
+          description={
+            rejectTarget.isLiveChangeReview
+              ? "The live listing will stay unchanged. The employer will be notified with your rejection reason and can edit and resubmit."
+              : "This job will not go Live. The employer will be notified with your rejection reason."
+          }
+          reasonLabel="Reason for rejection"
+          reasonPlaceholder={
+            rejectTarget.isLiveChangeReview
+              ? "Enter why these changes are being rejected. This reason is sent to the employer."
+              : "Enter why this job is being rejected. This reason is sent to the employer."
+          }
+          submitLabel={
+            rejectTarget.isLiveChangeReview ? "Reject Changes" : "Reject Job"
+          }
+          errorMessage={rejectError}
+          onCancel={() => {
+            if (!statusMutation.isPending) {
+              setRejectTarget(null);
+              setRejectError(null);
+            }
+          }}
+          onConfirm={handleConfirmRejectJob}
         />
       ) : null}
 

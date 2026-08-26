@@ -10,8 +10,10 @@ import {
 } from "lucide-react";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import { OperationsCard } from "../../../ui/OperationsCard";
+import { JobDescriptionContent } from "../../../ui/JobDescriptionContent";
 import type { OperationsJobDetail } from "../../../../types/operations-jobs";
 import { cn } from "../../../../utils/cn";
+import { looksLikeJobDescriptionHtml } from "../../../../utils/job-description-html";
 import {
   formatMetricCount,
   formatOperationsDate,
@@ -175,10 +177,16 @@ export function JobOverviewPanel({
   onCloseJob,
   isClosing,
 }: JobOverviewPanelProps) {
-  const parsedDescription = parseJobDescription(job.description);
+  const descriptionIsHtml = looksLikeJobDescriptionHtml(job.description);
+  const parsedDescription = descriptionIsHtml
+    ? { intro: [], responsibilities: [], requirements: [] }
+    : parseJobDescription(job.description);
   const jobInformationRows = jobPostingInformationRows(job);
   const canClose =
-    (job.status !== "closed" && job.status !== "draft") ||
+    (job.status !== "closed" &&
+      job.status !== "draft" &&
+      job.status !== "pending_approval" &&
+      job.status !== "rejected") ||
     (job.status === "closed" && !job.employerNotified && Boolean(job.closedReason));
   const daysRemaining =
     job.analytics.daysRemaining == null
@@ -188,9 +196,10 @@ export function JobOverviewPanel({
         : `${job.analytics.daysRemaining} Days`;
 
   const hasStructuredDescription =
-    parsedDescription.intro.length > 0 ||
-    parsedDescription.responsibilities.length > 0 ||
-    parsedDescription.requirements.length > 0;
+    !descriptionIsHtml &&
+    (parsedDescription.intro.length > 0 ||
+      parsedDescription.responsibilities.length > 0 ||
+      parsedDescription.requirements.length > 0);
 
   return (
     <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-12 xl:gap-2">
@@ -203,7 +212,13 @@ export function JobOverviewPanel({
           )}
           bodyClassName={overviewCardBodyClassName}
         >
-          {hasStructuredDescription ? (
+          {descriptionIsHtml ? (
+            <JobDescriptionContent
+              html={job.description}
+              className="text-xs leading-relaxed text-foreground"
+              emptyFallback="No description provided."
+            />
+          ) : hasStructuredDescription ? (
             <div className="space-y-4 text-xs leading-relaxed text-foreground">
               {parsedDescription.intro.length > 0 ? (
                 <div className="space-y-2">
@@ -225,8 +240,7 @@ export function JobOverviewPanel({
             <p className="text-xs leading-relaxed text-foreground">
               {job.description.trim() || "No description provided."}
             </p>
-          )}
-        </OperationsCard>
+          )}        </OperationsCard>
 
         <OperationsCard
           title="Job Information"

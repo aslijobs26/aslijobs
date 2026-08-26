@@ -14,8 +14,9 @@ export function useOperationsCandidates(params: OperationsCandidatesListParams) 
   return useQuery({
     queryKey: [...OPERATIONS_CANDIDATES_QUERY_KEY, params],
     queryFn: () => fetchOperationsCandidates(params),
+    staleTime: 30_000,
     refetchOnWindowFocus: true,
-    staleTime: 0,
+    retry: false,
     // Keep filters/search input mounted while the next page of results loads.
     placeholderData: keepPreviousData,
   });

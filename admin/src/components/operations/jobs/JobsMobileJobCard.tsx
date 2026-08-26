@@ -100,7 +100,11 @@ export function JobsMobileJobCard({
             variant={statusBadgeVariant(job.status)}
             className="px-2 py-0.5 text-[10px]"
           >
-            {job.statusLabel}
+            {job.isLiveChangeReview
+              ? "Edited Live Job"
+              : job.status === "pending_approval"
+                ? "Pending"
+                : job.statusLabel}
           </OperationsBadge>
           <span
             className={cn(

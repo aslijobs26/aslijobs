@@ -112,6 +112,8 @@ function isEmployerAlignedNotification(type: NotificationType): boolean {
     case "candidate_withdrawn":
     case "application_withdrawn":
     case "job_closed":
+    case "job_approved":
+    case "job_rejected":
       return false;
     case "interview_scheduled":
     case "interview_updated":
@@ -162,6 +164,10 @@ function notificationBadgeLabel(type: NotificationType): string {
       return "Withdrawn";
     case "job_closed":
       return "Closed";
+    case "job_approved":
+      return "Approved";
+    case "job_rejected":
+      return "Rejected";
     default:
       return "Update";
   }

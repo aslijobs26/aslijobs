@@ -6,7 +6,9 @@ import {
   JOB_LANGUAGES,
   JOB_LISTING_PAYMENT_STATUSES,
   JOB_CREATION_SOURCES,
+  JOB_LIVE_CHANGE_REVIEW_STATUSES,
   JOB_PERKS,
+  JOB_REVIEW_DECISIONS,
   JOB_STATUSES,
   JOB_TYPES,
   PART_TIME_SCHEDULES,
@@ -350,6 +352,75 @@ const jobSchema = new Schema(
       index: true,
     },
     closeNotificationSentAt: {
+      type: Date,
+      default: null,
+    },
+    submittedForApprovalAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    reviewDecision: {
+      type: String,
+      enum: [...JOB_REVIEW_DECISIONS, ""],
+      default: "",
+      trim: true,
+    },
+    reviewedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    reviewedByOperationsUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsTeamUser",
+      default: null,
+      index: true,
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    reviewNotificationSentAt: {
+      type: Date,
+      default: null,
+    },
+    /**
+     * Proposed listing fields from an employer edit of a live job.
+     * Live/public fields stay unchanged until Operations approves.
+     */
+    pendingLiveRevision: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
+    liveChangeReviewStatus: {
+      type: String,
+      enum: [...JOB_LIVE_CHANGE_REVIEW_STATUSES, ""],
+      default: "",
+      trim: true,
+      index: true,
+    },
+    liveChangeSubmittedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    liveChangeReviewedAt: {
+      type: Date,
+      default: null,
+    },
+    liveChangeReviewedByOperationsUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsTeamUser",
+      default: null,
+    },
+    liveChangeRejectionReason: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    liveChangeReviewNotificationSentAt: {
       type: Date,
       default: null,
     },

@@ -1,9 +1,11 @@
 export type JobStatus =
   | "draft"
+  | "pending_approval"
   | "active"
   | "paused"
   | "closed"
-  | "expired";
+  | "expired"
+  | "rejected";
 
 export type JobStatusAction =
   | "publish"
@@ -30,6 +32,13 @@ export type EmployerJobListItem = {
   views: number;
   status: JobStatus;
   publishedAt: string | null;
+  submittedForApprovalAt: string | null;
+  reviewDecision: string;
+  reviewedAt: string | null;
+  rejectionReason: string;
+  liveChangeReviewStatus: string;
+  liveChangeSubmittedAt: string | null;
+  liveChangeRejectionReason: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -37,10 +46,12 @@ export type EmployerJobListItem = {
 export type EmployerJobCounts = {
   all: number;
   draft: number;
+  pending_approval: number;
   active: number;
   paused: number;
   closed: number;
   expired: number;
+  rejected: number;
 };
 
 export type EmployerJobListOption = {
@@ -243,6 +254,15 @@ export type EmployerJobDetail = {
   bookmarks: number;
   shares: number;
   createdBy: string;
+  submittedForApprovalAt?: string | null;
+  reviewDecision?: string;
+  reviewedAt?: string | null;
+  rejectionReason?: string;
+  pendingLiveRevision?: CreateJobPayload | null;
+  liveChangeReviewStatus?: string;
+  liveChangeSubmittedAt?: string | null;
+  liveChangeReviewedAt?: string | null;
+  liveChangeRejectionReason?: string;
   createdAt: string;
   updatedAt: string;
 };

@@ -1,3 +1,4 @@
+import type { OperationsPermissionMap } from "../constants/operations-permissions";
 import type { OperationsTeamRole } from "../types/roles";
 
 export interface OperationsAuthUser {
@@ -6,6 +7,8 @@ export interface OperationsAuthUser {
   email: string;
   mobileNumber?: string;
   role: OperationsTeamRole;
+  /** Present on login/session responses; resolved locally if missing from cache. */
+  permissions?: OperationsPermissionMap;
 }
 
 export interface OperationsLoginResponse {

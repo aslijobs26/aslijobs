@@ -90,7 +90,65 @@ export function mapJobDetailToWizardState(job: EmployerJobDetail): {
   formData: PostJobWizardFormData;
   activeStep: PostJobActiveStep;
 } {
-  const snapshot = job.wizardSnapshot;
+  const revision = job.pendingLiveRevision;
+  const source: EmployerJobDetail =
+    revision && typeof revision === "object"
+      ? {
+          ...job,
+          companyName: revision.companyName ?? job.companyName,
+          industry: revision.industry ?? job.industry,
+          businessCategory: revision.businessCategory ?? job.businessCategory,
+          companySize: revision.companySize ?? job.companySize,
+          jobTitle: revision.jobTitle ?? job.jobTitle,
+          jobType: revision.jobType ?? job.jobType,
+          contractPeriodFrom:
+            revision.contractPeriodFrom ?? job.contractPeriodFrom,
+          contractPeriodTo: revision.contractPeriodTo ?? job.contractPeriodTo,
+          partTimeSchedule: revision.partTimeSchedule ?? job.partTimeSchedule,
+          partTimeStartTime:
+            revision.partTimeStartTime ?? job.partTimeStartTime,
+          partTimeEndTime: revision.partTimeEndTime ?? job.partTimeEndTime,
+          partTimeFlexibleHours:
+            revision.partTimeFlexibleHours ?? job.partTimeFlexibleHours,
+          workMode: revision.workMode ?? job.workMode,
+          vacancies: revision.vacancies ?? job.vacancies,
+          description: revision.description ?? job.description,
+          state: revision.state ?? job.state,
+          stateName: revision.stateName ?? job.stateName,
+          city: revision.city ?? job.city,
+          cityName: revision.cityName ?? job.cityName,
+          address: revision.address ?? job.address,
+          landmark: revision.landmark ?? job.landmark,
+          salaryType: revision.salaryType ?? job.salaryType,
+          salaryPeriod: revision.salaryPeriod ?? job.salaryPeriod,
+          fixedSalary: revision.fixedSalary ?? job.fixedSalary,
+          minimumSalary: revision.minimumSalary ?? job.minimumSalary,
+          maximumSalary: revision.maximumSalary ?? job.maximumSalary,
+          perks: revision.perks ?? job.perks,
+          education: revision.education ?? job.education,
+          experience: revision.experience ?? job.experience,
+          languages: revision.languages ?? job.languages,
+          gender: revision.gender ?? job.gender,
+          minimumAge: revision.minimumAge ?? job.minimumAge,
+          maximumAge: revision.maximumAge ?? job.maximumAge,
+          walkInEnabled: revision.walkInEnabled ?? job.walkInEnabled,
+          interviewAddress: revision.interviewAddress ?? job.interviewAddress,
+          walkInStartDate: revision.walkInStartDate ?? job.walkInStartDate,
+          walkInEndDate: revision.walkInEndDate ?? job.walkInEndDate,
+          walkInStartTime: revision.walkInStartTime ?? job.walkInStartTime,
+          walkInEndTime: revision.walkInEndTime ?? job.walkInEndTime,
+          interviewInstructions:
+            revision.interviewInstructions ?? job.interviewInstructions,
+          contactPersonName:
+            revision.contactPersonName ?? job.contactPersonName,
+          contactEmail: revision.contactEmail ?? job.contactEmail,
+          contactMobile: revision.contactMobile ?? job.contactMobile,
+          // Prefer revision fields over draft wizard snapshot when reviewing edits.
+          wizardSnapshot: null,
+        }
+      : job;
+
+  const snapshot = source.wizardSnapshot;
   const completedStep = ([1, 2, 3].includes(job.completedStep)
     ? job.completedStep
     : 1) as PostJobActiveStep;
@@ -158,70 +216,70 @@ export function mapJobDetailToWizardState(job: EmployerJobDetail): {
     formData: {
         jobInformation: {
           ...POST_JOB_INITIAL_WIZARD_DATA.jobInformation,
-          companyDetails: job.companyName,
-          industry: job.industry ?? "",
-          businessCategory: job.businessCategory ?? "",
-          companySize: job.companySize ?? "",
-          jobTitle: job.jobTitle === "Untitled draft" ? "" : job.jobTitle,
+          companyDetails: source.companyName,
+          industry: source.industry ?? "",
+          businessCategory: source.businessCategory ?? "",
+          companySize: source.companySize ?? "",
+          jobTitle: source.jobTitle === "Untitled draft" ? "" : source.jobTitle,
         jobType:
-          (job.jobType as PostJobWizardFormData["jobInformation"]["jobType"]) ||
+          (source.jobType as PostJobWizardFormData["jobInformation"]["jobType"]) ||
           "",
-        contractPeriodFrom: job.contractPeriodFrom,
-        contractPeriodTo: job.contractPeriodTo,
+        contractPeriodFrom: source.contractPeriodFrom,
+        contractPeriodTo: source.contractPeriodTo,
         partTimeSchedule:
-          (job.partTimeSchedule as PostJobWizardFormData["jobInformation"]["partTimeSchedule"]) ||
+          (source.partTimeSchedule as PostJobWizardFormData["jobInformation"]["partTimeSchedule"]) ||
           "",
-        partTimeStartTime: job.partTimeStartTime,
-        partTimeEndTime: job.partTimeEndTime,
-        partTimeFlexibleHours: job.partTimeFlexibleHours,
+        partTimeStartTime: source.partTimeStartTime,
+        partTimeEndTime: source.partTimeEndTime,
+        partTimeFlexibleHours: source.partTimeFlexibleHours,
         workMode:
-          (job.workMode as PostJobWizardFormData["jobInformation"]["workMode"]) ||
+          (source.workMode as PostJobWizardFormData["jobInformation"]["workMode"]) ||
           "",
-        vacancies: job.vacancies ? String(job.vacancies) : "",
-        jobDescription: job.description,
+        vacancies: source.vacancies ? String(source.vacancies) : "",
+        jobDescription: source.description,
       },
       locationAndSalary: {
         ...POST_JOB_INITIAL_WIZARD_DATA.locationAndSalary,
-        state: job.stateName || job.state,
-        city: job.cityName || job.city,
-        address: job.address,
-        landmark: job.landmark,
+        state: source.stateName || source.state,
+        city: source.cityName || source.city,
+        address: source.address,
+        landmark: source.landmark,
         salaryType:
-          (job.salaryType as PostJobWizardFormData["locationAndSalary"]["salaryType"]) ||
+          (source.salaryType as PostJobWizardFormData["locationAndSalary"]["salaryType"]) ||
           "",
         salaryPeriod:
-          (job.salaryPeriod as PostJobWizardFormData["locationAndSalary"]["salaryPeriod"]) ||
+          (source.salaryPeriod as PostJobWizardFormData["locationAndSalary"]["salaryPeriod"]) ||
           "per-month",
         salaryMin:
-          job.minimumSalary != null ? String(job.minimumSalary) : "",
+          source.minimumSalary != null ? String(source.minimumSalary) : "",
         salaryMax:
-          job.maximumSalary != null ? String(job.maximumSalary) : "",
-        incentives: job.fixedSalary != null ? String(job.fixedSalary) : "",
-        perks: job.perks as PostJobWizardFormData["locationAndSalary"]["perks"],
+          source.maximumSalary != null ? String(source.maximumSalary) : "",
+        incentives: source.fixedSalary != null ? String(source.fixedSalary) : "",
+        perks: source.perks as PostJobWizardFormData["locationAndSalary"]["perks"],
       },
       candidateAndInterview: {
         ...POST_JOB_INITIAL_WIZARD_DATA.candidateAndInterview,
         education:
-          job.education as PostJobWizardFormData["candidateAndInterview"]["education"],
+          source.education as PostJobWizardFormData["candidateAndInterview"]["education"],
         experienceRequired:
-          (job.experience as PostJobWizardFormData["candidateAndInterview"]["experienceRequired"]) ||
+          (source.experience as PostJobWizardFormData["candidateAndInterview"]["experienceRequired"]) ||
           "",
         languages:
-          job.languages as PostJobWizardFormData["candidateAndInterview"]["languages"],
+          source.languages as PostJobWizardFormData["candidateAndInterview"]["languages"],
         gender:
-          job.gender as PostJobWizardFormData["candidateAndInterview"]["gender"],
-        ageMin: job.minimumAge != null ? String(job.minimumAge) : "",
-        ageMax: job.maximumAge != null ? String(job.maximumAge) : "",
-        walkIn: job.walkInEnabled ? "yes" : "no",
-        walkInAddress: job.interviewAddress,
-        walkInStartDate: job.walkInStartDate,
-        walkInEndDate: job.walkInEndDate,
-        walkInStartTime: job.walkInStartTime,
-        walkInEndTime: job.walkInEndTime,
-        otherInstructions: job.interviewInstructions,
-        contactName: job.contactPersonName,
-        contactEmail: job.contactEmail,
-        contactMobile: job.contactMobile,
+          source.gender as PostJobWizardFormData["candidateAndInterview"]["gender"],
+        ageMin: source.minimumAge != null ? String(source.minimumAge) : "",
+        ageMax: source.maximumAge != null ? String(source.maximumAge) : "",
+        walkIn: source.walkInEnabled ? "yes" : "no",
+        walkInAddress: source.interviewAddress,
+        walkInStartDate: source.walkInStartDate,
+        walkInEndDate: source.walkInEndDate,
+        walkInStartTime: source.walkInStartTime,
+        walkInEndTime: source.walkInEndTime,
+        otherInstructions: source.interviewInstructions,
+        contactName: source.contactPersonName,
+        contactEmail: source.contactEmail,
+        contactMobile: source.contactMobile,
       },
     },
     activeStep: completedStep,

@@ -41,7 +41,12 @@ function JobPostedSuccessBody() {
   return (
     <main className="min-h-dvh bg-hero-bg">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:gap-7 sm:px-6 sm:py-10 lg:gap-8 lg:px-8 lg:py-12">
-        <JobPostedSuccessHero />
+        <JobPostedSuccessHero
+          isLiveChangeReview={
+            summary.status === "active" &&
+            summary.liveChangeReviewStatus === "pending_approval"
+          }
+        />
         <JobPostedSuccessSummaryCard summary={summary} />
         <JobPostedSuccessWhatsAppBanner />
         <JobPostedSuccessNextSteps />

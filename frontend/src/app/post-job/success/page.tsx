@@ -2,9 +2,9 @@ import { JobPostedSuccessContent } from "@/components/job-posted-success/JobPost
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Job Posted Successfully | AsliJobs",
+  title: "Job Submitted for Review | AsliJobs",
   description:
-    "Your job has been posted successfully and is now live for job seekers on AsliJobs.",
+    "Your job has been submitted and is pending Operations approval before going live on AsliJobs.",
 };
 
 export default function JobPostedSuccessPage() {

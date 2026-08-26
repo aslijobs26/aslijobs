@@ -1,6 +1,7 @@
 import {
   Ban,
   CalendarDays,
+  ClipboardCheck,
   FileText,
   TrendingDown,
   Wallet,
@@ -15,6 +16,11 @@ interface JobsInsightsStripProps {
 }
 
 const ICON_BY_ID: Record<string, { icon: LucideIcon; wrap: string; color: string }> = {
+  "pending-approval": {
+    icon: ClipboardCheck,
+    wrap: "bg-warning/10",
+    color: "text-warning",
+  },
   "expiring-soon": {
     icon: CalendarDays,
     wrap: "bg-warning/10",
@@ -42,12 +48,27 @@ const ICON_BY_ID: Record<string, { icon: LucideIcon; wrap: string; color: string
   },
 };
 
+const XL_GRID_COLS: Record<number, string> = {
+  1: "xl:grid-cols-1",
+  2: "xl:grid-cols-2",
+  3: "xl:grid-cols-3",
+  4: "xl:grid-cols-4",
+  5: "xl:grid-cols-5",
+  6: "xl:grid-cols-6",
+};
+
 export function JobsInsightsStrip({ insights, onSelect }: JobsInsightsStripProps) {
   const hasTrailingSingleOnTwoCol =
     insights.length % 2 === 1 && insights.length > 1;
+  const xlColsClass = XL_GRID_COLS[insights.length] ?? "xl:grid-cols-6";
 
   return (
-    <div className="grid grid-cols-1 gap-2 min-[540px]:grid-cols-2 xl:grid-cols-5">
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-2 min-[540px]:grid-cols-2",
+        xlColsClass,
+      )}
+    >
       {insights.map((insight, index) => {
         const visual = ICON_BY_ID[insight.id] ?? {
           icon: FileText,

@@ -3,6 +3,7 @@ import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
 import { jwtService } from "../../auth/jwt.service.js";
 import { OperationsTeamUserModel } from "./operations-team-user.model.js";
+import { resolveOperationsUserPermissions } from "./operations-rbac.service.js";
 import type {
   OperationsTeamAuthUser,
   OperationsTeamLoginInput,
@@ -23,6 +24,7 @@ function toAuthUser(user: {
     email: user.email?.trim().toLowerCase() || "",
     mobileNumber: user.mobileNumber,
     role: user.role,
+    permissions: resolveOperationsUserPermissions(user.role),
   };
 }
 

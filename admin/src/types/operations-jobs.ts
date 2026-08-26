@@ -1,9 +1,11 @@
 export type OperationsJobStatus =
   | "draft"
+  | "pending_approval"
   | "active"
   | "paused"
   | "closed"
-  | "expired";
+  | "expired"
+  | "rejected";
 
 export type OperationsJobPaymentStatus =
   | "pending"
@@ -13,11 +15,13 @@ export type OperationsJobPaymentStatus =
 
 export type OperationsJobTab =
   | "all"
+  | "pending_approval"
   | "live"
   | "paused"
   | "draft"
   | "expired"
-  | "closed";
+  | "closed"
+  | "rejected";
 
 export type OperationsJobStatusAction =
   | "publish"
@@ -25,7 +29,9 @@ export type OperationsJobStatusAction =
   | "resume"
   | "close"
   | "expire"
-  | "reactivate";
+  | "reactivate"
+  | "approve"
+  | "reject";
 
 export interface OperationsJobEmployer {
   id: string;
@@ -54,14 +60,18 @@ export interface OperationsJobListItem {
   locationLabel: string;
   publishedAt: string | null;
   createdAt: string;
+  submittedForApprovalAt: string | null;
   applications: number;
   applicationsToday: number;
+  isLiveChangeReview: boolean;
+  liveChangeReviewStatus: string;
   employer: OperationsJobEmployer;
 }
 
 export interface OperationsJobsKpis {
   totalJobs: number;
   activeJobs: number;
+  pendingApprovalJobs: number;
   pendingPaymentJobs: number;
   liveJobs: number;
   expiredJobs: number;
@@ -70,11 +80,13 @@ export interface OperationsJobsKpis {
 
 export interface OperationsJobsTabCounts {
   all: number;
+  pending_approval: number;
   live: number;
   paused: number;
   draft: number;
   expired: number;
   closed: number;
+  rejected: number;
 }
 
 export interface OperationsJobsInsight {
@@ -202,13 +214,27 @@ export interface OperationsJobDetail {
   jobTypeLabel: string;
   workModeLabel: string;
   completedStep: number;
-    lastEditedAt: string | null;
+  lastEditedAt: string | null;
   publishedAt: string | null;
   reactivatedAt: string | null;
   lastStatusChangedAt: string | null;
   closedReason: string;
   closedAt: string | null;
   employerNotified: boolean;
+  submittedForApprovalAt: string | null;
+  reviewDecision: string;
+  reviewedAt: string | null;
+  reviewedByOperationsUserId: string;
+  reviewedByLabel: string;
+  rejectionReason: string;
+  reviewNotificationSent: boolean;
+  pendingLiveRevision: unknown;
+  liveChangeReviewStatus: string;
+  liveChangeSubmittedAt: string | null;
+  liveChangeReviewedAt: string | null;
+  liveChangeReviewedByOperationsUserId: string;
+  liveChangeRejectionReason: string;
+  isLiveChangeReview: boolean;
   createdAt: string;
   updatedAt: string;
   wizardSnapshot: unknown;

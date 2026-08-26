@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchOperationsSession } from "../services/operations-auth.service";
+import type { OperationsAuthUser } from "../types/operations-auth";
 import { getOperationsAuthUser, hasOperationsAuthSession } from "../utils/operations-auth-storage";
 import { OPERATIONS_AUTH_QUERY_KEY } from "../utils/operations-session";
 
@@ -39,7 +40,7 @@ export function useOperationsSessionQuery({
 }
 
 export function resolveOperationsSessionUser(
-  sessionUser: { user: { id: string } } | undefined,
-) {
+  sessionUser: { user: OperationsAuthUser } | undefined,
+): OperationsAuthUser | null {
   return sessionUser?.user ?? getOperationsAuthUser() ?? null;
 }

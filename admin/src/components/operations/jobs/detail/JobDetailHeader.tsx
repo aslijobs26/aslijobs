@@ -23,8 +23,11 @@ import {
 interface JobDetailHeaderProps {
   job: OperationsJobDetail;
   isClosing?: boolean;
+  isReviewing?: boolean;
   onEdit: () => void;
   onCloseJob: () => void;
+  onApproveJob?: () => void;
+  onRejectJob?: () => void;
 }
 
 function FieldLabel({ children }: { children: ReactNode }) {
@@ -79,15 +82,23 @@ function StatMetric({
 export function JobDetailHeader({
   job,
   isClosing,
+  isReviewing,
   onEdit,
   onCloseJob,
+  onApproveJob,
+  onRejectJob,
 }: JobDetailHeaderProps) {
   const [copied, setCopied] = useState(false);
   const showVerified =
     job.employer.isWhatsappVerified || job.employer.registrationCompleted;
   const canClose =
-    (job.status !== "closed" && job.status !== "draft") ||
+    (job.status !== "closed" &&
+      job.status !== "draft" &&
+      job.status !== "pending_approval") ||
     (job.status === "closed" && !job.employerNotified && Boolean(job.closedReason));
+  const isPendingApproval =
+    job.status === "pending_approval" || Boolean(job.isLiveChangeReview);
+  const busy = Boolean(isClosing || isReviewing);
   const statusTone = jobDetailStatusTone(job.status);
 
   const handleCopyJobId = async () => {
@@ -124,11 +135,18 @@ export function JobDetailHeader({
                   variant={statusTone}
                   className={cn(
                     "px-2 py-0.5 text-[10px] font-semibold",
-                    job.status === "active" && "bg-success/10 text-success",
+                    job.status === "active" &&
+                      !job.isLiveChangeReview &&
+                      "bg-success/10 text-success",
                   )}
                 >
                   {job.statusLabel}
                 </OperationsBadge>
+                {job.isLiveChangeReview ? (
+                  <span className="inline-flex rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-semibold text-warning">
+                    Edited Live Job
+                  </span>
+                ) : null}
               </div>
 
               <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
@@ -152,8 +170,23 @@ export function JobDetailHeader({
                   {job.jobTypeLabel || "—"}
                 </span>
                 <span className="text-muted/70"> • </span>
-                Posted on {formatOperationsDateTime(job.publishedAt ?? job.createdAt)}
+                {job.status === "pending_approval"
+                  ? `Submitted ${formatOperationsDateTime(job.submittedForApprovalAt ?? job.createdAt)}`
+                  : job.isLiveChangeReview
+                    ? `Changes submitted ${formatOperationsDateTime(job.liveChangeSubmittedAt ?? job.lastEditedAt)}`
+                    : `Posted on ${formatOperationsDateTime(job.publishedAt ?? job.createdAt)}`}
               </p>
+              {job.status === "rejected" && job.rejectionReason ? (
+                <p className="text-[11px] leading-relaxed text-danger">
+                  Rejection reason: {job.rejectionReason}
+                </p>
+              ) : null}
+              {job.liveChangeReviewStatus === "rejected" &&
+              job.liveChangeRejectionReason ? (
+                <p className="text-[11px] leading-relaxed text-danger">
+                  Changes rejected: {job.liveChangeRejectionReason}
+                </p>
+              ) : null}
             </div>
           </HeaderColumn>
 
@@ -203,32 +236,67 @@ export function JobDetailHeader({
 
         <aside className="flex shrink-0 flex-col gap-3 border-t border-border-subtle pt-4 lg:min-w-[12rem] lg:border-t-0 lg:border-l lg:pl-5 lg:pt-0">
           <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
-            <button
-              type="button"
-              onClick={onEdit}
-              className={ghostActionClassName}
-            >
-              <Pencil className="size-3.5" aria-hidden="true" />
-              Edit Job
-            </button>
-            <button
-              type="button"
-              onClick={onCloseJob}
-              disabled={!canClose || isClosing}
-              className={cn(
-                primaryActionClassName,
-                canClose
-                  ? "bg-primary-soft text-surface hover:bg-primary-soft-hover"
-                  : "cursor-not-allowed bg-border-subtle text-muted shadow-none",
-              )}
-            >
-              <Plus className="size-3.5" aria-hidden="true" />
-              {isClosing
-                ? "Closing…"
-                : job.status === "closed" && !job.employerNotified && job.closedReason
-                  ? "Send notification"
-                  : "Close Job"}
-            </button>
+            {isPendingApproval ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onApproveJob}
+                  disabled={busy || !onApproveJob}
+                  className={cn(
+                    primaryActionClassName,
+                    "bg-success text-surface hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
+                  )}
+                >
+                  {isReviewing
+                    ? "Approving…"
+                    : job.isLiveChangeReview
+                      ? "Approve & Publish Changes"
+                      : "Approve & Publish"}
+                </button>
+                <button
+                  type="button"
+                  onClick={onRejectJob}
+                  disabled={busy || !onRejectJob}
+                  className={cn(
+                    primaryActionClassName,
+                    "bg-danger text-surface hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
+                  )}
+                >
+                  {job.isLiveChangeReview ? "Reject Changes" : "Reject"}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className={ghostActionClassName}
+                >
+                  <Pencil className="size-3.5" aria-hidden="true" />
+                  Edit Job
+                </button>
+                <button
+                  type="button"
+                  onClick={onCloseJob}
+                  disabled={!canClose || busy}
+                  className={cn(
+                    primaryActionClassName,
+                    canClose
+                      ? "bg-primary-soft text-surface hover:bg-primary-soft-hover"
+                      : "cursor-not-allowed bg-border-subtle text-muted shadow-none",
+                  )}
+                >
+                  <Plus className="size-3.5" aria-hidden="true" />
+                  {isClosing
+                    ? "Closing…"
+                    : job.status === "closed" &&
+                        !job.employerNotified &&
+                        job.closedReason
+                      ? "Send notification"
+                      : "Close Job"}
+                </button>
+              </>
+            )}
           </div>
 
           <div className="flex flex-wrap items-start gap-5 border-t border-border-subtle/80 pt-3 lg:justify-end">

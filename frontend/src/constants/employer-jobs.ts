@@ -77,30 +77,45 @@ export const EMPLOYER_JOB_TYPE_LABELS = {
 
 export const EMPLOYER_JOB_STATUS_LABELS = {
   all: "All Jobs",
-  active: "Active",
+  pending_approval: "Pending Approval",
+  active: "Live",
   paused: "Paused",
   draft: "Draft",
   closed: "Closed",
   expired: "Expired",
+  rejected: "Rejected",
 } as const;
+
+export const EMPLOYER_LIVE_CHANGE_PENDING_LABEL = "Changes Pending Approval";
+export const EMPLOYER_LIVE_CHANGE_PENDING_LABEL_SHORT = "Pending review";
+export const EMPLOYER_LIVE_CHANGE_REJECTED_LABEL = "Changes Rejected";
+export const EMPLOYER_LIVE_CHANGE_REJECTED_LABEL_SHORT = "Changes rejected";
+export const EMPLOYER_LIVE_CHANGE_PENDING_TITLE =
+  "Edits are waiting for Operations review. The live listing is unchanged until approved.";
+export const EMPLOYER_LIVE_CHANGE_REJECTED_TITLE =
+  "Your edits were rejected. The live listing is unchanged. Edit and resubmit.";
 
 export type EmployerJobsStatusTabId = keyof typeof EMPLOYER_JOB_STATUS_LABELS;
 
 export const EMPLOYER_JOBS_STATUS_TABS: readonly EmployerJobsStatusTabId[] = [
   "all",
+  "pending_approval",
   "active",
   "paused",
   "draft",
   "closed",
   "expired",
+  "rejected",
 ] as const;
 
 export const EMPLOYER_JOB_STATUS_PILL_CLASS: Record<JobStatus, string> = {
   active: "bg-primary-light text-primary-soft",
+  pending_approval: "bg-amber-50 text-amber-700",
   paused: "bg-amber-50 text-amber-700",
   draft: "bg-slate-100 text-slate-600",
   closed: "bg-red-50 text-red-600",
   expired: "bg-slate-50 text-slate-400",
+  rejected: "bg-red-50 text-red-700",
 };
 
 export type EmployerJobStatKey =

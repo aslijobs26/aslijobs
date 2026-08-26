@@ -49,7 +49,7 @@ export type EmployerJobPreviewFieldAccess = {
 
 /**
  * Maps employer job detail (all statuses) into the PublicJobDetail shape
- * used by JobDetailsCenterPanel so preview reuses the seeker job UI.
+ * used by employer job preview (candidate-facing fields only).
  */
 export function mapEmployerJobDetailToPublicPreview(
   job: EmployerJobDetail,

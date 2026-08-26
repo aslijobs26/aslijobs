@@ -11,6 +11,10 @@ interface CloseJobConfirmDialogProps {
   jobId: string;
   defaultReason?: string;
   isSubmitting: boolean;
+  title?: string;
+  description?: string;
+  reasonLabel?: string;
+  reasonPlaceholder?: string;
   submitLabel?: string;
   errorMessage?: string | null;
   onCancel: () => void;
@@ -23,6 +27,10 @@ export function CloseJobConfirmDialog({
   jobId,
   defaultReason = "",
   isSubmitting,
+  title = "Close this job?",
+  description = "This listing will be closed and the assigned employer will be notified with your reason.",
+  reasonLabel = "Reason for closing",
+  reasonPlaceholder = "Explain why this job is being closed…",
   submitLabel = "Close Job / Send",
   errorMessage,
   onCancel,
@@ -68,7 +76,7 @@ export function CloseJobConfirmDialog({
     event.preventDefault();
     const trimmed = reason.trim();
     if (!trimmed) {
-      setValidationError("Enter a reason before closing this job.");
+      setValidationError(`Enter a reason before continuing.`);
       textareaRef.current?.focus();
       return;
     }
@@ -96,12 +104,9 @@ export function CloseJobConfirmDialog({
         className="w-full max-w-md rounded-xl border border-border-subtle bg-surface p-4 shadow-[0_16px_40px_color-mix(in_srgb,var(--color-foreground)_18%,transparent)] sm:p-5"
       >
         <h2 id={titleId} className="text-sm font-bold text-foreground">
-          Close this job?
+          {title}
         </h2>
-        <p className="mt-1 text-xs leading-relaxed text-muted">
-          This listing will be closed and the assigned employer will be notified
-          with your reason.
-        </p>
+        <p className="mt-1 text-xs leading-relaxed text-muted">{description}</p>
 
         <dl className="mt-3 space-y-1.5 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 py-2.5">
           <div className="flex min-w-0 items-baseline justify-between gap-3">
@@ -124,7 +129,7 @@ export function CloseJobConfirmDialog({
 
         <form className="mt-4" onSubmit={handleSubmit}>
           <OperationsFormField
-            label="Reason for closing this job"
+            label={reasonLabel}
             htmlFor={reasonId}
             required
             error={fieldError}
@@ -136,7 +141,7 @@ export function CloseJobConfirmDialog({
               rows={4}
               value={reason}
               disabled={isSubmitting}
-              placeholder="Enter why Operations is closing this job. This reason is sent to the employer."
+              placeholder={reasonPlaceholder}
               className={cn(
                 operationsFieldTextareaClassName,
                 fieldError && "border-danger focus-visible:border-danger",
@@ -164,7 +169,7 @@ export function CloseJobConfirmDialog({
               disabled={isSubmitting || !reason.trim()}
               className="inline-flex h-9 items-center justify-center rounded-lg bg-danger px-3.5 text-xs font-semibold text-surface transition-colors hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Closing…" : submitLabel}
+              {isSubmitting ? "Submitting…" : submitLabel}
             </button>
           </div>
         </form>

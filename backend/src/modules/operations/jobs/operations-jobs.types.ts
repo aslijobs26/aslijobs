@@ -32,14 +32,18 @@ export type OperationsJobListItem = {
   locationLabel: string;
   publishedAt: string | null;
   createdAt: string;
+  submittedForApprovalAt: string | null;
   applications: number;
   applicationsToday: number;
+  isLiveChangeReview: boolean;
+  liveChangeReviewStatus: string;
   employer: OperationsJobEmployerSummary;
 };
 
 export type OperationsJobsKpis = {
   totalJobs: number;
   activeJobs: number;
+  pendingApprovalJobs: number;
   pendingPaymentJobs: number;
   liveJobs: number;
   expiredJobs: number;
@@ -48,11 +52,13 @@ export type OperationsJobsKpis = {
 
 export type OperationsJobsTabCounts = {
   all: number;
+  pending_approval: number;
   live: number;
   paused: number;
   draft: number;
   expired: number;
   closed: number;
+  rejected: number;
 };
 
 export type OperationsJobsInsight = {
@@ -168,6 +174,20 @@ export type OperationsJobDetail = {
   closedReason: string;
   closedAt: string | null;
   employerNotified: boolean;
+  submittedForApprovalAt: string | null;
+  reviewDecision: string;
+  reviewedAt: string | null;
+  reviewedByOperationsUserId: string;
+  reviewedByLabel: string;
+  rejectionReason: string;
+  reviewNotificationSent: boolean;
+  pendingLiveRevision: unknown;
+  liveChangeReviewStatus: string;
+  liveChangeSubmittedAt: string | null;
+  liveChangeReviewedAt: string | null;
+  liveChangeReviewedByOperationsUserId: string;
+  liveChangeRejectionReason: string;
+  isLiveChangeReview: boolean;
   createdAt: string;
   updatedAt: string;
   wizardSnapshot: unknown;

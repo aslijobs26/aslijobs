@@ -2,6 +2,7 @@
 
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { protectedApply } from "@/utils/job-apply-auth";
 import {
   formatJobSearchEducation,
@@ -18,6 +19,10 @@ import {
   formatJobSearchWorkMode,
   getCompanyInitials,
 } from "@/utils/job-search-format";
+import {
+  getJobDescriptionPlainTextLength,
+  isJobDescriptionEmpty,
+} from "@/utils/job-description-html";
 import {
   buildAbsolutePublicJobUrl,
   shareOrCopyText,
@@ -132,7 +137,7 @@ export function JobDetailsCenterPanel({
   const isApplied = appliedLocally || job?.isApplied === true;
 
   const descriptionNeedsCollapse = useMemo(() => {
-    const length = job?.description?.trim().length ?? 0;
+    const length = getJobDescriptionPlainTextLength(job?.description ?? "");
     return length > DESCRIPTION_COLLAPSE_CHARS;
   }, [job?.description]);
 
@@ -210,10 +215,8 @@ export function JobDetailsCenterPanel({
     ? splitInstructionLines(job.interviewInstructions)
     : [];
   const descriptionText = job.description?.trim() ?? "";
-  const visibleDescription =
-    !descriptionNeedsCollapse || descriptionExpanded
-      ? descriptionText
-      : `${descriptionText.slice(0, DESCRIPTION_COLLAPSE_CHARS).trimEnd()}…`;
+  const hasDescription = !isJobDescriptionEmpty(descriptionText);
+  const visibleDescription = descriptionText;
 
   const handleShare = () => {
     if (previewMode) {
@@ -395,11 +398,21 @@ export function JobDetailsCenterPanel({
       <div className="divide-y divide-border-subtle px-5 sm:px-7">
         <section className="py-6">
           <SectionHeading>Job Description</SectionHeading>
-          {descriptionText ? (
+          {hasDescription ? (
             <>
-              <p className="mt-3 whitespace-pre-wrap text-[15px] leading-[1.75] text-muted">
-                {visibleDescription}
-              </p>
+              <div
+                className={cn(
+                  "mt-3",
+                  !descriptionExpanded &&
+                    descriptionNeedsCollapse &&
+                    "max-h-[12.5rem] overflow-hidden",
+                )}
+              >
+                <JobDescriptionContent
+                  html={visibleDescription}
+                  className="text-[15px] leading-[1.75] text-muted"
+                />
+              </div>
               {descriptionNeedsCollapse ? (
                 <button
                   type="button"
@@ -422,8 +435,7 @@ export function JobDetailsCenterPanel({
             <p className="mt-3 text-[15px] leading-[1.75] text-muted">
               No description provided.
             </p>
-          )}
-        </section>
+          )}        </section>
 
         {hasAddress || hasWalkIn ? (
           <section className="py-6">

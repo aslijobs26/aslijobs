@@ -3,6 +3,7 @@
 import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
 import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkeletons";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import {
   formatJobSearchEducation,
@@ -619,7 +620,10 @@ export function JobSearchOverviewPanel({
             </p>
             {job.description?.trim() ? (
               <div className="mt-3">
-                <DetailMultilineText text={job.description} />
+                <JobDescriptionContent
+                  html={job.description}
+                  className="text-[14px] leading-[1.7] text-[#374151]"
+                />
               </div>
             ) : (
               <p className="mt-3 text-[15px] leading-[1.7] text-[#9CA3AF]">

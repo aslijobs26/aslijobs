@@ -14,6 +14,10 @@ import {
   EMPLOYER_JOBS_ERROR_TITLE,
   EMPLOYER_JOBS_RETRY_LABEL,
   EMPLOYER_JOBS_TABLE_COLUMNS,
+  EMPLOYER_LIVE_CHANGE_PENDING_LABEL_SHORT,
+  EMPLOYER_LIVE_CHANGE_PENDING_TITLE,
+  EMPLOYER_LIVE_CHANGE_REJECTED_LABEL_SHORT,
+  EMPLOYER_LIVE_CHANGE_REJECTED_TITLE,
 } from "@/constants/employer-jobs";
 import type {
   EmployerJobListItem,
@@ -82,27 +86,27 @@ type EmployerJobsTableProps = {
 const COLUMN_WIDTHS_WITH_SELECT = [
   "w-[3.5%]",
   "w-[14%]",
-  "w-[10%]",
-  "w-[11%]",
-  "w-[9%]",
+  "w-[9.5%]",
+  "w-[10.5%]",
   "w-[8%]",
+  "w-[7.5%]",
   "w-[7%]",
   "w-[7%]",
-  "w-[8%]",
   "w-[10%]",
+  "w-[10.5%]",
   "w-[12.5%]",
 ] as const;
 
 const COLUMN_WIDTHS = [
   "w-[15%]",
-  "w-[11%]",
-  "w-[12%]",
-  "w-[9%]",
-  "w-[9%]",
-  "w-[7%]",
-  "w-[7%]",
+  "w-[10.5%]",
+  "w-[11.5%]",
+  "w-[8.5%]",
   "w-[8%]",
-  "w-[11%]",
+  "w-[7%]",
+  "w-[7%]",
+  "w-[10%]",
+  "w-[11.5%]",
   "w-[11%]",
 ] as const;
 
@@ -310,6 +314,8 @@ function EmployerJobsTableRow({
       (job.status === "active" ||
         job.status === "paused" ||
         job.status === "draft" ||
+        job.status === "pending_approval" ||
+        job.status === "rejected" ||
         job.status === "closed")) ||
     canDeleteJobs;
 
@@ -380,7 +386,9 @@ function EmployerJobsTableRow({
   const canClose =
     job.status === "active" ||
     job.status === "paused" ||
-    job.status === "draft";
+    job.status === "draft" ||
+    job.status === "pending_approval" ||
+    job.status === "rejected";
   const canReactivate = job.status === "closed";
 
   return (
@@ -449,14 +457,79 @@ function EmployerJobsTableRow({
         {formatEmployerJobCount(job.views)}
       </td>
       <td className={BODY_CELL_CLASS}>
-        <span
-          className={cn(
-            "inline-flex min-w-[3.5rem] items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none xl:min-w-[3.75rem] xl:text-[11px]",
-            EMPLOYER_JOB_STATUS_PILL_CLASS[job.status],
+        <div className="flex min-w-0 flex-col gap-1">
+          {job.status === "pending_approval" ? (
+            <span
+              className="inline-flex w-fit max-w-full items-center justify-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold leading-none whitespace-nowrap text-amber-950 ring-1 ring-inset ring-amber-300/70 xl:text-xs"
+              title="Waiting for Operations review"
+            >
+              Pending
+            </span>
+          ) : job.status === "active" &&
+            (job.liveChangeReviewStatus === "pending_approval" ||
+              job.liveChangeReviewStatus === "rejected") ? (
+            <div
+              className={cn(
+                "inline-flex w-fit max-w-full flex-col gap-0.5 rounded-lg px-2 py-1 ring-1 ring-inset",
+                job.liveChangeReviewStatus === "pending_approval"
+                  ? "bg-amber-50/80 ring-amber-200/80"
+                  : "bg-red-50/70 ring-red-200/70",
+              )}
+              title={
+                job.liveChangeReviewStatus === "pending_approval"
+                  ? EMPLOYER_LIVE_CHANGE_PENDING_TITLE
+                  : EMPLOYER_LIVE_CHANGE_REJECTED_TITLE
+              }
+            >
+              <span
+                className={cn(
+                  "inline-flex w-fit items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none xl:text-[11px]",
+                  EMPLOYER_JOB_STATUS_PILL_CLASS.active,
+                )}
+              >
+                {EMPLOYER_JOB_STATUS_LABELS.active}
+              </span>
+              <span
+                className={cn(
+                  "text-[10px] font-semibold leading-snug",
+                  job.liveChangeReviewStatus === "pending_approval"
+                    ? "text-amber-800"
+                    : "text-red-700",
+                )}
+              >
+                {job.liveChangeReviewStatus === "pending_approval"
+                  ? EMPLOYER_LIVE_CHANGE_PENDING_LABEL_SHORT
+                  : EMPLOYER_LIVE_CHANGE_REJECTED_LABEL_SHORT}
+              </span>
+              {job.liveChangeReviewStatus === "rejected" &&
+              job.liveChangeRejectionReason ? (
+                <p
+                  className="line-clamp-2 text-[9px] font-normal leading-snug text-red-600"
+                  title={job.liveChangeRejectionReason}
+                >
+                  {job.liveChangeRejectionReason}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <span
+              className={cn(
+                "inline-flex w-fit items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none whitespace-nowrap xl:text-[11px]",
+                EMPLOYER_JOB_STATUS_PILL_CLASS[job.status],
+              )}
+            >
+              {EMPLOYER_JOB_STATUS_LABELS[job.status]}
+            </span>
           )}
-        >
-          {EMPLOYER_JOB_STATUS_LABELS[job.status]}
-        </span>
+          {job.status === "rejected" && job.rejectionReason ? (
+            <p
+              className="line-clamp-2 text-[10px] leading-snug text-red-600"
+              title={job.rejectionReason}
+            >
+              {job.rejectionReason}
+            </p>
+          ) : null}
+        </div>
       </td>
       <td className={cn(BODY_CELL_CLASS, "whitespace-nowrap")}>
         <p className="text-[11px] font-semibold leading-snug text-foreground xl:text-[12px]">
@@ -481,11 +554,17 @@ function EmployerJobsTableRow({
             </IconActionButton>
           ) : null}
           {canUpdateJobs &&
-          (job.status === "draft" || job.status === "active") ? (
+          (job.status === "draft" ||
+            job.status === "active" ||
+            job.status === "rejected") ? (
             <Link
               href={ROUTES.postJobEdit(job.id)}
               aria-label={
-                job.status === "draft" ? "Edit draft job" : "Edit active job"
+                job.status === "draft"
+                  ? "Edit draft job"
+                  : job.status === "rejected"
+                    ? "Edit rejected job"
+                    : "Edit active job"
               }
               className="inline-flex size-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
@@ -607,10 +686,10 @@ function getPrimaryStatusAction(status: EmployerJobListItem["status"]): {
       icon: <Play className="size-3.5" />,
     };
   }
-  if (status === "draft") {
+  if (status === "draft" || status === "rejected") {
     return {
       action: "publish",
-      label: "Publish job",
+      label: status === "rejected" ? "Resubmit job" : "Publish job",
       icon: <Send className="size-3.5" />,
     };
   }

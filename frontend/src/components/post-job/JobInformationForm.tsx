@@ -1,5 +1,6 @@
 "use client";
 
+import { JobDescriptionEditor } from "@/components/ui/JobDescriptionEditor";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import {
   EMPLOYER_REGISTER_COMPANY_STRENGTH_OPTIONS,
@@ -655,31 +656,16 @@ export function JobInformationForm({
         label="Job Description"
         error={fieldErrors.jobDescription}
       >
-        <textarea
+        <JobDescriptionEditor
           id="job-description"
           value={formData.jobDescription}
-          onChange={(event) =>
-            onFieldChange(
-              "jobDescription",
-              event.target.value.slice(0, POST_JOB_LONG_TEXT_MAX_LENGTH),
-            )
-          }
+          onChange={(next) => onFieldChange("jobDescription", next)}
           maxLength={POST_JOB_LONG_TEXT_MAX_LENGTH}
           placeholder="Describe the job role, responsibilities and requirements."
-          className={cn(
-            textareaClassName,
-            fieldErrors.jobDescription &&
-              "border-red-500 focus:border-red-500 focus:ring-red-500/20",
-          )}
+          hasError={Boolean(fieldErrors.jobDescription)}
           aria-invalid={Boolean(fieldErrors.jobDescription)}
           aria-describedby="job-description-count"
         />
-        <p
-          id="job-description-count"
-          className="text-right text-xs text-muted"
-        >
-          {formData.jobDescription.length}/{POST_JOB_LONG_TEXT_MAX_LENGTH}
-        </p>
       </FormField>
 
       <div className={cn(postJobFormInlineActionsClassName, "flex-row justify-end")}>
