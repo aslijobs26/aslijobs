@@ -1,6 +1,8 @@
 import { Download, RotateCcw, Search } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
 import type {
-  OperationsApplicationStatus,
+  OperationsCandidateDatePreset,
+  OperationsCandidateProfileStatus,
   OperationsCandidatesFilterOptions,
 } from "../../../types/operations-candidates";
 import { cn } from "../../../utils/cn";
@@ -8,12 +10,11 @@ import { OperationsFilterSelect } from "../jobs/OperationsFilterSelect";
 
 export interface CandidatesFiltersState {
   search: string;
-  status: "" | OperationsApplicationStatus;
-  jobId: string;
-  employerId: string;
   location: string;
   experience: string;
-  gender: string;
+  preferredRole: string;
+  profileStatus: "" | OperationsCandidateProfileStatus;
+  registrationPreset: OperationsCandidateDatePreset | "";
 }
 
 interface CandidatesFiltersBarProps {
@@ -24,22 +25,15 @@ interface CandidatesFiltersBarProps {
   onExport: () => void;
 }
 
-const STATUS_OPTIONS: {
-  value: "" | OperationsApplicationStatus;
+const REGISTRATION_PRESET_OPTIONS: {
+  value: OperationsCandidateDatePreset | "";
   label: string;
 }[] = [
-  { value: "", label: "All Status" },
-  { value: "submitted", label: "Applied" },
-  { value: "viewed", label: "Viewed" },
-  { value: "under_review", label: "Under Review" },
-  { value: "shortlisted", label: "Shortlisted" },
-  { value: "interview_scheduled", label: "Interview Scheduled" },
-  { value: "interview_completed", label: "Interview Completed" },
-  { value: "offer_sent", label: "Offer Sent" },
-  { value: "selected", label: "Selected" },
-  { value: "joined", label: "Joined" },
-  { value: "rejected", label: "Rejected" },
-  { value: "withdrawn", label: "Withdrawn" },
+  { value: "", label: "Any Date" },
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "last_7_days", label: "Last 7 Days" },
+  { value: "last_30_days", label: "Last 30 Days" },
 ];
 
 const controlSurfaceClassName =
@@ -57,119 +51,99 @@ export function CandidatesFiltersBar({
   onClear,
   onExport,
 }: CandidatesFiltersBarProps) {
+  const [searchInput, setSearchInput] = useState(filters.search);
+
+  useEffect(() => {
+    setSearchInput(filters.search);
+  }, [filters.search]);
+
+  const applySearch = () => {
+    onChange({ search: searchInput.trim() });
+  };
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    applySearch();
+  };
+
   const activeFilterCount = [
-    filters.search,
-    filters.status,
-    filters.jobId,
-    filters.employerId,
+    filters.search.trim() || searchInput.trim(),
     filters.location,
     filters.experience,
-    filters.gender,
+    filters.preferredRole,
+    filters.profileStatus,
+    filters.registrationPreset,
   ].filter(Boolean).length;
 
   const hasActiveFilters = activeFilterCount > 0;
+  const canSubmitSearch = searchInput.trim() !== filters.search.trim();
 
   return (
     <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm ops-brand-border-glow sm:p-3.5">
       <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-end xl:gap-2.5">
-        <label className="block w-full min-w-0 xl:w-[22rem] xl:min-w-[20rem] xl:max-w-[28rem] xl:shrink-0">
-          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted">
-            Search
-          </span>
-          <span className="sr-only">Search candidates</span>
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={filters.search}
-              onChange={(event) => onChange({ search: event.target.value })}
-              placeholder="Search by candidate name, ID, or job title…"
-              autoComplete="off"
-              spellCheck={false}
-              className={cn(
-                "ops-brand-border-glow h-10 w-full rounded-lg border border-border-subtle bg-hero-bg/60 py-2 pl-9 pr-3 text-xs font-medium text-foreground outline-none transition-[border-color,box-shadow,background-color] placeholder:font-normal placeholder:text-muted sm:h-9",
-                "hover:border-primary/25 hover:bg-surface",
-                "focus-visible:border-primary focus-visible:bg-surface focus-visible:ring-2 focus-visible:ring-primary/30",
-              )}
-            />
-          </div>
-        </label>
+        <form
+          className="block w-full min-w-0 xl:w-[24rem] xl:min-w-[20rem] xl:max-w-[30rem] xl:shrink-0"
+          onSubmit={handleSearchSubmit}
+        >
+          <label className="block w-full min-w-0">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted">
+              Search
+            </span>
+            <span className="sr-only">Search candidates</span>
+            <div className="relative">
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search by name, candidate ID, or job title…"
+                autoComplete="off"
+                spellCheck={false}
+                className={cn(
+                  "ops-brand-border-glow h-10 w-full rounded-lg border border-border-subtle bg-hero-bg/60 py-2 pl-3 pr-11 text-xs font-medium text-foreground outline-none transition-[border-color,box-shadow,background-color] placeholder:font-normal placeholder:text-muted sm:h-9",
+                  "hover:border-primary/25 hover:bg-surface",
+                  "focus-visible:border-primary focus-visible:bg-surface focus-visible:ring-2 focus-visible:ring-primary/30",
+                  "[appearance:textfield] [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden",
+                )}
+              />
+              <button
+                type="submit"
+                aria-label="Search candidates"
+                title="Search"
+                className={cn(
+                  "absolute top-1/2 right-1.5 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md transition-colors",
+                  "text-muted hover:bg-primary-light hover:text-primary",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                  canSubmitSearch && "text-primary",
+                )}
+              >
+                <Search className="size-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          </label>
+        </form>
 
         <div
           className="grid min-w-0 grid-cols-1 gap-2 min-[420px]:grid-cols-2 xl:flex xl:min-w-0 xl:flex-1 xl:gap-2"
           role="group"
           aria-label="Candidate filters"
         >
-          <div className="flex min-w-0 flex-col gap-1 xl:min-w-[7.5rem] xl:flex-1">
+          <div className="flex min-w-0 flex-col gap-1 xl:min-w-[8rem] xl:flex-1">
             <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">
-              Job
+              Registration Date
             </span>
             <OperationsFilterSelect
-              label="Job"
-              value={filters.jobId}
-              options={[
-                { value: "", label: "All Jobs" },
-                ...filterOptions.jobs,
-              ]}
-              className="w-full min-w-0"
-              triggerClassName={filterTriggerClassName}
-              onChange={(value) => onChange({ jobId: value })}
-            />
-          </div>
-          <div className="flex min-w-0 flex-col gap-1 xl:min-w-[7.5rem] xl:flex-1">
-            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">
-              Employer
-            </span>
-            <OperationsFilterSelect
-              label="Employer"
-              value={filters.employerId}
-              options={[
-                { value: "", label: "All Employers" },
-                ...filterOptions.employers,
-              ]}
-              className="w-full min-w-0"
-              triggerClassName={filterTriggerClassName}
-              onChange={(value) => onChange({ employerId: value })}
-            />
-          </div>
-          <div className="flex min-w-0 flex-col gap-1 xl:min-w-[7.5rem] xl:flex-1">
-            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">
-              Status
-            </span>
-            <OperationsFilterSelect
-              label="Status"
-              value={filters.status}
-              options={STATUS_OPTIONS}
+              label="Registration Date"
+              value={filters.registrationPreset}
+              options={REGISTRATION_PRESET_OPTIONS}
               hideSearch
               className="w-full min-w-0"
               triggerClassName={filterTriggerClassName}
               onChange={(value) =>
                 onChange({
-                  status: value as CandidatesFiltersState["status"],
+                  registrationPreset:
+                    value as CandidatesFiltersState["registrationPreset"],
                 })
               }
-            />
-          </div>
-          <div className="flex min-w-0 flex-col gap-1 xl:min-w-[7.5rem] xl:flex-1">
-            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">
-              Location
-            </span>
-            <OperationsFilterSelect
-              label="Location"
-              value={filters.location}
-              options={[
-                { value: "", label: "All Locations" },
-                ...filterOptions.locations.map((location) => ({
-                  value: location,
-                  label: location,
-                })),
-              ]}
-              className="w-full min-w-0"
-              triggerClassName={filterTriggerClassName}
-              onChange={(value) => onChange({ location: value })}
             />
           </div>
           <div className="flex min-w-0 flex-col gap-1 xl:min-w-[7rem] xl:flex-1">
@@ -192,28 +166,69 @@ export function CandidatesFiltersBar({
               onChange={(value) => onChange({ experience: value })}
             />
           </div>
-          {filterOptions.genders.length > 0 ? (
-            <div className="flex min-w-0 flex-col gap-1 xl:min-w-[7rem] xl:flex-1">
-              <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">
-                Gender
-              </span>
-              <OperationsFilterSelect
-                label="Gender"
-                value={filters.gender}
-                options={[
-                  { value: "", label: "All Genders" },
-                  ...filterOptions.genders.map((gender) => ({
-                    value: gender,
-                    label: gender.replaceAll("_", " "),
-                  })),
-                ]}
-                hideSearch
-                className="w-full min-w-0"
-                triggerClassName={filterTriggerClassName}
-                onChange={(value) => onChange({ gender: value })}
-              />
-            </div>
-          ) : null}
+          <div className="flex min-w-0 flex-col gap-1 xl:min-w-[8rem] xl:flex-1">
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">
+              Preferred Role
+            </span>
+            <OperationsFilterSelect
+              label="Preferred Role"
+              value={filters.preferredRole}
+              options={[
+                { value: "", label: "All Roles" },
+                ...filterOptions.preferredRoles.map((role) => ({
+                  value: role,
+                  label: role,
+                })),
+              ]}
+              className="w-full min-w-0"
+              triggerClassName={filterTriggerClassName}
+              onChange={(value) => onChange({ preferredRole: value })}
+            />
+          </div>
+          <div className="flex min-w-0 flex-col gap-1 xl:min-w-[7.5rem] xl:flex-1">
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">
+              Location
+            </span>
+            <OperationsFilterSelect
+              label="Location"
+              value={filters.location}
+              options={[
+                { value: "", label: "All Locations" },
+                ...filterOptions.locations.map((location) => ({
+                  value: location,
+                  label: location,
+                })),
+              ]}
+              className="w-full min-w-0"
+              triggerClassName={filterTriggerClassName}
+              onChange={(value) => onChange({ location: value })}
+            />
+          </div>
+          <div className="flex min-w-0 flex-col gap-1 xl:min-w-[7.5rem] xl:flex-1">
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted">
+              Profile Status
+            </span>
+            <OperationsFilterSelect
+              label="Profile Status"
+              value={filters.profileStatus}
+              options={[
+                { value: "", label: "All Statuses" },
+                ...(filterOptions.profileStatuses ?? [
+                  { value: "complete", label: "Complete" },
+                  { value: "incomplete", label: "Incomplete" },
+                ]),
+              ]}
+              hideSearch
+              className="w-full min-w-0"
+              triggerClassName={filterTriggerClassName}
+              onChange={(value) =>
+                onChange({
+                  profileStatus:
+                    value as CandidatesFiltersState["profileStatus"],
+                })
+              }
+            />
+          </div>
         </div>
 
         <div className="grid min-w-0 shrink-0 grid-cols-2 gap-2 sm:flex sm:items-center xl:border-l xl:border-border-subtle xl:pl-3">

@@ -1,4 +1,4 @@
-import { BadgeCheck, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { operationsCandidateDetailPath } from "../../../constants/operations-routes";
@@ -8,14 +8,15 @@ import { OperationsBadge } from "../../ui/OperationsBadge";
 import { CandidatesMobileCard } from "./CandidatesMobileCard";
 import { CandidatesRowActions } from "./CandidatesRowActions";
 import {
-  applicationStatusBadgeVariant,
   candidateAvatarInitials,
   formatCandidateDateTime,
   formatCandidateDisplayId,
+  profileStatusBadgeVariant,
 } from "./candidates-format";
 
 interface CandidatesTableSectionProps {
   applications: OperationsCandidateListItem[];
+  totalCandidates: number;
   isLoading: boolean;
   isError: boolean;
   errorMessage?: string;
@@ -38,11 +39,39 @@ function TableMessage({
   );
 }
 
+function PreferredRoleChips({ roles }: { roles: string[] }) {
+  if (!roles.length) {
+    return <span className="text-muted">—</span>;
+  }
+
+  const visible = roles.slice(0, 2);
+  const remaining = roles.length - visible.length;
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {visible.map((role) => (
+        <span
+          key={role}
+          className="inline-flex max-w-[8rem] truncate rounded-md bg-border-subtle px-1.5 py-0.5 text-[10px] font-medium text-foreground"
+        >
+          {role}
+        </span>
+      ))}
+      {remaining > 0 ? (
+        <span className="inline-flex rounded-md bg-border-subtle px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+          +{remaining}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 const thClassName =
   "whitespace-nowrap px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted first:pl-4 last:pr-4 sm:px-3.5";
 
 export function CandidatesTableSection({
   applications,
+  totalCandidates,
   isLoading,
   isError,
   errorMessage,
@@ -52,7 +81,7 @@ export function CandidatesTableSection({
     <div className="space-y-1">
       <p className="text-sm font-medium text-foreground">No candidates found</p>
       <p className="text-xs text-muted">
-        Try adjusting search, status, date range, or other filters.
+        Try adjusting search, registration date, or other filters.
       </p>
     </div>
   );
@@ -76,6 +105,12 @@ export function CandidatesTableSection({
 
   return (
     <div className="min-w-0 max-w-full">
+      <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4">
+        <h2 className="text-sm font-semibold text-foreground">
+          All Candidates ({totalCandidates.toLocaleString("en-IN")})
+        </h2>
+      </div>
+
       <ul className="flex flex-col gap-2.5 p-2.5 sm:hidden">
         {isLoading ? (
           <li className="px-2 py-10 text-center text-xs text-muted">
@@ -111,7 +146,7 @@ export function CandidatesTableSection({
         ) : null}
         {!isLoading && !isError
           ? applications.map((application) => {
-              const applied = formatCandidateDateTime(application.appliedAt);
+              const registered = formatCandidateDateTime(application.registeredAt);
               return (
                 <li key={application.id} className="px-3 py-3 sm:px-3.5">
                   <div className="flex items-start justify-between gap-2">
@@ -119,84 +154,77 @@ export function CandidatesTableSection({
                       to={operationsCandidateDetailPath(
                         application.jobSeekerId || application.id,
                       )}
-                      className="group min-w-0 flex-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      className="flex min-w-0 items-start gap-2.5"
                     >
-                      <p className="font-mono text-[10px] font-medium text-muted">
-                        {formatCandidateDisplayId(
-                          application.jobSeekerId || application.id,
+                      <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary">
+                        {resolveMediaUrl(application.profilePhotoUrl) ? (
+                          <img
+                            src={resolveMediaUrl(application.profilePhotoUrl)}
+                            alt=""
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          candidateAvatarInitials(application.candidateName)
                         )}
-                      </p>
-                      <p className="mt-0.5 text-sm font-semibold text-foreground group-hover:text-primary">
-                        {application.candidateName}
-                      </p>
-                      <p className="mt-0.5 truncate text-[11px] text-muted">
-                        {[application.candidateEmail, application.candidatePhone]
-                          .filter(Boolean)
-                          .join(" · ") || "—"}
-                      </p>
-                    </Link>
-                    <CandidatesRowActions application={application} />
-                  </div>
-                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                    <OperationsBadge
-                      variant={applicationStatusBadgeVariant(application.status)}
-                    >
-                      {application.statusLabel}
-                    </OperationsBadge>
-                    <span className="text-[11px] text-muted">
-                      {applied.date}
-                      {applied.time ? ` · ${applied.time}` : ""}
-                    </span>
-                  </div>
-                  <p className="mt-2 truncate text-xs font-medium text-foreground">
-                    {application.jobTitle || "No application"}{" "}
-                    {application.publicJobId ? (
-                      <span className="font-mono text-[10px] text-muted">
-                        ({application.publicJobId})
                       </span>
-                    ) : null}
-                  </p>
-                  <p className="mt-1 flex items-center gap-1 truncate text-[11px] text-muted">
-                    {application.employerName || "—"}
-                    {application.employerVerified ? (
-                      <BadgeCheck
-                        className="size-3.5 shrink-0 text-chart-accent"
-                        aria-label="Verified employer"
-                      />
-                    ) : null}
-                  </p>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-foreground">
+                          {application.candidateName}
+                        </span>
+                        <span className="mt-0.5 block text-[11px] text-muted">
+                          {formatCandidateDisplayId(
+                            application.jobSeekerId || application.id,
+                          )}
+                        </span>
+                        <span className="mt-1 block text-[11px] text-muted">
+                          {application.candidatePhone || "—"}
+                        </span>
+                        <span className="mt-1 flex items-center gap-1 text-[11px] text-muted">
+                          <MapPin className="size-3 shrink-0" aria-hidden="true" />
+                          {application.candidateLocation || "—"}
+                        </span>
+                        <span className="mt-1 block text-[11px] text-muted">
+                          {registered.date}
+                          {registered.time ? ` ${registered.time}` : ""}
+                        </span>
+                      </span>
+                    </Link>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <OperationsBadge
+                        variant={profileStatusBadgeVariant(
+                          application.profileStatus,
+                        )}
+                      >
+                        {application.profileStatusLabel || "Incomplete"}
+                      </OperationsBadge>
+                      <span className="text-[11px] font-semibold tabular-nums text-foreground">
+                        {application.applicationCount ?? 0} apps
+                      </span>
+                      <CandidatesRowActions application={application} />
+                    </div>
+                  </div>
                 </li>
               );
             })
           : null}
       </ul>
 
-      <div className="hidden min-w-0 max-w-full overflow-x-auto overscroll-x-contain scrollbar-hidden lg:block">
-        <table className="w-full min-w-[1080px] border-collapse text-left text-xs leading-snug xl:min-w-[1140px]">
-          <thead>
-            <tr className="ops-brand-border-glow border-y border-border-subtle bg-hero-bg/40">
-              {[
-                "Candidate ID",
-                "Candidate",
-                "Applied Job",
-                "Employer",
-                "Status",
-                "Applied On",
-                "Experience",
-                "Location",
-                "",
-              ].map((label, index) => (
-                <th
-                  key={label || `actions-${index}`}
-                  className={thClassName}
-                  scope="col"
-                >
-                  {label ? label : <span className="sr-only">Actions</span>}
-                </th>
-              ))}
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="min-w-full text-left text-xs">
+          <thead className="border-b border-border-subtle bg-hero-bg/40">
+            <tr>
+              <th className={thClassName}>Candidate</th>
+              <th className={thClassName}>Contact</th>
+              <th className={thClassName}>Preferred Roles</th>
+              <th className={thClassName}>Experience</th>
+              <th className={thClassName}>Location</th>
+              <th className={thClassName}>Registered On</th>
+              <th className={thClassName}>Applications</th>
+              <th className={thClassName}>Profile Status</th>
+              <th className={`${thClassName} text-right`}>Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border-subtle">
             {isLoading ? (
               <TableMessage>
                 <p className="text-xs text-muted">Loading candidates…</p>
@@ -210,35 +238,25 @@ export function CandidatesTableSection({
             ) : null}
             {!isLoading && !isError
               ? applications.map((application) => {
-                  const applied = formatCandidateDateTime(application.appliedAt);
-                  const photoSrc = resolveMediaUrl(application.profilePhotoUrl);
-
+                  const registered = formatCandidateDateTime(
+                    application.registeredAt,
+                  );
                   return (
                     <tr
                       key={application.id}
-                      className="border-b border-border-subtle/80 transition-colors last:border-0 hover:bg-hero-bg/40"
+                      className="align-middle hover:bg-hero-bg/30"
                     >
-                      <td className="whitespace-nowrap px-3 py-3 first:pl-4 sm:px-3.5">
-                        <span className="font-mono text-[11px] font-medium text-muted">
-                          {formatCandidateDisplayId(
-                            application.jobSeekerId || application.id,
-                          )}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 sm:px-3.5">
+                      <td className="px-3 py-3 first:pl-4 sm:px-3.5">
                         <Link
                           to={operationsCandidateDetailPath(
                             application.jobSeekerId || application.id,
                           )}
-                          className="group flex min-w-0 max-w-[16rem] items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                          className="flex min-w-0 items-center gap-2.5"
                         >
-                          <span
-                            className="inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[10px] font-semibold text-primary"
-                            aria-hidden="true"
-                          >
-                            {photoSrc ? (
+                          <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary">
+                            {resolveMediaUrl(application.profilePhotoUrl) ? (
                               <img
-                                src={photoSrc}
+                                src={resolveMediaUrl(application.profilePhotoUrl)}
                                 alt=""
                                 className="size-full object-cover"
                               />
@@ -247,83 +265,62 @@ export function CandidatesTableSection({
                             )}
                           </span>
                           <span className="min-w-0">
-                            <span className="block truncate font-semibold text-foreground group-hover:text-primary">
+                            <span className="block truncate font-semibold text-foreground">
                               {application.candidateName}
                             </span>
-                            <span className="mt-0.5 block truncate text-[11px] text-muted">
-                              {application.candidateEmail ||
-                                application.candidatePhone ||
-                                "—"}
+                            <span className="mt-0.5 block text-[11px] text-muted">
+                              {formatCandidateDisplayId(
+                                application.jobSeekerId || application.id,
+                              )}
                             </span>
-                            {application.candidateEmail &&
-                            application.candidatePhone ? (
-                              <span className="mt-0.5 block truncate text-[10px] text-muted">
-                                {application.candidatePhone}
-                              </span>
-                            ) : null}
                           </span>
                         </Link>
                       </td>
-                      <td className="px-3 py-3 sm:px-3.5">
-                        <div className="min-w-0 max-w-[12rem]">
-                          <p className="truncate font-semibold text-foreground">
-                            {application.jobTitle || "No application"}
-                          </p>
-                          <p className="mt-0.5 font-mono text-[10px] text-muted">
-                            {application.publicJobId || "—"}
-                          </p>
-                        </div>
+                      <td className="whitespace-nowrap px-3 py-3 text-foreground sm:px-3.5">
+                        {application.candidatePhone || "—"}
                       </td>
                       <td className="px-3 py-3 sm:px-3.5">
-                        <div className="flex min-w-0 max-w-[12rem] items-center gap-1">
-                          <p className="truncate font-medium text-foreground">
-                            {application.employerName || "—"}
-                          </p>
-                          {application.employerVerified ? (
-                            <BadgeCheck
-                              className="size-3.5 shrink-0 text-chart-accent"
-                              aria-label="Verified employer"
-                            />
-                          ) : null}
-                        </div>
+                        <PreferredRoleChips
+                          roles={application.preferredRoles ?? []}
+                        />
                       </td>
-                      <td className="px-3 py-3 sm:px-3.5">
-                        <OperationsBadge
-                          variant={applicationStatusBadgeVariant(
-                            application.status,
-                          )}
-                        >
-                          {application.statusLabel}
-                        </OperationsBadge>
+                      <td className="whitespace-nowrap px-3 py-3 text-foreground sm:px-3.5">
+                        {application.candidateExperienceLabel ||
+                          "Not specified"}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 sm:px-3.5">
-                        <p className="font-medium text-foreground">
-                          {applied.date}
-                        </p>
-                        {applied.time ? (
-                          <p className="mt-0.5 text-[10px] text-muted">
-                            {applied.time}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-3 sm:px-3.5">
-                        <p className="max-w-[8rem] truncate text-foreground">
-                          {application.candidateExperienceLabel || "—"}
-                        </p>
-                      </td>
-                      <td className="px-3 py-3 sm:px-3.5">
-                        <p className="flex max-w-[9rem] items-center gap-1 truncate text-foreground">
+                      <td className="px-3 py-3 text-muted sm:px-3.5">
+                        <span className="inline-flex max-w-[10rem] items-center gap-1">
                           <MapPin
-                            className="size-3 shrink-0 text-muted"
+                            className="size-3 shrink-0"
                             aria-hidden="true"
                           />
                           <span className="truncate">
                             {application.candidateLocation || "—"}
                           </span>
-                        </p>
+                        </span>
                       </td>
-                      <td className="px-3 py-3 last:pr-4 sm:px-3.5">
-                        <div className="flex justify-end">
+                      <td className="whitespace-nowrap px-3 py-3 text-muted sm:px-3.5">
+                        <span className="block">{registered.date}</span>
+                        {registered.time ? (
+                          <span className="block text-[11px]">
+                            {registered.time}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-3 font-semibold tabular-nums text-foreground sm:px-3.5">
+                        {application.applicationCount ?? 0}
+                      </td>
+                      <td className="px-3 py-3 sm:px-3.5">
+                        <OperationsBadge
+                          variant={profileStatusBadgeVariant(
+                            application.profileStatus,
+                          )}
+                        >
+                          {application.profileStatusLabel || "Incomplete"}
+                        </OperationsBadge>
+                      </td>
+                      <td className="px-3 py-3 text-right last:pr-4 sm:px-3.5">
+                        <div className="inline-flex justify-end">
                           <CandidatesRowActions application={application} />
                         </div>
                       </td>

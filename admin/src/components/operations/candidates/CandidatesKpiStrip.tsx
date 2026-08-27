@@ -1,10 +1,12 @@
 import {
+  Award,
   Briefcase,
   CheckCircle2,
+  Lightbulb,
   Star,
+  UserCheck,
   UserPlus,
   Users,
-  XCircle,
   type LucideIcon,
 } from "lucide-react";
 import type { OperationsCandidatesKpis } from "../../../types/operations-candidates";
@@ -18,11 +20,13 @@ const KPI_CONFIG: {
   id: keyof Pick<
     OperationsCandidatesKpis,
     | "totalCandidates"
+    | "newCandidatesToday"
     | "newThisWeek"
-    | "activeApplications"
+    | "activeCandidates"
+    | "withApplications"
+    | "withoutApplications"
     | "shortlisted"
     | "hired"
-    | "rejected"
   >;
   label: string;
   icon: LucideIcon;
@@ -39,108 +43,104 @@ const KPI_CONFIG: {
     caption: () => "All time",
   },
   {
-    id: "newThisWeek",
-    label: "New This Week",
+    id: "newCandidatesToday",
+    label: "New Candidates Today",
     icon: UserPlus,
     iconWrap: "bg-chart-accent/10",
     iconColor: "text-chart-accent",
-    caption: (kpis) =>
-      kpis.newThisWeekChangePercent == null
-        ? "Registered candidates"
-        : `${kpis.newThisWeekChangePercent >= 0 ? "↑" : "↓"} ${Math.abs(kpis.newThisWeekChangePercent)}% vs last week`,
+    caption: () => "Today",
   },
   {
-    id: "activeApplications",
-    label: "Active Applications",
+    id: "newThisWeek",
+    label: "New This Week",
+    icon: UserCheck,
+    iconWrap: "bg-chart-accent-alt/10",
+    iconColor: "text-chart-accent-alt",
+    caption: () => "This Week",
+  },
+  {
+    id: "activeCandidates",
+    label: "Active Candidates",
     icon: Briefcase,
     iconWrap: "bg-warning/10",
     iconColor: "text-warning",
-    caption: () => "Ongoing",
+    caption: () => "Active Profiles",
+  },
+  {
+    id: "withApplications",
+    label: "With Applications",
+    icon: CheckCircle2,
+    iconWrap: "bg-success/10",
+    iconColor: "text-success",
+    caption: (kpis) =>
+      kpis.withApplicationsPercent == null
+        ? "Applied to jobs"
+        : `${kpis.withApplicationsPercent}% of total`,
+  },
+  {
+    id: "withoutApplications",
+    label: "Without Applications",
+    icon: Lightbulb,
+    iconWrap: "bg-warning/10",
+    iconColor: "text-warning",
+    caption: (kpis) =>
+      kpis.withoutApplicationsPercent == null
+        ? "No applications yet"
+        : `${kpis.withoutApplicationsPercent}% of total`,
   },
   {
     id: "shortlisted",
     label: "Shortlisted",
     icon: Star,
-    iconWrap: "bg-chart-accent-alt/10",
-    iconColor: "text-chart-accent-alt",
-    caption: (kpis) =>
-      kpis.shortlistedPercent == null
-        ? "Applications"
-        : `${kpis.shortlistedPercent}% of candidates`,
+    iconWrap: "bg-danger/10",
+    iconColor: "text-danger",
+    caption: () => "By Employers",
   },
   {
     id: "hired",
     label: "Hired",
-    icon: CheckCircle2,
-    iconWrap: "bg-success/10",
-    iconColor: "text-success",
-    caption: (kpis) =>
-      kpis.hiredPercent == null
-        ? "Selected + joined"
-        : `${kpis.hiredPercent}% of candidates`,
-  },
-  {
-    id: "rejected",
-    label: "Rejected",
-    icon: XCircle,
-    iconWrap: "bg-danger/10",
-    iconColor: "text-danger",
-    caption: (kpis) =>
-      kpis.rejectedPercent == null
-        ? "Applications"
-        : `${kpis.rejectedPercent}% of candidates`,
+    icon: Award,
+    iconWrap: "bg-chart-accent/10",
+    iconColor: "text-chart-accent",
+    caption: () => "By Employers",
   },
 ];
-
 function formatCount(value: number): string {
   return value.toLocaleString("en-IN");
 }
 
 export function CandidatesKpiStrip({ kpis }: CandidatesKpiStripProps) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8">
       {KPI_CONFIG.map((item) => {
         const Icon = item.icon;
         const caption = item.caption(kpis);
-        const isPositiveTrend =
-          item.id === "newThisWeek" &&
-          kpis.newThisWeekChangePercent != null &&
-          kpis.newThisWeekChangePercent >= 0;
 
         return (
           <article
             key={item.id}
-            className="min-w-0 rounded-lg border border-border-subtle bg-surface px-2.5 py-2.5 shadow-sm sm:px-3 sm:py-3 xl:px-4 xl:py-4"
+            className="min-w-0 rounded-lg border border-border-subtle bg-surface px-2.5 py-2.5 shadow-sm sm:px-3 sm:py-3"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] leading-snug text-muted sm:text-[11px] xl:text-xs">
+                <p className="text-[10px] leading-snug text-muted sm:text-[11px]">
                   {item.label}
                 </p>
-                <p className="mt-1 text-lg font-bold leading-none text-foreground sm:text-xl xl:mt-1.5 xl:text-2xl">
+                <p className="mt-1 text-lg font-bold leading-none text-foreground sm:text-xl">
                   {formatCount(kpis[item.id])}
                 </p>
-                <p
-                  className={cn(
-                    "mt-1.5 text-[10px] leading-snug",
-                    item.id === "newThisWeek" && kpis.newThisWeekChangePercent != null
-                      ? isPositiveTrend
-                        ? "text-success"
-                        : "text-danger"
-                      : "text-muted",
-                  )}
-                >
+                <p className="mt-1.5 text-[10px] leading-snug text-muted">
                   {caption}
                 </p>
               </div>
               <span
                 className={cn(
-                  "inline-flex size-8 shrink-0 items-center justify-center rounded-md sm:size-9 xl:size-10 xl:rounded-lg",
+                  "inline-flex size-8 shrink-0 items-center justify-center rounded-md sm:size-9",
                   item.iconWrap,
                 )}
               >
                 <Icon
-                  className={cn("size-3.5 sm:size-4 xl:size-5", item.iconColor)}
+                  className={cn("size-3.5 sm:size-4", item.iconColor)}
                   aria-hidden="true"
                 />
               </span>

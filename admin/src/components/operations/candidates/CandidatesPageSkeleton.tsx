@@ -14,29 +14,14 @@ function SkeletonBone({ className }: { className?: string }) {
 
 function KpiCardSkeleton() {
   return (
-    <article className="min-w-0 rounded-lg border border-border-subtle bg-surface px-2.5 py-2.5 shadow-sm sm:px-3 sm:py-3 xl:px-4 xl:py-4">
+    <article className="min-w-0 rounded-lg border border-border-subtle bg-surface px-2.5 py-2.5 shadow-sm sm:px-3 sm:py-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1 space-y-2">
           <SkeletonBone className="h-3 w-16 sm:w-20" />
-          <SkeletonBone className="h-6 w-10 sm:h-7 sm:w-12 xl:h-8" />
+          <SkeletonBone className="h-6 w-10 sm:h-7 sm:w-12" />
           <SkeletonBone className="h-2.5 w-14" />
         </div>
-        <SkeletonBone className="size-8 shrink-0 rounded-md sm:size-9 xl:size-10 xl:rounded-lg" />
-      </div>
-    </article>
-  );
-}
-
-function InsightCardSkeleton() {
-  return (
-    <article className="flex min-w-0 items-start gap-3 rounded-lg border border-border-subtle bg-surface px-3.5 py-4 shadow-sm sm:px-4 sm:py-5">
-      <SkeletonBone className="size-9 shrink-0 rounded-md" />
-      <div className="min-w-0 flex-1 space-y-2.5">
-        <SkeletonBone className="h-3 w-28 sm:w-32" />
-        <div className="flex items-end justify-between gap-2">
-          <SkeletonBone className="h-5 w-8" />
-          <SkeletonBone className="h-3 w-10" />
-        </div>
+        <SkeletonBone className="size-8 shrink-0 rounded-md sm:size-9" />
       </div>
     </article>
   );
@@ -45,15 +30,16 @@ function InsightCardSkeleton() {
 function DateAnalyticsSkeleton() {
   return (
     <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm sm:p-3.5">
-      <SkeletonBone className="h-2.5 w-40" />
+      <SkeletonBone className="h-2.5 w-48" />
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <SkeletonBone key={index} className="h-8 w-20 rounded-md" />
+        {Array.from({ length: 5 }).map((_, index) => (
+          <SkeletonBone key={index} className="h-8 w-24 rounded-md" />
         ))}
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:max-w-sm sm:ml-auto">
-        <SkeletonBone className="h-16 rounded-lg" />
-        <SkeletonBone className="h-16 rounded-lg" />
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <SkeletonBone key={index} className="h-16 rounded-lg" />
+        ))}
       </div>
     </div>
   );
@@ -63,7 +49,7 @@ function FiltersBarSkeleton() {
   return (
     <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm ops-brand-border-glow sm:p-3.5">
       <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-end xl:gap-2.5">
-        <div className="w-full min-w-0 xl:w-[22rem] xl:min-w-[20rem] xl:max-w-[28rem] xl:shrink-0">
+        <div className="w-full min-w-0 xl:w-[24rem] xl:shrink-0">
           <SkeletonBone className="mb-1 h-2.5 w-12" />
           <SkeletonBone className="h-10 w-full rounded-lg sm:h-9" />
         </div>
@@ -87,45 +73,32 @@ function FiltersBarSkeleton() {
   );
 }
 
-function TabsSkeleton() {
-  return (
-    <div className="flex min-w-0 items-center gap-1.5 overflow-hidden sm:gap-2">
-      {Array.from({ length: 7 }).map((_, index) => (
-        <SkeletonBone
-          key={index}
-          className="h-8 w-[4.5rem] shrink-0 rounded-md sm:h-9 sm:w-24"
-        />
-      ))}
-    </div>
-  );
-}
-
 function TableRowSkeleton() {
   return (
     <tr className="border-b border-border-subtle/80 last:border-0">
       <td className="px-3 py-3 first:pl-4 sm:px-3.5">
-        <SkeletonBone className="h-3 w-14" />
-      </td>
-      <td className="px-3 py-3 sm:px-3.5">
         <div className="flex items-center gap-2.5">
-          <SkeletonBone className="size-8 shrink-0 rounded-full" />
+          <SkeletonBone className="size-9 shrink-0 rounded-full" />
           <div className="space-y-1.5">
             <SkeletonBone className="h-3.5 w-28" />
-            <SkeletonBone className="h-2.5 w-36" />
+            <SkeletonBone className="h-2.5 w-24" />
           </div>
         </div>
       </td>
       <td className="px-3 py-3 sm:px-3.5">
-        <div className="space-y-1.5">
-          <SkeletonBone className="h-3.5 w-32" />
-          <SkeletonBone className="h-2.5 w-20" />
+        <SkeletonBone className="h-3 w-24" />
+      </td>
+      <td className="px-3 py-3 sm:px-3.5">
+        <div className="flex gap-1">
+          <SkeletonBone className="h-5 w-16 rounded-md" />
+          <SkeletonBone className="h-5 w-14 rounded-md" />
         </div>
       </td>
       <td className="px-3 py-3 sm:px-3.5">
-        <SkeletonBone className="h-3 w-28" />
+        <SkeletonBone className="h-3 w-16" />
       </td>
       <td className="px-3 py-3 sm:px-3.5">
-        <SkeletonBone className="h-5 w-20 rounded-full" />
+        <SkeletonBone className="h-3 w-28" />
       </td>
       <td className="px-3 py-3 sm:px-3.5">
         <div className="space-y-1.5">
@@ -134,13 +107,13 @@ function TableRowSkeleton() {
         </div>
       </td>
       <td className="px-3 py-3 sm:px-3.5">
-        <SkeletonBone className="h-3 w-16" />
+        <SkeletonBone className="h-3 w-8" />
       </td>
       <td className="px-3 py-3 sm:px-3.5">
-        <SkeletonBone className="h-3 w-24" />
+        <SkeletonBone className="h-5 w-20 rounded-full" />
       </td>
       <td className="px-3 py-3 last:pr-4 sm:px-3.5">
-        <SkeletonBone className="ml-auto size-8 rounded-lg" />
+        <SkeletonBone className="ml-auto h-8 w-24 rounded-lg" />
       </td>
     </tr>
   );
@@ -151,21 +124,17 @@ function MobileCardSkeleton() {
     <li className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
       <div className="border-b border-border-subtle/80 bg-hero-bg/35 px-3 py-2.5">
         <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1 space-y-2">
-            <SkeletonBone className="h-4 w-36 max-w-full" />
-            <SkeletonBone className="h-2.5 w-20" />
+          <div className="flex min-w-0 flex-1 items-start gap-2.5">
+            <SkeletonBone className="size-10 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <SkeletonBone className="h-4 w-36 max-w-full" />
+              <SkeletonBone className="h-2.5 w-20" />
+            </div>
           </div>
           <SkeletonBone className="size-8 shrink-0 rounded-lg" />
         </div>
       </div>
       <div className="space-y-3 px-3 py-3">
-        <div className="flex items-center gap-2.5">
-          <SkeletonBone className="size-10 shrink-0 rounded-full" />
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <SkeletonBone className="h-3 w-32" />
-            <SkeletonBone className="h-2.5 w-20" />
-          </div>
-        </div>
         <SkeletonBone className="h-5 w-20 rounded-full" />
         <div className="grid grid-cols-2 gap-1.5">
           {Array.from({ length: 4 }).map((_, index) => (
@@ -198,7 +167,6 @@ interface CandidatesPageSkeletonProps {
   rowCount?: number;
 }
 
-/** Full Candidates page placeholder matching live layout dimensions. */
 export function CandidatesPageSkeleton({
   rowCount = 8,
 }: CandidatesPageSkeletonProps) {
@@ -209,25 +177,18 @@ export function CandidatesPageSkeleton({
       aria-live="polite"
       aria-label="Loading candidates"
     >
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, index) => (
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8">
+        {Array.from({ length: 8 }).map((_, index) => (
           <KpiCardSkeleton key={index} />
         ))}
       </div>
 
       <DateAnalyticsSkeleton />
-
-      <div className="grid grid-cols-1 gap-2 min-[540px]:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-        {Array.from({ length: 7 }).map((_, index) => (
-          <InsightCardSkeleton key={index} />
-        ))}
-      </div>
-
       <FiltersBarSkeleton />
 
       <div className="min-w-0 max-w-full rounded-xl border border-border-subtle bg-surface shadow-sm">
-        <div className="min-w-0 border-b border-border-subtle px-2.5 py-2 sm:px-3.5 sm:py-3">
-          <TabsSkeleton />
+        <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4">
+          <SkeletonBone className="h-4 w-40" />
         </div>
 
         <div className="min-w-0 max-w-full">
@@ -238,18 +199,18 @@ export function CandidatesPageSkeleton({
           </ul>
 
           <div className="hidden min-w-0 max-w-full overflow-x-auto overscroll-x-contain scrollbar-hidden lg:block">
-            <table className="w-full min-w-[1080px] border-collapse text-left text-xs leading-snug xl:min-w-[1140px]">
+            <table className="w-full min-w-[1080px] border-collapse text-left text-xs leading-snug">
               <thead>
                 <tr className="ops-brand-border-glow border-y border-border-subtle bg-hero-bg/40">
                   {[
-                    "Candidate ID",
                     "Candidate",
-                    "Applied Job",
-                    "Employer",
-                    "Status",
-                    "Applied On",
+                    "Contact",
+                    "Preferred Roles",
                     "Experience",
                     "Location",
+                    "Registered On",
+                    "Applications",
+                    "Profile Status",
                     "",
                   ].map((label, index) => (
                     <th

@@ -3,6 +3,7 @@ import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { sendSuccess } from "../../../utils/api-response.js";
 import { operationsCandidatesService } from "./operations-candidates.service.js";
 import type {
+  ListOperationsCandidateApplicationsQuery,
   ListOperationsCandidatesQuery,
   OperationsCandidateApplicationIdParams,
   OperationsCandidateSeekerIdParams,
@@ -25,6 +26,21 @@ export const operationsCandidatesController = {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations candidate details fetched successfully.",
+      data: result,
+    });
+  },
+
+  async listSeekerApplications(req: Request, res: Response): Promise<void> {
+    const { jobSeekerId } = req.params as OperationsCandidateSeekerIdParams;
+    const query =
+      req.query as unknown as ListOperationsCandidateApplicationsQuery;
+    const result = await operationsCandidatesService.listSeekerApplications(
+      jobSeekerId,
+      query,
+    );
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Operations candidate applications fetched successfully.",
       data: result,
     });
   },

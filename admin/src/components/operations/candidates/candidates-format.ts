@@ -44,6 +44,12 @@ export function candidateAvatarInitials(name: string): string {
     .join("");
 }
 
+export function profileStatusBadgeVariant(
+  status: string | null | undefined,
+): "candidate" | "medium" {
+  return status === "complete" ? "candidate" : "medium";
+}
+
 export function applicationStatusBadgeVariant(
   status: OperationsApplicationStatus | string | null,
 ): "default" | "candidate" | "job" | "high" | "medium" | "low" {

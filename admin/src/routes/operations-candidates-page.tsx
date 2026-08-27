@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 import {
   CandidatesDateAnalyticsBar,
@@ -8,29 +8,26 @@ import {
   CandidatesFiltersBar,
   type CandidatesFiltersState,
 } from "../components/operations/candidates/CandidatesFiltersBar";
-import { CandidatesInsightsStrip } from "../components/operations/candidates/CandidatesInsightsStrip";
 import { CandidatesKpiStrip } from "../components/operations/candidates/CandidatesKpiStrip";
 import { CandidatesPageSkeleton } from "../components/operations/candidates/CandidatesPageSkeleton";
 import { CandidatesTableSection } from "../components/operations/candidates/CandidatesTableSection";
-import { CandidatesTabs } from "../components/operations/candidates/CandidatesTabs";
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { formatCandidateDisplayId } from "../components/operations/candidates/candidates-format";
 import { useOperationsCandidates } from "../hooks/use-operations-candidates";
 import type {
-  OperationsCandidateTab,
-  OperationsCandidatesInsight,
+  OperationsCandidateDatePreset,
   OperationsCandidatesListResult,
 } from "../types/operations-candidates";
+import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
 
 const DEFAULT_FILTERS: CandidatesFiltersState = {
   search: "",
-  status: "",
-  jobId: "",
-  employerId: "",
   location: "",
   experience: "",
-  gender: "",
+  preferredRole: "",
+  profileStatus: "",
+  registrationPreset: "",
 };
 
 const DEFAULT_DATE_FILTERS: CandidatesDateFiltersState = {
@@ -42,34 +39,26 @@ const DEFAULT_DATE_FILTERS: CandidatesDateFiltersState = {
 function exportCandidatesCsv(result: OperationsCandidatesListResult): void {
   const header = [
     "Candidate ID",
-    "Application ID",
     "Candidate",
-    "Email",
     "Phone",
-    "Job ID",
-    "Job Title",
-    "Employer",
-    "Status",
-    "Applied At",
-    "Registered At",
+    "Preferred Roles",
     "Experience",
     "Location",
+    "Registered At",
+    "Applications",
+    "Profile Status",
   ];
 
   const rows = result.applications.map((item) => [
     formatCandidateDisplayId(item.jobSeekerId || item.id),
-    item.applicationId ?? "",
     item.candidateName,
-    item.candidateEmail,
     item.candidatePhone,
-    item.publicJobId,
-    item.jobTitle,
-    item.employerName,
-    item.statusLabel,
-    item.appliedAt ?? "",
-    item.registeredAt ?? "",
+    (item.preferredRoles ?? []).join("; "),
     item.candidateExperienceLabel,
     item.candidateLocation,
+    item.registeredAt ?? "",
+    String(item.applicationCount ?? 0),
+    item.profileStatusLabel,
   ]);
 
   const csv = [header, ...rows]
@@ -82,67 +71,60 @@ function exportCandidatesCsv(result: OperationsCandidatesListResult): void {
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `operations-candidates-page-${result.pagination.page}.csv`;
-  anchor.click();
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `operations-candidates-page-${result.pagination.page}.csv`;
+  link.click();
   URL.revokeObjectURL(url);
 }
 
 export function OperationsCandidatesPage() {
-  const [tab, setTab] = useState<OperationsCandidateTab>("all");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [filters, setFilters] = useState<CandidatesFiltersState>(DEFAULT_FILTERS);
   const [dateFilters, setDateFilters] =
     useState<CandidatesDateFiltersState>(DEFAULT_DATE_FILTERS);
-  const [dateField, setDateField] =
-    useState<"applied" | "registered">("registered");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setDebouncedSearch(filters.search.trim());
-    }, 300);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [filters.search]);
+  const listDatePreset: OperationsCandidateDatePreset = dateFilters.datePreset;
+  const listDateFrom =
+    listDatePreset === "custom" ? dateFilters.dateFrom : "";
+  const listDateTo = listDatePreset === "custom" ? dateFilters.dateTo : "";
 
   const queryParams = useMemo(
     () => ({
       page,
       limit,
-      tab,
-      search: debouncedSearch,
-      status: filters.status,
-      jobId: filters.jobId,
-      employerId: filters.employerId,
+      tab: "all" as const,
+      search: filters.search.trim(),
+      status: "" as const,
+      jobId: "",
+      employerId: "",
       location: filters.location,
       experience: filters.experience,
-      gender: filters.gender,
-      datePreset: dateFilters.datePreset,
-      dateFrom: dateFilters.dateFrom,
-      dateTo: dateFilters.dateTo,
-      dateField,
+      gender: "",
+      preferredRole: filters.preferredRole,
+      profileStatus: filters.profileStatus,
+      datePreset: listDatePreset,
+      dateFrom: listDateFrom,
+      dateTo: listDateTo,
+      dateField: "registered" as const,
+      analyticsPreset: listDatePreset,
+      analyticsFrom: listDateFrom,
+      analyticsTo: listDateTo,
     }),
     [
       page,
       limit,
-      tab,
-      debouncedSearch,
-      filters.status,
-      filters.jobId,
-      filters.employerId,
+      filters.search,
       filters.location,
       filters.experience,
-      filters.gender,
-      dateFilters.datePreset,
-      dateFilters.dateFrom,
-      dateFilters.dateTo,
-      dateField,
+      filters.preferredRole,
+      filters.profileStatus,
+      listDatePreset,
+      listDateFrom,
+      listDateTo,
     ],
   );
-
   const candidatesQuery = useOperationsCandidates(queryParams);
   const data = candidatesQuery.data;
   const isPageLoading =
@@ -153,6 +135,10 @@ export function OperationsCandidatesPage() {
   const errorMessage = (() => {
     if (!candidatesQuery.error) {
       return undefined;
+    }
+
+    if (isOperationsSessionTransientError(candidatesQuery.error)) {
+      return "The API server is temporarily unavailable. Please wait a moment and retry.";
     }
 
     if (isAxiosError(candidatesQuery.error)) {
@@ -180,67 +166,46 @@ export function OperationsCandidatesPage() {
 
   const handleFiltersChange = (next: Partial<CandidatesFiltersState>) => {
     setFilters((current) => ({ ...current, ...next }));
-    if (next.status !== undefined && next.status !== "") {
-      setTab("all");
+
+    if (next.registrationPreset !== undefined) {
+      if (next.registrationPreset === "") {
+        setDateFilters({
+          datePreset: "all",
+          dateFrom: "",
+          dateTo: "",
+        });
+      } else {
+        setDateFilters({
+          datePreset: next.registrationPreset,
+          dateFrom: "",
+          dateTo: "",
+        });
+      }
     }
+
     setPage(1);
   };
 
   const handleClearFilters = () => {
     setFilters(DEFAULT_FILTERS);
-    setDebouncedSearch("");
     setDateFilters(DEFAULT_DATE_FILTERS);
-    setDateField("registered");
     setPage(1);
   };
 
   const handleDateFiltersChange = (
     next: Partial<CandidatesDateFiltersState>,
   ) => {
-    setDateFilters((current) => ({ ...current, ...next }));
-    // Arrival analytics always filters the table by registration date.
-    setDateField("registered");
+    const merged = { ...dateFilters, ...next };
+    setDateFilters(merged);
+    setFilters((current) => ({
+      ...current,
+      registrationPreset:
+        merged.datePreset === "all" || merged.datePreset === "custom"
+          ? ""
+          : merged.datePreset,
+    }));
     setPage(1);
   };
-
-  const handleTabChange = (nextTab: OperationsCandidateTab) => {
-    setTab(nextTab);
-    if (nextTab !== "all") {
-      setFilters((current) => ({ ...current, status: "" }));
-    }
-    setPage(1);
-  };
-
-  const handleInsightSelect = (insight: OperationsCandidatesInsight) => {
-    if (insight.datePreset) {
-      setDateFilters({
-        datePreset: insight.datePreset,
-        dateFrom: "",
-        dateTo: "",
-      });
-      setDateField(
-        insight.id === "new-today" || insight.id === "registered-7d"
-          ? "registered"
-          : "applied",
-      );
-    }
-
-    if (insight.tab) {
-      setTab(insight.tab);
-      setFilters((current) => ({ ...current, status: "" }));
-    } else if (insight.id === "needs-review") {
-      setTab("applied");
-      setFilters((current) => ({ ...current, status: "" }));
-    } else if (insight.id === "no-active-app") {
-      setTab("all");
-      setFilters(DEFAULT_FILTERS);
-      setDateFilters(DEFAULT_DATE_FILTERS);
-      setDateField("registered");
-    }
-
-    setPage(1);
-  };
-
   return (
     <OperationsLayout
       title="Candidates"
@@ -280,11 +245,6 @@ export function OperationsCandidatesPage() {
             onChange={handleDateFiltersChange}
           />
 
-          <CandidatesInsightsStrip
-            insights={data.insights}
-            onSelect={handleInsightSelect}
-          />
-
           <CandidatesFiltersBar
             filters={filters}
             filterOptions={data.filterOptions}
@@ -303,15 +263,9 @@ export function OperationsCandidatesPage() {
                 aria-hidden="true"
               />
             ) : null}
-            <div className="min-w-0 border-b border-border-subtle px-2.5 py-2 sm:px-3.5 sm:py-3">
-              <CandidatesTabs
-                activeTab={tab}
-                counts={data.counts}
-                onChange={handleTabChange}
-              />
-            </div>
             <CandidatesTableSection
               applications={data.applications}
+              totalCandidates={data.pagination.total}
               isLoading={isSoftRefreshing}
               isError={candidatesQuery.isError}
               errorMessage={errorMessage}

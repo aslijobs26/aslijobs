@@ -1,4 +1,4 @@
-import { Copy, Eye, MoreVertical } from "lucide-react";
+import { Copy, MoreVertical } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { operationsCandidateDetailPath } from "../../../constants/operations-routes";
@@ -8,7 +8,6 @@ import { formatCandidateDisplayId } from "./candidates-format";
 
 interface CandidatesRowActionsProps {
   application: OperationsCandidateListItem;
-  /** Compact eye-only control for dense table rows. */
   showViewButton?: boolean;
 }
 
@@ -38,7 +37,9 @@ export function CandidatesRowActions({
 
   const handleView = () => {
     setOpen(false);
-    navigate(operationsCandidateDetailPath(application.jobSeekerId || application.id));
+    navigate(
+      operationsCandidateDetailPath(application.jobSeekerId || application.id),
+    );
   };
 
   const handleCopy = async () => {
@@ -55,19 +56,18 @@ export function CandidatesRowActions({
   };
 
   return (
-    <div className="relative flex shrink-0 items-center gap-0.5" ref={menuRef}>
+    <div className="relative flex shrink-0 items-center gap-1.5" ref={menuRef}>
       {showViewButton ? (
         <button
           type="button"
-          aria-label={`View ${application.candidateName}`}
           onClick={handleView}
           className={cn(
-            "inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors",
-            "hover:bg-hero-bg hover:text-foreground",
+            "inline-flex h-8 items-center justify-center rounded-lg border border-primary/30 px-2.5 text-[11px] font-semibold text-primary transition-colors",
+            "hover:bg-primary-light",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
           )}
         >
-          <Eye className="size-3.5" aria-hidden="true" />
+          View Profile
         </button>
       ) : null}
       <button
@@ -95,8 +95,7 @@ export function CandidatesRowActions({
             onClick={handleView}
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-primary-light hover:text-primary"
           >
-            <Eye className="size-3.5 shrink-0" aria-hidden="true" />
-            View Candidate
+            View Profile
           </button>
           <button
             type="button"

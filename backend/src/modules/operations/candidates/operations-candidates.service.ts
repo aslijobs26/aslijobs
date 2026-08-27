@@ -1,4 +1,8 @@
 import mongoose from "mongoose";
+import {
+  JOB_SEEKER_AVAILABILITY_STATUS_LABELS,
+  JOB_SEEKER_JOB_ROLES,
+} from "../../../constants/job-seeker.constants.js";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
 import { buildListPagination } from "../../../utils/pagination.js";
@@ -16,13 +20,20 @@ import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-i
 import { EmployerModel } from "../../employers/employer.model.js";
 import { JobModel } from "../../jobs/job.model.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
+import { calculateProfileCompleteness } from "../../resumes/utils/profile-completeness.js";
 import type {
+  ListOperationsCandidateApplicationsQuery,
   ListOperationsCandidatesQuery,
 } from "./operations-candidates.validation.js";
 import type {
+  OperationsCandidateApplicationItem,
+  OperationsCandidateApplicationsResult,
   OperationsCandidateDatePreset,
   OperationsCandidateDetail,
+  OperationsCandidateEducation,
+  OperationsCandidateExperienceEntry,
   OperationsCandidateListItem,
+  OperationsCandidateProfileStatus,
   OperationsCandidatesFilterOptions,
   OperationsCandidatesInsight,
   OperationsCandidatesKpis,
@@ -61,12 +72,54 @@ const NEEDS_REVIEW_STATUSES: ApplicationStatus[] = [
   "under_review",
 ];
 
+const EDUCATION_LEVEL_LABELS: Record<string, string> = {
+  no_formal_education: "No Formal Education",
+  below_10th: "Below 10th",
+  "10th_pass": "10th Pass",
+  intermediate: "Intermediate",
+  iti: "ITI",
+  diploma: "Diploma",
+  graduation: "Graduation",
+  post_graduation: "Post Graduation",
+};
+
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function splitCsv(value: unknown): string[] {
+  const raw = text(value);
+  if (!raw) {
+    return [];
+  }
+  return raw
+    .split(/[,;/|]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function titleCaseToken(value: string): string {
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function profileStatusFromRegistration(
+  registrationStatus: string | null | undefined,
+): OperationsCandidateProfileStatus {
+  return registrationStatus === "COMPLETED" ? "complete" : "incomplete";
+}
+
+function profileStatusLabel(
+  status: OperationsCandidateProfileStatus,
+): string {
+  return status === "complete" ? "Complete" : "Incomplete";
 }
 
 /**
@@ -226,6 +279,36 @@ function statusesForTab(tab: OperationsCandidateTab): ApplicationStatus[] | null
   }
 }
 
+const EXPERIENCE_NOT_SPECIFIED_LABEL = "Not specified";
+
+function experienceLabelFromSeeker(jobSeeker: {
+  experienceType?: string | null;
+  experiences?: Array<{ duration?: string }> | null;
+}): string {
+  // Fresher selection always wins — do not show preferred role or other fields.
+  if (jobSeeker.experienceType === "fresher") {
+    return "Fresher";
+  }
+
+  const experiences = Array.isArray(jobSeeker.experiences)
+    ? jobSeeker.experiences
+    : [];
+  // Prefer the duration they entered (e.g. "3 years").
+  const duration = experiences
+    .map((item) => text(item.duration))
+    .find(Boolean);
+  if (duration) {
+    return duration;
+  }
+
+  // Experienced selected (or experience entries exist) but no duration text.
+  if (jobSeeker.experienceType === "experienced" || experiences.length > 0) {
+    return "Experienced";
+  }
+
+  return "";
+}
+
 function candidateFromSources(
   snapshot: ApplicationResumeSnapshot | null,
   jobSeeker: {
@@ -237,6 +320,8 @@ function candidateFromSources(
     skills?: string[];
     gender?: string | null;
     experienceType?: string | null;
+    experiences?: Array<{ duration?: string }> | null;
+    jobRole?: string | null;
     profilePhoto?: { url?: string } | null;
     createdAt?: Date;
   } | null,
@@ -264,12 +349,18 @@ function candidateFromSources(
     text(header?.location);
   const headline =
     text(sections?.professionalHeadline) || text(header?.headline);
-  const experienceLabel = sections?.isFresher
+  // Prefer live seeker profile experience. Never fall back to preferred role
+  // (jobRole) or headline — those belong in other columns.
+  const seekerExperienceLabel = jobSeeker
+    ? experienceLabelFromSeeker(jobSeeker)
+    : "";
+  const resumeExperienceLabel = sections?.isFresher
     ? "Fresher"
-    : text(sections?.experienceLabel) ||
-      (jobSeeker?.experienceType === "fresher" ? "Fresher" : "") ||
-      headline ||
-      "Experienced";
+    : text(sections?.experienceLabel);
+  const experienceLabel =
+    seekerExperienceLabel ||
+    resumeExperienceLabel ||
+    EXPERIENCE_NOT_SPECIFIED_LABEL;
   const skills = Array.isArray(sections?.skills)
     ? sections.skills.map((item) => text(item)).filter(Boolean)
     : Array.isArray(jobSeeker?.skills)
@@ -301,35 +392,264 @@ function percentOf(part: number, total: number): number | null {
   return Math.round((part / total) * 1000) / 10;
 }
 
-async function loadFilterOptions(): Promise<OperationsCandidatesFilterOptions> {
-  const [jobRows, employerRows, locationRows, genderRows] = await Promise.all([
-    JobModel.find({ status: "active" })
-      .select("jobId jobTitle")
-      .sort({ updatedAt: -1 })
-      .limit(300)
-      .lean(),
-    EmployerModel.find({})
-      .select("companyName establishmentName")
-      .sort({ updatedAt: -1 })
-      .limit(300)
-      .lean(),
-    ApplicationModel.aggregate<{ _id: string }>([
-      {
-        $group: {
-          _id: {
-            $ifNull: [
-              "$resumeSnapshot.resumeJson.header.city",
-              "$resumeSnapshot.resumeJson.sections.contact.city",
-            ],
+function mapEducation(
+  education: Record<string, unknown> | null | undefined,
+): OperationsCandidateEducation {
+  if (!education || typeof education !== "object") {
+    return null;
+  }
+
+  const level = text(education.level);
+  if (!level) {
+    return null;
+  }
+
+  return {
+    level,
+    levelLabel: EDUCATION_LEVEL_LABELS[level] || titleCaseToken(level),
+    schoolName: text(education.schoolName),
+    collegeName: text(education.collegeName),
+    instituteName: text(education.instituteName),
+    board: text(education.board),
+    stream: text(education.stream),
+    trade: text(education.trade),
+    branch: text(education.branch),
+    degree: text(education.degree),
+    specialization: text(education.specialization),
+    passingYear: text(education.passingYear),
+    percentage: text(education.percentage),
+    cgpa: text(education.cgpa),
+  };
+}
+
+function mapExperiences(
+  experiences: unknown,
+): OperationsCandidateExperienceEntry[] {
+  if (!Array.isArray(experiences)) {
+    return [];
+  }
+
+  return experiences.map((entry) => {
+    const row = (entry ?? {}) as Record<string, unknown>;
+    return {
+      companyName: text(row.companyName),
+      jobRole: text(row.jobRole),
+      industry: text(row.industry),
+      startDate: text(row.startDate),
+      endDate: text(row.endDate),
+      currentlyWorking: Boolean(row.currentlyWorking),
+      duration: text(row.duration),
+      salary: text(row.salary),
+      location: text(row.location),
+      responsibilities: text(row.responsibilities),
+      achievements: text(row.achievements),
+    };
+  });
+}
+
+function formatLocationLabel(value: string): string {
+  return value
+    .split(",")
+    .map((part) => titleCaseToken(part.trim()))
+    .filter(Boolean)
+    .join(", ");
+}
+
+/** Same formula used for list display, filter options, and location matching. */
+function buildSeekerLocationLabel(input: {
+  city?: string | null;
+  state?: string | null;
+  preferredJobLocation?: string | null;
+}): string {
+  const city = text(input.city);
+  const state = text(input.state);
+  const preferred = text(input.preferredJobLocation);
+  const fromCityState = [city, state].filter(Boolean).join(", ");
+  return fromCityState || preferred;
+}
+
+/**
+ * Case-insensitive exact match against the canonical seeker location label.
+ * Avoids mismatched "City, State" options that previously regex-matched city/state separately.
+ */
+function buildLocationFilterClause(locationFilter: string): Record<string, unknown> {
+  const needle = locationFilter.trim().toLowerCase();
+  return {
+    $expr: {
+      $eq: [
+        {
+          $toLower: {
+            $let: {
+              vars: {
+                city: {
+                  $trim: { input: { $ifNull: ["$city", ""] } },
+                },
+                state: {
+                  $trim: { input: { $ifNull: ["$state", ""] } },
+                },
+                preferred: {
+                  $trim: {
+                    input: { $ifNull: ["$preferredJobLocation", ""] },
+                  },
+                },
+              },
+              in: {
+                $let: {
+                  vars: {
+                    cityState: {
+                      $trim: {
+                        input: {
+                          $cond: [
+                            {
+                              $and: [
+                                { $ne: ["$$city", ""] },
+                                { $ne: ["$$state", ""] },
+                              ],
+                            },
+                            { $concat: ["$$city", ", ", "$$state"] },
+                            {
+                              $cond: [
+                                { $ne: ["$$city", ""] },
+                                "$$city",
+                                {
+                                  $cond: [
+                                    { $ne: ["$$state", ""] },
+                                    "$$state",
+                                    "",
+                                  ],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  in: {
+                    $cond: [
+                      { $ne: ["$$cityState", ""] },
+                      "$$cityState",
+                      "$$preferred",
+                    ],
+                  },
+                },
+              },
+            },
           },
         },
-      },
-      { $match: { _id: { $nin: [null, ""] } } },
-      { $sort: { _id: 1 } },
-      { $limit: 200 },
+        needle,
+      ],
+    },
+  };
+}
+
+async function loadFilterOptions(): Promise<OperationsCandidatesFilterOptions> {
+  const [jobRows, employerRows, locationRows, genderRows, roleRows] =
+    await Promise.all([
+      JobModel.find({ status: "active" })
+        .select("jobId jobTitle")
+        .sort({ updatedAt: -1 })
+        .limit(300)
+        .lean(),
+      EmployerModel.find({})
+        .select("companyName establishmentName")
+        .sort({ updatedAt: -1 })
+        .limit(300)
+        .lean(),
+      JobSeekerModel.aggregate<{ label: string }>([
+        {
+          $project: {
+            city: { $trim: { input: { $ifNull: ["$city", ""] } } },
+            state: { $trim: { input: { $ifNull: ["$state", ""] } } },
+            preferred: {
+              $trim: { input: { $ifNull: ["$preferredJobLocation", ""] } },
+            },
+          },
+        },
+        {
+          $project: {
+            locationLabel: {
+              $let: {
+                vars: {
+                  cityState: {
+                    $trim: {
+                      input: {
+                        $cond: [
+                          {
+                            $and: [
+                              { $ne: ["$city", ""] },
+                              { $ne: ["$state", ""] },
+                            ],
+                          },
+                          { $concat: ["$city", ", ", "$state"] },
+                          {
+                            $cond: [
+                              { $ne: ["$city", ""] },
+                              "$city",
+                              {
+                                $cond: [
+                                  { $ne: ["$state", ""] },
+                                  "$state",
+                                  "",
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+                in: {
+                  $cond: [
+                    { $ne: ["$$cityState", ""] },
+                    "$$cityState",
+                    "$preferred",
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $match: {
+            locationLabel: { $nin: [null, ""] },
+          },
+        },
+        {
+          $group: {
+            _id: { $toLower: "$locationLabel" },
+            label: { $first: "$locationLabel" },
+          },
+        },
+        { $sort: { label: 1 } },
+        { $limit: 200 },
+      ]),
+      JobSeekerModel.distinct("gender"),
+      JobSeekerModel.distinct("jobRole"),
+    ]);
+
+  const preferredRoles = [
+    ...new Set([
+      ...JOB_SEEKER_JOB_ROLES,
+      ...roleRows.map((value) => text(value)).filter(Boolean),
     ]),
-    JobSeekerModel.distinct("gender"),
-  ]);
+  ].sort((a, b) => a.localeCompare(b));
+
+  const locations = [
+    ...new Map(
+      locationRows
+        .map((row) => {
+          const raw = text(row.label);
+          if (!raw) {
+            return null;
+          }
+          const label = formatLocationLabel(raw);
+          return [label.toLowerCase(), label] as const;
+        })
+        .filter((entry): entry is readonly [string, string] => entry != null),
+    ).values(),
+  ].sort((a, b) => a.localeCompare(b));
 
   return {
     jobs: jobRows
@@ -347,11 +667,14 @@ async function loadFilterOptions(): Promise<OperationsCandidatesFilterOptions> {
           "Employer",
       }))
       .filter((item) => item.value && item.label),
-    locations: locationRows
-      .map((row) => String(row._id ?? "").trim())
-      .filter(Boolean),
+    locations,
     experienceLevels: ["Fresher", "Experienced"],
     genders: genderRows.map((value) => String(value ?? "").trim()).filter(Boolean),
+    preferredRoles,
+    profileStatuses: [
+      { value: "complete", label: "Complete" },
+      { value: "incomplete", label: "Incomplete" },
+    ],
   };
 }
 
@@ -371,23 +694,31 @@ async function loadSummary(now: Date): Promise<{
 
   const [
     totalCandidates,
+    newCandidatesToday,
     newThisWeek,
     newPrevWeek,
+    activeCandidates,
     statusCounts,
+    withApplications,
     applicationsToday,
     applicationsNeedsReview,
     seekersNoActiveApp,
   ] = await Promise.all([
     JobSeekerModel.countDocuments({}),
     JobSeekerModel.countDocuments({
+      createdAt: { $gte: startToday, $lte: endToday },
+    }),
+    JobSeekerModel.countDocuments({
       createdAt: { $gte: start7, $lte: endToday },
     }),
     JobSeekerModel.countDocuments({
       createdAt: { $gte: startPrev7, $lte: endPrev7 },
     }),
+    JobSeekerModel.countDocuments({ registrationStatus: "COMPLETED" }),
     ApplicationModel.aggregate<{ _id: string; count: number }>([
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]),
+    ApplicationModel.distinct("jobSeekerId").then((ids) => ids.length),
     ApplicationModel.countDocuments({
       appliedAt: { $gte: startToday, $lte: endToday },
     }),
@@ -436,6 +767,7 @@ async function loadSummary(now: Date): Promise<{
   const applied = countStatuses(APPLIED_TAB_STATUSES);
   const underReview = byStatus.get("under_review") ?? 0;
   const interview = countStatuses(INTERVIEW_TAB_STATUSES);
+  const withoutApplications = Math.max(0, totalCandidates - withApplications);
 
   const weekChange =
     newPrevWeek > 0
@@ -446,12 +778,18 @@ async function loadSummary(now: Date): Promise<{
 
   const kpis: OperationsCandidatesKpis = {
     totalCandidates,
+    newCandidatesToday,
     newThisWeek,
     newThisWeekChangePercent: weekChange,
-    activeApplications,
+    activeCandidates,
+    withApplications,
+    withApplicationsPercent: percentOf(withApplications, totalCandidates),
+    withoutApplications,
+    withoutApplicationsPercent: percentOf(withoutApplications, totalCandidates),
     shortlisted,
-    shortlistedPercent: percentOf(shortlisted, totalCandidates),
     hired,
+    activeApplications,
+    shortlistedPercent: percentOf(shortlisted, totalCandidates),
     hiredPercent: percentOf(hired, totalCandidates),
     rejected,
     rejectedPercent: percentOf(rejected, totalCandidates),
@@ -471,9 +809,7 @@ async function loadSummary(now: Date): Promise<{
     {
       id: "new-today",
       label: "New candidates today",
-      count: await JobSeekerModel.countDocuments({
-        createdAt: { $gte: startToday, $lte: endToday },
-      }),
+      count: newCandidatesToday,
       datePreset: "today",
     },
     {
@@ -522,41 +858,76 @@ async function loadPeriodStats(input: {
   dateTo: string;
 }): Promise<OperationsCandidatesPeriodStats> {
   const range = resolveDateRange(input);
+
   if (!range.from && !range.to) {
-    const [candidatesRegistered, applicationsReceived] = await Promise.all([
-      JobSeekerModel.estimatedDocumentCount(),
-      ApplicationModel.estimatedDocumentCount(),
-    ]);
+    const [candidatesRegistered, withApplications, profilesIncomplete, recentlyActive] =
+      await Promise.all([
+        JobSeekerModel.estimatedDocumentCount(),
+        ApplicationModel.distinct("jobSeekerId").then((ids) => ids.length),
+        JobSeekerModel.countDocuments({
+          registrationStatus: { $ne: "COMPLETED" },
+        }),
+        JobSeekerModel.countDocuments({ lastLoginAt: { $ne: null } }),
+      ]);
+
     return {
       preset: "all",
       from: null,
       to: null,
       candidatesRegistered,
-      applicationsReceived,
+      withApplications,
+      profilesIncomplete,
+      recentlyActive,
+      applicationsReceived: withApplications,
     };
   }
 
   const createdAt: Record<string, Date> = {};
-  const appliedAt: Record<string, Date> = {};
+  const lastLoginAt: Record<string, Date> = {};
   if (range.from) {
     createdAt.$gte = range.from;
-    appliedAt.$gte = range.from;
+    lastLoginAt.$gte = range.from;
   }
   if (range.to) {
     createdAt.$lte = range.to;
-    appliedAt.$lte = range.to;
+    lastLoginAt.$lte = range.to;
   }
 
-  const [candidatesRegistered, applicationsReceived] = await Promise.all([
-    JobSeekerModel.countDocuments({ createdAt }),
-    ApplicationModel.countDocuments({ appliedAt }),
-  ]);
+  const registeredSeekers = await JobSeekerModel.find({ createdAt })
+    .select("_id registrationStatus")
+    .lean();
+  const registeredIds = registeredSeekers.map(
+    (row) => row._id as mongoose.Types.ObjectId,
+  );
+
+  const [withApplications, recentlyActive, applicationsReceived] =
+    await Promise.all([
+      registeredIds.length === 0
+        ? Promise.resolve(0)
+        : ApplicationModel.distinct("jobSeekerId", {
+            jobSeekerId: { $in: registeredIds },
+          }).then((ids) => ids.length),
+      JobSeekerModel.countDocuments({ lastLoginAt }),
+      ApplicationModel.countDocuments({
+        appliedAt: {
+          ...(range.from ? { $gte: range.from } : {}),
+          ...(range.to ? { $lte: range.to } : {}),
+        },
+      }),
+    ]);
+
+  const profilesIncomplete = registeredSeekers.filter(
+    (row) => row.registrationStatus !== "COMPLETED",
+  ).length;
 
   return {
     preset: range.preset,
     from: range.from?.toISOString() ?? null,
     to: range.to?.toISOString() ?? null,
-    candidatesRegistered,
+    candidatesRegistered: registeredSeekers.length,
+    withApplications,
+    profilesIncomplete,
+    recentlyActive,
     applicationsReceived,
   };
 }
@@ -667,14 +1038,14 @@ async function findSeekerIdsMatchingApplicationSearch(
       });
 
   const suffixAggregations =
-    idToken && idToken.length >= 8 && idToken.length < 24
+    idToken && idToken.length < 24
       ? ApplicationModel.aggregate<{ jobSeekerId: mongoose.Types.ObjectId }>([
-          { $match: buildObjectIdSuffixMatch("jobSeekerId", idToken) },
-          { $project: { jobSeekerId: 1 } },
+          {
+            $match: buildObjectIdSuffixMatch("jobSeekerId", idToken),
+          },
+          { $group: { _id: "$jobSeekerId", jobSeekerId: { $first: "$jobSeekerId" } } },
         ])
-      : Promise.resolve(
-          [] as Array<{ jobSeekerId: mongoose.Types.ObjectId }>,
-        );
+      : Promise.resolve([] as Array<{ jobSeekerId: mongoose.Types.ObjectId }>);
 
   const fullIdMatches =
     idToken && idToken.length === 24
@@ -760,14 +1131,22 @@ function buildSeekerMatch(
   }
 
   if (query.location.trim()) {
-    const pattern = escapeRegex(query.location.trim());
+    andClauses.push(buildLocationFilterClause(query.location));
+  }
+
+  if (query.preferredRole.trim()) {
     andClauses.push({
-      $or: [
-        { city: { $regex: pattern, $options: "i" } },
-        { state: { $regex: pattern, $options: "i" } },
-        { preferredJobLocation: { $regex: pattern, $options: "i" } },
-      ],
+      jobRole: {
+        $regex: escapeRegex(query.preferredRole.trim()),
+        $options: "i",
+      },
     });
+  }
+
+  if (query.profileStatus === "complete") {
+    andClauses.push({ registrationStatus: "COMPLETED" });
+  } else if (query.profileStatus === "incomplete") {
+    andClauses.push({ registrationStatus: { $ne: "COMPLETED" } });
   }
 
   const search = query.search.trim();
@@ -785,7 +1164,6 @@ function buildSeekerMatch(
       searchOr.push({ _id: { $in: searchMatchedSeekerIds } });
     }
 
-    // Only add the $or clause when at least one branch exists.
     if (searchOr.length > 0) {
       andClauses.push({ $or: searchOr });
     }
@@ -853,8 +1231,13 @@ type SeekerListRow = {
   skills?: string[];
   gender?: string | null;
   experienceType?: string | null;
+  experiences?: Array<{ duration?: string }> | null;
+  jobRole?: string | null;
+  registrationStatus?: string;
+  lastLoginAt?: Date | null;
   profilePhoto?: { url?: string } | null;
   createdAt?: Date;
+  applicationCount?: number;
   app?: {
     _id: mongoose.Types.ObjectId;
     publicJobId?: string;
@@ -889,6 +1272,8 @@ function toListItemFromSeeker(row: SeekerListRow): OperationsCandidateListItem {
     skills: row.skills,
     gender: row.gender,
     experienceType: row.experienceType,
+    experiences: row.experiences,
+    jobRole: row.jobRole,
     profilePhoto: row.profilePhoto,
     createdAt: row.createdAt,
   });
@@ -900,23 +1285,43 @@ function toListItemFromSeeker(row: SeekerListRow): OperationsCandidateListItem {
     "";
 
   const hasApplication = Boolean(app?._id);
+  const preferredRoles = splitCsv(row.jobRole);
+  const profileStatus = profileStatusFromRegistration(row.registrationStatus);
+  const applicationCount =
+    typeof row.applicationCount === "number"
+      ? row.applicationCount
+      : hasApplication
+        ? 1
+        : 0;
+
+  const seekerLocation = buildSeekerLocationLabel({
+    city: row.city,
+    state: row.state,
+    preferredJobLocation: row.preferredJobLocation,
+  });
 
   return {
-    id: row._id.toString(),
+    id: String(row._id),
     applicationId: app?._id ? String(app._id) : null,
-    jobSeekerId: row._id.toString(),
+    jobSeekerId: String(row._id),
     candidateName: candidate.fullName,
     candidatePhone: candidate.phone,
     candidateEmail: candidate.email,
     candidateHeadline: candidate.headline,
     candidateExperienceLabel: candidate.experienceLabel,
-    candidateLocation: candidate.location,
+    candidateLocation: seekerLocation || candidate.location,
     candidateSkills: candidate.skills.slice(0, 6),
     candidateGender: candidate.gender,
     profilePhotoUrl: candidate.profilePhotoUrl,
+    preferredRoles,
+    applicationCount,
+    profileStatus,
+    profileStatusLabel: profileStatusLabel(profileStatus),
+    registrationStatus: text(row.registrationStatus) || "PENDING",
+    lastActiveAt: row.lastLoginAt ? row.lastLoginAt.toISOString() : null,
     publicJobId: text(app?.publicJobId),
-    jobTitle: row.job?.jobTitle?.trim() || (hasApplication ? "Job" : ""),
-    employerId: row.employer?._id ? String(row.employer._id) : "",
+    jobTitle: text(row.job?.jobTitle),
+    employerId: app?.employerId ? String(app.employerId) : "",
     employerName: employerName || (hasApplication ? "Employer" : ""),
     employerLogoUrl: row.employer
       ? resolveEmployerPosterImageUrl(row.employer)
@@ -935,61 +1340,160 @@ function toListItemFromSeeker(row: SeekerListRow): OperationsCandidateListItem {
   };
 }
 
-function toListItem(row: {
-  _id: mongoose.Types.ObjectId;
-  jobSeekerId?: mongoose.Types.ObjectId;
-  publicJobId: string;
-  status: ApplicationStatus | string;
-  resumeSnapshot: unknown;
-  appliedAt: Date;
-  job?: {
-    jobTitle?: string;
-    companyName?: string;
-  };
-  employer?: {
-    _id?: mongoose.Types.ObjectId;
-    companyName?: string;
-    establishmentName?: string;
-    companyLogo?: { url?: string } | null;
-    profilePhoto?: { url?: string } | null;
-    isWhatsappVerified?: boolean;
-    registrationStatus?: string;
-  };
-  jobSeekerDoc?: {
-    fullName?: string;
-    whatsappNumber?: string;
-    city?: string;
-    state?: string;
-    preferredJobLocation?: string;
-    skills?: string[];
-    gender?: string | null;
-    experienceType?: string | null;
-    profilePhoto?: { url?: string } | null;
+function buildDetailFromSeeker(input: {
+  jobSeeker: Record<string, unknown> & {
+    _id: mongoose.Types.ObjectId;
     createdAt?: Date;
+    lastLoginAt?: Date | null;
+    profilePhoto?: { url?: string } | null;
+    uploadedResume?: {
+      url?: string;
+      originalName?: string;
+    } | null;
+    education?: Record<string, unknown> | null;
+    experiences?: unknown;
+    languages?: string[];
+  };
+  listItem: OperationsCandidateListItem;
+  applicationCount: number;
+  shortlistedCount: number;
+  latestApplication?: {
+    resumeVersion?: number;
+    resumeStatus?: string;
+    statusHistory?: Array<{
+      status?: string;
+      at?: Date | string;
+      actorType?: string;
+    }>;
+    resumeSnapshot?: unknown;
   } | null;
-}): OperationsCandidateListItem {
-  return toListItemFromSeeker({
-    _id: row.jobSeekerId ?? row._id,
-    fullName: row.jobSeekerDoc?.fullName,
-    whatsappNumber: row.jobSeekerDoc?.whatsappNumber,
-    city: row.jobSeekerDoc?.city,
-    state: row.jobSeekerDoc?.state,
-    preferredJobLocation: row.jobSeekerDoc?.preferredJobLocation,
-    skills: row.jobSeekerDoc?.skills,
-    gender: row.jobSeekerDoc?.gender,
-    experienceType: row.jobSeekerDoc?.experienceType,
-    profilePhoto: row.jobSeekerDoc?.profilePhoto,
-    createdAt: row.jobSeekerDoc?.createdAt,
-    app: {
-      _id: row._id,
-      publicJobId: row.publicJobId,
-      status: row.status,
-      resumeSnapshot: row.resumeSnapshot,
-      appliedAt: row.appliedAt,
-    },
-    job: row.job,
-    employer: row.employer,
+  jobCompanyName?: string;
+  descriptionExcerpt?: string;
+}): OperationsCandidateDetail {
+  const { jobSeeker, listItem } = input;
+  const completeness = calculateProfileCompleteness({
+    fullName: text(jobSeeker.fullName),
+    whatsappNumber: text(jobSeeker.whatsappNumber),
+    dateOfBirth: (jobSeeker.dateOfBirth as Date | string | null) ?? null,
+    gender: (jobSeeker.gender as string | null) ?? null,
+    pincode: text(jobSeeker.pincode),
+    city: text(jobSeeker.city),
+    state: text(jobSeeker.state),
+    jobRole: text(jobSeeker.jobRole),
+    jobType: (jobSeeker.jobType as string | null) ?? null,
+    workMode: (jobSeeker.workMode as string | null) ?? null,
+    preferredJobLocation: text(jobSeeker.preferredJobLocation),
+    expectedSalary: (jobSeeker.expectedSalary as number | null) ?? null,
+    expectedSalaryPeriod:
+      (jobSeeker.expectedSalaryPeriod as string | null) ?? null,
+    education: jobSeeker.education ?? null,
+    experienceType: (jobSeeker.experienceType as string | null) ?? null,
+    experiences: Array.isArray(jobSeeker.experiences)
+      ? jobSeeker.experiences
+      : [],
+    languages: Array.isArray(jobSeeker.languages) ? jobSeeker.languages : [],
+    professionalSummary: text(jobSeeker.professionalSummary),
+    skills: Array.isArray(jobSeeker.skills)
+      ? (jobSeeker.skills as string[])
+      : [],
   });
+
+  const availabilityStatus = text(jobSeeker.availabilityStatus);
+  const availabilityLabel =
+    availabilityStatus &&
+    availabilityStatus in JOB_SEEKER_AVAILABILITY_STATUS_LABELS
+      ? JOB_SEEKER_AVAILABILITY_STATUS_LABELS[
+          availabilityStatus as keyof typeof JOB_SEEKER_AVAILABILITY_STATUS_LABELS
+        ]
+      : availabilityStatus
+        ? titleCaseToken(availabilityStatus)
+        : "";
+
+  const history = Array.isArray(input.latestApplication?.statusHistory)
+    ? input.latestApplication.statusHistory.map((entry) => ({
+        status: String(entry.status ?? ""),
+        statusLabel: statusLabel(String(entry.status ?? "")),
+        at:
+          entry.at instanceof Date
+            ? entry.at.toISOString()
+            : entry.at
+              ? new Date(entry.at).toISOString()
+              : "",
+        actor: String(entry.actorType ?? "system"),
+      }))
+    : [];
+
+  const snapshotSkills = candidateFromSources(
+    asSnapshot(input.latestApplication?.resumeSnapshot),
+    {
+      fullName: text(jobSeeker.fullName),
+      whatsappNumber: text(jobSeeker.whatsappNumber),
+      city: text(jobSeeker.city),
+      state: text(jobSeeker.state),
+      preferredJobLocation: text(jobSeeker.preferredJobLocation),
+      skills: Array.isArray(jobSeeker.skills)
+        ? (jobSeeker.skills as string[])
+        : [],
+      gender: (jobSeeker.gender as string | null) ?? null,
+      experienceType: (jobSeeker.experienceType as string | null) ?? null,
+      experiences: mapExperiences(jobSeeker.experiences),
+      jobRole: text(jobSeeker.jobRole),
+      profilePhoto: jobSeeker.profilePhoto,
+      createdAt: jobSeeker.createdAt,
+    },
+  ).skills;
+
+  return {
+    ...listItem,
+    applicationCount: input.applicationCount,
+    shortlistedCount: input.shortlistedCount,
+    candidateCity: text(jobSeeker.city),
+    candidateState: text(jobSeeker.state),
+    candidatePincode: text(jobSeeker.pincode),
+    dateOfBirth:
+      jobSeeker.dateOfBirth instanceof Date
+        ? jobSeeker.dateOfBirth.toISOString()
+        : jobSeeker.dateOfBirth
+          ? new Date(String(jobSeeker.dateOfBirth)).toISOString()
+          : null,
+    skills:
+      Array.isArray(jobSeeker.skills) && jobSeeker.skills.length > 0
+        ? (jobSeeker.skills as string[]).map((item) => text(item)).filter(Boolean)
+        : snapshotSkills,
+    professionalSummary: text(jobSeeker.professionalSummary),
+    education: mapEducation(jobSeeker.education),
+    experiences: mapExperiences(jobSeeker.experiences),
+    languages: Array.isArray(jobSeeker.languages)
+      ? jobSeeker.languages.map((item) => titleCaseToken(String(item)))
+      : [],
+    preferredLocations: splitCsv(jobSeeker.preferredJobLocation),
+    preferredRoles: splitCsv(jobSeeker.jobRole),
+    jobType: text(jobSeeker.jobType)
+      ? titleCaseToken(text(jobSeeker.jobType))
+      : "",
+    workMode: text(jobSeeker.workMode)
+      ? titleCaseToken(text(jobSeeker.workMode))
+      : "",
+    expectedSalary:
+      typeof jobSeeker.expectedSalary === "number"
+        ? jobSeeker.expectedSalary
+        : null,
+    expectedSalaryPeriod: text(jobSeeker.expectedSalaryPeriod) || "per-month",
+    availabilityStatus,
+    availabilityLabel,
+    willingToTravel: null,
+    willingToRelocate: null,
+    workShiftPreference: null,
+    profileCompletionPercent: completeness.percent,
+    uploadedResumeUrl: text(jobSeeker.uploadedResume?.url),
+    uploadedResumeName: text(jobSeeker.uploadedResume?.originalName),
+    jobCompanyName: input.jobCompanyName ?? listItem.employerName,
+    resumeVersion: input.latestApplication?.resumeVersion ?? 0,
+    resumeStatus: text(input.latestApplication?.resumeStatus),
+    statusHistory: history,
+    descriptionExcerpt: input.descriptionExcerpt ?? "",
+    notesCount: 0,
+  };
 }
 
 export const operationsCandidatesService = {
@@ -1016,6 +1520,33 @@ export const operationsCandidatesService = {
 
     const pipeline: mongoose.PipelineStage[] = [
       { $match: seekerMatch },
+      {
+        $lookup: {
+          from: "applications",
+          let: { seekerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: [
+                    { $toString: "$jobSeekerId" },
+                    { $toString: "$$seekerId" },
+                  ],
+                },
+              },
+            },
+            { $count: "count" },
+          ],
+          as: "applicationCountRows",
+        },
+      },
+      {
+        $addFields: {
+          applicationCount: {
+            $ifNull: [{ $arrayElemAt: ["$applicationCountRows.count", 0] }, 0],
+          },
+        },
+      },
       {
         $lookup: {
           from: "applications",
@@ -1072,9 +1603,9 @@ export const operationsCandidatesService = {
       }>(pipeline),
       loadSummary(now),
       loadPeriodStats({
-        datePreset: query.datePreset,
-        dateFrom: query.dateFrom,
-        dateTo: query.dateTo,
+        datePreset: query.analyticsPreset || query.datePreset,
+        dateFrom: query.analyticsFrom || query.dateFrom,
+        dateTo: query.analyticsTo || query.dateTo,
       }),
       loadFilterOptions(),
     ]);
@@ -1103,56 +1634,192 @@ export const operationsCandidatesService = {
       throw new AppError("Candidate not found.", HTTP_STATUS.NOT_FOUND);
     }
 
-    const jobSeeker = await JobSeekerModel.findById(jobSeekerId)
-      .select(
-        "fullName whatsappNumber city state preferredJobLocation skills gender experienceType profilePhoto createdAt",
-      )
-      .lean();
+    const jobSeeker = await JobSeekerModel.findById(jobSeekerId).lean();
 
     if (!jobSeeker) {
       throw new AppError("Candidate not found.", HTTP_STATUS.NOT_FOUND);
     }
 
-    const application = await ApplicationModel.findOne({
-      jobSeekerId: jobSeeker._id,
-    })
-      .sort({ appliedAt: -1 })
-      .lean();
+    const [applicationCount, shortlistedCount, latestApplication] =
+      await Promise.all([
+        ApplicationModel.countDocuments({ jobSeekerId: jobSeeker._id }),
+        ApplicationModel.countDocuments({
+          jobSeekerId: jobSeeker._id,
+          status: { $in: SHORTLISTED_TAB_STATUSES },
+        }),
+        ApplicationModel.findOne({ jobSeekerId: jobSeeker._id })
+          .sort({ appliedAt: -1 })
+          .lean(),
+      ]);
 
-    if (!application) {
-      const listItem = toListItemFromSeeker({
-        _id: jobSeeker._id as mongoose.Types.ObjectId,
-        fullName: jobSeeker.fullName,
-        whatsappNumber: jobSeeker.whatsappNumber,
-        city: jobSeeker.city,
-        state: jobSeeker.state,
-        preferredJobLocation: jobSeeker.preferredJobLocation,
-        skills: jobSeeker.skills,
-        gender: jobSeeker.gender,
-        experienceType: jobSeeker.experienceType,
-        profilePhoto: jobSeeker.profilePhoto,
-        createdAt: jobSeeker.createdAt,
-        app: null,
-        job: null,
-        employer: null,
-      });
+    let job: {
+      jobTitle?: string;
+      companyName?: string;
+      description?: string;
+    } | null = null;
+    let employer: {
+      _id?: mongoose.Types.ObjectId;
+      companyName?: string;
+      establishmentName?: string;
+      companyLogo?: { url?: string } | null;
+      profilePhoto?: { url?: string } | null;
+      isWhatsappVerified?: boolean;
+      registrationStatus?: string;
+    } | null = null;
 
-      const candidate = candidateFromSources(null, jobSeeker);
-
-      return {
-        ...listItem,
-        candidateCity: candidate.city,
-        candidateState: candidate.state,
-        skills: candidate.skills,
-        jobCompanyName: "",
-        resumeVersion: 0,
-        resumeStatus: "",
-        statusHistory: [],
-        descriptionExcerpt: "",
-      };
+    if (latestApplication) {
+      const [jobDoc, employerDoc] = await Promise.all([
+        JobModel.findById(latestApplication.jobId)
+          .select("jobId jobTitle companyName description")
+          .lean(),
+        EmployerModel.findById(latestApplication.employerId)
+          .select(
+            "companyName establishmentName companyLogo profilePhoto isWhatsappVerified registrationStatus",
+          )
+          .lean(),
+      ]);
+      job = jobDoc;
+      employer = employerDoc;
     }
 
-    return this.getApplicationDetail(String(application._id));
+    const listItem = toListItemFromSeeker({
+      _id: jobSeeker._id as mongoose.Types.ObjectId,
+      fullName: jobSeeker.fullName,
+      whatsappNumber: jobSeeker.whatsappNumber,
+      city: jobSeeker.city,
+      state: jobSeeker.state,
+      preferredJobLocation: jobSeeker.preferredJobLocation,
+      skills: jobSeeker.skills,
+      gender: jobSeeker.gender,
+      experienceType: jobSeeker.experienceType,
+      experiences: jobSeeker.experiences,
+      jobRole: jobSeeker.jobRole,
+      registrationStatus: jobSeeker.registrationStatus,
+      lastLoginAt: jobSeeker.lastLoginAt,
+      profilePhoto: jobSeeker.profilePhoto,
+      createdAt: jobSeeker.createdAt,
+      applicationCount,
+      app: latestApplication
+        ? {
+            _id: latestApplication._id as mongoose.Types.ObjectId,
+            publicJobId: latestApplication.publicJobId,
+            status: latestApplication.status,
+            resumeSnapshot: latestApplication.resumeSnapshot,
+            appliedAt: latestApplication.appliedAt,
+            employerId: latestApplication.employerId as mongoose.Types.ObjectId,
+          }
+        : null,
+      job: job ?? null,
+      employer: employer ?? null,
+    });
+
+    return buildDetailFromSeeker({
+      jobSeeker: jobSeeker as typeof jobSeeker & Record<string, unknown>,
+      listItem,
+      applicationCount,
+      shortlistedCount,
+      latestApplication,
+      jobCompanyName: job?.companyName?.trim() || listItem.employerName,
+      descriptionExcerpt: text(job?.description).slice(0, 400),
+    });
+  },
+
+  async listSeekerApplications(
+    jobSeekerId: string,
+    query: ListOperationsCandidateApplicationsQuery,
+  ): Promise<OperationsCandidateApplicationsResult> {
+    if (!mongoose.Types.ObjectId.isValid(jobSeekerId)) {
+      throw new AppError("Candidate not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const seekerExists = await JobSeekerModel.exists({ _id: jobSeekerId });
+    if (!seekerExists) {
+      throw new AppError("Candidate not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const seekerObjectId = new mongoose.Types.ObjectId(jobSeekerId);
+
+    const pipeline: mongoose.PipelineStage[] = [
+      { $match: { jobSeekerId: seekerObjectId } },
+      { $sort: { appliedAt: -1 } },
+      {
+        $lookup: {
+          from: "jobs",
+          localField: "jobId",
+          foreignField: "_id",
+          as: "job",
+        },
+      },
+      { $unwind: { path: "$job", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "employers",
+          localField: "employerId",
+          foreignField: "_id",
+          as: "employer",
+        },
+      },
+      { $unwind: { path: "$employer", preserveNullAndEmptyArrays: true } },
+      {
+        $facet: {
+          items: [
+            { $skip: (query.page - 1) * query.limit },
+            { $limit: query.limit },
+          ],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const [facet] = await ApplicationModel.aggregate<{
+      items: Array<{
+        _id: mongoose.Types.ObjectId;
+        publicJobId?: string;
+        status?: ApplicationStatus | string;
+        appliedAt?: Date;
+        updatedAt?: Date;
+        employerId?: mongoose.Types.ObjectId;
+        job?: { jobTitle?: string };
+        employer?: {
+          companyName?: string;
+          establishmentName?: string;
+          isWhatsappVerified?: boolean;
+          registrationStatus?: string;
+        };
+      }>;
+      totalCount: Array<{ count: number }>;
+    }>(pipeline);
+
+    const total = facet?.totalCount?.[0]?.count ?? 0;
+    const applications: OperationsCandidateApplicationItem[] = (
+      facet?.items ?? []
+    ).map((app) => {
+      const employerName =
+        app.employer?.companyName?.trim() ||
+        app.employer?.establishmentName?.trim() ||
+        "Employer";
+
+      return {
+        id: String(app._id),
+        publicJobId: text(app.publicJobId),
+        jobTitle: text(app.job?.jobTitle) || "Job",
+        employerId: app.employerId ? String(app.employerId) : "",
+        employerName,
+        employerVerified: Boolean(
+          app.employer?.isWhatsappVerified ||
+            app.employer?.registrationStatus === "completed",
+        ),
+        status: app.status ?? "submitted",
+        statusLabel: statusLabel(String(app.status ?? "submitted")),
+        appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
+        updatedAt: app.updatedAt ? app.updatedAt.toISOString() : null,
+      };
+    });
+
+    return {
+      applications,
+      pagination: buildListPagination(query.page, query.limit, total),
+    };
   },
 
   async getApplicationDetail(
@@ -1167,67 +1834,6 @@ export const operationsCandidatesService = {
       throw new AppError("Application not found.", HTTP_STATUS.NOT_FOUND);
     }
 
-    const [job, employer, jobSeeker] = await Promise.all([
-      JobModel.findById(application.jobId)
-        .select("jobId jobTitle companyName description")
-        .lean(),
-      EmployerModel.findById(application.employerId)
-        .select(
-          "companyName establishmentName companyLogo profilePhoto isWhatsappVerified registrationStatus",
-        )
-        .lean(),
-      JobSeekerModel.findById(application.jobSeekerId)
-        .select(
-          "fullName whatsappNumber city state preferredJobLocation skills gender experienceType profilePhoto createdAt",
-        )
-        .lean(),
-    ]);
-
-    const listItem = toListItem({
-      _id: application._id as mongoose.Types.ObjectId,
-      jobSeekerId: application.jobSeekerId as mongoose.Types.ObjectId,
-      publicJobId: application.publicJobId,
-      status: application.status,
-      resumeSnapshot: application.resumeSnapshot,
-      appliedAt: application.appliedAt,
-      job: job ?? undefined,
-      employer: employer ?? undefined,
-      jobSeekerDoc: jobSeeker ?? undefined,
-    });
-
-    const candidate = candidateFromSources(
-      asSnapshot(application.resumeSnapshot),
-      jobSeeker ?? null,
-    );
-
-    const history = Array.isArray(application.statusHistory)
-      ? application.statusHistory.map((entry, index) => ({
-          status: String(entry.status ?? ""),
-          statusLabel: statusLabel(String(entry.status ?? "")),
-          at:
-            entry.at instanceof Date
-              ? entry.at.toISOString()
-              : new Date(entry.at).toISOString(),
-          actor: String(entry.actorType ?? "system"),
-          id: `${index}`,
-        }))
-      : [];
-
-    return {
-      ...listItem,
-      candidateCity: candidate.city,
-      candidateState: candidate.state,
-      skills: candidate.skills,
-      jobCompanyName: job?.companyName?.trim() || listItem.employerName,
-      resumeVersion: application.resumeVersion ?? 1,
-      resumeStatus: application.resumeStatus ?? "",
-      statusHistory: history.map(({ status, statusLabel: label, at, actor }) => ({
-        status,
-        statusLabel: label,
-        at,
-        actor,
-      })),
-      descriptionExcerpt: text(job?.description).slice(0, 400),
-    };
+    return this.getSeekerDetail(String(application.jobSeekerId));
   },
 };

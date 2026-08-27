@@ -4,6 +4,7 @@ import { validate } from "../../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../../utils/async-handler.js";
 import { operationsCandidatesController } from "./operations-candidates.controller.js";
 import {
+  listOperationsCandidateApplicationsQuerySchema,
   listOperationsCandidatesQuerySchema,
   operationsCandidateApplicationIdParamsSchema,
   operationsCandidateSeekerIdParamsSchema,
@@ -17,6 +18,13 @@ operationsCandidatesRouter.get(
   "/",
   validate(listOperationsCandidatesQuerySchema, "query"),
   asyncHandler(operationsCandidatesController.list),
+);
+
+operationsCandidatesRouter.get(
+  "/seekers/:jobSeekerId/applications",
+  validate(operationsCandidateSeekerIdParamsSchema, "params"),
+  validate(listOperationsCandidateApplicationsQuerySchema, "query"),
+  asyncHandler(operationsCandidatesController.listSeekerApplications),
 );
 
 operationsCandidatesRouter.get(

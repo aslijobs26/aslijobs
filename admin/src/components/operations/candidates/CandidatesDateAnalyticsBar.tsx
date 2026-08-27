@@ -1,8 +1,10 @@
+import { useId } from "react";
 import type {
   OperationsCandidateDatePreset,
   OperationsCandidatesPeriodStats,
 } from "../../../types/operations-candidates";
 import { cn } from "../../../utils/cn";
+import { OperationsDatePicker } from "../../ui/OperationsDatePicker";
 
 export interface CandidatesDateFiltersState {
   datePreset: OperationsCandidateDatePreset;
@@ -17,25 +19,67 @@ interface CandidatesDateAnalyticsBarProps {
 }
 
 const PRESETS: { value: OperationsCandidateDatePreset; label: string }[] = [
-  { value: "all", label: "All time" },
+  { value: "all", label: "All Candidates" },
   { value: "today", label: "Today" },
   { value: "yesterday", label: "Yesterday" },
-  { value: "last_7_days", label: "Last 7 days" },
-  { value: "last_30_days", label: "Last 30 days" },
+  { value: "last_7_days", label: "Last 7 Days" },
+  { value: "last_30_days", label: "Last 30 Days" },
   { value: "custom", label: "Custom" },
 ];
+
+function periodLabel(preset: OperationsCandidateDatePreset): string {
+  switch (preset) {
+    case "all":
+      return "All Time";
+    case "today":
+      return "Today";
+    case "yesterday":
+      return "Yesterday";
+    case "last_7_days":
+      return "Last 7 Days";
+    case "last_30_days":
+      return "Last 30 Days";
+    case "custom":
+      return "Custom Range";
+    default:
+      return "Period";
+  }
+}
+
+function todayIsoDate(): string {
+  const today = new Date();
+  return [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+}
 
 export function CandidatesDateAnalyticsBar({
   filters,
   periodStats,
   onChange,
 }: CandidatesDateAnalyticsBarProps) {
+  const label = periodLabel(filters.datePreset);
+  const fromPickerId = useId();
+  const toPickerId = useId();
+  const todayIso = todayIsoDate();
+
+  const handleFromChange = (dateFrom: string) => {
+    // To can only be on/after From — clamp when From moves past To.
+    const dateTo =
+      filters.dateTo && dateFrom && filters.dateTo < dateFrom
+        ? dateFrom
+        : filters.dateTo;
+    onChange({ dateFrom, dateTo });
+  };
+
   return (
     <section className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm ops-brand-border-glow sm:p-3.5">
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-            Candidate arrival analytics
+            Candidate Registration Analytics
           </p>
           <div
             className="mt-2 flex flex-wrap gap-1.5"
@@ -56,12 +100,7 @@ export function CandidatesDateAnalyticsBar({
                         : filters.dateFrom || filters.dateTo
                           ? {}
                           : (() => {
-                              const today = new Date();
-                              const iso = [
-                                today.getFullYear(),
-                                String(today.getMonth() + 1).padStart(2, "0"),
-                                String(today.getDate()).padStart(2, "0"),
-                              ].join("-");
+                              const iso = todayIsoDate();
                               return { dateFrom: iso, dateTo: iso };
                             })()),
                     })
@@ -81,49 +120,76 @@ export function CandidatesDateAnalyticsBar({
 
           {filters.datePreset === "custom" ? (
             <div className="mt-2.5 flex flex-wrap items-end gap-2">
-              <label className="min-w-[8rem] flex-1">
-                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted">
+              <div className="min-w-[9.5rem] flex-1">
+                <label
+                  htmlFor={fromPickerId}
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted"
+                >
                   From
-                </span>
-                <input
-                  type="date"
+                </label>
+                <OperationsDatePicker
+                  id={fromPickerId}
                   value={filters.dateFrom}
-                  onChange={(event) =>
-                    onChange({ dateFrom: event.target.value })
-                  }
-                  className="ops-brand-border-glow h-9 w-full rounded-lg border border-border-subtle bg-hero-bg/60 px-2.5 text-xs font-medium text-foreground outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
+                  placeholder="From date"
+                  maxDate={todayIso}
+                  compact
+                  aria-label="Custom range from date"
+                  onChange={handleFromChange}
                 />
-              </label>
-              <label className="min-w-[8rem] flex-1">
-                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted">
+              </div>
+              <div className="min-w-[9.5rem] flex-1">
+                <label
+                  htmlFor={toPickerId}
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted"
+                >
                   To
-                </span>
-                <input
-                  type="date"
+                </label>
+                <OperationsDatePicker
+                  id={toPickerId}
                   value={filters.dateTo}
-                  onChange={(event) => onChange({ dateTo: event.target.value })}
-                  className="ops-brand-border-glow h-9 w-full rounded-lg border border-border-subtle bg-hero-bg/60 px-2.5 text-xs font-medium text-foreground outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
+                  placeholder="To date"
+                  minDate={filters.dateFrom.trim() || undefined}
+                  maxDate={todayIso}
+                  compact
+                  aria-label="Custom range to date"
+                  onChange={(dateTo) => onChange({ dateTo })}
                 />
-              </label>
+              </div>
             </div>
           ) : null}
         </div>
 
-        <div className="grid min-w-0 grid-cols-2 gap-2 sm:min-w-[18rem]">
+        <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[28rem]">
           <article className="rounded-lg border border-border-subtle bg-hero-bg/50 px-3 py-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-              Candidates registered
+              Registered {label}
             </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">
+            <p className="mt-1 text-xl font-bold tabular-nums text-success">
               {periodStats.candidatesRegistered.toLocaleString("en-IN")}
             </p>
           </article>
           <article className="rounded-lg border border-border-subtle bg-hero-bg/50 px-3 py-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-              Applications received
+              With Applications
             </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-foreground">
-              {periodStats.applicationsReceived.toLocaleString("en-IN")}
+            <p className="mt-1 text-xl font-bold tabular-nums text-chart-accent">
+              {periodStats.withApplications.toLocaleString("en-IN")}
+            </p>
+          </article>
+          <article className="rounded-lg border border-border-subtle bg-hero-bg/50 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+              Profiles Incomplete
+            </p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-warning">
+              {periodStats.profilesIncomplete.toLocaleString("en-IN")}
+            </p>
+          </article>
+          <article className="rounded-lg border border-border-subtle bg-hero-bg/50 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+              Recently Active
+            </p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-chart-accent-alt">
+              {periodStats.recentlyActive.toLocaleString("en-IN")}
             </p>
           </article>
         </div>

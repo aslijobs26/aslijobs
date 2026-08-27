@@ -20,6 +20,11 @@ export const OPERATIONS_CANDIDATE_DATE_PRESETS = [
   "custom",
 ] as const;
 
+export const OPERATIONS_CANDIDATE_PROFILE_STATUSES = [
+  "complete",
+  "incomplete",
+] as const;
+
 export const listOperationsCandidatesQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).default(1),
@@ -44,10 +49,21 @@ export const listOperationsCandidatesQuerySchema = z
     location: z.string().trim().max(120).optional().default(""),
     experience: z.string().trim().max(80).optional().default(""),
     gender: z.string().trim().max(40).optional().default(""),
+    preferredRole: z.string().trim().max(120).optional().default(""),
+    profileStatus: z
+      .union([z.enum(OPERATIONS_CANDIDATE_PROFILE_STATUSES), z.literal("")])
+      .optional()
+      .default(""),
     datePreset: z.enum(OPERATIONS_CANDIDATE_DATE_PRESETS).default("all"),
     dateFrom: z.string().trim().max(32).optional().default(""),
     dateTo: z.string().trim().max(32).optional().default(""),
-    dateField: z.enum(["applied", "registered"]).default("applied"),
+    dateField: z.enum(["applied", "registered"]).default("registered"),
+    analyticsPreset: z
+      .enum(OPERATIONS_CANDIDATE_DATE_PRESETS)
+      .optional()
+      .default("today"),
+    analyticsFrom: z.string().trim().max(32).optional().default(""),
+    analyticsTo: z.string().trim().max(32).optional().default(""),
     sort: z
       .enum(["newest", "oldest", "updated"])
       .optional()
@@ -61,10 +77,30 @@ export const listOperationsCandidatesQuerySchema = z
         path: ["dateFrom"],
       });
     }
+    if (
+      value.analyticsPreset === "custom" &&
+      !value.analyticsFrom &&
+      !value.analyticsTo
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide a custom analytics date range.",
+        path: ["analyticsFrom"],
+      });
+    }
   });
 
 export type ListOperationsCandidatesQuery = z.infer<
   typeof listOperationsCandidatesQuerySchema
+>;
+
+export const listOperationsCandidateApplicationsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+});
+
+export type ListOperationsCandidateApplicationsQuery = z.infer<
+  typeof listOperationsCandidateApplicationsQuerySchema
 >;
 
 export const operationsCandidateApplicationIdParamsSchema = z.object({
