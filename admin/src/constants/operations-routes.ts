@@ -36,3 +36,7 @@ export function operationsJobDetailPath(jobId: string): string {
 export function operationsCandidateDetailPath(jobSeekerId: string): string {
   return `${OPERATIONS_ROUTES.CANDIDATES}/${encodeURIComponent(jobSeekerId)}`;
 }
+
+export function operationsEmployerDetailPath(employerId: string): string {
+  return `${OPERATIONS_ROUTES.EMPLOYERS}/${encodeURIComponent(employerId)}`;
+}

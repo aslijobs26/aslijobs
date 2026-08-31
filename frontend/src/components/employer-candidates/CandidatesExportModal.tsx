@@ -112,7 +112,7 @@ export function CandidatesExportModal({
   const [fields, setFields] = useState<EmployerExportField[]>(() =>
     EMPLOYER_EXPORT_DEFAULT_FIELDS.filter((field) =>
       availableExportFields.includes(field),
-    ),
+    ),            
   );
   const [previewTotal, setPreviewTotal] = useState<number | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);

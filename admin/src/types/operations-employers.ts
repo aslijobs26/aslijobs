@@ -1,5 +1,3 @@
-import type { ListPagination } from "../../../utils/pagination.js";
-
 export type OperationsEmployerVerificationStatus =
   | "verified"
   | "pending"
@@ -76,12 +74,37 @@ export interface OperationsEmployersFilterOptions {
   statuses: Array<{ value: string; label: string }>;
 }
 
+export interface OperationsEmployersPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 export interface OperationsEmployersListResult {
   kpis: OperationsEmployerKpis;
   periodStats: OperationsEmployersPeriodStats;
   filterOptions: OperationsEmployersFilterOptions;
   employers: OperationsEmployerListItem[];
-  pagination: ListPagination;
+  pagination: OperationsEmployersPagination;
+}
+
+export interface OperationsEmployersListParams {
+  page: number;
+  limit: number;
+  search?: string;
+  verificationStatus?: string;
+  employerType?: string;
+  location?: string;
+  status?: string;
+  datePreset?: OperationsEmployerDatePreset;
+  dateFrom?: string;
+  dateTo?: string;
+  analyticsPreset?: OperationsEmployerDatePreset;
+  analyticsFrom?: string;
+  analyticsTo?: string;
 }
 
 export interface OperationsEmployerDocumentItem {
@@ -114,7 +137,7 @@ export interface OperationsEmployerJobItem {
 
 export interface OperationsEmployerJobsResult {
   jobs: OperationsEmployerJobItem[];
-  pagination: ListPagination;
+  pagination: OperationsEmployersPagination;
 }
 
 export interface OperationsEmployerDetail extends OperationsEmployerListItem {
@@ -161,4 +184,14 @@ export interface OperationsEmployerDetail extends OperationsEmployerListItem {
   };
   verificationRemarks: string;
   suspensionReason: string;
+}
+
+export interface UpdateOperationsEmployerVerificationInput {
+  verificationStatus: "verified" | "pending" | "rejected";
+  remarks?: string;
+}
+
+export interface UpdateOperationsEmployerStatusInput {
+  status: "active" | "suspended" | "inactive";
+  reason?: string;
 }

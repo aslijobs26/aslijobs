@@ -260,6 +260,36 @@ const employerSchema = new Schema(
       type: Date,
       default: null,
     },
+    status: {
+      type: String,
+      enum: ["active", "suspended", "inactive"],
+      default: "active",
+      index: true,
+    },
+    verificationStatus: {
+      type: String,
+      enum: ["verified", "pending", "rejected"],
+      default: "pending",
+      index: true,
+    },
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+    verificationRemarks: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
+    suspensionReason: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     documentIds: [
       {
         type: Schema.Types.ObjectId,

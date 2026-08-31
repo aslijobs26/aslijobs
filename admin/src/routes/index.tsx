@@ -6,6 +6,8 @@ import { OperationsPermissionProvider } from "../providers/operations-permission
 import { OperationsCandidatesDetailPage } from "./operations-candidates-detail-page";
 import { OperationsCandidatesPage } from "./operations-candidates-page";
 import { OperationsDashboardPage } from "./operations-dashboard-page";
+import { OperationsEmployersDetailPage } from "./operations-employers-detail-page";
+import { OperationsEmployersPage } from "./operations-employers-page";
 import { OperationsJobsDetailPage } from "./operations-jobs-detail-page";
 import { OperationsJobsPage } from "./operations-jobs-page";
 import { OperationsJobsPostPage } from "./operations-jobs-post-page";
@@ -56,7 +58,11 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.EMPLOYERS}
-          element={<OperationsPlaceholderPage title="Employers" />}
+          element={<OperationsEmployersPage />}
+        />
+        <Route
+          path={`${OPERATIONS_ROUTES.EMPLOYERS}/:employerId`}
+          element={<OperationsEmployersDetailPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.CANDIDATES}
