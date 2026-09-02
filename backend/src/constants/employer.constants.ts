@@ -1,6 +1,8 @@
-export const OTP_LENGTH = 4;
+export const OTP_LENGTH = 6;
 export const OTP_EXPIRY_MINUTES = 5;
 export const OTP_MAX_ATTEMPTS = 5;
+export const OTP_RESEND_COOLDOWN_SECONDS = 60;
+export const OTP_CODE_PATTERN = new RegExp(`^\\d{${OTP_LENGTH}}$`);
 
 export const EMPLOYER_DOCUMENT_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 export const EMPLOYER_COMPANY_MEDIA_MAX_COUNT = 10;

@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  OTP_CODE_PATTERN,
+  OTP_LENGTH,
+} from "../../constants/employer.constants.js";
 
 const whatsappNumberSchema = z
   .string()
@@ -18,7 +22,7 @@ export const employerLoginVerifyOtpSchema = z.object({
   otp: z
     .string()
     .trim()
-    .regex(/^\d{4}$/, "OTP must be a 4-digit code"),
+    .regex(OTP_CODE_PATTERN, `OTP must be a ${OTP_LENGTH}-digit code`),
 });
 
 export type EmployerLoginSendOtpSchema = z.infer<

@@ -131,14 +131,18 @@ export const EMPLOYER_REGISTER_IMAGE_ACCEPT =
 export const EMPLOYER_REGISTER_IMAGE_UPLOAD_HINT =
   "PNG, JPG, JPEG or WEBP (max 5MB)";
 
-export const EMPLOYER_REGISTER_OTP_LENGTH = 4;
+export const EMPLOYER_REGISTER_OTP_LENGTH = 6;
 
 export const EMPLOYER_REGISTER_WHATSAPP_DIGIT_COUNT = 10;
 
 export const EMPLOYER_REGISTER_OTP_HEADING = "Verify WhatsApp Number";
 
 export const EMPLOYER_REGISTER_OTP_DESCRIPTION =
-  "We've sent a 4-digit verification code to your WhatsApp.";
+  "We've sent a 6-digit verification code to WhatsApp.";
+
+export const EMPLOYER_REGISTER_RESEND_PROMPT = "Didn't receive the code?";
+
+export const EMPLOYER_REGISTER_RESEND_LABEL = "Resend OTP";
 
 export const EMPLOYER_REGISTER_OTP_VERIFY_LABEL = "Verify OTP";
 

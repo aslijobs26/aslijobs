@@ -1,11 +1,9 @@
 import path from "node:path";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
-import { env } from "../../config/env.js";
 import {
   EMPLOYER_COMPANY_MEDIA_MAX_COUNT,
   EMPLOYER_IMAGE_MIME_TYPES,
-  OTP_MAX_ATTEMPTS,
   isBusinessEmployerAccountType,
 } from "../../constants/employer.constants.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
@@ -337,7 +335,7 @@ async function findEmployerOrThrow(employerId: string) {
   }
 
   const employer = await EmployerModel.findById(employerId).select(
-    "+otpHash +otpExpiresAt +otpAttempts",
+    "+otpHash +otpExpiresAt +otpAttempts +lastOtpSentAt",
   );
 
   if (!employer) {
@@ -398,9 +396,8 @@ export class EmployerService {
     const existing = await EmployerModel.findOne({
       whatsappNumber: input.whatsappNumber,
       registrationStatus: { $ne: "completed" },
-    });
+    }).select("+otpHash +otpExpiresAt +otpAttempts +lastOtpSentAt");
 
-    const generated = await otpService.createOtp();
     const registrationStatus =
       input.accountType === "individual" ? "otp_sent" : "pending_otp";
 
@@ -421,9 +418,6 @@ export class EmployerService {
         employer.isWhatsappVerified = false;
         employer.isProfileComplete = false;
         employer.registrationStatus = registrationStatus;
-        employer.otpHash = generated.otpHash;
-        employer.otpExpiresAt = generated.expiresAt;
-        employer.otpAttempts = 0;
         await employer.save();
       } else {
         employer = await EmployerModel.create({
@@ -440,9 +434,6 @@ export class EmployerService {
           isWhatsappVerified: false,
           isProfileComplete: false,
           registrationStatus,
-          otpHash: generated.otpHash,
-          otpExpiresAt: generated.expiresAt,
-          otpAttempts: 0,
         });
       }
     } catch (error) {
@@ -482,17 +473,16 @@ export class EmployerService {
       throw new AppError("Database error", HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 
-    await otpService.deliverOtp(
+    const delivery = await otpService.issueAndDeliver(
+      employer,
       input.whatsappNumber,
-      generated.otp,
-      generated.expiresAt,
+      { purpose: "registration" },
     );
 
     return {
       employer: toPublicEmployer(employer),
       employerId: employer._id.toString(),
-      otpExpiresAt: generated.expiresAt.toISOString(),
-      ...(env.NODE_ENV === "development" ? { otp: generated.otp } : {}),
+      ...delivery,
     };
   }
 
@@ -506,24 +496,19 @@ export class EmployerService {
       );
     }
 
-    const generated = await otpService.createOtp();
-    employer.otpHash = generated.otpHash;
-    employer.otpExpiresAt = generated.expiresAt;
-    employer.otpAttempts = 0;
     employer.registrationStatus =
       employer.accountType === "individual" ? "otp_sent" : "pending_otp";
     await employer.save();
 
-    await otpService.deliverOtp(
+    const delivery = await otpService.issueAndDeliver(
+      employer,
       employer.whatsappNumber,
-      generated.otp,
-      generated.expiresAt,
+      { purpose: "registration" },
     );
 
     return {
       employerId: employer._id.toString(),
-      otpExpiresAt: generated.expiresAt.toISOString(),
-      ...(env.NODE_ENV === "development" ? { otp: generated.otp } : {}),
+      ...delivery,
     };
   }
 
@@ -533,16 +518,13 @@ export class EmployerService {
 
     // Test OTP bypasses delivery/expiry only — registration flow continues unchanged.
     if (!acceptedViaTestOtp) {
-      if ((employer.otpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
-        otpService.logVerificationFailure(
-          employer.whatsappNumber,
-          "MAX_ATTEMPTS",
-        );
+      if ((employer.otpAttempts ?? 0) >= otpService.maxAttempts) {
+        otpService.logVerificationFailure("MAX_ATTEMPTS");
       } else if (
         !employer.otpExpiresAt ||
         employer.otpExpiresAt.getTime() < Date.now()
       ) {
-        otpService.logVerificationFailure(employer.whatsappNumber, "EXPIRED");
+        otpService.logVerificationFailure("EXPIRED");
       }
 
       otpService.assertCanAttempt(employer.otpAttempts ?? 0);
@@ -557,11 +539,11 @@ export class EmployerService {
     if (!isValid) {
       employer.otpAttempts = (employer.otpAttempts ?? 0) + 1;
       await employer.save();
-      otpService.logVerificationFailure(employer.whatsappNumber, "INVALID_OTP");
+      otpService.logVerificationFailure("INVALID_OTP");
       throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST);
     }
 
-    otpService.logVerificationSuccess(employer.whatsappNumber, input.otp);
+    otpService.logVerificationSuccess();
 
     employer.isWhatsappVerified = true;
     employer.otpHash = null;

@@ -62,13 +62,7 @@ async function startServer(): Promise<void> {
 
   httpServer = app.listen(env.PORT, () => {
     console.log(`AsliJobs API running on port ${env.PORT}`);
-    console.log("================================================");
-    console.log("[AsliJobs OTP]");
-    console.log(`OTP Provider: ${env.OTP_PROVIDER}`);
-    console.log(
-      `Test OTP Enabled: ${env.OTP_TEST_MODE === true && env.OTP_TEST_CODE.length > 0}`,
-    );
-    console.log("================================================");
+    console.log(`[AsliJobs OTP] provider=${env.OTP_PROVIDER}`);
   });
 
   process.on("SIGTERM", () => {

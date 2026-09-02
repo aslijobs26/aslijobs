@@ -10,7 +10,8 @@ type ApiSuccess<T> = {
 type SendLoginOtpResponse = {
   jobSeekerId: string;
   otpExpiresAt: string;
-  otp?: string;
+  expiresIn: number;
+  resendAvailableIn: number;
 };
 
 type VerifyLoginOtpResponse = {
@@ -25,18 +26,6 @@ type MeResponse = {
   jobSeeker: JobSeekerPublic;
 };
 
-function logDevelopmentOtp(phoneNumber: string, otp?: string) {
-  if (!otp) {
-    return;
-  }
-
-  console.info("====================================");
-  console.info("JOB SEEKER LOGIN OTP GENERATED");
-  console.info(`Phone Number: ${phoneNumber}`);
-  console.info(`OTP: ${otp}`);
-  console.info("====================================");
-}
-
 export async function sendJobSeekerLoginOtp(whatsappNumber: string) {
   const response = await apiClient.post<ApiSuccess<SendLoginOtpResponse>>(
     "/jobseekers/login/send-otp",
@@ -44,7 +33,6 @@ export async function sendJobSeekerLoginOtp(whatsappNumber: string) {
   );
 
   const data = response.data.data;
-  logDevelopmentOtp(whatsappNumber, data.otp);
   return data;
 }
 
@@ -55,7 +43,6 @@ export async function resendJobSeekerLoginOtp(whatsappNumber: string) {
   );
 
   const data = response.data.data;
-  logDevelopmentOtp(whatsappNumber, data.otp);
   return data;
 }
 

@@ -1,4 +1,4 @@
-export const JOB_SEEKER_REGISTER_OTP_LENGTH = 4;
+export const JOB_SEEKER_REGISTER_OTP_LENGTH = 6;
 
 export const JOB_SEEKER_REGISTER_HEADING = "Create a Job Seeker Account";
 
@@ -19,7 +19,7 @@ export const JOB_SEEKER_REGISTER_SEND_OTP_LABEL = "Send OTP";
 export const JOB_SEEKER_REGISTER_OTP_HEADING = "Verify WhatsApp Number";
 
 export const JOB_SEEKER_REGISTER_OTP_DESCRIPTION =
-  "We've sent a 4-digit verification code to your WhatsApp number.";
+  "We've sent a 6-digit verification code to WhatsApp.";
 
 export const JOB_SEEKER_REGISTER_VERIFY_OTP_LABEL = "Verify OTP";
 

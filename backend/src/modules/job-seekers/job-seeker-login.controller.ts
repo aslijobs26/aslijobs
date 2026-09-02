@@ -15,7 +15,7 @@ export class JobSeekerLoginController {
     const result = await jobSeekerLoginService.sendLoginOtp(body);
 
     sendSuccess(res, HTTP_STATUS.OK, {
-      message: "OTP generated successfully.",
+      message: "OTP sent to WhatsApp.",
       data: result,
     });
   };
@@ -25,7 +25,7 @@ export class JobSeekerLoginController {
     const result = await jobSeekerLoginService.resendLoginOtp(body);
 
     sendSuccess(res, HTTP_STATUS.OK, {
-      message: "OTP generated successfully.",
+      message: "OTP sent to WhatsApp.",
       data: result,
     });
   };

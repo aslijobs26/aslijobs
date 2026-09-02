@@ -22,13 +22,15 @@ type RegisterStartResponse = {
   jobSeeker: JobSeekerPublic;
   jobSeekerId: string;
   otpExpiresAt: string;
-  otp?: string;
+  expiresIn: number;
+  resendAvailableIn: number;
 };
 
 type ResendOtpResponse = {
   jobSeekerId: string;
   otpExpiresAt: string;
-  otp?: string;
+  expiresIn: number;
+  resendAvailableIn: number;
 };
 
 type VerifyOtpResponse = {
@@ -68,18 +70,6 @@ export type CompleteJobSeekerRegistrationPayload = {
   availabilityStatus: JobSeekerAvailabilityStatus;
 };
 
-function logDevelopmentOtp(phoneNumber: string, otp?: string) {
-  if (!otp) {
-    return;
-  }
-
-  console.info("====================================");
-  console.info("JOB SEEKER REGISTRATION OTP GENERATED");
-  console.info(`Phone Number: ${phoneNumber}`);
-  console.info(`OTP: ${otp}`);
-  console.info("====================================");
-}
-
 export async function registerJobSeekerAccount(
   fullName: string,
   whatsappNumber: string,
@@ -100,7 +90,6 @@ export async function registerJobSeekerAccount(
     );
   }
 
-  logDevelopmentOtp(whatsappNumber, data.otp);
   return data;
 }
 

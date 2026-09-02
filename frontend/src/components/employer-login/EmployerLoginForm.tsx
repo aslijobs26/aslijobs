@@ -26,6 +26,7 @@ import { isAxiosError } from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
 
 const EMPTY_OTP_DIGITS = Array.from(
   { length: EMPLOYER_LOGIN_OTP_LENGTH },
@@ -67,6 +68,8 @@ export function EmployerLoginForm() {
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { secondsLeft, isCoolingDown, startCooldown, resetCooldown } =
+    useOtpResendCooldown();
 
   const isWhatsappValid = isValidEmployerWhatsappNumber(whatsappNumber);
   const isOtpComplete = otpDigits.every(
@@ -81,6 +84,7 @@ export function EmployerLoginForm() {
     if (isOtpVisible) {
       setIsOtpVisible(false);
       setOtpDigits(EMPTY_OTP_DIGITS);
+      resetCooldown();
     }
   };
 
@@ -94,9 +98,10 @@ export function EmployerLoginForm() {
     setErrorMessage(null);
 
     try {
-      await sendEmployerLoginOtp(whatsappNumber);
+      const result = await sendEmployerLoginOtp(whatsappNumber);
       setOtpDigits(EMPTY_OTP_DIGITS);
       setIsOtpVisible(true);
+      startCooldown(result.resendAvailableIn);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Failed to send OTP"));
     } finally {
@@ -105,7 +110,7 @@ export function EmployerLoginForm() {
   };
 
   const handleResendOtp = async () => {
-    if (!isWhatsappValid) {
+    if (!isWhatsappValid || isCoolingDown) {
       return;
     }
 
@@ -113,8 +118,9 @@ export function EmployerLoginForm() {
     setErrorMessage(null);
 
     try {
-      await resendEmployerLoginOtp(whatsappNumber);
+      const result = await resendEmployerLoginOtp(whatsappNumber);
       setOtpDigits(EMPTY_OTP_DIGITS);
+      startCooldown(result.resendAvailableIn);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Failed to resend OTP"));
     } finally {
@@ -131,7 +137,7 @@ export function EmployerLoginForm() {
     }
 
     if (!isOtpComplete) {
-      setErrorMessage("Enter the 4-digit OTP");
+      setErrorMessage("Enter the 6-digit OTP");
       return;
     }
 
@@ -218,9 +224,11 @@ export function EmployerLoginForm() {
                 onClick={() => {
                   void handleResendOtp();
                 }}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isCoolingDown}
               >
-                {EMPLOYER_LOGIN_RESEND_LABEL}
+                {isCoolingDown
+                  ? `Resend OTP in ${secondsLeft}s`
+                  : EMPLOYER_LOGIN_RESEND_LABEL}
               </button>
             </p>
 

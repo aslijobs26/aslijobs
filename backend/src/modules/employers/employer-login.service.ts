@@ -1,9 +1,7 @@
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
-import { env } from "../../config/env.js";
 import {
   EMPLOYER_COMPANY_MEDIA_MAX_COUNT,
-  OTP_MAX_ATTEMPTS,
   isBusinessEmployerAccountType,
 } from "../../constants/employer.constants.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
@@ -205,7 +203,7 @@ function buildEmployerDisplayName(employer: {
 
 async function findLoginEligibleEmployer(whatsappNumber: string) {
   const employer = await EmployerModel.findOne({ whatsappNumber }).select(
-    "+otpHash +otpExpiresAt +otpAttempts +refreshTokenHash +refreshTokenExpiresAt",
+    "+otpHash +otpExpiresAt +otpAttempts +lastOtpSentAt +refreshTokenHash +refreshTokenExpiresAt",
   );
 
   if (!employer) {
@@ -228,27 +226,18 @@ async function findLoginEligibleEmployer(whatsappNumber: string) {
 async function issueAndPersistLoginOtp(
   employer: Awaited<ReturnType<typeof findLoginEligibleEmployer>>,
 ) {
-  const generated = await otpService.createOtp();
-
-  employer.otpHash = generated.otpHash;
-  employer.otpExpiresAt = generated.expiresAt;
-  employer.otpAttempts = 0;
-  await employer.save();
-
-  await otpService.deliverOtp(
+  const delivery = await otpService.issueAndDeliver(
+    employer,
     employer.whatsappNumber,
-    generated.otp,
-    generated.expiresAt,
     {
       purpose: "login",
-      employerName: buildEmployerDisplayName(employer),
+      accountName: buildEmployerDisplayName(employer),
     },
   );
 
   return {
     employerId: employer._id.toString(),
-    otpExpiresAt: generated.expiresAt.toISOString(),
-    ...(env.NODE_ENV === "development" ? { otp: generated.otp } : {}),
+    ...delivery,
   };
 }
 
@@ -269,11 +258,8 @@ export class EmployerLoginService {
 
     // Test OTP bypasses delivery/expiry only — auth/JWT flow continues unchanged.
     if (!acceptedViaTestOtp) {
-      if ((employer.otpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
-        otpService.logVerificationFailure(
-          employer.whatsappNumber,
-          "MAX_ATTEMPTS",
-        );
+      if ((employer.otpAttempts ?? 0) >= otpService.maxAttempts) {
+        otpService.logVerificationFailure("MAX_ATTEMPTS");
         throw new AppError(
           "Maximum Attempts Reached",
           HTTP_STATUS.TOO_MANY_REQUESTS,
@@ -284,7 +270,7 @@ export class EmployerLoginService {
         !employer.otpExpiresAt ||
         employer.otpExpiresAt.getTime() < Date.now()
       ) {
-        otpService.logVerificationFailure(employer.whatsappNumber, "EXPIRED");
+        otpService.logVerificationFailure("EXPIRED");
         throw new AppError("OTP Expired", HTTP_STATUS.BAD_REQUEST);
       }
     }
@@ -297,11 +283,11 @@ export class EmployerLoginService {
     if (!isValid) {
       employer.otpAttempts = (employer.otpAttempts ?? 0) + 1;
       await employer.save();
-      otpService.logVerificationFailure(employer.whatsappNumber, "INVALID_OTP");
+      otpService.logVerificationFailure("INVALID_OTP");
       throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST);
     }
 
-    otpService.logVerificationSuccess(employer.whatsappNumber, input.otp);
+    otpService.logVerificationSuccess();
 
     const tokens = jwtService.issueEmployerTokens({
       sub: employer._id.toString(),

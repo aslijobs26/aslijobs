@@ -63,7 +63,8 @@ export type EmployerLoginPublic = {
 type SendLoginOtpResponse = {
   employerId: string;
   otpExpiresAt: string;
-  otp?: string;
+  expiresIn: number;
+  resendAvailableIn: number;
 };
 
 type VerifyLoginOtpResponse = {
@@ -80,18 +81,6 @@ type MeResponse = {
 
 export const employerProfileQueryKey = ["employer", "me"] as const;
 
-function logDevelopmentOtp(phoneNumber: string, otp?: string) {
-  if (!otp) {
-    return;
-  }
-
-  console.info("====================================");
-  console.info("LOGIN OTP GENERATED");
-  console.info(`Phone Number: ${phoneNumber}`);
-  console.info(`OTP: ${otp}`);
-  console.info("====================================");
-}
-
 export async function sendEmployerLoginOtp(whatsappNumber: string) {
   const response = await apiClient.post<ApiSuccess<SendLoginOtpResponse>>(
     "/employers/login/send-otp",
@@ -99,7 +88,6 @@ export async function sendEmployerLoginOtp(whatsappNumber: string) {
   );
 
   const data = response.data.data;
-  logDevelopmentOtp(whatsappNumber, data.otp);
   return data;
 }
 
@@ -110,7 +98,6 @@ export async function resendEmployerLoginOtp(whatsappNumber: string) {
   );
 
   const data = response.data.data;
-  logDevelopmentOtp(whatsappNumber, data.otp);
   return data;
 }
 

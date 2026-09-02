@@ -1,28 +1,31 @@
-import { OTP_EXPIRY_MINUTES } from "../../constants/employer.constants.js";
 import { env } from "../../config/env.js";
+import { HTTP_STATUS } from "../../constants/http-status.js";
+import { AppError } from "../../middleware/error.middleware.js";
 import type { OtpDeliveryPayload, OtpProvider } from "./otp.types.js";
 
+/**
+ * Development-only fallback. Production always uses WhatsApp.
+ * Never logs OTP values. Cannot be used unless OTP_TEST_MODE is explicitly enabled.
+ */
 export class ConsoleOtpProvider implements OtpProvider {
   readonly name = "console";
 
   async sendOtp(payload: OtpDeliveryPayload): Promise<void> {
     const testModeEnabled =
-      env.OTP_TEST_MODE === true && env.OTP_TEST_CODE.length > 0;
+      env.NODE_ENV !== "production" && env.OTP_TEST_MODE === true;
 
-    console.log("================================================");
-    console.log("[AsliJobs OTP]");
-    if (payload.purpose === "login") {
-      console.log("Purpose: login");
-      if (payload.employerName) {
-        console.log(`Account: ${payload.employerName}`);
-      }
-    } else if (payload.purpose === "registration") {
-      console.log("Purpose: registration");
+    if (!testModeEnabled) {
+      console.error(
+        "[AsliJobs OTP] WhatsApp OTP delivery failed: console provider is disabled",
+      );
+      throw new AppError(
+        "Unable to send OTP right now. Please try again.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
-    console.log(`Phone: ${payload.phoneNumber}`);
-    console.log(`Generated OTP: ${payload.otp}`);
-    console.log(`Expires in: ${OTP_EXPIRY_MINUTES} minutes`);
-    console.log(`Test OTP Enabled: ${testModeEnabled}`);
-    console.log("================================================");
+
+    console.info(
+      `[AsliJobs OTP] Development test OTP mode enabled purpose=${payload.purpose ?? "unknown"}`,
+    );
   }
 }

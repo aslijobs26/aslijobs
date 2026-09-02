@@ -246,6 +246,11 @@ const employerSchema = new Schema(
       default: 0,
       select: false,
     },
+    lastOtpSentAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
     refreshTokenHash: {
       type: String,
       default: null,

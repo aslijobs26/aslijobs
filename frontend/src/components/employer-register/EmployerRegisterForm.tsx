@@ -33,6 +33,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { EmployerRegisterDocumentVerification } from "./EmployerRegisterDocumentVerification";
 import { EmployerRegisterOtpSection } from "./EmployerRegisterOtpSection";
+import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
 
 const EMPTY_OTP_DIGITS = Array.from(
   { length: EMPLOYER_REGISTER_OTP_LENGTH },
@@ -96,6 +97,8 @@ export function EmployerRegisterForm({
     useState<EmployerRegisterImagePreview | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { secondsLeft, isCoolingDown, startCooldown, resetCooldown } =
+    useOtpResendCooldown();
 
   const isConsultancyAccount = accountType === "consultancy";
   const isBusinessAccount = isBusinessEmployerAccountType(accountType);
@@ -154,6 +157,7 @@ export function EmployerRegisterForm({
       setIsWhatsappVerified(false);
       setOtpDigits(EMPTY_OTP_DIGITS);
       setEmployerId(null);
+      resetCooldown();
     }
   };
 
@@ -182,10 +186,12 @@ export function EmployerRegisterForm({
 
     try {
       if (employerId) {
-        await resendEmployerOtp(employerId, formData.whatsappNumber);
+        const result = await resendEmployerOtp(employerId);
+        startCooldown(result.resendAvailableIn);
       } else {
         const result = await registerEmployerAccount(formData, accountType);
         setEmployerId(result.employer.id);
+        startCooldown(result.resendAvailableIn);
       }
 
       setIsOtpVisible(true);
@@ -202,6 +208,9 @@ export function EmployerRegisterForm({
     event.preventDefault();
 
     if (!isWhatsappVerified) {
+      if (isOtpVisible && isCoolingDown) {
+        return;
+      }
       await requestOtp();
       return;
     }
@@ -262,7 +271,7 @@ export function EmployerRegisterForm({
     );
 
     if (!isComplete || !employerId) {
-      setErrorMessage("Enter the 4-digit OTP");
+      setErrorMessage("Enter the 6-digit OTP");
       return;
     }
 
@@ -468,9 +477,16 @@ export function EmployerRegisterForm({
           <EmployerRegisterOtpSection
             otpDigits={otpDigits}
             isVerified={isWhatsappVerified}
+            isSubmitting={isSubmitting}
+            resendSecondsLeft={secondsLeft}
             onOtpChange={setOtpDigits}
             onVerify={() => {
               void handleVerifyOtp();
+            }}
+            onResend={() => {
+              if (!isCoolingDown) {
+                void requestOtp();
+              }
             }}
           />
         ) : null}

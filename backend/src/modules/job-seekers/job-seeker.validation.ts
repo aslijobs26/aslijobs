@@ -10,6 +10,10 @@ import {
   JOB_SEEKER_SALARY_PERIODS,
   JOB_SEEKER_WORK_MODES,
 } from "../../constants/job-seeker.constants.js";
+import {
+  OTP_CODE_PATTERN,
+  OTP_LENGTH,
+} from "../../constants/employer.constants.js";
 
 const whatsappNumberSchema = z
   .string()
@@ -24,7 +28,7 @@ const jobSeekerIdSchema = z
 const otpSchema = z
   .string()
   .trim()
-  .regex(/^\d{4}$/, "OTP must be a 4-digit code");
+  .regex(OTP_CODE_PATTERN, `OTP must be a ${OTP_LENGTH}-digit code`);
 
 const dateOfBirthSchema = z
   .string()

@@ -5,11 +5,9 @@ import type { OtpProvider } from "./otp.types.js";
 import { WhatsAppOtpProvider } from "./whatsapp-otp.provider.js";
 
 export function createOtpProvider(): OtpProvider {
-  const consoleProvider = new ConsoleOtpProvider();
-
   if (env.OTP_PROVIDER === "whatsapp") {
-    return new WhatsAppOtpProvider(consoleProvider, new WhatsAppService());
+    return new WhatsAppOtpProvider(new WhatsAppService());
   }
 
-  return consoleProvider;
+  return new ConsoleOtpProvider();
 }

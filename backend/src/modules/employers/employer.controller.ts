@@ -23,7 +23,7 @@ export class EmployerController {
     const result = await employerService.registerEmployer(body);
 
     sendSuccess(res, HTTP_STATUS.CREATED, {
-      message: "OTP generated successfully.",
+      message: "OTP sent to WhatsApp.",
       data: result,
     });
   };
@@ -33,7 +33,7 @@ export class EmployerController {
     const result = await employerService.resendOtp(employerId);
 
     sendSuccess(res, HTTP_STATUS.OK, {
-      message: "OTP generated successfully.",
+      message: "OTP sent to WhatsApp.",
       data: result,
     });
   };

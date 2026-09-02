@@ -17,7 +17,7 @@ export const JOB_SEEKER_LOGIN_SEND_OTP_LABEL = "Send OTP";
 export const JOB_SEEKER_LOGIN_OTP_HEADING = "Verify WhatsApp Number";
 
 export const JOB_SEEKER_LOGIN_OTP_DESCRIPTION =
-  "Enter the 4-digit verification code.";
+  "We've sent a 6-digit verification code to WhatsApp.";
 
 export const JOB_SEEKER_LOGIN_CONTINUE_LABEL = "Continue";
 

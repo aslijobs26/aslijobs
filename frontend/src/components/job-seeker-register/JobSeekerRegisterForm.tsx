@@ -49,6 +49,7 @@ import { establishJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
 
 const EMPTY_OTP_DIGITS = Array.from(
   { length: JOB_SEEKER_REGISTER_OTP_LENGTH },
@@ -141,6 +142,8 @@ export function JobSeekerRegisterForm() {
   >("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { secondsLeft, isCoolingDown, startCooldown, resetCooldown } =
+    useOtpResendCooldown();
 
   const isWhatsappValid = isValidJobSeekerWhatsappNumber(whatsappNumber);
   const isOtpComplete = otpDigits.every(
@@ -195,6 +198,7 @@ export function JobSeekerRegisterForm() {
       setJobSeekerId(result.jobSeekerId);
       setOtpDigits([...EMPTY_OTP_DIGITS]);
       setStep("otp");
+      startCooldown(result.resendAvailableIn);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Failed to send OTP"));
     } finally {
@@ -203,7 +207,7 @@ export function JobSeekerRegisterForm() {
   };
 
   const handleResendOtp = async () => {
-    if (!jobSeekerId) {
+    if (!jobSeekerId || isCoolingDown) {
       return;
     }
 
@@ -211,8 +215,9 @@ export function JobSeekerRegisterForm() {
     setErrorMessage(null);
 
     try {
-      await resendJobSeekerOtp(jobSeekerId);
+      const result = await resendJobSeekerOtp(jobSeekerId);
       setOtpDigits(EMPTY_OTP_DIGITS);
+      startCooldown(result.resendAvailableIn);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Failed to resend OTP"));
     } finally {
@@ -222,7 +227,7 @@ export function JobSeekerRegisterForm() {
 
   const handleVerifyOtp = async () => {
     if (!jobSeekerId || !isOtpComplete) {
-      setErrorMessage("Enter the 4-digit OTP");
+      setErrorMessage("Enter the 6-digit OTP");
       return;
     }
 
@@ -501,6 +506,9 @@ export function JobSeekerRegisterForm() {
                     event.target.value.replace(/\D/g, "").slice(0, 10),
                   );
                   setErrorMessage(null);
+                  if (step === "otp") {
+                    resetCooldown();
+                  }
                 }}
                 placeholder={JOB_SEEKER_REGISTER_WHATSAPP_PLACEHOLDER}
                 autoComplete="tel"
@@ -544,9 +552,11 @@ export function JobSeekerRegisterForm() {
                 onClick={() => {
                   void handleResendOtp();
                 }}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isCoolingDown}
               >
-                {JOB_SEEKER_REGISTER_RESEND_LABEL}
+                {isCoolingDown
+                  ? `Resend OTP in ${secondsLeft}s`
+                  : JOB_SEEKER_REGISTER_RESEND_LABEL}
               </button>
             </p>
           </div>

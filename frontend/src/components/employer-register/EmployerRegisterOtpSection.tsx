@@ -5,6 +5,8 @@ import {
   EMPLOYER_REGISTER_OTP_HEADING,
   EMPLOYER_REGISTER_OTP_SUCCESS_LABEL,
   EMPLOYER_REGISTER_OTP_VERIFY_LABEL,
+  EMPLOYER_REGISTER_RESEND_LABEL,
+  EMPLOYER_REGISTER_RESEND_PROMPT,
 } from "@/constants/employer-register";
 import { Check } from "lucide-react";
 import { EmployerRegisterOtpInput } from "./EmployerRegisterOtpInput";
@@ -12,19 +14,26 @@ import { EmployerRegisterOtpInput } from "./EmployerRegisterOtpInput";
 type EmployerRegisterOtpSectionProps = {
   otpDigits: string[];
   isVerified: boolean;
+  isSubmitting?: boolean;
+  resendSecondsLeft?: number;
   onOtpChange: (nextValue: string[]) => void;
   onVerify: () => void;
+  onResend?: () => void;
 };
 
 export function EmployerRegisterOtpSection({
   otpDigits,
   isVerified,
+  isSubmitting = false,
+  resendSecondsLeft = 0,
   onOtpChange,
   onVerify,
+  onResend,
 }: EmployerRegisterOtpSectionProps) {
   const isOtpComplete = otpDigits.every(
     (digit) => digit.length === 1 && /\d/.test(digit),
   );
+  const isCoolingDown = resendSecondsLeft > 0;
 
   if (isVerified) {
     return (
@@ -54,12 +63,32 @@ export function EmployerRegisterOtpSection({
         </p>
       </div>
 
-      <EmployerRegisterOtpInput value={otpDigits} onChange={onOtpChange} />
+      <EmployerRegisterOtpInput
+        value={otpDigits}
+        onChange={onOtpChange}
+        disabled={isSubmitting}
+      />
+
+      {onResend ? (
+        <p className="text-center text-sm text-muted">
+          {EMPLOYER_REGISTER_RESEND_PROMPT}{" "}
+          <button
+            type="button"
+            className="employer-register-send-otp-link inline align-baseline"
+            onClick={onResend}
+            disabled={isSubmitting || isCoolingDown}
+          >
+            {isCoolingDown
+              ? `Resend OTP in ${resendSecondsLeft}s`
+              : EMPLOYER_REGISTER_RESEND_LABEL}
+          </button>
+        </p>
+      ) : null}
 
       <button
         type="button"
         className="employer-register-form-submit"
-        disabled={!isOtpComplete}
+        disabled={!isOtpComplete || isSubmitting}
         onClick={onVerify}
       >
         {EMPLOYER_REGISTER_OTP_VERIFY_LABEL}

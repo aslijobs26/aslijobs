@@ -62,7 +62,19 @@ const envSchema = z.object({
    * Never use Resend testing addresses for production delivery.
    */
   EMAIL_FROM: z.string().optional().default(""),
-  OTP_PROVIDER: z.enum(["console", "whatsapp"]).default("console"),
+  OTP_PROVIDER: z.enum(["console", "whatsapp"]).default("whatsapp"),
+  WHATSAPP_API_VERSION: z.string().trim().default("v21.0"),
+  WHATSAPP_OTP_TEMPLATE_NAME: z.string().trim().optional().default(""),
+  WHATSAPP_TEMPLATE_LANGUAGE: z.string().trim().default("en"),
+  WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().trim().optional().default(""),
+  OTP_EXPIRY_MINUTES: z.coerce.number().int().min(1).max(30).default(5),
+  OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+  OTP_RESEND_COOLDOWN_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(10)
+    .max(600)
+    .default(60),
   /**
    * Temporary auth testing only. Must be the string "true" to enable.
    * Missing / any other value → disabled (safe default).
@@ -77,7 +89,7 @@ const envSchema = z.object({
   }, z.boolean()),
   /**
    * Fixed OTP accepted for any phone when OTP_TEST_MODE is enabled.
-   * Must match the app OTP length (currently 4 digits). Never expose to clients.
+   * Must match OTP_LENGTH. Never enabled in production. Never expose to clients.
    */
   OTP_TEST_CODE: z.preprocess((value) => {
     if (typeof value !== "string" && typeof value !== "number") {
@@ -91,9 +103,9 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
   CLOUDINARY_ROOT_FOLDER: z.string().default("aslijobs"),
-  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
-  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
-  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional().default(""),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(""),
+  WHATSAPP_VERIFY_TOKEN: z.string().optional().default(""),
   META_APP_ID: z.string().optional(),
   META_APP_SECRET: z.string().optional(),
   /**
@@ -139,6 +151,17 @@ const DEV_SECRET_DEFAULTS = new Set([
   "aslijobs-dev-resume-access-secret-change-me",
 ]);
 
+if (
+  parsed.data.OTP_PROVIDER === "whatsapp" &&
+  (!parsed.data.WHATSAPP_ACCESS_TOKEN.trim() ||
+    !parsed.data.WHATSAPP_PHONE_NUMBER_ID.trim() ||
+    !parsed.data.WHATSAPP_OTP_TEMPLATE_NAME.trim())
+) {
+  console.warn(
+    "[AsliJobs OTP] WhatsApp OTP is selected but credentials or template are incomplete",
+  );
+}
+
 if (parsed.data.NODE_ENV === "production") {
   const secrets = [
     parsed.data.JWT_ACCESS_SECRET,
@@ -155,6 +178,26 @@ if (parsed.data.NODE_ENV === "production") {
     console.error("Production refused to start: MONGO_URI is required.");
     process.exit(1);
   }
+  if (parsed.data.OTP_PROVIDER !== "whatsapp") {
+    console.error(
+      "Production refused to start: OTP_PROVIDER must be whatsapp.",
+    );
+    process.exit(1);
+  }
+  if (
+    !parsed.data.WHATSAPP_ACCESS_TOKEN.trim() ||
+    !parsed.data.WHATSAPP_PHONE_NUMBER_ID.trim() ||
+    !parsed.data.WHATSAPP_OTP_TEMPLATE_NAME.trim()
+  ) {
+    console.error(
+      "Production refused to start: WhatsApp OTP credentials and template are required.",
+    );
+    process.exit(1);
+  }
 }
 
-export const env = parsed.data;
+export const env = {
+  ...parsed.data,
+  OTP_TEST_MODE:
+    parsed.data.NODE_ENV === "production" ? false : parsed.data.OTP_TEST_MODE,
+};

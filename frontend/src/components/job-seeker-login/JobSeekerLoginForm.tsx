@@ -30,6 +30,7 @@ import { isAxiosError } from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
 
 function readLoginReturnUrl(): string | null {
   if (typeof window === "undefined") {
@@ -80,6 +81,8 @@ export function JobSeekerLoginForm() {
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { secondsLeft, isCoolingDown, startCooldown, resetCooldown } =
+    useOtpResendCooldown();
 
   const isWhatsappValid = isValidJobSeekerWhatsappNumber(whatsappNumber);
   const isOtpComplete = otpDigits.every(
@@ -94,6 +97,7 @@ export function JobSeekerLoginForm() {
     if (isOtpVisible) {
       setIsOtpVisible(false);
       setOtpDigits(EMPTY_OTP_DIGITS);
+      resetCooldown();
     }
   };
 
@@ -107,9 +111,10 @@ export function JobSeekerLoginForm() {
     setErrorMessage(null);
 
     try {
-      await sendJobSeekerLoginOtp(whatsappNumber);
+      const result = await sendJobSeekerLoginOtp(whatsappNumber);
       setOtpDigits(EMPTY_OTP_DIGITS);
       setIsOtpVisible(true);
+      startCooldown(result.resendAvailableIn);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Failed to send OTP"));
     } finally {
@@ -118,7 +123,7 @@ export function JobSeekerLoginForm() {
   };
 
   const handleResendOtp = async () => {
-    if (!isWhatsappValid) {
+    if (!isWhatsappValid || isCoolingDown) {
       return;
     }
 
@@ -126,8 +131,9 @@ export function JobSeekerLoginForm() {
     setErrorMessage(null);
 
     try {
-      await resendJobSeekerLoginOtp(whatsappNumber);
+      const result = await resendJobSeekerLoginOtp(whatsappNumber);
       setOtpDigits(EMPTY_OTP_DIGITS);
+      startCooldown(result.resendAvailableIn);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Failed to resend OTP"));
     } finally {
@@ -144,7 +150,7 @@ export function JobSeekerLoginForm() {
     }
 
     if (!isOtpComplete) {
-      setErrorMessage("Enter the 4-digit OTP");
+      setErrorMessage("Enter the 6-digit OTP");
       return;
     }
 
@@ -232,9 +238,11 @@ export function JobSeekerLoginForm() {
                 onClick={() => {
                   void handleResendOtp();
                 }}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isCoolingDown}
               >
-                {JOB_SEEKER_LOGIN_RESEND_LABEL}
+                {isCoolingDown
+                  ? `Resend OTP in ${secondsLeft}s`
+                  : JOB_SEEKER_LOGIN_RESEND_LABEL}
               </button>
             </p>
 

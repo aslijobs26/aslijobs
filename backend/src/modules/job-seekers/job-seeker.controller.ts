@@ -19,7 +19,7 @@ export class JobSeekerController {
     const result = await jobSeekerService.registerJobSeeker(body);
 
     sendSuccess(res, HTTP_STATUS.CREATED, {
-      message: "OTP generated successfully.",
+      message: "OTP sent to WhatsApp.",
       data: result,
     });
   };
@@ -29,7 +29,7 @@ export class JobSeekerController {
     const result = await jobSeekerService.resendOtp(body);
 
     sendSuccess(res, HTTP_STATUS.OK, {
-      message: "OTP generated successfully.",
+      message: "OTP sent to WhatsApp.",
       data: result,
     });
   };

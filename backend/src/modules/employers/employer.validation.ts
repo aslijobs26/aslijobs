@@ -3,6 +3,8 @@ import {
   EMPLOYER_ACCOUNT_TYPES,
   EMPLOYER_BUSINESS_DOCUMENT_TYPES,
   EMPLOYER_IDENTITY_DOCUMENT_TYPES,
+  OTP_CODE_PATTERN,
+  OTP_LENGTH,
   isBusinessEmployerAccountType,
 } from "../../constants/employer.constants.js";
 
@@ -82,7 +84,7 @@ export const verifyEmployerOtpSchema = z.object({
   otp: z
     .string()
     .trim()
-    .regex(/^\d{4}$/, "OTP must be a 4-digit code"),
+    .regex(OTP_CODE_PATTERN, `OTP must be a ${OTP_LENGTH}-digit code`),
 });
 
 export const employerIdParamsSchema = z.object({
