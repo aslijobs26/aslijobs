@@ -25,6 +25,7 @@ import {
 import type { OperationsEmployerListItem } from "../../../types/operations-employers";
 import { cn } from "../../../utils/cn";
 import { OperationsCan } from "../auth/OperationsCan";
+import { OperationsCanKey } from "../auth/OperationsCanKey";
 
 interface EmployersRowActionsProps {
   employer: OperationsEmployerListItem;
@@ -152,9 +153,9 @@ export function EmployersRowActions({
         </Link>
       </OperationsCan>
 
-      <OperationsCan module="employers" action="update">
-        <div className="my-1 border-t border-border-subtle" />
+      <div className="my-1 border-t border-border-subtle" />
 
+      <OperationsCanKey permissionKey="employers.profile.actions.verify">
         {!isVerified && onVerify ? (
           <button
             type="button"
@@ -169,7 +170,9 @@ export function EmployersRowActions({
             Verify Employer
           </button>
         ) : null}
+      </OperationsCanKey>
 
+      <OperationsCanKey permissionKey="employers.profile.actions.reject">
         {employer.verificationStatus !== "rejected" && onReject ? (
           <button
             type="button"
@@ -184,8 +187,16 @@ export function EmployersRowActions({
             Reject Verification
           </button>
         ) : null}
+      </OperationsCanKey>
 
-        {onToggleStatus ? (
+      {onToggleStatus ? (
+        <OperationsCanKey
+          permissionKey={
+            isSuspended
+              ? "employers.profile.actions.activate"
+              : "employers.profile.actions.suspend"
+          }
+        >
           <button
             type="button"
             onClick={() => {
@@ -212,8 +223,8 @@ export function EmployersRowActions({
               </>
             )}
           </button>
-        ) : null}
-      </OperationsCan>
+        </OperationsCanKey>
+      ) : null}
 
       <div className="my-1 border-t border-border-subtle" />
 

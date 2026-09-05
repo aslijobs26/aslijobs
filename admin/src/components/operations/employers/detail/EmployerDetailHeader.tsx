@@ -18,6 +18,7 @@ import type { OperationsEmployerDetail } from "../../../../types/operations-empl
 import { resolveMediaUrl } from "../../../../utils/resolve-media-url";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import { OperationsCan } from "../../auth/OperationsCan";
+import { OperationsCanKey } from "../../auth/OperationsCanKey";
 import {
   employerAvatarInitials,
   employerStatusBadgeVariant,
@@ -131,7 +132,7 @@ export function EmployerDetailHeader({
             </button>
           </OperationsCan>
 
-          <OperationsCan module="employers" action="update">
+          <OperationsCanKey permissionKey="employers.profile.actions.verify">
             {!isVerified && onVerify ? (
               <button
                 type="button"
@@ -142,7 +143,9 @@ export function EmployerDetailHeader({
                 Verify Employer
               </button>
             ) : null}
+          </OperationsCanKey>
 
+          <OperationsCanKey permissionKey="employers.profile.actions.reject">
             {employer.verificationStatus !== "rejected" && onReject ? (
               <button
                 type="button"
@@ -153,8 +156,16 @@ export function EmployerDetailHeader({
                 Reject Verification
               </button>
             ) : null}
+          </OperationsCanKey>
 
-            {onToggleStatus ? (
+          {onToggleStatus ? (
+            <OperationsCanKey
+              permissionKey={
+                isSuspended
+                  ? "employers.profile.actions.activate"
+                  : "employers.profile.actions.suspend"
+              }
+            >
               <button
                 type="button"
                 onClick={onToggleStatus}
@@ -176,8 +187,8 @@ export function EmployerDetailHeader({
                   </>
                 )}
               </button>
-            ) : null}
-          </OperationsCan>
+            </OperationsCanKey>
+          ) : null}
         </div>
       </div>
     </div>

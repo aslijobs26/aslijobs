@@ -5,6 +5,7 @@ export const OPERATIONS_TEAM_ROLES = [
   "MARKETING",
   "CONTENT_LANGUAGE",
   "SALES",
+  "CUSTOM",
 ] as const;
 
 export type OperationsTeamRole = (typeof OPERATIONS_TEAM_ROLES)[number];

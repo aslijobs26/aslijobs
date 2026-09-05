@@ -13,8 +13,17 @@ export type OperationsTeamAuthUser = {
   email: string;
   mobileNumber: string;
   role: OperationsTeamUserDocument["role"];
-  /** Resolved capability matrix for UI gates and future Team Management. */
+  roleId: string | null;
+  roleName: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
+  isSuperAdmin: boolean;
+  canCreateRoles: boolean;
+  canManageUsers: boolean;
+  canAssignRoles: boolean;
   permissions: OperationsPermissionMap;
+  grantedKeys: string[];
+  delegatableKeys: string[];
 };
 
 export type OperationsTeamLoginResponse = {

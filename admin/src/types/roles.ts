@@ -6,6 +6,7 @@ export const OPERATIONS_TEAM_ROLES = {
   MARKETING: "MARKETING",
   CONTENT_LANGUAGE: "CONTENT_LANGUAGE",
   SALES: "SALES",
+  CUSTOM: "CUSTOM",
 } as const;
 
 export type OperationsTeamRole =

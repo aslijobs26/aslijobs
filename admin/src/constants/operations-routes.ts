@@ -16,6 +16,7 @@ export const OPERATIONS_ROUTES = {
   TEAM_MANAGEMENT: "/operations/team",
   DEPARTMENTS: "/operations/departments",
   ROLES: "/operations/roles",
+  ROLES_NEW: "/operations/roles/new",
   ACTIVITY_LOG: "/operations/activity-log",
   SUBSCRIPTIONS: "/operations/subscriptions",
   PAYMENTS: "/operations/payments",
@@ -39,4 +40,12 @@ export function operationsCandidateDetailPath(jobSeekerId: string): string {
 
 export function operationsEmployerDetailPath(employerId: string): string {
   return `${OPERATIONS_ROUTES.EMPLOYERS}/${encodeURIComponent(employerId)}`;
+}
+
+export function operationsRoleDetailPath(roleId: string): string {
+  return `${OPERATIONS_ROUTES.ROLES}/${encodeURIComponent(roleId)}`;
+}
+
+export function operationsRoleEditPath(roleId: string): string {
+  return `${OPERATIONS_ROUTES.ROLES}/${encodeURIComponent(roleId)}/edit`;
 }

@@ -30,13 +30,32 @@ export function OperationsPermissionProvider({
 
   const value = useMemo<OperationsPermissionContextValue>(() => {
     const permissions = getOperationsUserPermissions(user);
+    const isSuperAdmin = Boolean(user?.isSuperAdmin || user?.role === "SUPER_ADMIN");
+    const grantedKeys = user?.grantedKeys ?? [];
+    const delegatableKeys = user?.delegatableKeys ?? [];
     return {
       user,
       role: user?.role ?? null,
       permissions,
       isLoading: sessionQuery.isPending && !user,
+      isSuperAdmin,
+      canCreateRoles: Boolean(isSuperAdmin || user?.canCreateRoles),
+      canManageUsers: Boolean(isSuperAdmin || user?.canManageUsers),
+      canAssignRoles: Boolean(isSuperAdmin || user?.canAssignRoles),
+      grantedKeys,
+      delegatableKeys,
       can: (module, action = "read") =>
         operationsUserCan(user, module, action),
+      canKey: (key) => {
+        if (!user) return false;
+        if (isSuperAdmin) return true;
+        return grantedKeys.includes(key);
+      },
+      canDelegate: (key) => {
+        if (!user) return false;
+        if (isSuperAdmin) return true;
+        return delegatableKeys.includes(key);
+      },
     };
   }, [sessionQuery.isPending, user]);
 

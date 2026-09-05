@@ -27,6 +27,17 @@ type BackendAuthUser = {
   email?: string;
   mobileNumber?: string;
   role: OperationsAuthUser["role"];
+  roleId?: string | null;
+  roleName?: string | null;
+  departmentId?: string | null;
+  departmentName?: string | null;
+  isSuperAdmin?: boolean;
+  canCreateRoles?: boolean;
+  canManageUsers?: boolean;
+  canAssignRoles?: boolean;
+  permissions?: OperationsAuthUser["permissions"];
+  grantedKeys?: string[];
+  delegatableKeys?: string[];
 };
 
 type BackendLoginResponse = Omit<OperationsLoginResponse, "user"> & {
@@ -44,6 +55,17 @@ function mapAuthUser(user: BackendAuthUser): OperationsAuthUser {
     email: user.email?.trim() || "",
     mobileNumber: user.mobileNumber,
     role: user.role,
+    roleId: user.roleId ?? null,
+    roleName: user.roleName ?? null,
+    departmentId: user.departmentId ?? null,
+    departmentName: user.departmentName ?? null,
+    isSuperAdmin: Boolean(user.isSuperAdmin),
+    canCreateRoles: Boolean(user.canCreateRoles),
+    canManageUsers: Boolean(user.canManageUsers),
+    canAssignRoles: Boolean(user.canAssignRoles),
+    permissions: user.permissions,
+    grantedKeys: user.grantedKeys ?? [],
+    delegatableKeys: user.delegatableKeys ?? [],
   };
 }
 

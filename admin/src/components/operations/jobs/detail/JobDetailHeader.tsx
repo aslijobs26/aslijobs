@@ -15,6 +15,7 @@ import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import { formatBusinessCategoryLabel } from "../../../../constants/operations-post-job-company-options";
 import type { OperationsJobDetail } from "../../../../types/operations-jobs";
 import { cn } from "../../../../utils/cn";
+import { OperationsCanKey } from "../../auth/OperationsCanKey";
 import {
   formatOperationsDateTime,
   jobDetailStatusTone,
@@ -238,63 +239,71 @@ export function JobDetailHeader({
           <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
             {isPendingApproval ? (
               <>
-                <button
-                  type="button"
-                  onClick={onApproveJob}
-                  disabled={busy || !onApproveJob}
-                  className={cn(
-                    primaryActionClassName,
-                    "bg-success text-surface hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
-                  )}
-                >
-                  {isReviewing
-                    ? "Approving…"
-                    : job.isLiveChangeReview
-                      ? "Approve & Publish Changes"
-                      : "Approve & Publish"}
-                </button>
-                <button
-                  type="button"
-                  onClick={onRejectJob}
-                  disabled={busy || !onRejectJob}
-                  className={cn(
-                    primaryActionClassName,
-                    "bg-danger text-surface hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
-                  )}
-                >
-                  {job.isLiveChangeReview ? "Reject Changes" : "Reject"}
-                </button>
+                <OperationsCanKey permissionKey="jobs.detail.actions.approve">
+                  <button
+                    type="button"
+                    onClick={onApproveJob}
+                    disabled={busy || !onApproveJob}
+                    className={cn(
+                      primaryActionClassName,
+                      "bg-success text-surface hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
+                    )}
+                  >
+                    {isReviewing
+                      ? "Approving…"
+                      : job.isLiveChangeReview
+                        ? "Approve & Publish Changes"
+                        : "Approve & Publish"}
+                  </button>
+                </OperationsCanKey>
+                <OperationsCanKey permissionKey="jobs.detail.actions.reject">
+                  <button
+                    type="button"
+                    onClick={onRejectJob}
+                    disabled={busy || !onRejectJob}
+                    className={cn(
+                      primaryActionClassName,
+                      "bg-danger text-surface hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
+                    )}
+                  >
+                    {job.isLiveChangeReview ? "Reject Changes" : "Reject"}
+                  </button>
+                </OperationsCanKey>
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={onEdit}
-                  className={ghostActionClassName}
-                >
-                  <Pencil className="size-3.5" aria-hidden="true" />
-                  Edit Job
-                </button>
-                <button
-                  type="button"
-                  onClick={onCloseJob}
-                  disabled={!canClose || busy}
-                  className={cn(
-                    primaryActionClassName,
-                    canClose
-                      ? "bg-primary-soft text-surface hover:bg-primary-soft-hover"
-                      : "cursor-not-allowed bg-border-subtle text-muted shadow-none",
-                  )}
-                >
-                  <Plus className="size-3.5" aria-hidden="true" />
-                  {isClosing
-                    ? "Closing…"
-                    : job.status === "closed" &&
-                        !job.employerNotified &&
-                        job.closedReason
-                      ? "Send notification"
-                      : "Close Job"}
-                </button>
+                <OperationsCanKey permissionKey="jobs.post.update">
+                  <button
+                    type="button"
+                    onClick={onEdit}
+                    className={ghostActionClassName}
+                  >
+                    <Pencil className="size-3.5" aria-hidden="true" />
+                    Edit Job
+                  </button>
+                </OperationsCanKey>
+                <OperationsCanKey permissionKey="jobs.detail.actions.close">
+                  <button
+                    type="button"
+                    onClick={onCloseJob}
+                    disabled={!canClose || busy}
+                    className={cn(
+                      primaryActionClassName,
+                      canClose
+                        ? "bg-primary-soft text-surface hover:bg-primary-soft-hover"
+                        : "cursor-not-allowed bg-border-subtle text-muted shadow-none",
+                    )}
+                  >
+                    <Plus className="size-3.5" aria-hidden="true" />
+                    {isClosing
+                      ? "Closing…"
+                      : job.status === "closed" &&
+                          !job.employerNotified &&
+                          job.closedReason
+                        ? "Send notification"
+                        : "Close Job"}
+                  </button>
+                </OperationsCanKey>
               </>
             )}
           </div>

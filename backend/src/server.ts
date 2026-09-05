@@ -57,6 +57,10 @@ async function startServer(): Promise<void> {
     "./modules/operations/auth/ensure-default-operations-admin.js"
   );
   await ensureDefaultOperationsAdmin();
+  const { ensureOperationsRbacSeed } = await import(
+    "./modules/operations/rbac/operations-rbac-seed.js"
+  );
+  await ensureOperationsRbacSeed();
   logEmailConfigurationStatus();
   stopNotificationRetention = startNotificationRetentionScheduler();
 

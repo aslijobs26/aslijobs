@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/modules/rbac/*.test.ts",
+    "test": "tsx --test src/modules/rbac/*.test.ts src/modules/operations/rbac/*.test.ts",
     "test:field-access": "tsx --test src/modules/rbac/field-access.test.ts",
     "test:access-level": "tsx --test src/modules/rbac/access-level-templates.test.ts"
   },

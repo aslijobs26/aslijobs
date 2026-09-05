@@ -12,7 +12,13 @@ import { OperationsJobsDetailPage } from "./operations-jobs-detail-page";
 import { OperationsJobsPage } from "./operations-jobs-page";
 import { OperationsJobsPostPage } from "./operations-jobs-post-page";
 import { OperationsLoginPage } from "./operations-login-page";
+import { OperationsActivityLogPage } from "./operations-activity-log-page";
+import { OperationsDepartmentsPage } from "./operations-departments-page";
 import { OperationsPlaceholderPage } from "./operations-placeholder-page";
+import { OperationsRoleDetailPage } from "./operations-role-detail-page";
+import { OperationsRoleEditorPage } from "./operations-role-editor-page";
+import { OperationsRolesPage } from "./operations-roles-page";
+import { OperationsTeamPage } from "./operations-team-page";
 
 function OperationsProtectedLayout() {
   return (
@@ -88,19 +94,31 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.TEAM_MANAGEMENT}
-          element={<OperationsPlaceholderPage title="Team Management" />}
+          element={<OperationsTeamPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.DEPARTMENTS}
-          element={<OperationsPlaceholderPage title="Departments" />}
+          element={<OperationsDepartmentsPage />}
+        />
+        <Route
+          path={OPERATIONS_ROUTES.ROLES_NEW}
+          element={<OperationsRoleEditorPage />}
+        />
+        <Route
+          path={`${OPERATIONS_ROUTES.ROLES}/:roleId/edit`}
+          element={<OperationsRoleEditorPage />}
+        />
+        <Route
+          path={`${OPERATIONS_ROUTES.ROLES}/:roleId`}
+          element={<OperationsRoleDetailPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.ROLES}
-          element={<OperationsPlaceholderPage title="Roles & Permissions" />}
+          element={<OperationsRolesPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.ACTIVITY_LOG}
-          element={<OperationsPlaceholderPage title="Activity Log" />}
+          element={<OperationsActivityLogPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.SUBSCRIPTIONS}

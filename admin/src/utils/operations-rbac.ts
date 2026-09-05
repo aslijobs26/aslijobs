@@ -18,10 +18,16 @@ export function getOperationsUserPermissions(
 }
 
 export function operationsUserCan(
-  user: Pick<OperationsAuthUser, "role" | "permissions"> | null | undefined,
+  user: Pick<
+    OperationsAuthUser,
+    "role" | "permissions" | "isSuperAdmin"
+  > | null | undefined,
   module: OperationsPermissionModule,
   action: OperationsPermissionAction = "read",
 ): boolean {
+  if (user?.isSuperAdmin || user?.role === "SUPER_ADMIN") {
+    return true;
+  }
   const permissions = getOperationsUserPermissions(user);
   return canOperationsPermission(permissions, module, action);
 }

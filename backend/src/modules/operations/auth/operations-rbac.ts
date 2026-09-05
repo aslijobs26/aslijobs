@@ -164,6 +164,7 @@ export const OPERATIONS_ROLE_PERMISSION_DEFAULTS: Record<
     billing: readOnlyActions(),
     reports: readOnlyActions(),
   }),
+  CUSTOM: buildPermissionMap({}),
 };
 
 export function resolveOperationsPermissions(

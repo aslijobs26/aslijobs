@@ -439,12 +439,7 @@ export function JobDetailsCenterPanel({
 
         {hasAddress || hasWalkIn ? (
           <section className="py-6">
-            <div
-              className={cn(
-                "grid grid-cols-1 gap-6",
-                hasAddress && hasWalkIn && "md:grid-cols-2 md:gap-8",
-              )}
-            >
+            <div className="grid grid-cols-1 gap-6">
               {hasAddress ? (
                 <div>
                   <div className="flex items-center gap-2">

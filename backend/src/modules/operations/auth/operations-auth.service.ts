@@ -3,7 +3,7 @@ import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
 import { jwtService } from "../../auth/jwt.service.js";
 import { OperationsTeamUserModel } from "./operations-team-user.model.js";
-import { resolveOperationsUserPermissions } from "./operations-rbac.service.js";
+import { resolveOperationsUserAccess } from "../rbac/operations-access.service.js";
 import type {
   OperationsTeamAuthUser,
   OperationsTeamLoginInput,
@@ -11,20 +11,39 @@ import type {
   OperationsTeamSessionResponse,
 } from "./operations-auth.types.js";
 
-function toAuthUser(user: {
+async function toAuthUser(user: {
   _id: { toString(): string };
   fullName: string;
   email?: string | null;
   mobileNumber: string;
   role: OperationsTeamAuthUser["role"];
-}): OperationsTeamAuthUser {
+  roleId?: { toString(): string } | null;
+  departmentId?: { toString(): string } | null;
+}): Promise<OperationsTeamAuthUser> {
+  const access = await resolveOperationsUserAccess({
+    _id: user._id.toString(),
+    role: user.role,
+    roleId: user.roleId ? String(user.roleId) : null,
+    departmentId: user.departmentId ? String(user.departmentId) : null,
+  });
+
   return {
     id: String(user._id),
     fullName: user.fullName,
     email: user.email?.trim().toLowerCase() || "",
     mobileNumber: user.mobileNumber,
     role: user.role,
-    permissions: resolveOperationsUserPermissions(user.role),
+    roleId: access.roleId,
+    roleName: access.roleName,
+    departmentId: access.departmentId,
+    departmentName: access.departmentName,
+    isSuperAdmin: access.isSuperAdmin,
+    canCreateRoles: access.canCreateRoles,
+    canManageUsers: access.canManageUsers,
+    canAssignRoles: access.canAssignRoles,
+    permissions: access.permissions,
+    grantedKeys: access.grantedKeys,
+    delegatableKeys: access.delegatableKeys,
   };
 }
 
@@ -75,7 +94,7 @@ class OperationsAuthService {
       refreshToken: tokens.refreshToken,
       accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
       refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
-      user: toAuthUser(user),
+      user: await toAuthUser(user),
     };
   }
 
@@ -116,7 +135,7 @@ class OperationsAuthService {
       refreshToken: tokens.refreshToken,
       accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
       refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
-      user: toAuthUser(user),
+      user: await toAuthUser(user),
     };
   }
 
@@ -131,7 +150,7 @@ class OperationsAuthService {
     }
 
     return {
-      user: toAuthUser(user),
+      user: await toAuthUser(user),
     };
   }
 

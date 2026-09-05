@@ -9,6 +9,7 @@ import { SlaPerformanceSection } from "../components/operations/dashboard/SlaPer
 import { TeamWorkloadSection } from "../components/operations/dashboard/TeamWorkloadSection";
 import { WhatsAppActivitySection } from "../components/operations/dashboard/WhatsAppActivitySection";
 import { OPERATIONS_DASHBOARD_MOCK } from "../data/operations-dashboard.mock";
+import { OperationsCan } from "../components/operations/auth/OperationsCan";
 
 export function OperationsDashboardPage() {
   const data = OPERATIONS_DASHBOARD_MOCK;
@@ -38,10 +39,18 @@ export function OperationsDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4 xl:gap-2.5">
-          <JourneyAlertsSection alerts={data.journeyAlerts} />
-          <WhatsAppActivitySection metrics={data.whatsappActivity} />
-          <TeamWorkloadSection members={data.teamWorkload} />
-          <EscalationsOverviewSection items={data.escalations} />
+          <OperationsCan module="journey_alerts" action="read">
+            <JourneyAlertsSection alerts={data.journeyAlerts} />
+          </OperationsCan>
+          <OperationsCan module="whatsapp" action="read">
+            <WhatsAppActivitySection metrics={data.whatsappActivity} />
+          </OperationsCan>
+          <OperationsCan module="team" action="read">
+            <TeamWorkloadSection members={data.teamWorkload} />
+          </OperationsCan>
+          <OperationsCan module="escalations" action="read">
+            <EscalationsOverviewSection items={data.escalations} />
+          </OperationsCan>
         </div>
 
         <OperationsSnapshotSection metrics={data.snapshot} />

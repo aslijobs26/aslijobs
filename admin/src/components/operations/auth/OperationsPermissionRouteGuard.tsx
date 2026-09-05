@@ -17,7 +17,7 @@ export function OperationsPermissionRouteGuard({
   children,
 }: OperationsPermissionRouteGuardProps) {
   const pathname = useLocation().pathname;
-  const { can, isLoading, role } = useOperationsPermissions();
+  const { can, isLoading, user } = useOperationsPermissions();
 
   if (isLoading) {
     return (
@@ -41,8 +41,9 @@ export function OperationsPermissionRouteGuard({
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
       <p className="text-sm font-semibold text-foreground">Access denied</p>
       <p className="max-w-md text-sm text-muted">
-        Your role{role ? ` (${role})` : ""} does not have permission to view
-        this page.
+        Your role
+        {user?.roleName ? ` (${user.roleName})` : ""} does not have permission
+        to view this page.
       </p>
       <Link
         to={OPERATIONS_ROUTES.DASHBOARD}

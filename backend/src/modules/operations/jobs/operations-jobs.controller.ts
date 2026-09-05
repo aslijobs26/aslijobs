@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
 import { sendSuccess } from "../../../utils/api-response.js";
+import { assertOperationsPermissionKey } from "../rbac/operations-access.service.js";
+import { JOB_STATUS_ACTION_PERMISSION_KEYS } from "../rbac/operations-permission-catalog.js";
 import { operationsJobsService } from "./operations-jobs.service.js";
 import type {
   AssignOperationsJobEmployerBody,
@@ -12,6 +14,13 @@ import type {
   SaveOperationsJobDraftBody,
   UpdateOperationsJobStatusBody,
 } from "./operations-jobs.validation.js";
+
+function requireAccess(req: Request) {
+  if (!req.operationsAccess) {
+    throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  }
+  return req.operationsAccess;
+}
 
 export const operationsJobsController = {
   async list(req: Request, res: Response): Promise<void> {
@@ -35,6 +44,10 @@ export const operationsJobsController = {
   },
 
   async listApplications(req: Request, res: Response): Promise<void> {
+    assertOperationsPermissionKey(
+      requireAccess(req),
+      "jobs.detail.applications.view",
+    );
     const { jobId } = req.params as OperationsJobPublicIdParams;
     const query = req.query as unknown as ListOperationsJobApplicationsQuery;
     const result = await operationsJobsService.listJobApplications(jobId, query);
@@ -48,6 +61,14 @@ export const operationsJobsController = {
   async updateStatus(req: Request, res: Response): Promise<void> {
     const { jobId } = req.params as OperationsJobPublicIdParams;
     const body = req.body as UpdateOperationsJobStatusBody;
+    const permissionKey = JOB_STATUS_ACTION_PERMISSION_KEYS[body.action];
+    if (!permissionKey) {
+      throw new AppError(
+        "Access denied. You do not have permission to perform this action.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+    assertOperationsPermissionKey(requireAccess(req), permissionKey);
     const operationsUserId = req.operationsUserId;
 
     if (!operationsUserId) {
@@ -89,6 +110,7 @@ export const operationsJobsController = {
   },
 
   async createDraft(req: Request, res: Response): Promise<void> {
+    assertOperationsPermissionKey(requireAccess(req), "jobs.post.create");
     const body = req.body as SaveOperationsJobDraftBody;
     const operationsUserId = req.operationsUserId;
 
@@ -108,6 +130,7 @@ export const operationsJobsController = {
   },
 
   async updateDraft(req: Request, res: Response): Promise<void> {
+    assertOperationsPermissionKey(requireAccess(req), "jobs.post.update");
     const { jobId } = req.params as OperationsJobPublicIdParams;
     const body = req.body as SaveOperationsJobDraftBody;
     const operationsUserId = req.operationsUserId;
@@ -129,6 +152,10 @@ export const operationsJobsController = {
   },
 
   async assignEmployer(req: Request, res: Response): Promise<void> {
+    assertOperationsPermissionKey(
+      requireAccess(req),
+      "jobs.post.assign_employer",
+    );
     const { jobId } = req.params as OperationsJobPublicIdParams;
     const body = req.body as AssignOperationsJobEmployerBody;
     const operationsUserId = req.operationsUserId;
@@ -150,6 +177,7 @@ export const operationsJobsController = {
   },
 
   async publishDraft(req: Request, res: Response): Promise<void> {
+    assertOperationsPermissionKey(requireAccess(req), "jobs.post.publish");
     const { jobId } = req.params as OperationsJobPublicIdParams;
     const body = req.body as PublishOperationsJobBody;
     const operationsUserId = req.operationsUserId;

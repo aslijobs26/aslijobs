@@ -47,6 +47,27 @@ const operationsTeamUserSchema = new Schema(
       required: true,
       index: true,
     },
+    roleId: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsRole",
+      default: null,
+      index: true,
+    },
+    departmentId: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsDepartment",
+      default: null,
+      index: true,
+    },
+    invitedAt: {
+      type: Date,
+      default: null,
+    },
+    invitedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsTeamUser",
+      default: null,
+    },
     status: {
       type: String,
       enum: OPERATIONS_TEAM_USER_STATUSES,

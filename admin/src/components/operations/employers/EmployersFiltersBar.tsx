@@ -5,6 +5,7 @@ import type {
   OperationsEmployersFilterOptions,
 } from "../../../types/operations-employers";
 import { cn } from "../../../utils/cn";
+import { OperationsCanKey } from "../auth/OperationsCanKey";
 import { OperationsFilterSelect } from "../jobs/OperationsFilterSelect";
 
 export interface EmployersFiltersState {
@@ -218,14 +219,16 @@ export function EmployersFiltersBar({
 
         {/* Action Buttons */}
         <div className="flex w-full shrink-0 items-center gap-2 pt-1 min-[420px]:w-auto xl:pt-0">
-          <button
-            type="button"
-            onClick={onExport}
-            className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-9 min-[420px]:flex-initial"
-          >
-            <Download className="size-3.5" aria-hidden="true" />
-            Export
-          </button>
+          <OperationsCanKey permissionKey="employers.list.export">
+            <button
+              type="button"
+              onClick={onExport}
+              className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-9 min-[420px]:flex-initial"
+            >
+              <Download className="size-3.5" aria-hidden="true" />
+              Export
+            </button>
+          </OperationsCanKey>
 
           {hasActiveFilters ? (
             <button

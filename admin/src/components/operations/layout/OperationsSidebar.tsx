@@ -81,11 +81,16 @@ export function OperationsSidebar({
     ? OPERATIONS_SIDEBAR_COLLAPSED_WIDTH_COMPACT
     : OPERATIONS_SIDEBAR_COLLAPSED_WIDTH;
   const sessionUser = getOperationsAuthUser();
-  const { can, isLoading: permissionsLoading } = useOperationsPermissions();
-  const displayName = sessionUser?.fullName ?? MOCK_OPERATIONS_USER.name;
-  const displayRole = sessionUser?.role ?? MOCK_OPERATIONS_USER.role;
-  const displayInitials = sessionUser
-    ? getInitials(sessionUser.fullName)
+  const { can, isLoading: permissionsLoading, user } = useOperationsPermissions();
+  const resolvedUser = user ?? sessionUser;
+  const displayName = resolvedUser?.fullName || "Operations user";
+  const displayRole =
+    resolvedUser?.roleName ||
+    (resolvedUser?.isSuperAdmin || resolvedUser?.role === "SUPER_ADMIN"
+      ? "Super Admin"
+      : "Operations");
+  const displayInitials = resolvedUser
+    ? getInitials(resolvedUser.fullName)
     : MOCK_OPERATIONS_USER.initials;
 
   const visibleNavSections = useMemo(() => {
@@ -492,7 +497,7 @@ export function OperationsSidebar({
                 <span
                   className="absolute bottom-0 right-0 size-2 rounded-full border-2 border-surface bg-success"
                   aria-hidden="true"
-                  title={MOCK_OPERATIONS_USER.status}
+                  title="Online"
                 />
               </span>
 

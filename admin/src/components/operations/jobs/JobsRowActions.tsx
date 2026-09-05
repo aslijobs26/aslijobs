@@ -9,6 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { operationsJobDetailPath } from "../../../constants/operations-routes";
+import { useOperationsPermissions } from "../../../hooks/use-operations-permissions";
 import type {
   OperationsJobListItem,
   OperationsJobStatus,
@@ -22,6 +23,17 @@ interface JobStatusMenuAction {
   icon: typeof Pause;
   tone?: "danger";
 }
+
+const JOB_ACTION_PERMISSION_KEYS: Record<OperationsJobStatusAction, string> = {
+  approve: "jobs.detail.actions.approve",
+  reject: "jobs.detail.actions.reject",
+  pause: "jobs.detail.actions.pause",
+  resume: "jobs.detail.actions.resume",
+  close: "jobs.detail.actions.close",
+  reactivate: "jobs.detail.actions.reactivate",
+  publish: "jobs.detail.actions.publish",
+  expire: "jobs.detail.actions.expire",
+};
 
 const MENU_GAP_PX = 6;
 const MENU_ITEM_HEIGHT_PX = 36;
@@ -114,10 +126,11 @@ export function JobsRowActions({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { canKey } = useOperationsPermissions();
   const statusActions = jobStatusMenuActions(
     job.status,
     Boolean(job.isLiveChangeReview),
-  );
+  ).filter((item) => canKey(JOB_ACTION_PERMISSION_KEYS[item.action]));
   const isUpdating = pendingStatusJobId === job.jobId;
   const includeStatusActions = statusActions.length > 0 && Boolean(onStatusAction);
   const menuHeightEstimate = estimateMenuHeight(

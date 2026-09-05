@@ -10,8 +10,8 @@ import {
 } from "./operations-rbac.js";
 
 /**
- * Resolves the effective permission map for an Operations team user.
- * Today: static role defaults. Tomorrow: merge DB role templates / overrides.
+ * Legacy static resolver. Prefer `resolveOperationsUserAccess` for requests.
+ * Kept so existing call sites and migration fallback remain available.
  */
 export function resolveOperationsUserPermissions(
   role: OperationsTeamRole,
@@ -30,3 +30,10 @@ export function operationsUserCan(
     action,
   );
 }
+
+export {
+  resolveOperationsUserAccess,
+  operationsAccessCan,
+  operationsAccessCanKey,
+  operationsAccessCanDelegate,
+} from "../rbac/operations-access.service.js";

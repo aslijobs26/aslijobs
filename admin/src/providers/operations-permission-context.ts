@@ -12,10 +12,18 @@ export type OperationsPermissionContextValue = {
   role: OperationsTeamRole | null;
   permissions: OperationsPermissionMap | null;
   isLoading: boolean;
+  isSuperAdmin: boolean;
+  canCreateRoles: boolean;
+  canManageUsers: boolean;
+  canAssignRoles: boolean;
+  grantedKeys: string[];
+  delegatableKeys: string[];
   can: (
     module: OperationsPermissionModule,
     action?: OperationsPermissionAction,
   ) => boolean;
+  canKey: (key: string) => boolean;
+  canDelegate: (key: string) => boolean;
 };
 
 export const OperationsPermissionContext =

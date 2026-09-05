@@ -3,13 +3,10 @@ import { HTTP_STATUS } from "../constants/http-status.js";
 import { AppError } from "./error.middleware.js";
 import { jwtService } from "../modules/auth/jwt.service.js";
 import { OperationsTeamUserModel } from "../modules/operations/auth/operations-team-user.model.js";
-import type {
-  OperationsPermissionAction,
-  OperationsPermissionMap,
-  OperationsPermissionModule,
-} from "../modules/operations/auth/operations-rbac.js";
+import type { OperationsPermissionAction, OperationsPermissionMap, OperationsPermissionModule } from "../modules/operations/auth/operations-rbac.js";
 import { canOperationsPermission } from "../modules/operations/auth/operations-rbac.js";
-import { resolveOperationsUserPermissions } from "../modules/operations/auth/operations-rbac.service.js";
+import { resolveOperationsUserAccess } from "../modules/operations/rbac/operations-access.service.js";
+import type { OperationsResolvedAccess } from "../modules/operations/rbac/operations-access.types.js";
 import type { OperationsTeamRole } from "../modules/operations/operations.constants.js";
 
 declare global {
@@ -19,6 +16,7 @@ declare global {
       operationsTeamRole?: OperationsTeamRole;
       operationsMobileNumber?: string;
       operationsPermissions?: OperationsPermissionMap;
+      operationsAccess?: OperationsResolvedAccess;
     }
   }
 }
@@ -59,7 +57,9 @@ export async function requireOperationsAuth(
     req.operationsUserId = String(user._id);
     req.operationsTeamRole = user.role;
     req.operationsMobileNumber = user.mobileNumber;
-    req.operationsPermissions = resolveOperationsUserPermissions(user.role);
+    const access = await resolveOperationsUserAccess(user);
+    req.operationsAccess = access;
+    req.operationsPermissions = access.permissions;
     next();
   } catch (error) {
     next(
@@ -104,9 +104,15 @@ export function requireOperationsPermission(
   return (req, _res, next) => {
     const permissions = req.operationsPermissions;
     const role = req.operationsTeamRole;
+    const access = req.operationsAccess;
 
-    if (!role || !permissions) {
+    if (!role || !permissions || !access) {
       next(new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED));
+      return;
+    }
+
+    if (access.isSuperAdmin) {
+      next();
       return;
     }
 
@@ -121,6 +127,30 @@ export function requireOperationsPermission(
     }
 
     next();
+  };
+}
+
+export function requireOperationsPermissionKey(
+  key: string,
+): (req: Request, res: Response, next: NextFunction) => void {
+  return (req, _res, next) => {
+    const access = req.operationsAccess;
+    if (!access) {
+      next(new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED));
+      return;
+    }
+
+    if (access.isSuperAdmin || access.grantedKeys.includes(key)) {
+      next();
+      return;
+    }
+
+    next(
+      new AppError(
+        "Access denied. You do not have permission to perform this action.",
+        HTTP_STATUS.FORBIDDEN,
+      ),
+    );
   };
 }
 

@@ -2,7 +2,9 @@
 
 import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkeletons";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
+import { getJobDescriptionPlainTextLength } from "@/utils/job-description-html";
 import {
   formatJobSearchEducation,
   formatJobSearchExperience,
@@ -32,7 +34,7 @@ import {
   Share2,
   ShieldCheck,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 type JobSearchMobileJobDetailsProps = {
   job: PublicJobDetail | undefined;
@@ -43,80 +45,6 @@ type JobSearchMobileJobDetailsProps = {
   onToggleBookmark: () => void;
   onRetry?: () => void;
 };
-
-type DescriptionSection = {
-  title: string;
-  paragraphs: string[];
-  bullets: string[];
-};
-
-const SECTION_HEADING_PATTERN =
-  /^(key\s+)?(responsibilities|requirements|skills|qualifications|duties|role\s+overview)(:)?$/i;
-
-const BULLET_PATTERN = /^\s*(?:[-*•]|\d+[.)])\s+(.+)$/;
-
-function parseDescription(text: string): {
-  introParagraphs: string[];
-  sections: DescriptionSection[];
-} {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const introParagraphs: string[] = [];
-  const sections: DescriptionSection[] = [];
-  let currentSection: DescriptionSection | null = null;
-  let paragraphBuffer: string[] = [];
-
-  const flushParagraph = () => {
-    const paragraph = paragraphBuffer.join(" ").trim();
-    paragraphBuffer = [];
-    if (!paragraph) {
-      return;
-    }
-    if (currentSection) {
-      currentSection.paragraphs.push(paragraph);
-    } else {
-      introParagraphs.push(paragraph);
-    }
-  };
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) {
-      flushParagraph();
-      continue;
-    }
-
-    if (SECTION_HEADING_PATTERN.test(line)) {
-      flushParagraph();
-      currentSection = {
-        title: line.replace(/:$/, ""),
-        paragraphs: [],
-        bullets: [],
-      };
-      sections.push(currentSection);
-      continue;
-    }
-
-    const bulletMatch = line.match(BULLET_PATTERN);
-    if (bulletMatch?.[1]) {
-      flushParagraph();
-      if (!currentSection) {
-        currentSection = {
-          title: "Key Responsibilities",
-          paragraphs: [],
-          bullets: [],
-        };
-        sections.push(currentSection);
-      }
-      currentSection.bullets.push(bulletMatch[1].trim());
-      continue;
-    }
-
-    paragraphBuffer.push(line);
-  }
-
-  flushParagraph();
-  return { introParagraphs, sections };
-}
 
 function SummaryField({
   label,
@@ -173,14 +101,6 @@ function SectionHeading({ children }: { children: ReactNode }) {
   );
 }
 
-function SubHeading({ children }: { children: ReactNode }) {
-  return (
-    <h3 className="text-[13px] leading-snug font-bold text-[#1F2937]">
-      {children}
-    </h3>
-  );
-}
-
 function ContentSection({
   title,
   children,
@@ -209,11 +129,6 @@ export function JobSearchMobileJobDetails({
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
   const isApplied = appliedLocally || job?.isApplied === true;
-
-  const parsedDescription = useMemo(
-    () => parseDescription(job?.description ?? ""),
-    [job?.description],
-  );
 
   if (isLoading) {
     return (
@@ -287,8 +202,7 @@ export function JobSearchMobileJobDetails({
   );
 
   const descriptionNeedsCollapse =
-    (job.description?.trim().length ?? 0) > 380 ||
-    parsedDescription.sections.some((section) => section.bullets.length > 4);
+    getJobDescriptionPlainTextLength(job.description ?? "") > 380;
 
   const handleShare = () => {
     void shareOrCopyText({
@@ -485,42 +399,10 @@ export function JobSearchMobileJobDetails({
                     "max-h-[220px] overflow-hidden",
                 )}
               >
-                {parsedDescription.introParagraphs.map((paragraph, index) => (
-                  <p
-                    key={`intro-${index}`}
-                    className="mb-2 text-[13px] leading-[1.65] text-[#374151] last:mb-0"
-                  >
-                    {paragraph}
-                  </p>
-                ))}
-
-                {parsedDescription.sections.map((section) => (
-                  <div key={section.title} className="mt-4">
-                    <SubHeading>{section.title}</SubHeading>
-                    {section.paragraphs.map((paragraph, index) => (
-                      <p
-                        key={`${section.title}-p-${index}`}
-                        className="mt-1.5 text-[13px] leading-[1.65] text-[#374151]"
-                      >
-                        {paragraph}
-                      </p>
-                    ))}
-                    {section.bullets.length > 0 ? (
-                      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-[13px] leading-[1.65] text-[#374151]">
-                        {section.bullets.map((bullet) => (
-                          <li key={bullet}>{bullet}</li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                ))}
-
-                {parsedDescription.introParagraphs.length === 0 &&
-                parsedDescription.sections.length === 0 ? (
-                  <p className="whitespace-pre-wrap text-[13px] leading-[1.65] text-[#374151]">
-                    {job.description.trim()}
-                  </p>
-                ) : null}
+                <JobDescriptionContent
+                  html={job.description}
+                  className="text-[13px] leading-[1.65] text-[#374151]"
+                />
               </div>
 
               {!descriptionExpanded && descriptionNeedsCollapse ? (
