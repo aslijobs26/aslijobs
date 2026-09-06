@@ -46,6 +46,35 @@ export type ListOperationsJobsQuery = z.infer<
   typeof listOperationsJobsQuerySchema
 >;
 
+const analyticsIsoDateSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD date format.")
+  .or(z.literal(""));
+
+export const operationsJobsAnalyticsQuerySchema = z
+  .object({
+    preset: z
+      .enum(["last_7_days", "last_30_days", "last_3_months", "custom"])
+      .optional()
+      .default("last_30_days"),
+    dateFrom: analyticsIsoDateSchema.optional().default(""),
+    dateTo: analyticsIsoDateSchema.optional().default(""),
+  })
+  .superRefine((value, ctx) => {
+    if (value.preset === "custom" && !value.dateFrom && !value.dateTo) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide a custom analytics date range.",
+        path: ["dateFrom"],
+      });
+    }
+  });
+
+export type OperationsJobsAnalyticsQueryInput = z.infer<
+  typeof operationsJobsAnalyticsQuerySchema
+>;
+
 export const operationsJobPublicIdParamsSchema = z.object({
   jobId: z
     .string()

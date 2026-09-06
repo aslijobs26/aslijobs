@@ -7,6 +7,9 @@ import { validate } from "../../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../../utils/async-handler.js";
 import { operationsEmployersController } from "./operations-employers.controller.js";
 import {
+  createOperationsEmployerBodySchema,
+  employersAnalyticsQuerySchema,
+  exportOperationsEmployersQuerySchema,
   listOperationsEmployerJobsQuerySchema,
   listOperationsEmployersQuerySchema,
   operationsEmployerIdParamsSchema,
@@ -23,6 +26,27 @@ operationsEmployersRouter.get(
   requireOperationsPermission("employers", "read"),
   validate(listOperationsEmployersQuerySchema, "query"),
   asyncHandler(operationsEmployersController.list),
+);
+
+operationsEmployersRouter.get(
+  "/analytics",
+  requireOperationsPermission("employers", "read"),
+  validate(employersAnalyticsQuerySchema, "query"),
+  asyncHandler(operationsEmployersController.analytics),
+);
+
+operationsEmployersRouter.get(
+  "/export",
+  requireOperationsPermission("employers", "read"),
+  validate(exportOperationsEmployersQuerySchema, "query"),
+  asyncHandler(operationsEmployersController.exportCsv),
+);
+
+operationsEmployersRouter.post(
+  "/",
+  requireOperationsPermission("employers", "create"),
+  validate(createOperationsEmployerBodySchema, "body"),
+  asyncHandler(operationsEmployersController.create),
 );
 
 operationsEmployersRouter.get(

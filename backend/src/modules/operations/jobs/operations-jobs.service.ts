@@ -38,16 +38,19 @@ import type {
   OperationsJobApplicationsResult,
   OperationsJobDetail,
   OperationsJobListItem,
+  OperationsJobsAnalyticsResult,
   OperationsJobsFilterOptions,
   OperationsJobsInsight,
   OperationsJobsKpis,
   OperationsJobsListResult,
   OperationsJobsTabCounts,
 } from "./operations-jobs.types.js";
+import { loadJobsAnalyticsCharts } from "./operations-jobs-analytics.js";
 import type {
   AssignOperationsJobEmployerBody,
   ListOperationsJobApplicationsQuery,
   ListOperationsJobsQuery,
+  OperationsJobsAnalyticsQueryInput,
   PublishOperationsJobBody,
   SaveOperationsJobDraftBody,
 } from "./operations-jobs.validation.js";
@@ -126,6 +129,38 @@ function paymentStatusLabel(status: JobListingPaymentStatus): string {
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Collapses values that differ only by casing (e.g. "hyderabad" vs "Hyderabad").
+ * Prefers the better-capitalized spelling for display.
+ */
+function dedupeCaseInsensitiveStrings(values: string[]): string[] {
+  const byKey = new Map<string, string>();
+
+  for (const raw of values) {
+    const trimmed = String(raw ?? "").trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const key = trimmed.toLowerCase();
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, trimmed);
+      continue;
+    }
+
+    const existingCaps = (existing.match(/[A-Z]/g) ?? []).length;
+    const nextCaps = (trimmed.match(/[A-Z]/g) ?? []).length;
+    if (nextCaps > existingCaps) {
+      byKey.set(key, trimmed);
+    }
+  }
+
+  return [...byKey.values()].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" }),
+  );
 }
 
 function buildListFilter(
@@ -315,18 +350,15 @@ async function loadFilterOptions(): Promise<OperationsJobsFilterOptions> {
     JobModel.distinct("stateName"),
   ]);
 
-  const locations = stateRows
-    .map((value) => String(value ?? "").trim())
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b));
+  const locations = dedupeCaseInsensitiveStrings(
+    stateRows.map((value) => String(value ?? "")),
+  );
 
-  const categories = [
-    ...new Set(
-      [...jobCategories, ...employerCategories]
-        .map((value) => String(value ?? "").trim())
-        .filter(Boolean),
+  const categories = dedupeCaseInsensitiveStrings(
+    [...jobCategories, ...employerCategories].map((value) =>
+      String(value ?? ""),
     ),
-  ].sort((a, b) => a.localeCompare(b));
+  );
 
   return {
     categories,
@@ -1236,6 +1268,17 @@ export const operationsJobsService = {
         ...pagination,
         page: query.page > pagination.totalPages ? pagination.page : query.page,
       },
+    };
+  },
+
+  async getJobsAnalytics(
+    query: OperationsJobsAnalyticsQueryInput,
+  ): Promise<OperationsJobsAnalyticsResult> {
+    const summary = await loadKpisAndCounts();
+    const charts = await loadJobsAnalyticsCharts(query, summary.kpis);
+    return {
+      kpis: summary.kpis,
+      ...charts,
     };
   },
 

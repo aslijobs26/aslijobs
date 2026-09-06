@@ -110,6 +110,7 @@ function employerCatalog(): OperationsPermissionDefinition[] {
     { action: "search", label: "Search", mapsToAction: "read" },
     { action: "filter", label: "Filter", mapsToAction: "read" },
     { action: "export", label: "Export", mapsToAction: "read" },
+    { action: "create", label: "Create", mapsToAction: "create" },
   ];
 
   const profileFields: Array<{ id: string; label: string; sensitive?: boolean }> =

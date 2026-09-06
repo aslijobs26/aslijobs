@@ -4,6 +4,8 @@ import type {
   OperationsJobApplicationsResult,
   OperationsJobDetail,
   OperationsJobStatusAction,
+  OperationsJobsAnalyticsParams,
+  OperationsJobsAnalyticsResult,
   OperationsJobsListParams,
   OperationsJobsListResult,
 } from "../types/operations-jobs";
@@ -28,6 +30,27 @@ export async function fetchOperationsJobs(
         status: params.status || undefined,
         paymentStatus: params.paymentStatus || undefined,
         location: params.location || undefined,
+      },
+    },
+  );
+
+  return response.data.data;
+}
+
+export async function fetchOperationsJobsAnalytics(
+  params: OperationsJobsAnalyticsParams,
+): Promise<OperationsJobsAnalyticsResult> {
+  const response = await apiClient.get<{ data: OperationsJobsAnalyticsResult }>(
+    `${OPERATIONS_JOBS_BASE}/analytics`,
+    {
+      params: {
+        preset: params.preset,
+        dateFrom:
+          params.preset === "custom" && params.dateFrom
+            ? params.dateFrom
+            : undefined,
+        dateTo:
+          params.preset === "custom" && params.dateTo ? params.dateTo : undefined,
       },
     },
   );

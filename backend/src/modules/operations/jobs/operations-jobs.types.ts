@@ -82,6 +82,77 @@ export type OperationsJobsListResult = {
   pagination: ListPagination;
 };
 
+export type OperationsJobsAnalyticsPreset =
+  | "last_7_days"
+  | "last_30_days"
+  | "last_3_months"
+  | "custom";
+
+export type OperationsJobsAnalyticsQuery = {
+  preset: OperationsJobsAnalyticsPreset;
+  dateFrom: string;
+  dateTo: string;
+};
+
+export type OperationsJobsAnalyticsRange = {
+  preset: OperationsJobsAnalyticsPreset;
+  from: string;
+  to: string;
+  previousFrom: string;
+  previousTo: string;
+  granularity: "day" | "week";
+};
+
+export type OperationsJobsAnalyticsNamedCount = {
+  key: string;
+  label: string;
+  count: number;
+};
+
+export type OperationsJobsAnalyticsSeriesPoint = {
+  date: string;
+  label: string;
+  count: number;
+};
+
+export type OperationsJobsAnalyticsChartPoint = OperationsJobsAnalyticsNamedCount & {
+  percentage: number;
+};
+
+export type OperationsJobsAnalyticsInsight = {
+  headline: string;
+  detail: string;
+  jobsCreatedChangePercent: number | null;
+  applicationsChangePercent: number | null;
+  trendDirection: "up" | "down" | "flat" | null;
+};
+
+export type OperationsJobsAnalyticsResult = {
+  kpis: OperationsJobsKpis;
+  range: OperationsJobsAnalyticsRange;
+  status: OperationsJobsAnalyticsNamedCount[];
+  payment: OperationsJobsAnalyticsNamedCount[];
+  jobsCreated: OperationsJobsAnalyticsSeriesPoint[];
+  applicationsTrend: OperationsJobsAnalyticsSeriesPoint[];
+  applicationSummary: {
+    totalApplications: number;
+    previousTotalApplications: number;
+    averageApplicationsPerJob: number;
+    changePercent: number | null;
+  };
+  jobsByLocation: OperationsJobsAnalyticsNamedCount[];
+  jobsByEmploymentType: OperationsJobsAnalyticsNamedCount[];
+  topPerformingJobs: OperationsJobsAnalyticsChartPoint[];
+  jobsExpiringSoon: OperationsJobsAnalyticsNamedCount[];
+  insight: OperationsJobsAnalyticsInsight;
+  totals: {
+    jobsCreated: number;
+    previousJobsCreated: number;
+    applications: number;
+    previousApplications: number;
+  };
+};
+
 export type OperationsJobAnalytics = {
   views: number;
   applications: number;

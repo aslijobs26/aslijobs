@@ -309,6 +309,11 @@ const employerSchema = new Schema(
 );
 
 employerSchema.index({ whatsappNumber: 1, accountType: 1 });
+employerSchema.index({ createdAt: -1 });
+employerSchema.index({ verifiedAt: -1 });
+employerSchema.index({ industry: 1 });
+employerSchema.index({ state: 1, city: 1 });
+employerSchema.index({ status: 1, verificationStatus: 1 });
 
 export type EmployerDocumentLean = InferSchemaType<typeof employerSchema> & {
   _id: Types.ObjectId;

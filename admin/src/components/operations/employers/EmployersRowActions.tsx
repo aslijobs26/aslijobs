@@ -17,7 +17,7 @@ import {
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   OPERATIONS_ROUTES,
   operationsEmployerDetailPath,
@@ -44,7 +44,6 @@ export function EmployersRowActions({
   onReject,
   onToggleStatus,
 }: EmployersRowActionsProps) {
-  const navigate = useNavigate();
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -260,14 +259,6 @@ export function EmployersRowActions({
 
   return (
     <div className="relative inline-flex items-center gap-1.5">
-      <button
-        type="button"
-        onClick={() => navigate(operationsEmployerDetailPath(employer.id))}
-        className="inline-flex h-8 items-center justify-center rounded-lg border border-primary/30 px-2.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-      >
-        View Details
-      </button>
-
       <button
         ref={triggerRef}
         type="button"

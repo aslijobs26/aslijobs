@@ -360,7 +360,7 @@ export function OperationsGuestGuard({ children }: OperationsGuestGuardProps) {
 
   if (sessionQuery.isSuccess) {
 
-    return <Navigate to={OPERATIONS_ROUTES.DASHBOARD} replace />;
+    return <Navigate to={OPERATIONS_ROUTES.HOME} replace />;
 
   }
 
@@ -376,7 +376,7 @@ export function OperationsGuestGuard({ children }: OperationsGuestGuardProps) {
 
   ) {
 
-    return <Navigate to={OPERATIONS_ROUTES.DASHBOARD} replace />;
+    return <Navigate to={OPERATIONS_ROUTES.HOME} replace />;
 
   }
 

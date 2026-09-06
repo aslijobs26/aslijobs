@@ -34,7 +34,7 @@ export function OperationsLoginForm() {
         refreshToken: data.refreshToken,
         user: data.user,
       });
-      navigate(OPERATIONS_ROUTES.DASHBOARD, { replace: true });
+      navigate(OPERATIONS_ROUTES.HOME, { replace: true });
     },
     onError: (error) => {
       setErrorMessage(

@@ -9,6 +9,9 @@ import {
 } from "../rbac/operations-field-sanitize.js";
 import { operationsEmployersService } from "./operations-employers.service.js";
 import type {
+  CreateOperationsEmployerBody,
+  EmployersAnalyticsQuery,
+  ExportOperationsEmployersQuery,
   ListOperationsEmployerJobsQuery,
   ListOperationsEmployersQuery,
   OperationsEmployerIdParams,
@@ -37,6 +40,46 @@ export const operationsEmployersController = {
           sanitizeEmployerListItem(item, access),
         ),
       },
+    });
+  },
+
+  async analytics(req: Request, res: Response): Promise<void> {
+    const query = req.query as unknown as EmployersAnalyticsQuery;
+    const result = await operationsEmployersService.getAnalytics(query);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Operations employers analytics fetched successfully.",
+      data: result,
+    });
+  },
+
+  async exportCsv(req: Request, res: Response): Promise<void> {
+    assertOperationsPermissionKey(
+      requireAccess(req),
+      "employers.list.export",
+    );
+    const query = req.query as unknown as ExportOperationsEmployersQuery;
+    const csv = await operationsEmployersService.exportEmployersCsv({
+      ...query,
+      page: 1,
+      limit: 100,
+    });
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="operations-employers-export.csv"',
+    );
+    res.status(HTTP_STATUS.OK).send(csv);
+  },
+
+  async create(req: Request, res: Response): Promise<void> {
+    const body = req.body as CreateOperationsEmployerBody;
+    const result = await operationsEmployersService.createEmployer(body);
+
+    sendSuccess(res, HTTP_STATUS.CREATED, {
+      message: "Employer created successfully.",
+      data: sanitizeEmployerDetail(result, requireAccess(req)),
     });
   },
 

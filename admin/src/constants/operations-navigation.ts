@@ -1,24 +1,17 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Activity,
-  AlertTriangle,
   Briefcase,
   Building2,
-  CreditCard,
-  FileText,
-  FolderKanban,
+  Home,
+  Inbox,
   LayoutDashboard,
-  MessageCircle,
-  Receipt,
-  RefreshCw,
-  Route,
-  Scale,
-  Shield,
-  ShieldCheck,
+  MapPin,
+  Settings,
   Ticket,
   Users,
   UsersRound,
-  Wallet,
+  BarChart3,
+  FolderKanban,
 } from "lucide-react";
 import { OPERATIONS_ROUTES } from "./operations-routes";
 
@@ -36,46 +29,47 @@ export interface OperationsNavSection {
   items: OperationsNavItem[];
 }
 
+/**
+ * ASLI OS sidebar structure aligned to the Operational Dashboard reference.
+ * Routes map to existing modules; placeholder routes keep nav complete without
+ * breaking live Employers / Candidates / Jobs / Team pages.
+ */
 export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
   {
-    id: "operations",
-    label: "Operations",
+    id: "top",
+    label: "",
     items: [
       {
-        id: "dashboard",
-        label: "Dashboard",
-        href: OPERATIONS_ROUTES.DASHBOARD,
-        icon: LayoutDashboard,
+        id: "home",
+        label: "Home",
+        href: OPERATIONS_ROUTES.HOME,
+        icon: Home,
       },
       {
         id: "my-work",
         label: "My Work",
         href: OPERATIONS_ROUTES.MY_WORK,
         icon: FolderKanban,
+        badge: 24,
       },
       {
-        id: "work-queue",
-        label: "Work Queue",
-        href: OPERATIONS_ROUTES.WORK_QUEUE,
-        icon: Activity,
+        id: "inbox",
+        label: "Inbox",
+        href: OPERATIONS_ROUTES.INBOX,
+        icon: Inbox,
+        badge: 8,
       },
+    ],
+  },
+    {
+      id: "operations",
+      label: "OPERATIONS",
+      items: [
       {
-        id: "whatsapp-inbox",
-        label: "WhatsApp Inbox",
-        href: OPERATIONS_ROUTES.WHATSAPP_INBOX,
-        icon: MessageCircle,
-      },
-      {
-        id: "journey-alerts",
-        label: "Journey Alerts",
-        href: OPERATIONS_ROUTES.JOURNEY_ALERTS,
-        icon: Route,
-      },
-      {
-        id: "support-tickets",
-        label: "Support Tickets",
-        href: OPERATIONS_ROUTES.SUPPORT_TICKETS,
-        icon: Ticket,
+        id: "jobseekers",
+        label: "Jobseekers",
+        href: OPERATIONS_ROUTES.CANDIDATES,
+        icon: Users,
       },
       {
         id: "employers",
@@ -84,112 +78,58 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         icon: Building2,
       },
       {
-        id: "candidates",
-        label: "Candidates",
-        href: OPERATIONS_ROUTES.CANDIDATES,
-        icon: Users,
-      },
-      {
         id: "jobs",
         label: "Jobs",
         href: OPERATIONS_ROUTES.JOBS,
         icon: Briefcase,
       },
       {
-        id: "verifications",
-        label: "Verifications",
-        href: OPERATIONS_ROUTES.VERIFICATIONS,
-        icon: ShieldCheck,
+        id: "placements",
+        label: "Placements",
+        href: OPERATIONS_ROUTES.PLACEMENTS,
+        icon: MapPin,
       },
       {
-        id: "escalations",
-        label: "Escalations",
-        href: OPERATIONS_ROUTES.ESCALATIONS,
-        icon: AlertTriangle,
+        id: "support",
+        label: "Support",
+        href: OPERATIONS_ROUTES.SUPPORT_TICKETS,
+        icon: Ticket,
       },
     ],
   },
-  {
-    id: "management",
-    label: "Management",
-    items: [
+    {
+      id: "management",
+      label: "MANAGEMENT",
+      items: [
       {
-        id: "team",
-        label: "Team Management",
+        id: "operations-dashboard",
+        label: "Operations",
+        href: OPERATIONS_ROUTES.DASHBOARD,
+        icon: LayoutDashboard,
+      },
+      {
+        id: "analytics",
+        label: "Analytics",
+        href: `${OPERATIONS_ROUTES.JOBS}?view=analytics`,
+        icon: BarChart3,
+      },
+      {
+        id: "organization",
+        label: "Organization",
         href: OPERATIONS_ROUTES.TEAM_MANAGEMENT,
         icon: UsersRound,
       },
-      {
-        id: "departments",
-        label: "Departments",
-        href: OPERATIONS_ROUTES.DEPARTMENTS,
-        icon: Building2,
-      },
-      {
-        id: "roles",
-        label: "Roles & Permissions",
-        href: OPERATIONS_ROUTES.ROLES,
-        icon: Shield,
-      },
-      {
-        id: "activity-log",
-        label: "Activity Log",
-        href: OPERATIONS_ROUTES.ACTIVITY_LOG,
-        icon: Activity,
-      },
     ],
   },
-  {
-    id: "finance",
-    label: "Finance",
-    items: [
+    {
+      id: "system",
+      label: "SYSTEM",
+      items: [
       {
-        id: "subscriptions",
-        label: "Subscriptions & Boosters",
-        href: OPERATIONS_ROUTES.SUBSCRIPTIONS,
-        icon: CreditCard,
-      },
-      {
-        id: "payments",
-        label: "Payments & Invoices",
-        href: OPERATIONS_ROUTES.PAYMENTS,
-        icon: Receipt,
-      },
-      {
-        id: "transactions",
-        label: "Transactions",
-        href: OPERATIONS_ROUTES.TRANSACTIONS,
-        icon: Wallet,
-      },
-      {
-        id: "refunds",
-        label: "Refunds",
-        href: OPERATIONS_ROUTES.REFUNDS,
-        icon: RefreshCw,
-      },
-    ],
-  },
-  {
-    id: "compliance",
-    label: "Compliance",
-    items: [
-      {
-        id: "trust",
-        label: "Trust & Compliance",
-        href: OPERATIONS_ROUTES.TRUST_COMPLIANCE,
-        icon: Scale,
-      },
-      {
-        id: "audit",
-        label: "Audit Logs",
-        href: OPERATIONS_ROUTES.AUDIT_LOGS,
-        icon: FileText,
-      },
-      {
-        id: "policies",
-        label: "Policies & Documents",
-        href: OPERATIONS_ROUTES.POLICIES,
-        icon: FileText,
+        id: "settings",
+        label: "Settings",
+        href: OPERATIONS_ROUTES.SETTINGS,
+        icon: Settings,
       },
     ],
   },
@@ -199,33 +139,23 @@ export const OPERATIONS_NAV_ITEM_PERMISSION_MODULE: Record<
   string,
   import("./operations-permissions").OperationsPermissionModule
 > = {
-  dashboard: "dashboard",
+  home: "dashboard",
   "my-work": "my_work",
-  "work-queue": "work_queue",
-  "whatsapp-inbox": "whatsapp",
-  "journey-alerts": "journey_alerts",
-  "support-tickets": "support",
+  inbox: "whatsapp",
+  jobseekers: "candidates",
   employers: "employers",
-  candidates: "candidates",
   jobs: "jobs",
-  verifications: "verifications",
-  escalations: "escalations",
-  team: "team",
-  departments: "departments",
-  roles: "roles",
-  "activity-log": "activity_logs",
-  subscriptions: "billing",
-  payments: "billing",
-  transactions: "billing",
-  refunds: "billing",
-  trust: "settings",
-  audit: "activity_logs",
-  policies: "settings",
+  placements: "jobs",
+  support: "support",
+  "operations-dashboard": "dashboard",
+  analytics: "jobs",
+  organization: "team",
+  settings: "settings",
 };
 
 export const OPERATIONS_BRAND = {
-  name: "aslijobs",
-  tagline: "India's Trusted WhatsApp Job Network",
+  name: "ASLI OS",
+  tagline: "Jobs for a brighter tomorrow",
 } as const;
 
 export const MOCK_OPERATIONS_USER = {

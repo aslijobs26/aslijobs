@@ -8,7 +8,10 @@ import {
 } from "../../../constants/operations-layout";
 import { cn } from "../../../utils/cn";
 import "../dashboard/operations-dashboard-density.css";
-import { OperationsHeader } from "./OperationsHeader";
+import {
+  OperationsHeader,
+  type OperationsHeaderVariant,
+} from "./OperationsHeader";
 import { OperationsSidebar } from "./OperationsSidebar";
 
 interface OperationsLayoutProps {
@@ -16,6 +19,7 @@ interface OperationsLayoutProps {
   subtitle?: string;
   children: ReactNode;
   density?: OperationsLayoutDensity;
+  headerVariant?: OperationsHeaderVariant;
 }
 
 export function OperationsLayout({
@@ -23,6 +27,7 @@ export function OperationsLayout({
   subtitle,
   children,
   density = "compact",
+  headerVariant = "command",
 }: OperationsLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -86,6 +91,7 @@ export function OperationsLayout({
           subtitle={subtitle}
           onSidebarToggle={handleSidebarToggle}
           density={density}
+          variant={headerVariant}
         />
         <main
           className={cn(

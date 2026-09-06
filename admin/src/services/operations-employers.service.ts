@@ -4,8 +4,12 @@ import type {
   OperationsEmployersSearchResult,
 } from "../types/operations-post-job";
 import type {
+  CreateOperationsEmployerInput,
   OperationsEmployerDetail,
   OperationsEmployerJobsResult,
+  OperationsEmployersAnalyticsParams,
+  OperationsEmployersAnalyticsResult,
+  OperationsEmployersExportParams,
   OperationsEmployersListParams,
   OperationsEmployersListResult,
   UpdateOperationsEmployerStatusInput,
@@ -121,4 +125,78 @@ export async function fetchOperationsEmployerById(
   );
 
   return response.data.data;
+}
+
+export async function fetchOperationsEmployersAnalytics(
+  params: OperationsEmployersAnalyticsParams,
+): Promise<OperationsEmployersAnalyticsResult> {
+  const response = await apiClient.get<{
+    data: OperationsEmployersAnalyticsResult;
+  }>(`${OPERATIONS_EMPLOYERS_BASE}/analytics`, {
+    params: {
+      preset: params.preset,
+      dateFrom:
+        params.preset === "custom" && params.dateFrom
+          ? params.dateFrom
+          : undefined,
+      dateTo:
+        params.preset === "custom" && params.dateTo ? params.dateTo : undefined,
+    },
+  });
+
+  return response.data.data;
+}
+
+export async function createOperationsEmployer(
+  payload: CreateOperationsEmployerInput,
+): Promise<OperationsEmployerDetail> {
+  const response = await apiClient.post<{ data: OperationsEmployerDetail }>(
+    OPERATIONS_EMPLOYERS_BASE,
+    payload,
+  );
+
+  return response.data.data;
+}
+
+function buildEmployersFilterParams(params: OperationsEmployersExportParams) {
+  return {
+    search: params.search || undefined,
+    verificationStatus: params.verificationStatus || undefined,
+    employerType: params.employerType || undefined,
+    location: params.location || undefined,
+    status: params.status || undefined,
+    datePreset: params.datePreset || undefined,
+    dateFrom: params.dateFrom || undefined,
+    dateTo: params.dateTo || undefined,
+    analyticsPreset: params.analyticsPreset || undefined,
+    analyticsFrom: params.analyticsFrom || undefined,
+    analyticsTo: params.analyticsTo || undefined,
+  };
+}
+
+export async function exportOperationsEmployersCsv(
+  params: OperationsEmployersExportParams,
+): Promise<void> {
+  const response = await apiClient.get<Blob>(
+    `${OPERATIONS_EMPLOYERS_BASE}/export`,
+    {
+      params: buildEmployersFilterParams(params),
+      responseType: "blob",
+    },
+  );
+
+  const contentDisposition = response.headers["content-disposition"];
+  const filenameMatch =
+    typeof contentDisposition === "string"
+      ? /filename="?([^"]+)"?/i.exec(contentDisposition)
+      : null;
+  const filename =
+    filenameMatch?.[1]?.trim() || "operations-employers-export.csv";
+
+  const url = URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }

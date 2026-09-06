@@ -1,104 +1,124 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
-import {
-  EmployersDateAnalyticsBar,
-  type EmployersDateFiltersState,
-} from "../components/operations/employers/EmployersDateAnalyticsBar";
-import {
-  EmployersFiltersBar,
-  type EmployersFiltersState,
-} from "../components/operations/employers/EmployersFiltersBar";
-import { EmployersKpiStrip } from "../components/operations/employers/EmployersKpiStrip";
+import { Search } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { EmployersPageSkeleton } from "../components/operations/employers/EmployersPageSkeleton";
 import { EmployersTableSection } from "../components/operations/employers/EmployersTableSection";
-import { formatEmployerDisplayId } from "../components/operations/employers/employers-format";
+import { AddEmployerDialog } from "../components/operations/employers/overview/AddEmployerDialog";
+import { EmployerTypeDonut } from "../components/operations/employers/overview/EmployerTypeDonut";
+import { EmployersAskAsliCard } from "../components/operations/employers/overview/EmployersAskAsliCard";
+import { EmployersByIndustry } from "../components/operations/employers/overview/EmployersByIndustry";
+import { EmployersByLocation } from "../components/operations/employers/overview/EmployersByLocation";
+import { EmployersOnboardingFunnel } from "../components/operations/employers/overview/EmployersOnboardingFunnel";
+import { EmployersOverviewHeader } from "../components/operations/employers/overview/EmployersOverviewHeader";
+import { EmployersOverviewKpiStrip } from "../components/operations/employers/overview/EmployersOverviewKpiStrip";
+import { EmployersOverviewTabs } from "../components/operations/employers/overview/EmployersOverviewTabs";
+import { EmployersQuickActions } from "../components/operations/employers/overview/EmployersQuickActions";
+import { EmployersRegistrationTrendChart } from "../components/operations/employers/overview/EmployersRegistrationTrendChart";
+import { TopHiringLocations } from "../components/operations/employers/overview/TopHiringLocations";
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import {
+  useExportOperationsEmployersCsv,
   useOperationsEmployers,
+  useOperationsEmployersAnalytics,
   useUpdateOperationsEmployerStatus,
   useUpdateOperationsEmployerVerification,
 } from "../hooks/use-operations-employers";
 import type {
-  OperationsEmployerDatePreset,
   OperationsEmployerListItem,
-  OperationsEmployersListResult,
+  OperationsEmployersAnalyticsParams,
+  OperationsEmployersAnalyticsPreset,
+  OperationsEmployersExportParams,
+  OperationsEmployersOverviewTab,
 } from "../types/operations-employers";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
 
-const DEFAULT_FILTERS: EmployersFiltersState = {
-  search: "",
-  verificationStatus: "",
-  employerType: "",
-  location: "",
-  status: "",
-  registrationPreset: "",
+const ANALYTICS_PRESETS: OperationsEmployersAnalyticsPreset[] = [
+  "last_7_days",
+  "last_30_days",
+  "last_90_days",
+  "this_year",
+  "custom",
+];
+
+const EMPTY_TABS = {
+  all: 0,
+  new: 0,
+  verificationPending: 0,
+  active: 0,
+  inactive: 0,
 };
 
-const DEFAULT_DATE_FILTERS: EmployersDateFiltersState = {
-  datePreset: "all",
-  dateFrom: "",
-  dateTo: "",
-};
+function todayIsoDate(): string {
+  const today = new Date();
+  return [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+}
 
-function exportEmployersCsv(result: OperationsEmployersListResult): void {
-  const header = [
-    "Employer ID",
-    "Display Name",
-    "Company Name",
-    "Phone",
-    "Email",
-    "Organization Type",
-    "Location",
-    "Registered Date",
-    "Registered Time",
-    "Verification Status",
-    "Status",
-    "Active Jobs",
-    "Total Jobs",
-  ];
+function parseAnalyticsPreset(
+  value: string | null,
+): OperationsEmployersAnalyticsPreset {
+  return ANALYTICS_PRESETS.includes(value as OperationsEmployersAnalyticsPreset)
+    ? (value as OperationsEmployersAnalyticsPreset)
+    : "last_30_days";
+}
 
-  const rows = result.employers.map((item) => [
-    formatEmployerDisplayId(item.id),
-    item.displayName,
-    item.companyName,
-    item.phone,
-    item.email,
-    item.organizationType,
-    item.location,
-    item.registeredAtDate,
-    item.registeredAtTime,
-    item.verificationStatusLabel,
-    item.statusLabel,
-    String(item.activeJobsCount),
-    String(item.totalJobsCount),
-  ]);
+function parseOverviewTab(
+  value: string | null,
+): OperationsEmployersOverviewTab {
+  if (
+    value === "new" ||
+    value === "verificationPending" ||
+    value === "active" ||
+    value === "inactive"
+  ) {
+    return value;
+  }
+  return "all";
+}
 
-  const csv = [header, ...rows]
-    .map((row) =>
-      row
-        .map((cell) => `"${String(cell).replaceAll('"', '""')}"`)
-        .join(","),
-    )
-    .join("\n");
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `operations-employers-page-${result.pagination.page}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+function queryErrorMessage(error: unknown, fallback: string): string {
+  if (isOperationsSessionTransientError(error)) {
+    return "The API server is temporarily unavailable. Please wait a moment and retry.";
+  }
+  if (isAxiosError(error)) {
+    if (error.response?.status === 401) {
+      return "Your session expired. Please refresh or sign in again.";
+    }
+    const message = error.response?.data?.message;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
 }
 
 export function OperationsEmployersPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [filters, setFilters] = useState<EmployersFiltersState>(DEFAULT_FILTERS);
-  const [dateFilters, setDateFilters] =
-    useState<EmployersDateFiltersState>(DEFAULT_DATE_FILTERS);
+  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<OperationsEmployersOverviewTab>(
+    () =>
+      searchParams.get("verificationStatus") === "pending"
+        ? "verificationPending"
+        : parseOverviewTab(searchParams.get("tab")),
+  );
+  const [analyticsFilters, setAnalyticsFilters] =
+    useState<OperationsEmployersAnalyticsParams>({
+      preset: parseAnalyticsPreset(searchParams.get("preset")),
+      dateFrom: searchParams.get("dateFrom") ?? "",
+      dateTo: searchParams.get("dateTo") ?? "",
+    });
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  // Status/Verification Mutation Modals state
   const [selectedEmployer, setSelectedEmployer] =
     useState<OperationsEmployerListItem | null>(null);
   const [actionType, setActionType] = useState<
@@ -107,47 +127,64 @@ export function OperationsEmployersPage() {
   const [actionReason, setActionReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const listDatePreset: OperationsEmployerDatePreset =
-    filters.registrationPreset || dateFilters.datePreset;
-  const listDateFrom =
-    listDatePreset === "custom" ? dateFilters.dateFrom : "";
-  const listDateTo = listDatePreset === "custom" ? dateFilters.dateTo : "";
+  useEffect(() => {
+    if (searchParams.get("verificationStatus") === "pending") {
+      setActiveTab("verificationPending");
+    }
+  }, [searchParams]);
 
-  const queryParams = useMemo(
+  const listFilters = useMemo(() => {
+    switch (activeTab) {
+      case "new":
+        return {
+          verificationStatus: "",
+          status: "",
+          datePreset: "last_30_days" as const,
+        };
+      case "verificationPending":
+        return {
+          verificationStatus: "pending",
+          status: "",
+          datePreset: "all" as const,
+        };
+      case "active":
+        return {
+          verificationStatus: "",
+          status: "active",
+          datePreset: "all" as const,
+        };
+      case "inactive":
+        return {
+          verificationStatus: "",
+          status: "inactive",
+          datePreset: "all" as const,
+        };
+      default:
+        return {
+          verificationStatus: "",
+          status: "",
+          datePreset: "all" as const,
+        };
+    }
+  }, [activeTab]);
+
+  const listQueryParams = useMemo(
     () => ({
       page,
       limit,
-      search: filters.search.trim(),
-      verificationStatus: filters.verificationStatus,
-      employerType: filters.employerType,
-      location: filters.location,
-      status: filters.status,
-      datePreset: listDatePreset,
-      dateFrom: listDateFrom,
-      dateTo: listDateTo,
-      analyticsPreset: dateFilters.datePreset,
-      analyticsFrom:
-        dateFilters.datePreset === "custom" ? dateFilters.dateFrom : "",
-      analyticsTo: dateFilters.datePreset === "custom" ? dateFilters.dateTo : "",
+      search: search.trim(),
+      verificationStatus: listFilters.verificationStatus,
+      status: listFilters.status,
+      datePreset: listFilters.datePreset,
+      dateFrom: "",
+      dateTo: "",
     }),
-    [
-      page,
-      limit,
-      filters.search,
-      filters.verificationStatus,
-      filters.employerType,
-      filters.location,
-      filters.status,
-      listDatePreset,
-      listDateFrom,
-      listDateTo,
-      dateFilters.datePreset,
-      dateFilters.dateFrom,
-      dateFilters.dateTo,
-    ],
+    [page, limit, search, listFilters],
   );
 
-  const employersQuery = useOperationsEmployers(queryParams);
+  const analyticsQuery = useOperationsEmployersAnalytics(analyticsFilters);
+  const employersQuery = useOperationsEmployers(listQueryParams);
+  const exportMutation = useExportOperationsEmployersCsv();
   const verifyMutation = useUpdateOperationsEmployerVerification(
     selectedEmployer?.id,
   );
@@ -155,23 +192,52 @@ export function OperationsEmployersPage() {
     selectedEmployer?.id,
   );
 
-  const handleFilterChange = (next: Partial<EmployersFiltersState>) => {
-    setFilters((prev) => ({ ...prev, ...next }));
+  const exportParams = useMemo<OperationsEmployersExportParams>(
+    () => ({
+      search: search.trim(),
+      verificationStatus: listFilters.verificationStatus,
+      status: listFilters.status,
+      datePreset: listFilters.datePreset,
+    }),
+    [search, listFilters],
+  );
+
+  const handlePresetChange = (preset: OperationsEmployersAnalyticsPreset) => {
+    if (preset === "custom") {
+      const iso = todayIsoDate();
+      setAnalyticsFilters((prev) => ({
+        preset,
+        dateFrom: prev.dateFrom || iso,
+        dateTo: prev.dateTo || iso,
+      }));
+      return;
+    }
+    setAnalyticsFilters({ preset, dateFrom: "", dateTo: "" });
+  };
+
+  const handleTabChange = (tab: OperationsEmployersOverviewTab) => {
+    setActiveTab(tab);
     setPage(1);
+    const next = new URLSearchParams(searchParams);
+    if (tab === "verificationPending") {
+      next.set("verificationStatus", "pending");
+    } else {
+      next.delete("verificationStatus");
+    }
+    if (tab === "all") {
+      next.delete("tab");
+    } else {
+      next.set("tab", tab);
+    }
+    setSearchParams(next, { replace: true });
   };
 
-  const handleClearFilters = () => {
-    setFilters(DEFAULT_FILTERS);
-    setDateFilters(DEFAULT_DATE_FILTERS);
-    setPage(1);
+  const handleExport = () => {
+    void exportMutation.mutateAsync(exportParams).catch(() => {
+      // surfaced via mutation error state below if needed
+    });
   };
 
-  const handleExportCsv = () => {
-    if (!employersQuery.data) return;
-    exportEmployersCsv(employersQuery.data);
-  };
-
-  // Action handlers
   const handleOpenVerify = (employer: OperationsEmployerListItem) => {
     setSelectedEmployer(employer);
     setActionType("verify");
@@ -238,104 +304,191 @@ export function OperationsEmployersPage() {
     }
   };
 
-  const errorMessage = (() => {
-    if (!employersQuery.error) {
-      return undefined;
-    }
-    if (isOperationsSessionTransientError(employersQuery.error)) {
-      return "The API server is temporarily unavailable. Please wait a moment and retry.";
-    }
-    if (isAxiosError(employersQuery.error)) {
-      const message = employersQuery.error.response?.data?.message;
-      if (typeof message === "string" && message.trim()) {
-        return message;
-      }
-      if (employersQuery.error.response?.status === 401) {
-        return "Your session expired. Please refresh or sign in again.";
-      }
-    }
-    return "Failed to load employers. Please try again.";
-  })();
+  const analytics = analyticsQuery.data;
+  const listData = employersQuery.data;
+  const isInitialLoading =
+    (analyticsQuery.isLoading && !analytics) ||
+    (employersQuery.isLoading && !listData);
 
-  const data = employersQuery.data;
-  const isInitialLoading = employersQuery.isLoading && !data;
+  const listErrorMessage = employersQuery.error
+    ? queryErrorMessage(
+        employersQuery.error,
+        "Failed to load employers. Please try again.",
+      )
+    : undefined;
+
+  const analyticsErrorMessage = analyticsQuery.error
+    ? queryErrorMessage(
+        analyticsQuery.error,
+        "Failed to load employer analytics. Please try again.",
+      )
+    : undefined;
 
   return (
     <OperationsLayout
-      title="Employers"
-      subtitle="View, search and manage all employers."
+      title="Employers Overview"
+      subtitle="Track registrations, verification, and hiring activity."
+      headerVariant="command"
     >
       <div className="flex w-full min-w-0 flex-col gap-3">
         {isInitialLoading ? (
           <EmployersPageSkeleton />
         ) : (
           <>
-            {data?.kpis ? <EmployersKpiStrip kpis={data.kpis} /> : null}
-
-            {data?.periodStats ? (
-              <EmployersDateAnalyticsBar
-                filters={dateFilters}
-                periodStats={data.periodStats}
-                onChange={(next) => {
-                  setDateFilters((prev) => ({ ...prev, ...next }));
-                  setPage(1);
-                }}
-              />
-            ) : null}
-
-            <EmployersFiltersBar
-              filters={filters}
-              filterOptions={
-                data?.filterOptions ?? {
-                  verificationStatuses: [],
-                  employerTypes: [],
-                  locations: [],
-                  statuses: [],
-                }
+            <EmployersOverviewHeader
+              preset={analyticsFilters.preset}
+              dateFrom={analyticsFilters.dateFrom ?? ""}
+              dateTo={analyticsFilters.dateTo ?? ""}
+              onPresetChange={handlePresetChange}
+              onDateFromChange={(dateFrom) =>
+                setAnalyticsFilters((prev) => ({ ...prev, dateFrom }))
               }
-              onChange={handleFilterChange}
-              onClear={handleClearFilters}
-              onExport={handleExportCsv}
+              onDateToChange={(dateTo) =>
+                setAnalyticsFilters((prev) => ({ ...prev, dateTo }))
+              }
+              onAddEmployer={() => setAddDialogOpen(true)}
+              onExport={handleExport}
+              isExporting={exportMutation.isPending}
             />
 
-            <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow">
-              <EmployersTableSection
-                employers={data?.employers ?? []}
-                totalEmployers={data?.pagination.total ?? 0}
-                isLoading={employersQuery.isFetching && !data}
-                isError={employersQuery.isError}
-                errorMessage={errorMessage}
-                onRetry={() => void employersQuery.refetch()}
-                onVerify={handleOpenVerify}
-                onReject={handleOpenReject}
-                onToggleStatus={handleOpenToggleStatus}
-              />
+            {analyticsErrorMessage && !analytics ? (
+              <div className="rounded-xl border border-danger/20 bg-danger/5 px-3 py-3 text-xs text-danger">
+                {analyticsErrorMessage}
+                <button
+                  type="button"
+                  className="ml-2 font-semibold underline"
+                  onClick={() => void analyticsQuery.refetch()}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : null}
 
-              {data?.pagination ? (
-                <div className="border-t border-border-subtle p-3">
-                  <JobsPaginationBar
-                    pagination={data.pagination}
-                    onPageChange={setPage}
-                    onLimitChange={(newLimit: number) => {
-                      setLimit(newLimit);
-                      setPage(1);
-                    }}
+            {analytics ? (
+              <>
+                <EmployersOverviewKpiStrip kpis={analytics.kpis} />
+
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                  <EmployersRegistrationTrendChart
+                    data={analytics.registrationTrend}
+                  />
+                  <EmployersOnboardingFunnel
+                    stages={analytics.onboardingFunnel}
+                    isLoading={analyticsQuery.isFetching && !analytics}
+                    isError={analyticsQuery.isError}
+                    onRetry={() => void analyticsQuery.refetch()}
+                  />
+                  <EmployersByIndustry items={analytics.byIndustry} />
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                  <EmployersByLocation
+                    items={analytics.byLocation}
+                    isLoading={analyticsQuery.isFetching && !analytics}
+                    isError={analyticsQuery.isError}
+                    onRetry={() => void analyticsQuery.refetch()}
+                  />
+                  <EmployerTypeDonut
+                    items={analytics.employerType}
+                    total={analytics.employerTypeTotal}
+                  />
+                  <TopHiringLocations
+                    items={analytics.topHiringLocations}
+                    isLoading={analyticsQuery.isFetching && !analytics}
+                    isError={analyticsQuery.isError}
+                    onRetry={() => void analyticsQuery.refetch()}
                   />
                 </div>
-              ) : null}
+              </>
+            ) : null}
+
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
+              <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
+                <EmployersTableSection
+                  employers={listData?.employers ?? []}
+                  totalEmployers={listData?.pagination.total ?? 0}
+                  isLoading={employersQuery.isFetching && !listData}
+                  isError={employersQuery.isError}
+                  errorMessage={listErrorMessage}
+                  onRetry={() => void employersQuery.refetch()}
+                  onVerify={handleOpenVerify}
+                  onReject={handleOpenReject}
+                  onToggleStatus={handleOpenToggleStatus}
+                  toolbar={
+                    <div className="flex min-w-0 flex-col gap-2.5 xl:gap-2">
+                      <EmployersOverviewTabs
+                        activeTab={activeTab}
+                        counts={analytics?.tabs ?? EMPTY_TABS}
+                        onChange={handleTabChange}
+                      />
+                      <label className="relative block min-w-0 sm:max-w-xs xl:max-w-[14rem]">
+                        <span className="sr-only">Search employers</span>
+                        <Search
+                          className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted xl:size-3"
+                          aria-hidden="true"
+                        />
+                        <input
+                          type="search"
+                          value={search}
+                          onChange={(event) => {
+                            setSearch(event.target.value);
+                            setPage(1);
+                          }}
+                          placeholder="Search employers"
+                          className="h-8 w-full rounded-md border border-border-subtle bg-surface py-1.5 pr-2.5 pl-8 text-[11px] text-foreground outline-none placeholder:text-muted focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 xl:h-7 xl:pl-7 xl:text-[10px]"
+                        />
+                      </label>
+                    </div>
+                  }
+                />
+
+                {listData?.pagination ? (
+                  <div className="border-t border-border-subtle p-3 xl:p-2.5">
+                    <JobsPaginationBar
+                      pagination={listData.pagination}
+                      onPageChange={setPage}
+                      onLimitChange={(newLimit: number) => {
+                        setLimit(newLimit);
+                        setPage(1);
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <aside className="flex min-w-0 flex-col gap-3">
+                <EmployersQuickActions
+                  onExport={handleExport}
+                  isExporting={exportMutation.isPending}
+                />
+                <EmployersAskAsliCard />
+              </aside>
             </div>
+
+            {exportMutation.isError ? (
+              <p className="text-xs text-danger" role="alert">
+                {queryErrorMessage(
+                  exportMutation.error,
+                  "Export failed. Please try again.",
+                )}
+              </p>
+            ) : null}
           </>
         )}
       </div>
 
-      {/* Operational Action Confirmation Modal */}
+      <AddEmployerDialog
+        open={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
+      />
+
       {actionType && selectedEmployer ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-xs"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-md rounded-xl border border-border-subtle bg-surface p-4 sm:p-5 shadow-xl animate-in fade-in-0 zoom-in-95">
+          <div className="w-full max-w-md rounded-xl border border-border-subtle bg-surface p-4 shadow-xl sm:p-5 animate-in fade-in-0 zoom-in-95">
             <h3 className="text-sm font-bold text-foreground">
               {actionType === "verify" && "Verify Employer"}
               {actionType === "reject" && "Reject Employer Verification"}
@@ -373,24 +526,24 @@ export function OperationsEmployersPage() {
               <p className="mt-2 text-xs text-danger">{actionError}</p>
             ) : null}
 
-            <div className="mt-4 flex flex-col-reverse sm:flex-row items-center justify-end gap-2">
+            <div className="mt-4 flex flex-col-reverse items-center justify-end gap-2 sm:flex-row">
               <button
                 type="button"
                 onClick={handleCloseModal}
                 disabled={
                   verifyMutation.isPending || statusMutation.isPending
                 }
-                className="w-full sm:w-auto rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-muted hover:bg-hero-bg/60 hover:text-foreground"
+                className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-muted hover:bg-hero-bg/60 hover:text-foreground sm:w-auto"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleExecuteAction}
+                onClick={() => void handleExecuteAction()}
                 disabled={
                   verifyMutation.isPending || statusMutation.isPending
                 }
-                className={`w-full sm:w-auto rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors ${
+                className={`w-full rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors sm:w-auto ${
                   actionType === "reject" || actionType === "suspend"
                     ? "bg-danger hover:bg-danger/90"
                     : "bg-primary hover:bg-primary/90"

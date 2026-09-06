@@ -737,6 +737,7 @@ export const operationsEmployersService = {
         companyName: text(doc.companyName),
         establishmentName: text(doc.establishmentName),
         organizationType: resolveOrganizationType(doc),
+        industry: text(doc.industry) || text(doc.businessCategory) || "—",
         phone: text(doc.whatsappNumber),
         email: text(doc.emailAddress),
         location,
@@ -864,6 +865,7 @@ export const operationsEmployersService = {
       companyName: text(employerDoc.companyName),
       establishmentName: text(employerDoc.establishmentName),
       organizationType: resolveOrganizationType(employerDoc),
+      industry: text(employerDoc.industry) || text(employerDoc.businessCategory) || "—",
       phone: text(employerDoc.whatsappNumber),
       email: text(employerDoc.emailAddress),
       location,
@@ -891,7 +893,6 @@ export const operationsEmployersService = {
       isProfileComplete: Boolean(employerDoc.isProfileComplete),
       registrationStatus: text(employerDoc.registrationStatus),
 
-      industry: text(employerDoc.industry),
       businessCategory: text(employerDoc.businessCategory),
       companyDescription: text(employerDoc.companyDescription),
       website: text(employerDoc.website),
@@ -1093,5 +1094,133 @@ export const operationsEmployersService = {
     }
 
     return this.getEmployerById(employerId);
+  },
+
+  async getAnalytics(query: {
+    preset: import("./operations-employers.types.js").OperationsEmployersAnalyticsPreset;
+    dateFrom: string;
+    dateTo: string;
+  }) {
+    const { getOperationsEmployersAnalytics } = await import(
+      "./operations-employers-analytics.js"
+    );
+    return getOperationsEmployersAnalytics(query);
+  },
+
+  async createEmployer(input: {
+    companyName: string;
+    firstName: string;
+    lastName: string;
+    whatsappNumber: string;
+    emailAddress?: string;
+    industry?: string;
+    accountType?: "company" | "consultancy" | "individual";
+    city?: string;
+    state?: string;
+    minimumEmployees?: number | null;
+    maximumEmployees?: number | null;
+  }): Promise<OperationsEmployerDetail> {
+    const whatsappNumber = text(input.whatsappNumber).replace(/\s+/g, "");
+    if (!whatsappNumber) {
+      throw new AppError("WhatsApp number is required.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const accountType = input.accountType ?? "company";
+    const existing = await EmployerModel.findOne({
+      whatsappNumber,
+      accountType,
+    }).lean();
+    if (existing) {
+      throw new AppError(
+        "An employer with this WhatsApp number already exists.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const created = await EmployerModel.create({
+      accountType,
+      companyName: text(input.companyName),
+      firstName: text(input.firstName) || "Ops",
+      lastName: text(input.lastName) || "Created",
+      whatsappNumber,
+      emailAddress: text(input.emailAddress),
+      industry: text(input.industry),
+      city: text(input.city),
+      state: text(input.state),
+      minimumEmployees:
+        typeof input.minimumEmployees === "number"
+          ? input.minimumEmployees
+          : null,
+      maximumEmployees:
+        typeof input.maximumEmployees === "number"
+          ? input.maximumEmployees
+          : null,
+      registrationStatus: "completed",
+      isProfileComplete: true,
+      isWhatsappVerified: false,
+      status: "active",
+      verificationStatus: "pending",
+    });
+
+    return this.getEmployerById(String(created._id));
+  },
+
+  async exportEmployersCsv(query: ListOperationsEmployersQuery): Promise<string> {
+    const result = await this.listEmployers({
+      ...query,
+      page: 1,
+      limit: 100,
+    });
+
+    // Fetch all pages up to a safe cap for export.
+    const maxRows = 5000;
+    const all = [...result.employers];
+    let page = 2;
+    while (
+      all.length < result.pagination.total &&
+      all.length < maxRows &&
+      page <= result.pagination.totalPages
+    ) {
+      const next = await this.listEmployers({
+        ...query,
+        page,
+        limit: 100,
+      });
+      all.push(...next.employers);
+      page += 1;
+    }
+
+    const header = [
+      "Company Name",
+      "Industry",
+      "Location",
+      "Registration Date",
+      "Verification Status",
+      "Jobs Posted",
+      "Status",
+      "Employer ID",
+      "Phone",
+      "Email",
+    ];
+    const rows = all.map((item) => [
+      item.companyName || item.displayName,
+      item.industry,
+      item.location,
+      item.registeredAtDate,
+      item.verificationStatusLabel,
+      String(item.totalJobsCount),
+      item.statusLabel,
+      item.displayId,
+      item.phone,
+      item.email,
+    ]);
+
+    return [header, ...rows]
+      .map((row) =>
+        row
+          .map((cell) => `"${String(cell).replaceAll('"', '""')}"`)
+          .join(","),
+      )
+      .join("\n");
   },
 };

@@ -45,6 +45,7 @@ export interface OperationsEmployerListItem {
   companyName: string;
   establishmentName: string;
   organizationType: string;
+  industry: string;
   phone: string;
   email: string;
   location: string;
@@ -194,4 +195,122 @@ export interface UpdateOperationsEmployerVerificationInput {
 export interface UpdateOperationsEmployerStatusInput {
   status: "active" | "suspended" | "inactive";
   reason?: string;
+}
+
+export type OperationsEmployersAnalyticsPreset =
+  | "last_7_days"
+  | "last_30_days"
+  | "last_90_days"
+  | "this_year"
+  | "custom";
+
+export interface OperationsEmployersAnalyticsParams {
+  preset: OperationsEmployersAnalyticsPreset;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface OperationsEmployersAnalyticsRange {
+  preset: OperationsEmployersAnalyticsPreset;
+  from: string;
+  to: string;
+  previousFrom: string;
+  previousTo: string;
+  granularity: "day" | "week";
+}
+
+export interface OperationsEmployersOverviewKpis {
+  totalEmployers: number;
+  totalEmployersTrendPercent: number | null;
+  totalEmployersCaption: string;
+  newRegistrations: number;
+  newRegistrationsTrendPercent: number | null;
+  newRegistrationsCaption: string;
+  verifiedEmployers: number;
+  verifiedEmployersTrendPercent: number | null;
+  verifiedEmployersPercent: number | null;
+  verifiedEmployersCaption: string;
+  activeEmployers: number;
+  activeEmployersTrendPercent: number | null;
+  activeEmployersCaption: string;
+  employersHiring: number;
+  employersHiringTrendPercent: number | null;
+  employersHiringCaption: string;
+}
+
+export interface OperationsEmployersAnalyticsSeriesPoint {
+  date: string;
+  label: string;
+  newRegistrations: number;
+  verifiedEmployers: number;
+}
+
+export interface OperationsEmployersAnalyticsNamedCount {
+  id: string;
+  label: string;
+  count: number;
+  percent: number | null;
+}
+
+export interface OperationsEmployersAnalyticsFunnelStage {
+  id: string;
+  label: string;
+  count: number;
+  percent: number;
+}
+
+export interface OperationsEmployersAnalyticsTabs {
+  all: number;
+  new: number;
+  verificationPending: number;
+  active: number;
+  inactive: number;
+}
+
+export type OperationsEmployersOverviewTab =
+  keyof OperationsEmployersAnalyticsTabs;
+
+export interface OperationsEmployersAnalyticsResult {
+  range: OperationsEmployersAnalyticsRange;
+  kpis: OperationsEmployersOverviewKpis;
+  registrationTrend: OperationsEmployersAnalyticsSeriesPoint[];
+  onboardingFunnel: OperationsEmployersAnalyticsFunnelStage[];
+  byIndustry: OperationsEmployersAnalyticsNamedCount[];
+  byLocation: OperationsEmployersAnalyticsNamedCount[];
+  employerType: OperationsEmployersAnalyticsNamedCount[];
+  employerTypeTotal: number;
+  topHiringLocations: OperationsEmployersAnalyticsNamedCount[];
+  tabs: OperationsEmployersAnalyticsTabs;
+  comparisons: {
+    newRegistrationsPrevious: number;
+    newRegistrationsChangePercent: number | null;
+  };
+}
+
+export interface CreateOperationsEmployerInput {
+  companyName: string;
+  firstName: string;
+  lastName: string;
+  whatsappNumber: string;
+  emailAddress?: string;
+  industry?: string;
+  accountType?: "company" | "consultancy" | "individual";
+  city?: string;
+  state?: string;
+  minimumEmployees?: number | null;
+  maximumEmployees?: number | null;
+}
+
+export interface OperationsEmployersExportParams {
+  search?: string;
+  verificationStatus?: string;
+  employerType?: string;
+  location?: string;
+  status?: string;
+  datePreset?: OperationsEmployerDatePreset;
+  dateFrom?: string;
+  dateTo?: string;
+  analyticsPreset?: OperationsEmployerDatePreset;
+  analyticsFrom?: string;
+  analyticsTo?: string;
 }

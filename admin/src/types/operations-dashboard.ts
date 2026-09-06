@@ -1,55 +1,44 @@
+import type {
+  AttentionPriority,
+  AttentionWorkItem,
+} from "./operations-attention";
+
+export type { AttentionPriority, AttentionWorkItem };
+export type { AttentionDueTone } from "./operations-attention";
+
 export type TrendDirection = "up" | "down" | "neutral";
 
-export type PriorityLevel = "high" | "medium" | "low";
+export type AttentionTabId =
+  | "urgent"
+  | "sla_risk"
+  | "high_priority"
+  | "unassigned";
 
-export type EntityType = "employer" | "candidate" | "job" | "verification" | "support";
+export type OperationsHealthStatus = "healthy" | "needs_attention" | "sla_risk";
 
-export interface OperationsKpiMetric {
+export interface PlatformPulseMetric {
   id: string;
   label: string;
-  value: number;
-  trendLabel: string;
+  value: number | null;
+  trendPercent: number | null;
   trendDirection: TrendDirection;
-  iconTone: "blue" | "red" | "orange" | "purple" | "teal" | "violet";
+  todayChange: number | null;
+  href: string;
+  iconTone: "blue" | "purple" | "green" | "orange" | "red";
 }
 
-export interface PriorityQueueItem {
-  id: string;
-  type: EntityType;
-  customer: string;
-  task: string;
-  priority: PriorityLevel;
-  language: string;
-  assignedTo: { name: string; initials: string } | null;
-  slaRemainingMinutes: number;
-}
-
-export interface SlaCategoryMetric {
-  id: string;
-  label: string;
-  percentage: number;
-}
-
-export interface AiNextBestAction {
-  id: string;
-  title: string;
-  description: string;
-  tone: "whatsapp" | "insight" | "compliance";
-}
-
-export interface JourneyAlertItem {
-  id: string;
+export interface AttentionTabMeta {
+  id: AttentionTabId;
   label: string;
   count: number;
-  trendDirection: TrendDirection;
-  trendValue: string;
 }
 
-export interface WhatsAppActivityMetric {
+export interface OperationsHealthItem {
   id: string;
   label: string;
-  value: string;
-  subLabel?: string;
+  status: OperationsHealthStatus;
+  detail: string;
+  href: string;
 }
 
 export interface TeamWorkloadMember {
@@ -61,46 +50,35 @@ export interface TeamWorkloadMember {
   capacity: number;
 }
 
-export type EscalationChartColorToken =
-  | "danger"
-  | "warning"
-  | "chartAccentAlt"
-  | "chartAccent";
-
-export interface EscalationBreakdownItem {
+export interface TodaysActivityMetric {
   id: string;
   label: string;
-  count: number;
-  colorToken: EscalationChartColorToken;
+  value: number | null;
+  href: string;
 }
 
-export type SnapshotAccentTone =
-  | "primary"
-  | "teal"
-  | "success"
-  | "warning"
-  | "violet"
-  | "whatsapp";
-
-export interface OperationsSnapshotMetric {
+export interface QuickActionItem {
   id: string;
   label: string;
-  value: string;
-  trendLabel: string;
-  trendDirection: TrendDirection;
-  accentTone: SnapshotAccentTone;
+  href: string;
+  icon: "jobseeker" | "employer" | "job" | "support";
+}
+
+export interface AsliInsightItem {
+  id: string;
+  message: string;
+  actionLabel: string;
+  href: string;
 }
 
 export interface OperationsDashboardData {
-  kpis: OperationsKpiMetric[];
-  priorityQueue: PriorityQueueItem[];
-  slaOverall: number;
-  slaTarget: number;
-  slaCategories: SlaCategoryMetric[];
-  aiActions: AiNextBestAction[];
-  journeyAlerts: JourneyAlertItem[];
-  whatsappActivity: WhatsAppActivityMetric[];
+  platformPulse: PlatformPulseMetric[];
+  attentionTotal: number;
+  attentionTabs: AttentionTabMeta[];
+  attentionItems: AttentionWorkItem[];
+  operationsHealth: OperationsHealthItem[];
   teamWorkload: TeamWorkloadMember[];
-  escalations: EscalationBreakdownItem[];
-  snapshot: OperationsSnapshotMetric[];
+  todaysActivity: TodaysActivityMetric[];
+  quickActions: QuickActionItem[];
+  insights: AsliInsightItem[];
 }

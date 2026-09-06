@@ -1,4 +1,3 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { OperationsAuthGuard } from "../components/operations/auth/OperationsAuthGuard";
 import { OperationsPermissionRouteGuard } from "../components/operations/auth/OperationsPermissionRouteGuard";
 import { OPERATIONS_ROUTES } from "../constants/operations-routes";
@@ -6,6 +5,8 @@ import { OperationsPermissionProvider } from "../providers/operations-permission
 import { OperationsCandidatesDetailPage } from "./operations-candidates-detail-page";
 import { OperationsCandidatesPage } from "./operations-candidates-page";
 import { OperationsDashboardPage } from "./operations-dashboard-page";
+import { OperationsAttentionPage } from "./operations-attention-page";
+import { OperationsHomePage } from "./operations-home-page";
 import { OperationsEmployersDetailPage } from "./operations-employers-detail-page";
 import { OperationsEmployersPage } from "./operations-employers-page";
 import { OperationsJobsDetailPage } from "./operations-jobs-detail-page";
@@ -19,6 +20,7 @@ import { OperationsRoleDetailPage } from "./operations-role-detail-page";
 import { OperationsRoleEditorPage } from "./operations-role-editor-page";
 import { OperationsRolesPage } from "./operations-roles-page";
 import { OperationsTeamPage } from "./operations-team-page";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 function OperationsProtectedLayout() {
   return (
@@ -39,20 +41,28 @@ export function AppRoutes() {
       <Route element={<OperationsProtectedLayout />}>
         <Route
           path={OPERATIONS_ROUTES.ROOT}
-          element={<Navigate to={OPERATIONS_ROUTES.DASHBOARD} replace />}
+          element={<Navigate to={OPERATIONS_ROUTES.HOME} replace />}
         />
-        <Route path={OPERATIONS_ROUTES.DASHBOARD} element={<OperationsDashboardPage />} />
+        <Route path={OPERATIONS_ROUTES.HOME} element={<OperationsHomePage />} />
+        <Route
+          path={OPERATIONS_ROUTES.DASHBOARD}
+          element={<OperationsDashboardPage />}
+        />
         <Route
           path={OPERATIONS_ROUTES.MY_WORK}
           element={<OperationsPlaceholderPage title="My Work" />}
         />
         <Route
           path={OPERATIONS_ROUTES.WORK_QUEUE}
-          element={<OperationsPlaceholderPage title="Work Queue" />}
+          element={<OperationsAttentionPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.WHATSAPP_INBOX}
           element={<OperationsPlaceholderPage title="WhatsApp Inbox" />}
+        />
+        <Route
+          path={OPERATIONS_ROUTES.INBOX}
+          element={<OperationsPlaceholderPage title="Inbox" />}
         />
         <Route
           path={OPERATIONS_ROUTES.JOURNEY_ALERTS}
@@ -85,12 +95,31 @@ export function AppRoutes() {
           element={<OperationsJobsDetailPage />}
         />
         <Route
+          path={OPERATIONS_ROUTES.PLACEMENTS}
+          element={<OperationsPlaceholderPage title="Placements" />}
+        />
+        <Route
           path={OPERATIONS_ROUTES.VERIFICATIONS}
           element={<OperationsPlaceholderPage title="Verifications" />}
         />
         <Route
           path={OPERATIONS_ROUTES.ESCALATIONS}
           element={<OperationsPlaceholderPage title="Escalations" />}
+        />
+        <Route
+          path={OPERATIONS_ROUTES.ANALYTICS}
+          element={
+            <Navigate
+              to={`${OPERATIONS_ROUTES.JOBS}?view=analytics`}
+              replace
+            />
+          }
+        />
+        <Route
+          path={OPERATIONS_ROUTES.ORGANIZATION}
+          element={
+            <Navigate to={OPERATIONS_ROUTES.TEAM_MANAGEMENT} replace />
+          }
         />
         <Route
           path={OPERATIONS_ROUTES.TEAM_MANAGEMENT}
@@ -119,6 +148,10 @@ export function AppRoutes() {
         <Route
           path={OPERATIONS_ROUTES.ACTIVITY_LOG}
           element={<OperationsActivityLogPage />}
+        />
+        <Route
+          path={OPERATIONS_ROUTES.SETTINGS}
+          element={<OperationsPlaceholderPage title="Settings" />}
         />
         <Route
           path={OPERATIONS_ROUTES.SUBSCRIPTIONS}

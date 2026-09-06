@@ -29,13 +29,17 @@ export function useOperationsTeamOverview() {
   });
 }
 
-export function useOperationsTeamMembers(params: OperationsTeamListParams) {
+export function useOperationsTeamMembers(
+  params: OperationsTeamListParams,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: [...OPERATIONS_TEAM_QUERY_KEY, "list", params],
     queryFn: () => fetchOperationsTeamMembers(params),
     staleTime: 30_000,
     placeholderData: keepPreviousData,
     retry: shouldRetry,
+    enabled: options?.enabled ?? true,
   });
 }
 

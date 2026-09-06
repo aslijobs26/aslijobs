@@ -10,6 +10,7 @@ import type {
   ListOperationsJobApplicationsQuery,
   ListOperationsJobsQuery,
   OperationsJobPublicIdParams,
+  OperationsJobsAnalyticsQueryInput,
   PublishOperationsJobBody,
   SaveOperationsJobDraftBody,
   UpdateOperationsJobStatusBody,
@@ -29,6 +30,16 @@ export const operationsJobsController = {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations jobs fetched successfully.",
+      data: result,
+    });
+  },
+
+  async analytics(req: Request, res: Response): Promise<void> {
+    const query = req.query as unknown as OperationsJobsAnalyticsQueryInput;
+    const result = await operationsJobsService.getJobsAnalytics(query);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Operations jobs analytics fetched successfully.",
       data: result,
     });
   },

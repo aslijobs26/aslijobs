@@ -22,6 +22,7 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
       module: "dashboard",
       action: "read",
     },
+    { prefix: OPERATIONS_ROUTES.HOME, module: "dashboard", action: "read" },
     { prefix: OPERATIONS_ROUTES.MY_WORK, module: "my_work", action: "read" },
     {
       prefix: OPERATIONS_ROUTES.WORK_QUEUE,
@@ -33,6 +34,7 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
       module: "whatsapp",
       action: "read",
     },
+    { prefix: OPERATIONS_ROUTES.INBOX, module: "whatsapp", action: "read" },
     {
       prefix: OPERATIONS_ROUTES.JOURNEY_ALERTS,
       module: "journey_alerts",
@@ -55,6 +57,11 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
     },
     { prefix: OPERATIONS_ROUTES.JOBS, module: "jobs", action: "read" },
     {
+      prefix: OPERATIONS_ROUTES.PLACEMENTS,
+      module: "jobs",
+      action: "read",
+    },
+    {
       prefix: OPERATIONS_ROUTES.VERIFICATIONS,
       module: "verifications",
       action: "read",
@@ -62,6 +69,16 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
     {
       prefix: OPERATIONS_ROUTES.ESCALATIONS,
       module: "escalations",
+      action: "read",
+    },
+    {
+      prefix: OPERATIONS_ROUTES.ANALYTICS,
+      module: "jobs",
+      action: "read",
+    },
+    {
+      prefix: OPERATIONS_ROUTES.ORGANIZATION,
+      module: "team",
       action: "read",
     },
     {
@@ -78,6 +95,11 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
     {
       prefix: OPERATIONS_ROUTES.ACTIVITY_LOG,
       module: "activity_logs",
+      action: "read",
+    },
+    {
+      prefix: OPERATIONS_ROUTES.SETTINGS,
+      module: "settings",
       action: "read",
     },
     {

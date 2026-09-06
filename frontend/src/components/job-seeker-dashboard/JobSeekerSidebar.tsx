@@ -12,7 +12,7 @@ import {
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/utils/cn";
 import { clearJobSeekerClientSession } from "@/utils/job-seeker-session";
-import { ChevronsLeft, LogOut } from "lucide-react";
+import { ChevronsLeft, LogOut, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -81,8 +81,10 @@ export function JobSeekerSidebar({
       >
         <div
           className={cn(
-            "flex shrink-0 flex-col border-b border-border-subtle",
-            collapsed ? "items-center px-2 py-4" : "px-4 py-4",
+            "flex shrink-0 border-b border-border-subtle",
+            collapsed
+              ? "items-center justify-center px-2 py-4"
+              : "items-start justify-between gap-2 px-4 py-4",
           )}
         >
           <Link
@@ -93,7 +95,7 @@ export function JobSeekerSidebar({
               "rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
               collapsed
                 ? "inline-flex items-center justify-center"
-                : "inline-flex flex-col items-start gap-0.5",
+                : "inline-flex min-w-0 flex-col items-start gap-0.5",
             )}
           >
             {collapsed ? (
@@ -123,6 +125,15 @@ export function JobSeekerSidebar({
               </>
             )}
           </Link>
+
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
+            aria-label="Close navigation menu"
+          >
+            <X className="size-5" strokeWidth={2} aria-hidden="true" />
+          </button>
         </div>
 
         <nav

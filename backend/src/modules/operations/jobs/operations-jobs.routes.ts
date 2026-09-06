@@ -12,6 +12,7 @@ import {
   listOperationsJobApplicationsQuerySchema,
   listOperationsJobsQuerySchema,
   operationsJobPublicIdParamsSchema,
+  operationsJobsAnalyticsQuerySchema,
   publishOperationsJobBodySchema,
   saveOperationsJobDraftBodySchema,
   updateOperationsJobStatusBodySchema,
@@ -26,6 +27,13 @@ operationsJobsRouter.get(
   requireOperationsPermission("jobs", "read"),
   validate(listOperationsJobsQuerySchema, "query"),
   asyncHandler(operationsJobsController.list),
+);
+
+operationsJobsRouter.get(
+  "/analytics",
+  requireOperationsPermission("jobs", "read"),
+  validate(operationsJobsAnalyticsQuerySchema, "query"),
+  asyncHandler(operationsJobsController.analytics),
 );
 
 operationsJobsRouter.post(

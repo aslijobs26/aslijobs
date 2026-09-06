@@ -28,7 +28,10 @@ function candidatesRetryDelay(attemptIndex: number): number {
   return Math.min(1000 * 2 ** attemptIndex, 5000);
 }
 
-export function useOperationsCandidates(params: OperationsCandidatesListParams) {
+export function useOperationsCandidates(
+  params: OperationsCandidatesListParams,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: [...OPERATIONS_CANDIDATES_QUERY_KEY, params],
     queryFn: () => fetchOperationsCandidates(params),
@@ -37,6 +40,7 @@ export function useOperationsCandidates(params: OperationsCandidatesListParams) 
     retry: shouldRetryCandidatesQuery,
     retryDelay: candidatesRetryDelay,
     placeholderData: keepPreviousData,
+    enabled: options?.enabled ?? true,
   });
 }
 

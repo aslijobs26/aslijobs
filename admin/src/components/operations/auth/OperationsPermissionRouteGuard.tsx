@@ -46,10 +46,10 @@ export function OperationsPermissionRouteGuard({
         to view this page.
       </p>
       <Link
-        to={OPERATIONS_ROUTES.DASHBOARD}
+        to={OPERATIONS_ROUTES.HOME}
         className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-surface hover:bg-primary-hover"
       >
-        Go to Dashboard
+        Go to Home
       </Link>
     </div>
   );

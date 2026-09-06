@@ -76,7 +76,9 @@ export function EmployersMobileCard({
 
         <p className="flex items-center gap-1.5 text-muted">
           <Building2 className="size-3.5 shrink-0" aria-hidden="true" />
-          <span className="truncate">{employer.organizationType}</span>
+          <span className="truncate">
+            {employer.industry || employer.organizationType || "—"}
+          </span>
         </p>
 
         <p className="flex items-center gap-1.5 text-muted">
@@ -96,9 +98,9 @@ export function EmployersMobileCard({
         </div>
 
         <div className="text-right">
-          <span className="block text-[10px] uppercase text-muted">Active Jobs</span>
+          <span className="block text-[10px] uppercase text-muted">Jobs Posted</span>
           <span className="font-bold tabular-nums text-foreground">
-            {employer.activeJobsCount}
+            {employer.totalJobsCount}
           </span>
         </div>
       </div>

@@ -1,11 +1,9 @@
 /**
- * Page-scoped compact density for the Operations Dashboard.
- * Targets ~80% of the default scale so the UI matches the reference at 100% zoom.
- * Does not use CSS zoom/transform — only typography, spacing, and control sizing.
+ * Compact density + Home command-center chrome.
  */
 
 .operations-dashboard-density {
-  --operations-density-radius: 0.625rem;
+  --operations-density-radius: 0.75rem;
   --operations-density-gap: 0.5rem;
 }
 
@@ -14,23 +12,34 @@
 }
 
 .operations-dashboard-density .operations-density-card > header {
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
 }
 
 .operations-dashboard-density .operations-density-card > header h2 {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.25;
 }
 
 .operations-dashboard-density .operations-density-card > header p {
-  font-size: 0.625rem;
-  line-height: 1.3;
+  font-size: 0.75rem;
+  line-height: 1.35;
 }
 
 .operations-dashboard-density .operations-density-card > div:last-child {
-  padding: 0.625rem 0.75rem;
+  padding: 0.875rem 1rem;
 }
 
 .operations-dashboard-density .operations-density-card-flush > div:last-child {
   padding: 0;
+}
+
+.operations-home-command {
+  --operations-density-radius: 0.875rem;
+}
+
+.operations-home-command .operations-density-card {
+  border-radius: var(--operations-density-radius);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--color-foreground) 3%, transparent),
+    0 6px 16px color-mix(in srgb, #1a2b3c 3.5%, transparent);
 }

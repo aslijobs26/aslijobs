@@ -77,20 +77,47 @@ export function OperationsFilterSelect({
   const [placement, setPlacement] = useState<DropdownPlacement>("down");
   const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
 
-  const selectedOption = options.find(
-    (option) => normalizeOptionKey(option.value) === normalizeOptionKey(value),
-  );
+  const uniqueOptions = useMemo(() => {
+    const byKey = new Map<string, OperationsFilterSelectOption>();
+
+    for (const option of options) {
+      const key = normalizeOptionKey(option.value);
+      const existing = byKey.get(key);
+      if (!existing) {
+        byKey.set(key, option);
+        continue;
+      }
+
+      // Prefer the better-capitalized label when duplicates differ only by case.
+      const existingCaps = (existing.label.match(/[A-Z]/g) ?? []).length;
+      const nextCaps = (option.label.match(/[A-Z]/g) ?? []).length;
+      if (nextCaps > existingCaps) {
+        byKey.set(key, option);
+      }
+    }
+
+    return [...byKey.values()];
+  }, [options]);
+
+  const selectedOption = useMemo(() => {
+    const selectedKey = normalizeOptionKey(value);
+    return (
+      uniqueOptions.find(
+        (option) => normalizeOptionKey(option.value) === selectedKey,
+      ) ?? null
+    );
+  }, [uniqueOptions, value]);
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) {
-      return options;
+      return uniqueOptions;
     }
 
-    return options.filter((option) =>
+    return uniqueOptions.filter((option) =>
       `${option.label} ${option.value}`.toLowerCase().includes(normalizedQuery),
     );
-  }, [options, query]);
+  }, [uniqueOptions, query]);
 
   const displayValue = selectedOption?.label ?? label;
   const isPlaceholder = !selectedOption || selectedOption.value === "";
@@ -224,7 +251,7 @@ export function OperationsFilterSelect({
 
             return (
               <li
-                key={option.value || "__all__"}
+                key={normalizeOptionKey(option.value) || "__all__"}
                 role="option"
                 aria-selected={isSelected}
               >
