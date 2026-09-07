@@ -9,6 +9,7 @@ import { operationsCandidatesController } from "./operations-candidates.controll
 import {
   listOperationsCandidateApplicationsQuerySchema,
   listOperationsCandidatesQuerySchema,
+  candidatesAnalyticsQuerySchema,
   operationsCandidateApplicationIdParamsSchema,
   operationsCandidateSeekerIdParamsSchema,
 } from "./operations-candidates.validation.js";
@@ -22,6 +23,13 @@ operationsCandidatesRouter.get(
   requireOperationsPermission("candidates", "read"),
   validate(listOperationsCandidatesQuerySchema, "query"),
   asyncHandler(operationsCandidatesController.list),
+);
+
+operationsCandidatesRouter.get(
+  "/analytics",
+  requireOperationsPermission("candidates", "read"),
+  validate(candidatesAnalyticsQuerySchema, "query"),
+  asyncHandler(operationsCandidatesController.analytics),
 );
 
 operationsCandidatesRouter.get(

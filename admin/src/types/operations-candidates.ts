@@ -178,6 +178,8 @@ export interface OperationsCandidatesListResult {
 export interface OperationsCandidatesListParams {
   page: number;
   limit: number;
+  overviewTab?: string;
+  verificationStatus?: string;
   tab: OperationsCandidateTab;
   search: string;
   status: "" | OperationsApplicationStatus;
@@ -195,6 +197,96 @@ export interface OperationsCandidatesListParams {
   analyticsPreset: OperationsCandidateDatePreset;
   analyticsFrom: string;
   analyticsTo: string;
+}
+
+export type OperationsCandidatesAnalyticsPreset =
+  | "all"
+  | "last_7_days"
+  | "last_30_days"
+  | "last_3_months"
+  | "custom";
+
+export interface OperationsCandidatesAnalyticsParams {
+  preset: OperationsCandidatesAnalyticsPreset;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface OperationsCandidatesAnalyticsRange {
+  preset: OperationsCandidatesAnalyticsPreset;
+  from: string;
+  to: string;
+  previousFrom: string;
+  previousTo: string;
+  granularity: "day" | "week" | "month";
+}
+
+export interface OperationsCandidatesOverviewKpis {
+  totalJobseekers: number;
+  totalJobseekersTrendPercent: number | null;
+  totalJobseekersCaption: string;
+  newRegistrations: number;
+  newRegistrationsTrendPercent: number | null;
+  newRegistrationsCaption: string;
+  profileCompleted: number;
+  profileCompletedTrendPercent: number | null;
+  profileCompletedPercent: number | null;
+  profileCompletedCaption: string;
+  verifiedJobseekers: number;
+  verifiedJobseekersTrendPercent: number | null;
+  verifiedJobseekersPercent: number | null;
+  verifiedJobseekersCaption: string;
+  activeJobseekers: number;
+  activeJobseekersTrendPercent: number | null;
+  activeJobseekersCaption: string;
+}
+
+export interface OperationsCandidatesAnalyticsSeriesPoint {
+  date: string;
+  label: string;
+  newRegistrations: number;
+  profileCompleted: number;
+}
+
+export interface OperationsCandidatesAnalyticsNamedCount {
+  id: string;
+  label: string;
+  count: number;
+  percent: number | null;
+}
+
+export interface OperationsCandidatesAnalyticsFunnelStage {
+  id: string;
+  label: string;
+  count: number;
+  percent: number;
+}
+
+export interface OperationsCandidatesAnalyticsTabs {
+  all: number;
+  new: number;
+  profileIncomplete: number;
+  verificationPending: number;
+}
+
+export type OperationsCandidatesOverviewTab =
+  keyof OperationsCandidatesAnalyticsTabs;
+
+export interface OperationsCandidatesAnalyticsResult {
+  range: OperationsCandidatesAnalyticsRange;
+  kpis: OperationsCandidatesOverviewKpis;
+  registrationTrend: OperationsCandidatesAnalyticsSeriesPoint[];
+  onboardingFunnel: OperationsCandidatesAnalyticsFunnelStage[];
+  byLocation: OperationsCandidatesAnalyticsNamedCount[];
+  byLanguage: OperationsCandidatesAnalyticsNamedCount[];
+  languageTotal: number;
+  byExperience: OperationsCandidatesAnalyticsNamedCount[];
+  topJobCategories: OperationsCandidatesAnalyticsNamedCount[];
+  tabs: OperationsCandidatesAnalyticsTabs;
+  comparisons: {
+    newRegistrationsPrevious: number;
+    newRegistrationsChangePercent: number | null;
+  };
 }
 
 export interface OperationsCandidateApplicationItem {

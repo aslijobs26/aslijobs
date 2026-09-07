@@ -186,22 +186,17 @@ export function useOperationsDashboardData(): OperationsDashboardData {
       },
     );
 
-    let teamWorkload: TeamWorkloadMember[] = base.teamWorkload;
+    let teamWorkload: TeamWorkloadMember[] = [];
     if (canReadTeam && teamQuery.data?.members.length) {
-      teamWorkload = teamQuery.data.members.slice(0, 5).map((member, index) => {
-        const fallback = base.teamWorkload[index];
-        const capacity = fallback?.capacity ?? 20;
-        const assigned =
-          fallback?.assigned ?? Math.min(capacity, 8 + index * 2);
-        return {
-          id: member.id,
-          name: member.fullName,
-          role: member.roleName || member.role || "Team member",
-          initials: getInitials(member.fullName) || "TM",
-          assigned,
-          capacity,
-        };
-      });
+      teamWorkload = teamQuery.data.members.slice(0, 5).map((member) => ({
+        id: member.id,
+        name: member.fullName,
+        role: member.roleName || member.role || "Team member",
+        initials: getInitials(member.fullName) || "TM",
+        // Workload counts are not provided by the team API yet — never invent them.
+        assigned: null,
+        capacity: null,
+      }));
     }
 
     return {
@@ -209,6 +204,15 @@ export function useOperationsDashboardData(): OperationsDashboardData {
       platformPulse,
       todaysActivity,
       teamWorkload,
+      teamWorkloadStatus: {
+        isLoading: canReadTeam && teamQuery.isLoading,
+        isError: canReadTeam && teamQuery.isError,
+        isEmpty:
+          canReadTeam &&
+          !teamQuery.isLoading &&
+          !teamQuery.isError &&
+          teamWorkload.length === 0,
+      },
     };
   }, [
     base,
@@ -220,5 +224,7 @@ export function useOperationsDashboardData(): OperationsDashboardData {
     employersQuery.data,
     jobsQuery.data,
     teamQuery.data,
+    teamQuery.isLoading,
+    teamQuery.isError,
   ]);
 }

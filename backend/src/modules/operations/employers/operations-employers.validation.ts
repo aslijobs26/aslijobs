@@ -80,6 +80,7 @@ export type UpdateOperationsEmployerStatusBody = z.infer<
 export const employersAnalyticsQuerySchema = z.object({
   preset: z
     .enum([
+      "all",
       "last_7_days",
       "last_30_days",
       "last_90_days",
@@ -87,7 +88,7 @@ export const employersAnalyticsQuerySchema = z.object({
       "custom",
     ])
     .optional()
-    .default("last_30_days"),
+    .default("all"),
   dateFrom: isoDateStringSchema.optional().default(""),
   dateTo: isoDateStringSchema.optional().default(""),
 });

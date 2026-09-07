@@ -202,3 +202,88 @@ export type OperationsCandidateDetail = OperationsCandidateListItem & {
   descriptionExcerpt: string;
   notesCount: number;
 };
+
+export type OperationsCandidatesAnalyticsPreset =
+  | "all"
+  | "last_7_days"
+  | "last_30_days"
+  | "last_3_months"
+  | "custom";
+
+export type OperationsCandidatesAnalyticsQuery = {
+  preset: OperationsCandidatesAnalyticsPreset;
+  dateFrom: string;
+  dateTo: string;
+};
+
+export type OperationsCandidatesAnalyticsRange = {
+  preset: OperationsCandidatesAnalyticsPreset;
+  from: string;
+  to: string;
+  previousFrom: string;
+  previousTo: string;
+  granularity: "day" | "week" | "month";
+};
+
+export type OperationsCandidatesOverviewKpis = {
+  totalJobseekers: number;
+  totalJobseekersTrendPercent: number | null;
+  totalJobseekersCaption: string;
+  newRegistrations: number;
+  newRegistrationsTrendPercent: number | null;
+  newRegistrationsCaption: string;
+  profileCompleted: number;
+  profileCompletedTrendPercent: number | null;
+  profileCompletedPercent: number | null;
+  profileCompletedCaption: string;
+  verifiedJobseekers: number;
+  verifiedJobseekersTrendPercent: number | null;
+  verifiedJobseekersPercent: number | null;
+  verifiedJobseekersCaption: string;
+  activeJobseekers: number;
+  activeJobseekersTrendPercent: number | null;
+  activeJobseekersCaption: string;
+};
+
+export type OperationsCandidatesAnalyticsSeriesPoint = {
+  date: string;
+  label: string;
+  newRegistrations: number;
+  profileCompleted: number;
+};
+
+export type OperationsCandidatesAnalyticsNamedCount = {
+  id: string;
+  label: string;
+  count: number;
+  percent: number | null;
+};
+
+export type OperationsCandidatesAnalyticsFunnelStage = {
+  id: string;
+  label: string;
+  count: number;
+  percent: number;
+};
+
+export type OperationsCandidatesAnalyticsResult = {
+  range: OperationsCandidatesAnalyticsRange;
+  kpis: OperationsCandidatesOverviewKpis;
+  registrationTrend: OperationsCandidatesAnalyticsSeriesPoint[];
+  onboardingFunnel: OperationsCandidatesAnalyticsFunnelStage[];
+  byLocation: OperationsCandidatesAnalyticsNamedCount[];
+  byLanguage: OperationsCandidatesAnalyticsNamedCount[];
+  languageTotal: number;
+  byExperience: OperationsCandidatesAnalyticsNamedCount[];
+  topJobCategories: OperationsCandidatesAnalyticsNamedCount[];
+  tabs: {
+    all: number;
+    new: number;
+    profileIncomplete: number;
+    verificationPending: number;
+  };
+  comparisons: {
+    newRegistrationsPrevious: number;
+    newRegistrationsChangePercent: number | null;
+  };
+};

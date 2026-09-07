@@ -46,8 +46,9 @@ export interface TeamWorkloadMember {
   name: string;
   role: string;
   initials: string;
-  assigned: number;
-  capacity: number;
+  /** Null until a real workload metric API exists. */
+  assigned: number | null;
+  capacity: number | null;
 }
 
 export interface TodaysActivityMetric {
@@ -71,6 +72,12 @@ export interface AsliInsightItem {
   href: string;
 }
 
+export interface TeamWorkloadStatus {
+  isLoading: boolean;
+  isError: boolean;
+  isEmpty: boolean;
+}
+
 export interface OperationsDashboardData {
   platformPulse: PlatformPulseMetric[];
   attentionTotal: number;
@@ -78,6 +85,7 @@ export interface OperationsDashboardData {
   attentionItems: AttentionWorkItem[];
   operationsHealth: OperationsHealthItem[];
   teamWorkload: TeamWorkloadMember[];
+  teamWorkloadStatus: TeamWorkloadStatus;
   todaysActivity: TodaysActivityMetric[];
   quickActions: QuickActionItem[];
   insights: AsliInsightItem[];

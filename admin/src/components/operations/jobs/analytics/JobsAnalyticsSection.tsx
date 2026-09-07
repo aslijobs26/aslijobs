@@ -31,6 +31,7 @@ import {
 } from "./jobs-analytics-theme";
 
 const PRESETS: { value: OperationsJobsAnalyticsPreset; label: string }[] = [
+  { value: "all", label: "Overall" },
   { value: "last_7_days", label: "Last 7 Days" },
   { value: "last_30_days", label: "Last 30 Days" },
   { value: "last_3_months", label: "Last 3 Months" },
@@ -200,9 +201,17 @@ export function JobsAnalyticsSection({
   const createdTotal = data.jobsCreated.reduce((sum, point) => sum + point.count, 0);
   const applicationsTotal = data.applicationSummary.totalApplications;
   const locationMax = Math.max(
-    ...data.jobsByLocation.map((item) => item.count),
+    ...data.jobsByLocation.states.map((item) => item.count),
+    ...data.jobsByLocation.cities.map((item) => item.count),
+    ...data.jobsByLocation.topLocations.map((item) => item.count),
     0,
   );
+  const locationItems =
+    data.jobsByLocation.states.length > 0
+      ? data.jobsByLocation.states
+      : data.jobsByLocation.topLocations.length > 0
+        ? data.jobsByLocation.topLocations
+        : data.jobsByLocation.cities;
   const topMax = Math.max(
     ...data.topPerformingJobs.map((item) => item.count),
     0,
@@ -468,11 +477,11 @@ export function JobsAnalyticsSection({
           title="Jobs by Location"
           description="Top job locations from current listings."
         >
-          {data.jobsByLocation.length === 0 ? (
+          {locationItems.length === 0 ? (
             <ChartEmptyState message="No job locations are available to chart." />
           ) : (
             <ul className="flex flex-1 flex-col justify-center gap-4">
-              {data.jobsByLocation.map((item) => {
+              {locationItems.map((item) => {
                 const width =
                   locationMax > 0
                     ? Math.max(10, Math.round((item.count / locationMax) * 80))

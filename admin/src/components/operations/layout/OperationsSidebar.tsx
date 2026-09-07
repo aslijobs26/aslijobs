@@ -33,11 +33,9 @@ function isNavItemActive(
   itemId: string,
   href: string,
   pathname: string,
-  search: string,
+  _search: string,
 ) {
   const path = getHrefPath(href);
-  const params = new URLSearchParams(search);
-  const jobsView = params.get("view");
 
   if (itemId === "home") {
     return pathname === OPERATIONS_ROUTES.HOME;
@@ -51,14 +49,7 @@ function isNavItemActive(
     );
   }
 
-  if (itemId === "analytics") {
-    return pathname === OPERATIONS_ROUTES.JOBS && jobsView === "analytics";
-  }
-
   if (itemId === "jobs") {
-    if (pathname === OPERATIONS_ROUTES.JOBS && jobsView === "analytics") {
-      return false;
-    }
     return (
       pathname === OPERATIONS_ROUTES.JOBS ||
       pathname.startsWith(`${OPERATIONS_ROUTES.JOBS}/`)

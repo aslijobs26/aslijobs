@@ -17,10 +17,12 @@ import {
 interface CandidatesTableSectionProps {
   applications: OperationsCandidateListItem[];
   totalCandidates: number;
+  title?: string;
   isLoading: boolean;
   isError: boolean;
   errorMessage?: string;
   onRetry?: () => void;
+  toolbar?: ReactNode;
 }
 
 function TableMessage({
@@ -52,13 +54,13 @@ function PreferredRoleChips({ roles }: { roles: string[] }) {
       {visible.map((role) => (
         <span
           key={role}
-          className="inline-flex max-w-[8rem] truncate rounded-md bg-border-subtle px-1.5 py-0.5 text-[10px] font-medium text-foreground"
+          className="inline-flex max-w-[8rem] truncate rounded-md bg-border-subtle px-1.5 py-0.5 text-[10px] font-medium text-foreground xl:max-w-[6.5rem] xl:px-1 xl:text-[9px]"
         >
           {role}
         </span>
       ))}
       {remaining > 0 ? (
-        <span className="inline-flex rounded-md bg-border-subtle px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+        <span className="inline-flex rounded-md bg-border-subtle px-1.5 py-0.5 text-[10px] font-semibold text-muted xl:px-1 xl:text-[9px]">
           +{remaining}
         </span>
       ) : null}
@@ -67,35 +69,37 @@ function PreferredRoleChips({ roles }: { roles: string[] }) {
 }
 
 const thClassName =
-  "whitespace-nowrap px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted first:pl-4 last:pr-4 sm:px-3.5";
+  "whitespace-nowrap px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted first:pl-4 last:pr-4 sm:px-3.5 xl:px-2.5 xl:py-2 xl:text-[9px] xl:first:pl-3 xl:last:pr-3";
 
 export function CandidatesTableSection({
   applications,
   totalCandidates,
+  title = "Recent Jobseekers",
   isLoading,
   isError,
   errorMessage,
   onRetry,
+  toolbar,
 }: CandidatesTableSectionProps) {
   const emptyMessage = (
     <div className="space-y-1">
-      <p className="text-sm font-medium text-foreground">No candidates found</p>
-      <p className="text-xs text-muted">
-        Try adjusting search, registration date, or other filters.
+      <p className="text-sm font-medium text-foreground xl:text-xs">No jobseekers found</p>
+      <p className="text-xs text-muted xl:text-[11px]">
+        Try adjusting your search or tab filters.
       </p>
     </div>
   );
 
   const errorBlock = (
     <div className="space-y-2">
-      <p className="text-sm font-medium text-danger">
-        {errorMessage ?? "Failed to load candidates."}
+      <p className="text-sm font-medium text-danger xl:text-xs">
+        {errorMessage ?? "Failed to load jobseekers."}
       </p>
       {onRetry ? (
         <button
           type="button"
           onClick={onRetry}
-          className="inline-flex h-8 items-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="inline-flex h-8 items-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:h-7 xl:text-[11px]"
         >
           Retry
         </button>
@@ -105,10 +109,16 @@ export function CandidatesTableSection({
 
   return (
     <div className="min-w-0 max-w-full">
-      <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4">
-        <h2 className="text-sm font-semibold text-foreground">
-          All Candidates ({totalCandidates.toLocaleString("en-IN")})
-        </h2>
+      <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4 xl:px-3 xl:py-1.5">
+        <div className="flex min-w-0 flex-col gap-2.5 xl:gap-1.5">
+          <h2 className="text-sm font-semibold text-foreground xl:text-xs">
+            {title}{" "}
+            <span className="font-semibold tabular-nums text-muted xl:text-[11px]">
+              ({totalCandidates.toLocaleString("en-IN")})
+            </span>
+          </h2>
+          {toolbar}
+        </div>
       </div>
 
       <ul className="flex flex-col gap-2.5 p-2.5 sm:hidden">
@@ -209,8 +219,8 @@ export function CandidatesTableSection({
           : null}
       </ul>
 
-      <div className="hidden overflow-x-auto lg:block">
-        <table className="min-w-full text-left text-xs">
+      <div className="hidden overflow-x-auto overscroll-x-contain scrollbar-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden lg:block">
+        <table className="min-w-[960px] text-left text-xs xl:min-w-full xl:text-[11px]">
           <thead className="border-b border-border-subtle bg-hero-bg/40">
             <tr>
               <th className={thClassName}>Candidate</th>
@@ -227,7 +237,7 @@ export function CandidatesTableSection({
           <tbody className="divide-y divide-border-subtle">
             {isLoading ? (
               <TableMessage>
-                <p className="text-xs text-muted">Loading candidates…</p>
+                <p className="text-xs text-muted xl:text-[11px]">Loading candidates…</p>
               </TableMessage>
             ) : null}
             {!isLoading && isError ? (
@@ -246,14 +256,14 @@ export function CandidatesTableSection({
                       key={application.id}
                       className="align-middle hover:bg-hero-bg/30"
                     >
-                      <td className="px-3 py-3 first:pl-4 sm:px-3.5">
+                      <td className="max-w-[14rem] px-3 py-3 first:pl-4 sm:px-3.5 xl:max-w-[12rem] xl:px-2.5 xl:py-2 xl:first:pl-3">
                         <Link
                           to={operationsCandidateDetailPath(
                             application.jobSeekerId || application.id,
                           )}
-                          className="flex min-w-0 items-center gap-2.5"
+                          className="flex min-w-0 items-center gap-2.5 xl:gap-2"
                         >
-                          <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary">
+                          <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary xl:size-7 xl:text-[10px]">
                             {resolveMediaUrl(application.profilePhotoUrl) ? (
                               <img
                                 src={resolveMediaUrl(application.profilePhotoUrl)}
@@ -265,10 +275,10 @@ export function CandidatesTableSection({
                             )}
                           </span>
                           <span className="min-w-0">
-                            <span className="block truncate font-semibold text-foreground">
+                            <span className="block truncate text-xs font-semibold text-foreground xl:text-[11px]">
                               {application.candidateName}
                             </span>
-                            <span className="mt-0.5 block text-[11px] text-muted">
+                            <span className="mt-0.5 block text-[11px] text-muted xl:text-[10px]">
                               {formatCandidateDisplayId(
                                 application.jobSeekerId || application.id,
                               )}
@@ -276,41 +286,41 @@ export function CandidatesTableSection({
                           </span>
                         </Link>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-foreground sm:px-3.5">
+                      <td className="whitespace-nowrap px-3 py-3 text-foreground sm:px-3.5 xl:px-2.5 xl:py-2 xl:text-[11px]">
                         {application.candidatePhone || "—"}
                       </td>
-                      <td className="px-3 py-3 sm:px-3.5">
+                      <td className="px-3 py-3 sm:px-3.5 xl:px-2.5 xl:py-2">
                         <PreferredRoleChips
                           roles={application.preferredRoles ?? []}
                         />
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-foreground sm:px-3.5">
+                      <td className="whitespace-nowrap px-3 py-3 text-foreground sm:px-3.5 xl:px-2.5 xl:py-2 xl:text-[11px]">
                         {application.candidateExperienceLabel ||
                           "Not specified"}
                       </td>
-                      <td className="px-3 py-3 text-muted sm:px-3.5">
-                        <span className="inline-flex max-w-[10rem] items-center gap-1">
+                      <td className="px-3 py-3 text-muted sm:px-3.5 xl:px-2.5 xl:py-2">
+                        <span className="inline-flex max-w-[10rem] items-center gap-1 xl:max-w-[8rem]">
                           <MapPin
-                            className="size-3 shrink-0"
+                            className="size-3 shrink-0 xl:size-2.5"
                             aria-hidden="true"
                           />
-                          <span className="truncate">
+                          <span className="truncate xl:text-[11px]">
                             {application.candidateLocation || "—"}
                           </span>
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-muted sm:px-3.5">
-                        <span className="block">{registered.date}</span>
+                      <td className="whitespace-nowrap px-3 py-3 text-muted sm:px-3.5 xl:px-2.5 xl:py-2">
+                        <span className="block xl:text-[11px]">{registered.date}</span>
                         {registered.time ? (
-                          <span className="block text-[11px]">
+                          <span className="block text-[11px] xl:text-[10px]">
                             {registered.time}
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-3 py-3 font-semibold tabular-nums text-foreground sm:px-3.5">
+                      <td className="px-3 py-3 font-semibold tabular-nums text-foreground sm:px-3.5 xl:px-2.5 xl:py-2 xl:text-[11px]">
                         {application.applicationCount ?? 0}
                       </td>
-                      <td className="px-3 py-3 sm:px-3.5">
+                      <td className="px-3 py-3 sm:px-3.5 xl:px-2.5 xl:py-2 [&>span]:xl:px-1.5 [&>span]:xl:py-0 [&>span]:xl:text-[10px]">
                         <OperationsBadge
                           variant={profileStatusBadgeVariant(
                             application.profileStatus,
@@ -319,7 +329,7 @@ export function CandidatesTableSection({
                           {application.profileStatusLabel || "Incomplete"}
                         </OperationsBadge>
                       </td>
-                      <td className="px-3 py-3 text-right last:pr-4 sm:px-3.5">
+                      <td className="px-3 py-3 text-right last:pr-4 sm:px-3.5 xl:px-2.5 xl:py-2 xl:last:pr-3">
                         <div className="inline-flex justify-end">
                           <CandidatesRowActions application={application} />
                         </div>

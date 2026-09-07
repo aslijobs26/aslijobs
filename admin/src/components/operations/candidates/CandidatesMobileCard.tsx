@@ -57,10 +57,7 @@ export function CandidatesMobileCard({
               </span>
             </Link>
           </div>
-          <CandidatesRowActions
-            application={application}
-            showViewButton={false}
-          />
+          <CandidatesRowActions application={application} />
         </div>
       </div>
 

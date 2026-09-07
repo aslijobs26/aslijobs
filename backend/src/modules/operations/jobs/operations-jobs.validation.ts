@@ -55,9 +55,9 @@ const analyticsIsoDateSchema = z
 export const operationsJobsAnalyticsQuerySchema = z
   .object({
     preset: z
-      .enum(["last_7_days", "last_30_days", "last_3_months", "custom"])
+      .enum(["all", "last_7_days", "last_30_days", "last_3_months", "custom"])
       .optional()
-      .default("last_30_days"),
+      .default("all"),
     dateFrom: analyticsIsoDateSchema.optional().default(""),
     dateTo: analyticsIsoDateSchema.optional().default(""),
   })

@@ -48,6 +48,10 @@ export type OperationsJobsKpis = {
   liveJobs: number;
   expiredJobs: number;
   draftJobs: number;
+  /** Jobs with listingValidUntil in the next 7 days. */
+  atRiskJobs: number;
+  /** Jobs with status closed or expired. */
+  filledClosedJobs: number;
 };
 
 export type OperationsJobsTabCounts = {
@@ -83,6 +87,7 @@ export type OperationsJobsListResult = {
 };
 
 export type OperationsJobsAnalyticsPreset =
+  | "all"
   | "last_7_days"
   | "last_30_days"
   | "last_3_months"
@@ -100,13 +105,27 @@ export type OperationsJobsAnalyticsRange = {
   to: string;
   previousFrom: string;
   previousTo: string;
-  granularity: "day" | "week";
+  granularity: "day" | "week" | "month";
 };
 
 export type OperationsJobsAnalyticsNamedCount = {
   key: string;
   label: string;
   count: number;
+  percent?: number;
+};
+
+export type OperationsJobsLocationAnalytics = {
+  states: OperationsJobsAnalyticsNamedCount[];
+  cities: OperationsJobsAnalyticsNamedCount[];
+  topLocations: OperationsJobsAnalyticsNamedCount[];
+};
+
+export type OperationsJobsPostingsTrendPoint = {
+  date: string;
+  label: string;
+  jobsPosted: number;
+  jobsApproved: number;
 };
 
 export type OperationsJobsAnalyticsSeriesPoint = {
@@ -140,7 +159,7 @@ export type OperationsJobsAnalyticsResult = {
     averageApplicationsPerJob: number;
     changePercent: number | null;
   };
-  jobsByLocation: OperationsJobsAnalyticsNamedCount[];
+  jobsByLocation: OperationsJobsLocationAnalytics;
   jobsByEmploymentType: OperationsJobsAnalyticsNamedCount[];
   topPerformingJobs: OperationsJobsAnalyticsChartPoint[];
   jobsExpiringSoon: OperationsJobsAnalyticsNamedCount[];
@@ -150,6 +169,15 @@ export type OperationsJobsAnalyticsResult = {
     previousJobsCreated: number;
     applications: number;
     previousApplications: number;
+  };
+  postingsTrend: OperationsJobsPostingsTrendPoint[];
+  jobsByIndustry: OperationsJobsAnalyticsNamedCount[];
+  topJobRoles: OperationsJobsAnalyticsNamedCount[];
+  overviewTabs: {
+    all: number;
+    pending_approval: number;
+    at_risk: number;
+    recently_closed: number;
   };
 };
 

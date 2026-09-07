@@ -2,20 +2,22 @@ import { useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 import { Check } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { JobsFiltersBar, type JobsFiltersState } from "../components/operations/jobs/JobsFiltersBar";
+import {
+  EMPTY_JOBS_TABLE_FILTERS,
+  JobsTableFilters,
+  type JobsTableFiltersState,
+} from "../components/operations/jobs/JobsTableFilters";
 import { CloseJobConfirmDialog } from "../components/operations/jobs/detail/CloseJobConfirmDialog";
-import { JobsAnalyticsSection } from "../components/operations/jobs/analytics/JobsAnalyticsSection";
 import {
   JobsAnalyticsKpiSkeleton,
   JobsAnalyticsSkeleton,
 } from "../components/operations/jobs/analytics/JobsAnalyticsSkeleton";
-import { JobsInsightsStrip } from "../components/operations/jobs/JobsInsightsStrip";
 import { JobsKpiStrip } from "../components/operations/jobs/JobsKpiStrip";
-import { JobsPageSkeleton } from "../components/operations/jobs/JobsPageSkeleton";
-import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
+import { JobsAskAsliCard } from "../components/operations/jobs/overview/JobsAskAsliCard";
+import { JobsOverviewAnalytics } from "../components/operations/jobs/overview/JobsOverviewAnalytics";
+import { JobsOverviewHeader } from "../components/operations/jobs/overview/JobsOverviewHeader";
+import { JobsQuickActions } from "../components/operations/jobs/overview/JobsQuickActions";
 import { JobsTableSection } from "../components/operations/jobs/JobsTableSection";
-import { JobsTabs } from "../components/operations/jobs/JobsTabs";
-import { JobsViewTabs } from "../components/operations/jobs/JobsViewTabs";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import {
   useOperationsJobs,
@@ -29,9 +31,6 @@ import type {
   OperationsJobsAnalyticsParams,
   OperationsJobsAnalyticsPreset,
   OperationsJobsAnalyticsResult,
-  OperationsJobsInsight,
-  OperationsJobsListResult,
-  OperationsJobsModuleView,
 } from "../types/operations-jobs";
 
 function statusActionConfirmMessage(
@@ -57,30 +56,27 @@ function statusActionConfirmMessage(
   }
 }
 
-const DEFAULT_FILTERS: JobsFiltersState = {
-  search: "",
-  status: "",
-  paymentStatus: "",
-  location: "",
+const DEFAULT_FILTERS: JobsTableFiltersState = EMPTY_JOBS_TABLE_FILTERS;
+
+const EMPTY_JOBS_FILTER_OPTIONS = {
+  categories: [] as string[],
+  locations: [] as string[],
 };
 
 const ANALYTICS_PRESETS: OperationsJobsAnalyticsPreset[] = [
+  "all",
   "last_7_days",
   "last_30_days",
   "last_3_months",
   "custom",
 ];
 
-function parseJobsView(value: string | null): OperationsJobsModuleView {
-  return value === "analytics" ? "analytics" : "all";
-}
-
 function parseAnalyticsPreset(
   value: string | null,
 ): OperationsJobsAnalyticsPreset {
   return ANALYTICS_PRESETS.includes(value as OperationsJobsAnalyticsPreset)
     ? (value as OperationsJobsAnalyticsPreset)
-    : "last_30_days";
+    : "all";
 }
 
 function queryErrorMessage(error: unknown, fallback: string): string {
@@ -116,7 +112,9 @@ function exportAnalyticsCsv(result: OperationsJobsAnalyticsResult): void {
     ["Section", "Label", "Value"],
     ["KPI", "Total Jobs", String(result.kpis.totalJobs)],
     ["KPI", "Pending Approval", String(result.kpis.pendingApprovalJobs)],
+    ["KPI", "At Risk of Expiry", String(result.kpis.atRiskJobs ?? 0)],
     ["KPI", "Active Jobs", String(result.kpis.activeJobs)],
+    ["KPI", "Filled/Closed", String(result.kpis.filledClosedJobs ?? 0)],
     ["KPI", "Pending Payment", String(result.kpis.pendingPaymentJobs)],
     ["KPI", "Live Jobs", String(result.kpis.liveJobs)],
     ["KPI", "Expired Jobs", String(result.kpis.expiredJobs)],
@@ -147,8 +145,18 @@ function exportAnalyticsCsv(result: OperationsJobsAnalyticsResult): void {
       item.label,
       String(item.count),
     ]),
-    ...result.jobsByLocation.map((item) => [
-      "Jobs by Location",
+    ...result.jobsByLocation.states.map((item) => [
+      "Jobs by Location (States)",
+      item.label,
+      String(item.count),
+    ]),
+    ...result.jobsByLocation.cities.map((item) => [
+      "Jobs by Location (Cities)",
+      item.label,
+      String(item.count),
+    ]),
+    ...result.jobsByLocation.topLocations.map((item) => [
+      "Jobs by Location (Top)",
       item.label,
       String(item.count),
     ]),
@@ -188,70 +196,22 @@ function exportAnalyticsCsv(result: OperationsJobsAnalyticsResult): void {
   URL.revokeObjectURL(url);
 }
 
-function exportJobsCsv(result: OperationsJobsListResult): void {
-  const header = [
-    "Job ID",
-    "Job Title",
-    "Job Type",
-    "Employer",
-    "Vacancies",
-    "Location",
-    "Status",
-    "Payment Status",
-    "Applications",
-    "Published At",
-  ];
-
-  const rows = result.jobs.map((job) => [
-    job.jobId,
-    job.jobTitle,
-    job.jobType,
-    job.employer.companyName,
-    String(job.vacancies),
-    job.locationLabel,
-    job.statusLabel,
-    job.paymentStatusLabel,
-    String(job.applications),
-    job.publishedAt ?? job.createdAt,
-  ]);
-
-  const csv = [header, ...rows]
-    .map((row) =>
-      row
-        .map((cell) => `"${String(cell).replaceAll('"', '""')}"`)
-        .join(","),
-    )
-    .join("\n");
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `operations-jobs-page-${result.pagination.page}.csv`;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
 export function OperationsJobsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const view = parseJobsView(searchParams.get("view"));
   const requestedPreset = parseAnalyticsPreset(searchParams.get("preset"));
   const requestedFrom = searchParams.get("from")?.trim() ?? "";
   const requestedTo = searchParams.get("to")?.trim() ?? "";
   const analyticsFilters: OperationsJobsAnalyticsParams =
     requestedPreset === "custom" && !requestedFrom && !requestedTo
-      ? { preset: "last_30_days", dateFrom: "", dateTo: "" }
+      ? { preset: "all", dateFrom: "", dateTo: "" }
       : {
           preset: requestedPreset,
           dateFrom: requestedFrom,
           dateTo: requestedTo,
         };
-  const isAnalyticsView = view === "analytics";
 
   const [tab, setTab] = useState<OperationsJobTab>("all");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [filters, setFilters] = useState<JobsFiltersState>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<JobsTableFiltersState>(DEFAULT_FILTERS);
   const [closeTarget, setCloseTarget] = useState<OperationsJobListItem | null>(
     null,
   );
@@ -262,10 +222,10 @@ export function OperationsJobsPage() {
   const [rejectError, setRejectError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const queryParams = useMemo(
+  const overviewListParams = useMemo(
     () => ({
-      page,
-      limit,
+      page: 1,
+      limit: 10,
       tab,
       search: filters.search.trim(),
       status: filters.status,
@@ -273,8 +233,6 @@ export function OperationsJobsPage() {
       location: filters.location,
     }),
     [
-      page,
-      limit,
       tab,
       filters.search,
       filters.status,
@@ -283,24 +241,16 @@ export function OperationsJobsPage() {
     ],
   );
 
-  const jobsQuery = useOperationsJobs(queryParams, {
-    enabled: !isAnalyticsView,
-  });
+  const jobsQuery = useOperationsJobs(overviewListParams, { enabled: true });
   const analyticsQuery = useOperationsJobsAnalytics(analyticsFilters, {
-    enabled: isAnalyticsView,
+    enabled: true,
   });
   const statusMutation = useUpdateOperationsJobStatusMutation();
   const data = jobsQuery.data;
   const analyticsData = analyticsQuery.data;
-  const kpis = isAnalyticsView ? analyticsData?.kpis : data?.kpis;
-  const isListLoading =
-    !isAnalyticsView &&
-    (jobsQuery.isPending || (jobsQuery.isFetching && !data));
+  const kpis = analyticsData?.kpis;
   const isAnalyticsLoading =
-    isAnalyticsView &&
-    (analyticsQuery.isPending || (analyticsQuery.isFetching && !analyticsData));
-  const isSoftRefreshing =
-    Boolean(data) && jobsQuery.isFetching && !jobsQuery.isPending;
+    analyticsQuery.isPending || (analyticsQuery.isFetching && !analyticsData);
 
   const errorMessage = jobsQuery.error
     ? queryErrorMessage(jobsQuery.error, "Failed to load jobs.")
@@ -312,27 +262,22 @@ export function OperationsJobsPage() {
       )
     : undefined;
 
-  const handleFiltersChange = (next: Partial<JobsFiltersState>) => {
+  const handleFiltersChange = (next: Partial<JobsTableFiltersState>) => {
     setFilters((current) => ({ ...current, ...next }));
-    // Status dropdown filters only apply on All Status; jump back to All when used.
     if (next.status !== undefined && next.status !== "") {
       setTab("all");
     }
-    setPage(1);
   };
 
   const handleClearFilters = () => {
     setFilters(DEFAULT_FILTERS);
-    setPage(1);
   };
 
   const handleTabChange = (nextTab: OperationsJobTab) => {
     setTab(nextTab);
-    // Lifecycle tabs own status filtering; clear the dropdown to avoid conflicts.
     if (nextTab !== "all") {
       setFilters((current) => ({ ...current, status: "" }));
     }
-    setPage(1);
   };
 
   const handleStatusAction = (
@@ -457,197 +402,216 @@ export function OperationsJobsPage() {
     return () => window.clearTimeout(timer);
   }, [statusMessage]);
 
-  const updateViewParams = (
+  const updateAnalyticsParams = (
     next: Partial<{
-      view: OperationsJobsModuleView;
       preset: OperationsJobsAnalyticsPreset;
       from: string;
       to: string;
     }>,
   ) => {
     const params = new URLSearchParams(searchParams);
-    const nextView = next.view ?? view;
-    params.set("view", nextView);
+    params.delete("view");
 
     const nextPreset = next.preset ?? analyticsFilters.preset;
     const nextFrom = next.from ?? analyticsFilters.dateFrom;
     const nextTo = next.to ?? analyticsFilters.dateTo;
 
-    if (nextView === "analytics") {
+    if (nextPreset === "all") {
+      params.delete("preset");
+    } else {
       params.set("preset", nextPreset);
-      if (nextPreset === "custom") {
-        if (nextFrom) params.set("from", nextFrom);
-        else params.delete("from");
-        if (nextTo) params.set("to", nextTo);
-        else params.delete("to");
-      } else {
-        params.delete("from");
-        params.delete("to");
-      }
+    }
+
+    if (nextPreset === "custom") {
+      if (nextFrom) params.set("from", nextFrom);
+      else params.delete("from");
+      if (nextTo) params.set("to", nextTo);
+      else params.delete("to");
+    } else {
+      params.delete("from");
+      params.delete("to");
     }
 
     setSearchParams(params, { replace: true });
   };
 
-  const handleViewChange = (nextView: OperationsJobsModuleView) => {
-    updateViewParams({ view: nextView });
-  };
-
   const handleAnalyticsFiltersChange = (
     next: Partial<OperationsJobsAnalyticsParams>,
   ) => {
-    updateViewParams({
-      view: "analytics",
+    updateAnalyticsParams({
       preset: next.preset ?? analyticsFilters.preset,
       from: next.dateFrom ?? analyticsFilters.dateFrom,
       to: next.dateTo ?? analyticsFilters.dateTo,
     });
   };
 
-  const handleInsightSelect = (insight: OperationsJobsInsight) => {
-    updateViewParams({ view: "all" });
-    if (insight.tab === "paused_inactive") {
-      setTab("paused");
-      setFilters((current) => ({
-        ...current,
-        status: "",
-        paymentStatus: "",
-      }));
-    } else if (insight.tab === "pending_payment") {
-      setTab("all");
-      setFilters((current) => ({
-        ...current,
-        status: "",
-        paymentStatus: "pending",
-      }));
-    } else {
-      setTab(insight.tab);
-      setFilters((current) => ({
-        ...current,
-        status: "",
-        paymentStatus: "",
-      }));
-    }
-    setPage(1);
-  };
-
   return (
     <OperationsLayout
       title="Jobs"
-      subtitle="Manage all job postings across employers."
+      subtitle="Track job postings, approvals, performance and demand across all employers."
+      headerVariant="command"
     >
       <div className="flex w-full min-w-0 flex-col gap-2.5">
-        <JobsViewTabs value={view} onChange={handleViewChange} />
-
-        {isAnalyticsView ? (
-          isAnalyticsLoading ? (
-            <>
-              {kpis ? <JobsKpiStrip kpis={kpis} /> : <JobsAnalyticsKpiSkeleton />}
-              <JobsAnalyticsSkeleton />
-            </>
-          ) : analyticsQuery.isError && !analyticsData ? (
-            <div className="rounded-xl border border-border-subtle bg-surface px-4 py-16 text-center shadow-sm">
-              <p className="text-sm font-medium text-danger">
-                {analyticsErrorMessage ?? "Failed to load jobs analytics."}
-              </p>
-              <button
-                type="button"
-                onClick={() => void analyticsQuery.refetch()}
-                className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              >
-                Retry
-              </button>
-            </div>
-          ) : analyticsData ? (
-            <>
-              <JobsKpiStrip kpis={analyticsData.kpis} />
-              <JobsAnalyticsSection
-                data={analyticsData}
-                filters={analyticsFilters}
-                onFiltersChange={handleAnalyticsFiltersChange}
-                onExport={() => exportAnalyticsCsv(analyticsData)}
-              />
-            </>
-          ) : null
-        ) : isListLoading ? (
-          <JobsPageSkeleton rowCount={limit} />
-        ) : jobsQuery.isError && !data ? (
+        {isAnalyticsLoading ? (
+          <>
+            {kpis ? <JobsKpiStrip kpis={kpis} /> : <JobsAnalyticsKpiSkeleton />}
+            <JobsAnalyticsSkeleton />
+          </>
+        ) : analyticsQuery.isError && !analyticsData ? (
           <div className="rounded-xl border border-border-subtle bg-surface px-4 py-16 text-center shadow-sm">
             <p className="text-sm font-medium text-danger">
-              {errorMessage ?? "Failed to load jobs."}
+              {analyticsErrorMessage ?? "Failed to load jobs analytics."}
             </p>
             <button
               type="button"
-              onClick={() => void jobsQuery.refetch()}
+              onClick={() => void analyticsQuery.refetch()}
               className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
               Retry
             </button>
           </div>
-        ) : data ? (
-          <div className="relative flex w-full min-w-0 flex-col gap-2.5">
-            {isSoftRefreshing ? (
-              <div
-                className="pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden rounded-full"
-                aria-hidden="true"
-              >
-                <div className="h-full w-1/3 animate-pulse rounded-full bg-primary-soft" />
-              </div>
-            ) : null}
-
-            <JobsKpiStrip kpis={data.kpis} />
-
-            <JobsInsightsStrip
-              insights={data.insights}
-              onSelect={handleInsightSelect}
+        ) : analyticsData ? (
+          <div className="flex w-full min-w-0 flex-col gap-3">
+            <JobsOverviewHeader
+              preset={analyticsFilters.preset}
+              dateFrom={analyticsFilters.dateFrom}
+              dateTo={analyticsFilters.dateTo}
+              onPresetChange={(preset) =>
+                handleAnalyticsFiltersChange(
+                  preset === "custom"
+                    ? {
+                        preset,
+                        dateFrom:
+                          analyticsFilters.dateFrom ||
+                          new Date().toISOString().slice(0, 10),
+                        dateTo:
+                          analyticsFilters.dateTo ||
+                          new Date().toISOString().slice(0, 10),
+                      }
+                    : { preset, dateFrom: "", dateTo: "" },
+                )
+              }
+              onDateFromChange={(dateFrom) =>
+                handleAnalyticsFiltersChange({
+                  preset: "custom",
+                  dateFrom,
+                })
+              }
+              onDateToChange={(dateTo) =>
+                handleAnalyticsFiltersChange({
+                  preset: "custom",
+                  dateTo,
+                })
+              }
+              onExport={() => exportAnalyticsCsv(analyticsData)}
             />
 
-            <JobsFiltersBar
-              filters={filters}
-              filterOptions={data.filterOptions}
-              onChange={handleFiltersChange}
-              onClear={handleClearFilters}
-              onExport={() => exportJobsCsv(data)}
-            />
+            <JobsKpiStrip kpis={analyticsData.kpis} />
+            <JobsOverviewAnalytics data={analyticsData} />
 
-            <div
-              className="relative min-w-0 max-w-full rounded-xl border border-border-subtle bg-surface shadow-sm"
-              aria-busy={isSoftRefreshing || undefined}
-            >
-              {isSoftRefreshing ? (
-                <div
-                  className="absolute inset-0 z-10 rounded-xl bg-surface/40"
-                  aria-hidden="true"
-                />
-              ) : null}
-              <div className="min-w-0 border-b border-border-subtle px-2.5 py-2 sm:px-3.5 sm:py-3">
-                <JobsTabs
-                  activeTab={tab}
-                  counts={data.counts}
-                  onChange={handleTabChange}
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
+              <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
+                <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4 xl:px-3 xl:py-1.5">
+                  <div className="flex min-w-0 flex-col gap-2.5 xl:gap-1.5">
+                    <h2 className="text-sm font-semibold text-foreground xl:text-[11px]">
+                      Recent Job Postings{" "}
+                      <span className="font-semibold tabular-nums text-muted xl:text-[10px]">
+                        (
+                        {(
+                          data?.pagination.total ??
+                          analyticsData.overviewTabs?.all ??
+                          0
+                        ).toLocaleString("en-IN")}
+                        )
+                      </span>
+                    </h2>
+                    <div
+                      className="-mx-0.5 flex min-w-0 items-center gap-1.5 overflow-x-auto px-0.5 pb-0.5 scrollbar-hidden"
+                      role="tablist"
+                      aria-label="Recent job posting tabs"
+                    >
+                      {(
+                        [
+                          {
+                            id: "all" as const,
+                            label: "All",
+                            count: analyticsData.overviewTabs?.all ?? 0,
+                          },
+                          {
+                            id: "pending_approval" as const,
+                            label: "Pending Approval",
+                            count:
+                              analyticsData.overviewTabs?.pending_approval ?? 0,
+                          },
+                          {
+                            id: "live" as const,
+                            label: "At Risk",
+                            count: analyticsData.overviewTabs?.at_risk ?? 0,
+                          },
+                          {
+                            id: "closed" as const,
+                            label: "Recently Closed",
+                            count:
+                              analyticsData.overviewTabs?.recently_closed ?? 0,
+                          },
+                        ] as const
+                      ).map((item) => {
+                        const selected = tab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={selected}
+                            onClick={() => handleTabChange(item.id)}
+                            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:h-7 xl:gap-1 xl:px-2 xl:text-[9px] ${
+                              selected
+                                ? "ops-brand-border-glow border-primary-soft bg-primary-light text-primary-soft"
+                                : "ops-brand-border-glow border-border bg-surface text-muted hover:bg-primary-light/50"
+                            }`}
+                          >
+                            {item.label}
+                            <span className="tabular-nums xl:text-[8px]">
+                              {item.count.toLocaleString("en-IN")}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <JobsTableFilters
+                      filters={filters}
+                      filterOptions={
+                        data?.filterOptions ?? EMPTY_JOBS_FILTER_OPTIONS
+                      }
+                      onChange={handleFiltersChange}
+                      onClear={handleClearFilters}
+                    />
+                  </div>
+                </div>
+                <JobsTableSection
+                  jobs={data?.jobs ?? []}
+                  isLoading={jobsQuery.isFetching && !data}
+                  isError={jobsQuery.isError}
+                  errorMessage={errorMessage}
+                  onRetry={() => void jobsQuery.refetch()}
+                  pendingStatusJobId={
+                    statusMutation.isPending
+                      ? statusMutation.variables?.jobId
+                      : null
+                  }
+                  onStatusAction={handleStatusAction}
                 />
               </div>
-              <JobsTableSection
-                jobs={data.jobs}
-                isLoading={false}
-                isError={jobsQuery.isError}
-                errorMessage={errorMessage}
-                onRetry={() => void jobsQuery.refetch()}
-                pendingStatusJobId={
-                  statusMutation.isPending ? statusMutation.variables?.jobId : null
-                }
-                onStatusAction={handleStatusAction}
-              />
+
+              <aside className="flex min-w-0 flex-col gap-3">
+                <JobsQuickActions
+                  onExport={() => exportAnalyticsCsv(analyticsData)}
+                  onReviewPending={() => handleTabChange("pending_approval")}
+                  onCheckAtRisk={() => handleTabChange("live")}
+                />
+                <JobsAskAsliCard />
+              </aside>
             </div>
-
-            <JobsPaginationBar
-              pagination={data.pagination}
-              onPageChange={setPage}
-              onLimitChange={(nextLimit) => {
-                setLimit(nextLimit);
-                setPage(1);
-              }}
-            />
           </div>
         ) : null}
       </div>

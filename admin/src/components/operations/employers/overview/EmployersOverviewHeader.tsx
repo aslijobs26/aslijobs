@@ -8,6 +8,7 @@ import { OperationsFilterSelect } from "../../jobs/OperationsFilterSelect";
 
 const PRESET_OPTIONS: { value: OperationsEmployersAnalyticsPreset; label: string }[] =
   [
+    { value: "all", label: "Overall" },
     { value: "last_7_days", label: "Last 7 Days" },
     { value: "last_30_days", label: "Last 30 Days" },
     { value: "last_90_days", label: "Last 90 Days" },

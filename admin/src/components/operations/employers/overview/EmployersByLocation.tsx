@@ -121,7 +121,7 @@ export function EmployersByLocation({
   }, [countByState, hoveredState]);
 
   return (
-    <section className="operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section className="employers-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3 py-2 sm:px-3.5 sm:py-2.5">
         <h3 className="text-[13px] font-semibold tracking-tight text-foreground">
           Employers by Location
@@ -133,14 +133,14 @@ export function EmployersByLocation({
           onChange={(value) => setLimit((value as LocationLimit) || "5")}
           hideSearch
           className="w-auto min-w-[8.5rem]"
-          triggerClassName="h-7 min-w-[8.25rem] px-2 text-[11px] font-medium text-muted"
+          triggerClassName="h-7 min-w-[8.25rem] px-2 text-[11px] font-medium text-muted xl:h-6 xl:text-[10px]"
         />
       </header>
 
       <div className="min-h-0 flex-1 p-2.5 sm:p-3">
         {isLoading ? (
           <div
-            className="grid min-h-[11.5rem] animate-pulse grid-cols-1 gap-3 sm:grid-cols-2"
+            className="grid min-h-[11.5rem] animate-pulse grid-cols-1 gap-3 sm:grid-cols-2 xl:min-h-36"
             aria-hidden="true"
           >
             <div className="rounded-lg bg-hero-bg" />
@@ -151,7 +151,7 @@ export function EmployersByLocation({
             </div>
           </div>
         ) : isError ? (
-          <div className="flex min-h-[11.5rem] flex-col items-center justify-center gap-2 text-center">
+          <div className="flex min-h-[11.5rem] flex-col items-center justify-center gap-2 text-center xl:min-h-36">
             <p className="text-[12px] text-muted">
               Unable to load location analytics
             </p>
@@ -166,15 +166,15 @@ export function EmployersByLocation({
             ) : null}
           </div>
         ) : rankedStates.length === 0 ? (
-          <p className="flex min-h-[11.5rem] items-center justify-center text-center text-xs text-muted">
+          <p className="flex min-h-[11.5rem] items-center justify-center text-center text-xs text-muted xl:min-h-36">
             No location data available
           </p>
         ) : (
-          <div className="grid min-h-[11.5rem] grid-cols-1 items-center gap-3 sm:grid-cols-2">
+          <div className="grid min-h-[11.5rem] grid-cols-1 items-center gap-3 sm:grid-cols-2 xl:min-h-36 xl:gap-2">
             <div className="relative mx-auto w-full max-w-[11.5rem] sm:max-w-none">
               <svg
                 viewBox={indiaStatesMap.viewBox}
-                className="h-auto w-full max-h-[12.5rem]"
+                className="h-auto w-full max-h-[12.5rem] xl:max-h-[10rem]"
                 role="img"
                 aria-label="India map of employer concentration by state"
               >
@@ -219,7 +219,7 @@ export function EmployersByLocation({
               className={cn(
                 "min-w-0 divide-y divide-border-subtle",
                 limit === "all" &&
-                  "max-h-[12.5rem] overflow-y-auto overscroll-contain scrollbar-hidden",
+                  "max-h-[12.5rem] overflow-y-auto overscroll-contain scrollbar-hidden xl:max-h-[10rem]",
               )}
             >
               {visibleStates.map((item) => {
@@ -229,7 +229,7 @@ export function EmployersByLocation({
                   <li
                     key={item.id}
                     className={cn(
-                      "flex items-center gap-2 py-1.5 text-[12px]",
+                      "flex items-center gap-2 py-1.5 text-[12px] xl:py-1 xl:text-[11px]",
                       hoveredState?.toLowerCase() === item.label.toLowerCase() &&
                         "bg-hero-bg/70",
                     )}

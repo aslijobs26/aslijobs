@@ -2,12 +2,26 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildJobsAnalyticsInsight,
+  fillPostingsTrend,
   fillTimeSeries,
   percentChange,
   resolveJobsAnalyticsDateRange,
 } from "./operations-jobs-analytics.js";
 
 describe("operations jobs analytics helpers", () => {
+  it("resolves overall (all time) with monthly buckets", () => {
+    const range = resolveJobsAnalyticsDateRange({
+      preset: "all",
+      dateFrom: "",
+      dateTo: "",
+      now: new Date(2026, 8, 5),
+    });
+
+    assert.equal(range.preset, "all");
+    assert.equal(range.granularity, "month");
+    assert.equal(new Date(range.from).getFullYear(), 2020);
+  });
+
   it("resolves last 30 days and a matching previous period", () => {
     const now = new Date(2026, 8, 5, 15, 30, 0);
     const range = resolveJobsAnalyticsDateRange({
@@ -58,6 +72,33 @@ describe("operations jobs analytics helpers", () => {
     assert.deepEqual(
       points.map((point) => point.count),
       [0, 4, 0],
+    );
+  });
+
+  it("fills postings trend with jobsPosted and jobsApproved", () => {
+    const range = resolveJobsAnalyticsDateRange({
+      preset: "custom",
+      dateFrom: "2026-09-01",
+      dateTo: "2026-09-03",
+      now: new Date(2026, 8, 5),
+    });
+    const points = fillPostingsTrend(
+      [{ key: "2026-09-01", count: 2 }],
+      [{ key: "2026-09-02", count: 5 }],
+      range,
+    );
+
+    assert.equal(points.length, 3);
+    assert.deepEqual(
+      points.map((point) => ({
+        jobsPosted: point.jobsPosted,
+        jobsApproved: point.jobsApproved,
+      })),
+      [
+        { jobsPosted: 2, jobsApproved: 0 },
+        { jobsPosted: 0, jobsApproved: 5 },
+        { jobsPosted: 0, jobsApproved: 0 },
+      ],
     );
   });
 

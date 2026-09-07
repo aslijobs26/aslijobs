@@ -9,23 +9,23 @@ import {
   YAxis,
 } from "recharts";
 import { useOperationsThemeColors } from "../../../../hooks/use-operations-theme-colors";
-import type { OperationsEmployersAnalyticsSeriesPoint } from "../../../../types/operations-employers";
+import type { OperationsCandidatesAnalyticsSeriesPoint } from "../../../../types/operations-candidates";
 import { OperationsCard } from "../../../ui/OperationsCard";
 
-interface EmployersRegistrationTrendChartProps {
-  data: OperationsEmployersAnalyticsSeriesPoint[];
+interface CandidatesRegistrationTrendChartProps {
+  data: OperationsCandidatesAnalyticsSeriesPoint[];
   /** When Overall, subtitle notes the 12-month trend window. */
   isOverall?: boolean;
 }
 
-export function EmployersRegistrationTrendChart({
+export function CandidatesRegistrationTrendChart({
   data,
   isOverall = false,
-}: EmployersRegistrationTrendChartProps) {
+}: CandidatesRegistrationTrendChartProps) {
   const colors = useOperationsThemeColors();
   const series = Array.isArray(data) ? data : [];
   const hasData = series.some(
-    (point) => point.newRegistrations > 0 || point.verifiedEmployers > 0,
+    (point) => point.newRegistrations > 0 || point.profileCompleted > 0,
   );
   const axisTick = { fontSize: 10, fill: "#5a6570" };
   const pointCount = series.length;
@@ -37,10 +37,10 @@ export function EmployersRegistrationTrendChart({
       title="Registration Trend"
       subtitle={
         isOverall
-          ? "Last 12 months · new registrations vs verified"
-          : "New registrations vs verified employers"
+          ? "Last 12 months · new registrations vs profile completions"
+          : "New registrations vs profile completions"
       }
-      className="employers-analytics-card min-w-0"
+      className="candidates-analytics-card min-w-0"
     >
       {!hasData ? (
         <p className="flex min-h-44 items-center justify-center text-center text-xs text-muted xl:min-h-36">
@@ -77,12 +77,11 @@ export function EmployersRegistrationTrendChart({
                 width={28}
               />
               <Tooltip
-                labelFormatter={(label) => String(label)}
                 formatter={(value, name) => [
                   Number(value).toLocaleString("en-IN"),
                   name === "newRegistrations"
                     ? "New registrations"
-                    : "Verified employers",
+                    : "Profile completed",
                 ]}
               />
               <Legend
@@ -94,7 +93,7 @@ export function EmployersRegistrationTrendChart({
                 formatter={(value) =>
                   value === "newRegistrations"
                     ? "New registrations"
-                    : "Verified employers"
+                    : "Profile completed"
                 }
               />
               <Bar
@@ -104,7 +103,7 @@ export function EmployersRegistrationTrendChart({
                 maxBarSize={maxBarSize}
               />
               <Bar
-                dataKey="verifiedEmployers"
+                dataKey="profileCompleted"
                 fill={colors.success}
                 radius={[4, 4, 0, 0]}
                 maxBarSize={maxBarSize}

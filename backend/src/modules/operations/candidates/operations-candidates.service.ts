@@ -1093,8 +1093,23 @@ function buildSeekerMatch(
 ): Record<string, unknown> {
   const andClauses: Record<string, unknown>[] = [];
 
+  const overviewTab = query.overviewTab ?? "all";
+  let effectiveDatePreset = query.datePreset;
+  let effectiveProfileStatus = query.profileStatus;
+  let effectiveVerification = query.verificationStatus ?? "";
+
+  if (overviewTab === "new" && effectiveDatePreset === "all") {
+    effectiveDatePreset = "last_30_days";
+  }
+  if (overviewTab === "profileIncomplete" && !effectiveProfileStatus) {
+    effectiveProfileStatus = "incomplete";
+  }
+  if (overviewTab === "verificationPending" && !effectiveVerification) {
+    effectiveVerification = "pending";
+  }
+
   const range = resolveDateRange({
-    datePreset: query.datePreset,
+    datePreset: effectiveDatePreset,
     dateFrom: query.dateFrom,
     dateTo: query.dateTo,
   });
@@ -1143,10 +1158,21 @@ function buildSeekerMatch(
     });
   }
 
-  if (query.profileStatus === "complete") {
+  if (effectiveProfileStatus === "complete") {
     andClauses.push({ registrationStatus: "COMPLETED" });
-  } else if (query.profileStatus === "incomplete") {
+  } else if (effectiveProfileStatus === "incomplete") {
     andClauses.push({ registrationStatus: { $ne: "COMPLETED" } });
+  }
+
+  if (effectiveVerification === "verified") {
+    andClauses.push({ isWhatsappVerified: true });
+  } else if (effectiveVerification === "pending") {
+    andClauses.push({
+      $or: [
+        { isWhatsappVerified: false },
+        { isWhatsappVerified: { $exists: false } },
+      ],
+    });
   }
 
   const search = query.search.trim();

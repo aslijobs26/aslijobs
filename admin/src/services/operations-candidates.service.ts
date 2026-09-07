@@ -2,6 +2,8 @@ import { apiClient } from "./api-client";
 import type {
   OperationsCandidateApplicationsResult,
   OperationsCandidateDetail,
+  OperationsCandidatesAnalyticsParams,
+  OperationsCandidatesAnalyticsResult,
   OperationsCandidatesListParams,
   OperationsCandidatesListResult,
 } from "../types/operations-candidates";
@@ -17,6 +19,8 @@ export async function fetchOperationsCandidates(
       params: {
         page: params.page,
         limit: params.limit,
+        overviewTab: params.overviewTab || undefined,
+        verificationStatus: params.verificationStatus || undefined,
         tab: params.tab,
         search: params.search || undefined,
         status: params.status || undefined,
@@ -37,6 +41,28 @@ export async function fetchOperationsCandidates(
       },
     },
   );
+
+  return response.data.data;
+}
+
+export async function fetchOperationsCandidatesAnalytics(
+  params: OperationsCandidatesAnalyticsParams,
+): Promise<OperationsCandidatesAnalyticsResult> {
+  const response = await apiClient.get<{
+    data: OperationsCandidatesAnalyticsResult;
+  }>(`${OPERATIONS_CANDIDATES_BASE}/analytics`, {
+    params: {
+      preset: params.preset,
+      dateFrom:
+        params.preset === "custom" && params.dateFrom
+          ? params.dateFrom
+          : undefined,
+      dateTo:
+        params.preset === "custom" && params.dateTo
+          ? params.dateTo
+          : undefined,
+    },
+  });
 
   return response.data.data;
 }

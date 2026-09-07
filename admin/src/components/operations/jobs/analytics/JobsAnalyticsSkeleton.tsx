@@ -1,8 +1,5 @@
 import { cn } from "../../../../utils/cn";
-import {
-  JOBS_ANALYTICS_CARD_CLASS,
-  JOBS_ANALYTICS_INSIGHT_CLASS,
-} from "./jobs-analytics-theme";
+import { JOBS_ANALYTICS_CARD_CLASS } from "./jobs-analytics-theme";
 
 function Bone({ className }: { className?: string }) {
   return (
@@ -27,19 +24,20 @@ function ChartCardSkeleton({ className }: { className?: string }) {
 
 export function JobsAnalyticsKpiSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-7">
-      {Array.from({ length: 7 }).map((_, index) => (
+    <div className="grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-5">
+      {Array.from({ length: 5 }).map((_, index) => (
         <article
           key={index}
-          className="min-w-0 rounded-lg border border-border-subtle bg-surface px-2.5 py-2.5 shadow-sm sm:px-3 sm:py-3 xl:px-4 xl:py-4"
+          className="flex min-w-0 flex-col justify-between rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-3.5"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1 space-y-2">
               <Bone className="h-3 w-16 sm:w-20" />
-              <Bone className="h-6 w-10 sm:h-7 sm:w-12 xl:h-8" />
+              <Bone className="h-6 w-10 sm:h-7 sm:w-12" />
             </div>
-            <Bone className="size-8 shrink-0 rounded-md sm:size-9 xl:size-10 xl:rounded-lg" />
+            <Bone className="size-9 shrink-0 rounded-lg" />
           </div>
+          <Bone className="mt-3 h-3 w-24" />
         </article>
       ))}
     </div>
@@ -69,24 +67,11 @@ export function JobsAnalyticsSkeleton() {
         <ChartCardSkeleton />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <ChartCardSkeleton />
-        <ChartCardSkeleton />
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
         <ChartCardSkeleton />
         <ChartCardSkeleton />
         <ChartCardSkeleton />
       </div>
-
-      <section className={JOBS_ANALYTICS_INSIGHT_CLASS}>
-        <Bone className="size-9 shrink-0 rounded-full" />
-        <div className="min-w-0 flex-1 space-y-2">
-          <Bone className="h-4 w-20" />
-          <Bone className="h-4 w-full max-w-xl" />
-        </div>
-      </section>
     </div>
   );
 }

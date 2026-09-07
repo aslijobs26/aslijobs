@@ -42,7 +42,10 @@ export function OperationsHomePage() {
           <div className="flex min-w-0 flex-col gap-3.5 xl:col-span-4">
             <OperationsHealthSection items={data.operationsHealth} />
             <OperationsCan module="team" action="read">
-              <TeamWorkloadSection members={data.teamWorkload} />
+              <TeamWorkloadSection
+                members={data.teamWorkload}
+                status={data.teamWorkloadStatus}
+              />
             </OperationsCan>
             <QuickActionsSection actions={data.quickActions} />
           </div>

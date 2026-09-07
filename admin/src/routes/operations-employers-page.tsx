@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { isAxiosError } from "axios";
-import { Search } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { EmployersPageSkeleton } from "../components/operations/employers/EmployersPageSkeleton";
 import { EmployersTableSection } from "../components/operations/employers/EmployersTableSection";
+import {
+  EMPTY_EMPLOYERS_TABLE_FILTERS,
+  EmployersTableFilters,
+  type EmployersTableFiltersState,
+} from "../components/operations/employers/EmployersTableFilters";
 import { AddEmployerDialog } from "../components/operations/employers/overview/AddEmployerDialog";
 import { EmployerTypeDonut } from "../components/operations/employers/overview/EmployerTypeDonut";
 import { EmployersAskAsliCard } from "../components/operations/employers/overview/EmployersAskAsliCard";
@@ -26,15 +30,18 @@ import {
   useUpdateOperationsEmployerVerification,
 } from "../hooks/use-operations-employers";
 import type {
+  OperationsEmployerDatePreset,
   OperationsEmployerListItem,
   OperationsEmployersAnalyticsParams,
   OperationsEmployersAnalyticsPreset,
   OperationsEmployersExportParams,
+  OperationsEmployersFilterOptions,
   OperationsEmployersOverviewTab,
 } from "../types/operations-employers";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
 
 const ANALYTICS_PRESETS: OperationsEmployersAnalyticsPreset[] = [
+  "all",
   "last_7_days",
   "last_30_days",
   "last_90_days",
@@ -48,6 +55,13 @@ const EMPTY_TABS = {
   verificationPending: 0,
   active: 0,
   inactive: 0,
+};
+
+const EMPTY_FILTER_OPTIONS: OperationsEmployersFilterOptions = {
+  verificationStatuses: [],
+  employerTypes: [],
+  locations: [],
+  statuses: [],
 };
 
 function todayIsoDate(): string {
@@ -64,7 +78,7 @@ function parseAnalyticsPreset(
 ): OperationsEmployersAnalyticsPreset {
   return ANALYTICS_PRESETS.includes(value as OperationsEmployersAnalyticsPreset)
     ? (value as OperationsEmployersAnalyticsPreset)
-    : "last_30_days";
+    : "all";
 }
 
 function parseOverviewTab(
@@ -104,7 +118,9 @@ export function OperationsEmployersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [search, setSearch] = useState("");
+  const [tableFilters, setTableFilters] = useState<EmployersTableFiltersState>(
+    EMPTY_EMPLOYERS_TABLE_FILTERS,
+  );
   const [activeTab, setActiveTab] = useState<OperationsEmployersOverviewTab>(
     () =>
       searchParams.get("verificationStatus") === "pending"
@@ -133,7 +149,7 @@ export function OperationsEmployersPage() {
     }
   }, [searchParams]);
 
-  const listFilters = useMemo(() => {
+  const tabListFilters = useMemo(() => {
     switch (activeTab) {
       case "new":
         return {
@@ -168,18 +184,34 @@ export function OperationsEmployersPage() {
     }
   }, [activeTab]);
 
+  const effectiveListFilters = useMemo(() => {
+    const datePreset = (tableFilters.registrationPreset ||
+      tabListFilters.datePreset) as OperationsEmployerDatePreset;
+
+    return {
+      verificationStatus:
+        tableFilters.verificationStatus || tabListFilters.verificationStatus,
+      status: tableFilters.status || tabListFilters.status,
+      datePreset,
+      employerType: tableFilters.employerType,
+      location: tableFilters.location,
+    };
+  }, [tableFilters, tabListFilters]);
+
   const listQueryParams = useMemo(
     () => ({
       page,
       limit,
-      search: search.trim(),
-      verificationStatus: listFilters.verificationStatus,
-      status: listFilters.status,
-      datePreset: listFilters.datePreset,
+      search: tableFilters.search.trim(),
+      verificationStatus: effectiveListFilters.verificationStatus,
+      status: effectiveListFilters.status,
+      employerType: effectiveListFilters.employerType,
+      location: effectiveListFilters.location,
+      datePreset: effectiveListFilters.datePreset,
       dateFrom: "",
       dateTo: "",
     }),
-    [page, limit, search, listFilters],
+    [page, limit, tableFilters.search, effectiveListFilters],
   );
 
   const analyticsQuery = useOperationsEmployersAnalytics(analyticsFilters);
@@ -194,30 +226,93 @@ export function OperationsEmployersPage() {
 
   const exportParams = useMemo<OperationsEmployersExportParams>(
     () => ({
-      search: search.trim(),
-      verificationStatus: listFilters.verificationStatus,
-      status: listFilters.status,
-      datePreset: listFilters.datePreset,
+      search: tableFilters.search.trim(),
+      verificationStatus: effectiveListFilters.verificationStatus,
+      status: effectiveListFilters.status,
+      employerType: effectiveListFilters.employerType,
+      location: effectiveListFilters.location,
+      datePreset: effectiveListFilters.datePreset,
     }),
-    [search, listFilters],
+    [tableFilters.search, effectiveListFilters],
   );
+
+  const filterOptions =
+    employersQuery.data?.filterOptions ?? EMPTY_FILTER_OPTIONS;
+
+  const handleTableFiltersChange = (
+    next: Partial<EmployersTableFiltersState>,
+  ) => {
+    setTableFilters((prev) => ({ ...prev, ...next }));
+    setPage(1);
+
+    // If the user picks an explicit status/verification filter, leave specialized tabs
+    // so the dropdown is clearly the active constraint.
+    if (
+      ("verificationStatus" in next && next.verificationStatus) ||
+      ("status" in next && next.status) ||
+      ("registrationPreset" in next && next.registrationPreset)
+    ) {
+      if (activeTab !== "all") {
+        setActiveTab("all");
+        const params = new URLSearchParams(searchParams);
+        params.delete("tab");
+        params.delete("verificationStatus");
+        setSearchParams(params, { replace: true });
+      }
+    }
+  };
+
+  const handleClearTableFilters = () => {
+    setTableFilters(EMPTY_EMPLOYERS_TABLE_FILTERS);
+    setPage(1);
+  };
+
+  const syncAnalyticsParams = (
+    next: OperationsEmployersAnalyticsParams,
+  ) => {
+    setAnalyticsFilters(next);
+    const params = new URLSearchParams(searchParams);
+    if (next.preset === "all") {
+      params.delete("preset");
+    } else {
+      params.set("preset", next.preset);
+    }
+    if (next.preset === "custom" && next.dateFrom) {
+      params.set("dateFrom", next.dateFrom);
+    } else {
+      params.delete("dateFrom");
+    }
+    if (next.preset === "custom" && next.dateTo) {
+      params.set("dateTo", next.dateTo);
+    } else {
+      params.delete("dateTo");
+    }
+    setSearchParams(params, { replace: true });
+  };
 
   const handlePresetChange = (preset: OperationsEmployersAnalyticsPreset) => {
     if (preset === "custom") {
       const iso = todayIsoDate();
-      setAnalyticsFilters((prev) => ({
+      syncAnalyticsParams({
         preset,
-        dateFrom: prev.dateFrom || iso,
-        dateTo: prev.dateTo || iso,
-      }));
+        dateFrom: analyticsFilters.dateFrom || iso,
+        dateTo: analyticsFilters.dateTo || iso,
+      });
       return;
     }
-    setAnalyticsFilters({ preset, dateFrom: "", dateTo: "" });
+    syncAnalyticsParams({ preset, dateFrom: "", dateTo: "" });
   };
 
   const handleTabChange = (tab: OperationsEmployersOverviewTab) => {
     setActiveTab(tab);
     setPage(1);
+    // Clear dropdown filters that tabs already express, keep search/type/location.
+    setTableFilters((prev) => ({
+      ...prev,
+      verificationStatus: "",
+      status: "",
+      registrationPreset: "",
+    }));
     const next = new URLSearchParams(searchParams);
     if (tab === "verificationPending") {
       next.set("verificationStatus", "pending");
@@ -341,10 +436,18 @@ export function OperationsEmployersPage() {
               dateTo={analyticsFilters.dateTo ?? ""}
               onPresetChange={handlePresetChange}
               onDateFromChange={(dateFrom) =>
-                setAnalyticsFilters((prev) => ({ ...prev, dateFrom }))
+                syncAnalyticsParams({
+                  ...analyticsFilters,
+                  preset: "custom",
+                  dateFrom,
+                })
               }
               onDateToChange={(dateTo) =>
-                setAnalyticsFilters((prev) => ({ ...prev, dateTo }))
+                syncAnalyticsParams({
+                  ...analyticsFilters,
+                  preset: "custom",
+                  dateTo,
+                })
               }
               onAddEmployer={() => setAddDialogOpen(true)}
               onExport={handleExport}
@@ -371,6 +474,7 @@ export function OperationsEmployersPage() {
                 <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
                   <EmployersRegistrationTrendChart
                     data={analytics.registrationTrend}
+                    isOverall={analyticsFilters.preset === "all"}
                   />
                   <EmployersOnboardingFunnel
                     stages={analytics.onboardingFunnel}
@@ -421,23 +525,12 @@ export function OperationsEmployersPage() {
                         counts={analytics?.tabs ?? EMPTY_TABS}
                         onChange={handleTabChange}
                       />
-                      <label className="relative block min-w-0 sm:max-w-xs xl:max-w-[14rem]">
-                        <span className="sr-only">Search employers</span>
-                        <Search
-                          className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted xl:size-3"
-                          aria-hidden="true"
-                        />
-                        <input
-                          type="search"
-                          value={search}
-                          onChange={(event) => {
-                            setSearch(event.target.value);
-                            setPage(1);
-                          }}
-                          placeholder="Search employers"
-                          className="h-8 w-full rounded-md border border-border-subtle bg-surface py-1.5 pr-2.5 pl-8 text-[11px] text-foreground outline-none placeholder:text-muted focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 xl:h-7 xl:pl-7 xl:text-[10px]"
-                        />
-                      </label>
+                      <EmployersTableFilters
+                        filters={tableFilters}
+                        filterOptions={filterOptions}
+                        onChange={handleTableFiltersChange}
+                        onClear={handleClearTableFilters}
+                      />
                     </div>
                   }
                 />

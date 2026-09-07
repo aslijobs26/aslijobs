@@ -27,6 +27,7 @@ import type {
   UpdateOperationsEmployerStatusBody,
   UpdateOperationsEmployerVerificationBody,
 } from "./operations-employers.validation.js";
+import { getOperationsEmployersAnalytics } from "./operations-employers-analytics.js";
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1101,9 +1102,6 @@ export const operationsEmployersService = {
     dateFrom: string;
     dateTo: string;
   }) {
-    const { getOperationsEmployersAnalytics } = await import(
-      "./operations-employers-analytics.js"
-    );
     return getOperationsEmployersAnalytics(query);
   },
 

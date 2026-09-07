@@ -14,14 +14,14 @@ export function EmployersByIndustry({ items }: EmployersByIndustryProps) {
     <OperationsCard
       title="By Industry"
       subtitle="Employer distribution across industries"
-      className="min-w-0"
+      className="employers-analytics-card min-w-0"
     >
       {topItems.length === 0 ? (
-        <p className="flex min-h-44 items-center justify-center text-center text-xs text-muted">
+        <p className="flex min-h-44 items-center justify-center text-center text-xs text-muted xl:min-h-36">
           No industry data available.
         </p>
       ) : (
-        <ul className="flex min-h-44 flex-col justify-center gap-2.5">
+        <ul className="flex min-h-44 flex-col justify-center gap-2.5 xl:min-h-36 xl:gap-2">
           {topItems.map((item, index) => {
             const widthPercent = Math.max(
               8,
@@ -34,7 +34,7 @@ export function EmployersByIndustry({ items }: EmployersByIndustryProps) {
 
             return (
               <li key={item.id} className="min-w-0">
-                <div className="mb-1 flex items-center justify-between gap-2 text-[11px]">
+                <div className="mb-1 flex items-center justify-between gap-2 text-[11px] xl:mb-0.5 xl:text-[10px]">
                   <span className="truncate font-medium text-foreground">
                     {item.label}
                   </span>
@@ -47,7 +47,7 @@ export function EmployersByIndustry({ items }: EmployersByIndustryProps) {
                     ) : null}
                   </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-hero-bg">
+                <div className="h-2 overflow-hidden rounded-full bg-hero-bg xl:h-1.5">
                   <div
                     className="h-full rounded-full"
                     style={{

@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BarChart3,
   Briefcase,
   Building2,
   Home,
@@ -10,7 +11,6 @@ import {
   Ticket,
   Users,
   UsersRound,
-  BarChart3,
   FolderKanban,
 } from "lucide-react";
 import { OPERATIONS_ROUTES } from "./operations-routes";
@@ -110,7 +110,7 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
       {
         id: "analytics",
         label: "Analytics",
-        href: `${OPERATIONS_ROUTES.JOBS}?view=analytics`,
+        href: OPERATIONS_ROUTES.ANALYTICS,
         icon: BarChart3,
       },
       {

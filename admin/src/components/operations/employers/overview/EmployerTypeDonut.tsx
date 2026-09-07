@@ -39,15 +39,15 @@ export function EmployerTypeDonut({ items, total }: EmployerTypeDonutProps) {
     <OperationsCard
       title="Employer Type"
       subtitle="Company size / account mix"
-      className="min-w-0"
+      className="employers-analytics-card min-w-0"
     >
       {total === 0 || items.length === 0 ? (
-        <p className="flex min-h-44 items-center justify-center text-center text-xs text-muted">
+        <p className="flex min-h-44 items-center justify-center text-center text-xs text-muted xl:min-h-36">
           No employer type data available.
         </p>
       ) : (
-        <div className="flex min-h-44 min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="relative mx-auto size-[9rem] shrink-0 overflow-hidden sm:mx-0 sm:size-36">
+        <div className="flex min-h-44 min-w-0 flex-col gap-4 sm:flex-row sm:items-center xl:min-h-36 xl:gap-3">
+          <div className="relative mx-auto size-[9rem] shrink-0 overflow-hidden sm:mx-0 sm:size-36 xl:size-28">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -85,21 +85,21 @@ export function EmployerTypeDonut({ items, total }: EmployerTypeDonutProps) {
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col items-center justify-center px-3 text-center">
-              <span className="text-xl font-bold leading-none text-foreground">
+              <span className="text-xl font-bold leading-none text-foreground xl:text-lg">
                 {centerValue}
               </span>
-              <span className="mt-1 max-w-[5.5rem] truncate text-[10px] font-medium text-muted">
+              <span className="mt-1 max-w-[5.5rem] truncate text-[10px] font-medium text-muted xl:text-[9px]">
                 {activeItem ? activeItem.label : "Employers"}
               </span>
               {activeItem?.percent != null ? (
-                <span className="mt-0.5 text-[10px] font-semibold tabular-nums text-foreground">
+                <span className="mt-0.5 text-[10px] font-semibold tabular-nums text-foreground xl:text-[9px]">
                   {activeItem.percent}%
                 </span>
               ) : null}
             </div>
           </div>
 
-          <ul className="min-w-0 flex-1 space-y-1.5">
+          <ul className="min-w-0 flex-1 space-y-1.5 xl:space-y-1">
             {chartData.map((item) => {
               const percent =
                 item.percent ??
@@ -109,7 +109,7 @@ export function EmployerTypeDonut({ items, total }: EmployerTypeDonutProps) {
               return (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between gap-2 text-[11px]"
+                  className="flex items-center justify-between gap-2 text-[11px] xl:text-[10px]"
                   onMouseEnter={() => setActiveId(item.id)}
                   onMouseLeave={() => setActiveId(null)}
                 >

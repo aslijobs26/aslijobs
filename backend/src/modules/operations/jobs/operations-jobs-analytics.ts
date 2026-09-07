@@ -8,6 +8,7 @@ import {
 } from "../../../constants/job.constants.js";
 import { ApplicationModel } from "../../applications/application.model.js";
 import { JobModel } from "../../jobs/job.model.js";
+import { resolveIndiaStateLabel } from "../employers/india-state-normalize.js";
 import type {
   OperationsJobsAnalyticsChartPoint,
   OperationsJobsAnalyticsInsight,
@@ -17,9 +18,12 @@ import type {
   OperationsJobsAnalyticsResult,
   OperationsJobsAnalyticsSeriesPoint,
   OperationsJobsKpis,
+  OperationsJobsLocationAnalytics,
+  OperationsJobsPostingsTrendPoint,
 } from "./operations-jobs.types.js";
 
 export const JOBS_ANALYTICS_PRESETS = [
+  "all",
   "last_7_days",
   "last_30_days",
   "last_3_months",
@@ -89,6 +93,33 @@ function startOfWeek(date: Date): Date {
   const offset = weekday === 0 ? -6 : 1 - weekday;
   start.setDate(start.getDate() + offset);
   return start;
+}
+
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addMonths(date: Date, months: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
+}
+
+type JobsAnalyticsGranularity = "day" | "week" | "month";
+
+function resolveGranularity(
+  preset: JobsAnalyticsPreset,
+  durationMs: number,
+): JobsAnalyticsGranularity {
+  // Overall spans years — monthly buckets keep trend bars readable.
+  if (preset === "all") {
+    return "month";
+  }
+  if (durationMs > 180 * MS_PER_DAY) {
+    return "month";
+  }
+  if (durationMs > 62 * MS_PER_DAY) {
+    return "week";
+  }
+  return "day";
 }
 
 function humanizeToken(value: string): string {
@@ -161,6 +192,11 @@ export function resolveJobsAnalyticsDateRange(input: {
   let preset: JobsAnalyticsPreset = input.preset;
 
   switch (input.preset) {
+    case "all": {
+      from = new Date(2020, 0, 1);
+      to = todayEnd;
+      break;
+    }
     case "last_7_days": {
       from = startOfLocalDay(now);
       from.setDate(from.getDate() - 6);
@@ -189,11 +225,13 @@ export function resolveJobsAnalyticsDateRange(input: {
       }
       break;
     }
+    case "last_30_days":
     default: {
       preset = "last_30_days";
       from = startOfLocalDay(now);
       from.setDate(from.getDate() - 29);
       to = todayEnd;
+      break;
     }
   }
 
@@ -207,7 +245,7 @@ export function resolveJobsAnalyticsDateRange(input: {
     to: to.toISOString(),
     previousFrom: startOfLocalDay(previousFrom).toISOString(),
     previousTo: endOfLocalDay(previousTo).toISOString(),
-    granularity: durationMs > 62 * MS_PER_DAY ? "week" : "day",
+    granularity: resolveGranularity(preset, durationMs),
   };
 }
 
@@ -221,8 +259,17 @@ export function percentChange(
   return Math.round(((current - previous) / previous) * 100);
 }
 
+function sharePercent(count: number, total: number): number {
+  if (total <= 0) {
+    return 0;
+  }
+  return Math.round((count / total) * 100);
+}
+
 function formatPeriodLabel(preset: JobsAnalyticsPreset): string {
   switch (preset) {
+    case "all":
+      return "all time";
     case "last_7_days":
       return "the last 7 days";
     case "last_3_months":
@@ -315,20 +362,78 @@ export function buildJobsAnalyticsInsight(input: {
   };
 }
 
-function seriesKey(date: Date, granularity: "day" | "week"): string {
-  return toIsoDate(granularity === "week" ? startOfWeek(date) : startOfLocalDay(date));
+function seriesKey(date: Date, granularity: JobsAnalyticsGranularity): string {
+  if (granularity === "month") {
+    return toIsoDate(startOfMonth(date));
+  }
+  if (granularity === "week") {
+    return toIsoDate(startOfWeek(date));
+  }
+  return toIsoDate(startOfLocalDay(date));
 }
 
-function formatSeriesLabel(isoDate: string, granularity: "day" | "week"): string {
+function formatSeriesLabel(
+  isoDate: string,
+  granularity: JobsAnalyticsGranularity,
+): string {
   const date = parseDateOnly(isoDate);
   if (!date) {
     return isoDate;
   }
-  const label = new Intl.DateTimeFormat("en-IN", {
+  if (granularity === "month") {
+    // e.g. "May 22" — short and readable for Overall monthly trends.
+    return date.toLocaleDateString("en-IN", {
+      month: "short",
+      year: "2-digit",
+    });
+  }
+  return date.toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
-  }).format(date);
-  return granularity === "week" ? `Week of ${label}` : label;
+  });
+}
+
+function seriesCursorStart(
+  from: Date,
+  granularity: JobsAnalyticsGranularity,
+): Date {
+  if (granularity === "month") {
+    return startOfMonth(from);
+  }
+  if (granularity === "week") {
+    return startOfWeek(from);
+  }
+  return startOfLocalDay(from);
+}
+
+function advanceSeriesCursor(
+  cursor: Date,
+  granularity: JobsAnalyticsGranularity,
+): Date {
+  if (granularity === "month") {
+    return addMonths(cursor, 1);
+  }
+  if (granularity === "week") {
+    return addDays(cursor, 7);
+  }
+  return addDays(cursor, 1);
+}
+
+/**
+ * Overall KPIs stay all-time, but the trend chart only plots the last 12 months
+ * so bars stay thick and readable.
+ */
+function trendFillFrom(
+  range: OperationsJobsAnalyticsRange,
+): Date {
+  const from = new Date(range.from);
+  const to = new Date(range.to);
+  if (range.preset !== "all") {
+    return from;
+  }
+  const twelveMonthsAgo = startOfMonth(to);
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+  return twelveMonthsAgo.getTime() > from.getTime() ? twelveMonthsAgo : from;
 }
 
 export function fillTimeSeries(
@@ -337,21 +442,48 @@ export function fillTimeSeries(
 ): OperationsJobsAnalyticsSeriesPoint[] {
   const counts = new Map(rows.map((row) => [row.key, row.count]));
   const points: OperationsJobsAnalyticsSeriesPoint[] = [];
-  const from = new Date(range.from);
+  const from = trendFillFrom(range);
   const to = new Date(range.to);
-  const stepDays = range.granularity === "week" ? 7 : 1;
-  let cursor =
-    range.granularity === "week" ? startOfWeek(from) : startOfLocalDay(from);
+  let cursor = seriesCursorStart(from, range.granularity);
   const end = startOfLocalDay(to);
 
   while (cursor.getTime() <= end.getTime()) {
-    const key = toIsoDate(cursor);
+    const key = seriesKey(cursor, range.granularity);
     points.push({
       date: key,
       label: formatSeriesLabel(key, range.granularity),
       count: counts.get(key) ?? 0,
     });
-    cursor = addDays(cursor, stepDays);
+    cursor = advanceSeriesCursor(cursor, range.granularity);
+  }
+
+  return points;
+}
+
+export function fillPostingsTrend(
+  createdRows: Array<{ key: string; count: number }>,
+  approvedRows: Array<{ key: string; count: number }>,
+  range: OperationsJobsAnalyticsRange,
+): OperationsJobsPostingsTrendPoint[] {
+  const createdCounts = new Map(createdRows.map((row) => [row.key, row.count]));
+  const approvedCounts = new Map(
+    approvedRows.map((row) => [row.key, row.count]),
+  );
+  const points: OperationsJobsPostingsTrendPoint[] = [];
+  const from = trendFillFrom(range);
+  const to = new Date(range.to);
+  let cursor = seriesCursorStart(from, range.granularity);
+  const end = startOfLocalDay(to);
+
+  while (cursor.getTime() <= end.getTime()) {
+    const key = seriesKey(cursor, range.granularity);
+    points.push({
+      date: key,
+      label: formatSeriesLabel(key, range.granularity),
+      jobsPosted: createdCounts.get(key) ?? 0,
+      jobsApproved: approvedCounts.get(key) ?? 0,
+    });
+    cursor = advanceSeriesCursor(cursor, range.granularity);
   }
 
   return points;
@@ -362,17 +494,25 @@ function namedCountsFromMap(
   order: string[],
   labelFor: (key: string) => string,
   includeZero: boolean,
+  totalForPercent?: number,
 ): OperationsJobsAnalyticsNamedCount[] {
   const keys = [
     ...order,
     ...[...counts.keys()].filter((key) => !order.includes(key)),
   ];
   return keys
-    .map((key) => ({
-      key,
-      label: labelFor(key),
-      count: counts.get(key) ?? 0,
-    }))
+    .map((key) => {
+      const count = counts.get(key) ?? 0;
+      const item: OperationsJobsAnalyticsNamedCount = {
+        key,
+        label: labelFor(key),
+        count,
+      };
+      if (totalForPercent !== undefined) {
+        item.percent = sharePercent(count, totalForPercent);
+      }
+      return item;
+    })
     .filter((item) => includeZero || item.count > 0);
 }
 
@@ -381,28 +521,116 @@ async function loadDailyCounts(
   dateField: string,
   from: Date,
   to: Date,
-  granularity: "day" | "week",
+  granularity: JobsAnalyticsGranularity,
 ): Promise<Array<{ key: string; count: number }>> {
   const dateExpression =
-    granularity === "week"
+    granularity === "month"
       ? {
           $dateTrunc: {
             date: `$${dateField}`,
-            unit: "week",
-            startOfWeek: "Monday",
+            unit: "month",
           },
         }
-      : {
-          $dateTrunc: {
-            date: `$${dateField}`,
-            unit: "day",
-          },
-        };
+      : granularity === "week"
+        ? {
+            $dateTrunc: {
+              date: `$${dateField}`,
+              unit: "week",
+              startOfWeek: "Monday",
+            },
+          }
+        : {
+            $dateTrunc: {
+              date: `$${dateField}`,
+              unit: "day",
+            },
+          };
 
   const rows = await model.aggregate<{ _id: Date; count: number }>([
     {
       $match: {
         [dateField]: { $gte: from, $lte: to },
+      },
+    },
+    {
+      $group: {
+        _id: dateExpression,
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  return rows
+    .filter((row) => row._id)
+    .map((row) => ({
+      key: seriesKey(new Date(row._id), granularity),
+      count: row.count,
+    }));
+}
+
+/**
+ * Prefer publishedAt; when missing, count reviewedAt for active / approved jobs.
+ */
+async function loadApprovedDailyCounts(
+  from: Date,
+  to: Date,
+  granularity: JobsAnalyticsGranularity,
+): Promise<Array<{ key: string; count: number }>> {
+  const dateExpression =
+    granularity === "month"
+      ? {
+          $dateTrunc: {
+            date: "$approvedAt",
+            unit: "month",
+          },
+        }
+      : granularity === "week"
+        ? {
+            $dateTrunc: {
+              date: "$approvedAt",
+              unit: "week",
+              startOfWeek: "Monday",
+            },
+          }
+        : {
+            $dateTrunc: {
+              date: "$approvedAt",
+              unit: "day",
+            },
+          };
+
+  const rows = await JobModel.aggregate<{ _id: Date; count: number }>([
+    {
+      $addFields: {
+        approvedAt: {
+          $cond: [
+            { $ne: ["$publishedAt", null] },
+            "$publishedAt",
+            {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$reviewedAt", null] },
+                    {
+                      $or: [
+                        { $eq: ["$status", "active"] },
+                        { $eq: ["$reviewDecision", "approved"] },
+                      ],
+                    },
+                  ],
+                },
+                "$reviewedAt",
+                null,
+              ],
+            },
+          ],
+        },
+      },
+    },
+    {
+      $match: {
+        approvedAt: { $gte: from, $lte: to },
       },
     },
     {
@@ -432,25 +660,71 @@ export async function loadJobsAnalyticsCharts(
   const previousFrom = new Date(range.previousFrom);
   const previousTo = new Date(range.previousTo);
   const now = new Date();
+  const recentlyClosedFrom = new Date(now.getTime() - 30 * MS_PER_DAY);
 
   const [
     statusRows,
     paymentRows,
-    locationRows,
+    locationStateRows,
+    locationCityRows,
+    locationTopRows,
     jobTypeRows,
     createdRows,
     previousCreatedRows,
+    approvedRows,
     applicationRows,
     previousApplicationRows,
     topJobRows,
     expiringBuckets,
     totalApplications,
+    industryRows,
+    jobRoleRows,
+    recentlyClosedCount,
   ] = await Promise.all([
     JobModel.aggregate<{ _id: string; count: number }>([
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]),
     JobModel.aggregate<{ _id: string; count: number }>([
       { $group: { _id: "$listingPaymentStatus", count: { $sum: 1 } } },
+    ]),
+    JobModel.aggregate<{
+      _id: { state: string; city: string };
+      count: number;
+    }>([
+      {
+        $project: {
+          state: {
+            $trim: { input: { $ifNull: ["$stateName", ""] } },
+          },
+          city: {
+            $trim: { input: { $ifNull: ["$cityName", ""] } },
+          },
+        },
+      },
+      {
+        $match: {
+          $or: [{ state: { $ne: "" } }, { city: { $ne: "" } }],
+        },
+      },
+      {
+        $group: {
+          _id: { state: "$state", city: "$city" },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    JobModel.aggregate<{ _id: string; count: number }>([
+      {
+        $project: {
+          cityName: {
+            $trim: { input: { $ifNull: ["$cityName", ""] } },
+          },
+        },
+      },
+      { $match: { cityName: { $ne: "" } } },
+      { $group: { _id: "$cityName", count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 12 },
     ]),
     JobModel.aggregate<{ _id: string; count: number }>([
       {
@@ -463,10 +737,18 @@ export async function loadJobsAnalyticsCharts(
               },
               in: {
                 $cond: [
-                  { $ne: ["$$city", ""] },
-                  "$$city",
                   {
-                    $cond: [{ $ne: ["$$state", ""] }, "$$state", ""],
+                    $and: [{ $ne: ["$$city", ""] }, { $ne: ["$$state", ""] }],
+                  },
+                  { $concat: ["$$city", ", ", "$$state"] },
+                  {
+                    $cond: [
+                      { $ne: ["$$city", ""] },
+                      "$$city",
+                      {
+                        $cond: [{ $ne: ["$$state", ""] }, "$$state", ""],
+                      },
+                    ],
                   },
                 ],
               },
@@ -477,7 +759,7 @@ export async function loadJobsAnalyticsCharts(
       { $match: { location: { $ne: "" } } },
       { $group: { _id: "$location", count: { $sum: 1 } } },
       { $sort: { count: -1, _id: 1 } },
-      { $limit: 8 },
+      { $limit: 10 },
     ]),
     JobModel.aggregate<{ _id: string; count: number }>([
       {
@@ -498,6 +780,7 @@ export async function loadJobsAnalyticsCharts(
       previousTo,
       range.granularity,
     ),
+    loadApprovedDailyCounts(from, to, range.granularity),
     loadDailyCounts(
       ApplicationModel,
       "appliedAt",
@@ -571,6 +854,55 @@ export async function loadJobsAnalyticsCharts(
       },
     ]),
     ApplicationModel.countDocuments({}),
+    JobModel.aggregate<{ _id: string; count: number }>([
+      {
+        $project: {
+          industryKey: {
+            $let: {
+              vars: {
+                category: {
+                  $trim: { input: { $ifNull: ["$businessCategory", ""] } },
+                },
+                industry: {
+                  $trim: { input: { $ifNull: ["$industry", ""] } },
+                },
+              },
+              in: {
+                $cond: [
+                  { $ne: ["$$category", ""] },
+                  "$$category",
+                  "$$industry",
+                ],
+              },
+            },
+          },
+        },
+      },
+      { $match: { industryKey: { $ne: "" } } },
+      { $group: { _id: "$industryKey", count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 8 },
+    ]),
+    JobModel.aggregate<{ _id: string; count: number }>([
+      {
+        $project: {
+          role: {
+            $trim: { input: { $ifNull: ["$jobTitle", ""] } },
+          },
+        },
+      },
+      { $match: { role: { $ne: "" } } },
+      { $group: { _id: "$role", count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 8 },
+    ]),
+    JobModel.countDocuments({
+      status: "closed",
+      $or: [
+        { closedAt: { $gte: recentlyClosedFrom, $lte: now } },
+        { updatedAt: { $gte: recentlyClosedFrom, $lte: now } },
+      ],
+    }),
   ]);
 
   const statusCounts = new Map(
@@ -620,11 +952,60 @@ export async function loadJobsAnalyticsCharts(
         maxApplications > 0 ? Math.round((row.count / maxApplications) * 100) : 0,
     }));
 
-  const jobsByLocation: OperationsJobsAnalyticsNamedCount[] = locationRows.map(
+  const stateCounts = new Map<string, number>();
+  for (const row of locationStateRows) {
+    const label = resolveIndiaStateLabel(row._id.state, row._id.city);
+    if (label === "Unspecified") {
+      continue;
+    }
+    stateCounts.set(label, (stateCounts.get(label) ?? 0) + row.count);
+  }
+  const jobsByLocationStates: OperationsJobsAnalyticsNamedCount[] = Array.from(
+    stateCounts.entries(),
+  )
+    .map(([label, count]) => ({
+      key: label.toLowerCase().replace(/\s+/g, "-"),
+      label,
+      count,
+    }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+
+  const jobsByLocationCities: OperationsJobsAnalyticsNamedCount[] =
+    locationCityRows.map((row) => ({
+      key: row._id.toLowerCase().replace(/\s+/g, "-"),
+      label: row._id,
+      count: row.count,
+    }));
+
+  const jobsByLocationTop: OperationsJobsAnalyticsNamedCount[] =
+    locationTopRows.map((row) => ({
+      key: row._id.toLowerCase().replace(/\s+/g, "-"),
+      label: row._id,
+      count: row.count,
+    }));
+
+  const jobsByLocation: OperationsJobsLocationAnalytics = {
+    states: jobsByLocationStates,
+    cities: jobsByLocationCities,
+    topLocations: jobsByLocationTop,
+  };
+
+  const percentBase = Math.max(kpis.totalJobs, 1);
+  const jobsByIndustry: OperationsJobsAnalyticsNamedCount[] = industryRows.map(
     (row) => ({
       key: row._id,
       label: row._id,
       count: row.count,
+      percent: sharePercent(row.count, percentBase),
+    }),
+  );
+
+  const topJobRoles: OperationsJobsAnalyticsNamedCount[] = jobRoleRows.map(
+    (row) => ({
+      key: row._id,
+      label: row._id,
+      count: row.count,
+      percent: sharePercent(row.count, percentBase),
     }),
   );
 
@@ -633,6 +1014,15 @@ export async function loadJobsAnalyticsCharts(
       ? Math.round((totalApplications / kpis.totalJobs) * 10) / 10
       : 0;
 
+  const statusTotal = [...statusCounts.values()].reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+  const employmentTypeTotal = [...jobTypeCounts.values()].reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+
   return {
     range,
     status: namedCountsFromMap(
@@ -640,6 +1030,7 @@ export async function loadJobsAnalyticsCharts(
       STATUS_ORDER,
       jobStatusAnalyticsLabel,
       true,
+      statusTotal,
     ).filter((item) => JOB_STATUSES.includes(item.key as JobStatus)),
     payment: namedCountsFromMap(
       paymentCounts,
@@ -663,6 +1054,7 @@ export async function loadJobsAnalyticsCharts(
       [...JOB_TYPES, ""],
       jobTypeAnalyticsLabel,
       false,
+      employmentTypeTotal,
     ),
     topPerformingJobs,
     jobsExpiringSoon: expiringSoon,
@@ -682,6 +1074,15 @@ export async function loadJobsAnalyticsCharts(
       previousJobsCreated,
       applications,
       previousApplications,
+    },
+    postingsTrend: fillPostingsTrend(createdRows, approvedRows, range),
+    jobsByIndustry,
+    topJobRoles,
+    overviewTabs: {
+      all: kpis.totalJobs,
+      pending_approval: kpis.pendingApprovalJobs,
+      at_risk: kpis.atRiskJobs,
+      recently_closed: recentlyClosedCount,
     },
   };
 }

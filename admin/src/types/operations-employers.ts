@@ -198,6 +198,7 @@ export interface UpdateOperationsEmployerStatusInput {
 }
 
 export type OperationsEmployersAnalyticsPreset =
+  | "all"
   | "last_7_days"
   | "last_30_days"
   | "last_90_days"
@@ -216,7 +217,7 @@ export interface OperationsEmployersAnalyticsRange {
   to: string;
   previousFrom: string;
   previousTo: string;
-  granularity: "day" | "week";
+  granularity: "day" | "week" | "month";
 }
 
 export interface OperationsEmployersOverviewKpis {

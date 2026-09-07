@@ -441,6 +441,8 @@ async function loadKpisAndCounts(): Promise<{
     liveJobs,
     expiredJobs: countsByStatus.expired,
     draftJobs: countsByStatus.draft,
+    atRiskJobs: expiringSoon,
+    filledClosedJobs: countsByStatus.closed + countsByStatus.expired,
   };
 
   const counts: OperationsJobsTabCounts = {

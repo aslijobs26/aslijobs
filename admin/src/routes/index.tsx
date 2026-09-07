@@ -108,12 +108,7 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.ANALYTICS}
-          element={
-            <Navigate
-              to={`${OPERATIONS_ROUTES.JOBS}?view=analytics`}
-              replace
-            />
-          }
+          element={<OperationsPlaceholderPage title="Analytics" />}
         />
         <Route
           path={OPERATIONS_ROUTES.ORGANIZATION}

@@ -8,12 +8,10 @@ import { formatCandidateDisplayId } from "./candidates-format";
 
 interface CandidatesRowActionsProps {
   application: OperationsCandidateListItem;
-  showViewButton?: boolean;
 }
 
 export function CandidatesRowActions({
   application,
-  showViewButton = true,
 }: CandidatesRowActionsProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -57,32 +55,19 @@ export function CandidatesRowActions({
 
   return (
     <div className="relative flex shrink-0 items-center gap-1.5" ref={menuRef}>
-      {showViewButton ? (
-        <button
-          type="button"
-          onClick={handleView}
-          className={cn(
-            "inline-flex h-8 items-center justify-center rounded-lg border border-primary/30 px-2.5 text-[11px] font-semibold text-primary transition-colors",
-            "hover:bg-primary-light",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-          )}
-        >
-          View Profile
-        </button>
-      ) : null}
       <button
         type="button"
         aria-label={`More actions for ${application.candidateName}`}
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          "inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors",
+          "inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors xl:size-7",
           "hover:bg-hero-bg hover:text-foreground",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
           open && "bg-hero-bg text-foreground",
         )}
       >
-        <MoreVertical className="size-3.5" aria-hidden="true" />
+        <MoreVertical className="size-3.5 xl:size-3" aria-hidden="true" />
       </button>
       {open ? (
         <div

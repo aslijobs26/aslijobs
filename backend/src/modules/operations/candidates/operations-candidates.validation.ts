@@ -54,6 +54,14 @@ export const listOperationsCandidatesQuerySchema = z
       .union([z.enum(OPERATIONS_CANDIDATE_PROFILE_STATUSES), z.literal("")])
       .optional()
       .default(""),
+    verificationStatus: z
+      .enum(["", "verified", "pending"])
+      .optional()
+      .default(""),
+    overviewTab: z
+      .enum(["all", "new", "profileIncomplete", "verificationPending"])
+      .optional()
+      .default("all"),
     datePreset: z.enum(OPERATIONS_CANDIDATE_DATE_PRESETS).default("all"),
     dateFrom: z.string().trim().max(32).optional().default(""),
     dateTo: z.string().trim().max(32).optional().default(""),
@@ -123,4 +131,17 @@ export const operationsCandidateSeekerIdParamsSchema = z.object({
 
 export type OperationsCandidateSeekerIdParams = z.infer<
   typeof operationsCandidateSeekerIdParamsSchema
+>;
+
+export const candidatesAnalyticsQuerySchema = z.object({
+  preset: z
+    .enum(["all", "last_7_days", "last_30_days", "last_3_months", "custom"])
+    .optional()
+    .default("all"),
+  dateFrom: z.string().trim().max(32).optional().default(""),
+  dateTo: z.string().trim().max(32).optional().default(""),
+});
+
+export type CandidatesAnalyticsQuery = z.infer<
+  typeof candidatesAnalyticsQuerySchema
 >;

@@ -46,6 +46,26 @@ function TableMessage({
 const thClassName =
   "whitespace-nowrap px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted first:pl-4 last:pr-4 sm:px-3.5 xl:px-2.5 xl:py-2 xl:text-[9px] xl:first:pl-3 xl:last:pr-3";
 
+function industryOrAccountLabel(employer: OperationsEmployerListItem): string {
+  const industry = employer.industry?.trim();
+  if (industry && industry !== "—") return industry;
+
+  const accountType = employer.accountType?.toLowerCase().trim() || "";
+  if (accountType === "individual") return "Individual account";
+
+  if (accountType === "consultancy" || accountType === "company") {
+    const name =
+      employer.companyName?.trim() || employer.displayName?.trim() || "";
+    if (name && name !== "—") return name;
+    return accountType === "consultancy" ? "Consultancy" : "Company";
+  }
+
+  const organizationType = employer.organizationType?.trim();
+  if (organizationType && organizationType !== "—") return organizationType;
+
+  return "—";
+}
+
 export function EmployersTableSection({
   employers,
   totalEmployers,
@@ -207,7 +227,7 @@ export function EmployersTableSection({
 
                     <td className="max-w-[9rem] px-3 py-3 text-foreground sm:px-3.5 xl:max-w-[7.5rem] xl:px-2.5 xl:py-2">
                       <span className="block truncate xl:text-[11px]">
-                        {emp.industry || "—"}
+                        {industryOrAccountLabel(emp)}
                       </span>
                     </td>
 
@@ -218,7 +238,9 @@ export function EmployersTableSection({
                           aria-hidden="true"
                         />
                         <span className="truncate xl:text-[11px]">
-                          {emp.location || "—"}
+                          {emp.location?.trim() && emp.location.trim() !== "—"
+                            ? emp.location
+                            : "Not specified"}
                         </span>
                       </span>
                     </td>

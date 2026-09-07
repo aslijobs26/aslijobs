@@ -34,14 +34,14 @@ export function TopHiringLocations({
     .slice(0, 5);
 
   return (
-    <section className="operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section className="employers-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
       <header className="flex shrink-0 items-center justify-between gap-2 px-3.5 pt-3 sm:px-4 sm:pt-3.5">
         <h3 className="text-[13px] font-semibold tracking-tight text-foreground">
           Top Hiring Locations
         </h3>
         <Link
           to={OPERATIONS_ROUTES.JOBS}
-          className="shrink-0 text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="shrink-0 text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:text-[11px]"
         >
           View all
         </Link>
@@ -53,7 +53,7 @@ export function TopHiringLocations({
             {Array.from({ length: 5 }).map((_, index) => (
               <li
                 key={index}
-                className="flex animate-pulse items-center justify-between gap-3 py-2.5"
+                className="flex animate-pulse items-center justify-between gap-3 py-2.5 xl:py-2"
               >
                 <span className="flex items-center gap-2.5">
                   <span className="size-3.5 rounded bg-hero-bg" />
@@ -64,7 +64,7 @@ export function TopHiringLocations({
             ))}
           </ul>
         ) : isError ? (
-          <div className="flex min-h-[11rem] flex-col items-center justify-center gap-2 text-center">
+          <div className="flex min-h-[11rem] flex-col items-center justify-center gap-2 text-center xl:min-h-36">
             <p className="text-[12px] text-muted">
               Unable to load hiring locations
             </p>
@@ -79,7 +79,7 @@ export function TopHiringLocations({
             ) : null}
           </div>
         ) : topItems.length === 0 ? (
-          <p className="flex min-h-[11rem] items-center justify-center text-center text-xs text-muted">
+          <p className="flex min-h-[11rem] items-center justify-center text-center text-xs text-muted xl:min-h-36">
             No hiring location data available
           </p>
         ) : (
@@ -88,12 +88,12 @@ export function TopHiringLocations({
               <li
                 key={item.id}
                 className={cn(
-                  "flex min-w-0 items-center justify-between gap-3 py-2.5 text-[12px]",
+                  "flex min-w-0 items-center justify-between gap-3 py-2.5 text-[12px] xl:py-2 xl:text-[11px]",
                 )}
               >
                 <span className="inline-flex min-w-0 items-center gap-2.5 font-medium text-foreground">
                   <MapPin
-                    className="size-3.5 shrink-0 text-foreground"
+                    className="size-3.5 shrink-0 text-foreground xl:size-3"
                     strokeWidth={2}
                     aria-hidden="true"
                   />

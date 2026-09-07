@@ -1,5 +1,4 @@
 import { EmployerModel } from "../../employers/employer.model.js";
-import { EmployerDocumentModel } from "../../employers/employer-document.model.js";
 import { JobModel } from "../../jobs/job.model.js";
 import { resolveIndiaStateLabel } from "./india-state-normalize.js";
 import type {
@@ -12,6 +11,7 @@ import type {
 } from "./operations-employers.types.js";
 
 export const EMPLOYERS_ANALYTICS_PRESETS = [
+  "all",
   "last_7_days",
   "last_30_days",
   "last_90_days",
@@ -56,17 +56,76 @@ function parseDateOnly(value: string): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function toIsoDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+/** Format a Date as YYYY-MM-DD in Asia/Kolkata (matches Mongo `$dateToString` timezone). */
+function toKolkataIsoDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 }
 
-function addDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
+/** Monday-based week start in Asia/Kolkata, returned as YYYY-MM-DD. */
+function startOfWeekKolkataIso(date: Date): string {
+  const iso = toKolkataIsoDate(date);
+  const [year, month, day] = iso.split("-").map(Number);
+  // Noon UTC avoids DST edge cases when deriving weekday for the IST calendar day.
+  const noonUtc = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const weekday = noonUtc.getUTCDay(); // 0=Sun … 6=Sat for that calendar date
+  const offset = weekday === 0 ? -6 : 1 - weekday;
+  const monday = new Date(Date.UTC(year, month - 1, day + offset, 12, 0, 0));
+  return [
+    monday.getUTCFullYear(),
+    String(monday.getUTCMonth() + 1).padStart(2, "0"),
+    String(monday.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function seriesBucketLabel(
+  isoDate: string,
+  granularity: "day" | "week" | "month" = "day",
+): string {
+  const date = parseDateOnly(isoDate);
+  if (!date) {
+    return isoDate;
+  }
+  if (granularity === "month") {
+    return date.toLocaleDateString("en-IN", {
+      month: "short",
+      year: "2-digit",
+    });
+  }
+  // Keep axis labels short (e.g. "20 May") for daily and weekly buckets.
+  return date.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function addDaysIso(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day + days, 12, 0, 0));
+  return [
+    next.getUTCFullYear(),
+    String(next.getUTCMonth() + 1).padStart(2, "0"),
+    String(next.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function startOfMonthKolkataIso(date: Date): string {
+  const iso = toKolkataIsoDate(date);
+  return `${iso.slice(0, 7)}-01`;
+}
+
+function addMonthsIso(isoDate: string, months: number): string {
+  const [year, month] = isoDate.split("-").map(Number);
+  const next = new Date(Date.UTC(year, month - 1 + months, 1, 12, 0, 0));
+  return [
+    next.getUTCFullYear(),
+    String(next.getUTCMonth() + 1).padStart(2, "0"),
+    "01",
+  ].join("-");
 }
 
 function percentOf(part: number, total: number): number | null {
@@ -111,6 +170,95 @@ function employeeSize(doc: {
   return max ?? min;
 }
 
+function periodCaption(preset: EmployersAnalyticsPreset): string {
+  switch (preset) {
+    case "all":
+      return "All time";
+    case "last_7_days":
+      return "In last 7 days";
+    case "last_90_days":
+      return "In last 90 days";
+    case "this_year":
+      return "This year";
+    case "custom":
+      return "In selected range";
+    default:
+      return "In last 30 days";
+  }
+}
+
+function addDaysLocal(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function createdAtRangeFilter(from: Date, to: Date): Record<string, unknown> {
+  return { createdAt: { $gte: from, $lte: to } };
+}
+
+const VERIFIED_EMPLOYER_FILTER: Record<string, unknown> = {
+  $or: [
+    { verificationStatus: "verified" },
+    {
+      $and: [
+        { verificationStatus: { $in: [null, ""] } },
+        { isWhatsappVerified: true },
+        { registrationStatus: "completed" },
+      ],
+    },
+  ],
+};
+
+const ACTIVE_STATUS_FILTER: Record<string, unknown> = {
+  $or: [
+    { status: "active" },
+    { status: { $exists: false } },
+    { status: null },
+  ],
+};
+
+const PENDING_VERIFICATION_FILTER: Record<string, unknown> = {
+  $or: [
+    { verificationStatus: "pending" },
+    {
+      $and: [
+        { verificationStatus: { $in: [null, ""] } },
+        {
+          $or: [
+            { isWhatsappVerified: false },
+            { registrationStatus: { $ne: "completed" } },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const INACTIVE_STATUS_FILTER: Record<string, unknown> = {
+  $or: [{ status: "inactive" }, { registrationStatus: "pending_otp" }],
+};
+
+function jobLocationExpression() {
+  return {
+    $cond: [
+      {
+        $and: [{ $ne: ["$city", null] }, { $ne: ["$city", ""] }],
+      },
+      "$city",
+      {
+        $cond: [
+          {
+            $and: [{ $ne: ["$cityName", null] }, { $ne: ["$cityName", ""] }],
+          },
+          "$cityName",
+          "Unspecified",
+        ],
+      },
+    ],
+  };
+}
+
 export function resolveEmployersAnalyticsDateRange(input: {
   preset: EmployersAnalyticsPreset;
   dateFrom: string;
@@ -124,6 +272,12 @@ export function resolveEmployersAnalyticsDateRange(input: {
   let preset: EmployersAnalyticsPreset = input.preset;
 
   switch (input.preset) {
+    case "all": {
+      // Placeholder from; refined to earliest employer when loading analytics.
+      from = new Date(2020, 0, 1);
+      to = todayEnd;
+      break;
+    }
     case "last_7_days": {
       from = startOfLocalDay(now);
       from.setDate(from.getDate() - 6);
@@ -157,11 +311,13 @@ export function resolveEmployersAnalyticsDateRange(input: {
       }
       break;
     }
+    case "last_30_days":
     default: {
       preset = "last_30_days";
       from = startOfLocalDay(now);
       from.setDate(from.getDate() - 29);
       to = todayEnd;
+      break;
     }
   }
 
@@ -175,142 +331,248 @@ export function resolveEmployersAnalyticsDateRange(input: {
     to: to.toISOString(),
     previousFrom: startOfLocalDay(previousFrom).toISOString(),
     previousTo: endOfLocalDay(previousTo).toISOString(),
-    granularity: durationMs > 62 * MS_PER_DAY ? "week" : "day",
+    granularity:
+      preset === "all"
+        ? "month"
+        : durationMs > 62 * MS_PER_DAY
+          ? "week"
+          : "day",
   };
 }
 
 function buildSeries(
   from: Date,
   to: Date,
-  granularity: "day" | "week",
+  granularity: "day" | "week" | "month",
   registeredMap: Map<string, number>,
   verifiedMap: Map<string, number>,
 ): OperationsEmployersAnalyticsSeriesPoint[] {
   const points: OperationsEmployersAnalyticsSeriesPoint[] = [];
-  let cursor = startOfLocalDay(from);
-  const end = startOfLocalDay(to);
+  let cursorKey =
+    granularity === "month"
+      ? startOfMonthKolkataIso(from)
+      : granularity === "week"
+        ? startOfWeekKolkataIso(from)
+        : toKolkataIsoDate(from);
+  const endKey = toKolkataIsoDate(to);
 
-  while (cursor.getTime() <= end.getTime()) {
-    const key = toIsoDate(cursor);
+  while (cursorKey <= endKey) {
     points.push({
-      date: key,
-      label:
-        granularity === "week"
-          ? `W/c ${cursor.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`
-          : cursor.toLocaleDateString("en-IN", {
-              day: "numeric",
-              month: "short",
-            }),
-      newRegistrations: registeredMap.get(key) ?? 0,
-      verifiedEmployers: verifiedMap.get(key) ?? 0,
+      date: cursorKey,
+      label: seriesBucketLabel(cursorKey, granularity),
+      newRegistrations: registeredMap.get(cursorKey) ?? 0,
+      verifiedEmployers: verifiedMap.get(cursorKey) ?? 0,
     });
-    cursor = addDays(cursor, granularity === "week" ? 7 : 1);
+    cursorKey =
+      granularity === "month"
+        ? addMonthsIso(cursorKey, 1)
+        : addDaysIso(cursorKey, granularity === "week" ? 7 : 1);
   }
 
   return points;
 }
 
-async function countInRange(
+function dateBucketExpression(
   field: "createdAt" | "verifiedAt",
-  from: Date,
-  to: Date,
-  extra: Record<string, unknown> = {},
-): Promise<number> {
-  return EmployerModel.countDocuments({
-    ...extra,
-    [field]: { $gte: from, $lte: to },
-  });
+  granularity: "day" | "week" | "month",
+) {
+  const truncated =
+    granularity === "month"
+      ? {
+          $dateTrunc: {
+            date: `$${field}`,
+            unit: "month" as const,
+            binSize: 1,
+            timezone: "Asia/Kolkata",
+          },
+        }
+      : granularity === "week"
+        ? {
+            $dateTrunc: {
+              date: `$${field}`,
+              unit: "week" as const,
+              binSize: 1,
+              startOfWeek: "Monday" as const,
+              timezone: "Asia/Kolkata",
+            },
+          }
+        : {
+            $dateTrunc: {
+              date: `$${field}`,
+              unit: "day" as const,
+              binSize: 1,
+              timezone: "Asia/Kolkata",
+            },
+          };
+
+  return {
+    $dateToString: {
+      format: "%Y-%m-%d",
+      date: truncated,
+      timezone: "Asia/Kolkata",
+    },
+  };
 }
 
 export async function getOperationsEmployersAnalytics(
   query: OperationsEmployersAnalyticsQuery,
 ): Promise<OperationsEmployersAnalyticsResult> {
-  const range = resolveEmployersAnalyticsDateRange({
+  const resolved = resolveEmployersAnalyticsDateRange({
     preset: query.preset,
     dateFrom: query.dateFrom,
     dateTo: query.dateTo,
   });
 
-  const from = new Date(range.from);
-  const to = new Date(range.to);
-  const previousFrom = new Date(range.previousFrom);
-  const previousTo = new Date(range.previousTo);
+  const isOverall = resolved.preset === "all";
+  let from = new Date(resolved.from);
+  let to = new Date(resolved.to);
+  let granularity = resolved.granularity;
+  const previousFrom = new Date(resolved.previousFrom);
+  const previousTo = new Date(resolved.previousTo);
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const prevMonthEnd = new Date(monthStart.getTime() - 1);
-  const weekStart = startOfLocalDay(now);
-  weekStart.setDate(weekStart.getDate() - 6);
-  const prevWeekStart = addDays(weekStart, -7);
-  const prevWeekEnd = addDays(weekStart, -1);
   const last30Start = startOfLocalDay(now);
   last30Start.setDate(last30Start.getDate() - 29);
+  const caption = periodCaption(resolved.preset);
 
-  const verifiedFilter = {
-    $or: [
-      { verificationStatus: "verified" },
-      {
-        $and: [
-          { verificationStatus: { $in: [null, ""] } },
-          { isWhatsappVerified: true },
-          { registrationStatus: "completed" },
-        ],
-      },
-    ],
+  if (isOverall) {
+    const earliest = await EmployerModel.findOne()
+      .sort({ createdAt: 1 })
+      .select({ createdAt: 1 })
+      .lean();
+    from = earliest?.createdAt
+      ? startOfLocalDay(new Date(earliest.createdAt))
+      : startOfLocalDay(now);
+    // Overall always uses monthly buckets so registration bars stay thick.
+    granularity = "month";
+  }
+
+  const range: OperationsEmployersAnalyticsRange = {
+    ...resolved,
+    from: from.toISOString(),
+    to: to.toISOString(),
+    granularity,
   };
 
-  const activeStatusFilter = {
-    $or: [
-      { status: "active" },
-      { status: { $exists: false } },
-      { status: null },
-    ],
-  };
+  const cohortFilter = isOverall ? {} : createdAtRangeFilter(from, to);
+  const previousCohortFilter = isOverall
+    ? { _id: { $exists: false } }
+    : createdAtRangeFilter(previousFrom, previousTo);
+  /** Employers that existed by the end of the selected / previous period. */
+  const networkAsOfFilter = isOverall ? {} : { createdAt: { $lte: to } };
+  const previousNetworkAsOfFilter = isOverall
+    ? { _id: { $exists: false } }
+    : { createdAt: { $lte: previousTo } };
 
   const [
+    // Network size KPIs (as-of end of period)
     totalEmployers,
-    newThisMonth,
-    newPrevMonth,
+    previousTotalEmployers,
+    // Period cohort / activity KPIs
     newRegistrations,
     previousNewRegistrations,
-    newThisWeek,
-    previousNewThisWeek,
     verifiedEmployers,
-    employersWithJobsLast30,
+    previousVerifiedEmployers,
+    employersWithJobsInRange,
+    previousEmployersWithJobs,
     hiringEmployerIds,
-    previousHiringCount,
+    previousHiringIds,
     registrationBuckets,
-    documentPendingCount,
+    employersWithDocuments,
     industryRows,
     locationDocs,
     sizeDocs,
     hiringLocationRows,
+    jobsInRangeCount,
+    // Operational tab badges stay all-time (table filters are independent of analytics range)
+    tabAllCount,
     tabNewCount,
     tabPendingCount,
     tabActiveCount,
     tabInactiveCount,
   ] = await Promise.all([
-    EmployerModel.countDocuments({}),
-    countInRange("createdAt", monthStart, endOfLocalDay(now)),
-    countInRange("createdAt", prevMonthStart, endOfLocalDay(prevMonthEnd)),
-    countInRange("createdAt", from, to),
-    countInRange("createdAt", previousFrom, previousTo),
-    countInRange("createdAt", weekStart, endOfLocalDay(now)),
-    countInRange("createdAt", prevWeekStart, endOfLocalDay(prevWeekEnd)),
-    EmployerModel.countDocuments(verifiedFilter),
-    JobModel.distinct("employerId", {
-      createdAt: { $gte: last30Start, $lte: endOfLocalDay(now) },
+    EmployerModel.countDocuments(networkAsOfFilter),
+    EmployerModel.countDocuments(previousNetworkAsOfFilter),
+    EmployerModel.countDocuments(
+      isOverall
+        ? createdAtRangeFilter(last30Start, endOfLocalDay(now))
+        : cohortFilter,
+    ),
+    EmployerModel.countDocuments(
+      isOverall
+        ? createdAtRangeFilter(
+            addDaysLocal(last30Start, -30),
+            endOfLocalDay(addDaysLocal(last30Start, -1)),
+          )
+        : previousCohortFilter,
+    ),
+    EmployerModel.countDocuments({
+      ...cohortFilter,
+      ...VERIFIED_EMPLOYER_FILTER,
     }),
-    JobModel.distinct("employerId", { status: "active" }),
-    JobModel.distinct("employerId", {
-      status: "active",
-      updatedAt: { $gte: previousFrom, $lte: previousTo },
+    EmployerModel.countDocuments({
+      ...previousCohortFilter,
+      ...VERIFIED_EMPLOYER_FILTER,
     }),
+    JobModel.distinct(
+      "employerId",
+      isOverall
+        ? createdAtRangeFilter(last30Start, endOfLocalDay(now))
+        : createdAtRangeFilter(from, to),
+    ),
+    JobModel.distinct(
+      "employerId",
+      isOverall
+        ? { _id: { $exists: false } }
+        : createdAtRangeFilter(previousFrom, previousTo),
+    ),
+    JobModel.distinct(
+      "employerId",
+      isOverall
+        ? { status: "active" }
+        : {
+            status: "active",
+            ...createdAtRangeFilter(from, to),
+          },
+    ),
+    JobModel.distinct(
+      "employerId",
+      isOverall
+        ? { _id: { $exists: false } }
+        : {
+            status: "active",
+            ...createdAtRangeFilter(previousFrom, previousTo),
+          },
+    ),
     EmployerModel.aggregate<{ _id: string; count: number }>([
+      { $match: cohortFilter },
       { $group: { _id: "$registrationStatus", count: { $sum: 1 } } },
     ]),
-    EmployerDocumentModel.countDocuments({ verificationStatus: "pending" }),
+    EmployerModel.aggregate<{ count: number }>([
+      { $match: cohortFilter },
+      {
+        $lookup: {
+          from: "employer_documents",
+          localField: "_id",
+          foreignField: "employerId",
+          as: "documents",
+        },
+      },
+      {
+        $match: {
+          $or: [
+            { "documents.0": { $exists: true } },
+            {
+              registrationStatus: {
+                $in: ["document_uploaded", "completed"],
+              },
+            },
+          ],
+        },
+      },
+      { $count: "count" },
+    ]),
     EmployerModel.aggregate<{ _id: string; count: number }>([
+      { $match: cohortFilter },
       {
         $group: {
           _id: {
@@ -331,178 +593,145 @@ export async function getOperationsEmployersAnalytics(
       { $sort: { count: -1 } },
       { $limit: 12 },
     ]),
-    EmployerModel.find({})
-      .select({ state: 1, city: 1 })
-      .lean(),
-    EmployerModel.find({})
+    EmployerModel.find(cohortFilter).select({ state: 1, city: 1 }).lean(),
+    EmployerModel.find(cohortFilter)
       .select({ minimumEmployees: 1, maximumEmployees: 1 })
       .lean(),
     JobModel.aggregate<{ _id: string; count: number }>([
-      { $match: { status: "active" } },
+      {
+        $match: isOverall
+          ? { status: "active" }
+          : createdAtRangeFilter(from, to),
+      },
       {
         $group: {
-          _id: {
-            $cond: [
-              {
-                $and: [
-                  { $ne: ["$city", null] },
-                  { $ne: ["$city", ""] },
-                ],
-              },
-              "$city",
-              {
-                $cond: [
-                  {
-                    $and: [
-                      { $ne: ["$cityName", null] },
-                      { $ne: ["$cityName", ""] },
-                    ],
-                  },
-                  "$cityName",
-                  "Unspecified",
-                ],
-              },
-            ],
-          },
+          _id: jobLocationExpression(),
           count: { $sum: 1 },
         },
       },
       { $sort: { count: -1 } },
       { $limit: 8 },
     ]),
+    JobModel.countDocuments(
+      isOverall ? { status: "active" } : createdAtRangeFilter(from, to),
+    ),
+    EmployerModel.countDocuments({}),
     EmployerModel.countDocuments({
       createdAt: { $gte: last30Start, $lte: endOfLocalDay(now) },
     }),
-    EmployerModel.countDocuments({
-      $or: [
-        { verificationStatus: "pending" },
-        {
-          $and: [
-            { verificationStatus: { $in: [null, ""] } },
-            {
-              $or: [
-                { isWhatsappVerified: false },
-                { registrationStatus: { $ne: "completed" } },
-              ],
-            },
-          ],
-        },
-      ],
-    }),
-    EmployerModel.countDocuments(activeStatusFilter),
-    EmployerModel.countDocuments({
-      $or: [{ status: "inactive" }, { registrationStatus: "pending_otp" }],
-    }),
+    EmployerModel.countDocuments(PENDING_VERIFICATION_FILTER),
+    EmployerModel.countDocuments(ACTIVE_STATUS_FILTER),
+    EmployerModel.countDocuments(INACTIVE_STATUS_FILTER),
   ]);
-
-  // Fix verified prev month - simpler recount
-  const verifiedThisMonth = await EmployerModel.countDocuments({
-    verificationStatus: "verified",
-    verifiedAt: { $gte: monthStart, $lte: endOfLocalDay(now) },
-  });
-  const verifiedLastMonth = await EmployerModel.countDocuments({
-    verificationStatus: "verified",
-    verifiedAt: { $gte: prevMonthStart, $lte: endOfLocalDay(prevMonthEnd) },
-  });
-
-  const activeEmployers = employersWithJobsLast30.filter(Boolean).length;
+  const activeEmployers = employersWithJobsInRange.filter(Boolean).length;
+  const previousActiveEmployers = previousEmployersWithJobs.filter(Boolean).length;
   const employersHiring = hiringEmployerIds.filter(Boolean).length;
-  const previousHiring = previousHiringCount.filter(Boolean).length;
+  const previousHiring = previousHiringIds.filter(Boolean).length;
+  const documentsUploaded = employersWithDocuments[0]?.count ?? 0;
+  // Funnel / industry / location use the full cohort (all employers when Overall).
+  const periodCohortSize = isOverall ? totalEmployers : newRegistrations;
+  const verifiedPercent = percentOf(verifiedEmployers, periodCohortSize);
 
   const kpis: OperationsEmployersOverviewKpis = {
     totalEmployers,
-    totalEmployersTrendPercent: percentChange(newThisMonth, newPrevMonth),
-    totalEmployersCaption: `+${newThisMonth.toLocaleString("en-IN")} this month`,
+    totalEmployersTrendPercent: isOverall
+      ? null
+      : percentChange(totalEmployers, previousTotalEmployers),
+    totalEmployersCaption: isOverall
+      ? "Across the network"
+      : newRegistrations > 0
+        ? `+${newRegistrations.toLocaleString("en-IN")} ${caption.toLowerCase()}`
+        : caption,
     newRegistrations,
     newRegistrationsTrendPercent: percentChange(
-      newThisWeek,
-      previousNewThisWeek,
+      newRegistrations,
+      previousNewRegistrations,
     ),
-    newRegistrationsCaption: `+${newThisWeek.toLocaleString("en-IN")} this week`,
+    newRegistrationsCaption: isOverall
+      ? previousNewRegistrations > 0
+        ? `${previousNewRegistrations.toLocaleString("en-IN")} in prior 30 days`
+        : "In last 30 days"
+      : previousNewRegistrations > 0
+        ? `${previousNewRegistrations.toLocaleString("en-IN")} in prior period`
+        : caption,
     verifiedEmployers,
-    verifiedEmployersTrendPercent: percentChange(
-      verifiedThisMonth,
-      verifiedLastMonth,
-    ),
-    verifiedEmployersPercent: percentOf(verifiedEmployers, totalEmployers),
+    verifiedEmployersTrendPercent: isOverall
+      ? null
+      : percentChange(verifiedEmployers, previousVerifiedEmployers),
+    verifiedEmployersPercent: verifiedPercent,
     verifiedEmployersCaption:
-      percentOf(verifiedEmployers, totalEmployers) == null
-        ? "Verified"
-        : `${percentOf(verifiedEmployers, totalEmployers)}% of total`,
+      verifiedPercent == null
+        ? caption
+        : isOverall
+          ? `${verifiedPercent}% of total`
+          : `${verifiedPercent}% of new registrations`,
     activeEmployers,
-    activeEmployersTrendPercent: null,
-    activeEmployersCaption: "Posted jobs in last 30 days",
+    activeEmployersTrendPercent: isOverall
+      ? null
+      : percentChange(activeEmployers, previousActiveEmployers),
+    activeEmployersCaption: isOverall
+      ? "Posted jobs in last 30 days"
+      : "Posted jobs in period",
     employersHiring,
-    employersHiringTrendPercent: percentChange(employersHiring, previousHiring),
-    employersHiringCaption: "Have active job postings",
+    employersHiringTrendPercent: isOverall
+      ? null
+      : percentChange(employersHiring, previousHiring),
+    employersHiringCaption: isOverall
+      ? "Have active job postings"
+      : "Active jobs posted in period",
   };
 
-  // Active employers trend: compare current 30d job-posting employers vs prior 30d
-  const prior30Start = addDays(last30Start, -30);
-  const prior30End = addDays(last30Start, -1);
-  const priorActiveIds = await JobModel.distinct("employerId", {
-    createdAt: { $gte: prior30Start, $lte: endOfLocalDay(prior30End) },
-  });
-  kpis.activeEmployersTrendPercent = percentChange(
-    activeEmployers,
-    priorActiveIds.filter(Boolean).length,
-  );
+  const registeredDateBucket = dateBucketExpression("createdAt", granularity);
+  const verifiedDateBucket = dateBucketExpression("verifiedAt", granularity);
 
-  const dateFormat =
-    range.granularity === "week"
-      ? {
-          $dateToString: {
-            format: "%Y-%m-%d",
-            date: {
-              $dateTrunc: { date: "$createdAt", unit: "week", binSize: 1 },
-            },
+  const [registeredSeriesRows, verifiedSeriesRows, pendingInCohort] =
+    await Promise.all([
+      EmployerModel.aggregate<{ _id: string; count: number }>([
+        { $match: cohortFilter },
+        { $group: { _id: registeredDateBucket, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      EmployerModel.aggregate<{ _id: string; count: number }>([
+        {
+          $match: {
+            verificationStatus: "verified",
+            verifiedAt: { $gte: from, $lte: to },
           },
-        }
-      : { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } };
-
-  const verifiedDateFormat =
-    range.granularity === "week"
-      ? {
-          $dateToString: {
-            format: "%Y-%m-%d",
-            date: {
-              $dateTrunc: { date: "$verifiedAt", unit: "week", binSize: 1 },
-            },
-          },
-        }
-      : { $dateToString: { format: "%Y-%m-%d", date: "$verifiedAt" } };
-
-  const [registeredSeriesRows, verifiedSeriesRows] = await Promise.all([
-    EmployerModel.aggregate<{ _id: string; count: number }>([
-      { $match: { createdAt: { $gte: from, $lte: to } } },
-      { $group: { _id: dateFormat, count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-    ]),
-    EmployerModel.aggregate<{ _id: string; count: number }>([
-      {
-        $match: {
-          verificationStatus: "verified",
-          verifiedAt: { $gte: from, $lte: to },
         },
-      },
-      { $group: { _id: verifiedDateFormat, count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-    ]),
-  ]);
+        { $group: { _id: verifiedDateBucket, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      EmployerModel.countDocuments({
+        $and: [cohortFilter, PENDING_VERIFICATION_FILTER],
+      }),
+    ]);
 
-  const registeredMap = new Map(
-    registeredSeriesRows
-      .filter((row) => row._id)
-      .map((row) => [row._id, row.count]),
-  );
-  const verifiedMap = new Map(
-    verifiedSeriesRows
-      .filter((row) => row._id)
-      .map((row) => [row._id, row.count]),
-  );
+  const registeredMap = new Map<string, number>();
+  for (const row of registeredSeriesRows) {
+    if (!row._id) continue;
+    registeredMap.set(String(row._id), (registeredMap.get(String(row._id)) ?? 0) + row.count);
+  }
+
+  const verifiedMap = new Map<string, number>();
+  for (const row of verifiedSeriesRows) {
+    if (!row._id) continue;
+    verifiedMap.set(String(row._id), (verifiedMap.get(String(row._id)) ?? 0) + row.count);
+  }
+
+  // Overall KPIs stay all-time; trend chart uses the last 12 months for readable bars.
+  let trendFrom = from;
+  if (isOverall) {
+    const twelveMonthsAgo = new Date(to);
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+    twelveMonthsAgo.setDate(1);
+    trendFrom =
+      twelveMonthsAgo.getTime() > from.getTime()
+        ? startOfLocalDay(twelveMonthsAgo)
+        : from;
+  }
 
   const registrationTrend = buildSeries(
-    from,
+    trendFrom,
     to,
     range.granularity,
     registeredMap,
@@ -519,42 +748,37 @@ export async function getOperationsEmployersAnalytics(
     (registrationStatusMap.get("document_uploaded") ?? 0) +
     (registrationStatusMap.get("otp_verified") ?? 0);
 
-  const documentsSubmitted =
-    (registrationStatusMap.get("document_uploaded") ?? 0) +
-    (registrationStatusMap.get("completed") ?? 0) +
-    documentPendingCount;
+  const funnelBase = Math.max(periodCohortSize, 1);
+  const profileCompletedCount = Math.min(
+    profileCompleted || periodCohortSize,
+    periodCohortSize,
+  );
+  const documentsUploadedCount = Math.min(documentsUploaded, periodCohortSize);
 
-  const funnelBase = Math.max(totalEmployers, 1);
   const onboardingFunnel = [
     {
       id: "registered",
       label: "Registered",
-      count: totalEmployers,
-      percent: 100,
+      count: periodCohortSize,
+      percent: periodCohortSize > 0 ? 100 : 0,
     },
     {
       id: "profile_completed",
       label: "Profile Completed",
-      count: Math.min(profileCompleted || totalEmployers, totalEmployers),
-      percent:
-        percentOf(
-          Math.min(profileCompleted || totalEmployers, totalEmployers),
-          funnelBase,
-        ) ?? 0,
+      count: profileCompletedCount,
+      percent: percentOf(profileCompletedCount, funnelBase) ?? 0,
     },
     {
       id: "documents_submitted",
       label: "Documents Uploaded",
-      count: Math.min(documentsSubmitted, totalEmployers),
-      percent:
-        percentOf(Math.min(documentsSubmitted, totalEmployers), funnelBase) ??
-        0,
+      count: documentsUploadedCount,
+      percent: percentOf(documentsUploadedCount, funnelBase) ?? 0,
     },
     {
       id: "verification_in_progress",
       label: "Verification in Progress",
-      count: tabPendingCount,
-      percent: percentOf(tabPendingCount, funnelBase) ?? 0,
+      count: pendingInCohort,
+      percent: percentOf(pendingInCohort, funnelBase) ?? 0,
     },
     {
       id: "verified",
@@ -569,7 +793,7 @@ export async function getOperationsEmployersAnalytics(
       id: String(row._id),
       label: humanizeIndustry(String(row._id)),
       count: row.count,
-      percent: percentOf(row.count, totalEmployers),
+      percent: percentOf(row.count, periodCohortSize),
     }),
   );
 
@@ -585,7 +809,7 @@ export async function getOperationsEmployersAnalytics(
       id: label.toLowerCase().replace(/\s+/g, "-"),
       label,
       count,
-      percent: percentOf(count, totalEmployers),
+      percent: percentOf(count, periodCohortSize),
     }))
     .sort((a, b) => {
       if (a.label === "Unspecified") return 1;
@@ -605,7 +829,9 @@ export async function getOperationsEmployersAnalytics(
     sizedTotal += 1;
     const bucket =
       SIZE_BUCKETS.find((item) =>
-        item.max == null ? size >= item.min : size >= item.min && size <= item.max,
+        item.max == null
+          ? size >= item.min
+          : size >= item.min && size <= item.max,
       ) ?? SIZE_BUCKETS[0];
     sizeCounts.set(bucket.id, (sizeCounts.get(bucket.id) ?? 0) + 1);
   }
@@ -616,16 +842,17 @@ export async function getOperationsEmployersAnalytics(
       id: bucket.id,
       label: bucket.label,
       count,
-      percent: percentOf(count, sizedTotal || totalEmployers),
+      percent: percentOf(count, sizedTotal || periodCohortSize),
     };
   });
 
+  const hiringPercentBase = Math.max(jobsInRangeCount, employersHiring, 1);
   const topHiringLocations: OperationsEmployersAnalyticsNamedCount[] =
     hiringLocationRows.map((row) => ({
       id: String(row._id || "Unspecified"),
       label: String(row._id || "Unspecified"),
       count: row.count,
-      percent: percentOf(row.count, Math.max(employersHiring, 1)),
+      percent: percentOf(row.count, hiringPercentBase),
     }));
 
   return {
@@ -636,10 +863,10 @@ export async function getOperationsEmployersAnalytics(
     byIndustry,
     byLocation,
     employerType,
-    employerTypeTotal: sizedTotal || totalEmployers,
+    employerTypeTotal: sizedTotal || periodCohortSize,
     topHiringLocations,
     tabs: {
-      all: totalEmployers,
+      all: tabAllCount,
       new: tabNewCount,
       verificationPending: tabPendingCount,
       active: tabActiveCount,

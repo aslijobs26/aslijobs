@@ -8,7 +8,9 @@ import {
   sanitizeCandidateListItem,
 } from "../rbac/operations-field-sanitize.js";
 import { operationsCandidatesService } from "./operations-candidates.service.js";
+import { getOperationsCandidatesAnalytics } from "./operations-candidates-analytics.js";
 import type {
+  CandidatesAnalyticsQuery,
   ListOperationsCandidateApplicationsQuery,
   ListOperationsCandidatesQuery,
   OperationsCandidateApplicationIdParams,
@@ -36,6 +38,16 @@ export const operationsCandidatesController = {
           sanitizeCandidateListItem(item, access),
         ),
       },
+    });
+  },
+
+  async analytics(req: Request, res: Response): Promise<void> {
+    requireAccess(req);
+    const query = req.query as unknown as CandidatesAnalyticsQuery;
+    const data = await getOperationsCandidatesAnalytics(query);
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Operations candidates analytics fetched successfully.",
+      data,
     });
   },
 

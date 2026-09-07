@@ -118,9 +118,10 @@ function TableMessage({
 }
 
 const thClassName =
-  "whitespace-nowrap px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted first:pl-4 last:pr-4 sm:px-3.5";
+  "whitespace-nowrap px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted first:pl-4 last:pr-4 sm:px-3.5 xl:px-2.5 xl:py-2 xl:text-[9px] xl:first:pl-3 xl:last:pr-3";
 
-const tdClassName = "px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-3.5";
+const tdClassName =
+  "px-3 py-3 align-middle first:pl-4 last:pr-4 sm:px-3.5 xl:px-2.5 xl:py-2 xl:first:pl-3 xl:last:pr-3";
 
 export function JobsTableSection({
   jobs,
@@ -133,11 +134,11 @@ export function JobsTableSection({
 }: JobsTableSectionProps) {
   const emptyState = (
     <div className="mx-auto flex max-w-xs flex-col items-center gap-2 text-center">
-      <span className="inline-flex size-10 items-center justify-center rounded-xl bg-hero-bg text-muted">
-        <Briefcase className="size-4" aria-hidden="true" />
+      <span className="inline-flex size-10 items-center justify-center rounded-xl bg-hero-bg text-muted xl:size-8">
+        <Briefcase className="size-4 xl:size-3.5" aria-hidden="true" />
       </span>
-      <p className="text-sm font-medium text-foreground">No jobs found</p>
-      <p className="text-[11px] text-muted">
+      <p className="text-sm font-medium text-foreground xl:text-xs">No jobs found</p>
+      <p className="text-[11px] text-muted xl:text-[10px]">
         Try adjusting filters or switching tabs.
       </p>
     </div>
@@ -145,24 +146,24 @@ export function JobsTableSection({
 
   const loadingState = (
     <div className="mx-auto flex max-w-xs flex-col items-center gap-2 text-center">
-      <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary-light text-primary">
-        <Briefcase className="size-4" aria-hidden="true" />
+      <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary-light text-primary xl:size-8">
+        <Briefcase className="size-4 xl:size-3.5" aria-hidden="true" />
       </span>
-      <p className="text-sm font-medium text-foreground">Loading jobs…</p>
-      <p className="text-[11px] text-muted">Fetching the latest listings</p>
+      <p className="text-sm font-medium text-foreground xl:text-xs">Loading jobs…</p>
+      <p className="text-[11px] text-muted xl:text-[10px]">Fetching the latest listings</p>
     </div>
   );
 
   const errorState = (
     <div className="mx-auto flex max-w-sm flex-col items-center gap-2 text-center">
-      <p className="text-sm font-medium text-danger">
+      <p className="text-sm font-medium text-danger xl:text-xs">
         {errorMessage || "Failed to load jobs."}
       </p>
       {onRetry ? (
         <button
           type="button"
           onClick={onRetry}
-          className="mt-1 inline-flex h-9 items-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="mt-1 inline-flex h-9 items-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:h-7 xl:text-[11px]"
         >
           Retry
         </button>
@@ -303,7 +304,7 @@ export function JobsTableSection({
 
       {/* Desktop table with contained horizontal scroll */}
       <div className="hidden min-w-0 max-w-full overflow-x-auto overscroll-x-contain scrollbar-hidden lg:block">
-        <table className="w-full min-w-[920px] border-collapse text-left text-xs leading-snug xl:min-w-[980px]">
+        <table className="w-full min-w-[920px] border-collapse text-left text-xs leading-snug xl:min-w-full xl:text-[11px]">
           <thead>
             <tr className="ops-brand-border-glow border-y border-border-subtle bg-hero-bg/40">
               <th className={thClassName}>Job ID</th>
@@ -347,44 +348,44 @@ export function JobsTableSection({
                     className="border-b border-border-subtle/80 transition-colors last:border-0 hover:bg-hero-bg/35"
                   >
                     <td className={cn(tdClassName, "whitespace-nowrap")}>
-                      <span className="font-mono text-[11px] font-medium tracking-tight text-muted">
+                      <span className="font-mono text-[11px] font-medium tracking-tight text-muted xl:text-[10px]">
                         {job.jobId}
                       </span>
                     </td>
 
-                    <td className={cn(tdClassName, "max-w-[14rem]")}>
+                    <td className={cn(tdClassName, "max-w-[14rem] xl:max-w-[12rem]")}>
                       <div className="flex min-w-0 flex-col gap-0.5">
                         <div className="flex min-w-0 items-center gap-1.5">
-                          <span className="truncate font-semibold text-foreground">
+                          <span className="truncate font-semibold text-foreground xl:text-[11px]">
                             {job.jobTitle}
                           </span>
                           {job.isFeatured ? (
                             <OperationsBadge
                               variant="default"
-                              className="shrink-0 px-1.5 py-0 text-[9px]"
+                              className="shrink-0 px-1.5 py-0 text-[9px] xl:px-1 xl:text-[8px]"
                             >
                               Featured
                             </OperationsBadge>
                           ) : null}
                         </div>
-                        <p className="truncate text-[11px] text-muted">
+                        <p className="truncate text-[11px] text-muted xl:text-[10px]">
                           {formatJobType(job.jobType)}
                         </p>
                       </div>
                     </td>
 
-                    <td className={cn(tdClassName, "max-w-[12rem]")}>
-                      <div className="flex items-center gap-2">
+                    <td className={cn(tdClassName, "max-w-[12rem] xl:max-w-[10rem]")}>
+                      <div className="flex items-center gap-2 xl:gap-1.5">
                         <EmployerLogo
                           name={job.employer.companyName}
                           logoUrl={job.employer.logoUrl}
                         />
-                        <span className="min-w-0 truncate font-medium text-foreground">
+                        <span className="min-w-0 truncate font-medium text-foreground xl:text-[11px]">
                           {job.employer.companyName}
                         </span>
                         {showVerified ? (
                           <BadgeCheck
-                            className="size-3.5 shrink-0 text-chart-accent"
+                            className="size-3.5 shrink-0 text-chart-accent xl:size-3"
                             aria-label="Verified employer contact"
                           />
                         ) : null}
@@ -394,33 +395,42 @@ export function JobsTableSection({
                     <td
                       className={cn(
                         tdClassName,
-                        "whitespace-nowrap font-semibold tabular-nums text-foreground",
+                        "whitespace-nowrap font-semibold tabular-nums text-foreground xl:text-[11px]",
                       )}
                     >
                       {job.vacancies.toLocaleString("en-IN")}
                     </td>
 
-                    <td className={cn(tdClassName, "max-w-[9rem] text-muted")}>
+                    <td className={cn(tdClassName, "max-w-[9rem] text-muted xl:max-w-[8rem]")}>
                       <span className="inline-flex max-w-full items-center gap-1">
-                        <MapPin className="size-3 shrink-0 opacity-70" aria-hidden="true" />
-                        <span className="truncate">{job.locationLabel || "—"}</span>
+                        <MapPin
+                          className="size-3 shrink-0 opacity-70 xl:size-2.5"
+                          aria-hidden="true"
+                        />
+                        <span className="truncate xl:text-[11px]">
+                          {job.locationLabel || "—"}
+                        </span>
                       </span>
                     </td>
 
                     <td className={cn(tdClassName, "whitespace-nowrap")}>
-                      <p className="font-medium text-foreground">{posted.date}</p>
+                      <p className="font-medium text-foreground xl:text-[11px]">
+                        {posted.date}
+                      </p>
                       {posted.time ? (
-                        <p className="mt-0.5 text-[11px] text-muted">{posted.time}</p>
+                        <p className="mt-0.5 text-[11px] text-muted xl:text-[10px]">
+                          {posted.time}
+                        </p>
                       ) : null}
                     </td>
 
                     <td className={cn(tdClassName, "whitespace-nowrap")}>
-                      <p className="font-semibold tabular-nums text-foreground">
+                      <p className="font-semibold tabular-nums text-foreground xl:text-[11px]">
                         {job.applications.toLocaleString("en-IN")}
                       </p>
                       <p
                         className={cn(
-                          "mt-0.5 text-[11px] tabular-nums",
+                          "mt-0.5 text-[11px] tabular-nums xl:text-[10px]",
                           job.applicationsToday > 0 ? "text-success" : "text-muted",
                         )}
                       >
@@ -433,7 +443,7 @@ export function JobsTableSection({
                     <td className={tdClassName}>
                       <OperationsBadge
                         variant={statusBadgeVariant(job.status)}
-                        className="px-2 py-0.5 text-[10px]"
+                        className="px-2 py-0.5 text-[10px] xl:px-1.5 xl:py-0 xl:text-[9px]"
                       >
                         {job.isLiveChangeReview
                           ? "Edited Live Job"
@@ -446,18 +456,18 @@ export function JobsTableSection({
                     <td className={cn(tdClassName, "whitespace-nowrap")}>
                       <span
                         className={cn(
-                          "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
+                          "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium xl:px-1.5 xl:py-0 xl:text-[9px]",
                           paymentBadgeClass(job.listingPaymentStatus),
                         )}
                       >
                         {job.paymentStatusLabel}
                       </span>
                       {job.listingValidUntil ? (
-                        <p className="mt-1 text-[11px] text-muted">
+                        <p className="mt-1 text-[11px] text-muted xl:mt-0.5 xl:text-[10px]">
                           {formatValidUntil(job.listingValidUntil)}
                         </p>
                       ) : job.listingPackageLabel ? (
-                        <p className="mt-1 text-[11px] text-muted">
+                        <p className="mt-1 text-[11px] text-muted xl:mt-0.5 xl:text-[10px]">
                           {job.listingPackageLabel}
                         </p>
                       ) : null}
@@ -465,10 +475,10 @@ export function JobsTableSection({
 
                     <td className={cn(tdClassName, "text-right")}>
                       <JobsRowActions
-                      job={job}
-                      pendingStatusJobId={pendingStatusJobId}
-                      onStatusAction={onStatusAction}
-                    />
+                        job={job}
+                        pendingStatusJobId={pendingStatusJobId}
+                        onStatusAction={onStatusAction}
+                      />
                     </td>
                   </tr>
                 );

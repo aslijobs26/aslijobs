@@ -1,98 +1,42 @@
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
-import type { OperationsEmployersAnalyticsFunnelStage } from "../../../../types/operations-employers";
+import type { OperationsCandidatesAnalyticsFunnelStage } from "../../../../types/operations-candidates";
 import { cn } from "../../../../utils/cn";
 
-interface EmployersOnboardingFunnelProps {
-  stages: OperationsEmployersAnalyticsFunnelStage[];
-  isLoading?: boolean;
-  isError?: boolean;
-  onRetry?: () => void;
+function resolveBarTone(
+  stageId: string,
+  index: number,
+  total: number,
+): "registered" | "progress" | "verified" {
+  if (stageId === "registered" || index === 0) return "registered";
+  if (stageId === "verified" || index === total - 1) return "verified";
+  return "progress";
 }
 
-/** Preferred display order — reference-style five-row funnel. */
-const STAGE_ORDER = [
-  "registered",
-  "profile_completed",
-  "documents_submitted",
-  "verification_in_progress",
-  "verified",
-] as const;
-
-function resolveBarTone(stageId: string, index: number, total: number) {
-  if (stageId === "registered" || index === 0) {
-    return "registered" as const;
-  }
-  if (stageId === "verified" || index === total - 1) {
-    return "verified" as const;
-  }
-  return "progress" as const;
-}
-
-export function EmployersOnboardingFunnel({
+export function CandidatesProfileFunnel({
   stages,
-  isLoading = false,
-  isError = false,
-  onRetry,
-}: EmployersOnboardingFunnelProps) {
-  const orderedStages = STAGE_ORDER.map((id) =>
-    stages.find((stage) => stage.id === id),
-  ).filter((stage): stage is OperationsEmployersAnalyticsFunnelStage =>
-    Boolean(stage),
-  );
-
-  const displayStages =
-    orderedStages.length >= 5
-      ? orderedStages.slice(0, 5)
-      : stages.slice(0, 5);
+}: {
+  stages: OperationsCandidatesAnalyticsFunnelStage[];
+}) {
+  const displayStages = stages.slice(0, 5);
 
   return (
-    <section className="employers-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <header className="flex shrink-0 items-center justify-between gap-2 px-3 pt-2.5 sm:px-3.5 sm:pt-3 xl:px-3 xl:pt-2">
+    <section className="candidates-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
+      <header className="flex items-center justify-between gap-2 px-3 pt-2.5 sm:px-3.5 sm:pt-3 xl:px-3 xl:pt-2">
         <h3 className="text-[13px] font-semibold tracking-tight text-foreground xl:text-[12px]">
-          Onboarding Funnel
+          Profile Completion Funnel
         </h3>
         <Link
-          to={`${OPERATIONS_ROUTES.EMPLOYERS}?tab=verificationPending`}
+          to={`${OPERATIONS_ROUTES.CANDIDATES}?overviewTab=profileIncomplete`}
           className="shrink-0 text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:text-[11px]"
         >
           View details →
         </Link>
       </header>
-
       <div className="min-h-0 flex-1 px-3 pb-3 pt-3 sm:px-3.5 sm:pb-3.5 xl:px-3 xl:pb-2.5 xl:pt-2.5">
-        {isLoading ? (
-          <div className="flex min-h-[11rem] flex-col justify-center gap-3 xl:min-h-36 xl:gap-2" aria-hidden="true">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div
-                key={index}
-                className="grid animate-pulse grid-cols-[6.75rem_minmax(0,1fr)_auto_auto] items-center gap-x-2.5 sm:grid-cols-[8.5rem_minmax(0,1fr)_auto_auto] sm:gap-x-3"
-              >
-                <div className="h-3 rounded bg-hero-bg" />
-                <div className="h-3.5 rounded bg-hero-bg xl:h-3" />
-                <div className="h-3 w-10 rounded bg-hero-bg" />
-                <div className="h-3 w-8 rounded bg-hero-bg" />
-              </div>
-            ))}
-          </div>
-        ) : isError ? (
-          <div className="flex min-h-[11rem] flex-col items-center justify-center gap-2 text-center xl:min-h-36">
-            <p className="text-[12px] text-muted">
-              Unable to load onboarding funnel data
-            </p>
-            {onRetry ? (
-              <button
-                type="button"
-                onClick={onRetry}
-                className="text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              >
-                Retry
-              </button>
-            ) : null}
-          </div>
-        ) : displayStages.length === 0 ? (
+        {displayStages.length === 0 ? (
           <p className="flex min-h-[11rem] items-center justify-center text-center text-xs text-muted xl:min-h-36">
-            No onboarding funnel data available
+            No profile funnel data available.
           </p>
         ) : (
           <ul className="flex min-h-[11rem] flex-col justify-center gap-3 xl:min-h-36 xl:gap-2">

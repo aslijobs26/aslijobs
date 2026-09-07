@@ -76,6 +76,8 @@ export interface OperationsJobsKpis {
   liveJobs: number;
   expiredJobs: number;
   draftJobs: number;
+  atRiskJobs: number;
+  filledClosedJobs: number;
 }
 
 export interface OperationsJobsTabCounts {
@@ -129,9 +131,8 @@ export interface OperationsJobsListParams {
   location: string;
 }
 
-export type OperationsJobsModuleView = "analytics" | "all";
-
 export type OperationsJobsAnalyticsPreset =
+  | "all"
   | "last_7_days"
   | "last_30_days"
   | "last_3_months"
@@ -149,19 +150,33 @@ export interface OperationsJobsAnalyticsRange {
   to: string;
   previousFrom: string;
   previousTo: string;
-  granularity: "day" | "week";
+  granularity: "day" | "week" | "month";
 }
 
 export interface OperationsJobsAnalyticsNamedCount {
   key: string;
   label: string;
   count: number;
+  percent?: number;
+}
+
+export interface OperationsJobsLocationAnalytics {
+  states: OperationsJobsAnalyticsNamedCount[];
+  cities: OperationsJobsAnalyticsNamedCount[];
+  topLocations: OperationsJobsAnalyticsNamedCount[];
 }
 
 export interface OperationsJobsAnalyticsSeriesPoint {
   date: string;
   label: string;
   count: number;
+}
+
+export interface OperationsJobsPostingsTrendPoint {
+  date: string;
+  label: string;
+  jobsPosted: number;
+  jobsApproved: number;
 }
 
 export interface OperationsJobsAnalyticsChartPoint
@@ -177,6 +192,13 @@ export interface OperationsJobsAnalyticsInsight {
   trendDirection: "up" | "down" | "flat" | null;
 }
 
+export interface OperationsJobsOverviewTabs {
+  all: number;
+  pending_approval: number;
+  at_risk: number;
+  recently_closed: number;
+}
+
 export interface OperationsJobsAnalyticsResult {
   kpis: OperationsJobsKpis;
   range: OperationsJobsAnalyticsRange;
@@ -190,7 +212,7 @@ export interface OperationsJobsAnalyticsResult {
     averageApplicationsPerJob: number;
     changePercent: number | null;
   };
-  jobsByLocation: OperationsJobsAnalyticsNamedCount[];
+  jobsByLocation: OperationsJobsLocationAnalytics;
   jobsByEmploymentType: OperationsJobsAnalyticsNamedCount[];
   topPerformingJobs: OperationsJobsAnalyticsChartPoint[];
   jobsExpiringSoon: OperationsJobsAnalyticsNamedCount[];
@@ -201,6 +223,10 @@ export interface OperationsJobsAnalyticsResult {
     applications: number;
     previousApplications: number;
   };
+  postingsTrend: OperationsJobsPostingsTrendPoint[];
+  jobsByIndustry: OperationsJobsAnalyticsNamedCount[];
+  topJobRoles: OperationsJobsAnalyticsNamedCount[];
+  overviewTabs: OperationsJobsOverviewTabs;
 }
 
 export interface OperationsJobAnalytics {

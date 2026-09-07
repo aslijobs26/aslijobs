@@ -90,48 +90,12 @@ export const OPERATIONS_DASHBOARD_MOCK: OperationsDashboardData = {
       href: OPERATIONS_ROUTES.SUPPORT_TICKETS,
     },
   ],
-  teamWorkload: [
-    {
-      id: "tw-1",
-      name: "Ravi Kumar",
-      role: "Ops Associate",
-      initials: "RK",
-      assigned: 18,
-      capacity: 20,
-    },
-    {
-      id: "tw-2",
-      name: "Priya Sharma",
-      role: "Verification Lead",
-      initials: "PS",
-      assigned: 12,
-      capacity: 20,
-    },
-    {
-      id: "tw-3",
-      name: "Amit Singh",
-      role: "Support Specialist",
-      initials: "AS",
-      assigned: 8,
-      capacity: 20,
-    },
-    {
-      id: "tw-4",
-      name: "Sneha Reddy",
-      role: "Ops Associate",
-      initials: "SR",
-      assigned: 16,
-      capacity: 20,
-    },
-    {
-      id: "tw-5",
-      name: "Mohammed Ali",
-      role: "Moderation Lead",
-      initials: "MA",
-      assigned: 10,
-      capacity: 20,
-    },
-  ],
+  teamWorkload: [],
+  teamWorkloadStatus: {
+    isLoading: false,
+    isError: false,
+    isEmpty: true,
+  },
   todaysActivity: [
     {
       id: "act-jobseekers",
@@ -201,7 +165,7 @@ export const OPERATIONS_DASHBOARD_MOCK: OperationsDashboardData = {
       id: "ins-2",
       message: "Hyderabad has the highest number of unfilled delivery jobs.",
       actionLabel: "Explore demand",
-      href: `${OPERATIONS_ROUTES.JOBS}?view=analytics`,
+      href: OPERATIONS_ROUTES.JOBS,
     },
     {
       id: "ins-3",
