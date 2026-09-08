@@ -48,12 +48,18 @@ export function employerAvatarInitials(name: string): string {
   return trimmed.slice(0, 2).toUpperCase();
 }
 
-/** Last 8 hex chars of a Mongo ObjectId formatted as EMP-XXXXXXXX. */
+/**
+ * Display-only Employer ID for Operations UI.
+ * Example: `…08f43a34` → `AJ-EMP-08F43A34`
+ */
 export function formatEmployerDisplayId(id: string): string {
   if (!id) return "—";
   const cleaned = id.replace(/[^a-fA-F0-9]/g, "");
-  const segment = cleaned.length >= 8 ? cleaned.slice(-8).toUpperCase() : cleaned.toUpperCase();
-  return `EMP-${segment || "00000000"}`;
+  const segment =
+    cleaned.length >= 8
+      ? cleaned.slice(-8).toUpperCase()
+      : cleaned.toUpperCase();
+  return `AJ-EMP-${segment || "00000000"}`;
 }
 
 export function verificationStatusBadgeVariant(

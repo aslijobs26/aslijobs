@@ -14,6 +14,13 @@ import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
 import { jobViewService } from "./job-view.service.js";
 import {
+  assertEmployerVerifiedForJobAction,
+} from "./employer-job-verification.guard.js";
+import {
+  buildPublicEmployerVerificationStages,
+  isJobPubliclyEligible,
+} from "./public-job-eligibility.js";
+import {
   cascadeDeleteOwnedJobs,
   ensureEmployerJobRelationsConsistent,
   purgeOrphanJobRelationsForEmployer,
@@ -1258,6 +1265,10 @@ export class JobService {
     const employerObjectId = employer._id;
     const jobId = await generateJobId();
     const isDraft = input.status === "draft";
+    // Drafts are private WIP — verification required only for submission.
+    if (!isDraft) {
+      assertEmployerVerifiedForJobAction(employer, "submit");
+    }
     // Employer submissions require Operations approval before becoming Live.
     const status: JobStatus = isDraft ? "draft" : "pending_approval";
     const now = new Date();
@@ -1336,6 +1347,7 @@ export class JobService {
       bookmarks: 0,
       shares: 0,
       createdBy: employerObjectId,
+      // Server-authoritative — never trust client creationSource.
       creationSource: "employer",
     });
 
@@ -1557,6 +1569,28 @@ export class JobService {
   ) {
     const job = await this.findOwnedJobOrThrow(employerId, jobMongoId);
     const nextStatus = resolveStatusFromAction(job.status as JobStatus, action);
+
+    if (
+      nextStatus === "active" ||
+      nextStatus === "pending_approval" ||
+      action === "publish" ||
+      action === "resume" ||
+      action === "reactivate"
+    ) {
+      const employer = await EmployerModel.findById(employerId)
+        .select("verificationStatus")
+        .lean();
+      const gateAction =
+        action === "resume"
+          ? "resume"
+          : action === "reactivate"
+            ? "reactivate"
+            : action === "publish" || nextStatus === "pending_approval"
+              ? "publish"
+              : "publish";
+      assertEmployerVerifiedForJobAction(employer, gateAction);
+    }
+
     const now = new Date();
 
     const $set: Record<string, unknown> = {
@@ -1826,6 +1860,7 @@ export class JobService {
       bookmarks: 0,
       shares: 0,
       createdBy: employerObjectId,
+      creationSource: "employer",
     });
 
     return {
@@ -1873,9 +1908,16 @@ export class JobService {
       );
     }
 
+    const employer = await EmployerModel.findById(employerId)
+      .select("verificationStatus")
+      .lean();
+    assertEmployerVerifiedForJobAction(employer, "publish");
+
     applyCreateInputToJob(job, input);
     const now = new Date();
     job.status = "pending_approval";
+    // Server-authoritative creation source for employer-owned jobs.
+    job.creationSource = "employer";
     if (
       job.listingPaymentStatus === "pending" ||
       job.listingPaymentStatus === "unpaid"
@@ -1913,6 +1955,11 @@ export class JobService {
         HTTP_STATUS.BAD_REQUEST,
       );
     }
+
+    const employer = await EmployerModel.findById(employerId)
+      .select("verificationStatus")
+      .lean();
+    assertEmployerVerifiedForJobAction(employer, "live_edit");
 
     if (liveJobMatchesCreateInput(job, input)) {
       throw new AppError(
@@ -1953,6 +2000,23 @@ export class JobService {
     });
 
     if (!job) {
+      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const employerId = getJobEmployerId(job);
+    const employer =
+      employerId && mongoose.Types.ObjectId.isValid(employerId)
+        ? await EmployerModel.findById(employerId)
+            .select("verificationStatus")
+            .lean()
+        : null;
+
+    if (
+      !isJobPubliclyEligible({
+        creationSource: job.creationSource,
+        employer,
+      })
+    ) {
       throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
     }
 
@@ -2011,10 +2075,27 @@ export class JobService {
       jobId: publicJobId.toUpperCase(),
       status: "active",
     }).select(
-      "jobId jobTitle city state industry businessCategory",
+      "jobId jobTitle city state industry businessCategory employerId companyId creationSource",
     );
 
     if (!sourceJob) {
+      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const sourceEmployerId = getJobEmployerId(sourceJob);
+    const sourceEmployer =
+      sourceEmployerId && mongoose.Types.ObjectId.isValid(sourceEmployerId)
+        ? await EmployerModel.findById(sourceEmployerId)
+            .select("verificationStatus")
+            .lean()
+        : null;
+
+    if (
+      !isJobPubliclyEligible({
+        creationSource: sourceJob.creationSource,
+        employer: sourceEmployer,
+      })
+    ) {
       throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
     }
 
@@ -2063,9 +2144,15 @@ export class JobService {
       filter.$or = orClauses;
     }
 
-    const candidates = await JobModel.find(filter)
-      .sort({ publishedAt: -1, createdAt: -1 })
-      .limit(40);
+    const candidateDocs = await JobModel.aggregate([
+      { $match: filter },
+      ...buildPublicEmployerVerificationStages(),
+      { $sort: { publishedAt: -1, createdAt: -1 } },
+      { $limit: 40 },
+    ]);
+    const candidates = candidateDocs.map(
+      (doc) => JobModel.hydrate(doc) as JobDocument,
+    );
 
     const sourceContext = {
       jobTitle: sourceJob.jobTitle,
@@ -2120,6 +2207,7 @@ export class JobService {
   ) {
     const filter = buildPublicJobsFilter(query);
     const skip = (query.page - 1) * query.limit;
+    const verificationStages = buildPublicEmployerVerificationStages();
 
     const facetFilter = buildPublicJobsFilter({
       ...query,
@@ -2136,6 +2224,7 @@ export class JobService {
     const jobsPromise = useSalarySort
       ? JobModel.aggregate([
           { $match: filter },
+          ...verificationStages,
           { $addFields: { effectiveSalary: EFFECTIVE_SALARY_EXPRESSION } },
           {
             $sort: {
@@ -2152,6 +2241,7 @@ export class JobService {
       : useLocationRelevanceSort
         ? JobModel.aggregate([
             { $match: filter },
+            ...verificationStages,
             {
               $addFields: {
                 locationRelevanceRank: buildLocationRelevanceRankExpr(
@@ -2171,19 +2261,29 @@ export class JobService {
           ]).then((docs) =>
             docs.map((doc) => JobModel.hydrate(doc) as JobDocument),
           )
-        : JobModel.find(filter)
-            .sort({ publishedAt: -1, createdAt: -1 })
-            .skip(skip)
-            .limit(query.limit);
+        : JobModel.aggregate([
+            { $match: filter },
+            ...verificationStages,
+            { $sort: { publishedAt: -1, createdAt: -1 } },
+            { $skip: skip },
+            { $limit: query.limit },
+          ]).then((docs) =>
+            docs.map((doc) => JobModel.hydrate(doc) as JobDocument),
+          );
 
-    const [jobDocs, total, cityFacets] = await Promise.all([
+    const [jobDocs, totalResult, cityFacets] = await Promise.all([
       jobsPromise,
-      JobModel.countDocuments(filter),
+      JobModel.aggregate<{ total: number }>([
+        { $match: filter },
+        ...verificationStages,
+        { $count: "total" },
+      ]),
       JobModel.aggregate<{
         _id: { city: string; cityName: string };
         count: number;
       }>([
         { $match: facetFilter },
+        ...verificationStages,
         {
           $group: {
             _id: { city: "$city", cityName: "$cityName" },
@@ -2194,6 +2294,8 @@ export class JobService {
         { $limit: cityFacetLimit },
       ]),
     ]);
+
+    const total = totalResult[0]?.total ?? 0;
 
     const appliedIds = await getAppliedJobMongoIdSet(
       jobSeekerId,

@@ -16,6 +16,7 @@ import {
   useUpdateOperationsEmployerStatus,
   useUpdateOperationsEmployerVerification,
 } from "../hooks/use-operations-employers";
+import { useInvalidateRegistrationAwarenessOnDetail } from "../hooks/use-operations-registration-awareness";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
 
 function EmployerDetailSkeleton() {
@@ -54,6 +55,8 @@ export function OperationsEmployersDetailPage() {
   const detailQuery = useOperationsEmployerDetail(employerId);
   const verifyMutation = useUpdateOperationsEmployerVerification(employerId);
   const statusMutation = useUpdateOperationsEmployerStatus(employerId);
+
+  useInvalidateRegistrationAwarenessOnDetail(detailQuery.isSuccess);
 
   const employer = detailQuery.data;
 
@@ -179,7 +182,10 @@ export function OperationsEmployersDetailPage() {
                   <EmployerJobsPanel employerId={employer.id} />
                 )}
                 {activeTab === "documents" && (
-                  <EmployerDocumentsPanel documents={employer.documents} />
+                  <EmployerDocumentsPanel
+                    documents={employer.documents}
+                    employerId={employer.id}
+                  />
                 )}
                 {activeTab === "activity" && (
                   <EmployerActivityPanel employer={employer} />

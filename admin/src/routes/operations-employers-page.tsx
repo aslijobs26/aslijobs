@@ -11,7 +11,7 @@ import {
 import { AddEmployerDialog } from "../components/operations/employers/overview/AddEmployerDialog";
 import { EmployerTypeDonut } from "../components/operations/employers/overview/EmployerTypeDonut";
 import { EmployersAskAsliCard } from "../components/operations/employers/overview/EmployersAskAsliCard";
-import { EmployersByIndustry } from "../components/operations/employers/overview/EmployersByIndustry";
+import { EmployersByAccountType } from "../components/operations/employers/overview/EmployersByAccountType";
 import { EmployersByLocation } from "../components/operations/employers/overview/EmployersByLocation";
 import { EmployersOnboardingFunnel } from "../components/operations/employers/overview/EmployersOnboardingFunnel";
 import { EmployersOverviewHeader } from "../components/operations/employers/overview/EmployersOverviewHeader";
@@ -471,7 +471,7 @@ export function OperationsEmployersPage() {
               <>
                 <EmployersOverviewKpiStrip kpis={analytics.kpis} />
 
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                   <EmployersRegistrationTrendChart
                     data={analytics.registrationTrend}
                     isOverall={analyticsFilters.preset === "all"}
@@ -482,10 +482,12 @@ export function OperationsEmployersPage() {
                     isError={analyticsQuery.isError}
                     onRetry={() => void analyticsQuery.refetch()}
                   />
-                  <EmployersByIndustry items={analytics.byIndustry} />
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                  <TopHiringLocations
+                    items={analytics.topHiringLocations}
+                    isLoading={analyticsQuery.isFetching && !analytics}
+                    isError={analyticsQuery.isError}
+                    onRetry={() => void analyticsQuery.refetch()}
+                  />
                   <EmployersByLocation
                     items={analytics.byLocation}
                     isLoading={analyticsQuery.isFetching && !analytics}
@@ -496,12 +498,7 @@ export function OperationsEmployersPage() {
                     items={analytics.employerType}
                     total={analytics.employerTypeTotal}
                   />
-                  <TopHiringLocations
-                    items={analytics.topHiringLocations}
-                    isLoading={analyticsQuery.isFetching && !analytics}
-                    isError={analyticsQuery.isError}
-                    onRetry={() => void analyticsQuery.refetch()}
-                  />
+                  <EmployersByAccountType items={analytics.byAccountType} />
                 </div>
               </>
             ) : null}

@@ -85,6 +85,7 @@ function toLoginEmployer(employer: {
   isProfileComplete: boolean;
   companyProfileVisited?: boolean;
   registrationStatus: string;
+  verificationStatus?: string | null;
   lastLoginAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
@@ -177,6 +178,11 @@ function toLoginEmployer(employer: {
     isProfileComplete: employer.isProfileComplete,
     companyProfileVisited: employer.companyProfileVisited ?? false,
     registrationStatus: employer.registrationStatus,
+    verificationStatus: (employer.verificationStatus as
+      | "pending"
+      | "verified"
+      | "rejected"
+      | undefined) ?? "pending",
     lastLoginAt: employer.lastLoginAt ?? null,
     createdAt: employer.createdAt,
     updatedAt: employer.updatedAt,
@@ -210,6 +216,21 @@ async function findLoginEligibleEmployer(whatsappNumber: string) {
     throw new AppError("Employer not registered.", HTTP_STATUS.NOT_FOUND);
   }
 
+  if (employer.status === "suspended") {
+    throw new AppError(
+      "Your account is currently suspended. Please contact support.",
+      HTTP_STATUS.FORBIDDEN,
+    );
+  }
+
+  if (employer.status === "inactive") {
+    throw new AppError(
+      "Your account is currently inactive. Please contact support.",
+      HTTP_STATUS.FORBIDDEN,
+    );
+  }
+
+  // Pending verificationStatus must not block login.
   if (
     !employer.isWhatsappVerified ||
     employer.registrationStatus !== "completed"

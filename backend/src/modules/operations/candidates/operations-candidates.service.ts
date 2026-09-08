@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import {
   JOB_SEEKER_AVAILABILITY_STATUS_LABELS,
+  JOB_SEEKER_GENDER_LABELS,
+  JOB_SEEKER_GENDERS,
   JOB_SEEKER_JOB_ROLES,
 } from "../../../constants/job-seeker.constants.js";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
@@ -21,10 +23,25 @@ import { EmployerModel } from "../../employers/employer.model.js";
 import { JobModel } from "../../jobs/job.model.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import { calculateProfileCompleteness } from "../../resumes/utils/profile-completeness.js";
+import { createReadStream, existsSync } from "node:fs";
+import path from "node:path";
+import type { Readable } from "node:stream";
 import type {
   ListOperationsCandidateApplicationsQuery,
   ListOperationsCandidatesQuery,
 } from "./operations-candidates.validation.js";
+import {
+  buildOperationsCandidatesExportFile,
+  type OperationsCandidatesExportFormat,
+  type OperationsCandidatesExportFileResult,
+} from "./operations-candidates-export.js";
+import type { OperationsResolvedAccess } from "../rbac/operations-access.types.js";
+import { operationsAccessCanKey } from "../rbac/operations-access.service.js";
+import {
+  CANDIDATE_EXPORT_PERMISSION_KEY,
+  CANDIDATE_FIELD_PERMISSION_KEYS,
+} from "../rbac/operations-permission-catalog.js";
+import { sanitizeCandidateListItem } from "../rbac/operations-field-sanitize.js";
 import type {
   OperationsCandidateApplicationItem,
   OperationsCandidateApplicationsResult,
@@ -108,6 +125,15 @@ function titleCaseToken(value: string): string {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
+}
+
+function formatCandidateDisplayId(id: string): string {
+  const cleaned = id.replace(/[^a-fA-F0-9]/g, "");
+  const segment =
+    cleaned.length >= 8
+      ? cleaned.slice(-8).toUpperCase()
+      : cleaned.toUpperCase();
+  return `AJ-CAN-${segment || "00000000"}`;
 }
 
 function profileStatusFromRegistration(
@@ -331,18 +357,18 @@ function candidateFromSources(
   const sections = snapshot?.resumeJson?.sections;
 
   const fullName =
+    text(jobSeeker?.fullName) ||
     text(header?.fullName) ||
     text(contact?.fullName) ||
-    text(jobSeeker?.fullName) ||
     "Candidate";
   const phone =
+    text(jobSeeker?.whatsappNumber) ||
     text(header?.phone) ||
-    text(contact?.phone) ||
-    text(jobSeeker?.whatsappNumber);
+    text(contact?.phone);
   const email = text((contact as { email?: string } | undefined)?.email);
-  const city = text(header?.city) || text(contact?.city) || text(jobSeeker?.city);
+  const city = text(jobSeeker?.city) || text(header?.city) || text(contact?.city);
   const state =
-    text(header?.state) || text(contact?.state) || text(jobSeeker?.state);
+    text(jobSeeker?.state) || text(header?.state) || text(contact?.state);
   const location =
     [city, state].filter(Boolean).join(", ") ||
     text(jobSeeker?.preferredJobLocation) ||
@@ -544,8 +570,7 @@ function buildLocationFilterClause(locationFilter: string): Record<string, unkno
 }
 
 async function loadFilterOptions(): Promise<OperationsCandidatesFilterOptions> {
-  const [jobRows, employerRows, locationRows, genderRows, roleRows] =
-    await Promise.all([
+  const [jobRows, employerRows, locationRows, roleRows] = await Promise.all([
       JobModel.find({ status: "active" })
         .select("jobId jobTitle")
         .sort({ updatedAt: -1 })
@@ -625,7 +650,6 @@ async function loadFilterOptions(): Promise<OperationsCandidatesFilterOptions> {
         { $sort: { label: 1 } },
         { $limit: 200 },
       ]),
-      JobSeekerModel.distinct("gender"),
       JobSeekerModel.distinct("jobRole"),
     ]);
 
@@ -669,7 +693,10 @@ async function loadFilterOptions(): Promise<OperationsCandidatesFilterOptions> {
       .filter((item) => item.value && item.label),
     locations,
     experienceLevels: ["Fresher", "Experienced"],
-    genders: genderRows.map((value) => String(value ?? "").trim()).filter(Boolean),
+    genders: JOB_SEEKER_GENDERS.map((value) => ({
+      value,
+      label: JOB_SEEKER_GENDER_LABELS[value],
+    })),
     preferredRoles,
     profileStatuses: [
       { value: "complete", label: "Complete" },
@@ -1123,10 +1150,7 @@ function buildSeekerMatch(
 
   if (query.gender.trim()) {
     andClauses.push({
-      gender: {
-        $regex: `^${escapeRegex(query.gender.trim())}$`,
-        $options: "i",
-      },
+      gender: query.gender.trim(),
     });
   }
 
@@ -1260,9 +1284,14 @@ type SeekerListRow = {
   experiences?: Array<{ duration?: string }> | null;
   jobRole?: string | null;
   registrationStatus?: string;
+  isWhatsappVerified?: boolean;
   lastLoginAt?: Date | null;
   profilePhoto?: { url?: string } | null;
   createdAt?: Date;
+  operationsRegistrationAwareness?: {
+    state?: string | null;
+    registeredAt?: Date | null;
+  } | null;
   applicationCount?: number;
   app?: {
     _id: mongoose.Types.ObjectId;
@@ -1326,10 +1355,13 @@ function toListItemFromSeeker(row: SeekerListRow): OperationsCandidateListItem {
     preferredJobLocation: row.preferredJobLocation,
   });
 
+  const jobSeekerId = String(row._id);
+
   return {
-    id: String(row._id),
+    id: jobSeekerId,
     applicationId: app?._id ? String(app._id) : null,
-    jobSeekerId: String(row._id),
+    jobSeekerId,
+    displayId: formatCandidateDisplayId(jobSeekerId),
     candidateName: candidate.fullName,
     candidatePhone: candidate.phone,
     candidateEmail: candidate.email,
@@ -1344,6 +1376,7 @@ function toListItemFromSeeker(row: SeekerListRow): OperationsCandidateListItem {
     profileStatus,
     profileStatusLabel: profileStatusLabel(profileStatus),
     registrationStatus: text(row.registrationStatus) || "PENDING",
+    isWhatsappVerified: Boolean(row.isWhatsappVerified),
     lastActiveAt: row.lastLoginAt ? row.lastLoginAt.toISOString() : null,
     publicJobId: text(app?.publicJobId),
     jobTitle: text(row.job?.jobTitle),
@@ -1363,6 +1396,13 @@ function toListItemFromSeeker(row: SeekerListRow): OperationsCandidateListItem {
     appliedAt: app?.appliedAt ? app.appliedAt.toISOString() : null,
     registeredAt: candidate.registeredAt,
     hasApplication,
+    isNewRegistration:
+      row.operationsRegistrationAwareness?.state === "new",
+    registrationAwarenessState:
+      row.operationsRegistrationAwareness?.state === "new" ||
+      row.operationsRegistrationAwareness?.state === "seen"
+        ? (row.operationsRegistrationAwareness.state as "new" | "seen")
+        : null,
   };
 }
 
@@ -1375,6 +1415,7 @@ function buildDetailFromSeeker(input: {
     uploadedResume?: {
       url?: string;
       originalName?: string;
+      storagePath?: string;
     } | null;
     education?: Record<string, unknown> | null;
     experiences?: unknown;
@@ -1507,12 +1548,13 @@ function buildDetailFromSeeker(input: {
     expectedSalaryPeriod: text(jobSeeker.expectedSalaryPeriod) || "per-month",
     availabilityStatus,
     availabilityLabel,
-    willingToTravel: null,
-    willingToRelocate: null,
-    workShiftPreference: null,
     profileCompletionPercent: completeness.percent,
-    uploadedResumeUrl: text(jobSeeker.uploadedResume?.url),
+    uploadedResumeUrl: "",
     uploadedResumeName: text(jobSeeker.uploadedResume?.originalName),
+    hasUploadedResume: Boolean(
+      text(jobSeeker.uploadedResume?.url) ||
+        text(jobSeeker.uploadedResume?.storagePath),
+    ),
     jobCompanyName: input.jobCompanyName ?? listItem.employerName,
     resumeVersion: input.latestApplication?.resumeVersion ?? 0,
     resumeStatus: text(input.latestApplication?.resumeStatus),
@@ -1573,6 +1615,11 @@ export const operationsCandidatesService = {
           },
         },
       },
+      ...(query.applicationPresence === "has"
+        ? ([{ $match: { applicationCount: { $gt: 0 } } }] as mongoose.PipelineStage[])
+        : query.applicationPresence === "none"
+          ? ([{ $match: { applicationCount: { $eq: 0 } } }] as mongoose.PipelineStage[])
+          : []),
       {
         $lookup: {
           from: "applications",
@@ -1721,9 +1768,11 @@ export const operationsCandidatesService = {
       experiences: jobSeeker.experiences,
       jobRole: jobSeeker.jobRole,
       registrationStatus: jobSeeker.registrationStatus,
+      isWhatsappVerified: Boolean(jobSeeker.isWhatsappVerified),
       lastLoginAt: jobSeeker.lastLoginAt,
       profilePhoto: jobSeeker.profilePhoto,
       createdAt: jobSeeker.createdAt,
+      operationsRegistrationAwareness: jobSeeker.operationsRegistrationAwareness,
       applicationCount,
       app: latestApplication
         ? {
@@ -1861,5 +1910,152 @@ export const operationsCandidatesService = {
     }
 
     return this.getSeekerDetail(String(application.jobSeekerId));
+  },
+
+  async exportCandidates(
+    query: ListOperationsCandidatesQuery,
+    access: OperationsResolvedAccess,
+    format: OperationsCandidatesExportFormat = "xlsx",
+  ): Promise<OperationsCandidatesExportFileResult> {
+    if (!operationsAccessCanKey(access, CANDIDATE_EXPORT_PERMISSION_KEY)) {
+      throw new AppError("Forbidden", HTTP_STATUS.FORBIDDEN);
+    }
+
+    const maxRows = 5000;
+    const pageSize = 100;
+    const all: OperationsCandidateListItem[] = [];
+    let page = 1;
+    let totalPages = 1;
+
+    while (page <= totalPages && all.length < maxRows) {
+      const result = await this.listCandidates({
+        ...query,
+        page,
+        limit: pageSize,
+      });
+      all.push(...result.applications);
+      totalPages = result.pagination.totalPages;
+      page += 1;
+      if (result.applications.length === 0) {
+        break;
+      }
+    }
+
+    const sanitized = all
+      .slice(0, maxRows)
+      .map((item) => sanitizeCandidateListItem(item, access));
+
+    return buildOperationsCandidatesExportFile({
+      rows: sanitized,
+      format,
+      columnFlags: {
+        includeName: operationsAccessCanKey(
+          access,
+          CANDIDATE_FIELD_PERMISSION_KEYS.name,
+        ),
+        includePhone: operationsAccessCanKey(
+          access,
+          CANDIDATE_FIELD_PERMISSION_KEYS.phone,
+        ),
+        includeLocation: operationsAccessCanKey(
+          access,
+          CANDIDATE_FIELD_PERMISSION_KEYS.location,
+        ),
+      },
+    });
+  },
+
+  async openCandidateResume(jobSeekerId: string): Promise<{
+    stream: Readable;
+    mimeType: string;
+    fileName: string;
+    contentLength?: number;
+  }> {
+    if (!mongoose.Types.ObjectId.isValid(jobSeekerId)) {
+      throw new AppError("Candidate not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const jobSeeker = await JobSeekerModel.findById(jobSeekerId)
+      .select({ uploadedResume: 1, fullName: 1 })
+      .lean();
+
+    if (!jobSeeker) {
+      throw new AppError("Candidate not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const resume = jobSeeker.uploadedResume;
+    const fileName =
+      text(resume?.originalName) ||
+      `${text(jobSeeker.fullName) || "candidate"}-resume.pdf`;
+    const mimeType = text(resume?.mimeType) || "application/octet-stream";
+    const storagePath = text(resume?.storagePath);
+    const remoteUrl = text(resume?.url);
+
+    if (storagePath) {
+      const absolutePath = path.isAbsolute(storagePath)
+        ? storagePath
+        : path.resolve(process.cwd(), storagePath);
+      if (!existsSync(absolutePath)) {
+        throw new AppError("Resume file not found.", HTTP_STATUS.NOT_FOUND);
+      }
+      return {
+        stream: createReadStream(absolutePath),
+        mimeType,
+        fileName,
+      };
+    }
+
+    if (remoteUrl) {
+      const absoluteUrl = remoteUrl.startsWith("http")
+        ? remoteUrl
+        : remoteUrl.startsWith("/")
+          ? remoteUrl
+          : `/${remoteUrl}`;
+
+      // Local relative public URL → filesystem
+      if (!absoluteUrl.startsWith("http")) {
+        const localPath = path.resolve(
+          process.cwd(),
+          absoluteUrl.replace(/^\//, ""),
+        );
+        if (!existsSync(localPath)) {
+          throw new AppError("Resume file not found.", HTTP_STATUS.NOT_FOUND);
+        }
+        return {
+          stream: createReadStream(localPath),
+          mimeType,
+          fileName,
+        };
+      }
+
+      const response = await fetch(absoluteUrl);
+      if (!response.ok || !response.body) {
+        throw new AppError(
+          "Unable to load resume file.",
+          HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        );
+      }
+
+      const { Readable } = await import("node:stream");
+      const stream = Readable.fromWeb(
+        response.body as import("stream/web").ReadableStream,
+      );
+      const contentLengthHeader = response.headers.get("content-length");
+      const contentLength = contentLengthHeader
+        ? Number(contentLengthHeader)
+        : undefined;
+
+      return {
+        stream,
+        mimeType: response.headers.get("content-type") || mimeType,
+        fileName,
+        contentLength:
+          contentLength && Number.isFinite(contentLength)
+            ? contentLength
+            : undefined,
+      };
+    }
+
+    throw new AppError("No resume uploaded for this candidate.", HTTP_STATUS.NOT_FOUND);
   },
 };

@@ -1,6 +1,7 @@
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { AsliInsightsSection } from "../components/operations/dashboard/AsliInsightsSection";
 import { DashboardGreetingSection } from "../components/operations/dashboard/DashboardGreetingSection";
+import { NewRegistrationsSection } from "../components/operations/dashboard/NewRegistrationsSection";
 import { OperationsHealthSection } from "../components/operations/dashboard/OperationsHealthSection";
 import { PlatformPulseSection } from "../components/operations/dashboard/PlatformPulseSection";
 import { QuickActionsSection } from "../components/operations/dashboard/QuickActionsSection";
@@ -35,6 +36,7 @@ export function OperationsHomePage() {
               tabs={data.attentionTabs}
               items={data.attentionItems}
             />
+            <NewRegistrationsSection />
             <TodaysActivitySection metrics={data.todaysActivity} />
             <AsliInsightsSection insights={data.insights} />
           </div>

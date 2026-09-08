@@ -145,17 +145,6 @@ export function percentChange(
   return Math.round(((current - previous) / previous) * 100);
 }
 
-function humanizeIndustry(value: string): string {
-  if (!value) {
-    return "Others";
-  }
-  return value
-    .split(/[_-]/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 function employeeSize(doc: {
   minimumEmployees?: number | null;
   maximumEmployees?: number | null;
@@ -478,7 +467,7 @@ export async function getOperationsEmployersAnalytics(
     previousHiringIds,
     registrationBuckets,
     employersWithDocuments,
-    industryRows,
+    accountTypeRows,
     locationDocs,
     sizeDocs,
     hiringLocationRows,
@@ -576,22 +565,38 @@ export async function getOperationsEmployersAnalytics(
       {
         $group: {
           _id: {
-            $cond: [
-              {
-                $or: [
-                  { $eq: ["$industry", null] },
-                  { $eq: ["$industry", ""] },
-                ],
+            $let: {
+              vars: {
+                raw: {
+                  $toLower: {
+                    $trim: { input: { $ifNull: ["$accountType", ""] } },
+                  },
+                },
               },
-              "others",
-              { $toLower: "$industry" },
-            ],
+              in: {
+                $switch: {
+                  branches: [
+                    {
+                      case: { $eq: ["$$raw", "consultancy"] },
+                      then: "consultancy",
+                    },
+                    {
+                      case: { $eq: ["$$raw", "individual"] },
+                      then: "individual",
+                    },
+                    {
+                      case: { $eq: ["$$raw", "company"] },
+                      then: "company",
+                    },
+                  ],
+                  default: "unspecified",
+                },
+              },
+            },
           },
           count: { $sum: 1 },
         },
       },
-      { $sort: { count: -1 } },
-      { $limit: 12 },
     ]),
     EmployerModel.find(cohortFilter).select({ state: 1, city: 1 }).lean(),
     EmployerModel.find(cohortFilter)
@@ -628,7 +633,7 @@ export async function getOperationsEmployersAnalytics(
   const employersHiring = hiringEmployerIds.filter(Boolean).length;
   const previousHiring = previousHiringIds.filter(Boolean).length;
   const documentsUploaded = employersWithDocuments[0]?.count ?? 0;
-  // Funnel / industry / location use the full cohort (all employers when Overall).
+  // Funnel / account type / location use the full cohort (all employers when Overall).
   const periodCohortSize = isOverall ? totalEmployers : newRegistrations;
   const verifiedPercent = percentOf(verifiedEmployers, periodCohortSize);
 
@@ -788,14 +793,39 @@ export async function getOperationsEmployersAnalytics(
     },
   ];
 
-  const byIndustry: OperationsEmployersAnalyticsNamedCount[] = industryRows.map(
-    (row) => ({
-      id: String(row._id),
-      label: humanizeIndustry(String(row._id)),
-      count: row.count,
-      percent: percentOf(row.count, periodCohortSize),
-    }),
-  );
+  const ACCOUNT_TYPE_BUCKETS = [
+    { id: "company", label: "Company Accounts" },
+    { id: "consultancy", label: "Consultancy Accounts" },
+    { id: "individual", label: "Individual Accounts" },
+  ] as const;
+
+  const accountTypeCountMap = new Map<string, number>();
+  for (const row of accountTypeRows) {
+    if (!row._id) continue;
+    accountTypeCountMap.set(String(row._id), row.count);
+  }
+
+  const byAccountType: OperationsEmployersAnalyticsNamedCount[] =
+    ACCOUNT_TYPE_BUCKETS.map((bucket) => {
+      const count = accountTypeCountMap.get(bucket.id) ?? 0;
+      return {
+        id: bucket.id,
+        label: bucket.label,
+        count,
+        percent: percentOf(count, periodCohortSize),
+      };
+    });
+
+  const unspecifiedAccountTypeCount =
+    accountTypeCountMap.get("unspecified") ?? 0;
+  if (unspecifiedAccountTypeCount > 0) {
+    byAccountType.push({
+      id: "unspecified",
+      label: "Unspecified",
+      count: unspecifiedAccountTypeCount,
+      percent: percentOf(unspecifiedAccountTypeCount, periodCohortSize),
+    });
+  }
 
   const locationCounts = new Map<string, number>();
   for (const doc of locationDocs) {
@@ -860,7 +890,7 @@ export async function getOperationsEmployersAnalytics(
     kpis,
     registrationTrend,
     onboardingFunnel,
-    byIndustry,
+    byAccountType,
     byLocation,
     employerType,
     employerTypeTotal: sizedTotal || periodCohortSize,

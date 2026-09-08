@@ -44,6 +44,13 @@ export const EMPLOYER_REGISTRATION_STATUSES = [
   "completed",
 ] as const;
 
+/** Employer account verification (Operations) — independent of job approval. */
+export const EMPLOYER_VERIFICATION_STATUSES = [
+  "pending",
+  "verified",
+  "rejected",
+] as const;
+
 export const EMPLOYER_DOCUMENT_VERIFICATION_STATUSES = [
   "pending",
   "approved",

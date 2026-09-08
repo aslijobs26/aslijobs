@@ -13,6 +13,7 @@ import { cn } from "../../../../utils/cn";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import {
   formatCandidateDateTimeFull,
+  formatCandidateGender,
   profileStatusBadgeVariant,
 } from "../candidates-format";
 import { CandidateApplicationsTable } from "./CandidateApplicationsTable";
@@ -154,18 +155,20 @@ export function CandidateProfileOverview({
           iconColor="text-chart-accent-alt"
         />
         <OverviewKpi
-          label="Shortlisted"
+          label="Shortlisted applications"
           value={String(detail.shortlistedCount ?? 0)}
-          caption="By Employers"
+          caption="Application status count"
           icon={Star}
           iconWrap="bg-warning/10"
           iconColor="text-warning"
         />
         <OverviewKpi
-          label="Profile Status"
+          label="Registration status"
           value={detail.profileStatusLabel || "Incomplete"}
           caption={
-            detail.profileStatus === "complete" ? "All good" : "Needs attention"
+            detail.profileStatus === "complete"
+              ? "Registration flow finished"
+              : "Registration still incomplete"
           }
           icon={CheckCircle2}
           iconWrap="bg-success/10"
@@ -203,11 +206,7 @@ export function CandidateProfileOverview({
             />
             <DetailField
               label="Gender"
-              value={
-                detail.candidateGender
-                  ? detail.candidateGender.replaceAll("_", " ")
-                  : ""
-              }
+              value={formatCandidateGender(detail.candidateGender)}
             />
             <DetailField
               label="Availability"
@@ -273,10 +272,6 @@ export function CandidateProfileOverview({
                 )}
               />
               <DetailField label="Preferred Work Type" value={detail.jobType} />
-              <DetailField
-                label="Willing to Travel"
-                value={detail.willingToTravel ?? ""}
-              />
             </div>
           </div>
         </section>
@@ -293,17 +288,9 @@ export function CandidateProfileOverview({
                 detail.expectedSalaryPeriod,
               )}
             />
-            <DetailField
-              label="Willing to Relocate"
-              value={detail.willingToRelocate ?? ""}
-            />
-            <DetailField
-              label="Work Shift Preference"
-              value={detail.workShiftPreference ?? ""}
-            />
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-                Profile Status
+                Registration Status
               </p>
               <div className="mt-1.5">
                 <OperationsBadge
@@ -312,6 +299,10 @@ export function CandidateProfileOverview({
                   {detail.profileStatusLabel}
                 </OperationsBadge>
               </div>
+              <p className="mt-1.5 text-[10px] text-muted">
+                Completeness score: {detail.profileCompletionPercent ?? 0}%
+                (field fill)
+              </p>
             </div>
           </div>
         </section>

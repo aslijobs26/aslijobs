@@ -72,6 +72,10 @@ export function sanitizeEmployerDetail(
     documents: detail.documents,
     analytics: detail.analytics,
     verificationRemarks: detail.verificationRemarks,
+    verificationSubmittedAt: detail.verificationSubmittedAt,
+    rejectedAt: detail.rejectedAt,
+    verifiedByLabel: detail.verifiedByLabel,
+    rejectedByLabel: detail.rejectedByLabel,
     suspensionReason: detail.suspensionReason,
   };
 
@@ -159,8 +163,10 @@ export function sanitizeCandidateDetail(
     omitKey(next, "candidatePincode");
     next.preferredLocations = [];
   }
-  if (!operationsAccessCanKey(access, "candidates.profile.view")) {
+  if (!operationsAccessCanKey(access, "candidates.profile.documents.view")) {
     omitKey(next, "uploadedResumeUrl");
+    omitKey(next, "uploadedResumeName");
+    omitKey(next, "hasUploadedResume");
   }
   return next;
 }

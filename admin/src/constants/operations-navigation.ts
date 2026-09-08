@@ -3,6 +3,8 @@ import {
   BarChart3,
   Briefcase,
   Building2,
+  FileCheck2,
+  FolderKanban,
   Home,
   Inbox,
   LayoutDashboard,
@@ -11,16 +13,23 @@ import {
   Ticket,
   Users,
   UsersRound,
-  FolderKanban,
 } from "lucide-react";
 import { OPERATIONS_ROUTES } from "./operations-routes";
+import type { OperationsNavBadgeKey } from "../types/operations-registration-awareness";
+
+export type { OperationsNavBadgeKey };
 
 export interface OperationsNavItem {
   id: string;
   label: string;
   href: string;
   icon: LucideIcon;
+  /** Static badge count (prefer badgeKey for live counts). */
   badge?: number;
+  /** Live badge from registration-awareness / nav badges API. */
+  badgeKey?: OperationsNavBadgeKey;
+  /** Accessible label builder for live badges, e.g. (n) => `${n} new employers`. */
+  badgeAriaLabel?: (count: number) => string;
 }
 
 export interface OperationsNavSection {
@@ -50,14 +59,12 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "My Work",
         href: OPERATIONS_ROUTES.MY_WORK,
         icon: FolderKanban,
-        badge: 24,
       },
       {
         id: "inbox",
         label: "Inbox",
         href: OPERATIONS_ROUTES.INBOX,
         icon: Inbox,
-        badge: 8,
       },
     ],
   },
@@ -70,18 +77,36 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Jobseekers",
         href: OPERATIONS_ROUTES.CANDIDATES,
         icon: Users,
+        badgeKey: "newCandidates",
+        badgeAriaLabel: (count) =>
+          `${count} new jobseeker registration${count === 1 ? "" : "s"}`,
       },
       {
         id: "employers",
         label: "Employers",
         href: OPERATIONS_ROUTES.EMPLOYERS,
         icon: Building2,
+        badgeKey: "newEmployers",
+        badgeAriaLabel: (count) =>
+          `${count} new employer registration${count === 1 ? "" : "s"}`,
+      },
+      {
+        id: "verifications",
+        label: "Verifications",
+        href: OPERATIONS_ROUTES.VERIFICATIONS,
+        icon: FileCheck2,
+        badgeKey: "pendingVerifications",
+        badgeAriaLabel: (count) =>
+          `${count} pending verification${count === 1 ? "" : "s"}`,
       },
       {
         id: "jobs",
         label: "Jobs",
         href: OPERATIONS_ROUTES.JOBS,
         icon: Briefcase,
+        badgeKey: "pendingJobs",
+        badgeAriaLabel: (count) =>
+          `${count} pending job${count === 1 ? "" : "s"}`,
       },
       {
         id: "placements",
@@ -144,6 +169,7 @@ export const OPERATIONS_NAV_ITEM_PERMISSION_MODULE: Record<
   inbox: "whatsapp",
   jobseekers: "candidates",
   employers: "employers",
+  verifications: "verifications",
   jobs: "jobs",
   placements: "jobs",
   support: "support",

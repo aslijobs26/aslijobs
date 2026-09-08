@@ -233,6 +233,13 @@ function candidateCatalog(): OperationsPermissionDefinition[] {
     }),
     define({
       module: "candidates",
+      page: "list",
+      action: "export",
+      label: "Candidates · List · Export",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "candidates",
       page: "profile",
       action: "view",
       label: "Candidates · Profile · View",
@@ -257,6 +264,15 @@ function candidateCatalog(): OperationsPermissionDefinition[] {
       action: "view",
       label: "Candidates · Applications · View",
       mapsToAction: "read",
+    }),
+    define({
+      module: "candidates",
+      page: "profile",
+      section: "documents",
+      action: "view",
+      label: "Candidates · Documents · View",
+      mapsToAction: "read",
+      sensitive: true,
     }),
   ];
 }
@@ -612,6 +628,12 @@ export const CANDIDATE_FIELD_PERMISSION_KEYS = {
   email: "candidates.profile.fields.email.view",
   location: "candidates.profile.fields.location.view",
 } as const;
+
+export const CANDIDATE_DOCUMENTS_PERMISSION_KEY =
+  "candidates.profile.documents.view" as const;
+
+export const CANDIDATE_EXPORT_PERMISSION_KEY =
+  "candidates.list.export" as const;
 
 export const JOB_STATUS_ACTION_PERMISSION_KEYS = {
   approve: "jobs.detail.actions.approve",

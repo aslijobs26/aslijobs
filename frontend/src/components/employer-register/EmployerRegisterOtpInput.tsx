@@ -13,6 +13,10 @@ type EmployerRegisterOtpInputProps = {
   value: string[];
   onChange: (nextValue: string[]) => void;
   disabled?: boolean;
+  name?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
+  "aria-required"?: boolean;
 };
 
 function sanitizeDigit(value: string) {
@@ -23,6 +27,10 @@ export function EmployerRegisterOtpInput({
   value,
   onChange,
   disabled = false,
+  name = "otp",
+  "aria-invalid": ariaInvalid = false,
+  "aria-describedby": ariaDescribedBy,
+  "aria-required": ariaRequired = true,
 }: EmployerRegisterOtpInputProps) {
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -116,6 +124,9 @@ export function EmployerRegisterOtpInput({
       className="employer-register-otp-boxes"
       role="group"
       aria-label="One-time password"
+      aria-invalid={ariaInvalid || undefined}
+      aria-describedby={ariaDescribedBy}
+      aria-required={ariaRequired || undefined}
     >
       {value.map((digit, index) => (
         <input
@@ -123,7 +134,8 @@ export function EmployerRegisterOtpInput({
           ref={(element) => {
             inputRefs.current[index] = element;
           }}
-          id={`employer-register-otp-${index}`}
+          id={index === 0 ? name : `employer-register-otp-${index}`}
+          name={index === 0 ? name : undefined}
           type="text"
           inputMode="numeric"
           autoComplete="one-time-code"
@@ -131,6 +143,9 @@ export function EmployerRegisterOtpInput({
           maxLength={1}
           value={digit}
           disabled={disabled}
+          aria-invalid={ariaInvalid || undefined}
+          aria-describedby={ariaDescribedBy}
+          aria-required={ariaRequired || undefined}
           aria-label={`Digit ${index + 1} of ${EMPLOYER_REGISTER_OTP_LENGTH}`}
           onChange={(event) => handleChange(index, event)}
           onKeyDown={(event) => handleKeyDown(index, event)}

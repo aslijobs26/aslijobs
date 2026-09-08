@@ -11,6 +11,9 @@ export type OperationsJobEmployerSummary = {
   logoUrl: string;
   isWhatsappVerified: boolean;
   registrationCompleted: boolean;
+  /** Account verification — independent of WhatsApp OTP / job approval. */
+  verificationStatus: "pending" | "verified" | "rejected";
+  verificationStatusLabel: string;
 };
 
 export type OperationsJobListItem = {
@@ -300,12 +303,14 @@ export type OperationsJobDetail = {
 export type OperationsJobApplicationItem = {
   id: string;
   publicJobId: string;
+  jobSeekerId: string;
   candidateName: string;
   candidateHeadline: string;
   candidateLocation: string;
   candidatePhone: string;
   candidateExperienceLabel: string;
   candidateSkills: string[];
+  profilePhotoUrl: string;
   status: ApplicationStatus;
   statusLabel: string;
   resumeVersion: number;

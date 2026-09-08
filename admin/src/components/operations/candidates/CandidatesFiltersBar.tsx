@@ -1,5 +1,6 @@
 import { RotateCcw, Search } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { OPERATIONS_CANDIDATE_GENDER_FILTER_OPTIONS } from "../../../constants/operations-candidates";
 import type {
   OperationsCandidateDatePreset,
   OperationsCandidateProfileStatus,
@@ -12,8 +13,10 @@ export interface CandidatesFiltersState {
   search: string;
   location: string;
   experience: string;
+  gender: string;
   preferredRole: string;
   profileStatus: "" | OperationsCandidateProfileStatus;
+  applicationPresence: "" | "has" | "none";
   registrationPreset: OperationsCandidateDatePreset | "";
 }
 
@@ -65,8 +68,10 @@ export function CandidatesFiltersBar({
     filters.search.trim() || searchInput.trim(),
     filters.location,
     filters.experience,
+    filters.gender,
     filters.preferredRole,
     filters.profileStatus,
+    filters.applicationPresence,
     filters.registrationPreset,
   ].filter(Boolean).length;
 
@@ -114,7 +119,7 @@ export function CandidatesFiltersBar({
         ) : null}
       </div>
 
-      <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5 xl:gap-1">
+      <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 xl:gap-1">
         <OperationsFilterSelect
           label="Registration date"
           value={filters.registrationPreset}
@@ -143,6 +148,21 @@ export function CandidatesFiltersBar({
           onChange={(value) => onChange({ experience: value })}
         />
         <OperationsFilterSelect
+          label="Gender"
+          value={filters.gender}
+          options={
+            filterOptions.genders.length > 0
+              ? [
+                  { value: "", label: "All Genders" },
+                  ...filterOptions.genders,
+                ]
+              : [...OPERATIONS_CANDIDATE_GENDER_FILTER_OPTIONS]
+          }
+          hideSearch
+          triggerClassName={triggerClassName}
+          onChange={(value) => onChange({ gender: value })}
+        />
+        <OperationsFilterSelect
           label="Preferred role"
           value={filters.preferredRole}
           options={[
@@ -169,7 +189,7 @@ export function CandidatesFiltersBar({
           onChange={(value) => onChange({ location: value })}
         />
         <OperationsFilterSelect
-          label="Profile status"
+          label="Registration status"
           value={filters.profileStatus}
           options={[
             { value: "", label: "All Statuses" },
@@ -183,6 +203,23 @@ export function CandidatesFiltersBar({
           onChange={(value) =>
             onChange({
               profileStatus: value as CandidatesFiltersState["profileStatus"],
+            })
+          }
+        />
+        <OperationsFilterSelect
+          label="Applications"
+          value={filters.applicationPresence}
+          options={[
+            { value: "", label: "Any" },
+            { value: "has", label: "Has applications" },
+            { value: "none", label: "No applications" },
+          ]}
+          hideSearch
+          triggerClassName={triggerClassName}
+          onChange={(value) =>
+            onChange({
+              applicationPresence:
+                value as CandidatesFiltersState["applicationPresence"],
             })
           }
         />

@@ -20,6 +20,8 @@ import { OperationsRoleDetailPage } from "./operations-role-detail-page";
 import { OperationsRoleEditorPage } from "./operations-role-editor-page";
 import { OperationsRolesPage } from "./operations-roles-page";
 import { OperationsTeamPage } from "./operations-team-page";
+import { OperationsVerificationReviewPage } from "./operations-verification-review-page";
+import { OperationsVerificationsPage } from "./operations-verifications-page";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 function OperationsProtectedLayout() {
@@ -100,7 +102,11 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.VERIFICATIONS}
-          element={<OperationsPlaceholderPage title="Verifications" />}
+          element={<OperationsVerificationsPage />}
+        />
+        <Route
+          path={`${OPERATIONS_ROUTES.VERIFICATIONS}/:employerId`}
+          element={<OperationsVerificationReviewPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.ESCALATIONS}

@@ -33,12 +33,20 @@ export type OperationsJobStatusAction =
   | "approve"
   | "reject";
 
+export type OperationsJobEmployerVerificationStatus =
+  | "pending"
+  | "verified"
+  | "rejected";
+
 export interface OperationsJobEmployer {
   id: string;
   companyName: string;
   logoUrl: string;
   isWhatsappVerified: boolean;
   registrationCompleted: boolean;
+  /** Account verification — independent of WhatsApp OTP / job approval. */
+  verificationStatus: OperationsJobEmployerVerificationStatus;
+  verificationStatusLabel: string;
 }
 
 export interface OperationsJobListItem {
@@ -348,12 +356,14 @@ export interface OperationsJobDetail {
 export interface OperationsJobApplicationItem {
   id: string;
   publicJobId: string;
+  jobSeekerId: string;
   candidateName: string;
   candidateHeadline: string;
   candidateLocation: string;
   candidatePhone: string;
   candidateExperienceLabel: string;
   candidateSkills: string[];
+  profilePhotoUrl: string;
   status: string;
   statusLabel: string;
   resumeVersion: number;

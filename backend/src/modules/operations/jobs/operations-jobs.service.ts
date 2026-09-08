@@ -24,10 +24,16 @@ import type {
 import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-image.js";
 import { EmployerModel } from "../../employers/employer.model.js";
 import { JobModel, type JobDocument } from "../../jobs/job.model.js";
+import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import {
   applyApprovedCreateInputToJob,
   jobService,
 } from "../../jobs/job.service.js";
+import {
+  assertEmployerVerifiedForJobAction,
+  isEmployerCreatedJobSource,
+  resolveEmployerVerificationStatus,
+} from "../../jobs/employer-job-verification.guard.js";
 import { createJobSchema } from "../../jobs/job.validation.js";
 import { notificationService } from "../../notifications/notification.service.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
@@ -37,6 +43,7 @@ import type {
   OperationsJobApplicationItem,
   OperationsJobApplicationsResult,
   OperationsJobDetail,
+  OperationsJobEmployerSummary,
   OperationsJobListItem,
   OperationsJobsAnalyticsResult,
   OperationsJobsFilterOptions,
@@ -506,9 +513,28 @@ type OperationsEmployerListProjection = {
   profilePhoto?: { url?: string } | null;
   isWhatsappVerified?: boolean;
   registrationStatus?: string;
+  verificationStatus?: string | null;
   businessCategory?: string;
   industry?: string;
 };
+
+function toEmployerVerificationSummary(
+  employer: OperationsEmployerListProjection | null,
+): Pick<
+  OperationsJobEmployerSummary,
+  "verificationStatus" | "verificationStatusLabel"
+> {
+  const verificationStatus = resolveEmployerVerificationStatus(employer);
+  return {
+    verificationStatus,
+    verificationStatusLabel:
+      verificationStatus === "verified"
+        ? "Verified"
+        : verificationStatus === "rejected"
+          ? "Rejected"
+          : "Pending",
+  };
+}
 
 function resolveBusinessCategory(
   job: JobDocument,
@@ -579,6 +605,7 @@ function toListItem(
       logoUrl: employer ? resolveEmployerPosterImageUrl(employer) : "",
       isWhatsappVerified: Boolean(employer?.isWhatsappVerified),
       registrationCompleted: employer?.registrationStatus === "completed",
+      ...toEmployerVerificationSummary(employer),
     },
   };
 }
@@ -822,6 +849,78 @@ function candidateFromSnapshot(snapshot: ApplicationResumeSnapshot | null) {
     headline,
     experienceLabel: experienceLabelValue,
     skills,
+  };
+}
+
+type JobSeekerIdentityLean = {
+  fullName?: string | null;
+  whatsappNumber?: string | null;
+  city?: string | null;
+  state?: string | null;
+  preferredJobLocation?: string | null;
+  jobRole?: string | null;
+  experienceType?: string | null;
+  experiences?: Array<{ duration?: string | null }> | null;
+  skills?: string[] | null;
+  profilePhoto?: { url?: string | null } | null;
+};
+
+/**
+ * Operations application rows link to the live JobSeeker profile.
+ * Prefer seeker identity over frozen resume-snapshot fields so the table
+ * always matches what "View Details" opens.
+ */
+function candidateFromApplicationSources(
+  snapshot: ApplicationResumeSnapshot | null,
+  jobSeeker: JobSeekerIdentityLean | null | undefined,
+) {
+  const fromSnapshot = candidateFromSnapshot(snapshot);
+  const seekerName = textValue(jobSeeker?.fullName);
+  const seekerPhone = textValue(jobSeeker?.whatsappNumber);
+  const seekerCity = textValue(jobSeeker?.city);
+  const seekerState = textValue(jobSeeker?.state);
+  const seekerLocation =
+    [seekerCity, seekerState].filter(Boolean).join(", ") ||
+    textValue(jobSeeker?.preferredJobLocation);
+  const seekerRole = textValue(jobSeeker?.jobRole);
+
+  let seekerExperienceLabel = "";
+  if (jobSeeker?.experienceType === "fresher") {
+    seekerExperienceLabel = "Fresher";
+  } else if (jobSeeker) {
+    const experiences = Array.isArray(jobSeeker.experiences)
+      ? jobSeeker.experiences
+      : [];
+    const duration = experiences
+      .map((item) => textValue(item?.duration))
+      .find(Boolean);
+    if (duration) {
+      seekerExperienceLabel = duration;
+    } else if (
+      jobSeeker.experienceType === "experienced" ||
+      experiences.length > 0
+    ) {
+      seekerExperienceLabel = "Experienced";
+    }
+  }
+
+  const experienceLabel =
+    seekerExperienceLabel || fromSnapshot.experienceLabel;
+  const headline =
+    [experienceLabel, seekerRole].filter(Boolean).join(" | ") ||
+    fromSnapshot.headline;
+  const seekerSkills = Array.isArray(jobSeeker?.skills)
+    ? jobSeeker.skills.map((item) => textValue(item)).filter(Boolean)
+    : [];
+
+  return {
+    fullName: seekerName || fromSnapshot.fullName,
+    phone: seekerPhone || fromSnapshot.phone,
+    location: seekerLocation || fromSnapshot.location,
+    headline,
+    experienceLabel,
+    skills: fromSnapshot.skills.length > 0 ? fromSnapshot.skills : seekerSkills,
+    profilePhotoUrl: textValue(jobSeeker?.profilePhoto?.url),
   };
 }
 
@@ -1139,6 +1238,7 @@ function toDetail(
       logoUrl: employer ? resolveEmployerPosterImageUrl(employer) : "",
       isWhatsappVerified: Boolean(employer?.isWhatsappVerified),
       registrationCompleted: employer?.registrationStatus === "completed",
+      ...toEmployerVerificationSummary(employer),
     },
     analytics,
     activity: buildActivity(job),
@@ -1236,7 +1336,7 @@ export const operationsJobsService = {
           },
         })
           .select(
-            "companyName accountType companyLogo profilePhoto isWhatsappVerified registrationStatus businessCategory industry",
+            "companyName accountType companyLogo profilePhoto isWhatsappVerified registrationStatus verificationStatus businessCategory industry",
           )
           .lean(),
       ],
@@ -1300,7 +1400,7 @@ export const operationsJobsService = {
         employerLookupId && mongoose.Types.ObjectId.isValid(employerLookupId)
           ? EmployerModel.findById(employerLookupId)
               .select(
-                "companyName accountType companyLogo profilePhoto isWhatsappVerified registrationStatus businessCategory industry",
+                "companyName accountType companyLogo profilePhoto isWhatsappVerified registrationStatus verificationStatus businessCategory industry",
               )
               .lean()
           : Promise.resolve(null),
@@ -1366,11 +1466,38 @@ export const operationsJobsService = {
               $options: "i",
             },
           },
+          {
+            "_jobSeeker.fullName": {
+              $regex: pattern,
+              $options: "i",
+            },
+          },
+          {
+            "_jobSeeker.whatsappNumber": {
+              $regex: pattern,
+              $options: "i",
+            },
+          },
         ],
       });
     }
 
-    const pipeline: mongoose.PipelineStage[] = [{ $match: match }];
+    const pipeline: mongoose.PipelineStage[] = [
+      { $match: match },
+      {
+        $lookup: {
+          from: JobSeekerModel.collection.name,
+          localField: "jobSeekerId",
+          foreignField: "_id",
+          as: "_jobSeeker",
+        },
+      },
+      {
+        $addFields: {
+          _jobSeeker: { $arrayElemAt: ["$_jobSeeker", 0] },
+        },
+      },
+    ];
 
     if (andFilters.length > 0) {
       pipeline.push({ $match: { $and: andFilters } });
@@ -1391,6 +1518,7 @@ export const operationsJobsService = {
       items: Array<{
         _id: mongoose.Types.ObjectId;
         publicJobId: string;
+        jobSeekerId: mongoose.Types.ObjectId;
         status: ApplicationStatus | string;
         resumeVersion: number;
         resumeStatus: string;
@@ -1398,6 +1526,7 @@ export const operationsJobsService = {
         resumeSnapshot: unknown;
         appliedAt: Date;
         updatedAt?: Date;
+        _jobSeeker?: JobSeekerIdentityLean | null;
       }>;
       totalCount: Array<{ count: number }>;
     }>(pipeline);
@@ -1405,17 +1534,23 @@ export const operationsJobsService = {
     const total = facet?.totalCount?.[0]?.count ?? 0;
     const applications: OperationsJobApplicationItem[] = (facet?.items ?? []).map(
       (app) => {
-        const candidate = candidateFromSnapshot(asResumeSnapshot(app.resumeSnapshot));
+        const candidate = candidateFromApplicationSources(
+          asResumeSnapshot(app.resumeSnapshot),
+          app._jobSeeker,
+        );
 
         return {
           id: app._id.toString(),
           publicJobId: app.publicJobId,
+          jobSeekerId:
+            app.jobSeekerId?.toString?.() ?? String(app.jobSeekerId ?? ""),
           candidateName: candidate.fullName,
           candidateHeadline: candidate.headline,
           candidateLocation: candidate.location,
           candidatePhone: candidate.phone,
           candidateExperienceLabel: candidate.experienceLabel,
           candidateSkills: candidate.skills.slice(0, 8),
+          profilePhotoUrl: candidate.profilePhotoUrl,
           status: app.status as ApplicationStatus,
           statusLabel: applicationStatusLabel(app.status),
           resumeVersion: app.resumeVersion,
@@ -1470,6 +1605,26 @@ export const operationsJobsService = {
     }
 
     const nextStatus = resolveStatusFromAction(job.status as JobStatus, action);
+
+    // Any Operations path that makes an employer-created job public must re-check
+    // current employer verification (publish / resume / reactivate).
+    if (
+      nextStatus === "active" &&
+      isEmployerCreatedJobSource(job.creationSource)
+    ) {
+      const employerLookupId =
+        (job.employerId && String(job.employerId)) ||
+        (job.companyId && String(job.companyId)) ||
+        "";
+      const employer =
+        employerLookupId && mongoose.Types.ObjectId.isValid(employerLookupId)
+          ? await EmployerModel.findById(employerLookupId)
+              .select("verificationStatus")
+              .lean()
+          : null;
+      assertEmployerVerifiedForJobAction(employer, "operations_publish");
+    }
+
     const now = new Date();
 
     const $set: Record<string, unknown> = {
@@ -1520,13 +1675,6 @@ export const operationsJobsService = {
       );
     }
 
-    if (isLiveChangeReview) {
-      return this.approveLiveChangeWithEmployerNotification(
-        job,
-        operationsUserId,
-      );
-    }
-
     const employerId =
       (job.employerId && String(job.employerId)) ||
       (job.companyId && String(job.companyId)) ||
@@ -1536,6 +1684,22 @@ export const operationsJobsService = {
       throw new AppError(
         "Assign an employer before approving this job.",
         HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    // Re-check current employer verification at approval time (race-safe gate).
+    // Applies to employer-created jobs and live-change approvals that keep them public.
+    if (isEmployerCreatedJobSource(job.creationSource)) {
+      const employer = await EmployerModel.findById(employerId)
+        .select("verificationStatus")
+        .lean();
+      assertEmployerVerifiedForJobAction(employer, "operations_approve");
+    }
+
+    if (isLiveChangeReview) {
+      return this.approveLiveChangeWithEmployerNotification(
+        job,
+        operationsUserId,
       );
     }
 

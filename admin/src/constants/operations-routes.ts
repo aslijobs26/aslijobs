@@ -48,6 +48,10 @@ export function operationsEmployerDetailPath(employerId: string): string {
   return `${OPERATIONS_ROUTES.EMPLOYERS}/${encodeURIComponent(employerId)}`;
 }
 
+export function operationsVerificationReviewPath(employerId: string): string {
+  return `${OPERATIONS_ROUTES.VERIFICATIONS}/${encodeURIComponent(employerId)}`;
+}
+
 export function operationsRoleDetailPath(roleId: string): string {
   return `${OPERATIONS_ROUTES.ROLES}/${encodeURIComponent(roleId)}`;
 }

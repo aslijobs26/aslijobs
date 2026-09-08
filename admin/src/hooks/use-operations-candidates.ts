@@ -1,5 +1,6 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import {
+  exportOperationsCandidates,
   fetchOperationsCandidateApplications,
   fetchOperationsCandidateDetail,
   fetchOperationsCandidates,
@@ -7,6 +8,7 @@ import {
 } from "../services/operations-candidates.service";
 import type {
   OperationsCandidatesAnalyticsParams,
+  OperationsCandidatesExportParams,
   OperationsCandidatesListParams,
 } from "../types/operations-candidates";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
@@ -26,8 +28,6 @@ function shouldRetryCandidatesQuery(
   failureCount: number,
   error: unknown,
 ): boolean {
-  // Backend restarts (tsx watch) briefly cause Vite 502 / ECONNREFUSED.
-  // Retry a few times with backoff instead of failing the page immediately.
   if (failureCount >= 3) {
     return false;
   }
@@ -67,6 +67,13 @@ export function useOperationsCandidatesAnalytics(
     retryDelay: candidatesRetryDelay,
     placeholderData: keepPreviousData,
     enabled: options?.enabled ?? true,
+  });
+}
+
+export function useExportOperationsCandidates() {
+  return useMutation({
+    mutationFn: (params: OperationsCandidatesExportParams) =>
+      exportOperationsCandidates(params),
   });
 }
 

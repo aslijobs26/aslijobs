@@ -55,6 +55,8 @@ export type EmployerLoginPublic = {
   isProfileComplete: boolean;
   companyProfileVisited: boolean;
   registrationStatus: string;
+  /** Account verification — independent of WhatsApp OTP. */
+  verificationStatus: "pending" | "verified" | "rejected";
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;

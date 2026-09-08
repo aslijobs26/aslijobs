@@ -322,7 +322,7 @@ export function JobsAnalyticsSection({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         <DonutChartCard
           title="Jobs Status"
           description="Distribution of all jobs by current status."
@@ -460,7 +460,7 @@ export function JobsAnalyticsSection({
         </AnalyticsCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <DonutChartCard
           title="Payment Overview"
           description="Listing payment status across all jobs."

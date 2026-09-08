@@ -248,12 +248,42 @@ const jobSeekerSchema = new Schema(
       type: Date,
       default: null,
     },
+    /**
+     * Operations-only registration awareness (NEW/SEEN).
+     * Not KYC / WhatsApp verification. Missing = legacy (not NEW).
+     */
+    operationsRegistrationAwareness: {
+      state: {
+        type: String,
+        enum: ["new", "seen"],
+        default: undefined,
+      },
+      registeredAt: {
+        type: Date,
+        default: undefined,
+      },
+      firstSeenAt: {
+        type: Date,
+        default: null,
+      },
+      firstSeenBy: {
+        type: Schema.Types.ObjectId,
+        ref: "OperationsTeamUser",
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,
     collection: "jobseekers",
   },
 );
+
+jobSeekerSchema.index({ createdAt: -1 });
+jobSeekerSchema.index({
+  "operationsRegistrationAwareness.state": 1,
+  "operationsRegistrationAwareness.registeredAt": -1,
+});
 
 export type JobSeekerDocumentLean = InferSchemaType<typeof jobSeekerSchema> & {
   _id: Types.ObjectId;

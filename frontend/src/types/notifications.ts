@@ -27,7 +27,11 @@ export type NotificationType =
   | "candidate_withdrawn"
   | "job_closed"
   | "job_approved"
-  | "job_rejected";
+  | "job_rejected"
+  | "job_live_changes_approved"
+  | "job_live_changes_rejected"
+  | "employer_verification_approved"
+  | "employer_verification_rejected";
 
 export type NotificationListItem = {
   id: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import { FieldError } from "@/components/auth/FieldError";
 import {
   EMPLOYER_REGISTER_OTP_DESCRIPTION,
   EMPLOYER_REGISTER_OTP_HEADING,
@@ -16,6 +17,7 @@ type EmployerRegisterOtpSectionProps = {
   isVerified: boolean;
   isSubmitting?: boolean;
   resendSecondsLeft?: number;
+  otpError?: string | null;
   onOtpChange: (nextValue: string[]) => void;
   onVerify: () => void;
   onResend?: () => void;
@@ -26,6 +28,7 @@ export function EmployerRegisterOtpSection({
   isVerified,
   isSubmitting = false,
   resendSecondsLeft = 0,
+  otpError = null,
   onOtpChange,
   onVerify,
   onResend,
@@ -67,7 +70,11 @@ export function EmployerRegisterOtpSection({
         value={otpDigits}
         onChange={onOtpChange}
         disabled={isSubmitting}
+        name="otp"
+        aria-invalid={Boolean(otpError)}
+        aria-describedby={otpError ? "otp-error" : undefined}
       />
+      <FieldError id="otp-error" message={otpError} />
 
       {onResend ? (
         <p className="text-center text-sm text-muted">

@@ -46,8 +46,18 @@ export function CandidatesMobileCard({
                 )}
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-semibold leading-snug text-foreground group-hover:text-primary">
-                  {application.candidateName}
+                <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <span className="block text-sm font-semibold leading-snug text-foreground group-hover:text-primary">
+                    {application.candidateName}
+                  </span>
+                  {application.isNewRegistration ? (
+                    <OperationsBadge
+                      variant="high"
+                      className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
+                    >
+                      <span aria-label="New registration">NEW</span>
+                    </OperationsBadge>
+                  ) : null}
                 </span>
                 <span className="mt-1 block font-mono text-[10px] font-medium tracking-wide text-muted">
                   {formatCandidateDisplayId(

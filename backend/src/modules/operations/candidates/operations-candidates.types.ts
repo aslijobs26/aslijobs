@@ -49,6 +49,8 @@ export type OperationsCandidateListItem = {
   id: string;
   applicationId: string | null;
   jobSeekerId: string;
+  /** Display-only ID (AJ-CAN-…). */
+  displayId: string;
   candidateName: string;
   candidatePhone: string;
   candidateEmail: string;
@@ -63,6 +65,8 @@ export type OperationsCandidateListItem = {
   profileStatus: OperationsCandidateProfileStatus;
   profileStatusLabel: string;
   registrationStatus: string;
+  /** WhatsApp OTP verification only — not identity/KYC. */
+  isWhatsappVerified: boolean;
   lastActiveAt: string | null;
   publicJobId: string;
   jobTitle: string;
@@ -75,6 +79,9 @@ export type OperationsCandidateListItem = {
   appliedAt: string | null;
   registeredAt: string | null;
   hasApplication: boolean;
+  /** Operations awareness only — not WhatsApp/KYC verification. */
+  isNewRegistration: boolean;
+  registrationAwarenessState: "new" | "seen" | null;
 };
 
 export type OperationsCandidatesKpis = {
@@ -132,7 +139,7 @@ export type OperationsCandidatesFilterOptions = {
   employers: Array<{ value: string; label: string }>;
   locations: string[];
   experienceLevels: string[];
-  genders: string[];
+  genders: Array<{ value: string; label: string }>;
   preferredRoles: string[];
   profileStatuses: Array<{ value: OperationsCandidateProfileStatus; label: string }>;
 };
@@ -182,14 +189,13 @@ export type OperationsCandidateDetail = OperationsCandidateListItem & {
   expectedSalaryPeriod: string;
   availabilityStatus: string;
   availabilityLabel: string;
-  willingToTravel: string | null;
-  willingToRelocate: string | null;
-  workShiftPreference: string | null;
   profileCompletionPercent: number;
   applicationCount: number;
   shortlistedCount: number;
+  /** Cleared for clients; use authenticated resume download endpoint. */
   uploadedResumeUrl: string;
   uploadedResumeName: string;
+  hasUploadedResume: boolean;
   jobCompanyName: string;
   resumeVersion: number;
   resumeStatus: string;
@@ -272,6 +278,7 @@ export type OperationsCandidatesAnalyticsResult = {
   registrationTrend: OperationsCandidatesAnalyticsSeriesPoint[];
   onboardingFunnel: OperationsCandidatesAnalyticsFunnelStage[];
   byLocation: OperationsCandidatesAnalyticsNamedCount[];
+  byCity: OperationsCandidatesAnalyticsNamedCount[];
   byLanguage: OperationsCandidatesAnalyticsNamedCount[];
   languageTotal: number;
   byExperience: OperationsCandidatesAnalyticsNamedCount[];

@@ -23,6 +23,13 @@ import { JOB_CITIES, JOB_STATES } from "@/constants/job-locations";
 /** Max length for Job Description and Other Instructions in Post Job. */
 export const POST_JOB_LONG_TEXT_MAX_LENGTH = 3000;
 
+/** API / client gate: employer account must be verified to submit or publish. */
+export const EMPLOYER_VERIFICATION_REQUIRED_CODE =
+  "EMPLOYER_VERIFICATION_REQUIRED" as const;
+
+export const EMPLOYER_VERIFICATION_REQUIRED_MESSAGE =
+  "Your employer account must be verified before you can post a job.";
+
 export const POST_JOB_STEPS: PostJobStep[] = [
   {
     id: "job-information",

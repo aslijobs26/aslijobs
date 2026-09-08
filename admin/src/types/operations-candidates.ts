@@ -67,6 +67,7 @@ export interface OperationsCandidateListItem {
   id: string;
   applicationId: string | null;
   jobSeekerId: string;
+  displayId?: string;
   candidateName: string;
   candidatePhone: string;
   candidateEmail: string;
@@ -81,6 +82,7 @@ export interface OperationsCandidateListItem {
   profileStatus: OperationsCandidateProfileStatus;
   profileStatusLabel: string;
   registrationStatus: string;
+  isWhatsappVerified?: boolean;
   lastActiveAt: string | null;
   publicJobId: string;
   jobTitle: string;
@@ -93,6 +95,9 @@ export interface OperationsCandidateListItem {
   appliedAt: string | null;
   registeredAt: string | null;
   hasApplication: boolean;
+  /** True when registration awareness state is still "new". */
+  isNewRegistration?: boolean;
+  registrationAwarenessState?: "new" | "seen" | null;
 }
 
 export interface OperationsCandidatesKpis {
@@ -148,7 +153,7 @@ export interface OperationsCandidatesFilterOptions {
   employers: Array<{ value: string; label: string }>;
   locations: string[];
   experienceLevels: string[];
-  genders: string[];
+  genders: Array<{ value: string; label: string }>;
   preferredRoles: string[];
   profileStatuses: Array<{
     value: OperationsCandidateProfileStatus;
@@ -190,6 +195,7 @@ export interface OperationsCandidatesListParams {
   gender: string;
   preferredRole: string;
   profileStatus: "" | OperationsCandidateProfileStatus;
+  applicationPresence?: "" | "has" | "none";
   datePreset: OperationsCandidateDatePreset;
   dateFrom: string;
   dateTo: string;
@@ -197,6 +203,22 @@ export interface OperationsCandidatesListParams {
   analyticsPreset: OperationsCandidateDatePreset;
   analyticsFrom: string;
   analyticsTo: string;
+}
+
+export interface OperationsCandidatesExportParams {
+  overviewTab?: string;
+  verificationStatus?: string;
+  search?: string;
+  location?: string;
+  experience?: string;
+  gender?: string;
+  preferredRole?: string;
+  profileStatus?: "" | OperationsCandidateProfileStatus;
+  applicationPresence?: "" | "has" | "none";
+  datePreset?: OperationsCandidateDatePreset;
+  dateFrom?: string;
+  dateTo?: string;
+  format?: "xlsx" | "csv";
 }
 
 export type OperationsCandidatesAnalyticsPreset =
@@ -278,6 +300,7 @@ export interface OperationsCandidatesAnalyticsResult {
   registrationTrend: OperationsCandidatesAnalyticsSeriesPoint[];
   onboardingFunnel: OperationsCandidatesAnalyticsFunnelStage[];
   byLocation: OperationsCandidatesAnalyticsNamedCount[];
+  byCity: OperationsCandidatesAnalyticsNamedCount[];
   byLanguage: OperationsCandidatesAnalyticsNamedCount[];
   languageTotal: number;
   byExperience: OperationsCandidatesAnalyticsNamedCount[];
@@ -324,13 +347,12 @@ export interface OperationsCandidateDetail extends OperationsCandidateListItem {
   expectedSalaryPeriod: string;
   availabilityStatus: string;
   availabilityLabel: string;
-  willingToTravel: string | null;
-  willingToRelocate: string | null;
-  workShiftPreference: string | null;
   profileCompletionPercent: number;
   shortlistedCount: number;
+  /** Always empty for clients — use authenticated resume download endpoint. */
   uploadedResumeUrl: string;
   uploadedResumeName: string;
+  hasUploadedResume: boolean;
   jobCompanyName: string;
   resumeVersion: number;
   resumeStatus: string;

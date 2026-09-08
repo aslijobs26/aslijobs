@@ -18,8 +18,8 @@ const TABS: Array<{
   },
   {
     id: "verificationPending",
-    label: "Verification Pending",
-    shortLabel: "Pending",
+    label: "WhatsApp Pending",
+    shortLabel: "WA Pending",
   },
 ];
 

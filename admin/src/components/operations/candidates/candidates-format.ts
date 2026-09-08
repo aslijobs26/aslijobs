@@ -1,4 +1,5 @@
 import type { OperationsApplicationStatus } from "../../../types/operations-candidates";
+import { OPERATIONS_CANDIDATE_GENDER_LABELS } from "../../../constants/operations-candidates";
 
 export function formatCandidateDateTime(iso: string | null): {
   date: string;
@@ -93,4 +94,22 @@ export function shortApplicationId(id: string): string {
 export function formatCandidateDisplayId(id: string): string {
   if (!id) return "—";
   return `AJ-CAN-${shortApplicationId(id)}`;
+}
+
+export function formatCandidateGender(gender: string | null | undefined): string {
+  if (!gender?.trim()) {
+    return "";
+  }
+
+  const normalized = gender.trim().toLowerCase();
+  if (normalized in OPERATIONS_CANDIDATE_GENDER_LABELS) {
+    return OPERATIONS_CANDIDATE_GENDER_LABELS[
+      normalized as keyof typeof OPERATIONS_CANDIDATE_GENDER_LABELS
+    ];
+  }
+
+  return gender
+    .trim()
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }

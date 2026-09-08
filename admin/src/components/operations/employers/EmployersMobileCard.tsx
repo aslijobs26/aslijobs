@@ -41,8 +41,18 @@ export function EmployersMobileCard({
             )}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-foreground">
-              {employer.displayName}
+            <p className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <span className="truncate text-xs font-semibold text-foreground">
+                {employer.displayName}
+              </span>
+              {employer.isNewRegistration ? (
+                <OperationsBadge
+                  variant="high"
+                  className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
+                >
+                  <span aria-label="New registration">NEW</span>
+                </OperationsBadge>
+              ) : null}
             </p>
             <p className="mt-0.5 font-mono text-[11px] text-muted">
               {employer.displayId}

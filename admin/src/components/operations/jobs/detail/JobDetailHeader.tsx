@@ -11,10 +11,14 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import { EmployerLogo } from "../../../ui/EmployerLogo";
-import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
+import {
+  OPERATIONS_ROUTES,
+  operationsEmployerDetailPath,
+} from "../../../../constants/operations-routes";
 import { formatBusinessCategoryLabel } from "../../../../constants/operations-post-job-company-options";
 import type { OperationsJobDetail } from "../../../../types/operations-jobs";
 import { cn } from "../../../../utils/cn";
+import { verificationStatusBadgeVariant } from "../../employers/employers-format";
 import { OperationsCanKey } from "../../auth/OperationsCanKey";
 import {
   formatOperationsDateTime,
@@ -101,6 +105,21 @@ export function JobDetailHeader({
     job.status === "pending_approval" || Boolean(job.isLiveChangeReview);
   const busy = Boolean(isClosing || isReviewing);
   const statusTone = jobDetailStatusTone(job.status);
+  const employerVerificationStatus = job.employer.verificationStatus;
+  const employerVerificationLabel =
+    job.employer.verificationStatusLabel ||
+    (employerVerificationStatus === "verified"
+      ? "Verified"
+      : employerVerificationStatus === "rejected"
+        ? "Rejected"
+        : "Pending");
+  const isEmployerVerified = employerVerificationStatus === "verified";
+  const isEmployerCreatedJob = job.creationSource !== "operations";
+  const approvalBlockedByVerification =
+    isPendingApproval && isEmployerCreatedJob && !isEmployerVerified;
+  const employerProfileHref = job.employer.id
+    ? operationsEmployerDetailPath(job.employer.id)
+    : OPERATIONS_ROUTES.EMPLOYERS;
 
   const handleCopyJobId = async () => {
     try {
@@ -209,8 +228,21 @@ export function JobDetailHeader({
                 ) : null}
               </p>
             </div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted">
+                Employer Verification
+              </span>
+              <OperationsBadge
+                variant={verificationStatusBadgeVariant(
+                  employerVerificationStatus,
+                )}
+                className="px-2 py-0.5 text-[10px] font-semibold"
+              >
+                {employerVerificationLabel}
+              </OperationsBadge>
+            </div>
             <Link
-              to={OPERATIONS_ROUTES.EMPLOYERS}
+              to={employerProfileHref}
               className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary-soft transition-colors hover:text-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
               View Employer Profile
@@ -243,7 +275,14 @@ export function JobDetailHeader({
                   <button
                     type="button"
                     onClick={onApproveJob}
-                    disabled={busy || !onApproveJob}
+                    disabled={
+                      busy || !onApproveJob || approvalBlockedByVerification
+                    }
+                    title={
+                      approvalBlockedByVerification
+                        ? "Approval blocked — Employer verification required."
+                        : undefined
+                    }
                     className={cn(
                       primaryActionClassName,
                       "bg-success text-surface hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
@@ -307,6 +346,15 @@ export function JobDetailHeader({
               </>
             )}
           </div>
+
+          {approvalBlockedByVerification ? (
+            <p
+              className="text-[11px] leading-relaxed text-warning lg:text-right"
+              role="status"
+            >
+              Approval blocked — Employer verification required.
+            </p>
+          ) : null}
 
           <div className="flex flex-wrap items-start gap-5 border-t border-border-subtle/80 pt-3 lg:justify-end">
             <StatMetric

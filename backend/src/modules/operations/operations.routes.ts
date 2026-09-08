@@ -5,6 +5,7 @@ import operationsCandidatesRouter from "./candidates/operations-candidates.route
 import operationsDepartmentsRouter from "./departments/operations-departments.routes.js";
 import operationsEmployersRouter from "./employers/operations-employers.routes.js";
 import operationsJobsRouter from "./jobs/operations-jobs.routes.js";
+import operationsRegistrationAwarenessRouter from "./registration-awareness/operations-registration-awareness.routes.js";
 import operationsPermissionsRouter from "./roles/operations-permissions.routes.js";
 import operationsRolesRouter from "./roles/operations-roles.routes.js";
 import operationsTeamRouter from "./team/operations-team.routes.js";
@@ -20,5 +21,9 @@ operationsRouter.use("/roles", operationsRolesRouter);
 operationsRouter.use("/permissions", operationsPermissionsRouter);
 operationsRouter.use("/departments", operationsDepartmentsRouter);
 operationsRouter.use("/audit-log", operationsAuditRouter);
+operationsRouter.use(
+  "/registration-awareness",
+  operationsRegistrationAwarenessRouter,
+);
 
 export default operationsRouter;

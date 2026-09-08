@@ -61,6 +61,10 @@ type PostJobDatePickerProps = {
   disabled?: boolean;
   onChange: (value: string) => void;
   "aria-label"?: string;
+  name?: string;
+  "aria-invalid"?: boolean;
+  "aria-required"?: boolean;
+  "aria-describedby"?: string;
 };
 
 type CalendarPosition = {
@@ -185,6 +189,10 @@ export function PostJobDatePicker({
   disabled = false,
   onChange,
   "aria-label": ariaLabel,
+  name,
+  "aria-invalid": ariaInvalid = false,
+  "aria-required": ariaRequired = false,
+  "aria-describedby": ariaDescribedBy,
 }: PostJobDatePickerProps) {
   const listboxId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -755,12 +763,16 @@ export function PostJobDatePicker({
       <button
         ref={triggerRef}
         id={id}
+        name={name}
         type="button"
         disabled={disabled}
         aria-label={ariaLabel}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={isOpen ? listboxId : undefined}
+        aria-invalid={ariaInvalid || undefined}
+        aria-required={ariaRequired || undefined}
+        aria-describedby={ariaDescribedBy}
         onClick={() => {
           if (disabled) {
             return;

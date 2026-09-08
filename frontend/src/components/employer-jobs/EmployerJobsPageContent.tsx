@@ -42,6 +42,11 @@ import type {
   JobStatusAction,
 } from "@/types/employer-jobs";
 import { resolveEmptyPageFallback } from "@/utils/list-pagination";
+import {
+  EMPLOYER_VERIFICATION_REQUIRED_CODE,
+  EMPLOYER_VERIFICATION_REQUIRED_MESSAGE,
+} from "@/constants/post-job";
+import { getApiErrorMessage, normalizeApiError } from "@/utils/normalize-api-error";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
@@ -186,6 +191,17 @@ export function EmployerJobsPageContent() {
       }
 
       await invalidateJobsData();
+    },
+    onError: (error) => {
+      const normalized = normalizeApiError(error);
+      const message =
+        normalized.code === EMPLOYER_VERIFICATION_REQUIRED_CODE
+          ? normalized.message || EMPLOYER_VERIFICATION_REQUIRED_MESSAGE
+          : getApiErrorMessage(
+              error,
+              "Unable to update job status. Please try again.",
+            );
+      showAppToast(message, "error");
     },
   });
 

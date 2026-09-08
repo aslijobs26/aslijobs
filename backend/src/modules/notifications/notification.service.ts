@@ -112,6 +112,8 @@ function conversationDirectionForType(
     case "job_closed":
     case "job_approved":
     case "job_rejected":
+    case "employer_verification_approved":
+    case "employer_verification_rejected":
       return "incoming";
     default:
       return "outgoing";
@@ -1976,6 +1978,114 @@ export class NotificationService {
         rejectionReason: input.reason.trim(),
         reviewedBy: input.reviewedByLabel,
         reviewKind: "live_change",
+      },
+    });
+
+    return { created: true, alreadySent: false };
+  }
+
+  /**
+   * Employer inbox notice when Operations verifies the employer account.
+   * Idempotent on employer + type so retries do not duplicate.
+   */
+  async notifyEmployerVerificationApproved(input: {
+    employerId: string;
+    reviewedByLabel: string;
+  }): Promise<{ created: boolean; alreadySent: boolean }> {
+    if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
+      throw new AppError("Invalid employer.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const existing = await NotificationModel.findOne({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "employer_verification_approved",
+      referenceType: "employer",
+      referenceId: input.employerId,
+    })
+      .select("_id")
+      .lean();
+
+    if (existing) {
+      return { created: false, alreadySent: true };
+    }
+
+    const reviewedBy = input.reviewedByLabel.trim() || "Operations";
+    const body = [
+      "Your employer account has been verified.",
+      "You can now post jobs and hire on AsliJobs.",
+      `Verified by: ${reviewedBy}`,
+    ].join("\n");
+
+    await this.createNotification({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "employer_verification_approved",
+      category: "system",
+      title: "Employer account verified",
+      body,
+      priority: "high",
+      referenceType: "employer",
+      referenceId: input.employerId,
+      actionPath: "/employer/company-profile",
+      metadata: {
+        reviewedBy,
+      },
+    });
+
+    return { created: true, alreadySent: false };
+  }
+
+  /**
+   * Employer inbox notice when Operations rejects employer verification.
+   * Replaces any prior rejection notice for a new rejection cycle.
+   */
+  async notifyEmployerVerificationRejected(input: {
+    employerId: string;
+    reason: string;
+    reviewedByLabel: string;
+  }): Promise<{ created: boolean; alreadySent: boolean }> {
+    if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
+      throw new AppError("Invalid employer.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const existing = await NotificationModel.findOne({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "employer_verification_rejected",
+      referenceType: "employer",
+      referenceId: input.employerId,
+    })
+      .select("_id")
+      .lean();
+
+    if (existing) {
+      await NotificationModel.deleteOne({ _id: existing._id });
+    }
+
+    const reviewedBy = input.reviewedByLabel.trim() || "Operations";
+    const reason = input.reason.trim();
+    const body = [
+      "Your employer verification was rejected.",
+      `Rejection reason: ${reason}`,
+      `Reviewed by: ${reviewedBy}`,
+      "Update your documents and resubmit for verification.",
+    ].join("\n");
+
+    await this.createNotification({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "employer_verification_rejected",
+      category: "system",
+      title: "Employer verification rejected",
+      body,
+      priority: "high",
+      referenceType: "employer",
+      referenceId: input.employerId,
+      actionPath: "/employer/company-profile",
+      metadata: {
+        rejectionReason: reason,
+        reviewedBy,
       },
     });
 

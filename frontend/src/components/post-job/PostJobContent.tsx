@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  EMPLOYER_VERIFICATION_REQUIRED_CODE,
+  EMPLOYER_VERIFICATION_REQUIRED_MESSAGE,
   POST_JOB_INITIAL_STEP,
   POST_JOB_INITIAL_WIZARD_DATA,
 } from "@/constants/post-job";
@@ -15,12 +17,14 @@ import {
   updateEmployerActiveJob,
   updateEmployerJobDraft,
 } from "@/services/employer-jobs.service";
+import type { EmployerLoginPublic } from "@/services/employer-login.service";
 import { ensureEmployerProfile } from "@/hooks/useEmployerProfile";
 import type { CreatedJobResponse, JobStatus } from "@/types/employer-jobs";
 import { buildJobPostedSuccessSummary } from "@/utils/build-job-posted-success-summary";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import { setJobPostedSuccessSummary } from "@/utils/job-posted-success-storage";
 import { mapWizardDataToCreateJobPayload } from "@/utils/map-post-job-payload";
+import { normalizeApiError, getApiErrorMessage } from "@/utils/normalize-api-error";
 import {
   hasMeaningfulPostJobDraftContent,
   mapJobDetailToWizardState,
@@ -42,7 +46,6 @@ import type {
   PostJobWizardFormData,
 } from "@/types/post-job";
 import { useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -81,6 +84,7 @@ function PostJobActiveSection({
   isSubmitting,
   isEditMode,
   accountType,
+  showVerificationCta,
   onJobInformationChange,
   onLocationSalaryChange,
   onCandidateInterviewChange,
@@ -98,6 +102,7 @@ function PostJobActiveSection({
   isSubmitting: boolean;
   isEditMode: boolean;
   accountType: EmployerAccountType | null;
+  showVerificationCta: boolean;
   onJobInformationChange: <K extends keyof PostJobFormData>(
     field: K,
     value: PostJobFormData[K],
@@ -148,6 +153,7 @@ function PostJobActiveSection({
       formData={formData.candidateAndInterview}
       fieldErrors={fieldErrors}
       submitError={submitError}
+      showVerificationCta={showVerificationCta}
       isSubmitting={isSubmitting}
       isEditMode={isEditMode}
       onFieldChange={onCandidateInterviewChange}
@@ -156,6 +162,22 @@ function PostJobActiveSection({
       scrollContainerRef={scrollContainerRef}
     />
   );
+}
+
+function isEmployerVerifiedForJobs(
+  status: EmployerLoginPublic["verificationStatus"] | null | undefined,
+): boolean {
+  return status === "verified";
+}
+
+function resolvePostJobSubmitError(error: unknown): {
+  isVerificationRequired: boolean;
+} {
+  const normalized = normalizeApiError(error);
+  return {
+    isVerificationRequired:
+      normalized.code === EMPLOYER_VERIFICATION_REQUIRED_CODE,
+  };
 }
 
 type PostJobContentProps = {
@@ -181,8 +203,15 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   const [accountType, setAccountType] = useState<EmployerAccountType | null>(
     null,
   );
+  const [verificationStatus, setVerificationStatus] = useState<
+    EmployerLoginPublic["verificationStatus"] | null
+  >(null);
+  const [showVerificationCta, setShowVerificationCta] = useState(false);
   const formScrollRef = useRef<HTMLFormElement>(null);
   const hasPrefillEmployerProfileRef = useRef(false);
+  const verificationStatusRef = useRef<
+    EmployerLoginPublic["verificationStatus"] | null
+  >(null);
 
   const draftIdRef = useRef<string | null>(draftJobId ?? null);
   const isActiveEditMode = loadedJobStatus === "active";
@@ -213,6 +242,8 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
         }
 
         setAccountType(profile.accountType);
+        setVerificationStatus(profile.verificationStatus ?? "pending");
+        verificationStatusRef.current = profile.verificationStatus ?? "pending";
 
         if (draftJobId || hasPrefillEmployerProfileRef.current) {
           return;
@@ -266,6 +297,8 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       } catch {
         if (!cancelled) {
           setAccountType(null);
+          setVerificationStatus(null);
+          verificationStatusRef.current = null;
         }
       }
     };
@@ -276,6 +309,10 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       cancelled = true;
     };
   }, [draftJobId, queryClient]);
+
+  useEffect(() => {
+    verificationStatusRef.current = verificationStatus;
+  }, [verificationStatus]);
 
   const buildDraftSignature = useCallback(
     (data: PostJobWizardFormData, step: PostJobActiveStep) =>
@@ -398,10 +435,9 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
           return;
         }
 
-        const message = isAxiosError(error)
-          ? (error.response?.data as { message?: string } | undefined)?.message
-          : undefined;
-        setDraftLoadError(message || "Unable to load job. Please try again.");
+        setDraftLoadError(
+          getApiErrorMessage(error, "Unable to load job. Please try again."),
+        );
       } finally {
         if (!cancelled) {
           setIsHydratingDraft(false);
@@ -579,6 +615,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
 
   const handlePostJob = async () => {
     setSubmitError("");
+    setShowVerificationCta(false);
 
     if (!getEmployerAccessToken()) {
       const returnUrl = `${window.location.pathname}${window.location.search}`;
@@ -592,6 +629,13 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       setActiveStep(invalid.step);
       setFieldErrors(invalid.errors);
       scheduleFocusFirstInvalidField(invalid.errors);
+      return;
+    }
+
+    // Draft autosave remains allowed; only submit/publish/live-update is gated.
+    if (!isEmployerVerifiedForJobs(verificationStatusRef.current)) {
+      setSubmitError(EMPLOYER_VERIFICATION_REQUIRED_MESSAGE);
+      setShowVerificationCta(true);
       return;
     }
 
@@ -641,15 +685,18 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       if (!isActiveEditMode) {
         skipAutosaveRef.current = false;
       }
-      const message = isAxiosError(error)
-        ? (error.response?.data as { message?: string } | undefined)?.message
-        : undefined;
+      const resolved = resolvePostJobSubmitError(error);
       setSubmitError(
-        message ||
-          (isActiveEditMode
-            ? "Unable to update job. Please try again."
-            : "Unable to post job. Please try again."),
+        resolved.isVerificationRequired
+          ? EMPLOYER_VERIFICATION_REQUIRED_MESSAGE
+          : getApiErrorMessage(
+              error,
+              isActiveEditMode
+                ? "Unable to update job. Please try again."
+                : "Unable to post job. Please try again.",
+            ),
       );
+      setShowVerificationCta(resolved.isVerificationRequired);
       setIsSubmitting(false);
     }
   };
@@ -688,6 +735,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
               isSubmitting={isSubmitting}
               isEditMode={isActiveEditMode}
               accountType={accountType}
+              showVerificationCta={showVerificationCta}
               onJobInformationChange={updateJobInformation}
               onLocationSalaryChange={updateLocationAndSalary}
               onCandidateInterviewChange={updateCandidateAndInterview}

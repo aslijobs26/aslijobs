@@ -1,8 +1,9 @@
-import { Download, ExternalLink, Eye, FileText, X } from "lucide-react";
+import { Download, Eye, FileText, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { OperationsCandidateDetail } from "../../../../types/operations-candidates";
-import { resolveMediaUrl } from "../../../../utils/resolve-media-url";
+import { fetchOperationsCandidateResumeBlob } from "../../../../services/operations-candidates.service";
+import { OperationsCanKey } from "../../auth/OperationsCanKey";
 
 interface CandidateDocumentsPanelProps {
   detail: OperationsCandidateDetail;
@@ -29,12 +30,12 @@ function detectPreviewKind(fileName: string, mimeType?: string): PreviewKind {
 }
 
 const actionButtonClassName =
-  "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+  "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60";
 
 export function CandidateDocumentsPanel({
   detail,
 }: CandidateDocumentsPanelProps) {
-  const resumeUrl = resolveMediaUrl(detail.uploadedResumeUrl);
+  const hasResume = Boolean(detail.hasUploadedResume);
   const fileName = detail.uploadedResumeName || "Uploaded Resume";
   const previewKind = detectPreviewKind(fileName);
   const titleId = useId();
@@ -44,9 +45,11 @@ export function CandidateDocumentsPanel({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isPreviewOpen || !resumeUrl || previewKind === "unsupported") {
+    if (!isPreviewOpen || !hasResume || previewKind === "unsupported") {
       return;
     }
 
@@ -59,20 +62,16 @@ export function CandidateDocumentsPanel({
       setPreviewUrl(null);
 
       try {
-        const response = await fetch(resumeUrl);
-        if (!response.ok) {
-          throw new Error("Unable to load resume preview.");
-        }
-        const blob = await response.blob();
-        if (cancelled) {
-          return;
-        }
+        const { blob } = await fetchOperationsCandidateResumeBlob(
+          detail.jobSeekerId || detail.id,
+        );
+        if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
         setPreviewUrl(objectUrl);
       } catch {
         if (!cancelled) {
           setPreviewError(
-            "Unable to load resume preview. You can still download the file.",
+            "Unable to load resume preview. You can still try downloading the file.",
           );
         }
       } finally {
@@ -90,7 +89,7 @@ export function CandidateDocumentsPanel({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [isPreviewOpen, resumeUrl, previewKind]);
+  }, [isPreviewOpen, hasResume, previewKind, detail.jobSeekerId, detail.id]);
 
   useEffect(() => {
     if (!isPreviewOpen) {
@@ -122,10 +121,32 @@ export function CandidateDocumentsPanel({
 
   const openPreview = () => {
     if (previewKind === "unsupported") {
-      window.open(resumeUrl, "_blank", "noopener,noreferrer");
+      void handleDownload();
       return;
     }
     setIsPreviewOpen(true);
+  };
+
+  const handleDownload = async () => {
+    if (!hasResume || isDownloading) return;
+    setIsDownloading(true);
+    setActionError(null);
+    try {
+      const { blob, fileName: resolvedName } =
+        await fetchOperationsCandidateResumeBlob(
+          detail.jobSeekerId || detail.id,
+        );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = resolvedName || fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setActionError("Unable to download resume. Check your permissions.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const previewDialog =
@@ -156,15 +177,15 @@ export function CandidateDocumentsPanel({
                   <p className="truncate text-[11px] text-muted">{fileName}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <a
-                    href={resumeUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => void handleDownload()}
+                    disabled={isDownloading}
                     className={actionButtonClassName}
                   >
-                    <ExternalLink className="size-3.5" aria-hidden="true" />
-                    Open
-                  </a>
+                    <Download className="size-3.5" aria-hidden="true" />
+                    Download
+                  </button>
                   <button
                     ref={closeButtonRef}
                     type="button"
@@ -189,16 +210,15 @@ export function CandidateDocumentsPanel({
                     <p className="text-sm font-medium text-danger">
                       {previewError}
                     </p>
-                    <a
-                      href={resumeUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      download={detail.uploadedResumeName || undefined}
+                    <button
+                      type="button"
+                      onClick={() => void handleDownload()}
+                      disabled={isDownloading}
                       className={actionButtonClassName}
                     >
                       <Download className="size-3.5" aria-hidden="true" />
                       Download
-                    </a>
+                    </button>
                   </div>
                 ) : null}
 
@@ -227,62 +247,70 @@ export function CandidateDocumentsPanel({
       : null;
 
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-      <h3 className="text-sm font-semibold text-foreground">Documents</h3>
-
-      {!resumeUrl ? (
-        <div className="mt-4 rounded-lg border border-dashed border-border-subtle px-4 py-10 text-center">
-          <p className="text-sm font-medium text-foreground">No documents</p>
-          <p className="mt-1 text-xs text-muted">
-            This candidate has not uploaded a resume file.
+    <OperationsCanKey
+      permissionKey="candidates.profile.documents.view"
+      fallback={
+        <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+          <h3 className="text-sm font-semibold text-foreground">Documents</h3>
+          <p className="mt-4 text-xs text-muted">
+            You do not have permission to view candidate documents.
           </p>
-        </div>
-      ) : (
-        <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border-subtle bg-hero-bg/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="inline-flex size-10 items-center justify-center rounded-lg bg-primary-light text-primary">
-              <FileText className="size-5" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-foreground">
-                {fileName}
-              </p>
-              <p className="mt-0.5 text-[11px] text-muted">Resume document</p>
+        </section>
+      }
+    >
+      <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+        <h3 className="text-sm font-semibold text-foreground">Documents</h3>
+
+        {!hasResume ? (
+          <div className="mt-4 rounded-lg border border-dashed border-border-subtle px-4 py-10 text-center">
+            <p className="text-sm font-medium text-foreground">No documents</p>
+            <p className="mt-1 text-xs text-muted">
+              This candidate has not uploaded a resume file.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border-subtle bg-hero-bg/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="inline-flex size-10 items-center justify-center rounded-lg bg-primary-light text-primary">
+                <FileText className="size-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-semibold text-foreground">
+                  {fileName}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted">Resume document</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={openPreview}
+                className={actionButtonClassName}
+              >
+                <Eye className="size-3.5" aria-hidden="true" />
+                Preview
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDownload()}
+                disabled={isDownloading}
+                className={actionButtonClassName}
+              >
+                <Download className="size-3.5" aria-hidden="true" />
+                {isDownloading ? "Downloading…" : "Download"}
+              </button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={openPreview}
-              className={actionButtonClassName}
-            >
-              <Eye className="size-3.5" aria-hidden="true" />
-              Preview
-            </button>
-            <a
-              href={resumeUrl}
-              target="_blank"
-              rel="noreferrer"
-              className={actionButtonClassName}
-            >
-              <ExternalLink className="size-3.5" aria-hidden="true" />
-              Open
-            </a>
-            <a
-              href={resumeUrl}
-              target="_blank"
-              rel="noreferrer"
-              download={detail.uploadedResumeName || undefined}
-              className={actionButtonClassName}
-            >
-              <Download className="size-3.5" aria-hidden="true" />
-              Download
-            </a>
-          </div>
-        </div>
-      )}
+        )}
 
-      {previewDialog}
-    </section>
+        {actionError ? (
+          <p className="mt-2 text-[11px] text-danger" role="alert">
+            {actionError}
+          </p>
+        ) : null}
+
+        {previewDialog}
+      </section>
+    </OperationsCanKey>
   );
 }

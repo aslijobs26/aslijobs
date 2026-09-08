@@ -68,6 +68,12 @@ employerRouter.patch(
 );
 
 employerRouter.post(
+  "/me/verification/resubmit",
+  asyncHandler(requireEmployerAuth),
+  asyncHandler(employerController.resubmitVerification),
+);
+
+employerRouter.post(
   "/register",
   validate(registerEmployerSchema, "body"),
   asyncHandler(employerController.register),

@@ -36,7 +36,7 @@ export const EMPLOYER_REGISTER_DOCUMENT_VERIFICATION_SUBTITLE =
   "Upload one valid Government ID for identity verification.";
 
 export const EMPLOYER_REGISTER_BUSINESS_VERIFICATION_TITLE =
-  "Company/Business Verification*";
+  "Company/Business Verification";
 
 export type EmployerRegisterCompanyStrengthOption = EmployerRegisterSelectOption & {
   minimumEmployees: number;

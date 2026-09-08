@@ -1,5 +1,8 @@
 "use client";
 
+import { FieldError } from "@/components/auth/FieldError";
+import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
+import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import {
   EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES,
   EMPLOYER_REGISTER_IMAGE_ACCEPT,
@@ -19,9 +22,14 @@ import {
 type EmployerImageUploadFieldProps = {
   label: string;
   optional?: boolean;
+  required?: boolean;
+  name?: string;
+  error?: string | null;
+  errorId?: string;
   preview: EmployerRegisterImagePreview | null;
   existingImageUrl?: string | null;
   onPreviewChange: (preview: EmployerRegisterImagePreview | null) => void;
+  onInvalidFile?: (message: string) => void;
   onRemoveExisting?: () => void;
 };
 
@@ -37,30 +45,42 @@ function formatFileSize(sizeBytes: number) {
   return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function isAcceptedImageFile(file: File) {
+function getImageFileError(file: File): string | null {
   const extension = file.name.split(".").pop()?.toLowerCase();
   const allowedExtensions = new Set(["png", "jpg", "jpeg", "webp"]);
 
-  return (
-    allowedExtensions.has(extension ?? "") &&
-    file.type.startsWith("image/") &&
-    file.size <= EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES
-  );
+  if (!allowedExtensions.has(extension ?? "") || !file.type.startsWith("image/")) {
+    return AUTH_VALIDATION_MESSAGES.FILE_TYPE_INVALID;
+  }
+
+  if (file.size > EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES) {
+    return AUTH_VALIDATION_MESSAGES.FILE_SIZE_INVALID;
+  }
+
+  return null;
 }
 
 export function EmployerImageUploadField({
   label,
   optional = false,
+  required = false,
+  name,
+  error = null,
+  errorId,
   preview,
   existingImageUrl = null,
   onPreviewChange,
+  onInvalidFile,
   onRemoveExisting,
 }: EmployerImageUploadFieldProps) {
-  const inputId = useId();
+  const generatedId = useId();
+  const inputId = name ? `${name}-upload` : generatedId;
+  const resolvedErrorId = errorId ?? (name ? `${name}-error` : undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const objectUrl = preview?.previewUrl ?? null;
   const displayUrl = objectUrl || existingImageUrl || null;
   const fieldLabel = optional ? `${label} (Optional)` : label;
+  const isRequired = required && !optional;
 
   useEffect(() => {
     return () => {
@@ -71,7 +91,13 @@ export function EmployerImageUploadField({
   }, [objectUrl]);
 
   const applySelectedFile = (file: File | undefined) => {
-    if (!file || !isAcceptedImageFile(file)) {
+    if (!file) {
+      return;
+    }
+
+    const fileError = getImageFileError(file);
+    if (fileError) {
+      onInvalidFile?.(fileError);
       return;
     }
 
@@ -124,14 +150,18 @@ export function EmployerImageUploadField({
 
   return (
     <div className="employer-register-form-stack">
-      <p className="employer-register-form-label employer-register-form-label--with-icon">
+      <RequiredFieldLabel
+        htmlFor={inputId}
+        required={isRequired}
+        className="employer-register-form-label employer-register-form-label--with-icon"
+      >
         <Images
           className="employer-register-form-label-icon"
           strokeWidth={2}
           aria-hidden="true"
         />
         {fieldLabel}
-      </p>
+      </RequiredFieldLabel>
 
       {displayUrl ? (
         <div className="employer-register-document-preview">
@@ -167,10 +197,14 @@ export function EmployerImageUploadField({
         </div>
       ) : (
         <div
+          id={name}
           className="employer-register-document-dropzone"
           role="button"
           tabIndex={0}
           aria-label={`${fieldLabel}. ${EMPLOYER_REGISTER_IMAGE_UPLOAD_HINT}`}
+          aria-invalid={Boolean(error) || undefined}
+          aria-required={isRequired || undefined}
+          aria-describedby={error ? resolvedErrorId : undefined}
           onClick={openFileBrowser}
           onKeyDown={handleUploadKeyDown}
           onDragOver={handleDragOver}
@@ -197,12 +231,15 @@ export function EmployerImageUploadField({
       <input
         ref={fileInputRef}
         id={inputId}
+        name={name ? `${name}File` : undefined}
         type="file"
         accept={EMPLOYER_REGISTER_IMAGE_ACCEPT}
         className="sr-only"
         tabIndex={-1}
         onChange={handleFileInputChange}
       />
+
+      <FieldError id={resolvedErrorId} message={error} />
     </div>
   );
 }

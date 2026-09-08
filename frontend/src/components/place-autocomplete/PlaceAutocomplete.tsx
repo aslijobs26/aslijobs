@@ -35,6 +35,10 @@ export type PlaceAutocompleteProps = {
   selectedState?: string;
   disabled?: boolean;
   placeholder?: string;
+  name?: string;
+  "aria-invalid"?: boolean;
+  "aria-required"?: boolean;
+  "aria-describedby"?: string;
   showIcon?: boolean;
   iconClassName?: string;
   controlClassName?: string;
@@ -78,6 +82,10 @@ export function PlaceAutocomplete({
   selectedState = "",
   disabled = false,
   placeholder,
+  name,
+  "aria-invalid": ariaInvalid,
+  "aria-required": ariaRequired,
+  "aria-describedby": ariaDescribedBy,
   showIcon = true,
   iconClassName = "text-foreground",
   controlClassName = DEFAULT_CONTROL_CLASS_NAME,
@@ -275,11 +283,15 @@ export function PlaceAutocomplete({
         ) : null}
         <input
           id={id}
+          name={name}
           type="text"
           role="combobox"
           aria-expanded={showDropdown}
           aria-controls={listboxId}
           aria-autocomplete="list"
+          aria-invalid={ariaInvalid}
+          aria-required={ariaRequired}
+          aria-describedby={ariaDescribedBy}
           aria-activedescendant={
             highlightedIndex >= 0
               ? `${listboxId}-option-${highlightedIndex}`

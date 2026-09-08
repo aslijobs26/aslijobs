@@ -8,7 +8,7 @@ export const JOB_SEEKER_LOGIN_REGISTER_PROMPT = "Don't have an account?";
 
 export const JOB_SEEKER_LOGIN_REGISTER_LABEL = "Register";
 
-export const JOB_SEEKER_LOGIN_WHATSAPP_LABEL = "WhatsApp Number*";
+export const JOB_SEEKER_LOGIN_WHATSAPP_LABEL = "WhatsApp Number";
 
 export const JOB_SEEKER_LOGIN_WHATSAPP_PLACEHOLDER = "Enter WhatsApp Number";
 

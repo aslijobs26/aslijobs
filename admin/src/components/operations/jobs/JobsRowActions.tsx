@@ -133,6 +133,9 @@ export function JobsRowActions({
   ).filter((item) => canKey(JOB_ACTION_PERMISSION_KEYS[item.action]));
   const isUpdating = pendingStatusJobId === job.jobId;
   const includeStatusActions = statusActions.length > 0 && Boolean(onStatusAction);
+  const approvalBlockedByVerification =
+    job.employer.verificationStatus !== "verified" &&
+    (job.status === "pending_approval" || Boolean(job.isLiveChangeReview));
   const menuHeightEstimate = estimateMenuHeight(
     statusActions.length,
     includeStatusActions,
@@ -261,23 +264,39 @@ export function JobsRowActions({
           />
           {statusActions.map((item) => {
             const Icon = item.icon;
+            const isApproveBlocked =
+              item.action === "approve" && approvalBlockedByVerification;
 
             return (
               <button
                 key={item.action}
                 type="button"
                 role="menuitem"
-                disabled={isUpdating}
-                onClick={() => handleStatusAction(item.action)}
+                disabled={isUpdating || isApproveBlocked}
+                title={
+                  isApproveBlocked
+                    ? "Approval blocked — Employer verification required."
+                    : undefined
+                }
+                onClick={() => {
+                  if (isApproveBlocked) {
+                    return;
+                  }
+                  handleStatusAction(item.action);
+                }}
                 className={cn(
-                  "flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors disabled:cursor-wait disabled:opacity-60",
+                  "flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                   item.tone === "danger"
                     ? "text-danger hover:bg-danger/10"
                     : "text-foreground hover:bg-primary-light hover:text-primary",
                 )}
               >
                 <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-                {isUpdating ? "Updating…" : item.label}
+                {isUpdating
+                  ? "Updating…"
+                  : isApproveBlocked
+                    ? "Approve (verification required)"
+                    : item.label}
               </button>
             );
           })}

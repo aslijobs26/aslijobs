@@ -10,6 +10,16 @@ export const JOB_SEEKER_GENDERS = [
   "prefer_not_to_say",
 ] as const;
 
+export const JOB_SEEKER_GENDER_LABELS: Record<
+  (typeof JOB_SEEKER_GENDERS)[number],
+  string
+> = {
+  male: "Male",
+  female: "Female",
+  other: "Other",
+  prefer_not_to_say: "Prefer not to say",
+};
+
 export const JOB_SEEKER_JOB_TYPES = [
   "full-time",
   "part-time",

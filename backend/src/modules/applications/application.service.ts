@@ -10,6 +10,7 @@ import { resolveEmployerPosterImageUrl } from "../employers/employer-poster-imag
 import { EmployerModel } from "../employers/employer.model.js";
 import { JobModel } from "../jobs/job.model.js";
 import { ensureEmployerJobRelationsConsistent } from "../jobs/job-cascade-delete.js";
+import { isJobPubliclyEligible } from "../jobs/public-job-eligibility.js";
 import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
 import { generateResumePdfFromJson } from "../resumes/pdf/index.js";
 import { resumeService } from "../resumes/resume.service.js";
@@ -130,6 +131,56 @@ function buildResumeSnapshot(resume: {
       : (resumeJson.meta?.generatedAt ?? null),
     status: resume.status,
   };
+}
+
+/**
+ * Keep application snapshot identity aligned with the JobSeeker account that applied.
+ * Resume ATS/header text can diverge from the live profile; Operations links by jobSeekerId.
+ */
+function alignResumeSnapshotWithJobSeeker(
+  snapshot: ApplicationResumeSnapshot,
+  jobSeeker: {
+    fullName?: string | null;
+    whatsappNumber?: string | null;
+    city?: string | null;
+    state?: string | null;
+  } | null,
+): ApplicationResumeSnapshot {
+  if (!jobSeeker) {
+    return snapshot;
+  }
+
+  const fullName = text(jobSeeker.fullName);
+  const phone = text(jobSeeker.whatsappNumber);
+  const city = text(jobSeeker.city);
+  const state = text(jobSeeker.state);
+
+  if (!fullName && !phone && !city && !state) {
+    return snapshot;
+  }
+
+  const header = snapshot.resumeJson.header ?? {};
+  const contact = snapshot.resumeJson.sections?.contact ?? {};
+
+  snapshot.resumeJson.header = {
+    ...header,
+    ...(fullName ? { fullName } : {}),
+    ...(phone ? { phone } : {}),
+    ...(city ? { city } : {}),
+    ...(state ? { state } : {}),
+  };
+
+  if (snapshot.resumeJson.sections) {
+    snapshot.resumeJson.sections.contact = {
+      ...contact,
+      ...(fullName ? { fullName } : {}),
+      ...(phone ? { phone } : {}),
+      ...(city ? { city } : {}),
+      ...(state ? { state } : {}),
+    };
+  }
+
+  return snapshot;
 }
 
 function text(value: unknown): string {
@@ -762,6 +813,26 @@ export class ApplicationService {
       throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
     }
 
+    const employerLookupId =
+      (job.employerId && String(job.employerId)) ||
+      (job.companyId && String(job.companyId)) ||
+      "";
+    const employer =
+      employerLookupId && mongoose.Types.ObjectId.isValid(employerLookupId)
+        ? await EmployerModel.findById(employerLookupId)
+            .select("verificationStatus")
+            .lean()
+        : null;
+
+    if (
+      !isJobPubliclyEligible({
+        creationSource: job.creationSource,
+        employer,
+      })
+    ) {
+      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+    }
+
     const existing = await ApplicationModel.findOne({
       jobSeekerId: input.jobSeekerId,
       jobId: job._id,
@@ -816,6 +887,10 @@ export class ApplicationService {
     }
 
     const resumeSnapshot = buildResumeSnapshot(resume);
+    const jobSeeker = await JobSeekerModel.findById(input.jobSeekerId)
+      .select("fullName whatsappNumber city state")
+      .lean();
+    alignResumeSnapshotWithJobSeeker(resumeSnapshot, jobSeeker);
     const appliedAt = new Date();
 
     let application;

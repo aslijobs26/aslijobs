@@ -691,6 +691,7 @@ export async function loadJobsAnalyticsCharts(
       _id: { state: string; city: string };
       count: number;
     }>([
+      { $match: { status: "active" } },
       {
         $project: {
           state: {
@@ -714,6 +715,7 @@ export async function loadJobsAnalyticsCharts(
       },
     ]),
     JobModel.aggregate<{ _id: string; count: number }>([
+      { $match: { status: "active" } },
       {
         $project: {
           cityName: {
@@ -727,6 +729,7 @@ export async function loadJobsAnalyticsCharts(
       { $limit: 12 },
     ]),
     JobModel.aggregate<{ _id: string; count: number }>([
+      { $match: { status: "active" } },
       {
         $project: {
           location: {

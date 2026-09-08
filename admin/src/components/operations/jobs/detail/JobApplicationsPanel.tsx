@@ -1,11 +1,13 @@
-import { MoreVertical } from "lucide-react";
-import { JobsPaginationBar } from "../JobsPaginationBar";
-import { OperationsBadge } from "../../../ui/OperationsBadge";
-import { OperationsCard } from "../../../ui/OperationsCard";
+import { Link } from "react-router-dom";
+import { operationsCandidateDetailPath } from "../../../../constants/operations-routes";
 import type {
   OperationsJobApplicationItem,
   OperationsJobsPagination,
 } from "../../../../types/operations-jobs";
+import { resolveMediaUrl } from "../../../../utils/resolve-media-url";
+import { OperationsBadge } from "../../../ui/OperationsBadge";
+import { OperationsCard } from "../../../ui/OperationsCard";
+import { JobsPaginationBar } from "../JobsPaginationBar";
 import {
   candidateInitials,
   formatOperationsDateTime,
@@ -43,6 +45,33 @@ function applicationBadgeVariant(
     default:
       return "medium";
   }
+}
+
+const viewDetailsClassName =
+  "rounded-md border border-border-subtle px-2 py-1 text-[11px] font-semibold text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+
+function CandidateAvatar({
+  name,
+  photoUrl,
+}: {
+  name: string;
+  photoUrl: string | null | undefined;
+}) {
+  const resolvedPhoto = resolveMediaUrl(photoUrl);
+
+  return (
+    <span className="inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[10px] font-semibold text-primary">
+      {resolvedPhoto ? (
+        <img
+          src={resolvedPhoto}
+          alt=""
+          className="size-full object-cover"
+        />
+      ) : (
+        candidateInitials(name)
+      )}
+    </span>
+  );
 }
 
 export function JobApplicationsPanel({
@@ -115,103 +144,140 @@ export function JobApplicationsPanel({
                 </tr>
               </thead>
               <tbody>
-                {applications.map((application) => (
-                  <tr
-                    key={application.id}
-                    className="border-b border-border-subtle/80 last:border-0"
-                  >
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-light text-[10px] font-semibold text-primary">
-                          {candidateInitials(application.candidateName)}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold text-foreground">
-                            {application.candidateName}
-                          </p>
-                          <p className="truncate text-[11px] text-muted">
-                            {application.candidateHeadline || "View Profile →"}
-                          </p>
+                {applications.map((application) => {
+                  const profilePath = application.jobSeekerId
+                    ? operationsCandidateDetailPath(application.jobSeekerId)
+                    : null;
+
+                  return (
+                    <tr
+                      key={application.id}
+                      className="border-b border-border-subtle/80 last:border-0"
+                    >
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <CandidateAvatar
+                            name={application.candidateName}
+                            photoUrl={application.profilePhotoUrl}
+                          />
+                          <div className="min-w-0">
+                            {profilePath ? (
+                              <Link
+                                to={profilePath}
+                                className="block truncate font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                              >
+                                {application.candidateName}
+                              </Link>
+                            ) : (
+                              <p className="truncate font-semibold text-foreground">
+                                {application.candidateName}
+                              </p>
+                            )}
+                            <p className="truncate text-[11px] text-muted">
+                              {application.candidateHeadline || "Candidate"}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-muted">
-                      <p>{application.candidatePhone || "—"}</p>
-                      <p className="text-[11px]">
-                        {application.candidateLocation || "—"}
-                      </p>
-                    </td>
-                    <td className="px-3 py-3 text-foreground">
-                      {application.candidateExperienceLabel || "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-muted">
-                      {formatOperationsDateTime(application.appliedAt)}
-                    </td>
-                    <td className="px-3 py-3 text-muted">
-                      {application.sourceLabel}
-                    </td>
-                    <td className="px-3 py-3">
-                      <OperationsBadge
-                        variant={applicationBadgeVariant(application.status)}
-                      >
-                        {application.statusLabel}
-                      </OperationsBadge>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <button
-                          type="button"
-                          className="rounded-md border border-border-subtle px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      </td>
+                      <td className="px-3 py-3 text-muted">
+                        <p>{application.candidatePhone || "—"}</p>
+                        <p className="text-[11px]">
+                          {application.candidateLocation || "—"}
+                        </p>
+                      </td>
+                      <td className="px-3 py-3 text-foreground">
+                        {application.candidateExperienceLabel || "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 text-muted">
+                        {formatOperationsDateTime(application.appliedAt)}
+                      </td>
+                      <td className="px-3 py-3 text-muted">
+                        {application.sourceLabel}
+                      </td>
+                      <td className="px-3 py-3">
+                        <OperationsBadge
+                          variant={applicationBadgeVariant(application.status)}
                         >
-                          View Details
-                        </button>
-                        <button
-                          type="button"
-                          className="inline-flex size-7 items-center justify-center rounded-md text-muted hover:bg-hero-bg"
-                          aria-label={`More actions for ${application.candidateName}`}
-                        >
-                          <MoreVertical className="size-3.5" aria-hidden="true" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {application.statusLabel}
+                        </OperationsBadge>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        {profilePath ? (
+                          <Link
+                            to={profilePath}
+                            className={viewDetailsClassName}
+                            aria-label={`View profile for ${application.candidateName}`}
+                          >
+                            View Details
+                          </Link>
+                        ) : (
+                          <span className="text-[11px] text-muted">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           <ul className="divide-y divide-border-subtle md:hidden">
-            {applications.map((application) => (
-              <li key={application.id} className="px-3 py-3">
-                <div className="flex items-start gap-2">
-                  <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-light text-[10px] font-semibold text-primary">
-                    {candidateInitials(application.candidateName)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground">
-                      {application.candidateName}
-                    </p>
-                    <p className="text-[11px] text-muted">
-                      {application.candidateExperienceLabel || "—"}
-                    </p>
-                    <p className="mt-1 text-[11px] text-muted">
-                      {application.candidatePhone || "—"} ·{" "}
-                      {application.candidateLocation || "—"}
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <OperationsBadge
-                        variant={applicationBadgeVariant(application.status)}
-                      >
-                        {application.statusLabel}
-                      </OperationsBadge>
-                      <span className="text-[11px] text-muted">
-                        {formatOperationsDateTime(application.appliedAt)}
-                      </span>
+            {applications.map((application) => {
+              const profilePath = application.jobSeekerId
+                ? operationsCandidateDetailPath(application.jobSeekerId)
+                : null;
+
+              return (
+                <li key={application.id} className="px-3 py-3">
+                  <div className="flex items-start gap-2">
+                    <CandidateAvatar
+                      name={application.candidateName}
+                      photoUrl={application.profilePhotoUrl}
+                    />
+                    <div className="min-w-0 flex-1">
+                      {profilePath ? (
+                        <Link
+                          to={profilePath}
+                          className="font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                        >
+                          {application.candidateName}
+                        </Link>
+                      ) : (
+                        <p className="font-semibold text-foreground">
+                          {application.candidateName}
+                        </p>
+                      )}
+                      <p className="text-[11px] text-muted">
+                        {application.candidateExperienceLabel || "—"}
+                      </p>
+                      <p className="mt-1 text-[11px] text-muted">
+                        {application.candidatePhone || "—"} ·{" "}
+                        {application.candidateLocation || "—"}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <OperationsBadge
+                          variant={applicationBadgeVariant(application.status)}
+                        >
+                          {application.statusLabel}
+                        </OperationsBadge>
+                        <span className="text-[11px] text-muted">
+                          {formatOperationsDateTime(application.appliedAt)}
+                        </span>
+                        {profilePath ? (
+                          <Link
+                            to={profilePath}
+                            className={viewDetailsClassName}
+                            aria-label={`View profile for ${application.candidateName}`}
+                          >
+                            View Details
+                          </Link>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         </>
       ) : null}

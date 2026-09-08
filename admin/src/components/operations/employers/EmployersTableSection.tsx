@@ -215,8 +215,18 @@ export function EmployersTableSection({
                           )}
                         </span>
                         <div className="min-w-0">
-                          <span className="block truncate text-xs font-semibold text-foreground hover:text-primary xl:text-[11px]">
-                            {companyName}
+                          <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                            <span className="truncate text-xs font-semibold text-foreground hover:text-primary xl:text-[11px]">
+                              {companyName}
+                            </span>
+                            {emp.isNewRegistration ? (
+                              <OperationsBadge
+                                variant="high"
+                                className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
+                              >
+                                <span aria-label="New registration">NEW</span>
+                              </OperationsBadge>
+                            ) : null}
                           </span>
                           <span className="mt-0.5 block font-mono text-[11px] text-muted xl:text-[10px]">
                             {emp.displayId}

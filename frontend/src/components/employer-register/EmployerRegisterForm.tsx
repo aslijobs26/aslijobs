@@ -1,5 +1,8 @@
 "use client";
 
+import { FieldError } from "@/components/auth/FieldError";
+import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
+import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import {
   EMPLOYER_REGISTER_ACCOUNT_TYPE_LABEL,
   EMPLOYER_REGISTER_ACCOUNT_TYPE_OPTIONS,
@@ -13,11 +16,12 @@ import {
   isBusinessEmployerAccountType,
   isValidEmployerWhatsappNumber,
 } from "@/constants/employer-register";
+import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
 import {
+  completeEmployerIndividualIdentity,
   registerEmployerAccount,
   resendEmployerOtp,
   verifyEmployerOtp,
-  completeEmployerIndividualIdentity,
 } from "@/services/employer-register.service";
 import type {
   EmployerRegisterAccountType,
@@ -26,33 +30,39 @@ import type {
   EmployerRegisterFormData,
   EmployerRegisterImagePreview,
 } from "@/types/employer-register";
+import {
+  clearFieldError,
+  focusFirstInvalidField,
+  mergeFieldErrors,
+  type AuthFieldErrors,
+} from "@/utils/auth-field-errors";
 import { cn } from "@/utils/cn";
 import { establishEmployerClientSession } from "@/utils/employer-session";
-import { isAxiosError } from "axios";
+import { normalizeApiError } from "@/utils/normalize-api-error";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { EmployerRegisterDocumentVerification } from "./EmployerRegisterDocumentVerification";
 import { EmployerRegisterOtpSection } from "./EmployerRegisterOtpSection";
-import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
 
 const EMPTY_OTP_DIGITS = Array.from(
   { length: EMPLOYER_REGISTER_OTP_LENGTH },
   () => "",
 );
 
-function getErrorMessage(error: unknown, fallback: string) {
-  if (isAxiosError(error)) {
-    const message = error.response?.data?.message;
-    if (typeof message === "string" && message.trim()) {
-      return message;
-    }
+const OTP_FIELD_MESSAGES = new Set<string>([
+  AUTH_VALIDATION_MESSAGES.OTP_REQUIRED,
+  AUTH_VALIDATION_MESSAGES.OTP_INVALID,
+  AUTH_VALIDATION_MESSAGES.OTP_EXPIRED,
+  AUTH_VALIDATION_MESSAGES.OTP_TOO_MANY,
+]);
+
+function isValidOptionalEmail(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return true;
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 }
 
 function AccountTypeRadioIndicator({ checked }: { checked: boolean }) {
@@ -97,6 +107,7 @@ export function EmployerRegisterForm({
     useState<EmployerRegisterImagePreview | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const { secondsLeft, isCoolingDown, startCooldown, resetCooldown } =
     useOtpResendCooldown();
 
@@ -104,8 +115,8 @@ export function EmployerRegisterForm({
   const isBusinessAccount = isBusinessEmployerAccountType(accountType);
   const isIndividualAccount = accountType === "individual";
   const businessNameLabel = isConsultancyAccount
-    ? "Consultancy Name*"
-    : "Company/Business Name*";
+    ? "Consultancy Name"
+    : "Company/Business Name";
   const businessNamePlaceholder = isConsultancyAccount
     ? "Enter Consultancy Name"
     : "Enter company name";
@@ -134,10 +145,62 @@ export function EmployerRegisterForm({
     return () => cancelAnimationFrame(frameId);
   }, [isIndividualAccount]);
 
+  const clearField = (field: string) => {
+    setFieldErrors((current) => clearFieldError(current, field));
+  };
+
+  const applyApiError = (error: unknown, fallback: string) => {
+    const normalized = normalizeApiError(error);
+    const nextFieldErrors = { ...normalized.fieldErrors };
+
+    if (
+      !nextFieldErrors.otp &&
+      OTP_FIELD_MESSAGES.has(normalized.message)
+    ) {
+      nextFieldErrors.otp = normalized.message;
+    }
+
+    if (normalized.status === 429 && !nextFieldErrors.otp) {
+      nextFieldErrors.otp = AUTH_VALIDATION_MESSAGES.OTP_TOO_MANY;
+    }
+
+    setFieldErrors((current) => mergeFieldErrors(current, nextFieldErrors));
+
+    const fieldKeys = Object.keys(nextFieldErrors);
+    const hasOnlyScopedFieldError =
+      fieldKeys.length === 1 &&
+      (Boolean(nextFieldErrors.otp) ||
+        Boolean(nextFieldErrors.whatsappNumber) ||
+        Boolean(nextFieldErrors.emailAddress));
+
+    if (hasOnlyScopedFieldError) {
+      // Field-level alert is enough (e.g. Duplicate WhatsApp Number).
+      setErrorMessage(null);
+    } else {
+      setErrorMessage(
+        normalized.message ||
+          fallback ||
+          AUTH_VALIDATION_MESSAGES.GENERIC_SUBMIT_ERROR,
+      );
+    }
+
+    if (fieldKeys.length > 0) {
+      focusFirstInvalidField(nextFieldErrors);
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      document
+        .getElementById("employer-register-form-error")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+
   const handleAccountTypeChange = (value: EmployerRegisterAccountType) => {
     setAccountType(value);
     setEmployerId(null);
     setErrorMessage(null);
+    setFieldErrors({});
 
     if (value !== "individual") {
       setDocumentType(null);
@@ -151,6 +214,7 @@ export function EmployerRegisterForm({
     value: EmployerRegisterFormData[K],
   ) => {
     setFormData((current) => ({ ...current, [field]: value }));
+    clearField(field);
 
     if (field === "whatsappNumber" && (isOtpVisible || isWhatsappVerified)) {
       setIsOtpVisible(false);
@@ -158,31 +222,61 @@ export function EmployerRegisterForm({
       setOtpDigits(EMPTY_OTP_DIGITS);
       setEmployerId(null);
       resetCooldown();
+      clearField("otp");
     }
   };
 
-  const requestOtp = async () => {
+  const validateBeforeRequestOtp = (): AuthFieldErrors => {
+    const errors: AuthFieldErrors = {};
+
     if (!isValidEmployerWhatsappNumber(formData.whatsappNumber)) {
-      setErrorMessage("Enter a valid 10-digit WhatsApp number");
-      return;
+      errors.whatsappNumber = formData.whatsappNumber.trim()
+        ? AUTH_VALIDATION_MESSAGES.WHATSAPP_INVALID
+        : AUTH_VALIDATION_MESSAGES.WHATSAPP_REQUIRED;
     }
 
     if (isBusinessAccount && !formData.companyName.trim()) {
-      setErrorMessage(
-        isConsultancyAccount
-          ? "Consultancy Name is required"
-          : "Company / Business Name is required",
-      );
-      return;
+      errors.companyName = isConsultancyAccount
+        ? AUTH_VALIDATION_MESSAGES.CONSULTANCY_NAME_REQUIRED
+        : AUTH_VALIDATION_MESSAGES.COMPANY_NAME_REQUIRED;
     }
 
     if (isIndividualAccount && !formData.establishmentName.trim()) {
-      setErrorMessage("Establishment Name is required");
+      errors.establishmentName =
+        AUTH_VALIDATION_MESSAGES.ESTABLISHMENT_NAME_REQUIRED;
+    }
+
+    if (!formData.firstName.trim()) {
+      errors.firstName = AUTH_VALIDATION_MESSAGES.FIRST_NAME_REQUIRED;
+    }
+
+    if (!formData.lastName.trim()) {
+      errors.lastName = AUTH_VALIDATION_MESSAGES.LAST_NAME_REQUIRED;
+    }
+
+    if (!isValidOptionalEmail(formData.emailAddress)) {
+      errors.emailAddress = AUTH_VALIDATION_MESSAGES.EMAIL_INVALID;
+    }
+
+    return errors;
+  };
+
+  const requestOtp = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    const clientErrors = validateBeforeRequestOtp();
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      setErrorMessage(null);
+      focusFirstInvalidField(clientErrors);
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(null);
+    setFieldErrors({});
 
     try {
       if (employerId) {
@@ -198,7 +292,7 @@ export function EmployerRegisterForm({
       setIsWhatsappVerified(false);
       setOtpDigits(EMPTY_OTP_DIGITS);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, "Failed to send OTP"));
+      applyApiError(error, AUTH_VALIDATION_MESSAGES.GENERIC_SUBMIT_ERROR);
     } finally {
       setIsSubmitting(false);
     }
@@ -206,6 +300,10 @@ export function EmployerRegisterForm({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
 
     if (!isWhatsappVerified) {
       if (isOtpVisible && isCoolingDown) {
@@ -221,24 +319,34 @@ export function EmployerRegisterForm({
     }
 
     if (isIndividualAccount) {
+      const identityErrors: AuthFieldErrors = {};
+
       if (!documentType) {
-        setErrorMessage("Select one identity document");
-        return;
+        identityErrors.documentType =
+          AUTH_VALIDATION_MESSAGES.DOCUMENT_TYPE_REQUIRED;
       }
 
       if (!documentPreview?.file) {
-        setErrorMessage("Upload your selected identity document");
+        identityErrors.documentFile =
+          AUTH_VALIDATION_MESSAGES.DOCUMENT_REQUIRED;
+      }
+
+      if (Object.keys(identityErrors).length > 0) {
+        setFieldErrors(identityErrors);
+        setErrorMessage(null);
+        focusFirstInvalidField(identityErrors);
         return;
       }
 
       setIsSubmitting(true);
       setErrorMessage(null);
+      setFieldErrors({});
 
       try {
         const session = await completeEmployerIndividualIdentity({
           employerId,
-          documentType,
-          documentFile: documentPreview.file,
+          documentType: documentType!,
+          documentFile: documentPreview!.file,
           profilePhotoFile: profilePhotoPreview?.file,
         });
         await establishEmployerClientSession(queryClient, {
@@ -247,9 +355,7 @@ export function EmployerRegisterForm({
         });
         onContinue(formData, accountType, employerId);
       } catch (error) {
-        setErrorMessage(
-          getErrorMessage(error, "Failed to complete individual registration"),
-        );
+        applyApiError(error, AUTH_VALIDATION_MESSAGES.GENERIC_SUBMIT_ERROR);
       } finally {
         setIsSubmitting(false);
       }
@@ -265,24 +371,35 @@ export function EmployerRegisterForm({
   };
 
   const handleVerifyOtp = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
     const otp = otpDigits.join("");
     const isComplete = otpDigits.every(
       (digit) => digit.length === 1 && /\d/.test(digit),
     );
 
     if (!isComplete || !employerId) {
-      setErrorMessage("Enter the 6-digit OTP");
+      const errors: AuthFieldErrors = {
+        otp: AUTH_VALIDATION_MESSAGES.OTP_REQUIRED,
+      };
+      setFieldErrors(errors);
+      setErrorMessage(null);
+      focusFirstInvalidField(errors);
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(null);
+    clearField("otp");
 
     try {
       await verifyEmployerOtp(employerId, otp);
       setIsWhatsappVerified(true);
+      setFieldErrors((current) => clearFieldError(current, "otp"));
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, "Invalid OTP"));
+      applyApiError(error, AUTH_VALIDATION_MESSAGES.OTP_INVALID);
     } finally {
       setIsSubmitting(false);
     }
@@ -350,14 +467,16 @@ export function EmployerRegisterForm({
             <div className="employer-register-form-stack">
               {isIndividualAccount ? (
                 <>
-                  <label
+                  <RequiredFieldLabel
                     htmlFor="establishment-name"
+                    required
                     className="employer-register-form-label"
                   >
-                    Establishment Name*
-                  </label>
+                    Establishment Name
+                  </RequiredFieldLabel>
                   <input
                     id="establishment-name"
+                    name="establishmentName"
                     type="text"
                     value={formData.establishmentName}
                     onChange={(event) =>
@@ -366,18 +485,31 @@ export function EmployerRegisterForm({
                     placeholder="Enter Establishment Name"
                     autoComplete="organization"
                     className="employer-register-form-input"
+                    aria-required="true"
+                    aria-invalid={Boolean(fieldErrors.establishmentName)}
+                    aria-describedby={
+                      fieldErrors.establishmentName
+                        ? "establishmentName-error"
+                        : undefined
+                    }
+                  />
+                  <FieldError
+                    id="establishmentName-error"
+                    message={fieldErrors.establishmentName}
                   />
                 </>
               ) : (
                 <>
-                  <label
+                  <RequiredFieldLabel
                     htmlFor="company-name"
+                    required={isBusinessAccount}
                     className="employer-register-form-label"
                   >
                     {businessNameLabel}
-                  </label>
+                  </RequiredFieldLabel>
                   <input
                     id="company-name"
+                    name="companyName"
                     type="text"
                     value={formData.companyName}
                     onChange={(event) =>
@@ -387,6 +519,15 @@ export function EmployerRegisterForm({
                     autoComplete="organization"
                     className="employer-register-form-input"
                     tabIndex={isBusinessAccount ? undefined : -1}
+                    aria-required={isBusinessAccount}
+                    aria-invalid={Boolean(fieldErrors.companyName)}
+                    aria-describedby={
+                      fieldErrors.companyName ? "companyName-error" : undefined
+                    }
+                  />
+                  <FieldError
+                    id="companyName-error"
+                    message={fieldErrors.companyName}
                   />
                 </>
               )}
@@ -396,42 +537,68 @@ export function EmployerRegisterForm({
 
         <div className="employer-register-form-row">
           <div className="employer-register-form-stack">
-            <label htmlFor="first-name" className="employer-register-form-label">
+            <RequiredFieldLabel
+              htmlFor="first-name"
+              required
+              className="employer-register-form-label"
+            >
               First Name
-            </label>
+            </RequiredFieldLabel>
             <input
               id="first-name"
+              name="firstName"
               type="text"
               value={formData.firstName}
               onChange={(event) => updateField("firstName", event.target.value)}
               placeholder={firstNamePlaceholder}
               autoComplete="given-name"
               className="employer-register-form-input"
+              aria-required="true"
+              aria-invalid={Boolean(fieldErrors.firstName)}
+              aria-describedby={
+                fieldErrors.firstName ? "firstName-error" : undefined
+              }
             />
+            <FieldError id="firstName-error" message={fieldErrors.firstName} />
           </div>
 
           <div className="employer-register-form-stack">
-            <label htmlFor="last-name" className="employer-register-form-label">
+            <RequiredFieldLabel
+              htmlFor="last-name"
+              required
+              className="employer-register-form-label"
+            >
               Last Name
-            </label>
+            </RequiredFieldLabel>
             <input
               id="last-name"
+              name="lastName"
               type="text"
               value={formData.lastName}
               onChange={(event) => updateField("lastName", event.target.value)}
               placeholder={lastNamePlaceholder}
               autoComplete="family-name"
               className="employer-register-form-input"
+              aria-required="true"
+              aria-invalid={Boolean(fieldErrors.lastName)}
+              aria-describedby={
+                fieldErrors.lastName ? "lastName-error" : undefined
+              }
             />
+            <FieldError id="lastName-error" message={fieldErrors.lastName} />
           </div>
         </div>
 
         <div className="employer-register-form-stack">
-          <label htmlFor="email-address" className="employer-register-form-label">
+          <RequiredFieldLabel
+            htmlFor="email-address"
+            className="employer-register-form-label"
+          >
             Email Address
-          </label>
+          </RequiredFieldLabel>
           <input
             id="email-address"
+            name="emailAddress"
             type="email"
             value={formData.emailAddress}
             onChange={(event) =>
@@ -440,15 +607,28 @@ export function EmployerRegisterForm({
             placeholder={emailPlaceholder}
             autoComplete="email"
             className="employer-register-form-input"
+            aria-invalid={Boolean(fieldErrors.emailAddress)}
+            aria-describedby={
+              fieldErrors.emailAddress ? "emailAddress-error" : undefined
+            }
+          />
+          <FieldError
+            id="emailAddress-error"
+            message={fieldErrors.emailAddress}
           />
         </div>
 
         <div className="employer-register-form-stack">
-          <label htmlFor="whatsapp-number" className="employer-register-form-label">
-            WhatsApp Number*
-          </label>
+          <RequiredFieldLabel
+            htmlFor="whatsapp-number"
+            required
+            className="employer-register-form-label"
+          >
+            WhatsApp Number
+          </RequiredFieldLabel>
           <input
             id="whatsapp-number"
+            name="whatsappNumber"
             type="tel"
             inputMode="numeric"
             value={formData.whatsappNumber}
@@ -461,6 +641,15 @@ export function EmployerRegisterForm({
             placeholder={whatsappPlaceholder}
             autoComplete="tel"
             className="employer-register-form-input"
+            aria-required="true"
+            aria-invalid={Boolean(fieldErrors.whatsappNumber)}
+            aria-describedby={
+              fieldErrors.whatsappNumber ? "whatsappNumber-error" : undefined
+            }
+          />
+          <FieldError
+            id="whatsappNumber-error"
+            message={fieldErrors.whatsappNumber}
           />
           {canSendOtp ? (
             <button
@@ -479,7 +668,11 @@ export function EmployerRegisterForm({
             isVerified={isWhatsappVerified}
             isSubmitting={isSubmitting}
             resendSecondsLeft={secondsLeft}
-            onOtpChange={setOtpDigits}
+            otpError={fieldErrors.otp}
+            onOtpChange={(next) => {
+              setOtpDigits(next);
+              clearField("otp");
+            }}
             onVerify={() => {
               void handleVerifyOtp();
             }}
@@ -491,11 +684,6 @@ export function EmployerRegisterForm({
           />
         ) : null}
 
-        {/*
-          Company flow must not keep Document Verification mounted.
-          CSS-only collapse (opacity:0 + 0fr) still left that large block in the
-          scrollable overflow, creating blank space below Create Account.
-        */}
         {isIndividualAccount ? (
           <div
             className="employer-register-document-field"
@@ -506,16 +694,32 @@ export function EmployerRegisterForm({
                 documentType={documentType}
                 documentPreview={documentPreview}
                 profilePhotoPreview={profilePhotoPreview}
+                documentTypeError={fieldErrors.documentType}
+                documentFileError={fieldErrors.documentFile}
                 onDocumentTypeChange={setDocumentType}
                 onDocumentPreviewChange={setDocumentPreview}
                 onProfilePhotoPreviewChange={setProfilePhotoPreview}
+                onDocumentTypeErrorClear={() => clearField("documentType")}
+                onDocumentFileErrorChange={(message) => {
+                  if (message) {
+                    setFieldErrors((current) =>
+                      mergeFieldErrors(current, { documentFile: message }),
+                    );
+                  } else {
+                    clearField("documentFile");
+                  }
+                }}
               />
             </div>
           </div>
         ) : null}
 
         {errorMessage ? (
-          <p className="text-sm font-medium text-red-600" role="alert">
+          <p
+            id="employer-register-form-error"
+            className="text-sm font-medium text-red-600"
+            role="alert"
+          >
             {errorMessage}
           </p>
         ) : null}
@@ -524,6 +728,7 @@ export function EmployerRegisterForm({
           type="submit"
           className="employer-register-form-submit"
           disabled={isSubmitting}
+          aria-busy={isSubmitting}
         >
           {submitLabel}
         </button>

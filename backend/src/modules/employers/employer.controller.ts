@@ -135,6 +135,22 @@ export class EmployerController {
       ),
     });
   };
+
+  resubmitVerification = async (req: Request, res: Response): Promise<void> => {
+    const employerId = req.employerId;
+    if (!employerId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const result = await employerService.resubmitVerification(employerId);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: result.alreadyPending
+        ? "Verification is already pending review."
+        : "Verification resubmitted for Operations review.",
+      data: result,
+    });
+  };
 }
 
 export const employerController = new EmployerController();

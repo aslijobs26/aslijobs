@@ -5,6 +5,11 @@ import { JOB_SEEKER_JOB_ROLES } from "../../constants/job-seeker.constants.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { jwtService } from "../auth/jwt.service.js";
 import { JobModel } from "../jobs/job.model.js";
+import {
+  buildNewRegistrationAwarenessPayload,
+  formatCandidateRegistrationDisplayId,
+} from "../operations/registration-awareness/operations-registration-awareness.service.js";
+import { scheduleCandidateRegisteredAwareness } from "../operations/registration-awareness/operations-registration-emit.js";
 import { otpService } from "../otp/otp.service.js";
 import { resumeService } from "../resumes/resume.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
@@ -408,6 +413,10 @@ export class JobSeekerService {
     jobSeeker.languages = input.languages;
     jobSeeker.availabilityStatus = input.availabilityStatus;
     jobSeeker.registrationStatus = "COMPLETED";
+    if (!jobSeeker.operationsRegistrationAwareness?.registeredAt) {
+      jobSeeker.operationsRegistrationAwareness =
+        buildNewRegistrationAwarenessPayload(new Date());
+    }
 
     const tokens = jwtService.issueJobSeekerTokens({
       sub: jobSeeker._id.toString(),
@@ -419,6 +428,14 @@ export class JobSeekerService {
     jobSeeker.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt;
     jobSeeker.lastLoginAt = new Date();
     await jobSeeker.save();
+
+    scheduleCandidateRegisteredAwareness({
+      candidateId: jobSeeker._id.toString(),
+      displayName: jobSeeker.fullName?.trim() || "Candidate",
+      displayId: formatCandidateRegistrationDisplayId(jobSeeker._id.toString()),
+      registeredAt:
+        jobSeeker.operationsRegistrationAwareness?.registeredAt ?? new Date(),
+    });
 
     try {
       await resumeService.generateFromProfile(jobSeeker._id.toString());

@@ -180,10 +180,13 @@ export function resolveOperationsPermissions(
 }
 
 export function canOperationsPermission(
-  permissions: OperationsPermissionMap,
+  permissions: OperationsPermissionMap | undefined,
   module: OperationsPermissionModule,
   action: OperationsPermissionAction,
 ): boolean {
+  if (!permissions) {
+    return false;
+  }
   return Boolean(permissions[module]?.[action]);
 }
 

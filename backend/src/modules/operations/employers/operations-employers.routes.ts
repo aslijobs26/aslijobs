@@ -12,6 +12,7 @@ import {
   exportOperationsEmployersQuerySchema,
   listOperationsEmployerJobsQuerySchema,
   listOperationsEmployersQuerySchema,
+  operationsEmployerDocumentParamsSchema,
   operationsEmployerIdParamsSchema,
   updateOperationsEmployerStatusBodySchema,
   updateOperationsEmployerVerificationBodySchema,
@@ -55,6 +56,13 @@ operationsEmployersRouter.get(
   validate(operationsEmployerIdParamsSchema, "params"),
   validate(listOperationsEmployerJobsQuerySchema, "query"),
   asyncHandler(operationsEmployersController.listJobs),
+);
+
+operationsEmployersRouter.get(
+  "/:employerId/documents/:documentId",
+  requireOperationsPermission("employers", "read"),
+  validate(operationsEmployerDocumentParamsSchema, "params"),
+  asyncHandler(operationsEmployersController.downloadDocument),
 );
 
 operationsEmployersRouter.get(

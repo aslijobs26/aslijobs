@@ -1,5 +1,8 @@
 import type { OperationsCandidateDetail } from "../../../../types/operations-candidates";
-import { formatCandidateDateTimeFull } from "../candidates-format";
+import {
+  formatCandidateDateTimeFull,
+  formatCandidateGender,
+} from "../candidates-format";
 
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
@@ -31,11 +34,7 @@ export function CandidateProfileDetailsPanel({
           <DetailField label="Email" value={detail.candidateEmail} />
           <DetailField
             label="Gender"
-            value={
-              detail.candidateGender
-                ? detail.candidateGender.replaceAll("_", " ")
-                : ""
-            }
+            value={formatCandidateGender(detail.candidateGender)}
           />
           <DetailField
             label="Date of Birth"

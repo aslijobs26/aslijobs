@@ -4,7 +4,6 @@ import { ArrowLeft } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { CandidateApplicationsTable } from "../components/operations/candidates/profile/CandidateApplicationsTable";
 import { CandidateDocumentsPanel } from "../components/operations/candidates/profile/CandidateDocumentsPanel";
-import { CandidateEmptyStatePanel } from "../components/operations/candidates/profile/CandidateEmptyStatePanel";
 import { CandidatePreferencesPanel } from "../components/operations/candidates/profile/CandidatePreferencesPanel";
 import { CandidateProfileDetailsPanel } from "../components/operations/candidates/profile/CandidateProfileDetailsPanel";
 import { CandidateProfileHeader } from "../components/operations/candidates/profile/CandidateProfileHeader";
@@ -14,11 +13,14 @@ import {
   type CandidateProfileTabId,
 } from "../components/operations/candidates/profile/CandidateProfileTabs";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
+import { OperationsCanKey } from "../components/operations/auth/OperationsCanKey";
 import { OPERATIONS_ROUTES } from "../constants/operations-routes";
 import {
   useOperationsCandidateApplications,
   useOperationsCandidateDetail,
 } from "../hooks/use-operations-candidates";
+import { useInvalidateRegistrationAwarenessOnDetail } from "../hooks/use-operations-registration-awareness";
+import { useOperationsPermissions } from "../hooks/use-operations-permissions";
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
 
@@ -50,6 +52,8 @@ export function OperationsCandidatesDetailPage() {
     useState<CandidateProfileTabId>("overview");
   const [applicationsPage, setApplicationsPage] = useState(1);
   const [applicationsLimit, setApplicationsLimit] = useState(10);
+  const { canKey } = useOperationsPermissions();
+  const canViewApplications = canKey("candidates.profile.applications.view");
 
   const detailQuery = useOperationsCandidateDetail(jobSeekerId);
   const applicationsQuery = useOperationsCandidateApplications(
@@ -58,8 +62,15 @@ export function OperationsCandidatesDetailPage() {
       page: activeTab === "applications" ? applicationsPage : 1,
       limit: activeTab === "applications" ? applicationsLimit : 5,
     },
-    { enabled: Boolean(detailQuery.data) },
+    {
+      enabled:
+        Boolean(detailQuery.data) &&
+        canViewApplications &&
+        (activeTab === "overview" || activeTab === "applications"),
+    },
   );
+
+  useInvalidateRegistrationAwarenessOnDetail(detailQuery.isSuccess);
 
   const detail = detailQuery.data;
   const applications = applicationsQuery.data?.applications ?? [];
@@ -156,7 +167,6 @@ export function OperationsCandidatesDetailPage() {
                 applicationsCount={
                   applicationsPagination.total || detail.applicationCount || 0
                 }
-                notesCount={detail.notesCount ?? 0}
                 onChange={setActiveTab}
               />
             </div>
@@ -165,48 +175,61 @@ export function OperationsCandidatesDetailPage() {
               {activeTab === "overview" ? (
                 <CandidateProfileOverview
                   detail={detail}
-                  applications={applications}
+                  applications={canViewApplications ? applications : []}
                   applicationsTotal={
-                    applicationsPagination.total || detail.applicationCount || 0
+                    canViewApplications
+                      ? applicationsPagination.total ||
+                        detail.applicationCount ||
+                        0
+                      : detail.applicationCount || 0
                   }
                   onViewAllApplications={() => setActiveTab("applications")}
                 />
               ) : null}
 
               {activeTab === "applications" ? (
-                <div className="flex flex-col gap-3">
-                  <section className="rounded-xl border border-border-subtle bg-surface shadow-sm">
-                    <div className="border-b border-border-subtle px-4 py-3">
-                      <h3 className="text-sm font-semibold text-foreground">
-                        All Applications (
-                        {(
-                          applicationsPagination.total ||
-                          detail.applicationCount ||
-                          0
-                        ).toLocaleString("en-IN")}
-                        )
-                      </h3>
-                    </div>
-                    <CandidateApplicationsTable
-                      applications={applications}
-                      isLoading={applicationsQuery.isLoading}
-                      isError={applicationsQuery.isError}
-                      errorMessage={applicationsErrorMessage}
-                      onRetry={() => void applicationsQuery.refetch()}
-                    />
-                  </section>
-                  {(applicationsPagination.total || 0) > 0 ? (
-                    <JobsPaginationBar
-                      pagination={applicationsPagination}
-                      ariaLabel="Candidate applications pagination"
-                      onPageChange={setApplicationsPage}
-                      onLimitChange={(nextLimit) => {
-                        setApplicationsLimit(nextLimit);
-                        setApplicationsPage(1);
-                      }}
-                    />
-                  ) : null}
-                </div>
+                <OperationsCanKey
+                  permissionKey="candidates.profile.applications.view"
+                  fallback={
+                    <p className="rounded-xl border border-border-subtle bg-surface px-4 py-10 text-center text-xs text-muted">
+                      You do not have permission to view candidate applications.
+                    </p>
+                  }
+                >
+                  <div className="flex flex-col gap-3">
+                    <section className="rounded-xl border border-border-subtle bg-surface shadow-sm">
+                      <div className="border-b border-border-subtle px-4 py-3">
+                        <h3 className="text-sm font-semibold text-foreground">
+                          All Applications (
+                          {(
+                            applicationsPagination.total ||
+                            detail.applicationCount ||
+                            0
+                          ).toLocaleString("en-IN")}
+                          )
+                        </h3>
+                      </div>
+                      <CandidateApplicationsTable
+                        applications={applications}
+                        isLoading={applicationsQuery.isLoading}
+                        isError={applicationsQuery.isError}
+                        errorMessage={applicationsErrorMessage}
+                        onRetry={() => void applicationsQuery.refetch()}
+                      />
+                    </section>
+                    {(applicationsPagination.total || 0) > 0 ? (
+                      <JobsPaginationBar
+                        pagination={applicationsPagination}
+                        ariaLabel="Candidate applications pagination"
+                        onPageChange={setApplicationsPage}
+                        onLimitChange={(nextLimit) => {
+                          setApplicationsLimit(nextLimit);
+                          setApplicationsPage(1);
+                        }}
+                      />
+                    ) : null}
+                  </div>
+                </OperationsCanKey>
               ) : null}
 
               {activeTab === "preferences" ? (
@@ -219,20 +242,6 @@ export function OperationsCandidatesDetailPage() {
 
               {activeTab === "documents" ? (
                 <CandidateDocumentsPanel detail={detail} />
-              ) : null}
-
-              {activeTab === "activity" ? (
-                <CandidateEmptyStatePanel
-                  title="No activity yet"
-                  description="Candidate activity timeline will appear here when available."
-                />
-              ) : null}
-
-              {activeTab === "notes" ? (
-                <CandidateEmptyStatePanel
-                  title="No notes yet"
-                  description="Internal notes for this candidate will appear here when available."
-                />
               ) : null}
             </div>
           </div>

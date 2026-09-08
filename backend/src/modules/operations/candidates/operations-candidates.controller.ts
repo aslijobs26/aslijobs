@@ -7,10 +7,16 @@ import {
   sanitizeCandidateDetail,
   sanitizeCandidateListItem,
 } from "../rbac/operations-field-sanitize.js";
+import {
+  CANDIDATE_DOCUMENTS_PERMISSION_KEY,
+  CANDIDATE_EXPORT_PERMISSION_KEY,
+} from "../rbac/operations-permission-catalog.js";
+import { operationsRegistrationAwarenessService } from "../registration-awareness/operations-registration-awareness.service.js";
 import { operationsCandidatesService } from "./operations-candidates.service.js";
 import { getOperationsCandidatesAnalytics } from "./operations-candidates-analytics.js";
 import type {
   CandidatesAnalyticsQuery,
+  ExportOperationsCandidatesQuery,
   ListOperationsCandidateApplicationsQuery,
   ListOperationsCandidatesQuery,
   OperationsCandidateApplicationIdParams,
@@ -45,20 +51,96 @@ export const operationsCandidatesController = {
     requireAccess(req);
     const query = req.query as unknown as CandidatesAnalyticsQuery;
     const data = await getOperationsCandidatesAnalytics(query);
+    // Aggregate-only payload — no per-candidate PII fields.
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations candidates analytics fetched successfully.",
       data,
     });
   },
 
+  async export(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertOperationsPermissionKey(access, CANDIDATE_EXPORT_PERMISSION_KEY);
+    const query = req.query as unknown as ExportOperationsCandidatesQuery;
+    const format = query.format === "csv" ? "csv" : "xlsx";
+
+    const file = await operationsCandidatesService.exportCandidates(
+      {
+        page: 1,
+        limit: 100,
+        tab: query.tab,
+        search: query.search,
+        status: query.status,
+        jobId: query.jobId,
+        employerId: query.employerId,
+        location: query.location,
+        experience: query.experience,
+        gender: query.gender,
+        preferredRole: query.preferredRole,
+        profileStatus: query.profileStatus,
+        verificationStatus: query.verificationStatus,
+        applicationPresence: query.applicationPresence,
+        overviewTab: query.overviewTab,
+        datePreset: query.datePreset,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        dateField: query.dateField,
+        analyticsPreset: query.analyticsPreset,
+        analyticsFrom: query.analyticsFrom,
+        analyticsTo: query.analyticsTo,
+        sort: query.sort,
+      },
+      access,
+      format,
+    );
+
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${file.fileName}"`,
+    );
+    res.status(HTTP_STATUS.OK).send(file.buffer);
+  },
+
   async getBySeekerId(req: Request, res: Response): Promise<void> {
     const { jobSeekerId } = req.params as OperationsCandidateSeekerIdParams;
     const result = await operationsCandidatesService.getSeekerDetail(jobSeekerId);
+
+    if (result.isNewRegistration && req.operationsUserId) {
+      void operationsRegistrationAwarenessService
+        .markEntitySeen({
+          entityType: "candidate",
+          entityId: jobSeekerId,
+          userId: req.operationsUserId,
+        })
+        .catch(() => {
+          /* non-blocking awareness side-effect */
+        });
+    }
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations candidate details fetched successfully.",
       data: sanitizeCandidateDetail(result, requireAccess(req)),
     });
+  },
+
+  async downloadResume(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertOperationsPermissionKey(access, CANDIDATE_DOCUMENTS_PERMISSION_KEY);
+    const { jobSeekerId } = req.params as OperationsCandidateSeekerIdParams;
+    const file =
+      await operationsCandidatesService.openCandidateResume(jobSeekerId);
+
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${file.fileName.replace(/"/g, "")}"`,
+    );
+    if (file.contentLength != null) {
+      res.setHeader("Content-Length", String(file.contentLength));
+    }
+    res.status(HTTP_STATUS.OK);
+    file.stream.pipe(res);
   },
 
   async listSeekerApplications(req: Request, res: Response): Promise<void> {

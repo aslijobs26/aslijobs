@@ -1,5 +1,4 @@
 import {
-  Bell,
   ChevronDown,
   Globe,
   LogOut,
@@ -22,6 +21,7 @@ import { logoutOperationsTeam } from "../../../services/operations-auth.service"
 import { cn } from "../../../utils/cn";
 import { getOperationsAuthUser } from "../../../utils/operations-auth-storage";
 import { clearOperationsClientSession } from "../../../utils/operations-session";
+import { OperationsNotificationsMenu } from "./OperationsNotificationsMenu";
 
 export type OperationsHeaderVariant = "default" | "command";
 
@@ -231,20 +231,10 @@ export function OperationsHeader({
           )}
         </button>
 
-        <button
-          type="button"
-          className={cn(
-            iconButtonClassName,
-            "relative touch-manipulation",
-            isCompact ? "size-8" : "size-9",
-          )}
-          aria-label="Notifications, 8 unread"
-        >
-          <Bell className="size-3.5" strokeWidth={2} aria-hidden="true" />
-          <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-0.5 text-[9px] font-bold text-surface ring-2 ring-surface">
-            8
-          </span>
-        </button>
+        <OperationsNotificationsMenu
+          density={density}
+          iconButtonClassName={iconButtonClassName}
+        />
 
         <div ref={userMenuRef} className="relative">
           <button

@@ -56,6 +56,8 @@ export interface OperationsEmployerListItem {
   registeredAt: string | null;
   registeredAtDate: string;
   registeredAtTime: string;
+  verificationSubmittedAt: string | null;
+  documentsCount: number;
   verificationStatus: OperationsEmployerVerificationStatus;
   verificationStatusLabel: string;
   verifiedAt: string | null;
@@ -68,6 +70,9 @@ export interface OperationsEmployerListItem {
   isWhatsappVerified: boolean;
   isProfileComplete: boolean;
   registrationStatus: string;
+  /** Operations awareness only — independent of verificationStatus. */
+  isNewRegistration: boolean;
+  registrationAwarenessState: "new" | "seen" | null;
 }
 
 export interface OperationsEmployersFilterOptions {
@@ -153,7 +158,7 @@ export interface OperationsEmployersAnalyticsResult {
   kpis: OperationsEmployersOverviewKpis;
   registrationTrend: OperationsEmployersAnalyticsSeriesPoint[];
   onboardingFunnel: OperationsEmployersAnalyticsFunnelStage[];
-  byIndustry: OperationsEmployersAnalyticsNamedCount[];
+  byAccountType: OperationsEmployersAnalyticsNamedCount[];
   byLocation: OperationsEmployersAnalyticsNamedCount[];
   employerType: OperationsEmployersAnalyticsNamedCount[];
   employerTypeTotal: number;
@@ -247,5 +252,9 @@ export interface OperationsEmployerDetail extends OperationsEmployerListItem {
     hiredApplications: number;
   };
   verificationRemarks: string;
+  verificationSubmittedAt: string | null;
+  rejectedAt: string | null;
+  verifiedByLabel: string;
+  rejectedByLabel: string;
   suspensionReason: string;
 }

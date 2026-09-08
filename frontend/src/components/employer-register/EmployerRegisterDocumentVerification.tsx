@@ -1,5 +1,7 @@
 "use client";
 
+import { FieldError } from "@/components/auth/FieldError";
+import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import {
   EMPLOYER_REGISTER_DOCUMENT_ACCEPT,
   EMPLOYER_REGISTER_DOCUMENT_HELPER_TEXT,
@@ -30,6 +32,8 @@ type EmployerRegisterDocumentVerificationProps = {
   documentType: EmployerRegisterDocumentType | null;
   documentPreview: EmployerRegisterDocumentPreview | null;
   profilePhotoPreview: EmployerRegisterImagePreview | null;
+  documentTypeError?: string | null;
+  documentFileError?: string | null;
   onDocumentTypeChange: (value: EmployerRegisterDocumentType) => void;
   onDocumentPreviewChange: (
     preview: EmployerRegisterDocumentPreview | null,
@@ -37,6 +41,8 @@ type EmployerRegisterDocumentVerificationProps = {
   onProfilePhotoPreviewChange: (
     preview: EmployerRegisterImagePreview | null,
   ) => void;
+  onDocumentTypeErrorClear?: () => void;
+  onDocumentFileErrorChange?: (message: string | null) => void;
 };
 
 function formatFileSize(sizeBytes: number) {
@@ -51,14 +57,19 @@ function formatFileSize(sizeBytes: number) {
   return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function isAcceptedFile(file: File) {
+function getDocumentFileError(file: File): string | null {
   const extension = file.name.split(".").pop()?.toLowerCase();
   const allowedExtensions = new Set(["pdf", "jpg", "jpeg", "png", "webp"]);
 
-  return (
-    allowedExtensions.has(extension ?? "") &&
-    file.size <= EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES
-  );
+  if (!allowedExtensions.has(extension ?? "")) {
+    return AUTH_VALIDATION_MESSAGES.FILE_TYPE_INVALID;
+  }
+
+  if (file.size > EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES) {
+    return AUTH_VALIDATION_MESSAGES.FILE_SIZE_INVALID;
+  }
+
+  return null;
 }
 
 function DocumentTypeRadioIndicator({ checked }: { checked: boolean }) {
@@ -79,18 +90,29 @@ export function EmployerRegisterDocumentVerification({
   documentType,
   documentPreview,
   profilePhotoPreview,
+  documentTypeError = null,
+  documentFileError = null,
   onDocumentTypeChange,
   onDocumentPreviewChange,
   onProfilePhotoPreviewChange,
+  onDocumentTypeErrorClear,
+  onDocumentFileErrorChange,
 }: EmployerRegisterDocumentVerificationProps) {
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const applySelectedFile = (file: File | undefined) => {
-    if (!file || !isAcceptedFile(file)) {
+    if (!file) {
       return;
     }
 
+    const fileError = getDocumentFileError(file);
+    if (fileError) {
+      onDocumentFileErrorChange?.(fileError);
+      return;
+    }
+
+    onDocumentFileErrorChange?.(null);
     onDocumentPreviewChange({
       name: file.name,
       sizeBytes: file.size,
@@ -144,9 +166,12 @@ export function EmployerRegisterDocumentVerification({
       </div>
 
       <div
+        id="documentType"
         className="employer-register-document-type-options"
         role="radiogroup"
         aria-label="Government ID type"
+        aria-invalid={Boolean(documentTypeError) || undefined}
+        aria-describedby={documentTypeError ? "documentType-error" : undefined}
       >
         {EMPLOYER_REGISTER_DOCUMENT_TYPE_OPTIONS.map((option) => {
           const checked = documentType === option.value;
@@ -161,12 +186,14 @@ export function EmployerRegisterDocumentVerification({
             >
               <input
                 type="radio"
-                name="employer-document-type"
+                name="documentType"
                 value={option.value}
                 checked={checked}
                 onChange={() => {
                   onDocumentTypeChange(option.value);
                   onDocumentPreviewChange(null);
+                  onDocumentTypeErrorClear?.();
+                  onDocumentFileErrorChange?.(null);
                 }}
                 className="sr-only"
               />
@@ -176,6 +203,7 @@ export function EmployerRegisterDocumentVerification({
           );
         })}
       </div>
+      <FieldError id="documentType-error" message={documentTypeError} />
 
       {documentType ? (
         <div className="employer-register-form-stack">
@@ -199,17 +227,25 @@ export function EmployerRegisterDocumentVerification({
                 type="button"
                 className="employer-register-document-preview-remove"
                 aria-label="Remove selected document"
-                onClick={() => onDocumentPreviewChange(null)}
+                onClick={() => {
+                  onDocumentPreviewChange(null);
+                  onDocumentFileErrorChange?.(null);
+                }}
               >
                 <X className="size-4" strokeWidth={2.25} aria-hidden="true" />
               </button>
             </div>
           ) : (
             <div
+              id="documentFile"
               className="employer-register-document-dropzone"
               role="button"
               tabIndex={0}
               aria-label={`${EMPLOYER_REGISTER_DOCUMENT_UPLOAD_PRIMARY}. ${EMPLOYER_REGISTER_DOCUMENT_UPLOAD_HINT}`}
+              aria-invalid={Boolean(documentFileError) || undefined}
+              aria-describedby={
+                documentFileError ? "documentFile-error" : undefined
+              }
               onClick={openFileBrowser}
               onKeyDown={handleUploadKeyDown}
               onDragOver={handleDragOver}
@@ -237,12 +273,15 @@ export function EmployerRegisterDocumentVerification({
           <input
             ref={fileInputRef}
             id={inputId}
+            name="documentFile"
             type="file"
             accept={EMPLOYER_REGISTER_DOCUMENT_ACCEPT}
             className="sr-only"
             tabIndex={-1}
             onChange={handleFileInputChange}
           />
+
+          <FieldError id="documentFile-error" message={documentFileError} />
 
           <p className="employer-register-document-helper">
             {EMPLOYER_REGISTER_DOCUMENT_HELPER_TEXT}

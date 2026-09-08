@@ -2,6 +2,7 @@ import { Schema, model, type InferSchemaType, type Types } from "mongoose";
 import {
   EMPLOYER_ACCOUNT_TYPES,
   EMPLOYER_REGISTRATION_STATUSES,
+  EMPLOYER_VERIFICATION_STATUSES,
 } from "../../constants/employer.constants.js";
 
 const employerSchema = new Schema(
@@ -273,7 +274,7 @@ const employerSchema = new Schema(
     },
     verificationStatus: {
       type: String,
-      enum: ["verified", "pending", "rejected"],
+      enum: EMPLOYER_VERIFICATION_STATUSES,
       default: "pending",
       index: true,
     },
@@ -281,10 +282,29 @@ const employerSchema = new Schema(
       type: Date,
       default: null,
     },
+    verifiedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsTeamUser",
+      default: null,
+    },
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsTeamUser",
+      default: null,
+    },
     verificationRemarks: {
       type: String,
       trim: true,
       default: "",
+    },
+    verificationSubmittedAt: {
+      type: Date,
+      default: null,
+      index: true,
     },
     suspendedAt: {
       type: Date,
@@ -301,6 +321,30 @@ const employerSchema = new Schema(
         ref: "EmployerDocument",
       },
     ],
+    /**
+     * Operations-only registration awareness (NEW/SEEN).
+     * Independent of verificationStatus. Missing = legacy (not NEW).
+     */
+    operationsRegistrationAwareness: {
+      state: {
+        type: String,
+        enum: ["new", "seen"],
+        default: undefined,
+      },
+      registeredAt: {
+        type: Date,
+        default: undefined,
+      },
+      firstSeenAt: {
+        type: Date,
+        default: null,
+      },
+      firstSeenBy: {
+        type: Schema.Types.ObjectId,
+        ref: "OperationsTeamUser",
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,
@@ -311,9 +355,18 @@ const employerSchema = new Schema(
 employerSchema.index({ whatsappNumber: 1, accountType: 1 });
 employerSchema.index({ createdAt: -1 });
 employerSchema.index({ verifiedAt: -1 });
+employerSchema.index({ rejectedAt: -1 });
 employerSchema.index({ industry: 1 });
 employerSchema.index({ state: 1, city: 1 });
 employerSchema.index({ status: 1, verificationStatus: 1 });
+employerSchema.index({
+  verificationStatus: 1,
+  verificationSubmittedAt: -1,
+});
+employerSchema.index({
+  "operationsRegistrationAwareness.state": 1,
+  "operationsRegistrationAwareness.registeredAt": -1,
+});
 
 export type EmployerDocumentLean = InferSchemaType<typeof employerSchema> & {
   _id: Types.ObjectId;

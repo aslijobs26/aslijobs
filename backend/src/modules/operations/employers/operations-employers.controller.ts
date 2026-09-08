@@ -7,6 +7,7 @@ import {
   sanitizeEmployerDetail,
   sanitizeEmployerListItem,
 } from "../rbac/operations-field-sanitize.js";
+import { operationsRegistrationAwarenessService } from "../registration-awareness/operations-registration-awareness.service.js";
 import { operationsEmployersService } from "./operations-employers.service.js";
 import type {
   CreateOperationsEmployerBody,
@@ -14,6 +15,7 @@ import type {
   ExportOperationsEmployersQuery,
   ListOperationsEmployerJobsQuery,
   ListOperationsEmployersQuery,
+  OperationsEmployerDocumentParams,
   OperationsEmployerIdParams,
   UpdateOperationsEmployerStatusBody,
   UpdateOperationsEmployerVerificationBody,
@@ -54,23 +56,37 @@ export const operationsEmployersController = {
   },
 
   async exportCsv(req: Request, res: Response): Promise<void> {
-    assertOperationsPermissionKey(
-      requireAccess(req),
-      "employers.list.export",
-    );
+    const access = requireAccess(req);
+    assertOperationsPermissionKey(access, "employers.list.export");
     const query = req.query as unknown as ExportOperationsEmployersQuery;
-    const csv = await operationsEmployersService.exportEmployersCsv({
-      ...query,
-      page: 1,
-      limit: 100,
-    });
+    const format = query.format === "csv" ? "csv" : "xlsx";
 
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    const file = await operationsEmployersService.exportEmployers(
+      {
+        page: 1,
+        limit: 100,
+        search: query.search,
+        verificationStatus: query.verificationStatus,
+        employerType: query.employerType,
+        location: query.location,
+        status: query.status,
+        datePreset: query.datePreset,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        analyticsPreset: query.analyticsPreset,
+        analyticsFrom: query.analyticsFrom,
+        analyticsTo: query.analyticsTo,
+      },
+      access,
+      format,
+    );
+
+    res.setHeader("Content-Type", file.mimeType);
     res.setHeader(
       "Content-Disposition",
-      'attachment; filename="operations-employers-export.csv"',
+      `attachment; filename="${file.fileName}"`,
     );
-    res.status(HTTP_STATUS.OK).send(csv);
+    res.status(HTTP_STATUS.OK).send(file.buffer);
   },
 
   async create(req: Request, res: Response): Promise<void> {
@@ -86,6 +102,18 @@ export const operationsEmployersController = {
   async getById(req: Request, res: Response): Promise<void> {
     const { employerId } = req.params as OperationsEmployerIdParams;
     const result = await operationsEmployersService.getEmployerById(employerId);
+
+    if (result.isNewRegistration && req.operationsUserId) {
+      void operationsRegistrationAwarenessService
+        .markEntitySeen({
+          entityType: "employer",
+          entityId: employerId,
+          userId: req.operationsUserId,
+        })
+        .catch(() => {
+          /* non-blocking awareness side-effect */
+        });
+    }
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations employer fetched successfully.",
@@ -119,16 +147,47 @@ export const operationsEmployersController = {
         : "employers.profile.actions.verify";
     assertOperationsPermissionKey(requireAccess(req), key);
 
+    const operationsUserId = req.operationsUserId;
+    if (!operationsUserId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
     const { employerId } = req.params as OperationsEmployerIdParams;
     const result = await operationsEmployersService.updateVerification(
       employerId,
       body,
+      operationsUserId,
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Employer verification updated successfully.",
       data: sanitizeEmployerDetail(result, requireAccess(req)),
     });
+  },
+
+  async downloadDocument(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertOperationsPermissionKey(
+      access,
+      "employers.profile.documents.download",
+    );
+    const { employerId, documentId } =
+      req.params as OperationsEmployerDocumentParams;
+    const file = await operationsEmployersService.openEmployerDocument(
+      employerId,
+      documentId,
+    );
+
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${file.fileName.replace(/"/g, "")}"`,
+    );
+    if (file.contentLength != null) {
+      res.setHeader("Content-Length", String(file.contentLength));
+    }
+    res.status(HTTP_STATUS.OK);
+    file.stream.pipe(res);
   },
 
   async updateStatus(req: Request, res: Response): Promise<void> {

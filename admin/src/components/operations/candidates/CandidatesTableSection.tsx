@@ -178,13 +178,24 @@ export function CandidatesTableSection({
                         )}
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold text-foreground">
-                          {application.candidateName}
+                        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                          <span className="block truncate text-sm font-semibold text-foreground">
+                            {application.candidateName}
+                          </span>
+                          {application.isNewRegistration ? (
+                            <OperationsBadge
+                              variant="high"
+                              className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
+                            >
+                              <span aria-label="New registration">NEW</span>
+                            </OperationsBadge>
+                          ) : null}
                         </span>
                         <span className="mt-0.5 block text-[11px] text-muted">
-                          {formatCandidateDisplayId(
-                            application.jobSeekerId || application.id,
-                          )}
+                          {application.displayId ||
+                            formatCandidateDisplayId(
+                              application.jobSeekerId || application.id,
+                            )}
                         </span>
                         <span className="mt-1 block text-[11px] text-muted">
                           {application.candidatePhone || "—"}
@@ -275,13 +286,24 @@ export function CandidatesTableSection({
                             )}
                           </span>
                           <span className="min-w-0">
-                            <span className="block truncate text-xs font-semibold text-foreground xl:text-[11px]">
-                              {application.candidateName}
+                            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                              <span className="truncate text-xs font-semibold text-foreground xl:text-[11px]">
+                                {application.candidateName}
+                              </span>
+                              {application.isNewRegistration ? (
+                                <OperationsBadge
+                                  variant="high"
+                                  className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
+                                >
+                                  <span aria-label="New registration">NEW</span>
+                                </OperationsBadge>
+                              ) : null}
                             </span>
                             <span className="mt-0.5 block text-[11px] text-muted xl:text-[10px]">
-                              {formatCandidateDisplayId(
-                                application.jobSeekerId || application.id,
-                              )}
+                              {application.displayId ||
+                                formatCandidateDisplayId(
+                                  application.jobSeekerId || application.id,
+                                )}
                             </span>
                           </span>
                         </Link>

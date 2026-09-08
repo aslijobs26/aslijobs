@@ -191,6 +191,8 @@ export function mapWizardDataToPreviewDetail(
       logoUrl: employer?.logoUrl ?? "",
       isWhatsappVerified: employer?.isWhatsappVerified ?? false,
       registrationCompleted: employer?.registrationCompleted ?? false,
+      verificationStatus: "pending",
+      verificationStatusLabel: "Pending",
     },
     analytics: {
       views: 0,

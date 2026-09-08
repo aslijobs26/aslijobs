@@ -1,5 +1,7 @@
 "use client";
 
+import { FieldError } from "@/components/auth/FieldError";
+import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { searchIndiaPreferredLocations } from "@/services/nominatim-location.service";
 import type { PlaceSuggestion } from "@/types/nominatim-location";
 import { cn } from "@/utils/cn";
@@ -14,6 +16,9 @@ type JobSeekerPreferredLocationAutocompleteProps = {
   value: string;
   placeholder: string;
   disabled?: boolean;
+  required?: boolean;
+  name?: string;
+  error?: string | null;
   onChange: (value: string) => void;
 };
 
@@ -23,9 +28,13 @@ export function JobSeekerPreferredLocationAutocomplete({
   value,
   placeholder,
   disabled = false,
+  required = true,
+  name = "preferredJobLocation",
+  error,
   onChange,
 }: JobSeekerPreferredLocationAutocompleteProps) {
   const listId = useId();
+  const errorId = `${id}-error`;
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
@@ -77,12 +86,17 @@ export function JobSeekerPreferredLocationAutocomplete({
 
   return (
     <div className="employer-register-form-stack" ref={rootRef}>
-      <label htmlFor={id} className="employer-register-form-label">
+      <RequiredFieldLabel
+        htmlFor={id}
+        required={required}
+        className="employer-register-form-label"
+      >
         {label}
-      </label>
+      </RequiredFieldLabel>
       <div className="relative">
         <input
           id={id}
+          name={name}
           type="text"
           value={value}
           placeholder={placeholder}
@@ -92,7 +106,9 @@ export function JobSeekerPreferredLocationAutocomplete({
           aria-expanded={isOpen}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-required="true"
+          aria-required={required || undefined}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={error ? errorId : undefined}
           className="employer-register-form-input"
           onFocus={() => setIsOpen(true)}
           onChange={(event) => {
@@ -118,9 +134,6 @@ export function JobSeekerPreferredLocationAutocomplete({
                   type="button"
                   className={cn(
                     "flex w-full px-3 py-2 text-left text-sm hover:bg-primary-light",
-                    suggestion.label === value
-                      ? "font-semibold text-primary"
-                      : "text-foreground",
                   )}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
@@ -135,6 +148,7 @@ export function JobSeekerPreferredLocationAutocomplete({
           </ul>
         ) : null}
       </div>
+      <FieldError id={errorId} message={error} />
     </div>
   );
 }

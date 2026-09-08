@@ -58,6 +58,16 @@ export interface OperationsEmployerListItem {
   verificationStatusLabel: string;
   verifiedAt: string | null;
   verifiedAtDate: string;
+  /** Present on detail; optional on list when API includes it. */
+  verificationSubmittedAt?: string | null;
+  /** Present on detail; optional on list when API includes it. */
+  rejectedAt?: string | null;
+  /** Present on detail; optional on list when API includes it. */
+  verifiedByLabel?: string;
+  /** Present on detail; optional on list when API includes it. */
+  rejectedByLabel?: string;
+  /** Optional list enrichment when API includes document totals. */
+  documentsCount?: number;
   status: OperationsEmployerStatus;
   statusLabel: string;
   activeJobsCount: number;
@@ -66,6 +76,9 @@ export interface OperationsEmployerListItem {
   isWhatsappVerified: boolean;
   isProfileComplete: boolean;
   registrationStatus: string;
+  /** True when registration awareness state is still "new". */
+  isNewRegistration?: boolean;
+  registrationAwarenessState?: "new" | "seen" | null;
 }
 
 export interface OperationsEmployersFilterOptions {
@@ -184,6 +197,10 @@ export interface OperationsEmployerDetail extends OperationsEmployerListItem {
     hiredApplications: number;
   };
   verificationRemarks: string;
+  verificationSubmittedAt: string | null;
+  rejectedAt: string | null;
+  verifiedByLabel: string;
+  rejectedByLabel: string;
   suspensionReason: string;
 }
 
@@ -276,7 +293,7 @@ export interface OperationsEmployersAnalyticsResult {
   kpis: OperationsEmployersOverviewKpis;
   registrationTrend: OperationsEmployersAnalyticsSeriesPoint[];
   onboardingFunnel: OperationsEmployersAnalyticsFunnelStage[];
-  byIndustry: OperationsEmployersAnalyticsNamedCount[];
+  byAccountType: OperationsEmployersAnalyticsNamedCount[];
   byLocation: OperationsEmployersAnalyticsNamedCount[];
   employerType: OperationsEmployersAnalyticsNamedCount[];
   employerTypeTotal: number;
@@ -314,4 +331,6 @@ export interface OperationsEmployersExportParams {
   analyticsPreset?: OperationsEmployerDatePreset;
   analyticsFrom?: string;
   analyticsTo?: string;
+  /** Defaults to xlsx on the server. Pass "csv" for UTF-8 BOM CSV. */
+  format?: "xlsx" | "csv";
 }

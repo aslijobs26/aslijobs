@@ -61,13 +61,10 @@ export function JobsAnalyticsSkeleton() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         <ChartCardSkeleton />
         <ChartCardSkeleton />
         <ChartCardSkeleton />
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
         <ChartCardSkeleton />
         <ChartCardSkeleton />
         <ChartCardSkeleton />

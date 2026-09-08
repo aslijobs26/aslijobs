@@ -1,3 +1,6 @@
+import { createReadStream, existsSync } from "node:fs";
+import path from "node:path";
+import type { Readable } from "node:stream";
 import mongoose from "mongoose";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
@@ -7,6 +10,9 @@ import { EmployerModel } from "../../employers/employer.model.js";
 import { EmployerDocumentModel } from "../../employers/employer-document.model.js";
 import { JobModel } from "../../jobs/job.model.js";
 import { ApplicationModel } from "../../applications/application.model.js";
+import { notificationService } from "../../notifications/notification.service.js";
+import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
+import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
 import type {
   OperationsEmployerDetail,
   OperationsEmployerDocumentItem,
@@ -28,6 +34,15 @@ import type {
   UpdateOperationsEmployerVerificationBody,
 } from "./operations-employers.validation.js";
 import { getOperationsEmployersAnalytics } from "./operations-employers-analytics.js";
+import {
+  buildOperationsEmployersExportFile,
+  type OperationsEmployersExportFormat,
+  type OperationsEmployersExportFileResult,
+} from "./operations-employers-export.js";
+import type { OperationsResolvedAccess } from "../rbac/operations-access.types.js";
+import { operationsAccessCanKey } from "../rbac/operations-access.service.js";
+import { EMPLOYER_FIELD_PERMISSION_KEYS } from "../rbac/operations-permission-catalog.js";
+import { sanitizeEmployerListItem } from "../rbac/operations-field-sanitize.js";
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -191,10 +206,9 @@ function resolveOrganizationType(employer: {
   return "Private Company";
 }
 
-function resolveVerificationStatus(employer: {
+/** Explicit verificationStatus only — never infer from WhatsApp OTP. */
+export function resolveVerificationStatus(employer: {
   verificationStatus?: string | null;
-  isWhatsappVerified?: boolean | null;
-  registrationStatus?: string | null;
 }): OperationsEmployerVerificationStatus {
   const explicit = text(employer.verificationStatus).toLowerCase();
   if (explicit === "verified" || explicit === "approved") {
@@ -203,18 +217,39 @@ function resolveVerificationStatus(employer: {
   if (explicit === "rejected") {
     return "rejected";
   }
-  if (explicit === "pending") {
-    return "pending";
-  }
-
-  if (
-    employer.isWhatsappVerified &&
-    employer.registrationStatus === "completed"
-  ) {
-    return "verified";
-  }
-
   return "pending";
+}
+
+/**
+ * Decide whether a verification update is a no-op, a real transition, or a conflict.
+ * Null/empty verificationStatus is treated as pending.
+ */
+export function resolveVerificationTransition(
+  currentRaw: string | null | undefined,
+  target: OperationsEmployerVerificationStatus,
+): "idempotent" | "apply" | "conflict" {
+  const current = resolveVerificationStatus({ verificationStatus: currentRaw });
+  if (current === target) {
+    return "idempotent";
+  }
+  if (current === "verified" || current === "rejected") {
+    return "conflict";
+  }
+  return "apply";
+}
+
+function pendingVerificationFilter(
+  employerObjectId: mongoose.Types.ObjectId,
+): Record<string, unknown> {
+  return {
+    _id: employerObjectId,
+    $or: [
+      { verificationStatus: "pending" },
+      { verificationStatus: null },
+      { verificationStatus: "" },
+      { verificationStatus: { $exists: false } },
+    ],
+  };
 }
 
 function resolveVerificationStatusLabel(
@@ -696,7 +731,7 @@ export const operationsEmployersService = {
     const employerIds = employerDocs.map((doc) => doc._id);
 
     // Load active jobs and total jobs per employer in parallel
-    const [activeJobCounts, totalJobCounts] = await Promise.all([
+    const [activeJobCounts, totalJobCounts, documentCounts] = await Promise.all([
       JobModel.aggregate<{ _id: mongoose.Types.ObjectId; count: number }>([
         {
           $match: {
@@ -707,6 +742,13 @@ export const operationsEmployersService = {
         { $group: { _id: "$employerId", count: { $sum: 1 } } },
       ]),
       JobModel.aggregate<{ _id: mongoose.Types.ObjectId; count: number }>([
+        { $match: { employerId: { $in: employerIds } } },
+        { $group: { _id: "$employerId", count: { $sum: 1 } } },
+      ]),
+      EmployerDocumentModel.aggregate<{
+        _id: mongoose.Types.ObjectId;
+        count: number;
+      }>([
         { $match: { employerId: { $in: employerIds } } },
         { $group: { _id: "$employerId", count: { $sum: 1 } } },
       ]),
@@ -722,6 +764,11 @@ export const operationsEmployersService = {
       totalJobsMap.set(String(row._id), row.count);
     });
 
+    const documentsCountMap = new Map<string, number>();
+    documentCounts.forEach((row) => {
+      documentsCountMap.set(String(row._id), row.count);
+    });
+
     const employers: OperationsEmployerListItem[] = employerDocs.map((doc) => {
       const id = String(doc._id);
       const vStatus = resolveVerificationStatus(doc);
@@ -729,6 +776,8 @@ export const operationsEmployersService = {
       const city = text(doc.city);
       const state = text(doc.state);
       const location = [city, state].filter(Boolean).join(", ") || "—";
+      const submittedAt =
+        doc.verificationSubmittedAt ?? doc.createdAt ?? null;
 
       return {
         id,
@@ -747,6 +796,10 @@ export const operationsEmployersService = {
         registeredAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : null,
         registeredAtDate: formatDisplayDate(doc.createdAt),
         registeredAtTime: formatDisplayTime(doc.createdAt),
+        verificationSubmittedAt: submittedAt
+          ? new Date(submittedAt).toISOString()
+          : null,
+        documentsCount: documentsCountMap.get(id) ?? 0,
         verificationStatus: vStatus,
         verificationStatusLabel: resolveVerificationStatusLabel(vStatus),
         verifiedAt: doc.verifiedAt ? new Date(doc.verifiedAt).toISOString() : null,
@@ -759,6 +812,13 @@ export const operationsEmployersService = {
         isWhatsappVerified: Boolean(doc.isWhatsappVerified),
         isProfileComplete: Boolean(doc.isProfileComplete),
         registrationStatus: text(doc.registrationStatus),
+        isNewRegistration:
+          doc.operationsRegistrationAwareness?.state === "new",
+        registrationAwarenessState:
+          doc.operationsRegistrationAwareness?.state === "new" ||
+          doc.operationsRegistrationAwareness?.state === "seen"
+            ? doc.operationsRegistrationAwareness.state
+            : null,
       };
     });
 
@@ -858,6 +918,35 @@ export const operationsEmployersService = {
       .join(" ")
       .trim();
 
+    const reviewerIds = [
+      employerDoc.verifiedBy,
+      employerDoc.rejectedBy,
+    ].filter((id): id is mongoose.Types.ObjectId =>
+      Boolean(id && mongoose.Types.ObjectId.isValid(String(id))),
+    );
+
+    const reviewerNameById = new Map<string, string>();
+    if (reviewerIds.length > 0) {
+      const reviewers = await OperationsTeamUserModel.find({
+        _id: { $in: reviewerIds },
+      })
+        .select("fullName")
+        .lean();
+      for (const reviewer of reviewers) {
+        reviewerNameById.set(
+          String(reviewer._id),
+          text(reviewer.fullName) || "Operations",
+        );
+      }
+    }
+
+    const verifiedById = employerDoc.verifiedBy
+      ? String(employerDoc.verifiedBy)
+      : "";
+    const rejectedById = employerDoc.rejectedBy
+      ? String(employerDoc.rejectedBy)
+      : "";
+
     return {
       id,
       displayId: formatEmployerDisplayId(id),
@@ -877,6 +966,12 @@ export const operationsEmployersService = {
         : null,
       registeredAtDate: formatDisplayDate(employerDoc.createdAt),
       registeredAtTime: formatDisplayTime(employerDoc.createdAt),
+      verificationSubmittedAt: employerDoc.verificationSubmittedAt
+        ? new Date(employerDoc.verificationSubmittedAt).toISOString()
+        : employerDoc.createdAt
+          ? new Date(employerDoc.createdAt).toISOString()
+          : null,
+      documentsCount: documents.length,
       verificationStatus: vStatus,
       verificationStatusLabel: resolveVerificationStatusLabel(vStatus),
       verifiedAt: employerDoc.verifiedAt
@@ -893,6 +988,13 @@ export const operationsEmployersService = {
       isWhatsappVerified: Boolean(employerDoc.isWhatsappVerified),
       isProfileComplete: Boolean(employerDoc.isProfileComplete),
       registrationStatus: text(employerDoc.registrationStatus),
+      isNewRegistration:
+        employerDoc.operationsRegistrationAwareness?.state === "new",
+      registrationAwarenessState:
+        employerDoc.operationsRegistrationAwareness?.state === "new" ||
+        employerDoc.operationsRegistrationAwareness?.state === "seen"
+          ? employerDoc.operationsRegistrationAwareness.state
+          : null,
 
       businessCategory: text(employerDoc.businessCategory),
       companyDescription: text(employerDoc.companyDescription),
@@ -937,6 +1039,15 @@ export const operationsEmployersService = {
         hiredApplications,
       },
       verificationRemarks: text(employerDoc.verificationRemarks),
+      rejectedAt: employerDoc.rejectedAt
+        ? new Date(employerDoc.rejectedAt).toISOString()
+        : null,
+      verifiedByLabel: verifiedById
+        ? reviewerNameById.get(verifiedById) || "Operations"
+        : "",
+      rejectedByLabel: rejectedById
+        ? reviewerNameById.get(rejectedById) || "Operations"
+        : "",
       suspensionReason: text(employerDoc.suspensionReason),
     };
   },
@@ -1017,49 +1128,263 @@ export const operationsEmployersService = {
   async updateVerification(
     employerId: string,
     body: UpdateOperationsEmployerVerificationBody,
+    operationsUserId: string,
   ): Promise<OperationsEmployerDetail> {
     if (!mongoose.Types.ObjectId.isValid(employerId)) {
       throw new AppError("Employer not found.", HTTP_STATUS.NOT_FOUND);
     }
-
-    const employerObjectId = new mongoose.Types.ObjectId(employerId);
-
-    const update: Record<string, unknown> = {
-      verificationStatus: body.verificationStatus,
-      verificationRemarks: body.remarks?.trim() || "",
-    };
-
-    if (body.verificationStatus === "verified") {
-      update.verifiedAt = new Date();
-      update.isWhatsappVerified = true;
-    } else if (body.verificationStatus === "rejected") {
-      update.verifiedAt = null;
+    if (!mongoose.Types.ObjectId.isValid(operationsUserId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
-    const employer = await EmployerModel.findByIdAndUpdate(
-      employerObjectId,
-      { $set: update },
-      { new: true },
-    );
+    const remarks = body.remarks?.trim() || "";
+    if (body.verificationStatus === "rejected" && remarks.length < 3) {
+      throw new AppError(
+        "Rejection remarks must be at least 3 characters.",
+        HTTP_STATUS.UNPROCESSABLE_ENTITY,
+      );
+    }
 
-    if (!employer) {
+    const employerObjectId = new mongoose.Types.ObjectId(employerId);
+    const opsUserObjectId = new mongoose.Types.ObjectId(operationsUserId);
+
+    const current = await EmployerModel.findById(employerObjectId)
+      .select({
+        verificationStatus: 1,
+        companyName: 1,
+        establishmentName: 1,
+        firstName: 1,
+        lastName: 1,
+      })
+      .lean();
+
+    if (!current) {
       throw new AppError("Employer not found.", HTTP_STATUS.NOT_FOUND);
     }
 
-    // Sync employer documents
-    if (body.verificationStatus === "verified") {
+    const target = body.verificationStatus;
+    const decision = resolveVerificationTransition(
+      current.verificationStatus,
+      target,
+    );
+
+    if (decision === "idempotent") {
+      return this.getEmployerById(employerId);
+    }
+
+    if (decision === "conflict") {
+      throw new AppError(
+        "Verification already processed.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const now = new Date();
+    const previousStatus = resolveVerificationStatus(current);
+    const update: Record<string, unknown> = {
+      verificationStatus: target,
+    };
+
+    if (target === "verified") {
+      update.verifiedAt = now;
+      update.verifiedBy = opsUserObjectId;
+      update.rejectedAt = null;
+      update.rejectedBy = null;
+      update.verificationRemarks = remarks;
+    } else if (target === "rejected") {
+      update.rejectedAt = now;
+      update.rejectedBy = opsUserObjectId;
+      update.verifiedAt = null;
+      update.verifiedBy = null;
+      update.verificationRemarks = remarks;
+    } else {
+      update.verificationRemarks = remarks;
+    }
+
+    const updated = await EmployerModel.findOneAndUpdate(
+      pendingVerificationFilter(employerObjectId),
+      { $set: update },
+      { new: true },
+    ).lean();
+
+    if (!updated) {
+      const latest = await EmployerModel.findById(employerObjectId)
+        .select({ verificationStatus: 1 })
+        .lean();
+      if (!latest) {
+        throw new AppError("Employer not found.", HTTP_STATUS.NOT_FOUND);
+      }
+      const raceDecision = resolveVerificationTransition(
+        latest.verificationStatus,
+        target,
+      );
+      if (raceDecision === "idempotent") {
+        return this.getEmployerById(employerId);
+      }
+      throw new AppError(
+        "Verification already processed.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    if (target === "verified") {
       await EmployerDocumentModel.updateMany(
         { employerId: employerObjectId, verificationStatus: "pending" },
         { $set: { verificationStatus: "approved" } },
       );
-    } else if (body.verificationStatus === "rejected") {
+    } else if (target === "rejected") {
       await EmployerDocumentModel.updateMany(
         { employerId: employerObjectId, verificationStatus: "pending" },
         { $set: { verificationStatus: "rejected" } },
       );
     }
 
+    const actor = await OperationsTeamUserModel.findById(operationsUserId)
+      .select("fullName")
+      .lean();
+    const actorName = text(actor?.fullName) || "Operations";
+    const reviewedByLabel = `${actorName} (Operations)`;
+    const targetLabel =
+      text(updated.companyName) ||
+      text(updated.establishmentName) ||
+      resolveDisplayName(updated);
+
+    await recordOperationsAuditEvent({
+      actorUserId: opsUserObjectId,
+      actorName,
+      action:
+        target === "verified"
+          ? "employer.verification_approved"
+          : target === "rejected"
+            ? "employer.verification_rejected"
+            : "employer.verification_updated",
+      targetType: "employer",
+      targetId: employerId,
+      targetLabel,
+      previousState: { verificationStatus: previousStatus },
+      nextState: { verificationStatus: target },
+      reason: remarks,
+    });
+
+    try {
+      if (target === "verified") {
+        await notificationService.notifyEmployerVerificationApproved({
+          employerId,
+          reviewedByLabel,
+        });
+      } else if (target === "rejected") {
+        await notificationService.notifyEmployerVerificationRejected({
+          employerId,
+          reason: remarks,
+          reviewedByLabel,
+        });
+      }
+    } catch {
+      // Notification failure must not roll back verification.
+    }
+
     return this.getEmployerById(employerId);
+  },
+
+  async openEmployerDocument(
+    employerId: string,
+    documentId: string,
+  ): Promise<{
+    stream: Readable;
+    mimeType: string;
+    fileName: string;
+    contentLength?: number;
+  }> {
+    if (
+      !mongoose.Types.ObjectId.isValid(employerId) ||
+      !mongoose.Types.ObjectId.isValid(documentId)
+    ) {
+      throw new AppError("Document not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const employerObjectId = new mongoose.Types.ObjectId(employerId);
+    const documentObjectId = new mongoose.Types.ObjectId(documentId);
+
+    const document = await EmployerDocumentModel.findOne({
+      _id: documentObjectId,
+      employerId: employerObjectId,
+    }).lean();
+
+    if (!document) {
+      throw new AppError("Document not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const fileName = text(document.originalName) || "document";
+    const mimeType = text(document.mimeType) || "application/octet-stream";
+    const storagePath = text(document.storagePath);
+    const remoteUrl = text(document.url);
+
+    if (storagePath) {
+      const absolutePath = path.isAbsolute(storagePath)
+        ? storagePath
+        : path.resolve(process.cwd(), storagePath);
+      if (existsSync(absolutePath)) {
+        return {
+          stream: createReadStream(absolutePath),
+          mimeType,
+          fileName,
+          contentLength:
+            typeof document.fileSize === "number" ? document.fileSize : undefined,
+        };
+      }
+    }
+
+    if (remoteUrl) {
+      const absoluteUrl = remoteUrl.startsWith("http")
+        ? remoteUrl
+        : remoteUrl.startsWith("/")
+          ? remoteUrl
+          : `/${remoteUrl}`;
+
+      if (!absoluteUrl.startsWith("http")) {
+        const localPath = path.resolve(
+          process.cwd(),
+          absoluteUrl.replace(/^\//, ""),
+        );
+        if (!existsSync(localPath)) {
+          throw new AppError("Document file not found.", HTTP_STATUS.NOT_FOUND);
+        }
+        return {
+          stream: createReadStream(localPath),
+          mimeType,
+          fileName,
+        };
+      }
+
+      const response = await fetch(absoluteUrl);
+      if (!response.ok || !response.body) {
+        throw new AppError(
+          "Unable to load document file.",
+          HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        );
+      }
+
+      const { Readable: NodeReadable } = await import("node:stream");
+      const stream = NodeReadable.fromWeb(
+        response.body as import("stream/web").ReadableStream,
+      );
+      const contentLengthHeader = response.headers.get("content-length");
+      const contentLength = contentLengthHeader
+        ? Number(contentLengthHeader)
+        : undefined;
+
+      return {
+        stream,
+        mimeType: response.headers.get("content-type") || mimeType,
+        fileName,
+        contentLength:
+          contentLength != null && Number.isFinite(contentLength)
+            ? contentLength
+            : undefined,
+      };
+    }
+
+    throw new AppError("Document file not found.", HTTP_STATUS.NOT_FOUND);
   },
 
   async updateStatus(
@@ -1163,14 +1488,18 @@ export const operationsEmployersService = {
     return this.getEmployerById(String(created._id));
   },
 
-  async exportEmployersCsv(query: ListOperationsEmployersQuery): Promise<string> {
+  async exportEmployers(
+    query: ListOperationsEmployersQuery,
+    access: OperationsResolvedAccess,
+    format: OperationsEmployersExportFormat = "xlsx",
+  ): Promise<OperationsEmployersExportFileResult> {
     const result = await this.listEmployers({
       ...query,
       page: 1,
       limit: 100,
     });
 
-    // Fetch all pages up to a safe cap for export.
+    // Fetch all matching pages up to a safe cap (not limited to the UI page).
     const maxRows = 5000;
     const all = [...result.employers];
     let page = 2;
@@ -1188,37 +1517,29 @@ export const operationsEmployersService = {
       page += 1;
     }
 
-    const header = [
-      "Company Name",
-      "Industry",
-      "Location",
-      "Registration Date",
-      "Verification Status",
-      "Jobs Posted",
-      "Status",
-      "Employer ID",
-      "Phone",
-      "Email",
-    ];
-    const rows = all.map((item) => [
-      item.companyName || item.displayName,
-      item.industry,
-      item.location,
-      item.registeredAtDate,
-      item.verificationStatusLabel,
-      String(item.totalJobsCount),
-      item.statusLabel,
-      item.displayId,
-      item.phone,
-      item.email,
-    ]);
+    const sanitized = all.map((item) => sanitizeEmployerListItem(item, access));
 
-    return [header, ...rows]
-      .map((row) =>
-        row
-          .map((cell) => `"${String(cell).replaceAll('"', '""')}"`)
-          .join(","),
-      )
-      .join("\n");
+    return buildOperationsEmployersExportFile({
+      rows: sanitized,
+      format,
+      columnFlags: {
+        includeCompany: operationsAccessCanKey(
+          access,
+          EMPLOYER_FIELD_PERMISSION_KEYS.name,
+        ),
+        includeLocation: operationsAccessCanKey(
+          access,
+          EMPLOYER_FIELD_PERMISSION_KEYS.address,
+        ),
+        includePhone: operationsAccessCanKey(
+          access,
+          EMPLOYER_FIELD_PERMISSION_KEYS.phone,
+        ),
+        includeEmail: operationsAccessCanKey(
+          access,
+          EMPLOYER_FIELD_PERMISSION_KEYS.email,
+        ),
+      },
+    });
   },
 };

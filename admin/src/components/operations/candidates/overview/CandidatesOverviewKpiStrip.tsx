@@ -17,8 +17,8 @@ const CARDS: Array<{
 }> = [
   { value: "totalJobseekers", trend: "totalJobseekersTrendPercent", caption: "totalJobseekersCaption", label: "Total Jobseekers", icon: Users, tone: "text-primary", wrap: "bg-primary-light" },
   { value: "newRegistrations", trend: "newRegistrationsTrendPercent", caption: "newRegistrationsCaption", label: "New Registrations", icon: UserPlus, tone: "text-chart-accent", wrap: "bg-chart-accent/10" },
-  { value: "profileCompleted", trend: "profileCompletedTrendPercent", caption: "profileCompletedCaption", label: "Profile Completed", icon: FileCheck, tone: "text-success", wrap: "bg-success/10" },
-  { value: "verifiedJobseekers", trend: "verifiedJobseekersTrendPercent", caption: "verifiedJobseekersCaption", label: "Verified Jobseekers", icon: ShieldCheck, tone: "text-warning", wrap: "bg-warning/10" },
+  { value: "profileCompleted", trend: "profileCompletedTrendPercent", caption: "profileCompletedCaption", label: "Registration Complete", icon: FileCheck, tone: "text-success", wrap: "bg-success/10" },
+  { value: "verifiedJobseekers", trend: "verifiedJobseekersTrendPercent", caption: "verifiedJobseekersCaption", label: "WhatsApp Verified", icon: ShieldCheck, tone: "text-warning", wrap: "bg-warning/10" },
   { value: "activeJobseekers", trend: "activeJobseekersTrendPercent", caption: "activeJobseekersCaption", label: "Active Jobseekers", icon: Briefcase, tone: "text-chart-accent-alt", wrap: "bg-chart-accent-alt/10" },
 ];
 

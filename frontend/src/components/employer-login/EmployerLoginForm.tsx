@@ -1,6 +1,9 @@
 "use client";
 
+import { FieldError } from "@/components/auth/FieldError";
+import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { EmployerRegisterOtpInput } from "@/components/employer-register/EmployerRegisterOtpInput";
+import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import {
   EMPLOYER_LOGIN_CONTINUE_LABEL,
   EMPLOYER_LOGIN_HEADING,
@@ -16,49 +19,35 @@ import {
 } from "@/constants/employer-login";
 import { isValidEmployerWhatsappNumber } from "@/constants/employer-register";
 import { ROUTES } from "@/constants/routes";
+import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
 import {
   resendEmployerLoginOtp,
   sendEmployerLoginOtp,
   verifyEmployerLoginOtp,
 } from "@/services/employer-login.service";
+import {
+  clearFieldError,
+  focusFirstInvalidField,
+  mergeFieldErrors,
+  type AuthFieldErrors,
+} from "@/utils/auth-field-errors";
 import { establishEmployerClientSession } from "@/utils/employer-session";
-import { isAxiosError } from "axios";
+import { normalizeApiError } from "@/utils/normalize-api-error";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
 
 const EMPTY_OTP_DIGITS = Array.from(
   { length: EMPLOYER_LOGIN_OTP_LENGTH },
   () => "",
 );
 
-function getErrorMessage(error: unknown, fallback: string) {
-  if (isAxiosError(error)) {
-    const data = error.response?.data;
-
-    if (typeof data === "string" && data.trim()) {
-      return data.trim();
-    }
-
-    if (data && typeof data === "object" && "message" in data) {
-      const message = (data as { message?: unknown }).message;
-      if (typeof message === "string" && message.trim()) {
-        return message;
-      }
-    }
-
-    if (error.response?.status === 429) {
-      return "Too many requests, please try again later.";
-    }
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
-}
+const OTP_FIELD_MESSAGES = new Set<string>([
+  AUTH_VALIDATION_MESSAGES.OTP_REQUIRED,
+  AUTH_VALIDATION_MESSAGES.OTP_INVALID,
+  AUTH_VALIDATION_MESSAGES.OTP_EXPIRED,
+  AUTH_VALIDATION_MESSAGES.OTP_TOO_MANY,
+]);
 
 export function EmployerLoginForm() {
   const router = useRouter();
@@ -68,34 +57,96 @@ export function EmployerLoginForm() {
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const { secondsLeft, isCoolingDown, startCooldown, resetCooldown } =
     useOtpResendCooldown();
 
-  const isWhatsappValid = isValidEmployerWhatsappNumber(whatsappNumber);
   const isOtpComplete = otpDigits.every(
     (digit) => digit.length === 1 && /\d/.test(digit),
   );
+
+  const clearField = (field: string) => {
+    setFieldErrors((current) => clearFieldError(current, field));
+  };
+
+  const applyApiError = (error: unknown, fallback: string) => {
+    const normalized = normalizeApiError(error);
+    let message = normalized.message || fallback;
+    const nextFieldErrors = { ...normalized.fieldErrors };
+
+    if (normalized.status === 429) {
+      message = AUTH_VALIDATION_MESSAGES.OTP_TOO_MANY;
+    }
+
+    if (!nextFieldErrors.otp && OTP_FIELD_MESSAGES.has(message)) {
+      nextFieldErrors.otp = message;
+    }
+
+    if (
+      !nextFieldErrors.whatsappNumber &&
+      (message === AUTH_VALIDATION_MESSAGES.LOGIN_NOT_REGISTERED ||
+        message === AUTH_VALIDATION_MESSAGES.COMPLETE_REGISTRATION)
+    ) {
+      nextFieldErrors.whatsappNumber = message;
+    }
+
+    setFieldErrors((current) => mergeFieldErrors(current, nextFieldErrors));
+
+    const onlyFieldErrors =
+      Object.keys(nextFieldErrors).length > 0 &&
+      (OTP_FIELD_MESSAGES.has(message) ||
+        message === AUTH_VALIDATION_MESSAGES.LOGIN_NOT_REGISTERED ||
+        message === AUTH_VALIDATION_MESSAGES.COMPLETE_REGISTRATION);
+
+    setErrorMessage(onlyFieldErrors ? null : message);
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      focusFirstInvalidField(nextFieldErrors);
+    }
+  };
 
   const handleWhatsappChange = (value: string) => {
     const nextValue = value.replace(/\D/g, "").slice(0, 10);
     setWhatsappNumber(nextValue);
     setErrorMessage(null);
+    clearField("whatsappNumber");
 
     if (isOtpVisible) {
       setIsOtpVisible(false);
       setOtpDigits(EMPTY_OTP_DIGITS);
       resetCooldown();
+      clearField("otp");
     }
   };
 
   const handleSendOtp = async () => {
-    if (!isWhatsappValid) {
-      setErrorMessage("Enter a valid 10-digit WhatsApp number");
+    if (isSubmitting) {
+      return;
+    }
+
+    if (!whatsappNumber.trim()) {
+      const errors: AuthFieldErrors = {
+        whatsappNumber: AUTH_VALIDATION_MESSAGES.WHATSAPP_REQUIRED,
+      };
+      setFieldErrors(errors);
+      setErrorMessage(null);
+      focusFirstInvalidField(errors);
+      return;
+    }
+
+    if (!isValidEmployerWhatsappNumber(whatsappNumber)) {
+      const errors: AuthFieldErrors = {
+        whatsappNumber: AUTH_VALIDATION_MESSAGES.WHATSAPP_INVALID,
+      };
+      setFieldErrors(errors);
+      setErrorMessage(null);
+      focusFirstInvalidField(errors);
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(null);
+    setFieldErrors({});
 
     try {
       const result = await sendEmployerLoginOtp(whatsappNumber);
@@ -103,26 +154,27 @@ export function EmployerLoginForm() {
       setIsOtpVisible(true);
       startCooldown(result.resendAvailableIn);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, "Failed to send OTP"));
+      applyApiError(error, AUTH_VALIDATION_MESSAGES.GENERIC_SUBMIT_ERROR);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleResendOtp = async () => {
-    if (!isWhatsappValid || isCoolingDown) {
+    if (isSubmitting || !isValidEmployerWhatsappNumber(whatsappNumber) || isCoolingDown) {
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(null);
+    clearField("otp");
 
     try {
       const result = await resendEmployerLoginOtp(whatsappNumber);
       setOtpDigits(EMPTY_OTP_DIGITS);
       startCooldown(result.resendAvailableIn);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, "Failed to resend OTP"));
+      applyApiError(error, AUTH_VALIDATION_MESSAGES.GENERIC_SUBMIT_ERROR);
     } finally {
       setIsSubmitting(false);
     }
@@ -131,18 +183,28 @@ export function EmployerLoginForm() {
   const handleContinue = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (isSubmitting) {
+      return;
+    }
+
     if (!isOtpVisible) {
       await handleSendOtp();
       return;
     }
 
     if (!isOtpComplete) {
-      setErrorMessage("Enter the 6-digit OTP");
+      const errors: AuthFieldErrors = {
+        otp: AUTH_VALIDATION_MESSAGES.OTP_REQUIRED,
+      };
+      setFieldErrors(errors);
+      setErrorMessage(null);
+      focusFirstInvalidField(errors);
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(null);
+    clearField("otp");
 
     try {
       const session = await verifyEmployerLoginOtp(
@@ -156,7 +218,7 @@ export function EmployerLoginForm() {
       });
       router.replace(ROUTES.EMPLOYER_DASHBOARD);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, "Invalid OTP"));
+      applyApiError(error, AUTH_VALIDATION_MESSAGES.OTP_INVALID);
     } finally {
       setIsSubmitting(false);
     }
@@ -179,14 +241,16 @@ export function EmployerLoginForm() {
         noValidate
       >
         <div className="employer-register-form-stack">
-          <label
+          <RequiredFieldLabel
             htmlFor="employer-login-whatsapp"
+            required
             className="employer-register-form-label"
           >
             {EMPLOYER_LOGIN_WHATSAPP_LABEL}
-          </label>
+          </RequiredFieldLabel>
           <input
             id="employer-login-whatsapp"
+            name="whatsappNumber"
             type="tel"
             inputMode="numeric"
             value={whatsappNumber}
@@ -195,7 +259,15 @@ export function EmployerLoginForm() {
             autoComplete="tel"
             className="employer-register-form-input"
             aria-required="true"
+            aria-invalid={Boolean(fieldErrors.whatsappNumber)}
+            aria-describedby={
+              fieldErrors.whatsappNumber ? "whatsappNumber-error" : undefined
+            }
             disabled={isSubmitting}
+          />
+          <FieldError
+            id="whatsappNumber-error"
+            message={fieldErrors.whatsappNumber}
           />
         </div>
 
@@ -212,9 +284,16 @@ export function EmployerLoginForm() {
 
             <EmployerRegisterOtpInput
               value={otpDigits}
-              onChange={setOtpDigits}
+              onChange={(next) => {
+                setOtpDigits(next);
+                clearField("otp");
+              }}
               disabled={isSubmitting}
+              name="otp"
+              aria-invalid={Boolean(fieldErrors.otp)}
+              aria-describedby={fieldErrors.otp ? "otp-error" : undefined}
             />
+            <FieldError id="otp-error" message={fieldErrors.otp} />
 
             <p className="text-center text-sm text-muted">
               {EMPLOYER_LOGIN_RESEND_PROMPT}{" "}
@@ -241,7 +320,8 @@ export function EmployerLoginForm() {
             <button
               type="submit"
               className="employer-register-form-submit"
-              disabled={!isOtpComplete || isSubmitting}
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
             >
               {EMPLOYER_LOGIN_CONTINUE_LABEL}
             </button>
@@ -257,7 +337,8 @@ export function EmployerLoginForm() {
             <button
               type="submit"
               className="employer-register-form-submit"
-              disabled={!isWhatsappValid || isSubmitting}
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
             >
               {EMPLOYER_LOGIN_SEND_OTP_LABEL}
             </button>

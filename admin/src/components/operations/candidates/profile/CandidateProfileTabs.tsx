@@ -5,35 +5,29 @@ export type CandidateProfileTabId =
   | "applications"
   | "preferences"
   | "profile_details"
-  | "documents"
-  | "activity"
-  | "notes";
+  | "documents";
 
 interface CandidateProfileTabsProps {
   activeTab: CandidateProfileTabId;
   applicationsCount: number;
-  notesCount: number;
   onChange: (tab: CandidateProfileTabId) => void;
 }
 
 const TABS: Array<{
   id: CandidateProfileTabId;
   label: string;
-  countKey?: "applications" | "notes";
+  countKey?: "applications";
 }> = [
   { id: "overview", label: "Overview" },
   { id: "applications", label: "Applications", countKey: "applications" },
   { id: "preferences", label: "Job Preferences" },
   { id: "profile_details", label: "Profile Details" },
   { id: "documents", label: "Documents" },
-  { id: "activity", label: "Activity Timeline" },
-  { id: "notes", label: "Notes", countKey: "notes" },
 ];
 
 export function CandidateProfileTabs({
   activeTab,
   applicationsCount,
-  notesCount,
   onChange,
 }: CandidateProfileTabsProps) {
   return (
@@ -45,13 +39,11 @@ export function CandidateProfileTabs({
       {TABS.map((tab) => {
         const selected = activeTab === tab.id;
         const count =
-          tab.countKey === "applications"
-            ? applicationsCount
-            : tab.countKey === "notes"
-              ? notesCount
-              : null;
+          tab.countKey === "applications" ? applicationsCount : null;
         const label =
-          count == null ? tab.label : `${tab.label} (${count.toLocaleString("en-IN")})`;
+          count == null
+            ? tab.label
+            : `${tab.label} (${count.toLocaleString("en-IN")})`;
 
         return (
           <button

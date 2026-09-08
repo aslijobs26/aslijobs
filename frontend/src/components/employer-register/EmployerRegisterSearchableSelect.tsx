@@ -1,5 +1,7 @@
 "use client";
 
+import { FieldError } from "@/components/auth/FieldError";
+import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
 import { Check, ChevronDown, Plus, Search } from "lucide-react";
@@ -22,6 +24,11 @@ type EmployerRegisterSearchableSelectProps = {
   onChange: (value: string) => void;
   disabled?: boolean;
   required?: boolean;
+  name?: string;
+  error?: string | null;
+  errorId?: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
   hideLabel?: boolean;
   /** Hide the search input inside the dropdown panel. */
   hideSearch?: boolean;
@@ -61,6 +68,11 @@ export function EmployerRegisterSearchableSelect({
   onChange,
   disabled = false,
   required = false,
+  name,
+  error = null,
+  errorId,
+  "aria-invalid": ariaInvalid = false,
+  "aria-describedby": ariaDescribedBy,
   hideLabel = false,
   hideSearch = false,
   searchPlaceholder,
@@ -264,19 +276,23 @@ export function EmployerRegisterSearchableSelect({
 
   const displayValue = selectedOption?.label ?? (value || placeholder);
   const isPlaceholder = !selectedOption && !value;
+  const resolvedErrorId = errorId ?? (error ? `${id}-error` : undefined);
+  const describedBy =
+    ariaDescribedBy ?? (error && resolvedErrorId ? resolvedErrorId : undefined);
+  const isInvalid = ariaInvalid || Boolean(error);
 
   return (
     <div className="employer-register-form-stack" ref={rootRef}>
-      <label
+      <RequiredFieldLabel
         htmlFor={id}
+        required={required}
         className={cn(
           "employer-register-form-label",
           hideLabel && "sr-only",
         )}
       >
         {label}
-        {required ? "*" : null}
-      </label>
+      </RequiredFieldLabel>
 
       <div
         className={cn(
@@ -287,6 +303,7 @@ export function EmployerRegisterSearchableSelect({
         <button
           id={id}
           type="button"
+          name={name}
           className={cn(
             "employer-register-searchable-select-trigger",
             triggerClassName,
@@ -297,6 +314,9 @@ export function EmployerRegisterSearchableSelect({
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           aria-controls={listboxId}
+          aria-required={required || undefined}
+          aria-invalid={isInvalid || undefined}
+          aria-describedby={describedBy}
           disabled={disabled}
           onClick={() => {
             if (!disabled) {
@@ -447,6 +467,7 @@ export function EmployerRegisterSearchableSelect({
           </div>
         ) : null}
       </div>
+      <FieldError id={resolvedErrorId} message={error} />
     </div>
   );
 }

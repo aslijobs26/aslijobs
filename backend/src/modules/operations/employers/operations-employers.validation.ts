@@ -59,13 +59,41 @@ export type ListOperationsEmployerJobsQuery = z.infer<
   typeof listOperationsEmployerJobsQuerySchema
 >;
 
-export const updateOperationsEmployerVerificationBodySchema = z.object({
-  verificationStatus: z.enum(["verified", "pending", "rejected"]),
-  remarks: z.string().trim().max(500).optional().default(""),
-});
+export const updateOperationsEmployerVerificationBodySchema = z
+  .object({
+    verificationStatus: z.enum(["verified", "pending", "rejected"]),
+    remarks: z.string().trim().max(500).optional().default(""),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.verificationStatus === "rejected" &&
+      value.remarks.trim().length < 3
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["remarks"],
+        message: "Rejection remarks must be at least 3 characters.",
+      });
+    }
+  });
 
 export type UpdateOperationsEmployerVerificationBody = z.infer<
   typeof updateOperationsEmployerVerificationBodySchema
+>;
+
+export const operationsEmployerDocumentParamsSchema = z.object({
+  employerId: z
+    .string()
+    .trim()
+    .regex(/^[a-fA-F0-9]{24}$/, "Invalid employer id."),
+  documentId: z
+    .string()
+    .trim()
+    .regex(/^[a-fA-F0-9]{24}$/, "Invalid document id."),
+});
+
+export type OperationsEmployerDocumentParams = z.infer<
+  typeof operationsEmployerDocumentParamsSchema
 >;
 
 export const updateOperationsEmployerStatusBodySchema = z.object({
@@ -124,7 +152,10 @@ export type CreateOperationsEmployerBody = z.infer<
 >;
 
 export const exportOperationsEmployersQuerySchema =
-  listOperationsEmployersQuerySchema.omit({ page: true, limit: true });
+  listOperationsEmployersQuerySchema.omit({ page: true, limit: true }).extend({
+    /** Default xlsx. Pass format=csv for UTF-8 BOM CSV. */
+    format: z.enum(["xlsx", "csv"]).default("xlsx"),
+  });
 
 export type ExportOperationsEmployersQuery = z.infer<
   typeof exportOperationsEmployersQuerySchema

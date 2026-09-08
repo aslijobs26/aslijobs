@@ -6,11 +6,11 @@ export const JOB_SEEKER_REGISTER_LOGIN_PROMPT = "Already have an account?";
 
 export const JOB_SEEKER_REGISTER_LOGIN_LABEL = "Job Seeker Login";
 
-export const JOB_SEEKER_REGISTER_FULL_NAME_LABEL = "Full Name*";
+export const JOB_SEEKER_REGISTER_FULL_NAME_LABEL = "Full Name";
 
 export const JOB_SEEKER_REGISTER_FULL_NAME_PLACEHOLDER = "Enter your full name";
 
-export const JOB_SEEKER_REGISTER_WHATSAPP_LABEL = "WhatsApp Number*";
+export const JOB_SEEKER_REGISTER_WHATSAPP_LABEL = "WhatsApp Number";
 
 export const JOB_SEEKER_REGISTER_WHATSAPP_PLACEHOLDER = "Enter WhatsApp Number";
 
@@ -31,7 +31,7 @@ export const JOB_SEEKER_REGISTER_PREFERENCES_HEADING = "Job Preferences";
 
 export const JOB_SEEKER_REGISTER_EDUCATION_HEADING = "Education & Experience";
 
-export const JOB_SEEKER_REGISTER_DOB_LABEL = "Date of Birth*";
+export const JOB_SEEKER_REGISTER_DOB_LABEL = "Date of Birth";
 
 export const JOB_SEEKER_REGISTER_DOB_PLACEHOLDER = "DD/MM/YYYY";
 
@@ -39,7 +39,7 @@ export const JOB_SEEKER_REGISTER_GENDER_LABEL = "Gender";
 
 export const JOB_SEEKER_REGISTER_GENDER_PLACEHOLDER = "Select gender";
 
-export const JOB_SEEKER_REGISTER_JOB_ROLE_LABEL = "Job Role*";
+export const JOB_SEEKER_REGISTER_JOB_ROLE_LABEL = "Job Role";
 
 export const JOB_SEEKER_REGISTER_JOB_ROLE_PLACEHOLDER = "Search job role";
 
@@ -52,12 +52,12 @@ export const JOB_SEEKER_REGISTER_WORK_MODE_LABEL = "Work Mode";
 export const JOB_SEEKER_REGISTER_WORK_MODE_PLACEHOLDER = "Select work mode";
 
 export const JOB_SEEKER_REGISTER_PREFERRED_LOCATION_LABEL =
-  "Preferred Job Location*";
+  "Preferred Job Location";
 
 export const JOB_SEEKER_REGISTER_PREFERRED_LOCATION_PLACEHOLDER =
   "City / District / State";
 
-export const JOB_SEEKER_REGISTER_EXPECTED_SALARY_LABEL = "Expected Salary*";
+export const JOB_SEEKER_REGISTER_EXPECTED_SALARY_LABEL = "Expected Salary";
 
 export const JOB_SEEKER_REGISTER_EXPECTED_SALARY_PLACEHOLDER =
   "Enter amount";

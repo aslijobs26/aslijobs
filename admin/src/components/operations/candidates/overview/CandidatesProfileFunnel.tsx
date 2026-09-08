@@ -9,7 +9,7 @@ function resolveBarTone(
   total: number,
 ): "registered" | "progress" | "verified" {
   if (stageId === "registered" || index === 0) return "registered";
-  if (stageId === "verified" || index === total - 1) return "verified";
+  if (stageId === "profile_complete" || index === total - 1) return "verified";
   return "progress";
 }
 
@@ -23,9 +23,14 @@ export function CandidatesProfileFunnel({
   return (
     <section className="candidates-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
       <header className="flex items-center justify-between gap-2 px-3 pt-2.5 sm:px-3.5 sm:pt-3 xl:px-3 xl:pt-2">
-        <h3 className="text-[13px] font-semibold tracking-tight text-foreground xl:text-[12px]">
-          Profile Completion Funnel
-        </h3>
+        <div className="min-w-0">
+          <h3 className="text-[13px] font-semibold tracking-tight text-foreground xl:text-[12px]">
+            Profile Completion Funnel
+          </h3>
+          <p className="mt-0.5 text-[11px] text-muted xl:text-[10px]">
+            Live cohort · registration journey
+          </p>
+        </div>
         <Link
           to={`${OPERATIONS_ROUTES.CANDIDATES}?overviewTab=profileIncomplete`}
           className="shrink-0 text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:text-[11px]"

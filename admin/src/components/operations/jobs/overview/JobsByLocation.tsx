@@ -153,9 +153,14 @@ export function JobsByLocation({ data, className }: JobsByLocationProps) {
       )}
     >
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-3 py-2 sm:px-3.5 sm:py-2.5 xl:px-3 xl:py-1.5">
-        <h3 className="text-[13px] font-semibold tracking-tight text-foreground xl:text-[12px]">
-          Jobs by Location
-        </h3>
+        <div className="min-w-0">
+          <h3 className="text-[13px] font-semibold tracking-tight text-foreground xl:text-[12px]">
+            Jobs by Location
+          </h3>
+          <p className="mt-0.5 text-[11px] text-muted xl:text-[10px]">
+            Active jobs only
+          </p>
+        </div>
         <div
           role="tablist"
           aria-label="Location breakdown"
@@ -198,17 +203,18 @@ export function JobsByLocation({ data, className }: JobsByLocationProps) {
         ) : (
           <div
             className={cn(
-              "grid min-h-[9rem] items-center gap-2.5 xl:min-h-[8rem] xl:gap-2",
-              showMap ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1",
+              "grid min-h-[9rem] items-center gap-2.5",
+              showMap ? "grid-cols-1 sm:grid-cols-2 xl:min-h-[12rem]" : "grid-cols-1 xl:min-h-[8rem]",
+              "xl:gap-2",
             )}
           >
             {showMap ? (
-              <div className="relative mx-auto w-full max-w-[10rem] sm:max-w-none">
+              <div className="relative mx-auto w-full max-w-[10rem] sm:max-w-none xl:max-w-none">
                 <svg
                   viewBox={indiaStatesMap.viewBox}
-                  className="h-auto w-full max-h-[10.5rem] xl:max-h-[8.5rem]"
+                  className="h-auto w-full max-h-[10.5rem] xl:max-h-[12.5rem]"
                   role="img"
-                  aria-label="India map of job concentration by state"
+                  aria-label="India map of active job concentration by state"
                 >
                   {mapFeatures.map((feature) => {
                     const canonical = resolveMapFeatureStateName(feature.name);
@@ -250,7 +256,9 @@ export function JobsByLocation({ data, className }: JobsByLocationProps) {
             <ul
               className={cn(
                 "flex min-w-0 flex-col justify-center gap-2 overflow-y-auto overscroll-contain scrollbar-hidden xl:gap-1.5",
-                "max-h-[10.5rem] xl:max-h-[8.5rem]",
+                showMap
+                  ? "max-h-[10.5rem] xl:max-h-[12.5rem]"
+                  : "max-h-[10.5rem] xl:max-h-[8.5rem]",
               )}
             >
               {activeItems.map((item) => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { FieldError } from "@/components/auth/FieldError";
+import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { searchJobSeekerRoles } from "@/services/job-seeker-register.service";
 import { cn } from "@/utils/cn";
 import { useEffect, useId, useRef, useState } from "react";
@@ -12,6 +14,9 @@ type JobSeekerJobRoleAutocompleteProps = {
   value: string;
   placeholder: string;
   disabled?: boolean;
+  required?: boolean;
+  name?: string;
+  error?: string | null;
   onChange: (value: string) => void;
 };
 
@@ -21,9 +26,13 @@ export function JobSeekerJobRoleAutocomplete({
   value,
   placeholder,
   disabled = false,
+  required = true,
+  name = "jobRole",
+  error,
   onChange,
 }: JobSeekerJobRoleAutocompleteProps) {
   const listId = useId();
+  const errorId = `${id}-error`;
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
@@ -80,12 +89,17 @@ export function JobSeekerJobRoleAutocomplete({
 
   return (
     <div className="employer-register-form-stack" ref={rootRef}>
-      <label htmlFor={id} className="employer-register-form-label">
+      <RequiredFieldLabel
+        htmlFor={id}
+        required={required}
+        className="employer-register-form-label"
+      >
         {label}
-      </label>
+      </RequiredFieldLabel>
       <div className="relative">
         <input
           id={id}
+          name={name}
           type="text"
           value={value}
           placeholder={placeholder}
@@ -95,7 +109,9 @@ export function JobSeekerJobRoleAutocomplete({
           aria-expanded={isOpen}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-required="true"
+          aria-required={required || undefined}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={error ? errorId : undefined}
           className="employer-register-form-input"
           onFocus={() => setIsOpen(true)}
           onChange={(event) => {
@@ -155,6 +171,7 @@ export function JobSeekerJobRoleAutocomplete({
           </ul>
         ) : null}
       </div>
+      <FieldError id={errorId} message={error} />
     </div>
   );
 }

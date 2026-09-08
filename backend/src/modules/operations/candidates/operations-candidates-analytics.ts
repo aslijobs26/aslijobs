@@ -1,6 +1,9 @@
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import { ApplicationModel } from "../../applications/application.model.js";
-import { resolveIndiaStateLabel } from "../employers/india-state-normalize.js";
+import {
+  resolveCityLabelFromLocationFields,
+  resolveIndiaStateFromLocationFields,
+} from "../employers/india-state-normalize.js";
 import type {
   OperationsCandidatesAnalyticsNamedCount,
   OperationsCandidatesAnalyticsQuery,
@@ -379,33 +382,46 @@ function buildSeries(
   return points;
 }
 
-/** Basic profile: name + phone + at least one location/DOB signal. */
-const BASIC_PROFILE_FILTER = {
-  fullName: { $exists: true, $nin: [null, ""] },
-  whatsappNumber: { $exists: true, $nin: [null, ""] },
+/** Non-empty trimmed string field (whitespace-only fails). */
+function nonEmptyString(field: string): Record<string, unknown> {
+  return { [field]: { $regex: /\S/ } };
+}
+
+/**
+ * Profile Completion Funnel — aligned with job-seeker registration journey:
+ * OTP/WhatsApp → personal details → job preferences → registration COMPLETED.
+ * Stages are nested (each stage ⊆ previous) so conversion rates stay honest.
+ */
+const FUNNEL_WHATSAPP_FILTER = {
+  isWhatsappVerified: true,
+};
+
+const FUNNEL_BASIC_PROFILE_FILTER = {
+  ...FUNNEL_WHATSAPP_FILTER,
+  ...nonEmptyString("fullName"),
+  ...nonEmptyString("whatsappNumber"),
+  gender: { $exists: true, $nin: [null, ""] },
+  dateOfBirth: { $ne: null },
   $or: [
-    { city: { $exists: true, $nin: [null, ""] } },
-    { state: { $exists: true, $nin: [null, ""] } },
-    { pincode: { $exists: true, $nin: [null, ""] } },
-    { dateOfBirth: { $ne: null } },
+    nonEmptyString("city"),
+    nonEmptyString("state"),
+    nonEmptyString("pincode"),
   ],
 };
 
-const SKILLS_PREFERENCES_FILTER = {
-  $or: [
-    { jobRole: { $exists: true, $nin: [null, ""] } },
-    { "skills.0": { $exists: true } },
-    {
-      $and: [
-        { jobType: { $exists: true, $ne: null } },
-        { workMode: { $exists: true, $ne: null } },
-      ],
-    },
-  ],
+const FUNNEL_SKILLS_PREFERENCES_FILTER = {
+  ...FUNNEL_BASIC_PROFILE_FILTER,
+  ...nonEmptyString("jobRole"),
+  jobType: { $exists: true, $nin: [null, ""] },
+  workMode: { $exists: true, $nin: [null, ""] },
+  ...nonEmptyString("preferredJobLocation"),
+  expectedSalary: { $gt: 0 },
+  ...nonEmptyString("expectedSalaryPeriod"),
 };
 
-const DOCUMENTS_FILTER = {
-  "uploadedResume.url": { $exists: true, $nin: [null, ""] },
+const FUNNEL_PROFILE_COMPLETE_FILTER = {
+  ...FUNNEL_SKILLS_PREFERENCES_FILTER,
+  registrationStatus: "COMPLETED",
 };
 
 export async function getOperationsCandidatesAnalytics(
@@ -462,9 +478,7 @@ export async function getOperationsCandidatesAnalytics(
     verifiedJobseekers,
     activeJobseekerIds,
     previousActiveIds,
-    basicProfileCount,
-    skillsPreferencesCount,
-    documentsUploadedCount,
+    funnelFacetRows,
     completedSeriesRows,
     registeredSeriesRows,
     languageRows,
@@ -516,18 +530,36 @@ export async function getOperationsCandidatesAnalytics(
           }
         : { $gte: previousFrom, $lte: previousTo },
     }),
-    JobSeekerModel.countDocuments({
-      ...cohortFilter,
-      ...BASIC_PROFILE_FILTER,
-    }),
-    JobSeekerModel.countDocuments({
-      ...cohortFilter,
-      ...SKILLS_PREFERENCES_FILTER,
-    }),
-    JobSeekerModel.countDocuments({
-      ...cohortFilter,
-      ...DOCUMENTS_FILTER,
-    }),
+    JobSeekerModel.aggregate<{
+      registered: Array<{ count: number }>;
+      whatsapp: Array<{ count: number }>;
+      basic: Array<{ count: number }>;
+      preferences: Array<{ count: number }>;
+      complete: Array<{ count: number }>;
+    }>([
+      { $match: Object.keys(cohortFilter).length > 0 ? cohortFilter : {} },
+      {
+        $facet: {
+          registered: [{ $count: "count" }],
+          whatsapp: [
+            { $match: FUNNEL_WHATSAPP_FILTER },
+            { $count: "count" },
+          ],
+          basic: [
+            { $match: FUNNEL_BASIC_PROFILE_FILTER },
+            { $count: "count" },
+          ],
+          preferences: [
+            { $match: FUNNEL_SKILLS_PREFERENCES_FILTER },
+            { $count: "count" },
+          ],
+          complete: [
+            { $match: FUNNEL_PROFILE_COMPLETE_FILTER },
+            { $count: "count" },
+          ],
+        },
+      },
+    ]),
     JobSeekerModel.aggregate<{ _id: string; count: number }>([
       {
         $match: {
@@ -565,7 +597,9 @@ export async function getOperationsCandidatesAnalytics(
       { $sort: { count: -1 } },
       { $limit: 8 },
     ]),
-    JobSeekerModel.find(cohortFilter).select({ state: 1, city: 1 }).lean(),
+    JobSeekerModel.find(cohortFilter)
+      .select({ state: 1, city: 1, preferredJobLocation: 1 })
+      .lean(),
     JobSeekerModel.find(cohortFilter)
       .select({ experienceType: 1, experiences: 1 })
       .lean(),
@@ -583,9 +617,24 @@ export async function getOperationsCandidatesAnalytics(
     }),
   ]);
 
+  const funnelFacet = funnelFacetRows[0] ?? {
+    registered: [],
+    whatsapp: [],
+    basic: [],
+    preferences: [],
+    complete: [],
+  };
+  const funnelCount = (rows: Array<{ count: number }> | undefined): number =>
+    rows?.[0]?.count ?? 0;
+
+  const funnelBaseCount = funnelCount(funnelFacet.registered);
+  const whatsappFunnelCount = funnelCount(funnelFacet.whatsapp);
+  const basicProfileCount = funnelCount(funnelFacet.basic);
+  const skillsPreferencesCount = funnelCount(funnelFacet.preferences);
+  const profileCompleteFunnelCount = funnelCount(funnelFacet.complete);
+
   const activeJobseekers = activeJobseekerIds.filter(Boolean).length;
   const previousActive = previousActiveIds.filter(Boolean).length;
-  const funnelBaseCount = await JobSeekerModel.countDocuments(cohortFilter);
   const funnelBase = Math.max(funnelBaseCount, 1);
   const profileCompletedPercent = percentOf(
     profileCompleted,
@@ -629,7 +678,7 @@ export async function getOperationsCandidatesAnalytics(
     verifiedJobseekersCaption:
       verifiedPercent == null
         ? "WhatsApp verified"
-        : `${verifiedPercent}% verification rate`,
+        : `${verifiedPercent}% WhatsApp verified`,
     activeJobseekers,
     activeJobseekersTrendPercent: percentChange(activeJobseekers, previousActive),
     activeJobseekersCaption: "Applied in last 30 days",
@@ -674,6 +723,12 @@ export async function getOperationsCandidatesAnalytics(
       percent: funnelBaseCount > 0 ? 100 : 0,
     },
     {
+      id: "verified",
+      label: "WhatsApp Verified",
+      count: whatsappFunnelCount,
+      percent: percentOf(whatsappFunnelCount, funnelBase) ?? 0,
+    },
+    {
       id: "basic_profile",
       label: "Basic Profile",
       count: basicProfileCount,
@@ -686,23 +741,32 @@ export async function getOperationsCandidatesAnalytics(
       percent: percentOf(skillsPreferencesCount, funnelBase) ?? 0,
     },
     {
-      id: "documents_uploaded",
-      label: "Documents Uploaded",
-      count: documentsUploadedCount,
-      percent: percentOf(documentsUploadedCount, funnelBase) ?? 0,
-    },
-    {
-      id: "verified",
-      label: "Verified",
-      count: verifiedJobseekers,
-      percent: percentOf(verifiedJobseekers, funnelBase) ?? 0,
+      id: "profile_complete",
+      label: "Profile Complete",
+      count: profileCompleteFunnelCount,
+      percent: percentOf(profileCompleteFunnelCount, funnelBase) ?? 0,
     },
   ];
 
   const locationCounts = new Map<string, number>();
+  const cityCounts = new Map<string, number>();
   for (const doc of locationDocs) {
-    const label = resolveIndiaStateLabel(doc.state, doc.city);
+    const label = resolveIndiaStateFromLocationFields({
+      state: doc.state,
+      city: doc.city,
+      preferredJobLocation: doc.preferredJobLocation,
+    });
     locationCounts.set(label, (locationCounts.get(label) ?? 0) + 1);
+
+    const cityRaw = resolveCityLabelFromLocationFields({
+      city: doc.city,
+      preferredJobLocation: doc.preferredJobLocation,
+    });
+    if (!cityRaw) {
+      continue;
+    }
+    const cityKey = cityRaw.toLowerCase().replace(/\s+/g, " ");
+    cityCounts.set(cityKey, (cityCounts.get(cityKey) ?? 0) + 1);
   }
   const byLocation: OperationsCandidatesAnalyticsNamedCount[] = Array.from(
     locationCounts.entries(),
@@ -718,6 +782,25 @@ export async function getOperationsCandidatesAnalytics(
       if (b.label === "Unspecified") return -1;
       return b.count - a.count;
     });
+
+  const byCity: OperationsCandidatesAnalyticsNamedCount[] = Array.from(
+    cityCounts.entries(),
+  )
+    .map(([key, count]) => {
+      const label = key
+        .split(" ")
+        .map((part) =>
+          part ? part.charAt(0).toUpperCase() + part.slice(1) : part,
+        )
+        .join(" ");
+      return {
+        id: key.replace(/\s+/g, "-"),
+        label,
+        count,
+        percent: percentOf(count, Math.max(funnelBaseCount, 1)),
+      };
+    })
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
   const languageTotal = languageRows.reduce((sum, row) => sum + row.count, 0);
   const byLanguage: OperationsCandidatesAnalyticsNamedCount[] = languageRows.map(
@@ -794,6 +877,7 @@ export async function getOperationsCandidatesAnalytics(
     registrationTrend,
     onboardingFunnel,
     byLocation,
+    byCity,
     byLanguage,
     languageTotal: languageTotal || funnelBaseCount,
     byExperience,

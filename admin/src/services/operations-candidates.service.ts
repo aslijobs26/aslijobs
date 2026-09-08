@@ -4,11 +4,44 @@ import type {
   OperationsCandidateDetail,
   OperationsCandidatesAnalyticsParams,
   OperationsCandidatesAnalyticsResult,
+  OperationsCandidatesExportParams,
   OperationsCandidatesListParams,
   OperationsCandidatesListResult,
 } from "../types/operations-candidates";
 
 const OPERATIONS_CANDIDATES_BASE = "/operations/candidates";
+
+function buildCandidatesFilterParams(
+  params: OperationsCandidatesListParams | OperationsCandidatesExportParams,
+) {
+  return {
+    overviewTab: params.overviewTab || undefined,
+    verificationStatus: params.verificationStatus || undefined,
+    tab: "tab" in params ? params.tab : undefined,
+    search: params.search || undefined,
+    status: "status" in params ? params.status || undefined : undefined,
+    jobId: "jobId" in params ? params.jobId || undefined : undefined,
+    employerId:
+      "employerId" in params ? params.employerId || undefined : undefined,
+    location: params.location || undefined,
+    experience: params.experience || undefined,
+    gender: params.gender || undefined,
+    preferredRole: params.preferredRole || undefined,
+    profileStatus: params.profileStatus || undefined,
+    applicationPresence: params.applicationPresence || undefined,
+    datePreset: params.datePreset || undefined,
+    dateFrom: params.dateFrom || undefined,
+    dateTo: params.dateTo || undefined,
+    dateField: "dateField" in params ? params.dateField : undefined,
+    analyticsPreset:
+      "analyticsPreset" in params ? params.analyticsPreset : undefined,
+    analyticsFrom:
+      "analyticsFrom" in params ? params.analyticsFrom || undefined : undefined,
+    analyticsTo:
+      "analyticsTo" in params ? params.analyticsTo || undefined : undefined,
+    format: "format" in params ? params.format || undefined : undefined,
+  };
+}
 
 export async function fetchOperationsCandidates(
   params: OperationsCandidatesListParams,
@@ -19,25 +52,7 @@ export async function fetchOperationsCandidates(
       params: {
         page: params.page,
         limit: params.limit,
-        overviewTab: params.overviewTab || undefined,
-        verificationStatus: params.verificationStatus || undefined,
-        tab: params.tab,
-        search: params.search || undefined,
-        status: params.status || undefined,
-        jobId: params.jobId || undefined,
-        employerId: params.employerId || undefined,
-        location: params.location || undefined,
-        experience: params.experience || undefined,
-        gender: params.gender || undefined,
-        preferredRole: params.preferredRole || undefined,
-        profileStatus: params.profileStatus || undefined,
-        datePreset: params.datePreset,
-        dateFrom: params.dateFrom || undefined,
-        dateTo: params.dateTo || undefined,
-        dateField: params.dateField,
-        analyticsPreset: params.analyticsPreset,
-        analyticsFrom: params.analyticsFrom || undefined,
-        analyticsTo: params.analyticsTo || undefined,
+        ...buildCandidatesFilterParams(params),
       },
     },
   );
@@ -65,6 +80,55 @@ export async function fetchOperationsCandidatesAnalytics(
   });
 
   return response.data.data;
+}
+
+export async function exportOperationsCandidates(
+  params: OperationsCandidatesExportParams,
+): Promise<void> {
+  const response = await apiClient.get<Blob>(
+    `${OPERATIONS_CANDIDATES_BASE}/export`,
+    {
+      params: buildCandidatesFilterParams(params),
+      responseType: "blob",
+    },
+  );
+
+  const contentDisposition = response.headers["content-disposition"];
+  const filenameMatch =
+    typeof contentDisposition === "string"
+      ? /filename="?([^"]+)"?/i.exec(contentDisposition)
+      : null;
+  const filename =
+    filenameMatch?.[1]?.trim() || "AsliJobs-Operations-Candidates.xlsx";
+
+  const url = URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function operationsCandidateResumePath(jobSeekerId: string): string {
+  return `${OPERATIONS_CANDIDATES_BASE}/seekers/${encodeURIComponent(jobSeekerId)}/resume`;
+}
+
+export async function fetchOperationsCandidateResumeBlob(
+  jobSeekerId: string,
+): Promise<{ blob: Blob; fileName: string }> {
+  const response = await apiClient.get<Blob>(
+    operationsCandidateResumePath(jobSeekerId),
+    { responseType: "blob" },
+  );
+  const contentDisposition = response.headers["content-disposition"];
+  const filenameMatch =
+    typeof contentDisposition === "string"
+      ? /filename="?([^"]+)"?/i.exec(contentDisposition)
+      : null;
+  return {
+    blob: response.data,
+    fileName: filenameMatch?.[1]?.trim() || "resume.pdf",
+  };
 }
 
 export async function fetchOperationsCandidateDetail(

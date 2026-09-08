@@ -5,6 +5,7 @@ import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import type { OperationsCandidatesAnalyticsPreset } from "../../../../types/operations-candidates";
 import { OperationsDatePicker } from "../../../ui/OperationsDatePicker";
 import { OperationsFilterSelect } from "../../jobs/OperationsFilterSelect";
+import { OperationsCanKey } from "../../auth/OperationsCanKey";
 
 const PRESET_OPTIONS: Array<{
   value: OperationsCandidatesAnalyticsPreset;
@@ -25,6 +26,7 @@ interface CandidatesOverviewHeaderProps {
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   onExport: () => void;
+  isExporting?: boolean;
   onAddJobseeker?: () => void;
 }
 
@@ -36,6 +38,7 @@ export function CandidatesOverviewHeader({
   onDateFromChange,
   onDateToChange,
   onExport,
+  isExporting = false,
   onAddJobseeker,
 }: CandidatesOverviewHeaderProps) {
   const fromId = useId();
@@ -44,8 +47,14 @@ export function CandidatesOverviewHeader({
 
   return (
     <header className="flex min-w-0 flex-col gap-3">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[11px] text-muted">
-        <Link to={OPERATIONS_ROUTES.HOME} className="font-medium hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+      <nav
+        aria-label="Breadcrumb"
+        className="flex items-center gap-1.5 text-[11px] text-muted"
+      >
+        <Link
+          to={OPERATIONS_ROUTES.HOME}
+          className="font-medium hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        >
           Home
         </Link>
         <span aria-hidden="true">›</span>
@@ -53,9 +62,12 @@ export function CandidatesOverviewHeader({
       </nav>
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">Jobseekers Overview</h1>
+          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
+            Jobseekers Overview
+          </h1>
           <p className="mt-0.5 text-xs text-muted">
-            Track registrations, profile completion, verification and engagement across all jobseekers.
+            Track registrations, profile completion, WhatsApp verification and
+            engagement across all jobseekers.
           </p>
         </div>
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -63,21 +75,50 @@ export function CandidatesOverviewHeader({
             label="Date range"
             value={preset}
             options={PRESET_OPTIONS}
-            onChange={(value) => onPresetChange(value as OperationsCandidatesAnalyticsPreset)}
+            onChange={(value) =>
+              onPresetChange(value as OperationsCandidatesAnalyticsPreset)
+            }
             hideSearch
             className="sm:w-[10.5rem]"
           />
           {preset === "custom" ? (
             <div className="grid grid-cols-2 gap-2 sm:w-[18rem]">
-              <OperationsDatePicker id={fromId} value={dateFrom} placeholder="From" maxDate={dateTo || today} compact onChange={onDateFromChange} />
-              <OperationsDatePicker id={toId} value={dateTo} placeholder="To" minDate={dateFrom || undefined} maxDate={today} compact onChange={onDateToChange} />
+              <OperationsDatePicker
+                id={fromId}
+                value={dateFrom}
+                placeholder="From"
+                maxDate={dateTo || today}
+                compact
+                onChange={onDateFromChange}
+              />
+              <OperationsDatePicker
+                id={toId}
+                value={dateTo}
+                placeholder="To"
+                minDate={dateFrom || undefined}
+                maxDate={today}
+                compact
+                onChange={onDateToChange}
+              />
             </div>
           ) : null}
-          <button type="button" onClick={onExport} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
-            <Download className="size-3.5" aria-hidden="true" /> Export
-          </button>
+          <OperationsCanKey permissionKey="candidates.list.export">
+            <button
+              type="button"
+              onClick={onExport}
+              disabled={isExporting}
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Download className="size-3.5" aria-hidden="true" />
+              {isExporting ? "Exporting…" : "Export"}
+            </button>
+          </OperationsCanKey>
           {onAddJobseeker ? (
-            <button type="button" onClick={onAddJobseeker} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+            <button
+              type="button"
+              onClick={onAddJobseeker}
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
               <Plus className="size-3.5" aria-hidden="true" /> Add Jobseeker
             </button>
           ) : null}

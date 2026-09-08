@@ -81,18 +81,6 @@ export function CandidatePreferencesPanel({
               label="Availability"
               value={detail.availabilityLabel || detail.availabilityStatus}
             />
-            <DetailField
-              label="Willing to Travel"
-              value={detail.willingToTravel ?? ""}
-            />
-            <DetailField
-              label="Willing to Relocate"
-              value={detail.willingToRelocate ?? ""}
-            />
-            <DetailField
-              label="Work Shift Preference"
-              value={detail.workShiftPreference ?? ""}
-            />
           </div>
         </div>
       </section>

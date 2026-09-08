@@ -10,6 +10,12 @@ import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { jwtService } from "../auth/jwt.service.js";
 import { otpService } from "../otp/otp.service.js";
+import {
+  buildNewRegistrationAwarenessPayload,
+  formatEmployerRegistrationDisplayId,
+  resolveEmployerRegistrationDisplayName,
+} from "../operations/registration-awareness/operations-registration-awareness.service.js";
+import { scheduleEmployerRegisteredAwareness } from "../operations/registration-awareness/operations-registration-emit.js";
 import { storageService } from "../storage/storage.service.js";
 import { EmployerDocumentModel } from "./employer-document.model.js";
 import { EmployerModel } from "./employer.model.js";
@@ -703,6 +709,12 @@ export class EmployerService {
       }
       employer.isProfileComplete = true;
       employer.registrationStatus = "completed";
+      employer.verificationStatus = "pending";
+      employer.verificationSubmittedAt = new Date();
+      if (!employer.operationsRegistrationAwareness?.registeredAt) {
+        employer.operationsRegistrationAwareness =
+          buildNewRegistrationAwarenessPayload(new Date());
+      }
       employer.documentIds = [...(employer.documentIds ?? []), document._id];
       await employer.save();
     } catch (error) {
@@ -713,6 +725,14 @@ export class EmployerService {
     }
 
     const session = await issueEmployerRegistrationSession(employer);
+
+    scheduleEmployerRegisteredAwareness({
+      employerId: employer._id.toString(),
+      displayName: resolveEmployerRegistrationDisplayName(employer),
+      displayId: formatEmployerRegistrationDisplayId(employer._id.toString()),
+      registeredAt:
+        employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
+    });
 
     return {
       employer: toPublicEmployer(employer),
@@ -829,6 +849,12 @@ export class EmployerService {
       }
       employer.registrationStatus = "completed";
       employer.isProfileComplete = true;
+      employer.verificationStatus = "pending";
+      employer.verificationSubmittedAt = new Date();
+      if (!employer.operationsRegistrationAwareness?.registeredAt) {
+        employer.operationsRegistrationAwareness =
+          buildNewRegistrationAwarenessPayload(new Date());
+      }
       await employer.save();
     } catch (error) {
       if (error instanceof AppError) {
@@ -838,6 +864,14 @@ export class EmployerService {
     }
 
     const session = await issueEmployerRegistrationSession(employer);
+
+    scheduleEmployerRegisteredAwareness({
+      employerId: employer._id.toString(),
+      displayName: resolveEmployerRegistrationDisplayName(employer),
+      displayId: formatEmployerRegistrationDisplayId(employer._id.toString()),
+      registeredAt:
+        employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
+    });
 
     return {
       employer: toPublicEmployer(employer),
@@ -1098,6 +1132,63 @@ export class EmployerService {
     return {
       employer: toPublicEmployer(employer),
     };
+  }
+
+  /**
+   * Rejected employers re-enter the Operations verification queue.
+   * Preserves `verificationRemarks` as the prior rejection reason for reviewers.
+   */
+  async resubmitVerification(employerId: string) {
+    if (!mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const employer = await EmployerModel.findById(employerId);
+    if (!employer) {
+      throw new AppError("Employer not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const current = String(employer.verificationStatus ?? "pending").toLowerCase();
+    if (current === "pending") {
+      return { employer: toPublicEmployer(employer), alreadyPending: true };
+    }
+    if (current !== "rejected") {
+      throw new AppError(
+        "Only rejected employers can resubmit verification.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const previousRemarks = String(employer.verificationRemarks ?? "").trim();
+    employer.verificationStatus = "pending";
+    employer.verificationSubmittedAt = new Date();
+    // Keep remarks so Operations can see the prior rejection reason.
+    await employer.save();
+
+    try {
+      const { recordOperationsAuditEvent } = await import(
+        "../operations/rbac/operations-audit.service.js"
+      );
+      await recordOperationsAuditEvent({
+        actorUserId: null,
+        actorName: "Employer",
+        action: "employer.verification_resubmitted",
+        targetType: "employer",
+        targetId: employer._id.toString(),
+        targetLabel:
+          employer.companyName?.trim() ||
+          employer.establishmentName?.trim() ||
+          "",
+        previousState: { verificationStatus: "rejected" },
+        nextState: { verificationStatus: "pending" },
+        reason: previousRemarks,
+        metadata: { source: "employer_resubmit" },
+      });
+    } catch (error) {
+      console.error("Employer verification resubmit audit failed:", error);
+    }
+
+    return { employer: toPublicEmployer(employer), alreadyPending: false };
   }
 }
 

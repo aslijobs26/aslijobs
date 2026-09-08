@@ -97,6 +97,34 @@ export async function updateOperationsEmployerStatus(
   return response.data.data;
 }
 
+export function operationsEmployerDocumentPath(
+  employerId: string,
+  documentId: string,
+): string {
+  return `${OPERATIONS_EMPLOYERS_BASE}/${encodeURIComponent(employerId)}/documents/${encodeURIComponent(documentId)}`;
+}
+
+export async function fetchOperationsEmployerDocumentBlob(
+  employerId: string,
+  documentId: string,
+): Promise<{ blob: Blob; fileName: string }> {
+  const response = await apiClient.get<Blob>(
+    operationsEmployerDocumentPath(employerId, documentId),
+    { responseType: "blob" },
+  );
+
+  const contentDisposition = response.headers["content-disposition"];
+  const filenameMatch =
+    typeof contentDisposition === "string"
+      ? /filename="?([^"]+)"?/i.exec(contentDisposition)
+      : null;
+
+  return {
+    blob: response.data,
+    fileName: filenameMatch?.[1]?.trim() || "document",
+  };
+}
+
 /** Legacy / Post Job search helpers */
 export async function searchOperationsEmployers(params: {
   search: string;
@@ -171,6 +199,7 @@ function buildEmployersFilterParams(params: OperationsEmployersExportParams) {
     analyticsPreset: params.analyticsPreset || undefined,
     analyticsFrom: params.analyticsFrom || undefined,
     analyticsTo: params.analyticsTo || undefined,
+    format: params.format || undefined,
   };
 }
 
@@ -191,7 +220,7 @@ export async function exportOperationsEmployersCsv(
       ? /filename="?([^"]+)"?/i.exec(contentDisposition)
       : null;
   const filename =
-    filenameMatch?.[1]?.trim() || "operations-employers-export.csv";
+    filenameMatch?.[1]?.trim() || "AsliJobs-Operations-Employers.xlsx";
 
   const url = URL.createObjectURL(response.data);
   const link = document.createElement("a");

@@ -15,7 +15,27 @@ import {
 } from "../../../constants/operations-layout";
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
 import { useOperationsPermissions } from "../../../hooks/use-operations-permissions";
+import { useOperationsRegistrationBadges } from "../../../hooks/use-operations-registration-awareness";
+import type { OperationsNavBadgeCounts } from "../../../types/operations-registration-awareness";
 import { cn } from "../../../utils/cn";
+
+function resolveNavBadgeCount(
+  badgeKey: keyof OperationsNavBadgeCounts | undefined,
+  badges: OperationsNavBadgeCounts | undefined,
+  staticBadge: number | undefined,
+): number | undefined {
+  if (badgeKey && badges) {
+    const value = badges[badgeKey];
+    if (value == null || value <= 0) {
+      return undefined;
+    }
+    return value;
+  }
+  if (staticBadge != null && staticBadge > 0) {
+    return staticBadge;
+  }
+  return undefined;
+}
 
 interface OperationsSidebarProps {
   collapsed: boolean;
@@ -90,6 +110,8 @@ export function OperationsSidebar({
     ? OPERATIONS_SIDEBAR_COLLAPSED_WIDTH_COMPACT
     : OPERATIONS_SIDEBAR_COLLAPSED_WIDTH;
   const { can, isLoading: permissionsLoading } = useOperationsPermissions();
+  const badgesQuery = useOperationsRegistrationBadges();
+  const badges = badgesQuery.data;
 
   const visibleNavSections = useMemo(() => {
     return OPERATIONS_NAV_SECTIONS.map((section) => ({
@@ -273,6 +295,16 @@ export function OperationsSidebar({
                     location.pathname,
                     location.search,
                   );
+                  const badgeCount = resolveNavBadgeCount(
+                    item.badgeKey,
+                    badges,
+                    item.badge,
+                  );
+                  const badgeAriaLabel =
+                    badgeCount != null
+                      ? (item.badgeAriaLabel?.(badgeCount) ??
+                        `${badgeCount} new items`)
+                      : undefined;
 
                   return (
                     <li key={item.id}>
@@ -329,8 +361,9 @@ export function OperationsSidebar({
                             <span className="min-w-0 flex-1 truncate leading-tight">
                               {item.label}
                             </span>
-                            {item.badge !== undefined ? (
+                            {badgeCount !== undefined ? (
                               <span
+                                aria-label={badgeAriaLabel}
                                 className={cn(
                                   "inline-flex shrink-0 items-center justify-center rounded-full font-semibold leading-none tabular-nums",
                                   isCompact
@@ -341,16 +374,16 @@ export function OperationsSidebar({
                                     : "bg-primary text-surface",
                                 )}
                               >
-                                {item.badge > 99 ? "99+" : item.badge}
+                                {badgeCount > 99 ? "99+" : badgeCount}
                               </span>
                             ) : null}
                           </>
                         ) : null}
 
-                        {collapsed && item.badge !== undefined ? (
+                        {collapsed && badgeCount !== undefined ? (
                           <span
                             className="absolute right-1 top-1 size-1.5 rounded-full bg-primary"
-                            aria-hidden="true"
+                            aria-label={badgeAriaLabel}
                           />
                         ) : null}
                       </NavLink>

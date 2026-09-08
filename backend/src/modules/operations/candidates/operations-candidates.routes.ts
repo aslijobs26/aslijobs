@@ -10,6 +10,7 @@ import {
   listOperationsCandidateApplicationsQuerySchema,
   listOperationsCandidatesQuerySchema,
   candidatesAnalyticsQuerySchema,
+  exportOperationsCandidatesQuerySchema,
   operationsCandidateApplicationIdParamsSchema,
   operationsCandidateSeekerIdParamsSchema,
 } from "./operations-candidates.validation.js";
@@ -33,11 +34,25 @@ operationsCandidatesRouter.get(
 );
 
 operationsCandidatesRouter.get(
+  "/export",
+  requireOperationsPermission("candidates", "read"),
+  validate(exportOperationsCandidatesQuerySchema, "query"),
+  asyncHandler(operationsCandidatesController.export),
+);
+
+operationsCandidatesRouter.get(
   "/seekers/:jobSeekerId/applications",
   requireOperationsPermission("candidates", "read"),
   validate(operationsCandidateSeekerIdParamsSchema, "params"),
   validate(listOperationsCandidateApplicationsQuerySchema, "query"),
   asyncHandler(operationsCandidatesController.listSeekerApplications),
+);
+
+operationsCandidatesRouter.get(
+  "/seekers/:jobSeekerId/resume",
+  requireOperationsPermission("candidates", "read"),
+  validate(operationsCandidateSeekerIdParamsSchema, "params"),
+  asyncHandler(operationsCandidatesController.downloadResume),
 );
 
 operationsCandidatesRouter.get(

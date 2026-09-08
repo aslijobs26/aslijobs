@@ -84,8 +84,10 @@ export function notificationIcon(type: NotificationType): LucideIcon {
       return UserMinus;
     case "job_closed":
     case "job_rejected":
+    case "employer_verification_rejected":
       return XCircle;
     case "job_approved":
+    case "employer_verification_approved":
       return CheckCircle2;
     case "application_received":
       return Briefcase;
