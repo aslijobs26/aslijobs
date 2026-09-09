@@ -1,5 +1,6 @@
 import { Schema, model, type InferSchemaType, type Types } from "mongoose";
 import {
+  JOB_SEEKER_ACCOUNT_STATUSES,
   JOB_SEEKER_EDUCATION_LEVELS,
   JOB_SEEKER_EXPERIENCE_TYPES,
   JOB_SEEKER_GENDERS,
@@ -212,6 +213,16 @@ const jobSeekerSchema = new Schema(
       type: String,
       enum: JOB_SEEKER_REGISTRATION_STATUSES,
       default: "PENDING",
+      index: true,
+    },
+    /**
+     * Runtime account gate. Legacy documents without this field are active.
+     * Candidates cannot self-modify this field.
+     */
+    accountStatus: {
+      type: String,
+      enum: JOB_SEEKER_ACCOUNT_STATUSES,
+      default: "active",
       index: true,
     },
     otpHash: {

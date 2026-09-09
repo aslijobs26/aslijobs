@@ -35,6 +35,18 @@ export async function connectDB(): Promise<void> {
         indexError instanceof Error ? indexError.message : String(indexError);
       console.error("Failed to sync job_views indexes:", indexMessage);
     }
+
+    // Application uniqueness: active (non-withdrawn) only — enables re-apply after withdraw.
+    try {
+      const { ApplicationModel } = await import(
+        "../modules/applications/application.model.js"
+      );
+      await ApplicationModel.syncIndexes();
+    } catch (indexError) {
+      const indexMessage =
+        indexError instanceof Error ? indexError.message : String(indexError);
+      console.error("Failed to sync applications indexes:", indexMessage);
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const isDnsRelated =

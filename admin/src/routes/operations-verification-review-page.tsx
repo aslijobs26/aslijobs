@@ -2,10 +2,11 @@ import { isAxiosError } from "axios";
 import {
   ArrowLeft,
   CheckCircle2,
+  FileWarning,
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { OperationsCanKey } from "../components/operations/auth/OperationsCanKey";
 import { EmployerDocumentsPanel } from "../components/operations/employers/detail/EmployerDocumentsPanel";
@@ -14,15 +15,19 @@ import {
   employerAvatarInitials,
   formatEmployerDateTimeFull,
   formatEmployerDisplayId,
-  verificationStatusBadgeVariant,
 } from "../components/operations/employers/employers-format";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
+import { verificationOperationalStatusBadgeVariant } from "../components/operations/verifications/verifications-format";
 import { OperationsBadge } from "../components/ui/OperationsBadge";
 import { OPERATIONS_ROUTES } from "../constants/operations-routes";
+import { useOperationsEmployerDetail } from "../hooks/use-operations-employers";
 import {
-  useOperationsEmployerDetail,
-  useUpdateOperationsEmployerVerification,
-} from "../hooks/use-operations-employers";
+  useOperationsVerificationDetail,
+  useRequestOperationsVerificationDocuments,
+  useUpdateOperationsVerification,
+} from "../hooks/use-operations-verifications";
+import { fetchOperationsVerificationDocumentBlob } from "../services/operations-verifications.service";
+import type { OperationsEmployerDocumentItem } from "../types/operations-employers";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
 import { resolveMediaUrl } from "../utils/resolve-media-url";
 
@@ -36,31 +41,71 @@ function ReviewSkeleton() {
   );
 }
 
+function mapVerificationDocuments(
+  documents: Array<{
+    id: string;
+    documentType: string;
+    documentTypeLabel: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    verificationStatus: string;
+    uploadedAt: string | null;
+    url: string;
+  }>,
+): OperationsEmployerDocumentItem[] {
+  return documents.map((doc) => ({
+    id: doc.id,
+    documentType: doc.documentType,
+    documentTypeLabel: doc.documentTypeLabel,
+    originalName: doc.fileName,
+    url: doc.url,
+    mimeType: doc.mimeType,
+    fileSize: doc.fileSize,
+    verificationStatus: doc.verificationStatus,
+    uploadedAt: doc.uploadedAt ?? "",
+  }));
+}
+
 export function OperationsVerificationReviewPage() {
   const { employerId: rawId } = useParams<{ employerId: string }>();
-  const employerId = rawId ? decodeURIComponent(rawId) : undefined;
+  const verificationId = rawId ? decodeURIComponent(rawId) : undefined;
   const navigate = useNavigate();
   const approveTitleId = useId();
   const rejectTitleId = useId();
+  const requestDocsTitleId = useId();
 
-  const [actionType, setActionType] = useState<"approve" | "reject" | null>(
-    null,
-  );
+  const [actionType, setActionType] = useState<
+    "approve" | "reject" | "requestDocs" | null
+  >(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [requestMessage, setRequestMessage] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const detailQuery = useOperationsEmployerDetail(employerId);
-  const verifyMutation = useUpdateOperationsEmployerVerification(employerId);
-  const employer = detailQuery.data;
+  const detailQuery = useOperationsVerificationDetail(verificationId);
+  const employerOverviewQuery = useOperationsEmployerDetail(verificationId);
+  const verifyMutation = useUpdateOperationsVerification(verificationId);
+  const requestDocsMutation =
+    useRequestOperationsVerificationDocuments(verificationId);
+  const verification = detailQuery.data;
+
+  const mappedDocuments = useMemo(
+    () =>
+      verification
+        ? mapVerificationDocuments(verification.documents)
+        : [],
+    [verification],
+  );
 
   const closeModal = () => {
     setActionType(null);
     setRejectReason("");
+    setRequestMessage("");
     setActionError(null);
   };
 
   const handleApprove = async () => {
-    if (!employerId) return;
+    if (!verificationId) return;
     setActionError(null);
     try {
       await verifyMutation.mutateAsync({
@@ -80,7 +125,7 @@ export function OperationsVerificationReviewPage() {
   };
 
   const handleReject = async () => {
-    if (!employerId) return;
+    if (!verificationId) return;
     const trimmed = rejectReason.trim();
     if (trimmed.length < 3) {
       setActionError("Please provide a rejection reason (at least 3 characters).");
@@ -105,6 +150,32 @@ export function OperationsVerificationReviewPage() {
     }
   };
 
+  const handleRequestDocuments = async () => {
+    if (!verificationId) return;
+    const trimmed = requestMessage.trim();
+    if (trimmed.length < 3) {
+      setActionError(
+        "Please provide a message for the employer (at least 3 characters).",
+      );
+      return;
+    }
+    setActionError(null);
+    try {
+      await requestDocsMutation.mutateAsync({ message: trimmed });
+      closeModal();
+      void detailQuery.refetch();
+    } catch (err) {
+      if (isAxiosError(err)) {
+        setActionError(
+          err.response?.data?.message ||
+            "Failed to request documents. Please try again.",
+        );
+      } else {
+        setActionError("Failed to request documents. Please try again.");
+      }
+    }
+  };
+
   const errorMessage = (() => {
     if (!detailQuery.error) return null;
     if (isOperationsSessionTransientError(detailQuery.error)) {
@@ -114,32 +185,35 @@ export function OperationsVerificationReviewPage() {
       const msg = detailQuery.error.response?.data?.message;
       if (typeof msg === "string" && msg.trim()) return msg;
       if (detailQuery.error.response?.status === 404) {
-        return "This employer could not be found.";
+        return "This verification could not be found.";
       }
     }
-    return "Failed to load employer verification details.";
+    return "Failed to load verification details.";
   })();
 
-  const logoUrl = employer ? resolveMediaUrl(employer.logoUrl) : null;
-  const submittedOn = employer
-    ? formatEmployerDateTimeFull(
-        employer.verificationSubmittedAt || employer.registeredAt,
-      )
+  const logoUrl = verification ? resolveMediaUrl(verification.logoUrl) : null;
+  const submittedOn = verification
+    ? formatEmployerDateTimeFull(verification.submittedAt)
     : "—";
-  const accountTypeLabel = employer?.accountType
-    ? employer.accountType.charAt(0).toUpperCase() +
-      employer.accountType.slice(1).toLowerCase()
-    : employer?.organizationType || "—";
-  const canApprove = employer?.verificationStatus !== "verified";
-  const canReject = employer?.verificationStatus !== "rejected";
+  const accountTypeLabel = verification?.accountType
+    ? verification.accountType.charAt(0).toUpperCase() +
+      verification.accountType.slice(1).toLowerCase()
+    : verification?.organizationType || "—";
+  const canApprove = Boolean(verification?.allowedActions.canApprove);
+  const canReject = Boolean(verification?.allowedActions.canReject);
+  const canRequestDocuments = Boolean(
+    verification?.allowedActions.canRequestDocuments,
+  );
+  const isActionPending =
+    verifyMutation.isPending || requestDocsMutation.isPending;
 
   return (
     <OperationsLayout
-      title={employer?.displayName ?? "Verification Review"}
+      title={verification?.displayName ?? "Verification Review"}
       subtitle="Verifications > Review"
     >
       <div className="flex w-full min-w-0 flex-col gap-3">
-        {detailQuery.isLoading && !employer ? (
+        {detailQuery.isLoading && !verification ? (
           <ReviewSkeleton />
         ) : errorMessage ? (
           <div className="rounded-xl border border-border-subtle bg-surface p-8 text-center">
@@ -152,7 +226,7 @@ export function OperationsVerificationReviewPage() {
               Retry
             </button>
           </div>
-        ) : employer ? (
+        ) : verification ? (
           <>
             <div className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm ops-brand-border-glow sm:p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -173,24 +247,25 @@ export function OperationsVerificationReviewPage() {
                         className="size-full object-cover"
                       />
                     ) : (
-                      employerAvatarInitials(employer.displayName)
+                      employerAvatarInitials(verification.displayName)
                     )}
                   </span>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                       <h1 className="break-words text-base font-bold text-foreground sm:text-lg">
-                        {employer.displayName}
+                        {verification.displayName}
                       </h1>
                       <span className="font-mono text-[11px] font-semibold text-muted sm:text-xs">
-                        {formatEmployerDisplayId(employer.id)}
+                        {verification.displayId ||
+                          formatEmployerDisplayId(verification.id)}
                       </span>
                       <OperationsBadge
-                        variant={verificationStatusBadgeVariant(
-                          employer.verificationStatus,
+                        variant={verificationOperationalStatusBadgeVariant(
+                          verification.operationalStatus,
                         )}
                       >
-                        {employer.verificationStatusLabel}
+                        {verification.statusLabel}
                       </OperationsBadge>
                     </div>
 
@@ -211,55 +286,69 @@ export function OperationsVerificationReviewPage() {
                           {submittedOn}
                         </dd>
                       </div>
-                      {employer.location && employer.location !== "—" ? (
+                      {verification.location &&
+                      verification.location !== "—" ? (
                         <div>
                           <dt className="text-[10px] uppercase tracking-wide">
                             Location
                           </dt>
                           <dd className="font-semibold text-foreground">
-                            {employer.location}
+                            {verification.location}
                           </dd>
                         </div>
                       ) : null}
-                      {employer.verificationStatus === "verified" &&
-                      employer.verifiedByLabel ? (
+                      {verification.assignedToLabel?.trim() ? (
                         <div>
                           <dt className="text-[10px] uppercase tracking-wide">
-                            Verified By
+                            Assigned To
                           </dt>
                           <dd className="font-semibold text-foreground">
-                            {employer.verifiedByLabel}
-                            {employer.verifiedAtDate &&
-                            employer.verifiedAtDate !== "—"
-                              ? ` · ${employer.verifiedAtDate}`
-                              : ""}
+                            {verification.assignedToLabel}
                           </dd>
                         </div>
                       ) : null}
-                      {employer.verificationStatus === "rejected" &&
-                      employer.rejectedByLabel ? (
+                      {verification.slaLabel ? (
                         <div>
                           <dt className="text-[10px] uppercase tracking-wide">
-                            Rejected By
+                            SLA
                           </dt>
                           <dd className="font-semibold text-foreground">
-                            {employer.rejectedByLabel}
-                            {employer.rejectedAt
-                              ? ` · ${formatEmployerDateTimeFull(employer.rejectedAt)}`
-                              : ""}
+                            {verification.slaLabel}
+                          </dd>
+                        </div>
+                      ) : null}
+                      {verification.verificationStatus === "verified" &&
+                      verification.verifiedAt ? (
+                        <div>
+                          <dt className="text-[10px] uppercase tracking-wide">
+                            Verified At
+                          </dt>
+                          <dd className="font-semibold text-foreground">
+                            {formatEmployerDateTimeFull(verification.verifiedAt)}
+                          </dd>
+                        </div>
+                      ) : null}
+                      {verification.verificationStatus === "rejected" &&
+                      verification.rejectedAt ? (
+                        <div>
+                          <dt className="text-[10px] uppercase tracking-wide">
+                            Rejected At
+                          </dt>
+                          <dd className="font-semibold text-foreground">
+                            {formatEmployerDateTimeFull(verification.rejectedAt)}
                           </dd>
                         </div>
                       ) : null}
                     </dl>
 
-                    {employer.verificationStatus === "rejected" &&
-                    employer.verificationRemarks?.trim() ? (
+                    {verification.verificationStatus === "rejected" &&
+                    verification.verificationRemarks?.trim() ? (
                       <div className="mt-3 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-danger">
                           Previous rejection reason
                         </p>
                         <p className="mt-1 text-xs text-foreground whitespace-pre-wrap">
-                          {employer.verificationRemarks}
+                          {verification.verificationRemarks}
                         </p>
                       </div>
                     ) : null}
@@ -277,7 +366,7 @@ export function OperationsVerificationReviewPage() {
                 documents.
               </p>
 
-              <div className="mt-3 flex flex-col gap-2 min-[420px]:flex-row">
+              <div className="mt-3 flex flex-col gap-2 min-[420px]:flex-row min-[420px]:flex-wrap">
                 <OperationsCanKey permissionKey="employers.profile.actions.verify">
                   {canApprove ? (
                     <button
@@ -311,6 +400,23 @@ export function OperationsVerificationReviewPage() {
                   ) : null}
                 </OperationsCanKey>
 
+                <OperationsCanKey permissionKey="employers.profile.actions.reject">
+                  {canRequestDocuments ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionType("requestDocs");
+                        setRequestMessage("");
+                        setActionError(null);
+                      }}
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-warning/30 bg-warning/10 px-3 text-xs font-semibold text-warning transition-colors hover:bg-warning/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/30"
+                    >
+                      <FileWarning className="size-3.5" aria-hidden="true" />
+                      Request Additional Documents
+                    </button>
+                  ) : null}
+                </OperationsCanKey>
+
                 <button
                   type="button"
                   onClick={() => navigate(OPERATIONS_ROUTES.VERIFICATIONS)}
@@ -321,17 +427,25 @@ export function OperationsVerificationReviewPage() {
               </div>
             </div>
 
-            <EmployerOverviewPanel employer={employer} />
+            {employerOverviewQuery.data ? (
+              <EmployerOverviewPanel employer={employerOverviewQuery.data} />
+            ) : null}
 
             <EmployerDocumentsPanel
-              documents={employer.documents}
-              employerId={employer.id}
+              documents={mappedDocuments}
+              employerId={verification.id}
+              fetchDocumentBlob={(documentId) =>
+                fetchOperationsVerificationDocumentBlob(
+                  verification.id,
+                  documentId,
+                )
+              }
             />
           </>
         ) : null}
       </div>
 
-      {actionType === "approve" && employer ? (
+      {actionType === "approve" && verification ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-xs"
           role="dialog"
@@ -347,7 +461,8 @@ export function OperationsVerificationReviewPage() {
             </h3>
             <p className="mt-2 text-xs text-muted">
               Are you sure you want to approve verification for{" "}
-              {employer.displayName}? Their account will be marked as verified.
+              {verification.displayName}? Their account will be marked as
+              verified.
             </p>
             {actionError ? (
               <p className="mt-2 text-xs text-danger" role="alert">
@@ -358,7 +473,7 @@ export function OperationsVerificationReviewPage() {
               <button
                 type="button"
                 onClick={closeModal}
-                disabled={verifyMutation.isPending}
+                disabled={isActionPending}
                 className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-muted hover:bg-hero-bg/60 hover:text-foreground sm:w-auto"
               >
                 Cancel
@@ -366,7 +481,7 @@ export function OperationsVerificationReviewPage() {
               <button
                 type="button"
                 onClick={() => void handleApprove()}
-                disabled={verifyMutation.isPending}
+                disabled={isActionPending}
                 className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-success/90 sm:w-auto"
               >
                 <CheckCircle2 className="size-3.5" aria-hidden="true" />
@@ -377,7 +492,7 @@ export function OperationsVerificationReviewPage() {
         </div>
       ) : null}
 
-      {actionType === "reject" && employer ? (
+      {actionType === "reject" && verification ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-xs"
           role="dialog"
@@ -390,7 +505,7 @@ export function OperationsVerificationReviewPage() {
             </h3>
             <p className="mt-2 text-xs text-muted">
               Provide a reason for rejecting verification for{" "}
-              {employer.displayName}. This will be visible to the operations
+              {verification.displayName}. This will be visible to the operations
               team.
             </p>
             <div className="mt-3">
@@ -420,7 +535,7 @@ export function OperationsVerificationReviewPage() {
               <button
                 type="button"
                 onClick={closeModal}
-                disabled={verifyMutation.isPending}
+                disabled={isActionPending}
                 className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-muted hover:bg-hero-bg/60 hover:text-foreground sm:w-auto"
               >
                 Cancel
@@ -429,13 +544,80 @@ export function OperationsVerificationReviewPage() {
                 type="button"
                 onClick={() => void handleReject()}
                 disabled={
-                  verifyMutation.isPending || rejectReason.trim().length < 3
+                  isActionPending || rejectReason.trim().length < 3
                 }
                 className="w-full rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-danger/90 disabled:opacity-60 sm:w-auto"
               >
                 {verifyMutation.isPending
                   ? "Rejecting…"
                   : "Reject Verification"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {actionType === "requestDocs" && verification ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={requestDocsTitleId}
+        >
+          <div className="w-full max-w-md rounded-xl border border-border-subtle bg-surface p-4 shadow-xl sm:p-5">
+            <h3
+              id={requestDocsTitleId}
+              className="text-sm font-bold text-foreground"
+            >
+              Request Additional Documents
+            </h3>
+            <p className="mt-2 text-xs text-muted">
+              Send a message to {verification.displayName} requesting any
+              missing or clearer verification documents.
+            </p>
+            <div className="mt-3">
+              <label
+                htmlFor="verification-request-docs-message"
+                className="mb-1 block text-[11px] font-semibold text-muted"
+              >
+                Message <span className="text-danger">*</span>
+              </label>
+              <textarea
+                id="verification-request-docs-message"
+                value={requestMessage}
+                onChange={(event) => setRequestMessage(event.target.value)}
+                placeholder="Describe which documents are needed (min. 3 characters)…"
+                rows={4}
+                required
+                minLength={3}
+                className="w-full rounded-lg border border-border-subtle bg-hero-bg/60 p-2 text-xs text-foreground outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </div>
+            {actionError ? (
+              <p className="mt-2 text-xs text-danger" role="alert">
+                {actionError}
+              </p>
+            ) : null}
+            <div className="mt-4 flex flex-col-reverse items-center justify-end gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={closeModal}
+                disabled={isActionPending}
+                className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-muted hover:bg-hero-bg/60 hover:text-foreground sm:w-auto"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleRequestDocuments()}
+                disabled={
+                  isActionPending || requestMessage.trim().length < 3
+                }
+                className="w-full rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary/90 disabled:opacity-60 sm:w-auto"
+              >
+                {requestDocsMutation.isPending
+                  ? "Sending…"
+                  : "Send Request"}
               </button>
             </div>
           </div>

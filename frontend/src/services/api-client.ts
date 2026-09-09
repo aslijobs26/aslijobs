@@ -174,15 +174,18 @@ apiClient.interceptors.request.use((config) => {
   const realm = resolveAuthRealm(requestUrl, pathname);
   (config as RetryConfig)._authRealm = realm;
 
-  const accessToken =
-    realm === "job-seeker"
-      ? getJobSeekerAccessToken() ||
-        (requestUrl.includes("/notifications")
-          ? getEmployerAccessToken()
-          : null)
-      : getEmployerAccessToken();
-
-  attachAccessToken(config, accessToken);
+  const headers = AxiosHeaders.from(config.headers ?? {});
+  // Callers may supply a purpose-scoped token (e.g. registration continuation).
+  if (!headers.get("Authorization")) {
+    const accessToken =
+      realm === "job-seeker"
+        ? getJobSeekerAccessToken() ||
+          (requestUrl.includes("/notifications")
+            ? getEmployerAccessToken()
+            : null)
+        : getEmployerAccessToken();
+    attachAccessToken(config, accessToken);
+  }
   return config;
 });
 

@@ -47,7 +47,7 @@ export function EmployersRegistrationTrendChart({
           No registration activity in this period.
         </p>
       ) : (
-        <div className="h-52 min-w-0 sm:h-56 xl:h-44">
+        <div className="h-52 min-w-0 max-sm:h-44 sm:h-56 xl:h-44">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={series}

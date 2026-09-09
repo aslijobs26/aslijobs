@@ -29,14 +29,14 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm ops-brand-border-glow sm:p-5">
-      <div className="flex items-center gap-2 border-b border-border-subtle pb-3">
-        <Icon className="size-4 text-primary" aria-hidden="true" />
-        <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+    <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm ops-brand-border-glow max-sm:rounded-lg max-sm:p-2 sm:p-4 lg:p-5">
+      <div className="flex items-center gap-1.5 border-b border-border-subtle pb-2 max-sm:pb-1.5 sm:gap-2 sm:pb-3">
+        <Icon className="size-3.5 text-primary sm:size-4" aria-hidden="true" />
+        <h3 className="text-[10px] font-bold uppercase tracking-wider text-foreground sm:text-xs">
           {title}
         </h3>
       </div>
-      <div className="mt-4">{children}</div>
+      <div className="mt-2.5 sm:mt-4">{children}</div>
     </div>
   );
 }
@@ -57,21 +57,21 @@ function InfoRow({
   const display = value != null && value !== "" ? String(value) : "—";
 
   return (
-    <div className="flex flex-col gap-0.5 py-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-      <span className="text-xs font-medium text-muted">{label}</span>
+    <div className="flex flex-col gap-0.5 py-1 max-sm:py-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-1.5">
+      <span className="text-[10px] font-medium text-muted sm:text-xs">{label}</span>
       {isLink && href && display !== "—" ? (
         <a
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex max-w-full items-center gap-1 break-all text-xs font-semibold text-primary hover:underline"
+          className="inline-flex max-w-full items-center gap-1 break-all text-[11px] font-semibold text-primary hover:underline sm:text-xs"
         >
           <span className="truncate">{display}</span>
           <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
         </a>
       ) : (
         <span
-          className={`break-words text-xs font-semibold text-foreground ${isMono ? "font-mono" : ""}`}
+          className={`break-words text-[11px] font-semibold text-foreground sm:text-xs ${isMono ? "font-mono" : ""}`}
         >
           {display}
         </span>
@@ -113,65 +113,77 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
         : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 max-sm:space-y-2.5 sm:space-y-4">
       {/* KPI Stats Strip */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-        <article className="rounded-xl border border-border-subtle bg-surface p-3 shadow-xs">
-          <div className="flex items-center gap-2 text-muted">
-            <Briefcase className="size-3.5 text-primary" />
-            <span className="text-[11px] font-semibold uppercase">Total Jobs</span>
+      <div className="grid grid-cols-2 gap-1.5 max-sm:gap-1.5 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6">
+        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
+          <div className="flex items-center gap-1 text-muted sm:gap-2">
+            <Briefcase className="size-3 text-primary sm:size-3.5" />
+            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+              Total Jobs
+            </span>
           </div>
-          <p className="mt-1.5 text-xl font-bold tabular-nums text-foreground">
+          <p className="mt-1 text-base font-bold tabular-nums text-foreground max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
             {stats.totalJobs}
           </p>
         </article>
 
-        <article className="rounded-xl border border-border-subtle bg-surface p-3 shadow-xs">
-          <div className="flex items-center gap-2 text-muted">
-            <CheckCircle2 className="size-3.5 text-success" />
-            <span className="text-[11px] font-semibold uppercase">Active Jobs</span>
+        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
+          <div className="flex items-center gap-1 text-muted sm:gap-2">
+            <CheckCircle2 className="size-3 text-success sm:size-3.5" />
+            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+              Active Jobs
+            </span>
           </div>
-          <p className="mt-1.5 text-xl font-bold tabular-nums text-success">
+          <p className="mt-1 text-base font-bold tabular-nums text-success max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
             {stats.activeJobs}
           </p>
         </article>
 
-        <article className="rounded-xl border border-border-subtle bg-surface p-3 shadow-xs">
-          <div className="flex items-center gap-2 text-muted">
-            <Clock className="size-3.5 text-warning" />
-            <span className="text-[11px] font-semibold uppercase">Pending Jobs</span>
+        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
+          <div className="flex items-center gap-1 text-muted sm:gap-2">
+            <Clock className="size-3 text-warning sm:size-3.5" />
+            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+              Pending Jobs
+            </span>
           </div>
-          <p className="mt-1.5 text-xl font-bold tabular-nums text-warning">
+          <p className="mt-1 text-base font-bold tabular-nums text-warning max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
             {stats.pendingJobs}
           </p>
         </article>
 
-        <article className="rounded-xl border border-border-subtle bg-surface p-3 shadow-xs">
-          <div className="flex items-center gap-2 text-muted">
-            <Users className="size-3.5 text-chart-accent" />
-            <span className="text-[11px] font-semibold uppercase">Applications</span>
+        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
+          <div className="flex items-center gap-1 text-muted sm:gap-2">
+            <Users className="size-3 text-chart-accent sm:size-3.5" />
+            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+              Applications
+            </span>
           </div>
-          <p className="mt-1.5 text-xl font-bold tabular-nums text-chart-accent">
+          <p className="mt-1 text-base font-bold tabular-nums text-chart-accent max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
             {stats.totalApplications}
           </p>
         </article>
 
-        <article className="rounded-xl border border-border-subtle bg-surface p-3 shadow-xs">
-          <div className="flex items-center gap-2 text-muted">
-            <FileCheck className="size-3.5 text-chart-accent-alt" />
-            <span className="text-[11px] font-semibold uppercase">Shortlisted</span>
+        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
+          <div className="flex items-center gap-1 text-muted sm:gap-2">
+            <FileCheck className="size-3 text-chart-accent-alt sm:size-3.5" />
+            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+              Shortlisted
+            </span>
           </div>
-          <p className="mt-1.5 text-xl font-bold tabular-nums text-chart-accent-alt">
+          <p className="mt-1 text-base font-bold tabular-nums text-chart-accent-alt max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
             {stats.shortlistedApplications}
           </p>
         </article>
 
-        <article className="rounded-xl border border-border-subtle bg-surface p-3 shadow-xs">
-          <div className="flex items-center gap-2 text-muted">
-            <Award className="size-3.5 text-success" />
-            <span className="text-[11px] font-semibold uppercase">Hired</span>
+        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
+          <div className="flex items-center gap-1 text-muted sm:gap-2">
+            <Award className="size-3 text-success sm:size-3.5" />
+            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+              Hired
+            </span>
           </div>
-          <p className="mt-1.5 text-xl font-bold tabular-nums text-success">
+          <p className="mt-1 text-base font-bold tabular-nums text-success max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
             {stats.hiredApplications}
           </p>
         </article>
@@ -180,7 +192,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
       {/* Account Type Specific Details & Contacts */}
       {isIndividual ? (
         /* 1. INDIVIDUAL EMPLOYER PROFILE */
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-2.5 max-sm:gap-2 sm:gap-4 lg:grid-cols-2">
           <SectionCard title="Individual & Account Details" icon={UserCheck}>
             <div className="divide-y divide-border-subtle">
               <InfoRow
@@ -260,7 +272,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
         </div>
       ) : isConsultancy ? (
         /* 2. CONSULTANCY EMPLOYER PROFILE */
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-2.5 max-sm:gap-2 sm:gap-4 lg:grid-cols-2">
           <SectionCard title="Consultancy Details" icon={Building}>
             <div className="divide-y divide-border-subtle">
               <InfoRow
@@ -370,7 +382,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
         </div>
       ) : (
         /* 3. COMPANY / BUSINESS EMPLOYER PROFILE */
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-2.5 max-sm:gap-2 sm:gap-4 lg:grid-cols-2">
           <SectionCard title="Company & Organization Details" icon={Building}>
             <div className="divide-y divide-border-subtle">
               <InfoRow
@@ -511,7 +523,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
           }
           icon={Globe}
         >
-          <div className="space-y-4 text-xs">
+          <div className="space-y-3 text-[11px] max-sm:space-y-2.5 sm:space-y-4 sm:text-xs">
             {hasText(employer.companyDescription) ? (
               <div>
                 <h4 className="font-semibold text-foreground">

@@ -1,7 +1,7 @@
 import type {
+  OperationsNotificationEntityType,
+  OperationsNotificationType,
   OperationsRegistrationAwarenessState,
-  OperationsRegistrationEntityType,
-  OperationsRegistrationNotificationType,
 } from "./operations-registration-awareness.constants.js";
 
 export type OperationsRegistrationAwarenessFields = {
@@ -75,10 +75,10 @@ export type OperationsRegistrationMetricsResult = {
 
 export type OperationsNotificationListItem = {
   id: string;
-  type: OperationsRegistrationNotificationType;
+  type: OperationsNotificationType;
   title: string;
   body: string;
-  entityType: OperationsRegistrationEntityType;
+  entityType: OperationsNotificationEntityType;
   entityId: string;
   actionPath: string;
   actorName: string;

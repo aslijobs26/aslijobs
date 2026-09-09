@@ -25,6 +25,8 @@ const envSchema = z.object({
   // Short-lived access token; clients renew via /auth/.../refresh.
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("30d"),
+  /** Post-OTP registration continuation (preferences → complete). */
+  JOB_SEEKER_REGISTRATION_TOKEN_EXPIRES_IN: z.string().default("30m"),
   /**
    * Public API base used in export resume links (no trailing slash).
    * Example: http://localhost:5000/api/v1

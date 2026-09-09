@@ -67,6 +67,7 @@ export const operationsEmployersController = {
         limit: 100,
         search: query.search,
         verificationStatus: query.verificationStatus,
+        verificationQueue: query.verificationQueue,
         employerType: query.employerType,
         location: query.location,
         status: query.status,

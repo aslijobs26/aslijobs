@@ -76,6 +76,7 @@ const employerDocumentSchema = new Schema(
     uploadedAt: {
       type: Date,
       default: Date.now,
+      index: true,
     },
   },
   {
@@ -83,6 +84,9 @@ const employerDocumentSchema = new Schema(
     collection: "employer_documents",
   },
 );
+
+employerDocumentSchema.index({ uploadedAt: -1, documentType: 1 });
+employerDocumentSchema.index({ employerId: 1, verificationStatus: 1 });
 
 export type EmployerDocumentRecord = InferSchemaType<
   typeof employerDocumentSchema

@@ -22,6 +22,32 @@ export const OPERATIONS_REGISTRATION_NOTIFICATION_TYPES = [
 export type OperationsRegistrationNotificationType =
   (typeof OPERATIONS_REGISTRATION_NOTIFICATION_TYPES)[number];
 
+/**
+ * Workspace Operations inbox entity types.
+ * Extends registration awareness with job moderation entities.
+ */
+export const OPERATIONS_NOTIFICATION_ENTITY_TYPES = [
+  ...OPERATIONS_REGISTRATION_ENTITY_TYPES,
+  "job",
+] as const;
+
+export type OperationsNotificationEntityType =
+  (typeof OPERATIONS_NOTIFICATION_ENTITY_TYPES)[number];
+
+/**
+ * Workspace Operations inbox notification types.
+ * Registration + job moderation share `operations_notifications`.
+ */
+export const OPERATIONS_NOTIFICATION_TYPES = [
+  ...OPERATIONS_REGISTRATION_NOTIFICATION_TYPES,
+  "job.pending_approval",
+  "job.resubmitted",
+  "job.live_revision_submitted",
+] as const;
+
+export type OperationsNotificationType =
+  (typeof OPERATIONS_NOTIFICATION_TYPES)[number];
+
 export const OPERATIONS_REGISTRATION_AUDIT_ACTIONS = {
   EMPLOYER_REGISTERED: "employer.registered",
   CANDIDATE_REGISTERED: "candidate.registered",

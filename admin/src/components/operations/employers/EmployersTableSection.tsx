@@ -8,6 +8,7 @@ import { OperationsBadge } from "../../ui/OperationsBadge";
 import {
   employerAvatarInitials,
   employerStatusBadgeVariant,
+  industryOrAccountLabel,
   verificationStatusBadgeVariant,
 } from "./employers-format";
 import { EmployersMobileCard } from "./EmployersMobileCard";
@@ -45,26 +46,6 @@ function TableMessage({
 
 const thClassName =
   "whitespace-nowrap px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted first:pl-4 last:pr-4 sm:px-3.5 xl:px-2.5 xl:py-2 xl:text-[9px] xl:first:pl-3 xl:last:pr-3";
-
-function industryOrAccountLabel(employer: OperationsEmployerListItem): string {
-  const industry = employer.industry?.trim();
-  if (industry && industry !== "—") return industry;
-
-  const accountType = employer.accountType?.toLowerCase().trim() || "";
-  if (accountType === "individual") return "Individual account";
-
-  if (accountType === "consultancy" || accountType === "company") {
-    const name =
-      employer.companyName?.trim() || employer.displayName?.trim() || "";
-    if (name && name !== "—") return name;
-    return accountType === "consultancy" ? "Consultancy" : "Company";
-  }
-
-  const organizationType = employer.organizationType?.trim();
-  if (organizationType && organizationType !== "—") return organizationType;
-
-  return "—";
-}
 
 export function EmployersTableSection({
   employers,
@@ -107,9 +88,9 @@ export function EmployersTableSection({
 
   return (
     <div className="min-w-0 max-w-full">
-      <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4 xl:px-3 xl:py-2">
-        <div className="flex min-w-0 flex-col gap-2.5 xl:gap-2">
-          <h2 className="text-sm font-semibold text-foreground xl:text-[13px]">
+      <div className="border-b border-border-subtle px-3 py-2.5 max-sm:px-2.5 max-sm:py-2 sm:px-4 xl:px-3 xl:py-2">
+        <div className="flex min-w-0 flex-col gap-2.5 max-sm:gap-2 xl:gap-2">
+          <h2 className="text-sm font-semibold text-foreground max-sm:text-[13px] xl:text-[13px]">
             {title}{" "}
             <span className="font-semibold tabular-nums text-muted xl:text-[12px]">
               ({totalEmployers.toLocaleString("en-IN")})
@@ -119,7 +100,7 @@ export function EmployersTableSection({
         </div>
       </div>
 
-      <ul className="flex flex-col gap-2.5 p-2.5 sm:hidden">
+      <ul className="flex flex-col gap-2.5 p-2.5 max-sm:gap-2 max-sm:p-2 sm:hidden">
         {isLoading ? (
           <li className="px-2 py-10 text-center text-xs text-muted">
             Loading employers…

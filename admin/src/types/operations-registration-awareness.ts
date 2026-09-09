@@ -6,6 +6,16 @@ export type OperationsRegistrationNotificationType =
   | "employer.registered"
   | "candidate.registered";
 
+export type OperationsNotificationEntityType =
+  | OperationsRegistrationEntityType
+  | "job";
+
+export type OperationsNotificationType =
+  | OperationsRegistrationNotificationType
+  | "job.pending_approval"
+  | "job.resubmitted"
+  | "job.live_revision_submitted";
+
 export type OperationsNavBadgeKey =
   | "newEmployers"
   | "newCandidates"
@@ -63,10 +73,10 @@ export interface OperationsRegistrationMetricsResult {
 
 export interface OperationsNotificationListItem {
   id: string;
-  type: OperationsRegistrationNotificationType;
+  type: OperationsNotificationType;
   title: string;
   body: string;
-  entityType: OperationsRegistrationEntityType;
+  entityType: OperationsNotificationEntityType;
   entityId: string;
   actionPath: string;
   actorName: string;

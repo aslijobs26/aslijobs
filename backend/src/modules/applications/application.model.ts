@@ -239,7 +239,18 @@ const applicationSchema = new Schema(
   },
 );
 
-applicationSchema.index({ jobSeekerId: 1, jobId: 1 }, { unique: true });
+applicationSchema.index(
+  { jobSeekerId: 1, jobId: 1 },
+  {
+    unique: true,
+    /**
+     * Allow re-apply after withdraw while blocking concurrent active apps.
+     * Withdrawn rows remain for ATS history.
+     */
+    partialFilterExpression: { status: { $ne: "withdrawn" } },
+    name: "jobSeekerId_1_jobId_1_active",
+  },
+);
 applicationSchema.index({ employerId: 1, appliedAt: -1 });
 applicationSchema.index({ employerId: 1, status: 1, appliedAt: -1 });
 applicationSchema.index({ employerId: 1, updatedAt: -1 });

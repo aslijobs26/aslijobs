@@ -9,6 +9,7 @@ import operationsRegistrationAwarenessRouter from "./registration-awareness/oper
 import operationsPermissionsRouter from "./roles/operations-permissions.routes.js";
 import operationsRolesRouter from "./roles/operations-roles.routes.js";
 import operationsTeamRouter from "./team/operations-team.routes.js";
+import operationsVerificationsRouter from "./verifications/operations-verifications.routes.js";
 
 export const operationsRouter = Router();
 
@@ -16,6 +17,7 @@ operationsRouter.use("/auth", operationsAuthRouter);
 operationsRouter.use("/employers", operationsEmployersRouter);
 operationsRouter.use("/candidates", operationsCandidatesRouter);
 operationsRouter.use("/jobs", operationsJobsRouter);
+operationsRouter.use("/verifications", operationsVerificationsRouter);
 operationsRouter.use("/team", operationsTeamRouter);
 operationsRouter.use("/roles", operationsRolesRouter);
 operationsRouter.use("/permissions", operationsPermissionsRouter);

@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Eye,
   FileText,
+  FileWarning,
   Gift,
   Inbox,
   Layers,
@@ -84,9 +85,13 @@ export function notificationIcon(type: NotificationType): LucideIcon {
       return UserMinus;
     case "job_closed":
     case "job_rejected":
+    case "job_live_changes_rejected":
     case "employer_verification_rejected":
       return XCircle;
+    case "employer_verification_documents_requested":
+      return FileWarning;
     case "job_approved":
+    case "job_live_changes_approved":
     case "employer_verification_approved":
       return CheckCircle2;
     case "application_received":
@@ -113,10 +118,16 @@ export function notificationIconTone(type: NotificationType): NotificationIconTo
       return "emerald";
     case "application_rejected":
     case "job_rejected":
+    case "job_live_changes_rejected":
     case "job_closed":
+    case "employer_verification_rejected":
       return "rose";
+    case "employer_verification_documents_requested":
+      return "amber";
     case "application_joined":
     case "job_approved":
+    case "job_live_changes_approved":
+    case "employer_verification_approved":
       return "teal";
     default:
       return "teal";

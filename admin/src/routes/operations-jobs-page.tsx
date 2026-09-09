@@ -48,6 +48,8 @@ function statusActionConfirmMessage(
       return job.isLiveChangeReview
         ? `Approve and publish changes for job ${job.jobId}? The live listing will be updated and the employer will be notified.`
         : `Approve and publish job ${job.jobId}? It will become live for candidates and the employer will be notified.`;
+    case "expire":
+      return `Mark job ${job.jobId} as expired? It will be hidden from candidates.`;
     case "close":
     case "reject":
       return null;
@@ -471,7 +473,7 @@ export function OperationsJobsPage() {
             </button>
           </div>
         ) : analyticsData ? (
-          <div className="flex w-full min-w-0 flex-col gap-3">
+          <div className="flex w-full min-w-0 flex-col gap-3 max-lg:gap-2.5 max-sm:gap-2">
             <JobsOverviewHeader
               preset={analyticsFilters.preset}
               dateFrom={analyticsFilters.dateFrom}
@@ -509,7 +511,7 @@ export function OperationsJobsPage() {
             <JobsKpiStrip kpis={analyticsData.kpis} />
             <JobsOverviewAnalytics data={analyticsData} />
 
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
+            <div className="grid grid-cols-1 gap-3 max-sm:gap-2 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
               <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
                 <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4 xl:px-3 xl:py-1.5">
                   <div className="flex min-w-0 flex-col gap-2.5 xl:gap-1.5">
@@ -564,7 +566,7 @@ export function OperationsJobsPage() {
                             role="tab"
                             aria-selected={selected}
                             onClick={() => handleTabChange(item.id)}
-                            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:h-7 xl:gap-1 xl:px-2 xl:text-[9px] ${
+                      className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:h-8 max-sm:gap-1 max-sm:px-2 max-sm:text-[10px] xl:h-7 xl:gap-1 xl:px-2 xl:text-[9px] ${
                               selected
                                 ? "ops-brand-border-glow border-primary-soft bg-primary-light text-primary-soft"
                                 : "ops-brand-border-glow border-border bg-surface text-muted hover:bg-primary-light/50"
@@ -603,7 +605,7 @@ export function OperationsJobsPage() {
                 />
               </div>
 
-              <aside className="flex min-w-0 flex-col gap-3">
+              <aside className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
                 <JobsQuickActions
                   onExport={() => exportAnalyticsCsv(analyticsData)}
                   onReviewPending={() => handleTabChange("pending_approval")}

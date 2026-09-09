@@ -29,23 +29,23 @@ export function EmployerJobsPanel({ employerId }: EmployerJobsPanelProps) {
   const pagination = jobsQuery.data?.pagination;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Briefcase className="size-4 text-primary" />
-          <h3 className="text-sm font-bold text-foreground">
+    <div className="space-y-3 max-sm:space-y-2.5 sm:space-y-4">
+      <div className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm max-sm:gap-2 max-sm:rounded-lg max-sm:p-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-4">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <Briefcase className="size-3.5 text-primary sm:size-4" />
+          <h3 className="text-[12px] font-bold text-foreground sm:text-sm">
             Posted Jobs ({pagination?.total ?? 0})
           </h3>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
           <select
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="h-8 rounded-md border border-border-subtle bg-hero-bg/60 px-2 text-xs font-medium text-foreground outline-none"
+            className="h-7 min-w-0 flex-1 rounded-md border border-border-subtle bg-hero-bg/60 px-2 text-[11px] font-medium text-foreground outline-none sm:h-8 sm:flex-none sm:text-xs"
           >
             <option value="">All Job Statuses</option>
             <option value="active">Active</option>
@@ -61,15 +61,16 @@ export function EmployerJobsPanel({ employerId }: EmployerJobsPanelProps) {
                 `${OPERATIONS_ROUTES.JOBS_POST}?employerId=${encodeURIComponent(employerId)}`,
               )
             }
-            className="inline-flex h-8 items-center gap-1 rounded-md bg-primary px-3 text-xs font-semibold text-white transition-colors hover:bg-primary/90"
+            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 text-[11px] font-semibold text-white transition-colors hover:bg-primary/90 sm:h-8 sm:px-3 sm:text-xs"
           >
-            <Plus className="size-3.5" />
-            Post New Job
+            <Plus className="size-3 sm:size-3.5" />
+            <span className="sm:hidden">Post</span>
+            <span className="hidden sm:inline">Post New Job</span>
           </button>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm max-sm:rounded-lg">
         <div className="overflow-x-auto overscroll-x-contain scrollbar-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <table className="min-w-[700px] text-left text-xs xl:min-w-full">
             <thead className="border-b border-border-subtle bg-hero-bg/60 text-[10px] font-semibold uppercase text-muted">

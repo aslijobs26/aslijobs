@@ -179,11 +179,11 @@ export function CandidatesByLocation({
 
   return (
     <section className="candidates-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-3 py-2 sm:px-3.5 sm:py-2.5">
-        <h3 className="text-[13px] font-semibold tracking-tight text-foreground">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-3 py-2 max-sm:gap-1.5 max-sm:px-2.5 max-sm:py-1.5 sm:px-3.5 sm:py-2.5">
+        <h3 className="text-[13px] font-semibold tracking-tight text-foreground max-sm:text-[12px]">
           By Location
         </h3>
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 max-sm:gap-1.5">
           <div
             role="tablist"
             aria-label="Location dimension"
@@ -231,10 +231,10 @@ export function CandidatesByLocation({
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 p-2.5 sm:p-3">
+      <div className="min-h-0 flex-1 p-2.5 max-sm:p-2 sm:p-3">
         {isLoading ? (
           <div
-            className="grid min-h-[11.5rem] animate-pulse grid-cols-1 gap-3 sm:grid-cols-2 xl:min-h-36"
+            className="grid min-h-[11.5rem] animate-pulse grid-cols-1 gap-3 max-sm:min-h-36 sm:grid-cols-2 xl:min-h-36"
             aria-hidden="true"
           >
             <div className="rounded-lg bg-hero-bg" />
@@ -271,10 +271,10 @@ export function CandidatesByLocation({
             )}
           >
             {showMap ? (
-              <div className="relative mx-auto w-full max-w-[11.5rem] sm:max-w-none">
+              <div className="relative mx-auto w-full max-w-[11.5rem] max-sm:max-w-[9.5rem] sm:max-w-none">
                 <svg
                   viewBox={indiaStatesMap.viewBox}
-                  className="h-auto w-full max-h-[12.5rem] xl:max-h-[10rem]"
+                  className="h-auto w-full max-h-[12.5rem] max-sm:max-h-[10rem] xl:max-h-[10rem]"
                   role="img"
                   aria-label="India map of jobseeker concentration by state"
                 >

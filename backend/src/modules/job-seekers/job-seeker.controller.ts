@@ -55,8 +55,17 @@ export class JobSeekerController {
   };
 
   savePreferences = async (req: Request, res: Response): Promise<void> => {
+    const jobSeekerId = req.registrationJobSeekerId;
+    if (!jobSeekerId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
     const body = req.body as SaveJobSeekerPreferencesSchema;
-    const result = await jobSeekerService.savePreferences(body);
+    const { jobSeekerId: _ignored, ...preferences } = body;
+    const result = await jobSeekerService.savePreferences(
+      jobSeekerId,
+      preferences,
+    );
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Job preferences saved successfully.",
@@ -68,8 +77,17 @@ export class JobSeekerController {
     req: Request,
     res: Response,
   ): Promise<void> => {
+    const jobSeekerId = req.registrationJobSeekerId;
+    if (!jobSeekerId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
     const body = req.body as CompleteJobSeekerRegistrationSchema;
-    const result = await jobSeekerService.completeRegistration(body);
+    const { jobSeekerId: _ignored, ...completion } = body;
+    const result = await jobSeekerService.completeRegistration(
+      jobSeekerId,
+      completion,
+    );
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Registration completed successfully",
@@ -124,6 +142,29 @@ export class JobSeekerController {
       message: "Profile photo removed successfully.",
       data: result,
     });
+  };
+
+  downloadProfilePhoto = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const jobSeekerId = req.jobSeekerId;
+    if (!jobSeekerId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const file = await jobSeekerService.openOwnProfilePhoto(jobSeekerId);
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${file.fileName.replace(/"/g, "")}"`,
+    );
+    if (file.contentLength != null) {
+      res.setHeader("Content-Length", String(file.contentLength));
+    }
+    res.setHeader("Cache-Control", "private, no-store");
+    res.status(HTTP_STATUS.OK);
+    file.stream.pipe(res);
   };
 }
 

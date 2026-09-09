@@ -5,6 +5,7 @@ import { AppError } from "../../middleware/error.middleware.js";
 import { jwtService } from "../auth/jwt.service.js";
 import { otpService } from "../otp/otp.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
+import { assertJobSeekerAccountActive } from "./job-seeker-account-status.js";
 import { toPublicJobSeeker } from "./job-seeker.serializer.js";
 import type {
   JobSeekerLoginSendOtpInput,
@@ -29,6 +30,8 @@ async function findLoginEligibleJobSeeker(whatsappNumber: string) {
       HTTP_STATUS.CONFLICT,
     );
   }
+
+  assertJobSeekerAccountActive(jobSeeker.accountStatus);
 
   return jobSeeker;
 }
@@ -133,6 +136,8 @@ export class JobSeekerLoginService {
     if (!jobSeeker) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
+
+    assertJobSeekerAccountActive(jobSeeker.accountStatus);
 
     return {
       jobSeeker: toPublicJobSeeker(jobSeeker),

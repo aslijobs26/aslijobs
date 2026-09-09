@@ -34,7 +34,7 @@ export function CandidatesOverviewTabs({
 }) {
   return (
     <div
-      className="-mx-0.5 flex min-w-0 items-center gap-1.5 overflow-x-auto px-0.5 pb-0.5 scrollbar-hidden sm:gap-2 xl:gap-1.5"
+      className="-mx-0.5 flex min-w-0 items-center gap-1.5 overflow-x-auto overscroll-x-contain px-0.5 pb-0.5 scrollbar-hidden max-sm:gap-1 sm:gap-2 xl:gap-1.5"
       role="tablist"
       aria-label="Jobseeker overview tabs"
     >
@@ -49,6 +49,7 @@ export function CandidatesOverviewTabs({
             onClick={() => onChange(tab.id)}
             className={cn(
               "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+              "max-sm:h-8 max-sm:gap-1 max-sm:px-2 max-sm:text-[10px]",
               "sm:h-9 sm:px-3 sm:text-xs",
               "xl:h-7 xl:gap-1 xl:px-2 xl:text-[9px]",
               selected

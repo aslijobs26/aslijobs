@@ -21,6 +21,13 @@ export type JobSeekerJwtPayload = {
   whatsappNumber: string;
 };
 
+/** Short-lived token for post-OTP registration continuation only. */
+export type JobSeekerRegistrationContinuationPayload = {
+  typ: "job_seeker_registration";
+  sub: string;
+  whatsappNumber: string;
+};
+
 export type OperationsTeamJwtPayload = {
   sub: string;
   role: "operations_team";

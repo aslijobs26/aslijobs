@@ -21,20 +21,23 @@ import { isOperationsSessionTransientError } from "../utils/operations-session-e
 
 function EmployerDetailSkeleton() {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-3" aria-busy="true">
-      <div className="h-36 animate-pulse rounded-xl border border-border-subtle bg-surface" />
-      <div className="h-10 animate-pulse rounded-lg border border-border-subtle bg-surface" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+    <div
+      className="flex w-full min-w-0 flex-col gap-2.5 max-sm:gap-2 sm:gap-3"
+      aria-busy="true"
+    >
+      <div className="h-28 animate-pulse rounded-xl border border-border-subtle bg-surface max-sm:h-24 sm:h-32 lg:h-36" />
+      <div className="h-9 animate-pulse rounded-lg border border-border-subtle bg-surface max-sm:h-8" />
+      <div className="grid gap-1.5 max-sm:gap-1.5 sm:grid-cols-2 sm:gap-2.5 lg:grid-cols-6 lg:gap-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="h-20 animate-pulse rounded-xl border border-border-subtle bg-surface"
+            className="h-14 animate-pulse rounded-lg border border-border-subtle bg-surface sm:h-16 lg:h-20 sm:rounded-xl"
           />
         ))}
       </div>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div className="h-72 animate-pulse rounded-xl border border-border-subtle bg-surface" />
-        <div className="h-72 animate-pulse rounded-xl border border-border-subtle bg-surface" />
+      <div className="grid gap-2.5 sm:gap-3 lg:grid-cols-2">
+        <div className="h-56 animate-pulse rounded-xl border border-border-subtle bg-surface max-sm:h-48 sm:h-64 lg:h-72" />
+        <div className="h-56 animate-pulse rounded-xl border border-border-subtle bg-surface max-sm:h-48 sm:h-64 lg:h-72" />
       </div>
     </div>
   );
@@ -143,12 +146,12 @@ export function OperationsEmployersDetailPage() {
       title={employer?.displayName ?? "Employer Profile"}
       subtitle="Employers > Employer Profile"
     >
-      <div className="flex w-full min-w-0 flex-col gap-3">
+      <div className="flex w-full min-w-0 flex-col gap-2.5 max-sm:gap-2 sm:gap-3">
         {detailQuery.isLoading && !employer ? (
           <EmployerDetailSkeleton />
         ) : errorMessage ? (
-          <div className="rounded-xl border border-border-subtle bg-surface p-8 text-center">
-            <p className="text-sm font-medium text-danger">{errorMessage}</p>
+          <div className="rounded-xl border border-border-subtle bg-surface p-5 text-center max-sm:p-4 sm:p-8">
+            <p className="text-xs font-medium text-danger sm:text-sm">{errorMessage}</p>
             <button
               type="button"
               onClick={() => void detailQuery.refetch()}
@@ -166,7 +169,7 @@ export function OperationsEmployersDetailPage() {
               onToggleStatus={handleOpenToggleStatus}
             />
 
-            <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm max-sm:rounded-lg">
               <EmployerDetailTabs
                 activeTab={activeTab}
                 jobsCount={employer.analytics.totalJobs}
@@ -174,7 +177,7 @@ export function OperationsEmployersDetailPage() {
                 onTabChange={setActiveTab}
               />
 
-              <div className="p-4 sm:p-5">
+              <div className="p-2.5 max-sm:p-2 sm:p-4 lg:p-5">
                 {activeTab === "overview" && (
                   <EmployerOverviewPanel employer={employer} />
                 )}

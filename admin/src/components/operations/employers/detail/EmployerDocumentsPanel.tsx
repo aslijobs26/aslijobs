@@ -7,10 +7,16 @@ import { resolveMediaUrl } from "../../../../utils/resolve-media-url";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import { OperationsCanKey } from "../../auth/OperationsCanKey";
 
+type FetchEmployerDocumentBlob = (
+  documentId: string,
+) => Promise<{ blob: Blob; fileName: string }>;
+
 interface EmployerDocumentsPanelProps {
   documents: OperationsEmployerDocumentItem[];
   /** When set, preview/download use the authenticated document blob API. */
   employerId?: string;
+  /** Prefer over employer document API when provided (e.g. verifications). */
+  fetchDocumentBlob?: FetchEmployerDocumentBlob;
 }
 
 function formatBytes(bytes: number): string {
@@ -35,13 +41,15 @@ function hasDirectUrl(doc: OperationsEmployerDocumentItem): boolean {
 function canAccessDocument(
   doc: OperationsEmployerDocumentItem,
   employerId: string | undefined,
+  hasBlobFetcher: boolean,
 ): boolean {
-  return Boolean(employerId) || hasDirectUrl(doc);
+  return Boolean(employerId) || hasBlobFetcher || hasDirectUrl(doc);
 }
 
 export function EmployerDocumentsPanel({
   documents,
   employerId,
+  fetchDocumentBlob,
 }: EmployerDocumentsPanelProps) {
   const titleId = useId();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -67,6 +75,14 @@ export function EmployerDocumentsPanel({
       setPreviewUrl(null);
 
       try {
+        if (fetchDocumentBlob) {
+          const { blob } = await fetchDocumentBlob(previewDoc.id);
+          if (cancelled) return;
+          objectUrl = URL.createObjectURL(blob);
+          setPreviewUrl(objectUrl);
+          return;
+        }
+
         if (employerId) {
           const { blob } = await fetchOperationsEmployerDocumentBlob(
             employerId,
@@ -106,7 +122,7 @@ export function EmployerDocumentsPanel({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [previewDoc, employerId]);
+  }, [previewDoc, employerId, fetchDocumentBlob]);
 
   useEffect(() => {
     if (!previewDoc) {
@@ -139,17 +155,16 @@ export function EmployerDocumentsPanel({
   const handleDownload = async (doc: OperationsEmployerDocumentItem) => {
     setActionError(null);
 
-    if (employerId) {
+    if (fetchDocumentBlob || employerId) {
       setDownloadingId(doc.id);
       try {
-        const { blob, fileName } = await fetchOperationsEmployerDocumentBlob(
-          employerId,
-          doc.id,
-        );
-        const url = URL.createObjectURL(blob);
+        const result = fetchDocumentBlob
+          ? await fetchDocumentBlob(doc.id)
+          : await fetchOperationsEmployerDocumentBlob(employerId!, doc.id);
+        const url = URL.createObjectURL(result.blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = fileName || doc.originalName || "document";
+        link.download = result.fileName || doc.originalName || "document";
         link.click();
         URL.revokeObjectURL(url);
       } catch {
@@ -177,14 +192,13 @@ export function EmployerDocumentsPanel({
   const handleOpenExternal = async (doc: OperationsEmployerDocumentItem) => {
     setActionError(null);
 
-    if (employerId) {
+    if (fetchDocumentBlob || employerId) {
       setDownloadingId(doc.id);
       try {
-        const { blob } = await fetchOperationsEmployerDocumentBlob(
-          employerId,
-          doc.id,
-        );
-        const url = URL.createObjectURL(blob);
+        const result = fetchDocumentBlob
+          ? await fetchDocumentBlob(doc.id)
+          : await fetchOperationsEmployerDocumentBlob(employerId!, doc.id);
+        const url = URL.createObjectURL(result.blob);
         window.open(url, "_blank", "noopener,noreferrer");
         window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       } catch {
@@ -204,41 +218,45 @@ export function EmployerDocumentsPanel({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
-        <div className="flex items-center justify-between border-b border-border-subtle pb-3">
-          <div className="flex items-center gap-2">
-            <FileText className="size-4 text-primary" aria-hidden="true" />
-            <h3 className="text-sm font-bold text-foreground">
+    <div className="space-y-3 max-sm:space-y-2.5 sm:space-y-4">
+      <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm max-sm:rounded-lg max-sm:p-2 sm:p-4 lg:p-5">
+        <div className="flex items-center justify-between border-b border-border-subtle pb-2 max-sm:pb-1.5 sm:pb-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <FileText className="size-3.5 text-primary sm:size-4" aria-hidden="true" />
+            <h3 className="text-[12px] font-bold text-foreground sm:text-sm">
               Verification Documents ({documents.length})
             </h3>
           </div>
         </div>
 
         {actionError ? (
-          <p className="mt-3 text-xs text-danger" role="alert">
+          <p className="mt-2.5 text-[11px] text-danger sm:mt-3 sm:text-xs" role="alert">
             {actionError}
           </p>
         ) : null}
 
         {documents.length === 0 ? (
-          <div className="py-12 text-center text-xs text-muted">
+          <div className="py-8 text-center text-[11px] text-muted max-sm:py-6 sm:py-12 sm:text-xs">
             No verification documents uploaded yet.
           </div>
         ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-2.5 grid gap-2 max-sm:mt-2 max-sm:gap-1.5 sm:mt-4 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
             {documents.map((doc) => {
-              const accessible = canAccessDocument(doc, employerId);
+              const accessible = canAccessDocument(
+                doc,
+                employerId,
+                Boolean(fetchDocumentBlob),
+              );
 
               return (
                 <div
                   key={doc.id}
-                  className="flex flex-col justify-between rounded-xl border border-border-subtle bg-hero-bg/30 p-3.5 shadow-xs transition-shadow hover:shadow-sm"
+                  className="flex flex-col justify-between rounded-lg border border-border-subtle bg-hero-bg/30 p-2.5 shadow-xs transition-shadow hover:shadow-sm max-sm:p-2 sm:rounded-xl sm:p-3.5"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
-                      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
-                        <FileText className="size-4" aria-hidden="true" />
+                      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary sm:size-9 sm:rounded-lg">
+                        <FileText className="size-3.5 sm:size-4" aria-hidden="true" />
                       </span>
                       <OperationsBadge
                         variant={
@@ -249,19 +267,20 @@ export function EmployerDocumentsPanel({
                               ? "high"
                               : "medium"
                         }
+                        className="px-1.5 py-0 text-[9px]"
                       >
                         {doc.verificationStatus.charAt(0).toUpperCase() +
                           doc.verificationStatus.slice(1)}
                       </OperationsBadge>
                     </div>
 
-                    <h4 className="mt-2.5 truncate text-xs font-bold text-foreground">
+                    <h4 className="mt-2 truncate text-[11px] font-bold text-foreground sm:mt-2.5 sm:text-xs">
                       {doc.documentTypeLabel}
                     </h4>
-                    <p className="mt-0.5 truncate text-[11px] text-muted">
+                    <p className="mt-0.5 truncate text-[10px] text-muted sm:text-[11px]">
                       {doc.originalName}
                     </p>
-                    <p className="mt-1 text-[10px] text-muted">
+                    <p className="mt-1 text-[9px] text-muted sm:text-[10px]">
                       {formatBytes(doc.fileSize)} • Uploaded{" "}
                       {new Date(doc.uploadedAt).toLocaleDateString("en-IN", {
                         day: "2-digit",
@@ -271,16 +290,16 @@ export function EmployerDocumentsPanel({
                     </p>
                   </div>
 
-                  <div className="mt-4 flex items-center gap-2 border-t border-border-subtle pt-2.5">
+                  <div className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-2 max-sm:mt-2.5 sm:mt-4 sm:gap-2 sm:pt-2.5">
                     {accessible ? (
                       <>
                         <OperationsCanKey permissionKey="employers.profile.documents.view">
                           <button
                             type="button"
                             onClick={() => setPreviewDoc(doc)}
-                            className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-border-subtle bg-surface py-1 text-xs font-semibold text-foreground hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                            className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-border-subtle bg-surface py-1 text-[11px] font-semibold text-foreground hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-xs"
                           >
-                            <Eye className="size-3.5" aria-hidden="true" />
+                            <Eye className="size-3 sm:size-3.5" aria-hidden="true" />
                             Preview
                           </button>
                         </OperationsCanKey>

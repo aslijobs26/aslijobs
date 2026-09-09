@@ -1,4 +1,5 @@
 import type { OperationsCandidateDetail } from "../../../../types/operations-candidates";
+import { OperationsCanKey } from "../../auth/OperationsCanKey";
 import {
   formatCandidateDateTimeFull,
   formatCandidateGender,
@@ -29,25 +30,36 @@ export function CandidateProfileDetailsPanel({
           Personal Information
         </h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <DetailField label="Full Name" value={detail.candidateName} />
-          <DetailField label="Phone" value={detail.candidatePhone} />
-          <DetailField label="Email" value={detail.candidateEmail} />
+          <OperationsCanKey permissionKey="candidates.profile.fields.name.view">
+            <DetailField label="Full Name" value={detail.candidateName ?? ""} />
+          </OperationsCanKey>
+          <OperationsCanKey permissionKey="candidates.profile.fields.phone.view">
+            <DetailField label="Phone" value={detail.candidatePhone ?? ""} />
+          </OperationsCanKey>
+          <OperationsCanKey permissionKey="candidates.profile.fields.email.view">
+            <DetailField label="Email" value={detail.candidateEmail ?? ""} />
+          </OperationsCanKey>
           <DetailField
             label="Gender"
             value={formatCandidateGender(detail.candidateGender)}
           />
-          <DetailField
-            label="Date of Birth"
-            value={
-              detail.dateOfBirth
-                ? formatCandidateDateTimeFull(detail.dateOfBirth).split(",")[0] ??
-                  "—"
-                : ""
-            }
-          />
-          <DetailField label="Pincode" value={detail.candidatePincode} />
-          <DetailField label="City" value={detail.candidateCity} />
-          <DetailField label="State" value={detail.candidateState} />
+          <OperationsCanKey permissionKey="candidates.profile.fields.dob.view">
+            <DetailField
+              label="Date of Birth"
+              value={
+                detail.dateOfBirth
+                  ? formatCandidateDateTimeFull(detail.dateOfBirth).split(
+                      ",",
+                    )[0] ?? "—"
+                  : ""
+              }
+            />
+          </OperationsCanKey>
+          <OperationsCanKey permissionKey="candidates.profile.fields.location.view">
+            <DetailField label="Pincode" value={detail.candidatePincode ?? ""} />
+            <DetailField label="City" value={detail.candidateCity ?? ""} />
+            <DetailField label="State" value={detail.candidateState ?? ""} />
+          </OperationsCanKey>
           <DetailField
             label="Languages"
             value={detail.languages.join(", ")}
@@ -103,6 +115,13 @@ export function CandidateProfileDetailsPanel({
                       .filter(Boolean)
                       .join(" · ") || "—"}
                   </p>
+                  <OperationsCanKey permissionKey="candidates.profile.fields.current_salary.view">
+                    {experience.salary ? (
+                      <p className="mt-1 text-[11px] text-muted">
+                        Salary: {experience.salary}
+                      </p>
+                    ) : null}
+                  </OperationsCanKey>
                 </li>
               ))}
             </ul>

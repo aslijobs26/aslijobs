@@ -322,6 +322,8 @@ export function JobSeekerRegisterForm() {
   const otpSectionRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<RegisterStep>("account");
   const [jobSeekerId, setJobSeekerId] = useState<string | null>(null);
+  const [registrationContinuationToken, setRegistrationContinuationToken] =
+    useState<string | null>(null);
   const [fullName, setFullName] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP_DIGITS);
@@ -492,7 +494,11 @@ export function JobSeekerRegisterForm() {
     clearErrors();
 
     try {
-      await verifyJobSeekerOtp(jobSeekerId, otpDigits.join(""));
+      const verified = await verifyJobSeekerOtp(
+        jobSeekerId,
+        otpDigits.join(""),
+      );
+      setRegistrationContinuationToken(verified.registrationContinuationToken);
       setStep("preferences");
     } catch (error) {
       showApiFailure(error);
@@ -506,8 +512,8 @@ export function JobSeekerRegisterForm() {
       return;
     }
 
-    if (!jobSeekerId) {
-      setFormError("Registration session expired. Please start again.");
+    if (!registrationContinuationToken) {
+      setFormError("Registration session expired. Please verify OTP again.");
       return;
     }
 
@@ -521,8 +527,7 @@ export function JobSeekerRegisterForm() {
     clearErrors();
 
     try {
-      await saveJobSeekerPreferences({
-        jobSeekerId,
+      await saveJobSeekerPreferences(registrationContinuationToken, {
         dateOfBirth: preferences.dateOfBirth,
         gender: preferences.gender as JobSeekerGender,
         jobRole: preferences.jobRole.trim(),
@@ -546,8 +551,8 @@ export function JobSeekerRegisterForm() {
       return;
     }
 
-    if (!jobSeekerId) {
-      setFormError("Registration session expired. Please start again.");
+    if (!registrationContinuationToken) {
+      setFormError("Registration session expired. Please verify OTP again.");
       return;
     }
 
@@ -568,14 +573,17 @@ export function JobSeekerRegisterForm() {
     clearErrors();
 
     try {
-      const data = await completeJobSeekerRegistration({
-        jobSeekerId,
-        education,
-        experienceType: experienceType as JobSeekerExperienceType,
-        experiences: experienceType === "experienced" ? experiences : [],
-        languages,
-        availabilityStatus: availabilityStatus as JobSeekerAvailabilityStatus,
-      });
+      const data = await completeJobSeekerRegistration(
+        registrationContinuationToken,
+        {
+          education,
+          experienceType: experienceType as JobSeekerExperienceType,
+          experiences: experienceType === "experienced" ? experiences : [],
+          languages,
+          availabilityStatus: availabilityStatus as JobSeekerAvailabilityStatus,
+        },
+      );
+      setRegistrationContinuationToken(null);
       await establishJobSeekerClientSession(queryClient, {
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,

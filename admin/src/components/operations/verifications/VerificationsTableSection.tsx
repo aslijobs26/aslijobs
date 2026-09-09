@@ -2,20 +2,19 @@ import { MapPin } from "lucide-react";
 import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { operationsVerificationReviewPath } from "../../../constants/operations-routes";
-import type { OperationsEmployerListItem } from "../../../types/operations-employers";
+import type { OperationsVerificationListItem } from "../../../types/operations-verifications";
 import { resolveMediaUrl } from "../../../utils/resolve-media-url";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import {
   employerAvatarInitials,
   formatEmployerDateTime,
-  formatEmployerDisplayId,
-  verificationStatusBadgeVariant,
 } from "../employers/employers-format";
 import { VerificationsMobileCard } from "./VerificationsMobileCard";
+import { verificationOperationalStatusBadgeVariant } from "./verifications-format";
 
 interface VerificationsTableSectionProps {
-  employers: OperationsEmployerListItem[];
-  totalEmployers: number;
+  items: OperationsVerificationListItem[];
+  totalItems: number;
   isLoading: boolean;
   isError: boolean;
   errorMessage?: string;
@@ -25,7 +24,7 @@ interface VerificationsTableSectionProps {
 
 function TableMessage({
   children,
-  colSpan = 8,
+  colSpan = 9,
 }: {
   children: ReactNode;
   colSpan?: number;
@@ -42,28 +41,22 @@ function TableMessage({
 const thClassName =
   "whitespace-nowrap px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted first:pl-4 last:pr-4 sm:px-3.5 xl:px-2.5 xl:py-2 xl:text-[9px] xl:first:pl-3 xl:last:pr-3";
 
-function submittedLabel(employer: OperationsEmployerListItem): {
+function submittedLabel(item: OperationsVerificationListItem): {
   date: string;
   time: string;
 } {
-  if (employer.verificationSubmittedAt) {
-    return formatEmployerDateTime(employer.verificationSubmittedAt);
+  if (item.submittedAt) {
+    return formatEmployerDateTime(item.submittedAt);
   }
   return {
-    date: employer.registeredAtDate || "—",
-    time: employer.registeredAtTime || "",
+    date: item.submittedAtDate || "—",
+    time: "",
   };
 }
 
-function accountTypeLabel(employer: OperationsEmployerListItem): string {
-  const type = employer.accountType?.trim();
-  if (!type) return employer.organizationType || "—";
-  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
-}
-
 export function VerificationsTableSection({
-  employers,
-  totalEmployers,
+  items,
+  totalItems,
   isLoading,
   isError,
   errorMessage,
@@ -103,9 +96,9 @@ export function VerificationsTableSection({
       <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4 xl:px-3 xl:py-2">
         <div className="flex min-w-0 flex-col gap-2.5 xl:gap-2">
           <h2 className="text-sm font-semibold text-foreground xl:text-[13px]">
-            Employer Verifications{" "}
+            Recent Verifications{" "}
             <span className="font-semibold tabular-nums text-muted xl:text-[12px]">
-              ({totalEmployers.toLocaleString("en-IN")})
+              ({totalItems.toLocaleString("en-IN")})
             </span>
           </h2>
           {toolbar}
@@ -121,28 +114,25 @@ export function VerificationsTableSection({
         {!isLoading && isError ? (
           <li className="p-4 text-center">{errorBlock}</li>
         ) : null}
-        {!isLoading && !isError && employers.length === 0 ? (
+        {!isLoading && !isError && items.length === 0 ? (
           <li className="p-6 text-center">{emptyMessage}</li>
         ) : null}
         {!isLoading &&
           !isError &&
-          employers.map((employer) => (
-            <VerificationsMobileCard key={employer.id} employer={employer} />
+          items.map((item) => (
+            <VerificationsMobileCard key={item.id} item={item} />
           ))}
       </ul>
 
       <div className="hidden overflow-x-auto overscroll-x-contain scrollbar-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:block">
-        <table className="min-w-[960px] text-left text-xs xl:min-w-full xl:text-[11px]">
+        <table className="min-w-[1080px] text-left text-xs xl:min-w-full xl:text-[11px]">
           <thead className="border-b border-border-subtle bg-hero-bg/60 text-muted">
             <tr>
               <th scope="col" className={thClassName}>
-                Employer ID
+                Company Name
               </th>
               <th scope="col" className={thClassName}>
-                Employer Name
-              </th>
-              <th scope="col" className={thClassName}>
-                Account Type
+                Industry
               </th>
               <th scope="col" className={thClassName}>
                 Location
@@ -156,8 +146,14 @@ export function VerificationsTableSection({
               <th scope="col" className={thClassName}>
                 Status
               </th>
+              <th scope="col" className={thClassName}>
+                SLA
+              </th>
+              <th scope="col" className={thClassName}>
+                Assigned To
+              </th>
               <th scope="col" className={`${thClassName} text-right`}>
-                Action
+                Actions
               </th>
             </tr>
           </thead>
@@ -172,32 +168,28 @@ export function VerificationsTableSection({
             {!isLoading && isError ? (
               <TableMessage>{errorBlock}</TableMessage>
             ) : null}
-            {!isLoading && !isError && employers.length === 0 ? (
+            {!isLoading && !isError && items.length === 0 ? (
               <TableMessage>{emptyMessage}</TableMessage>
             ) : null}
             {!isLoading &&
               !isError &&
-              employers.map((employer) => {
-                const logoUrl = resolveMediaUrl(employer.logoUrl);
-                const submitted = submittedLabel(employer);
-                const documentsCount =
-                  typeof employer.documentsCount === "number"
-                    ? employer.documentsCount
-                    : null;
-                const reviewPath = operationsVerificationReviewPath(
-                  employer.id,
-                );
+              items.map((item) => {
+                const logoUrl = resolveMediaUrl(item.logoUrl);
+                const submitted = submittedLabel(item);
+                const reviewPath = operationsVerificationReviewPath(item.id);
+                const companyName =
+                  item.companyName?.trim() ||
+                  item.displayName?.trim() ||
+                  "—";
+                const canReview = item.allowedActions.canReview;
+                const actionLabel = canReview ? "Review" : "View";
 
                 return (
                   <tr
-                    key={employer.id}
+                    key={item.id}
                     className="align-middle transition-colors hover:bg-hero-bg/30"
                   >
-                    <td className="whitespace-nowrap py-3 pl-4 pr-3 font-mono text-[11px] text-muted sm:pr-3.5 xl:py-2 xl:pl-3 xl:pr-2.5 xl:text-[10px]">
-                      {formatEmployerDisplayId(employer.id)}
-                    </td>
-
-                    <td className="max-w-[15rem] px-3 py-3 sm:px-3.5 xl:max-w-[12rem] xl:px-2.5 xl:py-2">
+                    <td className="max-w-[15rem] px-3 py-3 pl-4 sm:px-3.5 xl:max-w-[12rem] xl:px-2.5 xl:py-2 xl:pl-3">
                       <Link
                         to={reviewPath}
                         className="flex min-w-0 items-center gap-2.5 xl:gap-2"
@@ -210,18 +202,18 @@ export function VerificationsTableSection({
                               className="size-full object-cover"
                             />
                           ) : (
-                            employerAvatarInitials(employer.displayName)
+                            employerAvatarInitials(companyName)
                           )}
                         </span>
                         <span className="truncate text-xs font-semibold text-foreground hover:text-primary xl:text-[11px]">
-                          {employer.displayName || employer.companyName || "—"}
+                          {companyName}
                         </span>
                       </Link>
                     </td>
 
                     <td className="max-w-[9rem] px-3 py-3 text-foreground sm:px-3.5 xl:max-w-[7.5rem] xl:px-2.5 xl:py-2">
                       <span className="block truncate xl:text-[11px]">
-                        {accountTypeLabel(employer)}
+                        {item.industry?.trim() || "—"}
                       </span>
                     </td>
 
@@ -232,9 +224,9 @@ export function VerificationsTableSection({
                           aria-hidden="true"
                         />
                         <span className="truncate xl:text-[11px]">
-                          {employer.location?.trim() &&
-                          employer.location.trim() !== "—"
-                            ? employer.location
+                          {item.location?.trim() &&
+                          item.location.trim() !== "—"
+                            ? item.location
                             : "Not specified"}
                         </span>
                       </span>
@@ -252,17 +244,27 @@ export function VerificationsTableSection({
                     </td>
 
                     <td className="px-3 py-3 font-semibold tabular-nums text-foreground sm:px-3.5 xl:px-2.5 xl:py-2 xl:text-[11px]">
-                      {documentsCount == null ? "—" : documentsCount}
+                      {item.documentsLabel || "—"}
                     </td>
 
                     <td className="whitespace-nowrap px-3 py-3 sm:px-3.5 xl:px-2.5 xl:py-2 [&>span]:xl:px-1.5 [&>span]:xl:py-0 [&>span]:xl:text-[10px]">
                       <OperationsBadge
-                        variant={verificationStatusBadgeVariant(
-                          employer.verificationStatus,
+                        variant={verificationOperationalStatusBadgeVariant(
+                          item.operationalStatus,
                         )}
                       >
-                        {employer.verificationStatusLabel}
+                        {item.statusLabel}
                       </OperationsBadge>
+                    </td>
+
+                    <td className="whitespace-nowrap px-3 py-3 tabular-nums text-foreground sm:px-3.5 xl:px-2.5 xl:py-2 xl:text-[11px]">
+                      {item.slaLabel || "—"}
+                    </td>
+
+                    <td className="max-w-[8rem] px-3 py-3 text-muted sm:px-3.5 xl:max-w-[7rem] xl:px-2.5 xl:py-2">
+                      <span className="block truncate xl:text-[11px]">
+                        {item.assignedToLabel?.trim() || "—"}
+                      </span>
                     </td>
 
                     <td className="whitespace-nowrap py-3 pl-3 pr-4 text-right sm:pl-3.5 xl:py-2 xl:pl-2.5 xl:pr-3">
@@ -270,7 +272,7 @@ export function VerificationsTableSection({
                         to={reviewPath}
                         className="inline-flex h-8 items-center justify-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:h-7 xl:px-2 xl:text-[10px]"
                       >
-                        Review
+                        {actionLabel}
                       </Link>
                     </td>
                   </tr>

@@ -382,6 +382,42 @@ const jobSchema = new Schema(
       trim: true,
       default: "",
     },
+    /**
+     * Append-only moderation review trail (approve/reject + live changes).
+     * Current scalars (`rejectionReason`, `reviewDecision`) remain the
+     * latest-state convenience fields for list/detail UX.
+     */
+    reviewHistory: {
+      type: [
+        {
+          kind: {
+            type: String,
+            enum: ["initial", "resubmission", "live_change"],
+            required: true,
+          },
+          decision: {
+            type: String,
+            enum: ["approved", "rejected"],
+            required: true,
+          },
+          reason: {
+            type: String,
+            trim: true,
+            default: "",
+          },
+          reviewedAt: {
+            type: Date,
+            required: true,
+          },
+          reviewedByOperationsUserId: {
+            type: Schema.Types.ObjectId,
+            ref: "OperationsTeamUser",
+            default: null,
+          },
+        },
+      ],
+      default: [],
+    },
     reviewNotificationSentAt: {
       type: Date,
       default: null,

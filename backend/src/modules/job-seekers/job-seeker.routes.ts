@@ -4,6 +4,12 @@ import {
   jobSeekerLoginSendOtpRateLimit,
   jobSeekerLoginVerifyOtpRateLimit,
 } from "../../middleware/job-seeker-login-rate-limit.middleware.js";
+import {
+  jobSeekerRegisterContinuationRateLimit,
+  jobSeekerRegisterSendOtpRateLimit,
+  jobSeekerRegisterVerifyOtpRateLimit,
+} from "../../middleware/job-seeker-register-rate-limit.middleware.js";
+import { requireJobSeekerRegistrationContinuation } from "../../middleware/job-seeker-registration-auth.middleware.js";
 import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { jobSeekerController } from "./job-seeker.controller.js";
@@ -60,6 +66,12 @@ jobSeekerRouter.patch(
   asyncHandler(jobSeekerController.updateProfile),
 );
 
+jobSeekerRouter.get(
+  "/me/photo",
+  asyncHandler(requireJobSeekerAuth),
+  asyncHandler(jobSeekerController.downloadProfilePhoto),
+);
+
 jobSeekerRouter.post(
   "/me/photo",
   asyncHandler(requireJobSeekerAuth),
@@ -81,30 +93,37 @@ jobSeekerRouter.get(
 
 jobSeekerRouter.post(
   "/register",
+  jobSeekerRegisterSendOtpRateLimit,
   validate(registerJobSeekerSchema, "body"),
   asyncHandler(jobSeekerController.register),
 );
 
 jobSeekerRouter.post(
   "/register/resend-otp",
+  jobSeekerRegisterSendOtpRateLimit,
   validate(resendJobSeekerOtpSchema, "body"),
   asyncHandler(jobSeekerController.resendOtp),
 );
 
 jobSeekerRouter.post(
   "/register/verify-otp",
+  jobSeekerRegisterVerifyOtpRateLimit,
   validate(verifyJobSeekerOtpSchema, "body"),
   asyncHandler(jobSeekerController.verifyOtp),
 );
 
 jobSeekerRouter.post(
   "/register/preferences",
+  jobSeekerRegisterContinuationRateLimit,
+  asyncHandler(requireJobSeekerRegistrationContinuation),
   validate(saveJobSeekerPreferencesSchema, "body"),
   asyncHandler(jobSeekerController.savePreferences),
 );
 
 jobSeekerRouter.post(
   "/register/complete",
+  jobSeekerRegisterContinuationRateLimit,
+  asyncHandler(requireJobSeekerRegistrationContinuation),
   validate(completeJobSeekerRegistrationSchema, "body"),
   asyncHandler(jobSeekerController.completeRegistration),
 );

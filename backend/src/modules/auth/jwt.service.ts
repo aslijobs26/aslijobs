@@ -6,6 +6,7 @@ import type {
   EmployerJwtPayload,
   IssuedTokenPair,
   JobSeekerJwtPayload,
+  JobSeekerRegistrationContinuationPayload,
   OperationsTeamJwtPayload,
   TeamMemberJwtPayload,
   WorkspaceJwtPayload,
@@ -264,6 +265,65 @@ export class JwtService {
       }
 
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+  }
+
+  /**
+   * Short-lived registration continuation after WhatsApp OTP verify.
+   * Not a session JWT — cannot call authenticated /me APIs.
+   */
+  issueJobSeekerRegistrationContinuationToken(input: {
+    jobSeekerId: string;
+    whatsappNumber: string;
+  }): { token: string; expiresAt: Date } {
+    const expiresAt = new Date(
+      Date.now() +
+        parseDurationToMs(env.JOB_SEEKER_REGISTRATION_TOKEN_EXPIRES_IN),
+    );
+    const payload: JobSeekerRegistrationContinuationPayload = {
+      typ: "job_seeker_registration",
+      sub: input.jobSeekerId,
+      whatsappNumber: input.whatsappNumber,
+    };
+    const token = jwt.sign(payload, env.JWT_ACCESS_SECRET, {
+      expiresIn:
+        env.JOB_SEEKER_REGISTRATION_TOKEN_EXPIRES_IN as jwt.SignOptions["expiresIn"],
+    });
+    return { token, expiresAt };
+  }
+
+  verifyJobSeekerRegistrationContinuationToken(
+    token: string,
+  ): JobSeekerRegistrationContinuationPayload {
+    try {
+      const decoded = jwt.verify(
+        token,
+        env.JWT_ACCESS_SECRET,
+      ) as JobSeekerRegistrationContinuationPayload;
+
+      if (
+        decoded.typ !== "job_seeker_registration" ||
+        typeof decoded.sub !== "string" ||
+        !decoded.sub.trim() ||
+        typeof decoded.whatsappNumber !== "string" ||
+        !decoded.whatsappNumber.trim()
+      ) {
+        throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+      }
+
+      return {
+        typ: "job_seeker_registration",
+        sub: decoded.sub.trim(),
+        whatsappNumber: decoded.whatsappNumber.trim(),
+      };
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        "Registration session expired. Please verify OTP again.",
+        HTTP_STATUS.UNAUTHORIZED,
+      );
     }
   }
 

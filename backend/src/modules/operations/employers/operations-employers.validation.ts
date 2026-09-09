@@ -14,6 +14,11 @@ export const listOperationsEmployersQuerySchema = z.object({
     .enum(["", "verified", "pending", "rejected"])
     .optional()
     .default(""),
+  /** Derived verification queues (not DB enum values). */
+  verificationQueue: z
+    .enum(["", "under_review", "sla_breaches", "needs_attention"])
+    .optional()
+    .default(""),
   employerType: z.string().trim().max(50).optional().default(""),
   location: z.string().trim().max(120).optional().default(""),
   status: z

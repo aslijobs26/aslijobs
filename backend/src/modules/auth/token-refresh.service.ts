@@ -4,6 +4,7 @@ import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { EmployerModel } from "../employers/employer.model.js";
 import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
+import { assertJobSeekerAccountActive } from "../job-seekers/job-seeker-account-status.js";
 import { TeamMemberModel } from "../team/team-member.model.js";
 import { jwtService } from "./jwt.service.js";
 import type { IssuedTokenPair, WorkspaceJwtPayload } from "./jwt.types.js";
@@ -58,6 +59,8 @@ class TokenRefreshService {
     if (!seeker) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
+
+    assertJobSeekerAccountActive(seeker.accountStatus);
 
     ensureRefreshNotExpired(seeker.refreshTokenExpiresAt);
     const valid = await matchesRefreshHash(

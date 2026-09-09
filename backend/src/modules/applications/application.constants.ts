@@ -52,6 +52,14 @@ export const WITHDRAWABLE_STATUSES = [
 ] as const;
 
 /**
+ * Interview scheduling product decision (Option B):
+ * POST/PATCH interview APIs persist interview metadata and history remarks
+ * without forcing hiring status to `interview_scheduled`.
+ * Employers advance hiring status explicitly via status/hiring endpoints.
+ * List filters may still use `interview_scheduled` as an activity filter.
+ */
+
+/**
  * Employer My Jobs / job-row "Shortlisted" column.
  * Exact current status only — matches Candidates KPI / application stats.
  */

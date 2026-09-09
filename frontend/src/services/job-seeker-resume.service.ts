@@ -129,3 +129,21 @@ export async function downloadMyResumePdf(): Promise<{
     throw error;
   }
 }
+
+export async function downloadMyUploadedResumeFile(): Promise<{
+  blob: Blob;
+  fileName: string;
+}> {
+  const response = await apiClient.get<Blob>("/resumes/me/uploaded/file", {
+    responseType: "blob",
+  });
+  const disposition = response.headers["content-disposition"];
+  let fileName = "resume";
+  if (typeof disposition === "string") {
+    const matched = /filename="?([^"]+)"?/i.exec(disposition);
+    if (matched?.[1]) {
+      fileName = matched[1];
+    }
+  }
+  return { blob: response.data, fileName };
+}

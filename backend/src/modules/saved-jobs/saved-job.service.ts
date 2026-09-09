@@ -6,6 +6,7 @@ import { resolveEmployerPosterImageUrl } from "../employers/employer-poster-imag
 import { EmployerModel } from "../employers/employer.model.js";
 import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
 import { JobModel } from "../jobs/job.model.js";
+import { isJobPubliclyEligible } from "../jobs/public-job-eligibility.js";
 import {
   HIGH_MATCH_THRESHOLD,
   RECENT_SAVED_DAYS,
@@ -21,7 +22,7 @@ import type {
 } from "./saved-job.types.js";
 
 const JOB_SELECT =
-  "jobId jobTitle companyName employerId companyId status city cityName state stateName salaryType salaryPeriod fixedSalary minimumSalary maximumSalary workMode jobType experience perks partTimeSchedule partTimeStartTime partTimeEndTime publishedAt createdAt description industry";
+  "jobId jobTitle companyName employerId companyId creationSource status city cityName state stateName salaryType salaryPeriod fixedSalary minimumSalary maximumSalary workMode jobType experience perks partTimeSchedule partTimeStartTime partTimeEndTime publishedAt createdAt description industry";
 
 const PERK_LABELS: Record<string, string> = {
   travel_allowance: "Travel Allowance",
@@ -54,6 +55,7 @@ type JobLean = {
   companyName?: string;
   employerId?: mongoose.Types.ObjectId;
   companyId?: mongoose.Types.ObjectId;
+  creationSource?: string;
   status?: string;
   city?: string;
   cityName?: string;
@@ -272,8 +274,17 @@ function toIso(value: Date | string | null | undefined): string | null {
   return date.toISOString();
 }
 
-function isJobExpired(status: string | undefined): boolean {
-  return status !== "active";
+function isJobExpired(
+  job: Pick<JobLean, "status" | "creationSource">,
+  employerVerificationStatus?: string | null,
+): boolean {
+  if (job.status !== "active") {
+    return true;
+  }
+  return !isJobPubliclyEligible({
+    creationSource: job.creationSource,
+    employer: { verificationStatus: employerVerificationStatus },
+  });
 }
 
 function mapListItem(input: {
@@ -284,11 +295,12 @@ function mapListItem(input: {
   isVerified: boolean;
   isApplied: boolean;
   matchPercent: number;
+  employerVerificationStatus?: string | null;
 }): SavedJobListItem {
   const { job } = input;
   const experience = text(job.experience);
   const perks = Array.isArray(job.perks) ? job.perks.map(text).filter(Boolean) : [];
-  const expired = isJobExpired(job.status);
+  const expired = isJobExpired(job, input.employerVerificationStatus);
 
   return {
     id: input.savedId,
@@ -528,7 +540,7 @@ async function loadEnrichedSavedJobs(
         },
       })
         .select(
-          "accountType companyLogo.url companyLogo.updatedAt profilePhoto.url profilePhoto.updatedAt registrationStatus",
+          "accountType companyLogo.url companyLogo.updatedAt profilePhoto.url profilePhoto.updatedAt registrationStatus verificationStatus",
         )
         .lean()
     : [];
@@ -590,6 +602,10 @@ async function loadEnrichedSavedJobs(
       employer && typeof employer.registrationStatus === "string"
         ? employer.registrationStatus
         : "";
+    const employerVerificationStatus =
+      employer && typeof employer.verificationStatus === "string"
+        ? employer.verificationStatus
+        : null;
 
     items.push(
       mapListItem({
@@ -602,6 +618,7 @@ async function loadEnrichedSavedJobs(
           registrationStatus === "otp_verified",
         isApplied: appliedIds.has(job._id.toString()),
         matchPercent: computeMatchPercent(job, seeker),
+        employerVerificationStatus,
       }),
     );
   }
@@ -628,6 +645,26 @@ export class SavedJobService {
         "Only active jobs can be saved",
         HTTP_STATUS.BAD_REQUEST,
       );
+    }
+
+    const employerLookupId =
+      (job.employerId && String(job.employerId)) ||
+      (job.companyId && String(job.companyId)) ||
+      "";
+    const employer =
+      employerLookupId && mongoose.Types.ObjectId.isValid(employerLookupId)
+        ? await EmployerModel.findById(employerLookupId)
+            .select("verificationStatus")
+            .lean()
+        : null;
+
+    if (
+      !isJobPubliclyEligible({
+        creationSource: job.creationSource,
+        employer,
+      })
+    ) {
+      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
     }
 
     const jobSeekerId = new mongoose.Types.ObjectId(input.jobSeekerId);

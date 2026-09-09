@@ -207,6 +207,9 @@ function candidateCatalog(): OperationsPermissionDefinition[] {
     { id: "phone", label: "Phone", sensitive: true },
     { id: "email", label: "Email", sensitive: true },
     { id: "location", label: "Location" },
+    { id: "dob", label: "Date of birth", sensitive: true },
+    { id: "expected_salary", label: "Expected salary", sensitive: true },
+    { id: "current_salary", label: "Current / previous salary", sensitive: true },
   ];
 
   return [
@@ -627,7 +630,19 @@ export const CANDIDATE_FIELD_PERMISSION_KEYS = {
   phone: "candidates.profile.fields.phone.view",
   email: "candidates.profile.fields.email.view",
   location: "candidates.profile.fields.location.view",
+  dob: "candidates.profile.fields.dob.view",
+  expectedSalary: "candidates.profile.fields.expected_salary.view",
+  currentSalary: "candidates.profile.fields.current_salary.view",
 } as const;
+
+export const CANDIDATE_LIST_VIEW_PERMISSION_KEY =
+  "candidates.list.view" as const;
+export const CANDIDATE_LIST_SEARCH_PERMISSION_KEY =
+  "candidates.list.search" as const;
+export const CANDIDATE_LIST_FILTER_PERMISSION_KEY =
+  "candidates.list.filter" as const;
+export const CANDIDATE_PROFILE_VIEW_PERMISSION_KEY =
+  "candidates.profile.view" as const;
 
 export const CANDIDATE_DOCUMENTS_PERMISSION_KEY =
   "candidates.profile.documents.view" as const;

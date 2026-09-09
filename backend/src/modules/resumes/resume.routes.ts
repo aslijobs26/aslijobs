@@ -30,6 +30,12 @@ resumeRouter.get(
   asyncHandler(resumeController.downloadPdf),
 );
 
+resumeRouter.get(
+  "/me/uploaded/file",
+  asyncHandler(requireJobSeekerAuth),
+  asyncHandler(resumeController.downloadUploadedFile),
+);
+
 resumeRouter.post(
   "/me/upload",
   asyncHandler(requireJobSeekerAuth),

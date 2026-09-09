@@ -35,6 +35,8 @@ type ResendOtpResponse = {
 
 type VerifyOtpResponse = {
   jobSeeker: JobSeekerPublic;
+  registrationContinuationToken: string;
+  registrationContinuationExpiresAt: string;
 };
 
 type PreferencesResponse = {
@@ -50,7 +52,6 @@ type CompleteRegistrationResponse = {
 };
 
 export type SaveJobSeekerPreferencesPayload = {
-  jobSeekerId: string;
   dateOfBirth: string;
   gender: JobSeekerGender;
   jobRole: string;
@@ -62,13 +63,18 @@ export type SaveJobSeekerPreferencesPayload = {
 };
 
 export type CompleteJobSeekerRegistrationPayload = {
-  jobSeekerId: string;
   education: JobSeekerEducation;
   experienceType: JobSeekerExperienceType;
   experiences: JobSeekerExperienceEntry[];
   languages: JobSeekerLanguage[];
   availabilityStatus: JobSeekerAvailabilityStatus;
 };
+
+function registrationAuthHeaders(continuationToken: string) {
+  return {
+    Authorization: `Bearer ${continuationToken}`,
+  };
+}
 
 export async function registerJobSeekerAccount(
   fullName: string,
@@ -108,7 +114,12 @@ export async function verifyJobSeekerOtp(jobSeekerId: string, otp: string) {
     { jobSeekerId, otp },
   );
 
-  return response.data.data;
+  const data = response.data.data;
+  if (!data?.registrationContinuationToken) {
+    throw new Error("Registration session was not created. Please try again.");
+  }
+
+  return data;
 }
 
 export async function searchJobSeekerRoles(
@@ -130,22 +141,27 @@ export async function searchJobSeekerRoles(
 }
 
 export async function saveJobSeekerPreferences(
+  continuationToken: string,
   payload: SaveJobSeekerPreferencesPayload,
 ) {
   const response = await apiClient.post<ApiSuccess<PreferencesResponse>>(
     "/jobseekers/register/preferences",
     payload,
+    { headers: registrationAuthHeaders(continuationToken) },
   );
 
   return response.data.data;
 }
 
 export async function completeJobSeekerRegistration(
+  continuationToken: string,
   payload: CompleteJobSeekerRegistrationPayload,
 ) {
   const response = await apiClient.post<
     ApiSuccess<CompleteRegistrationResponse>
-  >("/jobseekers/register/complete", payload);
+  >("/jobseekers/register/complete", payload, {
+    headers: registrationAuthHeaders(continuationToken),
+  });
 
   const data = response.data.data;
 

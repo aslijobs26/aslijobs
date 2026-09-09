@@ -27,7 +27,7 @@ export function CandidatesTopCategories({
           {items.map((item, index) => (
             <li
               key={item.id}
-              className="flex h-9 shrink-0 items-center gap-2 rounded-lg bg-hero-bg/60 px-2.5 text-[11px] xl:h-8 xl:text-[10px]"
+              className="flex h-9 shrink-0 items-center gap-2 rounded-lg bg-hero-bg/60 px-2.5 text-[11px] max-sm:h-8 max-sm:px-2 max-sm:text-[10px] xl:h-8 xl:text-[10px]"
             >
               <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-primary-light font-bold text-primary xl:size-4 xl:text-[9px]">
                 {index + 1}

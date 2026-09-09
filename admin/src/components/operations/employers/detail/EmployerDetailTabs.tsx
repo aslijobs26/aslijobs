@@ -23,18 +23,36 @@ interface EmployerDetailTabsProps {
 const TABS: {
   id: EmployerDetailTabId;
   label: string;
+  shortLabel: string;
   icon: LucideIcon;
   badgeKey?: "jobsCount" | "documentsCount";
 }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "jobs", label: "Jobs Posted", icon: Briefcase, badgeKey: "jobsCount" },
+  {
+    id: "overview",
+    label: "Overview",
+    shortLabel: "Overview",
+    icon: LayoutDashboard,
+  },
+  {
+    id: "jobs",
+    label: "Jobs Posted",
+    shortLabel: "Jobs",
+    icon: Briefcase,
+    badgeKey: "jobsCount",
+  },
   {
     id: "documents",
     label: "Documents & Verification",
+    shortLabel: "Docs",
     icon: FileText,
     badgeKey: "documentsCount",
   },
-  { id: "activity", label: "Activity & History", icon: Activity },
+  {
+    id: "activity",
+    label: "Activity & History",
+    shortLabel: "Activity",
+    icon: Activity,
+  },
 ];
 
 export function EmployerDetailTabs({
@@ -44,9 +62,9 @@ export function EmployerDetailTabs({
   onTabChange,
 }: EmployerDetailTabsProps) {
   return (
-    <div className="flex border-b border-border-subtle bg-surface px-3 sm:px-4 shadow-xs">
+    <div className="flex border-b border-border-subtle bg-surface px-2 shadow-xs max-sm:px-1.5 sm:px-3 lg:px-4">
       <nav
-        className="-mb-px flex space-x-4 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:space-x-6"
+        className="-mb-px flex space-x-3 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-sm:space-x-2.5 sm:space-x-4 lg:space-x-6"
         aria-label="Employer profile tabs"
       >
         {TABS.map((tab) => {
@@ -65,7 +83,7 @@ export function EmployerDetailTabs({
               type="button"
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "group inline-flex shrink-0 items-center gap-2 border-b-2 py-3 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline-none",
+                "group inline-flex shrink-0 items-center gap-1.5 border-b-2 py-2 text-[11px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none sm:gap-2 sm:py-2.5 sm:text-xs lg:py-3",
                 isActive
                   ? "border-primary text-primary"
                   : "border-transparent text-muted hover:border-border hover:text-foreground",
@@ -73,16 +91,19 @@ export function EmployerDetailTabs({
             >
               <Icon
                 className={cn(
-                  "size-4 transition-colors",
-                  isActive ? "text-primary" : "text-muted group-hover:text-foreground",
+                  "size-3.5 transition-colors sm:size-4",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted group-hover:text-foreground",
                 )}
                 aria-hidden="true"
               />
-              {tab.label}
+              <span className="lg:hidden">{tab.shortLabel}</span>
+              <span className="hidden lg:inline">{tab.label}</span>
               {badgeCount != null ? (
                 <span
                   className={cn(
-                    "inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums",
+                    "inline-flex items-center justify-center rounded-full px-1.5 py-0 text-[9px] font-bold tabular-nums sm:px-2 sm:py-0.5 sm:text-[10px]",
                     isActive
                       ? "bg-primary-light text-primary"
                       : "bg-hero-bg text-muted",

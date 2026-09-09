@@ -367,6 +367,9 @@ employerSchema.index({
   "operationsRegistrationAwareness.state": 1,
   "operationsRegistrationAwareness.registeredAt": -1,
 });
+employerSchema.index({ verifiedBy: 1 });
+employerSchema.index({ rejectedBy: 1 });
+employerSchema.index({ industry: 1, verificationStatus: 1 });
 
 export type EmployerDocumentLean = InferSchemaType<typeof employerSchema> & {
   _id: Types.ObjectId;

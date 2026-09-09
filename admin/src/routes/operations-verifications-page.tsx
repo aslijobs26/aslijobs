@@ -8,62 +8,85 @@ import {
   VerificationsFiltersBar,
   type VerificationsFiltersState,
 } from "../components/operations/verifications/VerificationsFiltersBar";
-import { VerificationsKpiStrip } from "../components/operations/verifications/VerificationsKpiStrip";
+import { VerificationsAskAsliCard } from "../components/operations/verifications/overview/VerificationsAskAsliCard";
+import { VerificationsByIndustry } from "../components/operations/verifications/overview/VerificationsByIndustry";
+import { VerificationsByLocation } from "../components/operations/verifications/overview/VerificationsByLocation";
+import { VerificationsDocumentsBreakdown } from "../components/operations/verifications/overview/VerificationsDocumentsBreakdown";
+import { VerificationsOverviewHeader } from "../components/operations/verifications/overview/VerificationsOverviewHeader";
+import { VerificationsOverviewKpiStrip } from "../components/operations/verifications/overview/VerificationsOverviewKpiStrip";
+import { VerificationsOverviewTabs } from "../components/operations/verifications/overview/VerificationsOverviewTabs";
+import { VerificationsQuickActions } from "../components/operations/verifications/overview/VerificationsQuickActions";
+import { VerificationsSlaCard } from "../components/operations/verifications/overview/VerificationsSlaCard";
+import { VerificationsStatusDonut } from "../components/operations/verifications/overview/VerificationsStatusDonut";
+import { VerificationsTrendChart } from "../components/operations/verifications/overview/VerificationsTrendChart";
 import { VerificationsPageSkeleton } from "../components/operations/verifications/VerificationsPageSkeleton";
 import { VerificationsTableSection } from "../components/operations/verifications/VerificationsTableSection";
 import {
-  VerificationsTabs,
-  type OperationsVerificationTab,
-  type OperationsVerificationTabCounts,
-} from "../components/operations/verifications/VerificationsTabs";
-import { useOperationsEmployers } from "../hooks/use-operations-employers";
+  useExportOperationsVerifications,
+  useOperationsVerificationsAnalytics,
+  useOperationsVerificationsList,
+} from "../hooks/use-operations-verifications";
 import type {
-  OperationsEmployerDatePreset,
-  OperationsEmployersFilterOptions,
-} from "../types/operations-employers";
+  OperationsVerificationsAnalyticsParams,
+  OperationsVerificationsExportParams,
+  OperationsVerificationsFilterOptions,
+  OperationsVerificationsListParams,
+  OperationsVerificationsOverviewTab,
+  VerificationsAnalyticsPreset,
+  VerificationsDatePreset,
+} from "../types/operations-verifications";
+import { VERIFICATIONS_ANALYTICS_PRESETS } from "../types/operations-verifications";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
 
-const EMPTY_FILTER_OPTIONS: OperationsEmployersFilterOptions = {
-  verificationStatuses: [],
-  employerTypes: [],
-  locations: [],
+const EMPTY_FILTER_OPTIONS: OperationsVerificationsFilterOptions = {
   statuses: [],
+  industries: [],
+  locations: [],
+  slaOptions: [],
 };
 
-const EMPTY_TAB_COUNTS: OperationsVerificationTabCounts = {
-  all: 0,
+const EMPTY_TAB_COUNTS = {
+  overview: 0,
   pending: 0,
-  approved: 0,
+  underReview: 0,
+  verified: 0,
   rejected: 0,
+  slaBreaches: 0,
 };
 
-function parseVerificationTab(
+function todayIsoDate(): string {
+  const today = new Date();
+  return [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function parseAnalyticsPreset(
   value: string | null,
-): OperationsVerificationTab {
+): VerificationsAnalyticsPreset {
+  return VERIFICATIONS_ANALYTICS_PRESETS.includes(
+    value as VerificationsAnalyticsPreset,
+  )
+    ? (value as VerificationsAnalyticsPreset)
+    : "last_30_days";
+}
+
+function parseOverviewTab(
+  value: string | null,
+): OperationsVerificationsOverviewTab {
   if (
     value === "pending" ||
-    value === "approved" ||
+    value === "underReview" ||
+    value === "verified" ||
     value === "rejected" ||
-    value === "all"
+    value === "slaBreaches" ||
+    value === "overview"
   ) {
     return value;
   }
-  return "pending";
-}
-
-function tabToVerificationStatus(
-  tab: OperationsVerificationTab,
-): string {
-  switch (tab) {
-    case "pending":
-      return "pending";
-    case "approved":
-      return "verified";
-    case "rejected":
-      return "rejected";
-    default:
-      return "";
-  }
+  return "overview";
 }
 
 function queryErrorMessage(error: unknown, fallback: string): string {
@@ -92,29 +115,45 @@ export function OperationsVerificationsPage() {
   const [filters, setFilters] = useState<VerificationsFiltersState>(() => ({
     ...EMPTY_VERIFICATIONS_FILTERS,
     search: searchParams.get("search")?.trim() ?? "",
-    employerType: searchParams.get("employerType") ?? "",
+    industry: searchParams.get("industry") ?? "",
     location: searchParams.get("location") ?? "",
   }));
-  const [activeTab, setActiveTab] = useState<OperationsVerificationTab>(() =>
-    parseVerificationTab(
-      searchParams.get("tab") ??
-        (searchParams.get("verificationStatus") === "pending"
-          ? "pending"
-          : null),
-    ),
+  const [activeTab, setActiveTab] = useState<OperationsVerificationsOverviewTab>(
+    () => parseOverviewTab(searchParams.get("tab")),
   );
+  const [analyticsFilters, setAnalyticsFilters] =
+    useState<OperationsVerificationsAnalyticsParams>({
+      preset: parseAnalyticsPreset(searchParams.get("preset")),
+      dateFrom: searchParams.get("dateFrom") ?? "",
+      dateTo: searchParams.get("dateTo") ?? "",
+    });
 
   useEffect(() => {
-    const urlTab = parseVerificationTab(
-      searchParams.get("tab") ??
-        (searchParams.get("verificationStatus") === "pending"
-          ? "pending"
-          : null),
-    );
-    setActiveTab(urlTab);
+    setActiveTab(parseOverviewTab(searchParams.get("tab")));
   }, [searchParams]);
 
-  const listQueryParams = useMemo(
+  const tabListFilters = useMemo((): Pick<
+    OperationsVerificationsListParams,
+    "status" | "queue"
+  > => {
+    switch (activeTab) {
+      case "pending":
+        return { status: "pending", queue: "" };
+      case "underReview":
+        return { status: "", queue: "under_review" };
+      case "verified":
+        return { status: "verified", queue: "" };
+      case "rejected":
+        return { status: "rejected", queue: "" };
+      case "slaBreaches":
+        return { status: "", queue: "sla_breaches" };
+      case "overview":
+      default:
+        return { status: "", queue: "" };
+    }
+  }, [activeTab]);
+
+  const listQueryParams = useMemo<OperationsVerificationsListParams>(
     () => ({
       page,
       limit,
@@ -122,39 +161,74 @@ export function OperationsVerificationsPage() {
         .trim()
         .replace(/^AJ-EMP-/i, "")
         .replace(/^EMP-/i, ""),
-      verificationStatus: tabToVerificationStatus(activeTab),
-      employerType: filters.employerType,
+      status: tabListFilters.status,
+      queue: tabListFilters.queue,
+      industry: filters.industry,
       location: filters.location,
       datePreset: (filters.submissionPreset ||
-        "all") as OperationsEmployerDatePreset,
+        "all") as VerificationsDatePreset,
       dateFrom: "",
       dateTo: "",
     }),
-    [page, limit, filters, activeTab],
+    [page, limit, filters, tabListFilters],
   );
 
-  const pendingTodayQuery = useOperationsEmployers({
-    page: 1,
-    limit: 1,
-    verificationStatus: "pending",
-    datePreset: "today",
-  });
+  const exportParams = useMemo<OperationsVerificationsExportParams>(
+    () => ({
+      search: filters.search.trim(),
+      status: tabListFilters.status,
+      queue: tabListFilters.queue,
+      industry: filters.industry,
+      location: filters.location,
+      datePreset: (filters.submissionPreset ||
+        "all") as VerificationsDatePreset,
+    }),
+    [filters, tabListFilters],
+  );
 
-  const employersQuery = useOperationsEmployers(listQueryParams);
+  const analyticsQuery = useOperationsVerificationsAnalytics(analyticsFilters);
+  const listQuery = useOperationsVerificationsList(listQueryParams);
+  const exportMutation = useExportOperationsVerifications();
 
-  const filterOptions =
-    employersQuery.data?.filterOptions ?? EMPTY_FILTER_OPTIONS;
-  const kpis = employersQuery.data?.kpis;
-  const listData = employersQuery.data;
+  const filterOptions = listQuery.data?.filterOptions ?? EMPTY_FILTER_OPTIONS;
+  const analytics = analyticsQuery.data;
+  const listData = listQuery.data;
 
-  const tabCounts: OperationsVerificationTabCounts = kpis
-    ? {
-        all: kpis.totalEmployers,
-        pending: kpis.pendingVerification,
-        approved: kpis.verifiedEmployers,
-        rejected: kpis.rejected,
-      }
-    : EMPTY_TAB_COUNTS;
+  const syncAnalyticsParams = (
+    next: OperationsVerificationsAnalyticsParams,
+  ) => {
+    setAnalyticsFilters(next);
+    const params = new URLSearchParams(searchParams);
+    if (next.preset === "last_30_days") {
+      params.delete("preset");
+    } else {
+      params.set("preset", next.preset);
+    }
+    if (next.preset === "custom" && next.dateFrom) {
+      params.set("dateFrom", next.dateFrom);
+    } else {
+      params.delete("dateFrom");
+    }
+    if (next.preset === "custom" && next.dateTo) {
+      params.set("dateTo", next.dateTo);
+    } else {
+      params.delete("dateTo");
+    }
+    setSearchParams(params, { replace: true });
+  };
+
+  const handlePresetChange = (preset: VerificationsAnalyticsPreset) => {
+    if (preset === "custom") {
+      const iso = todayIsoDate();
+      syncAnalyticsParams({
+        preset,
+        dateFrom: analyticsFilters.dateFrom || iso,
+        dateTo: analyticsFilters.dateTo || iso,
+      });
+      return;
+    }
+    syncAnalyticsParams({ preset, dateFrom: "", dateTo: "" });
+  };
 
   const handleFiltersChange = (next: Partial<VerificationsFiltersState>) => {
     setFilters((prev) => ({ ...prev, ...next }));
@@ -166,100 +240,177 @@ export function OperationsVerificationsPage() {
     setPage(1);
   };
 
-  const handleTabChange = (tab: OperationsVerificationTab) => {
+  const handleTabChange = (tab: OperationsVerificationsOverviewTab) => {
     setActiveTab(tab);
     setPage(1);
     const next = new URLSearchParams(searchParams);
-    if (tab === "pending") {
-      next.set("tab", "pending");
-      next.set("verificationStatus", "pending");
-    } else if (tab === "all") {
+    if (tab === "overview") {
       next.delete("tab");
-      next.delete("verificationStatus");
     } else {
       next.set("tab", tab);
-      next.delete("verificationStatus");
     }
     setSearchParams(next, { replace: true });
   };
 
-  const isInitialLoading = employersQuery.isLoading && !listData;
-  const listErrorMessage = employersQuery.error
+  const handleVerifyEmployer = () => {
+    handleTabChange("pending");
+  };
+
+  const handleExport = () => {
+    void exportMutation.mutateAsync(exportParams).catch(() => {
+      // surfaced via mutation error state
+    });
+  };
+
+  const isInitialLoading =
+    (analyticsQuery.isLoading && !analytics) ||
+    (listQuery.isLoading && !listData);
+
+  const listErrorMessage = listQuery.error
     ? queryErrorMessage(
-        employersQuery.error,
+        listQuery.error,
         "Failed to load employer verifications. Please try again.",
       )
     : undefined;
 
+  const analyticsErrorMessage = analyticsQuery.error
+    ? queryErrorMessage(
+        analyticsQuery.error,
+        "Failed to load verification analytics. Please try again.",
+      )
+    : undefined;
+
+  const showOverviewAnalytics = activeTab === "overview";
+
   return (
     <OperationsLayout
-      title="Employer Verifications"
-      subtitle="Review and manage employer verification submissions."
+      title="Verifications Overview"
+      subtitle="Monitor and manage employer verifications, documents and compliance."
       headerVariant="command"
     >
-      <div className="flex w-full min-w-0 flex-col gap-3">
+      <div className="flex w-full min-w-0 flex-col gap-3 max-lg:gap-2.5 max-sm:gap-2">
         {isInitialLoading ? (
           <VerificationsPageSkeleton />
         ) : (
           <>
-            <div className="min-w-0">
-              <h1 className="text-base font-bold text-foreground sm:text-lg">
-                Employer Verifications
-              </h1>
-              <p className="mt-0.5 text-xs text-muted">
-                Review and manage employer verification submissions.
-              </p>
-            </div>
+            <VerificationsOverviewHeader
+              preset={analyticsFilters.preset}
+              dateFrom={analyticsFilters.dateFrom ?? ""}
+              dateTo={analyticsFilters.dateTo ?? ""}
+              onPresetChange={handlePresetChange}
+              onDateFromChange={(dateFrom) =>
+                syncAnalyticsParams({
+                  ...analyticsFilters,
+                  preset: "custom",
+                  dateFrom,
+                })
+              }
+              onDateToChange={(dateTo) =>
+                syncAnalyticsParams({
+                  ...analyticsFilters,
+                  preset: "custom",
+                  dateTo,
+                })
+              }
+              onVerifyEmployer={handleVerifyEmployer}
+              onExport={handleExport}
+              isExporting={exportMutation.isPending}
+            />
 
-            {kpis ? (
-              <VerificationsKpiStrip
-                kpis={{
-                  totalPending: kpis.pendingVerification,
-                  pendingToday: pendingTodayQuery.data?.pagination.total ?? 0,
-                  approved: kpis.verifiedEmployers,
-                  rejected: kpis.rejected,
-                }}
-              />
+            {analyticsErrorMessage && !analytics ? (
+              <div className="rounded-xl border border-danger/20 bg-danger/5 px-3 py-3 text-xs text-danger">
+                {analyticsErrorMessage}
+                <button
+                  type="button"
+                  className="ml-2 font-semibold underline"
+                  onClick={() => void analyticsQuery.refetch()}
+                >
+                  Retry
+                </button>
+              </div>
             ) : null}
 
-            <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow">
-              <VerificationsTableSection
-                employers={listData?.employers ?? []}
-                totalEmployers={listData?.pagination.total ?? 0}
-                isLoading={employersQuery.isFetching && !listData}
-                isError={employersQuery.isError}
-                errorMessage={listErrorMessage}
-                onRetry={() => void employersQuery.refetch()}
-                toolbar={
-                  <div className="flex min-w-0 flex-col gap-2.5 xl:gap-2">
-                    <VerificationsTabs
-                      activeTab={activeTab}
-                      counts={tabCounts}
-                      onChange={handleTabChange}
-                    />
+            {analytics ? (
+              <VerificationsOverviewKpiStrip kpis={analytics.kpis} />
+            ) : null}
+
+            <VerificationsOverviewTabs
+              activeTab={activeTab}
+              counts={analytics?.tabs ?? EMPTY_TAB_COUNTS}
+              onChange={handleTabChange}
+            />
+
+            {showOverviewAnalytics && analytics ? (
+              <div className="grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
+                <VerificationsTrendChart
+                  data={analytics.trend}
+                  rangeLabel={analytics.range.label}
+                />
+                <VerificationsStatusDonut items={analytics.byStatus} />
+                <VerificationsDocumentsBreakdown
+                  items={analytics.documentsBreakdown}
+                />
+                <VerificationsByIndustry items={analytics.byIndustry} />
+                <VerificationsByLocation
+                  items={analytics.byLocation.states}
+                  isLoading={analyticsQuery.isFetching && !analytics}
+                  isError={analyticsQuery.isError}
+                  onRetry={() => void analyticsQuery.refetch()}
+                />
+                <VerificationsSlaCard sla={analytics.sla} />
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 gap-3 max-sm:gap-2 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
+              <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
+                <VerificationsTableSection
+                  items={listData?.items ?? []}
+                  totalItems={listData?.pagination.total ?? 0}
+                  isLoading={listQuery.isFetching && !listData}
+                  isError={listQuery.isError}
+                  errorMessage={listErrorMessage}
+                  onRetry={() => void listQuery.refetch()}
+                  toolbar={
                     <VerificationsFiltersBar
                       filters={filters}
                       filterOptions={filterOptions}
                       onChange={handleFiltersChange}
                       onClear={handleClearFilters}
                     />
-                  </div>
-                }
-              />
+                  }
+                />
 
-              {listData?.pagination ? (
-                <div className="border-t border-border-subtle p-3 xl:p-2.5">
-                  <JobsPaginationBar
-                    pagination={listData.pagination}
-                    onPageChange={setPage}
-                    onLimitChange={(newLimit: number) => {
-                      setLimit(newLimit);
-                      setPage(1);
-                    }}
-                  />
-                </div>
-              ) : null}
+                {listData?.pagination ? (
+                  <div className="border-t border-border-subtle p-3 xl:p-2.5">
+                    <JobsPaginationBar
+                      pagination={listData.pagination}
+                      onPageChange={setPage}
+                      onLimitChange={(newLimit: number) => {
+                        setLimit(newLimit);
+                        setPage(1);
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <aside className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
+                <VerificationsQuickActions
+                  onExport={handleExport}
+                  isExporting={exportMutation.isPending}
+                />
+                <VerificationsAskAsliCard />
+              </aside>
             </div>
+
+            {exportMutation.isError ? (
+              <p className="text-xs text-danger" role="alert">
+                {queryErrorMessage(
+                  exportMutation.error,
+                  "Export failed. Please try again.",
+                )}
+              </p>
+            ) : null}
           </>
         )}
       </div>

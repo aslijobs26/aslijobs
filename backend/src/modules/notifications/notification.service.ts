@@ -112,8 +112,11 @@ function conversationDirectionForType(
     case "job_closed":
     case "job_approved":
     case "job_rejected":
+    case "job_live_changes_approved":
+    case "job_live_changes_rejected":
     case "employer_verification_approved":
     case "employer_verification_rejected":
+    case "employer_verification_documents_requested":
       return "incoming";
     default:
       return "outgoing";
@@ -1877,7 +1880,7 @@ export class NotificationService {
     const existing = await NotificationModel.findOne({
       recipientType: "employer",
       recipientId: input.employerId,
-      type: "job_approved",
+      type: "job_live_changes_approved",
       referenceType: "job",
       referenceId: input.jobMongoId,
     })
@@ -1900,7 +1903,7 @@ export class NotificationService {
     await this.createNotification({
       recipientType: "employer",
       recipientId: input.employerId,
-      type: "job_approved",
+      type: "job_live_changes_approved",
       category: "system",
       title: "Job changes approved and published",
       body,
@@ -1940,7 +1943,7 @@ export class NotificationService {
     const existing = await NotificationModel.findOne({
       recipientType: "employer",
       recipientId: input.employerId,
-      type: "job_rejected",
+      type: "job_live_changes_rejected",
       referenceType: "job",
       referenceId: input.jobMongoId,
     })
@@ -1964,7 +1967,7 @@ export class NotificationService {
     await this.createNotification({
       recipientType: "employer",
       recipientId: input.employerId,
-      type: "job_rejected",
+      type: "job_live_changes_rejected",
       category: "system",
       title: "Job changes rejected",
       body,
@@ -2085,6 +2088,72 @@ export class NotificationService {
       actionPath: "/employer/company-profile",
       metadata: {
         rejectionReason: reason,
+        reviewedBy,
+      },
+    });
+
+    return { created: true, alreadySent: false };
+  }
+
+  /**
+   * Employer inbox notice when Operations requests additional verification documents.
+   * Replaces any prior request notice for the same employer cycle.
+   */
+  async notifyEmployerVerificationDocumentsRequested(input: {
+    employerId: string;
+    message: string;
+    documentTypes: string[];
+    reviewedByLabel: string;
+  }): Promise<{ created: boolean; alreadySent: boolean }> {
+    if (!mongoose.Types.ObjectId.isValid(input.employerId)) {
+      throw new AppError("Invalid employer.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const existing = await NotificationModel.findOne({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "employer_verification_documents_requested",
+      referenceType: "employer",
+      referenceId: input.employerId,
+    })
+      .select("_id")
+      .lean();
+
+    if (existing) {
+      await NotificationModel.deleteOne({ _id: existing._id });
+    }
+
+    const reviewedBy = input.reviewedByLabel.trim() || "Operations";
+    const message = input.message.trim();
+    const requestedTypes = input.documentTypes
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const typesLine =
+      requestedTypes.length > 0
+        ? `Requested documents: ${requestedTypes.join(", ")}`
+        : "Please upload the additional documents requested by Operations.";
+
+    const body = [
+      "Additional documents are required to complete employer verification.",
+      message,
+      typesLine,
+      `Requested by: ${reviewedBy}`,
+    ].join("\n");
+
+    await this.createNotification({
+      recipientType: "employer",
+      recipientId: input.employerId,
+      type: "employer_verification_documents_requested",
+      category: "system",
+      title: "Additional documents requested",
+      body,
+      priority: "high",
+      referenceType: "employer",
+      referenceId: input.employerId,
+      actionPath: "/employer/company-profile",
+      metadata: {
+        requestMessage: message,
+        documentTypes: requestedTypes,
         reviewedBy,
       },
     });

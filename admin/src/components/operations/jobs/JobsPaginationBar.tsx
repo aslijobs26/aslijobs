@@ -51,7 +51,7 @@ function buildPageItems(current: number, totalPages: number): (number | "ellipsi
 }
 
 const pageButtonBase =
-  "inline-flex size-8 shrink-0 items-center justify-center rounded-md border text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+  "inline-flex size-8 shrink-0 items-center justify-center rounded-md border text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:size-7 max-sm:text-[10px]";
 
 export function JobsPaginationBar({
   pagination,
@@ -65,15 +65,15 @@ export function JobsPaginationBar({
   const pageItems = buildPageItems(page, totalPages);
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <p className="min-w-0 text-center text-[11px] text-muted sm:text-left">
+    <div className="flex min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+      <p className="min-w-0 text-center text-[11px] text-muted max-sm:text-[10px] sm:text-left">
         {from.toLocaleString("en-IN")} to {to.toLocaleString("en-IN")} of{" "}
         {total.toLocaleString("en-IN")}
       </p>
 
       <div className="flex min-w-0 flex-col gap-2 min-[480px]:flex-row min-[480px]:flex-wrap min-[480px]:items-center min-[480px]:justify-end sm:gap-2">
         <nav
-          className="flex max-w-full flex-wrap items-center justify-center gap-1.5"
+          className="flex max-w-full flex-wrap items-center justify-center gap-1.5 max-sm:gap-1"
           aria-label={ariaLabel}
         >
           <button

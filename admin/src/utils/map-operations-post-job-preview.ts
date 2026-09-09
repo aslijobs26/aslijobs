@@ -173,6 +173,7 @@ export function mapWizardDataToPreviewDetail(
     reviewedByLabel: "",
     rejectionReason: "",
     reviewNotificationSent: false,
+    reviewHistory: [],
     pendingLiveRevision: null,
     liveChangeReviewStatus: "",
     liveChangeSubmittedAt: null,

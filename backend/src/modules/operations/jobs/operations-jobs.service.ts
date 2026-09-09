@@ -34,9 +34,15 @@ import {
   isEmployerCreatedJobSource,
   resolveEmployerVerificationStatus,
 } from "../../jobs/employer-job-verification.guard.js";
+import {
+  buildJobReviewHistoryEntry,
+  resolveJobReviewHistoryKind,
+} from "../../jobs/job-review-history.js";
 import { createJobSchema } from "../../jobs/job.validation.js";
 import { notificationService } from "../../notifications/notification.service.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
+import { scheduleJobModerationAudit } from "./operations-job-audit.js";
+import { OPERATIONS_JOB_AUDIT_ACTIONS } from "./operations-job-moderation.constants.js";
 import type {
   OperationsJobActivityItem,
   OperationsJobAnalytics,
@@ -594,6 +600,7 @@ function toListItem(
     applicationsToday,
     isLiveChangeReview,
     liveChangeReviewStatus,
+    creationSource: (job.creationSource ?? "employer") as JobCreationSource,
     employer: {
       id:
         employer?._id?.toString() ??
@@ -780,6 +787,12 @@ function resolveStatusFromAction(
       }
       return "closed";
     case "expire":
+      if (currentStatus !== "active" && currentStatus !== "paused") {
+        throw new AppError(
+          "Only active or paused jobs can be expired.",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
       return "expired";
     case "reactivate":
       if (currentStatus !== "closed" && currentStatus !== "expired") {
@@ -853,6 +866,7 @@ function candidateFromSnapshot(snapshot: ApplicationResumeSnapshot | null) {
 }
 
 type JobSeekerIdentityLean = {
+  _id?: unknown;
   fullName?: string | null;
   whatsappNumber?: string | null;
   city?: string | null;
@@ -862,8 +876,23 @@ type JobSeekerIdentityLean = {
   experienceType?: string | null;
   experiences?: Array<{ duration?: string | null }> | null;
   skills?: string[] | null;
-  profilePhoto?: { url?: string | null } | null;
+  profilePhoto?: {
+    url?: string | null;
+    storagePath?: string | null;
+  } | null;
 };
+
+function hasJobSeekerProfilePhoto(
+  photo:
+    | {
+        url?: string | null;
+        storagePath?: string | null;
+      }
+    | null
+    | undefined,
+): boolean {
+  return Boolean(photo?.storagePath?.trim() || photo?.url?.trim());
+}
 
 /**
  * Operations application rows link to the live JobSeeker profile.
@@ -912,6 +941,8 @@ function candidateFromApplicationSources(
   const seekerSkills = Array.isArray(jobSeeker?.skills)
     ? jobSeeker.skills.map((item) => textValue(item)).filter(Boolean)
     : [];
+  const seekerId =
+    jobSeeker?._id != null ? String(jobSeeker._id) : "";
 
   return {
     fullName: seekerName || fromSnapshot.fullName,
@@ -920,7 +951,10 @@ function candidateFromApplicationSources(
     headline,
     experienceLabel,
     skills: fromSnapshot.skills.length > 0 ? fromSnapshot.skills : seekerSkills,
-    profilePhotoUrl: textValue(jobSeeker?.profilePhoto?.url),
+    profilePhotoUrl:
+      hasJobSeekerProfilePhoto(jobSeeker?.profilePhoto) && seekerId
+        ? `/operations/candidates/seekers/${encodeURIComponent(seekerId)}/photo`
+        : "",
   };
 }
 
@@ -1213,6 +1247,17 @@ function toDetail(
     reviewedByLabel,
     rejectionReason: job.rejectionReason?.trim() || "",
     reviewNotificationSent: Boolean(job.reviewNotificationSentAt),
+    reviewHistory: Array.isArray(job.reviewHistory)
+      ? job.reviewHistory.map((entry) => ({
+          kind: String(entry?.kind ?? "initial"),
+          decision: String(entry?.decision ?? ""),
+          reason: String(entry?.reason ?? "").trim(),
+          reviewedAt: toIso(entry?.reviewedAt),
+          reviewedByOperationsUserId: entry?.reviewedByOperationsUserId
+            ? String(entry.reviewedByOperationsUserId)
+            : "",
+        }))
+      : [],
     pendingLiveRevision: job.pendingLiveRevision ?? null,
     liveChangeReviewStatus,
     liveChangeSubmittedAt: toIso(job.liveChangeSubmittedAt),
@@ -1645,10 +1690,46 @@ export const operationsJobsService = {
       }
     }
 
-    const updateResult = await JobModel.updateOne({ _id: job._id }, { $set });
+    const previousStatus = job.status as JobStatus;
+    const updateResult = await JobModel.updateOne(
+      { _id: job._id, status: previousStatus },
+      { $set },
+    );
 
     if (updateResult.matchedCount === 0) {
-      throw new AppError("Job not found.", HTTP_STATUS.NOT_FOUND);
+      throw new AppError(
+        "This job was already updated by another Operations user.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const actor = await OperationsTeamUserModel.findById(operationsUserId)
+      .select("fullName")
+      .lean();
+    const actorName = actor?.fullName?.trim() || "Operations";
+    const auditAction =
+      action === "pause"
+        ? OPERATIONS_JOB_AUDIT_ACTIONS.PAUSED
+        : action === "resume"
+          ? OPERATIONS_JOB_AUDIT_ACTIONS.RESUMED
+          : action === "reactivate"
+            ? OPERATIONS_JOB_AUDIT_ACTIONS.REACTIVATED
+            : action === "expire"
+              ? OPERATIONS_JOB_AUDIT_ACTIONS.EXPIRED
+              : action === "publish"
+                ? OPERATIONS_JOB_AUDIT_ACTIONS.OPERATIONS_PUBLISHED
+                : null;
+    if (auditAction) {
+      scheduleJobModerationAudit({
+        actorUserId: operationsUserId,
+        actorName,
+        action: auditAction,
+        publicJobId: job.jobId,
+        jobTitle: job.jobTitle?.trim() || "Untitled job",
+        previousStatus,
+        nextStatus,
+        metadata: { statusAction: action },
+      });
     }
 
     return this.getJobDetail(job.jobId);
@@ -1704,6 +1785,16 @@ export const operationsJobsService = {
     }
 
     const now = new Date();
+    const historyKind = resolveJobReviewHistoryKind({
+      hadPriorReviewDecision: Boolean(job.reviewDecision?.trim()),
+    });
+    const historyEntry = buildJobReviewHistoryEntry({
+      kind: historyKind,
+      decision: "approved",
+      reason: "",
+      reviewedAt: now,
+      reviewedByOperationsUserId: operationsUserId,
+    });
     const $set: Record<string, unknown> = {
       status: "active",
       lastStatusChangedAt: now,
@@ -1723,7 +1814,7 @@ export const operationsJobsService = {
 
     const updateResult = await JobModel.updateOne(
       { _id: job._id, status: "pending_approval" },
-      { $set },
+      { $set, $push: { reviewHistory: historyEntry } },
     );
 
     if (updateResult.matchedCount === 0) {
@@ -1739,6 +1830,17 @@ export const operationsJobsService = {
     const reviewedByLabel = actor?.fullName?.trim()
       ? `${actor.fullName.trim()} (Operations)`
       : "Operations";
+
+    scheduleJobModerationAudit({
+      actorUserId: operationsUserId,
+      actorName: actor?.fullName?.trim() || "Operations",
+      action: OPERATIONS_JOB_AUDIT_ACTIONS.APPROVED,
+      publicJobId: job.jobId,
+      jobTitle: job.jobTitle?.trim() || "Untitled job",
+      previousStatus: "pending_approval",
+      nextStatus: "active",
+      metadata: { reviewKind: historyKind },
+    });
 
     try {
       const notifyResult = await notificationService.notifyEmployerJobApproved({
@@ -1809,6 +1911,14 @@ export const operationsJobsService = {
     freshJob.liveChangeReviewNotificationSentAt = null;
     freshJob.lastEditedAt = now;
 
+    const historyEntry = buildJobReviewHistoryEntry({
+      kind: "live_change",
+      decision: "approved",
+      reason: "",
+      reviewedAt: now,
+      reviewedByOperationsUserId: operationsUserId,
+    });
+
     // Optimistic concurrency: only save if still pending approval.
     const saveResult = await JobModel.updateOne(
       {
@@ -1870,6 +1980,7 @@ export const operationsJobsService = {
           liveChangeReviewNotificationSentAt: null,
           lastEditedAt: now,
         },
+        $push: { reviewHistory: historyEntry },
       },
     );
 
@@ -1886,6 +1997,17 @@ export const operationsJobsService = {
     const reviewedByLabel = actor?.fullName?.trim()
       ? `${actor.fullName.trim()} (Operations)`
       : "Operations";
+
+    scheduleJobModerationAudit({
+      actorUserId: operationsUserId,
+      actorName: actor?.fullName?.trim() || "Operations",
+      action: OPERATIONS_JOB_AUDIT_ACTIONS.LIVE_REVISION_APPROVED,
+      publicJobId: freshJob.jobId,
+      jobTitle: parsed.data.jobTitle.trim() || "Untitled job",
+      previousStatus: String(freshJob.status),
+      nextStatus: String(freshJob.status),
+      metadata: { reviewKind: "live_change" },
+    });
 
     try {
       const notifyResult =
@@ -1961,6 +2083,16 @@ export const operationsJobsService = {
     }
 
     const now = new Date();
+    const historyKind = resolveJobReviewHistoryKind({
+      hadPriorReviewDecision: Boolean(job.reviewDecision?.trim()),
+    });
+    const historyEntry = buildJobReviewHistoryEntry({
+      kind: historyKind,
+      decision: "rejected",
+      reason: trimmedReason,
+      reviewedAt: now,
+      reviewedByOperationsUserId: operationsUserId,
+    });
     const updateResult = await JobModel.updateOne(
       { _id: job._id, status: "pending_approval" },
       {
@@ -1975,6 +2107,7 @@ export const operationsJobsService = {
           ),
           rejectionReason: trimmedReason,
         },
+        $push: { reviewHistory: historyEntry },
       },
     );
 
@@ -1991,6 +2124,18 @@ export const operationsJobsService = {
     const reviewedByLabel = actor?.fullName?.trim()
       ? `${actor.fullName.trim()} (Operations)`
       : "Operations";
+
+    scheduleJobModerationAudit({
+      actorUserId: operationsUserId,
+      actorName: actor?.fullName?.trim() || "Operations",
+      action: OPERATIONS_JOB_AUDIT_ACTIONS.REJECTED,
+      publicJobId: job.jobId,
+      jobTitle: job.jobTitle?.trim() || "Untitled job",
+      previousStatus: "pending_approval",
+      nextStatus: "rejected",
+      reason: trimmedReason,
+      metadata: { reviewKind: historyKind },
+    });
 
     try {
       const notifyResult = await notificationService.notifyEmployerJobRejected({
@@ -2033,6 +2178,13 @@ export const operationsJobsService = {
     }
 
     const now = new Date();
+    const historyEntry = buildJobReviewHistoryEntry({
+      kind: "live_change",
+      decision: "rejected",
+      reason: trimmedReason,
+      reviewedAt: now,
+      reviewedByOperationsUserId: operationsUserId,
+    });
     const updateResult = await JobModel.updateOne(
       {
         _id: job._id,
@@ -2048,6 +2200,7 @@ export const operationsJobsService = {
           liveChangeRejectionReason: trimmedReason,
           // Keep pendingLiveRevision so employer can edit and resubmit.
         },
+        $push: { reviewHistory: historyEntry },
       },
     );
 
@@ -2064,6 +2217,18 @@ export const operationsJobsService = {
     const reviewedByLabel = actor?.fullName?.trim()
       ? `${actor.fullName.trim()} (Operations)`
       : "Operations";
+
+    scheduleJobModerationAudit({
+      actorUserId: operationsUserId,
+      actorName: actor?.fullName?.trim() || "Operations",
+      action: OPERATIONS_JOB_AUDIT_ACTIONS.LIVE_REVISION_REJECTED,
+      publicJobId: job.jobId,
+      jobTitle: job.jobTitle?.trim() || "Untitled job",
+      previousStatus: String(job.status),
+      nextStatus: String(job.status),
+      reason: trimmedReason,
+      metadata: { reviewKind: "live_change" },
+    });
 
     try {
       const notifyResult =
@@ -2128,6 +2293,7 @@ export const operationsJobsService = {
     }
 
     if (!alreadyClosed) {
+      const previousStatus = job.status;
       const updateResult = await JobModel.updateOne(
         { _id: job._id, status: { $ne: "closed" } },
         {
@@ -2147,6 +2313,22 @@ export const operationsJobsService = {
       if (updateResult.matchedCount === 0) {
         throw new AppError("Job is already closed.", HTTP_STATUS.BAD_REQUEST);
       }
+
+      const actorForAudit = await OperationsTeamUserModel.findById(
+        operationsUserId,
+      )
+        .select("fullName")
+        .lean();
+      scheduleJobModerationAudit({
+        actorUserId: operationsUserId,
+        actorName: actorForAudit?.fullName?.trim() || "Operations",
+        action: OPERATIONS_JOB_AUDIT_ACTIONS.CLOSED,
+        publicJobId: job.jobId,
+        jobTitle: job.jobTitle?.trim() || "Untitled job",
+        previousStatus: String(previousStatus),
+        nextStatus: "closed",
+        reason: trimmedReason,
+      });
     }
 
     const actor = await OperationsTeamUserModel.findById(operationsUserId)

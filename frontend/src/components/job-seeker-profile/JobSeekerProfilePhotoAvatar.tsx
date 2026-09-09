@@ -1,8 +1,8 @@
 "use client";
 
 import type { JobSeekerPublic } from "@/types/job-seeker";
+import { useAuthenticatedMediaUrl } from "@/hooks/use-authenticated-media-url";
 import { getInitials } from "@/utils/job-seeker-profile";
-import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { Camera, Loader2, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useId, useRef } from "react";
@@ -27,9 +27,9 @@ export function JobSeekerProfilePhotoAvatar({
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const fullName = jobSeeker.fullName?.trim() || "Job Seeker";
-  const photoUrl = jobSeeker.profilePhoto?.url
-    ? resolveMediaUrl(jobSeeker.profilePhoto.url)
-    : "";
+  const { url: photoUrl } = useAuthenticatedMediaUrl(
+    jobSeeker.profilePhoto?.url ?? null,
+  );
 
   const dimension = size === "header" ? 96 : 80;
   const sizeClass =

@@ -114,8 +114,11 @@ function isEmployerAlignedNotification(type: NotificationType): boolean {
     case "job_closed":
     case "job_approved":
     case "job_rejected":
+    case "job_live_changes_approved":
+    case "job_live_changes_rejected":
     case "employer_verification_approved":
     case "employer_verification_rejected":
+    case "employer_verification_documents_requested":
       return false;
     case "interview_scheduled":
     case "interview_updated":
@@ -170,10 +173,16 @@ function notificationBadgeLabel(type: NotificationType): string {
       return "Approved";
     case "job_rejected":
       return "Rejected";
+    case "job_live_changes_approved":
+      return "Changes Approved";
+    case "job_live_changes_rejected":
+      return "Changes Rejected";
     case "employer_verification_approved":
       return "Verified";
     case "employer_verification_rejected":
       return "Verification Rejected";
+    case "employer_verification_documents_requested":
+      return "Documents Requested";
     default:
       return "Update";
   }

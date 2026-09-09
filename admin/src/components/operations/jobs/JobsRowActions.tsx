@@ -69,11 +69,23 @@ function jobStatusMenuActions(
     case "active":
       return [
         { action: "pause", label: "Pause Job", icon: Pause },
+        {
+          action: "expire",
+          label: "Mark Expired",
+          icon: XCircle,
+          tone: "danger",
+        },
         { action: "close", label: "Close Job", icon: XCircle, tone: "danger" },
       ];
     case "paused":
       return [
         { action: "resume", label: "Activate Job", icon: Play },
+        {
+          action: "expire",
+          label: "Mark Expired",
+          icon: XCircle,
+          tone: "danger",
+        },
         { action: "close", label: "Close Job", icon: XCircle, tone: "danger" },
       ];
     case "draft":
@@ -135,6 +147,7 @@ export function JobsRowActions({
   const includeStatusActions = statusActions.length > 0 && Boolean(onStatusAction);
   const approvalBlockedByVerification =
     job.employer.verificationStatus !== "verified" &&
+    job.creationSource !== "operations" &&
     (job.status === "pending_approval" || Boolean(job.isLiveChangeReview));
   const menuHeightEstimate = estimateMenuHeight(
     statusActions.length,

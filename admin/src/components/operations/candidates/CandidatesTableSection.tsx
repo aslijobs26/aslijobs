@@ -3,12 +3,11 @@ import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { operationsCandidateDetailPath } from "../../../constants/operations-routes";
 import type { OperationsCandidateListItem } from "../../../types/operations-candidates";
-import { resolveMediaUrl } from "../../../utils/resolve-media-url";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import { CandidatesMobileCard } from "./CandidatesMobileCard";
 import { CandidatesRowActions } from "./CandidatesRowActions";
+import { OperationsCandidateAvatar } from "./OperationsCandidateAvatar";
 import {
-  candidateAvatarInitials,
   formatCandidateDateTime,
   formatCandidateDisplayId,
   profileStatusBadgeVariant,
@@ -109,9 +108,9 @@ export function CandidatesTableSection({
 
   return (
     <div className="min-w-0 max-w-full">
-      <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4 xl:px-3 xl:py-1.5">
-        <div className="flex min-w-0 flex-col gap-2.5 xl:gap-1.5">
-          <h2 className="text-sm font-semibold text-foreground xl:text-xs">
+      <div className="border-b border-border-subtle px-3 py-2.5 max-sm:px-2.5 max-sm:py-2 sm:px-4 xl:px-3 xl:py-1.5">
+        <div className="flex min-w-0 flex-col gap-2.5 max-sm:gap-2 xl:gap-1.5">
+          <h2 className="text-sm font-semibold text-foreground max-sm:text-[13px] xl:text-xs">
             {title}{" "}
             <span className="font-semibold tabular-nums text-muted xl:text-[11px]">
               ({totalCandidates.toLocaleString("en-IN")})
@@ -121,7 +120,7 @@ export function CandidatesTableSection({
         </div>
       </div>
 
-      <ul className="flex flex-col gap-2.5 p-2.5 sm:hidden">
+      <ul className="flex flex-col gap-3 p-2.5 max-sm:gap-2.5 max-sm:p-2 sm:hidden">
         {isLoading ? (
           <li className="px-2 py-10 text-center text-xs text-muted">
             Loading candidates…
@@ -158,7 +157,10 @@ export function CandidatesTableSection({
           ? applications.map((application) => {
               const registered = formatCandidateDateTime(application.registeredAt);
               return (
-                <li key={application.id} className="px-3 py-3 sm:px-3.5">
+                <li
+                  key={application.id}
+                  className="px-3 py-3 max-md:py-2.5 sm:px-3.5"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <Link
                       to={operationsCandidateDetailPath(
@@ -166,21 +168,20 @@ export function CandidatesTableSection({
                       )}
                       className="flex min-w-0 items-start gap-2.5"
                     >
-                      <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary">
-                        {resolveMediaUrl(application.profilePhotoUrl) ? (
-                          <img
-                            src={resolveMediaUrl(application.profilePhotoUrl)}
-                            alt=""
-                            className="size-full object-cover"
-                          />
-                        ) : (
-                          candidateAvatarInitials(application.candidateName)
-                        )}
+                      <span className="inline-flex">
+                        <OperationsCandidateAvatar
+                          name={application.candidateName ?? "Candidate"}
+                          jobSeekerId={
+                            application.jobSeekerId || application.id
+                          }
+                          photoUrl={application.profilePhotoUrl}
+                          className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary max-md:size-8 xl:size-7 xl:text-[10px]"
+                        />
                       </span>
                       <span className="min-w-0">
                         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                          <span className="block truncate text-sm font-semibold text-foreground">
-                            {application.candidateName}
+                          <span className="block truncate text-sm font-semibold text-foreground max-md:text-[13px]">
+                            {application.candidateName ?? "Candidate"}
                           </span>
                           {application.isNewRegistration ? (
                             <OperationsBadge
@@ -274,21 +275,20 @@ export function CandidatesTableSection({
                           )}
                           className="flex min-w-0 items-center gap-2.5 xl:gap-2"
                         >
-                          <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary xl:size-7 xl:text-[10px]">
-                            {resolveMediaUrl(application.profilePhotoUrl) ? (
-                              <img
-                                src={resolveMediaUrl(application.profilePhotoUrl)}
-                                alt=""
-                                className="size-full object-cover"
-                              />
-                            ) : (
-                              candidateAvatarInitials(application.candidateName)
-                            )}
+                          <span className="inline-flex">
+                            <OperationsCandidateAvatar
+                              name={application.candidateName ?? "Candidate"}
+                              jobSeekerId={
+                                application.jobSeekerId || application.id
+                              }
+                              photoUrl={application.profilePhotoUrl}
+                              className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary xl:size-7 xl:text-[10px]"
+                            />
                           </span>
                           <span className="min-w-0">
                             <span className="flex min-w-0 flex-wrap items-center gap-1.5">
                               <span className="truncate text-xs font-semibold text-foreground xl:text-[11px]">
-                                {application.candidateName}
+                                {application.candidateName ?? "Candidate"}
                               </span>
                               {application.isNewRegistration ? (
                                 <OperationsBadge

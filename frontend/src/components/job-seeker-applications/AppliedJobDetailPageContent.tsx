@@ -15,7 +15,6 @@ import {
 } from "@/types/job-seeker-applications";
 import { isResumeJson } from "@/types/job-seeker-resume";
 import { cn } from "@/utils/cn";
-import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -363,16 +362,14 @@ export function AppliedJobDetailPageContent({
                   }`
                 : `AsliJobs Resume · v${application.resumeVersion}`}
             </p>
-            {application.resumeSource === "uploaded" &&
-            application.uploadedResumeSnapshot?.url ? (
-              <a
-                href={resolveMediaUrl(application.uploadedResumeSnapshot.url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              >
-                Open submitted file
-              </a>
+            {application.resumeSource === "uploaded" ? (
+              <p className="text-sm text-muted">
+                Uploaded file was captured with this application
+                {application.uploadedResumeSnapshot?.originalName
+                  ? ` (${application.uploadedResumeSnapshot.originalName})`
+                  : ""}
+                . Open it anytime from My Resume.
+              </p>
             ) : (
               <ResumePreview resumeJson={application.resumeSnapshot.resumeJson} />
             )}

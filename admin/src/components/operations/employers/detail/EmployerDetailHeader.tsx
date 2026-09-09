@@ -32,6 +32,9 @@ interface EmployerDetailHeaderProps {
   onToggleStatus?: () => void;
 }
 
+const actionBtnBase =
+  "inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 sm:h-9 sm:w-auto sm:px-3 sm:text-xs lg:h-9";
+
 export function EmployerDetailHeader({
   employer,
   onVerify,
@@ -44,18 +47,18 @@ export function EmployerDetailHeader({
   const isSuspended = employer.status === "suspended";
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm ops-brand-border-glow sm:p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex min-w-0 items-start gap-3 sm:gap-3.5">
+    <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm ops-brand-border-glow max-sm:rounded-lg max-sm:p-2 sm:p-4 lg:p-5">
+      <div className="flex flex-col gap-3 max-sm:gap-2.5 sm:gap-3.5 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+        <div className="flex min-w-0 items-start gap-2 max-sm:gap-2 sm:gap-3 lg:gap-3.5">
           <Link
             to={OPERATIONS_ROUTES.EMPLOYERS}
             aria-label="Back to Employers"
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-muted transition-colors hover:bg-hero-bg/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:size-9"
+            className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-muted transition-colors hover:bg-hero-bg/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:size-8 lg:size-9"
           >
-            <ArrowLeft className="size-4" aria-hidden="true" />
+            <ArrowLeft className="size-3.5 sm:size-4" aria-hidden="true" />
           </Link>
 
-          <span className="inline-flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-light text-sm font-bold text-primary sm:size-14 sm:text-base lg:size-16">
+          <span className="inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary-light text-[11px] font-bold text-primary max-sm:size-9 max-sm:rounded-md sm:size-12 sm:rounded-xl sm:text-sm lg:size-16 lg:text-base">
             {logoUrl ? (
               <img src={logoUrl} alt="" className="size-full object-cover" />
             ) : (
@@ -64,59 +67,60 @@ export function EmployerDetailHeader({
           </span>
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <h1 className="break-words text-base font-bold text-foreground sm:text-lg lg:text-xl">
+            <div className="flex flex-wrap items-center gap-1 max-sm:gap-1 sm:gap-1.5 lg:gap-2">
+              <h1 className="break-words text-[13px] font-bold leading-snug text-foreground sm:text-base lg:text-xl">
                 {employer.displayName}
               </h1>
-              <span className="font-mono text-[11px] font-semibold text-muted sm:text-xs">
+              <span className="font-mono text-[10px] font-semibold text-muted sm:text-[11px] lg:text-xs">
                 {employer.displayId}
               </span>
               <OperationsBadge
                 variant={verificationStatusBadgeVariant(
                   employer.verificationStatus,
                 )}
+                className="px-1.5 py-0 text-[9px] sm:text-[10px]"
               >
                 {employer.verificationStatusLabel}
               </OperationsBadge>
               <OperationsBadge
                 variant={employerStatusBadgeVariant(employer.status)}
+                className="px-1.5 py-0 text-[9px] sm:text-[10px]"
               >
                 {employer.statusLabel}
               </OperationsBadge>
             </div>
 
-            <div className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs text-muted">
+            <div className="mt-1.5 flex flex-col gap-1 text-[11px] text-muted max-sm:mt-1 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1 sm:text-xs lg:gap-x-3.5 lg:gap-y-1.5">
               {employer.phone ? (
-                <span className="flex items-center gap-1">
-                  <Phone className="size-3.5 shrink-0" aria-hidden="true" />
+                <span className="flex min-w-0 items-center gap-1">
+                  <Phone className="size-3 shrink-0 sm:size-3.5" aria-hidden="true" />
                   <span className="break-all">{employer.phone}</span>
                 </span>
               ) : null}
 
               {employer.email ? (
-                <span className="flex items-center gap-1">
-                  <Mail className="size-3.5 shrink-0" aria-hidden="true" />
+                <span className="flex min-w-0 items-center gap-1">
+                  <Mail className="size-3 shrink-0 sm:size-3.5" aria-hidden="true" />
                   <span className="break-all">{employer.email}</span>
                 </span>
               ) : null}
 
-              <span className="flex items-center gap-1">
-                <Briefcase className="size-3.5 shrink-0" aria-hidden="true" />
-                <span>{employer.organizationType}</span>
+              <span className="flex min-w-0 items-center gap-1">
+                <Briefcase className="size-3 shrink-0 sm:size-3.5" aria-hidden="true" />
+                <span className="truncate">{employer.organizationType}</span>
               </span>
 
               {employer.location && employer.location !== "—" ? (
-                <span className="flex items-center gap-1">
-                  <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
-                  <span>{employer.location}</span>
+                <span className="flex min-w-0 items-center gap-1">
+                  <MapPin className="size-3 shrink-0 sm:size-3.5" aria-hidden="true" />
+                  <span className="truncate">{employer.location}</span>
                 </span>
               ) : null}
             </div>
           </div>
         </div>
 
-        {/* Operational Actions */}
-        <div className="grid w-full grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center lg:shrink-0">
+        <div className="grid w-full grid-cols-2 gap-1.5 max-sm:gap-1.5 min-[420px]:grid-cols-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2 lg:shrink-0">
           <OperationsCan module="jobs" action="create">
             <button
               type="button"
@@ -125,9 +129,9 @@ export function EmployerDetailHeader({
                   `${OPERATIONS_ROUTES.JOBS_POST}?employerId=${encodeURIComponent(employer.id)}`,
                 )
               }
-              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-hero-bg/60 px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:w-auto"
+              className={`${actionBtnBase} border border-border-subtle bg-hero-bg/60 text-foreground hover:bg-surface focus-visible:ring-primary/30`}
             >
-              <Plus className="size-3.5" aria-hidden="true" />
+              <Plus className="size-3 sm:size-3.5" aria-hidden="true" />
               Post Job
             </button>
           </OperationsCan>
@@ -137,10 +141,11 @@ export function EmployerDetailHeader({
               <button
                 type="button"
                 onClick={onVerify}
-                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-success px-3.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-success/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/30 sm:w-auto"
+                className={`${actionBtnBase} bg-success text-white shadow-sm hover:bg-success/90 focus-visible:ring-success/30`}
               >
-                <ShieldCheck className="size-3.5" aria-hidden="true" />
-                Verify Employer
+                <ShieldCheck className="size-3 sm:size-3.5" aria-hidden="true" />
+                <span className="sm:hidden">Verify</span>
+                <span className="hidden sm:inline">Verify Employer</span>
               </button>
             ) : null}
           </OperationsCanKey>
@@ -150,10 +155,11 @@ export function EmployerDetailHeader({
               <button
                 type="button"
                 onClick={onReject}
-                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-danger/30 bg-danger/10 px-3 text-xs font-semibold text-danger transition-colors hover:bg-danger/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30 sm:w-auto"
+                className={`${actionBtnBase} border border-danger/30 bg-danger/10 text-danger hover:bg-danger/20 focus-visible:ring-danger/30`}
               >
-                <ShieldAlert className="size-3.5" aria-hidden="true" />
-                Reject Verification
+                <ShieldAlert className="size-3 sm:size-3.5" aria-hidden="true" />
+                <span className="sm:hidden">Reject</span>
+                <span className="hidden sm:inline">Reject Verification</span>
               </button>
             ) : null}
           </OperationsCanKey>
@@ -169,7 +175,7 @@ export function EmployerDetailHeader({
               <button
                 type="button"
                 onClick={onToggleStatus}
-                className={`inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 sm:w-auto ${
+                className={`${actionBtnBase} border ${
                   isSuspended
                     ? "border-success/30 bg-success/10 text-success hover:bg-success/20 focus-visible:ring-success/30"
                     : "border-danger/30 bg-danger/10 text-danger hover:bg-danger/20 focus-visible:ring-danger/30"
@@ -177,13 +183,15 @@ export function EmployerDetailHeader({
               >
                 {isSuspended ? (
                   <>
-                    <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                    Activate Account
+                    <CheckCircle2 className="size-3 sm:size-3.5" aria-hidden="true" />
+                    <span className="sm:hidden">Activate</span>
+                    <span className="hidden sm:inline">Activate Account</span>
                   </>
                 ) : (
                   <>
-                    <Ban className="size-3.5" aria-hidden="true" />
-                    Suspend Account
+                    <Ban className="size-3 sm:size-3.5" aria-hidden="true" />
+                    <span className="sm:hidden">Suspend</span>
+                    <span className="hidden sm:inline">Suspend Account</span>
                   </>
                 )}
               </button>

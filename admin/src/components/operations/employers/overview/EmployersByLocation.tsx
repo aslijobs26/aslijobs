@@ -171,10 +171,10 @@ export function EmployersByLocation({
           </p>
         ) : (
           <div className="grid min-h-[11.5rem] grid-cols-1 items-center gap-3 sm:grid-cols-2 xl:min-h-36 xl:gap-2">
-            <div className="relative mx-auto w-full max-w-[11.5rem] sm:max-w-none">
+            <div className="relative mx-auto w-full max-w-[11.5rem] max-sm:max-w-[9.5rem] sm:max-w-none">
               <svg
                 viewBox={indiaStatesMap.viewBox}
-                className="h-auto w-full max-h-[12.5rem] xl:max-h-[10rem]"
+                className="h-auto w-full max-h-[12.5rem] max-sm:max-h-[10rem] xl:max-h-[10rem]"
                 role="img"
                 aria-label="India map of employer concentration by state"
               >

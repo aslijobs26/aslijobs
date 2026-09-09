@@ -46,8 +46,8 @@ export function EmployerTypeDonut({ items, total }: EmployerTypeDonutProps) {
           No employer type data available.
         </p>
       ) : (
-        <div className="flex min-h-44 min-w-0 flex-col gap-4 sm:flex-row sm:items-center xl:min-h-36 xl:gap-3">
-          <div className="relative mx-auto size-[9rem] shrink-0 overflow-hidden sm:mx-0 sm:size-36 xl:size-28">
+        <div className="flex min-h-44 min-w-0 flex-col gap-4 max-sm:min-h-36 max-sm:gap-3 sm:flex-row sm:items-center xl:min-h-36 xl:gap-3">
+          <div className="relative mx-auto size-[9rem] shrink-0 overflow-hidden max-sm:size-32 sm:mx-0 sm:size-36 xl:size-28">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie

@@ -43,11 +43,11 @@ export function CandidatesRegistrationTrendChart({
       className="candidates-analytics-card min-w-0"
     >
       {!hasData ? (
-        <p className="flex min-h-44 items-center justify-center text-center text-xs text-muted xl:min-h-36">
+        <p className="flex min-h-44 items-center justify-center text-center text-xs text-muted max-sm:min-h-36 xl:min-h-36">
           No registration activity in this period.
         </p>
       ) : (
-        <div className="h-52 min-w-0 sm:h-56 xl:h-44">
+        <div className="h-52 min-w-0 max-sm:h-44 sm:h-56 xl:h-44">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={series}

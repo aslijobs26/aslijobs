@@ -1,10 +1,11 @@
 import type mongoose from "mongoose";
 
+/** Secure photo delivery path — never a public storage URL. */
+export const JOB_SEEKER_SECURE_PHOTO_PATH = "/api/v1/jobseekers/me/photo";
+
 export type JobSeekerImageAssetPublic = {
+  /** Authenticated download path (relative to API origin). */
   url: string;
-  storagePath: string;
-  publicId: string;
-  storageProvider: string;
   originalName: string;
   mimeType: string;
   fileSize: number;
@@ -42,6 +43,7 @@ type JobSeekerLike = {
     mimeType?: string;
     fileSize?: number;
   } | null;
+  accountStatus?: string | null;
   isWhatsappVerified: boolean;
   registrationStatus: string;
   lastLoginAt?: Date | null;
@@ -57,10 +59,7 @@ function toPublicImageAsset(
   }
 
   return {
-    url: asset.url ?? "",
-    storagePath: asset.storagePath ?? "",
-    publicId: asset.publicId ?? "",
-    storageProvider: asset.storageProvider ?? "",
+    url: JOB_SEEKER_SECURE_PHOTO_PATH,
     originalName: asset.originalName ?? "",
     mimeType: asset.mimeType ?? "",
     fileSize: asset.fileSize ?? 0,
@@ -99,6 +98,7 @@ export function toPublicJobSeeker(jobSeeker: JobSeekerLike) {
       : [],
     profileVisibility: jobSeeker.profileVisibility ?? "visible",
     profilePhoto: toPublicImageAsset(jobSeeker.profilePhoto),
+    accountStatus: jobSeeker.accountStatus ?? "active",
     isWhatsappVerified: jobSeeker.isWhatsappVerified,
     registrationStatus: jobSeeker.registrationStatus,
     lastLoginAt: jobSeeker.lastLoginAt ?? null,

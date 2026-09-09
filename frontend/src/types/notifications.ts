@@ -31,7 +31,8 @@ export type NotificationType =
   | "job_live_changes_approved"
   | "job_live_changes_rejected"
   | "employer_verification_approved"
-  | "employer_verification_rejected";
+  | "employer_verification_rejected"
+  | "employer_verification_documents_requested";
 
 export type NotificationListItem = {
   id: string;

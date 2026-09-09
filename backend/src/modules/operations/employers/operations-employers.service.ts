@@ -34,6 +34,7 @@ import type {
   UpdateOperationsEmployerVerificationBody,
 } from "./operations-employers.validation.js";
 import { getOperationsEmployersAnalytics } from "./operations-employers-analytics.js";
+import { SLA_TARGET_DAYS } from "../verifications/operations-verifications-analytics.js";
 import {
   buildOperationsEmployersExportFile,
   type OperationsEmployersExportFormat,
@@ -624,6 +625,135 @@ export const operationsEmployersService = {
           ],
         });
       }
+    }
+
+    // Derived verification queues (under review / SLA / needs attention)
+    const queue = query.verificationQueue?.trim().toLowerCase() ?? "";
+    if (queue === "under_review") {
+      andClauses.push({
+        $and: [
+          {
+            $or: [
+              { verificationStatus: "pending" },
+              { verificationStatus: null },
+              { verificationStatus: "" },
+              { verificationStatus: { $exists: false } },
+            ],
+          },
+          { verificationSubmittedAt: { $exists: true, $ne: null } },
+          {
+            $expr: {
+              $gt: [{ $size: { $ifNull: ["$documentIds", []] } }, 0],
+            },
+          },
+        ],
+      });
+    } else if (queue === "sla_breaches") {
+      const slaCutoff = new Date(
+        Date.now() - SLA_TARGET_DAYS * 24 * 60 * 60 * 1000,
+      );
+      andClauses.push({
+        $or: [
+          {
+            $and: [
+              {
+                $or: [
+                  { verificationStatus: "pending" },
+                  { verificationStatus: null },
+                  { verificationStatus: "" },
+                  { verificationStatus: { $exists: false } },
+                ],
+              },
+              {
+                $or: [
+                  { verificationSubmittedAt: { $lte: slaCutoff } },
+                  {
+                    $and: [
+                      {
+                        $or: [
+                          { verificationSubmittedAt: null },
+                          { verificationSubmittedAt: { $exists: false } },
+                        ],
+                      },
+                      { createdAt: { $lte: slaCutoff } },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            $and: [
+              { verificationStatus: "verified" },
+              { verifiedAt: { $exists: true, $ne: null } },
+              {
+                $expr: {
+                  $gt: [
+                    { $subtract: ["$verifiedAt", { $ifNull: ["$verificationSubmittedAt", "$createdAt"] }] },
+                    SLA_TARGET_DAYS * 24 * 60 * 60 * 1000,
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            $and: [
+              { verificationStatus: "rejected" },
+              { rejectedAt: { $exists: true, $ne: null } },
+              {
+                $expr: {
+                  $gt: [
+                    { $subtract: ["$rejectedAt", { $ifNull: ["$verificationSubmittedAt", "$createdAt"] }] },
+                    SLA_TARGET_DAYS * 24 * 60 * 60 * 1000,
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      });
+    } else if (queue === "needs_attention") {
+      const slaCutoff = new Date(
+        Date.now() - SLA_TARGET_DAYS * 24 * 60 * 60 * 1000,
+      );
+      andClauses.push({
+        $and: [
+          {
+            $or: [
+              { verificationStatus: "pending" },
+              { verificationStatus: null },
+              { verificationStatus: "" },
+              { verificationStatus: { $exists: false } },
+            ],
+          },
+          {
+            $or: [
+              { verificationSubmittedAt: { $lte: slaCutoff } },
+              {
+                $and: [
+                  {
+                    $or: [
+                      { verificationSubmittedAt: null },
+                      { verificationSubmittedAt: { $exists: false } },
+                    ],
+                  },
+                  { createdAt: { $lte: slaCutoff } },
+                ],
+              },
+              {
+                $and: [
+                  { registrationStatus: "completed" },
+                  {
+                    $expr: {
+                      $eq: [{ $size: { $ifNull: ["$documentIds", []] } }, 0],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
     }
 
     // Employer Type

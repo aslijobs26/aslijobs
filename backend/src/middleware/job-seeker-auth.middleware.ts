@@ -6,6 +6,10 @@ import {
   JobSeekerModel,
   type JobSeekerDocumentLean,
 } from "../modules/job-seekers/job-seeker.model.js";
+import {
+  assertJobSeekerAccountActive,
+  isJobSeekerAccountActive,
+} from "../modules/job-seekers/job-seeker-account-status.js";
 
 export type AuthenticatedJobSeeker = JobSeekerDocumentLean;
 
@@ -51,6 +55,15 @@ export async function requireJobSeekerAuth(
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
+    assertJobSeekerAccountActive(jobSeeker.accountStatus);
+
+    if (
+      !jobSeeker.isWhatsappVerified ||
+      jobSeeker.registrationStatus !== "COMPLETED"
+    ) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
     req.jobSeeker = jobSeeker.toObject() as AuthenticatedJobSeeker;
     req.jobSeekerId = jobSeeker._id.toString();
     next();
@@ -66,6 +79,7 @@ export async function requireJobSeekerAuth(
 /**
  * Attaches job seeker identity when a valid seeker token is present.
  * Does not fail for anonymous or non-seeker requests.
+ * Skips blocked/suspended and incomplete accounts (treated as anonymous).
  */
 export async function optionalJobSeekerAuth(
   req: Request,
@@ -80,9 +94,16 @@ export async function optionalJobSeekerAuth(
     }
 
     const payload = jwtService.verifyJobSeekerAccessToken(token);
-    const jobSeeker = await JobSeekerModel.findById(payload.sub).select("_id");
+    const jobSeeker = await JobSeekerModel.findById(payload.sub).select(
+      "_id accountStatus registrationStatus isWhatsappVerified",
+    );
 
-    if (jobSeeker) {
+    if (
+      jobSeeker &&
+      jobSeeker.registrationStatus === "COMPLETED" &&
+      jobSeeker.isWhatsappVerified &&
+      isJobSeekerAccountActive(jobSeeker.accountStatus)
+    ) {
       req.jobSeekerId = jobSeeker._id.toString();
     }
   } catch {

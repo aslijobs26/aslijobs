@@ -91,8 +91,8 @@ function DetailField({ label, value }: { label: string; value: string }) {
 }
 
 function formatSalary(
-  amount: number | null,
-  period: string,
+  amount: number | null | undefined,
+  period?: string,
 ): string {
   if (amount == null) {
     return "—";
@@ -201,7 +201,9 @@ export function CandidateProfileOverview({
               value={
                 [detail.candidateCity, detail.candidateState]
                   .filter(Boolean)
-                  .join(", ") || detail.candidateLocation
+                  .join(", ") ||
+                detail.candidateLocation ||
+                "—"
               }
             />
             <DetailField

@@ -9,6 +9,7 @@ import { env } from "./config/env.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { requestIdMiddleware } from "./middleware/request-id.middleware.js";
+import { isSensitiveUploadPublicPath } from "./modules/storage/private-file.service.js";
 import apiRouter from "./routes/index.js";
 import { buildAllowedCorsOrigins } from "./utils/cors-origins.js";
 
@@ -68,8 +69,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 if (env.STORAGE_PROVIDER === "local") {
-  // Serve uploads BEFORE the API rate limiter so avatars/logos/resumes do not
-  // consume the shared request budget used by authenticated dashboard traffic.
+  // Public static only for non-sensitive assets (employer logos, company assets).
+  // Resumes / job-seeker profiles / employer docs require authenticated APIs.
+  app.use("/uploads", (req, res, next) => {
+    if (isSensitiveUploadPublicPath(req.path)) {
+      res.status(404).end();
+      return;
+    }
+    next();
+  });
   app.use(
     "/uploads",
     express.static(path.resolve(process.cwd(), env.UPLOAD_DIR), {
@@ -89,7 +97,9 @@ if (env.STORAGE_PROVIDER === "local") {
  * General API rate limit.
  * Auth OTP endpoints keep their own stricter dedicated limiters and are skipped
  * here so a busy dashboard cannot block legitimate login attempts.
- * Max is intentionally unchanged — request storms must be fixed at the source.
+ *
+ * Development uses a much higher ceiling — Operations UI fans out many GETs
+ * (list + analytics + badge poll + candidate photos). Production stays strict.
  */
 const AUTH_OTP_PATH_SUFFIXES = [
   "/employers/login/send-otp",
@@ -98,20 +108,40 @@ const AUTH_OTP_PATH_SUFFIXES = [
   "/jobseekers/login/send-otp",
   "/jobseekers/login/resend-otp",
   "/jobseekers/login/verify-otp",
+  "/jobseekers/register",
+  "/jobseekers/register/resend-otp",
+  "/jobseekers/register/verify-otp",
   "/auth/workspace/refresh",
   "/auth/job-seeker/refresh",
   "/auth/workspace/logout",
   "/auth/job-seeker/logout",
 ] as const;
 
+/** High-frequency authenticated GETs that should not burn the global budget. */
+function isHighFrequencyOperationsRead(pathName: string): boolean {
+  if (pathName.includes("/operations/registration-awareness/badges")) {
+    return true;
+  }
+  if (
+    pathName.includes("/operations/candidates/seekers/") &&
+    pathName.endsWith("/photo")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 const apiRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: env.NODE_ENV === "development" ? 5_000 : 200,
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
     const pathName = req.path;
     if (pathName === "/health" || pathName === "/api/v1/health") {
+      return true;
+    }
+    if (isHighFrequencyOperationsRead(pathName)) {
       return true;
     }
     return AUTH_OTP_PATH_SUFFIXES.some(

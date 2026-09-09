@@ -68,12 +68,12 @@ export interface OperationsCandidateListItem {
   applicationId: string | null;
   jobSeekerId: string;
   displayId?: string;
-  candidateName: string;
-  candidatePhone: string;
-  candidateEmail: string;
+  candidateName?: string;
+  candidatePhone?: string;
+  candidateEmail?: string;
   candidateHeadline: string;
   candidateExperienceLabel: string;
-  candidateLocation: string;
+  candidateLocation?: string;
   candidateSkills: string[];
   candidateGender: string;
   profilePhotoUrl: string;
@@ -331,10 +331,10 @@ export interface OperationsCandidateApplicationsResult {
 }
 
 export interface OperationsCandidateDetail extends OperationsCandidateListItem {
-  candidateCity: string;
-  candidateState: string;
-  candidatePincode: string;
-  dateOfBirth: string | null;
+  candidateCity?: string;
+  candidateState?: string;
+  candidatePincode?: string;
+  dateOfBirth?: string | null;
   skills: string[];
   professionalSummary: string;
   education: OperationsCandidateEducation | null;
@@ -343,16 +343,16 @@ export interface OperationsCandidateDetail extends OperationsCandidateListItem {
   preferredLocations: string[];
   jobType: string;
   workMode: string;
-  expectedSalary: number | null;
-  expectedSalaryPeriod: string;
+  expectedSalary?: number | null;
+  expectedSalaryPeriod?: string;
   availabilityStatus: string;
   availabilityLabel: string;
   profileCompletionPercent: number;
   shortlistedCount: number;
   /** Always empty for clients — use authenticated resume download endpoint. */
-  uploadedResumeUrl: string;
-  uploadedResumeName: string;
-  hasUploadedResume: boolean;
+  uploadedResumeUrl?: string;
+  uploadedResumeName?: string;
+  hasUploadedResume?: boolean;
   jobCompanyName: string;
   resumeVersion: number;
   resumeStatus: string;

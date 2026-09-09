@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Download, MapPin, Phone } from "lucide-react";
 import type { OperationsCandidateDetail } from "../../../../types/operations-candidates";
-import { resolveMediaUrl } from "../../../../utils/resolve-media-url";
 import { fetchOperationsCandidateResumeBlob } from "../../../../services/operations-candidates.service";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import { OperationsCanKey } from "../../auth/OperationsCanKey";
+import { OperationsCandidateAvatar } from "../OperationsCandidateAvatar";
 import {
-  candidateAvatarInitials,
   formatCandidateDateTimeFull,
   formatCandidateDisplayId,
   profileStatusBadgeVariant,
@@ -19,7 +18,6 @@ interface CandidateProfileHeaderProps {
 export function CandidateProfileHeader({
   detail,
 }: CandidateProfileHeaderProps) {
-  const photoUrl = resolveMediaUrl(detail.profilePhotoUrl);
   const completion = Math.max(
     0,
     Math.min(100, detail.profileCompletionPercent ?? 0),
@@ -54,22 +52,17 @@ export function CandidateProfileHeader({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-start gap-3 sm:gap-4">
-            <span className="inline-flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-base font-semibold text-primary sm:size-20 sm:text-lg">
-              {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt=""
-                  className="size-full object-cover"
-                />
-              ) : (
-                candidateAvatarInitials(detail.candidateName)
-              )}
-            </span>
+            <OperationsCandidateAvatar
+              name={detail.candidateName ?? "Candidate"}
+              jobSeekerId={detail.jobSeekerId || detail.id}
+              photoUrl={detail.profilePhotoUrl}
+              className="inline-flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-base font-semibold text-primary sm:size-20 sm:text-lg"
+            />
 
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <h2 className="text-lg font-bold text-foreground sm:text-xl">
-                  {detail.candidateName}
+                  {detail.candidateName ?? "Candidate"}
                 </h2>
                 <OperationsBadge
                   variant={profileStatusBadgeVariant(detail.profileStatus)}

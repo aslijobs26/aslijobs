@@ -181,7 +181,8 @@ export const resendJobSeekerOtpSchema = z.object({
 });
 
 export const saveJobSeekerPreferencesSchema = z.object({
-  jobSeekerId: jobSeekerIdSchema,
+  // Optional for backward compatibility — identity comes from registration token.
+  jobSeekerId: jobSeekerIdSchema.optional(),
   dateOfBirth: dateOfBirthSchema,
   gender: z.enum(JOB_SEEKER_GENDERS, {
     message: "Select a valid gender",
@@ -208,7 +209,8 @@ export const saveJobSeekerPreferencesSchema = z.object({
 
 export const completeJobSeekerRegistrationSchema = z
   .object({
-    jobSeekerId: jobSeekerIdSchema,
+    // Optional for backward compatibility — identity comes from registration token.
+    jobSeekerId: jobSeekerIdSchema.optional(),
     education: educationSchema,
     experienceType: z.enum(JOB_SEEKER_EXPERIENCE_TYPES, {
       message: "Select fresher or experienced",

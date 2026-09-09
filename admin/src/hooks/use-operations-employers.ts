@@ -23,6 +23,8 @@ import type {
   UpdateOperationsEmployerVerificationInput,
 } from "../types/operations-employers";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
+import { OPERATIONS_REGISTRATION_AWARENESS_QUERY_KEY } from "./use-operations-registration-awareness";
+import { OPERATIONS_VERIFICATIONS_QUERY_KEY } from "./use-operations-verifications";
 
 export const OPERATIONS_EMPLOYERS_QUERY_KEY = [
   "operations",
@@ -151,6 +153,12 @@ export function useUpdateOperationsEmployerVerification(
       });
       void queryClient.invalidateQueries({
         queryKey: OPERATIONS_EMPLOYERS_ANALYTICS_QUERY_KEY,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: OPERATIONS_VERIFICATIONS_QUERY_KEY,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: OPERATIONS_REGISTRATION_AWARENESS_QUERY_KEY,
       });
     },
   });

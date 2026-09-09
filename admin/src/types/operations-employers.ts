@@ -110,6 +110,8 @@ export interface OperationsEmployersListParams {
   limit: number;
   search?: string;
   verificationStatus?: string;
+  /** Derived queue: under_review | sla_breaches | needs_attention */
+  verificationQueue?: string;
   employerType?: string;
   location?: string;
   status?: string;
@@ -322,6 +324,7 @@ export interface CreateOperationsEmployerInput {
 export interface OperationsEmployersExportParams {
   search?: string;
   verificationStatus?: string;
+  verificationQueue?: string;
   employerType?: string;
   location?: string;
   status?: string;

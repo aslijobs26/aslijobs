@@ -56,6 +56,13 @@ operationsCandidatesRouter.get(
 );
 
 operationsCandidatesRouter.get(
+  "/seekers/:jobSeekerId/photo",
+  requireOperationsPermission("candidates", "read"),
+  validate(operationsCandidateSeekerIdParamsSchema, "params"),
+  asyncHandler(operationsCandidatesController.downloadPhoto),
+);
+
+operationsCandidatesRouter.get(
   "/seekers/:jobSeekerId",
   requireOperationsPermission("candidates", "read"),
   validate(operationsCandidateSeekerIdParamsSchema, "params"),

@@ -73,6 +73,7 @@ export interface OperationsJobListItem {
   applicationsToday: number;
   isLiveChangeReview: boolean;
   liveChangeReviewStatus: string;
+  creationSource: "employer" | "operations";
   employer: OperationsJobEmployer;
 }
 
@@ -336,6 +337,13 @@ export interface OperationsJobDetail {
   reviewedByLabel: string;
   rejectionReason: string;
   reviewNotificationSent: boolean;
+  reviewHistory: Array<{
+    kind: string;
+    decision: string;
+    reason: string;
+    reviewedAt: string | null;
+    reviewedByOperationsUserId: string;
+  }>;
   pendingLiveRevision: unknown;
   liveChangeReviewStatus: string;
   liveChangeSubmittedAt: string | null;

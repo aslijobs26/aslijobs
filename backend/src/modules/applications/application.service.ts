@@ -12,6 +12,7 @@ import { JobModel } from "../jobs/job.model.js";
 import { ensureEmployerJobRelationsConsistent } from "../jobs/job-cascade-delete.js";
 import { isJobPubliclyEligible } from "../jobs/public-job-eligibility.js";
 import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
+import { assertJobSeekerAccountActive } from "../job-seekers/job-seeker-account-status.js";
 import { generateResumePdfFromJson } from "../resumes/pdf/index.js";
 import { resumeService } from "../resumes/resume.service.js";
 import { uploadedResumeService } from "../resumes/uploaded-resume.service.js";
@@ -804,6 +805,18 @@ export class ApplicationService {
       throw new AppError("Job id is required", HTTP_STATUS.BAD_REQUEST);
     }
 
+    const seeker = await JobSeekerModel.findById(input.jobSeekerId)
+      .select("registrationStatus isWhatsappVerified accountStatus")
+      .lean();
+    if (
+      !seeker ||
+      seeker.registrationStatus !== "COMPLETED" ||
+      !seeker.isWhatsappVerified
+    ) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+    assertJobSeekerAccountActive(seeker.accountStatus);
+
     const job = await JobModel.findOne({
       jobId: publicJobId,
       status: "active",
@@ -833,12 +846,13 @@ export class ApplicationService {
       throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
     }
 
-    const existing = await ApplicationModel.findOne({
+    const existingActive = await ApplicationModel.findOne({
       jobSeekerId: input.jobSeekerId,
       jobId: job._id,
+      status: { $ne: "withdrawn" },
     }).lean();
 
-    if (existing) {
+    if (existingActive) {
       throw new AppError(
         "You have already applied to this job",
         HTTP_STATUS.CONFLICT,
@@ -3217,29 +3231,57 @@ export class ApplicationService {
     jobSeekerId: string;
     applicationId: string;
   }) {
-    const application = await this.findSeekerApplicationOrThrow(
-      input.applicationId,
-      input.jobSeekerId,
-    );
-
-    const status = application.status as ApplicationStatus;
-    if (!canWithdraw(status)) {
-      throw new AppError(
-        "This application can no longer be withdrawn",
-        HTTP_STATUS.BAD_REQUEST,
-      );
+    if (
+      !mongoose.Types.ObjectId.isValid(input.applicationId) ||
+      !mongoose.Types.ObjectId.isValid(input.jobSeekerId)
+    ) {
+      throw new AppError("Application not found", HTTP_STATUS.NOT_FOUND);
     }
 
     const now = new Date();
-    application.status = "withdrawn";
-    application.withdrawnAt = now;
-    appendStatusHistory(application, {
-      status: "withdrawn",
+    const historyEntry = {
+      status: "withdrawn" as const,
       at: now,
-      actorType: "job_seeker",
+      actorType: "job_seeker" as const,
       remark: "Application withdrawn by candidate",
-    });
-    await application.save();
+    };
+
+    const application = await ApplicationModel.findOneAndUpdate(
+      {
+        _id: input.applicationId,
+        jobSeekerId: input.jobSeekerId,
+        status: { $in: [...WITHDRAWABLE_STATUSES] },
+      },
+      {
+        $set: {
+          status: "withdrawn",
+          withdrawnAt: now,
+        },
+        $push: {
+          statusHistory: historyEntry,
+        },
+      },
+      { new: true },
+    );
+
+    if (!application) {
+      const existing = await ApplicationModel.findOne({
+        _id: input.applicationId,
+        jobSeekerId: input.jobSeekerId,
+      })
+        .select("status")
+        .lean();
+
+      if (!existing) {
+        throw new AppError("Application not found", HTTP_STATUS.NOT_FOUND);
+      }
+
+      throw new AppError(
+        "This application can no longer be withdrawn",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
     await this.emitForApplication(
       APPLICATION_EVENT_NAMES.WITHDRAWN,
       application,

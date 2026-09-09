@@ -1,34 +1,34 @@
 import { RotateCcw, Search } from "lucide-react";
 import type {
-  OperationsEmployerDatePreset,
-  OperationsEmployersFilterOptions,
-} from "../../../types/operations-employers";
+  OperationsVerificationsFilterOptions,
+  VerificationsDatePreset,
+} from "../../../types/operations-verifications";
 import { cn } from "../../../utils/cn";
 import { OperationsFilterSelect } from "../jobs/OperationsFilterSelect";
 
 export interface VerificationsFiltersState {
   search: string;
-  employerType: string;
+  industry: string;
   location: string;
-  submissionPreset: OperationsEmployerDatePreset | "";
+  submissionPreset: VerificationsDatePreset | "";
 }
 
 export const EMPTY_VERIFICATIONS_FILTERS: VerificationsFiltersState = {
   search: "",
-  employerType: "",
+  industry: "",
   location: "",
   submissionPreset: "",
 };
 
 interface VerificationsFiltersBarProps {
   filters: VerificationsFiltersState;
-  filterOptions: OperationsEmployersFilterOptions;
+  filterOptions: OperationsVerificationsFilterOptions;
   onChange: (next: Partial<VerificationsFiltersState>) => void;
   onClear: () => void;
 }
 
 const SUBMISSION_PRESET_OPTIONS: {
-  value: OperationsEmployerDatePreset | "";
+  value: VerificationsDatePreset | "";
   label: string;
 }[] = [
   { value: "", label: "All Dates" },
@@ -51,7 +51,7 @@ export function VerificationsFiltersBar({
 }: VerificationsFiltersBarProps) {
   const activeFilterCount = [
     filters.search.trim(),
-    filters.employerType,
+    filters.industry,
     filters.location,
     filters.submissionPreset,
   ].filter(Boolean).length;
@@ -60,7 +60,7 @@ export function VerificationsFiltersBar({
     <div className="flex min-w-0 flex-col gap-2 xl:gap-1.5">
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <label className="relative block min-w-0 sm:min-w-[12rem] sm:max-w-xs sm:flex-1 xl:max-w-[14rem]">
-          <span className="sr-only">Search employers</span>
+          <span className="sr-only">Search verifications</span>
           <Search
             className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted xl:size-3"
             aria-hidden="true"
@@ -98,14 +98,14 @@ export function VerificationsFiltersBar({
 
       <div className="grid min-w-0 grid-cols-1 gap-1.5 sm:grid-cols-3">
         <OperationsFilterSelect
-          label="Account type"
-          value={filters.employerType}
+          label="Industry"
+          value={filters.industry}
           options={[
-            { value: "", label: "All Account Types" },
-            ...filterOptions.employerTypes,
+            { value: "", label: "All Industries" },
+            ...filterOptions.industries,
           ]}
           triggerClassName={triggerClassName}
-          onChange={(employerType) => onChange({ employerType })}
+          onChange={(industry) => onChange({ industry })}
         />
         <OperationsFilterSelect
           label="Location"
@@ -128,7 +128,7 @@ export function VerificationsFiltersBar({
           triggerClassName={triggerClassName}
           onChange={(value) =>
             onChange({
-              submissionPreset: value as OperationsEmployerDatePreset | "",
+              submissionPreset: value as VerificationsDatePreset | "",
             })
           }
         />

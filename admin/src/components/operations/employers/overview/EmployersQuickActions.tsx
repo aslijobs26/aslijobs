@@ -75,10 +75,10 @@ export function EmployersQuickActions({
           const Icon = action.icon;
           const content = (
             <>
-              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
-                <Icon className="size-4" strokeWidth={2} aria-hidden="true" />
+              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary max-sm:size-7">
+                <Icon className="size-4 max-sm:size-3.5" strokeWidth={2} aria-hidden="true" />
               </span>
-              <span className="min-w-0 flex-1 text-[12px] font-semibold leading-snug text-foreground">
+              <span className="min-w-0 flex-1 text-[12px] font-semibold leading-snug text-foreground max-sm:text-[11px]">
                 {action.label}
               </span>
               <ArrowRight
@@ -90,7 +90,7 @@ export function EmployersQuickActions({
           );
 
           const className =
-            "group flex items-center gap-2.5 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 transition-colors hover:border-primary/25 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60";
+            "group flex items-center gap-2.5 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 transition-colors hover:border-primary/25 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 max-sm:gap-2 max-sm:px-2.5 max-sm:py-2";
 
           return (
             <li key={action.id}>

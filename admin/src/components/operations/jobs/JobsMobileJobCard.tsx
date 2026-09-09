@@ -40,11 +40,11 @@ export function JobsMobileJobCard({
 
   return (
     <article className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-      <div className="border-b border-border-subtle/80 bg-hero-bg/35 px-3 py-2.5">
-        <div className="flex items-start gap-2">
+      <div className="border-b border-border-subtle/80 bg-hero-bg/35 px-3 py-2.5 max-sm:px-2.5 max-sm:py-2">
+        <div className="flex items-start gap-2 max-sm:gap-1.5">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <h3 className="text-sm font-semibold leading-snug text-foreground">
+              <h3 className="text-sm font-semibold leading-snug text-foreground max-sm:text-[13px]">
                 {job.jobTitle}
               </h3>
               {job.isFeatured ? (
@@ -72,15 +72,15 @@ export function JobsMobileJobCard({
         </div>
       </div>
 
-      <div className="space-y-3 px-3 py-3">
-        <div className="flex items-center gap-2.5">
+      <div className="space-y-3 px-3 py-3 max-sm:space-y-2.5 max-sm:px-2.5 max-sm:py-2.5">
+        <div className="flex items-center gap-2.5 max-sm:gap-2">
           <EmployerLogo
             name={job.employer.companyName}
             logoUrl={job.employer.logoUrl}
             size="md"
           />
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1 truncate text-xs font-semibold text-foreground">
+            <p className="flex items-center gap-1 truncate text-xs font-semibold text-foreground max-sm:text-[11px]">
               <span className="truncate">{job.employer.companyName}</span>
               {showVerified ? (
                 <BadgeCheck
@@ -116,34 +116,34 @@ export function JobsMobileJobCard({
           </span>
         </div>
 
-        <dl className="grid grid-cols-3 gap-1.5">
-          <div className="min-w-0 rounded-lg bg-hero-bg/60 px-2 py-2">
-            <dt className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-muted">
+        <dl className="grid grid-cols-3 gap-1.5 max-sm:gap-1">
+          <div className="min-w-0 rounded-lg bg-hero-bg/60 px-2 py-2 max-sm:px-1.5 max-sm:py-1.5">
+            <dt className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-muted max-sm:text-[8px]">
               <MapPin className="size-3 shrink-0" aria-hidden="true" />
               Location
             </dt>
-            <dd className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-foreground">
+            <dd className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-foreground max-sm:text-[10px]">
               {job.locationLabel || "—"}
             </dd>
           </div>
-          <div className="min-w-0 rounded-lg bg-hero-bg/60 px-2 py-2">
-            <dt className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-muted">
+          <div className="min-w-0 rounded-lg bg-hero-bg/60 px-2 py-2 max-sm:px-1.5 max-sm:py-1.5">
+            <dt className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-muted max-sm:text-[8px]">
               <CalendarDays className="size-3 shrink-0" aria-hidden="true" />
               Posted
             </dt>
-            <dd className="mt-1 text-[11px] font-medium leading-snug text-foreground">
+            <dd className="mt-1 text-[11px] font-medium leading-snug text-foreground max-sm:text-[10px]">
               {posted.date}
             </dd>
             {posted.time ? (
-              <dd className="text-[10px] leading-snug text-muted">{posted.time}</dd>
+              <dd className="text-[10px] leading-snug text-muted max-sm:text-[9px]">{posted.time}</dd>
             ) : null}
           </div>
-          <div className="min-w-0 rounded-lg bg-hero-bg/60 px-2 py-2">
-            <dt className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-muted">
+          <div className="min-w-0 rounded-lg bg-hero-bg/60 px-2 py-2 max-sm:px-1.5 max-sm:py-1.5">
+            <dt className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-muted max-sm:text-[8px]">
               <Users className="size-3 shrink-0" aria-hidden="true" />
               Apps
             </dt>
-            <dd className="mt-1 text-sm font-bold tabular-nums text-foreground">
+            <dd className="mt-1 text-sm font-bold tabular-nums text-foreground max-sm:text-xs">
               {job.applications.toLocaleString("en-IN")}
             </dd>
             {job.applicationsToday > 0 ? (

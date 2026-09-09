@@ -3,6 +3,19 @@ export const JOB_SEEKER_REGISTRATION_STATUSES = [
   "COMPLETED",
 ] as const;
 
+/**
+ * Runtime account lifecycle (independent of registrationStatus).
+ * Missing / legacy documents are treated as active.
+ */
+export const JOB_SEEKER_ACCOUNT_STATUSES = [
+  "active",
+  "blocked",
+  "suspended",
+] as const;
+
+export type JobSeekerAccountStatus =
+  (typeof JOB_SEEKER_ACCOUNT_STATUSES)[number];
+
 export const JOB_SEEKER_GENDERS = [
   "male",
   "female",

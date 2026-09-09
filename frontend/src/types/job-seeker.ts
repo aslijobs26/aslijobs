@@ -86,9 +86,6 @@ export type JobSeekerProfileVisibility =
 
 export type JobSeekerProfilePhoto = {
   url: string;
-  storagePath: string;
-  publicId: string;
-  storageProvider: string;
   originalName: string;
   mimeType: string;
   fileSize: number;
@@ -118,6 +115,7 @@ export type JobSeekerPublic = {
   skills?: string[];
   profileVisibility?: JobSeekerProfileVisibility;
   profilePhoto?: JobSeekerProfilePhoto | null;
+  accountStatus?: "active" | "blocked" | "suspended" | string;
   isWhatsappVerified: boolean;
   registrationStatus: "PENDING" | "COMPLETED" | string;
   lastLoginAt?: string | null;

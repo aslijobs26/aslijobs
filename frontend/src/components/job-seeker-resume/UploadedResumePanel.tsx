@@ -4,12 +4,12 @@ import {
   formatResumeFileSize,
 } from "@/constants/job-seeker-resume";
 import { ROUTES } from "@/constants/routes";
+import { downloadMyUploadedResumeFile } from "@/services/job-seeker-resume.service";
 import type {
   ApplicationResumeSource,
   PublicUploadedResume,
 } from "@/types/job-seeker-resume";
 import { cn } from "@/utils/cn";
-import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import {
   Download,
   Eye,
@@ -19,6 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 type UploadedResumePanelProps = {
   uploadedResume: PublicUploadedResume | null;
@@ -72,11 +73,29 @@ export function UploadedResumePanel({
   onSetDefault,
 }: UploadedResumePanelProps) {
   const isDefault = defaultResumeSource === "uploaded";
-  const resolvedFileUrl = resolveMediaUrl(uploadedResume?.fileUrl);
+  const [isDownloading, setIsDownloading] = useState(false);
   const isPdf =
     Boolean(uploadedResume) &&
     (uploadedResume!.mimeType.includes("pdf") ||
       uploadedResume!.fileName.toLowerCase().endsWith(".pdf"));
+
+  const handleDownload = async () => {
+    if (!uploadedResume || isDownloading) {
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      const { blob, fileName } = await downloadMyUploadedResumeFile();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = fileName || uploadedResume.fileName;
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <section className="resume-no-print rounded-2xl border border-border-subtle bg-surface p-3.5 shadow-sm sm:p-5">
@@ -173,7 +192,7 @@ export function UploadedResumePanel({
               isPdf ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3",
             )}
           >
-            {resolvedFileUrl && isPdf ? (
+            {isPdf ? (
               <Link
                 href={ROUTES.JOB_SEEKER_UPLOADED_RESUME_PREVIEW}
                 target="_blank"
@@ -187,22 +206,19 @@ export function UploadedResumePanel({
                 Preview
               </Link>
             ) : null}
-            {resolvedFileUrl ? (
-              <a
-                href={resolvedFileUrl}
-                download={uploadedResume.fileName}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  actionClassName,
-                  "bg-primary text-surface hover:bg-primary-hover",
-                  !isPdf && "sm:col-span-1",
-                )}
-              >
-                <Download className="size-3.5 shrink-0" aria-hidden="true" />
-                Download
-              </a>
-            ) : null}
+            <button
+              type="button"
+              disabled={isBusy || isDownloading}
+              onClick={() => void handleDownload()}
+              className={cn(
+                actionClassName,
+                "bg-primary text-surface hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50",
+                !isPdf && "sm:col-span-1",
+              )}
+            >
+              <Download className="size-3.5 shrink-0" aria-hidden="true" />
+              Download
+            </button>
             <button
               type="button"
               disabled={isBusy}

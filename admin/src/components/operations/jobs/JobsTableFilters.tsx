@@ -131,7 +131,7 @@ export function JobsTableFilters({
       </div>
 
       <div
-        className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-3"
+        className="grid min-w-0 grid-cols-2 gap-1.5 max-[360px]:grid-cols-1 sm:grid-cols-3"
         role="group"
         aria-label="Job table filters"
       >

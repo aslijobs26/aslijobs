@@ -1,4 +1,5 @@
 import type {
+  OperationsEmployerListItem,
   OperationsEmployerStatus,
   OperationsEmployerVerificationStatus,
 } from "../../../types/operations-employers";
@@ -107,5 +108,28 @@ export function formatIndustryOrCategory(val: string | null | undefined): string
     .replace(/\bAi\b/g, "AI")
     .replace(/\bBpo\b/g, "BPO")
     .replace(/\bKpo\b/g, "KPO");
+}
+
+/** Same industry / account fallback used by the employers table. */
+export function industryOrAccountLabel(
+  employer: OperationsEmployerListItem,
+): string {
+  const industry = employer.industry?.trim();
+  if (industry && industry !== "—") return industry;
+
+  const accountType = employer.accountType?.toLowerCase().trim() || "";
+  if (accountType === "individual") return "Individual account";
+
+  if (accountType === "consultancy" || accountType === "company") {
+    const name =
+      employer.companyName?.trim() || employer.displayName?.trim() || "";
+    if (name && name !== "—") return name;
+    return accountType === "consultancy" ? "Consultancy" : "Company";
+  }
+
+  const organizationType = employer.organizationType?.trim();
+  if (organizationType && organizationType !== "—") return organizationType;
+
+  return "—";
 }
 

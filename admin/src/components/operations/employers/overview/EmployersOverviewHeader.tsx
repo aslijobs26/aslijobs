@@ -53,10 +53,10 @@ export function EmployersOverviewHeader({
   const toPickerId = useId();
 
   return (
-    <header className="flex min-w-0 flex-col gap-3">
+    <header className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5 max-sm:gap-2">
       <nav
         aria-label="Breadcrumb"
-        className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted"
+        className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted max-sm:text-[10px]"
       >
         <Link
           to={OPERATIONS_ROUTES.HOME}
@@ -68,18 +68,18 @@ export function EmployersOverviewHeader({
         <span className="font-semibold text-foreground">Employers</span>
       </nav>
 
-      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
+          <h1 className="text-xl font-bold tracking-tight text-foreground max-lg:text-lg max-sm:text-base">
             Employers Overview
           </h1>
-          <p className="mt-0.5 text-xs text-muted">
+          <p className="mt-0.5 text-xs text-muted max-sm:text-[11px] max-sm:leading-snug">
             Track registrations, verification, and hiring activity across the
             employer network.
           </p>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
           <OperationsFilterSelect
             label="Date range"
             value={preset}
@@ -88,11 +88,11 @@ export function EmployersOverviewHeader({
               onPresetChange(value as OperationsEmployersAnalyticsPreset)
             }
             hideSearch
-            className="sm:w-[10.5rem]"
+            className="w-full min-w-0 sm:w-[10.5rem]"
           />
 
           {preset === "custom" ? (
-            <div className="grid grid-cols-2 gap-2 sm:w-[18rem]">
+            <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:w-[18rem]">
               <OperationsDatePicker
                 id={fromPickerId}
                 value={dateFrom}
@@ -118,24 +118,26 @@ export function EmployersOverviewHeader({
             </div>
           ) : null}
 
-          <button
-            type="button"
-            onClick={onExport}
-            disabled={isExporting}
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
-          >
-            <Download className="size-3.5" aria-hidden="true" />
-            {isExporting ? "Exporting…" : "Export"}
-          </button>
+          <div className="flex min-w-0 flex-wrap items-center gap-2 max-sm:w-full">
+            <button
+              type="button"
+              onClick={onExport}
+              disabled={isExporting}
+              className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 max-sm:min-w-[7.5rem] sm:flex-none"
+            >
+              <Download className="size-3.5" aria-hidden="true" />
+              {isExporting ? "Exporting…" : "Export"}
+            </button>
 
-          <button
-            type="button"
-            onClick={onAddEmployer}
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          >
-            <Plus className="size-3.5" aria-hidden="true" />
-            Add Employer
-          </button>
+            <button
+              type="button"
+              onClick={onAddEmployer}
+              className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
+            >
+              <Plus className="size-3.5" aria-hidden="true" />
+              Add Employer
+            </button>
+          </div>
         </div>
       </div>
     </header>

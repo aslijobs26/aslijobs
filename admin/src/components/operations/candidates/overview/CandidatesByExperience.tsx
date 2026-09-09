@@ -12,11 +12,11 @@ export function CandidatesByExperience({ items }: { items: OperationsCandidatesA
       className="candidates-analytics-card min-w-0"
     >
       {items.length === 0 ? (
-        <p className="flex min-h-44 items-center justify-center text-center text-xs text-muted xl:min-h-36">
+        <p className="flex min-h-44 items-center justify-center text-center text-xs text-muted max-sm:min-h-36 xl:min-h-36">
           No experience data available.
         </p>
       ) : (
-        <div className="h-52 min-w-0 sm:h-56 xl:h-40">
+        <div className="h-52 min-w-0 max-sm:h-44 sm:h-56 xl:h-40">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={items.slice(0, 8)} margin={{ top: 12, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke={colors.borderSubtle} strokeDasharray="4 6" />

@@ -23,8 +23,6 @@ import { EmployerModel } from "../../employers/employer.model.js";
 import { JobModel } from "../../jobs/job.model.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import { calculateProfileCompleteness } from "../../resumes/utils/profile-completeness.js";
-import { createReadStream, existsSync } from "node:fs";
-import path from "node:path";
 import type { Readable } from "node:stream";
 import type {
   ListOperationsCandidateApplicationsQuery,
@@ -335,9 +333,27 @@ function experienceLabelFromSeeker(jobSeeker: {
   return "";
 }
 
+function hasJobSeekerProfilePhoto(
+  photo:
+    | {
+        url?: string | null;
+        storagePath?: string | null;
+      }
+    | null
+    | undefined,
+): boolean {
+  return Boolean(photo?.storagePath?.trim() || photo?.url?.trim());
+}
+
+/** Relative API path for authenticated Ops candidate photo delivery. */
+export function buildOperationsCandidatePhotoPath(jobSeekerId: string): string {
+  return `/operations/candidates/seekers/${encodeURIComponent(jobSeekerId)}/photo`;
+}
+
 function candidateFromSources(
   snapshot: ApplicationResumeSnapshot | null,
   jobSeeker: {
+    _id?: unknown;
     fullName?: string;
     whatsappNumber?: string;
     city?: string;
@@ -348,9 +364,13 @@ function candidateFromSources(
     experienceType?: string | null;
     experiences?: Array<{ duration?: string }> | null;
     jobRole?: string | null;
-    profilePhoto?: { url?: string } | null;
+    profilePhoto?: {
+      url?: string | null;
+      storagePath?: string | null;
+    } | null;
     createdAt?: Date;
   } | null,
+  jobSeekerIdHint?: string,
 ) {
   const header = snapshot?.resumeJson?.header;
   const contact = snapshot?.resumeJson?.sections?.contact;
@@ -393,6 +413,10 @@ function candidateFromSources(
       ? jobSeeker.skills.map((item) => text(item)).filter(Boolean)
       : [];
 
+  const resolvedSeekerId =
+    jobSeekerIdHint?.trim() ||
+    (jobSeeker?._id != null ? String(jobSeeker._id) : "");
+
   return {
     fullName,
     phone,
@@ -404,7 +428,10 @@ function candidateFromSources(
     experienceLabel,
     skills,
     gender: text(jobSeeker?.gender),
-    profilePhotoUrl: text(jobSeeker?.profilePhoto?.url),
+    profilePhotoUrl:
+      hasJobSeekerProfilePhoto(jobSeeker?.profilePhoto) && resolvedSeekerId
+        ? buildOperationsCandidatePhotoPath(resolvedSeekerId)
+        : "",
     registeredAt: jobSeeker?.createdAt
       ? jobSeeker.createdAt.toISOString()
       : null,
@@ -1286,7 +1313,7 @@ type SeekerListRow = {
   registrationStatus?: string;
   isWhatsappVerified?: boolean;
   lastLoginAt?: Date | null;
-  profilePhoto?: { url?: string } | null;
+  profilePhoto?: { url?: string | null; storagePath?: string | null } | null;
   createdAt?: Date;
   operationsRegistrationAwareness?: {
     state?: string | null;
@@ -1318,20 +1345,26 @@ type SeekerListRow = {
 
 function toListItemFromSeeker(row: SeekerListRow): OperationsCandidateListItem {
   const app = row.app ?? null;
-  const candidate = candidateFromSources(asSnapshot(app?.resumeSnapshot), {
-    fullName: row.fullName,
-    whatsappNumber: row.whatsappNumber,
-    city: row.city,
-    state: row.state,
-    preferredJobLocation: row.preferredJobLocation,
-    skills: row.skills,
-    gender: row.gender,
-    experienceType: row.experienceType,
-    experiences: row.experiences,
-    jobRole: row.jobRole,
-    profilePhoto: row.profilePhoto,
-    createdAt: row.createdAt,
-  });
+  const jobSeekerId = String(row._id);
+  const candidate = candidateFromSources(
+    asSnapshot(app?.resumeSnapshot),
+    {
+      _id: row._id,
+      fullName: row.fullName,
+      whatsappNumber: row.whatsappNumber,
+      city: row.city,
+      state: row.state,
+      preferredJobLocation: row.preferredJobLocation,
+      skills: row.skills,
+      gender: row.gender,
+      experienceType: row.experienceType,
+      experiences: row.experiences,
+      jobRole: row.jobRole,
+      profilePhoto: row.profilePhoto,
+      createdAt: row.createdAt,
+    },
+    jobSeekerId,
+  );
 
   const employerName =
     row.employer?.companyName?.trim() ||
@@ -1354,8 +1387,6 @@ function toListItemFromSeeker(row: SeekerListRow): OperationsCandidateListItem {
     state: row.state,
     preferredJobLocation: row.preferredJobLocation,
   });
-
-  const jobSeekerId = String(row._id);
 
   return {
     id: jobSeekerId,
@@ -1493,6 +1524,7 @@ function buildDetailFromSeeker(input: {
   const snapshotSkills = candidateFromSources(
     asSnapshot(input.latestApplication?.resumeSnapshot),
     {
+      _id: jobSeeker._id,
       fullName: text(jobSeeker.fullName),
       whatsappNumber: text(jobSeeker.whatsappNumber),
       city: text(jobSeeker.city),
@@ -1508,6 +1540,7 @@ function buildDetailFromSeeker(input: {
       profilePhoto: jobSeeker.profilePhoto,
       createdAt: jobSeeker.createdAt,
     },
+    String(jobSeeker._id),
   ).skills;
 
   return {
@@ -1984,78 +2017,63 @@ export const operationsCandidatesService = {
     }
 
     const resume = jobSeeker.uploadedResume;
-    const fileName =
-      text(resume?.originalName) ||
-      `${text(jobSeeker.fullName) || "candidate"}-resume.pdf`;
-    const mimeType = text(resume?.mimeType) || "application/octet-stream";
-    const storagePath = text(resume?.storagePath);
-    const remoteUrl = text(resume?.url);
-
-    if (storagePath) {
-      const absolutePath = path.isAbsolute(storagePath)
-        ? storagePath
-        : path.resolve(process.cwd(), storagePath);
-      if (!existsSync(absolutePath)) {
-        throw new AppError("Resume file not found.", HTTP_STATUS.NOT_FOUND);
-      }
-      return {
-        stream: createReadStream(absolutePath),
-        mimeType,
-        fileName,
-      };
-    }
-
-    if (remoteUrl) {
-      const absoluteUrl = remoteUrl.startsWith("http")
-        ? remoteUrl
-        : remoteUrl.startsWith("/")
-          ? remoteUrl
-          : `/${remoteUrl}`;
-
-      // Local relative public URL → filesystem
-      if (!absoluteUrl.startsWith("http")) {
-        const localPath = path.resolve(
-          process.cwd(),
-          absoluteUrl.replace(/^\//, ""),
-        );
-        if (!existsSync(localPath)) {
-          throw new AppError("Resume file not found.", HTTP_STATUS.NOT_FOUND);
-        }
-        return {
-          stream: createReadStream(localPath),
-          mimeType,
-          fileName,
-        };
-      }
-
-      const response = await fetch(absoluteUrl);
-      if (!response.ok || !response.body) {
-        throw new AppError(
-          "Unable to load resume file.",
-          HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        );
-      }
-
-      const { Readable } = await import("node:stream");
-      const stream = Readable.fromWeb(
-        response.body as import("stream/web").ReadableStream,
+    if (!resume?.storagePath && !resume?.url) {
+      throw new AppError(
+        "No resume uploaded for this candidate.",
+        HTTP_STATUS.NOT_FOUND,
       );
-      const contentLengthHeader = response.headers.get("content-length");
-      const contentLength = contentLengthHeader
-        ? Number(contentLengthHeader)
-        : undefined;
-
-      return {
-        stream,
-        mimeType: response.headers.get("content-type") || mimeType,
-        fileName,
-        contentLength:
-          contentLength && Number.isFinite(contentLength)
-            ? contentLength
-            : undefined,
-      };
     }
 
-    throw new AppError("No resume uploaded for this candidate.", HTTP_STATUS.NOT_FOUND);
+    const { openPrivateFileStream } = await import(
+      "../../storage/private-file.service.js"
+    );
+    const file = await openPrivateFileStream({
+      storagePath: resume?.storagePath,
+      storageProvider: resume?.storageProvider,
+      publicId: resume?.publicId,
+      url: resume?.url,
+      mimeType: resume?.mimeType,
+      originalName:
+        text(resume?.originalName) ||
+        `${text(jobSeeker.fullName) || "candidate"}-resume.pdf`,
+    });
+
+    return file;
+  },
+
+  async openCandidatePhoto(jobSeekerId: string): Promise<{
+    stream: Readable;
+    mimeType: string;
+    fileName: string;
+    contentLength?: number;
+  }> {
+    if (!mongoose.Types.ObjectId.isValid(jobSeekerId)) {
+      throw new AppError("Candidate not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const jobSeeker = await JobSeekerModel.findById(jobSeekerId)
+      .select({ profilePhoto: 1, fullName: 1 })
+      .lean();
+
+    if (!jobSeeker) {
+      throw new AppError("Candidate not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const photo = jobSeeker.profilePhoto;
+    if (!hasJobSeekerProfilePhoto(photo)) {
+      throw new AppError("Profile photo not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const { openPrivateFileStream } = await import(
+      "../../storage/private-file.service.js"
+    );
+    return openPrivateFileStream({
+      storagePath: photo?.storagePath,
+      storageProvider: photo?.storageProvider,
+      publicId: photo?.publicId,
+      url: photo?.url,
+      mimeType: photo?.mimeType || "image/jpeg",
+      originalName: photo?.originalName || "profile-photo",
+    });
   },
 };

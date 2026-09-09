@@ -111,8 +111,8 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
     trendPointCount <= 14 ? "28%" : trendPointCount <= 26 ? "22%" : "18%";
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
+      <div className="grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
         <OperationsCard
           title="Job Postings Trend"
           subtitle={
@@ -125,7 +125,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
           {!hasTrend ? (
             <EmptyState message="No posting activity in this period." />
           ) : (
-            <div className="h-52 min-w-0 sm:h-56 xl:h-44">
+            <div className="h-52 min-w-0 max-sm:h-44 sm:h-56 xl:h-44">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={postingsTrend}
@@ -196,8 +196,8 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
           {statusTotal === 0 ? (
             <EmptyState message="No status data available." />
           ) : (
-            <div className="flex min-h-28 min-w-0 flex-col gap-4 sm:flex-row sm:items-center xl:min-h-24 xl:gap-2.5">
-              <div className="relative mx-auto size-36 shrink-0 xl:size-24">
+            <div className="flex min-h-28 min-w-0 flex-col gap-4 max-sm:min-h-24 max-sm:gap-3 sm:flex-row sm:items-center xl:min-h-24 xl:gap-2.5">
+              <div className="relative mx-auto size-36 shrink-0 max-sm:size-32 xl:size-24">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -225,7 +225,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-xl font-bold leading-none text-foreground xl:text-base">
+                  <span className="text-xl font-bold leading-none text-foreground max-sm:text-lg xl:text-base">
                     {statusTotal.toLocaleString("en-IN")}
                   </span>
                   <span className="mt-1 text-[10px] font-medium text-muted xl:mt-0.5 xl:text-[9px]">
@@ -302,8 +302,8 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
           {employmentTotal === 0 ? (
             <EmptyState message="No employment type data available." />
           ) : (
-            <div className="flex min-h-28 min-w-0 flex-col gap-4 sm:flex-row sm:items-center xl:min-h-24 xl:gap-2.5">
-              <div className="relative mx-auto size-36 shrink-0 xl:size-24">
+            <div className="flex min-h-28 min-w-0 flex-col gap-4 max-sm:min-h-24 max-sm:gap-3 sm:flex-row sm:items-center xl:min-h-24 xl:gap-2.5">
+              <div className="relative mx-auto size-36 shrink-0 max-sm:size-32 xl:size-24">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -331,7 +331,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-xl font-bold leading-none text-foreground xl:text-base">
+                  <span className="text-xl font-bold leading-none text-foreground max-sm:text-lg xl:text-base">
                     {employmentTotal.toLocaleString("en-IN")}
                   </span>
                   <span className="mt-1 text-[10px] font-medium text-muted xl:mt-0.5 xl:text-[9px]">

@@ -8,6 +8,7 @@ import {
   canOperationsPermission,
   type OperationsPermissionMap,
 } from "../auth/operations-rbac.js";
+import { PENDING_VERIFICATION_FILTER } from "../verifications/operations-verifications-analytics.js";
 import {
   OPERATIONS_REGISTRATION_RECENT_LIMIT,
   type OperationsRegistrationEntityType,
@@ -92,14 +93,13 @@ async function countPendingApprovalJobs(): Promise<number> {
   return pendingStatus + pendingLiveChange;
 }
 
+/**
+ * Nav badge: employers still awaiting a verification decision.
+ * Uses the same PENDING_VERIFICATION_FILTER as Verifications analytics
+ * (excludes WhatsApp+completed verified heuristic; includes pending + under review).
+ */
 async function countPendingVerifications(): Promise<number> {
-  return EmployerModel.countDocuments({
-    registrationStatus: "completed",
-    $or: [
-      { verificationStatus: "pending" },
-      { verificationStatus: { $in: [null, ""] } },
-    ],
-  });
+  return EmployerModel.countDocuments(PENDING_VERIFICATION_FILTER);
 }
 
 async function buildEmployerMetrics(

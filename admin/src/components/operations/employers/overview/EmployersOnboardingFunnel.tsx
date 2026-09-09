@@ -48,25 +48,25 @@ export function EmployersOnboardingFunnel({
 
   return (
     <section className="employers-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <header className="flex shrink-0 items-center justify-between gap-2 px-3 pt-2.5 sm:px-3.5 sm:pt-3 xl:px-3 xl:pt-2">
-        <h3 className="text-[13px] font-semibold tracking-tight text-foreground xl:text-[12px]">
+      <header className="flex shrink-0 items-center justify-between gap-2 px-3 pt-2.5 max-sm:gap-1.5 max-sm:px-2.5 max-sm:pt-2 sm:px-3.5 sm:pt-3 xl:px-3 xl:pt-2">
+        <h3 className="text-[13px] font-semibold tracking-tight text-foreground max-sm:text-[12px] xl:text-[12px]">
           Onboarding Funnel
         </h3>
         <Link
           to={`${OPERATIONS_ROUTES.EMPLOYERS}?tab=verificationPending`}
-          className="shrink-0 text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:text-[11px]"
+          className="shrink-0 text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:text-[11px] xl:text-[11px]"
         >
           View details →
         </Link>
       </header>
 
-      <div className="min-h-0 flex-1 px-3 pb-3 pt-3 sm:px-3.5 sm:pb-3.5 xl:px-3 xl:pb-2.5 xl:pt-2.5">
+      <div className="min-h-0 flex-1 px-3 pb-3 pt-3 max-sm:px-2.5 max-sm:pb-2.5 max-sm:pt-2.5 sm:px-3.5 sm:pb-3.5 xl:px-3 xl:pb-2.5 xl:pt-2.5">
         {isLoading ? (
-          <div className="flex min-h-[11rem] flex-col justify-center gap-3 xl:min-h-36 xl:gap-2" aria-hidden="true">
+          <div className="flex min-h-[11rem] flex-col justify-center gap-3 max-sm:min-h-36 max-sm:gap-2.5 xl:min-h-36 xl:gap-2" aria-hidden="true">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 key={index}
-                className="grid animate-pulse grid-cols-[6.75rem_minmax(0,1fr)_auto_auto] items-center gap-x-2.5 sm:grid-cols-[8.5rem_minmax(0,1fr)_auto_auto] sm:gap-x-3"
+                className="grid animate-pulse grid-cols-[minmax(0,5.25rem)_minmax(0,1fr)_auto_auto] items-center gap-x-2 max-sm:gap-x-1.5 sm:grid-cols-[8.5rem_minmax(0,1fr)_auto_auto] sm:gap-x-3"
               >
                 <div className="h-3 rounded bg-hero-bg" />
                 <div className="h-3.5 rounded bg-hero-bg xl:h-3" />
@@ -95,7 +95,7 @@ export function EmployersOnboardingFunnel({
             No onboarding funnel data available
           </p>
         ) : (
-          <ul className="flex min-h-[11rem] flex-col justify-center gap-3 xl:min-h-36 xl:gap-2">
+          <ul className="flex min-h-[11rem] flex-col justify-center gap-3 max-sm:min-h-36 max-sm:gap-2.5 xl:min-h-36 xl:gap-2">
             {displayStages.map((stage, index) => {
               const tone = resolveBarTone(
                 stage.id,
@@ -110,14 +110,14 @@ export function EmployersOnboardingFunnel({
               return (
                 <li
                   key={stage.id}
-                  className="grid grid-cols-[6.75rem_minmax(0,1fr)_auto_auto] items-center gap-x-2.5 sm:grid-cols-[8.5rem_minmax(0,1fr)_auto_auto] sm:gap-x-3"
+                  className="grid grid-cols-[minmax(0,5.25rem)_minmax(0,1fr)_auto_auto] items-center gap-x-2 max-sm:gap-x-1.5 sm:grid-cols-[8.5rem_minmax(0,1fr)_auto_auto] sm:gap-x-3"
                 >
-                  <span className="truncate text-[11px] font-medium text-foreground sm:text-[12px] xl:text-[11px]">
+                  <span className="truncate text-[11px] font-medium text-foreground max-sm:text-[10px] sm:text-[12px] xl:text-[11px]">
                     {stage.label}
                   </span>
 
                   <div
-                    className="h-3.5 w-full overflow-hidden rounded bg-[#EEF2F6] dark:bg-hero-bg xl:h-3"
+                    className="h-3.5 w-full min-w-0 overflow-hidden rounded bg-[#EEF2F6] dark:bg-hero-bg xl:h-3"
                     role="progressbar"
                     aria-label={`${stage.label}: ${percent}%`}
                     aria-valuenow={percent}

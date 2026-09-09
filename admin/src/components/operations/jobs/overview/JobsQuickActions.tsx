@@ -22,14 +22,14 @@ export function JobsQuickActions({
   onCheckAtRisk,
 }: JobsQuickActionsProps) {
   const className =
-    "group flex w-full items-center gap-2.5 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 text-left transition-colors hover:border-primary/25 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:gap-2 xl:px-2.5 xl:py-2";
+    "group flex w-full items-center gap-2.5 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 text-left transition-colors hover:border-primary/25 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:gap-2 max-sm:px-2.5 max-sm:py-2 xl:gap-2 xl:px-2.5 xl:py-2";
 
   const content = (label: string, Icon: LucideIcon) => (
     <>
-      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary xl:size-7">
-        <Icon className="size-4 xl:size-3.5" aria-hidden="true" />
+      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary max-sm:size-7 xl:size-7">
+        <Icon className="size-4 max-sm:size-3.5 xl:size-3.5" aria-hidden="true" />
       </span>
-      <span className="min-w-0 flex-1 text-[12px] font-semibold text-foreground xl:text-[11px]">
+      <span className="min-w-0 flex-1 text-[12px] font-semibold text-foreground max-sm:text-[11px] xl:text-[11px]">
         {label}
       </span>
       <ArrowRight

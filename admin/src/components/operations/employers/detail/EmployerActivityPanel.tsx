@@ -65,30 +65,35 @@ export function EmployerActivityPanel({ employer }: EmployerActivityPanelProps) 
   ];
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
-      <div className="flex items-center gap-2 border-b border-border-subtle pb-3">
-        <Activity className="size-4 text-primary" />
-        <h3 className="text-sm font-bold text-foreground">
+    <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm max-sm:rounded-lg max-sm:p-2 sm:p-4 lg:p-5">
+      <div className="flex items-center gap-1.5 border-b border-border-subtle pb-2 max-sm:pb-1.5 sm:gap-2 sm:pb-3">
+        <Activity className="size-3.5 text-primary sm:size-4" />
+        <h3 className="text-[12px] font-bold text-foreground sm:text-sm">
           Account Activity & History
         </h3>
       </div>
 
-      <div className="mt-4 space-y-4">
+      <div className="mt-2.5 space-y-3 max-sm:mt-2 max-sm:space-y-2.5 sm:mt-4 sm:space-y-4">
         {events.map((evt, idx) => {
           const Icon = evt.icon;
           return (
-            <div key={idx} className="flex items-start gap-3 text-xs">
+            <div
+              key={idx}
+              className="flex items-start gap-2 text-[11px] max-sm:gap-2 sm:gap-3 sm:text-xs"
+            >
               <span
-                className={`inline-flex size-8 shrink-0 items-center justify-center rounded-lg ${evt.iconBg} ${evt.iconColor}`}
+                className={`inline-flex size-7 shrink-0 items-center justify-center rounded-md sm:size-8 sm:rounded-lg ${evt.iconBg} ${evt.iconColor}`}
               >
-                <Icon className="size-4" />
+                <Icon className="size-3.5 sm:size-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                   <h4 className="font-semibold text-foreground">{evt.title}</h4>
-                  <span className="text-[11px] text-muted">{evt.date}</span>
+                  <span className="text-[10px] text-muted sm:text-[11px]">
+                    {evt.date}
+                  </span>
                 </div>
-                <p className="mt-0.5 text-muted">{evt.description}</p>
+                <p className="mt-0.5 leading-snug text-muted">{evt.description}</p>
               </div>
             </div>
           );

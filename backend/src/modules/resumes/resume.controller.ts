@@ -58,6 +58,25 @@ export class ResumeController {
     res.status(HTTP_STATUS.OK).send(pdf.buffer);
   };
 
+  downloadUploadedFile = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const jobSeekerId = requireAuthenticatedJobSeekerId(req);
+    const file = await uploadedResumeService.openOwnUploadedFile(jobSeekerId);
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${file.fileName.replace(/"/g, "")}"`,
+    );
+    if (file.contentLength != null) {
+      res.setHeader("Content-Length", String(file.contentLength));
+    }
+    res.setHeader("Cache-Control", "private, no-store");
+    res.status(HTTP_STATUS.OK);
+    file.stream.pipe(res);
+  };
+
   uploadOwn = async (req: Request, res: Response): Promise<void> => {
     const jobSeekerId = requireAuthenticatedJobSeekerId(req);
     const result = await uploadedResumeService.upload({

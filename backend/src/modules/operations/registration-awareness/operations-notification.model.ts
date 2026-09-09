@@ -1,11 +1,11 @@
 import { Schema, model, type InferSchemaType, type Types } from "mongoose";
 import {
-  OPERATIONS_REGISTRATION_ENTITY_TYPES,
-  OPERATIONS_REGISTRATION_NOTIFICATION_TYPES,
+  OPERATIONS_NOTIFICATION_ENTITY_TYPES,
+  OPERATIONS_NOTIFICATION_TYPES,
 } from "./operations-registration-awareness.constants.js";
 
 /**
- * Workspace-scoped Operations notifications for registration awareness.
+ * Workspace-scoped Operations notifications (registration + job moderation).
  * Separate from employer/job-seeker `notifications` (recipient-bound inbox).
  *
  * Read state is per Operations user via `reads[]`.
@@ -37,7 +37,7 @@ const operationsNotificationSchema = new Schema(
     },
     type: {
       type: String,
-      enum: OPERATIONS_REGISTRATION_NOTIFICATION_TYPES,
+      enum: OPERATIONS_NOTIFICATION_TYPES,
       required: true,
       index: true,
     },
@@ -53,7 +53,7 @@ const operationsNotificationSchema = new Schema(
     },
     entityType: {
       type: String,
-      enum: OPERATIONS_REGISTRATION_ENTITY_TYPES,
+      enum: OPERATIONS_NOTIFICATION_ENTITY_TYPES,
       required: true,
       index: true,
     },

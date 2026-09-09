@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { ChevronsLeft, MapPinned, X } from "lucide-react";
+import { ChevronsLeft, X } from "lucide-react";
 import { useMemo, type CSSProperties } from "react";
+import indiaStatesMap from "../../../assets/india-states-map.json";
 import {
   OPERATIONS_BRAND,
   OPERATIONS_NAV_ITEM_PERMISSION_MODULE,
@@ -430,26 +431,22 @@ export function OperationsSidebar({
               />
             </button>
           ) : (
-            <div className="relative overflow-hidden rounded-xl border border-border-subtle bg-hero-bg/70 p-2.5">
-              <svg
-                viewBox="0 0 80 90"
-                className="pointer-events-none absolute -right-1 bottom-0 h-[4.5rem] w-auto opacity-[0.12]"
-                aria-hidden="true"
-              >
-                <path
-                  d="M40 6c8 2 16 8 22 16 5 7 8 16 7 24-1 9-6 17-13 23-6 5-13 9-20 10-8-1-16-5-22-12-6-7-10-16-10-25 0-9 4-18 11-24C22 11 31 5 40 6z"
-                  fill="currentColor"
-                  className="text-foreground"
-                />
-              </svg>
-              <div className="relative flex items-start gap-2.5">
-                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
-                  <MapPinned
-                    className="size-4"
-                    strokeWidth={2}
-                    aria-hidden="true"
-                  />
-                </span>
+            <div className="rounded-xl border border-border-subtle bg-hero-bg/70 p-2.5">
+              <div className="flex items-center gap-2.5">
+                <svg
+                  viewBox={indiaStatesMap.viewBox}
+                  className="h-11 w-auto max-w-[2.75rem] shrink-0 text-[#B7C2D1]"
+                  role="img"
+                  aria-label="Map of India"
+                >
+                  {indiaStatesMap.features.map((feature) => (
+                    <path
+                      key={feature.id}
+                      d={feature.d}
+                      fill="currentColor"
+                    />
+                  ))}
+                </svg>
                 <div className="min-w-0">
                   <p className="text-[12px] font-semibold text-foreground">
                     India

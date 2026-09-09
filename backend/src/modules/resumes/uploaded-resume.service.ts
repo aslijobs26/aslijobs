@@ -2,9 +2,9 @@ import path from "node:path";
 import mongoose from "mongoose";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
-import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
 import { STORAGE_FOLDERS } from "../storage/storage.constants.js";
 import { storageService } from "../storage/storage.service.js";
+import { openPrivateFileStream } from "../storage/private-file.service.js";
 import {
   APPLICATION_RESUME_SOURCES,
   JOB_SEEKER_UPLOADED_RESUME_EXTENSIONS,
@@ -12,6 +12,8 @@ import {
   JOB_SEEKER_UPLOADED_RESUME_MIME_TYPES,
 } from "./resume.constants.js";
 import type { ApplicationResumeSource, PublicUploadedResume } from "./resume.types.js";
+import { assertJobSeekerAccountActive } from "../job-seekers/job-seeker-account-status.js";
+import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
 
 function hasAllowedExtension(originalName: string): boolean {
   const extension = path.extname(originalName).toLowerCase();
@@ -42,7 +44,8 @@ function toPublicUploadedResume(value: {
 
   return {
     fileName: value.originalName?.trim() || "resume",
-    fileUrl: value.url?.trim() || "",
+    /** Authenticated download — never a public /uploads or Cloudinary URL. */
+    fileUrl: "/api/v1/resumes/me/uploaded/file",
     mimeType: value.mimeType?.trim() || "",
     fileSize: typeof value.fileSize === "number" ? value.fileSize : 0,
     storageProvider: value.storageProvider?.trim() || "",
@@ -264,6 +267,35 @@ export class UploadedResumeService {
       uploadedResume,
       defaultResumeSource: input.source,
     };
+  }
+
+  async openOwnUploadedFile(jobSeekerId: string) {
+    if (!mongoose.Types.ObjectId.isValid(jobSeekerId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const jobSeeker = await JobSeekerModel.findById(jobSeekerId).select(
+      "uploadedResume accountStatus registrationStatus isWhatsappVerified",
+    );
+    if (!jobSeeker) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    assertJobSeekerAccountActive(jobSeeker.accountStatus);
+
+    const uploaded = jobSeeker.uploadedResume;
+    if (!uploaded?.storagePath && !uploaded?.url) {
+      throw new AppError("Uploaded resume not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    return openPrivateFileStream({
+      storagePath: uploaded?.storagePath,
+      storageProvider: uploaded?.storageProvider,
+      publicId: uploaded?.publicId,
+      url: uploaded?.url,
+      mimeType: uploaded?.mimeType,
+      originalName: uploaded?.originalName,
+    });
   }
 
   getUploadedSnapshotForApply(jobSeekerId: string) {

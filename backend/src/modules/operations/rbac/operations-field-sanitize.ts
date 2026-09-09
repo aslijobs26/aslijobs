@@ -163,10 +163,41 @@ export function sanitizeCandidateDetail(
     omitKey(next, "candidatePincode");
     next.preferredLocations = [];
   }
+  if (!operationsAccessCanKey(access, CANDIDATE_FIELD_PERMISSION_KEYS.dob)) {
+    omitKey(next, "dateOfBirth");
+  }
+  if (
+    !operationsAccessCanKey(
+      access,
+      CANDIDATE_FIELD_PERMISSION_KEYS.expectedSalary,
+    )
+  ) {
+    omitKey(next, "expectedSalary");
+    omitKey(next, "expectedSalaryPeriod");
+  }
+  if (
+    !operationsAccessCanKey(
+      access,
+      CANDIDATE_FIELD_PERMISSION_KEYS.currentSalary,
+    )
+  ) {
+    if (Array.isArray(next.experiences)) {
+      next.experiences = next.experiences.map((entry) => {
+        const copy = { ...entry };
+        omitKey(copy, "salary");
+        return copy;
+      });
+    }
+  }
   if (!operationsAccessCanKey(access, "candidates.profile.documents.view")) {
     omitKey(next, "uploadedResumeUrl");
     omitKey(next, "uploadedResumeName");
     omitKey(next, "hasUploadedResume");
+  } else {
+    // Never expose raw storage URLs — Ops must use the secure resume endpoint.
+    if ("uploadedResumeUrl" in next) {
+      next.uploadedResumeUrl = "";
+    }
   }
   return next;
 }

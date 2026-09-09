@@ -100,20 +100,20 @@ function errorMessage(error: unknown, fallback: string): string {
 
 function AnalyticsSectionSkeleton() {
   return (
-    <div className="flex flex-col gap-3" aria-busy="true">
-      <div className="grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-5">
+    <div className="flex flex-col gap-3 max-sm:gap-2" aria-busy="true">
+      <div className="grid grid-cols-2 gap-2.5 max-lg:gap-2 max-sm:gap-1.5 lg:grid-cols-5">
         {Array.from({ length: 5 }).map((_, index) => (
           <div
             key={index}
-            className="h-[5.5rem] animate-pulse rounded-xl border border-border-subtle bg-surface"
+            className="h-[5.5rem] animate-pulse rounded-xl border border-border-subtle bg-surface max-sm:h-[4.75rem] max-lg:last:col-span-2 lg:last:col-span-1"
           />
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
-            className="h-48 animate-pulse rounded-xl border border-border-subtle bg-surface"
+            className="h-48 animate-pulse rounded-xl border border-border-subtle bg-surface max-sm:h-40"
           />
         ))}
       </div>
@@ -275,7 +275,7 @@ export function OperationsCandidatesPage() {
       subtitle="Track registrations, profile completion, WhatsApp verification and engagement."
       headerVariant="command"
     >
-      <div className="flex w-full min-w-0 flex-col gap-3">
+      <div className="flex w-full min-w-0 flex-col gap-3 max-lg:gap-2.5 max-sm:gap-2">
         {isInitialLoading ? (
           <CandidatesPageSkeleton rowCount={limit} />
         ) : (
@@ -319,7 +319,7 @@ export function OperationsCandidatesPage() {
 
             {exportError ? (
               <div
-                className="rounded-xl border border-danger/20 bg-danger/5 px-3 py-3 text-xs text-danger"
+                className="rounded-xl border border-danger/20 bg-danger/5 px-3 py-3 text-xs text-danger max-sm:px-2.5 max-sm:py-2.5 max-sm:text-[11px]"
                 role="alert"
               >
                 {exportError}
@@ -332,7 +332,7 @@ export function OperationsCandidatesPage() {
 
             {analyticsError && !analytics ? (
               <div
-                className="rounded-xl border border-danger/20 bg-danger/5 px-3 py-3 text-xs text-danger"
+                className="rounded-xl border border-danger/20 bg-danger/5 px-3 py-3 text-xs text-danger max-sm:px-2.5 max-sm:py-2.5 max-sm:text-[11px]"
                 role="alert"
               >
                 {analyticsError}{" "}
@@ -349,7 +349,7 @@ export function OperationsCandidatesPage() {
             {analytics ? (
               <>
                 <CandidatesOverviewKpiStrip kpis={analytics.kpis} />
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
                   <CandidatesRegistrationTrendChart
                     data={analytics.registrationTrend}
                     isOverall={analyticsFilters.preset === "all"}
@@ -369,7 +369,7 @@ export function OperationsCandidatesPage() {
               </>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
+            <div className="grid grid-cols-1 gap-3 max-sm:gap-2 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
               <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
                 <CandidatesTableSection
                   applications={listData?.applications ?? []}
@@ -379,7 +379,7 @@ export function OperationsCandidatesPage() {
                   errorMessage={listError}
                   onRetry={() => void candidatesQuery.refetch()}
                   toolbar={
-                    <div className="flex min-w-0 flex-col gap-2.5 xl:gap-1.5">
+                    <div className="flex min-w-0 flex-col gap-2.5 max-sm:gap-2 xl:gap-1.5">
                       <CandidatesOverviewTabs
                         activeTab={activeTab}
                         counts={analytics?.tabs ?? EMPTY_TABS}
@@ -414,7 +414,7 @@ export function OperationsCandidatesPage() {
                   }
                 />
                 {listData?.pagination ? (
-                  <div className="border-t border-border-subtle p-3 xl:p-2.5">
+                  <div className="border-t border-border-subtle p-3 max-sm:p-2.5 xl:p-2.5">
                     <JobsPaginationBar
                       pagination={listData.pagination}
                       ariaLabel="Jobseekers pagination"
@@ -428,7 +428,7 @@ export function OperationsCandidatesPage() {
                 ) : null}
               </div>
 
-              <aside className="flex min-w-0 flex-col gap-3">
+              <aside className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
                 <CandidatesQuickActions
                   onExport={handleExport}
                   isExporting={exportMutation.isPending}

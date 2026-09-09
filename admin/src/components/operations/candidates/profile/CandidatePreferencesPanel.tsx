@@ -1,4 +1,5 @@
 import type { OperationsCandidateDetail } from "../../../../types/operations-candidates";
+import { OperationsCanKey } from "../../auth/OperationsCanKey";
 
 function ChipList({ values }: { values: string[] }) {
   if (!values.length) {
@@ -29,7 +30,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatSalary(amount: number | null, period: string): string {
+function formatSalary(amount: number | null | undefined, period?: string): string {
   if (amount == null) {
     return "—";
   }
@@ -70,13 +71,15 @@ export function CandidatePreferencesPanel({
           <div className="grid gap-3 sm:grid-cols-2">
             <DetailField label="Preferred Work Type" value={detail.jobType} />
             <DetailField label="Preferred Work Mode" value={detail.workMode} />
-            <DetailField
-              label="Preferred Salary"
-              value={formatSalary(
-                detail.expectedSalary,
-                detail.expectedSalaryPeriod,
-              )}
-            />
+            <OperationsCanKey permissionKey="candidates.profile.fields.expected_salary.view">
+              <DetailField
+                label="Preferred Salary"
+                value={formatSalary(
+                  detail.expectedSalary,
+                  detail.expectedSalaryPeriod,
+                )}
+              />
+            </OperationsCanKey>
             <DetailField
               label="Availability"
               value={detail.availabilityLabel || detail.availabilityStatus}

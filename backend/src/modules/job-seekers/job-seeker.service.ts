@@ -13,7 +13,9 @@ import { scheduleCandidateRegisteredAwareness } from "../operations/registration
 import { otpService } from "../otp/otp.service.js";
 import { resumeService } from "../resumes/resume.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
+import { assertJobSeekerAccountActive } from "./job-seeker-account-status.js";
 import { toPublicJobSeeker } from "./job-seeker.serializer.js";
+import { openPrivateFileStream } from "../storage/private-file.service.js";
 import type {
   CompleteJobSeekerRegistrationInput,
   RegisterJobSeekerInput,
@@ -297,8 +299,16 @@ export class JobSeekerService {
     jobSeeker.registrationStatus = "PENDING";
     await jobSeeker.save();
 
+    const continuation =
+      jwtService.issueJobSeekerRegistrationContinuationToken({
+        jobSeekerId: jobSeeker._id.toString(),
+        whatsappNumber: jobSeeker.whatsappNumber,
+      });
+
     return {
       jobSeeker: toPublicJobSeeker(jobSeeker),
+      registrationContinuationToken: continuation.token,
+      registrationContinuationExpiresAt: continuation.expiresAt.toISOString(),
     };
   }
 
@@ -333,8 +343,11 @@ export class JobSeekerService {
     return { roles };
   }
 
-  async savePreferences(input: SaveJobSeekerPreferencesInput) {
-    const jobSeeker = await findJobSeekerOrThrow(input.jobSeekerId);
+  async savePreferences(
+    jobSeekerId: string,
+    input: Omit<SaveJobSeekerPreferencesInput, "jobSeekerId">,
+  ) {
+    const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
 
     if (jobSeeker.registrationStatus === "COMPLETED") {
       throw new AppError(
@@ -366,8 +379,11 @@ export class JobSeekerService {
     };
   }
 
-  async completeRegistration(input: CompleteJobSeekerRegistrationInput) {
-    const jobSeeker = await findJobSeekerOrThrow(input.jobSeekerId);
+  async completeRegistration(
+    jobSeekerId: string,
+    input: Omit<CompleteJobSeekerRegistrationInput, "jobSeekerId">,
+  ) {
+    const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
 
     if (jobSeeker.registrationStatus === "COMPLETED") {
       throw new AppError(
@@ -413,6 +429,9 @@ export class JobSeekerService {
     jobSeeker.languages = input.languages;
     jobSeeker.availabilityStatus = input.availabilityStatus;
     jobSeeker.registrationStatus = "COMPLETED";
+    if (!jobSeeker.accountStatus) {
+      jobSeeker.accountStatus = "active";
+    }
     if (!jobSeeker.operationsRegistrationAwareness?.registeredAt) {
       jobSeeker.operationsRegistrationAwareness =
         buildNewRegistrationAwarenessPayload(new Date());
@@ -457,6 +476,7 @@ export class JobSeekerService {
     input: UpdateJobSeekerProfileInput,
   ) {
     const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
+    assertJobSeekerAccountActive(jobSeeker.accountStatus);
 
     if (
       !jobSeeker.isWhatsappVerified ||
@@ -564,6 +584,7 @@ export class JobSeekerService {
     }
 
     const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
+    assertJobSeekerAccountActive(jobSeeker.accountStatus);
 
     if (
       !jobSeeker.isWhatsappVerified ||
@@ -601,6 +622,7 @@ export class JobSeekerService {
 
   async deleteProfilePhoto(jobSeekerId: string) {
     const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
+    assertJobSeekerAccountActive(jobSeeker.accountStatus);
 
     if (
       !jobSeeker.isWhatsappVerified ||
@@ -619,6 +641,23 @@ export class JobSeekerService {
     return {
       jobSeeker: toPublicJobSeeker(jobSeeker),
     };
+  }
+
+  async openOwnProfilePhoto(jobSeekerId: string) {
+    const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
+    assertJobSeekerAccountActive(jobSeeker.accountStatus);
+    const photo = jobSeeker.profilePhoto;
+    if (!photo?.storagePath && !photo?.url) {
+      throw new AppError("Profile photo not found", HTTP_STATUS.NOT_FOUND);
+    }
+    return openPrivateFileStream({
+      storagePath: photo?.storagePath,
+      storageProvider: photo?.storageProvider,
+      publicId: photo?.publicId,
+      url: photo?.url,
+      mimeType: photo?.mimeType || "image/jpeg",
+      originalName: photo?.originalName || "profile-photo",
+    });
   }
 }
 

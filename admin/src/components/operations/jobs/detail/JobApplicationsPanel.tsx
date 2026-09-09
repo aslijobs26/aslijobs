@@ -4,14 +4,11 @@ import type {
   OperationsJobApplicationItem,
   OperationsJobsPagination,
 } from "../../../../types/operations-jobs";
-import { resolveMediaUrl } from "../../../../utils/resolve-media-url";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import { OperationsCard } from "../../../ui/OperationsCard";
+import { OperationsCandidateAvatar } from "../../candidates/OperationsCandidateAvatar";
 import { JobsPaginationBar } from "../JobsPaginationBar";
-import {
-  candidateInitials,
-  formatOperationsDateTime,
-} from "./job-detail-format";
+import { formatOperationsDateTime } from "./job-detail-format";
 
 interface JobApplicationsPanelProps {
   applications: OperationsJobApplicationItem[];
@@ -49,30 +46,6 @@ function applicationBadgeVariant(
 
 const viewDetailsClassName =
   "rounded-md border border-border-subtle px-2 py-1 text-[11px] font-semibold text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
-
-function CandidateAvatar({
-  name,
-  photoUrl,
-}: {
-  name: string;
-  photoUrl: string | null | undefined;
-}) {
-  const resolvedPhoto = resolveMediaUrl(photoUrl);
-
-  return (
-    <span className="inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[10px] font-semibold text-primary">
-      {resolvedPhoto ? (
-        <img
-          src={resolvedPhoto}
-          alt=""
-          className="size-full object-cover"
-        />
-      ) : (
-        candidateInitials(name)
-      )}
-    </span>
-  );
-}
 
 export function JobApplicationsPanel({
   applications,
@@ -156,9 +129,11 @@ export function JobApplicationsPanel({
                     >
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-2">
-                          <CandidateAvatar
+                          <OperationsCandidateAvatar
                             name={application.candidateName}
+                            jobSeekerId={application.jobSeekerId}
                             photoUrl={application.profilePhotoUrl}
+                            className="inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary"
                           />
                           <div className="min-w-0">
                             {profilePath ? (
@@ -230,9 +205,11 @@ export function JobApplicationsPanel({
               return (
                 <li key={application.id} className="px-3 py-3">
                   <div className="flex items-start gap-2">
-                    <CandidateAvatar
+                    <OperationsCandidateAvatar
                       name={application.candidateName}
+                      jobSeekerId={application.jobSeekerId}
                       photoUrl={application.profilePhotoUrl}
+                      className="inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[10px] font-semibold text-primary"
                     />
                     <div className="min-w-0 flex-1">
                       {profilePath ? (

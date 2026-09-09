@@ -2,7 +2,10 @@ import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { sendSuccess } from "../../../utils/api-response.js";
 import { AppError } from "../../../middleware/error.middleware.js";
-import { assertOperationsPermissionKey } from "../rbac/operations-access.service.js";
+import {
+  assertOperationsPermissionKey,
+  operationsAccessCanKey,
+} from "../rbac/operations-access.service.js";
 import {
   sanitizeCandidateDetail,
   sanitizeCandidateListItem,
@@ -10,6 +13,10 @@ import {
 import {
   CANDIDATE_DOCUMENTS_PERMISSION_KEY,
   CANDIDATE_EXPORT_PERMISSION_KEY,
+  CANDIDATE_LIST_FILTER_PERMISSION_KEY,
+  CANDIDATE_LIST_SEARCH_PERMISSION_KEY,
+  CANDIDATE_LIST_VIEW_PERMISSION_KEY,
+  CANDIDATE_PROFILE_VIEW_PERMISSION_KEY,
 } from "../rbac/operations-permission-catalog.js";
 import { operationsRegistrationAwarenessService } from "../registration-awareness/operations-registration-awareness.service.js";
 import { operationsCandidatesService } from "./operations-candidates.service.js";
@@ -30,11 +37,43 @@ function requireAccess(req: Request) {
   return req.operationsAccess;
 }
 
+function stripUnauthorizedListQuery(
+  query: ListOperationsCandidatesQuery,
+  access: ReturnType<typeof requireAccess>,
+): ListOperationsCandidatesQuery {
+  const next = { ...query };
+  if (!operationsAccessCanKey(access, CANDIDATE_LIST_SEARCH_PERMISSION_KEY)) {
+    next.search = "";
+  }
+  if (!operationsAccessCanKey(access, CANDIDATE_LIST_FILTER_PERMISSION_KEY)) {
+    next.tab = "all";
+    next.status = "";
+    next.jobId = "";
+    next.employerId = "";
+    next.location = "";
+    next.experience = "";
+    next.gender = "";
+    next.preferredRole = "";
+    next.profileStatus = "";
+    next.verificationStatus = "";
+    next.applicationPresence = "";
+    next.overviewTab = "all";
+    next.datePreset = "all";
+    next.dateFrom = "";
+    next.dateTo = "";
+  }
+  return next;
+}
+
 export const operationsCandidatesController = {
   async list(req: Request, res: Response): Promise<void> {
-    const query = req.query as unknown as ListOperationsCandidatesQuery;
-    const result = await operationsCandidatesService.listCandidates(query);
     const access = requireAccess(req);
+    assertOperationsPermissionKey(access, CANDIDATE_LIST_VIEW_PERMISSION_KEY);
+    const query = stripUnauthorizedListQuery(
+      req.query as unknown as ListOperationsCandidatesQuery,
+      access,
+    );
+    const result = await operationsCandidatesService.listCandidates(query);
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations candidates fetched successfully.",
@@ -48,7 +87,8 @@ export const operationsCandidatesController = {
   },
 
   async analytics(req: Request, res: Response): Promise<void> {
-    requireAccess(req);
+    const access = requireAccess(req);
+    assertOperationsPermissionKey(access, CANDIDATE_LIST_VIEW_PERMISSION_KEY);
     const query = req.query as unknown as CandidatesAnalyticsQuery;
     const data = await getOperationsCandidatesAnalytics(query);
     // Aggregate-only payload — no per-candidate PII fields.
@@ -60,6 +100,7 @@ export const operationsCandidatesController = {
 
   async export(req: Request, res: Response): Promise<void> {
     const access = requireAccess(req);
+    assertOperationsPermissionKey(access, CANDIDATE_LIST_VIEW_PERMISSION_KEY);
     assertOperationsPermissionKey(access, CANDIDATE_EXPORT_PERMISSION_KEY);
     const query = req.query as unknown as ExportOperationsCandidatesQuery;
     const format = query.format === "csv" ? "csv" : "xlsx";
@@ -103,6 +144,8 @@ export const operationsCandidatesController = {
   },
 
   async getBySeekerId(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertOperationsPermissionKey(access, CANDIDATE_PROFILE_VIEW_PERMISSION_KEY);
     const { jobSeekerId } = req.params as OperationsCandidateSeekerIdParams;
     const result = await operationsCandidatesService.getSeekerDetail(jobSeekerId);
 
@@ -120,12 +163,13 @@ export const operationsCandidatesController = {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations candidate details fetched successfully.",
-      data: sanitizeCandidateDetail(result, requireAccess(req)),
+      data: sanitizeCandidateDetail(result, access),
     });
   },
 
   async downloadResume(req: Request, res: Response): Promise<void> {
     const access = requireAccess(req);
+    assertOperationsPermissionKey(access, CANDIDATE_PROFILE_VIEW_PERMISSION_KEY);
     assertOperationsPermissionKey(access, CANDIDATE_DOCUMENTS_PERMISSION_KEY);
     const { jobSeekerId } = req.params as OperationsCandidateSeekerIdParams;
     const file =
@@ -139,13 +183,45 @@ export const operationsCandidatesController = {
     if (file.contentLength != null) {
       res.setHeader("Content-Length", String(file.contentLength));
     }
+    res.setHeader("Cache-Control", "private, no-store");
+    res.status(HTTP_STATUS.OK);
+    file.stream.pipe(res);
+  },
+
+  async downloadPhoto(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    // List avatars and profile header both need photo; either list or profile view.
+    if (
+      !operationsAccessCanKey(access, CANDIDATE_LIST_VIEW_PERMISSION_KEY) &&
+      !operationsAccessCanKey(access, CANDIDATE_PROFILE_VIEW_PERMISSION_KEY)
+    ) {
+      throw new AppError(
+        "Access denied. You do not have permission to perform this action.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+    const { jobSeekerId } = req.params as OperationsCandidateSeekerIdParams;
+    const file =
+      await operationsCandidatesService.openCandidatePhoto(jobSeekerId);
+
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${file.fileName.replace(/"/g, "")}"`,
+    );
+    if (file.contentLength != null) {
+      res.setHeader("Content-Length", String(file.contentLength));
+    }
+    res.setHeader("Cache-Control", "private, max-age=300");
     res.status(HTTP_STATUS.OK);
     file.stream.pipe(res);
   },
 
   async listSeekerApplications(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertOperationsPermissionKey(access, CANDIDATE_PROFILE_VIEW_PERMISSION_KEY);
     assertOperationsPermissionKey(
-      requireAccess(req),
+      access,
       "candidates.profile.applications.view",
     );
     const { jobSeekerId } = req.params as OperationsCandidateSeekerIdParams;
@@ -163,6 +239,8 @@ export const operationsCandidatesController = {
   },
 
   async getByApplicationId(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertOperationsPermissionKey(access, CANDIDATE_PROFILE_VIEW_PERMISSION_KEY);
     const { applicationId } =
       req.params as OperationsCandidateApplicationIdParams;
     const result =
@@ -170,7 +248,7 @@ export const operationsCandidatesController = {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations candidate details fetched successfully.",
-      data: sanitizeCandidateDetail(result, requireAccess(req)),
+      data: sanitizeCandidateDetail(result, access),
     });
   },
 };

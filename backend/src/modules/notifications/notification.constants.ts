@@ -38,6 +38,7 @@ export const NOTIFICATION_TYPES = [
   "job_live_changes_rejected",
   "employer_verification_approved",
   "employer_verification_rejected",
+  "employer_verification_documents_requested",
 ] as const;
 
 export const NOTIFICATION_CHANNEL_DEFAULTS = {

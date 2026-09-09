@@ -20,6 +20,9 @@ import {
   buildPublicEmployerVerificationStages,
   isJobPubliclyEligible,
 } from "./public-job-eligibility.js";
+import { scheduleJobModerationAudit } from "../operations/jobs/operations-job-audit.js";
+import { OPERATIONS_JOB_AUDIT_ACTIONS } from "../operations/jobs/operations-job-moderation.constants.js";
+import { scheduleJobPendingOpsNotification } from "../operations/jobs/operations-job-moderation-emit.js";
 import {
   cascadeDeleteOwnedJobs,
   ensureEmployerJobRelationsConsistent,
@@ -69,6 +72,7 @@ async function getAppliedJobMongoIdSet(
     jobId: {
       $in: validIds.map((id) => new mongoose.Types.ObjectId(id)),
     },
+    status: { $ne: "withdrawn" },
   })
     .select("jobId")
     .lean();
@@ -1351,6 +1355,31 @@ export class JobService {
       creationSource: "employer",
     });
 
+    if (!isDraft) {
+      scheduleJobPendingOpsNotification({
+        publicJobId: job.jobId,
+        jobMongoId: job._id.toString(),
+        jobTitle: job.jobTitle?.trim() || "Untitled job",
+        companyName: job.companyName?.trim() || employer.companyName?.trim() || "Employer",
+        kind: "submitted",
+        submittedAt: now,
+      });
+      scheduleJobModerationAudit({
+        actorUserId: null,
+        actorName: employer.companyName?.trim() || "Employer",
+        action: OPERATIONS_JOB_AUDIT_ACTIONS.SUBMITTED,
+        publicJobId: job.jobId,
+        jobTitle: job.jobTitle?.trim() || "Untitled job",
+        previousStatus: null,
+        nextStatus: "pending_approval",
+        metadata: {
+          actorType: "employer",
+          employerId,
+          source: "createJob",
+        },
+      });
+    }
+
     return {
       job: toJobPublic(job),
     };
@@ -1619,22 +1648,57 @@ export class JobService {
       }
     }
 
+    const previousStatus = job.status as JobStatus;
     const updateResult = await JobModel.updateOne(
       {
         _id: job._id,
         employerId: new mongoose.Types.ObjectId(employerId),
+        status: previousStatus,
       },
       { $set },
     );
 
     if (updateResult.matchedCount === 0) {
-      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+      throw new AppError(
+        "This job was already updated. Refresh and try again.",
+        HTTP_STATUS.CONFLICT,
+      );
     }
 
     const updatedJob = await JobModel.findById(job._id);
 
     if (!updatedJob) {
       throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    if (action === "publish" && nextStatus === "pending_approval") {
+      const kind =
+        previousStatus === "rejected" ? "resubmitted" : "submitted";
+      scheduleJobPendingOpsNotification({
+        publicJobId: updatedJob.jobId,
+        jobMongoId: updatedJob._id.toString(),
+        jobTitle: updatedJob.jobTitle?.trim() || "Untitled job",
+        companyName: updatedJob.companyName?.trim() || "Employer",
+        kind,
+        submittedAt: now,
+      });
+      scheduleJobModerationAudit({
+        actorUserId: null,
+        actorName: "Employer",
+        action:
+          kind === "resubmitted"
+            ? OPERATIONS_JOB_AUDIT_ACTIONS.RESUBMITTED
+            : OPERATIONS_JOB_AUDIT_ACTIONS.SUBMITTED,
+        publicJobId: updatedJob.jobId,
+        jobTitle: updatedJob.jobTitle?.trim() || "Untitled job",
+        previousStatus,
+        nextStatus: "pending_approval",
+        metadata: {
+          actorType: "employer",
+          employerId,
+          source: "updateJobStatus",
+        },
+      });
     }
 
     return {
@@ -1913,6 +1977,7 @@ export class JobService {
       .lean();
     assertEmployerVerifiedForJobAction(employer, "publish");
 
+    const previousWasRejected = job.status === "rejected";
     applyCreateInputToJob(job, input);
     const now = new Date();
     job.status = "pending_approval";
@@ -1936,6 +2001,31 @@ export class JobService {
     job.rejectionReason = "";
     job.reviewNotificationSentAt = null;
     await job.save();
+
+    scheduleJobPendingOpsNotification({
+      publicJobId: job.jobId,
+      jobMongoId: job._id.toString(),
+      jobTitle: job.jobTitle?.trim() || "Untitled job",
+      companyName: job.companyName?.trim() || "Employer",
+      kind: previousWasRejected ? "resubmitted" : "submitted",
+      submittedAt: now,
+    });
+    scheduleJobModerationAudit({
+      actorUserId: null,
+      actorName: "Employer",
+      action: previousWasRejected
+        ? OPERATIONS_JOB_AUDIT_ACTIONS.RESUBMITTED
+        : OPERATIONS_JOB_AUDIT_ACTIONS.SUBMITTED,
+      publicJobId: job.jobId,
+      jobTitle: job.jobTitle?.trim() || "Untitled job",
+      previousStatus: previousWasRejected ? "rejected" : "draft",
+      nextStatus: "pending_approval",
+      metadata: {
+        actorType: "employer",
+        employerId,
+        source: "publishDraft",
+      },
+    });
 
     return {
       job: toJobPublic(job),
@@ -1980,6 +2070,29 @@ export class JobService {
     job.lastEditedAt = now;
     job.wizardSnapshot = null;
     await job.save();
+
+    scheduleJobPendingOpsNotification({
+      publicJobId: job.jobId,
+      jobMongoId: job._id.toString(),
+      jobTitle: job.jobTitle?.trim() || input.jobTitle.trim() || "Untitled job",
+      companyName: job.companyName?.trim() || "Employer",
+      kind: "live_revision",
+      submittedAt: now,
+    });
+    scheduleJobModerationAudit({
+      actorUserId: null,
+      actorName: "Employer",
+      action: OPERATIONS_JOB_AUDIT_ACTIONS.LIVE_REVISION_SUBMITTED,
+      publicJobId: job.jobId,
+      jobTitle: job.jobTitle?.trim() || input.jobTitle.trim() || "Untitled job",
+      previousStatus: "active",
+      nextStatus: "active",
+      metadata: {
+        actorType: "employer",
+        employerId,
+        liveChangeReviewStatus: "pending_approval",
+      },
+    });
 
     return {
       job: toJobPublic(job),
@@ -2581,6 +2694,21 @@ export class JobService {
     job.publishedAt = now;
     job.lastStatusChangedAt = now;
     await job.save();
+
+    scheduleJobModerationAudit({
+      actorUserId: operationsUserId,
+      actorName: "Operations",
+      action: OPERATIONS_JOB_AUDIT_ACTIONS.OPERATIONS_PUBLISHED,
+      publicJobId: job.jobId,
+      jobTitle: job.jobTitle?.trim() || "Untitled job",
+      previousStatus: "draft",
+      nextStatus: "active",
+      metadata: {
+        actorType: "operations",
+        creationSource: "operations",
+        source: "publishOperationsDraft",
+      },
+    });
 
     return {
       job: toJobPublic(job),

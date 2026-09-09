@@ -29,6 +29,7 @@ export async function fetchOperationsEmployers(
         limit: params.limit,
         search: params.search || undefined,
         verificationStatus: params.verificationStatus || undefined,
+        verificationQueue: params.verificationQueue || undefined,
         employerType: params.employerType || undefined,
         location: params.location || undefined,
         status: params.status || undefined,
@@ -190,6 +191,7 @@ function buildEmployersFilterParams(params: OperationsEmployersExportParams) {
   return {
     search: params.search || undefined,
     verificationStatus: params.verificationStatus || undefined,
+    verificationQueue: params.verificationQueue || undefined,
     employerType: params.employerType || undefined,
     location: params.location || undefined,
     status: params.status || undefined,
