@@ -427,7 +427,8 @@ export class ApplicationController {
     req: Request,
     res: Response,
   ): Promise<void> => {
-    assertFieldReadable(req.rbac, "candidates", "resume");
+    // Token-authenticated export links — do not require session RBAC.
+    // Ownership is enforced via signed claims + findOwnedApplicationOrThrow.
     const token = String(req.params.token ?? "");
     const pdf = await employerResumeAccessService.openResumePdfFromToken(token);
 

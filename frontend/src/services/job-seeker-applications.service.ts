@@ -31,6 +31,7 @@ function normalizeListItem(
 function normalizeStats(stats: SeekerApplicationStats): SeekerApplicationStats {
   return {
     ...stats,
+    did_not_join: stats.did_not_join ?? 0,
     withdrawn: stats.withdrawn ?? 0,
   };
 }

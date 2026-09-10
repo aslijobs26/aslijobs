@@ -28,6 +28,7 @@ export const EMPLOYER_FORWARD_PIPELINE = [
 
 export const EMPLOYER_TERMINAL_STATUSES = [
   "joined",
+  "did_not_join",
   "rejected",
   "withdrawn",
 ] as const satisfies readonly ApplicationStatus[];
@@ -74,8 +75,9 @@ const EMPLOYER_ALLOWED_TRANSITIONS: Record<
   interview_scheduled: ["interview_completed", "rejected", "withdrawn"],
   interview_completed: ["offer_sent", "rejected", "withdrawn"],
   offer_sent: ["selected", "joined", "rejected", "withdrawn"],
-  selected: ["joined", "rejected", "withdrawn"],
+  selected: ["joined", "did_not_join", "rejected", "withdrawn"],
   joined: [],
+  did_not_join: [],
   rejected: [],
   withdrawn: [],
 };
@@ -243,6 +245,15 @@ export function assertEmployerStatusChangeAllowed(
     if (from !== "offer_sent" && from !== "selected") {
       throw new AppError(
         "Send an offer before marking the candidate as joined.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+  }
+
+  if (to === "did_not_join") {
+    if (from !== "selected") {
+      throw new AppError(
+        "Mark the candidate as selected before recording Did Not Join.",
         HTTP_STATUS.BAD_REQUEST,
       );
     }

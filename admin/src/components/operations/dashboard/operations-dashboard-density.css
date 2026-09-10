@@ -44,11 +44,12 @@
     0 6px 16px color-mix(in srgb, #1a2b3c 3.5%, transparent);
 }
 
-/* Overview analytics — slightly denser cards on XL+ (Jobseekers + Employers + Jobs) */
+/* Overview analytics — slightly denser cards on XL+ (Jobseekers + Employers + Jobs + Placements) */
 @media (min-width: 1280px) {
   .operations-dashboard-density .candidates-analytics-card > header,
   .operations-dashboard-density .employers-analytics-card > header,
-  .operations-dashboard-density .jobs-analytics-card > header {
+  .operations-dashboard-density .jobs-analytics-card > header,
+  .operations-dashboard-density .placements-analytics-card > header {
     padding: 0.5rem 0.75rem;
   }
 
@@ -57,28 +58,33 @@
   .operations-dashboard-density .employers-analytics-card > header h2,
   .operations-dashboard-density .employers-analytics-card > header h3,
   .operations-dashboard-density .jobs-analytics-card > header h2,
-  .operations-dashboard-density .jobs-analytics-card > header h3 {
+  .operations-dashboard-density .jobs-analytics-card > header h3,
+  .operations-dashboard-density .placements-analytics-card > header h2,
+  .operations-dashboard-density .placements-analytics-card > header h3 {
     font-size: 0.8125rem;
   }
 
   .operations-dashboard-density .candidates-analytics-card > header p,
   .operations-dashboard-density .employers-analytics-card > header p,
-  .operations-dashboard-density .jobs-analytics-card > header p {
+  .operations-dashboard-density .jobs-analytics-card > header p,
+  .operations-dashboard-density .placements-analytics-card > header p {
     font-size: 0.6875rem;
   }
 
   .operations-dashboard-density .candidates-analytics-card > div:last-child,
   .operations-dashboard-density .employers-analytics-card > div:last-child,
-  .operations-dashboard-density .jobs-analytics-card > div:last-child {
+  .operations-dashboard-density .jobs-analytics-card > div:last-child,
+  .operations-dashboard-density .placements-analytics-card > div:last-child {
     padding: 0.5rem 0.75rem;
   }
 }
 
-/* Jobseekers / Employers / Jobs overview analytics — tablet/mobile only */
+/* Jobseekers / Employers / Jobs / Placements overview analytics — tablet/mobile only */
 @media (max-width: 1023px) {
   .operations-dashboard-density .candidates-analytics-card > header,
   .operations-dashboard-density .employers-analytics-card > header,
-  .operations-dashboard-density .jobs-analytics-card > header {
+  .operations-dashboard-density .jobs-analytics-card > header,
+  .operations-dashboard-density .placements-analytics-card > header {
     padding: 0.625rem 0.75rem;
   }
 
@@ -87,19 +93,23 @@
   .operations-dashboard-density .employers-analytics-card > header h2,
   .operations-dashboard-density .employers-analytics-card > header h3,
   .operations-dashboard-density .jobs-analytics-card > header h2,
-  .operations-dashboard-density .jobs-analytics-card > header h3 {
+  .operations-dashboard-density .jobs-analytics-card > header h3,
+  .operations-dashboard-density .placements-analytics-card > header h2,
+  .operations-dashboard-density .placements-analytics-card > header h3 {
     font-size: 0.8125rem;
   }
 
   .operations-dashboard-density .candidates-analytics-card > header p,
   .operations-dashboard-density .employers-analytics-card > header p,
-  .operations-dashboard-density .jobs-analytics-card > header p {
+  .operations-dashboard-density .jobs-analytics-card > header p,
+  .operations-dashboard-density .placements-analytics-card > header p {
     font-size: 0.6875rem;
   }
 
   .operations-dashboard-density .candidates-analytics-card > div:last-child,
   .operations-dashboard-density .employers-analytics-card > div:last-child,
-  .operations-dashboard-density .jobs-analytics-card > div:last-child {
+  .operations-dashboard-density .jobs-analytics-card > div:last-child,
+  .operations-dashboard-density .placements-analytics-card > div:last-child {
     padding: 0.625rem 0.75rem;
   }
 }
@@ -107,13 +117,15 @@
 @media (max-width: 639px) {
   .operations-dashboard-density .candidates-analytics-card > header,
   .operations-dashboard-density .employers-analytics-card > header,
-  .operations-dashboard-density .jobs-analytics-card > header {
+  .operations-dashboard-density .jobs-analytics-card > header,
+  .operations-dashboard-density .placements-analytics-card > header {
     padding: 0.5rem 0.625rem;
   }
 
   .operations-dashboard-density .candidates-analytics-card > div:last-child,
   .operations-dashboard-density .employers-analytics-card > div:last-child,
-  .operations-dashboard-density .jobs-analytics-card > div:last-child {
+  .operations-dashboard-density .jobs-analytics-card > div:last-child,
+  .operations-dashboard-density .placements-analytics-card > div:last-child {
     padding: 0.5rem 0.625rem;
   }
 }

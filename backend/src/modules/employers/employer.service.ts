@@ -601,6 +601,18 @@ export class EmployerService {
       );
     }
 
+    // Registration completion only — block re-entry that would overwrite a
+    // completed account and re-mint sessions (IDOR / account takeover).
+    if (
+      employer.registrationStatus !== "otp_verified" &&
+      employer.registrationStatus !== "document_uploaded"
+    ) {
+      throw new AppError(
+        "Complete WhatsApp OTP verification before finishing company profile",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
     if (employer.accountType === "consultancy" && !files.companyLogo) {
       throw new AppError(
         "Company logo is required",
@@ -1164,6 +1176,15 @@ export class EmployerService {
     employer.verificationSubmittedAt = new Date();
     // Keep remarks so Operations can see the prior rejection reason.
     await employer.save();
+
+    // Re-open previously rejected docs so Ops approve can mark them approved.
+    await EmployerDocumentModel.updateMany(
+      {
+        employerId: employer._id,
+        verificationStatus: "rejected",
+      },
+      { $set: { verificationStatus: "pending" } },
+    );
 
     try {
       const { recordOperationsAuditEvent } = await import(

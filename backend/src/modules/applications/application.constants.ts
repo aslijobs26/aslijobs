@@ -8,6 +8,7 @@ export const APPLICATION_STATUSES = [
   "offer_sent",
   "selected",
   "joined",
+  "did_not_join",
   "rejected",
   "withdrawn",
 ] as const;
@@ -28,6 +29,7 @@ export const APPLICATION_STATUS_LABELS: Record<
   offer_sent: "Offer Sent",
   selected: "Selected",
   joined: "Joined",
+  did_not_join: "Did Not Join",
   rejected: "Rejected",
   withdrawn: "Withdrawn",
 };
@@ -36,6 +38,7 @@ export const APPLICATION_HISTORY_ACTORS = [
   "job_seeker",
   "employer",
   "system",
+  "operations",
 ] as const;
 
 export const APPLICATION_INTERVIEW_MODES = [
@@ -70,10 +73,21 @@ export const EMPLOYER_JOB_SHORTLISTED_STATUSES = [
 /**
  * Employer My Jobs / dashboard "Hired" column.
  * There is no `hired` application status — Selected + Joined are the hire outcomes.
+ * Does NOT include `did_not_join` (placement no-show is not a hire).
  */
 export const EMPLOYER_JOB_HIRED_STATUSES = [
   "selected",
   "joined",
+] as const satisfies ReadonlyArray<(typeof APPLICATION_STATUSES)[number]>;
+
+/**
+ * Operations Placements domain — Application is the source of truth.
+ * Joining Pending = selected, Joined = joined, Did Not Join = did_not_join.
+ */
+export const PLACEMENT_APPLICATION_STATUSES = [
+  "selected",
+  "joined",
+  "did_not_join",
 ] as const satisfies ReadonlyArray<(typeof APPLICATION_STATUSES)[number]>;
 
 export const INTERVIEW_CANCELLATION_REASON_OPTIONS = [
@@ -101,5 +115,6 @@ export const APPLICATION_EVENT_NAMES = {
   SELECTED: "application.selected",
   REJECTED: "application.rejected",
   JOINED: "application.joined",
+  DID_NOT_JOIN: "application.did_not_join",
   WITHDRAWN: "application.withdrawn",
 } as const;

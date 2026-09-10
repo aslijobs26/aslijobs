@@ -3,7 +3,7 @@ import axios, {
   type AxiosError,
   type InternalAxiosRequestConfig,
 } from "axios";
-import { env } from "@/constants/env";
+import { getApiUrl } from "@/constants/env";
 import {
   clearEmployerAuthSession,
   getEmployerAccessToken,
@@ -43,7 +43,8 @@ type RefreshResponse = {
 };
 
 export const apiClient = axios.create({
-  baseURL: env.apiUrl,
+  // Resolved per request so LAN Network URLs remap localhost → page host.
+  baseURL: getApiUrl(),
   timeout: 30_000,
   headers: {
     "Content-Type": "application/json",
@@ -53,12 +54,22 @@ export const apiClient = axios.create({
 
 /** Bare client for refresh/logout — never attached to the auth interceptor. */
 const refreshClient = axios.create({
-  baseURL: env.apiUrl,
+  baseURL: getApiUrl(),
   timeout: 15_000,
   headers: {
     "Content-Type": "application/json",
   },
   withCredentials: true,
+});
+
+apiClient.interceptors.request.use((config) => {
+  config.baseURL = getApiUrl();
+  return config;
+});
+
+refreshClient.interceptors.request.use((config) => {
+  config.baseURL = getApiUrl();
+  return config;
 });
 
 let workspaceRefreshPromise: Promise<string | null> | null = null;

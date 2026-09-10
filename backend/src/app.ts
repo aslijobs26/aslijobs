@@ -11,7 +11,11 @@ import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { requestIdMiddleware } from "./middleware/request-id.middleware.js";
 import { isSensitiveUploadPublicPath } from "./modules/storage/private-file.service.js";
 import apiRouter from "./routes/index.js";
-import { buildAllowedCorsOrigins } from "./utils/cors-origins.js";
+import {
+  buildAllowedCorsOrigins,
+  buildDevelopmentCorsPorts,
+  isDevelopmentLanOriginAllowed,
+} from "./utils/cors-origins.js";
 
 const app = express();
 
@@ -20,13 +24,24 @@ app.set("trust proxy", 1);
 
 app.use(requestIdMiddleware);
 
+const corsExtraOrigins = env.CORS_ALLOWED_ORIGINS.split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
 const allowedCorsOrigins = buildAllowedCorsOrigins({
   frontendUrl: env.FRONTEND_URL,
   adminUrl: env.ADMIN_URL,
-  extraOrigins: env.CORS_ALLOWED_ORIGINS.split(",")
-    .map((value) => value.trim())
-    .filter(Boolean),
+  extraOrigins: corsExtraOrigins,
 });
+
+const developmentCorsPorts =
+  env.NODE_ENV === "development"
+    ? buildDevelopmentCorsPorts({
+        frontendUrl: env.FRONTEND_URL,
+        adminUrl: env.ADMIN_URL,
+        extraOrigins: corsExtraOrigins,
+      })
+    : null;
 
 // Authenticated API responses must not be served from HTTP cache (304),
 // otherwise status/timestamp updates can appear stale in Employer Jobs.
@@ -54,6 +69,17 @@ app.use(
       }
 
       if (allowedCorsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      // Next.js / Vite Network URLs use LAN IPs (e.g. http://192.168.x.x:3000).
+      // Without this, browser OTP send/verify calls are blocked by CORS even
+      // though WhatsApp delivery itself is healthy.
+      if (
+        developmentCorsPorts &&
+        isDevelopmentLanOriginAllowed(origin, developmentCorsPorts)
+      ) {
         callback(null, true);
         return;
       }
@@ -105,6 +131,7 @@ const AUTH_OTP_PATH_SUFFIXES = [
   "/employers/login/send-otp",
   "/employers/login/resend-otp",
   "/employers/login/verify-otp",
+  "/employers/register",
   "/jobseekers/login/send-otp",
   "/jobseekers/login/resend-otp",
   "/jobseekers/login/verify-otp",
@@ -142,6 +169,12 @@ const apiRateLimit = rateLimit({
       return true;
     }
     if (isHighFrequencyOperationsRead(pathName)) {
+      return true;
+    }
+    if (
+      pathName.includes("/employers/") &&
+      (pathName.endsWith("/otp/resend") || pathName.endsWith("/otp/verify"))
+    ) {
       return true;
     }
     return AUTH_OTP_PATH_SUFFIXES.some(

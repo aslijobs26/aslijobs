@@ -128,6 +128,7 @@ export const MESSAGES_EMPLOYER_ACTION_OPTIONS: EmployerRegisterSelectOption[] = 
   { value: "offer_sent", label: "Offer Sent" },
   { value: "application_selected", label: "Selected" },
   { value: "application_joined", label: "Joined" },
+  { value: "application_did_not_join", label: "Did Not Join" },
   { value: "application_rejected", label: "Rejected" },
 ];
 

@@ -383,13 +383,10 @@ function EmployerJobsTableRow({
     }
   };
 
-  const canClose =
-    job.status === "active" ||
-    job.status === "paused" ||
-    job.status === "draft" ||
-    job.status === "pending_approval" ||
-    job.status === "rejected";
-  const canReactivate = job.status === "closed";
+  const canClose = job.status === "active" || job.status === "paused";
+  const canReactivate =
+    (job.status === "closed" || job.status === "expired") &&
+    String(job.reviewDecision ?? "").toLowerCase() === "approved";
 
   return (
     <tr

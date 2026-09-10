@@ -58,7 +58,7 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
     { prefix: OPERATIONS_ROUTES.JOBS, module: "jobs", action: "read" },
     {
       prefix: OPERATIONS_ROUTES.PLACEMENTS,
-      module: "jobs",
+      module: "placements",
       action: "read",
     },
     {

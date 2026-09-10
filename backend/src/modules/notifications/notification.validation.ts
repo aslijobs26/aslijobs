@@ -17,6 +17,7 @@ const applicationStatusValues = [
   "offer_sent",
   "selected",
   "joined",
+  "did_not_join",
   "rejected",
   "withdrawn",
 ] as const;

@@ -29,6 +29,7 @@ export type OperationsApplicationStatus =
   | "offer_sent"
   | "selected"
   | "joined"
+  | "did_not_join"
   | "rejected"
   | "withdrawn";
 

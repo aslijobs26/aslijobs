@@ -212,6 +212,7 @@ function PanelStatusSelect({
     setOpen(false);
     const result = resolveEmployerStatusSelect({
       nextStatus: next,
+      currentStatus,
       interview,
       offer,
     });

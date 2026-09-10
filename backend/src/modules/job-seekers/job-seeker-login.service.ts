@@ -12,7 +12,24 @@ import type {
   JobSeekerLoginVerifyOtpInput,
 } from "./job-seeker.types.js";
 
-async function findLoginEligibleJobSeeker(whatsappNumber: string) {
+type JobSeekerOtpRecord = {
+  _id: mongoose.Types.ObjectId;
+  fullName: string;
+  whatsappNumber: string;
+  isWhatsappVerified: boolean;
+  registrationStatus: string;
+  accountStatus?: string | null;
+  otpHash?: string | null;
+  otpExpiresAt?: Date | null;
+  otpAttempts?: number | null;
+  lastOtpSentAt?: Date | null;
+  refreshTokenHash?: string | null;
+  refreshTokenExpiresAt?: Date | null;
+  lastLoginAt?: Date | null;
+  save: () => Promise<unknown>;
+};
+
+async function findJobSeekerForLoginOtp(whatsappNumber: string) {
   const jobSeeker = await JobSeekerModel.findOne({ whatsappNumber }).select(
     "+otpHash +otpExpiresAt +otpAttempts +lastOtpSentAt +refreshTokenHash +refreshTokenExpiresAt",
   );
@@ -21,24 +38,19 @@ async function findLoginEligibleJobSeeker(whatsappNumber: string) {
     throw new AppError("Job seeker not registered.", HTTP_STATUS.NOT_FOUND);
   }
 
-  if (
-    !jobSeeker.isWhatsappVerified ||
-    jobSeeker.registrationStatus !== "COMPLETED"
-  ) {
-    throw new AppError(
-      "Complete your registration first.",
-      HTTP_STATUS.CONFLICT,
-    );
-  }
-
   assertJobSeekerAccountActive(jobSeeker.accountStatus);
 
-  return jobSeeker;
+  return jobSeeker as unknown as JobSeekerOtpRecord;
 }
 
-async function issueAndPersistLoginOtp(
-  jobSeeker: Awaited<ReturnType<typeof findLoginEligibleJobSeeker>>,
-) {
+function isRegistrationComplete(jobSeeker: JobSeekerOtpRecord): boolean {
+  return (
+    jobSeeker.isWhatsappVerified === true &&
+    jobSeeker.registrationStatus === "COMPLETED"
+  );
+}
+
+async function issueAndPersistLoginOtp(jobSeeker: JobSeekerOtpRecord) {
   const delivery = await otpService.issueAndDeliver(
     jobSeeker,
     jobSeeker.whatsappNumber,
@@ -49,20 +61,70 @@ async function issueAndPersistLoginOtp(
   );
 
   return {
+    registrationResume: false as const,
     jobSeekerId: jobSeeker._id.toString(),
     ...delivery,
   };
 }
 
-export class JobSeekerLoginService {
-  async sendLoginOtp(input: JobSeekerLoginSendOtpInput) {
-    const jobSeeker = await findLoginEligibleJobSeeker(input.whatsappNumber);
+/**
+ * Incomplete registrations cannot use login OTP (no full session yet).
+ * Re-send a registration OTP so the user can finish signup instead of a
+ * dead-end "Complete your registration first" with no WhatsApp message.
+ */
+async function issueAndPersistRegistrationResumeOtp(
+  jobSeeker: JobSeekerOtpRecord,
+) {
+  jobSeeker.isWhatsappVerified = false;
+  jobSeeker.registrationStatus = "PENDING";
+  await jobSeeker.save();
+
+  const delivery = await otpService.issueAndDeliver(
+    jobSeeker,
+    jobSeeker.whatsappNumber,
+    {
+      purpose: "registration",
+      accountName: jobSeeker.fullName,
+    },
+  );
+
+  return {
+    registrationResume: true as const,
+    jobSeekerId: jobSeeker._id.toString(),
+    ...delivery,
+  };
+}
+
+async function issueLoginOrResumeOtp(whatsappNumber: string) {
+  const jobSeeker = await findJobSeekerForLoginOtp(whatsappNumber);
+
+  if (isRegistrationComplete(jobSeeker)) {
     return issueAndPersistLoginOtp(jobSeeker);
   }
 
+  return issueAndPersistRegistrationResumeOtp(jobSeeker);
+}
+
+async function findLoginEligibleJobSeeker(whatsappNumber: string) {
+  const jobSeeker = await findJobSeekerForLoginOtp(whatsappNumber);
+
+  if (!isRegistrationComplete(jobSeeker)) {
+    throw new AppError(
+      "Complete your registration first.",
+      HTTP_STATUS.CONFLICT,
+    );
+  }
+
+  return jobSeeker;
+}
+
+export class JobSeekerLoginService {
+  async sendLoginOtp(input: JobSeekerLoginSendOtpInput) {
+    return issueLoginOrResumeOtp(input.whatsappNumber);
+  }
+
   async resendLoginOtp(input: JobSeekerLoginSendOtpInput) {
-    const jobSeeker = await findLoginEligibleJobSeeker(input.whatsappNumber);
-    return issueAndPersistLoginOtp(jobSeeker);
+    return issueLoginOrResumeOtp(input.whatsappNumber);
   }
 
   async verifyLoginOtp(input: JobSeekerLoginVerifyOtpInput) {

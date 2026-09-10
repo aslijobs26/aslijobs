@@ -237,6 +237,11 @@ function employerConversationCopy(row: LeanNotificationRow): {
         title: "Candidate Joined",
         body: "You marked this candidate as joined.",
       };
+    case "application_did_not_join":
+      return {
+        title: "Did Not Join",
+        body: "You marked this candidate as did not join.",
+      };
     case "application_rejected":
       return {
         title: "Application Rejected",
@@ -893,7 +898,7 @@ export class NotificationService {
     }
     if (conversationType === "active") {
       postMatch["application.status"] = {
-        $nin: ["joined", "rejected", "withdrawn"],
+        $nin: ["joined", "did_not_join", "rejected", "withdrawn"],
       };
     } else if (conversationType === "completed") {
       postMatch["application.status"] = "joined";
@@ -1016,7 +1021,7 @@ export class NotificationService {
     });
 
     const weekAgo = new Date(inboxNow.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const terminalStatuses = ["joined", "rejected", "withdrawn"] as const;
+    const terminalStatuses = ["joined", "did_not_join", "rejected", "withdrawn"] as const;
 
     const [unreadCount, jobFacetRows, activeHiringRows, interviewWeekRows] =
       await Promise.all([
@@ -1599,6 +1604,34 @@ export class NotificationService {
             category: "system",
             title: "Candidate Joined",
             body: `${candidate} was marked as joined for ${jobTitle}.`,
+            priority: "normal",
+            referenceType: "application",
+            referenceId: context.applicationId,
+            actionPath: employerPath,
+            metadata: { publicJobId: context.publicJobId },
+          },
+        );
+        break;
+      case APPLICATION_EVENT_NAMES.DID_NOT_JOIN:
+        jobs.push(
+          {
+            recipientType: "job_seeker",
+            recipientId: context.jobSeekerId,
+            type: "application_did_not_join",
+            category: "system",
+            title: "Did Not Join",
+            body: `Your status for ${jobTitle} was updated to Did Not Join.`,
+            referenceType: "application",
+            referenceId: context.applicationId,
+            actionPath: seekerPath,
+          },
+          {
+            recipientType: "employer",
+            recipientId: context.employerId,
+            type: "application_did_not_join",
+            category: "system",
+            title: "Did Not Join",
+            body: `${candidate} was marked as did not join for ${jobTitle}.`,
             priority: "normal",
             referenceType: "application",
             referenceId: context.applicationId,

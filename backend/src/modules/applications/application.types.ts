@@ -116,6 +116,7 @@ export type EmployerApplicationStats = {
   offer_sent: number;
   selected: number;
   joined: number;
+  did_not_join: number;
   rejected: number;
   withdrawn: number;
 };
@@ -289,6 +290,7 @@ export type SeekerApplicationStats = {
   selected: number;
   rejected: number;
   joined: number;
+  did_not_join: number;
   withdrawn: number;
 };
 

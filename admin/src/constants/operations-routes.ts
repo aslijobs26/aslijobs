@@ -14,6 +14,7 @@ export const OPERATIONS_ROUTES = {
   JOBS: "/operations/jobs",
   JOBS_POST: "/operations/jobs/post",
   PLACEMENTS: "/operations/placements",
+  PLACEMENTS_LIST: "/operations/placements/list",
   VERIFICATIONS: "/operations/verifications",
   ESCALATIONS: "/operations/escalations",
   ANALYTICS: "/operations/analytics",
@@ -50,6 +51,10 @@ export function operationsEmployerDetailPath(employerId: string): string {
 
 export function operationsVerificationReviewPath(employerId: string): string {
   return `${OPERATIONS_ROUTES.VERIFICATIONS}/${encodeURIComponent(employerId)}`;
+}
+
+export function operationsPlacementDetailPath(placementId: string): string {
+  return `${OPERATIONS_ROUTES.PLACEMENTS}/${encodeURIComponent(placementId)}`;
 }
 
 export function operationsRoleDetailPath(roleId: string): string {

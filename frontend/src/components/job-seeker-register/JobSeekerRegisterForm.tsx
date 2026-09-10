@@ -55,6 +55,7 @@ import {
   type AuthFieldErrors,
 } from "@/utils/auth-field-errors";
 import { establishJobSeekerClientSession } from "@/utils/job-seeker-session";
+import { consumeJobSeekerRegistrationResume } from "@/utils/job-seeker-registration-resume";
 import { normalizeApiError } from "@/utils/normalize-api-error";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -359,6 +360,19 @@ export function JobSeekerRegisterForm() {
   const whatsappErrorId = "job-seeker-register-whatsapp-error";
   const otpErrorId = "job-seeker-register-otp-error";
   const formErrorId = "job-seeker-register-form-error";
+
+  useEffect(() => {
+    const resume = consumeJobSeekerRegistrationResume();
+    if (!resume) {
+      return;
+    }
+
+    setJobSeekerId(resume.jobSeekerId);
+    setRegistrationContinuationToken(resume.registrationContinuationToken);
+    setFullName(resume.fullName);
+    setWhatsappNumber(resume.whatsappNumber);
+    setStep("preferences");
+  }, []);
 
   useEffect(() => {
     if (step !== "otp") {

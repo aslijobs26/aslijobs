@@ -29,6 +29,7 @@ export const EMPLOYER_FORWARD_PIPELINE = [
 
 export const EMPLOYER_TERMINAL_STATUSES = [
   "joined",
+  "did_not_join",
   "rejected",
   "withdrawn",
 ] as const satisfies readonly EmployerApplicationStatus[];
@@ -42,6 +43,7 @@ const EMPLOYER_ALLOWED_TRANSITIONS: Record<
   readonly EmployerApplicationStatus[]
 > = {
   submitted: [
+    "viewed",
     "under_review",
     "shortlisted",
     "interview_scheduled",
@@ -70,8 +72,9 @@ const EMPLOYER_ALLOWED_TRANSITIONS: Record<
   interview_scheduled: ["interview_completed", "rejected", "withdrawn"],
   interview_completed: ["offer_sent", "rejected", "withdrawn"],
   offer_sent: ["selected", "joined", "rejected", "withdrawn"],
-  selected: ["joined", "rejected", "withdrawn"],
+  selected: ["joined", "did_not_join", "rejected", "withdrawn"],
   joined: [],
+  did_not_join: [],
   rejected: [],
   withdrawn: [],
 };
@@ -192,6 +195,7 @@ export type EmployerApplicationStats = {
   offer_sent: number;
   selected: number;
   joined: number;
+  did_not_join: number;
   rejected: number;
   withdrawn: number;
 };

@@ -364,6 +364,54 @@ function jobCatalog(): OperationsPermissionDefinition[] {
   ];
 }
 
+function placementCatalog(): OperationsPermissionDefinition[] {
+  return [
+    define({
+      module: "placements",
+      page: "list",
+      action: "view",
+      label: "Placements · List · View",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "placements",
+      page: "list",
+      action: "search",
+      label: "Placements · List · Search",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "placements",
+      page: "list",
+      action: "filter",
+      label: "Placements · List · Filter",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "placements",
+      page: "list",
+      action: "export",
+      label: "Placements · List · Export",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "placements",
+      page: "detail",
+      action: "view",
+      label: "Placements · Detail · View",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "placements",
+      page: "detail",
+      section: "actions",
+      action: "update_joining",
+      label: "Placements · Detail · Update joining status",
+      mapsToAction: "update",
+    }),
+  ];
+}
+
 function teamCatalog(): OperationsPermissionDefinition[] {
   return [
     define({
@@ -506,8 +554,14 @@ export const OPERATIONS_PERMISSION_CATALOG: OperationsPermissionDefinition[] = [
   ...employerCatalog(),
   ...candidateCatalog(),
   ...jobCatalog(),
+  ...placementCatalog(),
   ...teamCatalog(),
 ];
+
+export const PLACEMENTS_LIST_EXPORT_KEY =
+  "placements.list.export" as const;
+export const PLACEMENTS_DETAIL_UPDATE_JOINING_KEY =
+  "placements.detail.actions.update_joining" as const;
 
 const CATALOG_BY_KEY = new Map(
   OPERATIONS_PERMISSION_CATALOG.map((item) => [item.key, item]),

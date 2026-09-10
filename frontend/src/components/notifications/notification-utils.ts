@@ -80,6 +80,8 @@ export function notificationIcon(type: NotificationType): LucideIcon {
       return XCircle;
     case "application_joined":
       return CheckCircle2;
+    case "application_did_not_join":
+      return XCircle;
     case "application_withdrawn":
     case "candidate_withdrawn":
       return UserMinus;
@@ -117,6 +119,7 @@ export function notificationIconTone(type: NotificationType): NotificationIconTo
     case "application_selected":
       return "emerald";
     case "application_rejected":
+    case "application_did_not_join":
     case "job_rejected":
     case "job_live_changes_rejected":
     case "job_closed":

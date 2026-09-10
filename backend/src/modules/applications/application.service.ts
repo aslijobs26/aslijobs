@@ -709,6 +709,8 @@ function eventNameForStatus(status: ApplicationStatus): string | null {
       return APPLICATION_EVENT_NAMES.REJECTED;
     case "joined":
       return APPLICATION_EVENT_NAMES.JOINED;
+    case "did_not_join":
+      return APPLICATION_EVENT_NAMES.DID_NOT_JOIN;
     case "withdrawn":
       return APPLICATION_EVENT_NAMES.WITHDRAWN;
     default:
@@ -1538,6 +1540,7 @@ export class ApplicationService {
       offer_sent: byStatus.get("offer_sent") ?? 0,
       selected: byStatus.get("selected") ?? 0,
       joined: byStatus.get("joined") ?? 0,
+      did_not_join: byStatus.get("did_not_join") ?? 0,
       rejected: byStatus.get("rejected") ?? 0,
       withdrawn: byStatus.get("withdrawn") ?? 0,
     };
@@ -1552,9 +1555,9 @@ export class ApplicationService {
       stats.offer_sent +
       stats.selected +
       stats.joined +
+      stats.did_not_join +
       stats.rejected +
       stats.withdrawn;
-
     return { stats };
   }
 
@@ -2279,11 +2282,6 @@ export class ApplicationService {
     applicationId: string;
     status: ApplicationStatus;
   }) {
-    const application = await this.findOwnedApplicationOrThrow(
-      input.applicationId,
-      input.employerId,
-    );
-
     if (input.status === "interview_scheduled") {
       throw new AppError(
         "Schedule an interview to set status to Interview Scheduled. Direct status update is not allowed.",
@@ -2298,28 +2296,66 @@ export class ApplicationService {
       );
     }
 
-    if (application.status !== input.status) {
-      assertEmployerStatusChangeAllowed(
-        application.status as ApplicationStatus,
-        input.status,
-        {
-          interview: mapInterview(application.interview),
-          offer: mapOffer(application.offer),
-        },
-      );
-      const now = new Date();
-      application.status = input.status;
-      appendStatusHistory(application, {
-        status: input.status,
-        at: now,
-        actorType: "employer",
-      });
-      await application.save();
+    const application = await this.findOwnedApplicationOrThrow(
+      input.applicationId,
+      input.employerId,
+    );
 
-      const eventName = eventNameForStatus(input.status);
-      if (eventName) {
-        await this.emitForApplication(eventName, application);
+    if (application.status === input.status) {
+      return this.loadEmployerDetail({
+        employerId: input.employerId,
+        applicationId: input.applicationId,
+        autoView: false,
+      });
+    }
+
+    const expectedStatus = application.status as ApplicationStatus;
+    assertEmployerStatusChangeAllowed(expectedStatus, input.status, {
+      interview: mapInterview(application.interview),
+      offer: mapOffer(application.offer),
+    });
+
+    const now = new Date();
+    const historyEntry = {
+      status: input.status,
+      at: now,
+      actorType: "employer" as const,
+      remark: "",
+    };
+
+    // Atomic compare-and-set — concurrent employer/Ops writers get 409.
+    const updated = await ApplicationModel.findOneAndUpdate(
+      {
+        _id: application._id,
+        employerId: application.employerId,
+        status: expectedStatus,
+      },
+      {
+        $set: { status: input.status },
+        $push: { statusHistory: historyEntry },
+      },
+      { new: true },
+    );
+
+    if (!updated) {
+      const existing = await ApplicationModel.findOne({
+        _id: application._id,
+        employerId: application.employerId,
+      })
+        .select("status")
+        .lean();
+      if (!existing) {
+        throw new AppError("Application not found", HTTP_STATUS.NOT_FOUND);
       }
+      throw new AppError(
+        "Application status was already updated. Refresh and try again.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const eventName = eventNameForStatus(input.status);
+    if (eventName) {
+      await this.emitForApplication(eventName, updated);
     }
 
     return this.loadEmployerDetail({
@@ -2673,7 +2709,6 @@ export class ApplicationService {
     );
 
     const now = new Date();
-    let statusChanged = false;
     let interviewUpdated = false;
 
     if (input.interview) {
@@ -2711,36 +2746,77 @@ export class ApplicationService {
         input.employerNotesVisibleToSeeker;
     }
 
-    if (input.status && application.status !== input.status) {
-      assertEmployerStatusChangeAllowed(
-        application.status as ApplicationStatus,
-        input.status,
-        {
-          interview: mapInterview(application.interview),
-          offer: mapOffer(application.offer),
-        },
-      );
-      application.status = input.status;
-      statusChanged = true;
-      appendStatusHistory(application, {
-        status: input.status,
-        at: now,
-        actorType: "employer",
+    const expectedStatus = application.status as ApplicationStatus;
+    const nextStatus = input.status;
+    const statusChanging =
+      Boolean(nextStatus) && nextStatus !== expectedStatus;
+
+    if (statusChanging && nextStatus) {
+      assertEmployerStatusChangeAllowed(expectedStatus, nextStatus, {
+        interview: mapInterview(application.interview),
+        offer: mapOffer(application.offer),
       });
-    }
 
-    await application.save();
+      const historyEntry = {
+        status: nextStatus,
+        at: now,
+        actorType: "employer" as const,
+        remark: "",
+      };
 
-    if (statusChanged) {
-      const eventName = eventNameForStatus(input.status!);
-      if (eventName) {
-        await this.emitForApplication(eventName, application);
-      }
-    } else if (interviewUpdated && application.status === "interview_scheduled") {
-      await this.emitForApplication(
-        APPLICATION_EVENT_NAMES.INTERVIEW_UPDATED,
-        application,
+      const $set: Record<string, unknown> = {
+        status: nextStatus,
+        interview: application.interview,
+        offer: application.offer,
+        rejectReason: application.rejectReason,
+        employerNotesVisibleToSeeker: application.employerNotesVisibleToSeeker,
+      };
+
+      const updated = await ApplicationModel.findOneAndUpdate(
+        {
+          _id: application._id,
+          employerId: application.employerId,
+          status: expectedStatus,
+        },
+        {
+          $set,
+          $push: { statusHistory: historyEntry },
+        },
+        { new: true },
       );
+
+      if (!updated) {
+        const existing = await ApplicationModel.findOne({
+          _id: application._id,
+          employerId: application.employerId,
+        })
+          .select("status")
+          .lean();
+        if (!existing) {
+          throw new AppError("Application not found", HTTP_STATUS.NOT_FOUND);
+        }
+        throw new AppError(
+          "Application status was already updated. Refresh and try again.",
+          HTTP_STATUS.CONFLICT,
+        );
+      }
+
+      const eventName = eventNameForStatus(nextStatus);
+      if (eventName) {
+        await this.emitForApplication(eventName, updated);
+      }
+    } else {
+      await application.save();
+
+      if (
+        interviewUpdated &&
+        application.status === "interview_scheduled"
+      ) {
+        await this.emitForApplication(
+          APPLICATION_EVENT_NAMES.INTERVIEW_UPDATED,
+          application,
+        );
+      }
     }
 
     return this.loadEmployerDetail({
@@ -3145,6 +3221,7 @@ export class ApplicationService {
         selected: byStatus.get("selected") ?? 0,
         rejected: byStatus.get("rejected") ?? 0,
         joined: byStatus.get("joined") ?? 0,
+        did_not_join: byStatus.get("did_not_join") ?? 0,
         withdrawn: byStatus.get("withdrawn") ?? 0,
       },
     };

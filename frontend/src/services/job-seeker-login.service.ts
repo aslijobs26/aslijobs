@@ -12,6 +12,8 @@ type SendLoginOtpResponse = {
   otpExpiresAt: string;
   expiresIn: number;
   resendAvailableIn: number;
+  /** Incomplete signup — OTP is for registration resume, not full login. */
+  registrationResume?: boolean;
 };
 
 type VerifyLoginOtpResponse = {

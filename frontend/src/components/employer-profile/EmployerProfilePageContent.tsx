@@ -22,6 +22,7 @@ import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import { useCan } from "@/providers/employer-permission-provider";
 import { employerProfileQueryKey } from "@/services/employer-login.service";
 import {
+  resubmitEmployerVerification,
   updateEmployerProfile,
   type EmployerProfilePublic,
   type UpdateEmployerProfileInput,
@@ -290,6 +291,35 @@ export function EmployerProfilePageContent() {
     mutationFn: updateEmployerProfile,
   });
 
+  const resubmitVerificationMutation = useMutation({
+    mutationFn: resubmitEmployerVerification,
+    onSuccess: (result) => {
+      queryClient.setQueryData(employerProfileQueryKey, result.employer);
+      showAppToast(
+        result.alreadyPending
+          ? "Verification is already pending Operations review."
+          : "Verification resubmitted for Operations review.",
+        "success",
+      );
+    },
+    onError: (error: unknown) => {
+      const message =
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "data" in error.response &&
+        error.response.data &&
+        typeof error.response.data === "object" &&
+        "message" in error.response.data &&
+        typeof error.response.data.message === "string"
+          ? error.response.data.message
+          : "Could not resubmit verification. Please try again.";
+      showAppToast(message, "error");
+    },
+  });
+
   const profile = profileQuery.data;
 
   const markVisitedMutation = useMutation({
@@ -405,8 +435,11 @@ export function EmployerProfilePageContent() {
       (option) => option.value === profile.industry,
     )?.label ?? profile.industry;
   const websiteHref = safeExternalHref(profile.website);
-  const isVerified =
-    profile.registrationStatus === "completed" && profile.isWhatsappVerified;
+  const isVerified = profile.verificationStatus === "verified";
+  const isVerificationRejected = profile.verificationStatus === "rejected";
+  const isVerificationPending =
+    profile.verificationStatus === "pending" &&
+    profile.registrationStatus === "completed";
   const isBusinessProfile = profile.accountType !== "individual";
   const media = profile.companyMedia ?? [];
   const aboutTabs = isBusinessProfile
@@ -510,6 +543,42 @@ export function EmployerProfilePageContent() {
         </div>
       </header>
 
+      {isVerificationRejected || isVerificationPending ? (
+        <section
+          className={cn(
+            "mt-4 rounded-xl border p-4 shadow-sm",
+            isVerificationRejected
+              ? "border-red-200 bg-red-50/80"
+              : "border-amber-200 bg-amber-50/80",
+          )}
+          aria-live="polite"
+        >
+          <p className="text-sm font-semibold text-foreground">
+            {isVerificationRejected
+              ? "Account verification was rejected"
+              : "Account verification is pending"}
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            {isVerificationRejected
+              ? profile.verificationRemarks?.trim() ||
+                "Please update your company details if needed, then submit again for Operations review."
+              : "You can save job drafts, but submitting or publishing jobs requires Operations verification."}
+          </p>
+          {isVerificationRejected ? (
+            <button
+              type="button"
+              disabled={resubmitVerificationMutation.isPending}
+              onClick={() => void resubmitVerificationMutation.mutateAsync()}
+              className="mt-3 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+            >
+              {resubmitVerificationMutation.isPending
+                ? "Submitting…"
+                : "Submit Again"}
+            </button>
+          ) : null}
+        </section>
+      ) : null}
+
       <div className="mt-5 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,0.9fr)]">
         <main className="min-w-0 space-y-4">
           <section
@@ -551,6 +620,14 @@ export function EmployerProfilePageContent() {
                       <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-1 text-[0.6875rem] font-semibold text-primary">
                         <BadgeCheck className="size-3.5" aria-hidden="true" />
                         Verified
+                      </span>
+                    ) : isVerificationRejected ? (
+                      <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-[0.6875rem] font-semibold text-red-700">
+                        Verification rejected
+                      </span>
+                    ) : isVerificationPending ? (
+                      <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-[0.6875rem] font-semibold text-amber-800">
+                        Verification pending
                       </span>
                     ) : null}
                   </div>

@@ -25,12 +25,14 @@ import {
   sendJobSeekerLoginOtp,
   verifyJobSeekerLoginOtp,
 } from "@/services/job-seeker-login.service";
+import { verifyJobSeekerOtp } from "@/services/job-seeker-register.service";
 import {
   clearFieldError,
   focusFirstInvalidField,
   mergeFieldErrors,
   type AuthFieldErrors,
 } from "@/utils/auth-field-errors";
+import { storeJobSeekerRegistrationResume } from "@/utils/job-seeker-registration-resume";
 import { establishJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { normalizeApiError } from "@/utils/normalize-api-error";
 import {
@@ -56,11 +58,12 @@ const EMPTY_OTP_DIGITS = Array.from(
 );
 
 function applyApiFailure(error: unknown): {
-  formError: string;
+  formError: string | null;
   fieldErrors: AuthFieldErrors;
 } {
   const normalized = normalizeApiError(error);
   const fieldErrors: AuthFieldErrors = { ...normalized.fieldErrors };
+  let message = normalized.message;
 
   const otpMessages = new Set<string>([
     AUTH_VALIDATION_MESSAGES.OTP_INVALID,
@@ -69,22 +72,35 @@ function applyApiFailure(error: unknown): {
     AUTH_VALIDATION_MESSAGES.OTP_REQUIRED,
   ]);
 
-  if (otpMessages.has(normalized.message) && !fieldErrors.otp) {
-    fieldErrors.otp = normalized.message;
+  if (normalized.status === 429) {
+    message = AUTH_VALIDATION_MESSAGES.OTP_TOO_MANY;
+  }
+
+  if (otpMessages.has(message) && !fieldErrors.otp) {
+    fieldErrors.otp = message;
   }
 
   if (
-    (normalized.message === AUTH_VALIDATION_MESSAGES.LOGIN_NOT_REGISTERED ||
-      normalized.message === AUTH_VALIDATION_MESSAGES.COMPLETE_REGISTRATION ||
-      normalized.message === AUTH_VALIDATION_MESSAGES.ACCOUNT_SUSPENDED ||
-      normalized.message === AUTH_VALIDATION_MESSAGES.ACCOUNT_INACTIVE) &&
+    (message === AUTH_VALIDATION_MESSAGES.LOGIN_NOT_REGISTERED ||
+      message === AUTH_VALIDATION_MESSAGES.COMPLETE_REGISTRATION ||
+      message === AUTH_VALIDATION_MESSAGES.ACCOUNT_SUSPENDED ||
+      message === AUTH_VALIDATION_MESSAGES.ACCOUNT_INACTIVE) &&
     !fieldErrors.whatsappNumber
   ) {
-    fieldErrors.whatsappNumber = normalized.message;
+    fieldErrors.whatsappNumber = message;
   }
 
+  // Field-level copy only — avoid duplicating the same text as a form alert.
+  const onlyFieldErrors =
+    Object.keys(fieldErrors).length > 0 &&
+    (otpMessages.has(message) ||
+      message === AUTH_VALIDATION_MESSAGES.LOGIN_NOT_REGISTERED ||
+      message === AUTH_VALIDATION_MESSAGES.COMPLETE_REGISTRATION ||
+      message === AUTH_VALIDATION_MESSAGES.ACCOUNT_SUSPENDED ||
+      message === AUTH_VALIDATION_MESSAGES.ACCOUNT_INACTIVE);
+
   return {
-    formError: normalized.message,
+    formError: onlyFieldErrors ? null : message,
     fieldErrors,
   };
 }
@@ -123,6 +139,8 @@ export function JobSeekerLoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
+  const [registrationResumeJobSeekerId, setRegistrationResumeJobSeekerId] =
+    useState<string | null>(null);
   const { secondsLeft, isCoolingDown, startCooldown, resetCooldown } =
     useOtpResendCooldown();
 
@@ -164,6 +182,7 @@ export function JobSeekerLoginForm() {
     if (isOtpVisible) {
       setIsOtpVisible(false);
       setOtpDigits(EMPTY_OTP_DIGITS);
+      setRegistrationResumeJobSeekerId(null);
       clearSingleFieldError("otp");
       resetCooldown();
     }
@@ -187,6 +206,9 @@ export function JobSeekerLoginForm() {
       const result = await sendJobSeekerLoginOtp(whatsappNumber);
       setOtpDigits(EMPTY_OTP_DIGITS);
       setIsOtpVisible(true);
+      setRegistrationResumeJobSeekerId(
+        result.registrationResume ? result.jobSeekerId : null,
+      );
       startCooldown(result.resendAvailableIn);
     } catch (error) {
       showApiFailure(error);
@@ -212,6 +234,9 @@ export function JobSeekerLoginForm() {
     try {
       const result = await resendJobSeekerLoginOtp(whatsappNumber);
       setOtpDigits(EMPTY_OTP_DIGITS);
+      setRegistrationResumeJobSeekerId(
+        result.registrationResume ? result.jobSeekerId : null,
+      );
       startCooldown(result.resendAvailableIn);
     } catch (error) {
       showApiFailure(error);
@@ -246,10 +271,25 @@ export function JobSeekerLoginForm() {
     clearErrors();
 
     try {
-      const data = await verifyJobSeekerLoginOtp(
-        whatsappNumber,
-        otpDigits.join(""),
-      );
+      const otp = otpDigits.join("");
+
+      if (registrationResumeJobSeekerId) {
+        const verified = await verifyJobSeekerOtp(
+          registrationResumeJobSeekerId,
+          otp,
+        );
+        storeJobSeekerRegistrationResume({
+          jobSeekerId: verified.jobSeeker.id,
+          registrationContinuationToken:
+            verified.registrationContinuationToken,
+          fullName: verified.jobSeeker.fullName,
+          whatsappNumber: verified.jobSeeker.whatsappNumber,
+        });
+        router.push(ROUTES.JOB_SEEKER_REGISTER);
+        return;
+      }
+
+      const data = await verifyJobSeekerLoginOtp(whatsappNumber, otp);
       await establishJobSeekerClientSession(queryClient, {
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
@@ -319,7 +359,9 @@ export function JobSeekerLoginForm() {
                 {JOB_SEEKER_LOGIN_OTP_HEADING}
               </h2>
               <p className="employer-register-otp-description">
-                {JOB_SEEKER_LOGIN_OTP_DESCRIPTION}
+                {registrationResumeJobSeekerId
+                  ? "Your signup is incomplete. Enter the WhatsApp code to continue registration."
+                  : JOB_SEEKER_LOGIN_OTP_DESCRIPTION}
               </p>
             </div>
 

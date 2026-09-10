@@ -35,6 +35,7 @@ const STATUS_PILL_CLASS: Record<string, string> = {
   offer_sent: "bg-emerald-50 text-emerald-700",
   selected: "bg-emerald-50 text-emerald-700",
   joined: "bg-emerald-50 text-emerald-700",
+  did_not_join: "bg-red-50 text-red-600",
   rejected: "bg-red-50 text-red-600",
   withdrawn: "bg-slate-100 text-slate-600",
 };

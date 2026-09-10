@@ -130,6 +130,7 @@ function isEmployerAlignedNotification(type: NotificationType): boolean {
     case "application_shortlisted":
     case "application_selected":
     case "application_joined":
+    case "application_did_not_join":
     case "application_rejected":
       return true;
     default:
@@ -162,6 +163,8 @@ function notificationBadgeLabel(type: NotificationType): string {
       return "Selected";
     case "application_joined":
       return "Joined";
+    case "application_did_not_join":
+      return "Did Not Join";
     case "application_rejected":
       return "Rejected";
     case "application_withdrawn":

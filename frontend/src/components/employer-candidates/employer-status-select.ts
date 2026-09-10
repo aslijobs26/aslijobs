@@ -21,10 +21,11 @@ export type EmployerStatusSelectResult =
  */
 export function resolveEmployerStatusSelect(input: {
   nextStatus: EmployerApplicationStatus;
+  currentStatus?: EmployerApplicationStatus;
   interview: ApplicationInterview;
   offer: ApplicationOffer;
 }): EmployerStatusSelectResult {
-  const { nextStatus, interview, offer } = input;
+  const { nextStatus, currentStatus, interview, offer } = input;
 
   if (nextStatus === "shortlisted") {
     return {
@@ -68,6 +69,16 @@ export function resolveEmployerStatusSelect(input: {
       return {
         action: "blocked",
         message: "Send an offer before marking the candidate as joined.",
+      };
+    }
+  }
+
+  if (nextStatus === "did_not_join") {
+    if (currentStatus !== undefined && currentStatus !== "selected") {
+      return {
+        action: "blocked",
+        message:
+          "Mark the candidate as selected before recording Did Not Join.",
       };
     }
   }

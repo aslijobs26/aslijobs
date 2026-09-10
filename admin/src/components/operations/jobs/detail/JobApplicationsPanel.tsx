@@ -32,6 +32,7 @@ function applicationBadgeVariant(
     case "selected":
     case "joined":
       return "default";
+    case "did_not_join":
     case "rejected":
     case "withdrawn":
       return "high";

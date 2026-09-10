@@ -268,6 +268,7 @@ export function applicationStatusBadgeClass(status: ApplicationStatus): string {
     case "viewed":
     case "submitted":
       return "bg-resource-salary-surface text-resource-salary-icon ring-resource-salary-icon/25";
+    case "did_not_join":
     case "rejected":
       return "bg-primary-light text-pin-state ring-pin-state/25";
     case "withdrawn":
@@ -295,6 +296,7 @@ export function applicationStatusIcon(
     case "offer_sent":
     case "joined":
       return Gift;
+    case "did_not_join":
     case "rejected":
       return XCircle;
     case "withdrawn":
@@ -339,6 +341,10 @@ export function buildStatusContext(
 
   if (status === "rejected") {
     return { label: "Rejected", date: statusDate };
+  }
+
+  if (status === "did_not_join") {
+    return { label: "Did Not Join", date: statusDate };
   }
 
   if (status === "withdrawn") {
@@ -502,6 +508,7 @@ export function getStatsChipCount(
       stats.selected +
       stats.rejected +
       stats.joined +
+      (stats.did_not_join ?? 0) +
       (stats.withdrawn ?? 0)
     );
   }

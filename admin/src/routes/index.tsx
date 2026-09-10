@@ -20,6 +20,9 @@ import { OperationsRoleDetailPage } from "./operations-role-detail-page";
 import { OperationsRoleEditorPage } from "./operations-role-editor-page";
 import { OperationsRolesPage } from "./operations-roles-page";
 import { OperationsTeamPage } from "./operations-team-page";
+import { OperationsPlacementDetailPage } from "./operations-placement-detail-page";
+import { OperationsPlacementsListPage } from "./operations-placements-list-page";
+import { OperationsPlacementsPage } from "./operations-placements-page";
 import { OperationsVerificationReviewPage } from "./operations-verification-review-page";
 import { OperationsVerificationsPage } from "./operations-verifications-page";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
@@ -98,7 +101,15 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.PLACEMENTS}
-          element={<OperationsPlaceholderPage title="Placements" />}
+          element={<OperationsPlacementsPage />}
+        />
+        <Route
+          path={OPERATIONS_ROUTES.PLACEMENTS_LIST}
+          element={<OperationsPlacementsListPage />}
+        />
+        <Route
+          path={`${OPERATIONS_ROUTES.PLACEMENTS}/:placementId`}
+          element={<OperationsPlacementDetailPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.VERIFICATIONS}

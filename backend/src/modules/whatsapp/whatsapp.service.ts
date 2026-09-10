@@ -9,7 +9,14 @@ type MetaErrorBody = {
     type?: string;
     code?: number;
     error_subcode?: number;
+    error_user_title?: string;
+    error_user_msg?: string;
+    fbtrace_id?: string;
   };
+};
+
+type MetaSendSuccessBody = {
+  messages?: Array<{ id?: string; message_status?: string }>;
 };
 
 /**
@@ -53,6 +60,7 @@ export class WhatsAppService {
         signal: AbortSignal.timeout(15_000),
         body: JSON.stringify({
           messaging_product: "whatsapp",
+          recipient_type: "individual",
           to: recipient,
           type: "template",
           template: {
@@ -94,22 +102,52 @@ export class WhatsAppService {
       await this.handleMetaFailure(response);
     }
 
-    console.info("[WhatsAppService] WhatsApp OTP delivery successful");
+    let messageId = "";
+    let messageStatus = "";
+    try {
+      const body = (await response.json()) as MetaSendSuccessBody;
+      messageId = body.messages?.[0]?.id?.trim() ?? "";
+      messageStatus = body.messages?.[0]?.message_status?.trim() ?? "";
+    } catch {
+      // Acceptance without a parseable body is still treated as success.
+    }
+
+    console.info(
+      `[WhatsAppService] WhatsApp OTP delivery successful${
+        messageId ? ` messageId=${messageId}` : ""
+      }${messageStatus ? ` status=${messageStatus}` : ""}`,
+    );
   }
 
   private async handleMetaFailure(response: Response): Promise<never> {
     let errorCode: number | undefined;
+    let errorSubcode: number | undefined;
+    let errorType = "";
+    let errorMessage = "";
+    let fbtraceId = "";
+
     try {
       const body = (await response.json()) as MetaErrorBody;
       errorCode = body.error?.code;
+      errorSubcode = body.error?.error_subcode;
+      errorType = body.error?.type?.trim() ?? "";
+      errorMessage = (
+        body.error?.error_user_msg ||
+        body.error?.message ||
+        ""
+      ).trim();
+      fbtraceId = body.error?.fbtrace_id?.trim() ?? "";
     } catch {
       // Ignore unreadable Meta error payloads.
     }
 
     console.error(
-      `[WhatsAppService] WhatsApp OTP delivery failed: status=${response.status}${
-        typeof errorCode === "number" ? ` code=${errorCode}` : ""
-      }`,
+      `[WhatsAppService] WhatsApp OTP delivery failed: status=${response.status}` +
+        `${typeof errorCode === "number" ? ` code=${errorCode}` : ""}` +
+        `${typeof errorSubcode === "number" ? ` subcode=${errorSubcode}` : ""}` +
+        `${errorType ? ` type=${errorType}` : ""}` +
+        `${fbtraceId ? ` fbtrace=${fbtraceId}` : ""}` +
+        `${errorMessage ? ` message=${errorMessage}` : ""}`,
     );
 
     throw new AppError(

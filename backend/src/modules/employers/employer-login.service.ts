@@ -86,6 +86,7 @@ function toLoginEmployer(employer: {
   companyProfileVisited?: boolean;
   registrationStatus: string;
   verificationStatus?: string | null;
+  verificationRemarks?: string | null;
   lastLoginAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
@@ -183,6 +184,7 @@ function toLoginEmployer(employer: {
       | "verified"
       | "rejected"
       | undefined) ?? "pending",
+    verificationRemarks: String(employer.verificationRemarks ?? "").trim(),
     lastLoginAt: employer.lastLoginAt ?? null,
     createdAt: employer.createdAt,
     updatedAt: employer.updatedAt,

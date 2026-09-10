@@ -79,6 +79,22 @@ export async function fetchEmployerProfile() {
   return employer;
 }
 
+export async function resubmitEmployerVerification(): Promise<{
+  employer: EmployerProfilePublic;
+  alreadyPending: boolean;
+}> {
+  const response = await apiClient.post<
+    ApiSuccess<{
+      employer: EmployerProfilePublic;
+      alreadyPending?: boolean;
+    }>
+  >("/employers/me/verification/resubmit");
+  return {
+    employer: response.data.data.employer,
+    alreadyPending: Boolean(response.data.data.alreadyPending),
+  };
+}
+
 export async function updateEmployerProfile(input: UpdateEmployerProfileInput) {
   const body = new FormData();
 

@@ -264,6 +264,9 @@ applicationSchema.index({ jobId: 1, status: 1 });
 applicationSchema.index({ jobSeekerId: 1, appliedAt: -1 });
 applicationSchema.index({ jobSeekerId: 1, status: 1 });
 applicationSchema.index({ employerId: 1, jobId: 1, status: 1 });
+/** Operations Placements list/analytics by status + recency. */
+applicationSchema.index({ status: 1, updatedAt: -1 });
+applicationSchema.index({ status: 1, appliedAt: -1 });
 
 export type ApplicationDocumentLean = InferSchemaType<
   typeof applicationSchema

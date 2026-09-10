@@ -10,6 +10,7 @@ export const APPLICATION_STATUSES = [
   "offer_sent",
   "selected",
   "joined",
+  "did_not_join",
   "rejected",
   "withdrawn",
 ] as const;
@@ -26,11 +27,16 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   offer_sent: "Offer Sent",
   selected: "Selected",
   joined: "Joined",
+  did_not_join: "Did Not Join",
   rejected: "Rejected",
   withdrawn: "Withdrawn",
 };
 
-export type ApplicationHistoryActor = "job_seeker" | "employer" | "system";
+export type ApplicationHistoryActor =
+  | "job_seeker"
+  | "employer"
+  | "system"
+  | "operations";
 
 export type ApplicationStatusHistoryEntry = {
   status: ApplicationStatus;
@@ -105,6 +111,7 @@ export type SeekerApplicationStats = {
   selected: number;
   rejected: number;
   joined: number;
+  did_not_join: number;
   withdrawn: number;
 };
 

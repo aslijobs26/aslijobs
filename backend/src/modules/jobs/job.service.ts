@@ -585,19 +585,27 @@ function resolveStatusFromAction(
       }
       return "active";
     case "close":
-      if (currentStatus === "closed" || currentStatus === "expired") {
+      // Only previously Live (or paused) jobs can be closed — prevents
+      // draft/pending_approval/rejected → close → reactivate approval bypass.
+      if (currentStatus !== "active" && currentStatus !== "paused") {
         throw new AppError(
-          "Job is already closed or expired",
+          "Only active or paused jobs can be closed",
           HTTP_STATUS.BAD_REQUEST,
         );
       }
       return "closed";
     case "expire":
+      if (currentStatus !== "active" && currentStatus !== "paused") {
+        throw new AppError(
+          "Only active or paused jobs can be expired",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
       return "expired";
     case "reactivate":
-      if (currentStatus !== "closed") {
+      if (currentStatus !== "closed" && currentStatus !== "expired") {
         throw new AppError(
-          "Only closed jobs can be reactivated",
+          "Only closed or expired jobs can be reactivated",
           HTTP_STATUS.BAD_REQUEST,
         );
       }
@@ -1598,6 +1606,19 @@ export class JobService {
   ) {
     const job = await this.findOwnedJobOrThrow(employerId, jobMongoId);
     const nextStatus = resolveStatusFromAction(job.status as JobStatus, action);
+
+    // Reactivate must only restore jobs that Operations previously approved.
+    if (action === "reactivate") {
+      const reviewDecision = String(job.reviewDecision ?? "")
+        .trim()
+        .toLowerCase();
+      if (reviewDecision !== "approved") {
+        throw new AppError(
+          "Only jobs previously approved by Operations can be reactivated.",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+    }
 
     if (
       nextStatus === "active" ||

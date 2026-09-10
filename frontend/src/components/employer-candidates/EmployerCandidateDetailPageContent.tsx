@@ -554,6 +554,7 @@ export function EmployerCandidateDetailPageContent({
                   }
                   const result = resolveEmployerStatusSelect({
                     nextStatus: next,
+                    currentStatus: application.status,
                     interview: application.interview,
                     offer: application.offer,
                   });

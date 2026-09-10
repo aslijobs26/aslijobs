@@ -22,6 +22,7 @@ export type NotificationType =
   | "offer_sent"
   | "application_selected"
   | "application_joined"
+  | "application_did_not_join"
   | "application_rejected"
   | "application_withdrawn"
   | "candidate_withdrawn"

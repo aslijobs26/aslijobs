@@ -171,7 +171,7 @@ export const OPERATIONS_NAV_ITEM_PERMISSION_MODULE: Record<
   employers: "employers",
   verifications: "verifications",
   jobs: "jobs",
-  placements: "jobs",
+  placements: "placements",
   support: "support",
   "operations-dashboard": "dashboard",
   analytics: "jobs",

@@ -78,6 +78,11 @@ const QUICK_FILTERS: {
     statsKey: "offer_sent",
   },
   { key: "joined", label: "Hired", statsKey: "joined" },
+  {
+    key: "did_not_join",
+    label: EMPLOYER_APPLICATION_STATUS_LABELS.did_not_join,
+    statsKey: "did_not_join",
+  },
   { key: "rejected", label: "Rejected", statsKey: "rejected" },
   { key: "withdrawn", label: "Withdrawn", statsKey: "withdrawn" },
 ];

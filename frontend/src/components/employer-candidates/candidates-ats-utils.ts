@@ -62,6 +62,7 @@ export function employerApplicationStatusClass(
     case "under_review":
     case "viewed":
       return "bg-sky-50 text-sky-800 ring-sky-200";
+    case "did_not_join":
     case "rejected":
     case "withdrawn":
       return "bg-red-50 text-red-700 ring-red-200";
