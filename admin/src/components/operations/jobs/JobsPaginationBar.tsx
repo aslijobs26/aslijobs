@@ -136,14 +136,20 @@ export function JobsPaginationBar({
           </button>
         </nav>
 
-        <OperationsFilterSelect
-          label="Rows per page"
-          value={String(limit)}
-          options={ROWS_PER_PAGE_OPTIONS}
-          hideSearch
-          className="w-[4.5rem]"
-          onChange={(value) => onLimitChange(Number(value))}
-        />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="hidden text-[11px] text-muted sm:inline" aria-hidden>
+            Rows
+          </span>
+          <OperationsFilterSelect
+            label="Rows per page"
+            value={String(limit)}
+            options={ROWS_PER_PAGE_OPTIONS}
+            hideSearch
+            className="w-[4.75rem] shrink-0"
+            triggerClassName="min-w-0 px-2"
+            onChange={(value) => onLimitChange(Number(value))}
+          />
+        </div>
       </div>
     </div>
   );

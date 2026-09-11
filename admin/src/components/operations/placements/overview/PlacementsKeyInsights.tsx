@@ -47,7 +47,7 @@ export function PlacementsKeyInsights({
   return (
     <OperationsCard
       title="Key Insights"
-      subtitle="Highlights from the selected period"
+      subtitle="Selected period"
       className="placements-analytics-card min-w-0"
       badge={
         <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary-light text-primary">
@@ -56,11 +56,11 @@ export function PlacementsKeyInsights({
       }
     >
       {items.length === 0 ? (
-        <p className="flex min-h-36 items-center justify-center text-center text-xs text-muted">
-          No insights available for this period.
+        <p className="py-3 text-center text-[11px] text-muted xl:py-2 xl:text-[10px]">
+          No insights for this period.
         </p>
       ) : (
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="flex flex-col gap-1.5 xl:gap-1">
           {items.map((insight) => {
             const tone = insight.tone ?? "neutral";
             const style = TONE_STYLES[tone];
@@ -71,19 +71,22 @@ export function PlacementsKeyInsights({
               <li
                 key={insight.id}
                 className={cn(
-                  "flex min-w-0 items-start gap-2.5 rounded-xl border p-3 max-sm:p-2.5",
+                  "flex min-w-0 items-start gap-2 rounded-lg border p-2 xl:gap-1.5 xl:p-1.5",
                   style.wrap,
                 )}
               >
                 <span
                   className={cn(
-                    "inline-flex size-8 shrink-0 items-center justify-center rounded-lg max-sm:size-7",
+                    "inline-flex size-6 shrink-0 items-center justify-center rounded-md xl:size-5",
                     style.iconWrap,
                   )}
                 >
-                  <Icon className="size-3.5" aria-hidden="true" />
+                  <Icon
+                    className="size-3 xl:size-2.5"
+                    aria-hidden="true"
+                  />
                 </span>
-                <p className="min-w-0 text-[12px] leading-snug text-foreground max-sm:text-[11px]">
+                <p className="min-w-0 text-[11px] leading-snug text-foreground xl:text-[10px]">
                   {message || "—"}
                 </p>
               </li>

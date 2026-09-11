@@ -29,6 +29,7 @@ export type OperationsRegistrationNotificationType =
 export const OPERATIONS_NOTIFICATION_ENTITY_TYPES = [
   ...OPERATIONS_REGISTRATION_ENTITY_TYPES,
   "job",
+  "work",
 ] as const;
 
 export type OperationsNotificationEntityType =
@@ -36,13 +37,16 @@ export type OperationsNotificationEntityType =
 
 /**
  * Workspace Operations inbox notification types.
- * Registration + job moderation share `operations_notifications`.
+ * Registration + job moderation + work assignment share `operations_notifications`.
  */
 export const OPERATIONS_NOTIFICATION_TYPES = [
   ...OPERATIONS_REGISTRATION_NOTIFICATION_TYPES,
   "job.pending_approval",
   "job.resubmitted",
   "job.live_revision_submitted",
+  "work.assigned",
+  "work.reassigned",
+  "work.claimed",
 ] as const;
 
 export type OperationsNotificationType =

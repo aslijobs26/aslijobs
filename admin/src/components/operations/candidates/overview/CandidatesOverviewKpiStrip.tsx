@@ -14,12 +14,58 @@ const CARDS: Array<{
   icon: LucideIcon;
   tone: string;
   wrap: string;
+  card: string;
 }> = [
-  { value: "totalJobseekers", trend: "totalJobseekersTrendPercent", caption: "totalJobseekersCaption", label: "Total Jobseekers", icon: Users, tone: "text-primary", wrap: "bg-primary-light" },
-  { value: "newRegistrations", trend: "newRegistrationsTrendPercent", caption: "newRegistrationsCaption", label: "New Registrations", icon: UserPlus, tone: "text-chart-accent", wrap: "bg-chart-accent/10" },
-  { value: "profileCompleted", trend: "profileCompletedTrendPercent", caption: "profileCompletedCaption", label: "Registration Complete", icon: FileCheck, tone: "text-success", wrap: "bg-success/10" },
-  { value: "verifiedJobseekers", trend: "verifiedJobseekersTrendPercent", caption: "verifiedJobseekersCaption", label: "WhatsApp Verified", icon: ShieldCheck, tone: "text-warning", wrap: "bg-warning/10" },
-  { value: "activeJobseekers", trend: "activeJobseekersTrendPercent", caption: "activeJobseekersCaption", label: "Active Jobseekers", icon: Briefcase, tone: "text-chart-accent-alt", wrap: "bg-chart-accent-alt/10" },
+  {
+    value: "totalJobseekers",
+    trend: "totalJobseekersTrendPercent",
+    caption: "totalJobseekersCaption",
+    label: "Total Jobseekers",
+    icon: Users,
+    tone: "text-primary",
+    wrap: "bg-primary/20",
+    card: "border-primary/20 bg-gradient-to-br from-primary/10 to-white dark:from-primary/15 dark:to-surface",
+  },
+  {
+    value: "newRegistrations",
+    trend: "newRegistrationsTrendPercent",
+    caption: "newRegistrationsCaption",
+    label: "New Registrations",
+    icon: UserPlus,
+    tone: "text-sky-600",
+    wrap: "bg-sky-500/20",
+    card: "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white dark:border-sky-500/25 dark:from-sky-500/10 dark:to-surface",
+  },
+  {
+    value: "profileCompleted",
+    trend: "profileCompletedTrendPercent",
+    caption: "profileCompletedCaption",
+    label: "Registration Complete",
+    icon: FileCheck,
+    tone: "text-success",
+    wrap: "bg-success/20",
+    card: "border-success/20 bg-gradient-to-br from-success/10 to-white dark:from-success/15 dark:to-surface",
+  },
+  {
+    value: "verifiedJobseekers",
+    trend: "verifiedJobseekersTrendPercent",
+    caption: "verifiedJobseekersCaption",
+    label: "WhatsApp Verified",
+    icon: ShieldCheck,
+    tone: "text-warning",
+    wrap: "bg-warning/20",
+    card: "border-warning/25 bg-gradient-to-br from-warning/10 to-white dark:from-warning/15 dark:to-surface",
+  },
+  {
+    value: "activeJobseekers",
+    trend: "activeJobseekersTrendPercent",
+    caption: "activeJobseekersCaption",
+    label: "Active Jobseekers",
+    icon: Briefcase,
+    tone: "text-violet-600",
+    wrap: "bg-violet-500/20",
+    card: "border-violet-200/80 bg-gradient-to-br from-violet-50 to-white dark:border-violet-500/25 dark:from-violet-500/10 dark:to-surface",
+  },
 ];
 
 export function CandidatesOverviewKpiStrip({ kpis }: Props) {
@@ -39,7 +85,10 @@ export function CandidatesOverviewKpiStrip({ kpis }: Props) {
         return (
           <article
             key={card.label}
-            className="flex min-w-0 flex-col justify-between rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm ops-brand-border-glow max-lg:p-3 max-sm:p-2.5 max-lg:last:col-span-2 lg:last:col-span-1"
+            className={cn(
+              "ops-brand-border-glow flex min-w-0 flex-col justify-between rounded-xl border p-3.5 shadow-sm max-lg:p-3 max-sm:p-2.5 max-lg:last:col-span-2 lg:last:col-span-1",
+              card.card,
+            )}
           >
             <div className="flex items-start justify-between gap-2 max-sm:gap-1.5">
               <div className="min-w-0">

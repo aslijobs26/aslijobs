@@ -23,6 +23,9 @@ import { OperationsTeamPage } from "./operations-team-page";
 import { OperationsPlacementDetailPage } from "./operations-placement-detail-page";
 import { OperationsPlacementsListPage } from "./operations-placements-list-page";
 import { OperationsPlacementsPage } from "./operations-placements-page";
+import { OperationsMyWorkDetailPage } from "./operations-my-work-detail-page";
+import { OperationsMyWorkPage } from "./operations-my-work-page";
+import { OperationsMyWorkPerformancePage } from "./operations-my-work-performance-page";
 import { OperationsVerificationReviewPage } from "./operations-verification-review-page";
 import { OperationsVerificationsPage } from "./operations-verifications-page";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
@@ -55,7 +58,15 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.MY_WORK}
-          element={<OperationsPlaceholderPage title="My Work" />}
+          element={<OperationsMyWorkPage />}
+        />
+        <Route
+          path={OPERATIONS_ROUTES.MY_WORK_PERFORMANCE}
+          element={<OperationsMyWorkPerformancePage />}
+        />
+        <Route
+          path={`${OPERATIONS_ROUTES.MY_WORK}/:workItemId`}
+          element={<OperationsMyWorkDetailPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.WORK_QUEUE}

@@ -21,14 +21,17 @@ const KPI_CONFIG: {
   icon: LucideIcon;
   iconWrap: string;
   iconColor: string;
+  cardClassName: string;
 }[] = [
   {
     id: "totalJobs",
     label: "Total Jobs",
     caption: () => "Across all employers",
     icon: Briefcase,
-    iconWrap: "bg-success/10",
-    iconColor: "text-success",
+    iconWrap: "bg-primary/20",
+    iconColor: "text-primary",
+    cardClassName:
+      "border-primary/20 bg-gradient-to-br from-primary/10 to-white dark:from-primary/15 dark:to-surface",
   },
   {
     id: "pendingApprovalJobs",
@@ -38,16 +41,20 @@ const KPI_CONFIG: {
         ? `${Math.round((kpis.pendingApprovalJobs / kpis.totalJobs) * 100)}% of total`
         : "Awaiting review",
     icon: FileCheck2,
-    iconWrap: "bg-primary-light",
-    iconColor: "text-primary",
+    iconWrap: "bg-sky-500/20",
+    iconColor: "text-sky-600",
+    cardClassName:
+      "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white dark:border-sky-500/25 dark:from-sky-500/10 dark:to-surface",
   },
   {
     id: "atRiskJobs",
     label: "At Risk of Expiry",
     caption: () => "Closing in 7 days",
     icon: AlertTriangle,
-    iconWrap: "bg-warning/10",
+    iconWrap: "bg-warning/20",
     iconColor: "text-warning",
+    cardClassName:
+      "border-warning/25 bg-gradient-to-br from-warning/10 to-white dark:from-warning/15 dark:to-surface",
   },
   {
     id: "activeJobs",
@@ -57,16 +64,20 @@ const KPI_CONFIG: {
         ? `${Math.round((kpis.activeJobs / kpis.totalJobs) * 100)}% of total`
         : "Live listings",
     icon: CheckCircle2,
-    iconWrap: "bg-primary-soft/15",
-    iconColor: "text-primary-soft",
+    iconWrap: "bg-success/20",
+    iconColor: "text-success",
+    cardClassName:
+      "border-success/20 bg-gradient-to-br from-success/10 to-white dark:from-success/15 dark:to-surface",
   },
   {
     id: "filledClosedJobs",
     label: "Filled / Closed",
     caption: () => "Closed + expired",
     icon: Clock3,
-    iconWrap: "bg-danger/10",
+    iconWrap: "bg-danger/20",
     iconColor: "text-danger",
+    cardClassName:
+      "border-danger/20 bg-gradient-to-br from-danger/10 to-white dark:from-danger/15 dark:to-surface",
   },
 ];
 
@@ -95,7 +106,10 @@ export function JobsKpiStrip({ kpis, isLoading }: JobsKpiStripProps) {
         return (
           <article
             key={item.id}
-            className="flex min-w-0 flex-col justify-between rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm ops-brand-border-glow max-lg:p-3 max-sm:p-2.5 max-lg:last:col-span-2 lg:last:col-span-1"
+            className={cn(
+              "ops-brand-border-glow flex min-w-0 flex-col justify-between rounded-xl border p-3.5 shadow-sm max-lg:p-3 max-sm:p-2.5 max-lg:last:col-span-2 lg:last:col-span-1",
+              item.cardClassName,
+            )}
           >
             <div className="flex items-start justify-between gap-2 max-sm:gap-1.5">
               <div className="min-w-0">

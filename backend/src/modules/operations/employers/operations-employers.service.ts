@@ -1396,6 +1396,28 @@ export const operationsEmployersService = {
       reason: remarks,
     });
 
+    if (target === "verified" || target === "rejected") {
+      void import("../work/operations-work-emit.js")
+        .then(({ completeOpenSystemWorkForEntity }) =>
+          completeOpenSystemWorkForEntity({
+            relatedEntityType: "employer",
+            relatedEntityId: employerId,
+            types: ["verification"],
+            actorName,
+            note:
+              target === "verified"
+                ? "Employer verification approved"
+                : "Employer verification rejected",
+          }),
+        )
+        .catch((error: unknown) => {
+          console.error("[operations-work] verification work resolve rejected", {
+            employerId,
+            errorCategory: error instanceof Error ? error.name : "unknown",
+          });
+        });
+    }
+
     try {
       if (target === "verified") {
         await notificationService.notifyEmployerVerificationApproved({

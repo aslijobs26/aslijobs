@@ -17,6 +17,7 @@ import {
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
 import { useOperationsPermissions } from "../../../hooks/use-operations-permissions";
 import { useOperationsRegistrationBadges } from "../../../hooks/use-operations-registration-awareness";
+import { useOperationsWorkAnalytics } from "../../../hooks/use-operations-work";
 import type { OperationsNavBadgeCounts } from "../../../types/operations-registration-awareness";
 import { cn } from "../../../utils/cn";
 
@@ -113,6 +114,15 @@ export function OperationsSidebar({
   const { can, isLoading: permissionsLoading } = useOperationsPermissions();
   const badgesQuery = useOperationsRegistrationBadges();
   const badges = badgesQuery.data;
+  const canReadMyWork = !permissionsLoading && can("my_work", "read");
+  const myWorkAnalyticsQuery = useOperationsWorkAnalytics({
+    enabled: canReadMyWork,
+  });
+  const myWorkBadgeCount =
+    myWorkAnalyticsQuery.data?.myQueueBadge &&
+    myWorkAnalyticsQuery.data.myQueueBadge > 0
+      ? myWorkAnalyticsQuery.data.myQueueBadge
+      : undefined;
 
   const visibleNavSections = useMemo(() => {
     return OPERATIONS_NAV_SECTIONS.map((section) => ({
@@ -296,15 +306,20 @@ export function OperationsSidebar({
                     location.pathname,
                     location.search,
                   );
-                  const badgeCount = resolveNavBadgeCount(
-                    item.badgeKey,
-                    badges,
-                    item.badge,
-                  );
+                  const badgeCount =
+                    item.id === "my-work"
+                      ? myWorkBadgeCount
+                      : resolveNavBadgeCount(
+                          item.badgeKey,
+                          badges,
+                          item.badge,
+                        );
                   const badgeAriaLabel =
                     badgeCount != null
-                      ? (item.badgeAriaLabel?.(badgeCount) ??
-                        `${badgeCount} new items`)
+                      ? item.id === "my-work"
+                        ? `${badgeCount} item${badgeCount === 1 ? "" : "s"} in My Queue`
+                        : (item.badgeAriaLabel?.(badgeCount) ??
+                          `${badgeCount} new items`)
                       : undefined;
 
                   return (

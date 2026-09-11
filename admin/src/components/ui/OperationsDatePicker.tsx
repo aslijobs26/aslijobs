@@ -497,7 +497,9 @@ export function OperationsDatePicker({
               maxWidth: position.width || undefined,
             }}
             className={cn(
-              "fixed z-50 box-border min-w-0 overflow-hidden rounded-md border border-border-subtle bg-surface shadow-sm",
+              // Match OperationsFilterSelect portals (z-index 1000) so the
+              // calendar stays above Operations modals (z-[70]).
+              "fixed z-[1000] box-border min-w-0 overflow-hidden rounded-md border border-border-subtle bg-surface shadow-sm",
               compact ? "p-1.5" : "p-2",
             )}
           >

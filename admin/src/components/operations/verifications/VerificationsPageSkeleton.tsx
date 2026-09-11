@@ -68,14 +68,14 @@ export function VerificationsPageSkeleton() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="operations-analytics-grid grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
           <ChartCardSkeleton key={index} />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_16.5rem]">
-        <div className="rounded-xl border border-border-subtle bg-surface shadow-sm">
+      <div className="operations-overview-split grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
+        <div className="min-w-0 rounded-xl border border-border-subtle bg-surface shadow-sm">
           <div className="space-y-2 border-b border-border-subtle px-3 py-2.5 sm:px-4">
             <SkeletonBone className="h-4 w-48" />
             <SkeletonBone className="h-8 w-full max-w-xl rounded-md" />
@@ -86,7 +86,7 @@ export function VerificationsPageSkeleton() {
             ))}
           </div>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="operations-overview-rail flex h-fit flex-col gap-3 xl:self-start">
           <ChartCardSkeleton />
           <SkeletonBone className="h-36 w-full rounded-xl" />
         </div>

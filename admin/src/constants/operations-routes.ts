@@ -4,6 +4,7 @@ export const OPERATIONS_ROUTES = {
   DASHBOARD: "/operations",
   HOME: "/operations/home",
   MY_WORK: "/operations/my-work",
+  MY_WORK_PERFORMANCE: "/operations/my-work/performance",
   WORK_QUEUE: "/operations/work-queue",
   WHATSAPP_INBOX: "/operations/whatsapp-inbox",
   INBOX: "/operations/inbox",
@@ -55,6 +56,10 @@ export function operationsVerificationReviewPath(employerId: string): string {
 
 export function operationsPlacementDetailPath(placementId: string): string {
   return `${OPERATIONS_ROUTES.PLACEMENTS}/${encodeURIComponent(placementId)}`;
+}
+
+export function operationsMyWorkDetailPath(workItemId: string): string {
+  return `${OPERATIONS_ROUTES.MY_WORK}/${encodeURIComponent(workItemId)}`;
 }
 
 export function operationsRoleDetailPath(roleId: string): string {

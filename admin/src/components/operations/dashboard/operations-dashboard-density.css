@@ -7,6 +7,35 @@
   --operations-density-gap: 0.5rem;
 }
 
+/**
+ * Main + right-rail overview split.
+ * Right rail must stay content-sized — never stretch to the left column height.
+ */
+@media (min-width: 1280px) {
+  .operations-dashboard-density .operations-overview-split {
+    align-items: start;
+  }
+
+  .operations-dashboard-density .operations-overview-rail {
+    align-self: start;
+    height: fit-content;
+    min-height: 0;
+  }
+
+  .operations-dashboard-density .operations-overview-rail .operations-density-card {
+    height: auto;
+  }
+}
+
+/**
+ * Analytics mosaics only: equal-height peer cards within the same grid row.
+ * Do not apply this class to main/rail overview splits.
+ */
+.operations-dashboard-density .operations-analytics-grid > .operations-density-card,
+.operations-dashboard-density .operations-analytics-grid > [class*="min-w-0"] > .operations-density-card {
+  height: 100%;
+}
+
 .operations-dashboard-density .operations-density-card {
   border-radius: var(--operations-density-radius);
 }

@@ -5,6 +5,7 @@ import { AttentionSidePanels } from "../components/operations/attention/Attentio
 import { AttentionSummaryCards } from "../components/operations/attention/AttentionSummaryCards";
 import { AttentionWorkTable } from "../components/operations/attention/AttentionWorkTable";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
+import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
 import { useOperationsAttention } from "../hooks/use-operations-attention";
 
 export function OperationsAttentionPage() {
@@ -77,27 +78,9 @@ export function OperationsAttentionPage() {
           onSelect={setTab}
         />
 
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:items-start">
-          <div className="min-w-0 xl:col-span-9">
-            <AttentionWorkTable
-              tabs={data.tabs}
-              activeTab={activeTab}
-              onTabChange={setTab}
-              filters={filters}
-              onFiltersChange={updateFilters}
-              filterOptions={filterOptions}
-              items={pageItems}
-              totalFiltered={filteredItems.length}
-              page={page}
-              totalPages={totalPages}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              selectedIds={selectedIds}
-              onToggleRow={toggleRow}
-              onToggleVisibleRows={toggleVisibleRows}
-            />
-          </div>
-          <div className="min-w-0 xl:col-span-3">
+        <OperationsOverviewSplit
+          variant="attention"
+          rail={
             <AttentionSidePanels
               quickFilters={data.quickFilters}
               activeQuickFilter={filters.quickFilter}
@@ -109,8 +92,26 @@ export function OperationsAttentionPage() {
               slaStatus={data.slaStatus}
               workByType={data.workByType}
             />
-          </div>
-        </div>
+          }
+        >
+          <AttentionWorkTable
+            tabs={data.tabs}
+            activeTab={activeTab}
+            onTabChange={setTab}
+            filters={filters}
+            onFiltersChange={updateFilters}
+            filterOptions={filterOptions}
+            items={pageItems}
+            totalFiltered={filteredItems.length}
+            page={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            selectedIds={selectedIds}
+            onToggleRow={toggleRow}
+            onToggleVisibleRows={toggleVisibleRows}
+          />
+        </OperationsOverviewSplit>
       </div>
     </OperationsLayout>
   );

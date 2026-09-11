@@ -732,6 +732,49 @@ function emitApplicationEvent(
         error,
       });
     });
+
+  if (eventName === APPLICATION_EVENT_NAMES.SELECTED) {
+    void import("../operations/work/operations-work-emit.js")
+      .then(({ scheduleJoiningPendingWork }) => {
+        scheduleJoiningPendingWork({
+          applicationId: context.applicationId,
+          candidateName: context.candidateName,
+          companyName: context.companyName,
+          jobTitle: context.jobTitle,
+          selectedAt: new Date(),
+        });
+      })
+      .catch((error: unknown) => {
+        console.error("[operations-work] joining-pending emit rejected", {
+          applicationId: context.applicationId,
+          errorCategory: error instanceof Error ? error.name : "unknown",
+        });
+      });
+  }
+
+  if (
+    eventName === APPLICATION_EVENT_NAMES.JOINED ||
+    eventName === APPLICATION_EVENT_NAMES.DID_NOT_JOIN
+  ) {
+    void import("../operations/work/operations-work-emit.js")
+      .then(({ completeOpenSystemWorkForEntity }) =>
+        completeOpenSystemWorkForEntity({
+          relatedEntityType: "placement",
+          relatedEntityId: context.applicationId,
+          types: ["placements"],
+          note:
+            eventName === APPLICATION_EVENT_NAMES.JOINED
+              ? "Candidate joined"
+              : "Did not join recorded",
+        }),
+      )
+      .catch((error: unknown) => {
+        console.error("[operations-work] joining work resolve rejected", {
+          applicationId: context.applicationId,
+          errorCategory: error instanceof Error ? error.name : "unknown",
+        });
+      });
+  }
 }
 
 function buildApplicationEventContext(input: {

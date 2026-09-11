@@ -1,5 +1,6 @@
 import { RotateCcw, Search } from "lucide-react";
 import type {
+  OperationsVerificationListStatus,
   OperationsVerificationsFilterOptions,
   VerificationsDatePreset,
 } from "../../../types/operations-verifications";
@@ -8,6 +9,7 @@ import { OperationsFilterSelect } from "../jobs/OperationsFilterSelect";
 
 export interface VerificationsFiltersState {
   search: string;
+  status: OperationsVerificationListStatus | "";
   industry: string;
   location: string;
   submissionPreset: VerificationsDatePreset | "";
@@ -15,6 +17,7 @@ export interface VerificationsFiltersState {
 
 export const EMPTY_VERIFICATIONS_FILTERS: VerificationsFiltersState = {
   search: "",
+  status: "",
   industry: "",
   location: "",
   submissionPreset: "",
@@ -25,6 +28,11 @@ interface VerificationsFiltersBarProps {
   filterOptions: OperationsVerificationsFilterOptions;
   onChange: (next: Partial<VerificationsFiltersState>) => void;
   onClear: () => void;
+  /**
+   * When an overview tab already pins status, show that value in the Status
+   * control. Empty / undefined = use filters.status.
+   */
+  statusOverride?: OperationsVerificationListStatus | "";
 }
 
 const SUBMISSION_PRESET_OPTIONS: {
@@ -38,6 +46,17 @@ const SUBMISSION_PRESET_OPTIONS: {
   { value: "last_30_days", label: "Last 30 Days" },
 ];
 
+const FALLBACK_STATUS_OPTIONS: {
+  value: OperationsVerificationListStatus | "";
+  label: string;
+}[] = [
+  { value: "", label: "All Statuses" },
+  { value: "pending", label: "Pending" },
+  { value: "under_review", label: "Under Review" },
+  { value: "verified", label: "Verified" },
+  { value: "rejected", label: "Rejected" },
+];
+
 const triggerClassName = cn(
   "!h-8 !w-full !min-w-0 !rounded-md !px-2 !text-[11px] xl:!h-7 xl:!text-[10px]",
   "border-border-subtle bg-surface ops-brand-border-glow hover:bg-hero-bg/60",
@@ -48,9 +67,27 @@ export function VerificationsFiltersBar({
   filterOptions,
   onChange,
   onClear,
+  statusOverride,
 }: VerificationsFiltersBarProps) {
+  const statusValue =
+    statusOverride !== undefined && statusOverride !== ""
+      ? statusOverride
+      : filters.status;
+
+  const statusOptions =
+    filterOptions.statuses.length > 0
+      ? [
+          { value: "", label: "All Statuses" },
+          ...filterOptions.statuses.map((option) => ({
+            value: option.value as OperationsVerificationListStatus | "",
+            label: option.label,
+          })),
+        ]
+      : FALLBACK_STATUS_OPTIONS;
+
   const activeFilterCount = [
     filters.search.trim(),
+    statusOverride ? "" : filters.status,
     filters.industry,
     filters.location,
     filters.submissionPreset,
@@ -96,7 +133,19 @@ export function VerificationsFiltersBar({
         ) : null}
       </div>
 
-      <div className="grid min-w-0 grid-cols-1 gap-1.5 sm:grid-cols-3">
+      <div className="grid min-w-0 grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+        <OperationsFilterSelect
+          label="Status"
+          value={statusValue}
+          options={statusOptions}
+          hideSearch
+          triggerClassName={triggerClassName}
+          onChange={(value) =>
+            onChange({
+              status: value as OperationsVerificationListStatus | "",
+            })
+          }
+        />
         <OperationsFilterSelect
           label="Industry"
           value={filters.industry}

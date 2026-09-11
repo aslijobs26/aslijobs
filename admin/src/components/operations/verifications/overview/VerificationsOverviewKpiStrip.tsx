@@ -52,9 +52,10 @@ const KPI_CARDS: {
     captionKey: "totalVerificationsCaption",
     label: "Total Verifications",
     icon: ShieldCheck,
-    cardBg: "bg-success/10 border-success/15",
-    iconWrap: "bg-success/15",
-    iconColor: "text-success",
+    cardBg:
+      "border-primary/20 bg-gradient-to-br from-primary/10 to-white dark:from-primary/15 dark:to-surface",
+    iconWrap: "bg-primary/20",
+    iconColor: "text-primary",
   },
   {
     valueKey: "pendingReview",
@@ -62,9 +63,10 @@ const KPI_CARDS: {
     captionKey: "pendingReviewCaption",
     label: "Pending Review",
     icon: Clock,
-    cardBg: "bg-primary-light/80 border-primary/15",
-    iconWrap: "bg-primary/10",
-    iconColor: "text-primary",
+    cardBg:
+      "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white dark:border-sky-500/25 dark:from-sky-500/10 dark:to-surface",
+    iconWrap: "bg-sky-500/20",
+    iconColor: "text-sky-600",
   },
   {
     valueKey: "verifiedEmployers",
@@ -72,9 +74,10 @@ const KPI_CARDS: {
     captionKey: "verifiedEmployersCaption",
     label: "Verified Employers",
     icon: Users,
-    cardBg: "bg-chart-accent-alt/10 border-chart-accent-alt/15",
-    iconWrap: "bg-chart-accent-alt/15",
-    iconColor: "text-chart-accent-alt",
+    cardBg:
+      "border-success/20 bg-gradient-to-br from-success/10 to-white dark:from-success/15 dark:to-surface",
+    iconWrap: "bg-success/20",
+    iconColor: "text-success",
   },
   {
     valueKey: "needsAttention",
@@ -82,8 +85,9 @@ const KPI_CARDS: {
     captionKey: "needsAttentionCaption",
     label: "Needs Attention",
     icon: AlertTriangle,
-    cardBg: "bg-warning/10 border-warning/20",
-    iconWrap: "bg-warning/15",
+    cardBg:
+      "border-warning/25 bg-gradient-to-br from-warning/10 to-white dark:from-warning/15 dark:to-surface",
+    iconWrap: "bg-warning/20",
     iconColor: "text-warning",
   },
   {
@@ -92,8 +96,9 @@ const KPI_CARDS: {
     captionKey: "rejectedCaption",
     label: "Rejected",
     icon: XCircle,
-    cardBg: "bg-danger/10 border-danger/15",
-    iconWrap: "bg-danger/15",
+    cardBg:
+      "border-danger/20 bg-gradient-to-br from-danger/10 to-white dark:from-danger/15 dark:to-surface",
+    iconWrap: "bg-danger/20",
     iconColor: "text-danger",
   },
 ];

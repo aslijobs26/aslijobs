@@ -3,6 +3,7 @@ import { isAxiosError } from "axios";
 import { useSearchParams } from "react-router-dom";
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
+import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
 import {
   EMPTY_VERIFICATIONS_FILTERS,
   VerificationsFiltersBar,
@@ -27,6 +28,7 @@ import {
   useOperationsVerificationsList,
 } from "../hooks/use-operations-verifications";
 import type {
+  OperationsVerificationListStatus,
   OperationsVerificationsAnalyticsParams,
   OperationsVerificationsExportParams,
   OperationsVerificationsFilterOptions,
@@ -53,6 +55,20 @@ const EMPTY_TAB_COUNTS = {
   rejected: 0,
   slaBreaches: 0,
 };
+
+function parseListStatus(
+  value: string | null,
+): OperationsVerificationListStatus | "" {
+  if (
+    value === "pending" ||
+    value === "under_review" ||
+    value === "verified" ||
+    value === "rejected"
+  ) {
+    return value;
+  }
+  return "";
+}
 
 function todayIsoDate(): string {
   const today = new Date();
@@ -115,6 +131,7 @@ export function OperationsVerificationsPage() {
   const [filters, setFilters] = useState<VerificationsFiltersState>(() => ({
     ...EMPTY_VERIFICATIONS_FILTERS,
     search: searchParams.get("search")?.trim() ?? "",
+    status: parseListStatus(searchParams.get("status")),
     industry: searchParams.get("industry") ?? "",
     location: searchParams.get("location") ?? "",
   }));
@@ -161,7 +178,7 @@ export function OperationsVerificationsPage() {
         .trim()
         .replace(/^AJ-EMP-/i, "")
         .replace(/^EMP-/i, ""),
-      status: tabListFilters.status,
+      status: tabListFilters.status || filters.status || "",
       queue: tabListFilters.queue,
       industry: filters.industry,
       location: filters.location,
@@ -176,7 +193,7 @@ export function OperationsVerificationsPage() {
   const exportParams = useMemo<OperationsVerificationsExportParams>(
     () => ({
       search: filters.search.trim(),
-      status: tabListFilters.status,
+      status: tabListFilters.status || filters.status || "",
       queue: tabListFilters.queue,
       industry: filters.industry,
       location: filters.location,
@@ -231,6 +248,14 @@ export function OperationsVerificationsPage() {
   };
 
   const handleFiltersChange = (next: Partial<VerificationsFiltersState>) => {
+    // Status dropdown on overview tabs that already pin status: jump back to
+    // overview so the selected Pending/Verified filter actually applies.
+    if (next.status !== undefined && activeTab !== "overview") {
+      setActiveTab("overview");
+      const params = new URLSearchParams(searchParams);
+      params.delete("tab");
+      setSearchParams(params, { replace: true });
+    }
     setFilters((prev) => ({ ...prev, ...next }));
     setPage(1);
   };
@@ -243,6 +268,10 @@ export function OperationsVerificationsPage() {
   const handleTabChange = (tab: OperationsVerificationsOverviewTab) => {
     setActiveTab(tab);
     setPage(1);
+    // Tab selection owns status; clear the dropdown so it does not fight the tab.
+    if (tab !== "overview") {
+      setFilters((prev) => ({ ...prev, status: "" }));
+    }
     const next = new URLSearchParams(searchParams);
     if (tab === "overview") {
       next.delete("tab");
@@ -341,7 +370,7 @@ export function OperationsVerificationsPage() {
             />
 
             {showOverviewAnalytics && analytics ? (
-              <div className="grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
+              <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
                 <VerificationsTrendChart
                   data={analytics.trend}
                   rangeLabel={analytics.range.label}
@@ -361,7 +390,17 @@ export function OperationsVerificationsPage() {
               </div>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-3 max-sm:gap-2 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
+            <OperationsOverviewSplit
+              rail={
+                <>
+                  <VerificationsQuickActions
+                    onExport={handleExport}
+                    isExporting={exportMutation.isPending}
+                  />
+                  <VerificationsAskAsliCard />
+                </>
+              }
+            >
               <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
                 <VerificationsTableSection
                   items={listData?.items ?? []}
@@ -374,6 +413,7 @@ export function OperationsVerificationsPage() {
                     <VerificationsFiltersBar
                       filters={filters}
                       filterOptions={filterOptions}
+                      statusOverride={tabListFilters.status}
                       onChange={handleFiltersChange}
                       onClear={handleClearFilters}
                     />
@@ -393,15 +433,7 @@ export function OperationsVerificationsPage() {
                   </div>
                 ) : null}
               </div>
-
-              <aside className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
-                <VerificationsQuickActions
-                  onExport={handleExport}
-                  isExporting={exportMutation.isPending}
-                />
-                <VerificationsAskAsliCard />
-              </aside>
-            </div>
+            </OperationsOverviewSplit>
 
             {exportMutation.isError ? (
               <p className="text-xs text-danger" role="alert">

@@ -1,4 +1,5 @@
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
+import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
 import { AsliInsightsSection } from "../components/operations/dashboard/AsliInsightsSection";
 import { DashboardGreetingSection } from "../components/operations/dashboard/DashboardGreetingSection";
 import { NewRegistrationsSection } from "../components/operations/dashboard/NewRegistrationsSection";
@@ -29,8 +30,24 @@ export function OperationsHomePage() {
 
         <PlatformPulseSection metrics={data.platformPulse} />
 
-        <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-12 xl:items-start xl:gap-4">
-          <div className="flex min-w-0 flex-col gap-3.5 xl:col-span-8">
+        <OperationsOverviewSplit
+          variant="command"
+          className="gap-3.5 sm:gap-4"
+          railClassName="gap-3.5"
+          rail={
+            <>
+              <OperationsHealthSection items={data.operationsHealth} />
+              <OperationsCan module="team" action="read">
+                <TeamWorkloadSection
+                  members={data.teamWorkload}
+                  status={data.teamWorkloadStatus}
+                />
+              </OperationsCan>
+              <QuickActionsSection actions={data.quickActions} />
+            </>
+          }
+        >
+          <div className="flex min-w-0 flex-col gap-3.5">
             <WhatNeedsAttentionSection
               total={data.attentionTotal}
               tabs={data.attentionTabs}
@@ -40,18 +57,7 @@ export function OperationsHomePage() {
             <TodaysActivitySection metrics={data.todaysActivity} />
             <AsliInsightsSection insights={data.insights} />
           </div>
-
-          <div className="flex min-w-0 flex-col gap-3.5 xl:col-span-4">
-            <OperationsHealthSection items={data.operationsHealth} />
-            <OperationsCan module="team" action="read">
-              <TeamWorkloadSection
-                members={data.teamWorkload}
-                status={data.teamWorkloadStatus}
-              />
-            </OperationsCan>
-            <QuickActionsSection actions={data.quickActions} />
-          </div>
-        </div>
+        </OperationsOverviewSplit>
       </div>
     </OperationsLayout>
   );

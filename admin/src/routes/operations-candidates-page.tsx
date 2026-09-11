@@ -20,6 +20,7 @@ import { CandidatesRegistrationTrendChart } from "../components/operations/candi
 import { CandidatesTopCategories } from "../components/operations/candidates/overview/CandidatesTopCategories";
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
+import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
 import { OPERATIONS_CANDIDATE_GENDERS, OPERATIONS_CANDIDATE_GENDER_LABELS } from "../constants/operations-candidates";
 import {
   useExportOperationsCandidates,
@@ -349,7 +350,7 @@ export function OperationsCandidatesPage() {
             {analytics ? (
               <>
                 <CandidatesOverviewKpiStrip kpis={analytics.kpis} />
-                <div className="grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
+                <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
                   <CandidatesRegistrationTrendChart
                     data={analytics.registrationTrend}
                     isOverall={analyticsFilters.preset === "all"}
@@ -369,7 +370,17 @@ export function OperationsCandidatesPage() {
               </>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-3 max-sm:gap-2 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
+            <OperationsOverviewSplit
+              rail={
+                <>
+                  <CandidatesQuickActions
+                    onExport={handleExport}
+                    isExporting={exportMutation.isPending}
+                  />
+                  <CandidatesAskAsliCard />
+                </>
+              }
+            >
               <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
                 <CandidatesTableSection
                   applications={listData?.applications ?? []}
@@ -427,15 +438,7 @@ export function OperationsCandidatesPage() {
                   </div>
                 ) : null}
               </div>
-
-              <aside className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
-                <CandidatesQuickActions
-                  onExport={handleExport}
-                  isExporting={exportMutation.isPending}
-                />
-                <CandidatesAskAsliCard />
-              </aside>
-            </div>
+            </OperationsOverviewSplit>
           </>
         )}
       </div>

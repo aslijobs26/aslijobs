@@ -1,4 +1,5 @@
 import { OperationsNotificationModel } from "../registration-awareness/operations-notification.model.js";
+import { scheduleJobModerationWork } from "../work/operations-work-emit.js";
 import type { OperationsJobNotificationType } from "./operations-job-moderation.constants.js";
 
 export type EmitJobPendingOpsNotificationInput = {
@@ -99,6 +100,15 @@ export async function emitJobPendingOpsNotification(
       },
       { upsert: true },
     );
+
+    scheduleJobModerationWork({
+      publicJobId,
+      jobMongoId: input.jobMongoId,
+      jobTitle,
+      companyName,
+      kind: input.kind,
+      submittedAt,
+    });
   } catch (error) {
     console.error("[operations-jobs] pending notification failed", {
       type,

@@ -73,6 +73,16 @@ const operationsNotificationSchema = new Schema(
       trim: true,
       default: "SYSTEM",
     },
+    /**
+     * When set, notification is targeted to a specific Operations user
+     * (e.g. work assignment). Null = workspace broadcast.
+     */
+    recipientUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsTeamUser",
+      default: null,
+      index: true,
+    },
     metadata: {
       type: Schema.Types.Mixed,
       default: {},

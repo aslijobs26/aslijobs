@@ -68,7 +68,7 @@ export function AttentionSidePanels({
   workByType,
 }: AttentionSidePanelsProps) {
   return (
-    <aside className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-3">
       <OperationsCard title="Quick Filters" bodyClassName="space-y-1 p-2 sm:p-2.5">
         <ul className="space-y-0.5">
           {quickFilters.map((filter) => {
@@ -179,6 +179,6 @@ export function AttentionSidePanels({
           Ask ASLI
         </Link>
       </section>
-    </aside>
+    </div>
   );
 }

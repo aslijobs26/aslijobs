@@ -3,6 +3,7 @@ import { isAxiosError } from "axios";
 import { useSearchParams } from "react-router-dom";
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
+import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
 import { PlacementsAskAsliCard } from "../components/operations/placements/overview/PlacementsAskAsliCard";
 import { PlacementsByCategory } from "../components/operations/placements/overview/PlacementsByCategory";
 import { PlacementsByLocation } from "../components/operations/placements/overview/PlacementsByLocation";
@@ -299,7 +300,7 @@ export function OperationsPlacementsPage() {
             ) : null}
 
             {analytics ? (
-              <div className="grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
+              <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
                 <PlacementsTrendChart
                   data={analytics.trend}
                   rangeLabel={analytics.range.label}
@@ -320,53 +321,55 @@ export function OperationsPlacementsPage() {
                   avgDays={analytics.timeToJoin.avgDays}
                   trendPercent={analytics.timeToJoin.trendPercent}
                   series={analytics.timeToJoin.series}
+                  preset={analyticsFilters.preset}
+                  onPresetChange={handlePresetChange}
                 />
               </div>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-3 max-sm:gap-2 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
-              <div className="min-w-0">
-                {analytics ? (
-                  <PlacementsKeyInsights insights={analytics.insights} />
+            <OperationsOverviewSplit
+              rail={
+                <>
+                  {analytics ? (
+                    <PlacementsKeyInsights insights={analytics.insights} />
+                  ) : null}
+                  <PlacementsQuickActions
+                    onExport={handleExport}
+                    isExporting={exportMutation.isPending}
+                  />
+                  <PlacementsAskAsliCard />
+                </>
+              }
+            >
+              <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
+                <PlacementsTableSection
+                  items={listData?.items ?? []}
+                  totalItems={listData?.pagination.total ?? 0}
+                  tabCounts={analytics?.tabs ?? EMPTY_TAB_COUNTS}
+                  activeTab={activeTab}
+                  onTabChange={handleTabChange}
+                  search={search}
+                  onSearchChange={handleSearchChange}
+                  isLoading={listQuery.isFetching && !listData}
+                  isError={listQuery.isError}
+                  errorMessage={listErrorMessage}
+                  onRetry={() => void listQuery.refetch()}
+                />
+
+                {listData?.pagination ? (
+                  <div className="border-t border-border-subtle p-3 xl:p-2.5">
+                    <JobsPaginationBar
+                      pagination={listData.pagination}
+                      onPageChange={setPage}
+                      onLimitChange={(newLimit: number) => {
+                        setLimit(newLimit);
+                        setPage(1);
+                      }}
+                    />
+                  </div>
                 ) : null}
               </div>
-              <aside className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
-                <PlacementsQuickActions
-                  onExport={handleExport}
-                  isExporting={exportMutation.isPending}
-                />
-                <PlacementsAskAsliCard />
-              </aside>
-            </div>
-
-            <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
-              <PlacementsTableSection
-                items={listData?.items ?? []}
-                totalItems={listData?.pagination.total ?? 0}
-                tabCounts={analytics?.tabs ?? EMPTY_TAB_COUNTS}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                search={search}
-                onSearchChange={handleSearchChange}
-                isLoading={listQuery.isFetching && !listData}
-                isError={listQuery.isError}
-                errorMessage={listErrorMessage}
-                onRetry={() => void listQuery.refetch()}
-              />
-
-              {listData?.pagination ? (
-                <div className="border-t border-border-subtle p-3 xl:p-2.5">
-                  <JobsPaginationBar
-                    pagination={listData.pagination}
-                    onPageChange={setPage}
-                    onLimitChange={(newLimit: number) => {
-                      setLimit(newLimit);
-                      setPage(1);
-                    }}
-                  />
-                </div>
-              ) : null}
-            </div>
+            </OperationsOverviewSplit>
 
             {exportMutation.isError ? (
               <p className="text-xs text-danger" role="alert">

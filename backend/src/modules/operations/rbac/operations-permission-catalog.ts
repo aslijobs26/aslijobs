@@ -412,6 +412,102 @@ function placementCatalog(): OperationsPermissionDefinition[] {
   ];
 }
 
+function myWorkCatalog(): OperationsPermissionDefinition[] {
+  return [
+    define({
+      module: "my_work",
+      page: "list",
+      action: "view",
+      label: "My Work · List · View",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "my_work",
+      page: "list",
+      action: "search",
+      label: "My Work · List · Search",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "my_work",
+      page: "list",
+      action: "filter",
+      label: "My Work · List · Filter",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "my_work",
+      page: "detail",
+      action: "view",
+      label: "My Work · Detail · View",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "my_work",
+      page: "detail",
+      action: "history",
+      label: "My Work · Detail · History",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "my_work",
+      action: "create",
+      label: "My Work · Create",
+      mapsToAction: "create",
+    }),
+    define({
+      module: "my_work",
+      action: "assign",
+      label: "My Work · Assign",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "my_work",
+      action: "reassign",
+      label: "My Work · Reassign",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "my_work",
+      action: "claim",
+      label: "My Work · Claim",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "my_work",
+      action: "update",
+      label: "My Work · Update status",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "my_work",
+      action: "complete",
+      label: "My Work · Complete",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "my_work",
+      section: "priority",
+      action: "update",
+      label: "My Work · Update priority",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "my_work",
+      section: "due",
+      action: "update",
+      label: "My Work · Update due date",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "my_work",
+      action: "export",
+      label: "My Work · Export",
+      mapsToAction: "read",
+    }),
+  ];
+}
+
 function teamCatalog(): OperationsPermissionDefinition[] {
   return [
     define({
@@ -521,7 +617,6 @@ function teamCatalog(): OperationsPermissionDefinition[] {
 }
 
 const UNIMPLEMENTED_READ_WRITE: OperationsPermissionModule[] = [
-  "my_work",
   "work_queue",
   "whatsapp",
   "support",
@@ -551,6 +646,7 @@ export const OPERATIONS_PERMISSION_CATALOG: OperationsPermissionDefinition[] = [
   ...UNIMPLEMENTED_READ_ONLY.filter((module) => module !== "dashboard").flatMap(
     (module) => coarseModule(module, module.replaceAll("_", " "), ["read"]),
   ),
+  ...myWorkCatalog(),
   ...employerCatalog(),
   ...candidateCatalog(),
   ...jobCatalog(),
@@ -562,6 +658,21 @@ export const PLACEMENTS_LIST_EXPORT_KEY =
   "placements.list.export" as const;
 export const PLACEMENTS_DETAIL_UPDATE_JOINING_KEY =
   "placements.detail.actions.update_joining" as const;
+
+export const WORK_LIST_VIEW_KEY = "my_work.list.view" as const;
+export const WORK_LIST_SEARCH_KEY = "my_work.list.search" as const;
+export const WORK_LIST_FILTER_KEY = "my_work.list.filter" as const;
+export const WORK_DETAIL_VIEW_KEY = "my_work.detail.view" as const;
+export const WORK_DETAIL_HISTORY_KEY = "my_work.detail.history" as const;
+export const WORK_CREATE_KEY = "my_work.create" as const;
+export const WORK_ASSIGN_KEY = "my_work.assign" as const;
+export const WORK_REASSIGN_KEY = "my_work.reassign" as const;
+export const WORK_CLAIM_KEY = "my_work.claim" as const;
+export const WORK_UPDATE_KEY = "my_work.update" as const;
+export const WORK_COMPLETE_KEY = "my_work.complete" as const;
+export const WORK_PRIORITY_UPDATE_KEY = "my_work.priority.update" as const;
+export const WORK_DUE_UPDATE_KEY = "my_work.due.update" as const;
+export const WORK_EXPORT_KEY = "my_work.export" as const;
 
 const CATALOG_BY_KEY = new Map(
   OPERATIONS_PERMISSION_CATALOG.map((item) => [item.key, item]),

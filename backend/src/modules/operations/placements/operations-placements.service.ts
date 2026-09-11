@@ -37,12 +37,13 @@ import {
   PLACEMENT_STATUS_MATCH,
   daysBetweenOfferAndJoin,
   extractPlacementSearchObjectId,
-  findStatusHistoryAt,
   formatPlacementDisplayId,
   joiningStatusToApplicationStatus,
   parseOfferDate,
   placementCohortAtStages,
   placementStatusLabel,
+  resolveActualJoinedAt,
+  resolveOfferMadeAt,
   resolvePlacementCohortDate,
   resolvePlacementJoiningStatus,
 } from "./operations-placements-domain.js";
@@ -626,6 +627,30 @@ function emitApplicationEvent(
         error,
       });
     });
+
+  if (
+    eventName === APPLICATION_EVENT_NAMES.JOINED ||
+    eventName === APPLICATION_EVENT_NAMES.DID_NOT_JOIN
+  ) {
+    void import("../work/operations-work-emit.js")
+      .then(({ completeOpenSystemWorkForEntity }) =>
+        completeOpenSystemWorkForEntity({
+          relatedEntityType: "placement",
+          relatedEntityId: context.applicationId,
+          types: ["placements"],
+          note:
+            eventName === APPLICATION_EVENT_NAMES.JOINED
+              ? "Candidate joined"
+              : "Did not join recorded",
+        }),
+      )
+      .catch((error: unknown) => {
+        console.error("[operations-work] joining work resolve rejected", {
+          applicationId: context.applicationId,
+          errorCategory: error instanceof Error ? error.name : "unknown",
+        });
+      });
+  }
 }
 
 export const operationsPlacementsService = {
@@ -707,12 +732,6 @@ export const operationsPlacementsService = {
           }
         : null;
 
-    const joinedAt =
-      joiningStatus === "joined"
-        ? parseOfferDate(row.offer?.joiningDate) ??
-          findStatusHistoryAt(row.statusHistory, "joined")
-        : null;
-
     const detail: OperationsPlacementDetail = {
       ...listItem,
       candidateCity: text(seeker?.city),
@@ -735,7 +754,10 @@ export const operationsPlacementsService = {
       timeline: mapTimeline(row.statusHistory),
       daysToJoin:
         joiningStatus === "joined"
-          ? daysBetweenOfferAndJoin(row.offer?.offerDate, joinedAt)
+          ? daysBetweenOfferAndJoin(
+              resolveOfferMadeAt(row),
+              resolveActualJoinedAt(row),
+            )
           : null,
       canUpdateJoining:
         joiningStatus === "joining_pending" &&

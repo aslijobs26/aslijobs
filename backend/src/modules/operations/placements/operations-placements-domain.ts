@@ -152,6 +152,46 @@ export function findStatusHistoryAt(
   return null;
 }
 
+export type PlacementOfferJoinLike = {
+  offer?: {
+    offerDate?: string | Date | null;
+    joiningDate?: string | Date | null;
+  } | null;
+  statusHistory?: StatusHistoryLike[] | null;
+  updatedAt?: Date | string | null;
+};
+
+/**
+ * When the offer was made: explicit offer.offerDate, else offer_sent history.
+ */
+export function resolveOfferMadeAt(
+  row: PlacementOfferJoinLike,
+): Date | null {
+  return (
+    parseOfferDate(row.offer?.offerDate) ??
+    findStatusHistoryAt(row.statusHistory, "offer_sent")
+  );
+}
+
+/**
+ * When the candidate actually joined.
+ * Prefer the joined status-history event over the planned offer.joiningDate
+ * (planned dates often equal offerDate → false "0 days", and can fall outside
+ * the analytics window so the trend series stays empty).
+ */
+export function resolveActualJoinedAt(
+  row: PlacementOfferJoinLike,
+): Date | null {
+  return (
+    findStatusHistoryAt(row.statusHistory, "joined") ??
+    parseOfferDate(row.offer?.joiningDate) ??
+    resolvePlacementCohortDate({
+      statusHistory: row.statusHistory,
+      updatedAt: row.updatedAt,
+    })
+  );
+}
+
 export function formatPlacementDisplayId(applicationId: string): string {
   const hex = applicationId.replace(/[^a-fA-F0-9]/g, "").slice(-8).toUpperCase();
   return hex ? `AJ-PLC-${hex}` : "AJ-PLC-UNKNOWN";

@@ -53,9 +53,10 @@ const KPI_CARDS: {
     captionKey: "totalPlacementsCaption",
     label: "Total Placements",
     icon: UserCheck,
-    cardBg: "bg-success/10 border-success/15",
-    iconWrap: "bg-success/15",
-    iconColor: "text-success",
+    cardBg:
+      "border-primary/20 bg-gradient-to-br from-primary/10 to-white dark:from-primary/15 dark:to-surface",
+    iconWrap: "bg-primary/20",
+    iconColor: "text-primary",
   },
   {
     valueKey: "joined",
@@ -63,9 +64,10 @@ const KPI_CARDS: {
     captionKey: "joinedCaption",
     label: "Joined",
     icon: CheckCircle2,
-    cardBg: "bg-primary-light/80 border-primary/15",
-    iconWrap: "bg-primary/10",
-    iconColor: "text-primary",
+    cardBg:
+      "border-success/20 bg-gradient-to-br from-success/10 to-white dark:from-success/15 dark:to-surface",
+    iconWrap: "bg-success/20",
+    iconColor: "text-success",
   },
   {
     valueKey: "joiningPending",
@@ -73,8 +75,9 @@ const KPI_CARDS: {
     captionKey: "joiningPendingCaption",
     label: "Joining Pending",
     icon: Clock,
-    cardBg: "bg-warning/10 border-warning/20",
-    iconWrap: "bg-warning/15",
+    cardBg:
+      "border-warning/25 bg-gradient-to-br from-warning/10 to-white dark:from-warning/15 dark:to-surface",
+    iconWrap: "bg-warning/20",
     iconColor: "text-warning",
   },
   {
@@ -83,8 +86,9 @@ const KPI_CARDS: {
     captionKey: "didNotJoinCaption",
     label: "Did Not Join",
     icon: UserX,
-    cardBg: "bg-danger/10 border-danger/15",
-    iconWrap: "bg-danger/15",
+    cardBg:
+      "border-danger/20 bg-gradient-to-br from-danger/10 to-white dark:from-danger/15 dark:to-surface",
+    iconWrap: "bg-danger/20",
     iconColor: "text-danger",
   },
   {
@@ -93,19 +97,20 @@ const KPI_CARDS: {
     captionKey: "avgTimeToJoinCaption",
     label: "Avg. Time to Join",
     icon: Timer,
-    cardBg: "bg-chart-accent-alt/10 border-chart-accent-alt/15",
-    iconWrap: "bg-chart-accent-alt/15",
-    iconColor: "text-chart-accent-alt",
+    cardBg:
+      "border-violet-200/80 bg-gradient-to-br from-violet-50 to-white dark:border-violet-500/25 dark:from-violet-500/10 dark:to-surface",
+    iconWrap: "bg-violet-500/20",
+    iconColor: "text-violet-600",
     isDays: true,
   },
 ];
 
 function formatCount(value: number | null, isDays?: boolean): string {
-  if (value == null) return "—";
+  const resolved = value ?? 0;
   if (isDays) {
-    return `${value.toLocaleString("en-IN", { maximumFractionDigits: 1 })}d`;
+    return `${resolved.toLocaleString("en-IN", { maximumFractionDigits: 1 })}d`;
   }
-  return value.toLocaleString("en-IN");
+  return resolved.toLocaleString("en-IN");
 }
 
 export function PlacementsOverviewKpiStrip({

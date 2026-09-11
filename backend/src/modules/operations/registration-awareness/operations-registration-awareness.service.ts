@@ -252,7 +252,16 @@ async function countUnreadNotifications(userId: string): Promise<number> {
   }
   const userObjectId = new mongoose.Types.ObjectId(userId);
   return OperationsNotificationModel.countDocuments({
-    "reads.userId": { $ne: userObjectId },
+    $and: [
+      {
+        $or: [
+          { recipientUserId: null },
+          { recipientUserId: { $exists: false } },
+          { recipientUserId: userObjectId },
+        ],
+      },
+      { "reads.userId": { $ne: userObjectId } },
+    ],
   });
 }
 
@@ -433,7 +442,13 @@ export const operationsRegistrationAwarenessService = {
       : null;
 
     const [docs, unreadCount] = await Promise.all([
-      OperationsNotificationModel.find({})
+      OperationsNotificationModel.find({
+        $or: [
+          { recipientUserId: null },
+          { recipientUserId: { $exists: false } },
+          ...(userObjectId ? [{ recipientUserId: userObjectId }] : []),
+        ],
+      })
         .sort({ createdAt: -1 })
         .limit(limit)
         .lean(),

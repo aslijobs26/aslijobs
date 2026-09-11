@@ -11,6 +11,8 @@ import {
   joiningStatusToApplicationStatus,
   parseOfferDate,
   placementStatusLabel,
+  resolveActualJoinedAt,
+  resolveOfferMadeAt,
   resolvePlacementCohortDate,
   resolvePlacementJoiningStatus,
 } from "./operations-placements-domain.js";
@@ -59,6 +61,52 @@ describe("operations placements domain", () => {
     );
     assert.equal(daysBetweenOfferAndJoin(null, "2026-09-01"), null);
     assert.equal(daysBetweenOfferAndJoin("bad", "2026-09-01"), null);
+  });
+
+  it("prefers actual joined history over planned joiningDate for time-to-join", () => {
+    const row = {
+      offer: {
+        offerDate: "2026-08-01T00:00:00.000Z",
+        // Planned join same day as offer — previously produced false "0 days"
+        joiningDate: "2026-08-01",
+      },
+      statusHistory: [
+        { status: "offer_sent", at: "2026-08-01T10:00:00.000Z" },
+        { status: "selected", at: "2026-08-05T10:00:00.000Z" },
+        { status: "joined", at: "2026-08-29T00:00:00.000Z" },
+      ],
+      updatedAt: "2026-08-29T00:00:00.000Z",
+    };
+    assert.equal(
+      resolveOfferMadeAt(row)?.toISOString(),
+      "2026-08-01T00:00:00.000Z",
+    );
+    assert.equal(
+      resolveActualJoinedAt(row)?.toISOString(),
+      "2026-08-29T00:00:00.000Z",
+    );
+    assert.equal(
+      daysBetweenOfferAndJoin(resolveOfferMadeAt(row), resolveActualJoinedAt(row)),
+      28,
+    );
+  });
+
+  it("falls back to offer_sent history when offer.offerDate is missing", () => {
+    const row = {
+      offer: { offerDate: "", joiningDate: "2026-09-01" },
+      statusHistory: [
+        { status: "offer_sent", at: "2026-08-10T00:00:00.000Z" },
+        { status: "joined", at: "2026-08-20T00:00:00.000Z" },
+      ],
+    };
+    assert.equal(
+      resolveOfferMadeAt(row)?.toISOString(),
+      "2026-08-10T00:00:00.000Z",
+    );
+    assert.equal(
+      daysBetweenOfferAndJoin(resolveOfferMadeAt(row), resolveActualJoinedAt(row)),
+      10,
+    );
   });
 
   it("resolves placement cohort date from status history", () => {

@@ -19,8 +19,8 @@ import { ROUTES } from "@/constants/routes";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import { useCan } from "@/providers/employer-permission-provider";
 import {
-  fetchNotificationUnreadCount,
-  notificationQueryKeys,
+  employerMessageQueryKeys,
+  fetchNotificationConversations,
 } from "@/services/notifications.service";
 import type { EmployerDashboardNavItem } from "@/types/employer-dashboard";
 import { cn } from "@/utils/cn";
@@ -51,9 +51,22 @@ export function EmployerSidebar({
     pathname === ROUTES.EMPLOYER_HELP_CENTER ||
     pathname.startsWith(`${ROUTES.EMPLOYER_HELP_CENTER}/`);
 
+  // Messages badge = unread application/job conversation threads only.
+  // Do not use global /notifications/me/unread-count — account notices
+  // (e.g. employer verification) inflate that count but never appear in Messages.
   const messagesUnreadQuery = useQuery({
-    queryKey: notificationQueryKeys.unreadCount("employer"),
-    queryFn: fetchNotificationUnreadCount,
+    queryKey: [
+      ...employerMessageQueryKeys.stats,
+      "sidebar-unread-conversations",
+    ],
+    queryFn: async () => {
+      const result = await fetchNotificationConversations({
+        page: 1,
+        limit: 1,
+        readStatus: "unread",
+      });
+      return result.pagination.total;
+    },
     staleTime: 60_000,
     refetchInterval: 180_000,
     refetchIntervalInBackground: false,

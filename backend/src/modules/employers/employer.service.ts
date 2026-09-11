@@ -16,6 +16,7 @@ import {
   resolveEmployerRegistrationDisplayName,
 } from "../operations/registration-awareness/operations-registration-awareness.service.js";
 import { scheduleEmployerRegisteredAwareness } from "../operations/registration-awareness/operations-registration-emit.js";
+import { scheduleEmployerVerificationWork } from "../operations/work/operations-work-emit.js";
 import { storageService } from "../storage/storage.service.js";
 import { EmployerDocumentModel } from "./employer-document.model.js";
 import { EmployerModel } from "./employer.model.js";
@@ -746,6 +747,14 @@ export class EmployerService {
         employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
     });
 
+    scheduleEmployerVerificationWork({
+      employerId: employer._id.toString(),
+      companyName: resolveEmployerRegistrationDisplayName(employer),
+      locationLabel: [employer.city, employer.state].filter(Boolean).join(", "),
+      submittedAt: employer.verificationSubmittedAt ?? new Date(),
+      kind: "submitted",
+    });
+
     return {
       employer: toPublicEmployer(employer),
       document: {
@@ -883,6 +892,14 @@ export class EmployerService {
       displayId: formatEmployerRegistrationDisplayId(employer._id.toString()),
       registeredAt:
         employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
+    });
+
+    scheduleEmployerVerificationWork({
+      employerId: employer._id.toString(),
+      companyName: resolveEmployerRegistrationDisplayName(employer),
+      locationLabel: [employer.city, employer.state].filter(Boolean).join(", "),
+      submittedAt: employer.verificationSubmittedAt ?? new Date(),
+      kind: "submitted",
     });
 
     return {
@@ -1208,6 +1225,17 @@ export class EmployerService {
     } catch (error) {
       console.error("Employer verification resubmit audit failed:", error);
     }
+
+    scheduleEmployerVerificationWork({
+      employerId: employer._id.toString(),
+      companyName:
+        employer.companyName?.trim() ||
+        employer.establishmentName?.trim() ||
+        "Employer",
+      locationLabel: [employer.city, employer.state].filter(Boolean).join(", "),
+      submittedAt: employer.verificationSubmittedAt ?? new Date(),
+      kind: "resubmitted",
+    });
 
     return { employer: toPublicEmployer(employer), alreadyPending: false };
   }

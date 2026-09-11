@@ -19,6 +19,7 @@ import { JobsOverviewHeader } from "../components/operations/jobs/overview/JobsO
 import { JobsQuickActions } from "../components/operations/jobs/overview/JobsQuickActions";
 import { JobsTableSection } from "../components/operations/jobs/JobsTableSection";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
+import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
 import {
   useOperationsJobs,
   useOperationsJobsAnalytics,
@@ -511,7 +512,18 @@ export function OperationsJobsPage() {
             <JobsKpiStrip kpis={analyticsData.kpis} />
             <JobsOverviewAnalytics data={analyticsData} />
 
-            <div className="grid grid-cols-1 gap-3 max-sm:gap-2 xl:grid-cols-[minmax(0,1fr)_16.5rem] xl:items-start xl:gap-3.5">
+            <OperationsOverviewSplit
+              rail={
+                <>
+                  <JobsQuickActions
+                    onExport={() => exportAnalyticsCsv(analyticsData)}
+                    onReviewPending={() => handleTabChange("pending_approval")}
+                    onCheckAtRisk={() => handleTabChange("live")}
+                  />
+                  <JobsAskAsliCard />
+                </>
+              }
+            >
               <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
                 <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4 xl:px-3 xl:py-1.5">
                   <div className="flex min-w-0 flex-col gap-2.5 xl:gap-1.5">
@@ -604,16 +616,7 @@ export function OperationsJobsPage() {
                   onStatusAction={handleStatusAction}
                 />
               </div>
-
-              <aside className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
-                <JobsQuickActions
-                  onExport={() => exportAnalyticsCsv(analyticsData)}
-                  onReviewPending={() => handleTabChange("pending_approval")}
-                  onCheckAtRisk={() => handleTabChange("live")}
-                />
-                <JobsAskAsliCard />
-              </aside>
-            </div>
+            </OperationsOverviewSplit>
           </div>
         ) : null}
       </div>

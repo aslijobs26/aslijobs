@@ -1861,6 +1861,23 @@ export const operationsJobsService = {
       // Approval succeeds even if notification fails; employer can still see Live status.
     }
 
+    void import("../work/operations-work-emit.js")
+      .then(({ completeOpenSystemWorkForEntity }) =>
+        completeOpenSystemWorkForEntity({
+          relatedEntityType: "job",
+          relatedEntityId: job.jobId.trim().toUpperCase(),
+          types: ["job_operations"],
+          actorName: actor?.fullName?.trim() || "Operations",
+          note: "Job approved",
+        }),
+      )
+      .catch((error: unknown) => {
+        console.error("[operations-work] job work resolve rejected", {
+          publicJobId: job.jobId,
+          errorCategory: error instanceof Error ? error.name : "unknown",
+        });
+      });
+
     return this.getJobDetail(job.jobId);
   },
 
@@ -2156,6 +2173,23 @@ export const operationsJobsService = {
     } catch {
       // Rejection succeeds even if notification fails; employer still sees Rejected + reason.
     }
+
+    void import("../work/operations-work-emit.js")
+      .then(({ completeOpenSystemWorkForEntity }) =>
+        completeOpenSystemWorkForEntity({
+          relatedEntityType: "job",
+          relatedEntityId: job.jobId.trim().toUpperCase(),
+          types: ["job_operations"],
+          actorName: actor?.fullName?.trim() || "Operations",
+          note: "Job rejected",
+        }),
+      )
+      .catch((error: unknown) => {
+        console.error("[operations-work] job work resolve rejected", {
+          publicJobId: job.jobId,
+          errorCategory: error instanceof Error ? error.name : "unknown",
+        });
+      });
 
     return this.getJobDetail(job.jobId);
   },

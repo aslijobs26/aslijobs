@@ -112,7 +112,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
 
   return (
     <div className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
-      <div className="grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
+      <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
         <OperationsCard
           title="Job Postings Trend"
           subtitle={

@@ -25,7 +25,9 @@ export function OperationsCard({
   return (
     <section
       className={cn(
-        "operations-density-card flex h-full flex-col rounded-xl border border-border-subtle bg-surface shadow-sm",
+        // Content-sized by default. Pass `h-full` (or use `.operations-analytics-grid`)
+        // only when equal-height card rows are intentional.
+        "operations-density-card flex h-auto flex-col rounded-xl border border-border-subtle bg-surface shadow-sm",
         isFlushBody && "operations-density-card-flush",
         className,
       )}

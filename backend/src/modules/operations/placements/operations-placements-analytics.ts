@@ -8,9 +8,9 @@ import { resolveEmployerIndustryLabel } from "../verifications/operations-verifi
 import {
   PLACEMENT_STATUS_MATCH,
   daysBetweenOfferAndJoin,
-  findStatusHistoryAt,
-  parseOfferDate,
   placementStatusLabel,
+  resolveActualJoinedAt,
+  resolveOfferMadeAt,
   resolvePlacementCohortDate,
   resolvePlacementJoiningStatus,
 } from "./operations-placements-domain.js";
@@ -535,10 +535,10 @@ function summarizeCohort(
     const joining = resolvePlacementJoiningStatus(row.status);
     if (joining === "joined") {
       joined += 1;
-      const joinedAt =
-        parseOfferDate(row.offer?.joiningDate) ??
-        findStatusHistoryAt(row.statusHistory, "joined");
-      const days = daysBetweenOfferAndJoin(row.offer?.offerDate, joinedAt);
+      const days = daysBetweenOfferAndJoin(
+        resolveOfferMadeAt(row),
+        resolveActualJoinedAt(row),
+      );
       if (days != null) {
         joinDays.push(days);
       }
@@ -817,17 +817,11 @@ export async function getPlacementsAnalytics(
     if (resolvePlacementJoiningStatus(row.status) !== "joined") {
       continue;
     }
-    const joinedAt =
-      parseOfferDate(row.offer?.joiningDate) ??
-      findStatusHistoryAt(row.statusHistory, "joined") ??
-      resolvePlacementCohortDate({
-        statusHistory: row.statusHistory,
-        updatedAt: row.updatedAt,
-      });
+    const joinedAt = resolveActualJoinedAt(row);
     if (!joinedAt || !inRange(joinedAt, isOverall ? trendFrom : from, to)) {
       continue;
     }
-    const days = daysBetweenOfferAndJoin(row.offer?.offerDate, joinedAt);
+    const days = daysBetweenOfferAndJoin(resolveOfferMadeAt(row), joinedAt);
     if (days == null) {
       continue;
     }

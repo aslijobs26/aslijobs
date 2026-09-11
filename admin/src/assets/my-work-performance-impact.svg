@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="96" viewBox="0 0 320 96" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="impactBg" x1="0" y1="0" x2="320" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D8F3F1"/>
+      <stop offset="55%" stop-color="#EAF8F6"/>
+      <stop offset="100%" stop-color="#F4FBFA" stop-opacity="0.35"/>
+    </linearGradient>
+    <filter id="bubbleShadow" x="-10%" y="-10%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0e8585" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="320" height="96" rx="20" fill="url(#impactBg)"/>
+
+  <!-- Ascending bars -->
+  <g>
+    <rect x="28" y="58" width="14" height="20" rx="3" fill="#7BC4BE" fill-opacity="0.55"/>
+    <rect x="48" y="46" width="14" height="32" rx="3" fill="#5BB4AD" fill-opacity="0.65"/>
+    <rect x="68" y="28" width="14" height="50" rx="3" fill="#3AA39B" fill-opacity="0.78"/>
+    <rect x="88" y="18" width="14" height="60" rx="3" fill="#1F9189" fill-opacity="0.88"/>
+  </g>
+
+  <!-- Check + upward arrow over third bar -->
+  <g transform="translate(67 8)" fill="none" stroke="#0B6E68" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 14l4 4 8-10"/>
+    <path d="M8 18v16"/>
+    <path d="M3 24l5-6 5 6"/>
+  </g>
+
+  <!-- Plant / leaves beside tallest bar -->
+  <g transform="translate(106 46)" fill="#0B6E68">
+    <path d="M6 22c0-10 6-16 12-18-1 8-5 14-12 18Z" fill-opacity="0.9"/>
+    <path d="M6 22c0-9-5-15-12-17 2 8 5 14 12 17Z" fill-opacity="0.75"/>
+    <path d="M6 8c2-5 6-8 10-9-2 5-5 8-10 9Z" fill-opacity="0.85"/>
+    <rect x="5" y="20" width="2.2" height="10" rx="1" fill-opacity="0.7"/>
+  </g>
+
+  <!-- Speech bubble -->
+  <g filter="url(#bubbleShadow)">
+    <path
+      d="M148 22h142c8.3 0 15 6.7 15 15v24c0 8.3-6.7 15-15 15H188l-12 10v-10h-28c-8.3 0-15-6.7-15-15V37c0-8.3 6.7-15 15-15Z"
+      fill="#E7F7F5"
+      stroke="#C7EAE6"
+      stroke-width="1"
+    />
+    <text x="164" y="44" fill="#0F4F4A" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="650">
+      Small actions
+    </text>
+    <text x="164" y="62" fill="#0F4F4A" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="650">
+      create big impact
+    </text>
+  </g>
+</svg>
