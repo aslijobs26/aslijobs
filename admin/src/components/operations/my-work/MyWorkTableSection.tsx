@@ -34,6 +34,12 @@ interface MyWorkTableSectionProps {
   onDueChange: (value: WorkDueFilter) => void;
   search: string;
   onSearchChange: (value: string) => void;
+  sort: "dueAt" | "priority" | "createdAt" | "updatedAt";
+  order: "asc" | "desc";
+  onSortChange: (
+    sort: "dueAt" | "priority" | "createdAt" | "updatedAt",
+    order: "asc" | "desc",
+  ) => void;
   isLoading: boolean;
   isError: boolean;
   errorMessage?: string;
@@ -44,6 +50,13 @@ interface MyWorkTableSectionProps {
   canSearch?: boolean;
   /** When true, All is listed first (operational heads / managers). */
   preferAllFirst?: boolean;
+  selectionEnabled?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (item: OperationsWorkListItem) => void;
+  onToggleSelectAllVisible?: () => void;
+  isItemSelectable?: (item: OperationsWorkListItem) => boolean;
+  /** Offer ⋮ → Select to enter bulk selection mode (when not already active). */
+  showSelectMenuOption?: boolean;
 }
 
 const SPECIALIST_TABS: Array<{
@@ -89,10 +102,20 @@ const PRIORITY_OPTIONS = [
 
 const DUE_OPTIONS = [
   { value: "all", label: "All Due" },
+  { value: "do_now", label: "Do Now" },
   { value: "overdue", label: "Overdue" },
   { value: "due_today", label: "Due Today" },
   { value: "due_soon", label: "Due Soon" },
   { value: "upcoming", label: "Upcoming" },
+] as const;
+
+const SORT_OPTIONS = [
+  { value: "dueAt:asc", label: "Due date ↑" },
+  { value: "dueAt:desc", label: "Due date ↓" },
+  { value: "priority:asc", label: "Priority ↑" },
+  { value: "priority:desc", label: "Priority ↓" },
+  { value: "createdAt:desc", label: "Newest" },
+  { value: "updatedAt:desc", label: "Recently updated" },
 ] as const;
 
 const thClassName =
@@ -154,6 +177,9 @@ export function MyWorkTableSection({
   onDueChange,
   search,
   onSearchChange,
+  sort,
+  order,
+  onSortChange,
   isLoading,
   isError,
   errorMessage,
@@ -163,12 +189,28 @@ export function MyWorkTableSection({
   canFilter = true,
   canSearch = true,
   preferAllFirst = false,
+  selectionEnabled = false,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAllVisible,
+  isItemSelectable,
+  showSelectMenuOption = false,
 }: MyWorkTableSectionProps) {
   const { canKey } = useOperationsPermissions();
   const empty = emptyCopy(activeTab);
   const showFilters = canFilter && canKey("my_work.list.filter");
   const showSearch = canSearch && canKey("my_work.list.search");
   const tabsConfig = preferAllFirst ? OPERATIONS_HEAD_TABS : SPECIALIST_TABS;
+  const selectableItems = selectionEnabled
+    ? items.filter((item) => (isItemSelectable ? isItemSelectable(item) : true))
+    : [];
+  const allVisibleSelected =
+    selectableItems.length > 0 &&
+    selectableItems.every((item) => selectedIds?.has(item.id));
+  const someVisibleSelected =
+    selectableItems.some((item) => selectedIds?.has(item.id)) &&
+    !allVisibleSelected;
+  const colCount = selectionEnabled ? 8 : 7;
 
   return (
     <section className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
@@ -237,6 +279,21 @@ export function MyWorkTableSection({
                   mobileSheet
                   className="min-w-[7.5rem] sm:w-auto"
                 />
+                <OperationsFilterSelect
+                  label="Sort"
+                  value={`${sort}:${order}`}
+                  options={SORT_OPTIONS}
+                  onChange={(value) => {
+                    const [nextSort, nextOrder] = value.split(":") as [
+                      "dueAt" | "priority" | "createdAt" | "updatedAt",
+                      "asc" | "desc",
+                    ];
+                    onSortChange(nextSort, nextOrder);
+                  }}
+                  hideSearch
+                  mobileSheet
+                  className="min-w-[8.5rem] sm:w-auto"
+                />
               </>
             ) : null}
             {showSearch ? (
@@ -264,9 +321,21 @@ export function MyWorkTableSection({
         <table className="w-full min-w-[720px] border-collapse text-left">
           <thead>
             <tr className="border-b border-border-subtle bg-hero-bg/40">
-              <th className={thClassName} scope="col">
-                <span className="sr-only">Select</span>
-              </th>
+              {selectionEnabled ? (
+                <th className={thClassName} scope="col">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    ref={(node) => {
+                      if (node) node.indeterminate = someVisibleSelected;
+                    }}
+                    onChange={() => onToggleSelectAllVisible?.()}
+                    aria-label="Select all visible work items on this page"
+                    className="size-3.5 rounded border-border-subtle"
+                    disabled={selectableItems.length === 0}
+                  />
+                </th>
+              ) : null}
               <th className={thClassName} scope="col">
                 Priority
               </th>
@@ -293,13 +362,13 @@ export function MyWorkTableSection({
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted">
+                <td colSpan={colCount} className="px-4 py-12 text-center text-sm text-muted">
                   Loading work items…
                 </td>
               </tr>
             ) : isError ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center">
+                <td colSpan={colCount} className="px-4 py-12 text-center">
                   <p className="text-sm font-medium text-danger">
                     {errorMessage ?? "Failed to load work items."}
                   </p>
@@ -316,7 +385,7 @@ export function MyWorkTableSection({
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-14 text-center">
+                <td colSpan={colCount} className="px-4 py-14 text-center">
                   <p className="text-sm font-medium text-foreground">{empty.title}</p>
                   <p className="mt-1 text-xs text-muted">{empty.body}</p>
                 </td>
@@ -328,19 +397,27 @@ export function MyWorkTableSection({
                   item.relatedEntityType,
                   item.relatedEntityId,
                 );
+                const selectable = isItemSelectable
+                  ? isItemSelectable(item)
+                  : true;
                 return (
                   <tr
                     key={item.id}
                     className="border-b border-border-subtle last:border-b-0 hover:bg-hero-bg/30"
                   >
+                    {selectionEnabled ? (
+                      <td className="px-3 py-2.5 first:pl-4 xl:px-2.5 xl:first:pl-3">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(selectedIds?.has(item.id))}
+                          disabled={!selectable}
+                          onChange={() => onToggleSelect?.(item)}
+                          aria-label={`Select ${item.displayId}`}
+                          className="size-3.5 rounded border-border-subtle disabled:opacity-40"
+                        />
+                      </td>
+                    ) : null}
                     <td className="px-3 py-2.5 first:pl-4 xl:px-2.5 xl:first:pl-3">
-                      <input
-                        type="checkbox"
-                        aria-label={`Select ${item.displayId}`}
-                        className="size-3.5 rounded border-border-subtle"
-                      />
-                    </td>
-                    <td className="px-3 py-2.5 xl:px-2.5">
                       <OperationsBadge variant={priorityVariant(item.priority)}>
                         {item.priority}
                       </OperationsBadge>
@@ -401,6 +478,7 @@ export function MyWorkTableSection({
                       <MyWorkRowActions
                         item={item}
                         busy={busyId === item.id}
+                        showSelectOption={showSelectMenuOption}
                         onAction={(action) => onRowAction(item, action)}
                       />
                     </td>
@@ -441,21 +519,37 @@ export function MyWorkTableSection({
         ) : (
           items.map((item) => {
             const dueInfo = formatWorkDueLabel(item.dueAt);
+            const selectable = isItemSelectable
+              ? isItemSelectable(item)
+              : true;
             return (
               <li key={item.id} className="flex flex-col gap-2 px-3 py-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <Link
-                      to={operationsMyWorkDetailPath(item.id)}
-                      className="text-[13px] font-semibold text-foreground"
-                    >
-                      {item.title}
-                    </Link>
-                    <p className="text-[10px] text-muted">{item.displayId}</p>
+                  <div className="flex min-w-0 items-start gap-2">
+                    {selectionEnabled ? (
+                      <input
+                        type="checkbox"
+                        checked={Boolean(selectedIds?.has(item.id))}
+                        disabled={!selectable}
+                        onChange={() => onToggleSelect?.(item)}
+                        aria-label={`Select ${item.displayId}`}
+                        className="mt-1 size-3.5 rounded border-border-subtle disabled:opacity-40"
+                      />
+                    ) : null}
+                    <div className="min-w-0">
+                      <Link
+                        to={operationsMyWorkDetailPath(item.id)}
+                        className="text-[13px] font-semibold text-foreground"
+                      >
+                        {item.title}
+                      </Link>
+                      <p className="text-[10px] text-muted">{item.displayId}</p>
+                    </div>
                   </div>
                   <MyWorkRowActions
                     item={item}
                     busy={busyId === item.id}
+                    showSelectOption={showSelectMenuOption}
                     onAction={(action) => onRowAction(item, action)}
                   />
                 </div>

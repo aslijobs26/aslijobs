@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { isAxiosError } from "axios";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { MyWorkPerformanceByTypePanel } from "../components/operations/my-work/performance/MyWorkPerformanceByTypePanel";
@@ -11,7 +11,6 @@ import {
   percentChange,
   sumTrendHalf,
   type PerformanceMetricCardModel,
-  type TrendDirection,
 } from "../components/operations/my-work/performance/performance-format";
 import {
   useExportOperationsWork,
@@ -31,12 +30,24 @@ function detailError(error: unknown): string {
   return "Failed to load performance metrics.";
 }
 
-function trendLabel(
-  direction: Exclude<TrendDirection, "none">,
-  percent: number,
-): string {
-  const arrow = direction === "up" ? "↑" : direction === "down" ? "↓" : "→";
-  return `${arrow} ${percent}%`;
+function rangePresets() {
+  const now = new Date();
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+  const start7 = new Date(now);
+  start7.setDate(start7.getDate() - 6);
+  start7.setHours(0, 0, 0, 0);
+  const start30 = new Date(now);
+  start30.setDate(start30.getDate() - 29);
+  start30.setHours(0, 0, 0, 0);
+  return {
+    "7d": { from: start7.toISOString(), to: end.toISOString(), label: "Last 7 days" },
+    "30d": {
+      from: start30.toISOString(),
+      to: end.toISOString(),
+      label: "Last 30 days",
+    },
+  } as const;
 }
 
 function buildMetrics(
@@ -44,19 +55,16 @@ function buildMetrics(
 ): PerformanceMetricCardModel[] {
   const firstHalf = sumTrendHalf(data.completionTrend, "first");
   const secondHalf = sumTrendHalf(data.completionTrend, "second");
-  const completed7dTrend = percentChange(secondHalf, firstHalf);
-  const completedTotalPrior = Math.max(
-    0,
-    data.completedTotal - data.completedLast7Days,
-  );
-  const completedTotalTrend = percentChange(
-    data.completedLast7Days,
-    completedTotalPrior,
-  );
-  const completionRateTrend =
-    data.completionRatePercent == null
+  const completedWindowTrend =
+    firstHalf === 0 && secondHalf === 0
       ? null
-      : percentChange(data.completionRatePercent, 0);
+      : percentChange(secondHalf, firstHalf);
+
+  const noneTrend = {
+    direction: "none" as const,
+    label: "No data",
+    caption: "",
+  };
 
   return [
     {
@@ -64,39 +72,28 @@ function buildMetrics(
       label: "Open assigned",
       value: formatPerformanceMetric(data.assignedOpen),
       ...PERFORMANCE_METRIC_ICON_PRESETS.open,
-      trend: {
-        direction: data.assignedOpen === 0 ? "down" : "flat",
-        label: trendLabel(data.assignedOpen === 0 ? "down" : "flat", 0),
-        caption: "vs last 7 days",
-      },
+      trend: noneTrend,
     },
     {
       id: "completed-total",
       label: "Completed (total)",
       value: formatPerformanceMetric(data.completedTotal),
       ...PERFORMANCE_METRIC_ICON_PRESETS.completedTotal,
-      trend: {
-        direction: completedTotalTrend.direction,
-        label: trendLabel(
-          completedTotalTrend.direction,
-          completedTotalTrend.percent,
-        ),
-        caption: "vs last 7 days",
-      },
+      trend: noneTrend,
     },
     {
-      id: "completed-7d",
-      label: "Completed (7 days)",
+      id: "completed-window",
+      label: "Completed (range)",
       value: formatPerformanceMetric(data.completedLast7Days),
       ...PERFORMANCE_METRIC_ICON_PRESETS.completed7d,
-      trend: {
-        direction: completed7dTrend.direction,
-        label: trendLabel(
-          completed7dTrend.direction,
-          completed7dTrend.percent,
-        ),
-        caption: "vs last 7 days",
-      },
+      trend:
+        completedWindowTrend == null
+          ? noneTrend
+          : {
+              direction: completedWindowTrend.direction,
+              label: `${completedWindowTrend.direction === "up" ? "↑" : completedWindowTrend.direction === "down" ? "↓" : "→"} ${completedWindowTrend.percent}%`,
+              caption: "2nd half vs 1st half of range",
+            },
     },
     {
       id: "completion-rate",
@@ -105,32 +102,14 @@ function buildMetrics(
         suffix: "%",
       }),
       ...PERFORMANCE_METRIC_ICON_PRESETS.completionRate,
-      trend: {
-        direction:
-          data.completionRatePercent == null
-            ? "none"
-            : (completionRateTrend?.direction ?? "flat"),
-        label:
-          data.completionRatePercent == null || completionRateTrend == null
-            ? "No data"
-            : trendLabel(
-                completionRateTrend.direction,
-                completionRateTrend.percent,
-              ),
-        caption:
-          data.completionRatePercent == null ? "" : "vs last 7 days",
-      },
+      trend: noneTrend,
     },
     {
       id: "overdue",
       label: "Overdue",
       value: formatPerformanceMetric(data.overdue),
       ...PERFORMANCE_METRIC_ICON_PRESETS.overdue,
-      trend: {
-        direction: data.overdue === 0 ? "down" : "up",
-        label: trendLabel(data.overdue === 0 ? "down" : "up", 0),
-        caption: "vs last 7 days",
-      },
+      trend: noneTrend,
     },
     {
       id: "sla",
@@ -139,15 +118,7 @@ function buildMetrics(
         suffix: "%",
       }),
       ...PERFORMANCE_METRIC_ICON_PRESETS.sla,
-      trend: {
-        direction: data.slaCompliancePercent == null ? "none" : "flat",
-        label:
-          data.slaCompliancePercent == null
-            ? "No data"
-            : trendLabel("flat", 0),
-        caption:
-          data.slaCompliancePercent == null ? "" : "vs last 7 days",
-      },
+      trend: noneTrend,
     },
     {
       id: "resolution",
@@ -156,11 +127,7 @@ function buildMetrics(
         decimals: 1,
       }),
       ...PERFORMANCE_METRIC_ICON_PRESETS.resolution,
-      trend: {
-        direction: "down",
-        label: trendLabel("down", 0),
-        caption: "vs last 7 days",
-      },
+      trend: noneTrend,
     },
     {
       id: "response",
@@ -169,25 +136,23 @@ function buildMetrics(
         decimals: 1,
       }),
       ...PERFORMANCE_METRIC_ICON_PRESETS.response,
-      trend: {
-        direction: "down",
-        label: trendLabel("down", 0),
-        caption: "vs last 7 days",
-      },
+      trend: noneTrend,
     },
   ];
 }
 
 export function OperationsMyWorkPerformancePage() {
-  const query = useOperationsWorkPerformance();
+  const presets = useMemo(() => rangePresets(), []);
+  const [rangeKey, setRangeKey] = useState<"7d" | "30d">("7d");
+  const range = presets[rangeKey];
+  const query = useOperationsWorkPerformance({
+    from: range.from,
+    to: range.to,
+  });
   const exportMutation = useExportOperationsWork();
   const data = query.data;
 
-  const metrics = useMemo(
-    () => (data ? buildMetrics(data) : []),
-    [data],
-  );
-
+  const metrics = useMemo(() => (data ? buildMetrics(data) : []), [data]);
   const errorMessage = query.error ? detailError(query.error) : null;
 
   return (
@@ -199,7 +164,11 @@ export function OperationsMyWorkPerformancePage() {
       <div className="mx-auto flex w-full min-w-0 max-w-[90rem] flex-col gap-3.5">
         <MyWorkPerformanceHeader
           trend={data?.completionTrend ?? []}
+          rangeLabel={range.label}
+          downloadLabel="Download completed work"
           isDownloading={exportMutation.isPending}
+          onRangeChange={setRangeKey}
+          rangeKey={rangeKey}
           onDownload={() => {
             exportMutation.mutate({
               tab: "completed",

@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { isAxiosError } from "axios";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { MyWorkAssignDialog } from "../components/operations/my-work/MyWorkAssignDialog";
+import { MyWorkWaitingReasonDialog } from "../components/operations/my-work/MyWorkWaitingReasonDialog";
 import { MyWorkDetailActivity } from "../components/operations/my-work/detail/MyWorkDetailActivity";
 import { MyWorkDetailHeader } from "../components/operations/my-work/detail/MyWorkDetailHeader";
 import { MyWorkDetailSidePanel } from "../components/operations/my-work/detail/MyWorkDetailSidePanel";
@@ -40,6 +41,7 @@ export function OperationsMyWorkDetailPage() {
   const priorityMutation = useUpdateOperationsWorkPriority();
   const dueMutation = useUpdateOperationsWorkDue();
   const [assignOpen, setAssignOpen] = useState(false);
+  const [waitingOpen, setWaitingOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const item = detailQuery.data;
@@ -94,7 +96,11 @@ export function OperationsMyWorkDetailPage() {
                     "Failed to claim.",
                   )
                 }
-                onStatus={(input) =>
+                onStatus={(input) => {
+                  if (input.status === "waiting" && !input.waitingReason) {
+                    setWaitingOpen(true);
+                    return;
+                  }
                   void run(
                     () =>
                       statusMutation.mutateAsync({
@@ -106,8 +112,8 @@ export function OperationsMyWorkDetailPage() {
                         },
                       }),
                     "Failed to update status.",
-                  )
-                }
+                  );
+                }}
                 onPriority={(priority: WorkItemPriority) =>
                   void run(
                     () =>
@@ -144,6 +150,27 @@ export function OperationsMyWorkDetailPage() {
               item={item}
               onClose={() => setAssignOpen(false)}
               onSuccess={() => setActionError(null)}
+            />
+            <MyWorkWaitingReasonDialog
+              open={waitingOpen}
+              workTitle={item.title}
+              isSubmitting={statusMutation.isPending}
+              onClose={() => setWaitingOpen(false)}
+              onConfirm={async (reason) => {
+                await run(
+                  () =>
+                    statusMutation.mutateAsync({
+                      id: item.id,
+                      input: {
+                        status: "waiting",
+                        waitingReason: reason,
+                        expectedRevision: item.revision,
+                      },
+                    }),
+                  "Failed to update status.",
+                );
+                setWaitingOpen(false);
+              }}
             />
           </>
         ) : null}

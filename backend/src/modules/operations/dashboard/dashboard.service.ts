@@ -1,9 +1,5 @@
 /**
- * Dashboard-specific service layer.
- * Implementation pending — scaffold only.
+ * @deprecated Use operations-dashboard.service.ts
+ * Kept only so old imports do not break during transition.
  */
-export const operationsDashboardService = {
-  async getOverview() {
-    throw new Error("Operations dashboard overview not implemented");
-  },
-};
+export { operationsDashboardService } from "./operations-dashboard.service.js";

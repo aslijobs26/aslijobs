@@ -177,12 +177,32 @@ export function AppRoutes() {
           element={<OperationsPlaceholderPage title="Settings" />}
         />
         <Route
+          path={OPERATIONS_ROUTES.LANGUAGES}
+          element={
+            <OperationsPlaceholderPage title="Languages & Localization" />
+          }
+        />
+        <Route
+          path={OPERATIONS_ROUTES.BUSINESS_DEVELOPMENT}
+          element={
+            <OperationsPlaceholderPage title="Business Development" />
+          }
+        />
+        <Route
+          path={OPERATIONS_ROUTES.PROMOTIONS_EVENTS}
+          element={
+            <OperationsPlaceholderPage title="Promotions & Events" />
+          }
+        />
+        <Route
           path={OPERATIONS_ROUTES.SUBSCRIPTIONS}
           element={<OperationsPlaceholderPage title="Subscriptions & Boosters" />}
         />
         <Route
           path={OPERATIONS_ROUTES.PAYMENTS}
-          element={<OperationsPlaceholderPage title="Payments & Invoices" />}
+          element={
+            <OperationsPlaceholderPage title="Payments & Subscriptions" />
+          }
         />
         <Route
           path={OPERATIONS_ROUTES.TRANSACTIONS}

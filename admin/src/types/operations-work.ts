@@ -24,7 +24,8 @@ export type WorkDueFilter =
   | "overdue"
   | "due_today"
   | "due_soon"
-  | "upcoming";
+  | "upcoming"
+  | "do_now";
 
 export interface OperationsWorkListItem {
   id: string;
@@ -149,6 +150,8 @@ export interface OperationsWorkPerformanceResult {
     label: string;
     completed: number;
   }>;
+  rangeFrom?: string;
+  rangeTo?: string;
   generatedAt: string;
 }
 
@@ -158,6 +161,28 @@ export interface EligibleAssignee {
   email: string | null;
   roleId: string | null;
   departmentId: string | null;
+}
+
+export interface EligibleDepartment {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface OperationsWorkBulkAssignResult {
+  requested: number;
+  succeeded: number;
+  failed: number;
+  targetType: "department" | "user";
+  targetId: string;
+  targetLabel: string;
+  successful: Array<{ workItemId: string; displayId: string }>;
+  failures: Array<{
+    workItemId: string;
+    displayId: string | null;
+    code: string;
+    reason: string;
+  }>;
 }
 
 export interface AssignWorkInput {

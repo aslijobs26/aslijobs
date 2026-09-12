@@ -5,7 +5,9 @@ import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationB
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
 import { MyWorkAssignDialog } from "../components/operations/my-work/MyWorkAssignDialog";
+import { MyWorkBulkAssignDialog } from "../components/operations/my-work/MyWorkBulkAssignDialog";
 import { MyWorkCreateDialog } from "../components/operations/my-work/MyWorkCreateDialog";
+import { MyWorkWaitingReasonDialog } from "../components/operations/my-work/MyWorkWaitingReasonDialog";
 import { MyWorkPageSkeleton } from "../components/operations/my-work/MyWorkPageSkeleton";
 import { MyWorkAskAsliCard } from "../components/operations/my-work/overview/MyWorkAskAsliCard";
 import { MyWorkKpiStrip } from "../components/operations/my-work/overview/MyWorkKpiStrip";
@@ -59,6 +61,7 @@ function parseDue(value: string | null): WorkDueFilter {
     value === "due_today" ||
     value === "due_soon" ||
     value === "upcoming" ||
+    value === "do_now" ||
     value === "all"
   ) {
     return value;
@@ -93,6 +96,8 @@ export function OperationsMyWorkPage() {
     isSuperAdmin ||
     canKey("my_work.assign") ||
     canKey("my_work.reassign");
+  const canBulkAssign =
+    canKey("my_work.assign") || canKey("my_work.reassign");
   const defaultTab: WorkQueueTab = isOperationsHead ? "all" : "my_queue";
   const hasExplicitTab = searchParams.has("tab");
 
@@ -116,9 +121,37 @@ export function OperationsMyWorkPage() {
     null,
   );
   const [assignMode, setAssignMode] = useState<"assign" | "reassign">("assign");
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(
+    () => searchParams.get("create") === "1",
+  );
+  const [waitingItem, setWaitingItem] = useState<OperationsWorkListItem | null>(
+    null,
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [selectionModeActive, setSelectionModeActive] = useState(false);
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkResultMessage, setBulkResultMessage] = useState<string | null>(
+    null,
+  );
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [sort, setSort] = useState<
+    "dueAt" | "priority" | "createdAt" | "updatedAt"
+  >(() => {
+    const value = searchParams.get("sort");
+    if (
+      value === "dueAt" ||
+      value === "priority" ||
+      value === "createdAt" ||
+      value === "updatedAt"
+    ) {
+      return value;
+    }
+    return "dueAt";
+  });
+  const [order, setOrder] = useState<"asc" | "desc">(() =>
+    searchParams.get("order") === "desc" ? "desc" : "asc",
+  );
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -127,6 +160,19 @@ export function OperationsMyWorkPage() {
     }, 300);
     return () => window.clearTimeout(handle);
   }, [searchInput]);
+
+  // Changing filters/page context clears selection to avoid assigning hidden rows.
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setSelectionModeActive(false);
+    setBulkAssignOpen(false);
+  }, [tab, type, priority, due, debouncedSearch, page, limit, sort, order]);
+
+  const exitSelectionMode = () => {
+    setSelectedIds(new Set());
+    setSelectionModeActive(false);
+    setBulkAssignOpen(false);
+  };
 
   useEffect(() => {
     if (hasExplicitTab) {
@@ -150,6 +196,8 @@ export function OperationsMyWorkPage() {
     priority?: string;
     due?: WorkDueFilter;
     search?: string;
+    sort?: "dueAt" | "priority" | "createdAt" | "updatedAt";
+    order?: "asc" | "desc";
   }) => {
     const params = new URLSearchParams(searchParams);
     const nextTab = next.tab ?? tab;
@@ -157,6 +205,8 @@ export function OperationsMyWorkPage() {
     const nextPriority = next.priority ?? priority;
     const nextDue = next.due ?? due;
     const nextSearch = next.search ?? debouncedSearch;
+    const nextSort = next.sort ?? sort;
+    const nextOrder = next.order ?? order;
 
     if (nextTab === defaultTab) params.delete("tab");
     else params.set("tab", nextTab);
@@ -173,6 +223,12 @@ export function OperationsMyWorkPage() {
     if (!nextSearch) params.delete("search");
     else params.set("search", nextSearch);
 
+    if (nextSort === "dueAt") params.delete("sort");
+    else params.set("sort", nextSort);
+
+    if (nextOrder === "asc") params.delete("order");
+    else params.set("order", nextOrder);
+
     setSearchParams(params, { replace: true });
   };
 
@@ -185,10 +241,10 @@ export function OperationsMyWorkPage() {
       priority,
       due,
       search: debouncedSearch,
-      sort: "dueAt",
-      order: "asc",
+      sort,
+      order,
     }),
-    [page, limit, tab, type, priority, due, debouncedSearch],
+    [page, limit, tab, type, priority, due, debouncedSearch, sort, order],
   );
 
   const analyticsQuery = useOperationsWorkAnalytics();
@@ -199,6 +255,47 @@ export function OperationsMyWorkPage() {
 
   const analytics = analyticsQuery.data;
   const listData = listQuery.data;
+  const listItems = listData?.items ?? [];
+
+  const isItemSelectable = (item: OperationsWorkListItem) => {
+    if (!canBulkAssign) return false;
+    if (item.status === "completed" || item.status === "cancelled") {
+      return false;
+    }
+    return true;
+  };
+
+  const selectedItems = useMemo(
+    () => listItems.filter((item) => selectedIds.has(item.id)),
+    [listItems, selectedIds],
+  );
+
+  const toggleSelect = (item: OperationsWorkListItem) => {
+    if (!isItemSelectable(item)) return;
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(item.id)) next.delete(item.id);
+      else next.add(item.id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllVisible = () => {
+    const selectable = listItems.filter(isItemSelectable);
+    setSelectedIds((current) => {
+      const allSelected =
+        selectable.length > 0 &&
+        selectable.every((item) => current.has(item.id));
+      if (allSelected) {
+        const next = new Set(current);
+        for (const item of selectable) next.delete(item.id);
+        return next;
+      }
+      const next = new Set(current);
+      for (const item of selectable) next.add(item.id);
+      return next;
+    });
+  };
 
   const isInitialLoading =
     (analyticsQuery.isPending && !analytics) ||
@@ -210,15 +307,15 @@ export function OperationsMyWorkPage() {
     setPage(1);
     switch (key) {
       case "doNow":
-        // Scope-wide urgent work (includes team queue for authorized actors).
+        // Matches backend KPI: P1 OR overdue (due=do_now).
         setTab("all");
-        setPriority("P1");
-        setDue("all");
+        setPriority("");
+        setDue("do_now");
         setType("");
         syncParams({
           tab: "all",
-          priority: "P1",
-          due: "all",
+          priority: "",
+          due: "do_now",
           type: "",
         });
         break;
@@ -303,6 +400,12 @@ export function OperationsMyWorkPage() {
     action: MyWorkRowAction,
   ) => {
     if (action === "view") return;
+    if (action === "select") {
+      if (!canBulkAssign) return;
+      setBulkResultMessage(null);
+      setSelectionModeActive(true);
+      return;
+    }
     if (action === "assign" || action === "reassign") {
       setAssignMode(action);
       setAssignItem(item);
@@ -334,8 +437,7 @@ export function OperationsMyWorkPage() {
       return;
     }
     if (action === "wait") {
-      const reason = window.prompt("Waiting reason (optional):") ?? "";
-      await runStatus(item, "waiting", reason.trim() || "Awaiting input");
+      setWaitingItem(item);
       return;
     }
     if (action === "complete") {
@@ -415,6 +517,51 @@ export function OperationsMyWorkPage() {
               </div>
             ) : null}
 
+            {bulkResultMessage ? (
+              <div className="rounded-xl border border-success/20 bg-success/5 px-3 py-2 text-xs text-foreground">
+                {bulkResultMessage}
+              </div>
+            ) : null}
+
+            {canBulkAssign && selectionModeActive ? (
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+                <p className="text-[12px] font-semibold text-foreground">
+                  {selectedItems.length > 0 ? (
+                    <>
+                      {selectedItems.length} selected
+                      <span className="ml-1 font-normal text-muted">
+                        (current page only)
+                      </span>
+                    </>
+                  ) : (
+                    <span className="font-normal text-muted">
+                      Selection mode — choose work items to assign
+                    </span>
+                  )}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={selectedItems.length === 0}
+                    onClick={() => {
+                      setBulkResultMessage(null);
+                      setBulkAssignOpen(true);
+                    }}
+                    className="h-8 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  >
+                    Assign
+                  </button>
+                  <button
+                    type="button"
+                    onClick={exitSelectionMode}
+                    className="h-8 rounded-lg border border-border-subtle px-3 text-[11px] font-semibold text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  >
+                    Exit selection
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             <MyWorkKpiStrip
               kpis={analytics?.kpis}
               isLoading={
@@ -440,7 +587,7 @@ export function OperationsMyWorkPage() {
             >
               <div className="flex min-w-0 flex-col gap-2.5">
                   <MyWorkTableSection
-                  items={listData?.items ?? []}
+                  items={listItems}
                   tabs={listData?.tabs ?? EMPTY_TABS}
                   activeTab={tab}
                   onTabChange={(next) => {
@@ -478,6 +625,14 @@ export function OperationsMyWorkPage() {
                   }}
                   search={searchInput}
                   onSearchChange={setSearchInput}
+                  sort={sort}
+                  order={order}
+                  onSortChange={(nextSort, nextOrder) => {
+                    setSort(nextSort);
+                    setOrder(nextOrder);
+                    setPage(1);
+                    syncParams({ sort: nextSort, order: nextOrder });
+                  }}
                   isLoading={listQuery.isFetching && !listData}
                   isError={Boolean(listQuery.error)}
                   errorMessage={
@@ -491,6 +646,12 @@ export function OperationsMyWorkPage() {
                   onRetry={() => void listQuery.refetch()}
                   busyId={busyId}
                   preferAllFirst={isOperationsHead}
+                  selectionEnabled={canBulkAssign && selectionModeActive}
+                  showSelectMenuOption={canBulkAssign && !selectionModeActive}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
+                  onToggleSelectAllVisible={toggleSelectAllVisible}
+                  isItemSelectable={isItemSelectable}
                   onRowAction={(item, action) => {
                     void handleRowAction(item, action);
                   }}
@@ -521,6 +682,36 @@ export function OperationsMyWorkPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onSuccess={() => setActionError(null)}
+      />
+      <MyWorkWaitingReasonDialog
+        open={Boolean(waitingItem)}
+        workTitle={waitingItem?.title}
+        isSubmitting={Boolean(waitingItem && busyId === waitingItem.id)}
+        onClose={() => setWaitingItem(null)}
+        onConfirm={async (reason) => {
+          if (!waitingItem) return;
+          await runStatus(waitingItem, "waiting", reason);
+          setWaitingItem(null);
+        }}
+      />
+      <MyWorkBulkAssignDialog
+        open={bulkAssignOpen}
+        items={selectedItems}
+        onClose={() => setBulkAssignOpen(false)}
+        onComplete={(result) => {
+          setBulkResultMessage(
+            result.failed === 0
+              ? `${result.succeeded} of ${result.requested} assigned successfully.`
+              : `${result.succeeded} of ${result.requested} assigned. ${result.failed} could not be assigned.`,
+          );
+          if (result.succeeded > 0) {
+            setSelectedIds((current) => {
+              const next = new Set(current);
+              for (const row of result.successful) next.delete(row.workItemId);
+              return next;
+            });
+          }
+        }}
       />
     </OperationsLayout>
   );

@@ -21,6 +21,7 @@ function accessForKeys(
     roleName: "Custom",
     departmentId: null,
     departmentName: null,
+    departmentSlug: null,
     isSuperAdmin: false,
     canCreateRoles: true,
     canManageUsers: false,

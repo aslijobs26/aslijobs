@@ -16,6 +16,8 @@ import {
   updateWorkDueBodySchema,
   updateWorkPriorityBodySchema,
   updateWorkStatusBodySchema,
+  performanceOperationsWorkQuerySchema,
+  bulkAssignOperationsWorkBodySchema,
 } from "./operations-work.validation.js";
 
 export const operationsWorkRouter = Router();
@@ -31,7 +33,14 @@ operationsWorkRouter.get(
 operationsWorkRouter.get(
   "/performance",
   requireOperationsPermission("my_work", "read"),
+  validate(performanceOperationsWorkQuerySchema, "query"),
   asyncHandler(operationsWorkController.performance),
+);
+
+operationsWorkRouter.post(
+  "/reconcile",
+  requireOperationsPermission("my_work", "update"),
+  asyncHandler(operationsWorkController.reconcile),
 );
 
 operationsWorkRouter.get(
@@ -45,6 +54,19 @@ operationsWorkRouter.get(
   "/eligible-assignees",
   requireOperationsPermission("my_work", "update"),
   asyncHandler(operationsWorkController.eligibleAssignees),
+);
+
+operationsWorkRouter.get(
+  "/eligible-departments",
+  requireOperationsPermission("my_work", "update"),
+  asyncHandler(operationsWorkController.eligibleDepartments),
+);
+
+operationsWorkRouter.patch(
+  "/bulk-assign",
+  requireOperationsPermission("my_work", "update"),
+  validate(bulkAssignOperationsWorkBodySchema, "body"),
+  asyncHandler(operationsWorkController.bulkAssign),
 );
 
 operationsWorkRouter.get(

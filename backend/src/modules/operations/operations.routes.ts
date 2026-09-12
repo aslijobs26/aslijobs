@@ -12,10 +12,12 @@ import operationsTeamRouter from "./team/operations-team.routes.js";
 import operationsVerificationsRouter from "./verifications/operations-verifications.routes.js";
 import operationsPlacementsRouter from "./placements/operations-placements.routes.js";
 import operationsWorkRouter from "./work/operations-work.routes.js";
+import operationsDashboardRouter from "./dashboard/operations-dashboard.routes.js";
 
 export const operationsRouter = Router();
 
 operationsRouter.use("/auth", operationsAuthRouter);
+operationsRouter.use("/dashboard", operationsDashboardRouter);
 operationsRouter.use("/employers", operationsEmployersRouter);
 operationsRouter.use("/candidates", operationsCandidatesRouter);
 operationsRouter.use("/jobs", operationsJobsRouter);

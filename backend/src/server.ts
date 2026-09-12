@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 let httpServer: Server | null = null;
 let isShuttingDown = false;
 let stopNotificationRetention: (() => void) | null = null;
+let stopWorkReconcile: (() => void) | null = null;
 
 async function shutdown(signal: string): Promise<void> {
   if (isShuttingDown) {
@@ -27,6 +28,8 @@ async function shutdown(signal: string): Promise<void> {
   try {
     stopNotificationRetention?.();
     stopNotificationRetention = null;
+    stopWorkReconcile?.();
+    stopWorkReconcile = null;
     if (httpServer) {
       await new Promise<void>((resolve, reject) => {
         httpServer?.close((error) => {
@@ -63,6 +66,14 @@ async function startServer(): Promise<void> {
   await ensureOperationsRbacSeed();
   logEmailConfigurationStatus();
   stopNotificationRetention = startNotificationRetentionScheduler();
+  const { startOperationsWorkReconcileScheduler } = await import(
+    "./modules/operations/work/operations-work-reconcile.js"
+  );
+  const { ensureOperationsWorkDepartments } = await import(
+    "./modules/operations/work/operations-work-department.js"
+  );
+  await ensureOperationsWorkDepartments();
+  stopWorkReconcile = startOperationsWorkReconcileScheduler();
 
   httpServer = app.listen(env.PORT, () => {
     console.log(`AsliJobs API running on port ${env.PORT}`);

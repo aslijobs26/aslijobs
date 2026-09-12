@@ -12,7 +12,7 @@ const FETCH_LIMIT = 20;
 const stateCache = new Map<string, PlaceSuggestion[]>();
 const cityCache = new Map<string, PlaceSuggestion[]>();
 
-const INDIAN_STATES_AND_UTS: readonly string[] = [
+export const INDIAN_STATES_AND_UTS: readonly string[] = [
   "Andaman and Nicobar Islands",
   "Andhra Pradesh",
   "Arunachal Pradesh",

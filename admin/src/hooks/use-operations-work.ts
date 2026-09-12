@@ -6,10 +6,12 @@ import {
 } from "@tanstack/react-query";
 import {
   assignOperationsWork,
+  bulkAssignOperationsWork,
   claimOperationsWork,
   createOperationsWork,
   exportOperationsWork,
   fetchEligibleWorkAssignees,
+  fetchEligibleWorkDepartments,
   fetchOperationsWorkAnalytics,
   fetchOperationsWorkDetail,
   fetchOperationsWorkList,
@@ -95,10 +97,13 @@ export function useOperationsWorkDetail(
   });
 }
 
-export function useOperationsWorkPerformance(options?: { enabled?: boolean }) {
+export function useOperationsWorkPerformance(
+  params?: { from?: string; to?: string },
+  options?: { enabled?: boolean },
+) {
   return useQuery({
-    queryKey: OPERATIONS_WORK_PERFORMANCE_KEY,
-    queryFn: fetchOperationsWorkPerformance,
+    queryKey: [...OPERATIONS_WORK_PERFORMANCE_KEY, params ?? {}],
+    queryFn: () => fetchOperationsWorkPerformance(params),
     staleTime: 30_000,
     retry: shouldRetry,
     retryDelay,
@@ -110,6 +115,17 @@ export function useEligibleWorkAssignees(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [...OPERATIONS_WORK_QUERY_KEY, "eligible-assignees"],
     queryFn: fetchEligibleWorkAssignees,
+    staleTime: 60_000,
+    enabled: options?.enabled ?? true,
+    retry: shouldRetry,
+    retryDelay,
+  });
+}
+
+export function useEligibleWorkDepartments(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: [...OPERATIONS_WORK_QUERY_KEY, "eligible-departments"],
+    queryFn: fetchEligibleWorkDepartments,
     staleTime: 60_000,
     enabled: options?.enabled ?? true,
     retry: shouldRetry,
@@ -136,6 +152,14 @@ export function useAssignOperationsWork() {
       id: string;
       input: AssignWorkInput;
     }) => assignOperationsWork(id, input),
+    onSuccess: () => invalidateOperationsWorkQueries(queryClient),
+  });
+}
+
+export function useBulkAssignOperationsWork() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: bulkAssignOperationsWork,
     onSuccess: () => invalidateOperationsWorkQueries(queryClient),
   });
 }

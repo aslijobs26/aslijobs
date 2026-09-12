@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
+import { OperationsDepartmentModel } from "../rbac/operations-department.model.js";
 import {
   getRoleDescendantIds,
   operationsAccessCanKey,
@@ -13,6 +14,8 @@ import {
   WORK_CLAIM_KEY,
 } from "../rbac/operations-permission-catalog.js";
 
+export const WORK_BULK_ASSIGN_MAX = 50;
+
 export type EligibleAssignee = {
   id: string;
   fullName: string;
@@ -21,6 +24,12 @@ export type EligibleAssignee = {
   roleName: string | null;
   departmentId: string | null;
   departmentName: string | null;
+};
+
+export type EligibleDepartment = {
+  id: string;
+  name: string;
+  slug: string;
 };
 
 /**
@@ -47,8 +56,7 @@ export async function isStrictRoleDescendantOfActor(
 
 /**
  * Department boundary: non–super-admins with a department may only assign
- * within that department (or to users with null department that share scope
- * via role hierarchy only when actor has no department constraint).
+ * within that department.
  */
 export function isWithinDepartmentScope(
   actor: OperationsResolvedAccess,
@@ -64,6 +72,57 @@ export function isWithinDepartmentScope(
     return false;
   }
   return String(actor.departmentId) === String(targetDepartmentId);
+}
+
+export function assertHasAssignPermission(
+  actor: OperationsResolvedAccess,
+  mode: "assign" | "reassign",
+): void {
+  const permissionKey =
+    mode === "reassign" ? WORK_REASSIGN_KEY : WORK_ASSIGN_KEY;
+  if (!operationsAccessCanKey(actor, permissionKey)) {
+    if (
+      mode === "reassign" &&
+      operationsAccessCanKey(actor, WORK_ASSIGN_KEY)
+    ) {
+      return;
+    }
+    throw new AppError(
+      mode === "reassign"
+        ? "You do not have permission to reassign work."
+        : "You do not have permission to assign work.",
+      HTTP_STATUS.FORBIDDEN,
+    );
+  }
+}
+
+/** Bulk entry gate: actor must hold assign and/or reassign. */
+export function assertHasAssignOrReassignPermission(
+  actor: OperationsResolvedAccess,
+): void {
+  if (
+    operationsAccessCanKey(actor, WORK_ASSIGN_KEY) ||
+    operationsAccessCanKey(actor, WORK_REASSIGN_KEY)
+  ) {
+    return;
+  }
+  throw new AppError(
+    "You do not have permission to bulk assign work.",
+    HTTP_STATUS.FORBIDDEN,
+  );
+}
+
+/**
+ * Prefer assign-mode target validation when the actor can assign;
+ * otherwise reassign-mode (still validates hierarchy/department/active).
+ */
+export function resolveBulkTargetValidationMode(
+  actor: OperationsResolvedAccess,
+): "assign" | "reassign" {
+  if (operationsAccessCanKey(actor, WORK_ASSIGN_KEY)) {
+    return "assign";
+  }
+  return "reassign";
 }
 
 export async function loadActiveAssignableUser(userId: string) {
@@ -85,6 +144,25 @@ export async function loadActiveAssignableUser(userId: string) {
   return user;
 }
 
+export async function loadActiveDepartment(departmentId: string) {
+  if (!mongoose.Types.ObjectId.isValid(departmentId)) {
+    throw new AppError("Invalid department.", HTTP_STATUS.BAD_REQUEST);
+  }
+  const department = await OperationsDepartmentModel.findById(departmentId)
+    .select("_id name slug status")
+    .lean();
+  if (!department) {
+    throw new AppError("Department not found.", HTTP_STATUS.NOT_FOUND);
+  }
+  if (department.status !== "active") {
+    throw new AppError(
+      "Cannot route work to an inactive department.",
+      HTTP_STATUS.BAD_REQUEST,
+    );
+  }
+  return department;
+}
+
 /**
  * Full assign authority gate:
  * permission + strict hierarchy + department + active target.
@@ -96,22 +174,7 @@ export async function assertCanAssignWorkToUser(input: {
 }): Promise<{
   target: Awaited<ReturnType<typeof loadActiveAssignableUser>>;
 }> {
-  const permissionKey =
-    input.mode === "reassign" ? WORK_REASSIGN_KEY : WORK_ASSIGN_KEY;
-  if (!operationsAccessCanKey(input.actor, permissionKey)) {
-    // Reassign may fall back to assign permission for managers who have assign.
-    if (
-      input.mode === "reassign" &&
-      operationsAccessCanKey(input.actor, WORK_ASSIGN_KEY)
-    ) {
-      // allowed via assign
-    } else {
-      throw new AppError(
-        "You do not have permission to assign work.",
-        HTTP_STATUS.FORBIDDEN,
-      );
-    }
-  }
+  assertHasAssignPermission(input.actor, input.mode);
 
   const target = await loadActiveAssignableUser(input.targetUserId);
 
@@ -143,6 +206,31 @@ export async function assertCanAssignWorkToUser(input: {
   return { target };
 }
 
+/**
+ * Route work into a department Team Queue (unassigned).
+ */
+export async function assertCanRouteWorkToDepartment(input: {
+  actor: OperationsResolvedAccess;
+  departmentId: string;
+  mode: "assign" | "reassign";
+}): Promise<{
+  department: Awaited<ReturnType<typeof loadActiveDepartment>>;
+}> {
+  assertHasAssignPermission(input.actor, input.mode);
+
+  const department = await loadActiveDepartment(input.departmentId);
+  const departmentId = String(department._id);
+
+  if (!isWithinDepartmentScope(input.actor, departmentId)) {
+    throw new AppError(
+      "You cannot route work outside your department scope.",
+      HTTP_STATUS.FORBIDDEN,
+    );
+  }
+
+  return { department };
+}
+
 export function assertCanClaimWork(actor: OperationsResolvedAccess): void {
   if (!operationsAccessCanKey(actor, WORK_CLAIM_KEY)) {
     throw new AppError(
@@ -154,7 +242,6 @@ export function assertCanClaimWork(actor: OperationsResolvedAccess): void {
 
 /**
  * Eligible assignees for the Assign UI — only active subordinates in scope.
- * Never returns peers, managers, or out-of-department users.
  */
 export async function listEligibleAssignees(
   actor: OperationsResolvedAccess,
@@ -226,9 +313,62 @@ export async function listEligibleAssignees(
 }
 
 /**
+ * Active departments the actor may route Team Queue work into.
+ */
+export async function listEligibleDepartments(
+  actor: OperationsResolvedAccess,
+): Promise<EligibleDepartment[]> {
+  if (
+    !operationsAccessCanKey(actor, WORK_ASSIGN_KEY) &&
+    !operationsAccessCanKey(actor, WORK_REASSIGN_KEY)
+  ) {
+    throw new AppError(
+      "You do not have permission to assign work.",
+      HTTP_STATUS.FORBIDDEN,
+    );
+  }
+
+  if (actor.isSuperAdmin) {
+    const departments = await OperationsDepartmentModel.find({
+      status: "active",
+    })
+      .select("_id name slug")
+      .sort({ name: 1 })
+      .limit(200)
+      .lean();
+    return departments.map((d) => ({
+      id: String(d._id),
+      name: d.name,
+      slug: d.slug,
+    }));
+  }
+
+  if (!actor.departmentId) {
+    return [];
+  }
+
+  const department = await OperationsDepartmentModel.findOne({
+    _id: actor.departmentId,
+    status: "active",
+  })
+    .select("_id name slug")
+    .lean();
+
+  if (!department) {
+    return [];
+  }
+
+  return [
+    {
+      id: String(department._id),
+      name: department.name,
+      slug: department.slug,
+    },
+  ];
+}
+
+/**
  * Visibility scope for list/detail/analytics.
- * Super Admin: all.
- * Others: own assigned work + department team queue (unassigned) + work they created.
  */
 export function buildWorkVisibilityFilter(
   actor: OperationsResolvedAccess,
@@ -250,7 +390,5 @@ export function buildWorkVisibilityFilter(
     });
   }
 
-  // Managers with assign permission also see work assigned to subordinates —
-  // resolved at query time via optional assigneeIds expansion in service.
   return { $or: clauses };
 }

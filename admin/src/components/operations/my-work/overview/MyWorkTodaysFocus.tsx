@@ -52,11 +52,11 @@ export function MyWorkTodaysFocus({ focus, onViewAll }: MyWorkTodaysFocusProps) 
                     <p className="text-[12px] font-medium text-foreground">
                       {item.title}
                     </p>
-                    {item.id === "response_time" ? (
+                    {item.id === "clear_overdue" ? (
                       <p
                         className={cn(
                           "mt-1 text-[11px] font-semibold",
-                          item.status === "on_track"
+                          item.status === "done" || item.status === "on_track"
                             ? "text-success"
                             : "text-warning",
                         )}

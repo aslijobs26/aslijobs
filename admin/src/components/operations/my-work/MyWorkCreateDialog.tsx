@@ -3,6 +3,7 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 import {
   useCreateOperationsWork,
   useEligibleWorkAssignees,
+  useEligibleWorkDepartments,
 } from "../../../hooks/use-operations-work";
 import { useOperationsPermissions } from "../../../hooks/use-operations-permissions";
 import type { WorkItemPriority, WorkItemType } from "../../../types/operations-work";
@@ -39,15 +40,21 @@ const PRIORITY_OPTIONS = [
   { value: "P3", label: "P3" },
 ] as const;
 
+type AssignMode = "none" | "team_queue" | "user";
+
 export function MyWorkCreateDialog({
   open,
   onClose,
   onSuccess,
 }: MyWorkCreateDialogProps) {
   const titleId = useId();
-  const { canKey } = useOperationsPermissions();
+  const { canKey, user } = useOperationsPermissions();
   const canAssign = canKey("my_work.assign");
+  const departmentId = user?.departmentId ?? null;
   const assigneesQuery = useEligibleWorkAssignees({
+    enabled: open && canAssign,
+  });
+  const departmentsQuery = useEligibleWorkDepartments({
     enabled: open && canAssign,
   });
   const createMutation = useCreateOperationsWork();
@@ -57,7 +64,9 @@ export function MyWorkCreateDialog({
   const [type, setType] = useState<WorkItemType>("support");
   const [priority, setPriority] = useState<WorkItemPriority>("P2");
   const [priorityManual, setPriorityManual] = useState(false);
+  const [assignMode, setAssignMode] = useState<AssignMode>("none");
   const [assigneeId, setAssigneeId] = useState("");
+  const [teamDepartmentId, setTeamDepartmentId] = useState("");
   const [dueParts, setDueParts] = useState<MyWorkDueParts>(() => emptyDueParts());
   const [relatedLabel, setRelatedLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -69,11 +78,20 @@ export function MyWorkCreateDialog({
     setType("support");
     setPriority("P2");
     setPriorityManual(false);
+    setAssignMode(canAssign ? "team_queue" : "none");
     setAssigneeId("");
+    setTeamDepartmentId(departmentId ?? "");
     setDueParts(emptyDueParts());
     setRelatedLabel("");
     setError(null);
-  }, [open]);
+  }, [open, canAssign, departmentId]);
+
+  useEffect(() => {
+    if (!open || !canAssign) return;
+    if (teamDepartmentId) return;
+    const first = departmentsQuery.data?.[0]?.id;
+    if (first) setTeamDepartmentId(first);
+  }, [open, canAssign, departmentsQuery.data, teamDepartmentId]);
 
   if (!open) return null;
 
@@ -94,6 +112,14 @@ export function MyWorkCreateDialog({
       setError("Title must be at least 3 characters.");
       return;
     }
+    if (canAssign && assignMode === "user" && !assigneeId) {
+      setError("Select a team member.");
+      return;
+    }
+    if (canAssign && assignMode === "team_queue" && !teamDepartmentId) {
+      setError("Select a department for Team Queue.");
+      return;
+    }
     try {
       await createMutation.mutateAsync({
         title: title.trim(),
@@ -101,7 +127,13 @@ export function MyWorkCreateDialog({
         type,
         priority,
         relatedLabel: relatedLabel.trim(),
-        assignedToUserId: canAssign && assigneeId ? assigneeId : null,
+        assignTo: canAssign ? assignMode : "none",
+        assignedToUserId:
+          canAssign && assignMode === "user" ? assigneeId : null,
+        departmentId:
+          canAssign && assignMode === "team_queue"
+            ? teamDepartmentId
+            : departmentId ?? null,
         dueAt: dueAtIso,
       });
       onSuccess();
@@ -173,26 +205,79 @@ export function MyWorkCreateDialog({
               className="h-9 rounded-md border border-border-subtle px-2.5 text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
           </label>
+
           {canAssign ? (
-            <OperationsFilterSelect
-              label="Assignee (optional)"
-              value={assigneeId}
-              options={[
-                { value: "", label: "Team queue (unassigned)" },
-                ...(assigneesQuery.data ?? []).map((user) => ({
-                  value: user.id,
-                  label: user.fullName,
-                })),
-              ]}
-              onChange={setAssigneeId}
-              mobileSheet
-            />
+            <fieldset className="flex flex-col gap-2 rounded-md border border-border-subtle p-3">
+              <legend className="px-1 text-[11px] font-semibold text-foreground">
+                Assignment
+              </legend>
+              <label className="flex items-center gap-2 text-[12px]">
+                <input
+                  type="radio"
+                  name="create-assign-mode"
+                  checked={assignMode === "team_queue"}
+                  onChange={() => setAssignMode("team_queue")}
+                />
+                My Team Queue
+              </label>
+              <label className="flex items-center gap-2 text-[12px]">
+                <input
+                  type="radio"
+                  name="create-assign-mode"
+                  checked={assignMode === "user"}
+                  onChange={() => setAssignMode("user")}
+                />
+                Specific team member
+              </label>
+              <label className="flex items-center gap-2 text-[12px]">
+                <input
+                  type="radio"
+                  name="create-assign-mode"
+                  checked={assignMode === "none"}
+                  onChange={() => setAssignMode("none")}
+                />
+                Unassigned (creator queue)
+              </label>
+
+              {assignMode === "team_queue" ? (
+                <OperationsFilterSelect
+                  label="Department"
+                  value={teamDepartmentId}
+                  options={[
+                    { value: "", label: "Select department" },
+                    ...(departmentsQuery.data ?? []).map((dept) => ({
+                      value: dept.id,
+                      label: dept.name,
+                    })),
+                  ]}
+                  onChange={setTeamDepartmentId}
+                  mobileSheet
+                />
+              ) : null}
+
+              {assignMode === "user" ? (
+                <OperationsFilterSelect
+                  label="Team member"
+                  value={assigneeId}
+                  options={[
+                    { value: "", label: "Select team member" },
+                    ...(assigneesQuery.data ?? []).map((user) => ({
+                      value: user.id,
+                      label: user.fullName,
+                    })),
+                  ]}
+                  onChange={setAssigneeId}
+                  mobileSheet
+                />
+              ) : null}
+            </fieldset>
           ) : (
             <p className="text-[11px] text-muted">
-              Without assign permission, work is created in the team queue when
-              allowed by server rules.
+              Without assign permission, work is created without a team
+              assignment target.
             </p>
           )}
+
           <MyWorkDueDateTimeField
             value={dueParts}
             onChange={handleDueChange}

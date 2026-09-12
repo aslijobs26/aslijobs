@@ -1043,6 +1043,23 @@ export const operationsVerificationsService = {
       /* non-blocking notification */
     }
 
+    // Keep/create actionable My Work item while verification remains open.
+    void import("../work/operations-work-emit.js")
+      .then(({ upsertEmployerVerificationWork }) =>
+        upsertEmployerVerificationWork({
+          employerId: id,
+          companyName: targetLabel,
+          submittedAt: new Date(),
+          kind: "documents_requested",
+        }),
+      )
+      .catch((error) => {
+        console.error("[operations-verifications] work ensure failed", {
+          employerId: id,
+          errorCategory: error instanceof Error ? error.name : "unknown",
+        });
+      });
+
     return this.getById(id, access);
   },
 

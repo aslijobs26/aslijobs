@@ -103,6 +103,21 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
       action: "read",
     },
     {
+      prefix: OPERATIONS_ROUTES.LANGUAGES,
+      module: "settings",
+      action: "read",
+    },
+    {
+      prefix: OPERATIONS_ROUTES.BUSINESS_DEVELOPMENT,
+      module: "campaigns",
+      action: "read",
+    },
+    {
+      prefix: OPERATIONS_ROUTES.PROMOTIONS_EVENTS,
+      module: "campaigns",
+      action: "read",
+    },
+    {
       prefix: OPERATIONS_ROUTES.SUBSCRIPTIONS,
       module: "billing",
       action: "read",

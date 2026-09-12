@@ -8,15 +8,18 @@ export type WorkAssignmentNotifyInput = {
   actorName: string;
   kind: "assigned" | "reassigned" | "claimed";
   previousAssigneeUserId?: string | null;
+  /** Stable event discriminator (prefer revision over wall-clock). */
+  revision?: number;
 };
 
 function idempotencyKey(
   kind: WorkAssignmentNotifyInput["kind"],
   workItemId: string,
   assigneeUserId: string,
-  atIso: string,
+  revision: number | undefined,
 ): string {
-  return `work.${kind}:${workItemId}:${assigneeUserId}:${atIso}`;
+  const rev = revision != null ? String(revision) : "na";
+  return `work.${kind}:${workItemId}:${assigneeUserId}:r${rev}`;
 }
 
 /**
@@ -44,7 +47,7 @@ export async function emitWorkAssignmentNotification(
     input.kind,
     input.workItemId,
     input.assigneeUserId,
-    now.toISOString(),
+    input.revision,
   );
 
   try {
@@ -66,6 +69,7 @@ export async function emitWorkAssignmentNotification(
             displayId: input.displayId,
             kind: input.kind,
             previousAssigneeUserId: input.previousAssigneeUserId ?? null,
+            revision: input.revision ?? null,
           },
           reads: [],
           createdAt: now,

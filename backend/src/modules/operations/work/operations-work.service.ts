@@ -24,8 +24,13 @@ import {
 import {
   assertCanAssignWorkToUser,
   assertCanClaimWork,
+  assertCanRouteWorkToDepartment,
   buildWorkVisibilityFilter,
   listEligibleAssignees,
+  assertHasAssignOrReassignPermission,
+  listEligibleDepartments,
+  resolveBulkTargetValidationMode,
+  WORK_BULK_ASSIGN_MAX,
 } from "./operations-work-assignment.js";
 import {
   WORK_ITEM_STATUS_LABELS,
@@ -38,32 +43,38 @@ import {
 import {
   addMs,
   assertWorkStatusTransition,
+  buildDoNowFilter,
   endOfLocalDay,
   formatWorkDisplayId,
   isTerminalWorkStatus,
+  kolkataDateKey,
   startOfLocalDay,
 } from "./operations-work-domain.js";
 import { buildOperationsWorkExportFile } from "./operations-work-export.js";
 import { OperationsWorkItemModel } from "./operations-work.model.js";
 import { scheduleWorkAssignmentNotification } from "./operations-work-notify.js";
+import { reconcileOpenOperationsWork } from "./operations-work-reconcile.js";
+import type {
+  AssignOperationsWorkBody,
+  BulkAssignOperationsWorkBody,
+  ClaimOperationsWorkBody,
+  CreateOperationsWorkBody,
+  ExportOperationsWorkQuery,
+  ListOperationsWorkQuery,
+  PerformanceOperationsWorkQuery,
+  UpdateWorkDueBody,
+  UpdateWorkPriorityBody,
+  UpdateWorkStatusBody,
+} from "./operations-work.validation.js";
 import type {
   OperationsWorkAnalyticsResult,
+  OperationsWorkBulkAssignResult,
   OperationsWorkDetail,
   OperationsWorkListItem,
   OperationsWorkListResult,
   OperationsWorkPerformanceResult,
   OperationsWorkPerformanceTrendPoint,
 } from "./operations-work.types.js";
-import type {
-  AssignOperationsWorkBody,
-  ClaimOperationsWorkBody,
-  CreateOperationsWorkBody,
-  ExportOperationsWorkQuery,
-  ListOperationsWorkQuery,
-  UpdateWorkDueBody,
-  UpdateWorkPriorityBody,
-  UpdateWorkStatusBody,
-} from "./operations-work.validation.js";
 
 function iso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -214,6 +225,8 @@ function applyDueFilter(
   const in48 = addMs(now, 48 * 60 * 60 * 1000);
 
   switch (due) {
+    case "do_now":
+      return buildDoNowFilter(now);
     case "overdue":
       return {
         dueAt: { $lt: now },
@@ -287,6 +300,10 @@ class OperationsWorkService {
     return listEligibleAssignees(access);
   }
 
+  async listEligibleDepartments(access: OperationsResolvedAccess) {
+    return listEligibleDepartments(access);
+  }
+
   async getAnalytics(
     access: OperationsResolvedAccess,
   ): Promise<OperationsWorkAnalyticsResult> {
@@ -324,13 +341,7 @@ class OperationsWorkService {
       dueTodayDone,
     ] = await Promise.all([
       OperationsWorkItemModel.countDocuments({
-        $and: [
-          visibility,
-          { status: { $in: ["assigned", "in_progress", "queued"] } },
-          {
-            $or: [{ priority: "P1" }, { dueAt: { $lt: now } }],
-          },
-        ],
+        $and: [visibility, buildDoNowFilter(now)],
       }),
       OperationsWorkItemModel.countDocuments({
         $and: [
@@ -425,12 +436,15 @@ class OperationsWorkService {
           progressLabel: `${p1Done} of ${Math.max(p1Target, p1Done)}`,
         },
         {
-          id: "response_time",
-          title: "Maintain response time < 2 hours",
-          current: doNow === 0 ? 1 : 0,
+          id: "clear_overdue",
+          title: "Clear overdue work",
+          current: Math.max(doNow - p1Open, 0) === 0 && doNow === 0 ? 1 : 0,
           target: 1,
-          status: doNow === 0 ? "on_track" : "at_risk",
-          progressLabel: doNow === 0 ? "On track" : "At risk",
+          status: doNow === 0 ? "done" : "at_risk",
+          progressLabel:
+            doNow === 0
+              ? "No urgent work"
+              : `${doNow} urgent item${doNow === 1 ? "" : "s"}`,
         },
         {
           id: "complete_today",
@@ -603,15 +617,57 @@ class OperationsWorkService {
     assertPermission(access, WORK_CREATE_KEY);
     const now = new Date();
     const id = new mongoose.Types.ObjectId();
-    let assignedToUserId: string | null = null;
 
-    if (body.assignedToUserId) {
-      await assertCanAssignWorkToUser({
+    const assignTo =
+      body.assignTo ??
+      (body.assignedToUserId
+        ? "user"
+        : body.departmentId
+          ? "team_queue"
+          : "none");
+
+    let assignedToUserId: string | null = null;
+    let departmentId: string | null =
+      body.departmentId ?? access.departmentId ?? null;
+    let status: WorkItemStatus = "queued";
+    let historyNote = "Manual work created";
+
+    if (assignTo === "user") {
+      if (!body.assignedToUserId) {
+        throw new AppError(
+          "Assignee is required when assigning to a team member.",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+      const { target } = await assertCanAssignWorkToUser({
         actor: access,
         targetUserId: body.assignedToUserId,
         mode: "assign",
       });
-      assignedToUserId = body.assignedToUserId;
+      assignedToUserId = String(target._id);
+      departmentId = target.departmentId
+        ? String(target.departmentId)
+        : departmentId;
+      status = "assigned";
+      historyNote = "Manual work created and assigned";
+    } else if (assignTo === "team_queue") {
+      const routeDepartmentId =
+        body.departmentId ?? access.departmentId ?? null;
+      if (!routeDepartmentId) {
+        throw new AppError(
+          "Select a department for Team Queue assignment.",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+      const { department } = await assertCanRouteWorkToDepartment({
+        actor: access,
+        departmentId: routeDepartmentId,
+        mode: "assign",
+      });
+      departmentId = String(department._id);
+      assignedToUserId = null;
+      status = "queued";
+      historyNote = "Manual work created in Team Queue";
     }
 
     const dueAt = body.dueAt
@@ -625,14 +681,14 @@ class OperationsWorkService {
       description: body.description?.trim() ?? "",
       type: body.type,
       priority: body.priority,
-      status: assignedToUserId ? "assigned" : "queued",
+      status,
       origin: "manual",
       sourceEventKey: null,
       relatedEntityType: body.relatedEntityType ?? null,
       relatedEntityId: body.relatedEntityId ?? null,
       relatedLabel: body.relatedLabel ?? "",
       relatedLocationLabel: body.relatedLocationLabel ?? "",
-      departmentId: body.departmentId ?? access.departmentId ?? null,
+      departmentId,
       assignedToUserId,
       assignedByUserId: assignedToUserId ? access.userId : null,
       assignedAt: assignedToUserId ? now : null,
@@ -647,9 +703,13 @@ class OperationsWorkService {
           actorUserId: access.userId,
           actorName: actorName(access),
           fromStatus: null,
-          toStatus: assignedToUserId ? "assigned" : "queued",
-          note: "Manual work created",
-          metadata: {},
+          toStatus: status,
+          note: historyNote,
+          metadata: {
+            assignTo,
+            departmentId,
+            assignedToUserId,
+          },
         },
         ...(assignedToUserId
           ? [
@@ -675,7 +735,14 @@ class OperationsWorkService {
       targetType: "work_item",
       targetId: String(doc._id),
       targetLabel: doc.displayId,
-      nextState: { status: doc.status, type: doc.type, priority: doc.priority },
+      nextState: {
+        status: doc.status,
+        type: doc.type,
+        priority: doc.priority,
+        assignTo,
+        departmentId,
+        assignedToUserId,
+      },
     });
 
     if (assignedToUserId) {
@@ -686,10 +753,317 @@ class OperationsWorkService {
         assigneeUserId: assignedToUserId,
         actorName: actorName(access),
         kind: "assigned",
+        revision: 1,
       });
     }
 
     return this.getById(String(doc._id), access);
+  }
+
+  async bulkAssign(
+    body: BulkAssignOperationsWorkBody,
+    access: OperationsResolvedAccess,
+  ): Promise<OperationsWorkBulkAssignResult> {
+    if (body.workItemIds.length > WORK_BULK_ASSIGN_MAX) {
+      throw new AppError(
+        `Bulk assign is limited to ${WORK_BULK_ASSIGN_MAX} work items.`,
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    assertHasAssignOrReassignPermission(access);
+
+    const result: OperationsWorkBulkAssignResult = {
+      requested: body.workItemIds.length,
+      succeeded: 0,
+      failed: 0,
+      targetType: body.targetType,
+      targetId: body.targetId,
+      targetLabel: body.targetId,
+      successful: [],
+      failures: [],
+    };
+
+    let userTarget: Awaited<
+      ReturnType<typeof assertCanAssignWorkToUser>
+    >["target"] | null = null;
+
+    const targetValidationMode = resolveBulkTargetValidationMode(access);
+
+    // Pre-validate target once (still re-check per item for mode).
+    try {
+      if (body.targetType === "user") {
+        const validated = await assertCanAssignWorkToUser({
+          actor: access,
+          targetUserId: body.targetId,
+          mode: targetValidationMode,
+        });
+        userTarget = validated.target;
+        result.targetLabel = validated.target.fullName;
+      } else {
+        const validated = await assertCanRouteWorkToDepartment({
+          actor: access,
+          departmentId: body.targetId,
+          mode: targetValidationMode,
+        });
+        result.targetLabel = validated.department.name;
+      }
+    } catch (error) {
+      const mapped = mapBulkItemError(error);
+      for (const workItemId of body.workItemIds) {
+        result.failures.push({
+          workItemId,
+          displayId: null,
+          code: mapped.code,
+          reason: mapped.reason,
+        });
+      }
+      result.failed = result.failures.length;
+      await recordOperationsAuditEvent({
+        actorUserId: access.userId,
+        actorName: actorName(access),
+        action: "work.bulk_assign",
+        targetType: "work_item",
+        targetId: "bulk",
+        targetLabel: result.targetLabel,
+        metadata: {
+          targetType: body.targetType,
+          targetId: body.targetId,
+          requested: result.requested,
+          succeeded: 0,
+          failed: result.failed,
+          failures: result.failures,
+        },
+      });
+      return result;
+    }
+
+    const now = new Date();
+
+    for (const workItemId of body.workItemIds) {
+      const expectedRevision = body.expectedRevisions[workItemId];
+      const displayFallback = workItemId;
+      try {
+        if (expectedRevision == null) {
+          result.failures.push({
+            workItemId,
+            displayId: null,
+            code: "BAD_REQUEST",
+            reason: "Missing expectedRevision.",
+          });
+          continue;
+        }
+
+        let existing: Record<string, unknown>;
+        try {
+          existing = await loadWorkOrThrow(workItemId, access);
+        } catch (error) {
+          const mapped = mapBulkItemError(error);
+          result.failures.push({
+            workItemId,
+            displayId: null,
+            code: mapped.code,
+            reason: mapped.reason,
+          });
+          continue;
+        }
+
+        const displayId = String(existing.displayId ?? displayFallback);
+        const fromStatus = existing.status as WorkItemStatus;
+        if (isTerminalWorkStatus(fromStatus)) {
+          result.failures.push({
+            workItemId,
+            displayId,
+            code: "TERMINAL",
+            reason: "Cannot assign a completed or cancelled work item.",
+          });
+          continue;
+        }
+
+        const previousAssignee = existing.assignedToUserId
+          ? String(existing.assignedToUserId)
+          : null;
+        const mode = previousAssignee ? "reassign" : "assign";
+
+        if (body.targetType === "user") {
+          await assertCanAssignWorkToUser({
+            actor: access,
+            targetUserId: body.targetId,
+            mode,
+          });
+          assertWorkStatusTransition(fromStatus, "assigned");
+
+          const targetDepartmentId = userTarget?.departmentId
+            ? String(userTarget.departmentId)
+            : null;
+
+          const updated = await OperationsWorkItemModel.updateOne(
+            {
+              _id: workItemId,
+              revision: expectedRevision,
+              status: { $nin: ["completed", "cancelled"] },
+            },
+            {
+              $set: {
+                assignedToUserId: body.targetId,
+                assignedByUserId: access.userId,
+                assignedAt: now,
+                status: "assigned",
+                waitingReason: null,
+                ...(targetDepartmentId
+                  ? { departmentId: targetDepartmentId }
+                  : {}),
+              },
+              $inc: { revision: 1 },
+              $push: {
+                history: {
+                  action:
+                    mode === "reassign" ? "work.reassigned" : "work.assigned",
+                  at: now,
+                  actorUserId: access.userId,
+                  actorName: actorName(access),
+                  fromStatus,
+                  toStatus: "assigned",
+                  note: "Bulk assign",
+                  metadata: {
+                    bulk: true,
+                    assignedToUserId: body.targetId,
+                    previousAssigneeUserId: previousAssignee,
+                  },
+                },
+              },
+            },
+          );
+
+          if (!updated.matchedCount) {
+            result.failures.push({
+              workItemId,
+              displayId,
+              code: "CONFLICT",
+              reason:
+                "This work item was updated by another user. Refresh and try again.",
+            });
+            continue;
+          }
+
+          scheduleWorkAssignmentNotification({
+            workItemId,
+            displayId,
+            title: String(existing.title ?? ""),
+            assigneeUserId: body.targetId,
+            actorName: actorName(access),
+            kind: mode === "reassign" ? "reassigned" : "assigned",
+            previousAssigneeUserId: previousAssignee,
+            revision: expectedRevision + 1,
+          });
+
+          result.successful.push({ workItemId, displayId });
+        } else {
+          await assertCanRouteWorkToDepartment({
+            actor: access,
+            departmentId: body.targetId,
+            mode,
+          });
+          if (fromStatus === "in_progress" || fromStatus === "waiting") {
+            result.failures.push({
+              workItemId,
+              displayId,
+              code: "BAD_REQUEST",
+              reason:
+                "Return work to Assigned before routing it to Team Queue.",
+            });
+            continue;
+          }
+          if (fromStatus !== "queued") {
+            assertWorkStatusTransition(fromStatus, "queued");
+          }
+
+          const updated = await OperationsWorkItemModel.updateOne(
+            {
+              _id: workItemId,
+              revision: expectedRevision,
+              status: { $nin: ["completed", "cancelled"] },
+            },
+            {
+              $set: {
+                assignedToUserId: null,
+                assignedByUserId: null,
+                assignedAt: null,
+                departmentId: body.targetId,
+                status: "queued",
+                waitingReason: null,
+              },
+              $inc: { revision: 1 },
+              $push: {
+                history: {
+                  action: "work.routed_to_team_queue",
+                  at: now,
+                  actorUserId: access.userId,
+                  actorName: actorName(access),
+                  fromStatus,
+                  toStatus: "queued",
+                  note: "Bulk assign to department Team Queue",
+                  metadata: {
+                    bulk: true,
+                    departmentId: body.targetId,
+                    previousAssigneeUserId: previousAssignee,
+                  },
+                },
+              },
+            },
+          );
+
+          if (!updated.matchedCount) {
+            result.failures.push({
+              workItemId,
+              displayId,
+              code: "CONFLICT",
+              reason:
+                "This work item was updated by another user. Refresh and try again.",
+            });
+            continue;
+          }
+
+          // No mass notification to every department member for Team Queue.
+          result.successful.push({ workItemId, displayId });
+        }
+      } catch (error) {
+        const mapped = mapBulkItemError(error);
+        result.failures.push({
+          workItemId,
+          displayId: null,
+          code: mapped.code,
+          reason: mapped.reason,
+        });
+      }
+    }
+
+    result.succeeded = result.successful.length;
+    result.failed = result.failures.length;
+
+    await recordOperationsAuditEvent({
+      actorUserId: access.userId,
+      actorName: actorName(access),
+      action: "work.bulk_assign",
+      targetType: "work_item",
+      targetId: "bulk",
+      targetLabel: result.targetLabel,
+      metadata: {
+        targetType: body.targetType,
+        targetId: body.targetId,
+        requested: result.requested,
+        succeeded: result.succeeded,
+        failed: result.failed,
+        successfulIds: result.successful.map((row) => row.workItemId),
+        failures: result.failures.map((row) => ({
+          workItemId: row.workItemId,
+          code: row.code,
+          reason: row.reason,
+        })),
+      },
+    });
+
+    return result;
   }
 
   async assign(
@@ -799,6 +1173,7 @@ class OperationsWorkService {
       actorName: actorName(access),
       kind: mode === "reassign" ? "reassigned" : "assigned",
       previousAssigneeUserId: previousAssignee,
+      revision: Number(existing.revision ?? 1) + 1,
     });
 
     return this.getById(id, access);
@@ -885,6 +1260,7 @@ class OperationsWorkService {
       assigneeUserId: String(access.userId),
       actorName: actorName(access),
       kind: "claimed",
+      revision: Number(existing.revision ?? 1) + 1,
     });
 
     return this.getById(id, access);
@@ -1138,19 +1514,70 @@ class OperationsWorkService {
     return file;
   }
 
+  async reconcile(access: OperationsResolvedAccess) {
+    if (!access.isSuperAdmin) {
+      throw new AppError(
+        "Only Super Admin can run work reconciliation.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+    const stats = await reconcileOpenOperationsWork();
+    await recordOperationsAuditEvent({
+      actorUserId: access.userId,
+      actorName: actorName(access),
+      action: "work.reconciled",
+      targetType: "work_item",
+      targetId: "reconcile",
+      targetLabel: "operations_work_items",
+      metadata: { ...stats },
+    });
+    return stats;
+  }
+
   async getPerformance(
     access: OperationsResolvedAccess,
+    query: PerformanceOperationsWorkQuery = {},
   ): Promise<OperationsWorkPerformanceResult> {
     assertPermission(access, WORK_LIST_VIEW_KEY);
     const now = new Date();
     const startToday = startOfLocalDay(now);
-    const sevenDaysAgo = addMs(startToday, -6 * 24 * 60 * 60 * 1000);
+    const rangeTo = query.to ? new Date(query.to) : endOfLocalDay(now);
+    const rangeFrom = query.from
+      ? new Date(query.from)
+      : addMs(startToday, -6 * 24 * 60 * 60 * 1000);
+
+    if (
+      Number.isNaN(rangeFrom.getTime()) ||
+      Number.isNaN(rangeTo.getTime()) ||
+      rangeFrom > rangeTo
+    ) {
+      throw new AppError(
+        "Invalid performance date range.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
     const mine = { assignedToUserId: access.userId };
+    const completedInRange = {
+      ...mine,
+      status: "completed" as const,
+      completedAt: { $gte: rangeFrom, $lte: rangeTo },
+    };
+
+    const dayCount = Math.min(
+      31,
+      Math.max(
+        1,
+        Math.ceil(
+          (rangeTo.getTime() - rangeFrom.getTime()) / (24 * 60 * 60 * 1000),
+        ) + 1,
+      ),
+    );
 
     const [
       assignedOpen,
       completedTotal,
-      completedLast7Days,
+      completedInWindow,
       overdue,
       openWithSla,
       breachedOpen,
@@ -1165,11 +1592,7 @@ class OperationsWorkService {
         ...mine,
         status: "completed",
       }),
-      OperationsWorkItemModel.countDocuments({
-        ...mine,
-        status: "completed",
-        completedAt: { $gte: sevenDaysAgo },
-      }),
+      OperationsWorkItemModel.countDocuments(completedInRange),
       OperationsWorkItemModel.countDocuments({
         ...mine,
         status: { $nin: ["completed", "cancelled"] },
@@ -1183,12 +1606,12 @@ class OperationsWorkService {
       OperationsWorkItemModel.countDocuments({
         ...mine,
         status: { $nin: ["completed", "cancelled"] },
-        slaTargetAt: { $lt: now },
+        $or: [{ breachedAt: { $ne: null } }, { slaTargetAt: { $lt: now } }],
       }),
       OperationsWorkItemModel.find({
         ...mine,
         status: "completed",
-        completedAt: { $ne: null },
+        completedAt: { $gte: rangeFrom, $lte: rangeTo },
         assignedAt: { $ne: null },
       })
         .select("assignedAt completedAt createdAt")
@@ -1199,7 +1622,13 @@ class OperationsWorkService {
         assigned: number;
         completed: number;
       }>([
-        { $match: { assignedToUserId: new mongoose.Types.ObjectId(String(access.userId)) } },
+        {
+          $match: {
+            assignedToUserId: new mongoose.Types.ObjectId(
+              String(access.userId),
+            ),
+          },
+        },
         {
           $group: {
             _id: "$type",
@@ -1211,6 +1640,16 @@ class OperationsWorkService {
         },
       ]),
     ]);
+
+    await OperationsWorkItemModel.updateMany(
+      {
+        ...mine,
+        status: { $nin: ["completed", "cancelled"] },
+        slaTargetAt: { $ne: null, $lt: now },
+        $or: [{ breachedAt: null }, { breachedAt: { $exists: false } }],
+      },
+      { $set: { breachedAt: now } },
+    );
 
     let resolutionSumMs = 0;
     let resolutionCount = 0;
@@ -1249,8 +1688,9 @@ class OperationsWorkService {
         : null;
 
     const trend: OperationsWorkPerformanceTrendPoint[] = [];
-    for (let i = 6; i >= 0; i -= 1) {
-      const dayStart = addMs(startToday, -i * 24 * 60 * 60 * 1000);
+    for (let i = dayCount - 1; i >= 0; i -= 1) {
+      const dayStart = addMs(startOfLocalDay(rangeTo), -i * 24 * 60 * 60 * 1000);
+      if (dayStart < startOfLocalDay(rangeFrom)) continue;
       const dayEnd = endOfLocalDay(dayStart);
       const count = await OperationsWorkItemModel.countDocuments({
         ...mine,
@@ -1258,8 +1698,9 @@ class OperationsWorkService {
         completedAt: { $gte: dayStart, $lte: dayEnd },
       });
       trend.push({
-        date: dayStart.toISOString().slice(0, 10),
+        date: kolkataDateKey(dayStart),
         label: dayStart.toLocaleDateString("en-IN", {
+          timeZone: "Asia/Kolkata",
           weekday: "short",
           day: "numeric",
         }),
@@ -1270,7 +1711,7 @@ class OperationsWorkService {
     return {
       assignedOpen,
       completedTotal,
-      completedLast7Days,
+      completedLast7Days: completedInWindow,
       completionRatePercent,
       overdue,
       slaOnTrack,
@@ -1293,9 +1734,36 @@ class OperationsWorkService {
         completed: row.completed,
       })),
       completionTrend: trend,
+      rangeFrom: rangeFrom.toISOString(),
+      rangeTo: rangeTo.toISOString(),
       generatedAt: now.toISOString(),
     };
   }
+}
+
+function mapBulkItemError(error: unknown): {
+  code: OperationsWorkBulkAssignResult["failures"][number]["code"];
+  reason: string;
+} {
+  if (error instanceof AppError) {
+    if (error.statusCode === HTTP_STATUS.FORBIDDEN) {
+      return { code: "FORBIDDEN", reason: error.message };
+    }
+    if (error.statusCode === HTTP_STATUS.NOT_FOUND) {
+      return { code: "NOT_FOUND", reason: error.message };
+    }
+    if (error.statusCode === HTTP_STATUS.CONFLICT) {
+      return { code: "CONFLICT", reason: error.message };
+    }
+    if (error.statusCode === HTTP_STATUS.UNAUTHORIZED) {
+      return { code: "UNAUTHORIZED", reason: error.message };
+    }
+    return { code: "BAD_REQUEST", reason: error.message };
+  }
+  return {
+    code: "BAD_REQUEST",
+    reason: "Unable to assign this work item.",
+  };
 }
 
 function assertPermission(

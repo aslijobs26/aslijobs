@@ -13,7 +13,8 @@ export type WorkDueFilter =
   | "overdue"
   | "due_today"
   | "due_soon"
-  | "upcoming";
+  | "upcoming"
+  | "do_now";
 
 export interface OperationsWorkHistoryEntry {
   action: string;
@@ -135,7 +136,34 @@ export interface OperationsWorkPerformanceResult {
   averageResponseHours: number | null;
   byType: OperationsWorkPerformanceByType[];
   completionTrend: OperationsWorkPerformanceTrendPoint[];
+  rangeFrom: string;
+  rangeTo: string;
   generatedAt: string;
+}
+
+export interface OperationsWorkBulkAssignResult {
+  requested: number;
+  succeeded: number;
+  failed: number;
+  targetType: "department" | "user";
+  targetId: string;
+  targetLabel: string;
+  successful: Array<{
+    workItemId: string;
+    displayId: string;
+  }>;
+  failures: Array<{
+    workItemId: string;
+    displayId: string | null;
+    code:
+      | "FORBIDDEN"
+      | "NOT_FOUND"
+      | "CONFLICT"
+      | "BAD_REQUEST"
+      | "TERMINAL"
+      | "UNAUTHORIZED";
+    reason: string;
+  }>;
 }
 
 export interface CreateSystemWorkItemInput {

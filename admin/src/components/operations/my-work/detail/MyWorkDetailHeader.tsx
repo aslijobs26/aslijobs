@@ -4,10 +4,7 @@ import {
   Calendar,
   Check,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Copy,
-  MoreHorizontal,
 } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
@@ -434,37 +431,10 @@ export function MyWorkDetailHeader({
           <ArrowLeft className="size-3.5" aria-hidden />
           Back to My Work
         </Link>
-        <div
-          className="inline-flex items-center overflow-hidden rounded-md border border-border-subtle bg-surface shadow-[0_1px_1px_rgba(15,23,42,0.04)]"
-          role="group"
-          aria-label="Work item navigation"
-        >
-          <button
-            type="button"
-            disabled
-            title="Previous work item is not available yet"
-            className="inline-flex h-8 items-center gap-1 border-r border-border-subtle px-2.5 text-[11px] font-semibold text-muted opacity-55"
-          >
-            <ChevronLeft className="size-3.5" aria-hidden />
-            Previous
-          </button>
-          <button
-            type="button"
-            disabled
-            title="Next work item is not available yet"
-            className="inline-flex h-8 items-center gap-1 border-r border-border-subtle px-2.5 text-[11px] font-semibold text-muted opacity-55"
-          >
-            Next
-            <ChevronRight className="size-3.5" aria-hidden />
-          </button>
-          <button
-            type="button"
-            aria-label="More page actions"
-            disabled
-            className="inline-flex size-8 items-center justify-center text-muted opacity-55"
-          >
-            <MoreHorizontal className="size-4" aria-hidden />
-          </button>
+        <div className="inline-flex items-center gap-1">
+          <span className="sr-only">
+            Previous/Next navigation is not available on this page.
+          </span>
         </div>
       </div>
 
@@ -686,9 +656,7 @@ export function MyWorkDetailHeader({
                       className="flex w-full px-3 py-2 text-left text-[12px] font-medium text-foreground hover:bg-hero-bg"
                       onClick={() => {
                         setMoreOpen(false);
-                        const reason =
-                          window.prompt("Waiting reason:") ?? "Awaiting input";
-                        onStatus({ status: "waiting", waitingReason: reason });
+                        onStatus({ status: "waiting" });
                       }}
                     >
                       Mark as Waiting

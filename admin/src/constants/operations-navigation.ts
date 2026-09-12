@@ -5,12 +5,16 @@ import {
   Building2,
   FileCheck2,
   FolderKanban,
+  HelpCircle,
   Home,
   Inbox,
+  Languages,
   LayoutDashboard,
-  MapPin,
+  Megaphone,
+  Network,
+  Rocket,
   Settings,
-  Ticket,
+  Shield,
   Users,
   UsersRound,
 } from "lucide-react";
@@ -68,10 +72,10 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
       },
     ],
   },
-    {
-      id: "operations",
-      label: "OPERATIONS",
-      items: [
+  {
+    id: "operations",
+    label: "OPERATIONS",
+    items: [
       {
         id: "jobseekers",
         label: "Jobseekers",
@@ -112,20 +116,44 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         id: "placements",
         label: "Placements",
         href: OPERATIONS_ROUTES.PLACEMENTS,
-        icon: MapPin,
+        icon: Rocket,
       },
       {
         id: "support",
         label: "Support",
         href: OPERATIONS_ROUTES.SUPPORT_TICKETS,
-        icon: Ticket,
+        icon: HelpCircle,
       },
     ],
   },
-    {
-      id: "management",
-      label: "MANAGEMENT",
-      items: [
+  {
+    id: "business",
+    label: "BUSINESS",
+    items: [
+      {
+        id: "business-development",
+        label: "Business Development",
+        href: OPERATIONS_ROUTES.BUSINESS_DEVELOPMENT,
+        icon: Network,
+      },
+      {
+        id: "promotions-events",
+        label: "Promotions & Events",
+        href: OPERATIONS_ROUTES.PROMOTIONS_EVENTS,
+        icon: Megaphone,
+      },
+      {
+        id: "payments-subscriptions",
+        label: "Payments & Subscriptions",
+        href: OPERATIONS_ROUTES.PAYMENTS,
+        icon: Shield,
+      },
+    ],
+  },
+  {
+    id: "management",
+    label: "MANAGEMENT",
+    items: [
       {
         id: "operations-dashboard",
         label: "Operations",
@@ -146,10 +174,16 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
       },
     ],
   },
-    {
-      id: "system",
-      label: "SYSTEM",
-      items: [
+  {
+    id: "platform",
+    label: "PLATFORM",
+    items: [
+      {
+        id: "languages",
+        label: "Languages & Localization",
+        href: OPERATIONS_ROUTES.LANGUAGES,
+        icon: Languages,
+      },
       {
         id: "settings",
         label: "Settings",
@@ -173,9 +207,13 @@ export const OPERATIONS_NAV_ITEM_PERMISSION_MODULE: Record<
   jobs: "jobs",
   placements: "placements",
   support: "support",
+  "business-development": "campaigns",
+  "promotions-events": "campaigns",
+  "payments-subscriptions": "billing",
   "operations-dashboard": "dashboard",
   analytics: "jobs",
   organization: "team",
+  languages: "settings",
   settings: "settings",
 };
 

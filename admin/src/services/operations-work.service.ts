@@ -2,7 +2,9 @@ import { apiClient } from "./api-client";
 import type {
   AssignWorkInput,
   EligibleAssignee,
+  EligibleDepartment,
   OperationsWorkAnalyticsResult,
+  OperationsWorkBulkAssignResult,
   OperationsWorkDetail,
   OperationsWorkListParams,
   OperationsWorkListResult,
@@ -34,10 +36,18 @@ export async function fetchOperationsWorkAnalytics(): Promise<OperationsWorkAnal
   return response.data.data;
 }
 
-export async function fetchOperationsWorkPerformance(): Promise<OperationsWorkPerformanceResult> {
+export async function fetchOperationsWorkPerformance(params?: {
+  from?: string;
+  to?: string;
+}): Promise<OperationsWorkPerformanceResult> {
   const response = await apiClient.get<{
     data: OperationsWorkPerformanceResult;
-  }>(`${BASE}/performance`);
+  }>(`${BASE}/performance`, {
+    params: {
+      from: params?.from,
+      to: params?.to,
+    },
+  });
   return response.data.data;
 }
 
@@ -67,6 +77,15 @@ export async function fetchEligibleWorkAssignees(): Promise<EligibleAssignee[]> 
   return response.data.data.items;
 }
 
+export async function fetchEligibleWorkDepartments(): Promise<
+  EligibleDepartment[]
+> {
+  const response = await apiClient.get<{
+    data: { items: EligibleDepartment[] };
+  }>(`${BASE}/eligible-departments`);
+  return response.data.data.items;
+}
+
 export interface CreateOperationsWorkInput {
   title: string;
   description?: string;
@@ -77,6 +96,8 @@ export interface CreateOperationsWorkInput {
   relatedLabel?: string;
   relatedLocationLabel?: string;
   assignedToUserId?: string | null;
+  departmentId?: string | null;
+  assignTo?: "none" | "team_queue" | "user";
   dueAt?: string | null;
 }
 
@@ -98,6 +119,18 @@ export async function assignOperationsWork(
     `${BASE}/${encodeURIComponent(id)}/assign`,
     input,
   );
+  return response.data.data;
+}
+
+export async function bulkAssignOperationsWork(input: {
+  workItemIds: string[];
+  targetType: "department" | "user";
+  targetId: string;
+  expectedRevisions: Record<string, number>;
+}): Promise<OperationsWorkBulkAssignResult> {
+  const response = await apiClient.patch<{
+    data: OperationsWorkBulkAssignResult;
+  }>(`${BASE}/bulk-assign`, input);
   return response.data.data;
 }
 

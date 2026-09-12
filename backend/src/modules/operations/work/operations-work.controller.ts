@@ -24,6 +24,7 @@ import {
 import { operationsWorkService } from "./operations-work.service.js";
 import type {
   AssignOperationsWorkBody,
+  BulkAssignOperationsWorkBody,
   ClaimOperationsWorkBody,
   CreateOperationsWorkBody,
   ExportOperationsWorkQuery,
@@ -32,6 +33,7 @@ import type {
   UpdateWorkDueBody,
   UpdateWorkPriorityBody,
   UpdateWorkStatusBody,
+  PerformanceOperationsWorkQuery,
 } from "./operations-work.validation.js";
 
 function requireAccess(req: Request) {
@@ -71,9 +73,19 @@ export const operationsWorkController = {
   async performance(req: Request, res: Response): Promise<void> {
     const access = requireAccess(req);
     assertOperationsPermissionKey(access, WORK_LIST_VIEW_KEY);
-    const data = await operationsWorkService.getPerformance(access);
+    const query = req.query as unknown as PerformanceOperationsWorkQuery;
+    const data = await operationsWorkService.getPerformance(access, query);
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations work performance fetched successfully.",
+      data,
+    });
+  },
+
+  async reconcile(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    const data = await operationsWorkService.reconcile(access);
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Operations work reconciliation completed.",
       data,
     });
   },
@@ -139,6 +151,46 @@ export const operationsWorkController = {
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Eligible assignees fetched successfully.",
       data: { items: data },
+    });
+  },
+
+  async eligibleDepartments(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    if (
+      !operationsAccessCanKey(access, WORK_ASSIGN_KEY) &&
+      !operationsAccessCanKey(access, WORK_REASSIGN_KEY)
+    ) {
+      throw new AppError(
+        "You do not have permission to assign work.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+    const data = await operationsWorkService.listEligibleDepartments(access);
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Eligible departments fetched successfully.",
+      data: { items: data },
+    });
+  },
+
+  async bulkAssign(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    if (
+      !operationsAccessCanKey(access, WORK_ASSIGN_KEY) &&
+      !operationsAccessCanKey(access, WORK_REASSIGN_KEY)
+    ) {
+      throw new AppError(
+        "You do not have permission to assign work.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+    const body = req.body as BulkAssignOperationsWorkBody;
+    const data = await operationsWorkService.bulkAssign(body, access);
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message:
+        data.failed === 0
+          ? "Bulk assignment completed successfully."
+          : "Bulk assignment completed with some failures.",
+      data,
     });
   },
 

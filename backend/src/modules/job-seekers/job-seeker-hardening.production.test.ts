@@ -34,6 +34,7 @@ function accessForKeys(grantedKeys: string[]): OperationsResolvedAccess {
     roleName: "Custom",
     departmentId: null,
     departmentName: null,
+    departmentSlug: null,
     isSuperAdmin: false,
     canCreateRoles: false,
     canManageUsers: false,

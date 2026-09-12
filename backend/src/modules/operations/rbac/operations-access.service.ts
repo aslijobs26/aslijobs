@@ -108,6 +108,7 @@ export async function resolveOperationsUserAccess(user: {
       roleName: "Super Admin",
       departmentId: toIdString(user.departmentId),
       departmentName: null,
+      departmentSlug: null,
       isSuperAdmin: true,
       canCreateRoles: true,
       canManageUsers: true,
@@ -133,14 +134,16 @@ export async function resolveOperationsUserAccess(user: {
         .filter((key) => isOperationsPermissionKey(key));
 
       let departmentName: string | null = null;
+      let departmentSlug: string | null = null;
       const departmentId =
         toIdString(user.departmentId) ?? toIdString(customRole.departmentId);
       if (departmentId && mongoose.isValidObjectId(departmentId)) {
         const department = await OperationsDepartmentModel.findById(departmentId)
-          .select("name status")
+          .select("name slug status")
           .lean();
         if (department && department.status === "active") {
           departmentName = department.name;
+          departmentSlug = department.slug ? String(department.slug) : null;
         }
       }
 
@@ -151,6 +154,7 @@ export async function resolveOperationsUserAccess(user: {
         roleName: customRole.name,
         departmentId,
         departmentName,
+        departmentSlug,
         isSuperAdmin: false,
         canCreateRoles: Boolean(customRole.canCreateRoles),
         canManageUsers: Boolean(customRole.canManageUsers),
@@ -171,6 +175,7 @@ export async function resolveOperationsUserAccess(user: {
       roleName: "Unassigned",
       departmentId: toIdString(user.departmentId),
       departmentName: null,
+      departmentSlug: null,
       isSuperAdmin: false,
       canCreateRoles: false,
       canManageUsers: false,
@@ -194,6 +199,7 @@ export async function resolveOperationsUserAccess(user: {
     roleName: user.role,
     departmentId: toIdString(user.departmentId),
     departmentName: null,
+    departmentSlug: null,
     isSuperAdmin: false,
     canCreateRoles: false,
     canManageUsers: false,

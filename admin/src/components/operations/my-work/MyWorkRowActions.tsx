@@ -18,6 +18,7 @@ import { cn } from "../../../utils/cn";
 
 export type MyWorkRowAction =
   | "view"
+  | "select"
   | "claim"
   | "assign"
   | "reassign"
@@ -30,6 +31,8 @@ interface MyWorkRowActionsProps {
   item: OperationsWorkListItem;
   busy?: boolean;
   onAction: (action: MyWorkRowAction) => void;
+  /** Show “Select” to enter bulk selection mode (assign/reassign only). */
+  showSelectOption?: boolean;
 }
 
 function statusActions(
@@ -56,6 +59,7 @@ export function MyWorkRowActions({
   item,
   busy,
   onAction,
+  showSelectOption = false,
 }: MyWorkRowActionsProps) {
   const navigate = useNavigate();
   const { canKey } = useOperationsPermissions();
@@ -77,6 +81,10 @@ export function MyWorkRowActions({
   const actions: Array<{ action: MyWorkRowAction; label: string }> = [
     { action: "view", label: "View details" },
   ];
+
+  if (showSelectOption && (canAssign || canReassign)) {
+    actions.push({ action: "select", label: "Select" });
+  }
 
   if (isTeamQueue && canClaim) {
     actions.push({ action: "claim", label: "Claim" });
