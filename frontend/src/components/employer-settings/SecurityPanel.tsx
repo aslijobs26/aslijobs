@@ -1,12 +1,13 @@
 "use client";
 
+import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { SecurityCard } from "@/components/employer-settings/SecurityCard";
 import { SettingsSection } from "@/components/employer-settings/SettingsSection";
 import { ROUTES } from "@/constants/routes";
 import { clearEmployerClientSession } from "@/utils/employer-session";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 type SecurityPanelProps = {
   principalType: "owner" | "member" | undefined;
@@ -19,13 +20,29 @@ export function SecurityPanel({
 }: SecurityPanelProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = useCallback(() => {
+  const handleLogoutRequest = useCallback(() => {
+    setIsLogoutConfirmOpen(true);
+  }, []);
+
+  const handleLogoutConfirm = useCallback(() => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
     void (async () => {
-      await clearEmployerClientSession(queryClient);
-      router.replace(ROUTES.HOME);
+      try {
+        await clearEmployerClientSession(queryClient);
+        setIsLogoutConfirmOpen(false);
+        router.replace(ROUTES.HOME);
+      } finally {
+        setIsLoggingOut(false);
+      }
     })();
-  }, [queryClient, router]);
+  }, [isLoggingOut, queryClient, router]);
 
   const isMember = principalType === "member";
 
@@ -62,7 +79,7 @@ export function SecurityPanel({
             title: "Sign out",
             description: "End this device session and clear local tokens.",
             actionLabel: "Log out",
-            onAction: handleLogout,
+            onAction: handleLogoutRequest,
             icon: "logout",
             tone: "danger",
           },
@@ -94,6 +111,17 @@ export function SecurityPanel({
             icon: "sessions",
           },
         ]}
+      />
+
+      <LogoutConfirmDialog
+        open={isLogoutConfirmOpen}
+        isSubmitting={isLoggingOut}
+        onClose={() => {
+          if (!isLoggingOut) {
+            setIsLogoutConfirmOpen(false);
+          }
+        }}
+        onConfirm={handleLogoutConfirm}
       />
     </div>
   );

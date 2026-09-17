@@ -19,8 +19,9 @@ export type OperationsDashboardTrendPoint = {
 export type OperationsDashboardLocationRow = {
   state: string;
   totalActivity: number;
+  sharePercent: number | null;
   trendPercent: number | null;
-  trendDirection: "up" | "down" | "neutral";
+  trendDirection: "up" | "down" | "neutral" | "new";
 };
 
 export type OperationsDashboardTaskStatus = {

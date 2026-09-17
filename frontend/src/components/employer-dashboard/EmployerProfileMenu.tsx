@@ -1,5 +1,6 @@
 "use client";
 
+import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import {
   EMPLOYER_DASHBOARD_AVATAR_INITIALS,
   EMPLOYER_DASHBOARD_ACCOUNT_NAME,
@@ -194,6 +195,8 @@ export function EmployerProfileMenu({
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const employerProfileQuery = useEmployerProfile();
   const {
     can,
@@ -349,12 +352,26 @@ export function EmployerProfileMenu({
     }
   };
 
-  const handleLogout = () => {
+  const handleLogoutRequest = () => {
     setIsOpen(false);
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
     void (async () => {
-      await clearEmployerClientSession(queryClient);
-      onLogout?.();
-      router.replace(ROUTES.HOME);
+      try {
+        await clearEmployerClientSession(queryClient);
+        setIsLogoutConfirmOpen(false);
+        onLogout?.();
+        router.replace(ROUTES.HOME);
+      } finally {
+        setIsLoggingOut(false);
+      }
     })();
   };
 
@@ -467,13 +484,24 @@ export function EmployerProfileMenu({
         <button
           type="button"
           role="menuitem"
-          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          onClick={handleLogout}
+          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
+          onClick={handleLogoutRequest}
         >
-          <LogOut className="size-4 shrink-0 text-muted" strokeWidth={2} aria-hidden="true" />
+          <LogOut className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
           {EMPLOYER_DASHBOARD_PROFILE_MENU_LOGOUT}
         </button>
       </div>
+
+      <LogoutConfirmDialog
+        open={isLogoutConfirmOpen}
+        isSubmitting={isLoggingOut}
+        onClose={() => {
+          if (!isLoggingOut) {
+            setIsLogoutConfirmOpen(false);
+          }
+        }}
+        onConfirm={handleLogoutConfirm}
+      />
     </div>
   );
 }

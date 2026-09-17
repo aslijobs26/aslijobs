@@ -56,7 +56,7 @@ function parseAnalyticsPreset(
     value as PlacementsAnalyticsPreset,
   )
     ? (value as PlacementsAnalyticsPreset)
-    : "last_30_days";
+    : "all";
 }
 
 function parseTableTab(value: string | null): OperationsPlacementsTableTab {
@@ -176,7 +176,7 @@ export function OperationsPlacementsPage() {
   const syncAnalyticsParams = (next: OperationsPlacementsAnalyticsParams) => {
     setAnalyticsFilters(next);
     const params = new URLSearchParams(searchParams);
-    if (next.preset === "last_30_days") {
+    if (next.preset === "all") {
       params.delete("preset");
     } else {
       params.set("preset", next.preset);
@@ -304,6 +304,7 @@ export function OperationsPlacementsPage() {
                 <PlacementsTrendChart
                   data={analytics.trend}
                   rangeLabel={analytics.range.label}
+                  isOverall={analyticsFilters.preset === "all"}
                 />
                 <PlacementsFunnel stages={analytics.funnel} />
                 <PlacementsByCategory items={analytics.byCategory} />

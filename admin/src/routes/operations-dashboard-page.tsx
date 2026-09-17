@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { isAxiosError } from "axios";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
 import {
@@ -32,45 +33,55 @@ import type {
   DashboardTaskTab,
 } from "../types/operations-dashboard-overview";
 import { INDIAN_STATES_AND_UTS } from "../services/india-location.service";
+import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
 
 const DATE_OPTIONS = [
+  { value: "all", label: "Overall" },
   { value: "last_7_days", label: "Last 7 days" },
   { value: "last_30_days", label: "Last 30 days" },
   { value: "last_90_days", label: "Last 90 days" },
   { value: "this_year", label: "This year" },
 ] as const;
 
+function overviewErrorMessage(error: unknown): string {
+  if (isOperationsSessionTransientError(error)) {
+    return "The API server is temporarily unavailable. Please wait a moment and retry.";
+  }
+  if (isAxiosError(error)) {
+    const payload = error.response?.data as { message?: string } | undefined;
+    if (payload?.message?.trim()) {
+      return payload.message.trim();
+    }
+  }
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return "Unable to load Operations Overview.";
+}
+
 export function OperationsDashboardPage() {
   const { can } = useOperationsPermissions();
-  const [datePreset, setDatePreset] =
-    useState<DashboardDatePreset>("last_30_days");
+  const [datePreset, setDatePreset] = useState<DashboardDatePreset>("all");
   const [state, setState] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [taskTab, setTaskTab] = useState<DashboardTaskTab>("all");
   const [taskSearchInput, setTaskSearchInput] = useState("");
-  const [taskSearch, setTaskSearch] = useState("");
   const [exporting, setExporting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const handle = window.setTimeout(() => {
-      setTaskSearch(taskSearchInput.trim());
-    }, 250);
-    return () => window.clearTimeout(handle);
-  }, [taskSearchInput]);
-
   const departmentsQuery = useOperationsDepartments({ status: "active" });
 
+  // Tab/search are client-only so switching Recent Tasks tabs does not refetch Overview.
   const params = useMemo(
     () => ({
       datePreset,
       state,
       departmentId: departmentId || undefined,
-      taskTab,
-      taskSearch,
-      taskLimit: 10,
+      taskTab: "all" as const,
+      taskSearch: "",
+      taskLimit: 100,
     }),
-    [datePreset, state, departmentId, taskTab, taskSearch],
+    [datePreset, state, departmentId],
   );
 
   const overviewQuery = useOperationsDashboardOverview(params, {
@@ -175,6 +186,9 @@ export function OperationsDashboardPage() {
             <p className="text-[13px] font-semibold text-foreground">
               Unable to load Operations Overview
             </p>
+            <p className="mt-1 text-[12px] text-muted">
+              {overviewErrorMessage(overviewQuery.error)}
+            </p>
             <button
               type="button"
               onClick={() => void overviewQuery.refetch()}
@@ -213,7 +227,10 @@ export function OperationsDashboardPage() {
               <div className="flex min-w-0 flex-col gap-3">
                 <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                   <OverviewActivityTrend points={data.activityTrend} />
-                  <OverviewByLocation rows={data.operationsByLocation} />
+                  <OverviewByLocation
+                    rows={data.operationsByLocation}
+                    datePreset={data.filters.datePreset}
+                  />
                 </div>
                 <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                   <OverviewTaskStatus status={data.taskStatus} />

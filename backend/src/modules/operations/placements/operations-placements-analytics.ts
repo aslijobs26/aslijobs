@@ -669,10 +669,10 @@ export async function getPlacementsAnalytics(
   const trendFrom =
     isOverall
       ? (() => {
-          const twelveMonthsAgo = new Date(to);
-          twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
-          twelveMonthsAgo.setDate(1);
-          return startOfLocalDay(twelveMonthsAgo);
+          const sixMonthsAgo = new Date(to);
+          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+          sixMonthsAgo.setDate(1);
+          return startOfLocalDay(sixMonthsAgo);
         })()
       : from;
 

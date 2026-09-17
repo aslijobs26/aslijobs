@@ -5,7 +5,7 @@ const objectIdRegex = /^[a-f\d]{24}$/i;
 
 export const placementsAnalyticsQuerySchema = z
   .object({
-    preset: z.enum(PLACEMENTS_ANALYTICS_PRESETS).default("last_30_days"),
+    preset: z.enum(PLACEMENTS_ANALYTICS_PRESETS).default("all"),
     dateFrom: z.string().optional().default(""),
     dateTo: z.string().optional().default(""),
   })

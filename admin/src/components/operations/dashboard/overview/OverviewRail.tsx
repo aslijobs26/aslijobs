@@ -1,3 +1,4 @@
+import { Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import type { OperationsDashboardOverview } from "../../../../types/operations-dashboard-overview";
@@ -13,8 +14,15 @@ export function OverviewQuickActions({
   exporting: boolean;
 }) {
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm">
-      <h3 className="text-[12px] font-semibold text-foreground">Quick Actions</h3>
+    <section className="rounded-xl border border-border-subtle bg-[#FFFBEB] p-3.5 shadow-sm dark:bg-hero-bg">
+      <h3 className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
+        <Zap
+          className="size-3.5 shrink-0 text-brand-accent"
+          strokeWidth={2.25}
+          aria-hidden
+        />
+        Quick Actions
+      </h3>
       {actions.length === 0 ? (
         <p className="mt-2 text-[11px] text-muted">No actions available.</p>
       ) : (
@@ -27,7 +35,7 @@ export function OverviewQuickActions({
                     type="button"
                     disabled={exporting}
                     onClick={onExport}
-                    className="w-full rounded-md px-2 py-1.5 text-left text-[11px] font-medium text-foreground hover:bg-hero-bg disabled:opacity-60"
+                    className="w-full rounded-md px-2 py-1.5 text-left text-[11px] font-medium text-foreground hover:bg-surface/80 disabled:opacity-60 dark:hover:bg-surface"
                   >
                     {exporting ? "Downloading…" : action.label}
                   </button>
@@ -38,7 +46,7 @@ export function OverviewQuickActions({
               <li key={action.id}>
                 <Link
                   to={action.href}
-                  className="block rounded-md px-2 py-1.5 text-[11px] font-medium text-foreground hover:bg-hero-bg"
+                  className="block rounded-md px-2 py-1.5 text-[11px] font-medium text-foreground hover:bg-surface/80 dark:hover:bg-surface"
                 >
                   {action.label}
                 </Link>

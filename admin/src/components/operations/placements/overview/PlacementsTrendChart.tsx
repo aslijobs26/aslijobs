@@ -16,11 +16,14 @@ import { OperationsCard } from "../../../ui/OperationsCard";
 interface PlacementsTrendChartProps {
   data: OperationsPlacementsTrendPoint[];
   rangeLabel?: string;
+  /** Overall uses fewer monthly buckets — widen bars to match Jobs Overview. */
+  isOverall?: boolean;
 }
 
 export function PlacementsTrendChart({
   data,
   rangeLabel,
+  isOverall = false,
 }: PlacementsTrendChartProps) {
   const colors = useOperationsThemeColors();
   const series = Array.isArray(data) ? data : [];
@@ -29,13 +32,42 @@ export function PlacementsTrendChart({
   );
   const axisTick = { fontSize: 10, fill: "#5a6570" };
   const pointCount = series.length;
-  const maxBarSize = pointCount <= 14 ? 28 : pointCount <= 26 ? 20 : 14;
-  const categoryGap = pointCount <= 14 ? "28%" : pointCount <= 26 ? "22%" : "18%";
+  const maxBarSize = isOverall
+    ? pointCount <= 8
+      ? 56
+      : pointCount <= 14
+        ? 48
+        : pointCount <= 26
+          ? 34
+          : 22
+    : pointCount <= 14
+      ? 36
+      : pointCount <= 26
+        ? 26
+        : 16;
+  const categoryGap = isOverall
+    ? pointCount <= 8
+      ? "8%"
+      : pointCount <= 14
+        ? "6%"
+        : pointCount <= 26
+          ? "5%"
+          : "4%"
+    : pointCount <= 14
+      ? "28%"
+      : pointCount <= 26
+        ? "22%"
+        : "18%";
+  const barGap = isOverall ? 2 : 3;
 
   return (
     <OperationsCard
       title="Placements Trend"
-      subtitle={rangeLabel || "Placements vs joined"}
+      subtitle={
+        isOverall
+          ? "Last 6 months · placements vs joined"
+          : rangeLabel || "Placements vs joined"
+      }
       className="placements-analytics-card min-w-0"
     >
       {!hasData ? (
@@ -48,7 +80,7 @@ export function PlacementsTrendChart({
             <ComposedChart
               data={series}
               margin={{ top: 8, right: 8, left: 0, bottom: 4 }}
-              barGap={2}
+              barGap={barGap}
               barCategoryGap={categoryGap}
             >
               <CartesianGrid
@@ -92,7 +124,7 @@ export function PlacementsTrendChart({
               <Bar
                 dataKey="placements"
                 fill={colors.chartAccent}
-                radius={[3, 3, 0, 0]}
+                radius={[4, 4, 0, 0]}
                 maxBarSize={maxBarSize}
               />
               <Line

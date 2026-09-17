@@ -80,6 +80,8 @@ function isNavItemActive(
 
   if (itemId === "organization") {
     return (
+      pathname === OPERATIONS_ROUTES.ORGANIZATION ||
+      pathname.startsWith(`${OPERATIONS_ROUTES.ORGANIZATION}/`) ||
       pathname === OPERATIONS_ROUTES.TEAM_MANAGEMENT ||
       pathname.startsWith(`${OPERATIONS_ROUTES.TEAM_MANAGEMENT}/`) ||
       pathname === OPERATIONS_ROUTES.DEPARTMENTS ||

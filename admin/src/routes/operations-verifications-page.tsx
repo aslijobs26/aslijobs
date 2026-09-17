@@ -86,7 +86,7 @@ function parseAnalyticsPreset(
     value as VerificationsAnalyticsPreset,
   )
     ? (value as VerificationsAnalyticsPreset)
-    : "last_30_days";
+    : "all";
 }
 
 function parseOverviewTab(
@@ -216,7 +216,7 @@ export function OperationsVerificationsPage() {
   ) => {
     setAnalyticsFilters(next);
     const params = new URLSearchParams(searchParams);
-    if (next.preset === "last_30_days") {
+    if (next.preset === "all") {
       params.delete("preset");
     } else {
       params.set("preset", next.preset);
@@ -374,6 +374,7 @@ export function OperationsVerificationsPage() {
                 <VerificationsTrendChart
                   data={analytics.trend}
                   rangeLabel={analytics.range.label}
+                  isOverall={analyticsFilters.preset === "all"}
                 />
                 <VerificationsStatusDonut items={analytics.byStatus} />
                 <VerificationsDocumentsBreakdown

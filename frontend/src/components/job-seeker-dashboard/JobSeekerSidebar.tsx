@@ -1,5 +1,6 @@
 "use client";
 
+import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import asliLogo from "@/assets/AsliLogo.svg";
 import asliLogoMark from "@/assets/logos/Frame 130.png";
 import { JobSeekerSidebarItem } from "@/components/job-seeker-dashboard/JobSeekerSidebarItem";
@@ -17,7 +18,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 
 type JobSeekerSidebarProps = {
   collapsed: boolean;
@@ -42,9 +43,22 @@ export function JobSeekerSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogoutRequest = () => {
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
     void clearJobSeekerClientSession(queryClient).finally(() => {
+      setIsLoggingOut(false);
+      setIsLogoutConfirmOpen(false);
       onMobileClose();
       router.replace(ROUTES.HOME);
     });
@@ -165,7 +179,7 @@ export function JobSeekerSidebar({
         >
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={handleLogoutRequest}
             title={collapsed ? "Logout" : undefined}
             className={cn(
               "flex w-full items-center rounded-lg text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200",
@@ -193,6 +207,17 @@ export function JobSeekerSidebar({
           </button>
         </div>
       </aside>
+
+      <LogoutConfirmDialog
+        open={isLogoutConfirmOpen}
+        isSubmitting={isLoggingOut}
+        onClose={() => {
+          if (!isLoggingOut) {
+            setIsLogoutConfirmOpen(false);
+          }
+        }}
+        onConfirm={handleLogoutConfirm}
+      />
     </>
   );
 }

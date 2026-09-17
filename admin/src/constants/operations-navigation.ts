@@ -16,7 +16,6 @@ import {
   Settings,
   Shield,
   Users,
-  UsersRound,
 } from "lucide-react";
 import { OPERATIONS_ROUTES } from "./operations-routes";
 import type { OperationsNavBadgeKey } from "../types/operations-registration-awareness";
@@ -169,8 +168,8 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
       {
         id: "organization",
         label: "Organization",
-        href: OPERATIONS_ROUTES.TEAM_MANAGEMENT,
-        icon: UsersRound,
+        href: OPERATIONS_ROUTES.ORGANIZATION,
+        icon: Network,
       },
     ],
   },

@@ -4,17 +4,15 @@ import {
   fetchOperationsDepartments,
   updateOperationsDepartment,
 } from "../services/operations-departments.service";
-import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
+import {
+  operationsQueryRetryDelay,
+  shouldRetryOperationsQuery,
+} from "../utils/operations-session-errors";
 
 export const OPERATIONS_DEPARTMENTS_QUERY_KEY = [
   "operations",
   "departments",
 ] as const;
-
-function shouldRetry(failureCount: number, error: unknown): boolean {
-  if (failureCount >= 3) return false;
-  return isOperationsSessionTransientError(error);
-}
 
 export function useOperationsDepartments(params?: {
   search?: string;
@@ -24,7 +22,8 @@ export function useOperationsDepartments(params?: {
     queryKey: [...OPERATIONS_DEPARTMENTS_QUERY_KEY, params],
     queryFn: () => fetchOperationsDepartments(params),
     staleTime: 30_000,
-    retry: shouldRetry,
+    retry: shouldRetryOperationsQuery,
+    retryDelay: operationsQueryRetryDelay,
   });
 }
 

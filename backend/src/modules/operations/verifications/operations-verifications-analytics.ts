@@ -1251,12 +1251,12 @@ export async function getOperationsVerificationsAnalytics(
 
   let trendFrom = from;
   if (isOverall) {
-    const twelveMonthsAgo = new Date(to);
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
-    twelveMonthsAgo.setDate(1);
+    const sixMonthsAgo = new Date(to);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
     trendFrom =
-      twelveMonthsAgo.getTime() > from.getTime()
-        ? startOfLocalDay(twelveMonthsAgo)
+      sixMonthsAgo.getTime() > from.getTime()
+        ? startOfLocalDay(sixMonthsAgo)
         : from;
   }
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const DASHBOARD_DATE_PRESETS = [
+  "all",
   "last_7_days",
   "last_30_days",
   "last_90_days",
@@ -17,7 +18,7 @@ const departmentIdSchema = z
   .or(z.literal("").transform(() => undefined));
 
 const dashboardDateFields = {
-  datePreset: z.enum(DASHBOARD_DATE_PRESETS).optional().default("last_30_days"),
+  datePreset: z.enum(DASHBOARD_DATE_PRESETS).optional().default("all"),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   state: z.string().trim().max(80).optional().default(""),
@@ -50,7 +51,7 @@ export const operationsDashboardOverviewQuerySchema = z
       .optional()
       .default("all"),
     taskSearch: z.string().trim().max(120).optional().default(""),
-    taskLimit: z.coerce.number().int().min(1).max(50).optional().default(10),
+    taskLimit: z.coerce.number().int().min(1).max(100).optional().default(10),
   })
   .superRefine(refineCustomDateRange);
 

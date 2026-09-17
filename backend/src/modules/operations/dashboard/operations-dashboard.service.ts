@@ -8,7 +8,6 @@ import {
   formatRelativeTime,
   toKolkataIsoDate,
 } from "../registration-awareness/operations-registration-time.js";
-import { VERIFIED_EMPLOYER_FILTER } from "../verifications/operations-verifications-analytics.js";
 import { PENDING_VERIFICATION_FILTER } from "../verifications/operations-verifications-analytics.js";
 import { resolveIndiaStateLabel } from "../employers/india-state-normalize.js";
 import { OperationsDepartmentModel } from "../rbac/operations-department.model.js";
@@ -32,7 +31,9 @@ import {
   mapWorkStatusToTaskBucket,
   percentChange,
   resolveDashboardDateRange,
+  resolveOverallChartFrom,
 } from "./operations-dashboard-domain.js";
+import { buildLocationActivity } from "./operations-dashboard-location.js";
 import type {
   OperationsDashboardOverviewQuery,
   OperationsDashboardExportQuery,
@@ -40,7 +41,6 @@ import type {
 import type {
   OperationsDashboardAlert,
   OperationsDashboardKpi,
-  OperationsDashboardLocationRow,
   OperationsDashboardMyTeam,
   OperationsDashboardOverviewResponse,
   OperationsDashboardQuickAction,
@@ -50,7 +50,6 @@ import type {
 } from "./operations-dashboard.types.js";
 
 const PLACEMENT_STATUSES = ["selected", "joined", "did_not_join"] as const;
-const TOP_STATES = 8;
 
 function trendDirection(
   percent: number | null,
@@ -59,8 +58,37 @@ function trendDirection(
   return percent > 0 ? "up" : "down";
 }
 
+/**
+ * Same verified-employer definition as Employers Overview KPIs.
+ * Includes explicit `verified` plus legacy WhatsApp-completed accounts.
+ */
+const EMPLOYERS_ONBOARDED_FILTER: Record<string, unknown> = {
+  $or: [
+    { verificationStatus: "verified" },
+    {
+      $and: [
+        { verificationStatus: { $in: [null, ""] } },
+        { isWhatsappVerified: true },
+        { registrationStatus: "completed" },
+      ],
+    },
+  ],
+};
+
 function createdAtRange(from: Date, toExclusive: Date) {
   return { createdAt: { $gte: from, $lt: toExclusive } };
+}
+
+function mergeFilters(
+  ...parts: Array<Record<string, unknown> | null | undefined>
+): Record<string, unknown> {
+  const clauses = parts.filter(
+    (part): part is Record<string, unknown> =>
+      Boolean(part) && Object.keys(part as object).length > 0,
+  );
+  if (clauses.length === 0) return {};
+  if (clauses.length === 1) return clauses[0];
+  return { $and: clauses };
 }
 
 function stateMatchFilter(state: string): Record<string, unknown> | null {
@@ -72,11 +100,14 @@ function stateMatchFilter(state: string): Record<string, unknown> | null {
   return {
     $or: [
       { state: regex },
+      { stateName: regex },
       { "address.state": regex },
       { preferredState: regex },
+      { preferredJobLocation: regex },
       { "preferredLocation.state": regex },
       { location: regex },
       { city: regex },
+      { cityName: regex },
       { "jobLocation.state": regex },
       { "location.state": regex },
     ],
@@ -91,17 +122,20 @@ async function countInRange(
   toExclusive: Date,
   stateFilter: Record<string, unknown> | null,
 ): Promise<number> {
-  const filter: Record<string, unknown> = {
-    ...base,
-    ...createdAtRange(from, toExclusive),
-  };
-  if (stateFilter) {
-    filter.$and = [
-      ...(Array.isArray(filter.$and) ? (filter.$and as unknown[]) : []),
-      stateFilter,
-    ];
-  }
-  return Number(await model.countDocuments(filter));
+  return Number(
+    await model.countDocuments(
+      mergeFilters(base, createdAtRange(from, toExclusive), stateFilter),
+    ),
+  );
+}
+
+async function countDocuments(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  model: { countDocuments: (filter: Record<string, unknown>) => any },
+  base: Record<string, unknown>,
+  stateFilter: Record<string, unknown> | null,
+): Promise<number> {
+  return Number(await model.countDocuments(mergeFilters(base, stateFilter)));
 }
 
 async function dailyCreatedCounts(
@@ -219,20 +253,30 @@ export const operationsDashboardService = {
     if (canEmployers) {
       kpiPromises.push(
         (async () => {
-          employersCurrent = await countInRange(
-            EmployerModel,
-            VERIFIED_EMPLOYER_FILTER,
-            range.from,
-            range.toExclusive,
-            stateFilter,
-          );
-          employersPrevious = await countInRange(
-            EmployerModel,
-            VERIFIED_EMPLOYER_FILTER,
-            range.previousFrom,
-            range.previousToExclusive,
-            stateFilter,
-          );
+          if (range.preset === "all") {
+            // Match Employers Overview Overall: network verified stock, not createdAt cohort.
+            employersCurrent = await countDocuments(
+              EmployerModel,
+              EMPLOYERS_ONBOARDED_FILTER,
+              stateFilter,
+            );
+            employersPrevious = 0;
+          } else {
+            employersCurrent = await countInRange(
+              EmployerModel,
+              EMPLOYERS_ONBOARDED_FILTER,
+              range.from,
+              range.toExclusive,
+              stateFilter,
+            );
+            employersPrevious = await countInRange(
+              EmployerModel,
+              EMPLOYERS_ONBOARDED_FILTER,
+              range.previousFrom,
+              range.previousToExclusive,
+              stateFilter,
+            );
+          }
         })(),
       );
     }
@@ -324,7 +368,10 @@ export const operationsDashboardService = {
       });
     }
 
-    const days = enumerateKolkataDays(range.from, range.toExclusive);
+    // Overall KPIs stay all-time; activity trend uses the last 12 months.
+    const trendFrom = resolveOverallChartFrom(range);
+
+    const days = enumerateKolkataDays(trendFrom, range.toExclusive);
     const activityTrend: OperationsDashboardTrendPoint[] = days.map((date) => {
       const [y, m, d] = date.split("-").map(Number);
       const labelDate = new Date(Date.UTC(y, m - 1, d, 12));
@@ -350,7 +397,7 @@ export const operationsDashboardService = {
         dailyCreatedCounts(
           JobSeekerModel,
           { registrationStatus: "COMPLETED", ...(stateFilter ?? {}) },
-          range.from,
+          trendFrom,
           range.toExclusive,
         ).then((map) => {
           for (const [date, count] of map) {
@@ -364,8 +411,8 @@ export const operationsDashboardService = {
       trendLoads.push(
         dailyCreatedCounts(
           EmployerModel,
-          { ...VERIFIED_EMPLOYER_FILTER, ...(stateFilter ?? {}) },
-          range.from,
+          { ...EMPLOYERS_ONBOARDED_FILTER, ...(stateFilter ?? {}) },
+          trendFrom,
           range.toExclusive,
         ).then((map) => {
           for (const [date, count] of map) {
@@ -380,7 +427,7 @@ export const operationsDashboardService = {
         dailyCreatedCounts(
           JobModel,
           { ...(stateFilter ?? {}) },
-          range.from,
+          trendFrom,
           range.toExclusive,
         ).then((map) => {
           for (const [date, count] of map) {
@@ -398,7 +445,7 @@ export const operationsDashboardService = {
             status: { $in: [...PLACEMENT_STATUSES] },
             ...(stateFilter ?? {}),
           },
-          range.from,
+          trendFrom,
           range.toExclusive,
         ).then((map) => {
           for (const [date, count] of map) {
@@ -416,6 +463,8 @@ export const operationsDashboardService = {
       canJobs,
       canPlacements,
       range,
+      selectedState: query.state ?? "",
+      employerMatch: EMPLOYERS_ONBOARDED_FILTER,
     });
 
     const workScope = workDepartmentScope(access, query.departmentId);
@@ -423,6 +472,8 @@ export const operationsDashboardService = {
       ? await buildTaskBundle({
           workScope,
           query,
+          range,
+          access,
           now,
         })
       : {
@@ -529,6 +580,19 @@ export const operationsDashboardService = {
     lines.push(`Pending,${overview.taskStatus.pending}`);
     lines.push(`Overdue,${overview.taskStatus.overdue}`);
     lines.push("");
+    lines.push("Operations by Location");
+    lines.push("State,TotalActivity,SharePercent,TrendPercent");
+    for (const row of overview.operationsByLocation) {
+      lines.push(
+        [
+          csvEscape(row.state),
+          row.totalActivity,
+          row.sharePercent ?? "",
+          row.trendPercent ?? (row.trendDirection === "new" ? "new" : ""),
+        ].join(","),
+      );
+    }
+    lines.push("");
     lines.push("Recent Tasks");
     lines.push("DisplayId,Title,Type,Assignee,Priority,Status,DueAt");
     for (const task of overview.recentTasks.items) {
@@ -578,167 +642,26 @@ function csvEscape(value: string | number): string {
   return text;
 }
 
-async function buildLocationActivity(input: {
-  canCandidates: boolean;
-  canEmployers: boolean;
-  canJobs: boolean;
-  canPlacements: boolean;
-  range: ReturnType<typeof resolveDashboardDateRange>;
-}): Promise<OperationsDashboardLocationRow[]> {
-  const current = new Map<string, number>();
-  const previous = new Map<string, number>();
-
-  async function accumulate(
-    enabled: boolean,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    model: { find: (...args: any[]) => any },
-    match: Record<string, unknown>,
-    from: Date,
-    toExclusive: Date,
-    target: Map<string, number>,
-  ) {
-    if (!enabled) return;
-    const docs = (await model
-      .find(
-        {
-          ...match,
-          createdAt: { $gte: from, $lt: toExclusive },
-        },
-        {
-          state: 1,
-          address: 1,
-          preferredState: 1,
-          preferredLocation: 1,
-          location: 1,
-          city: 1,
-          jobLocation: 1,
-        },
-      )
-      .limit(5000)
-      .lean()) as Array<Record<string, unknown>>;
-    for (const doc of docs) {
-      const label =
-        resolveIndiaStateLabel(
-          String(
-            doc.state ??
-              (doc.address as { state?: string } | undefined)?.state ??
-              doc.preferredState ??
-              (doc.preferredLocation as { state?: string } | undefined)?.state ??
-              (doc.jobLocation as { state?: string } | undefined)?.state ??
-              doc.location ??
-              "",
-          ),
-        ) ?? "Unknown";
-      target.set(label, (target.get(label) ?? 0) + 1);
-    }
-  }
-
-  await Promise.all([
-    accumulate(
-      input.canCandidates,
-      JobSeekerModel,
-      { registrationStatus: "COMPLETED" },
-      input.range.from,
-      input.range.toExclusive,
-      current,
-    ),
-    accumulate(
-      input.canEmployers,
-      EmployerModel,
-      VERIFIED_EMPLOYER_FILTER,
-      input.range.from,
-      input.range.toExclusive,
-      current,
-    ),
-    accumulate(
-      input.canJobs,
-      JobModel,
-      {},
-      input.range.from,
-      input.range.toExclusive,
-      current,
-    ),
-    accumulate(
-      input.canPlacements,
-      ApplicationModel,
-      { status: { $in: [...PLACEMENT_STATUSES] } },
-      input.range.from,
-      input.range.toExclusive,
-      current,
-    ),
-    accumulate(
-      input.canCandidates,
-      JobSeekerModel,
-      { registrationStatus: "COMPLETED" },
-      input.range.previousFrom,
-      input.range.previousToExclusive,
-      previous,
-    ),
-    accumulate(
-      input.canEmployers,
-      EmployerModel,
-      VERIFIED_EMPLOYER_FILTER,
-      input.range.previousFrom,
-      input.range.previousToExclusive,
-      previous,
-    ),
-    accumulate(
-      input.canJobs,
-      JobModel,
-      {},
-      input.range.previousFrom,
-      input.range.previousToExclusive,
-      previous,
-    ),
-    accumulate(
-      input.canPlacements,
-      ApplicationModel,
-      { status: { $in: [...PLACEMENT_STATUSES] } },
-      input.range.previousFrom,
-      input.range.previousToExclusive,
-      previous,
-    ),
-  ]);
-
-  const ranked = [...current.entries()]
-    .map(([state, totalActivity]) => {
-      const prev = previous.get(state) ?? 0;
-      const trend = percentChange(totalActivity, prev);
-      return {
-        state,
-        totalActivity,
-        trendPercent: trend,
-        trendDirection: trendDirection(trend),
-      };
-    })
-    .sort((a, b) => b.totalActivity - a.totalActivity);
-
-  if (ranked.length <= TOP_STATES) return ranked;
-
-  const top = ranked.slice(0, TOP_STATES - 1);
-  const rest = ranked.slice(TOP_STATES - 1);
-  const othersActivity = rest.reduce((sum, row) => sum + row.totalActivity, 0);
-  const othersPrev = rest.reduce(
-    (sum, row) => sum + (previous.get(row.state) ?? 0),
-    0,
-  );
-  const othersTrend = percentChange(othersActivity, othersPrev);
-  top.push({
-    state: "Others",
-    totalActivity: othersActivity,
-    trendPercent: othersTrend,
-    trendDirection: trendDirection(othersTrend),
-  });
-  return top;
-}
-
 async function buildTaskBundle(input: {
   workScope: Record<string, unknown>;
   query: OperationsDashboardOverviewQuery;
+  range: ReturnType<typeof resolveDashboardDateRange>;
+  access: OperationsResolvedAccess;
   now: Date;
 }) {
+  const dateScoped =
+    input.range.preset === "all"
+      ? {}
+      : {
+          createdAt: {
+            $gte: input.range.from,
+            $lt: input.range.toExclusive,
+          },
+        };
+
   const openFilter = {
     ...input.workScope,
+    ...dateScoped,
     status: { $nin: ["cancelled"] },
   };
   const items = await OperationsWorkItemModel.find(openFilter)
@@ -746,7 +669,7 @@ async function buildTaskBundle(input: {
       "_id displayId title type priority status dueAt assignedToUserId departmentId updatedAt",
     )
     .sort({ updatedAt: -1 })
-    .limit(2000)
+    .limit(5000)
     .lean();
 
   let completed = 0;
@@ -775,25 +698,18 @@ async function buildTaskBundle(input: {
     assignees.map((user) => [String(user._id), user.fullName]),
   );
 
-  const departmentIds = [
-    ...new Set(
-      items
-        .map((item) =>
-          item.departmentId ? String(item.departmentId) : null,
-        )
-        .filter((id): id is string => Boolean(id)),
-    ),
-  ];
-  const departments = departmentIds.length
-    ? await OperationsDepartmentModel.find({
-        _id: { $in: departmentIds },
-      })
-        .select("_id name")
-        .lean()
-    : [];
+  const activeDepartments = await OperationsDepartmentModel.find(
+    authorizedDepartmentsFilter(input.access),
+  )
+    .select("_id name")
+    .sort({ name: 1 })
+    .lean();
   const departmentName = new Map(
-    departments.map((dept) => [String(dept._id), dept.name]),
+    activeDepartments.map((dept) => [String(dept._id), dept.name]),
   );
+  for (const dept of activeDepartments) {
+    byDepartment.set(String(dept._id), { completed: 0, total: 0 });
+  }
 
   const recentCandidates: OperationsDashboardRecentTask[] = [];
 
@@ -815,6 +731,9 @@ async function buildTaskBundle(input: {
       row.total += 1;
       if (bucket === "completed") row.completed += 1;
       byDepartment.set(deptId, row);
+      if (!departmentName.has(deptId)) {
+        departmentName.set(deptId, "Unassigned team");
+      }
     }
 
     recentCandidates.push({
@@ -835,6 +754,21 @@ async function buildTaskBundle(input: {
       statusBucket: bucket,
       href: `/operations/my-work/${String(item._id)}`,
     });
+  }
+
+  // Resolve names for departments that appear on work items but are inactive/missing.
+  const missingDeptIds = [...byDepartment.keys()].filter(
+    (id) => !departmentName.has(id) || departmentName.get(id) === "Unassigned team",
+  );
+  if (missingDeptIds.length > 0) {
+    const extra = await OperationsDepartmentModel.find({
+      _id: { $in: missingDeptIds },
+    })
+      .select("_id name")
+      .lean();
+    for (const dept of extra) {
+      departmentName.set(String(dept._id), dept.name);
+    }
   }
 
   const total = completed + inProgress + pending + overdue;
@@ -858,30 +792,33 @@ async function buildTaskBundle(input: {
       teamName: departmentName.get(departmentId) ?? "Unassigned team",
       completed: stats.completed,
       total: stats.total,
-      completionRate: completionRate(stats.completed, stats.total),
+      completionRate:
+        stats.total > 0 ? completionRate(stats.completed, stats.total) : 0,
     }))
+    .filter((row) => row.total > 0)
     .sort(
       (a, b) => (b.completionRate ?? -1) - (a.completionRate ?? -1),
     );
 
   const search = input.query.taskSearch.trim().toLowerCase();
-  const filtered = recentCandidates.filter((task) => {
-    if (input.query.taskTab !== "all" && task.statusBucket !== input.query.taskTab) {
-      return false;
-    }
-    if (!search) return true;
-    return (
-      task.title.toLowerCase().includes(search) ||
-      task.displayId.toLowerCase().includes(search) ||
-      (task.assignedToName?.toLowerCase().includes(search) ?? false)
+  // Return an unfiltered pool so the admin can tab/search client-side without
+  // refetching the entire Overview payload.
+  const poolLimit = Math.max(input.query.taskLimit, 100);
+  let pool = recentCandidates;
+  if (search) {
+    pool = recentCandidates.filter(
+      (task) =>
+        task.title.toLowerCase().includes(search) ||
+        task.displayId.toLowerCase().includes(search) ||
+        (task.assignedToName?.toLowerCase().includes(search) ?? false),
     );
-  });
+  }
 
   return {
     taskStatus,
     teamPerformance,
     recentTasks: {
-      tab: input.query.taskTab,
+      tab: "all",
       counts: {
         all: recentCandidates.length,
         pending,
@@ -889,7 +826,7 @@ async function buildTaskBundle(input: {
         overdue,
         completed,
       },
-      items: filtered.slice(0, input.query.taskLimit),
+      items: pool.slice(0, poolLimit),
     },
   };
 }

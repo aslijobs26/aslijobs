@@ -36,6 +36,25 @@ export function isOperationsSessionTransientError(error: unknown): boolean {
   return status === 408 || status === 429 || (status >= 502 && status <= 504);
 }
 
+/**
+ * Shared TanStack Query retry for Operations module reads.
+ * Covers Vite proxy 503 during backend restarts and production gateway blips.
+ */
+export function shouldRetryOperationsQuery(
+  failureCount: number,
+  error: unknown,
+): boolean {
+  if (failureCount >= 4) {
+    return false;
+  }
+  return isOperationsSessionTransientError(error);
+}
+
+/** Exponential backoff: ~0.8s → 1.6s → 3.2s → 6s (covers typical tsx watch restarts). */
+export function operationsQueryRetryDelay(attemptIndex: number): number {
+  return Math.min(800 * 2 ** attemptIndex, 6_000);
+}
+
 export function shouldClearSessionOnRefreshError(error: unknown): boolean {
   if (!isAxiosError(error)) {
     return true;

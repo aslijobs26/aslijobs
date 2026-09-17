@@ -59,6 +59,12 @@ const operationsTeamUserSchema = new Schema(
       default: null,
       index: true,
     },
+    orgUnitId: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsOrgUnit",
+      default: null,
+      index: true,
+    },
     invitedAt: {
       type: Date,
       default: null,

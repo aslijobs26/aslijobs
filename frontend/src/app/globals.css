@@ -95,6 +95,17 @@ body {
   font-family: var(--font-sans);
 }
 
+/*
+ * Desktop site footer overscroll: when rubber-banding past the bottom,
+ * paint the footer color instead of the default white canvas.
+ * Scoped to md+ and only when the public site footer is mounted.
+ */
+@media (min-width: 768px) {
+  html:has([data-site-footer]) {
+    background-color: var(--color-foreground);
+  }
+}
+
 @utility bg-whatsapp-cta-surface {
   background-image: linear-gradient(
     90deg,

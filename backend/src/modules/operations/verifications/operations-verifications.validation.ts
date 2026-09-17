@@ -12,7 +12,7 @@ export const verificationsAnalyticsQuerySchema = z.object({
   preset: z
     .enum(VERIFICATIONS_ANALYTICS_PRESETS)
     .optional()
-    .default("last_30_days"),
+    .default("all"),
   dateFrom: isoDateStringSchema.optional().default(""),
   dateTo: isoDateStringSchema.optional().default(""),
 });

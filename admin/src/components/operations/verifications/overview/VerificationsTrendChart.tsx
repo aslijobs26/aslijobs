@@ -15,11 +15,14 @@ import { OperationsCard } from "../../../ui/OperationsCard";
 interface VerificationsTrendChartProps {
   data: OperationsVerificationsTrendPoint[];
   rangeLabel?: string;
+  /** Overall uses fewer monthly buckets — widen bars to match Jobs Overview. */
+  isOverall?: boolean;
 }
 
 export function VerificationsTrendChart({
   data,
   rangeLabel,
+  isOverall = false,
 }: VerificationsTrendChartProps) {
   const colors = useOperationsThemeColors();
   const series = Array.isArray(data) ? data : [];
@@ -29,13 +32,42 @@ export function VerificationsTrendChart({
   );
   const axisTick = { fontSize: 10, fill: "#5a6570" };
   const pointCount = series.length;
-  const maxBarSize = pointCount <= 14 ? 28 : pointCount <= 26 ? 20 : 14;
-  const categoryGap = pointCount <= 14 ? "28%" : pointCount <= 26 ? "22%" : "18%";
+  const maxBarSize = isOverall
+    ? pointCount <= 8
+      ? 56
+      : pointCount <= 14
+        ? 48
+        : pointCount <= 26
+          ? 34
+          : 22
+    : pointCount <= 14
+      ? 36
+      : pointCount <= 26
+        ? 26
+        : 16;
+  const categoryGap = isOverall
+    ? pointCount <= 8
+      ? "8%"
+      : pointCount <= 14
+        ? "6%"
+        : pointCount <= 26
+          ? "5%"
+          : "4%"
+    : pointCount <= 14
+      ? "28%"
+      : pointCount <= 26
+        ? "22%"
+        : "18%";
+  const barGap = isOverall ? 2 : 3;
 
   return (
     <OperationsCard
       title="Verifications Trend"
-      subtitle={rangeLabel || "Submitted vs verified vs rejected"}
+      subtitle={
+        isOverall
+          ? "Last 6 months · submitted vs verified vs rejected"
+          : rangeLabel || "Submitted vs verified vs rejected"
+      }
       className="employers-analytics-card min-w-0"
     >
       {!hasData ? (
@@ -48,7 +80,7 @@ export function VerificationsTrendChart({
             <BarChart
               data={series}
               margin={{ top: 8, right: 8, left: 0, bottom: 4 }}
-              barGap={2}
+              barGap={barGap}
               barCategoryGap={categoryGap}
             >
               <CartesianGrid
@@ -100,19 +132,19 @@ export function VerificationsTrendChart({
               <Bar
                 dataKey="submitted"
                 fill={colors.chartAccent}
-                radius={[3, 3, 0, 0]}
+                radius={[4, 4, 0, 0]}
                 maxBarSize={maxBarSize}
               />
               <Bar
                 dataKey="verified"
                 fill={colors.success}
-                radius={[3, 3, 0, 0]}
+                radius={[4, 4, 0, 0]}
                 maxBarSize={maxBarSize}
               />
               <Bar
                 dataKey="rejected"
                 fill={colors.danger}
-                radius={[3, 3, 0, 0]}
+                radius={[4, 4, 0, 0]}
                 maxBarSize={maxBarSize}
               />
             </BarChart>

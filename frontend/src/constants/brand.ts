@@ -1,1 +1,1 @@
-export const BRAND_TAGLINE = "India's Trusted WhatsApp Job Network";
+export const BRAND_TAGLINE = "Advance staffing and labor intelligence";

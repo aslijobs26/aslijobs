@@ -74,6 +74,7 @@ const STATE_ALIASES: Record<string, IndiaStateLabel> = {
   pondicherry: "Puducherry",
   puducherry: "Puducherry",
   "tamil nadu": "Tamil Nadu",
+  tamilnadu: "Tamil Nadu",
   telangana: "Telangana",
   "uttar pradesh": "Uttar Pradesh",
   uttaranchal: "Uttarakhand",

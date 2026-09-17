@@ -15,6 +15,7 @@ import { OperationsJobsPostPage } from "./operations-jobs-post-page";
 import { OperationsLoginPage } from "./operations-login-page";
 import { OperationsActivityLogPage } from "./operations-activity-log-page";
 import { OperationsDepartmentsPage } from "./operations-departments-page";
+import { OperationsOrganizationPage } from "./operations-organization-page";
 import { OperationsPlaceholderPage } from "./operations-placeholder-page";
 import { OperationsRoleDetailPage } from "./operations-role-detail-page";
 import { OperationsRoleEditorPage } from "./operations-role-editor-page";
@@ -140,9 +141,7 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.ORGANIZATION}
-          element={
-            <Navigate to={OPERATIONS_ROUTES.TEAM_MANAGEMENT} replace />
-          }
+          element={<OperationsOrganizationPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.TEAM_MANAGEMENT}

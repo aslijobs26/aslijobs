@@ -18,11 +18,23 @@ const ICONS = {
   placements: UsersRound,
 } as const;
 
-const ACCENTS = {
-  jobseekers: "text-sky-600 bg-sky-50",
-  employers: "text-emerald-600 bg-emerald-50",
-  jobs: "text-orange-600 bg-orange-50",
-  placements: "text-violet-600 bg-violet-50",
+const CARD_TONES = {
+  jobseekers: {
+    card: "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white hover:border-sky-300 dark:border-sky-500/25 dark:from-sky-500/10 dark:to-surface dark:hover:border-sky-400/40",
+    iconWrap: "bg-sky-500/20 text-sky-600 dark:text-sky-400",
+  },
+  employers: {
+    card: "border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white hover:border-emerald-300 dark:border-emerald-500/25 dark:from-emerald-500/10 dark:to-surface dark:hover:border-emerald-400/40",
+    iconWrap: "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400",
+  },
+  jobs: {
+    card: "border-orange-200/80 bg-gradient-to-br from-orange-50 to-white hover:border-orange-300 dark:border-orange-500/25 dark:from-orange-500/10 dark:to-surface dark:hover:border-orange-400/40",
+    iconWrap: "bg-orange-500/20 text-orange-600 dark:text-orange-400",
+  },
+  placements: {
+    card: "border-violet-200/80 bg-gradient-to-br from-violet-50 to-white hover:border-violet-300 dark:border-violet-500/25 dark:from-violet-500/10 dark:to-surface dark:hover:border-violet-400/40",
+    iconWrap: "bg-violet-500/20 text-violet-600 dark:text-violet-400",
+  },
 } as const;
 
 export function OverviewKpiStrip({
@@ -42,11 +54,15 @@ export function OverviewKpiStrip({
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {kpis.map((kpi) => {
         const Icon = ICONS[kpi.id];
+        const tone = CARD_TONES[kpi.id];
         return (
           <Link
             key={kpi.id}
             to={kpi.href}
-            className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm transition hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className={cn(
+              "ops-brand-border-glow rounded-xl border p-4 shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+              tone.card,
+            )}
           >
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -60,7 +76,7 @@ export function OverviewKpiStrip({
               <span
                 className={cn(
                   "inline-flex size-9 items-center justify-center rounded-lg",
-                  ACCENTS[kpi.id],
+                  tone.iconWrap,
                 )}
               >
                 <Icon className="size-4" aria-hidden />
@@ -128,7 +144,7 @@ export function OverviewModuleTabs({
     <div
       role="tablist"
       aria-label="Operations modules"
-      className="flex min-w-0 gap-1 overflow-x-auto border-b border-border-subtle pb-px"
+      className="-mx-0.5 flex min-w-0 gap-1 overflow-x-auto overscroll-x-contain border-b border-border-subtle px-0.5 pb-px scrollbar-hidden"
     >
       {tabs.map((tab) => (
         <Link

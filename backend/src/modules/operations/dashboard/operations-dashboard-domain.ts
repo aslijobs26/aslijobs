@@ -58,6 +58,12 @@ export function resolveDashboardDateRange(input: {
   let label: string;
 
   switch (input.datePreset) {
+    case "all": {
+      from = startOfKolkataDay(new Date(Date.UTC(2020, 0, 1, 12)));
+      toExclusive = tomorrowStart;
+      label = "Overall";
+      break;
+    }
     case "last_7_days": {
       toExclusive = tomorrowStart;
       from = new Date(todayStart.getTime() - 6 * MS_PER_DAY);
@@ -110,6 +116,68 @@ export function resolveDashboardDateRange(input: {
     previousFrom,
     previousToExclusive,
     label,
+  };
+}
+
+/**
+ * Overall KPIs stay all-time. Charts use the last 12 months so trends are readable.
+ */
+export function resolveOverallChartFrom(range: DashboardDateRange): Date {
+  if (range.preset !== "all") {
+    return range.from;
+  }
+  const twelveMonthsAgo = new Date(range.toExclusive.getTime() - 1);
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+  twelveMonthsAgo.setDate(1);
+  const capped = startOfKolkataDay(twelveMonthsAgo);
+  return capped.getTime() > range.from.getTime() ? capped : range.from;
+}
+
+export type LocationComparisonRange = {
+  totalsFrom: Date;
+  totalsToExclusive: Date;
+  trendCurrentFrom: Date;
+  trendCurrentToExclusive: Date;
+  trendPreviousFrom: Date;
+  trendPreviousToExclusive: Date;
+  trendCaption: string;
+  usesDistinctTrendWindow: boolean;
+};
+
+/**
+ * Location totals follow the selected date range. Overall trend compares the last
+ * 12 months with the prior 12 months so the default Overview view is not blank.
+ */
+export function resolveLocationComparisonRange(
+  range: DashboardDateRange,
+): LocationComparisonRange {
+  if (range.preset !== "all") {
+    return {
+      totalsFrom: range.from,
+      totalsToExclusive: range.toExclusive,
+      trendCurrentFrom: range.from,
+      trendCurrentToExclusive: range.toExclusive,
+      trendPreviousFrom: range.previousFrom,
+      trendPreviousToExclusive: range.previousToExclusive,
+      trendCaption: "vs previous period",
+      usesDistinctTrendWindow: false,
+    };
+  }
+
+  const trendCurrentFrom = resolveOverallChartFrom(range);
+  const durationMs = Math.max(
+    range.toExclusive.getTime() - trendCurrentFrom.getTime(),
+    MS_PER_DAY,
+  );
+  return {
+    totalsFrom: range.from,
+    totalsToExclusive: range.toExclusive,
+    trendCurrentFrom,
+    trendCurrentToExclusive: range.toExclusive,
+    trendPreviousFrom: new Date(trendCurrentFrom.getTime() - durationMs),
+    trendPreviousToExclusive: trendCurrentFrom,
+    trendCaption: "vs prior 12 months",
+    usesDistinctTrendWindow: true,
   };
 }
 

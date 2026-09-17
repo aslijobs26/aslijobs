@@ -1,4 +1,5 @@
 export type DashboardDatePreset =
+  | "all"
   | "last_7_days"
   | "last_30_days"
   | "last_90_days"
@@ -51,8 +52,9 @@ export interface OperationsDashboardOverview {
   operationsByLocation: Array<{
     state: string;
     totalActivity: number;
+    sharePercent: number | null;
     trendPercent: number | null;
-    trendDirection: "up" | "down" | "neutral";
+    trendDirection: "up" | "down" | "neutral" | "new";
   }>;
   taskStatus: {
     total: number;

@@ -104,11 +104,36 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
     cities: [],
     topLocations: [],
   };
+  const isOverall = data.range.preset === "all";
   const trendPointCount = postingsTrend.length;
-  const trendMaxBarSize =
-    trendPointCount <= 14 ? 36 : trendPointCount <= 26 ? 26 : 16;
-  const trendCategoryGap =
-    trendPointCount <= 14 ? "28%" : trendPointCount <= 26 ? "22%" : "18%";
+  // Overall uses monthly buckets — widen bars vs denser day/week ranges.
+  const trendMaxBarSize = isOverall
+    ? trendPointCount <= 8
+      ? 56
+      : trendPointCount <= 14
+        ? 48
+        : trendPointCount <= 26
+          ? 34
+          : 22
+    : trendPointCount <= 14
+      ? 36
+      : trendPointCount <= 26
+        ? 26
+        : 16;
+  const trendCategoryGap = isOverall
+    ? trendPointCount <= 8
+      ? "8%"
+      : trendPointCount <= 14
+        ? "6%"
+        : trendPointCount <= 26
+          ? "5%"
+          : "4%"
+    : trendPointCount <= 14
+      ? "28%"
+      : trendPointCount <= 26
+        ? "22%"
+        : "18%";
+  const trendBarGap = isOverall ? 2 : 3;
 
   return (
     <div className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
@@ -116,8 +141,8 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
         <OperationsCard
           title="Job Postings Trend"
           subtitle={
-            data.range.preset === "all"
-              ? "Last 12 months · jobs posted vs approved"
+            isOverall
+              ? "Last 6 months · jobs posted vs approved"
               : "Jobs posted vs approved"
           }
           className="jobs-analytics-card min-w-0"
@@ -130,7 +155,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
                 <BarChart
                   data={postingsTrend}
                   margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-                  barGap={3}
+                  barGap={trendBarGap}
                   barCategoryGap={trendCategoryGap}
                 >
                   <CartesianGrid

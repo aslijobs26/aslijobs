@@ -24,6 +24,7 @@ export const createOperationsTeamMemberBodySchema = z.object({
   password: z.string().min(8).max(72),
   roleId: objectId,
   departmentId: z.union([objectId, z.literal(""), z.null()]).optional(),
+  orgUnitId: z.union([objectId, z.literal(""), z.null()]).optional(),
   status: z.enum(["active", "inactive"]).optional().default("active"),
 });
 
@@ -38,6 +39,7 @@ export const updateOperationsTeamMemberBodySchema = z.object({
   password: z.string().min(8).max(72).optional(),
   roleId: objectId.optional(),
   departmentId: z.union([objectId, z.literal(""), z.null()]).optional(),
+  orgUnitId: z.union([objectId, z.literal(""), z.null()]).optional(),
 });
 
 export const updateOperationsTeamMemberStatusBodySchema = z.object({

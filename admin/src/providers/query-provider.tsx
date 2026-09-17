@@ -1,13 +1,21 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { useState, type ReactNode } from "react";
+import {
+  operationsQueryRetryDelay,
+  shouldRetryOperationsQuery,
+} from "../utils/operations-session-errors";
 
 type QueryProviderProps = {
   children: ReactNode;
 };
 
 function shouldRetryQuery(failureCount: number, error: unknown): boolean {
-  // One retry max for recoverable failures; never hammer gateway/proxy outages.
+  // Prefer Operations-aware transient retries (502/503/504, network).
+  if (shouldRetryOperationsQuery(failureCount, error)) {
+    return true;
+  }
+
   if (failureCount >= 1) {
     return false;
   }
@@ -16,25 +24,18 @@ function shouldRetryQuery(failureCount: number, error: unknown): boolean {
     return true;
   }
 
-  if (
-    error.code === "ECONNABORTED" ||
-    error.code === "ERR_NETWORK" ||
-    error.message.toLowerCase().includes("network error")
-  ) {
-    return false;
-  }
-
   const status = error.response?.status;
   if (status == null) {
     return false;
   }
 
-  // Vite returns 502 when the backend is unreachable (ECONNREFUSED).
-  // Retrying immediately only multiplies console/network noise.
+  // Auth / missing resources must not retry.
   if (status === 401 || status === 403 || status === 404) {
     return false;
   }
 
+  // Other 5xx (e.g. 500 bugs) — one quick retry only via Operations helper above
+  // when classified as gateway; plain 500 stops here.
   if (status >= 500) {
     return false;
   }
@@ -50,6 +51,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
           queries: {
             staleTime: 60 * 1000,
             retry: shouldRetryQuery,
+            retryDelay: operationsQueryRetryDelay,
             refetchOnWindowFocus: true,
           },
         },

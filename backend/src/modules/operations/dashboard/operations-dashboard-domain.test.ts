@@ -5,6 +5,7 @@ import {
   mapWorkStatusToTaskBucket,
   percentChange,
   resolveDashboardDateRange,
+  resolveOverallChartFrom,
 } from "./operations-dashboard-domain.js";
 
 describe("operations dashboard domain", () => {
@@ -17,6 +18,29 @@ describe("operations dashboard domain", () => {
   it("computes completion rate", () => {
     assert.equal(completionRate(1, 2), 50);
     assert.equal(completionRate(0, 0), null);
+  });
+
+  it("resolves overall all-time range", () => {
+    const now = new Date("2026-09-12T10:00:00.000Z");
+    const range = resolveDashboardDateRange({
+      datePreset: "all",
+      now,
+    });
+    assert.equal(range.label, "Overall");
+    assert.equal(range.preset, "all");
+    assert.ok(range.from.getTime() < range.toExclusive.getTime());
+    assert.ok(range.from.getTime() < new Date("2020-01-02T00:00:00.000Z").getTime());
+  });
+
+  it("caps overall chart windows to the last 12 months", () => {
+    const now = new Date("2026-09-12T10:00:00.000Z");
+    const range = resolveDashboardDateRange({
+      datePreset: "all",
+      now,
+    });
+    const chartFrom = resolveOverallChartFrom(range);
+    assert.ok(chartFrom.getTime() > range.from.getTime());
+    assert.ok(chartFrom.getTime() < range.toExclusive.getTime());
   });
 
   it("resolves last 30 days with equal previous window", () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { SettingsSection } from "@/components/job-seeker-settings/SettingsSection";
 import { JOB_SEEKER_PROFILE_VISIBILITY_OPTIONS } from "@/constants/job-seeker-profile";
 import { ROUTES } from "@/constants/routes";
@@ -34,6 +35,8 @@ export function PrivacySecurityPanel({
   const [visibility, setVisibility] = useState<JobSeekerProfileVisibility>(
     jobSeeker.profileVisibility ?? "visible",
   );
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     setVisibility(jobSeeker.profileVisibility ?? "visible");
@@ -49,8 +52,19 @@ export function PrivacySecurityPanel({
     }
   };
 
-  const handleLogout = () => {
+  const handleLogoutRequest = () => {
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
     void clearJobSeekerClientSession(queryClient).finally(() => {
+      setIsLoggingOut(false);
+      setIsLogoutConfirmOpen(false);
       showAppToast("Signed out successfully", "success");
       router.replace(ROUTES.JOB_SEEKER_LOGIN);
     });
@@ -142,7 +156,7 @@ export function PrivacySecurityPanel({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={handleLogoutRequest}
             className="inline-flex h-9 items-center gap-2 rounded-xl border border-primary px-4 text-xs font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:text-sm"
           >
             <LogOut className="size-4" aria-hidden="true" />
@@ -157,6 +171,17 @@ export function PrivacySecurityPanel({
           </button>
         </div>
       </SettingsSection>
+
+      <LogoutConfirmDialog
+        open={isLogoutConfirmOpen}
+        isSubmitting={isLoggingOut}
+        onClose={() => {
+          if (!isLoggingOut) {
+            setIsLogoutConfirmOpen(false);
+          }
+        }}
+        onConfirm={handleLogoutConfirm}
+      />
     </div>
   );
 }

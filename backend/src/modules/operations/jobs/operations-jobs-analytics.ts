@@ -420,8 +420,8 @@ function advanceSeriesCursor(
 }
 
 /**
- * Overall KPIs stay all-time, but the trend chart only plots the last 12 months
- * so bars stay thick and readable.
+ * Overall KPIs stay all-time, but the trend chart only plots the last 6 months
+ * so grouped bars stay thick and readable in the Overview card.
  */
 function trendFillFrom(
   range: OperationsJobsAnalyticsRange,
@@ -431,9 +431,9 @@ function trendFillFrom(
   if (range.preset !== "all") {
     return from;
   }
-  const twelveMonthsAgo = startOfMonth(to);
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
-  return twelveMonthsAgo.getTime() > from.getTime() ? twelveMonthsAgo : from;
+  const sixMonthsAgo = startOfMonth(to);
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  return sixMonthsAgo.getTime() > from.getTime() ? sixMonthsAgo : from;
 }
 
 export function fillTimeSeries(

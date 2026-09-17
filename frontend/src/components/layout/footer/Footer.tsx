@@ -9,7 +9,10 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="hidden bg-foreground text-surface md:block">
+    <footer
+      data-site-footer
+      className="relative hidden bg-foreground text-surface md:block md:shadow-[0_100vh_0_100vh_var(--color-foreground)]"
+    >
       <Container className="py-10 sm:py-12 lg:py-14">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))_minmax(0,1.35fr)] xl:gap-8">
           <div className="md:col-span-2 xl:col-span-1">

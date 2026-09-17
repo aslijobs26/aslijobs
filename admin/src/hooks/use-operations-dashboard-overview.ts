@@ -4,6 +4,10 @@ import {
   fetchOperationsDashboardOverview,
 } from "../services/operations-dashboard.service";
 import type { OperationsDashboardOverviewParams } from "../types/operations-dashboard-overview";
+import {
+  operationsQueryRetryDelay,
+  shouldRetryOperationsQuery,
+} from "../utils/operations-session-errors";
 
 export const OPERATIONS_DASHBOARD_QUERY_KEY = [
   "operations",
@@ -20,6 +24,9 @@ export function useOperationsDashboardOverview(
     queryFn: () => fetchOperationsDashboardOverview(params),
     enabled: options?.enabled ?? true,
     staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    retry: shouldRetryOperationsQuery,
+    retryDelay: operationsQueryRetryDelay,
   });
 }
 

@@ -169,7 +169,7 @@ function DescriptionSection({
 }
 
 const overviewCardBodyClassName = "p-2.5 sm:p-3 xl:p-2";
-const pairedOverviewCardClassName = "w-full min-w-0";
+const pairedOverviewCardClassName = "h-full w-full min-w-0";
 const sideOverviewCardClassName = "h-auto w-full self-start";
 
 export function JobOverviewPanel({
@@ -203,7 +203,7 @@ export function JobOverviewPanel({
 
   return (
     <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-12 xl:gap-2">
-      <div className="grid grid-cols-1 gap-2.5 lg:col-span-9 lg:grid-cols-9 lg:items-start xl:gap-2">
+      <div className="grid grid-cols-1 gap-2.5 lg:col-span-9 lg:grid-cols-9 lg:items-stretch xl:gap-2">
         <OperationsCard
           title="Job Description"
           className={cn(

@@ -6,6 +6,7 @@ import { buildListPagination } from "../../../utils/pagination.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
 import { OperationsDepartmentModel } from "../rbac/operations-department.model.js";
 import { OperationsRoleModel } from "../rbac/operations-role.model.js";
+import { OperationsOrgUnitModel } from "../organization/operations-org-unit.model.js";
 import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
 import {
   getRoleDescendantIds,
@@ -27,12 +28,17 @@ function toPublicMember(doc: {
   role: string;
   roleId?: mongoose.Types.ObjectId | null;
   departmentId?: mongoose.Types.ObjectId | null;
+  orgUnitId?: mongoose.Types.ObjectId | null;
   status: string;
   lastActiveAt?: Date | null;
   invitedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
-}, extras?: { roleName?: string | null; departmentName?: string | null }) {
+}, extras?: {
+  roleName?: string | null;
+  departmentName?: string | null;
+  orgUnitName?: string | null;
+}) {
   return {
     id: String(doc._id),
     fullName: doc.fullName,
@@ -43,6 +49,8 @@ function toPublicMember(doc: {
     roleName: extras?.roleName ?? null,
     departmentId: doc.departmentId ? String(doc.departmentId) : null,
     departmentName: extras?.departmentName ?? null,
+    orgUnitId: doc.orgUnitId ? String(doc.orgUnitId) : null,
+    orgUnitName: extras?.orgUnitName ?? null,
     status: doc.status,
     lastActiveAt: doc.lastActiveAt ? doc.lastActiveAt.toISOString() : null,
     invitedAt: doc.invitedAt ? doc.invitedAt.toISOString() : null,
@@ -208,6 +216,23 @@ class OperationsTeamService {
       }
     }
 
+    const orgUnitId =
+      body.orgUnitId && body.orgUnitId !== ""
+        ? String(body.orgUnitId)
+        : null;
+    if (orgUnitId) {
+      const orgUnit = await OperationsOrgUnitModel.findOne({
+        _id: orgUnitId,
+        status: "active",
+      }).lean();
+      if (!orgUnit) {
+        throw new AppError(
+          "Organization unit not found.",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
+    }
+
     const member = await OperationsTeamUserModel.create({
       fullName: body.fullName.trim(),
       email,
@@ -216,6 +241,7 @@ class OperationsTeamService {
       role: "CUSTOM",
       roleId: body.roleId,
       departmentId: departmentId || null,
+      orgUnitId: orgUnitId || null,
       status: body.status,
       invitedAt: new Date(),
       invitedBy: actor.userId,
@@ -273,6 +299,7 @@ class OperationsTeamService {
       fullName: member.fullName,
       roleId: member.roleId ? String(member.roleId) : null,
       departmentId: member.departmentId ? String(member.departmentId) : null,
+      orgUnitId: member.orgUnitId ? String(member.orgUnitId) : null,
     };
 
     if (body.roleId) {
@@ -307,6 +334,27 @@ class OperationsTeamService {
         ? new mongoose.Types.ObjectId(departmentId)
         : null;
     }
+    if (body.orgUnitId !== undefined) {
+      const orgUnitId =
+        body.orgUnitId && body.orgUnitId !== ""
+          ? String(body.orgUnitId)
+          : null;
+      if (orgUnitId) {
+        const orgUnit = await OperationsOrgUnitModel.findOne({
+          _id: orgUnitId,
+          status: "active",
+        }).lean();
+        if (!orgUnit) {
+          throw new AppError(
+            "Organization unit not found.",
+            HTTP_STATUS.BAD_REQUEST,
+          );
+        }
+      }
+      member.orgUnitId = orgUnitId
+        ? new mongoose.Types.ObjectId(orgUnitId)
+        : null;
+    }
 
     await member.save();
 
@@ -322,6 +370,7 @@ class OperationsTeamService {
         fullName: member.fullName,
         roleId: member.roleId ? String(member.roleId) : null,
         departmentId: member.departmentId ? String(member.departmentId) : null,
+        orgUnitId: member.orgUnitId ? String(member.orgUnitId) : null,
       },
     });
 
