@@ -17,6 +17,7 @@ export type OperationsTeamAuthUser = {
   roleName: string | null;
   departmentId: string | null;
   departmentName: string | null;
+  orgUnitId: string | null;
   isSuperAdmin: boolean;
   canCreateRoles: boolean;
   canManageUsers: boolean;

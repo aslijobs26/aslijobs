@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
+import { buildListPagination } from "../../../utils/pagination.js";
 import { OperationsAuditLogModel } from "../rbac/operations-audit-log.model.js";
 import { OperationsDepartmentModel } from "../rbac/operations-department.model.js";
 import { OperationsRoleModel } from "../rbac/operations-role.model.js";
@@ -152,13 +153,22 @@ class OperationsRolesService {
 
     if (!actor.isSuperAdmin) {
       if (!actor.roleId) {
-        return { roles: [] };
+        return {
+          roles: [],
+          pagination: buildListPagination(query.page, query.limit, 0),
+        };
       }
       const descendantIds = await getRoleDescendantIds(actor.roleId);
       filter._id = { $in: [actor.roleId, ...descendantIds] };
     }
 
-    const roles = await OperationsRoleModel.find(filter).sort({ name: 1 }).lean();
+    const total = await OperationsRoleModel.countDocuments(filter);
+    const pagination = buildListPagination(query.page, query.limit, total);
+    const roles = await OperationsRoleModel.find(filter)
+      .sort({ name: 1 })
+      .skip((pagination.page - 1) * pagination.limit)
+      .limit(pagination.limit)
+      .lean();
     const roleIds = roles.map((role) => role._id);
     const [memberCounts, childCounts, departments, parents, users] =
       await Promise.all([
@@ -234,6 +244,7 @@ class OperationsRolesService {
           childCount: childCountById.get(String(role._id)) ?? 0,
         }),
       ),
+      pagination,
     };
   }
 
@@ -329,6 +340,8 @@ class OperationsRolesService {
       search: "",
       status: "active",
       departmentId: "",
+      page: 1,
+      limit: 100,
     });
 
     const listedIds = new Set(roles.map((role) => role.id));

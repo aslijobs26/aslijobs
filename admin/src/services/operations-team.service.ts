@@ -28,6 +28,8 @@ export async function fetchOperationsTeamMembers(
       status: params.status || undefined,
       roleId: params.roleId || undefined,
       departmentId: params.departmentId || undefined,
+      orgUnitId: params.orgUnitId || undefined,
+      teamId: params.teamId || undefined,
     },
   });
   return response.data.data;

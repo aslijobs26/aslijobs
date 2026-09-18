@@ -18,6 +18,13 @@ const operationsDepartmentSchema = new Schema(
       unique: true,
       index: true,
     },
+    code: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      maxlength: 80,
+      default: "",
+    },
     description: {
       type: String,
       trim: true,
@@ -29,6 +36,17 @@ const operationsDepartmentSchema = new Schema(
       enum: OPERATIONS_DEPARTMENT_STATUSES,
       default: "active",
       index: true,
+    },
+    headUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsTeamUser",
+      default: null,
+      index: true,
+    },
+    revision: {
+      type: Number,
+      default: 1,
+      min: 1,
     },
     createdBy: {
       type: Schema.Types.ObjectId,
@@ -61,6 +79,14 @@ operationsDepartmentSchema.index(
   {
     unique: true,
     partialFilterExpression: { status: "active" },
+  },
+);
+
+operationsDepartmentSchema.index(
+  { code: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: "active", code: { $gt: "" } },
   },
 );
 

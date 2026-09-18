@@ -1,27 +1,93 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createOperationsDepartment,
+  deleteOperationsDepartment,
+  fetchOperationsDepartment,
+  fetchOperationsDepartmentDependencies,
+  fetchOperationsDepartmentMetrics,
   fetchOperationsDepartments,
   updateOperationsDepartment,
 } from "../services/operations-departments.service";
+import type { OperationsDepartmentListParams } from "../types/operations-team";
 import {
   operationsQueryRetryDelay,
   shouldRetryOperationsQuery,
 } from "../utils/operations-session-errors";
+import { OPERATIONS_ORGANIZATION_QUERY_KEY } from "./use-operations-organization";
+import { OPERATIONS_WORK_QUERY_KEY } from "./use-operations-work";
 
 export const OPERATIONS_DEPARTMENTS_QUERY_KEY = [
   "operations",
   "departments",
 ] as const;
 
-export function useOperationsDepartments(params?: {
-  search?: string;
-  status?: "active" | "archived" | "all";
-}) {
+async function invalidateDepartmentRelatedCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+) {
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: OPERATIONS_DEPARTMENTS_QUERY_KEY,
+    }),
+    queryClient.invalidateQueries({
+      queryKey: OPERATIONS_ORGANIZATION_QUERY_KEY,
+    }),
+    queryClient.invalidateQueries({
+      queryKey: OPERATIONS_WORK_QUERY_KEY,
+    }),
+  ]);
+}
+
+export function useOperationsDepartments(
+  params?: OperationsDepartmentListParams,
+) {
   return useQuery({
-    queryKey: [...OPERATIONS_DEPARTMENTS_QUERY_KEY, params],
+    queryKey: [...OPERATIONS_DEPARTMENTS_QUERY_KEY, "list", params],
     queryFn: () => fetchOperationsDepartments(params),
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
+    retry: shouldRetryOperationsQuery,
+    retryDelay: operationsQueryRetryDelay,
+  });
+}
+
+export function useOperationsDepartmentMetrics(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: [...OPERATIONS_DEPARTMENTS_QUERY_KEY, "metrics"],
+    queryFn: fetchOperationsDepartmentMetrics,
+    staleTime: 30_000,
+    retry: shouldRetryOperationsQuery,
+    retryDelay: operationsQueryRetryDelay,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useOperationsDepartment(
+  departmentId: string | null,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...OPERATIONS_DEPARTMENTS_QUERY_KEY, "detail", departmentId],
+    queryFn: () => fetchOperationsDepartment(departmentId!),
+    enabled: Boolean(departmentId) && enabled,
+    staleTime: 15_000,
+    retry: shouldRetryOperationsQuery,
+    retryDelay: operationsQueryRetryDelay,
+  });
+}
+
+export function useOperationsDepartmentDependencies(
+  departmentId: string | null,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [
+      ...OPERATIONS_DEPARTMENTS_QUERY_KEY,
+      "dependencies",
+      departmentId,
+    ],
+    queryFn: () => fetchOperationsDepartmentDependencies(departmentId!),
+    enabled: Boolean(departmentId) && enabled,
+    staleTime: 5_000,
     retry: shouldRetryOperationsQuery,
     retryDelay: operationsQueryRetryDelay,
   });
@@ -30,12 +96,13 @@ export function useOperationsDepartments(params?: {
 export function useCreateOperationsDepartment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string; description?: string }) =>
-      createOperationsDepartment(input),
+    mutationFn: (input: {
+      name: string;
+      code?: string;
+      description?: string;
+    }) => createOperationsDepartment(input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: OPERATIONS_DEPARTMENTS_QUERY_KEY,
-      });
+      await invalidateDepartmentRelatedCaches(queryClient);
     },
   });
 }
@@ -48,12 +115,25 @@ export function useUpdateOperationsDepartment() {
       input,
     }: {
       departmentId: string;
-      input: { name?: string; description?: string; status?: "active" | "archived" };
+      input: {
+        name?: string;
+        description?: string;
+        status?: "active" | "archived";
+      };
     }) => updateOperationsDepartment(departmentId, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: OPERATIONS_DEPARTMENTS_QUERY_KEY,
-      });
+      await invalidateDepartmentRelatedCaches(queryClient);
+    },
+  });
+}
+
+export function useDeleteOperationsDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (departmentId: string) =>
+      deleteOperationsDepartment(departmentId),
+    onSuccess: async () => {
+      await invalidateDepartmentRelatedCaches(queryClient);
     },
   });
 }

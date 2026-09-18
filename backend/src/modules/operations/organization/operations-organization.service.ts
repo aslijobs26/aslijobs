@@ -6,8 +6,32 @@ import { OperationsDepartmentModel } from "../rbac/operations-department.model.j
 import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
 import { slugifyOperationsName } from "../rbac/operations-slug.js";
 import type { OperationsResolvedAccess } from "../rbac/operations-access.types.js";
-import { operationsAccessCan } from "../rbac/operations-access.service.js";
+import {
+  assertFineOrCoarsePermission,
+  getRoleDescendantIds,
+  operationsAccessCan,
+  operationsAccessCanKey,
+} from "../rbac/operations-access.service.js";
+import {
+  assertActorCanAccessOrgUnit,
+  loadActorOrgSubtreeIds,
+} from "../rbac/operations-org-scope.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
+import { OperationsRoleModel } from "../rbac/operations-role.model.js";
+import {
+  listActiveTeamsInOrgUnits,
+} from "../teams/operations-teams.service.js";
+import { OperationsTeamModel } from "../teams/operations-teams.model.js";
+import {
+  SETTINGS_UPDATE_KEY,
+  SETTINGS_VIEW_KEY,
+  TEAM_ORGANIZATION_ARCHIVE_KEY,
+  TEAM_ORGANIZATION_CREATE_KEY,
+  TEAM_ORGANIZATION_UPDATE_KEY,
+  TEAM_ORGANIZATION_VIEW_KEY,
+  TEAM_TEAMS_CREATE_KEY,
+  TEAM_MEMBERS_MOBILE_VIEW_KEY,
+} from "../rbac/operations-permission-catalog.js";
 import {
   OperationsOrgUnitModel,
   type OperationsOrgUnitType,
@@ -27,6 +51,7 @@ import type {
   ListOrgTreeQuery,
   OrgUnitPeopleQuery,
   UpdateOrgUnitBody,
+  UpdateOrganizationSettingsBody,
 } from "./operations-organization.validation.js";
 import type {
   OperationsOrgOverviewResponse,
@@ -174,7 +199,12 @@ class OperationsOrganizationService {
 
   async ensureSeeded(actorUserId?: string): Promise<void> {
     if (!this.seedPromise) {
-      this.seedPromise = this.seedHierarchyIfEmpty(actorUserId).finally(() => {
+      this.seedPromise = (async () => {
+        await this.seedHierarchyIfEmpty(actorUserId);
+        // Hierarchy may already exist from an older seed that omitted states
+        // (e.g. Telangana). Fill gaps without wiping user data.
+        await this.reconcileMissingSeededStates(actorUserId);
+      })().finally(() => {
         this.seedPromise = null;
       });
     }
@@ -285,6 +315,133 @@ class OperationsOrganizationService {
     });
   }
 
+  /**
+   * Ensures every seeded region/state exists under India.
+   * Safe for existing DBs: only creates missing units, restores archived
+   * system-seeded states that match the seed list, and reparents orphaned
+   * system-seeded states to the correct region.
+   */
+  private async reconcileMissingSeededStates(
+    actorUserId?: string,
+  ): Promise<void> {
+    const india = await OperationsOrgUnitModel.findOne({
+      slug: ORG_INDIA_SLUG,
+      type: "country",
+    });
+    if (!india) return;
+
+    const globalId =
+      (india.ancestorIds?.[0] as mongoose.Types.ObjectId | undefined) ?? null;
+    const actor =
+      actorUserId && mongoose.isValidObjectId(actorUserId)
+        ? new mongoose.Types.ObjectId(actorUserId)
+        : null;
+
+    const regionDocs = new Map<string, mongoose.Types.ObjectId>();
+    for (const region of INDIA_REGION_SEED) {
+      let regionDoc = await OperationsOrgUnitModel.findOne({
+        slug: region.slug,
+        type: "region",
+      });
+      if (!regionDoc) {
+        regionDoc = await OperationsOrgUnitModel.create({
+          name: region.name,
+          slug: region.slug,
+          type: "region",
+          parentId: india._id,
+          ancestorIds: globalId ? [globalId, india._id] : [india._id],
+          depth: globalId ? 2 : 1,
+          status: "active",
+          timezone: "Asia/Kolkata",
+          isSystemSeeded: true,
+          createdBy: actor,
+          updatedBy: actor,
+        });
+      } else if (regionDoc.status === "archived") {
+        regionDoc.status = "active";
+        regionDoc.archivedAt = null;
+        regionDoc.archivedBy = null;
+        regionDoc.updatedBy = actor;
+        await regionDoc.save();
+      }
+      regionDocs.set(region.slug, regionDoc._id);
+    }
+
+    let created = 0;
+    let restored = 0;
+    let reparented = 0;
+
+    for (const region of INDIA_REGION_SEED) {
+      const regionId = regionDocs.get(region.slug);
+      if (!regionId) continue;
+      const ancestorIds = globalId
+        ? [globalId, india._id, regionId]
+        : [india._id, regionId];
+
+      for (const stateName of region.states) {
+        const slug = slugifyOperationsName(stateName);
+        let stateDoc = await OperationsOrgUnitModel.findOne({
+          type: "state",
+          $or: [{ slug }, { name: stateName }],
+        });
+
+        if (!stateDoc) {
+          await OperationsOrgUnitModel.create({
+            name: stateName,
+            slug,
+            type: "state",
+            parentId: regionId,
+            ancestorIds,
+            depth: ancestorIds.length,
+            status: "active",
+            timezone: "Asia/Kolkata",
+            isSystemSeeded: true,
+            createdBy: actor,
+            updatedBy: actor,
+          });
+          created += 1;
+          continue;
+        }
+
+        let changed = false;
+        if (stateDoc.status === "archived" && stateDoc.isSystemSeeded) {
+          stateDoc.status = "active";
+          stateDoc.archivedAt = null;
+          stateDoc.archivedBy = null;
+          restored += 1;
+          changed = true;
+        }
+
+        const parentMismatch =
+          !stateDoc.parentId || String(stateDoc.parentId) !== String(regionId);
+        if (parentMismatch && stateDoc.isSystemSeeded) {
+          stateDoc.parentId = regionId;
+          stateDoc.ancestorIds = ancestorIds;
+          stateDoc.depth = ancestorIds.length;
+          reparented += 1;
+          changed = true;
+        }
+
+        if (changed) {
+          stateDoc.updatedBy = actor;
+          await stateDoc.save();
+        }
+      }
+    }
+
+    if (created > 0 || restored > 0 || reparented > 0) {
+      await recordOperationsAuditEvent({
+        actorUserId: actorUserId ?? "system",
+        actorName: "System",
+        action: "organization.seed_reconciled",
+        targetType: "organization",
+        targetId: String(india._id),
+        targetLabel: india.name,
+        metadata: { created, restored, reparented },
+      });
+    }
+  }
+
   async getTree(
     query: ListOrgTreeQuery,
     access: OperationsResolvedAccess,
@@ -293,8 +450,15 @@ class OperationsOrganizationService {
     scopeId: string | null;
     search: string;
   }> {
+    assertFineOrCoarsePermission(
+      access,
+      TEAM_ORGANIZATION_VIEW_KEY,
+      "team",
+      "read",
+    );
     await this.ensureSeeded(access.userId);
 
+    const actorSubtree = await loadActorOrgSubtreeIds(access);
     const filter: Record<string, unknown> = {};
     if (query.status !== "all") {
       filter.status = query.status;
@@ -320,10 +484,15 @@ class OperationsOrganizationService {
 
     const scopedUnits = (() => {
       const scopeId = query.scopeId.trim();
-      if (!scopeId || !mongoose.isValidObjectId(scopeId)) {
-        return units;
+      let next = units;
+      if (actorSubtree) {
+        const allowed = new Set(actorSubtree);
+        next = next.filter((unit) => allowed.has(String(unit._id)));
       }
-      return units.filter(
+      if (!scopeId || !mongoose.isValidObjectId(scopeId)) {
+        return next;
+      }
+      return next.filter(
         (unit) =>
           String(unit._id) === scopeId ||
           (unit.ancestorIds ?? []).some((id) => String(id) === scopeId),
@@ -401,6 +570,13 @@ class OperationsOrganizationService {
     unitId: string,
     access: OperationsResolvedAccess,
   ): Promise<OperationsOrgUnitPublic> {
+    assertFineOrCoarsePermission(
+      access,
+      TEAM_ORGANIZATION_VIEW_KEY,
+      "team",
+      "read",
+    );
+    await assertActorCanAccessOrgUnit(access, unitId);
     await this.ensureSeeded(access.userId);
     const unit = (await OperationsOrgUnitModel.findById(unitId).lean()) as
       | LeanOrgUnit
@@ -476,33 +652,18 @@ class OperationsOrganizationService {
 
     const scopeIds = descendantIds.map((row) => row._id);
     const scopeIdStrings = new Set(scopeIds.map((id) => String(id)));
+    const peopleMatch =
+      unit.type === "global"
+        ? { status: "active" as const }
+        : { status: "active" as const, orgUnitId: { $in: scopeIds } };
 
-    const [departments, peopleInScope, peopleByDept, cityCount] =
+    const [peopleByDept, cityCount, scopedTeams, peopleTotal] =
       await Promise.all([
-        OperationsDepartmentModel.find({ status: "active" })
-          .select("_id name status")
-          .sort({ name: 1 })
-          .lean(),
-        OperationsTeamUserModel.find({
-          status: "active",
-          ...(unit.type === "global"
-            ? {}
-            : { orgUnitId: { $in: scopeIds } }),
-        })
-          .select("_id fullName departmentId orgUnitId")
-          .lean(),
         OperationsTeamUserModel.aggregate<{
           _id: mongoose.Types.ObjectId | null;
           count: number;
         }>([
-          {
-            $match: {
-              status: "active",
-              ...(unit.type === "global"
-                ? {}
-                : { orgUnitId: { $in: scopeIds } }),
-            },
-          },
+          { $match: peopleMatch },
           { $group: { _id: "$departmentId", count: { $sum: 1 } } },
         ]),
         OperationsOrgUnitModel.countDocuments({
@@ -510,7 +671,23 @@ class OperationsOrganizationService {
           type: "city",
           $or: [{ _id: unitObjectId }, { ancestorIds: unitObjectId }],
         }),
+        listActiveTeamsInOrgUnits(scopeIds, 80),
+        OperationsTeamUserModel.countDocuments(peopleMatch),
       ]);
+
+    const scopedDepartmentIds = [
+      ...new Set(scopedTeams.map((team) => team.departmentId).filter(Boolean)),
+    ];
+    const departments =
+      scopedDepartmentIds.length === 0
+        ? []
+        : await OperationsDepartmentModel.find({
+            _id: { $in: scopedDepartmentIds },
+            status: "active",
+          })
+            .select("_id name status")
+            .sort({ name: 1 })
+            .lean();
 
     const deptNameById = new Map(
       departments.map((dept) => [String(dept._id), dept.name]),
@@ -527,27 +704,75 @@ class OperationsOrganizationService {
           label,
           count: row.count,
           percent:
-            peopleInScope.length > 0
-              ? Math.round((row.count / peopleInScope.length) * 1000) / 10
+            peopleTotal > 0
+              ? Math.round((row.count / peopleTotal) * 1000) / 10
               : null,
         };
       })
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
-    const memberCountByDept = new Map(
-      peopleByDept.map((row) => [
-        row._id ? String(row._id) : "unassigned",
-        row.count,
-      ]),
-    );
+    const teamCountByDept = new Map<string, number>();
+    for (const team of scopedTeams) {
+      teamCountByDept.set(
+        team.departmentId,
+        (teamCountByDept.get(team.departmentId) ?? 0) + 1,
+      );
+    }
 
-    const teams = departments.map((dept) => ({
+    const overviewDepartments = departments.map((dept) => ({
       id: String(dept._id),
       name: dept.name,
-      departmentName: dept.name,
-      peopleCount: memberCountByDept.get(String(dept._id)) ?? 0,
-      leadName: null as string | null,
+      teamCount: teamCountByDept.get(String(dept._id)) ?? 0,
+      memberCount:
+        peopleByDept.find((row) => String(row._id) === String(dept._id))
+          ?.count ?? 0,
       status: dept.status,
+    }));
+
+    const roles =
+      scopedDepartmentIds.length === 0
+        ? []
+        : await OperationsRoleModel.find({
+            status: "active",
+            departmentId: { $in: scopedDepartmentIds },
+          })
+            .select("name departmentId")
+            .sort({ name: 1 })
+            .limit(50)
+            .lean();
+    const roleMemberCounts =
+      roles.length === 0
+        ? []
+        : await OperationsTeamUserModel.aggregate<{
+            _id: mongoose.Types.ObjectId;
+            count: number;
+          }>([
+            {
+              $match: {
+                roleId: { $in: roles.map((role) => role._id) },
+              },
+            },
+            { $group: { _id: "$roleId", count: { $sum: 1 } } },
+          ]);
+    const roleCountById = new Map(
+      roleMemberCounts.map((row) => [String(row._id), row.count]),
+    );
+    const overviewRoles = roles.map((role) => ({
+      id: String(role._id),
+      name: role.name,
+      departmentName: role.departmentId
+        ? (deptNameById.get(String(role.departmentId)) ?? null)
+        : null,
+      memberCount: roleCountById.get(String(role._id)) ?? 0,
+    }));
+
+    const teams = scopedTeams.map((team) => ({
+      id: team.id,
+      name: team.name,
+      departmentName: team.departmentName ?? "",
+      peopleCount: team.activeMemberCount,
+      leadName: team.leadName,
+      status: team.status,
     }));
 
     const mapPoints = descendantIds
@@ -604,7 +829,7 @@ class OperationsOrganizationService {
       breadcrumbs.find((row) => row.type === "state")?.name ??
       (unit.type === "state" ? unit.name : null);
 
-    const canManageTeam = operationsAccessCan(access, "team", "create");
+    const canManageTeam = operationsAccessCanKey(access, TEAM_TEAMS_CREATE_KEY);
     const canManageDepartments = operationsAccessCan(
       access,
       "departments",
@@ -622,7 +847,7 @@ class OperationsOrganizationService {
           value: unit.peopleCount,
           trendPercent: null,
           trendDirection: "neutral",
-          caption: "No comparison data",
+          caption: "People in this location",
         },
         {
           id: "teams",
@@ -630,15 +855,15 @@ class OperationsOrganizationService {
           value: teams.length,
           trendPercent: null,
           trendDirection: "neutral",
-          caption: "Active departments as teams",
+          caption: "Operational teams in this location",
         },
         {
           id: "departments",
           label: "Departments",
-          value: departments.length,
+          value: overviewDepartments.length,
           trendPercent: null,
           trendDirection: "neutral",
-          caption: "Active departments",
+          caption: "Departments with teams here",
         },
         {
           id: "cities",
@@ -668,13 +893,15 @@ class OperationsOrganizationService {
       },
       mapPoints,
       teams,
+      departments: overviewDepartments,
+      roles: overviewRoles,
       peopleByDepartment,
       quickActions: [
         {
           id: "add-team",
           label: "Add Team",
-          href: "/operations/departments",
-          available: canManageDepartments,
+          href: "/operations/teams",
+          available: canManageTeam,
         },
         {
           id: "add-department",
@@ -686,7 +913,7 @@ class OperationsOrganizationService {
           id: "assign-people",
           label: "Assign People",
           href: "/operations/team",
-          available: canManageTeam,
+          available: operationsAccessCan(access, "team", "create"),
         },
         {
           id: "manage-roles",
@@ -703,8 +930,8 @@ class OperationsOrganizationService {
         {
           id: "location-settings",
           label: "Location Settings",
-          href: `/operations/organization?tab=locations&unit=${unit.id}`,
-          available: operationsAccessCan(access, "team", "update"),
+          href: "/operations/settings",
+          available: operationsAccessCanKey(access, SETTINGS_UPDATE_KEY),
         },
       ],
     };
@@ -736,9 +963,31 @@ class OperationsOrganizationService {
     if (scopeIds) {
       filter.orgUnitId = { $in: scopeIds };
     }
+    if (!access.isSuperAdmin && access.roleId) {
+      const descendants = await getRoleDescendantIds(access.roleId);
+      const roleScope = {
+        $or: [
+          { _id: access.userId },
+          { roleId: { $in: [access.roleId, ...descendants] } },
+        ],
+      };
+      filter.$and = [roleScope];
+    } else if (!access.isSuperAdmin && !access.roleId) {
+      filter._id = access.userId;
+    }
+    if (!access.isSuperAdmin && access.departmentId) {
+      filter.departmentId = access.departmentId;
+    }
     if (query.search.trim()) {
       const regex = new RegExp(query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      filter.$or = [{ fullName: regex }, { email: regex }, { mobileNumber: regex }];
+      const searchClause = {
+        $or: [{ fullName: regex }, { email: regex }, { mobileNumber: regex }],
+      };
+      if (Array.isArray(filter.$and)) {
+        filter.$and.push(searchClause);
+      } else {
+        filter.$or = searchClause.$or;
+      }
     }
 
     const skip = (query.page - 1) * query.limit;
@@ -746,7 +995,7 @@ class OperationsOrganizationService {
       OperationsTeamUserModel.countDocuments(filter),
       OperationsTeamUserModel.find(filter)
         .select(
-          "_id fullName email mobileNumber status role roleId departmentId orgUnitId lastActiveAt createdAt",
+          "_id fullName email mobileNumber status role roleId departmentId orgUnitId teamId lastActiveAt createdAt",
         )
         .sort({ fullName: 1 })
         .skip(skip)
@@ -764,12 +1013,21 @@ class OperationsOrganizationService {
         id: String(item._id),
         fullName: item.fullName,
         email: item.email ?? null,
-        mobileNumber: item.mobileNumber,
+        mobileNumber:
+          access.isSuperAdmin ||
+          operationsAccessCanKey(access, TEAM_MEMBERS_MOBILE_VIEW_KEY) ||
+          (!access.grantedKeys.some(
+            (key) => key === "team" || key.startsWith("team."),
+          ) &&
+            operationsAccessCan(access, "team", "read"))
+            ? item.mobileNumber
+            : "",
         status: item.status,
         role: item.role,
         roleId: item.roleId ? String(item.roleId) : null,
         departmentId: item.departmentId ? String(item.departmentId) : null,
         orgUnitId: item.orgUnitId ? String(item.orgUnitId) : null,
+        teamId: item.teamId ? String(item.teamId) : null,
         lastActiveAt: item.lastActiveAt?.toISOString() ?? null,
         createdAt: item.createdAt?.toISOString() ?? null,
       })),
@@ -777,7 +1035,16 @@ class OperationsOrganizationService {
   }
 
   async createUnit(access: OperationsResolvedAccess, body: CreateOrgUnitBody) {
+    assertFineOrCoarsePermission(
+      access,
+      TEAM_ORGANIZATION_CREATE_KEY,
+      "team",
+      "create",
+    );
     await this.ensureSeeded(access.userId);
+    if (body.parentId) {
+      await assertActorCanAccessOrgUnit(access, body.parentId);
+    }
 
     let parent: LeanOrgUnit | null = null;
     if (body.parentId) {
@@ -866,6 +1133,15 @@ class OperationsOrganizationService {
     access: OperationsResolvedAccess,
     body: UpdateOrgUnitBody,
   ) {
+    assertFineOrCoarsePermission(
+      access,
+      body.status === "archived"
+        ? TEAM_ORGANIZATION_ARCHIVE_KEY
+        : TEAM_ORGANIZATION_UPDATE_KEY,
+      "team",
+      body.status === "archived" ? "delete" : "update",
+    );
+    await assertActorCanAccessOrgUnit(access, unitId);
     await this.ensureSeeded(access.userId);
     const unit = await OperationsOrgUnitModel.findById(unitId);
     if (!unit) {
@@ -976,6 +1252,16 @@ class OperationsOrganizationService {
           HTTP_STATUS.CONFLICT,
         );
       }
+      const teamCount = await OperationsTeamModel.countDocuments({
+        orgUnitId: unit._id,
+        status: "active",
+      });
+      if (teamCount > 0) {
+        throw new AppError(
+          `Cannot archive this unit while ${teamCount} active team(s) operate here.`,
+          HTTP_STATUS.CONFLICT,
+        );
+      }
       unit.status = "archived";
       unit.archivedAt = new Date();
       unit.archivedBy = new mongoose.Types.ObjectId(access.userId);
@@ -986,8 +1272,42 @@ class OperationsOrganizationService {
     }
 
     unit.updatedBy = new mongoose.Types.ObjectId(access.userId);
-    unit.revision = (unit.revision ?? 1) + 1;
-    await unit.save();
+    const revisionFilter =
+      body.revision != null
+        ? { _id: unit._id, revision: body.revision }
+        : { _id: unit._id };
+    const saved = await OperationsOrgUnitModel.findOneAndUpdate(
+      revisionFilter,
+      {
+        $set: {
+          name: unit.name,
+          slug: unit.slug,
+          parentId: unit.parentId,
+          ancestorIds: unit.ancestorIds,
+          depth: unit.depth,
+          code: unit.code,
+          timezone: unit.timezone,
+          primaryOffice: unit.primaryOffice,
+          latitude: unit.latitude,
+          longitude: unit.longitude,
+          establishedAt: unit.establishedAt,
+          headUserId: unit.headUserId,
+          status: unit.status,
+          archivedAt: unit.archivedAt,
+          archivedBy: unit.archivedBy,
+          updatedBy: unit.updatedBy,
+        },
+        $inc: { revision: 1 },
+      },
+      { new: true },
+    );
+    if (!saved) {
+      throw new AppError(
+        "This organization unit was updated by someone else. Refresh and try again.",
+        HTTP_STATUS.CONFLICT,
+        { code: "STALE_REVISION" },
+      );
+    }
 
     // Rebuild descendant ancestor paths when parent changed.
     if (body.parentId !== undefined) {
@@ -1016,6 +1336,119 @@ class OperationsOrganizationService {
     });
 
     return this.getUnit(String(unit._id), access);
+  }
+
+  async getSettings(access: OperationsResolvedAccess) {
+    assertFineOrCoarsePermission(access, SETTINGS_VIEW_KEY, "settings", "read");
+    await this.ensureSeeded(access.userId);
+    const global = await OperationsOrgUnitModel.findOne({
+      slug: ORG_ROOT_SLUG,
+      type: "global",
+    }).lean();
+    if (!global) {
+      throw new AppError("Organization root not found.", HTTP_STATUS.NOT_FOUND);
+    }
+    const countries = await OperationsOrgUnitModel.find({
+      type: "country",
+      status: "active",
+    })
+      .select("name")
+      .sort({ name: 1 })
+      .lean();
+    const metadata = (global.metadata ?? {}) as { defaultCountryId?: string };
+    const defaultCountryId =
+      metadata.defaultCountryId &&
+      countries.some((row) => String(row._id) === metadata.defaultCountryId)
+        ? metadata.defaultCountryId
+        : countries[0]
+          ? String(countries[0]._id)
+          : null;
+    return {
+      organizationName: global.name,
+      defaultCountryId,
+      defaultTimezone: global.timezone || "Asia/Kolkata",
+      revision: global.revision ?? 1,
+      countries: countries.map((row) => ({
+        id: String(row._id),
+        name: row.name,
+      })),
+    };
+  }
+
+  async updateSettings(
+    access: OperationsResolvedAccess,
+    body: UpdateOrganizationSettingsBody,
+  ) {
+    assertFineOrCoarsePermission(
+      access,
+      SETTINGS_UPDATE_KEY,
+      "settings",
+      "update",
+    );
+    await this.ensureSeeded(access.userId);
+    const country = await OperationsOrgUnitModel.findOne({
+      _id: body.defaultCountryId,
+      type: "country",
+      status: "active",
+    }).lean();
+    if (!country) {
+      throw new AppError("Default country is invalid.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const previous = await OperationsOrgUnitModel.findOne({
+      slug: ORG_ROOT_SLUG,
+      type: "global",
+    }).lean();
+    if (!previous) {
+      throw new AppError("Organization root not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const updated = await OperationsOrgUnitModel.findOneAndUpdate(
+      {
+        _id: previous._id,
+        revision: body.expectedRevision,
+      },
+      {
+        $set: {
+          name: body.organizationName.trim(),
+          timezone: body.defaultTimezone.trim(),
+          "metadata.defaultCountryId": body.defaultCountryId,
+          updatedBy: access.userId,
+        },
+        $inc: { revision: 1 },
+      },
+      { new: true },
+    );
+    if (!updated) {
+      throw new AppError(
+        "Organization settings were updated by someone else. Refresh and try again.",
+        HTTP_STATUS.CONFLICT,
+        { code: "STALE_REVISION" },
+      );
+    }
+
+    await recordOperationsAuditEvent({
+      actorUserId: access.userId,
+      actorName: access.roleName ?? "",
+      action: "settings.updated",
+      targetType: "organization",
+      targetId: String(updated._id),
+      targetLabel: updated.name,
+      previousState: {
+        organizationName: previous.name,
+        timezone: previous.timezone,
+        defaultCountryId:
+          (previous.metadata as { defaultCountryId?: string } | undefined)
+            ?.defaultCountryId ?? null,
+      },
+      nextState: {
+        organizationName: updated.name,
+        timezone: updated.timezone,
+        defaultCountryId: body.defaultCountryId,
+      },
+    });
+
+    return this.getSettings(access);
   }
 
   private async rebuildDescendantPaths(rootId: string): Promise<void> {

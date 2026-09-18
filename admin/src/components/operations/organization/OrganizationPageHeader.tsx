@@ -1,9 +1,10 @@
-import { ChevronDown, Globe, Plus, Search } from "lucide-react";
+import { ChevronDown, Plus, Search } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
 import type { OperationsOrgTreeNode } from "../../../types/operations-organization";
 import { OperationsCan } from "../auth/OperationsCan";
+import { OperationsFilterSelect } from "../jobs/OperationsFilterSelect";
 import { flattenOrgTree } from "./org-tree-utils";
 
 interface OrganizationPageHeaderProps {
@@ -98,27 +99,16 @@ export function OrganizationPageHeader({
         </div>
 
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <label className="relative inline-flex h-9 min-w-[7.5rem] items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-[12px] font-medium text-foreground shadow-sm focus-within:ring-2 focus-within:ring-primary/30">
-            <Globe className="size-3.5 shrink-0 text-muted" aria-hidden="true" />
-            <span className="sr-only">Organization scope</span>
-            <select
+          <div className="w-full min-w-[9rem] sm:w-[11rem]">
+            <OperationsFilterSelect
+              label={`Organization scope ${selectedScopeLabel}`}
               value={scopeId}
-              onChange={(event) => onScopeChange(event.target.value)}
-              className="h-full min-w-0 flex-1 cursor-pointer appearance-none bg-transparent pr-5 text-[12px] font-medium text-foreground outline-none"
-              aria-label="Organization scope"
-            >
-              {scopeOptions.map((option) => (
-                <option key={option.value || "global"} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-2 size-3.5 text-muted"
-              aria-hidden="true"
+              options={scopeOptions}
+              onChange={onScopeChange}
+              hideSearch={scopeOptions.length <= 10}
+              triggerClassName="h-9"
             />
-            <span className="sr-only">{selectedScopeLabel}</span>
-          </label>
+          </div>
 
           <label className="relative min-w-0 flex-1 sm:w-56 sm:flex-none">
             <span className="sr-only">Search organization</span>
@@ -131,7 +121,7 @@ export function OrganizationPageHeader({
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder="Search organization..."
-              className="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-3 text-[12px] text-foreground shadow-sm placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="ops-brand-border-glow h-9 w-full rounded-md border border-border-subtle bg-surface pl-8 pr-3 text-[12px] font-medium text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:font-normal placeholder:text-muted transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
           </label>
 

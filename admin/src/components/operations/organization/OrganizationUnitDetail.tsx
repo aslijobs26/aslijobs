@@ -35,6 +35,8 @@ interface OrganizationUnitDetailProps {
   onArchive: () => void;
   canAddSubUnit?: boolean;
   emptyMessage?: string;
+  onSelectNamedLocation?: (name: string, kind: "district" | "state") => void;
+  locationHint?: string | null;
 }
 
 export function OrganizationUnitDetail({
@@ -51,7 +53,16 @@ export function OrganizationUnitDetail({
   onArchive,
   canAddSubUnit = true,
   emptyMessage,
+  onSelectNamedLocation,
+  locationHint,
 }: OrganizationUnitDetailProps) {
+  const peopleByDepartment = overview?.peopleByDepartment ?? [];
+  const peopleCountByDepartmentId = new Map(
+    peopleByDepartment.map((item) => [item.id, item.count] as const),
+  );
+  const scopedDepartments = overview?.departments ?? [];
+  const scopedRoles = overview?.roles ?? [];
+
   if (!unit) {
     return (
       <section className="flex min-h-[24rem] items-center justify-center rounded-xl border border-border-subtle bg-surface p-6 text-center shadow-sm xl:min-h-[32rem]">
@@ -136,7 +147,7 @@ export function OrganizationUnitDetail({
         })}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 scrollbar-hidden">
         {detailTab === "overview" ? (
           overviewError ? (
             <p className="py-10 text-center text-[12px] text-danger">
@@ -146,6 +157,8 @@ export function OrganizationUnitDetail({
             <OrganizationOverview
               overview={overview}
               isLoading={isOverviewLoading}
+              onSelectNamedLocation={onSelectNamedLocation}
+              locationHint={locationHint}
             />
           ) : (
             <p className="py-10 text-center text-[12px] text-muted">
@@ -156,15 +169,21 @@ export function OrganizationUnitDetail({
 
         {detailTab === "teams" ? (
           <DetailTable
-            empty="No teams (departments) in this scope."
-            headers={["Team", "People", "Status"]}
+            empty="No operational teams in this location scope."
+            headers={["Team", "Department", "People", "Lead", "Status"]}
             rows={(overview?.teams ?? []).map((team) => [
               team.name,
+              team.departmentName,
               team.peopleCount.toLocaleString("en-IN"),
+              team.leadName ?? "—",
               team.status,
             ])}
-            footerHref={OPERATIONS_ROUTES.DEPARTMENTS}
-            footerLabel="Manage departments"
+            footerHref={
+              unit
+                ? `${OPERATIONS_ROUTES.TEAMS}?orgUnitId=${encodeURIComponent(unit.id)}`
+                : OPERATIONS_ROUTES.TEAMS
+            }
+            footerLabel="Manage teams"
           />
         ) : null}
 
@@ -183,27 +202,53 @@ export function OrganizationUnitDetail({
                 person.role,
               ])}
               footerHref={OPERATIONS_ROUTES.TEAM_MANAGEMENT}
-              footerLabel="Open team management"
+              footerLabel="Open people"
             />
           )
         ) : null}
 
         {detailTab === "departments" ? (
-          <LinkPanel
-            title="Departments"
-            description="Functional Operations departments are managed in the Departments module."
-            href={OPERATIONS_ROUTES.DEPARTMENTS}
-            actionLabel="Open Departments"
-          />
+          isOverviewLoading ? (
+            <p className="py-10 text-center text-[12px] text-muted">
+              Loading departments…
+            </p>
+          ) : (
+            <DetailTable
+              empty="No departments operate in this location yet."
+              headers={["Department", "Teams", "People in scope", "Status"]}
+              rows={scopedDepartments.map((department) => [
+                department.name,
+                department.teamCount.toLocaleString("en-IN"),
+                (
+                  peopleCountByDepartmentId.get(department.id) ??
+                  department.memberCount
+                ).toLocaleString("en-IN"),
+                department.status,
+              ])}
+              footerHref={OPERATIONS_ROUTES.DEPARTMENTS}
+              footerLabel="Manage departments"
+            />
+          )
         ) : null}
 
         {detailTab === "roles" ? (
-          <LinkPanel
-            title="Roles & Permissions"
-            description="Role hierarchy and permission grants are managed in Roles."
-            href={OPERATIONS_ROUTES.ROLES}
-            actionLabel="Open Roles"
-          />
+          isOverviewLoading ? (
+            <p className="py-10 text-center text-[12px] text-muted">
+              Loading roles…
+            </p>
+          ) : (
+            <DetailTable
+              empty="No location-scoped roles for this selection."
+              headers={["Role", "Department", "Members"]}
+              rows={scopedRoles.map((role) => [
+                role.name,
+                role.departmentName ?? "—",
+                role.memberCount.toLocaleString("en-IN"),
+              ])}
+              footerHref={OPERATIONS_ROUTES.ROLES}
+              footerLabel="Manage roles"
+            />
+          )
         ) : null}
 
         {detailTab === "settings" ? (
@@ -260,7 +305,7 @@ function DetailTable({
   }
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border border-border-subtle">
+      <div className="overflow-x-auto rounded-lg border border-border-subtle scrollbar-hidden">
         <table className="w-full min-w-[28rem] text-left text-[12px]">
           <thead className="bg-hero-bg/70 text-muted">
             <tr>
@@ -274,14 +319,18 @@ function DetailTable({
           <tbody>
             {rows.map((row, index) => (
               <tr key={index} className="border-t border-border-subtle">
-                {row.map((cell, cellIndex) => (
-                  <td
-                    key={cellIndex}
-                    className="px-3 py-2 text-foreground"
-                  >
-                    {cell}
-                  </td>
-                ))}
+                {row.map((cell, cellIndex) => {
+                  const isStatus =
+                    headers[cellIndex]?.toLowerCase() === "status";
+                  return (
+                    <td
+                      key={cellIndex}
+                      className="px-3 py-2 text-foreground"
+                    >
+                      {isStatus ? <StatusBadge status={cell} /> : cell}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
@@ -297,36 +346,35 @@ function DetailTable({
   );
 }
 
-function LinkPanel({
-  title,
-  description,
-  href,
-  actionLabel,
-}: {
-  title: string;
-  description: string;
-  href: string;
-  actionLabel: string;
-}) {
+function StatusBadge({ status }: { status: string }) {
+  const normalized = status.trim().toLowerCase();
   return (
-    <div className="rounded-xl border border-border-subtle bg-hero-bg/40 p-4">
-      <h3 className="text-[13px] font-semibold text-foreground">{title}</h3>
-      <p className="mt-1 text-[12px] text-muted">{description}</p>
-      <Link
-        to={href}
-        className="mt-3 inline-flex h-8 items-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface hover:bg-primary-hover"
-      >
-        {actionLabel}
-      </Link>
-    </div>
+    <span
+      className={cn(
+        "inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize",
+        normalized === "active" && "bg-success/10 text-success",
+        normalized === "inactive" && "bg-amber-500/10 text-amber-700",
+        normalized === "suspended" && "bg-danger/10 text-danger",
+        normalized === "archived" && "bg-muted/25 text-muted",
+        !["active", "inactive", "suspended", "archived"].includes(normalized) &&
+          "bg-hero-bg text-muted",
+      )}
+    >
+      {status}
+    </span>
   );
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
+  const isStatus = label.toLowerCase() === "status";
   return (
     <div className="flex items-center justify-between gap-3 border-b border-border-subtle py-2 last:border-0">
       <span className="text-muted">{label}</span>
-      <span className="font-medium text-foreground">{value}</span>
+      {isStatus ? (
+        <StatusBadge status={value} />
+      ) : (
+        <span className="font-medium text-foreground">{value}</span>
+      )}
     </div>
   );
 }

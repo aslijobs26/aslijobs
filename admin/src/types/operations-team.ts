@@ -10,6 +10,10 @@ export type OperationsTeamMember = {
   roleName: string | null;
   departmentId: string | null;
   departmentName: string | null;
+  orgUnitId: string | null;
+  orgUnitName: string | null;
+  teamId: string | null;
+  teamName: string | null;
   status: OperationsTeamMemberStatus;
   lastActiveAt: string | null;
   invitedAt: string | null;
@@ -24,6 +28,7 @@ export type OperationsTeamOverview = {
   pendingInvitations: number;
   totalRoles: number;
   totalDepartments: number;
+  totalTeams?: number;
 };
 
 export type OperationsTeamListParams = {
@@ -33,6 +38,8 @@ export type OperationsTeamListParams = {
   status?: OperationsTeamMemberStatus | "";
   roleId?: string;
   departmentId?: string;
+  orgUnitId?: string;
+  teamId?: string;
 };
 
 export type OperationsTeamListResult = {
@@ -54,6 +61,8 @@ export type CreateOperationsTeamMemberInput = {
   password: string;
   roleId: string;
   departmentId?: string | null;
+  orgUnitId?: string | null;
+  teamId?: string | null;
   status?: "active" | "inactive";
 };
 
@@ -64,6 +73,8 @@ export type UpdateOperationsTeamMemberInput = {
   password?: string;
   roleId?: string;
   departmentId?: string | null;
+  orgUnitId?: string | null;
+  teamId?: string | null;
 };
 
 export type OperationsRoleGrant = {
@@ -144,10 +155,42 @@ export type OperationsDepartment = {
   id: string;
   name: string;
   slug: string;
+  code: string;
   description: string;
   status: string;
+  headUserId?: string | null;
+  headName?: string | null;
+  revision?: number;
+  memberCount: number;
+  teamCount: number;
   createdAt: string | null;
   updatedAt: string | null;
+};
+
+export type OperationsDepartmentMetrics = {
+  totalDepartments: number;
+  activeDepartments: number;
+  departmentsWithTeams: number;
+  totalMembers: number;
+};
+
+export type OperationsDepartmentListParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: "active" | "archived" | "all";
+};
+
+export type OperationsDepartmentListResult = {
+  departments: OperationsDepartment[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
 };
 
 export type OperationsAuditEvent = {

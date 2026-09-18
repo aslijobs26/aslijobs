@@ -15,6 +15,8 @@ export const listOperationsTeamQuerySchema = z.object({
     .default(""),
   roleId: z.union([objectId, z.literal("")]).optional().default(""),
   departmentId: z.union([objectId, z.literal("")]).optional().default(""),
+  orgUnitId: z.union([objectId, z.literal("")]).optional().default(""),
+  teamId: z.union([objectId, z.literal("")]).optional().default(""),
 });
 
 export const createOperationsTeamMemberBodySchema = z.object({
@@ -25,6 +27,7 @@ export const createOperationsTeamMemberBodySchema = z.object({
   roleId: objectId,
   departmentId: z.union([objectId, z.literal(""), z.null()]).optional(),
   orgUnitId: z.union([objectId, z.literal(""), z.null()]).optional(),
+  teamId: z.union([objectId, z.literal(""), z.null()]).optional(),
   status: z.enum(["active", "inactive"]).optional().default("active"),
 });
 
@@ -40,6 +43,7 @@ export const updateOperationsTeamMemberBodySchema = z.object({
   roleId: objectId.optional(),
   departmentId: z.union([objectId, z.literal(""), z.null()]).optional(),
   orgUnitId: z.union([objectId, z.literal(""), z.null()]).optional(),
+  teamId: z.union([objectId, z.literal(""), z.null()]).optional(),
 });
 
 export const updateOperationsTeamMemberStatusBodySchema = z.object({

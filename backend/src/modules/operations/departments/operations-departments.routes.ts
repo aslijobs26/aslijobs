@@ -24,11 +24,31 @@ operationsDepartmentsRouter.get(
   asyncHandler(operationsDepartmentsController.list),
 );
 
+operationsDepartmentsRouter.get(
+  "/metrics",
+  requireOperationsPermission("departments", "read"),
+  asyncHandler(operationsDepartmentsController.metrics),
+);
+
 operationsDepartmentsRouter.post(
   "/",
   requireOperationsPermission("departments", "create"),
   validate(createOperationsDepartmentBodySchema, "body"),
   asyncHandler(operationsDepartmentsController.create),
+);
+
+operationsDepartmentsRouter.get(
+  "/:departmentId/dependencies",
+  requireOperationsPermission("departments", "read"),
+  validate(operationsDepartmentIdParamsSchema, "params"),
+  asyncHandler(operationsDepartmentsController.getDependencies),
+);
+
+operationsDepartmentsRouter.get(
+  "/:departmentId",
+  requireOperationsPermission("departments", "read"),
+  validate(operationsDepartmentIdParamsSchema, "params"),
+  asyncHandler(operationsDepartmentsController.getById),
 );
 
 operationsDepartmentsRouter.patch(
@@ -37,6 +57,14 @@ operationsDepartmentsRouter.patch(
   validate(operationsDepartmentIdParamsSchema, "params"),
   validate(updateOperationsDepartmentBodySchema, "body"),
   asyncHandler(operationsDepartmentsController.update),
+);
+
+/** Soft-delete (archive) with authoritative dependency checks. */
+operationsDepartmentsRouter.delete(
+  "/:departmentId",
+  requireOperationsPermission("departments", "update"),
+  validate(operationsDepartmentIdParamsSchema, "params"),
+  asyncHandler(operationsDepartmentsController.remove),
 );
 
 export default operationsDepartmentsRouter;

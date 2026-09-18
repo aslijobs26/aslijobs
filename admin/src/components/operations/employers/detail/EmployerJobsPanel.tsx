@@ -7,7 +7,16 @@ import {
 } from "../../../../constants/operations-routes";
 import { useOperationsEmployerJobs } from "../../../../hooks/use-operations-employers";
 import { JobsPaginationBar } from "../../jobs/JobsPaginationBar";
+import { OperationsFilterSelect } from "../../jobs/OperationsFilterSelect";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
+
+const EMPLOYER_JOB_STATUS_OPTIONS = [
+  { value: "", label: "All Job Statuses" },
+  { value: "active", label: "Active" },
+  { value: "pending_approval", label: "Pending Approval" },
+  { value: "draft", label: "Draft" },
+  { value: "closed", label: "Closed" },
+] as const;
 
 interface EmployerJobsPanelProps {
   employerId: string;
@@ -39,20 +48,18 @@ export function EmployerJobsPanel({ employerId }: EmployerJobsPanelProps) {
         </div>
 
         <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="h-7 min-w-0 flex-1 rounded-md border border-border-subtle bg-hero-bg/60 px-2 text-[11px] font-medium text-foreground outline-none sm:h-8 sm:flex-none sm:text-xs"
-          >
-            <option value="">All Job Statuses</option>
-            <option value="active">Active</option>
-            <option value="pending_approval">Pending Approval</option>
-            <option value="draft">Draft</option>
-            <option value="closed">Closed</option>
-          </select>
+          <div className="min-w-0 flex-1 sm:w-[11rem] sm:flex-none">
+            <OperationsFilterSelect
+              label="Job status"
+              value={statusFilter}
+              options={EMPLOYER_JOB_STATUS_OPTIONS}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setPage(1);
+              }}
+              hideSearch
+            />
+          </div>
 
           <button
             type="button"

@@ -14,6 +14,8 @@ import operationsVerificationsRouter from "./verifications/operations-verificati
 import operationsPlacementsRouter from "./placements/operations-placements.routes.js";
 import operationsWorkRouter from "./work/operations-work.routes.js";
 import operationsDashboardRouter from "./dashboard/operations-dashboard.routes.js";
+import operationsTeamsRouter from "./teams/operations-teams.routes.js";
+import operationsSettingsRouter from "./organization/operations-settings.routes.js";
 
 export const operationsRouter = Router();
 
@@ -26,7 +28,9 @@ operationsRouter.use("/placements", operationsPlacementsRouter);
 operationsRouter.use("/work", operationsWorkRouter);
 operationsRouter.use("/verifications", operationsVerificationsRouter);
 operationsRouter.use("/team", operationsTeamRouter);
+operationsRouter.use("/teams", operationsTeamsRouter);
 operationsRouter.use("/organization", operationsOrganizationRouter);
+operationsRouter.use("/settings", operationsSettingsRouter);
 operationsRouter.use("/roles", operationsRolesRouter);
 operationsRouter.use("/permissions", operationsPermissionsRouter);
 operationsRouter.use("/departments", operationsDepartmentsRouter);

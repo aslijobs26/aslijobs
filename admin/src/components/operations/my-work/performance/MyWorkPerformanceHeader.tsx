@@ -1,9 +1,10 @@
-import { Calendar, ChevronDown, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import impactIllustration from "../../../../assets/my-work-performance-impact.svg";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import type { OperationsWorkPerformanceResult } from "../../../../types/operations-work";
 import { OperationsCanKey } from "../../auth/OperationsCanKey";
+import { OperationsFilterSelect } from "../../jobs/OperationsFilterSelect";
 
 interface MyWorkPerformanceHeaderProps {
   trend: OperationsWorkPerformanceResult["completionTrend"];
@@ -14,6 +15,11 @@ interface MyWorkPerformanceHeaderProps {
   rangeKey: "7d" | "30d";
   onRangeChange: (key: "7d" | "30d") => void;
 }
+
+const RANGE_OPTIONS = [
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+] as const;
 
 export function MyWorkPerformanceHeader({
   onDownload,
@@ -61,22 +67,16 @@ export function MyWorkPerformanceHeader({
           <span className="sr-only">Small actions create big impact</span>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <label className="inline-flex h-9 min-w-[13.5rem] items-center gap-2 rounded-lg border border-border-subtle bg-surface px-2.5 text-[12px] font-semibold text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-              <Calendar className="size-3.5 shrink-0 text-muted" aria-hidden />
-              <span className="sr-only">Date range</span>
-              <select
+            <div className="w-[11rem]">
+              <OperationsFilterSelect
+                label={`Date range ${rangeLabel}`}
                 value={rangeKey}
-                onChange={(event) =>
-                  onRangeChange(event.target.value as "7d" | "30d")
-                }
-                aria-label={`Date range ${rangeLabel}`}
-                className="min-w-0 flex-1 appearance-none bg-transparent tabular-nums focus-visible:outline-none"
-              >
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-              </select>
-              <ChevronDown className="size-3.5 shrink-0 text-muted" aria-hidden />
-            </label>
+                options={RANGE_OPTIONS}
+                onChange={(value) => onRangeChange(value as "7d" | "30d")}
+                hideSearch
+                triggerClassName="h-9"
+              />
+            </div>
 
             <OperationsCanKey permissionKey="my_work.export">
               <button

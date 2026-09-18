@@ -116,6 +116,19 @@ export type OperationsOrgOverviewResponse = {
   keyInfo: OperationsOrgKeyInfo;
   mapPoints: OperationsOrgLocationPoint[];
   teams: OperationsOrgTeamRow[];
+  departments: Array<{
+    id: string;
+    name: string;
+    teamCount: number;
+    memberCount: number;
+    status: string;
+  }>;
+  roles: Array<{
+    id: string;
+    name: string;
+    departmentName: string | null;
+    memberCount: number;
+  }>;
   peopleByDepartment: OperationsOrgDepartmentShare[];
   quickActions: Array<{
     id: string;
@@ -135,6 +148,7 @@ export type OperationsOrgPerson = {
   roleId: string | null;
   departmentId: string | null;
   orgUnitId: string | null;
+  teamId: string | null;
   lastActiveAt: string | null;
   createdAt: string | null;
 };
@@ -174,15 +188,6 @@ export type UpdateOperationsOrgUnitInput = {
   status?: "active" | "archived";
   revision?: number;
 };
-
-export type OperationsOrganizationTab =
-  | "structure"
-  | "people"
-  | "roles"
-  | "departments"
-  | "locations"
-  | "teams"
-  | "settings";
 
 export type OperationsOrgUnitDetailTab =
   | "overview"

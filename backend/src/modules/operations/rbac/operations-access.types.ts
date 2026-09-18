@@ -16,6 +16,7 @@ export type OperationsResolvedAccess = {
   departmentName: string | null;
   /** Active department slug when resolved; used for work-type team queue routing. */
   departmentSlug: string | null;
+  orgUnitId: string | null;
   isSuperAdmin: boolean;
   canCreateRoles: boolean;
   canManageUsers: boolean;

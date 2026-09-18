@@ -19,12 +19,14 @@ async function toAuthUser(user: {
   role: OperationsTeamAuthUser["role"];
   roleId?: { toString(): string } | null;
   departmentId?: { toString(): string } | null;
+  orgUnitId?: { toString(): string } | null;
 }): Promise<OperationsTeamAuthUser> {
   const access = await resolveOperationsUserAccess({
     _id: user._id.toString(),
     role: user.role,
     roleId: user.roleId ? String(user.roleId) : null,
     departmentId: user.departmentId ? String(user.departmentId) : null,
+    orgUnitId: user.orgUnitId ? String(user.orgUnitId) : null,
   });
 
   return {
@@ -37,6 +39,7 @@ async function toAuthUser(user: {
     roleName: access.roleName,
     departmentId: access.departmentId,
     departmentName: access.departmentName,
+    orgUnitId: access.orgUnitId,
     isSuperAdmin: access.isSuperAdmin,
     canCreateRoles: access.canCreateRoles,
     canManageUsers: access.canManageUsers,

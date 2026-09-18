@@ -86,6 +86,11 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
       module: "team",
       action: "read",
     },
+    {
+      prefix: OPERATIONS_ROUTES.TEAMS,
+      module: "team",
+      action: "read",
+    },
     { prefix: OPERATIONS_ROUTES.ROLES, module: "roles", action: "read" },
     {
       prefix: OPERATIONS_ROUTES.DEPARTMENTS,

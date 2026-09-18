@@ -81,6 +81,19 @@ export type OperationsOrgOverviewResponse = {
   keyInfo: OperationsOrgKeyInfo;
   mapPoints: OperationsOrgLocationPoint[];
   teams: OperationsOrgTeamRow[];
+  departments: Array<{
+    id: string;
+    name: string;
+    teamCount: number;
+    memberCount: number;
+    status: string;
+  }>;
+  roles: Array<{
+    id: string;
+    name: string;
+    departmentName: string | null;
+    memberCount: number;
+  }>;
   peopleByDepartment: OperationsOrgDepartmentShare[];
   quickActions: Array<{
     id: string;

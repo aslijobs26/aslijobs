@@ -57,7 +57,25 @@ export const orgUnitPeopleQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
 
+export const updateOrganizationSettingsBodySchema = z.object({
+  organizationName: z.string().trim().min(2).max(120),
+  defaultCountryId: z
+    .string()
+    .trim()
+    .regex(/^[a-fA-F0-9]{24}$/, "Invalid id."),
+  defaultTimezone: z
+    .string()
+    .trim()
+    .min(3)
+    .max(64)
+    .regex(/^[A-Za-z0-9_+\-\/]+$/, "Invalid timezone."),
+  expectedRevision: z.coerce.number().int().min(1),
+});
+
 export type ListOrgTreeQuery = z.infer<typeof listOrgTreeQuerySchema>;
 export type CreateOrgUnitBody = z.infer<typeof createOrgUnitBodySchema>;
 export type UpdateOrgUnitBody = z.infer<typeof updateOrgUnitBodySchema>;
 export type OrgUnitPeopleQuery = z.infer<typeof orgUnitPeopleQuerySchema>;
+export type UpdateOrganizationSettingsBody = z.infer<
+  typeof updateOrganizationSettingsBodySchema
+>;

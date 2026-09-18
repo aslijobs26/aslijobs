@@ -7,11 +7,38 @@ import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
 import { OperationsDepartmentModel } from "../rbac/operations-department.model.js";
 import { OperationsRoleModel } from "../rbac/operations-role.model.js";
 import { OperationsOrgUnitModel } from "../organization/operations-org-unit.model.js";
+import { OperationsTeamModel } from "../teams/operations-teams.model.js";
 import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
 import {
+  assertFineOrCoarsePermission,
   getRoleDescendantIds,
   isRoleWithinActorScope,
+  operationsAccessCan,
+  operationsAccessCanKey,
 } from "../rbac/operations-access.service.js";
+import {
+  assertActorCanAccessDepartment,
+  assertActorCanAccessOrgUnit,
+  loadActorOrgSubtreeIds,
+  loadOrgSubtreeIds,
+} from "../rbac/operations-org-scope.js";
+import {
+  TEAM_MEMBERS_ACTIVATE_KEY,
+  TEAM_MEMBERS_ASSIGN_DEPARTMENT_KEY,
+  TEAM_MEMBERS_ASSIGN_LOCATION_KEY,
+  TEAM_MEMBERS_ASSIGN_ROLE_KEY,
+  TEAM_MEMBERS_ASSIGN_TEAM_KEY,
+  TEAM_MEMBERS_DEACTIVATE_KEY,
+  TEAM_MEMBERS_INVITE_KEY,
+  TEAM_MEMBERS_MOBILE_VIEW_KEY,
+  TEAM_MEMBERS_UPDATE_KEY,
+  TEAM_MEMBERS_VIEW_KEY,
+} from "../rbac/operations-permission-catalog.js";
+import {
+  isDepartmentCompatible,
+  isSameOrgBranch,
+  TEAM_ERROR_CODES,
+} from "../teams/operations-teams-domain.js";
 import type { OperationsResolvedAccess } from "../rbac/operations-access.types.js";
 import type {
   CreateOperationsTeamMemberBody,
@@ -20,30 +47,57 @@ import type {
   UpdateOperationsTeamMemberStatusBody,
 } from "./operations-team.validation.js";
 
-function toPublicMember(doc: {
-  _id: mongoose.Types.ObjectId;
-  fullName: string;
-  email?: string | null;
-  mobileNumber: string;
-  role: string;
-  roleId?: mongoose.Types.ObjectId | null;
-  departmentId?: mongoose.Types.ObjectId | null;
-  orgUnitId?: mongoose.Types.ObjectId | null;
-  status: string;
-  lastActiveAt?: Date | null;
-  invitedAt?: Date | null;
-  createdAt?: Date;
-  updatedAt?: Date;
-}, extras?: {
-  roleName?: string | null;
-  departmentName?: string | null;
-  orgUnitName?: string | null;
-}) {
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function optionalId(value: string | null | undefined): string | null {
+  if (!value || value === "") return null;
+  return value;
+}
+
+function canViewMobile(access: OperationsResolvedAccess): boolean {
+  if (access.isSuperAdmin) return true;
+  if (operationsAccessCanKey(access, TEAM_MEMBERS_MOBILE_VIEW_KEY)) {
+    return true;
+  }
+  const hasFineGrants = access.grantedKeys.some(
+    (key) => key === "team" || key.startsWith("team."),
+  );
+  if (hasFineGrants) return false;
+  return operationsAccessCan(access, "team", "read");
+}
+
+function toPublicMember(
+  doc: {
+    _id: mongoose.Types.ObjectId;
+    fullName: string;
+    email?: string | null;
+    mobileNumber: string;
+    role: string;
+    roleId?: mongoose.Types.ObjectId | null;
+    departmentId?: mongoose.Types.ObjectId | null;
+    orgUnitId?: mongoose.Types.ObjectId | null;
+    teamId?: mongoose.Types.ObjectId | null;
+    status: string;
+    lastActiveAt?: Date | null;
+    invitedAt?: Date | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+  },
+  extras?: {
+    roleName?: string | null;
+    departmentName?: string | null;
+    orgUnitName?: string | null;
+    teamName?: string | null;
+    mobileNumber?: string;
+  },
+) {
   return {
     id: String(doc._id),
     fullName: doc.fullName,
     email: doc.email ?? "",
-    mobileNumber: doc.mobileNumber,
+    mobileNumber: extras?.mobileNumber ?? "",
     role: doc.role,
     roleId: doc.roleId ? String(doc.roleId) : null,
     roleName: extras?.roleName ?? null,
@@ -51,6 +105,8 @@ function toPublicMember(doc: {
     departmentName: extras?.departmentName ?? null,
     orgUnitId: doc.orgUnitId ? String(doc.orgUnitId) : null,
     orgUnitName: extras?.orgUnitName ?? null,
+    teamId: doc.teamId ? String(doc.teamId) : null,
+    teamName: extras?.teamName ?? null,
     status: doc.status,
     lastActiveAt: doc.lastActiveAt ? doc.lastActiveAt.toISOString() : null,
     invitedAt: doc.invitedAt ? doc.invitedAt.toISOString() : null,
@@ -61,7 +117,9 @@ function toPublicMember(doc: {
 
 class OperationsTeamService {
   async overview(actor: OperationsResolvedAccess) {
+    assertFineOrCoarsePermission(actor, TEAM_MEMBERS_VIEW_KEY, "team", "read");
     const memberFilter = await this.memberScopeFilter(actor);
+    const teamFilter = await this.teamScopeFilter(actor);
     const [
       totalMembers,
       activeMembers,
@@ -69,6 +127,7 @@ class OperationsTeamService {
       pendingInvitations,
       totalRoles,
       totalDepartments,
+      totalTeams,
     ] = await Promise.all([
       OperationsTeamUserModel.countDocuments(memberFilter),
       OperationsTeamUserModel.countDocuments({ ...memberFilter, status: "active" }),
@@ -93,7 +152,12 @@ class OperationsTeamService {
               }
             : { _id: { $in: [] } },
       ),
-      OperationsDepartmentModel.countDocuments({ status: "active" }),
+      OperationsDepartmentModel.countDocuments(
+        actor.isSuperAdmin || !actor.departmentId
+          ? { status: "active" }
+          : { status: "active", _id: actor.departmentId },
+      ),
+      OperationsTeamModel.countDocuments(teamFilter),
     ]);
 
     return {
@@ -103,10 +167,12 @@ class OperationsTeamService {
       pendingInvitations,
       totalRoles,
       totalDepartments,
+      totalTeams,
     };
   }
 
   async list(actor: OperationsResolvedAccess, query: ListOperationsTeamQuery) {
+    assertFineOrCoarsePermission(actor, TEAM_MEMBERS_VIEW_KEY, "team", "read");
     const filter: Record<string, unknown> = {
       ...(await this.memberScopeFilter(actor)),
     };
@@ -118,15 +184,44 @@ class OperationsTeamService {
       filter.roleId = query.roleId;
     }
     if (query.departmentId) {
+      assertActorCanAccessDepartment(actor, query.departmentId);
       filter.departmentId = query.departmentId;
     }
+    if (query.orgUnitId) {
+      await assertActorCanAccessOrgUnit(actor, query.orgUnitId);
+      const subtree = await loadOrgSubtreeIds(query.orgUnitId);
+      filter.orgUnitId = { $in: subtree };
+    }
+    if (query.teamId) {
+      const team = await OperationsTeamModel.findById(query.teamId)
+        .select("departmentId orgUnitId")
+        .lean();
+      if (!team) {
+        throw new AppError("Team not found.", HTTP_STATUS.NOT_FOUND, {
+          code: TEAM_ERROR_CODES.TEAM_NOT_FOUND,
+        });
+      }
+      assertActorCanAccessDepartment(actor, String(team.departmentId));
+      await assertActorCanAccessOrgUnit(actor, String(team.orgUnitId));
+      filter.teamId = query.teamId;
+    }
     if (query.search.trim()) {
-      const pattern = query.search.trim();
-      filter.$or = [
-        { fullName: { $regex: pattern, $options: "i" } },
-        { email: { $regex: pattern, $options: "i" } },
-        { mobileNumber: { $regex: pattern, $options: "i" } },
-      ];
+      const pattern = escapeRegex(query.search.trim());
+      const searchClause = {
+        $or: [
+          { fullName: { $regex: pattern, $options: "i" } },
+          { email: { $regex: pattern, $options: "i" } },
+          { mobileNumber: { $regex: pattern, $options: "i" } },
+        ],
+      };
+      if (Array.isArray(filter.$and)) {
+        filter.$and.push(searchClause);
+      } else if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, searchClause];
+        delete filter.$or;
+      } else {
+        Object.assign(filter, searchClause);
+      }
     }
 
     const total = await OperationsTeamUserModel.countDocuments(filter);
@@ -137,59 +232,27 @@ class OperationsTeamService {
       .limit(pagination.limit)
       .lean();
 
-    const [roles, departments] = await Promise.all([
-      OperationsRoleModel.find({
-        _id: {
-          $in: members
-            .map((member) => member.roleId)
-            .filter((id): id is mongoose.Types.ObjectId => Boolean(id)),
-        },
-      })
-        .select("name")
-        .lean(),
-      OperationsDepartmentModel.find({
-        _id: {
-          $in: members
-            .map((member) => member.departmentId)
-            .filter((id): id is mongoose.Types.ObjectId => Boolean(id)),
-        },
-      })
-        .select("name")
-        .lean(),
-    ]);
-
-    const roleNameById = new Map(roles.map((role) => [String(role._id), role.name]));
-    const departmentNameById = new Map(
-      departments.map((department) => [String(department._id), department.name]),
-    );
+    const showMobile = canViewMobile(actor);
+    const extras = await this.hydrateMemberExtras(members, showMobile);
 
     return {
       members: members.map((member) =>
-        toPublicMember(member, {
-          roleName:
-            member.role === "SUPER_ADMIN"
-              ? "Super Admin"
-              : member.roleId
-                ? roleNameById.get(String(member.roleId)) ?? null
-                : member.role,
-          departmentName: member.departmentId
-            ? departmentNameById.get(String(member.departmentId)) ?? null
-            : null,
-        }),
+        toPublicMember(member, extras.get(String(member._id))),
       ),
       pagination,
     };
   }
 
   async create(actor: OperationsResolvedAccess, body: CreateOperationsTeamMemberBody) {
-    if (!actor.isSuperAdmin && !actor.canManageUsers) {
-      throw new AppError(
-        "You are not allowed to create team members.",
-        HTTP_STATUS.FORBIDDEN,
-      );
-    }
+    assertFineOrCoarsePermission(actor, TEAM_MEMBERS_INVITE_KEY, "team", "create");
 
     await this.assertAssignableRole(actor, body.roleId);
+    assertFineOrCoarsePermission(
+      actor,
+      TEAM_MEMBERS_ASSIGN_ROLE_KEY,
+      "team",
+      "update",
+    );
 
     const email = body.email.trim().toLowerCase();
     const existing = await OperationsTeamUserModel.findOne({
@@ -202,35 +265,26 @@ class OperationsTeamService {
       );
     }
 
-    const departmentId =
-      body.departmentId && body.departmentId !== ""
-        ? String(body.departmentId)
-        : actor.departmentId;
-    if (departmentId) {
-      const department = await OperationsDepartmentModel.findOne({
-        _id: departmentId,
-        status: "active",
-      }).lean();
-      if (!department) {
-        throw new AppError("Department not found.", HTTP_STATUS.BAD_REQUEST);
-      }
+    const requestedDepartmentId = optionalId(body.departmentId);
+    if (requestedDepartmentId) {
+      await this.assertActiveDepartment(actor, requestedDepartmentId);
+    }
+    const departmentId = requestedDepartmentId ?? actor.departmentId;
+
+    const orgUnitId = optionalId(body.orgUnitId);
+    if (orgUnitId) {
+      await this.assertActiveOrgUnit(actor, orgUnitId);
     }
 
-    const orgUnitId =
-      body.orgUnitId && body.orgUnitId !== ""
-        ? String(body.orgUnitId)
-        : null;
-    if (orgUnitId) {
-      const orgUnit = await OperationsOrgUnitModel.findOne({
-        _id: orgUnitId,
-        status: "active",
-      }).lean();
-      if (!orgUnit) {
-        throw new AppError(
-          "Organization unit not found.",
-          HTTP_STATUS.BAD_REQUEST,
-        );
-      }
+    const teamId = optionalId(body.teamId);
+    if (teamId) {
+      await this.assertTeamAssignment({
+        actor,
+        teamId,
+        departmentId,
+        orgUnitId,
+        existingTeamId: null,
+      });
     }
 
     const member = await OperationsTeamUserModel.create({
@@ -242,6 +296,7 @@ class OperationsTeamService {
       roleId: body.roleId,
       departmentId: departmentId || null,
       orgUnitId: orgUnitId || null,
+      teamId: teamId || null,
       status: body.status,
       invitedAt: new Date(),
       invitedBy: actor.userId,
@@ -257,11 +312,30 @@ class OperationsTeamService {
       nextState: {
         email,
         roleId: body.roleId,
+        departmentId,
+        orgUnitId,
+        teamId,
         status: member.status,
       },
     });
 
-    return toPublicMember(member);
+    if (teamId) {
+      await recordOperationsAuditEvent({
+        actorUserId: actor.userId,
+        actorName: actor.roleName ?? "",
+        action: "team.member_added",
+        targetType: "team",
+        targetId: teamId,
+        targetLabel: member.fullName,
+        nextState: { userId: String(member._id) },
+      });
+    }
+
+    const extras = await this.hydrateMemberExtras(
+      [member.toObject()],
+      canViewMobile(actor),
+    );
+    return toPublicMember(member, extras.get(String(member._id)));
   }
 
   async update(
@@ -269,12 +343,7 @@ class OperationsTeamService {
     memberId: string,
     body: UpdateOperationsTeamMemberBody,
   ) {
-    if (!actor.isSuperAdmin && !actor.canManageUsers) {
-      throw new AppError(
-        "You are not allowed to update team members.",
-        HTTP_STATUS.FORBIDDEN,
-      );
-    }
+    assertFineOrCoarsePermission(actor, TEAM_MEMBERS_UPDATE_KEY, "team", "update");
 
     const member = await OperationsTeamUserModel.findById(memberId).select(
       "+passwordHash",
@@ -282,12 +351,8 @@ class OperationsTeamService {
     if (!member) {
       throw new AppError("Team member not found.", HTTP_STATUS.NOT_FOUND);
     }
-    if (member.role === "SUPER_ADMIN" && !actor.isSuperAdmin) {
-      throw new AppError(
-        "You cannot modify a Super Admin.",
-        HTTP_STATUS.FORBIDDEN,
-      );
-    }
+    await this.assertCanManageMember(actor, member);
+
     if (String(member._id) === actor.userId && body.roleId) {
       throw new AppError(
         "You cannot change your own role.",
@@ -300,10 +365,17 @@ class OperationsTeamService {
       roleId: member.roleId ? String(member.roleId) : null,
       departmentId: member.departmentId ? String(member.departmentId) : null,
       orgUnitId: member.orgUnitId ? String(member.orgUnitId) : null,
+      teamId: member.teamId ? String(member.teamId) : null,
     };
 
     if (body.roleId) {
       await this.assertAssignableRole(actor, body.roleId);
+      assertFineOrCoarsePermission(
+        actor,
+        TEAM_MEMBERS_ASSIGN_ROLE_KEY,
+        "team",
+        "update",
+      );
       member.roleId = new mongoose.Types.ObjectId(body.roleId);
       if (member.role !== "SUPER_ADMIN") {
         member.role = "CUSTOM";
@@ -317,47 +389,58 @@ class OperationsTeamService {
       member.passwordHash = await bcrypt.hash(body.password, 10);
     }
     if (body.departmentId !== undefined) {
-      const departmentId =
-        body.departmentId && body.departmentId !== ""
-          ? String(body.departmentId)
-          : null;
+      const departmentId = optionalId(body.departmentId);
       if (departmentId) {
-        const department = await OperationsDepartmentModel.findOne({
-          _id: departmentId,
-          status: "active",
-        }).lean();
-        if (!department) {
-          throw new AppError("Department not found.", HTTP_STATUS.BAD_REQUEST);
-        }
+        await this.assertActiveDepartment(actor, departmentId);
       }
       member.departmentId = departmentId
         ? new mongoose.Types.ObjectId(departmentId)
         : null;
     }
     if (body.orgUnitId !== undefined) {
-      const orgUnitId =
-        body.orgUnitId && body.orgUnitId !== ""
-          ? String(body.orgUnitId)
-          : null;
+      const orgUnitId = optionalId(body.orgUnitId);
       if (orgUnitId) {
-        const orgUnit = await OperationsOrgUnitModel.findOne({
-          _id: orgUnitId,
-          status: "active",
-        }).lean();
-        if (!orgUnit) {
-          throw new AppError(
-            "Organization unit not found.",
-            HTTP_STATUS.BAD_REQUEST,
-          );
-        }
+        await this.assertActiveOrgUnit(actor, orgUnitId);
       }
       member.orgUnitId = orgUnitId
         ? new mongoose.Types.ObjectId(orgUnitId)
         : null;
     }
 
+    const nextDepartmentId = member.departmentId
+      ? String(member.departmentId)
+      : null;
+    const nextOrgUnitId = member.orgUnitId ? String(member.orgUnitId) : null;
+    const existingTeamId = member.teamId ? String(member.teamId) : null;
+
+    if (body.teamId !== undefined) {
+      const teamId = optionalId(body.teamId);
+      if (teamId) {
+        await this.assertTeamAssignment({
+          actor,
+          teamId,
+          departmentId: nextDepartmentId,
+          orgUnitId: nextOrgUnitId,
+          existingTeamId,
+        });
+        member.teamId = new mongoose.Types.ObjectId(teamId);
+      } else {
+        member.teamId = null;
+      }
+    } else if (existingTeamId) {
+      await this.assertTeamAssignment({
+        actor,
+        teamId: existingTeamId,
+        departmentId: nextDepartmentId,
+        orgUnitId: nextOrgUnitId,
+        existingTeamId,
+        skipAssignPermission: true,
+      });
+    }
+
     await member.save();
 
+    const nextTeamId = member.teamId ? String(member.teamId) : null;
     await recordOperationsAuditEvent({
       actorUserId: actor.userId,
       actorName: actor.roleName ?? "",
@@ -369,12 +452,42 @@ class OperationsTeamService {
       nextState: {
         fullName: member.fullName,
         roleId: member.roleId ? String(member.roleId) : null,
-        departmentId: member.departmentId ? String(member.departmentId) : null,
-        orgUnitId: member.orgUnitId ? String(member.orgUnitId) : null,
+        departmentId: nextDepartmentId,
+        orgUnitId: nextOrgUnitId,
+        teamId: nextTeamId,
       },
     });
 
-    return toPublicMember(member);
+    if (previous.teamId !== nextTeamId) {
+      if (previous.teamId) {
+        await recordOperationsAuditEvent({
+          actorUserId: actor.userId,
+          actorName: actor.roleName ?? "",
+          action: "team.member_removed",
+          targetType: "team",
+          targetId: previous.teamId,
+          targetLabel: member.fullName,
+          nextState: { userId: memberId },
+        });
+      }
+      if (nextTeamId) {
+        await recordOperationsAuditEvent({
+          actorUserId: actor.userId,
+          actorName: actor.roleName ?? "",
+          action: "team.member_added",
+          targetType: "team",
+          targetId: nextTeamId,
+          targetLabel: member.fullName,
+          nextState: { userId: memberId },
+        });
+      }
+    }
+
+    const extras = await this.hydrateMemberExtras(
+      [member.toObject()],
+      canViewMobile(actor),
+    );
+    return toPublicMember(member, extras.get(memberId));
   }
 
   async updateStatus(
@@ -382,23 +495,17 @@ class OperationsTeamService {
     memberId: string,
     body: UpdateOperationsTeamMemberStatusBody,
   ) {
-    if (!actor.isSuperAdmin && !actor.canManageUsers) {
-      throw new AppError(
-        "You are not allowed to change member status.",
-        HTTP_STATUS.FORBIDDEN,
-      );
-    }
+    const fineKey =
+      body.status === "active"
+        ? TEAM_MEMBERS_ACTIVATE_KEY
+        : TEAM_MEMBERS_DEACTIVATE_KEY;
+    assertFineOrCoarsePermission(actor, fineKey, "team", "update");
 
     const member = await OperationsTeamUserModel.findById(memberId);
     if (!member) {
       throw new AppError("Team member not found.", HTTP_STATUS.NOT_FOUND);
     }
-    if (member.role === "SUPER_ADMIN" && !actor.isSuperAdmin) {
-      throw new AppError(
-        "You cannot change Super Admin status.",
-        HTTP_STATUS.FORBIDDEN,
-      );
-    }
+    await this.assertCanManageMember(actor, member);
     if (String(member._id) === actor.userId) {
       throw new AppError(
         "You cannot change your own status.",
@@ -427,7 +534,11 @@ class OperationsTeamService {
       reason: body.reason,
     });
 
-    return toPublicMember(member);
+    const extras = await this.hydrateMemberExtras(
+      [member.toObject()],
+      canViewMobile(actor),
+    );
+    return toPublicMember(member, extras.get(memberId));
   }
 
   private async memberScopeFilter(
@@ -436,16 +547,277 @@ class OperationsTeamService {
     if (actor.isSuperAdmin) {
       return {};
     }
+    const and: Record<string, unknown>[] = [];
     if (!actor.roleId) {
-      return { _id: actor.userId };
+      and.push({ _id: actor.userId });
+    } else {
+      const descendantRoleIds = await getRoleDescendantIds(actor.roleId);
+      and.push({
+        $or: [
+          { _id: actor.userId },
+          { roleId: { $in: [actor.roleId, ...descendantRoleIds] } },
+        ],
+      });
     }
-    const descendantRoleIds = await getRoleDescendantIds(actor.roleId);
-    return {
-      $or: [
-        { _id: actor.userId },
-        { roleId: { $in: [actor.roleId, ...descendantRoleIds] } },
-      ],
-    };
+    if (actor.departmentId) {
+      and.push({ departmentId: actor.departmentId });
+    }
+    const subtree = await loadActorOrgSubtreeIds(actor);
+    if (subtree) {
+      and.push({ orgUnitId: { $in: subtree } });
+    }
+    if (and.length === 1) {
+      return and[0]!;
+    }
+    return { $and: and };
+  }
+
+  private async teamScopeFilter(
+    actor: OperationsResolvedAccess,
+  ): Promise<Record<string, unknown>> {
+    const filter: Record<string, unknown> = { status: "active" };
+    if (!actor.isSuperAdmin && actor.departmentId) {
+      filter.departmentId = actor.departmentId;
+    }
+    const subtree = await loadActorOrgSubtreeIds(actor);
+    if (subtree) {
+      filter.orgUnitId = { $in: subtree };
+    }
+    return filter;
+  }
+
+  private async assertCanManageMember(
+    actor: OperationsResolvedAccess,
+    member: { _id: mongoose.Types.ObjectId; role: string },
+  ): Promise<void> {
+    if (member.role === "SUPER_ADMIN" && !actor.isSuperAdmin) {
+      throw new AppError(
+        "You cannot modify a Super Admin.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+    const scope = await this.memberScopeFilter(actor);
+    const visible = await OperationsTeamUserModel.exists({
+      _id: member._id,
+      ...scope,
+    });
+    if (!visible) {
+      throw new AppError(
+        "You cannot manage this member.",
+        HTTP_STATUS.FORBIDDEN,
+        { code: TEAM_ERROR_CODES.ORG_SCOPE_FORBIDDEN },
+      );
+    }
+  }
+
+  private async assertActiveDepartment(
+    actor: OperationsResolvedAccess,
+    departmentId: string,
+  ): Promise<void> {
+    assertFineOrCoarsePermission(
+      actor,
+      TEAM_MEMBERS_ASSIGN_DEPARTMENT_KEY,
+      "team",
+      "update",
+    );
+    assertActorCanAccessDepartment(actor, departmentId);
+    const department = await OperationsDepartmentModel.findOne({
+      _id: departmentId,
+      status: "active",
+    }).lean();
+    if (!department) {
+      throw new AppError("Department not found.", HTTP_STATUS.BAD_REQUEST);
+    }
+  }
+
+  private async assertActiveOrgUnit(
+    actor: OperationsResolvedAccess,
+    orgUnitId: string,
+  ): Promise<void> {
+    assertFineOrCoarsePermission(
+      actor,
+      TEAM_MEMBERS_ASSIGN_LOCATION_KEY,
+      "team",
+      "update",
+    );
+    await assertActorCanAccessOrgUnit(actor, orgUnitId);
+    const orgUnit = await OperationsOrgUnitModel.findOne({
+      _id: orgUnitId,
+      status: "active",
+    }).lean();
+    if (!orgUnit) {
+      throw new AppError(
+        "Organization unit not found.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+  }
+
+  private async assertTeamAssignment(input: {
+    actor: OperationsResolvedAccess;
+    teamId: string;
+    departmentId: string | null;
+    orgUnitId: string | null;
+    existingTeamId: string | null;
+    skipAssignPermission?: boolean;
+  }): Promise<void> {
+    if (!input.skipAssignPermission) {
+      assertFineOrCoarsePermission(
+        input.actor,
+        TEAM_MEMBERS_ASSIGN_TEAM_KEY,
+        "team",
+        "update",
+      );
+    }
+    const team = await OperationsTeamModel.findById(input.teamId).lean();
+    if (!team) {
+      throw new AppError("Team not found.", HTTP_STATUS.BAD_REQUEST, {
+        code: TEAM_ERROR_CODES.TEAM_NOT_FOUND,
+      });
+    }
+    if (team.status !== "active") {
+      throw new AppError("Cannot assign members to an archived team.", HTTP_STATUS.CONFLICT, {
+        code: TEAM_ERROR_CODES.TEAM_INACTIVE,
+      });
+    }
+    assertActorCanAccessDepartment(input.actor, String(team.departmentId));
+    await assertActorCanAccessOrgUnit(input.actor, String(team.orgUnitId));
+
+    if (!isDepartmentCompatible(input.departmentId, String(team.departmentId))) {
+      throw new AppError(
+        "People must belong to the same department as the team.",
+        HTTP_STATUS.CONFLICT,
+        { code: TEAM_ERROR_CODES.TEAM_DEPARTMENT_MISMATCH },
+      );
+    }
+
+    if (
+      input.existingTeamId &&
+      input.existingTeamId !== input.teamId
+    ) {
+      throw new AppError(
+        "This member is already assigned to another team. Remove them first.",
+        HTTP_STATUS.CONFLICT,
+        { code: TEAM_ERROR_CODES.TEAM_MEMBER_ALREADY_ASSIGNED },
+      );
+    }
+
+    if (!input.orgUnitId) {
+      return;
+    }
+    const [userUnit, teamUnit] = await Promise.all([
+      OperationsOrgUnitModel.findById(input.orgUnitId).select("ancestorIds").lean(),
+      OperationsOrgUnitModel.findById(team.orgUnitId).select("ancestorIds").lean(),
+    ]);
+    const compatible = isSameOrgBranch({
+      userOrgUnitId: input.orgUnitId,
+      userAncestorIds: (userUnit?.ancestorIds ?? []).map((id) => String(id)),
+      teamOrgUnitId: String(team.orgUnitId),
+      teamAncestorIds: (teamUnit?.ancestorIds ?? []).map((id) => String(id)),
+    });
+    if (!compatible) {
+      throw new AppError(
+        "People must belong to the same geographic branch as the team.",
+        HTTP_STATUS.CONFLICT,
+        { code: TEAM_ERROR_CODES.TEAM_LOCATION_MISMATCH },
+      );
+    }
+  }
+
+  private async hydrateMemberExtras(
+    members: Array<{
+      _id: mongoose.Types.ObjectId;
+      role: string;
+      roleId?: mongoose.Types.ObjectId | null;
+      departmentId?: mongoose.Types.ObjectId | null;
+      orgUnitId?: mongoose.Types.ObjectId | null;
+      teamId?: mongoose.Types.ObjectId | null;
+      mobileNumber: string;
+    }>,
+    showMobile: boolean,
+  ): Promise<
+    Map<
+      string,
+      {
+        roleName: string | null;
+        departmentName: string | null;
+        orgUnitName: string | null;
+        teamName: string | null;
+        mobileNumber: string;
+      }
+    >
+  > {
+    const [roles, departments, orgUnits, teams] = await Promise.all([
+      OperationsRoleModel.find({
+        _id: {
+          $in: members
+            .map((member) => member.roleId)
+            .filter((id): id is mongoose.Types.ObjectId => Boolean(id)),
+        },
+      })
+        .select("name")
+        .lean(),
+      OperationsDepartmentModel.find({
+        _id: {
+          $in: members
+            .map((member) => member.departmentId)
+            .filter((id): id is mongoose.Types.ObjectId => Boolean(id)),
+        },
+      })
+        .select("name")
+        .lean(),
+      OperationsOrgUnitModel.find({
+        _id: {
+          $in: members
+            .map((member) => member.orgUnitId)
+            .filter((id): id is mongoose.Types.ObjectId => Boolean(id)),
+        },
+      })
+        .select("name")
+        .lean(),
+      OperationsTeamModel.find({
+        _id: {
+          $in: members
+            .map((member) => member.teamId)
+            .filter((id): id is mongoose.Types.ObjectId => Boolean(id)),
+        },
+      })
+        .select("name")
+        .lean(),
+    ]);
+
+    const roleNameById = new Map(roles.map((role) => [String(role._id), role.name]));
+    const departmentNameById = new Map(
+      departments.map((department) => [String(department._id), department.name]),
+    );
+    const orgUnitNameById = new Map(
+      orgUnits.map((unit) => [String(unit._id), unit.name]),
+    );
+    const teamNameById = new Map(teams.map((team) => [String(team._id), team.name]));
+
+    return new Map(
+      members.map((member) => [
+        String(member._id),
+        {
+          roleName:
+            member.role === "SUPER_ADMIN"
+              ? "Super Admin"
+              : member.roleId
+                ? roleNameById.get(String(member.roleId)) ?? null
+                : member.role,
+          departmentName: member.departmentId
+            ? departmentNameById.get(String(member.departmentId)) ?? null
+            : null,
+          orgUnitName: member.orgUnitId
+            ? orgUnitNameById.get(String(member.orgUnitId)) ?? null
+            : null,
+          teamName: member.teamId
+            ? teamNameById.get(String(member.teamId)) ?? null
+            : null,
+          mobileNumber: showMobile ? member.mobileNumber : "",
+        },
+      ]),
+    );
   }
 
   private async assertAssignableRole(

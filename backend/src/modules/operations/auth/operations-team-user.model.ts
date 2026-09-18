@@ -65,6 +65,12 @@ const operationsTeamUserSchema = new Schema(
       default: null,
       index: true,
     },
+    teamId: {
+      type: Schema.Types.ObjectId,
+      ref: "OperationsTeam",
+      default: null,
+      index: true,
+    },
     invitedAt: {
       type: Date,
       default: null,
@@ -100,6 +106,9 @@ const operationsTeamUserSchema = new Schema(
     collection: "operations_team_users",
   },
 );
+
+operationsTeamUserSchema.index({ teamId: 1, status: 1 });
+operationsTeamUserSchema.index({ departmentId: 1, orgUnitId: 1, status: 1 });
 
 export type OperationsTeamUserDocument = InferSchemaType<
   typeof operationsTeamUserSchema

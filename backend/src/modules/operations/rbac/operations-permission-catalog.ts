@@ -561,6 +561,30 @@ function teamCatalog(): OperationsPermissionDefinition[] {
     }),
     define({
       module: "team",
+      page: "members",
+      action: "assign_team",
+      label: "Team · Members · Assign team",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "team",
+      page: "members",
+      action: "assign_location",
+      label: "Team · Members · Assign location",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "team",
+      page: "members",
+      section: "fields",
+      field: "mobile",
+      action: "view",
+      label: "Team · Members · Mobile",
+      mapsToAction: "read",
+      sensitive: true,
+    }),
+    define({
+      module: "team",
       page: "organization",
       action: "view",
       label: "Team · Organization · View",
@@ -586,6 +610,66 @@ function teamCatalog(): OperationsPermissionDefinition[] {
       action: "archive",
       label: "Team · Organization · Archive unit",
       mapsToAction: "delete",
+    }),
+    define({
+      module: "team",
+      page: "teams",
+      action: "view",
+      label: "Teams · View",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "team",
+      page: "teams",
+      action: "create",
+      label: "Teams · Create",
+      mapsToAction: "create",
+    }),
+    define({
+      module: "team",
+      page: "teams",
+      action: "update",
+      label: "Teams · Update",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "team",
+      page: "teams",
+      action: "archive",
+      label: "Teams · Archive",
+      mapsToAction: "delete",
+    }),
+    define({
+      module: "team",
+      page: "teams",
+      section: "members",
+      action: "view",
+      label: "Teams · Members · View",
+      mapsToAction: "read",
+    }),
+    define({
+      module: "team",
+      page: "teams",
+      section: "members",
+      action: "add",
+      label: "Teams · Members · Add",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "team",
+      page: "teams",
+      section: "members",
+      action: "remove",
+      label: "Teams · Members · Remove",
+      mapsToAction: "update",
+    }),
+    define({
+      module: "team",
+      page: "teams",
+      section: "lead",
+      action: "assign",
+      label: "Teams · Lead · Assign",
+      mapsToAction: "update",
     }),
     define({
       module: "roles",
@@ -636,6 +720,12 @@ function teamCatalog(): OperationsPermissionDefinition[] {
       mapsToAction: "update",
     }),
     define({
+      module: "departments",
+      action: "archive",
+      label: "Departments · Archive",
+      mapsToAction: "delete",
+    }),
+    define({
       module: "activity_logs",
       action: "view",
       label: "Activity log · View",
@@ -658,7 +748,6 @@ const UNIMPLEMENTED_READ_ONLY: OperationsPermissionModule[] = [
   "journey_alerts",
   "reports",
   "billing",
-  "settings",
 ];
 
 export const OPERATIONS_PERMISSION_CATALOG: OperationsPermissionDefinition[] = [
@@ -680,6 +769,7 @@ export const OPERATIONS_PERMISSION_CATALOG: OperationsPermissionDefinition[] = [
   ...jobCatalog(),
   ...placementCatalog(),
   ...teamCatalog(),
+  ...coarseModule("settings", "Settings", ["read", "update"]),
 ];
 
 export const PLACEMENTS_LIST_EXPORT_KEY =
@@ -701,6 +791,37 @@ export const WORK_COMPLETE_KEY = "my_work.complete" as const;
 export const WORK_PRIORITY_UPDATE_KEY = "my_work.priority.update" as const;
 export const WORK_DUE_UPDATE_KEY = "my_work.due.update" as const;
 export const WORK_EXPORT_KEY = "my_work.export" as const;
+
+export const TEAM_MEMBERS_VIEW_KEY = "team.members.view" as const;
+export const TEAM_MEMBERS_INVITE_KEY = "team.members.invite" as const;
+export const TEAM_MEMBERS_UPDATE_KEY = "team.members.update" as const;
+export const TEAM_MEMBERS_ACTIVATE_KEY = "team.members.activate" as const;
+export const TEAM_MEMBERS_DEACTIVATE_KEY = "team.members.deactivate" as const;
+export const TEAM_MEMBERS_ASSIGN_ROLE_KEY = "team.members.assign_role" as const;
+export const TEAM_MEMBERS_ASSIGN_DEPARTMENT_KEY =
+  "team.members.assign_department" as const;
+export const TEAM_MEMBERS_ASSIGN_TEAM_KEY = "team.members.assign_team" as const;
+export const TEAM_MEMBERS_ASSIGN_LOCATION_KEY =
+  "team.members.assign_location" as const;
+export const TEAM_MEMBERS_MOBILE_VIEW_KEY =
+  "team.members.fields.mobile.view" as const;
+export const TEAM_ORGANIZATION_VIEW_KEY = "team.organization.view" as const;
+export const TEAM_ORGANIZATION_CREATE_KEY = "team.organization.create" as const;
+export const TEAM_ORGANIZATION_UPDATE_KEY = "team.organization.update" as const;
+export const TEAM_ORGANIZATION_ARCHIVE_KEY =
+  "team.organization.archive" as const;
+export const TEAM_TEAMS_VIEW_KEY = "team.teams.view" as const;
+export const TEAM_TEAMS_CREATE_KEY = "team.teams.create" as const;
+export const TEAM_TEAMS_UPDATE_KEY = "team.teams.update" as const;
+export const TEAM_TEAMS_ARCHIVE_KEY = "team.teams.archive" as const;
+export const TEAM_TEAMS_MEMBERS_VIEW_KEY = "team.teams.members.view" as const;
+export const TEAM_TEAMS_MEMBERS_ADD_KEY = "team.teams.members.add" as const;
+export const TEAM_TEAMS_MEMBERS_REMOVE_KEY =
+  "team.teams.members.remove" as const;
+export const TEAM_TEAMS_LEAD_ASSIGN_KEY = "team.teams.lead.assign" as const;
+export const DEPARTMENTS_ARCHIVE_KEY = "departments.archive" as const;
+export const SETTINGS_VIEW_KEY = "settings.view" as const;
+export const SETTINGS_UPDATE_KEY = "settings.update" as const;
 
 const CATALOG_BY_KEY = new Map(
   OPERATIONS_PERMISSION_CATALOG.map((item) => [item.key, item]),

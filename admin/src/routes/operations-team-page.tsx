@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Ban,
   CheckCircle2,
@@ -8,10 +8,14 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { OrganizationTabs } from "../components/operations/organization/OrganizationTabs";
+import { flattenOrgTree } from "../components/operations/organization/org-tree-utils";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { OperationsCan } from "../components/operations/auth/OperationsCan";
 import { OperationsCanKey } from "../components/operations/auth/OperationsCanKey";
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
+import { OperationsFilterSelect } from "../components/operations/jobs/OperationsFilterSelect";
 import {
   formatOperationsTimestamp,
   getOperationsApiErrorMessage,
@@ -26,6 +30,8 @@ import {
 } from "../hooks/use-operations-team";
 import { useOperationsRoles } from "../hooks/use-operations-roles";
 import { useOperationsDepartments } from "../hooks/use-operations-departments";
+import { useOperationsOrgTree } from "../hooks/use-operations-organization";
+import { useOperationsOpsTeams } from "../hooks/use-operations-ops-teams";
 import type {
   CreateOperationsTeamMemberInput,
   OperationsTeamMember,
@@ -58,6 +64,8 @@ type MemberFormState = {
   password: string;
   roleId: string;
   departmentId: string;
+  orgUnitId: string;
+  teamId: string;
 };
 
 const EMPTY_FORM: MemberFormState = {
@@ -67,18 +75,39 @@ const EMPTY_FORM: MemberFormState = {
   password: "",
   roleId: "",
   departmentId: "",
+  orgUnitId: "",
+  teamId: "",
 };
 
 export function OperationsTeamPage() {
   const { user, can } = useOperationsPermissions();
+  const [searchParams] = useSearchParams();
+  const departmentIdFromUrl = searchParams.get("departmentId") ?? "";
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [departmentId, setDepartmentId] = useState(departmentIdFromUrl);
+  const [orgUnitId, setOrgUnitId] = useState("");
+  const [teamId, setTeamId] = useState("");
   const [dialog, setDialog] = useState<"create" | "edit" | null>(null);
   const [selected, setSelected] = useState<OperationsTeamMember | null>(null);
   const [form, setForm] = useState<MemberFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    setDepartmentId(departmentIdFromUrl);
+    setPage(1);
+  }, [departmentIdFromUrl]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   const overviewQuery = useOperationsTeamOverview();
   const membersQuery = useOperationsTeamMembers({
@@ -86,9 +115,20 @@ export function OperationsTeamPage() {
     limit,
     search,
     status: status as "" | "active" | "inactive" | "suspended",
+    departmentId: departmentId || undefined,
+    orgUnitId: orgUnitId || undefined,
+    teamId: teamId || undefined,
   });
   const rolesQuery = useOperationsRoles({ status: "active" });
   const departmentsQuery = useOperationsDepartments({ status: "active" });
+  const treeQuery = useOperationsOrgTree({ status: "active" });
+  const teamsQuery = useOperationsOpsTeams({
+    page: 1,
+    limit: 100,
+    status: "active",
+    departmentId: form.departmentId || departmentId || undefined,
+    orgUnitId: form.orgUnitId || orgUnitId || undefined,
+  });
   const createMutation = useCreateOperationsTeamMember();
   const updateMutation = useUpdateOperationsTeamMember();
   const statusMutation = useUpdateOperationsTeamMemberStatus();
@@ -120,6 +160,8 @@ export function OperationsTeamPage() {
       password: "",
       roleId: member.roleId ?? "",
       departmentId: member.departmentId ?? "",
+      orgUnitId: member.orgUnitId ?? "",
+      teamId: member.teamId ?? "",
     });
     setFormError("");
     setDialog("edit");
@@ -136,6 +178,8 @@ export function OperationsTeamPage() {
           password: form.password,
           roleId: form.roleId,
           departmentId: form.departmentId || null,
+          orgUnitId: form.orgUnitId || null,
+          teamId: form.teamId || null,
         };
         await createMutation.mutateAsync(payload);
       } else if (selected) {
@@ -148,6 +192,8 @@ export function OperationsTeamPage() {
             password: form.password || undefined,
             roleId: form.roleId || undefined,
             departmentId: form.departmentId || null,
+            orgUnitId: form.orgUnitId || null,
+            teamId: form.teamId || null,
           },
         });
       }
@@ -163,10 +209,11 @@ export function OperationsTeamPage() {
 
   return (
     <OperationsLayout
-      title="Team Management"
-      subtitle="Invite members, assign custom roles, and control Operations access."
+      title="People"
+      subtitle="Invite members, assign roles, departments, teams and locations."
     >
       <div className="flex flex-col gap-4">
+        <OrganizationTabs />
         {overviewQuery.isError ? (
           <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {getOperationsApiErrorMessage(
@@ -203,27 +250,91 @@ export function OperationsTeamPage() {
         <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:flex-row sm:items-center">
           <input
             type="search"
-            value={search}
-            onChange={(event) => {
-              setPage(1);
-              setSearch(event.target.value);
-            }}
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
             placeholder="Search name, email or mobile"
             className="h-10 min-w-0 flex-1 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           />
-          <select
-            value={status}
-            onChange={(event) => {
-              setPage(1);
-              setStatus(event.target.value);
-            }}
-            className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="suspended">Suspended</option>
-          </select>
+          <div className="w-full shrink-0 sm:w-[10rem]">
+            <OperationsFilterSelect
+              label="Member status"
+              value={status}
+              options={[
+                { value: "", label: "All statuses" },
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+                { value: "suspended", label: "Suspended" },
+              ]}
+              onChange={(value) => {
+                setPage(1);
+                setStatus(value);
+              }}
+              hideSearch
+              triggerClassName="h-9"
+            />
+          </div>
+          <div className="w-full shrink-0 sm:w-[12rem]">
+            <OperationsFilterSelect
+              label="Department"
+              value={departmentId}
+              options={[
+                { value: "", label: "All departments" },
+                ...(departmentsQuery.data?.departments ?? []).map(
+                  (department) => ({
+                    value: department.id,
+                    label: department.name,
+                  }),
+                ),
+              ]}
+              onChange={(value) => {
+                setPage(1);
+                setDepartmentId(value);
+              }}
+              hideSearch
+              triggerClassName="h-9"
+            />
+          </div>
+          <div className="w-full shrink-0 sm:w-[12rem]">
+            <OperationsFilterSelect
+              label="Location"
+              value={orgUnitId}
+              options={[
+                { value: "", label: "All locations" },
+                ...flattenOrgTree(treeQuery.data?.roots ?? [])
+                  .filter((unit) =>
+                    ["region", "state", "city", "office"].includes(unit.type),
+                  )
+                  .map((unit) => ({
+                    value: unit.id,
+                    label: `${unit.name} · ${unit.type}`,
+                  })),
+              ]}
+              onChange={(value) => {
+                setPage(1);
+                setOrgUnitId(value);
+                setTeamId("");
+              }}
+              triggerClassName="h-9"
+            />
+          </div>
+          <div className="w-full shrink-0 sm:w-[12rem]">
+            <OperationsFilterSelect
+              label="Team"
+              value={teamId}
+              options={[
+                { value: "", label: "All teams" },
+                ...(teamsQuery.data?.teams ?? []).map((team) => ({
+                  value: team.id,
+                  label: team.name,
+                })),
+              ]}
+              onChange={(value) => {
+                setPage(1);
+                setTeamId(value);
+              }}
+              triggerClassName="h-9"
+            />
+          </div>
           <OperationsCan module="team" action="create">
             <button
               type="button"
@@ -251,13 +362,16 @@ export function OperationsTeamPage() {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface shadow-sm">
-            <table className="min-w-full text-left text-sm">
+            <table className="min-w-[72rem] text-left text-sm">
               <thead className="border-b border-border-subtle bg-hero-bg/60 text-[11px] uppercase tracking-wide text-muted">
                 <tr>
                   <th className="px-4 py-3">Member</th>
                   <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Mobile</th>
                   <th className="px-4 py-3">Role</th>
                   <th className="px-4 py-3">Department</th>
+                  <th className="px-4 py-3">Team</th>
+                  <th className="px-4 py-3">Location</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Created</th>
                   <th className="px-4 py-3">Last active</th>
@@ -271,6 +385,9 @@ export function OperationsTeamPage() {
                       {member.fullName}
                     </td>
                     <td className="px-4 py-3 text-muted">{member.email || "—"}</td>
+                    <td className="px-4 py-3 text-muted">
+                      {member.mobileNumber || "—"}
+                    </td>
                     <td className="px-4 py-3 text-foreground">
                       {member.role === "SUPER_ADMIN"
                         ? "Super Admin"
@@ -278,6 +395,12 @@ export function OperationsTeamPage() {
                     </td>
                     <td className="px-4 py-3 text-muted">
                       {member.departmentName || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {member.teamName || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {member.orgUnitName || "—"}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -424,43 +547,98 @@ export function OperationsTeamPage() {
                   className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 />
               </label>
-              <label className="grid gap-1 text-xs font-semibold text-muted">
-                Role
-                <select
+              <div className="grid gap-1.5">
+                <p className="text-xs font-semibold text-muted">Role</p>
+                <OperationsFilterSelect
+                  label="Role"
                   value={form.roleId}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, roleId: event.target.value }))
+                  options={[
+                    { value: "", label: "Select a role" },
+                    ...(rolesQuery.data?.roles ?? []).map((role) => ({
+                      value: role.id,
+                      label: role.name,
+                    })),
+                  ]}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, roleId: value }))
                   }
-                  className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                >
-                  <option value="">Select a role</option>
-                  {(rolesQuery.data?.roles ?? []).map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {role.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-1 text-xs font-semibold text-muted">
-                Department
-                <select
+                  hideSearch={(rolesQuery.data?.roles?.length ?? 0) <= 8}
+                  triggerClassName="h-9 rounded-lg text-xs"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <p className="text-xs font-semibold text-muted">Department</p>
+                <OperationsFilterSelect
+                  label="Department"
                   value={form.departmentId}
-                  onChange={(event) =>
+                  options={[
+                    { value: "", label: "None" },
+                    ...(departmentsQuery.data?.departments ?? []).map(
+                      (department) => ({
+                        value: department.id,
+                        label: department.name,
+                      }),
+                    ),
+                  ]}
+                  onChange={(value) =>
                     setForm((current) => ({
                       ...current,
-                      departmentId: event.target.value,
+                      departmentId: value,
+                      teamId: "",
                     }))
                   }
-                  className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                >
-                  <option value="">None</option>
-                  {(departmentsQuery.data?.departments ?? []).map((department) => (
-                    <option key={department.id} value={department.id}>
-                      {department.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  hideSearch={
+                    (departmentsQuery.data?.departments?.length ?? 0) <= 8
+                  }
+                  triggerClassName="h-9 rounded-lg text-xs"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <p className="text-xs font-semibold text-muted">Location</p>
+                <OperationsFilterSelect
+                  label="Location"
+                  value={form.orgUnitId}
+                  options={[
+                    { value: "", label: "None" },
+                    ...flattenOrgTree(treeQuery.data?.roots ?? [])
+                      .filter((unit) =>
+                        ["region", "state", "city", "office"].includes(
+                          unit.type,
+                        ),
+                      )
+                      .map((unit) => ({
+                        value: unit.id,
+                        label: `${unit.name} · ${unit.type}`,
+                      })),
+                  ]}
+                  onChange={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      orgUnitId: value,
+                      teamId: "",
+                    }))
+                  }
+                  triggerClassName="h-9 rounded-lg text-xs"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <p className="text-xs font-semibold text-muted">Team</p>
+                <OperationsFilterSelect
+                  label="Team"
+                  value={form.teamId}
+                  options={[
+                    { value: "", label: "None" },
+                    ...(teamsQuery.data?.teams ?? []).map((team) => ({
+                      value: team.id,
+                      label: team.name,
+                    })),
+                  ]}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, teamId: value }))
+                  }
+                  triggerClassName="h-9 rounded-lg text-xs"
+                />
+              </div>
               {formError ? (
                 <p className="text-sm text-danger">{formError}</p>
               ) : null}

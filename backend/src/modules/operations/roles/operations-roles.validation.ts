@@ -15,6 +15,8 @@ export const listOperationsRolesQuerySchema = z.object({
   search: z.string().trim().max(80).optional().default(""),
   status: z.enum(["active", "archived", "all"]).optional().default("active"),
   departmentId: z.union([objectId, z.literal("")]).optional().default(""),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(100),
 });
 
 export const createOperationsRoleBodySchema = z.object({

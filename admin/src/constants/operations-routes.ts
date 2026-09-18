@@ -21,6 +21,8 @@ export const OPERATIONS_ROUTES = {
   ANALYTICS: "/operations/analytics",
   ORGANIZATION: "/operations/organization",
   TEAM_MANAGEMENT: "/operations/team",
+  PEOPLE: "/operations/people",
+  TEAMS: "/operations/teams",
   DEPARTMENTS: "/operations/departments",
   ROLES: "/operations/roles",
   ROLES_NEW: "/operations/roles/new",
@@ -63,6 +65,10 @@ export function operationsPlacementDetailPath(placementId: string): string {
 
 export function operationsMyWorkDetailPath(workItemId: string): string {
   return `${OPERATIONS_ROUTES.MY_WORK}/${encodeURIComponent(workItemId)}`;
+}
+
+export function operationsTeamDetailPath(teamId: string): string {
+  return `${OPERATIONS_ROUTES.TEAMS}/${encodeURIComponent(teamId)}`;
 }
 
 export function operationsRoleDetailPath(roleId: string): string {

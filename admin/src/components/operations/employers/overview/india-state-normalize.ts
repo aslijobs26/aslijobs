@@ -57,6 +57,7 @@ const STATE_ALIASES: Record<string, IndiaStateLabel> = {
   "new delhi": "Delhi",
   "nct of delhi": "Delhi",
   "andaman and nicobar islands": "Andaman and Nicobar Islands",
+  "andaman and nicobar island": "Andaman and Nicobar Islands",
   "andaman nicobar island": "Andaman and Nicobar Islands",
   "andaman nicobar islands": "Andaman and Nicobar Islands",
   "andra pradesh": "Andhra Pradesh",

@@ -1,11 +1,19 @@
 import { useState } from "react";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
+import { OperationsFilterSelect } from "../components/operations/jobs/OperationsFilterSelect";
 import {
   formatOperationsTimestamp,
   getOperationsApiErrorMessage,
 } from "../components/operations/team/team-format";
 import { useOperationsAuditLog } from "../hooks/use-operations-audit";
+
+const TARGET_TYPE_OPTIONS = [
+  { value: "", label: "All targets" },
+  { value: "role", label: "Roles" },
+  { value: "user", label: "Users" },
+  { value: "department", label: "Departments" },
+] as const;
 
 export function OperationsActivityLogPage() {
   const [page, setPage] = useState(1);
@@ -45,19 +53,19 @@ export function OperationsActivityLogPage() {
             placeholder="Search actor, target or action"
             className="h-10 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-3 text-sm text-foreground"
           />
-          <select
-            value={targetType}
-            onChange={(event) => {
-              setPage(1);
-              setTargetType(event.target.value);
-            }}
-            className="h-10 rounded-lg border border-border-subtle bg-surface px-3 text-sm text-foreground"
-          >
-            <option value="">All targets</option>
-            <option value="role">Roles</option>
-            <option value="user">Users</option>
-            <option value="department">Departments</option>
-          </select>
+          <div className="w-full shrink-0 sm:w-[10rem]">
+            <OperationsFilterSelect
+              label="Activity target type"
+              value={targetType}
+              options={TARGET_TYPE_OPTIONS}
+              onChange={(value) => {
+                setPage(1);
+                setTargetType(value);
+              }}
+              hideSearch
+              triggerClassName="h-9"
+            />
+          </div>
         </div>
         {query.isError ? (
           <p className="text-sm text-danger">

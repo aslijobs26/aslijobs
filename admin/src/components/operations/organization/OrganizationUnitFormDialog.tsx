@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import {
   ORG_UNIT_CHILD_TYPES,
   OPERATIONS_ORG_UNIT_TYPES,
@@ -8,6 +8,8 @@ import {
   type OperationsOrgUnitType,
   type UpdateOperationsOrgUnitInput,
 } from "../../../types/operations-organization";
+import { useOperationsTeamMembers } from "../../../hooks/use-operations-team";
+import { OperationsDatePicker } from "../../ui/OperationsDatePicker";
 import { OperationsFilterSelect } from "../jobs/OperationsFilterSelect";
 import { getOperationsApiErrorMessage } from "../team/team-format";
 import { formatOrgUnitType } from "./org-tree-utils";
@@ -31,6 +33,10 @@ type FormState = {
   code: string;
   timezone: string;
   primaryOffice: string;
+  headUserId: string;
+  establishedAt: string;
+  latitude: string;
+  longitude: string;
   status: "active" | "archived";
 };
 
@@ -40,8 +46,50 @@ const EMPTY_FORM: FormState = {
   code: "",
   timezone: "Asia/Kolkata",
   primaryOffice: "",
+  headUserId: "",
+  establishedAt: "",
+  latitude: "",
+  longitude: "",
   status: "active",
 };
+
+function toDateInputValue(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function toIsoDateTime(dateOnly: string): string | null {
+  const trimmed = dateOnly.trim();
+  if (!trimmed) return null;
+  const date = new Date(`${trimmed}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
+function parseOptionalCoordinate(
+  value: string,
+  kind: "latitude" | "longitude",
+): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(
+      kind === "latitude"
+        ? "Latitude must be a valid number."
+        : "Longitude must be a valid number.",
+    );
+  }
+  if (kind === "latitude" && (parsed < -90 || parsed > 90)) {
+    throw new Error("Latitude must be between -90 and 90.");
+  }
+  if (kind === "longitude" && (parsed < -180 || parsed > 180)) {
+    throw new Error("Longitude must be between -180 and 180.");
+  }
+  return parsed;
+}
 
 export function OrganizationUnitFormDialog({
   open,
@@ -54,8 +102,41 @@ export function OrganizationUnitFormDialog({
   onSubmitUpdate,
 }: OrganizationUnitFormDialogProps) {
   const titleId = useId();
+  const establishedPickerId = useId();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [error, setError] = useState("");
+
+  const teamMembersQuery = useOperationsTeamMembers(
+    {
+      page: 1,
+      limit: 100,
+      status: "active",
+    },
+    { enabled: open },
+  );
+
+  const headOptions = useMemo(() => {
+    const members = teamMembersQuery.data?.members ?? [];
+    const options = [
+      { value: "", label: "No head assigned" },
+      ...members.map((member) => ({
+        value: member.id,
+        label: member.fullName,
+      })),
+    ];
+    if (
+      mode === "edit" &&
+      unit?.headUserId &&
+      unit.headName &&
+      !options.some((option) => option.value === unit.headUserId)
+    ) {
+      options.push({
+        value: unit.headUserId,
+        label: `${unit.headName} (current)`,
+      });
+    }
+    return options;
+  }, [mode, teamMembersQuery.data?.members, unit?.headName, unit?.headUserId]);
 
   useEffect(() => {
     if (!open) return;
@@ -71,6 +152,16 @@ export function OrganizationUnitFormDialog({
         code: unit.code ?? "",
         timezone: unit.timezone || "Asia/Kolkata",
         primaryOffice: unit.primaryOffice ?? "",
+        headUserId: unit.headUserId ?? "",
+        establishedAt: toDateInputValue(unit.establishedAt),
+        latitude:
+          unit.latitude != null && Number.isFinite(unit.latitude)
+            ? String(unit.latitude)
+            : "",
+        longitude:
+          unit.longitude != null && Number.isFinite(unit.longitude)
+            ? String(unit.longitude)
+            : "",
         status: unit.status === "archived" ? "archived" : "active",
       });
       return;
@@ -124,6 +215,33 @@ export function OrganizationUnitFormDialog({
       return;
     }
 
+    let latitude: number | null;
+    let longitude: number | null;
+    try {
+      latitude = parseOptionalCoordinate(form.latitude, "latitude");
+      longitude = parseOptionalCoordinate(form.longitude, "longitude");
+    } catch (coordinateError) {
+      setError(
+        coordinateError instanceof Error
+          ? coordinateError.message
+          : "Invalid coordinates.",
+      );
+      return;
+    }
+
+    if ((latitude == null) !== (longitude == null)) {
+      setError("Provide both latitude and longitude, or leave both empty.");
+      return;
+    }
+
+    const establishedAt = toIsoDateTime(form.establishedAt);
+    if (form.establishedAt.trim() && !establishedAt) {
+      setError("Established date is invalid.");
+      return;
+    }
+
+    const headUserId = form.headUserId.trim() || null;
+
     try {
       if (mode === "edit" && unit) {
         await onSubmitUpdate({
@@ -131,6 +249,10 @@ export function OrganizationUnitFormDialog({
           code: form.code.trim(),
           timezone: form.timezone.trim() || "Asia/Kolkata",
           primaryOffice: form.primaryOffice.trim(),
+          headUserId,
+          establishedAt,
+          latitude,
+          longitude,
           status: form.status,
           revision: unit.revision,
         });
@@ -141,6 +263,10 @@ export function OrganizationUnitFormDialog({
           code: form.code.trim() || undefined,
           timezone: form.timezone.trim() || undefined,
           primaryOffice: form.primaryOffice.trim() || undefined,
+          headUserId,
+          establishedAt,
+          latitude,
+          longitude,
           parentId:
             mode === "create-sub" && parentUnit ? parentUnit.id : undefined,
         };
@@ -169,7 +295,7 @@ export function OrganizationUnitFormDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-border-subtle bg-surface shadow-lg"
+        className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-border-subtle bg-surface shadow-lg scrollbar-hidden"
       >
         <header className="flex items-start justify-between gap-3 border-b border-border-subtle px-4 py-3">
           <div>
@@ -179,6 +305,10 @@ export function OrganizationUnitFormDialog({
             {mode === "create-sub" && parentUnit ? (
               <p className="mt-0.5 text-[11px] text-muted">
                 Under {parentUnit.name} ({formatOrgUnitType(parentUnit.type)})
+              </p>
+            ) : mode === "edit" ? (
+              <p className="mt-0.5 text-[11px] text-muted">
+                Updates Key Information fields for this unit.
               </p>
             ) : null}
           </div>
@@ -192,7 +322,7 @@ export function OrganizationUnitFormDialog({
           </button>
         </header>
 
-        <form className="space-y-3 p-4" onSubmit={handleSubmit}>
+        <form className="space-y-3 p-4" onSubmit={(event) => void handleSubmit(event)}>
           <label className="grid gap-1 text-[11px] font-semibold text-muted">
             Name
             <input
@@ -204,6 +334,11 @@ export function OrganizationUnitFormDialog({
               minLength={2}
               className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
+            {mode === "edit" && form.type === "state" ? (
+              <span className="font-normal text-[10px] text-muted">
+                For state units, this is the State shown in Key Information.
+              </span>
+            ) : null}
           </label>
 
           {mode !== "edit" ? (
@@ -222,38 +357,44 @@ export function OrganizationUnitFormDialog({
               }))}
             />
           ) : (
-            <p className="text-[12px] text-muted">
+            <p className="rounded-lg border border-border-subtle bg-hero-bg/40 px-3 py-2 text-[12px] text-muted">
               Type:{" "}
               <span className="font-medium text-foreground">
                 {formatOrgUnitType(form.type)}
               </span>
+              <span className="mt-1 block text-[10px]">
+                Region / Country / State labels in Key Information come from the
+                hierarchy parents (except State name for state units).
+              </span>
             </p>
           )}
 
-          <label className="grid gap-1 text-[11px] font-semibold text-muted">
-            Code
-            <input
-              value={form.code}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, code: event.target.value }))
-              }
-              className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            />
-          </label>
-
-          <label className="grid gap-1 text-[11px] font-semibold text-muted">
-            Timezone
-            <input
-              value={form.timezone}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  timezone: event.target.value,
-                }))
-              }
-              className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            />
-          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-[11px] font-semibold text-muted">
+              Code
+              <input
+                value={form.code}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, code: event.target.value }))
+                }
+                className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </label>
+            <label className="grid gap-1 text-[11px] font-semibold text-muted">
+              Timezone
+              <input
+                value={form.timezone}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    timezone: event.target.value,
+                  }))
+                }
+                placeholder="Asia/Kolkata"
+                className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </label>
+          </div>
 
           <label className="grid gap-1 text-[11px] font-semibold text-muted">
             Primary office
@@ -265,9 +406,79 @@ export function OrganizationUnitFormDialog({
                   primaryOffice: event.target.value,
                 }))
               }
+              placeholder="e.g. Madhapur, Hyderabad"
               className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
           </label>
+
+          <OperationsFilterSelect
+            label="Head"
+            value={form.headUserId}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, headUserId: value }))
+            }
+            options={headOptions}
+            hideSearch={headOptions.length <= 8}
+          />
+
+          <div className="grid gap-1">
+            <label
+              htmlFor={establishedPickerId}
+              className="text-[11px] font-semibold text-muted"
+            >
+              Established
+            </label>
+            <OperationsDatePicker
+              id={establishedPickerId}
+              value={form.establishedAt}
+              placeholder="Select established date"
+              maxDate={new Date().toISOString().slice(0, 10)}
+              aria-label="Established date"
+              onChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  establishedAt: value,
+                }))
+              }
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-[11px] font-semibold text-muted">
+              Latitude
+              <input
+                inputMode="decimal"
+                value={form.latitude}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    latitude: event.target.value,
+                  }))
+                }
+                placeholder="e.g. 17.3850"
+                className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </label>
+            <label className="grid gap-1 text-[11px] font-semibold text-muted">
+              Longitude
+              <input
+                inputMode="decimal"
+                value={form.longitude}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    longitude: event.target.value,
+                  }))
+                }
+                placeholder="e.g. 78.4867"
+                className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </label>
+          </div>
+          <p className="text-[10px] text-muted">
+            Coordinates power the Key Information map location. Leave both empty
+            to clear.
+          </p>
 
           {mode === "edit" ? (
             <OperationsFilterSelect
@@ -284,6 +495,16 @@ export function OrganizationUnitFormDialog({
                 { value: "archived", label: "Archived" },
               ]}
             />
+          ) : null}
+
+          {mode === "edit" ? (
+            <aside className="rounded-lg border border-border-subtle bg-hero-bg/50 px-3 py-2.5 text-[10px] leading-relaxed text-muted">
+              <strong className="font-semibold text-foreground">
+                Not edited here:
+              </strong>{" "}
+              Total People and Total Teams are calculated from assignments.
+              Region / Country come from parent units in the hierarchy.
+            </aside>
           ) : null}
 
           {allowedTypes.length === 0 ? (

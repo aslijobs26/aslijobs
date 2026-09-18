@@ -21,6 +21,9 @@ import { OperationsRoleDetailPage } from "./operations-role-detail-page";
 import { OperationsRoleEditorPage } from "./operations-role-editor-page";
 import { OperationsRolesPage } from "./operations-roles-page";
 import { OperationsTeamPage } from "./operations-team-page";
+import { OperationsTeamDetailPage } from "./operations-team-detail-page";
+import { OperationsTeamsPage } from "./operations-teams-page";
+import { OperationsOrganizationSettingsPage } from "./operations-organization-settings-page";
 import { OperationsPlacementDetailPage } from "./operations-placement-detail-page";
 import { OperationsPlacementsListPage } from "./operations-placements-list-page";
 import { OperationsPlacementsPage } from "./operations-placements-page";
@@ -148,6 +151,18 @@ export function AppRoutes() {
           element={<OperationsTeamPage />}
         />
         <Route
+          path={OPERATIONS_ROUTES.PEOPLE}
+          element={<Navigate to={OPERATIONS_ROUTES.TEAM_MANAGEMENT} replace />}
+        />
+        <Route
+          path={`${OPERATIONS_ROUTES.TEAMS}/:teamId`}
+          element={<OperationsTeamDetailPage />}
+        />
+        <Route
+          path={OPERATIONS_ROUTES.TEAMS}
+          element={<OperationsTeamsPage />}
+        />
+        <Route
           path={OPERATIONS_ROUTES.DEPARTMENTS}
           element={<OperationsDepartmentsPage />}
         />
@@ -173,7 +188,7 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.SETTINGS}
-          element={<OperationsPlaceholderPage title="Settings" />}
+          element={<OperationsOrganizationSettingsPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.LANGUAGES}

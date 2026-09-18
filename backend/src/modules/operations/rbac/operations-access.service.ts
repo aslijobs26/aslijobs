@@ -81,6 +81,36 @@ export function assertOperationsPermissionKey(
   }
 }
 
+/**
+ * Prefer a catalog key when the actor already has fine-grained grants
+ * for that module. Fall back to the coarse matrix for legacy enum roles.
+ */
+export function assertFineOrCoarsePermission(
+  access: OperationsResolvedAccess,
+  fineKey: string,
+  module: OperationsPermissionModule,
+  action: OperationsPermissionAction,
+): void {
+  if (access.isSuperAdmin) {
+    return;
+  }
+  if (operationsAccessCanKey(access, fineKey)) {
+    return;
+  }
+  const prefix = `${module}.`;
+  const hasFineGrants = access.grantedKeys.some(
+    (key) => key === module || key.startsWith(prefix),
+  );
+  if (hasFineGrants) {
+    throw new AppError(
+      "Access denied. You do not have permission to perform this action.",
+      HTTP_STATUS.FORBIDDEN,
+      { code: "ROLE_SCOPE_FORBIDDEN", key: fineKey },
+    );
+  }
+  assertOperationsPermission(access, module, action);
+}
+
 function toIdString(value: Types.ObjectId | string | null | undefined): string | null {
   if (!value) {
     return null;
@@ -93,8 +123,10 @@ export async function resolveOperationsUserAccess(user: {
   role: OperationsTeamRole;
   roleId?: Types.ObjectId | string | null;
   departmentId?: Types.ObjectId | string | null;
+  orgUnitId?: Types.ObjectId | string | null;
 }): Promise<OperationsResolvedAccess> {
   const userId = String(user._id);
+  const orgUnitId = toIdString(user.orgUnitId);
   const isSuperAdmin = user.role === "SUPER_ADMIN";
 
   if (isSuperAdmin) {
@@ -109,6 +141,7 @@ export async function resolveOperationsUserAccess(user: {
       departmentId: toIdString(user.departmentId),
       departmentName: null,
       departmentSlug: null,
+      orgUnitId,
       isSuperAdmin: true,
       canCreateRoles: true,
       canManageUsers: true,
@@ -155,6 +188,7 @@ export async function resolveOperationsUserAccess(user: {
         departmentId,
         departmentName,
         departmentSlug,
+        orgUnitId,
         isSuperAdmin: false,
         canCreateRoles: Boolean(customRole.canCreateRoles),
         canManageUsers: Boolean(customRole.canManageUsers),
@@ -176,6 +210,7 @@ export async function resolveOperationsUserAccess(user: {
       departmentId: toIdString(user.departmentId),
       departmentName: null,
       departmentSlug: null,
+      orgUnitId,
       isSuperAdmin: false,
       canCreateRoles: false,
       canManageUsers: false,
@@ -200,6 +235,7 @@ export async function resolveOperationsUserAccess(user: {
     departmentId: toIdString(user.departmentId),
     departmentName: null,
     departmentSlug: null,
+    orgUnitId,
     isSuperAdmin: false,
     canCreateRoles: false,
     canManageUsers: false,

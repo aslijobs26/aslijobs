@@ -84,10 +84,16 @@ function isNavItemActive(
       pathname.startsWith(`${OPERATIONS_ROUTES.ORGANIZATION}/`) ||
       pathname === OPERATIONS_ROUTES.TEAM_MANAGEMENT ||
       pathname.startsWith(`${OPERATIONS_ROUTES.TEAM_MANAGEMENT}/`) ||
+      pathname === OPERATIONS_ROUTES.TEAMS ||
+      pathname.startsWith(`${OPERATIONS_ROUTES.TEAMS}/`) ||
+      pathname === OPERATIONS_ROUTES.PEOPLE ||
+      pathname.startsWith(`${OPERATIONS_ROUTES.PEOPLE}/`) ||
       pathname === OPERATIONS_ROUTES.DEPARTMENTS ||
       pathname.startsWith(`${OPERATIONS_ROUTES.DEPARTMENTS}/`) ||
       pathname === OPERATIONS_ROUTES.ROLES ||
-      pathname.startsWith(`${OPERATIONS_ROUTES.ROLES}/`)
+      pathname.startsWith(`${OPERATIONS_ROUTES.ROLES}/`) ||
+      pathname === OPERATIONS_ROUTES.SETTINGS ||
+      pathname.startsWith(`${OPERATIONS_ROUTES.SETTINGS}/`)
     );
   }
 

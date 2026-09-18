@@ -27,6 +27,33 @@ export const operationsDepartmentsController = {
     });
   },
 
+  async metrics(_req: Request, res: Response): Promise<void> {
+    const data = await operationsDepartmentsService.metrics();
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Department metrics fetched successfully.",
+      data,
+    });
+  },
+
+  async getById(req: Request, res: Response): Promise<void> {
+    const { departmentId } = req.params as OperationsDepartmentIdParams;
+    const data = await operationsDepartmentsService.getById(departmentId);
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Department fetched successfully.",
+      data,
+    });
+  },
+
+  async getDependencies(req: Request, res: Response): Promise<void> {
+    const { departmentId } = req.params as OperationsDepartmentIdParams;
+    const data =
+      await operationsDepartmentsService.getDependencies(departmentId);
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Department dependencies fetched successfully.",
+      data,
+    });
+  },
+
   async create(req: Request, res: Response): Promise<void> {
     const body = req.body as CreateOperationsDepartmentBody;
     const data = await operationsDepartmentsService.create(
@@ -49,6 +76,18 @@ export const operationsDepartmentsController = {
     );
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Department updated successfully.",
+      data,
+    });
+  },
+
+  async remove(req: Request, res: Response): Promise<void> {
+    const { departmentId } = req.params as OperationsDepartmentIdParams;
+    const data = await operationsDepartmentsService.remove(
+      requireAccess(req),
+      departmentId,
+    );
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Department deleted successfully.",
       data,
     });
   },

@@ -31,7 +31,9 @@ import {
   resolveMapFeatureStateName,
 } from "../employers/overview/india-state-normalize";
 import {
+  getCachedIndiaStateDistrictMap,
   loadIndiaStateDistrictMap,
+  prefetchIndiaStateDistrictMaps,
   type IndiaStateDistrictMap,
 } from "../../../utils/india-state-districts";
 
@@ -51,6 +53,7 @@ const REGION_STATE_LABELS: Record<string, string[]> = {
   ],
   "west india": ["Goa", "Gujarat", "Maharashtra", "Dadra and Nagar Haveli and Daman and Diu"],
   "north india": [
+    "Chandigarh",
     "Delhi",
     "Haryana",
     "Himachal Pradesh",
@@ -58,10 +61,10 @@ const REGION_STATE_LABELS: Record<string, string[]> = {
     "Ladakh",
     "Punjab",
     "Rajasthan",
+    "Uttar Pradesh",
     "Uttarakhand",
-    "Chandigarh",
   ],
-  "east india": ["Bihar", "Jharkhand", "Odisha", "West Bengal"],
+  "east india": ["Bihar", "Jharkhand", "Odisha", "West Bengal", "Sikkim"],
   "central india": ["Chhattisgarh", "Madhya Pradesh"],
   "northeast india": [
     "Arunachal Pradesh",
@@ -70,34 +73,46 @@ const REGION_STATE_LABELS: Record<string, string[]> = {
     "Meghalaya",
     "Mizoram",
     "Nagaland",
-    "Sikkim",
     "Tripura",
   ],
 };
 
 const KPI_META: Record<
   OperationsOrgOverviewResponse["kpis"][number]["id"],
-  { icon: LucideIcon; iconClass: string; wrapClass: string }
+  {
+    icon: LucideIcon;
+    iconClass: string;
+    wrapClass: string;
+    cardClassName: string;
+  }
 > = {
   people: {
     icon: Users,
-    iconClass: "text-sky-700 dark:text-sky-300",
-    wrapClass: "bg-sky-50 dark:bg-sky-500/15",
+    iconClass: "text-sky-600",
+    wrapClass: "bg-sky-500/20",
+    cardClassName:
+      "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white dark:border-sky-500/25 dark:from-sky-500/10 dark:to-surface",
   },
   teams: {
     icon: UsersRound,
-    iconClass: "text-violet-700 dark:text-violet-300",
-    wrapClass: "bg-violet-50 dark:bg-violet-500/15",
+    iconClass: "text-violet-600",
+    wrapClass: "bg-violet-500/20",
+    cardClassName:
+      "border-violet-200/80 bg-gradient-to-br from-violet-50 to-white dark:border-violet-500/25 dark:from-violet-500/10 dark:to-surface",
   },
   departments: {
     icon: Building2,
-    iconClass: "text-amber-700 dark:text-amber-300",
-    wrapClass: "bg-amber-50 dark:bg-amber-500/15",
+    iconClass: "text-amber-600",
+    wrapClass: "bg-amber-500/20",
+    cardClassName:
+      "border-amber-200/80 bg-gradient-to-br from-amber-50 to-white dark:border-amber-500/25 dark:from-amber-500/10 dark:to-surface",
   },
   cities: {
     icon: MapPin,
-    iconClass: "text-emerald-700 dark:text-emerald-300",
-    wrapClass: "bg-emerald-50 dark:bg-emerald-500/15",
+    iconClass: "text-emerald-600",
+    wrapClass: "bg-emerald-500/20",
+    cardClassName:
+      "border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white dark:border-emerald-500/25 dark:from-emerald-500/10 dark:to-surface",
   },
 };
 
@@ -130,11 +145,15 @@ const FOCUSED_STROKE_HOVER = "#64748B";
 interface OrganizationOverviewProps {
   overview: OperationsOrgOverviewResponse;
   isLoading?: boolean;
+  onSelectNamedLocation?: (name: string, kind: "district" | "state") => void;
+  locationHint?: string | null;
 }
 
 export function OrganizationOverview({
   overview,
   isLoading,
+  onSelectNamedLocation,
+  locationHint,
 }: OrganizationOverviewProps) {
   if (isLoading) {
     return (
@@ -158,7 +177,10 @@ export function OrganizationOverview({
           return (
             <div
               key={kpi.id}
-              className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm"
+              className={cn(
+                "ops-brand-border-glow rounded-xl border p-3.5 shadow-sm",
+                meta.cardClassName,
+              )}
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -218,6 +240,8 @@ export function OrganizationOverview({
           unitName={overview.unit.name}
           unitType={overview.unit.type}
           mapPoints={overview.mapPoints}
+          onSelectNamedLocation={onSelectNamedLocation}
+          locationHint={locationHint}
         />
         <KeyInformationCard keyInfo={overview.keyInfo} />
         <QuickActionsCard actions={overview.quickActions} />
@@ -238,28 +262,40 @@ function LocationMapCard({
   unitName,
   unitType,
   mapPoints,
+  onSelectNamedLocation,
+  locationHint,
 }: {
   unitName: string;
   unitType: string;
   mapPoints: OperationsOrgOverviewResponse["mapPoints"];
+  onSelectNamedLocation?: (name: string, kind: "district" | "state") => void;
+  locationHint?: string | null;
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [focusedViewBox, setFocusedViewBox] = useState<string | null>(null);
-  const [districtMap, setDistrictMap] = useState<IndiaStateDistrictMap | null>(
-    null,
-  );
-  const [districtsLoading, setDistrictsLoading] = useState(false);
-  const focusGroupRef = useRef<SVGGElement>(null);
-
   const highlightName =
     unitType === "state"
       ? (resolveIndiaStateLabel(unitName) ?? unitName)
       : null;
 
+  const [districtMap, setDistrictMap] = useState<IndiaStateDistrictMap | null>(
+    () =>
+      highlightName ? getCachedIndiaStateDistrictMap(highlightName) : null,
+  );
+  const [districtsLoading, setDistrictsLoading] = useState(
+    () => Boolean(highlightName) && !getCachedIndiaStateDistrictMap(highlightName ?? ""),
+  );
+  const focusGroupRef = useRef<SVGGElement>(null);
+
   const regionStateNames =
     unitType === "region"
       ? (REGION_STATE_LABELS[unitName.trim().toLowerCase()] ?? null)
       : null;
+
+  useEffect(() => {
+    if (!regionStateNames?.length) return;
+    prefetchIndiaStateDistrictMaps(regionStateNames);
+  }, [regionStateNames]);
 
   const allFeatures = useMemo(
     () =>
@@ -295,12 +331,22 @@ function LocationMapCard({
     Boolean(highlightName) &&
     Boolean(districtMap && districtMap.districts.length > 0);
 
+  /** While districts load for a state, never flash the coarse state outline. */
+  const waitingForDistricts = Boolean(highlightName) && !showDistricts && districtsLoading;
+
   const isFocusedMap =
     Boolean(highlightName) || Boolean(regionStateNames?.length);
 
   useEffect(() => {
     if (!highlightName) {
       setDistrictMap(null);
+      setDistrictsLoading(false);
+      return;
+    }
+
+    const cached = getCachedIndiaStateDistrictMap(highlightName);
+    if (cached) {
+      setDistrictMap(cached);
       setDistrictsLoading(false);
       return;
     }
@@ -324,6 +370,11 @@ function LocationMapCard({
 
   useLayoutEffect(() => {
     if (!isFocusedMap) {
+      setFocusedViewBox(null);
+      return;
+    }
+
+    if (waitingForDistricts) {
       setFocusedViewBox(null);
       return;
     }
@@ -357,7 +408,13 @@ function LocationMapCard({
     } catch {
       setFocusedViewBox(null);
     }
-  }, [districtMap, isFocusedMap, showDistricts, visibleFeatures]);
+  }, [
+    districtMap,
+    isFocusedMap,
+    showDistricts,
+    visibleFeatures,
+    waitingForDistricts,
+  ]);
 
   const cityMarkers = mapPoints.filter(
     (point) => point.type === "city" || point.type === "office",
@@ -377,7 +434,10 @@ function LocationMapCard({
         : `${unitName} states focused. Select a state for a closer view.`
       : "Select a state or add cities to focus the map.";
 
-  const hasRenderableMap = showDistricts || visibleFeatures.length > 0;
+  const hasRenderableMap =
+    showDistricts ||
+    (!highlightName && visibleFeatures.length > 0) ||
+    (Boolean(highlightName) && !districtsLoading && visibleFeatures.length > 0);
 
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
@@ -388,7 +448,18 @@ function LocationMapCard({
         <p className="text-[11px] text-muted">{unitName}</p>
       </header>
       <div className="relative bg-gradient-to-b from-sky-50/80 to-surface p-3 dark:from-sky-500/5">
-        {!hasRenderableMap ? (
+        {waitingForDistricts ? (
+          <div
+            className="flex min-h-[16rem] max-h-[20rem] items-center justify-center"
+            role="status"
+            aria-live="polite"
+            aria-label={`Loading ${highlightName} district map`}
+          >
+            <p className="text-center text-[11px] text-muted">
+              Loading {highlightName} districts…
+            </p>
+          </div>
+        ) : !hasRenderableMap ? (
           <p className="flex min-h-[16rem] items-center justify-center text-center text-[11px] text-muted">
             Map outline is not available for {unitName}.
           </p>
@@ -399,9 +470,14 @@ function LocationMapCard({
                 ? districtMap.viewBox
                 : (focusedViewBox ?? indiaStatesMap.viewBox)
             }
+            preserveAspectRatio="xMidYMid meet"
             className={cn(
               "mx-auto h-auto w-full transition-opacity duration-150",
-              isFocusedMap ? "max-h-[20rem] min-h-[16rem]" : "max-h-[13rem]",
+              showDistricts
+                ? "aspect-[480/540] max-h-[20rem] max-w-[18rem] sm:max-w-[20rem]"
+                : isFocusedMap
+                  ? "max-h-[20rem] min-h-[16rem]"
+                  : "max-h-[13rem]",
               isFocusedMap && !showDistricts && !focusedViewBox
                 ? "opacity-0"
                 : "opacity-100",
@@ -423,6 +499,7 @@ function LocationMapCard({
                           isHovered ? FOCUSED_STROKE_HOVER : FOCUSED_STROKE
                         }
                         strokeWidth={isHovered ? 1.15 : 0.85}
+                        vectorEffect="non-scaling-stroke"
                         strokeLinejoin="round"
                         strokeLinecap="round"
                         className="cursor-pointer transition-[stroke,stroke-width] duration-150"
@@ -430,6 +507,15 @@ function LocationMapCard({
                         onMouseLeave={() => setHovered(null)}
                         onFocus={() => setHovered(district.name)}
                         onBlur={() => setHovered(null)}
+                        onClick={() =>
+                          onSelectNamedLocation?.(district.name, "district")
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onSelectNamedLocation?.(district.name, "district");
+                          }
+                        }}
                         tabIndex={0}
                         aria-label={district.name}
                       >
@@ -458,17 +544,29 @@ function LocationMapCard({
                         strokeWidth={
                           isFocusedMap
                             ? isHovered
-                              ? 1.35
+                              ? 1.6
                               : 1.1
                             : isHovered
                               ? 1.2
                               : 0.55
                         }
+                        vectorEffect={
+                          isFocusedMap ? "non-scaling-stroke" : undefined
+                        }
                         strokeLinejoin="round"
                         strokeLinecap="round"
-                        className="transition-[fill,stroke-width] duration-150"
+                        className="cursor-pointer transition-[stroke,stroke-width] duration-150"
                         onMouseEnter={() => setHovered(canonical)}
                         onMouseLeave={() => setHovered(null)}
+                        onClick={() =>
+                          onSelectNamedLocation?.(canonical, "state")
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onSelectNamedLocation?.(canonical, "state");
+                          }
+                        }}
                         tabIndex={0}
                         aria-label={canonical}
                       />
@@ -477,7 +575,11 @@ function LocationMapCard({
             </g>
           </svg>
         )}
-        {hovered && showDistricts ? (
+        {locationHint ? (
+          <p className="mt-2 text-center text-[11px] text-muted" role="status">
+            {locationHint}
+          </p>
+        ) : hovered && showDistricts ? (
           <p className="mt-2 text-center text-[11px] font-medium text-foreground">
             {hovered}
           </p>
@@ -629,7 +731,7 @@ function TeamsTable({
           Teams in {unitName}
         </h3>
         <Link
-          to={OPERATIONS_ROUTES.DEPARTMENTS}
+          to={OPERATIONS_ROUTES.TEAMS}
           className="text-[11px] font-semibold text-primary hover:underline"
         >
           View All
@@ -640,7 +742,7 @@ function TeamsTable({
           No teams in this scope yet.
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-hidden">
           <table className="w-full min-w-[30rem] text-left text-[12px]">
             <thead>
               <tr className="border-b border-border-subtle bg-hero-bg/50 text-[10px] uppercase tracking-wide text-muted">
@@ -679,7 +781,16 @@ function TeamsTable({
                     )}
                   </td>
                   <td className="px-3 py-2.5">
-                    <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold capitalize text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                    <span
+                      className={cn(
+                        "inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize",
+                        team.status.toLowerCase() === "active"
+                          ? "bg-success/10 text-success"
+                          : team.status.toLowerCase() === "archived"
+                            ? "bg-muted/25 text-muted"
+                            : "bg-amber-500/10 text-amber-700",
+                      )}
+                    >
                       {team.status}
                     </span>
                   </td>

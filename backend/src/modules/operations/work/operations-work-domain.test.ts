@@ -30,6 +30,7 @@ function actor(
     departmentId: "cccccccccccccccccccccccc",
     departmentName: "Verification",
     departmentSlug: "verification",
+    orgUnitId: null,
     isSuperAdmin: false,
     canCreateRoles: false,
     canManageUsers: true,

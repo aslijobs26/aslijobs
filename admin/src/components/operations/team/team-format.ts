@@ -19,7 +19,22 @@ export function getOperationsApiErrorMessage(
   return fallback;
 }
 
-export function formatOperationsTimestamp(value: string | null | undefined): string {
+export function getOperationsApiErrorDetails(
+  error: unknown,
+): unknown | undefined {
+  if (!isAxiosError(error)) {
+    return undefined;
+  }
+  const data = error.response?.data;
+  if (!data || typeof data !== "object" || !("details" in data)) {
+    return undefined;
+  }
+  return (data as { details?: unknown }).details;
+}
+
+export function formatOperationsTimestamp(
+  value: string | null | undefined,
+): string {
   if (!value) {
     return "—";
   }

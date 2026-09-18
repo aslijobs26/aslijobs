@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GitBranch, Plus } from "lucide-react";
+import { OrganizationTabs } from "../components/operations/organization/OrganizationTabs";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { OperationsCan } from "../components/operations/auth/OperationsCan";
+import { OperationsFilterSelect } from "../components/operations/jobs/OperationsFilterSelect";
 import {
   formatOperationsTimestamp,
   getOperationsApiErrorMessage,
@@ -20,6 +22,12 @@ import {
 } from "../hooks/use-operations-roles";
 import type { OperationsRole, OperationsRoleTreeNode } from "../types/operations-team";
 import { cn } from "../utils/cn";
+
+const ROLE_STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "archived", label: "Archived" },
+  { value: "all", label: "All" },
+] as const;
 
 function RoleTree({
   nodes,
@@ -80,6 +88,7 @@ export function OperationsRolesPage() {
       subtitle="Create custom roles and define exactly what each role can access and delegate."
     >
       <div className="flex flex-col gap-4">
+        <OrganizationTabs />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="inline-flex rounded-lg border border-border-subtle bg-surface p-1">
             <button
@@ -141,25 +150,26 @@ export function OperationsRolesPage() {
           )
         ) : (
           <>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <input
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search roles"
-                className="h-10 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="ops-brand-border-glow h-9 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-3 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:font-normal placeholder:text-muted transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               />
-              <select
-                value={status}
-                onChange={(event) =>
-                  setStatus(event.target.value as "active" | "archived" | "all")
-                }
-                className="h-10 rounded-lg border border-border-subtle bg-surface px-3 text-sm text-foreground"
-              >
-                <option value="active">Active</option>
-                <option value="archived">Archived</option>
-                <option value="all">All</option>
-              </select>
+              <div className="w-full shrink-0 sm:w-[8.5rem]">
+                <OperationsFilterSelect
+                  label="Role status"
+                  value={status}
+                  options={ROLE_STATUS_OPTIONS}
+                  onChange={(value) =>
+                    setStatus(value as "active" | "archived" | "all")
+                  }
+                  hideSearch
+                  triggerClassName="h-9"
+                />
+              </div>
             </div>
             {rolesQuery.isError ? (
               <p className="text-sm text-danger">
@@ -276,26 +286,31 @@ export function OperationsRolesPage() {
               must be archived first. Members must be reassigned if any remain.
             </p>
             {archiveTarget.memberCount > 0 ? (
-              <label className="mt-3 grid gap-1 text-xs font-semibold text-muted">
-                Reassign members to
-                <select
+              <div className="mt-3 grid gap-1.5">
+                <p className="text-xs font-semibold text-muted">
+                  Reassign members to
+                </p>
+                <OperationsFilterSelect
+                  label="Reassign members to"
                   value={reassignRoleId}
-                  onChange={(event) => setReassignRoleId(event.target.value)}
-                  className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground"
-                >
-                  <option value="">Select a role</option>
-                  {roles
-                    .filter(
-                      (role) =>
-                        role.id !== archiveTarget.id && role.status === "active",
-                    )
-                    .map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
+                  options={[
+                    { value: "", label: "Select a role" },
+                    ...roles
+                      .filter(
+                        (role) =>
+                          role.id !== archiveTarget.id &&
+                          role.status === "active",
+                      )
+                      .map((role) => ({
+                        value: role.id,
+                        label: role.name,
+                      })),
+                  ]}
+                  onChange={setReassignRoleId}
+                  hideSearch={roles.length <= 8}
+                  triggerClassName="h-9 rounded-lg text-xs"
+                />
+              </div>
             ) : null}
             {error ? <p className="mt-2 text-sm text-danger">{error}</p> : null}
             <div className="mt-4 flex justify-end gap-2">

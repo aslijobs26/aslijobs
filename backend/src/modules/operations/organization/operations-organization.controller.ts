@@ -7,6 +7,7 @@ import type {
   ListOrgTreeQuery,
   OrgUnitPeopleQuery,
   UpdateOrgUnitBody,
+  UpdateOrganizationSettingsBody,
 } from "./operations-organization.validation.js";
 
 function requireAccess(req: Request) {
@@ -77,6 +78,19 @@ export const operationsOrganizationController = {
       access,
       body,
     );
+    res.status(HTTP_STATUS.OK).json({ success: true, data });
+  },
+
+  async getSettings(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    const data = await operationsOrganizationService.getSettings(access);
+    res.status(HTTP_STATUS.OK).json({ success: true, data });
+  },
+
+  async updateSettings(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    const body = req.body as UpdateOrganizationSettingsBody;
+    const data = await operationsOrganizationService.updateSettings(access, body);
     res.status(HTTP_STATUS.OK).json({ success: true, data });
   },
 };

@@ -1,14 +1,16 @@
 import {
-  Building2,
   ChevronRight,
   Folder,
   Globe2,
+  MapPin,
   MapPinned,
   Search,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { resolveIndiaStateLabel } from "../employers/overview/india-state-normalize";
 import type { OperationsOrgTreeNode } from "../../../types/operations-organization";
 import { cn } from "../../../utils/cn";
+import { prefetchIndiaStateDistrictMaps } from "../../../utils/india-state-districts";
 
 interface OrganizationHierarchyPanelProps {
   roots: OperationsOrgTreeNode[];
@@ -91,7 +93,7 @@ export function OrganizationHierarchyPanel({
         </label>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2 scrollbar-hidden">
         {isLoading ? (
           <div className="space-y-2 p-1">
             {Array.from({ length: 8 }).map((_, index) => (
@@ -193,6 +195,16 @@ function HierarchyNode({
         <button
           type="button"
           onClick={() => onSelect(node.id)}
+          onMouseEnter={() => {
+            if (node.type !== "state") return;
+            const label = resolveIndiaStateLabel(node.name) ?? node.name;
+            prefetchIndiaStateDistrictMaps([label]);
+          }}
+          onFocus={() => {
+            if (node.type !== "state") return;
+            const label = resolveIndiaStateLabel(node.name) ?? node.name;
+            prefetchIndiaStateDistrictMaps([label]);
+          }}
           className={cn(
             "flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
             selected ? "text-foreground" : "text-foreground hover:bg-hero-bg/80",
@@ -203,7 +215,7 @@ function HierarchyNode({
               "inline-flex size-6 shrink-0 items-center justify-center rounded-md",
               selected
                 ? "bg-primary/15 text-primary"
-                : "bg-hero-bg text-muted",
+                : iconToneClass(node.type, node.name),
             )}
             aria-hidden="true"
           >
@@ -254,13 +266,84 @@ function iconForType(type: string) {
     case "region":
       return Folder;
     case "state":
-      return Building2;
+      return MapPin;
     case "city":
     case "office":
       return MapPinned;
     default:
       return Folder;
   }
+}
+
+/** Soft icon chip colors — states get a distinct light color per state name. */
+const STATE_ICON_TONES: Record<string, string> = {
+  "andhra pradesh": "bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300",
+  karnataka: "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300",
+  kerala: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300",
+  "tamil nadu": "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300",
+  telangana: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+  puducherry: "bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-500/10 dark:text-fuchsia-300",
+  maharashtra: "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-300",
+  gujarat: "bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-300",
+  goa: "bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-300",
+  delhi: "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300",
+  "west bengal": "bg-lime-50 text-lime-700 dark:bg-lime-500/10 dark:text-lime-300",
+  "uttar pradesh": "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300",
+  rajasthan: "bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-300",
+  "madhya pradesh": "bg-stone-50 text-stone-600 dark:bg-stone-500/10 dark:text-stone-300",
+  bihar: "bg-pink-50 text-pink-600 dark:bg-pink-500/10 dark:text-pink-300",
+  odisha: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300",
+  assam: "bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-300",
+  punjab: "bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-200",
+  haryana: "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-200",
+  "himachal pradesh": "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200",
+  "jammu and kashmir": "bg-slate-50 text-slate-600 dark:bg-slate-500/10 dark:text-slate-200",
+  ladakh: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200",
+  chhattisgarh: "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-200",
+  jharkhand: "bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200",
+  "andaman and nicobar islands":
+    "bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-200",
+  lakshadweep: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200",
+};
+
+const STATE_ICON_FALLBACK_TONES = [
+  "bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300",
+  "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300",
+  "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300",
+  "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300",
+  "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+  "bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-500/10 dark:text-fuchsia-300",
+  "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-300",
+  "bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-300",
+] as const;
+
+function iconToneClass(type: string, name: string): string {
+  if (type === "global") {
+    return "bg-slate-50 text-slate-600 dark:bg-slate-500/10 dark:text-slate-300";
+  }
+  if (type === "country") {
+    return "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300";
+  }
+  if (type === "region") {
+    return "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300";
+  }
+  if (type === "city") {
+    return "bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-300";
+  }
+  if (type === "office") {
+    return "bg-stone-50 text-stone-600 dark:bg-stone-500/10 dark:text-stone-300";
+  }
+  if (type === "state") {
+    const label = (resolveIndiaStateLabel(name) ?? name).trim().toLowerCase();
+    const mapped = STATE_ICON_TONES[label];
+    if (mapped) return mapped;
+    let hash = 0;
+    for (let i = 0; i < label.length; i += 1) {
+      hash = (hash + label.charCodeAt(i) * (i + 1)) % STATE_ICON_FALLBACK_TONES.length;
+    }
+    return STATE_ICON_FALLBACK_TONES[hash]!;
+  }
+  return "bg-hero-bg text-muted";
 }
 
 function countryFlagEmoji(name: string): string | null {
