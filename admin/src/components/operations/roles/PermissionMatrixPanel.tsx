@@ -28,7 +28,9 @@ import {
   areKeysFullyGranted,
   areKeysPartiallyGranted,
   buildPermissionMatrixRows,
+  filterDelegatableKeys,
   grantKeySet,
+  isPermissionColumnLocked,
   PERMISSION_MATRIX_COLUMN_LABELS,
   PERMISSION_MATRIX_COLUMNS,
   selectAllApplicableKeys,
@@ -176,11 +178,19 @@ export function PermissionMatrixPanel({
     column: PermissionMatrixColumnId,
     enabled: boolean,
   ) => {
-    onChange(toggleKeysInGrants(grants, row.columnKeys[column], enabled));
+    const unlocked = filterDelegatableKeys(row.columnKeys[column], allowed);
+    if (unlocked.length === 0) {
+      return;
+    }
+    onChange(toggleKeysInGrants(grants, unlocked, enabled));
   };
 
   const setFullAccess = (row: PermissionMatrixModuleRow, enabled: boolean) => {
-    onChange(toggleKeysInGrants(grants, row.leafKeys, enabled));
+    const unlocked = filterDelegatableKeys(row.leafKeys, allowed);
+    if (unlocked.length === 0) {
+      return;
+    }
+    onChange(toggleKeysInGrants(grants, unlocked, enabled));
   };
 
   const handleSelectAll = () => {
@@ -397,7 +407,11 @@ export function PermissionMatrixPanel({
               ) : (
                 filteredRows.map((row) => {
                   const Icon = moduleIcon(row.id);
-                  const fullKeys = row.leafKeys;
+                  const fullKeys = filterDelegatableKeys(row.leafKeys, allowed);
+                  const fullLocked = isPermissionColumnLocked(
+                    row.leafKeys,
+                    allowed,
+                  );
                   const fullChecked = areKeysFullyGranted(fullKeys, selected);
                   const fullPartial = areKeysPartiallyGranted(
                     fullKeys,
@@ -432,15 +446,28 @@ export function PermissionMatrixPanel({
                             </td>
                           );
                         }
-                        const checked = areKeysFullyGranted(keys, selected);
-                        const partial = areKeysPartiallyGranted(keys, selected);
+                        const unlocked = filterDelegatableKeys(keys, allowed);
+                        const locked = isPermissionColumnLocked(keys, allowed);
+                        const checked = areKeysFullyGranted(
+                          unlocked.length > 0 ? unlocked : keys,
+                          selected,
+                        );
+                        const partial = areKeysPartiallyGranted(
+                          unlocked.length > 0 ? unlocked : keys,
+                          selected,
+                        );
                         return (
                           <td key={column} className="px-2 py-2.5 text-center">
                             <div className="flex justify-center">
                               <MatrixCheckbox
-                                checked={checked}
-                                indeterminate={partial}
-                                label={`${row.label} ${PERMISSION_MATRIX_COLUMN_LABELS[column]}`}
+                                checked={checked && !locked}
+                                indeterminate={partial && !locked}
+                                disabled={locked}
+                                label={
+                                  locked
+                                    ? `${row.label} ${PERMISSION_MATRIX_COLUMN_LABELS[column]} — you do not have permission to delegate this action`
+                                    : `${row.label} ${PERMISSION_MATRIX_COLUMN_LABELS[column]}`
+                                }
                                 onChange={(next) =>
                                   setColumn(row, column, next)
                                 }
@@ -450,14 +477,19 @@ export function PermissionMatrixPanel({
                         );
                       })}
                       <td className="px-2 py-2.5 text-center">
-                        {fullKeys.length === 0 ? (
+                        {row.leafKeys.length === 0 ? (
                           <span className="text-[12px] text-muted">—</span>
                         ) : (
                           <div className="flex justify-center">
                             <MatrixCheckbox
-                              checked={fullChecked}
-                              indeterminate={fullPartial}
-                              label={`${row.label} full access`}
+                              checked={fullChecked && !fullLocked}
+                              indeterminate={fullPartial && !fullLocked}
+                              disabled={fullLocked}
+                              label={
+                                fullLocked
+                                  ? `${row.label} full access — you do not have permission to delegate this action`
+                                  : `${row.label} full access`
+                              }
                               onChange={(next) => setFullAccess(row, next)}
                             />
                           </div>
@@ -490,12 +522,28 @@ export function PermissionMatrixPanel({
                     <ul className="grid gap-1.5 sm:grid-cols-2">
                       {row.fieldKeys.map((key) => {
                         const checked = selected.has(key);
+                        const locked = Boolean(
+                          allowed && !allowed.has(key),
+                        );
                         const label = key.split(".").slice(-2, -1)[0] ?? key;
                         return (
                           <li key={key}>
-                            <label className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[12px] text-foreground hover:bg-hero-bg/60">
+                            <label
+                              className={cn(
+                                "flex items-center gap-2 rounded-md px-1.5 py-1 text-[12px] text-foreground",
+                                locked
+                                  ? "cursor-not-allowed opacity-60"
+                                  : "hover:bg-hero-bg/60",
+                              )}
+                              title={
+                                locked
+                                  ? "You do not have permission to delegate this field."
+                                  : undefined
+                              }
+                            >
                               <MatrixCheckbox
-                                checked={checked}
+                                checked={checked && !locked}
+                                disabled={locked}
                                 label={`${row.label} field ${label}`}
                                 onChange={(next) =>
                                   onChange(
@@ -505,6 +553,7 @@ export function PermissionMatrixPanel({
                               />
                               <span className="capitalize">
                                 {label.replace(/_/g, " ")}
+                                {locked ? " (locked)" : ""}
                               </span>
                             </label>
                           </li>

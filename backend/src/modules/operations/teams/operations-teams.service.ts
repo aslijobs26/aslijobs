@@ -32,6 +32,7 @@ import {
 } from "../rbac/operations-permission-catalog.js";
 import { OPEN_WORK_STATUSES } from "../work/operations-work-department.js";
 import { OperationsWorkItemModel } from "../work/operations-work.model.js";
+import { resolveCapabilitiesForMembers } from "../work/operations-work-capability.js";
 import {
   buildTeamArchiveBlockedMessage,
   hasBlockingTeamDependencies,
@@ -532,7 +533,17 @@ class OperationsTeamsService {
     }
     await assertCanAccessTeam(access, team);
     const [hydrated] = await hydrateTeams([team]);
-    return hydrated;
+    const activeMembers = await OperationsTeamUserModel.find({
+      teamId: team._id,
+      status: "active",
+    })
+      .select("_id role roleId")
+      .lean();
+    const capabilities = await resolveCapabilitiesForMembers(activeMembers);
+    return {
+      ...hydrated,
+      capabilities,
+    };
   }
 
   async create(access: OperationsResolvedAccess, body: CreateOperationsTeamBody) {

@@ -20,6 +20,7 @@ import {
   operationsQueryRetryDelay,
   shouldRetryOperationsQuery,
 } from "../utils/operations-session-errors";
+import { OPERATIONS_AUTH_QUERY_KEY } from "../utils/operations-session";
 import { OPERATIONS_ORGANIZATION_QUERY_KEY } from "./use-operations-organization";
 import { OPERATIONS_TEAM_QUERY_KEY } from "./use-operations-team";
 import { OPERATIONS_DEPARTMENTS_QUERY_KEY } from "./use-operations-departments";
@@ -34,6 +35,7 @@ async function invalidateTeamCaches(
     queryClient.invalidateQueries({ queryKey: OPERATIONS_ORGANIZATION_QUERY_KEY }),
     queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY }),
     queryClient.invalidateQueries({ queryKey: OPERATIONS_DEPARTMENTS_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY }),
   ]);
 }
 

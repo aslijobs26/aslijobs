@@ -11,106 +11,92 @@ import {
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import { OperationsCard } from "../../../ui/OperationsCard";
-
-interface QuickActionItem {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  href?: string;
-  onClick?: () => void;
-}
+import { OperationsCanKey } from "../../auth/OperationsCanKey";
 
 interface EmployersQuickActionsProps {
   onExport: () => void;
   isExporting?: boolean;
 }
 
+const className =
+  "group flex w-full items-center gap-2.5 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 text-left transition-colors hover:border-primary/25 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 max-sm:gap-2 max-sm:px-2.5 max-sm:py-2";
+
+function ActionContent({
+  label,
+  icon: Icon,
+}: {
+  label: string;
+  icon: LucideIcon;
+}) {
+  return (
+    <>
+      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary max-sm:size-7">
+        <Icon className="size-4 max-sm:size-3.5" strokeWidth={2} aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1 text-[12px] font-semibold leading-snug text-foreground max-sm:text-[11px]">
+        {label}
+      </span>
+      <ArrowRight
+        className="size-3.5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+        strokeWidth={2}
+        aria-hidden="true"
+      />
+    </>
+  );
+}
+
 export function EmployersQuickActions({
   onExport,
   isExporting = false,
 }: EmployersQuickActionsProps) {
-  const actions: QuickActionItem[] = [
-    {
-      id: "verifications",
-      label: "Review Verifications",
-      icon: ShieldCheck,
-      href: OPERATIONS_ROUTES.VERIFICATIONS,
-    },
-    {
-      id: "pending",
-      label: "Pending Employers",
-      icon: Building2,
-      href: `${OPERATIONS_ROUTES.EMPLOYERS}?verificationStatus=pending`,
-    },
-    {
-      id: "post-job",
-      label: "Post a Job",
-      icon: Briefcase,
-      href: OPERATIONS_ROUTES.JOBS_POST,
-    },
-    {
-      id: "inbox",
-      label: "WhatsApp Inbox",
-      icon: MessageSquare,
-      href: OPERATIONS_ROUTES.WHATSAPP_INBOX,
-    },
-    {
-      id: "team",
-      label: "Team Management",
-      icon: Users,
-      href: OPERATIONS_ROUTES.TEAM_MANAGEMENT,
-    },
-    {
-      id: "export",
-      label: isExporting ? "Exporting…" : "Export Employers",
-      icon: Download,
-      onClick: onExport,
-    },
-  ];
-
   return (
     <OperationsCard title="Quick Actions" className="min-w-0">
       <ul className="grid grid-cols-1 gap-2">
-        {actions.map((action) => {
-          const Icon = action.icon;
-          const content = (
-            <>
-              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary max-sm:size-7">
-                <Icon className="size-4 max-sm:size-3.5" strokeWidth={2} aria-hidden="true" />
-              </span>
-              <span className="min-w-0 flex-1 text-[12px] font-semibold leading-snug text-foreground max-sm:text-[11px]">
-                {action.label}
-              </span>
-              <ArrowRight
-                className="size-3.5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
-                strokeWidth={2}
-                aria-hidden="true"
+        <li>
+          <Link to={OPERATIONS_ROUTES.VERIFICATIONS} className={className}>
+            <ActionContent label="Review Verifications" icon={ShieldCheck} />
+          </Link>
+        </li>
+        <li>
+          <Link
+            to={`${OPERATIONS_ROUTES.EMPLOYERS}?verificationStatus=pending`}
+            className={className}
+          >
+            <ActionContent label="Pending Employers" icon={Building2} />
+          </Link>
+        </li>
+        <OperationsCanKey permissionKey="jobs.post.create">
+          <li>
+            <Link to={OPERATIONS_ROUTES.JOBS_POST} className={className}>
+              <ActionContent label="Post a Job" icon={Briefcase} />
+            </Link>
+          </li>
+        </OperationsCanKey>
+        <li>
+          <Link to={OPERATIONS_ROUTES.WHATSAPP_INBOX} className={className}>
+            <ActionContent label="WhatsApp Inbox" icon={MessageSquare} />
+          </Link>
+        </li>
+        <li>
+          <Link to={OPERATIONS_ROUTES.TEAM_MANAGEMENT} className={className}>
+            <ActionContent label="Team Management" icon={Users} />
+          </Link>
+        </li>
+        <OperationsCanKey permissionKey="employers.list.export">
+          <li>
+            <button
+              type="button"
+              onClick={onExport}
+              disabled={isExporting}
+              className={className}
+            >
+              <ActionContent
+                label={isExporting ? "Exporting…" : "Export Employers"}
+                icon={Download}
               />
-            </>
-          );
-
-          const className =
-            "group flex items-center gap-2.5 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 transition-colors hover:border-primary/25 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 max-sm:gap-2 max-sm:px-2.5 max-sm:py-2";
-
-          return (
-            <li key={action.id}>
-              {action.href ? (
-                <Link to={action.href} className={className}>
-                  {content}
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  onClick={action.onClick}
-                  disabled={isExporting && action.id === "export"}
-                  className={`w-full text-left ${className}`}
-                >
-                  {content}
-                </button>
-              )}
-            </li>
-          );
-        })}
+            </button>
+          </li>
+        </OperationsCanKey>
       </ul>
     </OperationsCard>
   );

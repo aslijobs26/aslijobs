@@ -484,6 +484,11 @@ export function MyWorkDetailHeader({
                 ) : null}
                 {item.statusLabel}
               </span>
+              {item.capabilityMismatch ? (
+                <span className="inline-flex items-center rounded-full bg-warning/12 px-2 py-0.5 text-[10px] font-semibold text-warning ring-1 ring-inset ring-warning/15">
+                  Capability Mismatch
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -555,6 +560,15 @@ export function MyWorkDetailHeader({
           className="mt-3 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-[12px] text-danger"
         >
           {actionError}
+        </div>
+      ) : null}
+
+      {item.capabilityMismatch && item.status !== "completed" ? (
+        <div
+          role="status"
+          className="mt-3 rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-[12px] text-warning"
+        >
+          Capability mismatch — reassign this work before completing it.
         </div>
       ) : null}
 
@@ -664,7 +678,7 @@ export function MyWorkDetailHeader({
                   ) : null}
                 </OperationsCanKey>
                 <OperationsCanKey permissionKey="my_work.complete">
-                  {item.status === "in_progress" ? (
+                  {item.status === "in_progress" && !item.capabilityMismatch ? (
                     <button
                       type="button"
                       role="menuitem"

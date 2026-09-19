@@ -13,7 +13,10 @@ import { OperationsDepartmentModel } from "./operations-department.model.js";
 import { OperationsRoleModel } from "./operations-role.model.js";
 import { catalogKeysMatchingMatrix } from "./operations-permission-projection.js";
 import { projectGrantedKeysToMatrix } from "./operations-permission-projection.js";
-import { isOperationsPermissionKey } from "./operations-permission-catalog.js";
+import {
+  isOperationsPermissionKey,
+  TEAM_MEMBERS_MOBILE_VIEW_KEY,
+} from "./operations-permission-catalog.js";
 import type { OperationsResolvedAccess } from "./operations-access.types.js";
 
 export function operationsAccessCan(
@@ -41,6 +44,28 @@ export function operationsAccessCanKey(
     return true;
   }
   return access.grantedKeys.includes(key);
+}
+
+/** Field-level: Organization member mobile is omitted unless this is true. */
+export function canViewOperationsMemberMobile(
+  access: OperationsResolvedAccess | undefined,
+): boolean {
+  if (!access) {
+    return false;
+  }
+  if (access.isSuperAdmin) {
+    return true;
+  }
+  if (operationsAccessCanKey(access, TEAM_MEMBERS_MOBILE_VIEW_KEY)) {
+    return true;
+  }
+  const hasFineTeamGrants = access.grantedKeys.some(
+    (key) => key === "team" || key.startsWith("team."),
+  );
+  if (hasFineTeamGrants) {
+    return false;
+  }
+  return operationsAccessCan(access, "team", "read");
 }
 
 export function operationsAccessCanDelegate(

@@ -1,10 +1,16 @@
 import { Router } from "express";
 import {
   requireOperationsAuth,
-  requireOperationsPermission,
+  requireFineOrCoarsePermission,
+  requireOperationsPermissionKey,
 } from "../../../middleware/operations-auth.middleware.js";
 import { validate } from "../../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../../utils/async-handler.js";
+import {
+  CANDIDATE_EXPORT_PERMISSION_KEY,
+  CANDIDATE_LIST_VIEW_PERMISSION_KEY,
+  CANDIDATE_PROFILE_VIEW_PERMISSION_KEY,
+} from "../rbac/operations-permission-catalog.js";
 import { operationsCandidatesController } from "./operations-candidates.controller.js";
 import {
   listOperationsCandidateApplicationsQuerySchema,
@@ -21,28 +27,40 @@ operationsCandidatesRouter.use(asyncHandler(requireOperationsAuth));
 
 operationsCandidatesRouter.get(
   "/",
-  requireOperationsPermission("candidates", "read"),
+  requireFineOrCoarsePermission(
+    CANDIDATE_LIST_VIEW_PERMISSION_KEY,
+    "candidates",
+    "read",
+  ),
   validate(listOperationsCandidatesQuerySchema, "query"),
   asyncHandler(operationsCandidatesController.list),
 );
 
 operationsCandidatesRouter.get(
   "/analytics",
-  requireOperationsPermission("candidates", "read"),
+  requireFineOrCoarsePermission(
+    CANDIDATE_LIST_VIEW_PERMISSION_KEY,
+    "candidates",
+    "read",
+  ),
   validate(candidatesAnalyticsQuerySchema, "query"),
   asyncHandler(operationsCandidatesController.analytics),
 );
 
 operationsCandidatesRouter.get(
   "/export",
-  requireOperationsPermission("candidates", "read"),
+  requireOperationsPermissionKey(CANDIDATE_EXPORT_PERMISSION_KEY),
   validate(exportOperationsCandidatesQuerySchema, "query"),
   asyncHandler(operationsCandidatesController.export),
 );
 
 operationsCandidatesRouter.get(
   "/seekers/:jobSeekerId/applications",
-  requireOperationsPermission("candidates", "read"),
+  requireFineOrCoarsePermission(
+    CANDIDATE_PROFILE_VIEW_PERMISSION_KEY,
+    "candidates",
+    "read",
+  ),
   validate(operationsCandidateSeekerIdParamsSchema, "params"),
   validate(listOperationsCandidateApplicationsQuerySchema, "query"),
   asyncHandler(operationsCandidatesController.listSeekerApplications),
@@ -50,28 +68,44 @@ operationsCandidatesRouter.get(
 
 operationsCandidatesRouter.get(
   "/seekers/:jobSeekerId/resume",
-  requireOperationsPermission("candidates", "read"),
+  requireFineOrCoarsePermission(
+    CANDIDATE_PROFILE_VIEW_PERMISSION_KEY,
+    "candidates",
+    "read",
+  ),
   validate(operationsCandidateSeekerIdParamsSchema, "params"),
   asyncHandler(operationsCandidatesController.downloadResume),
 );
 
 operationsCandidatesRouter.get(
   "/seekers/:jobSeekerId/photo",
-  requireOperationsPermission("candidates", "read"),
+  requireFineOrCoarsePermission(
+    CANDIDATE_PROFILE_VIEW_PERMISSION_KEY,
+    "candidates",
+    "read",
+  ),
   validate(operationsCandidateSeekerIdParamsSchema, "params"),
   asyncHandler(operationsCandidatesController.downloadPhoto),
 );
 
 operationsCandidatesRouter.get(
   "/seekers/:jobSeekerId",
-  requireOperationsPermission("candidates", "read"),
+  requireFineOrCoarsePermission(
+    CANDIDATE_PROFILE_VIEW_PERMISSION_KEY,
+    "candidates",
+    "read",
+  ),
   validate(operationsCandidateSeekerIdParamsSchema, "params"),
   asyncHandler(operationsCandidatesController.getBySeekerId),
 );
 
 operationsCandidatesRouter.get(
   "/applications/:applicationId",
-  requireOperationsPermission("candidates", "read"),
+  requireFineOrCoarsePermission(
+    CANDIDATE_PROFILE_VIEW_PERMISSION_KEY,
+    "candidates",
+    "read",
+  ),
   validate(operationsCandidateApplicationIdParamsSchema, "params"),
   asyncHandler(operationsCandidatesController.getByApplicationId),
 );

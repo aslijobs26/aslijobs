@@ -42,7 +42,10 @@ export function MyWorkAssignDialog({
   onSuccess,
 }: MyWorkAssignDialogProps) {
   const titleId = useId();
-  const assigneesQuery = useEligibleWorkAssignees({ enabled: open });
+  const assigneesQuery = useEligibleWorkAssignees({
+    enabled: open && Boolean(item),
+    workType: item?.type ?? null,
+  });
   const assignMutation = useAssignOperationsWork();
   const [assigneeId, setAssigneeId] = useState("");
   const [priority, setPriority] = useState<WorkItemPriority>("P2");
@@ -63,14 +66,23 @@ export function MyWorkAssignDialog({
 
   const dueAtIso = duePartsToIso(dueParts);
   const suggestedPriority = suggestPriorityFromDueAt(dueAtIso);
+  const assignees = assigneesQuery.data ?? [];
+  const assigneesLoaded = !assigneesQuery.isLoading && !assigneesQuery.isFetching;
+  const noEligibleAssignees = assigneesLoaded && assignees.length === 0;
 
   const assigneeOptions = [
     { value: "", label: "Select assignee" },
-    ...(assigneesQuery.data ?? []).map((user) => ({
+    ...assignees.map((user) => ({
       value: user.id,
       label: user.fullName,
     })),
   ];
+
+  const canSave =
+    Boolean(assigneeId) &&
+    assignees.length > 0 &&
+    !assigneesQuery.isLoading &&
+    !assignMutation.isPending;
 
   const handleDueChange = (next: MyWorkDueParts) => {
     setDueParts(next);
@@ -82,7 +94,7 @@ export function MyWorkAssignDialog({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (!assigneeId) {
+    if (!assigneeId || assignees.length === 0) {
       setError("Select an eligible assignee.");
       return;
     }
@@ -149,6 +161,12 @@ export function MyWorkAssignDialog({
             mobileSheet
           />
 
+          {noEligibleAssignees ? (
+            <p className="text-[11px] text-warning" role="status">
+              No eligible assignee found for this task.
+            </p>
+          ) : null}
+
           <MyWorkDueDateTimeField
             value={dueParts}
             onChange={handleDueChange}
@@ -202,7 +220,7 @@ export function MyWorkAssignDialog({
             </button>
             <button
               type="submit"
-              disabled={assignMutation.isPending}
+              disabled={!canSave}
               className="h-8 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
             >
               {assignMutation.isPending ? "Saving…" : "Save"}

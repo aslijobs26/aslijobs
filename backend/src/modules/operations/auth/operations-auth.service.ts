@@ -52,21 +52,16 @@ async function toAuthUser(user: {
 
 class OperationsAuthService {
   async login(input: OperationsTeamLoginInput): Promise<OperationsTeamLoginResponse> {
-    const email = input.email?.trim().toLowerCase() ?? "";
-    const mobileNumber = input.mobileNumber?.trim() ?? "";
+    const email = input.email.trim().toLowerCase();
 
     const user = await OperationsTeamUserModel.findOne({
       status: "active",
-      ...(email
-        ? { email }
-        : { mobileNumber }),
+      email,
     }).select("+passwordHash");
 
     if (!user?.passwordHash) {
       throw new AppError(
-        email
-          ? "Invalid email or password."
-          : "Invalid mobile number or password.",
+        "Invalid email or password.",
         HTTP_STATUS.UNAUTHORIZED,
       );
     }
@@ -74,9 +69,7 @@ class OperationsAuthService {
     const valid = await bcrypt.compare(input.password, user.passwordHash);
     if (!valid) {
       throw new AppError(
-        email
-          ? "Invalid email or password."
-          : "Invalid mobile number or password.",
+        "Invalid email or password.",
         HTTP_STATUS.UNAUTHORIZED,
       );
     }

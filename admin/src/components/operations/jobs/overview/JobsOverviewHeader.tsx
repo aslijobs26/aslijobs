@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import type { OperationsJobsAnalyticsPreset } from "../../../../types/operations-jobs";
 import { OperationsDatePicker } from "../../../ui/OperationsDatePicker";
+import { OperationsCanKey } from "../../auth/OperationsCanKey";
 import { OperationsFilterSelect } from "../OperationsFilterSelect";
 
 const PRESET_OPTIONS: Array<{
@@ -100,21 +101,25 @@ export function JobsOverviewHeader({
             </div>
           ) : null}
           <div className="flex min-w-0 flex-wrap items-center gap-2 max-sm:w-full">
-            <Link
-              to={OPERATIONS_ROUTES.JOBS_POST}
-              className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
-            >
-              <Plus className="size-3.5" aria-hidden="true" />
-              Post a Job
-            </Link>
-            <button
-              type="button"
-              onClick={onExport}
-              className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
-            >
-              <Download className="size-3.5" aria-hidden="true" />
-              Export
-            </button>
+            <OperationsCanKey permissionKey="jobs.post.create">
+              <Link
+                to={OPERATIONS_ROUTES.JOBS_POST}
+                className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
+              >
+                <Plus className="size-3.5" aria-hidden="true" />
+                Post a Job
+              </Link>
+            </OperationsCanKey>
+            <OperationsCanKey permissionKey="jobs.list.export">
+              <button
+                type="button"
+                onClick={onExport}
+                className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
+              >
+                <Download className="size-3.5" aria-hidden="true" />
+                Export
+              </button>
+            </OperationsCanKey>
           </div>
         </div>
       </div>

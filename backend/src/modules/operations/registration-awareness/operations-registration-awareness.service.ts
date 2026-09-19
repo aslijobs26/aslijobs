@@ -435,6 +435,8 @@ export const operationsRegistrationAwarenessService = {
   async listNotifications(input: {
     userId: string;
     limit?: number;
+    permissions?: OperationsPermissionMap;
+    isSuperAdmin?: boolean;
   }): Promise<OperationsNotificationListResult> {
     const limit = Math.min(Math.max(input.limit ?? 30, 1), 100);
     const userObjectId = mongoose.Types.ObjectId.isValid(input.userId)
@@ -450,19 +452,50 @@ export const operationsRegistrationAwarenessService = {
         ],
       })
         .sort({ createdAt: -1 })
-        .limit(limit)
+        .limit(Math.min(limit * 3, 150))
         .lean(),
       countUnreadNotifications(input.userId),
     ]);
 
-    const items: OperationsNotificationListItem[] = docs.map((doc) => {
+    const canRead = (module: Parameters<typeof canOperationsPermission>[1]) =>
+      input.isSuperAdmin === true ||
+      canOperationsPermission(input.permissions, module, "read");
+
+    const items: OperationsNotificationListItem[] = [];
+    for (const doc of docs) {
+      if (doc.type === "candidate.registered" && !canRead("candidates")) {
+        continue;
+      }
+      if (doc.type === "employer.registered" && !canRead("employers")) {
+        continue;
+      }
+      if (
+        (doc.type === "job.pending_approval" ||
+          doc.type === "job.resubmitted" ||
+          doc.type === "job.live_revision_submitted") &&
+        !canRead("jobs")
+      ) {
+        continue;
+      }
+      if (
+        (doc.type === "work.assigned" ||
+          doc.type === "work.reassigned" ||
+          doc.type === "work.claimed") &&
+        !canRead("my_work")
+      ) {
+        continue;
+      }
+      if (doc.type === "role.created" && !canRead("roles")) {
+        continue;
+      }
+
       const isRead = userObjectId
         ? (doc.reads ?? []).some(
             (read) => String(read.userId) === String(userObjectId),
           )
         : false;
 
-      return {
+      items.push({
         id: String(doc._id),
         type: doc.type,
         title: doc.title,
@@ -475,8 +508,12 @@ export const operationsRegistrationAwarenessService = {
           ? new Date(doc.createdAt).toISOString()
           : new Date().toISOString(),
         isRead,
-      };
-    });
+      });
+
+      if (items.length >= limit) {
+        break;
+      }
+    }
 
     return { items, unreadCount };
   },

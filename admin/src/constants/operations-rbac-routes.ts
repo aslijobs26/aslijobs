@@ -5,14 +5,16 @@ import type {
 } from "./operations-permissions";
 
 /**
- * Optional route → permission rules for future UI gating.
+ * Optional route → permission rules for UI gating.
  * Routes without a rule remain accessible to any authenticated ops user.
  * SUPER_ADMIN always passes via the full permission matrix.
+ * Home is available to every authenticated Organization user.
  */
 export type OperationsRoutePermissionRule = {
   prefix: string;
   module: OperationsPermissionModule;
   action?: OperationsPermissionAction;
+  allowAuthenticated?: boolean;
 };
 
 export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] =
@@ -22,7 +24,12 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
       module: "dashboard",
       action: "read",
     },
-    { prefix: OPERATIONS_ROUTES.HOME, module: "dashboard", action: "read" },
+    {
+      prefix: OPERATIONS_ROUTES.HOME,
+      module: "dashboard",
+      action: "read",
+      allowAuthenticated: true,
+    },
     { prefix: OPERATIONS_ROUTES.MY_WORK, module: "my_work", action: "read" },
     {
       prefix: OPERATIONS_ROUTES.WORK_QUEUE,
@@ -55,6 +62,7 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
       module: "candidates",
       action: "read",
     },
+    { prefix: OPERATIONS_ROUTES.JOBS_POST, module: "jobs", action: "create" },
     { prefix: OPERATIONS_ROUTES.JOBS, module: "jobs", action: "read" },
     {
       prefix: OPERATIONS_ROUTES.PLACEMENTS,
@@ -83,6 +91,11 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
     },
     {
       prefix: OPERATIONS_ROUTES.TEAM_MANAGEMENT,
+      module: "team",
+      action: "read",
+    },
+    {
+      prefix: OPERATIONS_ROUTES.PEOPLE,
       module: "team",
       action: "read",
     },

@@ -256,10 +256,69 @@ function QuickLinksCard({ item }: { item: OperationsWorkDetail }) {
   );
 }
 
+function CapabilityCard({ item }: { item: OperationsWorkDetail }) {
+  const required = item.requiredCapability;
+
+  return (
+    <OperationsCard title="Capability" bodyClassName="p-0 sm:p-0">
+      <dl className="px-3 py-1">
+        <DetailRow
+          label="Required Module"
+          value={required?.moduleLabel || "—"}
+        />
+        <DetailRow
+          label="Required Capability"
+          value={required?.capabilityLabel || item.capabilityLabel || "—"}
+        />
+        <DetailRow
+          label="Assigned user"
+          value={item.assignedToName ?? "Unassigned"}
+        />
+        <DetailRow
+          label="Capability Status"
+          value={item.capabilityMismatch ? "Capability mismatch" : "OK"}
+        />
+      </dl>
+      {required && required.requiredPermissions.length > 0 ? (
+        <div className="border-t border-border-subtle px-3 py-2.5">
+          <p className="text-[11px] font-medium text-muted">
+            Required permissions
+          </p>
+          <ul className="mt-1.5 flex flex-col gap-1">
+            {required.requiredPermissions.map((permission) => (
+              <li
+                key={`${permission.coarse}-${permission.label}`}
+                className="rounded-md border border-border-subtle bg-hero-bg/40 px-2 py-1.5 text-[11px] text-foreground"
+              >
+                <span className="font-semibold">{permission.label}</span>
+                {permission.coarse ? (
+                  <span className="mt-0.5 block text-[10px] text-muted">
+                    {permission.coarse}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {item.capabilityMismatch ? (
+        <div
+          role="status"
+          className="border-t border-warning/20 bg-warning/10 px-3 py-2.5 text-[11px] leading-relaxed text-warning"
+        >
+          Reassign this work to someone with the required capability before
+          completing it.
+        </div>
+      ) : null}
+    </OperationsCard>
+  );
+}
+
 export function MyWorkDetailSidePanel({ item }: MyWorkDetailSidePanelProps) {
   return (
     <aside className="flex min-w-0 flex-col gap-3">
       <JobDetailsCard item={item} />
+      <CapabilityCard item={item} />
       <StatusTimelineCard item={item} />
       <QuickLinksCard item={item} />
     </aside>

@@ -85,6 +85,39 @@ apiClient.interceptors.request.use((config) => {
     headers.set("Authorization", `Bearer ${token}`);
     config.headers = headers;
   }
+
+  // Role preview is UI-only. Block mutating Operations API calls so Super Admin
+  // cannot accidentally execute real actions while simulating another role.
+  if (typeof window !== "undefined") {
+    const previewActive =
+      window.location.pathname.includes("/operations/") &&
+      Boolean(sessionStorage.getItem("aslijobs:operations-role-preview"));
+    const method = (config.method ?? "get").toLowerCase();
+    const url = String(config.url ?? "");
+    const isMutating =
+      method === "post" ||
+      method === "put" ||
+      method === "patch" ||
+      method === "delete";
+    const isAuthEndpoint = url.includes("/operations/auth/");
+    if (previewActive && isMutating && !isAuthEndpoint) {
+      return Promise.reject(
+        Object.assign(new Error("Disabled in role preview."), {
+          code: "ROLE_PREVIEW_READONLY",
+          config,
+          isAxiosError: true,
+          response: {
+            status: 403,
+            data: {
+              success: false,
+              message: "Disabled in role preview. Exit preview to make changes.",
+            },
+          },
+        }),
+      );
+    }
+  }
+
   return config;
 });
 

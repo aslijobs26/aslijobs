@@ -470,9 +470,16 @@ export function MyWorkTableSection({
                       {dueInfo.label}
                     </td>
                     <td className="px-3 py-2.5 xl:px-2.5">
-                      <OperationsBadge variant={statusVariant(item.status)}>
-                        {item.statusLabel}
-                      </OperationsBadge>
+                      <div className="flex flex-col items-start gap-1">
+                        <OperationsBadge variant={statusVariant(item.status)}>
+                          {item.statusLabel}
+                        </OperationsBadge>
+                        {item.capabilityMismatch ? (
+                          <OperationsBadge variant="medium">
+                            Capability Mismatch
+                          </OperationsBadge>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-3 py-2.5 last:pr-4 xl:px-2.5 xl:last:pr-3">
                       <MyWorkRowActions
@@ -560,6 +567,11 @@ export function MyWorkTableSection({
                   <OperationsBadge variant={statusVariant(item.status)}>
                     {item.statusLabel}
                   </OperationsBadge>
+                  {item.capabilityMismatch ? (
+                    <OperationsBadge variant="medium">
+                      Capability Mismatch
+                    </OperationsBadge>
+                  ) : null}
                   <span className="text-[11px] text-muted">{item.typeLabel}</span>
                 </div>
                 <p className="text-[11px] text-foreground">

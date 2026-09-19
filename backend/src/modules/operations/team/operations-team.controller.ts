@@ -40,7 +40,9 @@ export const operationsTeamController = {
     const body = req.body as CreateOperationsTeamMemberBody;
     const data = await operationsTeamService.create(requireAccess(req), body);
     sendSuccess(res, HTTP_STATUS.CREATED, {
-      message: "Team member created successfully.",
+      message: data.invitationEmailSent
+        ? "Team member created and invitation email sent."
+        : "Team member created. Invitation email could not be delivered.",
       data,
     });
   },
@@ -69,6 +71,32 @@ export const operationsTeamController = {
     );
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Team member status updated successfully.",
+      data,
+    });
+  },
+
+  async resendInvitation(req: Request, res: Response): Promise<void> {
+    const { memberId } = req.params as OperationsTeamMemberIdParams;
+    const data = await operationsTeamService.resendInvitation(
+      requireAccess(req),
+      memberId,
+    );
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: data.invitationEmailSent
+        ? "Invitation email sent."
+        : "Invitation could not be delivered. Try again later.",
+      data,
+    });
+  },
+
+  async remove(req: Request, res: Response): Promise<void> {
+    const { memberId } = req.params as OperationsTeamMemberIdParams;
+    const data = await operationsTeamService.remove(
+      requireAccess(req),
+      memberId,
+    );
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Person deleted permanently.",
       data,
     });
   },

@@ -1,8 +1,10 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createOperationsTeamMember,
+  deleteOperationsTeamMember,
   fetchOperationsTeamMembers,
   fetchOperationsTeamOverview,
+  resendOperationsTeamInvitation,
   updateOperationsTeamMember,
   updateOperationsTeamMemberStatus,
 } from "../services/operations-team.service";
@@ -11,6 +13,7 @@ import type {
   OperationsTeamListParams,
   UpdateOperationsTeamMemberInput,
 } from "../types/operations-team";
+import { OPERATIONS_AUTH_QUERY_KEY } from "../utils/operations-session";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
 
 export const OPERATIONS_TEAM_QUERY_KEY = ["operations", "team"] as const;
@@ -50,6 +53,7 @@ export function useCreateOperationsTeamMember() {
       createOperationsTeamMember(input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY });
     },
   });
 }
@@ -66,6 +70,7 @@ export function useUpdateOperationsTeamMember() {
     }) => updateOperationsTeamMember(memberId, input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY });
     },
   });
 }
@@ -84,6 +89,28 @@ export function useUpdateOperationsTeamMemberStatus() {
     }) => updateOperationsTeamMemberStatus(memberId, status, reason),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY });
+    },
+  });
+}
+
+export function useResendOperationsTeamInvitation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (memberId: string) => resendOperationsTeamInvitation(memberId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY });
+    },
+  });
+}
+
+export function useDeleteOperationsTeamMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (memberId: string) => deleteOperationsTeamMember(memberId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY });
     },
   });
 }

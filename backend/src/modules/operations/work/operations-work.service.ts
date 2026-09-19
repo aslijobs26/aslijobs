@@ -29,9 +29,17 @@ import {
   listEligibleAssignees,
   assertHasAssignOrReassignPermission,
   listEligibleDepartments,
+  listEligibleOpsTeams,
   resolveBulkTargetValidationMode,
   WORK_BULK_ASSIGN_MAX,
 } from "./operations-work-assignment.js";
+import {
+  assertAccessHasWorkCapability,
+  buildCapabilitySummary,
+  getWorkTypeCapability,
+  loadCapabilitySnapshotsForUsers,
+  snapshotHasWorkCapability,
+} from "./operations-work-capability.js";
 import {
   WORK_ITEM_STATUS_LABELS,
   WORK_ITEM_TYPE_LABELS,
@@ -106,6 +114,10 @@ async function nameMapForIds(
 function toListItem(
   doc: Record<string, unknown>,
   names: Map<string, string>,
+  capability?: {
+    capabilityMismatch?: boolean;
+    capabilityLabel?: string | null;
+  },
 ): OperationsWorkListItem {
   const assignedToUserId = doc.assignedToUserId
     ? String(doc.assignedToUserId)
@@ -139,7 +151,104 @@ function toListItem(
     revision: Number(doc.revision ?? 1),
     createdAt: iso(doc.createdAt as Date) ?? new Date(0).toISOString(),
     updatedAt: iso(doc.updatedAt as Date) ?? new Date(0).toISOString(),
+    ...(capability
+      ? {
+          capabilityMismatch: capability.capabilityMismatch,
+          capabilityLabel: capability.capabilityLabel,
+        }
+      : {}),
   };
+}
+
+function readMetadataCapabilityMismatch(
+  doc: Record<string, unknown>,
+): boolean {
+  const metadata =
+    doc.metadata && typeof doc.metadata === "object"
+      ? (doc.metadata as Record<string, unknown>)
+      : {};
+  return metadata.capabilityMismatch === true;
+}
+
+async function resolveCapabilityFieldsForDocs(
+  docs: Array<Record<string, unknown>>,
+): Promise<
+  Array<{ capabilityMismatch: boolean; capabilityLabel: string | null }>
+> {
+  const assigneeIds = [
+    ...new Set(
+      docs
+        .map((doc) =>
+          doc.assignedToUserId ? String(doc.assignedToUserId) : null,
+        )
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const users =
+    assigneeIds.length === 0
+      ? []
+      : await OperationsTeamUserModel.find({ _id: { $in: assigneeIds } })
+          .select("_id role roleId")
+          .lean();
+  const snapshots = await loadCapabilitySnapshotsForUsers(users);
+
+  return docs.map((doc) => {
+    const type = doc.type as WorkItemType;
+    const assignedToUserId = doc.assignedToUserId
+      ? String(doc.assignedToUserId)
+      : null;
+    const metaMismatch = readMetadataCapabilityMismatch(doc);
+    let liveMismatch = false;
+    if (assignedToUserId) {
+      const snapshot = snapshots.get(assignedToUserId);
+      liveMismatch =
+        !snapshot || !snapshotHasWorkCapability(snapshot, type);
+    }
+    const capabilityMismatch = Boolean(
+      assignedToUserId && (metaMismatch || liveMismatch),
+    );
+    return {
+      capabilityMismatch,
+      capabilityLabel: capabilityMismatch
+        ? getWorkTypeCapability(type).capabilityLabel
+        : null,
+    };
+  });
+}
+
+function isWorkCapabilityMismatchError(error: unknown): boolean {
+  if (!(error instanceof AppError) || error.details == null) {
+    return false;
+  }
+  if (typeof error.details !== "object") {
+    return false;
+  }
+  return (
+    (error.details as { code?: string }).code === "WORK_CAPABILITY_MISMATCH"
+  );
+}
+
+async function auditCapabilityAssignmentRejection(input: {
+  access: OperationsResolvedAccess;
+  workItemId: string;
+  displayId?: string | null;
+  error: AppError;
+}): Promise<void> {
+  const details =
+    input.error.details && typeof input.error.details === "object"
+      ? (input.error.details as Record<string, unknown>)
+      : {};
+  await recordOperationsAuditEvent({
+    actorUserId: input.access.userId,
+    actorName: actorName(input.access),
+    action: "work.assignment_rejected_capability",
+    targetType: "work_item",
+    targetId: input.workItemId,
+    targetLabel: input.displayId ?? input.workItemId,
+    reason: input.error.message,
+    metadata: { ...details },
+  });
 }
 
 async function expandManagerAssigneeScope(
@@ -296,12 +405,34 @@ function conflictIfStale(
 }
 
 class OperationsWorkService {
-  async listEligibleAssignees(access: OperationsResolvedAccess) {
-    return listEligibleAssignees(access);
+  async listEligibleAssignees(
+    access: OperationsResolvedAccess,
+    options?: {
+      workType?: WorkItemType | null;
+      workTypes?: WorkItemType[] | null;
+    },
+  ) {
+    return listEligibleAssignees(access, options);
   }
 
-  async listEligibleDepartments(access: OperationsResolvedAccess) {
-    return listEligibleDepartments(access);
+  async listEligibleDepartments(
+    access: OperationsResolvedAccess,
+    options?: {
+      workType?: WorkItemType | null;
+      workTypes?: WorkItemType[] | null;
+    },
+  ) {
+    return listEligibleDepartments(access, options);
+  }
+
+  async listEligibleOpsTeams(
+    access: OperationsResolvedAccess,
+    options?: {
+      workType?: WorkItemType | null;
+      workTypes?: WorkItemType[] | null;
+    },
+  ) {
+    return listEligibleOpsTeams(access, options);
   }
 
   async getAnalytics(
@@ -533,8 +664,13 @@ class OperationsWorkService {
       ),
     );
 
+    const docs = rows.map((row) => row as Record<string, unknown>);
+    const capabilityFields = await resolveCapabilityFieldsForDocs(docs);
+
     return {
-      items: rows.map((row) => toListItem(row as Record<string, unknown>, names)),
+      items: docs.map((doc, index) =>
+        toListItem(doc, names, capabilityFields[index]),
+      ),
       pagination: {
         page: query.page,
         limit: query.limit,
@@ -562,9 +698,11 @@ class OperationsWorkService {
       doc.assignedByUserId ? String(doc.assignedByUserId) : null,
       doc.completedByUserId ? String(doc.completedByUserId) : null,
     ]);
-    const base = toListItem(doc, names);
+    const [capabilityFields] = await resolveCapabilityFieldsForDocs([doc]);
+    const base = toListItem(doc, names, capabilityFields);
     const historyRaw = Array.isArray(doc.history) ? doc.history : [];
     const canHistory = operationsAccessCanKey(access, WORK_DETAIL_HISTORY_KEY);
+    const workType = doc.type as WorkItemType;
 
     return {
       ...base,
@@ -585,6 +723,7 @@ class OperationsWorkService {
         ? String(doc.completedByUserId)
         : null,
       sourceEventKey: doc.sourceEventKey ? String(doc.sourceEventKey) : null,
+      requiredCapability: buildCapabilitySummary(workType),
       metadata:
         doc.metadata && typeof doc.metadata === "object"
           ? (doc.metadata as Record<string, unknown>)
@@ -643,6 +782,7 @@ class OperationsWorkService {
         actor: access,
         targetUserId: body.assignedToUserId,
         mode: "assign",
+        workType: body.type,
       });
       assignedToUserId = String(target._id);
       departmentId = target.departmentId
@@ -663,6 +803,7 @@ class OperationsWorkService {
         actor: access,
         departmentId: routeDepartmentId,
         mode: "assign",
+        workType: body.type,
       });
       departmentId = String(department._id);
       assignedToUserId = null;
@@ -790,13 +931,15 @@ class OperationsWorkService {
 
     const targetValidationMode = resolveBulkTargetValidationMode(access);
 
-    // Pre-validate target once (still re-check per item for mode).
+    // Pre-validate target once (hierarchy/scope only; capability checked per item).
     try {
       if (body.targetType === "user") {
         const validated = await assertCanAssignWorkToUser({
           actor: access,
           targetUserId: body.targetId,
           mode: targetValidationMode,
+          workType: "support",
+          skipCapabilityCheck: true,
         });
         userTarget = validated.target;
         result.targetLabel = validated.target.fullName;
@@ -805,10 +948,20 @@ class OperationsWorkService {
           actor: access,
           departmentId: body.targetId,
           mode: targetValidationMode,
+          workType: "support",
+          skipCapabilityCheck: true,
         });
         result.targetLabel = validated.department.name;
       }
     } catch (error) {
+      if (isWorkCapabilityMismatchError(error)) {
+        await auditCapabilityAssignmentRejection({
+          access,
+          workItemId: "bulk",
+          displayId: "bulk",
+          error: error as AppError,
+        });
+      }
       const mapped = mapBulkItemError(error);
       for (const workItemId of body.workItemIds) {
         result.failures.push({
@@ -890,12 +1043,16 @@ class OperationsWorkService {
             actor: access,
             targetUserId: body.targetId,
             mode,
+            workType: existing.type as WorkItemType,
           });
           assertWorkStatusTransition(fromStatus, "assigned");
 
           const targetDepartmentId = userTarget?.departmentId
             ? String(userTarget.departmentId)
             : null;
+
+          const hadCapabilityMismatch =
+            readMetadataCapabilityMismatch(existing);
 
           const updated = await OperationsWorkItemModel.updateOne(
             {
@@ -910,6 +1067,8 @@ class OperationsWorkService {
                 assignedAt: now,
                 status: "assigned",
                 waitingReason: null,
+                "metadata.capabilityMismatch": false,
+                "metadata.capabilityMismatchAt": null,
                 ...(targetDepartmentId
                   ? { departmentId: targetDepartmentId }
                   : {}),
@@ -929,6 +1088,7 @@ class OperationsWorkService {
                     bulk: true,
                     assignedToUserId: body.targetId,
                     previousAssigneeUserId: previousAssignee,
+                    clearedCapabilityMismatch: hadCapabilityMismatch,
                   },
                 },
               },
@@ -957,12 +1117,30 @@ class OperationsWorkService {
             revision: expectedRevision + 1,
           });
 
+          if (hadCapabilityMismatch && mode === "reassign") {
+            await recordOperationsAuditEvent({
+              actorUserId: access.userId,
+              actorName: actorName(access),
+              action: "work.reassigned_after_mismatch",
+              targetType: "work_item",
+              targetId: workItemId,
+              targetLabel: displayId,
+              metadata: {
+                bulk: true,
+                previousAssigneeUserId: previousAssignee,
+                assignedToUserId: body.targetId,
+                workType: existing.type,
+              },
+            });
+          }
+
           result.successful.push({ workItemId, displayId });
         } else {
           await assertCanRouteWorkToDepartment({
             actor: access,
             departmentId: body.targetId,
             mode,
+            workType: existing.type as WorkItemType,
           });
           if (fromStatus === "in_progress" || fromStatus === "waiting") {
             result.failures.push({
@@ -992,6 +1170,8 @@ class OperationsWorkService {
                 departmentId: body.targetId,
                 status: "queued",
                 waitingReason: null,
+                "metadata.capabilityMismatch": false,
+                "metadata.capabilityMismatchAt": null,
               },
               $inc: { revision: 1 },
               $push: {
@@ -1028,6 +1208,14 @@ class OperationsWorkService {
           result.successful.push({ workItemId, displayId });
         }
       } catch (error) {
+        if (isWorkCapabilityMismatchError(error)) {
+          await auditCapabilityAssignmentRejection({
+            access,
+            workItemId,
+            displayId: null,
+            error: error as AppError,
+          });
+        }
         const mapped = mapBulkItemError(error);
         result.failures.push({
           workItemId,
@@ -1093,6 +1281,7 @@ class OperationsWorkService {
       actor: access,
       targetUserId: body.assignedToUserId,
       mode,
+      workType: existing.type as WorkItemType,
     });
 
     if (isTerminalWorkStatus(existing.status as WorkItemStatus)) {
@@ -1105,6 +1294,7 @@ class OperationsWorkService {
     const fromStatus = existing.status as WorkItemStatus;
     assertWorkStatusTransition(fromStatus, "assigned");
 
+    const hadCapabilityMismatch = readMetadataCapabilityMismatch(existing);
     const now = new Date();
     const setFields: Record<string, unknown> = {
       assignedToUserId: target._id,
@@ -1112,6 +1302,8 @@ class OperationsWorkService {
       assignedAt: now,
       status: "assigned",
       waitingReason: null,
+      "metadata.capabilityMismatch": false,
+      "metadata.capabilityMismatchAt": null,
     };
     if (body.dueAt !== undefined) {
       setFields.dueAt = body.dueAt ? new Date(body.dueAt) : null;
@@ -1141,6 +1333,7 @@ class OperationsWorkService {
             metadata: {
               assignedToUserId: String(target._id),
               previousAssigneeUserId: previousAssignee,
+              clearedCapabilityMismatch: hadCapabilityMismatch,
             },
           },
         },
@@ -1164,6 +1357,22 @@ class OperationsWorkService {
         status: "assigned",
       },
     });
+
+    if (hadCapabilityMismatch && mode === "reassign") {
+      await recordOperationsAuditEvent({
+        actorUserId: access.userId,
+        actorName: actorName(access),
+        action: "work.reassigned_after_mismatch",
+        targetType: "work_item",
+        targetId: id,
+        targetLabel: String(existing.displayId ?? id),
+        metadata: {
+          previousAssigneeUserId: previousAssignee,
+          assignedToUserId: String(target._id),
+          workType: existing.type,
+        },
+      });
+    }
 
     scheduleWorkAssignmentNotification({
       workItemId: id,
@@ -1210,6 +1419,11 @@ class OperationsWorkService {
         HTTP_STATUS.FORBIDDEN,
       );
     }
+
+    assertAccessHasWorkCapability(
+      access,
+      existing.type as WorkItemType,
+    );
 
     const now = new Date();
     const updated = await OperationsWorkItemModel.updateOne(
@@ -1282,6 +1496,36 @@ class OperationsWorkService {
 
     if (toStatus === "completed") {
       assertPermission(access, WORK_COMPLETE_KEY);
+      if (isAssignee) {
+        assertAccessHasWorkCapability(
+          access,
+          existing.type as WorkItemType,
+        );
+      }
+
+      const metaMismatch = readMetadataCapabilityMismatch(existing);
+      let liveMismatch = false;
+      if (existing.assignedToUserId) {
+        const assigneeUsers = await OperationsTeamUserModel.find({
+          _id: existing.assignedToUserId,
+        })
+          .select("_id role roleId")
+          .lean();
+        const snapshots = await loadCapabilitySnapshotsForUsers(assigneeUsers);
+        const snapshot = snapshots.get(String(existing.assignedToUserId));
+        liveMismatch =
+          !snapshot ||
+          !snapshotHasWorkCapability(
+            snapshot,
+            existing.type as WorkItemType,
+          );
+      }
+      if (metaMismatch || liveMismatch) {
+        throw new AppError(
+          "Resolve capability mismatch before completing this task.",
+          HTTP_STATUS.BAD_REQUEST,
+        );
+      }
     } else {
       assertPermission(access, WORK_UPDATE_KEY);
     }

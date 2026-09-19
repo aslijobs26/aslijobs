@@ -51,13 +51,6 @@ export function MyWorkCreateDialog({
   const { canKey, user } = useOperationsPermissions();
   const canAssign = canKey("my_work.assign");
   const departmentId = user?.departmentId ?? null;
-  const assigneesQuery = useEligibleWorkAssignees({
-    enabled: open && canAssign,
-  });
-  const departmentsQuery = useEligibleWorkDepartments({
-    enabled: open && canAssign,
-  });
-  const createMutation = useCreateOperationsWork();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -70,6 +63,16 @@ export function MyWorkCreateDialog({
   const [dueParts, setDueParts] = useState<MyWorkDueParts>(() => emptyDueParts());
   const [relatedLabel, setRelatedLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const assigneesQuery = useEligibleWorkAssignees({
+    enabled: open && canAssign,
+    workType: type,
+  });
+  const departmentsQuery = useEligibleWorkDepartments({
+    enabled: open && canAssign,
+    workType: type,
+  });
+  const createMutation = useCreateOperationsWork();
 
   useEffect(() => {
     if (!open) return;
@@ -88,6 +91,27 @@ export function MyWorkCreateDialog({
 
   useEffect(() => {
     if (!open || !canAssign) return;
+    const assignees = assigneesQuery.data;
+    if (!assignees) return;
+    if (assigneeId && !assignees.some((user) => user.id === assigneeId)) {
+      setAssigneeId("");
+    }
+  }, [open, canAssign, type, assigneesQuery.data, assigneeId]);
+
+  useEffect(() => {
+    if (!open || !canAssign) return;
+    const departments = departmentsQuery.data;
+    if (!departments) return;
+    if (
+      teamDepartmentId &&
+      !departments.some((dept) => dept.id === teamDepartmentId)
+    ) {
+      setTeamDepartmentId("");
+    }
+  }, [open, canAssign, type, departmentsQuery.data, teamDepartmentId]);
+
+  useEffect(() => {
+    if (!open || !canAssign) return;
     if (teamDepartmentId) return;
     const first = departmentsQuery.data?.[0]?.id;
     if (first) setTeamDepartmentId(first);
@@ -97,6 +121,36 @@ export function MyWorkCreateDialog({
 
   const dueAtIso = duePartsToIso(dueParts);
   const suggestedPriority = suggestPriorityFromDueAt(dueAtIso);
+  const assignees = assigneesQuery.data ?? [];
+  const departments = departmentsQuery.data ?? [];
+  const assigneesLoaded =
+    !assigneesQuery.isLoading && !assigneesQuery.isFetching;
+  const departmentsLoaded =
+    !departmentsQuery.isLoading && !departmentsQuery.isFetching;
+
+  const assigneeIneligible =
+    assignMode === "user" &&
+    canAssign &&
+    assigneesLoaded &&
+    (assignees.length === 0 ||
+      (Boolean(assigneeId) &&
+        !assignees.some((user) => user.id === assigneeId)));
+
+  const departmentIneligible =
+    assignMode === "team_queue" &&
+    canAssign &&
+    departmentsLoaded &&
+    (departments.length === 0 ||
+      (Boolean(teamDepartmentId) &&
+        !departments.some((dept) => dept.id === teamDepartmentId)));
+
+  const assignmentBlocked = assigneeIneligible || departmentIneligible;
+
+  const canCreate =
+    !createMutation.isPending &&
+    !assignmentBlocked &&
+    !(canAssign && assignMode === "user" && !assigneeId) &&
+    !(canAssign && assignMode === "team_queue" && !teamDepartmentId);
 
   const handleDueChange = (next: MyWorkDueParts) => {
     setDueParts(next);
@@ -110,6 +164,10 @@ export function MyWorkCreateDialog({
     setError(null);
     if (title.trim().length < 3) {
       setError("Title must be at least 3 characters.");
+      return;
+    }
+    if (assignmentBlocked) {
+      setError("This assignee cannot complete this type of work.");
       return;
     }
     if (canAssign && assignMode === "user" && !assigneeId) {
@@ -245,7 +303,7 @@ export function MyWorkCreateDialog({
                   value={teamDepartmentId}
                   options={[
                     { value: "", label: "Select department" },
-                    ...(departmentsQuery.data ?? []).map((dept) => ({
+                    ...departments.map((dept) => ({
                       value: dept.id,
                       label: dept.name,
                     })),
@@ -261,7 +319,7 @@ export function MyWorkCreateDialog({
                   value={assigneeId}
                   options={[
                     { value: "", label: "Select team member" },
-                    ...(assigneesQuery.data ?? []).map((user) => ({
+                    ...assignees.map((user) => ({
                       value: user.id,
                       label: user.fullName,
                     })),
@@ -269,6 +327,12 @@ export function MyWorkCreateDialog({
                   onChange={setAssigneeId}
                   mobileSheet
                 />
+              ) : null}
+
+              {assignmentBlocked ? (
+                <p className="text-[11px] text-warning" role="status">
+                  This assignee cannot complete this type of work.
+                </p>
               ) : null}
             </fieldset>
           ) : (
@@ -323,7 +387,7 @@ export function MyWorkCreateDialog({
             </button>
             <button
               type="submit"
-              disabled={createMutation.isPending}
+              disabled={!canCreate}
               className="h-8 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white disabled:opacity-60"
             >
               {createMutation.isPending ? "Creating…" : "Create"}

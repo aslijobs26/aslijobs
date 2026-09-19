@@ -3,6 +3,7 @@ import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
 import { OperationsDepartmentModel } from "../rbac/operations-department.model.js";
+import { OperationsTeamModel } from "../teams/operations-teams.model.js";
 import {
   getRoleDescendantIds,
   operationsAccessCanKey,
@@ -13,6 +14,14 @@ import {
   WORK_REASSIGN_KEY,
   WORK_CLAIM_KEY,
 } from "../rbac/operations-permission-catalog.js";
+import type { WorkItemType } from "./operations-work.constants.js";
+import {
+  capabilityRejectionMessage,
+  departmentHasWorkCapability,
+  loadCapabilitySnapshotsForUsers,
+  snapshotHasWorkCapability,
+  teamHasWorkCapability,
+} from "./operations-work-capability.js";
 
 export const WORK_BULK_ASSIGN_MAX = 50;
 
@@ -30,6 +39,13 @@ export type EligibleDepartment = {
   id: string;
   name: string;
   slug: string;
+};
+
+export type EligibleOpsTeam = {
+  id: string;
+  name: string;
+  departmentId: string | null;
+  departmentName: string | null;
 };
 
 /**
@@ -130,7 +146,7 @@ export async function loadActiveAssignableUser(userId: string) {
     throw new AppError("Invalid assignee.", HTTP_STATUS.BAD_REQUEST);
   }
   const user = await OperationsTeamUserModel.findById(userId)
-    .select("_id fullName email roleId departmentId status")
+    .select("_id fullName email role roleId departmentId status")
     .lean();
   if (!user) {
     throw new AppError("Assignee not found.", HTTP_STATUS.NOT_FOUND);
@@ -163,14 +179,44 @@ export async function loadActiveDepartment(departmentId: string) {
   return department;
 }
 
+async function assertUserHasWorkCapability(
+  user: Awaited<ReturnType<typeof loadActiveAssignableUser>>,
+  workType: WorkItemType,
+): Promise<void> {
+  const snapshots = await loadCapabilitySnapshotsForUsers([user]);
+  const snapshot = snapshots.get(String(user._id));
+  if (!snapshot || !snapshotHasWorkCapability(snapshot, workType)) {
+    throw new AppError(
+      capabilityRejectionMessage(workType),
+      HTTP_STATUS.BAD_REQUEST,
+      {
+        code: "WORK_CAPABILITY_MISMATCH",
+        workType,
+        targetUserId: String(user._id),
+      },
+    );
+  }
+}
+
+export async function assertAssigneeHasWorkCapability(
+  userId: string,
+  workType: WorkItemType,
+): Promise<void> {
+  const user = await loadActiveAssignableUser(userId);
+  await assertUserHasWorkCapability(user, workType);
+}
+
 /**
  * Full assign authority gate:
- * permission + strict hierarchy + department + active target.
+ * permission + strict hierarchy + department + active target + capability.
  */
 export async function assertCanAssignWorkToUser(input: {
   actor: OperationsResolvedAccess;
   targetUserId: string;
   mode: "assign" | "reassign";
+  workType: WorkItemType;
+  /** When true, only hierarchy/scope/active are checked (bulk preflight). */
+  skipCapabilityCheck?: boolean;
 }): Promise<{
   target: Awaited<ReturnType<typeof loadActiveAssignableUser>>;
 }> {
@@ -203,16 +249,24 @@ export async function assertCanAssignWorkToUser(input: {
     );
   }
 
+  if (!input.skipCapabilityCheck) {
+    await assertUserHasWorkCapability(target, input.workType);
+  }
+
   return { target };
 }
 
 /**
  * Route work into a department Team Queue (unassigned).
+ * Department must contain at least one member capable of the work type.
  */
 export async function assertCanRouteWorkToDepartment(input: {
   actor: OperationsResolvedAccess;
   departmentId: string;
   mode: "assign" | "reassign";
+  workType: WorkItemType;
+  /** When true, only scope/active are checked (bulk preflight). */
+  skipCapabilityCheck?: boolean;
 }): Promise<{
   department: Awaited<ReturnType<typeof loadActiveDepartment>>;
 }> {
@@ -228,6 +282,24 @@ export async function assertCanRouteWorkToDepartment(input: {
     );
   }
 
+  if (!input.skipCapabilityCheck) {
+    const capable = await departmentHasWorkCapability(
+      departmentId,
+      input.workType,
+    );
+    if (!capable) {
+      throw new AppError(
+        capabilityRejectionMessage(input.workType),
+        HTTP_STATUS.BAD_REQUEST,
+        {
+          code: "WORK_CAPABILITY_MISMATCH",
+          workType: input.workType,
+          departmentId,
+        },
+      );
+    }
+  }
+
   return { department };
 }
 
@@ -240,11 +312,49 @@ export function assertCanClaimWork(actor: OperationsResolvedAccess): void {
   }
 }
 
+function parseWorkTypesFilter(
+  workType?: WorkItemType | null,
+  workTypes?: WorkItemType[] | null,
+): WorkItemType[] {
+  if (workTypes && workTypes.length > 0) {
+    return [...new Set(workTypes)];
+  }
+  if (workType) {
+    return [workType];
+  }
+  return [];
+}
+
+async function filterUsersByAllWorkCapabilities<
+  T extends {
+    _id: mongoose.Types.ObjectId | string;
+    role?: string;
+    roleId?: mongoose.Types.ObjectId | string | null;
+  },
+>(users: T[], requiredTypes: WorkItemType[]): Promise<T[]> {
+  if (requiredTypes.length === 0 || users.length === 0) {
+    return users;
+  }
+  const snapshots = await loadCapabilitySnapshotsForUsers(users);
+  return users.filter((user) => {
+    const snapshot = snapshots.get(String(user._id));
+    if (!snapshot) return false;
+    return requiredTypes.every((type) =>
+      snapshotHasWorkCapability(snapshot, type),
+    );
+  });
+}
+
 /**
- * Eligible assignees for the Assign UI — only active subordinates in scope.
+ * Eligible assignees for the Assign UI — active subordinates in scope
+ * who can complete the requested work type(s).
  */
 export async function listEligibleAssignees(
   actor: OperationsResolvedAccess,
+  options?: {
+    workType?: WorkItemType | null;
+    workTypes?: WorkItemType[] | null;
+  },
 ): Promise<EligibleAssignee[]> {
   if (
     !operationsAccessCanKey(actor, WORK_ASSIGN_KEY) &&
@@ -256,52 +366,61 @@ export async function listEligibleAssignees(
     );
   }
 
+  const requiredTypes = parseWorkTypesFilter(
+    options?.workType,
+    options?.workTypes,
+  );
+
+  let users: Array<{
+    _id: mongoose.Types.ObjectId;
+    fullName: string;
+    email?: string | null;
+    role?: string;
+    roleId?: mongoose.Types.ObjectId | null;
+    departmentId?: mongoose.Types.ObjectId | null;
+  }>;
+
   if (actor.isSuperAdmin) {
-    const users = await OperationsTeamUserModel.find({
+    users = await OperationsTeamUserModel.find({
       status: "active",
       _id: { $ne: actor.userId },
     })
-      .select("_id fullName email roleId departmentId")
+      .select("_id fullName email role roleId departmentId")
       .sort({ fullName: 1 })
       .limit(500)
       .lean();
+  } else {
+    if (!actor.roleId) {
+      return [];
+    }
 
-    return users.map((user) => ({
-      id: String(user._id),
-      fullName: user.fullName,
-      email: user.email ?? null,
-      roleId: user.roleId ? String(user.roleId) : null,
-      roleName: null,
-      departmentId: user.departmentId ? String(user.departmentId) : null,
-      departmentName: null,
-    }));
+    const descendantRoleIds = await getRoleDescendantIds(actor.roleId);
+    if (descendantRoleIds.length === 0) {
+      return [];
+    }
+
+    const filter: Record<string, unknown> = {
+      status: "active",
+      roleId: { $in: descendantRoleIds },
+      _id: { $ne: actor.userId },
+    };
+    if (actor.departmentId) {
+      filter.departmentId = actor.departmentId;
+    }
+
+    users = await OperationsTeamUserModel.find(filter)
+      .select("_id fullName email role roleId departmentId")
+      .sort({ fullName: 1 })
+      .limit(500)
+      .lean();
   }
 
-  if (!actor.roleId) {
-    return [];
-  }
+  const capableUsers = await filterUsersByAllWorkCapabilities(
+    users,
+    requiredTypes,
+  );
 
-  const descendantRoleIds = await getRoleDescendantIds(actor.roleId);
-  if (descendantRoleIds.length === 0) {
-    return [];
-  }
-
-  const filter: Record<string, unknown> = {
-    status: "active",
-    roleId: { $in: descendantRoleIds },
-    _id: { $ne: actor.userId },
-  };
-  if (actor.departmentId) {
-    filter.departmentId = actor.departmentId;
-  }
-
-  const users = await OperationsTeamUserModel.find(filter)
-    .select("_id fullName email roleId departmentId")
-    .sort({ fullName: 1 })
-    .limit(500)
-    .lean();
-
-  return users.map((user) => ({
+  return capableUsers.map((user) => ({
     id: String(user._id),
     fullName: user.fullName,
     email: user.email ?? null,
@@ -313,10 +432,15 @@ export async function listEligibleAssignees(
 }
 
 /**
- * Active departments the actor may route Team Queue work into.
+ * Active departments the actor may route Team Queue work into,
+ * limited to departments that have capability-compatible members.
  */
 export async function listEligibleDepartments(
   actor: OperationsResolvedAccess,
+  options?: {
+    workType?: WorkItemType | null;
+    workTypes?: WorkItemType[] | null;
+  },
 ): Promise<EligibleDepartment[]> {
   if (
     !operationsAccessCanKey(actor, WORK_ASSIGN_KEY) &&
@@ -328,14 +452,38 @@ export async function listEligibleDepartments(
     );
   }
 
+  const requiredTypes = parseWorkTypesFilter(
+    options?.workType,
+    options?.workTypes,
+  );
+
+  let departments: Array<{
+    _id: mongoose.Types.ObjectId;
+    name: string;
+    slug: string;
+  }>;
+
   if (actor.isSuperAdmin) {
-    const departments = await OperationsDepartmentModel.find({
+    departments = await OperationsDepartmentModel.find({
       status: "active",
     })
       .select("_id name slug")
       .sort({ name: 1 })
       .limit(200)
       .lean();
+  } else if (!actor.departmentId) {
+    return [];
+  } else {
+    const department = await OperationsDepartmentModel.findOne({
+      _id: actor.departmentId,
+      status: "active",
+    })
+      .select("_id name slug")
+      .lean();
+    departments = department ? [department] : [];
+  }
+
+  if (requiredTypes.length === 0) {
     return departments.map((d) => ({
       id: String(d._id),
       name: d.name,
@@ -343,28 +491,109 @@ export async function listEligibleDepartments(
     }));
   }
 
-  if (!actor.departmentId) {
-    return [];
+  const eligible: EligibleDepartment[] = [];
+  for (const department of departments) {
+    const id = String(department._id);
+    let ok = true;
+    for (const workType of requiredTypes) {
+      if (!(await departmentHasWorkCapability(id, workType))) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) {
+      eligible.push({
+        id,
+        name: department.name,
+        slug: department.slug,
+      });
+    }
+  }
+  return eligible;
+}
+
+/**
+ * Organization Ops Teams with members capable of the work type(s).
+ * Work items still assign via departmentId or assignedToUserId.
+ */
+export async function listEligibleOpsTeams(
+  actor: OperationsResolvedAccess,
+  options?: {
+    workType?: WorkItemType | null;
+    workTypes?: WorkItemType[] | null;
+  },
+): Promise<EligibleOpsTeam[]> {
+  if (
+    !operationsAccessCanKey(actor, WORK_ASSIGN_KEY) &&
+    !operationsAccessCanKey(actor, WORK_REASSIGN_KEY)
+  ) {
+    throw new AppError(
+      "You do not have permission to assign work.",
+      HTTP_STATUS.FORBIDDEN,
+    );
   }
 
-  const department = await OperationsDepartmentModel.findOne({
-    _id: actor.departmentId,
-    status: "active",
-  })
-    .select("_id name slug")
+  const requiredTypes = parseWorkTypesFilter(
+    options?.workType,
+    options?.workTypes,
+  );
+
+  const filter: Record<string, unknown> = { status: "active" };
+  if (!actor.isSuperAdmin && actor.departmentId) {
+    filter.departmentId = actor.departmentId;
+  }
+
+  const teams = await OperationsTeamModel.find(filter)
+    .select("_id name departmentId")
+    .sort({ name: 1 })
+    .limit(200)
     .lean();
 
-  if (!department) {
+  if (teams.length === 0) {
     return [];
   }
 
-  return [
-    {
-      id: String(department._id),
-      name: department.name,
-      slug: department.slug,
-    },
+  const departmentIds = [
+    ...new Set(
+      teams
+        .map((team) => (team.departmentId ? String(team.departmentId) : null))
+        .filter((id): id is string => Boolean(id)),
+    ),
   ];
+  const departments = await OperationsDepartmentModel.find({
+    _id: { $in: departmentIds },
+  })
+    .select("_id name")
+    .lean();
+  const departmentNameById = new Map(
+    departments.map((d) => [String(d._id), d.name]),
+  );
+
+  const eligible: EligibleOpsTeam[] = [];
+  for (const team of teams) {
+    const teamId = String(team._id);
+    let ok = requiredTypes.length === 0;
+    if (requiredTypes.length > 0) {
+      ok = true;
+      for (const workType of requiredTypes) {
+        if (!(await teamHasWorkCapability(teamId, workType))) {
+          ok = false;
+          break;
+        }
+      }
+    }
+    if (!ok) continue;
+    const departmentId = team.departmentId ? String(team.departmentId) : null;
+    eligible.push({
+      id: teamId,
+      name: team.name,
+      departmentId,
+      departmentName: departmentId
+        ? departmentNameById.get(departmentId) ?? null
+        : null,
+    });
+  }
+  return eligible;
 }
 
 /**

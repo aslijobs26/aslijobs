@@ -7,7 +7,10 @@ import {
 } from "./operations-delegation.js";
 import { sanitizeEmployerDetail } from "./operations-field-sanitize.js";
 import type { OperationsResolvedAccess } from "./operations-access.types.js";
-import { projectGrantedKeysToMatrix } from "./operations-permission-projection.js";
+import {
+  catalogKeysMatchingMatrix,
+  projectGrantedKeysToMatrix,
+} from "./operations-permission-projection.js";
 import { isOperationsPermissionKey } from "./operations-permission-catalog.js";
 
 function accessForKeys(
@@ -197,5 +200,104 @@ describe("permission catalog integrity", () => {
     assert.equal(isOperationsPermissionKey("TeamManagement.Admin"), false);
     assert.equal(isOperationsPermissionKey("Finance.Refund"), false);
     assert.equal(isOperationsPermissionKey("employers.list.view"), true);
+    assert.equal(isOperationsPermissionKey("team.members.delete"), true);
+  });
+});
+
+describe("export as first-class coarse action", () => {
+  it("view key alone grants read but not create or export", () => {
+    const matrix = projectGrantedKeysToMatrix(["employers.list.view"], false);
+    assert.equal(matrix.employers.read, true);
+    assert.equal(matrix.employers.create, false);
+    assert.equal(matrix.employers.export, false);
+  });
+
+  it("export key alone grants export but not read", () => {
+    const matrix = projectGrantedKeysToMatrix(["employers.list.export"], false);
+    assert.equal(matrix.employers.export, true);
+    assert.equal(matrix.employers.read, false);
+  });
+
+  it("create key alone grants create but not read", () => {
+    const matrix = projectGrantedKeysToMatrix(["employers.list.create"], false);
+    assert.equal(matrix.employers.create, true);
+    assert.equal(matrix.employers.read, false);
+  });
+
+  it("readOnly employers matrix does not include list export", () => {
+    const matrix = projectGrantedKeysToMatrix([], false);
+    matrix.employers = {
+      read: true,
+      create: false,
+      update: false,
+      delete: false,
+      export: false,
+    };
+    const keys = catalogKeysMatchingMatrix(matrix).map((item) => item.key);
+    assert.equal(keys.includes("employers.list.export"), false);
+    assert.equal(keys.includes("employers.list.view"), true);
+  });
+});
+
+describe("field grants do not unlock module navigation", () => {
+  it("candidate field keys alone do not set candidates.read", () => {
+    const matrix = projectGrantedKeysToMatrix(
+      [
+        "candidates.profile.fields.phone.view",
+        "candidates.profile.fields.email.view",
+        "candidates.profile.fields.name.view",
+      ],
+      false,
+    );
+    assert.equal(matrix.candidates.read, false);
+    assert.equal(matrix.candidates.create, false);
+    assert.equal(matrix.candidates.export, false);
+  });
+
+  it("candidate search/filter alone do not set candidates.read", () => {
+    const matrix = projectGrantedKeysToMatrix(
+      ["candidates.list.search", "candidates.list.filter"],
+      false,
+    );
+    assert.equal(matrix.candidates.read, false);
+  });
+
+  it("candidate list.view unlocks candidates.read without create/export", () => {
+    const matrix = projectGrantedKeysToMatrix(
+      ["candidates.list.view"],
+      false,
+    );
+    assert.equal(matrix.candidates.read, true);
+    assert.equal(matrix.candidates.create, false);
+    assert.equal(matrix.candidates.export, false);
+  });
+
+  it("documents.view alone does not unlock candidates.read", () => {
+    const matrix = projectGrantedKeysToMatrix(
+      ["candidates.profile.documents.view"],
+      false,
+    );
+    assert.equal(matrix.candidates.read, false);
+  });
+});
+
+describe("module entry access", () => {
+  it("denies module access when only field grants exist", async () => {
+    const { operationsAccessCanModule } = await import(
+      "./operations-module-access.js"
+    );
+    const access = accessForKeys([
+      "candidates.profile.fields.name.view",
+      "candidates.profile.fields.phone.view",
+    ]);
+    assert.equal(operationsAccessCanModule(access, "candidates"), false);
+  });
+
+  it("allows module access with list.view", async () => {
+    const { operationsAccessCanModule } = await import(
+      "./operations-module-access.js"
+    );
+    const access = accessForKeys(["candidates.list.view"]);
+    assert.equal(operationsAccessCanModule(access, "candidates"), true);
   });
 });

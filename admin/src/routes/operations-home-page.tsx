@@ -28,7 +28,9 @@ export function OperationsHomePage() {
       <div className="operations-home-command flex w-full min-w-0 flex-col gap-3.5 sm:gap-4">
         <DashboardGreetingSection />
 
-        <PlatformPulseSection metrics={data.platformPulse} />
+        {data.platformPulse.length > 0 ? (
+          <PlatformPulseSection metrics={data.platformPulse} />
+        ) : null}
 
         <OperationsOverviewSplit
           variant="command"
@@ -36,26 +38,36 @@ export function OperationsHomePage() {
           railClassName="gap-3.5"
           rail={
             <>
-              <OperationsHealthSection items={data.operationsHealth} />
+              {data.operationsHealth.length > 0 ? (
+                <OperationsHealthSection items={data.operationsHealth} />
+              ) : null}
               <OperationsCan module="team" action="read">
                 <TeamWorkloadSection
                   members={data.teamWorkload}
                   status={data.teamWorkloadStatus}
                 />
               </OperationsCan>
-              <QuickActionsSection actions={data.quickActions} />
+              {data.quickActions.length > 0 ? (
+                <QuickActionsSection actions={data.quickActions} />
+              ) : null}
             </>
           }
         >
           <div className="flex min-w-0 flex-col gap-3.5">
-            <WhatNeedsAttentionSection
-              total={data.attentionTotal}
-              tabs={data.attentionTabs}
-              items={data.attentionItems}
-            />
+            {data.attentionItems.length > 0 ? (
+              <WhatNeedsAttentionSection
+                total={data.attentionItems.length}
+                tabs={data.attentionTabs}
+                items={data.attentionItems}
+              />
+            ) : null}
             <NewRegistrationsSection />
-            <TodaysActivitySection metrics={data.todaysActivity} />
-            <AsliInsightsSection insights={data.insights} />
+            {data.todaysActivity.length > 0 ? (
+              <TodaysActivitySection metrics={data.todaysActivity} />
+            ) : null}
+            {data.insights.length > 0 ? (
+              <AsliInsightsSection insights={data.insights} />
+            ) : null}
           </div>
         </OperationsOverviewSplit>
       </div>

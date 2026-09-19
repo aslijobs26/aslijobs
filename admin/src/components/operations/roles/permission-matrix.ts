@@ -128,13 +128,12 @@ export function classifyPermissionKey(
 
 export function buildPermissionMatrixRows(
   tree: OperationsCatalogTreeNode[],
-  allowedKeys: Set<string> | null,
+  /** When set, rows still include all keys; callers lock non-delegatable ones. */
+  _allowedKeys?: Set<string> | null,
 ): PermissionMatrixModuleRow[] {
   return tree
     .map((moduleNode) => {
-      const allLeaves = collectLeaves(moduleNode).filter(
-        (key) => !allowedKeys || allowedKeys.has(key),
-      );
+      const allLeaves = collectLeaves(moduleNode);
       const fieldKeys = allLeaves.filter(isFieldKey);
       const leafKeys = allLeaves.filter((key) => !isFieldKey(key));
 
@@ -158,6 +157,27 @@ export function buildPermissionMatrixRows(
       };
     })
     .filter((row) => row.leafKeys.length > 0 || row.fieldKeys.length > 0);
+}
+
+/** Keys the actor may actually toggle (delegatable subset). */
+export function filterDelegatableKeys(
+  keys: string[],
+  allowedKeys: Set<string> | null,
+): string[] {
+  if (!allowedKeys) {
+    return keys;
+  }
+  return keys.filter((key) => allowedKeys.has(key));
+}
+
+export function isPermissionColumnLocked(
+  keys: string[],
+  allowedKeys: Set<string> | null,
+): boolean {
+  if (!allowedKeys || keys.length === 0) {
+    return false;
+  }
+  return filterDelegatableKeys(keys, allowedKeys).length === 0;
 }
 
 export function grantKeySet(grants: OperationsRoleGrant[]): Set<string> {

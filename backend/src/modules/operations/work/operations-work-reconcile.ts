@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
+import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
 import { PENDING_VERIFICATION_FILTER } from "../verifications/operations-verifications-analytics.js";
 import {
   upsertEmployerVerificationWork,
@@ -9,6 +11,11 @@ import {
   ensureOperationsWorkDepartments,
   resolveWorkDepartmentId,
 } from "./operations-work-department.js";
+import {
+  loadCapabilitySnapshotsForUsers,
+  snapshotHasWorkCapability,
+} from "./operations-work-capability.js";
+import type { WorkItemType } from "./operations-work.constants.js";
 import { OperationsWorkItemModel } from "./operations-work.model.js";
 
 export type WorkReconcileStats = {
@@ -22,6 +29,7 @@ export type WorkReconcileStats = {
   placementsCreated: number;
   departmentBackfilled: number;
   slaBreachesMarked: number;
+  capabilityMismatchesFlagged: number;
   errors: number;
 };
 
@@ -114,6 +122,108 @@ async function markSlaBreaches(now: Date = new Date()): Promise<number> {
     },
   );
   return result.modifiedCount;
+}
+
+/**
+ * Flag open assigned work where the assignee no longer has required capability.
+ * Clears the flag when capability is restored. Audits only on newly flagged rows.
+ */
+async function scanOpenCapabilityMismatches(
+  batchSize: number,
+): Promise<number> {
+  let flagged = 0;
+  let lastId: mongoose.Types.ObjectId | null = null;
+  const now = new Date();
+
+  for (;;) {
+    const pageFilter: Record<string, unknown> = {
+      status: { $in: ["queued", "assigned", "in_progress", "waiting"] },
+      assignedToUserId: { $ne: null },
+    };
+    if (lastId) {
+      pageFilter._id = { $gt: lastId };
+    }
+
+    const items = await OperationsWorkItemModel.find(pageFilter)
+      .select("_id displayId type assignedToUserId metadata")
+      .sort({ _id: 1 })
+      .limit(batchSize)
+      .lean();
+
+    if (items.length === 0) break;
+
+    const userIds = [
+      ...new Set(
+        items
+          .map((item) =>
+            item.assignedToUserId ? String(item.assignedToUserId) : null,
+          )
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const users = await OperationsTeamUserModel.find({
+      _id: { $in: userIds },
+    })
+      .select("_id role roleId")
+      .lean();
+    const snapshots = await loadCapabilitySnapshotsForUsers(users);
+
+    for (const item of items) {
+      lastId = item._id as mongoose.Types.ObjectId;
+      if (!item.assignedToUserId) continue;
+
+      const assigneeId = String(item.assignedToUserId);
+      const workType = item.type as WorkItemType;
+      const snapshot = snapshots.get(assigneeId);
+      const hasCapability =
+        snapshot != null &&
+        snapshotHasWorkCapability(snapshot, workType);
+      const metadata =
+        item.metadata && typeof item.metadata === "object"
+          ? (item.metadata as Record<string, unknown>)
+          : {};
+      const wasFlagged = metadata.capabilityMismatch === true;
+
+      if (!hasCapability && !wasFlagged) {
+        await OperationsWorkItemModel.updateOne(
+          { _id: item._id },
+          {
+            $set: {
+              "metadata.capabilityMismatch": true,
+              "metadata.capabilityMismatchAt": now,
+            },
+          },
+        );
+        flagged += 1;
+        await recordOperationsAuditEvent({
+          actorUserId: null,
+          actorName: "SYSTEM",
+          action: "work.capability_mismatch_detected",
+          targetType: "work_item",
+          targetId: String(item._id),
+          targetLabel: String(item.displayId ?? item._id),
+          metadata: {
+            workType,
+            assignedToUserId: assigneeId,
+          },
+        });
+      } else if (hasCapability && wasFlagged) {
+        await OperationsWorkItemModel.updateOne(
+          { _id: item._id },
+          {
+            $unset: {
+              "metadata.capabilityMismatch": "",
+              "metadata.capabilityMismatchAt": "",
+            },
+          },
+        );
+      }
+    }
+
+    if (items.length < batchSize) break;
+  }
+
+  return flagged;
 }
 
 async function reconcileEmployers(
@@ -355,6 +465,7 @@ export async function reconcileOpenOperationsWork(options?: {
     placementsCreated: 0,
     departmentBackfilled: 0,
     slaBreachesMarked: 0,
+    capabilityMismatchesFlagged: 0,
     errors: 0,
   };
 
@@ -370,6 +481,8 @@ export async function reconcileOpenOperationsWork(options?: {
   await reconcileJobs(db, batchSize, stats);
   await reconcilePlacements(db, batchSize, stats);
   stats.slaBreachesMarked = await markSlaBreaches();
+  stats.capabilityMismatchesFlagged =
+    await scanOpenCapabilityMismatches(batchSize);
 
   stats.finishedAt = new Date().toISOString();
   console.info("[operations-work-reconcile] completed", stats);

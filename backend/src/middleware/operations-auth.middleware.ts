@@ -5,7 +5,7 @@ import { jwtService } from "../modules/auth/jwt.service.js";
 import { OperationsTeamUserModel } from "../modules/operations/auth/operations-team-user.model.js";
 import type { OperationsPermissionAction, OperationsPermissionMap, OperationsPermissionModule } from "../modules/operations/auth/operations-rbac.js";
 import { canOperationsPermission } from "../modules/operations/auth/operations-rbac.js";
-import { resolveOperationsUserAccess } from "../modules/operations/rbac/operations-access.service.js";
+import { resolveOperationsUserAccess, assertFineOrCoarsePermission } from "../modules/operations/rbac/operations-access.service.js";
 import type { OperationsResolvedAccess } from "../modules/operations/rbac/operations-access.types.js";
 import type { OperationsTeamRole } from "../modules/operations/operations.constants.js";
 
@@ -151,6 +151,30 @@ export function requireOperationsPermissionKey(
         HTTP_STATUS.FORBIDDEN,
       ),
     );
+  };
+}
+
+/**
+ * Prefer a catalog key when the actor has fine grants for that module.
+ * Falls back to the coarse matrix for legacy enum roles.
+ */
+export function requireFineOrCoarsePermission(
+  fineKey: string,
+  module: OperationsPermissionModule,
+  action: OperationsPermissionAction,
+): (req: Request, res: Response, next: NextFunction) => void {
+  return (req, _res, next) => {
+    const access = req.operationsAccess;
+    if (!access) {
+      next(new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED));
+      return;
+    }
+    try {
+      assertFineOrCoarsePermission(access, fineKey, module, action);
+      next();
+    } catch (error) {
+      next(error);
+    }
   };
 }
 

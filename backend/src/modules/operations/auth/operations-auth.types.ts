@@ -2,8 +2,7 @@ import type { OperationsTeamUserDocument } from "./operations-team-user.model.js
 import type { OperationsPermissionMap } from "./operations-rbac.js";
 
 export type OperationsTeamLoginInput = {
-  email?: string;
-  mobileNumber?: string;
+  email: string;
   password: string;
 };
 

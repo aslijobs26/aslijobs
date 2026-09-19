@@ -4,7 +4,7 @@ export type OperationsTeamMember = {
   id: string;
   fullName: string;
   email: string;
-  mobileNumber: string;
+  mobileNumber?: string;
   role: string;
   roleId: string | null;
   roleName: string | null;
@@ -17,6 +17,11 @@ export type OperationsTeamMember = {
   status: OperationsTeamMemberStatus;
   lastActiveAt: string | null;
   invitedAt: string | null;
+  invitationLastSentAt?: string | null;
+  invitationResendCount?: number;
+  invitationEmailStatus?: string | null;
+  invitationEmailError?: string | null;
+  invitationEmailSent?: boolean;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -58,7 +63,7 @@ export type CreateOperationsTeamMemberInput = {
   fullName: string;
   email: string;
   mobileNumber: string;
-  password: string;
+  password?: string;
   roleId: string;
   departmentId?: string | null;
   orgUnitId?: string | null;
@@ -99,6 +104,7 @@ export type OperationsRole = {
   canAssignRoles: boolean;
   grants: OperationsRoleGrant[];
   isSystemSeeded: boolean;
+  revision: number;
   memberCount: number;
   childCount: number;
   createdBy: string | null;
@@ -149,6 +155,7 @@ export type CreateOperationsRoleInput = {
   canManageUsers?: boolean;
   canAssignRoles?: boolean;
   grants?: OperationsRoleGrant[];
+  expectedRevision?: number;
 };
 
 export type OperationsDepartment = {

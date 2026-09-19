@@ -21,12 +21,14 @@ import {
   WORK_UPDATE_KEY,
   WORK_COMPLETE_KEY,
 } from "../rbac/operations-permission-catalog.js";
+import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
 import { operationsWorkService } from "./operations-work.service.js";
 import type {
   AssignOperationsWorkBody,
   BulkAssignOperationsWorkBody,
   ClaimOperationsWorkBody,
   CreateOperationsWorkBody,
+  EligibleWorkTargetsQuery,
   ExportOperationsWorkQuery,
   ListOperationsWorkQuery,
   OperationsWorkIdParams,
@@ -35,12 +37,65 @@ import type {
   UpdateWorkStatusBody,
   PerformanceOperationsWorkQuery,
 } from "./operations-work.validation.js";
+import type { WorkItemType } from "./operations-work.constants.js";
 
 function requireAccess(req: Request) {
   if (!req.operationsAccess) {
     throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
   }
   return req.operationsAccess;
+}
+
+function parseEligibleWorkTargetOptions(query: EligibleWorkTargetsQuery): {
+  workType?: WorkItemType;
+  workTypes?: WorkItemType[];
+} {
+  const workTypes =
+    query.workTypes
+      ?.split(",")
+      .map((part) => part.trim())
+      .filter(Boolean) ?? [];
+  return {
+    workType: query.workType,
+    workTypes:
+      workTypes.length > 0 ? (workTypes as WorkItemType[]) : undefined,
+  };
+}
+
+function isWorkCapabilityMismatchError(error: unknown): boolean {
+  if (!(error instanceof AppError) || error.details == null) {
+    return false;
+  }
+  if (typeof error.details !== "object") {
+    return false;
+  }
+  return (
+    (error.details as { code?: string }).code === "WORK_CAPABILITY_MISMATCH"
+  );
+}
+
+async function auditCapabilityAssignmentRejection(input: {
+  access: ReturnType<typeof requireAccess>;
+  workItemId: string;
+  displayId?: string | null;
+  error: AppError;
+}): Promise<void> {
+  const details =
+    input.error.details && typeof input.error.details === "object"
+      ? (input.error.details as Record<string, unknown>)
+      : {};
+  await recordOperationsAuditEvent({
+    actorUserId: input.access.userId,
+    actorName: input.access.roleName?.trim() || "Operations",
+    action: "work.assignment_rejected_capability",
+    targetType: "work_item",
+    targetId: input.workItemId,
+    targetLabel: input.displayId ?? input.workItemId,
+    reason: input.error.message,
+    metadata: {
+      ...details,
+    },
+  });
 }
 
 function stripUnauthorizedListQuery(
@@ -147,7 +202,13 @@ export const operationsWorkController = {
         HTTP_STATUS.FORBIDDEN,
       );
     }
-    const data = await operationsWorkService.listEligibleAssignees(access);
+    const options = parseEligibleWorkTargetOptions(
+      req.query as unknown as EligibleWorkTargetsQuery,
+    );
+    const data = await operationsWorkService.listEligibleAssignees(
+      access,
+      options,
+    );
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Eligible assignees fetched successfully.",
       data: { items: data },
@@ -165,9 +226,39 @@ export const operationsWorkController = {
         HTTP_STATUS.FORBIDDEN,
       );
     }
-    const data = await operationsWorkService.listEligibleDepartments(access);
+    const options = parseEligibleWorkTargetOptions(
+      req.query as unknown as EligibleWorkTargetsQuery,
+    );
+    const data = await operationsWorkService.listEligibleDepartments(
+      access,
+      options,
+    );
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Eligible departments fetched successfully.",
+      data: { items: data },
+    });
+  },
+
+  async eligibleOpsTeams(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    if (
+      !operationsAccessCanKey(access, WORK_ASSIGN_KEY) &&
+      !operationsAccessCanKey(access, WORK_REASSIGN_KEY)
+    ) {
+      throw new AppError(
+        "You do not have permission to assign work.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+    const options = parseEligibleWorkTargetOptions(
+      req.query as unknown as EligibleWorkTargetsQuery,
+    );
+    const data = await operationsWorkService.listEligibleOpsTeams(
+      access,
+      options,
+    );
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Eligible ops teams fetched successfully.",
       data: { items: data },
     });
   },
@@ -184,14 +275,26 @@ export const operationsWorkController = {
       );
     }
     const body = req.body as BulkAssignOperationsWorkBody;
-    const data = await operationsWorkService.bulkAssign(body, access);
-    sendSuccess(res, HTTP_STATUS.OK, {
-      message:
-        data.failed === 0
-          ? "Bulk assignment completed successfully."
-          : "Bulk assignment completed with some failures.",
-      data,
-    });
+    try {
+      const data = await operationsWorkService.bulkAssign(body, access);
+      sendSuccess(res, HTTP_STATUS.OK, {
+        message:
+          data.failed === 0
+            ? "Bulk assignment completed successfully."
+            : "Bulk assignment completed with some failures.",
+        data,
+      });
+    } catch (error) {
+      if (isWorkCapabilityMismatchError(error)) {
+        await auditCapabilityAssignmentRejection({
+          access,
+          workItemId: "bulk",
+          displayId: "bulk",
+          error: error as AppError,
+        });
+      }
+      throw error;
+    }
   },
 
   async getById(req: Request, res: Response): Promise<void> {
@@ -220,11 +323,22 @@ export const operationsWorkController = {
     const access = requireAccess(req);
     const { id } = req.params as OperationsWorkIdParams;
     const body = req.body as AssignOperationsWorkBody;
-    const data = await operationsWorkService.assign(id, body, access);
-    sendSuccess(res, HTTP_STATUS.OK, {
-      message: "Work item assigned successfully.",
-      data,
-    });
+    try {
+      const data = await operationsWorkService.assign(id, body, access);
+      sendSuccess(res, HTTP_STATUS.OK, {
+        message: "Work item assigned successfully.",
+        data,
+      });
+    } catch (error) {
+      if (isWorkCapabilityMismatchError(error)) {
+        await auditCapabilityAssignmentRejection({
+          access,
+          workItemId: id,
+          error: error as AppError,
+        });
+      }
+      throw error;
+    }
   },
 
   async claim(req: Request, res: Response): Promise<void> {

@@ -212,3 +212,28 @@ export const performanceOperationsWorkQuerySchema = z.object({
 export type PerformanceOperationsWorkQuery = z.infer<
   typeof performanceOperationsWorkQuerySchema
 >;
+
+export const eligibleWorkTargetsQuerySchema = z.object({
+  workType: z.enum(WORK_ITEM_TYPES).optional(),
+  workTypes: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) => {
+        if (!value) return true;
+        return value
+          .split(",")
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .every((part) =>
+            (WORK_ITEM_TYPES as readonly string[]).includes(part),
+          );
+      },
+      "Invalid work type in workTypes.",
+    ),
+});
+
+export type EligibleWorkTargetsQuery = z.infer<
+  typeof eligibleWorkTargetsQuerySchema
+>;

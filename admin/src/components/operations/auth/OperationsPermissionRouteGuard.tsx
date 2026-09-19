@@ -17,7 +17,7 @@ export function OperationsPermissionRouteGuard({
   children,
 }: OperationsPermissionRouteGuardProps) {
   const pathname = useLocation().pathname;
-  const { can, isLoading, user } = useOperationsPermissions();
+  const { can, canKey, isLoading, user } = useOperationsPermissions();
 
   if (isLoading) {
     return (
@@ -32,8 +32,21 @@ export function OperationsPermissionRouteGuard({
     return <>{children}</>;
   }
 
+  if (rule.allowAuthenticated) {
+    return <>{children}</>;
+  }
+
   const action = rule.action ?? "read";
-  if (can(rule.module, action)) {
+  const allowed =
+    action === "read"
+      ? canKey(`${rule.module}.list.view`) ||
+        canKey(`${rule.module}.view`) ||
+        canKey(`${rule.module}.profile.view`) ||
+        canKey(`${rule.module}.detail.view`) ||
+        can(rule.module, action)
+      : can(rule.module, action);
+
+  if (allowed) {
     return <>{children}</>;
   }
 

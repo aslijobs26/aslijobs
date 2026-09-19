@@ -7,10 +7,7 @@ import { OperationsDepartmentModel } from "../rbac/operations-department.model.j
 import { OperationsRoleModel } from "../rbac/operations-role.model.js";
 import type { OperationsRoleGrant } from "../rbac/operations-role.model.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
-import {
-  assertDelegationBoundary,
-  wouldCreateRoleCycle,
-} from "../rbac/operations-delegation.js";
+import { wouldCreateRoleCycle } from "../rbac/operations-delegation.js";
 import {
   getRoleAncestorIds,
   getRoleDescendantIds,
@@ -20,26 +17,17 @@ import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js"
 import { slugifyOperationsName } from "../rbac/operations-slug.js";
 import { buildOperationsPermissionCatalogTree } from "../rbac/operations-permission-catalog.js";
 import type { OperationsResolvedAccess } from "../rbac/operations-access.types.js";
+import { prepareRoleGrants } from "./operations-role-grants.js";
+import {
+  scheduleRoleCreatedNotifications,
+  roleCreatedNotifyFromActor,
+} from "./operations-role-notify.js";
 import type {
   ArchiveOperationsRoleBody,
   CreateOperationsRoleBody,
   ListOperationsRolesQuery,
   UpdateOperationsRoleBody,
 } from "./operations-roles.validation.js";
-
-function normalizeGrants(
-  grants: Array<{ key: string; access?: "allow"; canDelegate?: boolean }>,
-): OperationsRoleGrant[] {
-  const unique = new Map<string, OperationsRoleGrant>();
-  for (const grant of grants) {
-    unique.set(grant.key, {
-      key: grant.key,
-      access: "allow",
-      canDelegate: Boolean(grant.canDelegate),
-    });
-  }
-  return [...unique.values()];
-}
 
 function toPublicRole(
   role: {
@@ -56,6 +44,7 @@ function toPublicRole(
     canAssignRoles?: boolean;
     grants?: OperationsRoleGrant[];
     isSystemSeeded?: boolean;
+    revision?: number;
     createdBy?: mongoose.Types.ObjectId | null;
     updatedBy?: mongoose.Types.ObjectId | null;
     createdAt?: Date;
@@ -87,6 +76,7 @@ function toPublicRole(
     canAssignRoles: Boolean(role.canAssignRoles),
     grants: role.grants ?? [],
     isSystemSeeded: Boolean(role.isSystemSeeded),
+    revision: role.revision ?? 1,
     memberCount: extras?.memberCount ?? 0,
     childCount: extras?.childCount ?? 0,
     createdBy: role.createdBy ? String(role.createdBy) : null,
@@ -372,7 +362,7 @@ class OperationsRolesService {
               id: "SUPER_ADMIN",
               name: "Super Admin",
               slug: "super-admin",
-              description: "System-level unrestricted Operations control.",
+              description: "Highest level role with full system access.",
               status: "active",
               departmentId: null,
               departmentName: null,
@@ -393,6 +383,7 @@ class OperationsRolesService {
               createdAt: null,
               updatedAt: null,
               archivedAt: null,
+              revision: 1,
               isSystemRoot: true,
               children: roots,
             },
@@ -421,12 +412,30 @@ class OperationsRolesService {
       );
     }
 
-    const grants = normalizeGrants(body.grants ?? []);
-    assertDelegationBoundary({
-      isSuperAdmin: actor.isSuperAdmin,
-      actorDelegatableKeys: actor.delegatableKeys,
-      requestedGrants: grants,
-    });
+    let grants;
+    try {
+      grants = prepareRoleGrants({
+        requestedGrants: body.grants ?? [],
+        isSuperAdmin: actor.isSuperAdmin,
+        actorDelegatableKeys: actor.delegatableKeys,
+      });
+    } catch (error) {
+      if (error instanceof AppError && error.statusCode === 403) {
+        await recordOperationsAuditEvent({
+          actorUserId: actor.userId,
+          actorName: actor.roleName ?? "",
+          action: "role.creation_rejected_permission_escalation",
+          targetType: "role",
+          targetId: "pending",
+          targetLabel: name,
+          nextState: {
+            reason: error.message,
+            requestedGrantCount: body.grants?.length ?? 0,
+          },
+        }).catch(() => undefined);
+      }
+      throw error;
+    }
 
     let parentRoleId =
       body.parentRoleId && body.parentRoleId !== ""
@@ -526,6 +535,10 @@ class OperationsRolesService {
       },
     });
 
+    scheduleRoleCreatedNotifications(
+      roleCreatedNotifyFromActor(role, actor, actor.departmentName),
+    );
+
     return toPublicRole(role);
   }
 
@@ -558,14 +571,30 @@ class OperationsRolesService {
       parentRoleId: role.parentRoleId ? String(role.parentRoleId) : null,
     };
 
+    const expectedRevision = Number(body.expectedRevision);
+    const currentRevision = Number(role.revision ?? 1);
+    if (
+      !Number.isInteger(expectedRevision) ||
+      expectedRevision < 1 ||
+      expectedRevision !== currentRevision
+    ) {
+      throw new AppError(
+        "This role was updated by someone else. Reload and try again.",
+        HTTP_STATUS.CONFLICT,
+        { expectedRevision: body.expectedRevision, currentRevision },
+      );
+    }
+
+    const $set: Record<string, unknown> = {
+      updatedBy: new mongoose.Types.ObjectId(actor.userId),
+    };
+
     if (body.grants) {
-      const grants = normalizeGrants(body.grants);
-      assertDelegationBoundary({
+      $set.grants = prepareRoleGrants({
+        requestedGrants: body.grants,
         isSuperAdmin: actor.isSuperAdmin,
         actorDelegatableKeys: actor.delegatableKeys,
-        requestedGrants: grants,
       });
-      role.set("grants", grants);
     }
 
     if (body.name && body.name.trim() !== role.name) {
@@ -580,12 +609,12 @@ class OperationsRolesService {
           HTTP_STATUS.CONFLICT,
         );
       }
-      role.name = body.name.trim();
-      role.slug = await uniqueSlug(role.name, String(role._id));
+      $set.name = body.name.trim();
+      $set.slug = await uniqueSlug(String($set.name), String(role._id));
     }
 
     if (body.description !== undefined) {
-      role.description = body.description.trim();
+      $set.description = body.description.trim();
     }
 
     if (body.parentRoleId !== undefined) {
@@ -612,13 +641,16 @@ class OperationsRolesService {
         }
         const parent = await OperationsRoleModel.findById(nextParentId).lean();
         if (!parent || parent.status !== "active") {
-          throw new AppError("Parent role is not available.", HTTP_STATUS.BAD_REQUEST);
+          throw new AppError(
+            "Parent role is not available.",
+            HTTP_STATUS.BAD_REQUEST,
+          );
         }
-        role.parentRoleId = new mongoose.Types.ObjectId(nextParentId);
-        role.depth = (parent.depth ?? 0) + 1;
+        $set.parentRoleId = new mongoose.Types.ObjectId(nextParentId);
+        $set.depth = (parent.depth ?? 0) + 1;
       } else if (actor.isSuperAdmin) {
-        role.parentRoleId = null;
-        role.depth = 0;
+        $set.parentRoleId = null;
+        $set.depth = 0;
       }
     }
 
@@ -628,7 +660,7 @@ class OperationsRolesService {
           ? String(body.departmentId)
           : null;
       await assertDepartment(departmentId);
-      role.departmentId = departmentId
+      $set.departmentId = departmentId
         ? new mongoose.Types.ObjectId(departmentId)
         : null;
     }
@@ -640,7 +672,7 @@ class OperationsRolesService {
           HTTP_STATUS.FORBIDDEN,
         );
       }
-      role.canCreateRoles = body.canCreateRoles;
+      $set.canCreateRoles = body.canCreateRoles;
     }
     if (body.canManageUsers !== undefined) {
       if (!actor.isSuperAdmin && body.canManageUsers && !actor.canManageUsers) {
@@ -649,7 +681,7 @@ class OperationsRolesService {
           HTTP_STATUS.FORBIDDEN,
         );
       }
-      role.canManageUsers = body.canManageUsers;
+      $set.canManageUsers = body.canManageUsers;
     }
     if (body.canAssignRoles !== undefined) {
       if (!actor.isSuperAdmin && body.canAssignRoles && !actor.canAssignRoles) {
@@ -658,12 +690,29 @@ class OperationsRolesService {
           HTTP_STATUS.FORBIDDEN,
         );
       }
-      role.canAssignRoles = body.canAssignRoles;
+      $set.canAssignRoles = body.canAssignRoles;
     }
 
-    role.updatedBy = new mongoose.Types.ObjectId(actor.userId);
-    role.revision = (role.revision ?? 1) + 1;
-    await role.save();
+    // Atomic CAS: only one concurrent writer with this revision can win.
+    const updated = await OperationsRoleModel.findOneAndUpdate(
+      { _id: roleId, revision: expectedRevision },
+      { $set, $inc: { revision: 1 } },
+      { new: true },
+    );
+
+    if (!updated) {
+      const latest = await OperationsRoleModel.findById(roleId)
+        .select("revision")
+        .lean();
+      throw new AppError(
+        "This role was updated by someone else. Reload and try again.",
+        HTTP_STATUS.CONFLICT,
+        {
+          expectedRevision,
+          currentRevision: latest?.revision ?? null,
+        },
+      );
+    }
 
     await recordOperationsAuditEvent({
       actorUserId: actor.userId,
@@ -671,17 +720,20 @@ class OperationsRolesService {
       action: "role.updated",
       targetType: "role",
       targetId: roleId,
-      targetLabel: role.name,
+      targetLabel: updated.name,
       previousState: previous,
       nextState: {
-        name: role.name,
-        grants: role.grants,
-        canCreateRoles: role.canCreateRoles,
-        parentRoleId: role.parentRoleId ? String(role.parentRoleId) : null,
+        name: updated.name,
+        grants: updated.grants,
+        canCreateRoles: updated.canCreateRoles,
+        parentRoleId: updated.parentRoleId
+          ? String(updated.parentRoleId)
+          : null,
+        revision: updated.revision,
       },
     });
 
-    return toPublicRole(role);
+    return toPublicRole(updated);
   }
 
   async archive(

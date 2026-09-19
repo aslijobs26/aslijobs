@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   requireOperationsAuth,
   requireOperationsPermission,
+  requireOperationsPermissionKey,
 } from "../../../middleware/operations-auth.middleware.js";
 import { validate } from "../../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../../utils/async-handler.js";
@@ -30,6 +31,7 @@ operationsVerificationsRouter.get(
 operationsVerificationsRouter.get(
   "/export",
   requireOperationsPermission("verifications", "read"),
+  requireOperationsPermissionKey("employers.list.export"),
   validate(exportOperationsVerificationsQuerySchema, "query"),
   asyncHandler(operationsVerificationsController.export),
 );

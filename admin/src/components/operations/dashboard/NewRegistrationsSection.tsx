@@ -2,6 +2,7 @@ import { Building2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
+import { useOperationsPermissions } from "../../../hooks/use-operations-permissions";
 import { useOperationsRegistrationMetrics } from "../../../hooks/use-operations-registration-awareness";
 import type {
   OperationsRecentCandidateRegistration,
@@ -117,32 +118,46 @@ function RecentCandidateRow({
 }
 
 export function NewRegistrationsSection() {
-  const metricsQuery = useOperationsRegistrationMetrics();
-  const [activeTab, setActiveTab] = useState<RecentTab>("employers");
+  const { can } = useOperationsPermissions();
+  const canReadEmployers = can("employers", "read");
+  const canReadCandidates = can("candidates", "read");
+  const metricsQuery = useOperationsRegistrationMetrics({
+    enabled: canReadEmployers || canReadCandidates,
+  });
+  const [activeTab, setActiveTab] = useState<RecentTab>(
+    canReadEmployers ? "employers" : "candidates",
+  );
 
   const data = metricsQuery.data;
-  const employersMetrics = data?.employers ?? null;
-  const candidatesMetrics = data?.candidates ?? null;
+  const employersMetrics = canReadEmployers ? data?.employers ?? null : null;
+  const candidatesMetrics = canReadCandidates ? data?.candidates ?? null : null;
 
   useEffect(() => {
-    if (employersMetrics == null && candidatesMetrics != null) {
+    if (!canReadEmployers && canReadCandidates) {
       setActiveTab("candidates");
-    } else if (candidatesMetrics == null && employersMetrics != null) {
+      return;
+    }
+    if (!canReadCandidates && canReadEmployers) {
       setActiveTab("employers");
     }
-  }, [employersMetrics, candidatesMetrics]);
+  }, [canReadCandidates, canReadEmployers]);
 
   const recentItems = useMemo(() => {
     if (!data) {
       return [];
     }
-    return activeTab === "employers"
-      ? data.recent.employers
-      : data.recent.candidates;
-  }, [activeTab, data]);
+    if (activeTab === "employers") {
+      return canReadEmployers ? data.recent.employers : [];
+    }
+    return canReadCandidates ? data.recent.candidates : [];
+  }, [activeTab, canReadCandidates, canReadEmployers, data]);
 
   const hasAnyMetrics =
     employersMetrics != null || candidatesMetrics != null;
+
+  if (!canReadEmployers && !canReadCandidates) {
+    return null;
+  }
 
   return (
     <OperationsCard

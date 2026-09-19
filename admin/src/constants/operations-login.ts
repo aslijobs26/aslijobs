@@ -3,17 +3,17 @@ export const OPERATIONS_LOGIN_ROUTES = {
 } as const;
 
 export const OPERATIONS_LOGIN_COPY = {
-  heading: "Operations Dashboard",
+  heading: "Organization Dashboard",
   subtitle:
-    "Secure login for AsliJobs Operations Team. Manage hiring operations, employers, candidates and support.",
-  emailLabel: "Email Address",
-  emailPlaceholder: "Enter your operations team email",
-  emailHelper: "Use your registered AsliJobs operations team email address.",
+    "Secure login for ASLIJOBS Organization and Admin users. Use your work email and password.",
+  emailLabel: "Email",
+  emailPlaceholder: "Enter your organization email",
+  emailHelper: "Use the email address from your invitation.",
   passwordLabel: "Password",
   passwordPlaceholder: "Enter password",
   submitLabel: "Login",
   submittingLabel: "Signing in...",
-  trustText: "Secure • Private • Trusted by 10,000+ Employers",
+  trustText: "Secure • Private • Internal access only",
   footer: "© 2026 AsliJobs. All rights reserved.",
 } as const;
 

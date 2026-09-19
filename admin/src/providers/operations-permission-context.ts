@@ -13,6 +13,8 @@ export type OperationsPermissionContextValue = {
   permissions: OperationsPermissionMap | null;
   isLoading: boolean;
   isSuperAdmin: boolean;
+  /** True while Super Admin is previewing another role's unsaved/saved grants. */
+  isRolePreview: boolean;
   canCreateRoles: boolean;
   canManageUsers: boolean;
   canAssignRoles: boolean;

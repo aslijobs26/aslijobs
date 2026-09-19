@@ -2,9 +2,11 @@ import { Router } from "express";
 import {
   requireOperationsAuth,
   requireOperationsPermission,
+  requireOperationsPermissionKey,
 } from "../../../middleware/operations-auth.middleware.js";
 import { validate } from "../../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../../utils/async-handler.js";
+import { WORK_EXPORT_KEY } from "../rbac/operations-permission-catalog.js";
 import { operationsWorkController } from "./operations-work.controller.js";
 import {
   assignOperationsWorkBodySchema,
@@ -18,6 +20,7 @@ import {
   updateWorkStatusBodySchema,
   performanceOperationsWorkQuerySchema,
   bulkAssignOperationsWorkBodySchema,
+  eligibleWorkTargetsQuerySchema,
 } from "./operations-work.validation.js";
 
 export const operationsWorkRouter = Router();
@@ -45,7 +48,7 @@ operationsWorkRouter.post(
 
 operationsWorkRouter.get(
   "/export",
-  requireOperationsPermission("my_work", "read"),
+  requireOperationsPermissionKey(WORK_EXPORT_KEY),
   validate(exportOperationsWorkQuerySchema, "query"),
   asyncHandler(operationsWorkController.export),
 );
@@ -53,13 +56,22 @@ operationsWorkRouter.get(
 operationsWorkRouter.get(
   "/eligible-assignees",
   requireOperationsPermission("my_work", "update"),
+  validate(eligibleWorkTargetsQuerySchema, "query"),
   asyncHandler(operationsWorkController.eligibleAssignees),
 );
 
 operationsWorkRouter.get(
   "/eligible-departments",
   requireOperationsPermission("my_work", "update"),
+  validate(eligibleWorkTargetsQuerySchema, "query"),
   asyncHandler(operationsWorkController.eligibleDepartments),
+);
+
+operationsWorkRouter.get(
+  "/eligible-teams",
+  requireOperationsPermission("my_work", "update"),
+  validate(eligibleWorkTargetsQuerySchema, "query"),
+  asyncHandler(operationsWorkController.eligibleOpsTeams),
 );
 
 operationsWorkRouter.patch(

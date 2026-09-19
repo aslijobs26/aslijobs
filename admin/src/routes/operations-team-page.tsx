@@ -1,14 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
+  ArrowLeft,
   Ban,
+  Building2,
   CheckCircle2,
+  MoreVertical,
+  Pencil,
   Plus,
+  RotateCcw,
+  Search,
+  Send,
   Shield,
   UserPlus,
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
 import { OrganizationTabs } from "../components/operations/organization/OrganizationTabs";
 import { flattenOrgTree } from "../components/operations/organization/org-tree-utils";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
@@ -16,15 +23,23 @@ import { OperationsCan } from "../components/operations/auth/OperationsCan";
 import { OperationsCanKey } from "../components/operations/auth/OperationsCanKey";
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
 import { OperationsFilterSelect } from "../components/operations/jobs/OperationsFilterSelect";
+import { PeopleMemberRowActions } from "../components/operations/team/PeopleMemberRowActions";
 import {
-  formatOperationsTimestamp,
-  getOperationsApiErrorMessage,
-} from "../components/operations/team/team-format";
+  formatPeopleTimestamp,
+  getAvatarPalette,
+  getMemberInitials,
+  getRoleBadgePalette,
+  PeopleKpiCard,
+} from "../components/operations/team/people-ui";
+import { getOperationsApiErrorMessage } from "../components/operations/team/team-format";
+import { OPERATIONS_ROUTES } from "../constants/operations-routes";
 import { useOperationsPermissions } from "../hooks/use-operations-permissions";
 import {
   useCreateOperationsTeamMember,
+  useDeleteOperationsTeamMember,
   useOperationsTeamMembers,
   useOperationsTeamOverview,
+  useResendOperationsTeamInvitation,
   useUpdateOperationsTeamMember,
   useUpdateOperationsTeamMemberStatus,
 } from "../hooks/use-operations-team";
@@ -35,10 +50,11 @@ import { useOperationsOpsTeams } from "../hooks/use-operations-ops-teams";
 import type {
   CreateOperationsTeamMemberInput,
   OperationsTeamMember,
+  OperationsTeamMemberStatus,
 } from "../types/operations-team";
 import { cn } from "../utils/cn";
 
-const KPI: Array<{
+const KPI_CARDS: Array<{
   key:
     | "totalMembers"
     | "activeMembers"
@@ -48,13 +64,71 @@ const KPI: Array<{
     | "pendingInvitations";
   label: string;
   icon: LucideIcon;
+  iconClassName: string;
+  cardClassName: string;
+  accentClassName: string;
+  moduleGate?: "team" | "roles" | "departments";
 }> = [
-  { key: "totalMembers", label: "Team members", icon: Users },
-  { key: "activeMembers", label: "Active", icon: CheckCircle2 },
-  { key: "inactiveMembers", label: "Inactive", icon: Ban },
-  { key: "totalRoles", label: "Custom roles", icon: Shield },
-  { key: "totalDepartments", label: "Departments", icon: Users },
-  { key: "pendingInvitations", label: "Pending invites", icon: UserPlus },
+  {
+    key: "totalMembers",
+    label: "Team Members",
+    icon: Users,
+    iconClassName: "bg-sky-500/20 text-sky-600",
+    cardClassName:
+      "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white dark:border-sky-500/25 dark:from-sky-500/10 dark:to-surface",
+    accentClassName: "text-sky-700 dark:text-sky-300",
+    moduleGate: "team",
+  },
+  {
+    key: "activeMembers",
+    label: "Active",
+    icon: CheckCircle2,
+    iconClassName: "bg-success/20 text-success",
+    cardClassName:
+      "border-success/20 bg-gradient-to-br from-success/10 to-white dark:from-success/15 dark:to-surface",
+    accentClassName: "text-success",
+    moduleGate: "team",
+  },
+  {
+    key: "inactiveMembers",
+    label: "Inactive",
+    icon: Ban,
+    iconClassName: "bg-danger/20 text-danger",
+    cardClassName:
+      "border-danger/20 bg-gradient-to-br from-danger/10 to-white dark:from-danger/15 dark:to-surface",
+    accentClassName: "text-danger",
+    moduleGate: "team",
+  },
+  {
+    key: "totalRoles",
+    label: "Custom Roles",
+    icon: Shield,
+    iconClassName: "bg-blue-500/20 text-blue-600",
+    cardClassName:
+      "border-blue-200/80 bg-gradient-to-br from-blue-50 to-white dark:border-blue-500/25 dark:from-blue-500/10 dark:to-surface",
+    accentClassName: "text-blue-700 dark:text-blue-300",
+    moduleGate: "roles",
+  },
+  {
+    key: "totalDepartments",
+    label: "Departments",
+    icon: Building2,
+    iconClassName: "bg-primary/20 text-primary",
+    cardClassName:
+      "border-primary/20 bg-gradient-to-br from-primary/10 to-white dark:from-primary/15 dark:to-surface",
+    accentClassName: "text-primary",
+    moduleGate: "departments",
+  },
+  {
+    key: "pendingInvitations",
+    label: "Pending Invites",
+    icon: UserPlus,
+    iconClassName: "bg-violet-500/20 text-violet-600",
+    cardClassName:
+      "border-violet-200/80 bg-gradient-to-br from-violet-50 to-white dark:border-violet-500/25 dark:from-violet-500/10 dark:to-surface",
+    accentClassName: "text-violet-700 dark:text-violet-300",
+    moduleGate: "team",
+  },
 ];
 
 type MemberFormState = {
@@ -79,8 +153,18 @@ const EMPTY_FORM: MemberFormState = {
   teamId: "",
 };
 
+type StatusConfirmState = {
+  member: OperationsTeamMember;
+  nextStatus: OperationsTeamMemberStatus;
+};
+
+function memberRoleLabel(member: OperationsTeamMember): string {
+  if (member.role === "SUPER_ADMIN") return "Super Admin";
+  return member.roleName || member.role || "—";
+}
+
 export function OperationsTeamPage() {
-  const { user, can } = useOperationsPermissions();
+  const { user, can, canKey } = useOperationsPermissions();
   const [searchParams] = useSearchParams();
   const departmentIdFromUrl = searchParams.get("departmentId") ?? "";
   const [page, setPage] = useState(1);
@@ -93,8 +177,17 @@ export function OperationsTeamPage() {
   const [teamId, setTeamId] = useState("");
   const [dialog, setDialog] = useState<"create" | "edit" | null>(null);
   const [selected, setSelected] = useState<OperationsTeamMember | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<OperationsTeamMember | null>(
+    null,
+  );
+  const [statusConfirm, setStatusConfirm] = useState<StatusConfirmState | null>(
+    null,
+  );
+  const [deleteError, setDeleteError] = useState("");
+  const [statusError, setStatusError] = useState("");
   const [form, setForm] = useState<MemberFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
+  const [resendFeedback, setResendFeedback] = useState("");
 
   useEffect(() => {
     setDepartmentId(departmentIdFromUrl);
@@ -132,6 +225,15 @@ export function OperationsTeamPage() {
   const createMutation = useCreateOperationsTeamMember();
   const updateMutation = useUpdateOperationsTeamMember();
   const statusMutation = useUpdateOperationsTeamMemberStatus();
+  const resendMutation = useResendOperationsTeamInvitation();
+  const deleteMutation = useDeleteOperationsTeamMember();
+  const canViewMobile =
+    Boolean(user?.isSuperAdmin) ||
+    canKey("team.members.fields.mobile.view") ||
+    (!(user?.grantedKeys ?? []).some(
+      (key) => key === "team" || key.startsWith("team."),
+    ) &&
+      can("team", "read"));
 
   const overview = overviewQuery.data;
   const members = membersQuery.data?.members ?? [];
@@ -142,6 +244,25 @@ export function OperationsTeamPage() {
     totalPages: 1,
     hasNextPage: false,
     hasPreviousPage: false,
+  };
+
+  const visibleKpis = useMemo(
+    () =>
+      KPI_CARDS.filter((item) => {
+        if (!item.moduleGate) return true;
+        return can(item.moduleGate, "read");
+      }),
+    [can],
+  );
+
+  const resetFilters = () => {
+    setSearchInput("");
+    setSearch("");
+    setStatus("");
+    setDepartmentId(departmentIdFromUrl);
+    setOrgUnitId("");
+    setTeamId("");
+    setPage(1);
   };
 
   const openCreate = () => {
@@ -156,7 +277,7 @@ export function OperationsTeamPage() {
     setForm({
       fullName: member.fullName,
       email: member.email,
-      mobileNumber: member.mobileNumber,
+      mobileNumber: member.mobileNumber ?? "",
       password: "",
       roleId: member.roleId ?? "",
       departmentId: member.departmentId ?? "",
@@ -175,20 +296,32 @@ export function OperationsTeamPage() {
           fullName: form.fullName.trim(),
           email: form.email.trim(),
           mobileNumber: form.mobileNumber.trim(),
-          password: form.password,
           roleId: form.roleId,
           departmentId: form.departmentId || null,
           orgUnitId: form.orgUnitId || null,
           teamId: form.teamId || null,
         };
-        await createMutation.mutateAsync(payload);
+        if (form.password.trim().length >= 8) {
+          payload.password = form.password;
+        }
+        const created = await createMutation.mutateAsync(payload);
+        if (created.invitationEmailSent === false) {
+          setFormError(
+            created.invitationEmailError ||
+              "Person created, but the invitation email could not be sent. Use Resend invitation.",
+          );
+          setDialog(null);
+          return;
+        }
       } else if (selected) {
         await updateMutation.mutateAsync({
           memberId: selected.id,
           input: {
             fullName: form.fullName.trim(),
             email: form.email.trim(),
-            mobileNumber: form.mobileNumber.trim(),
+            ...(canViewMobile
+              ? { mobileNumber: form.mobileNumber.trim() }
+              : {}),
             password: form.password || undefined,
             roleId: form.roleId || undefined,
             departmentId: form.departmentId || null,
@@ -206,14 +339,60 @@ export function OperationsTeamPage() {
   };
 
   const busy = createMutation.isPending || updateMutation.isPending;
+  const hasActiveFilters =
+    Boolean(searchInput.trim()) ||
+    Boolean(status) ||
+    Boolean(departmentId && departmentId !== departmentIdFromUrl) ||
+    Boolean(orgUnitId) ||
+    Boolean(teamId);
 
   return (
-    <OperationsLayout
-      title="People"
-      subtitle="Invite members, assign roles, departments, teams and locations."
-    >
-      <div className="flex flex-col gap-4">
+    <OperationsLayout title="People" headerVariant="command">
+      <div className="flex flex-col gap-4 lg:gap-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <Link
+              to={OPERATIONS_ROUTES.ORGANIZATION}
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              <ArrowLeft className="size-3.5" aria-hidden="true" />
+              Organization
+              <span className="text-muted/70" aria-hidden="true">
+                ›
+              </span>
+              <span className="font-semibold text-foreground">People</span>
+            </Link>
+            <h1 className="mt-2 text-[22px] font-semibold tracking-tight text-foreground sm:text-[24px]">
+              People
+            </h1>
+            <p className="mt-1 max-w-2xl text-[13px] leading-snug text-muted">
+              Manage team members, their roles, departments and access across
+              the organization.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <OperationsCan module="team" action="create">
+              <button
+                type="button"
+                onClick={openCreate}
+                className="inline-flex h-[42px] min-w-[130px] items-center justify-center gap-1.5 rounded-[10px] bg-primary px-4 text-[13px] font-semibold text-white shadow-sm hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              >
+                <Plus className="size-4" strokeWidth={2.5} aria-hidden="true" />
+                Add member
+              </button>
+            </OperationsCan>
+            <button
+              type="button"
+              aria-label="More page actions"
+              className="inline-flex size-[42px] items-center justify-center rounded-[10px] border border-border-subtle bg-surface text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              <MoreVertical className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
         <OrganizationTabs />
+
         {overviewQuery.isError ? (
           <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {getOperationsApiErrorMessage(
@@ -223,267 +402,426 @@ export function OperationsTeamPage() {
           </p>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-          {KPI.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div
+        {visibleKpis.length > 0 ? (
+          <div
+            className={cn(
+              "grid gap-2.5 sm:gap-3",
+              visibleKpis.length >= 6
+                ? "grid-cols-2 md:grid-cols-3 xl:grid-cols-6"
+                : "grid-cols-2 md:grid-cols-3 xl:grid-cols-5",
+            )}
+          >
+            {visibleKpis.map((item) => (
+              <PeopleKpiCard
                 key={item.key}
-                className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="rounded-lg bg-primary/10 p-1.5 text-primary">
-                    <Icon className="size-4" aria-hidden="true" />
-                  </span>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                    {item.label}
-                  </p>
-                </div>
-                <p className="mt-2 text-xl font-bold text-foreground">
-                  {overview ? overview[item.key] : "—"}
-                </p>
+                label={item.label}
+                value={overview ? overview[item.key] : "—"}
+                icon={item.icon}
+                iconClassName={item.iconClassName}
+                cardClassName={item.cardClassName}
+                accentClassName={item.accentClassName}
+                loading={overviewQuery.isPending}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        <div className="rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder={
+                  canViewMobile
+                    ? "Search name, email or mobile..."
+                    : "Search name or email..."
+                }
+                className="h-10 w-full rounded-lg border border-border-subtle bg-hero-bg/40 pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:flex xl:shrink-0 xl:items-center">
+              <div className="w-full xl:w-[9.5rem]">
+                <OperationsFilterSelect
+                  label="Member status"
+                  value={status}
+                  options={[
+                    { value: "", label: "All statuses" },
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                    { value: "suspended", label: "Suspended" },
+                  ]}
+                  onChange={(value) => {
+                    setPage(1);
+                    setStatus(value);
+                  }}
+                  hideSearch
+                  triggerClassName="h-10"
+                />
               </div>
-            );
-          })}
+              <div className="w-full xl:w-[11rem]">
+                <OperationsFilterSelect
+                  label="Department"
+                  value={departmentId}
+                  options={[
+                    { value: "", label: "All departments" },
+                    ...(departmentsQuery.data?.departments ?? []).map(
+                      (department) => ({
+                        value: department.id,
+                        label: department.name,
+                      }),
+                    ),
+                  ]}
+                  onChange={(value) => {
+                    setPage(1);
+                    setDepartmentId(value);
+                  }}
+                  hideSearch
+                  triggerClassName="h-10"
+                />
+              </div>
+              <div className="w-full xl:w-[11rem]">
+                <OperationsFilterSelect
+                  label="Location"
+                  value={orgUnitId}
+                  options={[
+                    { value: "", label: "All locations" },
+                    ...flattenOrgTree(treeQuery.data?.roots ?? [])
+                      .filter((unit) =>
+                        ["region", "state", "city", "office"].includes(
+                          unit.type,
+                        ),
+                      )
+                      .map((unit) => ({
+                        value: unit.id,
+                        label: `${unit.name} · ${unit.type}`,
+                      })),
+                  ]}
+                  onChange={(value) => {
+                    setPage(1);
+                    setOrgUnitId(value);
+                    setTeamId("");
+                  }}
+                  triggerClassName="h-10"
+                />
+              </div>
+              <div className="w-full xl:w-[11rem]">
+                <OperationsFilterSelect
+                  label="Team"
+                  value={teamId}
+                  options={[
+                    { value: "", label: "All teams" },
+                    ...(teamsQuery.data?.teams ?? []).map((team) => ({
+                      value: team.id,
+                      label: team.name,
+                    })),
+                  ]}
+                  onChange={(value) => {
+                    setPage(1);
+                    setTeamId(value);
+                  }}
+                  triggerClassName="h-10"
+                />
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 xl:ml-auto">
+              <button
+                type="button"
+                onClick={resetFilters}
+                disabled={!hasActiveFilters && !searchInput}
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[12px] font-semibold text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <RotateCcw className="size-3.5" aria-hidden="true" />
+                Reset
+              </button>
+              <OperationsCan module="team" action="create">
+                <button
+                  type="button"
+                  onClick={openCreate}
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-[12px] font-semibold text-white shadow-sm hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                >
+                  <Plus className="size-3.5" strokeWidth={2.5} aria-hidden="true" />
+                  Add member
+                </button>
+              </OperationsCan>
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:flex-row sm:items-center">
-          <input
-            type="search"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="Search name, email or mobile"
-            className="h-10 min-w-0 flex-1 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-          />
-          <div className="w-full shrink-0 sm:w-[10rem]">
-            <OperationsFilterSelect
-              label="Member status"
-              value={status}
-              options={[
-                { value: "", label: "All statuses" },
-                { value: "active", label: "Active" },
-                { value: "inactive", label: "Inactive" },
-                { value: "suspended", label: "Suspended" },
-              ]}
-              onChange={(value) => {
-                setPage(1);
-                setStatus(value);
-              }}
-              hideSearch
-              triggerClassName="h-9"
-            />
-          </div>
-          <div className="w-full shrink-0 sm:w-[12rem]">
-            <OperationsFilterSelect
-              label="Department"
-              value={departmentId}
-              options={[
-                { value: "", label: "All departments" },
-                ...(departmentsQuery.data?.departments ?? []).map(
-                  (department) => ({
-                    value: department.id,
-                    label: department.name,
-                  }),
-                ),
-              ]}
-              onChange={(value) => {
-                setPage(1);
-                setDepartmentId(value);
-              }}
-              hideSearch
-              triggerClassName="h-9"
-            />
-          </div>
-          <div className="w-full shrink-0 sm:w-[12rem]">
-            <OperationsFilterSelect
-              label="Location"
-              value={orgUnitId}
-              options={[
-                { value: "", label: "All locations" },
-                ...flattenOrgTree(treeQuery.data?.roots ?? [])
-                  .filter((unit) =>
-                    ["region", "state", "city", "office"].includes(unit.type),
-                  )
-                  .map((unit) => ({
-                    value: unit.id,
-                    label: `${unit.name} · ${unit.type}`,
-                  })),
-              ]}
-              onChange={(value) => {
-                setPage(1);
-                setOrgUnitId(value);
-                setTeamId("");
-              }}
-              triggerClassName="h-9"
-            />
-          </div>
-          <div className="w-full shrink-0 sm:w-[12rem]">
-            <OperationsFilterSelect
-              label="Team"
-              value={teamId}
-              options={[
-                { value: "", label: "All teams" },
-                ...(teamsQuery.data?.teams ?? []).map((team) => ({
-                  value: team.id,
-                  label: team.name,
-                })),
-              ]}
-              onChange={(value) => {
-                setPage(1);
-                setTeamId(value);
-              }}
-              triggerClassName="h-9"
-            />
-          </div>
-          <OperationsCan module="team" action="create">
-            <button
-              type="button"
-              onClick={openCreate}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              Add member
-            </button>
-          </OperationsCan>
-        </div>
+        {resendFeedback ? (
+          <p
+            className="rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"
+            role="status"
+          >
+            {resendFeedback}
+          </p>
+        ) : null}
 
         {membersQuery.isError ? (
-          <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {getOperationsApiErrorMessage(
-              membersQuery.error,
-              "Unable to load team members.",
-            )}
-          </p>
+          <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-8 text-center">
+            <p className="text-sm font-semibold text-danger">
+              Unable to load team members.
+            </p>
+            <p className="mt-1 text-sm text-danger/80">
+              {getOperationsApiErrorMessage(
+                membersQuery.error,
+                "Please try again.",
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => void membersQuery.refetch()}
+              className="mt-4 inline-flex h-9 items-center justify-center rounded-lg border border-danger/30 bg-surface px-4 text-[12px] font-semibold text-danger hover:bg-danger/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              Retry
+            </button>
+          </div>
         ) : membersQuery.isPending ? (
-          <div className="h-64 animate-pulse rounded-xl border border-border-subtle bg-surface" />
+          <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <div className="space-y-0">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="flex h-[84px] items-center gap-4 border-b border-border-subtle px-4 last:border-0"
+                >
+                  <div className="size-9 animate-pulse rounded-full bg-hero-bg" />
+                  <div className="h-4 w-28 animate-pulse rounded bg-hero-bg" />
+                  <div className="ml-auto h-4 w-40 animate-pulse rounded bg-hero-bg" />
+                </div>
+              ))}
+            </div>
+          </div>
         ) : members.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border-subtle bg-surface px-6 py-16 text-center text-sm text-muted">
-            No team members match the current filters.
+          <div className="rounded-xl border border-dashed border-border-subtle bg-surface px-6 py-16 text-center">
+            <p className="text-sm font-semibold text-foreground">
+              No team members found
+            </p>
+            <p className="mt-1 text-sm text-muted">
+              {hasActiveFilters
+                ? "Try adjusting your search or filters."
+                : "Invite your first team member to get started."}
+            </p>
+            <OperationsCan module="team" action="create">
+              <button
+                type="button"
+                onClick={openCreate}
+                className="mt-4 inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] bg-primary px-4 text-[13px] font-semibold text-white shadow-sm hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              >
+                <Plus className="size-4" strokeWidth={2.5} aria-hidden="true" />
+                Add member
+              </button>
+            </OperationsCan>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface shadow-sm">
-            <table className="min-w-[72rem] text-left text-sm">
-              <thead className="border-b border-border-subtle bg-hero-bg/60 text-[11px] uppercase tracking-wide text-muted">
+          <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <table className="min-w-[78rem] w-full text-left">
+              <thead className="border-b border-border-subtle bg-[#F8FAFC] text-[11px] font-semibold uppercase tracking-[0.04em] text-muted">
                 <tr>
                   <th className="px-4 py-3">Member</th>
                   <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Mobile</th>
+                  {canViewMobile ? <th className="px-4 py-3">Mobile</th> : null}
                   <th className="px-4 py-3">Role</th>
                   <th className="px-4 py-3">Department</th>
                   <th className="px-4 py-3">Team</th>
                   <th className="px-4 py-3">Location</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Created</th>
-                  <th className="px-4 py-3">Last active</th>
+                  <th className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1">
+                      Created
+                      <span aria-hidden="true">↓</span>
+                    </span>
+                  </th>
+                  <th className="px-4 py-3">Last Active</th>
                   <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {members.map((member) => (
-                  <tr key={member.id} className="border-b border-border-subtle last:border-0">
-                    <td className="px-4 py-3 font-semibold text-foreground">
-                      {member.fullName}
-                    </td>
-                    <td className="px-4 py-3 text-muted">{member.email || "—"}</td>
-                    <td className="px-4 py-3 text-muted">
-                      {member.mobileNumber || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-foreground">
-                      {member.role === "SUPER_ADMIN"
-                        ? "Super Admin"
-                        : member.roleName || member.role}
-                    </td>
-                    <td className="px-4 py-3 text-muted">
-                      {member.departmentName || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted">
-                      {member.teamName || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted">
-                      {member.orgUnitName || "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize",
-                          member.status === "active"
-                            ? "bg-success/10 text-success"
-                            : "bg-danger/10 text-danger",
-                        )}
-                      >
-                        {member.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted">
-                      {formatOperationsTimestamp(member.createdAt)}
-                    </td>
-                    <td className="px-4 py-3 text-muted">
-                      {formatOperationsTimestamp(member.lastActiveAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1.5">
-                        <OperationsCan module="team" action="update">
-                          {member.role !== "SUPER_ADMIN" || user?.isSuperAdmin ? (
-                            <button
-                              type="button"
-                              onClick={() => openEdit(member)}
-                              className="rounded-lg border border-border-subtle px-2 py-1 text-xs font-semibold text-foreground hover:bg-hero-bg"
-                            >
-                              Edit
-                            </button>
-                          ) : null}
-                        </OperationsCan>
-                        <OperationsCanKey permissionKey="team.members.activate">
-                          {member.status !== "active" && member.id !== user?.id ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void statusMutation.mutateAsync({
-                                  memberId: member.id,
-                                  status: "active",
-                                })
-                              }
-                              className="rounded-lg border border-success/30 px-2 py-1 text-xs font-semibold text-success hover:bg-success/10"
-                            >
-                              Activate
-                            </button>
-                          ) : null}
-                        </OperationsCanKey>
-                        <OperationsCanKey permissionKey="team.members.deactivate">
-                          {member.status === "active" && member.id !== user?.id ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void statusMutation.mutateAsync({
-                                  memberId: member.id,
-                                  status: "inactive",
-                                })
-                              }
-                              className="rounded-lg border border-danger/30 px-2 py-1 text-xs font-semibold text-danger hover:bg-danger/10"
-                            >
-                              Deactivate
-                            </button>
-                          ) : null}
-                        </OperationsCanKey>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {members.map((member) => {
+                  const roleLabel = memberRoleLabel(member);
+                  const canEditMember =
+                    member.role !== "SUPER_ADMIN" || Boolean(user?.isSuperAdmin);
+                  const showResendPrimary =
+                    member.role !== "SUPER_ADMIN" && Boolean(member.email);
+
+                  return (
+                    <tr
+                      key={member.id}
+                      className="h-[84px] border-b border-border-subtle transition-colors last:border-0 hover:bg-[#F0F9F8]/40"
+                    >
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <span
+                            className={cn(
+                              "inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold",
+                              getAvatarPalette(member.id || member.fullName),
+                            )}
+                            aria-hidden="true"
+                          >
+                            {getMemberInitials(member.fullName)}
+                          </span>
+                          <span className="min-w-0 whitespace-pre-line text-[13px] font-semibold leading-snug text-foreground">
+                            {member.fullName}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 align-middle text-[13px] text-muted">
+                        {member.email || "—"}
+                      </td>
+                      {canViewMobile ? (
+                        <td className="px-4 py-3 align-middle text-[13px] text-muted">
+                          {member.mobileNumber || "—"}
+                        </td>
+                      ) : null}
+                      <td className="px-4 py-3 align-middle">
+                        <span
+                          className={cn(
+                            "inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                            getRoleBadgePalette(roleLabel),
+                          )}
+                        >
+                          {roleLabel}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-middle text-[13px] text-muted">
+                        {member.departmentName || "—"}
+                      </td>
+                      <td className="px-4 py-3 align-middle text-[13px] text-muted">
+                        {member.teamName || "—"}
+                      </td>
+                      <td className="px-4 py-3 align-middle text-[13px] text-muted">
+                        {member.orgUnitName || "—"}
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
+                            member.status === "active"
+                              ? "bg-success/10 text-success"
+                              : member.status === "suspended"
+                                ? "bg-[#FFF7ED] text-[#C2410C]"
+                                : "bg-danger/10 text-danger",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "size-1.5 rounded-full",
+                              member.status === "active"
+                                ? "bg-success"
+                                : member.status === "suspended"
+                                  ? "bg-[#C2410C]"
+                                  : "bg-danger",
+                            )}
+                            aria-hidden="true"
+                          />
+                          {member.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-middle whitespace-pre-line text-[12px] leading-snug text-muted">
+                        {formatPeopleTimestamp(member.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 align-middle whitespace-pre-line text-[12px] leading-snug text-muted">
+                        {formatPeopleTimestamp(member.lastActiveAt)}
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex items-center gap-2">
+                          {showResendPrimary ? (
+                            <OperationsCanKey permissionKey="team.members.invite">
+                              <button
+                                type="button"
+                                disabled={resendMutation.isPending}
+                                onClick={() => {
+                                  setResendFeedback("");
+                                  void resendMutation
+                                    .mutateAsync(member.id)
+                                    .then(() => {
+                                      setResendFeedback(
+                                        `Invitation resent to ${member.fullName}.`,
+                                      );
+                                    })
+                                    .catch((error: unknown) => {
+                                      setResendFeedback(
+                                        getOperationsApiErrorMessage(
+                                          error,
+                                          "Unable to resend invitation.",
+                                        ),
+                                      );
+                                    });
+                                }}
+                                className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+                              >
+                                <Send className="size-3.5" aria-hidden="true" />
+                                Resend invitation
+                              </button>
+                            </OperationsCanKey>
+                          ) : (
+                            <OperationsCan module="team" action="update">
+                              {canEditMember ? (
+                                <button
+                                  type="button"
+                                  onClick={() => openEdit(member)}
+                                  className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                                >
+                                  <Pencil
+                                    className="size-3.5"
+                                    aria-hidden="true"
+                                  />
+                                  Edit
+                                </button>
+                              ) : null}
+                            </OperationsCan>
+                          )}
+                          <PeopleMemberRowActions
+                            member={member}
+                            currentUserId={user?.id}
+                            isSuperAdminViewer={user?.isSuperAdmin}
+                            showEditInMenu={showResendPrimary && canEditMember}
+                            onEdit={openEdit}
+                            onActivate={(target) => {
+                              setStatusError("");
+                              setStatusConfirm({
+                                member: target,
+                                nextStatus: "active",
+                              });
+                            }}
+                            onDeactivate={(target) => {
+                              setStatusError("");
+                              setStatusConfirm({
+                                member: target,
+                                nextStatus: "inactive",
+                              });
+                            }}
+                            onDelete={(target) => {
+                              setDeleteError("");
+                              setDeleteTarget(target);
+                            }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
 
-        {pagination.total > 0 ? (
-          <JobsPaginationBar
-            pagination={pagination}
-            onPageChange={setPage}
-            onLimitChange={(next) => {
-              setLimit(next);
-              setPage(1);
-            }}
-            ariaLabel="Team members pagination"
-          />
+        {pagination.total > limit ? (
+          <div className="rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:px-4">
+            <JobsPaginationBar
+              pagination={pagination}
+              onPageChange={setPage}
+              onLimitChange={(next) => {
+                setLimit(next);
+                setPage(1);
+              }}
+              ariaLabel="Team members pagination"
+            />
+          </div>
         ) : null}
       </div>
 
@@ -507,7 +845,10 @@ export function OperationsTeamPage() {
                 <input
                   value={form.fullName}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, fullName: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      fullName: event.target.value,
+                    }))
                   }
                   className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 />
@@ -518,31 +859,41 @@ export function OperationsTeamPage() {
                   type="email"
                   value={form.email}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, email: event.target.value }))
-                  }
-                  className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                />
-              </label>
-              <label className="grid gap-1 text-xs font-semibold text-muted">
-                Mobile number
-                <input
-                  value={form.mobileNumber}
-                  onChange={(event) =>
                     setForm((current) => ({
                       ...current,
-                      mobileNumber: event.target.value,
+                      email: event.target.value,
                     }))
                   }
                   className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 />
               </label>
+              {dialog === "create" || canViewMobile ? (
+                <label className="grid gap-1 text-xs font-semibold text-muted">
+                  Mobile number
+                  <input
+                    value={form.mobileNumber}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        mobileNumber: event.target.value,
+                      }))
+                    }
+                    className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  />
+                </label>
+              ) : null}
               <label className="grid gap-1 text-xs font-semibold text-muted">
-                {dialog === "create" ? "Password" : "New password (optional)"}
+                {dialog === "create"
+                  ? "Password (optional — emailed if left blank)"
+                  : "New password (optional)"}
                 <input
                   type="password"
                   value={form.password}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, password: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      password: event.target.value,
+                    }))
                   }
                   className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 />
@@ -653,11 +1004,167 @@ export function OperationsTeamPage() {
               </button>
               <button
                 type="button"
-                disabled={busy || !can("team", dialog === "create" ? "create" : "update")}
+                disabled={
+                  busy ||
+                  !can("team", dialog === "create" ? "create" : "update")
+                }
                 onClick={() => void submit()}
                 className="h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover disabled:opacity-60"
               >
                 {busy ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {statusConfirm ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 p-4 sm:items-center">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="status-person-title"
+            aria-describedby="status-person-description"
+            className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-5 shadow-xl"
+          >
+            <h2
+              id="status-person-title"
+              className="text-base font-bold text-foreground"
+            >
+              {statusConfirm.nextStatus === "inactive"
+                ? "Deactivate member?"
+                : "Activate member?"}
+            </h2>
+            <p
+              id="status-person-description"
+              className="mt-2 text-sm text-muted"
+            >
+              {statusConfirm.nextStatus === "inactive"
+                ? `This will prevent ${statusConfirm.member.fullName} from signing in.`
+                : `This will allow ${statusConfirm.member.fullName} to sign in again.`}
+            </p>
+            {statusError ? (
+              <p className="mt-3 text-sm text-danger" role="alert">
+                {statusError}
+              </p>
+            ) : null}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={statusMutation.isPending}
+                onClick={() => {
+                  setStatusConfirm(null);
+                  setStatusError("");
+                }}
+                className="h-10 rounded-lg border border-border-subtle px-4 text-sm font-semibold text-foreground hover:bg-hero-bg disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={statusMutation.isPending}
+                onClick={() => {
+                  void statusMutation
+                    .mutateAsync({
+                      memberId: statusConfirm.member.id,
+                      status: statusConfirm.nextStatus,
+                    })
+                    .then(() => {
+                      setStatusConfirm(null);
+                      setStatusError("");
+                    })
+                    .catch((error: unknown) => {
+                      setStatusError(
+                        getOperationsApiErrorMessage(
+                          error,
+                          "Unable to update member status.",
+                        ),
+                      );
+                    });
+                }}
+                className={cn(
+                  "h-10 rounded-lg px-4 text-sm font-semibold text-surface disabled:opacity-60",
+                  statusConfirm.nextStatus === "inactive"
+                    ? "bg-danger hover:opacity-90"
+                    : "bg-primary hover:bg-primary-hover",
+                )}
+              >
+                {statusMutation.isPending
+                  ? "Updating…"
+                  : statusConfirm.nextStatus === "inactive"
+                    ? "Deactivate"
+                    : "Activate"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 p-4 sm:items-center">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-person-title"
+            aria-describedby="delete-person-description"
+            className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-5 shadow-xl"
+          >
+            <h2
+              id="delete-person-title"
+              className="text-base font-bold text-foreground"
+            >
+              Delete person permanently?
+            </h2>
+            <p
+              id="delete-person-description"
+              className="mt-2 text-sm text-muted"
+            >
+              This will completely remove{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget.fullName}
+              </span>{" "}
+              from the database. Their login will stop working. This cannot be
+              undone.
+            </p>
+            {deleteError ? (
+              <p className="mt-3 text-sm text-danger" role="alert">
+                {deleteError}
+              </p>
+            ) : null}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteError("");
+                }}
+                className="h-10 rounded-lg border border-border-subtle px-4 text-sm font-semibold text-foreground hover:bg-hero-bg disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => {
+                  void deleteMutation
+                    .mutateAsync(deleteTarget.id)
+                    .then(() => {
+                      setDeleteTarget(null);
+                      setDeleteError("");
+                    })
+                    .catch((error: unknown) => {
+                      setDeleteError(
+                        getOperationsApiErrorMessage(
+                          error,
+                          "Unable to delete this person.",
+                        ),
+                      );
+                    });
+                }}
+                className="h-10 rounded-lg bg-danger px-4 text-sm font-semibold text-surface hover:opacity-90 disabled:opacity-60"
+              >
+                {deleteMutation.isPending ? "Deleting…" : "Delete permanently"}
               </button>
             </div>
           </div>

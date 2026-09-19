@@ -12,6 +12,7 @@ import {
   exportOperationsWork,
   fetchEligibleWorkAssignees,
   fetchEligibleWorkDepartments,
+  fetchEligibleWorkOpsTeams,
   fetchOperationsWorkAnalytics,
   fetchOperationsWorkDetail,
   fetchOperationsWorkList,
@@ -111,10 +112,25 @@ export function useOperationsWorkPerformance(
   });
 }
 
-export function useEligibleWorkAssignees(options?: { enabled?: boolean }) {
+export function useEligibleWorkAssignees(options?: {
+  enabled?: boolean;
+  workType?: string | null;
+  workTypes?: string[] | null;
+}) {
+  const workType = options?.workType ?? undefined;
+  const workTypes = options?.workTypes ?? undefined;
   return useQuery({
-    queryKey: [...OPERATIONS_WORK_QUERY_KEY, "eligible-assignees"],
-    queryFn: fetchEligibleWorkAssignees,
+    queryKey: [
+      ...OPERATIONS_WORK_QUERY_KEY,
+      "eligible-assignees",
+      workType ?? null,
+      workTypes ?? null,
+    ],
+    queryFn: () =>
+      fetchEligibleWorkAssignees({
+        workType: workType ?? undefined,
+        workTypes: workTypes ?? undefined,
+      }),
     staleTime: 60_000,
     enabled: options?.enabled ?? true,
     retry: shouldRetry,
@@ -122,10 +138,51 @@ export function useEligibleWorkAssignees(options?: { enabled?: boolean }) {
   });
 }
 
-export function useEligibleWorkDepartments(options?: { enabled?: boolean }) {
+export function useEligibleWorkDepartments(options?: {
+  enabled?: boolean;
+  workType?: string | null;
+  workTypes?: string[] | null;
+}) {
+  const workType = options?.workType ?? undefined;
+  const workTypes = options?.workTypes ?? undefined;
   return useQuery({
-    queryKey: [...OPERATIONS_WORK_QUERY_KEY, "eligible-departments"],
-    queryFn: fetchEligibleWorkDepartments,
+    queryKey: [
+      ...OPERATIONS_WORK_QUERY_KEY,
+      "eligible-departments",
+      workType ?? null,
+      workTypes ?? null,
+    ],
+    queryFn: () =>
+      fetchEligibleWorkDepartments({
+        workType: workType ?? undefined,
+        workTypes: workTypes ?? undefined,
+      }),
+    staleTime: 60_000,
+    enabled: options?.enabled ?? true,
+    retry: shouldRetry,
+    retryDelay,
+  });
+}
+
+export function useEligibleWorkOpsTeams(options?: {
+  enabled?: boolean;
+  workType?: string | null;
+  workTypes?: string[] | null;
+}) {
+  const workType = options?.workType ?? undefined;
+  const workTypes = options?.workTypes ?? undefined;
+  return useQuery({
+    queryKey: [
+      ...OPERATIONS_WORK_QUERY_KEY,
+      "eligible-teams",
+      workType ?? null,
+      workTypes ?? null,
+    ],
+    queryFn: () =>
+      fetchEligibleWorkOpsTeams({
+        workType: workType ?? undefined,
+        workTypes: workTypes ?? undefined,
+      }),
     staleTime: 60_000,
     enabled: options?.enabled ?? true,
     retry: shouldRetry,

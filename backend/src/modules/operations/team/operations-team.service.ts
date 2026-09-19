@@ -8,13 +8,14 @@ import { OperationsDepartmentModel } from "../rbac/operations-department.model.j
 import { OperationsRoleModel } from "../rbac/operations-role.model.js";
 import { OperationsOrgUnitModel } from "../organization/operations-org-unit.model.js";
 import { OperationsTeamModel } from "../teams/operations-teams.model.js";
+import { OperationsWorkItemModel } from "../work/operations-work.model.js";
+import { OPEN_WORK_STATUSES } from "../work/operations-work-department.js";
 import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
 import {
   assertFineOrCoarsePermission,
+  canViewOperationsMemberMobile,
   getRoleDescendantIds,
   isRoleWithinActorScope,
-  operationsAccessCan,
-  operationsAccessCanKey,
 } from "../rbac/operations-access.service.js";
 import {
   assertActorCanAccessDepartment,
@@ -29,8 +30,8 @@ import {
   TEAM_MEMBERS_ASSIGN_ROLE_KEY,
   TEAM_MEMBERS_ASSIGN_TEAM_KEY,
   TEAM_MEMBERS_DEACTIVATE_KEY,
+  TEAM_MEMBERS_DELETE_KEY,
   TEAM_MEMBERS_INVITE_KEY,
-  TEAM_MEMBERS_MOBILE_VIEW_KEY,
   TEAM_MEMBERS_UPDATE_KEY,
   TEAM_MEMBERS_VIEW_KEY,
 } from "../rbac/operations-permission-catalog.js";
@@ -40,12 +41,19 @@ import {
   TEAM_ERROR_CODES,
 } from "../teams/operations-teams-domain.js";
 import type { OperationsResolvedAccess } from "../rbac/operations-access.types.js";
+import {
+  generateOrganizationTemporaryPassword,
+  sendOrganizationInvitationEmail,
+} from "./operations-invitation-email.service.js";
 import type {
   CreateOperationsTeamMemberBody,
   ListOperationsTeamQuery,
   UpdateOperationsTeamMemberBody,
   UpdateOperationsTeamMemberStatusBody,
 } from "./operations-team.validation.js";
+
+const INVITATION_RESEND_COOLDOWN_MS = 60_000;
+const INVITATION_RESEND_MAX_PER_HOUR = 5;
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -57,15 +65,7 @@ function optionalId(value: string | null | undefined): string | null {
 }
 
 function canViewMobile(access: OperationsResolvedAccess): boolean {
-  if (access.isSuperAdmin) return true;
-  if (operationsAccessCanKey(access, TEAM_MEMBERS_MOBILE_VIEW_KEY)) {
-    return true;
-  }
-  const hasFineGrants = access.grantedKeys.some(
-    (key) => key === "team" || key.startsWith("team."),
-  );
-  if (hasFineGrants) return false;
-  return operationsAccessCan(access, "team", "read");
+  return canViewOperationsMemberMobile(access);
 }
 
 function toPublicMember(
@@ -82,6 +82,10 @@ function toPublicMember(
     status: string;
     lastActiveAt?: Date | null;
     invitedAt?: Date | null;
+    invitationLastSentAt?: Date | null;
+    invitationResendCount?: number;
+    invitationEmailStatus?: string | null;
+    invitationEmailError?: string | null;
     createdAt?: Date;
     updatedAt?: Date;
   },
@@ -90,14 +94,19 @@ function toPublicMember(
     departmentName?: string | null;
     orgUnitName?: string | null;
     teamName?: string | null;
+    includeMobile?: boolean;
     mobileNumber?: string;
+    invitationEmailSent?: boolean;
+    invitationEmailError?: string | null;
   },
 ) {
   return {
     id: String(doc._id),
     fullName: doc.fullName,
     email: doc.email ?? "",
-    mobileNumber: extras?.mobileNumber ?? "",
+    ...(extras?.includeMobile
+      ? { mobileNumber: extras.mobileNumber ?? "" }
+      : {}),
     role: doc.role,
     roleId: doc.roleId ? String(doc.roleId) : null,
     roleName: extras?.roleName ?? null,
@@ -110,6 +119,13 @@ function toPublicMember(
     status: doc.status,
     lastActiveAt: doc.lastActiveAt ? doc.lastActiveAt.toISOString() : null,
     invitedAt: doc.invitedAt ? doc.invitedAt.toISOString() : null,
+    invitationLastSentAt: doc.invitationLastSentAt
+      ? doc.invitationLastSentAt.toISOString()
+      : null,
+    invitationResendCount: doc.invitationResendCount ?? 0,
+    invitationEmailStatus: doc.invitationEmailStatus ?? null,
+    invitationEmailError: extras?.invitationEmailError ?? doc.invitationEmailError ?? null,
+    invitationEmailSent: extras?.invitationEmailSent,
     createdAt: doc.createdAt?.toISOString() ?? null,
     updatedAt: doc.updatedAt?.toISOString() ?? null,
   };
@@ -207,13 +223,14 @@ class OperationsTeamService {
     }
     if (query.search.trim()) {
       const pattern = escapeRegex(query.search.trim());
-      const searchClause = {
-        $or: [
-          { fullName: { $regex: pattern, $options: "i" } },
-          { email: { $regex: pattern, $options: "i" } },
-          { mobileNumber: { $regex: pattern, $options: "i" } },
-        ],
-      };
+      const searchFields: Record<string, unknown>[] = [
+        { fullName: { $regex: pattern, $options: "i" } },
+        { email: { $regex: pattern, $options: "i" } },
+      ];
+      if (canViewMobile(actor)) {
+        searchFields.push({ mobileNumber: { $regex: pattern, $options: "i" } });
+      }
+      const searchClause = { $or: searchFields };
       if (Array.isArray(filter.$and)) {
         filter.$and.push(searchClause);
       } else if (filter.$or) {
@@ -255,12 +272,23 @@ class OperationsTeamService {
     );
 
     const email = body.email.trim().toLowerCase();
-    const existing = await OperationsTeamUserModel.findOne({
-      $or: [{ email }, { mobileNumber: body.mobileNumber }],
-    }).lean();
-    if (existing) {
+    const emailClash = await OperationsTeamUserModel.findOne({ email })
+      .select("_id")
+      .lean();
+    if (emailClash) {
       throw new AppError(
-        "A team member with this email or mobile number already exists.",
+        "A team member with this email already exists.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+    const mobileClash = await OperationsTeamUserModel.findOne({
+      mobileNumber: body.mobileNumber,
+    })
+      .select("_id")
+      .lean();
+    if (mobileClash) {
+      throw new AppError(
+        "A team member with this mobile number already exists.",
         HTTP_STATUS.CONFLICT,
       );
     }
@@ -287,11 +315,20 @@ class OperationsTeamService {
       });
     }
 
+    const assignedRole = await OperationsRoleModel.findById(body.roleId)
+      .select("name")
+      .lean();
+    const roleName = assignedRole?.name ?? "Organization member";
+    const temporaryPassword =
+      body.password && body.password.length >= 8
+        ? body.password
+        : generateOrganizationTemporaryPassword();
+
     const member = await OperationsTeamUserModel.create({
       fullName: body.fullName.trim(),
       email,
       mobileNumber: body.mobileNumber,
-      passwordHash: await bcrypt.hash(body.password, 10),
+      passwordHash: await bcrypt.hash(temporaryPassword, 10),
       role: "CUSTOM",
       roleId: body.roleId,
       departmentId: departmentId || null,
@@ -300,18 +337,20 @@ class OperationsTeamService {
       status: body.status,
       invitedAt: new Date(),
       invitedBy: actor.userId,
+      invitationEmailStatus: "pending",
     });
 
     await recordOperationsAuditEvent({
       actorUserId: actor.userId,
       actorName: actor.roleName ?? "",
-      action: "user.invited",
+      action: "user.created",
       targetType: "user",
       targetId: String(member._id),
       targetLabel: member.fullName,
       nextState: {
         email,
         roleId: body.roleId,
+        roleName,
         departmentId,
         orgUnitId,
         teamId,
@@ -331,11 +370,26 @@ class OperationsTeamService {
       });
     }
 
+    const invitation = await this.deliverInvitationEmail({
+      actor,
+      memberId: String(member._id),
+      fullName: member.fullName,
+      email,
+      roleName,
+      temporaryPassword,
+      isResend: false,
+    });
+
     const extras = await this.hydrateMemberExtras(
       [member.toObject()],
       canViewMobile(actor),
     );
-    return toPublicMember(member, extras.get(String(member._id)));
+    const extra = extras.get(String(member._id));
+    return toPublicMember(member, {
+      ...extra,
+      invitationEmailSent: invitation.sent,
+      invitationEmailError: invitation.errorMessage,
+    });
   }
 
   async update(
@@ -541,6 +595,219 @@ class OperationsTeamService {
     return toPublicMember(member, extras.get(memberId));
   }
 
+  async remove(actor: OperationsResolvedAccess, memberId: string) {
+    assertFineOrCoarsePermission(actor, TEAM_MEMBERS_DELETE_KEY, "team", "delete");
+
+    const member = await OperationsTeamUserModel.findById(memberId).select(
+      "+passwordHash +refreshTokenHash",
+    );
+    if (!member) {
+      throw new AppError("Team member not found.", HTTP_STATUS.NOT_FOUND);
+    }
+    await this.assertCanManageMember(actor, member);
+    if (String(member._id) === actor.userId) {
+      throw new AppError(
+        "You cannot delete your own account.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+    if (member.role === "SUPER_ADMIN") {
+      throw new AppError(
+        "Super Admin accounts cannot be deleted.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+
+    const previous = {
+      email: member.email ?? "",
+      role: member.role,
+      roleId: member.roleId ? String(member.roleId) : null,
+      departmentId: member.departmentId ? String(member.departmentId) : null,
+      orgUnitId: member.orgUnitId ? String(member.orgUnitId) : null,
+      teamId: member.teamId ? String(member.teamId) : null,
+      status: member.status,
+    };
+
+    await Promise.all([
+      OperationsTeamModel.updateMany(
+        { leadUserId: member._id },
+        { $set: { leadUserId: null }, $inc: { revision: 1 } },
+      ),
+      OperationsDepartmentModel.updateMany(
+        { headUserId: member._id },
+        { $set: { headUserId: null } },
+      ),
+      OperationsOrgUnitModel.updateMany(
+        { headUserId: member._id },
+        { $set: { headUserId: null } },
+      ),
+      OperationsWorkItemModel.updateMany(
+        {
+          assignedToUserId: member._id,
+          status: { $in: [...OPEN_WORK_STATUSES] },
+        },
+        {
+          $set: {
+            assignedToUserId: null,
+            assignedByUserId: null,
+            assignedAt: null,
+          },
+          $inc: { revision: 1 },
+        },
+      ),
+    ]);
+
+    await OperationsTeamUserModel.deleteOne({ _id: member._id });
+
+    await recordOperationsAuditEvent({
+      actorUserId: actor.userId,
+      actorName: actor.roleName ?? "",
+      action: "user.deleted",
+      targetType: "user",
+      targetId: memberId,
+      targetLabel: member.fullName,
+      previousState: previous,
+    });
+
+    return { id: memberId, deleted: true as const };
+  }
+
+  async resendInvitation(
+    actor: OperationsResolvedAccess,
+    memberId: string,
+  ) {
+    assertFineOrCoarsePermission(actor, TEAM_MEMBERS_INVITE_KEY, "team", "create");
+
+    const member = await OperationsTeamUserModel.findById(memberId).select(
+      "+passwordHash +refreshTokenHash",
+    );
+    if (!member) {
+      throw new AppError("Team member not found.", HTTP_STATUS.NOT_FOUND);
+    }
+    await this.assertCanManageMember(actor, member);
+    if (!member.email) {
+      throw new AppError(
+        "This person does not have an email address.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
+    const lastSent = member.invitationLastSentAt
+      ? member.invitationLastSentAt.getTime()
+      : 0;
+    if (lastSent && Date.now() - lastSent < INVITATION_RESEND_COOLDOWN_MS) {
+      throw new AppError(
+        "Please wait before resending the invitation.",
+        HTTP_STATUS.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const hourAgo = Date.now() - 60 * 60 * 1000;
+    if (
+      lastSent >= hourAgo &&
+      (member.invitationResendCount ?? 0) >= INVITATION_RESEND_MAX_PER_HOUR
+    ) {
+      throw new AppError(
+        "Invitation resend limit reached. Try again later.",
+        HTTP_STATUS.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const role = member.roleId
+      ? await OperationsRoleModel.findById(member.roleId).select("name").lean()
+      : null;
+    const temporaryPassword = generateOrganizationTemporaryPassword();
+    member.passwordHash = await bcrypt.hash(temporaryPassword, 10);
+    member.refreshTokenHash = null;
+    member.refreshTokenExpiresAt = null;
+    await member.save();
+
+    const invitation = await this.deliverInvitationEmail({
+      actor,
+      memberId,
+      fullName: member.fullName,
+      email: member.email,
+      roleName:
+        member.role === "SUPER_ADMIN"
+          ? "Super Admin"
+          : role?.name ?? "Organization member",
+      temporaryPassword,
+      isResend: true,
+    });
+
+    const extras = await this.hydrateMemberExtras(
+      [member.toObject()],
+      canViewMobile(actor),
+    );
+    return toPublicMember(member, {
+      ...extras.get(memberId),
+      invitationEmailSent: invitation.sent,
+      invitationEmailError: invitation.errorMessage,
+    });
+  }
+
+  private async deliverInvitationEmail(input: {
+    actor: OperationsResolvedAccess;
+    memberId: string;
+    fullName: string;
+    email: string;
+    roleName: string;
+    temporaryPassword: string;
+    isResend: boolean;
+  }): Promise<{ sent: boolean; errorMessage: string | null }> {
+    const result = await sendOrganizationInvitationEmail({
+      toEmail: input.email,
+      memberName: input.fullName,
+      roleName: input.roleName,
+      temporaryPassword: input.temporaryPassword,
+    });
+
+    const now = new Date();
+    const errorMessage = result.errorMessage
+      ? result.errorMessage.slice(0, 400)
+      : null;
+    const resetHourWindow = input.isResend
+      ? await OperationsTeamUserModel.findById(input.memberId)
+          .select("invitationLastSentAt invitationResendCount")
+          .lean()
+      : null;
+    const lastSent = resetHourWindow?.invitationLastSentAt?.getTime() ?? 0;
+    const hourAgo = Date.now() - 60 * 60 * 1000;
+    const nextResendCount = input.isResend
+      ? lastSent < hourAgo
+        ? 1
+        : (resetHourWindow?.invitationResendCount ?? 0) + 1
+      : 0;
+
+    await OperationsTeamUserModel.updateOne(
+      { _id: input.memberId },
+      {
+        $set: {
+          invitationLastSentAt: now,
+          invitationEmailStatus: result.sent ? "sent" : "failed",
+          invitationEmailError: errorMessage,
+          invitationResendCount: nextResendCount,
+          invitedAt: now,
+        },
+      },
+    );
+
+    await recordOperationsAuditEvent({
+      actorUserId: input.actor.userId,
+      actorName: input.actor.roleName ?? "",
+      action: input.isResend ? "invitation.resent" : "invitation.sent",
+      targetType: "user",
+      targetId: input.memberId,
+      targetLabel: input.fullName,
+      metadata: {
+        emailSent: result.sent,
+        roleName: input.roleName,
+      },
+    });
+
+    return { sent: result.sent, errorMessage };
+  }
+
   private async memberScopeFilter(
     actor: OperationsResolvedAccess,
   ): Promise<Record<string, unknown>> {
@@ -743,7 +1010,8 @@ class OperationsTeamService {
         departmentName: string | null;
         orgUnitName: string | null;
         teamName: string | null;
-        mobileNumber: string;
+        includeMobile?: boolean;
+        mobileNumber?: string;
       }
     >
   > {
@@ -814,7 +1082,8 @@ class OperationsTeamService {
           teamName: member.teamId
             ? teamNameById.get(String(member.teamId)) ?? null
             : null,
-          mobileNumber: showMobile ? member.mobileNumber : "",
+          includeMobile: showMobile,
+          mobileNumber: showMobile ? member.mobileNumber : undefined,
         },
       ]),
     );

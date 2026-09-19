@@ -204,11 +204,54 @@ export function OperationsTeamDetailPage() {
             ) : null}
 
             {tab === "overview" ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Info label="Region" value={team.region} />
-                <Info label="State" value={team.state} />
-                <Info label="City" value={team.city} />
-                <Info label="Department" value={team.departmentName} />
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Info label="Region" value={team.region} />
+                  <Info label="State" value={team.state} />
+                  <Info label="City" value={team.city} />
+                  <Info label="Department" value={team.departmentName} />
+                </div>
+
+                {team.capabilities && team.capabilities.length > 0 ? (
+                  <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+                    <h3 className="text-[12px] font-semibold text-foreground">
+                      Team Capabilities
+                    </h3>
+                    <ul className="mt-3 flex flex-col gap-2">
+                      {team.capabilities.map((capability) => (
+                        <li
+                          key={capability.workType}
+                          className="flex items-start gap-2 rounded-md border border-border-subtle px-3 py-2"
+                        >
+                          <span
+                            className={cn(
+                              "mt-0.5 text-[12px] font-bold",
+                              capability.available
+                                ? "text-success"
+                                : "text-danger",
+                            )}
+                            aria-hidden
+                          >
+                            {capability.available ? "✓" : "✗"}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-semibold text-foreground">
+                              {capability.moduleLabel}
+                            </p>
+                            <p className="text-[11px] text-muted">
+                              {capability.capabilityLabel}
+                            </p>
+                          </div>
+                          <span className="sr-only">
+                            {capability.available
+                              ? "Supported"
+                              : "Not supported"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
               </div>
             ) : null}
 

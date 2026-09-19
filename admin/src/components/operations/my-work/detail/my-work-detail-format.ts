@@ -333,6 +333,9 @@ export function primaryStatusAction(
     return { label: "Mark as In Progress", status: "in_progress" };
   }
   if (item.status === "in_progress") {
+    if (item.capabilityMismatch) {
+      return null;
+    }
     return { label: "Mark as Completed", status: "completed" };
   }
   if (item.status === "queued" && item.assignedToUserId) {

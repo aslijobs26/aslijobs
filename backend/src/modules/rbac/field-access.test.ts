@@ -107,14 +107,15 @@ describe("rbac field levels", () => {
       candidateLocation: "Pune",
       candidateName: "Alex",
     };
-    sanitizeDtoByFieldAccess(
+    const sanitized = sanitizeDtoByFieldAccess(
       context,
       "candidates",
       dto,
       CANDIDATE_LIST_FIELD_BINDINGS,
     );
-    assert.equal(dto.candidatePhone, "******3210");
-    assert.equal(dto.candidateLocation, "Pune");
+    assert.equal(sanitized.candidatePhone, "******3210");
+    assert.equal(sanitized.candidateLocation, "Pune");
+    assert.equal(dto.candidatePhone, "9876543210");
   });
 
   it("filters export fields for hidden and mask", () => {

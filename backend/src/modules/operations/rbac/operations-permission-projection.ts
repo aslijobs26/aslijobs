@@ -17,6 +17,7 @@ function denyAllMatrix(): OperationsPermissionMap {
       create: false,
       update: false,
       delete: false,
+      export: false,
     };
   }
   return map;
@@ -40,6 +41,23 @@ export function projectGrantedKeysToMatrix(
     const definition = byKey.get(key);
     if (!definition) {
       continue;
+    }
+    // Field permissions are fine-key only — never unlock module coarse actions.
+    if (definition.field) {
+      continue;
+    }
+    // Section-level views (documents, applications, actions) and list helpers
+    // (search/filter) must not imply module navigation access. Only page-level
+    // view keys (and coarse module.view) project onto matrix.read.
+    if (definition.mapsTo.action === "read") {
+      const isPageView =
+        definition.action === "view" || definition.action === "read";
+      if (!isPageView) {
+        continue;
+      }
+      if (definition.section) {
+        continue;
+      }
     }
     matrix[definition.mapsTo.module][definition.mapsTo.action] = true;
   }

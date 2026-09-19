@@ -3,6 +3,7 @@ import type {
   AssignWorkInput,
   EligibleAssignee,
   EligibleDepartment,
+  EligibleOpsTeam,
   OperationsWorkAnalyticsResult,
   OperationsWorkBulkAssignResult,
   OperationsWorkDetail,
@@ -26,6 +27,19 @@ function listParams(params: OperationsWorkListParams) {
     search: params.search || undefined,
     sort: params.sort,
     order: params.order,
+  };
+}
+
+function eligibleQueryParams(params?: {
+  workType?: string;
+  workTypes?: string[];
+}) {
+  return {
+    workType: params?.workType || undefined,
+    workTypes:
+      params?.workTypes && params.workTypes.length > 0
+        ? params.workTypes.join(",")
+        : undefined,
   };
 }
 
@@ -70,19 +84,39 @@ export async function fetchOperationsWorkDetail(
   return response.data.data;
 }
 
-export async function fetchEligibleWorkAssignees(): Promise<EligibleAssignee[]> {
+export async function fetchEligibleWorkAssignees(params?: {
+  workType?: string;
+  workTypes?: string[];
+}): Promise<EligibleAssignee[]> {
   const response = await apiClient.get<{
     data: { items: EligibleAssignee[] };
-  }>(`${BASE}/eligible-assignees`);
+  }>(`${BASE}/eligible-assignees`, {
+    params: eligibleQueryParams(params),
+  });
   return response.data.data.items;
 }
 
-export async function fetchEligibleWorkDepartments(): Promise<
-  EligibleDepartment[]
-> {
+export async function fetchEligibleWorkDepartments(params?: {
+  workType?: string;
+  workTypes?: string[];
+}): Promise<EligibleDepartment[]> {
   const response = await apiClient.get<{
     data: { items: EligibleDepartment[] };
-  }>(`${BASE}/eligible-departments`);
+  }>(`${BASE}/eligible-departments`, {
+    params: eligibleQueryParams(params),
+  });
+  return response.data.data.items;
+}
+
+export async function fetchEligibleWorkOpsTeams(params?: {
+  workType?: string;
+  workTypes?: string[];
+}): Promise<EligibleOpsTeam[]> {
+  const response = await apiClient.get<{
+    data: { items: EligibleOpsTeam[] };
+  }>(`${BASE}/eligible-teams`, {
+    params: eligibleQueryParams(params),
+  });
   return response.data.data.items;
 }
 

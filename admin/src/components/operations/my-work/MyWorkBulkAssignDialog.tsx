@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import {
   useBulkAssignOperationsWork,
   useEligibleWorkAssignees,
@@ -37,9 +37,20 @@ export function MyWorkBulkAssignDialog({
     null,
   );
 
+  const workTypes = useMemo(
+    () => [...new Set(items.map((item) => item.type))],
+    [items],
+  );
+
   const canQuery = open && items.length > 0;
-  const departmentsQuery = useEligibleWorkDepartments({ enabled: canQuery });
-  const assigneesQuery = useEligibleWorkAssignees({ enabled: canQuery });
+  const departmentsQuery = useEligibleWorkDepartments({
+    enabled: canQuery,
+    workTypes,
+  });
+  const assigneesQuery = useEligibleWorkAssignees({
+    enabled: canQuery,
+    workTypes,
+  });
   const bulkMutation = useBulkAssignOperationsWork();
 
   useEffect(() => {
@@ -53,16 +64,26 @@ export function MyWorkBulkAssignDialog({
 
   if (!open) return null;
 
+  const departments = departmentsQuery.data ?? [];
+  const assignees = assigneesQuery.data ?? [];
+  const departmentsLoaded =
+    !departmentsQuery.isLoading && !departmentsQuery.isFetching;
+  const assigneesLoaded =
+    !assigneesQuery.isLoading && !assigneesQuery.isFetching;
+  const noEligibleDepartments =
+    departmentsLoaded && departments.length === 0;
+  const noEligibleAssignees = assigneesLoaded && assignees.length === 0;
+
   const departmentOptions = [
     { value: "", label: "Select department" },
-    ...(departmentsQuery.data ?? []).map((dept) => ({
+    ...departments.map((dept) => ({
       value: dept.id,
       label: dept.name,
     })),
   ];
   const userOptions = [
     { value: "", label: "Select team member" },
-    ...(assigneesQuery.data ?? []).map((user) => ({
+    ...assignees.map((user) => ({
       value: user.id,
       label: user.fullName,
     })),
@@ -70,13 +91,26 @@ export function MyWorkBulkAssignDialog({
 
   const targetLabel =
     targetType === "department"
-      ? departmentsQuery.data?.find((d) => d.id === targetId)?.name
-      : assigneesQuery.data?.find((u) => u.id === targetId)?.fullName;
+      ? departments.find((d) => d.id === targetId)?.name
+      : assignees.find((u) => u.id === targetId)?.fullName;
+
+  const eligibleOptionsEmpty =
+    targetType === "department" ? noEligibleDepartments : noEligibleAssignees;
+  const hasEligibleOptions =
+    targetType === "department"
+      ? departments.length > 0
+      : assignees.length > 0;
+
+  const canConfirm =
+    Boolean(targetId) &&
+    confirmed &&
+    hasEligibleOptions &&
+    !bulkMutation.isPending;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (!targetId) {
+    if (!targetId || !hasEligibleOptions) {
       setError(
         targetType === "department"
           ? "Select a department."
@@ -230,6 +264,14 @@ export function MyWorkBulkAssignDialog({
               />
             )}
 
+            {eligibleOptionsEmpty ? (
+              <p className="text-[11px] text-warning" role="status">
+                {targetType === "department"
+                  ? "No eligible team found for this task."
+                  : "No eligible assignee found for this task."}
+              </p>
+            ) : null}
+
             {targetId && targetLabel ? (
               <p className="rounded-md border border-border-subtle bg-hero-bg/50 px-3 py-2 text-[11px] text-foreground">
                 Assign {items.length} work item{items.length === 1 ? "" : "s"}{" "}
@@ -274,7 +316,7 @@ export function MyWorkBulkAssignDialog({
               </button>
               <button
                 type="submit"
-                disabled={bulkMutation.isPending || !confirmed || !targetId}
+                disabled={!canConfirm}
                 className="h-8 rounded-lg bg-primary px-3 text-[11px] font-semibold text-white disabled:opacity-60"
               >
                 {bulkMutation.isPending ? "Assigning…" : "Confirm assign"}

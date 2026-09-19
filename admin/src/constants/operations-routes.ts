@@ -72,9 +72,14 @@ export function operationsTeamDetailPath(teamId: string): string {
 }
 
 export function operationsRoleDetailPath(roleId: string): string {
-  return `${OPERATIONS_ROUTES.ROLES}/${encodeURIComponent(roleId)}`;
+  // Role detail page removed — open the editor instead.
+  return operationsRoleEditPath(roleId);
 }
 
 export function operationsRoleEditPath(roleId: string): string {
   return `${OPERATIONS_ROUTES.ROLES}/${encodeURIComponent(roleId)}/edit`;
+}
+
+export function operationsRolePreviewPath(roleId: string): string {
+  return `${OPERATIONS_ROUTES.ROLES}/${encodeURIComponent(roleId)}/preview`;
 }

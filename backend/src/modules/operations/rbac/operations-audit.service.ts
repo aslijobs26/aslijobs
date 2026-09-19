@@ -30,6 +30,9 @@ function redactSecrets(value: unknown): unknown {
     "refreshTokenHash",
     "accessToken",
     "token",
+    "invitationToken",
+    "invitationTokenHash",
+    "temporaryPassword",
     "otp",
     "otpHash",
   ]);

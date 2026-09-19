@@ -80,6 +80,24 @@ const operationsTeamUserSchema = new Schema(
       ref: "OperationsTeamUser",
       default: null,
     },
+    invitationLastSentAt: {
+      type: Date,
+      default: null,
+    },
+    invitationResendCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    invitationEmailStatus: {
+      type: String,
+      default: null,
+    },
+    invitationEmailError: {
+      type: String,
+      default: null,
+      maxlength: 400,
+    },
     status: {
       type: String,
       enum: OPERATIONS_TEAM_USER_STATUSES,

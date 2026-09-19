@@ -40,6 +40,14 @@ operationsTeamRouter.post(
   asyncHandler(operationsTeamController.create),
 );
 
+operationsTeamRouter.post(
+  "/:memberId/resend-invitation",
+  operationsTeamWriteRateLimit,
+  requireOperationsPermission("team", "create"),
+  validate(operationsTeamMemberIdParamsSchema, "params"),
+  asyncHandler(operationsTeamController.resendInvitation),
+);
+
 operationsTeamRouter.patch(
   "/:memberId",
   operationsTeamWriteRateLimit,
@@ -56,6 +64,14 @@ operationsTeamRouter.patch(
   validate(operationsTeamMemberIdParamsSchema, "params"),
   validate(updateOperationsTeamMemberStatusBodySchema, "body"),
   asyncHandler(operationsTeamController.updateStatus),
+);
+
+operationsTeamRouter.delete(
+  "/:memberId",
+  operationsTeamWriteRateLimit,
+  requireOperationsPermission("team", "delete"),
+  validate(operationsTeamMemberIdParamsSchema, "params"),
+  asyncHandler(operationsTeamController.remove),
 );
 
 export default operationsTeamRouter;

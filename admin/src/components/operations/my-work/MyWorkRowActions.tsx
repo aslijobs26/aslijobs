@@ -92,13 +92,19 @@ export function MyWorkRowActions({
   if ((isTeamQueue || !hasAssignee) && canAssign) {
     actions.push({ action: "assign", label: "Assign" });
   }
-  if (hasAssignee && canReassign && item.status !== "completed") {
+  if (
+    canReassign &&
+    item.status !== "completed" &&
+    (hasAssignee || item.capabilityMismatch)
+  ) {
     actions.push({ action: "reassign", label: "Reassign" });
   }
 
   for (const next of statusActions(item.status)) {
     if (next.action === "claim" && (!canClaim || !isTeamQueue)) continue;
-    if (next.action === "complete" && !canComplete) continue;
+    if (next.action === "complete" && (!canComplete || item.capabilityMismatch)) {
+      continue;
+    }
     if (
       (next.action === "start" ||
         next.action === "wait" ||

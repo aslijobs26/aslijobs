@@ -30,6 +30,7 @@ import {
   useUpdateOperationsEmployerStatus,
   useUpdateOperationsEmployerVerification,
 } from "../hooks/use-operations-employers";
+import { useOperationsPermissions } from "../hooks/use-operations-permissions";
 import type {
   OperationsEmployerDatePreset,
   OperationsEmployerListItem,
@@ -117,6 +118,8 @@ function queryErrorMessage(error: unknown, fallback: string): string {
 
 export function OperationsEmployersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { canKey } = useOperationsPermissions();
+  const canCreateEmployer = canKey("employers.list.create");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [tableFilters, setTableFilters] = useState<EmployersTableFiltersState>(
@@ -450,7 +453,10 @@ export function OperationsEmployersPage() {
                   dateTo,
                 })
               }
-              onAddEmployer={() => setAddDialogOpen(true)}
+              onAddEmployer={() => {
+                if (!canCreateEmployer) return;
+                setAddDialogOpen(true);
+              }}
               onExport={handleExport}
               isExporting={exportMutation.isPending}
             />
@@ -570,10 +576,12 @@ export function OperationsEmployersPage() {
         )}
       </div>
 
-      <AddEmployerDialog
-        open={addDialogOpen}
-        onClose={() => setAddDialogOpen(false)}
-      />
+      {canCreateEmployer ? (
+        <AddEmployerDialog
+          open={addDialogOpen}
+          onClose={() => setAddDialogOpen(false)}
+        />
+      ) : null}
 
       {actionType && selectedEmployer ? (
         <div

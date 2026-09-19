@@ -4,9 +4,9 @@ import { useMemo, type CSSProperties } from "react";
 import indiaStatesMap from "../../../assets/india-states-map.json";
 import {
   OPERATIONS_BRAND,
-  OPERATIONS_NAV_ITEM_PERMISSION_MODULE,
   OPERATIONS_NAV_SECTIONS,
 } from "../../../constants/operations-navigation";
+import { filterOperationsNavSections, getOrganizationEntryPath } from "../../../constants/operations-navigation-access";
 import {
   OPERATIONS_SIDEBAR_COLLAPSED_WIDTH,
   OPERATIONS_SIDEBAR_COLLAPSED_WIDTH_COMPACT,
@@ -119,7 +119,7 @@ export function OperationsSidebar({
   const sidebarCollapsedWidth = isCompact
     ? OPERATIONS_SIDEBAR_COLLAPSED_WIDTH_COMPACT
     : OPERATIONS_SIDEBAR_COLLAPSED_WIDTH;
-  const { can, isLoading: permissionsLoading } = useOperationsPermissions();
+  const { can, canKey, isLoading: permissionsLoading, user } = useOperationsPermissions();
   const badgesQuery = useOperationsRegistrationBadges();
   const badges = badgesQuery.data;
   const canReadMyWork = !permissionsLoading && can("my_work", "read");
@@ -133,20 +133,23 @@ export function OperationsSidebar({
       : undefined;
 
   const visibleNavSections = useMemo(() => {
-    return OPERATIONS_NAV_SECTIONS.map((section) => ({
+    if (permissionsLoading) {
+      return [];
+    }
+    return filterOperationsNavSections(
+      OPERATIONS_NAV_SECTIONS,
+      can,
+      Boolean(user),
+      canKey,
+    ).map((section) => ({
       ...section,
-      items: section.items.filter((item) => {
-        const moduleKey = OPERATIONS_NAV_ITEM_PERMISSION_MODULE[item.id];
-        if (!moduleKey) {
-          return true;
-        }
-        if (permissionsLoading) {
-          return false;
-        }
-        return can(moduleKey, "read");
-      }),
-    })).filter((section) => section.items.length > 0);
-  }, [can, permissionsLoading]);
+      items: section.items.map((item) =>
+        item.id === "organization"
+          ? { ...item, href: getOrganizationEntryPath(can) }
+          : item,
+      ),
+    }));
+  }, [can, canKey, permissionsLoading, user]);
 
   return (
     <>

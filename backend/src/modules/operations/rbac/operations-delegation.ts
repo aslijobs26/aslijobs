@@ -35,8 +35,9 @@ export function assertDelegationBoundary(input: {
 
     if (!delegatable.has(grant.key)) {
       throw new AppError(
-        "You can only assign permissions within your delegation boundary.",
+        "You cannot delegate permissions you do not possess.",
         HTTP_STATUS.FORBIDDEN,
+        { code: "ROLE_DELEGATION_FORBIDDEN", key: grant.key },
       );
     }
 

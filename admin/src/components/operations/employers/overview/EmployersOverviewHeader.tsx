@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import type { OperationsEmployersAnalyticsPreset } from "../../../../types/operations-employers";
 import { OperationsDatePicker } from "../../../ui/OperationsDatePicker";
+import { OperationsCanKey } from "../../auth/OperationsCanKey";
 import { OperationsFilterSelect } from "../../jobs/OperationsFilterSelect";
 
 const PRESET_OPTIONS: { value: OperationsEmployersAnalyticsPreset; label: string }[] =
@@ -119,24 +120,28 @@ export function EmployersOverviewHeader({
           ) : null}
 
           <div className="flex min-w-0 flex-wrap items-center gap-2 max-sm:w-full">
-            <button
-              type="button"
-              onClick={onExport}
-              disabled={isExporting}
-              className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 max-sm:min-w-[7.5rem] sm:flex-none"
-            >
-              <Download className="size-3.5" aria-hidden="true" />
-              {isExporting ? "Exporting…" : "Export"}
-            </button>
+            <OperationsCanKey permissionKey="employers.list.export">
+              <button
+                type="button"
+                onClick={onExport}
+                disabled={isExporting}
+                className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 max-sm:min-w-[7.5rem] sm:flex-none"
+              >
+                <Download className="size-3.5" aria-hidden="true" />
+                {isExporting ? "Exporting…" : "Export"}
+              </button>
+            </OperationsCanKey>
 
-            <button
-              type="button"
-              onClick={onAddEmployer}
-              className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
-            >
-              <Plus className="size-3.5" aria-hidden="true" />
-              Add Employer
-            </button>
+            <OperationsCanKey permissionKey="employers.list.create">
+              <button
+                type="button"
+                onClick={onAddEmployer}
+                className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
+              >
+                <Plus className="size-3.5" aria-hidden="true" />
+                Add Employer
+              </button>
+            </OperationsCanKey>
           </div>
         </div>
       </div>

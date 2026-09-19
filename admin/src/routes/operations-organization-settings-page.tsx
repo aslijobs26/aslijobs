@@ -4,6 +4,7 @@ import { OperationsLayout } from "../components/operations/layout/OperationsLayo
 import { OperationsCan } from "../components/operations/auth/OperationsCan";
 import { OperationsFilterSelect } from "../components/operations/jobs/OperationsFilterSelect";
 import { getOperationsApiErrorMessage } from "../components/operations/team/team-format";
+import { useOperationsPermissions } from "../hooks/use-operations-permissions";
 import {
   useOperationsOrganizationSettings,
   useUpdateOperationsOrganizationSettings,
@@ -18,6 +19,7 @@ const TIMEZONES = [
 ];
 
 export function OperationsOrganizationSettingsPage() {
+  const { can } = useOperationsPermissions();
   const settingsQuery = useOperationsOrganizationSettings();
   const updateMutation = useUpdateOperationsOrganizationSettings();
   const [organizationName, setOrganizationName] = useState("");
@@ -91,7 +93,8 @@ export function OperationsOrganizationSettingsPage() {
               <input
                 value={organizationName}
                 onChange={(event) => setOrganizationName(event.target.value)}
-                className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                disabled={!can("settings", "update")}
+                className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-70"
               />
             </label>
             <div className="grid gap-1.5">

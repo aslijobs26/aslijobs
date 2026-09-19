@@ -9,6 +9,7 @@ import {
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import { OperationsCard } from "../../../ui/OperationsCard";
+import { OperationsCanKey } from "../../auth/OperationsCanKey";
 
 interface JobsQuickActionsProps {
   onExport: () => void;
@@ -52,16 +53,20 @@ export function JobsQuickActions({
             {content("Check Jobs at Risk", AlertTriangle)}
           </button>
         </li>
-        <li>
-          <Link to={OPERATIONS_ROUTES.JOBS_POST} className={className}>
-            {content("Post a Job", Briefcase)}
-          </Link>
-        </li>
-        <li>
-          <button type="button" onClick={onExport} className={className}>
-            {content("Download Jobs Report", Download)}
-          </button>
-        </li>
+        <OperationsCanKey permissionKey="jobs.post.create">
+          <li>
+            <Link to={OPERATIONS_ROUTES.JOBS_POST} className={className}>
+              {content("Post a Job", Briefcase)}
+            </Link>
+          </li>
+        </OperationsCanKey>
+        <OperationsCanKey permissionKey="jobs.list.export">
+          <li>
+            <button type="button" onClick={onExport} className={className}>
+              {content("Download Jobs Report", Download)}
+            </button>
+          </li>
+        </OperationsCanKey>
       </ul>
     </OperationsCard>
   );

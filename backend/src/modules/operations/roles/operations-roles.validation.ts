@@ -6,7 +6,7 @@ const objectId = z
   .regex(/^[a-fA-F0-9]{24}$/, "Invalid id.");
 
 const grantSchema = z.object({
-  key: z.string().trim().min(3).max(160),
+  key: z.string().trim().min(3).max(200),
   access: z.literal("allow").optional().default("allow"),
   canDelegate: z.boolean().optional().default(false),
 });
@@ -35,6 +35,7 @@ export const updateOperationsRoleBodySchema = createOperationsRoleBodySchema
   .partial()
   .extend({
     status: z.enum(["active", "archived"]).optional(),
+    expectedRevision: z.coerce.number().int().min(1),
   });
 
 export const archiveOperationsRoleBodySchema = z.object({

@@ -8,6 +8,7 @@ import { slugifyOperationsName } from "../rbac/operations-slug.js";
 import type { OperationsResolvedAccess } from "../rbac/operations-access.types.js";
 import {
   assertFineOrCoarsePermission,
+  canViewOperationsMemberMobile,
   getRoleDescendantIds,
   operationsAccessCan,
   operationsAccessCanKey,
@@ -30,7 +31,6 @@ import {
   TEAM_ORGANIZATION_UPDATE_KEY,
   TEAM_ORGANIZATION_VIEW_KEY,
   TEAM_TEAMS_CREATE_KEY,
-  TEAM_MEMBERS_MOBILE_VIEW_KEY,
 } from "../rbac/operations-permission-catalog.js";
 import {
   OperationsOrgUnitModel,
@@ -1003,6 +1003,7 @@ class OperationsOrganizationService {
         .lean(),
     ]);
 
+    const showMobile = canViewOperationsMemberMobile(access);
     return {
       unitId: unit.id,
       page: query.page,
@@ -1013,15 +1014,7 @@ class OperationsOrganizationService {
         id: String(item._id),
         fullName: item.fullName,
         email: item.email ?? null,
-        mobileNumber:
-          access.isSuperAdmin ||
-          operationsAccessCanKey(access, TEAM_MEMBERS_MOBILE_VIEW_KEY) ||
-          (!access.grantedKeys.some(
-            (key) => key === "team" || key.startsWith("team."),
-          ) &&
-            operationsAccessCan(access, "team", "read"))
-            ? item.mobileNumber
-            : "",
+        ...(showMobile ? { mobileNumber: item.mobileNumber } : {}),
         status: item.status,
         role: item.role,
         roleId: item.roleId ? String(item.roleId) : null,

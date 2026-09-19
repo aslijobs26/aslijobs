@@ -2,7 +2,10 @@ import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
 import { sendSuccess } from "../../../utils/api-response.js";
-import { assertOperationsPermissionKey } from "../rbac/operations-access.service.js";
+import {
+  assertFineOrCoarsePermission,
+  assertOperationsPermissionKey,
+} from "../rbac/operations-access.service.js";
 import {
   sanitizeEmployerDetail,
   sanitizeEmployerListItem,
@@ -91,12 +94,19 @@ export const operationsEmployersController = {
   },
 
   async create(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertFineOrCoarsePermission(
+      access,
+      "employers.list.create",
+      "employers",
+      "create",
+    );
     const body = req.body as CreateOperationsEmployerBody;
     const result = await operationsEmployersService.createEmployer(body);
 
     sendSuccess(res, HTTP_STATUS.CREATED, {
       message: "Employer created successfully.",
-      data: sanitizeEmployerDetail(result, requireAccess(req)),
+      data: sanitizeEmployerDetail(result, access),
     });
   },
 

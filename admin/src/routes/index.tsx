@@ -1,5 +1,6 @@
 import { OperationsAuthGuard } from "../components/operations/auth/OperationsAuthGuard";
 import { OperationsPermissionRouteGuard } from "../components/operations/auth/OperationsPermissionRouteGuard";
+import { RolePreviewBootstrap } from "../components/operations/auth/RolePreviewBootstrap";
 import { OPERATIONS_ROUTES } from "../constants/operations-routes";
 import { OperationsPermissionProvider } from "../providers/operations-permission-provider";
 import { OperationsCandidatesDetailPage } from "./operations-candidates-detail-page";
@@ -17,8 +18,8 @@ import { OperationsActivityLogPage } from "./operations-activity-log-page";
 import { OperationsDepartmentsPage } from "./operations-departments-page";
 import { OperationsOrganizationPage } from "./operations-organization-page";
 import { OperationsPlaceholderPage } from "./operations-placeholder-page";
-import { OperationsRoleDetailPage } from "./operations-role-detail-page";
 import { OperationsRoleEditorPage } from "./operations-role-editor-page";
+import { OperationsRolePreviewPage } from "./operations-role-preview-page";
 import { OperationsRolesPage } from "./operations-roles-page";
 import { OperationsTeamPage } from "./operations-team-page";
 import { OperationsTeamDetailPage } from "./operations-team-detail-page";
@@ -38,9 +39,11 @@ function OperationsProtectedLayout() {
   return (
     <OperationsAuthGuard>
       <OperationsPermissionProvider>
-        <OperationsPermissionRouteGuard>
-          <Outlet />
-        </OperationsPermissionRouteGuard>
+        <RolePreviewBootstrap>
+          <OperationsPermissionRouteGuard>
+            <Outlet />
+          </OperationsPermissionRouteGuard>
+        </RolePreviewBootstrap>
       </OperationsPermissionProvider>
     </OperationsAuthGuard>
   );
@@ -175,8 +178,12 @@ export function AppRoutes() {
           element={<OperationsRoleEditorPage />}
         />
         <Route
+          path={`${OPERATIONS_ROUTES.ROLES}/:roleId/preview`}
+          element={<OperationsRolePreviewPage />}
+        />
+        <Route
           path={`${OPERATIONS_ROUTES.ROLES}/:roleId`}
-          element={<OperationsRoleDetailPage />}
+          element={<Navigate to="edit" replace />}
         />
         <Route
           path={OPERATIONS_ROUTES.ROLES}

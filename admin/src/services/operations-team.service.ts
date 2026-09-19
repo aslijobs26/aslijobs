@@ -64,3 +64,21 @@ export async function updateOperationsTeamMemberStatus(
   );
   return response.data.data;
 }
+
+export async function resendOperationsTeamInvitation(
+  memberId: string,
+): Promise<OperationsTeamMember> {
+  const response = await apiClient.post<{ data: OperationsTeamMember }>(
+    `${BASE}/${encodeURIComponent(memberId)}/resend-invitation`,
+  );
+  return response.data.data;
+}
+
+export async function deleteOperationsTeamMember(
+  memberId: string,
+): Promise<{ id: string; deleted: true }> {
+  const response = await apiClient.delete<{ data: { id: string; deleted: true } }>(
+    `${BASE}/${encodeURIComponent(memberId)}`,
+  );
+  return response.data.data;
+}

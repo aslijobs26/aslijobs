@@ -12,6 +12,7 @@ import type {
   CreateOperationsOrgUnitInput,
   UpdateOperationsOrgUnitInput,
 } from "../types/operations-organization";
+import { OPERATIONS_AUTH_QUERY_KEY } from "../utils/operations-session";
 import {
   operationsQueryRetryDelay,
   shouldRetryOperationsQuery,
@@ -96,9 +97,14 @@ export function useOperationsOrgPeople(
 async function invalidateOrganizationQueries(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  await queryClient.invalidateQueries({
-    queryKey: OPERATIONS_ORGANIZATION_QUERY_KEY,
-  });
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: OPERATIONS_ORGANIZATION_QUERY_KEY,
+    }),
+    queryClient.invalidateQueries({
+      queryKey: OPERATIONS_AUTH_QUERY_KEY,
+    }),
+  ]);
 }
 
 export function useCreateOperationsOrgUnit() {

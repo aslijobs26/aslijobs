@@ -25,6 +25,13 @@ export type OperationsOpsTeam = {
   revision: number;
   createdAt: string | null;
   updatedAt: string | null;
+  capabilities?: Array<{
+    workType: string;
+    typeLabel: string;
+    moduleLabel: string;
+    capabilityLabel: string;
+    available: boolean;
+  }>;
 };
 
 export type OperationsOpsTeamMetrics = {

@@ -52,6 +52,8 @@ export interface OperationsWorkListItem {
   revision: number;
   createdAt: string;
   updatedAt: string;
+  capabilityMismatch?: boolean;
+  capabilityLabel?: string | null;
 }
 
 export interface OperationsWorkHistoryEntry {
@@ -74,6 +76,17 @@ export interface OperationsWorkDetail extends OperationsWorkListItem {
   history: OperationsWorkHistoryEntry[];
   metadata: Record<string, unknown>;
   sourceEventKey: string | null;
+  requiredCapability?: {
+    workType: string;
+    typeLabel: string;
+    moduleLabel: string;
+    capabilityLabel: string;
+    requiredPermissions: Array<{
+      label: string;
+      fineKeys: string[];
+      coarse: string;
+    }>;
+  } | null;
 }
 
 export interface OperationsWorkListParams {
@@ -167,6 +180,13 @@ export interface EligibleDepartment {
   id: string;
   name: string;
   slug: string;
+}
+
+export interface EligibleOpsTeam {
+  id: string;
+  name: string;
+  departmentId: string | null;
+  departmentName: string | null;
 }
 
 export interface OperationsWorkBulkAssignResult {

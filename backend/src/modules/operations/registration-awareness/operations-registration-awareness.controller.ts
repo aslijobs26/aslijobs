@@ -98,6 +98,8 @@ export class OperationsRegistrationAwarenessController {
     const data = await operationsRegistrationAwarenessService.listNotifications({
       userId,
       limit: Number.isFinite(limit) ? limit : undefined,
+      permissions: req.operationsPermissions,
+      isSuperAdmin: req.operationsAccess?.isSuperAdmin === true,
     });
 
     sendSuccess(res, HTTP_STATUS.OK, {

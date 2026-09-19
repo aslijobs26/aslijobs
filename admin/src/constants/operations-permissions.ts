@@ -37,6 +37,7 @@ export const OPERATIONS_PERMISSION_ACTIONS = [
   "create",
   "update",
   "delete",
+  "export",
 ] as const;
 
 export type OperationsPermissionAction =
@@ -58,6 +59,7 @@ function denyAllActions(): OperationsModulePermissions {
     create: false,
     update: false,
     delete: false,
+    export: false,
   };
 }
 
@@ -67,6 +69,7 @@ function allowAllActions(): OperationsModulePermissions {
     create: true,
     update: true,
     delete: true,
+    export: true,
   };
 }
 
@@ -76,6 +79,7 @@ function readOnlyActions(): OperationsModulePermissions {
     create: false,
     update: false,
     delete: false,
+    export: false,
   };
 }
 
@@ -85,10 +89,11 @@ function readWriteActions(): OperationsModulePermissions {
     create: true,
     update: true,
     delete: true,
+    export: true,
   };
 }
 
-function buildPermissionMap(
+export function buildPermissionMap(
   overrides: Partial<
     Record<OperationsPermissionModule, OperationsModulePermissions>
   >,

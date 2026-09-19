@@ -13,6 +13,37 @@ export class AppError extends Error {
   }
 }
 
+function mapKnownPersistenceError(
+  err: Error,
+): { statusCode: number; message: string } | null {
+  const code = (err as { code?: number }).code;
+  if (code === 11000) {
+    return {
+      statusCode: 409,
+      message: "A record with these details already exists.",
+    };
+  }
+  if (err.name === "ValidationError") {
+    return {
+      statusCode: 400,
+      message: "The submitted data is invalid.",
+    };
+  }
+  if (err.name === "VersionError") {
+    return {
+      statusCode: 409,
+      message: "This record was updated by someone else. Reload and try again.",
+    };
+  }
+  if (err.name === "CastError") {
+    return {
+      statusCode: 400,
+      message: "The submitted data is invalid.",
+    };
+  }
+  return null;
+}
+
 export function errorMiddleware(
   err: Error,
   _req: Request,
@@ -33,9 +64,15 @@ export function errorMiddleware(
     return;
   }
 
-  const statusCode = err instanceof AppError ? err.statusCode : 500;
+  const mapped = mapKnownPersistenceError(err);
+  const statusCode =
+    err instanceof AppError
+      ? err.statusCode
+      : mapped?.statusCode ?? 500;
   const message =
-    err instanceof AppError ? err.message : "Internal server error";
+    err instanceof AppError
+      ? err.message
+      : mapped?.message ?? "Internal server error";
   const details = err instanceof AppError ? err.details : undefined;
 
   if (process.env.NODE_ENV === "development" || statusCode >= 500) {

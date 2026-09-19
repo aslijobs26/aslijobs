@@ -4,7 +4,7 @@ import type { OperationsAuthUser } from "../types/operations-auth";
 import { getOperationsAuthUser, hasOperationsAuthSession } from "../utils/operations-auth-storage";
 import { OPERATIONS_AUTH_QUERY_KEY } from "../utils/operations-session";
 
-const SESSION_STALE_TIME_MS = 5 * 60_000;
+const SESSION_STALE_TIME_MS = 15_000;
 const SESSION_GC_TIME_MS = 30 * 60_000;
 
 type OperationsSessionQueryMode = "protected" | "guest";
@@ -31,9 +31,9 @@ export function useOperationsSessionQuery({
     retry: false,
     staleTime: SESSION_STALE_TIME_MS,
     gcTime: SESSION_GC_TIME_MS,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
     initialData: cachedSession,
     initialDataUpdatedAt: cachedSession ? Date.now() : undefined,
   });

@@ -142,7 +142,7 @@ export type OperationsOrgPerson = {
   id: string;
   fullName: string;
   email: string | null;
-  mobileNumber: string;
+  mobileNumber?: string;
   status: string;
   role: string;
   roleId: string | null;

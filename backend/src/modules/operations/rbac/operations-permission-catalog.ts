@@ -88,6 +88,7 @@ function coarseModule(
     create: "Create",
     update: "Update",
     delete: "Delete",
+    export: "Export",
   };
 
   return actions.map((action) =>
@@ -109,7 +110,7 @@ function employerCatalog(): OperationsPermissionDefinition[] {
     { action: "view", label: "View list", mapsToAction: "read" },
     { action: "search", label: "Search", mapsToAction: "read" },
     { action: "filter", label: "Filter", mapsToAction: "read" },
-    { action: "export", label: "Export", mapsToAction: "read" },
+    { action: "export", label: "Export", mapsToAction: "export" },
     { action: "create", label: "Create", mapsToAction: "create" },
   ];
 
@@ -239,7 +240,7 @@ function candidateCatalog(): OperationsPermissionDefinition[] {
       page: "list",
       action: "export",
       label: "Candidates · List · Export",
-      mapsToAction: "read",
+      mapsToAction: "export",
     }),
     define({
       module: "candidates",
@@ -285,6 +286,7 @@ function jobCatalog(): OperationsPermissionDefinition[] {
     { action: "view", label: "View list", mapsToAction: "read" as const },
     { action: "search", label: "Search", mapsToAction: "read" as const },
     { action: "filter", label: "Filter", mapsToAction: "read" as const },
+    { action: "export", label: "Export", mapsToAction: "export" as const },
   ];
 
   const statusActions = [
@@ -392,7 +394,7 @@ function placementCatalog(): OperationsPermissionDefinition[] {
       page: "list",
       action: "export",
       label: "Placements · List · Export",
-      mapsToAction: "read",
+      mapsToAction: "export",
     }),
     define({
       module: "placements",
@@ -503,7 +505,7 @@ function myWorkCatalog(): OperationsPermissionDefinition[] {
       module: "my_work",
       action: "export",
       label: "My Work · Export",
-      mapsToAction: "read",
+      mapsToAction: "export",
     }),
   ];
 }
@@ -544,6 +546,13 @@ function teamCatalog(): OperationsPermissionDefinition[] {
       action: "deactivate",
       label: "Team · Members · Deactivate",
       mapsToAction: "update",
+    }),
+    define({
+      module: "team",
+      page: "members",
+      action: "delete",
+      label: "Team · Members · Delete",
+      mapsToAction: "delete",
     }),
     define({
       module: "team",
@@ -797,6 +806,7 @@ export const TEAM_MEMBERS_INVITE_KEY = "team.members.invite" as const;
 export const TEAM_MEMBERS_UPDATE_KEY = "team.members.update" as const;
 export const TEAM_MEMBERS_ACTIVATE_KEY = "team.members.activate" as const;
 export const TEAM_MEMBERS_DEACTIVATE_KEY = "team.members.deactivate" as const;
+export const TEAM_MEMBERS_DELETE_KEY = "team.members.delete" as const;
 export const TEAM_MEMBERS_ASSIGN_ROLE_KEY = "team.members.assign_role" as const;
 export const TEAM_MEMBERS_ASSIGN_DEPARTMENT_KEY =
   "team.members.assign_department" as const;
@@ -963,6 +973,9 @@ export const CANDIDATE_DOCUMENTS_PERMISSION_KEY =
 
 export const CANDIDATE_EXPORT_PERMISSION_KEY =
   "candidates.list.export" as const;
+
+export const JOBS_LIST_EXPORT_KEY = "jobs.list.export" as const;
+export const JOBS_POST_CREATE_KEY = "jobs.post.create" as const;
 
 export const JOB_STATUS_ACTION_PERMISSION_KEYS = {
   approve: "jobs.detail.actions.approve",

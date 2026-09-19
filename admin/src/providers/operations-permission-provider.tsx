@@ -39,6 +39,7 @@ export function OperationsPermissionProvider({
       permissions,
       isLoading: sessionQuery.isPending && !user,
       isSuperAdmin,
+      isRolePreview: false,
       canCreateRoles: Boolean(isSuperAdmin || user?.canCreateRoles),
       canManageUsers: Boolean(isSuperAdmin || user?.canManageUsers),
       canAssignRoles: Boolean(isSuperAdmin || user?.canAssignRoles),

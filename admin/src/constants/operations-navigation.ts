@@ -19,14 +19,27 @@ import {
 } from "lucide-react";
 import { OPERATIONS_ROUTES } from "./operations-routes";
 import type { OperationsNavBadgeKey } from "../types/operations-registration-awareness";
+import type {
+  OperationsPermissionAction,
+  OperationsPermissionModule,
+} from "./operations-permissions";
 
 export type { OperationsNavBadgeKey };
+
+export type OperationsNavPermission = {
+  module: OperationsPermissionModule;
+  action?: OperationsPermissionAction;
+};
 
 export interface OperationsNavItem {
   id: string;
   label: string;
   href: string;
   icon: LucideIcon;
+  /** Authenticated Organization users always see this item. */
+  allowAuthenticated?: boolean;
+  requiredPermission?: OperationsNavPermission;
+  requiredAnyPermissions?: OperationsNavPermission[];
   /** Static badge count (prefer badgeKey for live counts). */
   badge?: number;
   /** Live badge from registration-awareness / nav badges API. */
@@ -56,18 +69,21 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Home",
         href: OPERATIONS_ROUTES.HOME,
         icon: Home,
+        allowAuthenticated: true,
       },
       {
         id: "my-work",
         label: "My Work",
         href: OPERATIONS_ROUTES.MY_WORK,
         icon: FolderKanban,
+        requiredPermission: { module: "my_work", action: "read" },
       },
       {
         id: "inbox",
         label: "Inbox",
         href: OPERATIONS_ROUTES.INBOX,
         icon: Inbox,
+        requiredPermission: { module: "whatsapp", action: "read" },
       },
     ],
   },
@@ -80,6 +96,7 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Jobseekers",
         href: OPERATIONS_ROUTES.CANDIDATES,
         icon: Users,
+        requiredPermission: { module: "candidates", action: "read" },
         badgeKey: "newCandidates",
         badgeAriaLabel: (count) =>
           `${count} new jobseeker registration${count === 1 ? "" : "s"}`,
@@ -89,6 +106,7 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Employers",
         href: OPERATIONS_ROUTES.EMPLOYERS,
         icon: Building2,
+        requiredPermission: { module: "employers", action: "read" },
         badgeKey: "newEmployers",
         badgeAriaLabel: (count) =>
           `${count} new employer registration${count === 1 ? "" : "s"}`,
@@ -98,6 +116,7 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Verifications",
         href: OPERATIONS_ROUTES.VERIFICATIONS,
         icon: FileCheck2,
+        requiredPermission: { module: "verifications", action: "read" },
         badgeKey: "pendingVerifications",
         badgeAriaLabel: (count) =>
           `${count} pending verification${count === 1 ? "" : "s"}`,
@@ -107,6 +126,7 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Jobs",
         href: OPERATIONS_ROUTES.JOBS,
         icon: Briefcase,
+        requiredPermission: { module: "jobs", action: "read" },
         badgeKey: "pendingJobs",
         badgeAriaLabel: (count) =>
           `${count} pending job${count === 1 ? "" : "s"}`,
@@ -116,12 +136,14 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Placements",
         href: OPERATIONS_ROUTES.PLACEMENTS,
         icon: Rocket,
+        requiredPermission: { module: "placements", action: "read" },
       },
       {
         id: "support",
         label: "Support",
         href: OPERATIONS_ROUTES.SUPPORT_TICKETS,
         icon: HelpCircle,
+        requiredPermission: { module: "support", action: "read" },
       },
     ],
   },
@@ -134,18 +156,21 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Business Development",
         href: OPERATIONS_ROUTES.BUSINESS_DEVELOPMENT,
         icon: Network,
+        requiredPermission: { module: "campaigns", action: "read" },
       },
       {
         id: "promotions-events",
         label: "Promotions & Events",
         href: OPERATIONS_ROUTES.PROMOTIONS_EVENTS,
         icon: Megaphone,
+        requiredPermission: { module: "campaigns", action: "read" },
       },
       {
         id: "payments-subscriptions",
         label: "Payments & Subscriptions",
         href: OPERATIONS_ROUTES.PAYMENTS,
         icon: Shield,
+        requiredPermission: { module: "billing", action: "read" },
       },
     ],
   },
@@ -158,18 +183,26 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Operations",
         href: OPERATIONS_ROUTES.DASHBOARD,
         icon: LayoutDashboard,
+        requiredPermission: { module: "dashboard", action: "read" },
       },
       {
         id: "analytics",
         label: "Analytics",
         href: OPERATIONS_ROUTES.ANALYTICS,
         icon: BarChart3,
+        requiredPermission: { module: "jobs", action: "read" },
       },
       {
         id: "organization",
         label: "Organization",
         href: OPERATIONS_ROUTES.ORGANIZATION,
         icon: Network,
+        requiredAnyPermissions: [
+          { module: "team", action: "read" },
+          { module: "roles", action: "read" },
+          { module: "departments", action: "read" },
+          { module: "settings", action: "read" },
+        ],
       },
     ],
   },
@@ -182,39 +215,18 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Languages & Localization",
         href: OPERATIONS_ROUTES.LANGUAGES,
         icon: Languages,
+        requiredPermission: { module: "settings", action: "read" },
       },
       {
         id: "settings",
         label: "Settings",
         href: OPERATIONS_ROUTES.SETTINGS,
         icon: Settings,
+        requiredPermission: { module: "settings", action: "read" },
       },
     ],
   },
 ];
-
-export const OPERATIONS_NAV_ITEM_PERMISSION_MODULE: Record<
-  string,
-  import("./operations-permissions").OperationsPermissionModule
-> = {
-  home: "dashboard",
-  "my-work": "my_work",
-  inbox: "whatsapp",
-  jobseekers: "candidates",
-  employers: "employers",
-  verifications: "verifications",
-  jobs: "jobs",
-  placements: "placements",
-  support: "support",
-  "business-development": "campaigns",
-  "promotions-events": "campaigns",
-  "payments-subscriptions": "billing",
-  "operations-dashboard": "dashboard",
-  analytics: "jobs",
-  organization: "team",
-  languages: "settings",
-  settings: "settings",
-};
 
 export const OPERATIONS_BRAND = {
   name: "ASLI OS",

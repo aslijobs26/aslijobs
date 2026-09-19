@@ -30,6 +30,7 @@ export const OPERATIONS_NOTIFICATION_ENTITY_TYPES = [
   ...OPERATIONS_REGISTRATION_ENTITY_TYPES,
   "job",
   "work",
+  "role",
 ] as const;
 
 export type OperationsNotificationEntityType =
@@ -47,6 +48,7 @@ export const OPERATIONS_NOTIFICATION_TYPES = [
   "work.assigned",
   "work.reassigned",
   "work.claimed",
+  "role.created",
 ] as const;
 
 export type OperationsNotificationType =

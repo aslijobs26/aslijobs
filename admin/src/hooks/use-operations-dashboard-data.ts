@@ -1,6 +1,11 @@
 import { useMemo } from "react";
 import { OPERATIONS_DASHBOARD_MOCK } from "../data/operations-dashboard.mock";
 import { useOperationsPermissions } from "./use-operations-permissions";
+import { canAccessOperationsPath } from "../constants/operations-navigation-access";
+import type {
+  OperationsPermissionAction,
+  OperationsPermissionModule,
+} from "../constants/operations-permissions";
 import { useOperationsCandidates } from "./use-operations-candidates";
 import { useOperationsEmployers } from "./use-operations-employers";
 import { useOperationsJobs } from "./use-operations-jobs";
@@ -35,13 +40,44 @@ function trendFromPercent(percent: number | null | undefined): {
   };
 }
 
+type PermissionCan = (
+  module: OperationsPermissionModule,
+  action?: OperationsPermissionAction,
+) => boolean;
+
+function canAccessDashboardQuickAction(
+  action: { id: string; href: string },
+  can: PermissionCan,
+  canKey: (key: string) => boolean,
+  canReadPath: (href: string) => boolean,
+): boolean {
+  if (!canReadPath(action.href)) {
+    return false;
+  }
+
+  switch (action.id) {
+    case "qa-employer":
+      return can("employers", "create") || canKey("employers.list.create");
+    case "qa-job":
+      return can("jobs", "create") || canKey("jobs.post.create");
+    case "qa-jobseeker":
+      return can("candidates", "create");
+    default:
+      return true;
+  }
+}
+
 /**
  * Home command-center data.
  * Platform Pulse + Today's Activity use live KPI APIs only (no mock numbers).
  */
 export function useOperationsDashboardData(): OperationsDashboardData {
-  const { can } = useOperationsPermissions();
+  const { can, canKey, user } = useOperationsPermissions();
   const base = OPERATIONS_DASHBOARD_MOCK;
+  const isAuthenticated = Boolean(user);
+
+  const canReadPath = (href: string) =>
+    canAccessOperationsPath(href, can, isAuthenticated, canKey);
 
   const canReadCandidates = can("candidates", "read");
   const canReadEmployers = can("employers", "read");
@@ -201,8 +237,18 @@ export function useOperationsDashboardData(): OperationsDashboardData {
 
     return {
       ...base,
-      platformPulse,
-      todaysActivity,
+      platformPulse: platformPulse.filter((metric) => canReadPath(metric.href)),
+      operationsHealth: base.operationsHealth.filter((item) =>
+        canReadPath(item.href),
+      ),
+      todaysActivity: todaysActivity.filter((metric) => canReadPath(metric.href)),
+      quickActions: base.quickActions.filter((action) =>
+        canAccessDashboardQuickAction(action, can, canKey, canReadPath),
+      ),
+      insights: base.insights.filter((insight) => canReadPath(insight.href)),
+      attentionItems: base.attentionItems.filter((item) =>
+        canReadPath(item.actionHref),
+      ),
       teamWorkload,
       teamWorkloadStatus: {
         isLoading: canReadTeam && teamQuery.isLoading,
@@ -216,6 +262,9 @@ export function useOperationsDashboardData(): OperationsDashboardData {
     };
   }, [
     base,
+    can,
+    canKey,
+    user,
     canReadCandidates,
     canReadEmployers,
     canReadJobs,

@@ -2,9 +2,11 @@ import { Router } from "express";
 import {
   requireOperationsAuth,
   requireOperationsPermission,
+  requireOperationsPermissionKey,
 } from "../../../middleware/operations-auth.middleware.js";
 import { validate } from "../../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../../utils/async-handler.js";
+import { PLACEMENTS_LIST_EXPORT_KEY } from "../rbac/operations-permission-catalog.js";
 import { operationsPlacementsController } from "./operations-placements.controller.js";
 import {
   exportOperationsPlacementsQuerySchema,
@@ -27,7 +29,7 @@ operationsPlacementsRouter.get(
 
 operationsPlacementsRouter.get(
   "/export",
-  requireOperationsPermission("placements", "read"),
+  requireOperationsPermissionKey(PLACEMENTS_LIST_EXPORT_KEY),
   validate(exportOperationsPlacementsQuerySchema, "query"),
   asyncHandler(operationsPlacementsController.export),
 );

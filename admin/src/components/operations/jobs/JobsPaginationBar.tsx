@@ -67,8 +67,8 @@ export function JobsPaginationBar({
   return (
     <div className="flex min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:items-center sm:justify-between">
       <p className="min-w-0 text-center text-[11px] text-muted max-sm:text-[10px] sm:text-left">
-        {from.toLocaleString("en-IN")} to {to.toLocaleString("en-IN")} of{" "}
-        {total.toLocaleString("en-IN")}
+        Showing {from.toLocaleString("en-IN")} to {to.toLocaleString("en-IN")} of{" "}
+        {total.toLocaleString("en-IN")} results
       </p>
 
       <div className="flex min-w-0 flex-col gap-2 min-[480px]:flex-row min-[480px]:flex-wrap min-[480px]:items-center min-[480px]:justify-end sm:gap-2">

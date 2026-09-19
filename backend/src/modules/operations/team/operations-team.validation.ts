@@ -23,7 +23,12 @@ export const createOperationsTeamMemberBodySchema = z.object({
   fullName: z.string().trim().min(2).max(80),
   email: z.string().trim().email().max(120),
   mobileNumber: z.string().trim().regex(/^\d{10}$/, "Enter a 10-digit mobile number."),
-  password: z.string().min(8).max(72),
+  password: z
+    .string()
+    .min(8)
+    .max(72)
+    .optional()
+    .or(z.literal("")),
   roleId: objectId,
   departmentId: z.union([objectId, z.literal(""), z.null()]).optional(),
   orgUnitId: z.union([objectId, z.literal(""), z.null()]).optional(),
