@@ -20,7 +20,11 @@ export const OPERATIONS_MODULE_ENTRY_VIEW_KEYS: Partial<
   jobs: ["jobs.list.view"],
   placements: ["placements.list.view"],
   my_work: ["my_work.list.view"],
-  team: ["team.members.view"],
+  team: [
+    "team.members.view",
+    "team.organization.view",
+    "team.teams.view",
+  ],
   roles: ["roles.view"],
   departments: ["departments.view"],
   settings: ["settings.view"],

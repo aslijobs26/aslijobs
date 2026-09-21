@@ -50,7 +50,15 @@ export function OperationsCard({
           {action}
         </header>
       )}
-      <div className={cn("min-h-0 flex-1 p-2.5 sm:p-3", bodyClassName)}>{children}</div>
+      <div
+        className={cn(
+          "min-h-0 flex-1",
+          isFlushBody ? "p-0" : "p-2.5 sm:p-3",
+          bodyClassName,
+        )}
+      >
+        {children}
+      </div>
     </section>
   );
 }

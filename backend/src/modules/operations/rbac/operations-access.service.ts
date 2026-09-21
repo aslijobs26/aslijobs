@@ -15,6 +15,7 @@ import { catalogKeysMatchingMatrix } from "./operations-permission-projection.js
 import { projectGrantedKeysToMatrix } from "./operations-permission-projection.js";
 import {
   isOperationsPermissionKey,
+  TEAM_MEMBERS_EMAIL_VIEW_KEY,
   TEAM_MEMBERS_MOBILE_VIEW_KEY,
 } from "./operations-permission-catalog.js";
 import type { OperationsResolvedAccess } from "./operations-access.types.js";
@@ -46,9 +47,9 @@ export function operationsAccessCanKey(
   return access.grantedKeys.includes(key);
 }
 
-/** Field-level: Organization member mobile is omitted unless this is true. */
-export function canViewOperationsMemberMobile(
+function canViewTeamMemberField(
   access: OperationsResolvedAccess | undefined,
+  fieldKey: string,
 ): boolean {
   if (!access) {
     return false;
@@ -56,7 +57,7 @@ export function canViewOperationsMemberMobile(
   if (access.isSuperAdmin) {
     return true;
   }
-  if (operationsAccessCanKey(access, TEAM_MEMBERS_MOBILE_VIEW_KEY)) {
+  if (operationsAccessCanKey(access, fieldKey)) {
     return true;
   }
   const hasFineTeamGrants = access.grantedKeys.some(
@@ -66,6 +67,20 @@ export function canViewOperationsMemberMobile(
     return false;
   }
   return operationsAccessCan(access, "team", "read");
+}
+
+/** Field-level: Organization member mobile is omitted unless this is true. */
+export function canViewOperationsMemberMobile(
+  access: OperationsResolvedAccess | undefined,
+): boolean {
+  return canViewTeamMemberField(access, TEAM_MEMBERS_MOBILE_VIEW_KEY);
+}
+
+/** Field-level: Organization member email is omitted unless this is true. */
+export function canViewOperationsMemberEmail(
+  access: OperationsResolvedAccess | undefined,
+): boolean {
+  return canViewTeamMemberField(access, TEAM_MEMBERS_EMAIL_VIEW_KEY);
 }
 
 export function operationsAccessCanDelegate(

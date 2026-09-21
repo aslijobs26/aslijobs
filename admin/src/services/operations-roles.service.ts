@@ -2,6 +2,7 @@ import { apiClient } from "./api-client";
 import type {
   CreateOperationsRoleInput,
   OperationsCatalogTreeNode,
+  OperationsPermissionProjectionDefinition,
   OperationsRole,
   OperationsRoleDetail,
   OperationsRoleTreeNode,
@@ -38,9 +39,13 @@ export async function fetchOperationsRoleHierarchy(): Promise<{
 
 export async function fetchOperationsPermissionCatalog(): Promise<{
   tree: OperationsCatalogTreeNode[];
+  definitions: OperationsPermissionProjectionDefinition[];
 }> {
   const response = await apiClient.get<{
-    data: { tree: OperationsCatalogTreeNode[] };
+    data: {
+      tree: OperationsCatalogTreeNode[];
+      definitions: OperationsPermissionProjectionDefinition[];
+    };
   }>(`${BASE}/catalog`);
   return response.data.data;
 }
@@ -74,20 +79,26 @@ export async function updateOperationsRole(
 
 export async function archiveOperationsRole(
   roleId: string,
+  expectedRevision: number,
   reassignRoleId?: string,
 ): Promise<OperationsRole> {
   const response = await apiClient.post<{ data: OperationsRole }>(
     `${BASE}/${encodeURIComponent(roleId)}/archive`,
-    { reassignRoleId: reassignRoleId ?? "" },
+    {
+      reassignRoleId: reassignRoleId ?? "",
+      expectedRevision,
+    },
   );
   return response.data.data;
 }
 
 export async function restoreOperationsRole(
   roleId: string,
+  expectedRevision: number,
 ): Promise<OperationsRole> {
   const response = await apiClient.post<{ data: OperationsRole }>(
     `${BASE}/${encodeURIComponent(roleId)}/restore`,
+    { expectedRevision },
   );
   return response.data.data;
 }

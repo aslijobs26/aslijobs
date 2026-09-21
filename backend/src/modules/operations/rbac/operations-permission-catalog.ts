@@ -594,6 +594,16 @@ function teamCatalog(): OperationsPermissionDefinition[] {
     }),
     define({
       module: "team",
+      page: "members",
+      section: "fields",
+      field: "email",
+      action: "view",
+      label: "Team · Members · Email",
+      mapsToAction: "read",
+      sensitive: true,
+    }),
+    define({
+      module: "team",
       page: "organization",
       action: "view",
       label: "Team · Organization · View",
@@ -815,6 +825,8 @@ export const TEAM_MEMBERS_ASSIGN_LOCATION_KEY =
   "team.members.assign_location" as const;
 export const TEAM_MEMBERS_MOBILE_VIEW_KEY =
   "team.members.fields.mobile.view" as const;
+export const TEAM_MEMBERS_EMAIL_VIEW_KEY =
+  "team.members.fields.email.view" as const;
 export const TEAM_ORGANIZATION_VIEW_KEY = "team.organization.view" as const;
 export const TEAM_ORGANIZATION_CREATE_KEY = "team.organization.create" as const;
 export const TEAM_ORGANIZATION_UPDATE_KEY = "team.organization.update" as const;
@@ -849,6 +861,26 @@ export function getOperationsPermissionDefinition(
 
 export function listOperationsPermissionKeys(): string[] {
   return OPERATIONS_PERMISSION_CATALOG.map((item) => item.key);
+}
+
+/** Compact catalog rows for client-side projection (Role Preview). */
+export function listOperationsPermissionProjectionDefinitions(): Array<{
+  key: string;
+  field: string | null;
+  section: string | null;
+  action: string;
+  mapsTo: {
+    module: OperationsPermissionModule;
+    action: OperationsPermissionAction;
+  };
+}> {
+  return OPERATIONS_PERMISSION_CATALOG.map((item) => ({
+    key: item.key,
+    field: item.field,
+    section: item.section,
+    action: item.action,
+    mapsTo: item.mapsTo,
+  }));
 }
 
 export function assertKnownPermissionKeys(keys: string[]): void {

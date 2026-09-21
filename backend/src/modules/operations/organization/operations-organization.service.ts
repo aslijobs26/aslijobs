@@ -8,6 +8,7 @@ import { slugifyOperationsName } from "../rbac/operations-slug.js";
 import type { OperationsResolvedAccess } from "../rbac/operations-access.types.js";
 import {
   assertFineOrCoarsePermission,
+  canViewOperationsMemberEmail,
   canViewOperationsMemberMobile,
   getRoleDescendantIds,
   operationsAccessCan,
@@ -1004,6 +1005,7 @@ class OperationsOrganizationService {
     ]);
 
     const showMobile = canViewOperationsMemberMobile(access);
+    const showEmail = canViewOperationsMemberEmail(access);
     return {
       unitId: unit.id,
       page: query.page,
@@ -1013,7 +1015,7 @@ class OperationsOrganizationService {
       items: items.map((item) => ({
         id: String(item._id),
         fullName: item.fullName,
-        email: item.email ?? null,
+        ...(showEmail ? { email: item.email ?? null } : {}),
         ...(showMobile ? { mobileNumber: item.mobileNumber } : {}),
         status: item.status,
         role: item.role,
@@ -1141,10 +1143,15 @@ class OperationsOrganizationService {
       throw new AppError("Organization unit not found.", HTTP_STATUS.NOT_FOUND);
     }
 
-    if (body.revision != null && body.revision !== unit.revision) {
+    if (body.revision !== unit.revision) {
       throw new AppError(
         "This organization unit was updated by someone else. Refresh and try again.",
         HTTP_STATUS.CONFLICT,
+        {
+          code: "STALE_REVISION",
+          expectedRevision: body.revision,
+          currentRevision: unit.revision ?? 1,
+        },
       );
     }
 
@@ -1265,12 +1272,8 @@ class OperationsOrganizationService {
     }
 
     unit.updatedBy = new mongoose.Types.ObjectId(access.userId);
-    const revisionFilter =
-      body.revision != null
-        ? { _id: unit._id, revision: body.revision }
-        : { _id: unit._id };
     const saved = await OperationsOrgUnitModel.findOneAndUpdate(
-      revisionFilter,
+      { _id: unit._id, revision: body.revision },
       {
         $set: {
           name: unit.name,

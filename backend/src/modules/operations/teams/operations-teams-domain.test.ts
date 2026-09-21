@@ -95,6 +95,14 @@ describe("operations teams domain", () => {
       false,
     );
     assert.equal(
+      canActorAccessDepartment({
+        isSuperAdmin: false,
+        actorDepartmentId: null,
+        targetDepartmentId: "ops",
+      }),
+      false,
+    );
+    assert.equal(
       canActorAccessOrgUnit({
         isSuperAdmin: false,
         actorOrgUnitId: "telangana",
@@ -109,6 +117,15 @@ describe("operations teams domain", () => {
         actorOrgUnitId: "telangana",
         actorSubtreeIds: ["telangana", "hyderabad"],
         targetUnitId: "vijayawada",
+      }),
+      false,
+    );
+    assert.equal(
+      canActorAccessOrgUnit({
+        isSuperAdmin: false,
+        actorOrgUnitId: null,
+        actorSubtreeIds: [],
+        targetUnitId: "hyderabad",
       }),
       false,
     );

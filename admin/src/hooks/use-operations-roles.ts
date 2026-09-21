@@ -113,11 +113,13 @@ export function useArchiveOperationsRole() {
   return useMutation({
     mutationFn: ({
       roleId,
+      expectedRevision,
       reassignRoleId,
     }: {
       roleId: string;
+      expectedRevision: number;
       reassignRoleId?: string;
-    }) => archiveOperationsRole(roleId, reassignRoleId),
+    }) => archiveOperationsRole(roleId, expectedRevision, reassignRoleId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: OPERATIONS_ROLES_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY });
@@ -128,7 +130,13 @@ export function useArchiveOperationsRole() {
 export function useRestoreOperationsRole() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (roleId: string) => restoreOperationsRole(roleId),
+    mutationFn: ({
+      roleId,
+      expectedRevision,
+    }: {
+      roleId: string;
+      expectedRevision: number;
+    }) => restoreOperationsRole(roleId, expectedRevision),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: OPERATIONS_ROLES_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY });

@@ -123,6 +123,7 @@ export function useUpdateOperationsDepartment() {
         name?: string;
         description?: string;
         status?: "active" | "archived";
+        expectedRevision: number;
       };
     }) => updateOperationsDepartment(departmentId, input),
     onSuccess: async () => {
@@ -134,8 +135,13 @@ export function useUpdateOperationsDepartment() {
 export function useDeleteOperationsDepartment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (departmentId: string) =>
-      deleteOperationsDepartment(departmentId),
+    mutationFn: ({
+      departmentId,
+      expectedRevision,
+    }: {
+      departmentId: string;
+      expectedRevision: number;
+    }) => deleteOperationsDepartment(departmentId, expectedRevision),
     onSuccess: async () => {
       await invalidateDepartmentRelatedCaches(queryClient);
     },

@@ -49,7 +49,7 @@ export function InterviewsKpiStrip({
   isLoading,
 }: InterviewsKpiStripProps) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:gap-3">
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
       {KPI_ITEMS.map((item) => {
         const Icon = item.icon;
         const value = stats?.[item.key];
@@ -57,7 +57,7 @@ export function InterviewsKpiStrip({
         return (
           <div
             key={item.key}
-            className="flex min-h-[5rem] w-full flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:min-h-0 sm:max-w-40 sm:w-40 sm:px-3 sm:py-2.5"
+            className="flex min-h-[5rem] min-w-0 flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:min-h-0 sm:px-3 sm:py-2.5"
           >
             <div className="flex items-center justify-between gap-2">
               <span

@@ -20,6 +20,7 @@ const TIMEZONES = [
 
 export function OperationsOrganizationSettingsPage() {
   const { can } = useOperationsPermissions();
+  const canUpdateSettings = can("settings", "update");
   const settingsQuery = useOperationsOrganizationSettings();
   const updateMutation = useUpdateOperationsOrganizationSettings();
   const [organizationName, setOrganizationName] = useState("");
@@ -37,7 +38,7 @@ export function OperationsOrganizationSettingsPage() {
   }, [settingsQuery.data]);
 
   const save = async () => {
-    if (!settingsQuery.data) return;
+    if (!settingsQuery.data || !canUpdateSettings) return;
     setError("");
     setSuccess("");
     try {
@@ -93,34 +94,48 @@ export function OperationsOrganizationSettingsPage() {
               <input
                 value={organizationName}
                 onChange={(event) => setOrganizationName(event.target.value)}
-                disabled={!can("settings", "update")}
+                disabled={!canUpdateSettings}
                 className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-70"
               />
             </label>
             <div className="grid gap-1.5">
               <p className="text-xs font-semibold text-muted">Default country</p>
-              <OperationsFilterSelect
-                label="Default country"
-                value={defaultCountryId}
-                options={(settingsQuery.data?.countries ?? []).map((country) => ({
-                  value: country.id,
-                  label: country.name,
-                }))}
-                onChange={setDefaultCountryId}
-                hideSearch
-                triggerClassName="h-9"
-              />
+              {canUpdateSettings ? (
+                <OperationsFilterSelect
+                  label="Default country"
+                  value={defaultCountryId}
+                  options={(settingsQuery.data?.countries ?? []).map((country) => ({
+                    value: country.id,
+                    label: country.name,
+                  }))}
+                  onChange={setDefaultCountryId}
+                  hideSearch
+                  triggerClassName="h-9"
+                />
+              ) : (
+                <p className="flex h-9 items-center rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground">
+                  {(settingsQuery.data?.countries ?? []).find(
+                    (country) => country.id === defaultCountryId,
+                  )?.name ?? "—"}
+                </p>
+              )}
             </div>
             <div className="grid gap-1.5">
               <p className="text-xs font-semibold text-muted">Default timezone</p>
-              <OperationsFilterSelect
-                label="Default timezone"
-                value={defaultTimezone}
-                options={TIMEZONES.map((zone) => ({ value: zone, label: zone }))}
-                onChange={setDefaultTimezone}
-                hideSearch
-                triggerClassName="h-9"
-              />
+              {canUpdateSettings ? (
+                <OperationsFilterSelect
+                  label="Default timezone"
+                  value={defaultTimezone}
+                  options={TIMEZONES.map((zone) => ({ value: zone, label: zone }))}
+                  onChange={setDefaultTimezone}
+                  hideSearch
+                  triggerClassName="h-9"
+                />
+              ) : (
+                <p className="flex h-9 items-center rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground">
+                  {defaultTimezone || "—"}
+                </p>
+              )}
             </div>
             {error ? (
               <p className="text-sm text-danger" role="alert">

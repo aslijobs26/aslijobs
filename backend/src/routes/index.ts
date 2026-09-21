@@ -10,6 +10,7 @@ import savedCandidateRouter from "../modules/saved-candidates/saved-candidate.ro
 import savedJobRouter from "../modules/saved-jobs/saved-job.routes.js";
 import teamRouter from "../modules/team/team.routes.js";
 import operationsRouter from "../modules/operations/operations.routes.js";
+import analyticsEventRouter from "../modules/analytics/analytics-event.routes.js";
 
 const apiRouter = Router();
 
@@ -23,6 +24,7 @@ apiRouter.use("/saved-jobs", savedJobRouter);
 apiRouter.use("/saved-candidates", savedCandidateRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/team", teamRouter);
+apiRouter.use("/analytics", analyticsEventRouter);
 apiRouter.use("/operations", operationsRouter);
 
 export default apiRouter;

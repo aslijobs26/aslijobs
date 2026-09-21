@@ -3,6 +3,7 @@
 import { PlaceAutocomplete } from "@/components/place-autocomplete/PlaceAutocomplete";
 import type { JobSearchUrlState } from "@/types/job-search";
 import {
+  getCityPlaceholderForState,
   resolveIndiaStateLabel,
 } from "@/services/nominatim-location.service";
 import {
@@ -180,7 +181,9 @@ export function JobSearchBar({
             disabled={!selectedState && !stateInput.trim()}
             placeholder={
               selectedState || stateInput.trim()
-                ? "e.g. Hyderabad"
+                ? getCityPlaceholderForState(
+                    resolveDisplayState(selectedState) || stateInput,
+                  )
                 : "Select a state first"
             }
             controlClassName={controlClassName}

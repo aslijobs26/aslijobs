@@ -6,7 +6,6 @@ import {
   Briefcase,
   Building2,
   CheckCircle2,
-  Eye,
   MapPin,
   MoreVertical,
   Plus,
@@ -26,11 +25,11 @@ import {
   getMemberInitials,
   PeopleKpiCard,
 } from "../components/operations/team/people-ui";
+import { TeamsRowActions } from "../components/operations/team/TeamsRowActions";
 import { getOperationsApiErrorMessage } from "../components/operations/team/team-format";
 import { flattenOrgTree } from "../components/operations/organization/org-tree-utils";
 import {
   OPERATIONS_ROUTES,
-  operationsTeamDetailPath,
 } from "../constants/operations-routes";
 import { useOperationsDepartments } from "../hooks/use-operations-departments";
 import { useOperationsOrgTree } from "../hooks/use-operations-organization";
@@ -193,9 +192,8 @@ export function OperationsTeamsPage() {
       limit: 100,
       status: "active",
       departmentId: form.departmentId || undefined,
-      orgUnitId: form.orgUnitId || undefined,
     },
-    { enabled: dialog && Boolean(form.departmentId && form.orgUnitId) },
+    { enabled: dialog },
   );
 
   const locations = useMemo(
@@ -553,8 +551,29 @@ export function OperationsTeamsPage() {
                       <td className="px-4 py-3 align-middle text-[13px] text-muted">
                         {formatTeamLocation(team)}
                       </td>
-                      <td className="px-4 py-3 align-middle text-[13px] text-foreground">
-                        {team.leadName || "—"}
+                      <td className="px-4 py-3 align-middle">
+                        {team.leadName ? (
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span
+                              className={cn(
+                                "inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
+                                getAvatarPalette(
+                                  team.leadUserId || team.leadName,
+                                ),
+                              )}
+                              aria-hidden="true"
+                            >
+                              {getMemberInitials(team.leadName)}
+                            </span>
+                            <span className="min-w-0 truncate text-[13px] font-medium text-foreground">
+                              {team.leadName}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[13px] text-muted">
+                            Unassigned
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 align-middle text-[13px] tabular-nums text-foreground">
                         {team.activeMemberCount.toLocaleString("en-IN")}
@@ -585,29 +604,13 @@ export function OperationsTeamsPage() {
                         {formatPeopleTimestamp(team.createdAt)}
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            to={operationsTeamDetailPath(team.id)}
-                            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                          >
-                            <Eye className="size-3.5" aria-hidden="true" />
-                            View
-                          </Link>
-                          <OperationsCanKey permissionKey="team.teams.archive">
-                            {isActive ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setArchiveError("");
-                                  setArchiveTarget(team);
-                                }}
-                                className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-danger transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                              >
-                                Archive
-                              </button>
-                            ) : null}
-                          </OperationsCanKey>
-                        </div>
+                        <TeamsRowActions
+                          team={team}
+                          onArchive={(target) => {
+                            setArchiveError("");
+                            setArchiveTarget(target);
+                          }}
+                        />
                       </td>
                     </tr>
                   );
@@ -750,8 +753,21 @@ export function OperationsTeamsPage() {
                   onChange={(value) =>
                     setForm((current) => ({ ...current, leadUserId: value }))
                   }
+                  hideSearch={
+                    (leadCandidatesQuery.data?.members?.length ?? 0) <= 8
+                  }
                   triggerClassName="h-9 rounded-lg text-xs"
                 />
+                {dialog && leadCandidatesQuery.isPending ? (
+                  <p className="text-[11px] text-muted">Loading people…</p>
+                ) : dialog &&
+                  (leadCandidatesQuery.data?.members.length ?? 0) === 0 ? (
+                  <p className="text-[11px] text-muted">
+                    No active people found
+                    {form.departmentId ? " in this department" : ""}. You can
+                    assign a lead later from the team detail page.
+                  </p>
+                ) : null}
               </div>
               {formError ? (
                 <p className="text-sm text-danger">{formError}</p>

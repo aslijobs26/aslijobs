@@ -339,7 +339,7 @@ export function SaveCandidateModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 scrollbar-hidden sm:p-5">
           <div className="block">
             <span className="mb-1.5 block text-xs font-semibold text-foreground">
               Priority <span className="text-red-600">*</span>

@@ -103,6 +103,55 @@ const STATE_BBOX: Record<string, string> = {
   "west bengal": "85.8,21.5,89.9,27.2",
 };
 
+/** Representative city shown in city-field placeholders after a state is chosen. */
+const EXAMPLE_CITY_BY_STATE: Record<string, string> = {
+  "andaman and nicobar islands": "Port Blair",
+  "andhra pradesh": "Visakhapatnam",
+  "arunachal pradesh": "Itanagar",
+  assam: "Guwahati",
+  bihar: "Patna",
+  chandigarh: "Chandigarh",
+  chhattisgarh: "Raipur",
+  "dadra and nagar haveli and daman and diu": "Daman",
+  delhi: "New Delhi",
+  goa: "Panaji",
+  gujarat: "Ahmedabad",
+  haryana: "Gurugram",
+  "himachal pradesh": "Shimla",
+  "jammu and kashmir": "Srinagar",
+  jharkhand: "Ranchi",
+  karnataka: "Bengaluru",
+  kerala: "Kochi",
+  ladakh: "Leh",
+  lakshadweep: "Kavaratti",
+  "madhya pradesh": "Bhopal",
+  maharashtra: "Mumbai",
+  manipur: "Imphal",
+  meghalaya: "Shillong",
+  mizoram: "Aizawl",
+  nagaland: "Kohima",
+  odisha: "Bhubaneswar",
+  puducherry: "Puducherry",
+  punjab: "Ludhiana",
+  rajasthan: "Jaipur",
+  sikkim: "Gangtok",
+  "tamil nadu": "Chennai",
+  telangana: "Hyderabad",
+  tripura: "Agartala",
+  "uttar pradesh": "Lucknow",
+  uttarakhand: "Dehradun",
+  "west bengal": "Kolkata",
+};
+
+/**
+ * City input placeholder for the selected Indian state/UT.
+ * Falls back to a generic prompt when the state is unknown.
+ */
+export function getCityPlaceholderForState(selectedState: string): string {
+  const example = EXAMPLE_CITY_BY_STATE[normalizeKey(selectedState)];
+  return example ? `e.g. ${example}` : "Search city";
+}
+
 const CITY_OSM_VALUES = new Set([
   "city",
   "town",

@@ -145,7 +145,7 @@ export function OperationsSidebar({
       ...section,
       items: section.items.map((item) =>
         item.id === "organization"
-          ? { ...item, href: getOrganizationEntryPath(can) }
+          ? { ...item, href: getOrganizationEntryPath(can, canKey) }
           : item,
       ),
     }));

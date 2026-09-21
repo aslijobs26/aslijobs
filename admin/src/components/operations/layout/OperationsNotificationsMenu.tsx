@@ -168,7 +168,7 @@ export function OperationsNotificationsMenu({
             ) : null}
           </div>
 
-          <div className="max-h-[22rem] overflow-y-auto">
+          <div className="max-h-[22rem] overflow-y-auto overscroll-contain scrollbar-hidden">
             {notificationsQuery.isLoading ? (
               <p className="px-3 py-8 text-center text-xs text-muted">
                 Loading notifications…

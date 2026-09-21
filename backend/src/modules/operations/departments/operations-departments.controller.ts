@@ -4,6 +4,7 @@ import { AppError } from "../../../middleware/error.middleware.js";
 import { sendSuccess } from "../../../utils/api-response.js";
 import { operationsDepartmentsService } from "./operations-departments.service.js";
 import type {
+  ArchiveOperationsDepartmentBody,
   CreateOperationsDepartmentBody,
   ListOperationsDepartmentsQuery,
   OperationsDepartmentIdParams,
@@ -20,15 +21,18 @@ function requireAccess(req: Request) {
 export const operationsDepartmentsController = {
   async list(req: Request, res: Response): Promise<void> {
     const query = req.query as unknown as ListOperationsDepartmentsQuery;
-    const data = await operationsDepartmentsService.list(query);
+    const data = await operationsDepartmentsService.list(
+      requireAccess(req),
+      query,
+    );
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Departments fetched successfully.",
       data,
     });
   },
 
-  async metrics(_req: Request, res: Response): Promise<void> {
-    const data = await operationsDepartmentsService.metrics();
+  async metrics(req: Request, res: Response): Promise<void> {
+    const data = await operationsDepartmentsService.metrics(requireAccess(req));
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Department metrics fetched successfully.",
       data,
@@ -37,7 +41,10 @@ export const operationsDepartmentsController = {
 
   async getById(req: Request, res: Response): Promise<void> {
     const { departmentId } = req.params as OperationsDepartmentIdParams;
-    const data = await operationsDepartmentsService.getById(departmentId);
+    const data = await operationsDepartmentsService.getById(
+      requireAccess(req),
+      departmentId,
+    );
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Department fetched successfully.",
       data,
@@ -46,8 +53,10 @@ export const operationsDepartmentsController = {
 
   async getDependencies(req: Request, res: Response): Promise<void> {
     const { departmentId } = req.params as OperationsDepartmentIdParams;
-    const data =
-      await operationsDepartmentsService.getDependencies(departmentId);
+    const data = await operationsDepartmentsService.getDependencies(
+      requireAccess(req),
+      departmentId,
+    );
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Department dependencies fetched successfully.",
       data,
@@ -82,9 +91,11 @@ export const operationsDepartmentsController = {
 
   async remove(req: Request, res: Response): Promise<void> {
     const { departmentId } = req.params as OperationsDepartmentIdParams;
+    const body = req.body as ArchiveOperationsDepartmentBody;
     const data = await operationsDepartmentsService.remove(
       requireAccess(req),
       departmentId,
+      body,
     );
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Department deleted successfully.",

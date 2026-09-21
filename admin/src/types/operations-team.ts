@@ -3,7 +3,7 @@ export type OperationsTeamMemberStatus = "active" | "inactive" | "suspended";
 export type OperationsTeamMember = {
   id: string;
   fullName: string;
-  email: string;
+  email?: string;
   mobileNumber?: string;
   role: string;
   roleId: string | null;
@@ -146,6 +146,17 @@ export type OperationsCatalogTreeNode = {
   children: OperationsCatalogTreeNode[];
 };
 
+export type OperationsPermissionProjectionDefinition = {
+  key: string;
+  field: string | null;
+  section: string | null;
+  action: string;
+  mapsTo: {
+    module: string;
+    action: "read" | "create" | "update" | "delete" | "export";
+  };
+};
+
 export type CreateOperationsRoleInput = {
   name: string;
   description?: string;
@@ -167,7 +178,7 @@ export type OperationsDepartment = {
   status: string;
   headUserId?: string | null;
   headName?: string | null;
-  revision?: number;
+  revision: number;
   memberCount: number;
   teamCount: number;
   createdAt: string | null;

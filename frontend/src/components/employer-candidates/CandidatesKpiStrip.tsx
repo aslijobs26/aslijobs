@@ -60,7 +60,7 @@ export function CandidatesKpiStrip({
   isLoading,
 }: CandidatesKpiStripProps) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:flex lg:flex-wrap">
+    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-5">
       {KPI_ITEMS.map((item) => {
         const Icon = item.icon;
         const value = item.getValue(stats);
@@ -69,8 +69,8 @@ export function CandidatesKpiStrip({
           <div
             key={item.key}
             className={cn(
-              "flex h-full min-h-[5rem] flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:min-h-[5.5rem] sm:px-3 sm:py-2.5",
-              "lg:h-auto lg:w-40 lg:max-w-40 lg:min-h-0",
+              "flex h-full min-h-[5rem] min-w-0 flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:min-h-[5.5rem] sm:px-3 sm:py-2.5",
+              "lg:min-h-0",
             )}
           >
             <div className="flex items-center justify-between gap-2">

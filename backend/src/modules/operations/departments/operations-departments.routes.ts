@@ -10,6 +10,7 @@ import {
   createOperationsDepartmentBodySchema,
   listOperationsDepartmentsQuerySchema,
   operationsDepartmentIdParamsSchema,
+  archiveOperationsDepartmentBodySchema,
   updateOperationsDepartmentBodySchema,
 } from "./operations-departments.validation.js";
 
@@ -62,8 +63,9 @@ operationsDepartmentsRouter.patch(
 /** Soft-delete (archive) with authoritative dependency checks. */
 operationsDepartmentsRouter.delete(
   "/:departmentId",
-  requireOperationsPermission("departments", "update"),
+  requireOperationsPermission("departments", "delete"),
   validate(operationsDepartmentIdParamsSchema, "params"),
+  validate(archiveOperationsDepartmentBodySchema, "body"),
   asyncHandler(operationsDepartmentsController.remove),
 );
 

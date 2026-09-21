@@ -66,6 +66,16 @@ function canAccessModuleAction(
   if (canKey(`${module}.list.view`) || canKey(`${module}.view`)) {
     return true;
   }
+  // Organization team sub-modules use page-level view keys (not list.view).
+  if (module === "team") {
+    if (
+      canKey("team.members.view") ||
+      canKey("team.organization.view") ||
+      canKey("team.teams.view")
+    ) {
+      return true;
+    }
+  }
   // Detail/profile-only access is enforced by route guards, not list nav.
   if (
     canKey(`${module}.profile.view`) ||
@@ -115,17 +125,41 @@ export function canAccessOperationsPath(
 
 export function getOrganizationEntryPath(
   can: OperationsPermissionCheck,
+  canKey?: OperationsPermissionKeyCheck,
 ): string {
-  if (can("team", "read")) {
+  const canRead = (
+    module: Parameters<OperationsPermissionCheck>[0],
+    keys: string[],
+  ) => {
+    if (keys.some((key) => canKey?.(key))) return true;
+    return can(module, "read");
+  };
+
+  if (
+    canRead("team", [
+      "team.organization.view",
+      "team.members.view",
+      "team.teams.view",
+    ])
+  ) {
+    if (canKey?.("team.organization.view") || can("team", "read")) {
+      return OPERATIONS_ROUTES.ORGANIZATION;
+    }
+    if (canKey?.("team.members.view")) {
+      return OPERATIONS_ROUTES.TEAM_MANAGEMENT;
+    }
+    if (canKey?.("team.teams.view")) {
+      return OPERATIONS_ROUTES.TEAMS;
+    }
     return OPERATIONS_ROUTES.ORGANIZATION;
   }
-  if (can("roles", "read")) {
+  if (canRead("roles", ["roles.view"])) {
     return OPERATIONS_ROUTES.ROLES;
   }
-  if (can("departments", "read")) {
+  if (canRead("departments", ["departments.view"])) {
     return OPERATIONS_ROUTES.DEPARTMENTS;
   }
-  if (can("settings", "read")) {
+  if (canRead("settings", ["settings.view"])) {
     return OPERATIONS_ROUTES.SETTINGS;
   }
   return OPERATIONS_ROUTES.HOME;

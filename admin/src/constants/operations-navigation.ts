@@ -190,7 +190,10 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         label: "Analytics",
         href: OPERATIONS_ROUTES.ANALYTICS,
         icon: BarChart3,
-        requiredPermission: { module: "jobs", action: "read" },
+        requiredAnyPermissions: [
+          { module: "reports", action: "read" },
+          { module: "jobs", action: "read" },
+        ],
       },
       {
         id: "organization",

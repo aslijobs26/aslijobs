@@ -24,11 +24,19 @@ export async function loadOrgSubtreeIds(
   return rows.map((row) => String(row._id));
 }
 
+/**
+ * null = Super Admin (no geographic filter).
+ * [] = non-Super-Admin missing orgUnitId (deny-by-default: match nothing).
+ * string[] = scoped subtree.
+ */
 export async function loadActorOrgSubtreeIds(
   access: OperationsResolvedAccess,
 ): Promise<string[] | null> {
-  if (access.isSuperAdmin || !access.orgUnitId) {
+  if (access.isSuperAdmin) {
     return null;
+  }
+  if (!access.orgUnitId) {
+    return [];
   }
   return loadOrgSubtreeIds(access.orgUnitId);
 }
@@ -37,8 +45,15 @@ export async function assertActorCanAccessOrgUnit(
   access: OperationsResolvedAccess,
   targetUnitId: string,
 ): Promise<void> {
-  if (access.isSuperAdmin || !access.orgUnitId) {
+  if (access.isSuperAdmin) {
     return;
+  }
+  if (!access.orgUnitId) {
+    throw new AppError(
+      "Location scope is required to access organization data.",
+      HTTP_STATUS.FORBIDDEN,
+      { code: TEAM_ERROR_CODES.ORG_SCOPE_FORBIDDEN },
+    );
   }
   const subtree = await loadOrgSubtreeIds(access.orgUnitId);
   if (

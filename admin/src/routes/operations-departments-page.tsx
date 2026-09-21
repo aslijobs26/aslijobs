@@ -202,7 +202,10 @@ export function OperationsDepartmentsPage() {
     try {
       await updateMutation.mutateAsync({
         departmentId: department.id,
-        input: { status: nextStatus },
+        input: {
+          status: nextStatus,
+          expectedRevision: department.revision,
+        },
       });
     } catch (error) {
       const deps = parseDependencyDetails(getOperationsApiErrorDetails(error));
@@ -467,12 +470,7 @@ export function OperationsDepartmentsPage() {
                                 onActivate={() =>
                                   void handleStatusChange(department, "active")
                                 }
-                                onDeactivate={() =>
-                                  void handleStatusChange(
-                                    department,
-                                    "archived",
-                                  )
-                                }
+                                onDeactivate={() => openDelete(department)}
                                 onDelete={() => openDelete(department)}
                               />
                             </td>
@@ -514,7 +512,10 @@ export function OperationsDepartmentsPage() {
           if (!editTarget) return;
           await updateMutation.mutateAsync({
             departmentId: editTarget.id,
-            input,
+            input: {
+              ...input,
+              expectedRevision: editTarget.revision,
+            },
           });
         }}
       />
@@ -538,7 +539,10 @@ export function OperationsDepartmentsPage() {
           if (!deleteTarget) return;
           setDeleteError(null);
           void deleteMutation
-            .mutateAsync(deleteTarget.id)
+            .mutateAsync({
+              departmentId: deleteTarget.id,
+              expectedRevision: deleteTarget.revision,
+            })
             .then(() => {
               setDeleteTarget(null);
               setConflictDependencies(null);

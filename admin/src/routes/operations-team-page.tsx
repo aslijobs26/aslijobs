@@ -14,6 +14,7 @@ import {
   Shield,
   UserPlus,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { OrganizationTabs } from "../components/operations/organization/OrganizationTabs";
@@ -187,7 +188,10 @@ export function OperationsTeamPage() {
   const [statusError, setStatusError] = useState("");
   const [form, setForm] = useState<MemberFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
-  const [resendFeedback, setResendFeedback] = useState("");
+  const [pageFeedback, setPageFeedback] = useState<{
+    tone: "success" | "warning" | "danger";
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     setDepartmentId(departmentIdFromUrl);
@@ -215,12 +219,17 @@ export function OperationsTeamPage() {
   const rolesQuery = useOperationsRoles({ status: "active" });
   const departmentsQuery = useOperationsDepartments({ status: "active" });
   const treeQuery = useOperationsOrgTree({ status: "active" });
-  const teamsQuery = useOperationsOpsTeams({
+  const filterTeamsQuery = useOperationsOpsTeams({
     page: 1,
     limit: 100,
     status: "active",
-    departmentId: form.departmentId || departmentId || undefined,
-    orgUnitId: form.orgUnitId || orgUnitId || undefined,
+    departmentId: departmentId || undefined,
+    orgUnitId: orgUnitId || undefined,
+  });
+  const formTeamsQuery = useOperationsOpsTeams({
+    page: 1,
+    limit: 100,
+    status: "active",
   });
   const createMutation = useCreateOperationsTeamMember();
   const updateMutation = useUpdateOperationsTeamMember();
@@ -230,6 +239,13 @@ export function OperationsTeamPage() {
   const canViewMobile =
     Boolean(user?.isSuperAdmin) ||
     canKey("team.members.fields.mobile.view") ||
+    (!(user?.grantedKeys ?? []).some(
+      (key) => key === "team" || key.startsWith("team."),
+    ) &&
+      can("team", "read"));
+  const canViewEmail =
+    Boolean(user?.isSuperAdmin) ||
+    canKey("team.members.fields.email.view") ||
     (!(user?.grantedKeys ?? []).some(
       (key) => key === "team" || key.startsWith("team."),
     ) &&
@@ -276,7 +292,7 @@ export function OperationsTeamPage() {
     setSelected(member);
     setForm({
       fullName: member.fullName,
-      email: member.email,
+      email: member.email ?? "",
       mobileNumber: member.mobileNumber ?? "",
       password: "",
       roleId: member.roleId ?? "",
@@ -306,13 +322,21 @@ export function OperationsTeamPage() {
         }
         const created = await createMutation.mutateAsync(payload);
         if (created.invitationEmailSent === false) {
-          setFormError(
-            created.invitationEmailError ||
-              "Person created, but the invitation email could not be sent. Use Resend invitation.",
-          );
           setDialog(null);
+          setPageFeedback({
+            tone: "warning",
+            message:
+              created.invitationEmailError ||
+              "Person created, but invitation email could not be delivered. Use Resend invitation.",
+          });
           return;
         }
+        setDialog(null);
+        setPageFeedback({
+          tone: "success",
+          message: "Person created and invitation sent.",
+        });
+        return;
       } else if (selected) {
         await updateMutation.mutateAsync({
           memberId: selected.id,
@@ -516,7 +540,7 @@ export function OperationsTeamPage() {
                   value={teamId}
                   options={[
                     { value: "", label: "All teams" },
-                    ...(teamsQuery.data?.teams ?? []).map((team) => ({
+                    ...(filterTeamsQuery.data?.teams ?? []).map((team) => ({
                       value: team.id,
                       label: team.name,
                     })),
@@ -553,12 +577,20 @@ export function OperationsTeamPage() {
           </div>
         </div>
 
-        {resendFeedback ? (
+        {pageFeedback ? (
           <p
-            className="rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"
-            role="status"
+            className={cn(
+              "rounded-xl border px-4 py-3 text-sm",
+              pageFeedback.tone === "success" &&
+                "border-success/30 bg-success/10 text-success",
+              pageFeedback.tone === "warning" &&
+                "border-amber-500/30 bg-amber-500/10 text-amber-800",
+              pageFeedback.tone === "danger" &&
+                "border-danger/30 bg-danger/10 text-danger",
+            )}
+            role={pageFeedback.tone === "danger" ? "alert" : "status"}
           >
-            {resendFeedback}
+            {pageFeedback.message}
           </p>
         ) : null}
 
@@ -623,7 +655,7 @@ export function OperationsTeamPage() {
               <thead className="border-b border-border-subtle bg-[#F8FAFC] text-[11px] font-semibold uppercase tracking-[0.04em] text-muted">
                 <tr>
                   <th className="px-4 py-3">Member</th>
-                  <th className="px-4 py-3">Email</th>
+                  {canViewEmail ? <th className="px-4 py-3">Email</th> : null}
                   {canViewMobile ? <th className="px-4 py-3">Mobile</th> : null}
                   <th className="px-4 py-3">Role</th>
                   <th className="px-4 py-3">Department</th>
@@ -646,7 +678,10 @@ export function OperationsTeamPage() {
                   const canEditMember =
                     member.role !== "SUPER_ADMIN" || Boolean(user?.isSuperAdmin);
                   const showResendPrimary =
-                    member.role !== "SUPER_ADMIN" && Boolean(member.email);
+                    member.role !== "SUPER_ADMIN" &&
+                    Boolean(member.email) &&
+                    member.lastActiveAt == null &&
+                    Boolean(member.invitedAt);
 
                   return (
                     <tr
@@ -669,9 +704,11 @@ export function OperationsTeamPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 align-middle text-[13px] text-muted">
-                        {member.email || "—"}
-                      </td>
+                      {canViewEmail ? (
+                        <td className="px-4 py-3 align-middle text-[13px] text-muted">
+                          {member.email || "—"}
+                        </td>
+                      ) : null}
                       {canViewMobile ? (
                         <td className="px-4 py-3 align-middle text-[13px] text-muted">
                           {member.mobileNumber || "—"}
@@ -735,21 +772,32 @@ export function OperationsTeamPage() {
                                 type="button"
                                 disabled={resendMutation.isPending}
                                 onClick={() => {
-                                  setResendFeedback("");
+                                  setPageFeedback(null);
                                   void resendMutation
                                     .mutateAsync(member.id)
-                                    .then(() => {
-                                      setResendFeedback(
-                                        `Invitation resent to ${member.fullName}.`,
-                                      );
+                                    .then((result) => {
+                                      if (result.invitationEmailSent === false) {
+                                        setPageFeedback({
+                                          tone: "warning",
+                                          message:
+                                            result.invitationEmailError ||
+                                            "Invitation regenerated, but the email could not be delivered.",
+                                        });
+                                        return;
+                                      }
+                                      setPageFeedback({
+                                        tone: "success",
+                                        message: `Invitation resent to ${member.fullName}.`,
+                                      });
                                     })
                                     .catch((error: unknown) => {
-                                      setResendFeedback(
-                                        getOperationsApiErrorMessage(
+                                      setPageFeedback({
+                                        tone: "danger",
+                                        message: getOperationsApiErrorMessage(
                                           error,
                                           "Unable to resend invitation.",
                                         ),
-                                      );
+                                      });
                                     });
                                 }}
                                 className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
@@ -833,12 +881,22 @@ export function OperationsTeamPage() {
             aria-labelledby="team-member-dialog-title"
             className="w-full max-w-lg rounded-2xl border border-border-subtle bg-surface p-5 shadow-xl"
           >
-            <h2
-              id="team-member-dialog-title"
-              className="text-base font-bold text-foreground"
-            >
-              {dialog === "create" ? "Add team member" : "Edit team member"}
-            </h2>
+            <div className="flex items-start justify-between gap-3">
+              <h2
+                id="team-member-dialog-title"
+                className="text-base font-bold text-foreground"
+              >
+                {dialog === "create" ? "Add team member" : "Edit team member"}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setDialog(null)}
+                className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                aria-label="Close"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </div>
             <div className="mt-4 grid gap-3">
               <label className="grid gap-1 text-xs font-semibold text-muted">
                 Full name
@@ -979,16 +1037,73 @@ export function OperationsTeamPage() {
                   value={form.teamId}
                   options={[
                     { value: "", label: "None" },
-                    ...(teamsQuery.data?.teams ?? []).map((team) => ({
-                      value: team.id,
-                      label: team.name,
-                    })),
+                    ...(() => {
+                      const teams = formTeamsQuery.data?.teams ?? [];
+                      const hasCurrent =
+                        Boolean(form.teamId) &&
+                        teams.some((team) => team.id === form.teamId);
+                      if (
+                        form.teamId &&
+                        !hasCurrent &&
+                        selected?.teamId === form.teamId &&
+                        selected.teamName
+                      ) {
+                        return [
+                          {
+                            value: form.teamId,
+                            label: selected.departmentName
+                              ? `${selected.teamName} · ${selected.departmentName}`
+                              : selected.teamName,
+                          },
+                          ...teams.map((team) => ({
+                            value: team.id,
+                            label: team.departmentName
+                              ? `${team.name} · ${team.departmentName}`
+                              : team.name,
+                          })),
+                        ];
+                      }
+                      return teams.map((team) => ({
+                        value: team.id,
+                        label: team.departmentName
+                          ? `${team.name} · ${team.departmentName}`
+                          : team.name,
+                      }));
+                    })(),
                   ]}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, teamId: value }))
-                  }
+                  onChange={(value) => {
+                    const selectedTeam = (
+                      formTeamsQuery.data?.teams ?? []
+                    ).find((team) => team.id === value);
+                    setForm((current) => ({
+                      ...current,
+                      teamId: value,
+                      ...(selectedTeam
+                        ? {
+                            departmentId: selectedTeam.departmentId,
+                            orgUnitId: selectedTeam.orgUnitId,
+                          }
+                        : {}),
+                    }));
+                  }}
+                  hideSearch={(formTeamsQuery.data?.teams?.length ?? 0) <= 8}
                   triggerClassName="h-9 rounded-lg text-xs"
                 />
+                {formTeamsQuery.isError ? (
+                  <p className="text-[11px] text-danger">
+                    {getOperationsApiErrorMessage(
+                      formTeamsQuery.error,
+                      "Unable to load teams.",
+                    )}
+                  </p>
+                ) : formTeamsQuery.isPending ? (
+                  <p className="text-[11px] text-muted">Loading teams…</p>
+                ) : (formTeamsQuery.data?.teams.length ?? 0) === 0 ? (
+                  <p className="text-[11px] text-muted">
+                    No active teams found. Create a team from Organization →
+                    Teams.
+                  </p>
+                ) : null}
               </div>
               {formError ? (
                 <p className="text-sm text-danger">{formError}</p>

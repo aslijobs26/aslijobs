@@ -4,6 +4,7 @@ import {
   type OperationsPermissionContextValue,
 } from "./operations-permission-context";
 import { useOperationsPermissions } from "../hooks/use-operations-permissions";
+import { useOperationsPermissionCatalog } from "../hooks/use-operations-roles";
 import { OPERATIONS_TEAM_ROLES } from "../types/roles";
 import {
   grantKeysFromGrants,
@@ -19,16 +20,21 @@ type RolePreviewPermissionProviderProps = {
 /**
  * UI-only permission overlay for role preview.
  * Does not change JWT, session, or backend authorization.
+ * Matrix projection uses the same catalog definitions as live sessions.
  */
 export function RolePreviewPermissionProvider({
   draft,
   children,
 }: RolePreviewPermissionProviderProps) {
   const real = useOperationsPermissions();
+  const catalogQuery = useOperationsPermissionCatalog();
 
   const value = useMemo<OperationsPermissionContextValue>(() => {
     const grantedKeys = grantKeysFromGrants(draft.grants);
-    const permissions = projectRoleGrantsToPermissionMatrix(draft.grants);
+    const permissions = projectRoleGrantsToPermissionMatrix(
+      draft.grants,
+      catalogQuery.data?.definitions,
+    );
     const grantedSet = new Set(grantedKeys);
 
     const previewUser = real.user
@@ -51,7 +57,7 @@ export function RolePreviewPermissionProvider({
       user: previewUser,
       role: OPERATIONS_TEAM_ROLES.CUSTOM,
       permissions,
-      isLoading: false,
+      isLoading: catalogQuery.isPending,
       isSuperAdmin: false,
       isRolePreview: true,
       canCreateRoles: draft.canCreateRoles,
@@ -64,7 +70,7 @@ export function RolePreviewPermissionProvider({
       canKey: (key) => grantedSet.has(key),
       canDelegate: () => false,
     };
-  }, [draft, real.user]);
+  }, [draft, real.user, catalogQuery.data?.definitions, catalogQuery.isPending]);
 
   return createElement(
     OperationsPermissionContext.Provider,

@@ -41,11 +41,15 @@ export const updateOrgUnitBodySchema = z
     establishedAt: z.string().datetime().nullable().optional(),
     parentId: objectIdString.nullable().optional(),
     status: z.enum(["active", "archived"]).optional(),
-    revision: z.number().int().positive().optional(),
+    /** Mandatory CAS token — stale clients must refresh before mutating. */
+    revision: z.number().int().positive(),
   })
-  .refine((body) => Object.keys(body).length > 0, {
-    message: "At least one field is required.",
-  });
+  .refine(
+    (body) => Object.keys(body).some((key) => key !== "revision"),
+    {
+      message: "At least one field is required.",
+    },
+  );
 
 export const orgUnitPeopleQuerySchema = z.object({
   search: z.string().trim().max(120).optional().default(""),

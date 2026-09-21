@@ -1,6 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
-import type { OperationsPermissionModule } from "../../../constants/operations-permissions";
 import { useOperationsPermissions } from "../../../hooks/use-operations-permissions";
 import { cn } from "../../../utils/cn";
 
@@ -8,24 +7,53 @@ const TABS: Array<{
   id: string;
   label: string;
   href: string;
-  module: OperationsPermissionModule;
+  /** Fine entry keys — field-only grants must not unlock tabs. */
+  entryKeys: readonly string[];
+  /** Coarse fallback for legacy roles without fine grants. */
+  coarseModule: "team" | "roles" | "departments" | "settings";
 }> = [
-  { id: "structure", label: "Structure", href: OPERATIONS_ROUTES.ORGANIZATION, module: "team" },
-  { id: "people", label: "People", href: OPERATIONS_ROUTES.TEAM_MANAGEMENT, module: "team" },
-  { id: "teams", label: "Teams", href: OPERATIONS_ROUTES.TEAMS, module: "team" },
+  {
+    id: "structure",
+    label: "Structure",
+    href: OPERATIONS_ROUTES.ORGANIZATION,
+    entryKeys: ["team.organization.view"],
+    coarseModule: "team",
+  },
+  {
+    id: "people",
+    label: "People",
+    href: OPERATIONS_ROUTES.TEAM_MANAGEMENT,
+    entryKeys: ["team.members.view"],
+    coarseModule: "team",
+  },
+  {
+    id: "teams",
+    label: "Teams",
+    href: OPERATIONS_ROUTES.TEAMS,
+    entryKeys: ["team.teams.view"],
+    coarseModule: "team",
+  },
   {
     id: "roles",
     label: "Roles & Permissions",
     href: OPERATIONS_ROUTES.ROLES,
-    module: "roles",
+    entryKeys: ["roles.view"],
+    coarseModule: "roles",
   },
   {
     id: "departments",
     label: "Departments",
     href: OPERATIONS_ROUTES.DEPARTMENTS,
-    module: "departments",
+    entryKeys: ["departments.view"],
+    coarseModule: "departments",
   },
-  { id: "settings", label: "Settings", href: OPERATIONS_ROUTES.SETTINGS, module: "settings" },
+  {
+    id: "settings",
+    label: "Settings",
+    href: OPERATIONS_ROUTES.SETTINGS,
+    entryKeys: ["settings.view"],
+    coarseModule: "settings",
+  },
 ];
 
 function isTabActive(href: string, pathname: string, tabId: string): boolean {
@@ -70,10 +98,28 @@ function isTabActive(href: string, pathname: string, tabId: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function hasFineGrantsForModule(
+  grantedKeys: readonly string[],
+  module: string,
+): boolean {
+  const prefix = `${module}.`;
+  return grantedKeys.some((key) => key === module || key.startsWith(prefix));
+}
+
 export function OrganizationTabs() {
   const { pathname } = useLocation();
-  const { can } = useOperationsPermissions();
-  const visibleTabs = TABS.filter((tab) => can(tab.module, "read"));
+  const { can, canKey, grantedKeys, isSuperAdmin } = useOperationsPermissions();
+
+  const visibleTabs = TABS.filter((tab) => {
+    if (isSuperAdmin) return true;
+    if (tab.entryKeys.some((key) => canKey(key))) return true;
+    // Legacy coarse roles without fine grants for this module.
+    if (!hasFineGrantsForModule(grantedKeys, tab.coarseModule)) {
+      return can(tab.coarseModule, "read");
+    }
+    return false;
+  });
+
   const activeId =
     visibleTabs.find((tab) => isTabActive(tab.href, pathname, tab.id))?.id ??
     visibleTabs[0]?.id ??

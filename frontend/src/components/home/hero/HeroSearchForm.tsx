@@ -3,6 +3,7 @@
 import { HeroPlaceAutocomplete } from "@/components/home/hero/HeroPlaceAutocomplete";
 import { HERO_SEARCH_DEFAULTS } from "@/constants/hero";
 import { ROUTES } from "@/constants/routes";
+import { getCityPlaceholderForState } from "@/services/nominatim-location.service";
 import type { HeroSearchFormValues } from "@/types/hero";
 import { cn } from "@/utils/cn";
 import { Search } from "lucide-react";
@@ -126,7 +127,9 @@ export function HeroSearchForm() {
             selectedState={values.state}
             disabled={!values.state}
             placeholder={
-              values.state ? "e.g. Hyderabad" : "Select a state first"
+              values.state
+                ? getCityPlaceholderForState(values.state)
+                : "Select a state first"
             }
             onChange={(value) => {
               setCityInput(value);

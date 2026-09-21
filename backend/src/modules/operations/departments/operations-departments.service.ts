@@ -15,6 +15,7 @@ import {
 import { OperationsWorkItemModel } from "../work/operations-work.model.js";
 import { OperationsTeamModel } from "../teams/operations-teams.model.js";
 import { assertFineOrCoarsePermission } from "../rbac/operations-access.service.js";
+import { assertActorCanAccessDepartment } from "../rbac/operations-org-scope.js";
 import { DEPARTMENTS_ARCHIVE_KEY } from "../rbac/operations-permission-catalog.js";
 import {
   buildDepartmentArchiveBlockedMessage,
@@ -23,6 +24,7 @@ import {
   type OperationsDepartmentArchiveDependencies,
 } from "./operations-departments-domain.js";
 import type {
+  ArchiveOperationsDepartmentBody,
   CreateOperationsDepartmentBody,
   ListOperationsDepartmentsQuery,
   UpdateOperationsDepartmentBody,
@@ -64,10 +66,18 @@ function toPublicDepartment(
 
 function buildListFilter(
   query: ListOperationsDepartmentsQuery,
+  actor?: OperationsResolvedAccess,
 ): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
   if (query.status !== "all") {
     filter.status = query.status;
+  }
+  if (actor && !actor.isSuperAdmin) {
+    if (!actor.departmentId) {
+      filter._id = { $in: [] };
+    } else {
+      filter._id = actor.departmentId;
+    }
   }
   const search = query.search.trim();
   if (search) {
@@ -173,8 +183,11 @@ async function resolveCreateCode(
 }
 
 class OperationsDepartmentsService {
-  async list(query: ListOperationsDepartmentsQuery) {
-    const filter = buildListFilter(query);
+  async list(
+    actor: OperationsResolvedAccess,
+    query: ListOperationsDepartmentsQuery,
+  ) {
+    const filter = buildListFilter(query, actor);
     const total = await OperationsDepartmentModel.countDocuments(filter);
     const pagination = buildListPagination(query.page, query.limit, total);
 
@@ -199,25 +212,48 @@ class OperationsDepartmentsService {
     };
   }
 
-  async metrics() {
+  async metrics(actor: OperationsResolvedAccess) {
+    const scopeFilter =
+      actor.isSuperAdmin
+        ? {}
+        : actor.departmentId
+          ? { _id: actor.departmentId }
+          : { _id: { $in: [] } };
+    const memberMatch =
+      actor.isSuperAdmin
+        ? { departmentId: { $ne: null }, status: { $ne: "inactive" } }
+        : actor.departmentId
+          ? {
+              departmentId: new mongoose.Types.ObjectId(actor.departmentId),
+              status: { $ne: "inactive" },
+            }
+          : { departmentId: { $in: [] } };
+    const teamMatch =
+      actor.isSuperAdmin
+        ? { status: "active", departmentId: { $ne: null } }
+        : actor.departmentId
+          ? {
+              status: "active",
+              departmentId: new mongoose.Types.ObjectId(actor.departmentId),
+            }
+          : { status: "active", departmentId: { $in: [] } };
+
     const [
       totalDepartments,
       activeDepartments,
       memberAgg,
       departmentsWithTeams,
     ] = await Promise.all([
-      OperationsDepartmentModel.countDocuments({}),
-      OperationsDepartmentModel.countDocuments({ status: "active" }),
+      OperationsDepartmentModel.countDocuments(scopeFilter),
+      OperationsDepartmentModel.countDocuments({
+        ...scopeFilter,
+        status: "active",
+      }),
       OperationsTeamUserModel.aggregate<{
         _id: null;
         totalMembers: number;
       }>([
-        {
-          $match: {
-            departmentId: { $ne: null },
-            status: { $ne: "inactive" },
-          },
-        },
+        { $match: memberMatch },
         {
           $group: {
             _id: null,
@@ -225,11 +261,7 @@ class OperationsDepartmentsService {
           },
         },
       ]),
-      // Teams = first-class OperationsTeam documents, never roles.
-      OperationsTeamModel.distinct("departmentId", {
-        status: "active",
-        departmentId: { $ne: null },
-      }),
+      OperationsTeamModel.distinct("departmentId", teamMatch),
     ]);
 
     return {
@@ -240,7 +272,8 @@ class OperationsDepartmentsService {
     };
   }
 
-  async getById(departmentId: string) {
+  async getById(actor: OperationsResolvedAccess, departmentId: string) {
+    assertActorCanAccessDepartment(actor, departmentId);
     const department = (await OperationsDepartmentModel.findById(departmentId)
       .lean()) as DepartmentDoc | null;
     if (!department) {
@@ -257,7 +290,8 @@ class OperationsDepartmentsService {
     });
   }
 
-  async getDependencies(departmentId: string) {
+  async getDependencies(actor: OperationsResolvedAccess, departmentId: string) {
+    assertActorCanAccessDepartment(actor, departmentId);
     const department = await OperationsDepartmentModel.findById(departmentId)
       .select("_id name status")
       .lean();
@@ -280,6 +314,14 @@ class OperationsDepartmentsService {
     actor: OperationsResolvedAccess,
     body: CreateOperationsDepartmentBody,
   ) {
+    // Creating a department is an organization-wide action.
+    if (!actor.isSuperAdmin) {
+      throw new AppError(
+        "Only Super Admin can create departments.",
+        HTTP_STATUS.FORBIDDEN,
+        { code: "DEPARTMENT_SCOPE_FORBIDDEN" },
+      );
+    }
     const name = body.name.trim();
     if (name.length < 2) {
       throw new AppError(
@@ -337,6 +379,7 @@ class OperationsDepartmentsService {
     departmentId: string,
     body: UpdateOperationsDepartmentBody,
   ) {
+    assertActorCanAccessDepartment(actor, departmentId);
     const department = await OperationsDepartmentModel.findById(departmentId);
     if (!department) {
       throw new AppError("Department not found.", HTTP_STATUS.NOT_FOUND);
@@ -350,14 +393,15 @@ class OperationsDepartmentsService {
       revision: department.revision ?? 1,
     };
 
-    if (
-      body.expectedRevision != null &&
-      (department.revision ?? 1) !== body.expectedRevision
-    ) {
+    if ((department.revision ?? 1) !== body.expectedRevision) {
       throw new AppError(
         "This department was updated by someone else. Refresh and try again.",
         HTTP_STATUS.CONFLICT,
-        { code: "STALE_REVISION" },
+        {
+          code: "STALE_REVISION",
+          expectedRevision: body.expectedRevision,
+          currentRevision: department.revision ?? 1,
+        },
       );
     }
 
@@ -409,8 +453,31 @@ class OperationsDepartmentsService {
     }
 
     department.updatedBy = new mongoose.Types.ObjectId(actor.userId);
-    department.revision = (department.revision ?? 1) + 1;
-    await department.save();
+    const expectedRevision = body.expectedRevision;
+    const saved = await OperationsDepartmentModel.findOneAndUpdate(
+      { _id: department._id, revision: expectedRevision },
+      {
+        $set: {
+          name: department.name,
+          code: department.code,
+          description: department.description,
+          headUserId: department.headUserId,
+          status: department.status,
+          archivedAt: department.archivedAt,
+          archivedBy: department.archivedBy,
+          updatedBy: department.updatedBy,
+        },
+        $inc: { revision: 1 },
+      },
+      { new: true },
+    );
+    if (!saved) {
+      throw new AppError(
+        "This department was updated by someone else. Refresh and try again.",
+        HTTP_STATUS.CONFLICT,
+        { code: "STALE_REVISION", expectedRevision },
+      );
+    }
     clearWorkDepartmentCache();
 
     const auditAction =
@@ -425,15 +492,15 @@ class OperationsDepartmentsService {
       actorName: actor.roleName ?? "",
       action: auditAction,
       targetType: "department",
-      targetId: String(department._id),
-      targetLabel: department.name,
+      targetId: String(saved._id),
+      targetLabel: saved.name,
       previousState: previous,
       nextState: {
-        name: department.name,
-        code: department.code,
-        description: department.description,
-        status: department.status,
-        revision: department.revision,
+        name: saved.name,
+        code: saved.code,
+        description: saved.description,
+        status: saved.status,
+        revision: saved.revision,
       },
       metadata:
         statusAction === "deactivated"
@@ -442,12 +509,12 @@ class OperationsDepartmentsService {
     });
 
     const { memberCountById, teamCountById } = await countMapForDepartments([
-      department._id,
+      saved._id,
     ]);
 
-    return toPublicDepartment(department.toObject() as DepartmentDoc, {
-      memberCount: memberCountById.get(String(department._id)) ?? 0,
-      teamCount: teamCountById.get(String(department._id)) ?? 0,
+    return toPublicDepartment(saved.toObject() as DepartmentDoc, {
+      memberCount: memberCountById.get(String(saved._id)) ?? 0,
+      teamCount: teamCountById.get(String(saved._id)) ?? 0,
     });
   }
 
@@ -455,7 +522,12 @@ class OperationsDepartmentsService {
    * Soft-deletes (archives) a department after authoritative dependency checks.
    * Hard delete is not used — matches existing Operations archive convention.
    */
-  async remove(actor: OperationsResolvedAccess, departmentId: string) {
+  async remove(
+    actor: OperationsResolvedAccess,
+    departmentId: string,
+    body: ArchiveOperationsDepartmentBody,
+  ) {
+    assertActorCanAccessDepartment(actor, departmentId);
     const department = await OperationsDepartmentModel.findById(departmentId);
     if (!department) {
       throw new AppError("Department not found.", HTTP_STATUS.NOT_FOUND);
@@ -463,18 +535,57 @@ class OperationsDepartmentsService {
 
     await this.assertCanArchive(actor, department);
 
+    const expectedRevision = Number(body.expectedRevision);
+    const currentRevision = department.revision ?? 1;
+    if (
+      !Number.isInteger(expectedRevision) ||
+      expectedRevision < 1 ||
+      expectedRevision !== currentRevision
+    ) {
+      throw new AppError(
+        "This department was updated by someone else. Refresh and try again.",
+        HTTP_STATUS.CONFLICT,
+        {
+          code: "STALE_REVISION",
+          expectedRevision: body.expectedRevision,
+          currentRevision,
+        },
+      );
+    }
+
     const previous = {
       name: department.name,
       description: department.description,
       status: department.status,
+      revision: currentRevision,
     };
 
-    department.status = "archived";
-    department.archivedAt = new Date();
-    department.archivedBy = new mongoose.Types.ObjectId(actor.userId);
-    department.updatedBy = new mongoose.Types.ObjectId(actor.userId);
-    department.revision = (department.revision ?? 1) + 1;
-    await department.save();
+    const archivedAt = new Date();
+    const saved = await OperationsDepartmentModel.findOneAndUpdate(
+      {
+        _id: department._id,
+        revision: expectedRevision,
+        status: { $ne: "archived" },
+      },
+      {
+        $set: {
+          status: "archived",
+          archivedAt,
+          archivedBy: new mongoose.Types.ObjectId(actor.userId),
+          updatedBy: new mongoose.Types.ObjectId(actor.userId),
+        },
+        $inc: { revision: 1 },
+      },
+      { new: true },
+    );
+
+    if (!saved) {
+      throw new AppError(
+        "This department was updated by someone else. Refresh and try again.",
+        HTTP_STATUS.CONFLICT,
+        { code: "STALE_REVISION", expectedRevision },
+      );
+    }
     clearWorkDepartmentCache();
 
     await recordOperationsAuditEvent({
@@ -482,18 +593,19 @@ class OperationsDepartmentsService {
       actorName: actor.roleName ?? "",
       action: "department.deleted",
       targetType: "department",
-      targetId: String(department._id),
-      targetLabel: department.name,
+      targetId: String(saved._id),
+      targetLabel: saved.name,
       previousState: previous,
       nextState: {
-        name: department.name,
-        description: department.description,
-        status: department.status,
+        name: saved.name,
+        description: saved.description,
+        status: saved.status,
+        revision: saved.revision,
       },
       metadata: { mode: "soft_archive" },
     });
 
-    return toPublicDepartment(department.toObject() as DepartmentDoc, {
+    return toPublicDepartment(saved.toObject() as DepartmentDoc, {
       memberCount: 0,
       teamCount: 0,
     });
@@ -535,7 +647,7 @@ class OperationsDepartmentsService {
       actor,
       DEPARTMENTS_ARCHIVE_KEY,
       "departments",
-      "update",
+      "delete",
     );
     const dependencies = await this.collectArchiveDependencies(department._id);
     if (!hasBlockingDepartmentDependencies(dependencies)) {

@@ -8,6 +8,7 @@ import type {
   CreateOperationsRoleBody,
   ListOperationsRolesQuery,
   OperationsRoleIdParams,
+  RestoreOperationsRoleBody,
   UpdateOperationsRoleBody,
 } from "./operations-roles.validation.js";
 
@@ -91,9 +92,11 @@ export const operationsRolesController = {
 
   async restore(req: Request, res: Response): Promise<void> {
     const { roleId } = req.params as OperationsRoleIdParams;
+    const body = req.body as RestoreOperationsRoleBody;
     const data = await operationsRolesService.restore(
       requireAccess(req),
       roleId,
+      body,
     );
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Role restored successfully.",

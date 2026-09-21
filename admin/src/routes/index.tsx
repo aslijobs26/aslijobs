@@ -17,6 +17,7 @@ import { OperationsLoginPage } from "./operations-login-page";
 import { OperationsActivityLogPage } from "./operations-activity-log-page";
 import { OperationsDepartmentsPage } from "./operations-departments-page";
 import { OperationsOrganizationPage } from "./operations-organization-page";
+import { OperationsAnalyticsPage } from "./operations-analytics-page";
 import { OperationsPlaceholderPage } from "./operations-placeholder-page";
 import { OperationsRoleEditorPage } from "./operations-role-editor-page";
 import { OperationsRolePreviewPage } from "./operations-role-preview-page";
@@ -143,7 +144,7 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.ANALYTICS}
-          element={<OperationsPlaceholderPage title="Analytics" />}
+          element={<OperationsAnalyticsPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.ORGANIZATION}

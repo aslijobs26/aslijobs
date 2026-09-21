@@ -81,7 +81,12 @@ export async function createOperationsDepartment(input: {
 
 export async function updateOperationsDepartment(
   departmentId: string,
-  input: { name?: string; description?: string; status?: "active" | "archived" },
+  input: {
+    name?: string;
+    description?: string;
+    status?: "active" | "archived";
+    expectedRevision: number;
+  },
 ): Promise<OperationsDepartment> {
   const response = await apiClient.patch<{ data: OperationsDepartment }>(
     `${BASE}/${encodeURIComponent(departmentId)}`,
@@ -92,9 +97,11 @@ export async function updateOperationsDepartment(
 
 export async function deleteOperationsDepartment(
   departmentId: string,
+  expectedRevision: number,
 ): Promise<OperationsDepartment> {
   const response = await apiClient.delete<{ data: OperationsDepartment }>(
     `${BASE}/${encodeURIComponent(departmentId)}`,
+    { data: { expectedRevision } },
   );
   return response.data.data;
 }

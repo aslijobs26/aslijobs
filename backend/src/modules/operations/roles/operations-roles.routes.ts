@@ -12,6 +12,7 @@ import {
   createOperationsRoleBodySchema,
   listOperationsRolesQuerySchema,
   operationsRoleIdParamsSchema,
+  restoreOperationsRoleBodySchema,
   updateOperationsRoleBodySchema,
 } from "./operations-roles.validation.js";
 
@@ -76,6 +77,7 @@ operationsRolesRouter.post(
   operationsTeamWriteRateLimit,
   requireOperationsPermission("roles", "update"),
   validate(operationsRoleIdParamsSchema, "params"),
+  validate(restoreOperationsRoleBodySchema, "body"),
   asyncHandler(operationsRolesController.restore),
 );
 

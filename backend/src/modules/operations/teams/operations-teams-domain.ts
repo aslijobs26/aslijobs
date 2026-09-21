@@ -95,27 +95,38 @@ export function isDepartmentCompatible(
   return userDepartmentId === teamDepartmentId;
 }
 
+/**
+ * Location scope: Super Admin is org-wide. Every other actor must have an
+ * explicit orgUnitId; missing scope denies access (never falls open).
+ */
 export function canActorAccessOrgUnit(input: {
   isSuperAdmin: boolean;
   actorOrgUnitId: string | null;
   actorSubtreeIds: string[];
   targetUnitId: string;
 }): boolean {
-  if (input.isSuperAdmin || !input.actorOrgUnitId) {
+  if (input.isSuperAdmin) {
     return true;
+  }
+  if (!input.actorOrgUnitId) {
+    return false;
   }
   return input.actorSubtreeIds.includes(input.targetUnitId);
 }
 
+/**
+ * Department scope: Super Admin is org-wide. Every other actor must have an
+ * explicit departmentId; missing scope denies access (never falls open).
+ */
 export function canActorAccessDepartment(input: {
   isSuperAdmin: boolean;
   actorDepartmentId: string | null;
   targetDepartmentId: string | null;
 }): boolean {
-  if (input.isSuperAdmin || !input.actorDepartmentId) {
+  if (input.isSuperAdmin) {
     return true;
   }
-  if (!input.targetDepartmentId) {
+  if (!input.actorDepartmentId || !input.targetDepartmentId) {
     return false;
   }
   return input.actorDepartmentId === input.targetDepartmentId;

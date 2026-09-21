@@ -13,6 +13,7 @@ import { OPEN_WORK_STATUSES } from "../work/operations-work-department.js";
 import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
 import {
   assertFineOrCoarsePermission,
+  canViewOperationsMemberEmail,
   canViewOperationsMemberMobile,
   getRoleDescendantIds,
   isRoleWithinActorScope,
@@ -45,6 +46,7 @@ import {
   generateOrganizationTemporaryPassword,
   sendOrganizationInvitationEmail,
 } from "./operations-invitation-email.service.js";
+import { isInvitationResendEligible, buildMemberSearchFields } from "./operations-people-security.js";
 import type {
   CreateOperationsTeamMemberBody,
   ListOperationsTeamQuery,
@@ -64,8 +66,25 @@ function optionalId(value: string | null | undefined): string | null {
   return value;
 }
 
+async function ensureVacantTeamLead(
+  teamId: string,
+  userId: string,
+): Promise<void> {
+  await OperationsTeamModel.updateOne(
+    {
+      _id: teamId,
+      $or: [{ leadUserId: null }, { leadUserId: { $exists: false } }],
+    },
+    { $set: { leadUserId: userId } },
+  );
+}
+
 function canViewMobile(access: OperationsResolvedAccess): boolean {
   return canViewOperationsMemberMobile(access);
+}
+
+function canViewEmail(access: OperationsResolvedAccess): boolean {
+  return canViewOperationsMemberEmail(access);
 }
 
 function toPublicMember(
@@ -95,7 +114,9 @@ function toPublicMember(
     orgUnitName?: string | null;
     teamName?: string | null;
     includeMobile?: boolean;
+    includeEmail?: boolean;
     mobileNumber?: string;
+    email?: string;
     invitationEmailSent?: boolean;
     invitationEmailError?: string | null;
   },
@@ -103,7 +124,9 @@ function toPublicMember(
   return {
     id: String(doc._id),
     fullName: doc.fullName,
-    email: doc.email ?? "",
+    ...(extras?.includeEmail
+      ? { email: extras.email ?? doc.email ?? "" }
+      : {}),
     ...(extras?.includeMobile
       ? { mobileNumber: extras.mobileNumber ?? "" }
       : {}),
@@ -169,9 +192,11 @@ class OperationsTeamService {
             : { _id: { $in: [] } },
       ),
       OperationsDepartmentModel.countDocuments(
-        actor.isSuperAdmin || !actor.departmentId
+        actor.isSuperAdmin
           ? { status: "active" }
-          : { status: "active", _id: actor.departmentId },
+          : actor.departmentId
+            ? { status: "active", _id: actor.departmentId }
+            : { _id: { $in: [] } },
       ),
       OperationsTeamModel.countDocuments(teamFilter),
     ]);
@@ -223,13 +248,11 @@ class OperationsTeamService {
     }
     if (query.search.trim()) {
       const pattern = escapeRegex(query.search.trim());
-      const searchFields: Record<string, unknown>[] = [
-        { fullName: { $regex: pattern, $options: "i" } },
-        { email: { $regex: pattern, $options: "i" } },
-      ];
-      if (canViewMobile(actor)) {
-        searchFields.push({ mobileNumber: { $regex: pattern, $options: "i" } });
-      }
+      const searchFields = buildMemberSearchFields({
+        pattern,
+        canViewEmail: canViewEmail(actor),
+        canViewMobile: canViewMobile(actor),
+      });
       const searchClause = { $or: searchFields };
       if (Array.isArray(filter.$and)) {
         filter.$and.push(searchClause);
@@ -250,7 +273,8 @@ class OperationsTeamService {
       .lean();
 
     const showMobile = canViewMobile(actor);
-    const extras = await this.hydrateMemberExtras(members, showMobile);
+    const showEmail = canViewEmail(actor);
+    const extras = await this.hydrateMemberExtras(members, showMobile, showEmail);
 
     return {
       members: members.map((member) =>
@@ -368,6 +392,7 @@ class OperationsTeamService {
         targetLabel: member.fullName,
         nextState: { userId: String(member._id) },
       });
+      await ensureVacantTeamLead(teamId, String(member._id));
     }
 
     const invitation = await this.deliverInvitationEmail({
@@ -383,6 +408,7 @@ class OperationsTeamService {
     const extras = await this.hydrateMemberExtras(
       [member.toObject()],
       canViewMobile(actor),
+      canViewEmail(actor),
     );
     const extra = extras.get(String(member._id));
     return toPublicMember(member, {
@@ -534,12 +560,14 @@ class OperationsTeamService {
           targetLabel: member.fullName,
           nextState: { userId: memberId },
         });
+        await ensureVacantTeamLead(nextTeamId, memberId);
       }
     }
 
     const extras = await this.hydrateMemberExtras(
       [member.toObject()],
       canViewMobile(actor),
+      canViewEmail(actor),
     );
     return toPublicMember(member, extras.get(memberId));
   }
@@ -591,6 +619,7 @@ class OperationsTeamService {
     const extras = await this.hydrateMemberExtras(
       [member.toObject()],
       canViewMobile(actor),
+      canViewEmail(actor),
     );
     return toPublicMember(member, extras.get(memberId));
   }
@@ -692,6 +721,22 @@ class OperationsTeamService {
       );
     }
 
+    // Resend is only for pending invitations (invited, never logged in).
+    if (
+      !isInvitationResendEligible({
+        email: member.email,
+        role: member.role,
+        lastActiveAt: member.lastActiveAt,
+        invitedAt: member.invitedAt,
+      })
+    ) {
+      throw new AppError(
+        "Invitation resend is only available for members with a pending invitation.",
+        HTTP_STATUS.CONFLICT,
+        { code: "INVITATION_NOT_PENDING" },
+      );
+    }
+
     const lastSent = member.invitationLastSentAt
       ? member.invitationLastSentAt.getTime()
       : 0;
@@ -738,6 +783,7 @@ class OperationsTeamService {
     const extras = await this.hydrateMemberExtras(
       [member.toObject()],
       canViewMobile(actor),
+      canViewEmail(actor),
     );
     return toPublicMember(member, {
       ...extras.get(memberId),
@@ -828,6 +874,9 @@ class OperationsTeamService {
     }
     if (actor.departmentId) {
       and.push({ departmentId: actor.departmentId });
+    } else {
+      // Deny-by-default: non-Super-Admin without department scope sees nobody.
+      and.push({ departmentId: { $in: [] } });
     }
     const subtree = await loadActorOrgSubtreeIds(actor);
     if (subtree) {
@@ -843,8 +892,13 @@ class OperationsTeamService {
     actor: OperationsResolvedAccess,
   ): Promise<Record<string, unknown>> {
     const filter: Record<string, unknown> = { status: "active" };
-    if (!actor.isSuperAdmin && actor.departmentId) {
+    if (actor.isSuperAdmin) {
+      return filter;
+    }
+    if (actor.departmentId) {
       filter.departmentId = actor.departmentId;
+    } else {
+      filter.departmentId = { $in: [] };
     }
     const subtree = await loadActorOrgSubtreeIds(actor);
     if (subtree) {
@@ -1000,8 +1054,10 @@ class OperationsTeamService {
       orgUnitId?: mongoose.Types.ObjectId | null;
       teamId?: mongoose.Types.ObjectId | null;
       mobileNumber: string;
+      email?: string | null;
     }>,
     showMobile: boolean,
+    showEmail: boolean,
   ): Promise<
     Map<
       string,
@@ -1011,7 +1067,9 @@ class OperationsTeamService {
         orgUnitName: string | null;
         teamName: string | null;
         includeMobile?: boolean;
+        includeEmail?: boolean;
         mobileNumber?: string;
+        email?: string;
       }
     >
   > {
@@ -1084,6 +1142,8 @@ class OperationsTeamService {
             : null,
           includeMobile: showMobile,
           mobileNumber: showMobile ? member.mobileNumber : undefined,
+          includeEmail: showEmail,
+          email: showEmail ? member.email ?? "" : undefined,
         },
       ]),
     );

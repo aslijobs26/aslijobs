@@ -15,7 +15,7 @@ import {
 } from "../rbac/operations-access.service.js";
 import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
 import { slugifyOperationsName } from "../rbac/operations-slug.js";
-import { buildOperationsPermissionCatalogTree } from "../rbac/operations-permission-catalog.js";
+import { buildOperationsPermissionCatalogTree, listOperationsPermissionProjectionDefinitions } from "../rbac/operations-permission-catalog.js";
 import type { OperationsResolvedAccess } from "../rbac/operations-access.types.js";
 import { prepareRoleGrants } from "./operations-role-grants.js";
 import {
@@ -26,6 +26,7 @@ import type {
   ArchiveOperationsRoleBody,
   CreateOperationsRoleBody,
   ListOperationsRolesQuery,
+  RestoreOperationsRoleBody,
   UpdateOperationsRoleBody,
 } from "./operations-roles.validation.js";
 
@@ -126,6 +127,7 @@ class OperationsRolesService {
   catalog() {
     return {
       tree: buildOperationsPermissionCatalogTree(),
+      definitions: listOperationsPermissionProjectionDefinitions(),
     };
   }
 
@@ -749,6 +751,20 @@ class OperationsRolesService {
       throw new AppError("You cannot archive this role.", HTTP_STATUS.FORBIDDEN);
     }
 
+    const expectedRevision = Number(body.expectedRevision);
+    const currentRevision = role.revision ?? 1;
+    if (
+      !Number.isInteger(expectedRevision) ||
+      expectedRevision < 1 ||
+      expectedRevision !== currentRevision
+    ) {
+      throw new AppError(
+        "This role was updated by someone else. Reload and try again.",
+        HTTP_STATUS.CONFLICT,
+        { expectedRevision: body.expectedRevision, currentRevision },
+      );
+    }
+
     const [memberCount, childCount] = await Promise.all([
       OperationsTeamUserModel.countDocuments({ roleId: role._id }),
       OperationsRoleModel.countDocuments({
@@ -790,11 +806,34 @@ class OperationsRolesService {
       );
     }
 
-    role.status = "archived";
-    role.archivedAt = new Date();
-    role.archivedBy = new mongoose.Types.ObjectId(actor.userId);
-    role.updatedBy = new mongoose.Types.ObjectId(actor.userId);
-    await role.save();
+    const archivedAt = new Date();
+    const updated = await OperationsRoleModel.findOneAndUpdate(
+      { _id: roleId, revision: expectedRevision, status: { $ne: "archived" } },
+      {
+        $set: {
+          status: "archived",
+          archivedAt,
+          archivedBy: new mongoose.Types.ObjectId(actor.userId),
+          updatedBy: new mongoose.Types.ObjectId(actor.userId),
+        },
+        $inc: { revision: 1 },
+      },
+      { new: true },
+    );
+
+    if (!updated) {
+      const latest = await OperationsRoleModel.findById(roleId)
+        .select("revision status")
+        .lean();
+      throw new AppError(
+        "This role was updated by someone else. Reload and try again.",
+        HTTP_STATUS.CONFLICT,
+        {
+          expectedRevision,
+          currentRevision: latest?.revision ?? null,
+        },
+      );
+    }
 
     await recordOperationsAuditEvent({
       actorUserId: actor.userId,
@@ -802,17 +841,22 @@ class OperationsRolesService {
       action: "role.archived",
       targetType: "role",
       targetId: roleId,
-      targetLabel: role.name,
+      targetLabel: updated.name,
       metadata: {
         reassignRoleId: body.reassignRoleId || null,
         memberCount,
+        revision: updated.revision,
       },
     });
 
-    return toPublicRole(role);
+    return toPublicRole(updated);
   }
 
-  async restore(actor: OperationsResolvedAccess, roleId: string) {
+  async restore(
+    actor: OperationsResolvedAccess,
+    roleId: string,
+    body: RestoreOperationsRoleBody,
+  ) {
     const role = await OperationsRoleModel.findById(roleId);
     if (!role) {
       throw new AppError("Role not found.", HTTP_STATUS.NOT_FOUND);
@@ -821,11 +865,47 @@ class OperationsRolesService {
       throw new AppError("You cannot restore this role.", HTTP_STATUS.FORBIDDEN);
     }
 
-    role.status = "active";
-    role.archivedAt = null;
-    role.archivedBy = null;
-    role.updatedBy = new mongoose.Types.ObjectId(actor.userId);
-    await role.save();
+    const expectedRevision = Number(body.expectedRevision);
+    const currentRevision = role.revision ?? 1;
+    if (
+      !Number.isInteger(expectedRevision) ||
+      expectedRevision < 1 ||
+      expectedRevision !== currentRevision
+    ) {
+      throw new AppError(
+        "This role was updated by someone else. Reload and try again.",
+        HTTP_STATUS.CONFLICT,
+        { expectedRevision: body.expectedRevision, currentRevision },
+      );
+    }
+
+    const updated = await OperationsRoleModel.findOneAndUpdate(
+      { _id: roleId, revision: expectedRevision, status: "archived" },
+      {
+        $set: {
+          status: "active",
+          archivedAt: null,
+          archivedBy: null,
+          updatedBy: new mongoose.Types.ObjectId(actor.userId),
+        },
+        $inc: { revision: 1 },
+      },
+      { new: true },
+    );
+
+    if (!updated) {
+      const latest = await OperationsRoleModel.findById(roleId)
+        .select("revision status")
+        .lean();
+      throw new AppError(
+        "This role was updated by someone else. Reload and try again.",
+        HTTP_STATUS.CONFLICT,
+        {
+          expectedRevision,
+          currentRevision: latest?.revision ?? null,
+        },
+      );
+    }
 
     await recordOperationsAuditEvent({
       actorUserId: actor.userId,
@@ -833,10 +913,11 @@ class OperationsRolesService {
       action: "role.restored",
       targetType: "role",
       targetId: roleId,
-      targetLabel: role.name,
+      targetLabel: updated.name,
+      metadata: { revision: updated.revision },
     });
 
-    return toPublicRole(role);
+    return toPublicRole(updated);
   }
 }
 

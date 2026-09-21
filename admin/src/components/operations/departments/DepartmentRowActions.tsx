@@ -107,6 +107,22 @@ export function DepartmentRowActions({
             Manage Roles
           </Link>
           <OperationsCan module="departments" action="update">
+            {!isActive ? (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={isStatusPending}
+                onClick={() => {
+                  close();
+                  onActivate();
+                }}
+                className="flex w-full px-3 py-2 text-left text-xs text-foreground hover:bg-primary-light hover:text-primary disabled:opacity-50"
+              >
+                Activate
+              </button>
+            ) : null}
+          </OperationsCan>
+          <OperationsCan module="departments" action="delete">
             {isActive ? (
               <button
                 type="button"
@@ -120,20 +136,7 @@ export function DepartmentRowActions({
               >
                 Deactivate
               </button>
-            ) : (
-              <button
-                type="button"
-                role="menuitem"
-                disabled={isStatusPending}
-                onClick={() => {
-                  close();
-                  onActivate();
-                }}
-                className="flex w-full px-3 py-2 text-left text-xs text-foreground hover:bg-primary-light hover:text-primary disabled:opacity-50"
-              >
-                Activate
-              </button>
-            )}
+            ) : null}
             <button
               type="button"
               role="menuitem"

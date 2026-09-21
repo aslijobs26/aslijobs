@@ -26,7 +26,11 @@ export const updateOperationsDepartmentBodySchema = z.object({
   description: z.string().trim().max(400).optional(),
   headUserId: z.union([objectId, z.literal(""), z.null()]).optional(),
   status: z.enum(["active", "archived"]).optional(),
-  expectedRevision: z.coerce.number().int().min(1).optional(),
+  expectedRevision: z.coerce.number().int().min(1),
+});
+
+export const archiveOperationsDepartmentBodySchema = z.object({
+  expectedRevision: z.coerce.number().int().min(1),
 });
 
 export const operationsDepartmentIdParamsSchema = z.object({
@@ -41,6 +45,9 @@ export type CreateOperationsDepartmentBody = z.infer<
 >;
 export type UpdateOperationsDepartmentBody = z.infer<
   typeof updateOperationsDepartmentBodySchema
+>;
+export type ArchiveOperationsDepartmentBody = z.infer<
+  typeof archiveOperationsDepartmentBodySchema
 >;
 export type OperationsDepartmentIdParams = z.infer<
   typeof operationsDepartmentIdParamsSchema

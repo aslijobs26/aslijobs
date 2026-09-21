@@ -167,7 +167,10 @@ export function OperationsRolesPage() {
             onRetry={() => void hierarchyQuery.refetch()}
             onArchive={openArchive}
             onRestore={(role) => {
-              void restoreMutation.mutateAsync(role.id);
+              void restoreMutation.mutateAsync({
+                roleId: role.id,
+                expectedRevision: role.revision,
+              });
             }}
             leadingControls={
               <RolesHierarchyToggle tab={tab} onChange={setTab} />
@@ -331,7 +334,10 @@ export function OperationsRolesPage() {
                                   role={role}
                                   onArchive={openArchive}
                                   onRestore={(target) => {
-                                    void restoreMutation.mutateAsync(target.id);
+                                    void restoreMutation.mutateAsync({
+                                      roleId: target.id,
+                                      expectedRevision: target.revision,
+                                    });
                                   }}
                                 />
                               </div>
@@ -436,6 +442,7 @@ export function OperationsRolesPage() {
                   try {
                     await archiveMutation.mutateAsync({
                       roleId: archiveTarget.id,
+                      expectedRevision: archiveTarget.revision,
                       reassignRoleId: reassignRoleId || undefined,
                     });
                     setArchiveTarget(null);

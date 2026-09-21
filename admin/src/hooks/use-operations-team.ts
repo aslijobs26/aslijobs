@@ -15,8 +15,23 @@ import type {
 } from "../types/operations-team";
 import { OPERATIONS_AUTH_QUERY_KEY } from "../utils/operations-session";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
+import { OPERATIONS_ORGANIZATION_QUERY_KEY } from "./use-operations-organization";
+import { OPERATIONS_DEPARTMENTS_QUERY_KEY } from "./use-operations-departments";
 
 export const OPERATIONS_TEAM_QUERY_KEY = ["operations", "team"] as const;
+
+async function invalidatePeopleRelatedCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY }),
+    // Inline key avoids circular import with use-operations-ops-teams.
+    queryClient.invalidateQueries({ queryKey: ["operations", "teams"] }),
+    queryClient.invalidateQueries({ queryKey: OPERATIONS_ORGANIZATION_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: OPERATIONS_DEPARTMENTS_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY }),
+  ]);
+}
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
   if (failureCount >= 3) return false;
@@ -52,8 +67,7 @@ export function useCreateOperationsTeamMember() {
     mutationFn: (input: CreateOperationsTeamMemberInput) =>
       createOperationsTeamMember(input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY });
+      await invalidatePeopleRelatedCaches(queryClient);
     },
   });
 }
@@ -69,8 +83,7 @@ export function useUpdateOperationsTeamMember() {
       input: UpdateOperationsTeamMemberInput;
     }) => updateOperationsTeamMember(memberId, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY });
+      await invalidatePeopleRelatedCaches(queryClient);
     },
   });
 }
@@ -88,8 +101,7 @@ export function useUpdateOperationsTeamMemberStatus() {
       reason?: string;
     }) => updateOperationsTeamMemberStatus(memberId, status, reason),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY });
+      await invalidatePeopleRelatedCaches(queryClient);
     },
   });
 }
@@ -109,8 +121,7 @@ export function useDeleteOperationsTeamMember() {
   return useMutation({
     mutationFn: (memberId: string) => deleteOperationsTeamMember(memberId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: OPERATIONS_TEAM_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: OPERATIONS_AUTH_QUERY_KEY });
+      await invalidatePeopleRelatedCaches(queryClient);
     },
   });
 }

@@ -40,6 +40,11 @@ export const updateOperationsRoleBodySchema = createOperationsRoleBodySchema
 
 export const archiveOperationsRoleBodySchema = z.object({
   reassignRoleId: z.union([objectId, z.literal("")]).optional().default(""),
+  expectedRevision: z.coerce.number().int().min(1),
+});
+
+export const restoreOperationsRoleBodySchema = z.object({
+  expectedRevision: z.coerce.number().int().min(1),
 });
 
 export const operationsRoleIdParamsSchema = z.object({
@@ -57,6 +62,9 @@ export type UpdateOperationsRoleBody = z.infer<
 >;
 export type ArchiveOperationsRoleBody = z.infer<
   typeof archiveOperationsRoleBodySchema
+>;
+export type RestoreOperationsRoleBody = z.infer<
+  typeof restoreOperationsRoleBodySchema
 >;
 export type OperationsRoleIdParams = z.infer<
   typeof operationsRoleIdParamsSchema

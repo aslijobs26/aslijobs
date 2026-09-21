@@ -10,8 +10,11 @@ import { slugifyOperationsName } from "../rbac/operations-slug.js";
 import type { OperationsResolvedAccess } from "../rbac/operations-access.types.js";
 import {
   assertFineOrCoarsePermission,
+  canViewOperationsMemberEmail,
+  canViewOperationsMemberMobile,
   getRoleDescendantIds,
 } from "../rbac/operations-access.service.js";
+import { sanitizeMemberContactFields } from "../team/operations-people-security.js";
 import {
   assertActorCanAccessDepartment,
   assertActorCanAccessOrgUnit,
@@ -289,6 +292,57 @@ async function hydrateTeams(teams: LeanTeam[]) {
   if (teams.length === 0) {
     return [];
   }
+
+  // Repair vacant leads from existing active members so Team Lead never
+  // stays blank when the team already has people assigned.
+  const vacantTeams = teams.filter((team) => !team.leadUserId);
+  if (vacantTeams.length > 0) {
+    const firstMembers = await OperationsTeamUserModel.aggregate<{
+      _id: mongoose.Types.ObjectId;
+      userId: mongoose.Types.ObjectId;
+    }>([
+      {
+        $match: {
+          teamId: { $in: vacantTeams.map((team) => team._id) },
+          status: "active",
+        },
+      },
+      { $sort: { createdAt: 1 } },
+      {
+        $group: {
+          _id: "$teamId",
+          userId: { $first: "$_id" },
+        },
+      },
+    ]);
+
+    if (firstMembers.length > 0) {
+      await Promise.all(
+        firstMembers.map((row) =>
+          OperationsTeamModel.updateOne(
+            {
+              _id: row._id,
+              $or: [{ leadUserId: null }, { leadUserId: { $exists: false } }],
+            },
+            { $set: { leadUserId: row.userId } },
+          ),
+        ),
+      );
+
+      const leadByTeamId = new Map(
+        firstMembers.map((row) => [String(row._id), row.userId]),
+      );
+      for (const team of teams) {
+        if (!team.leadUserId) {
+          const leadId = leadByTeamId.get(String(team._id));
+          if (leadId) {
+            team.leadUserId = leadId;
+          }
+        }
+      }
+    }
+  }
+
   const departmentIds = [...new Set(teams.map((team) => String(team.departmentId)))];
   const orgUnitIds = [...new Set(teams.map((team) => String(team.orgUnitId)))];
   const leadIds = [
@@ -298,6 +352,9 @@ async function hydrateTeams(teams: LeanTeam[]) {
         .filter((id): id is string => Boolean(id)),
     ),
   ];
+  const leadObjectIds = leadIds
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
   const teamObjectIds = teams.map((team) => team._id);
 
   const [departments, orgUnits, leads, memberRows] = await Promise.all([
@@ -307,9 +364,9 @@ async function hydrateTeams(teams: LeanTeam[]) {
     OperationsOrgUnitModel.find({ _id: { $in: orgUnitIds } })
       .select("name type ancestorIds")
       .lean(),
-    leadIds.length
-      ? OperationsTeamUserModel.find({ _id: { $in: leadIds } })
-          .select("fullName")
+    leadObjectIds.length
+      ? OperationsTeamUserModel.find({ _id: { $in: leadObjectIds } })
+          .select("fullName email")
           .lean()
       : [],
     OperationsTeamUserModel.aggregate<{
@@ -375,7 +432,13 @@ async function hydrateTeams(teams: LeanTeam[]) {
     orgUnits.map((row) => [String(row._id), row]),
   );
   const leadNameById = new Map(
-    leads.map((row) => [String(row._id), row.fullName]),
+    leads.map((row) => {
+      const name =
+        (typeof row.fullName === "string" && row.fullName.trim()) ||
+        (typeof row.email === "string" && row.email.trim()) ||
+        null;
+      return [String(row._id), name] as const;
+    }),
   );
   const memberByTeam = new Map(
     memberRows.map((row) => [String(row._id), row]),
@@ -418,8 +481,12 @@ class OperationsTeamsService {
     extra: Record<string, unknown> = {},
   ): Promise<Record<string, unknown>> {
     const filter: Record<string, unknown> = { ...extra };
-    if (!access.isSuperAdmin && access.departmentId) {
-      filter.departmentId = access.departmentId;
+    if (!access.isSuperAdmin) {
+      if (access.departmentId) {
+        filter.departmentId = access.departmentId;
+      } else {
+        filter.departmentId = { $in: [] };
+      }
     }
     const subtree = await loadActorOrgSubtreeIds(access);
     if (subtree) {
@@ -877,6 +944,16 @@ class OperationsTeamsService {
       },
     );
 
+    if (!team.leadUserId) {
+      await OperationsTeamModel.updateOne(
+        {
+          _id: team._id,
+          $or: [{ leadUserId: null }, { leadUserId: { $exists: false } }],
+        },
+        { $set: { leadUserId: body.userId } },
+      );
+    }
+
     await recordOperationsAuditEvent({
       actorUserId: access.userId,
       actorName: access.roleName ?? "",
@@ -985,15 +1062,16 @@ class OperationsTeamsService {
     }
     if (query.search.trim()) {
       const pattern = query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      filter.$and = [
-        {
-          $or: [
-            { fullName: { $regex: pattern, $options: "i" } },
-            { email: { $regex: pattern, $options: "i" } },
-            { mobileNumber: { $regex: pattern, $options: "i" } },
-          ],
-        },
+      const searchFields: Record<string, unknown>[] = [
+        { fullName: { $regex: pattern, $options: "i" } },
       ];
+      if (canViewOperationsMemberEmail(access)) {
+        searchFields.push({ email: { $regex: pattern, $options: "i" } });
+      }
+      if (canViewOperationsMemberMobile(access)) {
+        searchFields.push({ mobileNumber: { $regex: pattern, $options: "i" } });
+      }
+      filter.$and = [{ $or: searchFields }];
     }
 
     const total = await OperationsTeamUserModel.countDocuments(filter);
@@ -1007,13 +1085,20 @@ class OperationsTeamsService {
       .limit(pagination.limit)
       .lean();
 
+    const showMobile = canViewOperationsMemberMobile(access);
+    const showEmail = canViewOperationsMemberEmail(access);
+
     return {
       teamId,
       members: members.map((member) => ({
         id: String(member._id),
         fullName: member.fullName,
-        email: member.email ?? "",
-        mobileNumber: "",
+        ...sanitizeMemberContactFields({
+          email: member.email,
+          mobileNumber: member.mobileNumber,
+          canViewEmail: showEmail,
+          canViewMobile: showMobile,
+        }),
         status: member.status,
         role: member.role,
         roleId: member.roleId ? String(member.roleId) : null,
