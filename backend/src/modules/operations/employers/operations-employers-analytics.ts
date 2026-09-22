@@ -187,16 +187,7 @@ function createdAtRangeFilter(from: Date, to: Date): Record<string, unknown> {
 }
 
 const VERIFIED_EMPLOYER_FILTER: Record<string, unknown> = {
-  $or: [
-    { verificationStatus: "verified" },
-    {
-      $and: [
-        { verificationStatus: { $in: [null, ""] } },
-        { isWhatsappVerified: true },
-        { registrationStatus: "completed" },
-      ],
-    },
-  ],
+  verificationStatus: { $in: ["verified", "approved"] },
 };
 
 const ACTIVE_STATUS_FILTER: Record<string, unknown> = {
@@ -207,20 +198,13 @@ const ACTIVE_STATUS_FILTER: Record<string, unknown> = {
   ],
 };
 
+/** Explicit verificationStatus only — never infer from WhatsApp OTP. */
 const PENDING_VERIFICATION_FILTER: Record<string, unknown> = {
   $or: [
     { verificationStatus: "pending" },
-    {
-      $and: [
-        { verificationStatus: { $in: [null, ""] } },
-        {
-          $or: [
-            { isWhatsappVerified: false },
-            { registrationStatus: { $ne: "completed" } },
-          ],
-        },
-      ],
-    },
+    { verificationStatus: null },
+    { verificationStatus: "" },
+    { verificationStatus: { $exists: false } },
   ],
 };
 

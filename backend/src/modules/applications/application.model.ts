@@ -2,6 +2,7 @@ import { Schema, model, type InferSchemaType, type Types } from "mongoose";
 import { RESUME_STATUSES } from "../resumes/resume.constants.js";
 import { SAVED_CANDIDATE_PRIORITIES } from "../saved-candidates/saved-candidate.constants.js";
 import {
+  APPLICATION_ACTIVE_STATUSES,
   APPLICATION_DEFAULT_STATUS,
   APPLICATION_HISTORY_ACTORS,
   APPLICATION_INTERVIEW_MODES,
@@ -245,9 +246,11 @@ applicationSchema.index(
     unique: true,
     /**
      * Allow re-apply after withdraw while blocking concurrent active apps.
-     * Withdrawn rows remain for ATS history.
+     * MongoDB Atlas rejects `$ne` / `$not` in partialFilterExpression — use `$in`.
      */
-    partialFilterExpression: { status: { $ne: "withdrawn" } },
+    partialFilterExpression: {
+      status: { $in: [...APPLICATION_ACTIVE_STATUSES] },
+    },
     name: "jobSeekerId_1_jobId_1_active",
   },
 );

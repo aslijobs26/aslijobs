@@ -13,6 +13,11 @@ export const APPLICATION_STATUSES = [
   "withdrawn",
 ] as const;
 
+/** Active (non-withdrawn) statuses — used by unique partial indexes (MongoDB rejects `$ne` in partialFilterExpression). */
+export const APPLICATION_ACTIVE_STATUSES = APPLICATION_STATUSES.filter(
+  (status) => status !== "withdrawn",
+);
+
 export const APPLICATION_DEFAULT_STATUS =
   "submitted" as const satisfies (typeof APPLICATION_STATUSES)[number];
 

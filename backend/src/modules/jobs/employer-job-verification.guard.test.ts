@@ -56,6 +56,34 @@ describe("employer job verification guard", () => {
     }
   });
 
+  it("includes draftSaved metadata when submit is blocked after draft persist", () => {
+    assert.throws(
+      () =>
+        assertEmployerVerifiedForJobAction(
+          { _id: "emp1", verificationStatus: "pending" },
+          "submit",
+          {
+            draftSaved: true,
+            jobId: "507f1f77bcf86cd799439011",
+            jobPublicId: "AJ-2026-000001",
+          },
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        const details = error.details as {
+          code?: string;
+          draftSaved?: boolean;
+          jobId?: string;
+        };
+        assert.equal(details.code, EMPLOYER_VERIFICATION_REQUIRED_CODE);
+        assert.equal(details.draftSaved, true);
+        assert.equal(details.jobId, "507f1f77bcf86cd799439011");
+        assert.match(error.message, /saved as a draft/i);
+        return true;
+      },
+    );
+  });
+
   it("allows verified employers for submit/publish/approve actions", () => {
     assert.doesNotThrow(() =>
       assertEmployerVerifiedForJobAction(

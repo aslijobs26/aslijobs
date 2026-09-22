@@ -2,6 +2,7 @@
 
 import {
   EMPLOYER_VERIFICATION_REQUIRED_CODE,
+  EMPLOYER_VERIFICATION_REQUIRED_DRAFT_SAVED_MESSAGE,
   EMPLOYER_VERIFICATION_REQUIRED_MESSAGE,
   POST_JOB_INITIAL_STEP,
   POST_JOB_INITIAL_WIZARD_DATA,
@@ -18,13 +19,17 @@ import {
   updateEmployerJobDraft,
 } from "@/services/employer-jobs.service";
 import type { EmployerLoginPublic } from "@/services/employer-login.service";
-import { ensureEmployerProfile } from "@/hooks/useEmployerProfile";
+import {
+  ensureEmployerProfile,
+  fetchFreshEmployerProfile,
+} from "@/hooks/useEmployerProfile";
 import type { CreatedJobResponse, JobStatus } from "@/types/employer-jobs";
 import { buildJobPostedSuccessSummary } from "@/utils/build-job-posted-success-summary";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import { setJobPostedSuccessSummary } from "@/utils/job-posted-success-storage";
 import { mapWizardDataToCreateJobPayload } from "@/utils/map-post-job-payload";
 import { normalizeApiError, getApiErrorMessage } from "@/utils/normalize-api-error";
+import { isAxiosError } from "axios";
 import {
   hasMeaningfulPostJobDraftContent,
   mapJobDetailToWizardState,
@@ -170,13 +175,31 @@ function isEmployerVerifiedForJobs(
   return status === "verified";
 }
 
-function resolvePostJobSubmitError(error: unknown): {
+function readVerificationErrorDetails(error: unknown): {
   isVerificationRequired: boolean;
+  draftSaved: boolean;
+  draftJobId: string | null;
 } {
   const normalized = normalizeApiError(error);
+  let draftSaved = false;
+  let draftJobId: string | null = null;
+
+  if (isAxiosError(error)) {
+    const details = error.response?.data?.details;
+    if (details && typeof details === "object" && !Array.isArray(details)) {
+      const record = details as Record<string, unknown>;
+      draftSaved = record.draftSaved === true;
+      if (typeof record.jobId === "string" && record.jobId.trim()) {
+        draftJobId = record.jobId.trim();
+      }
+    }
+  }
+
   return {
     isVerificationRequired:
       normalized.code === EMPLOYER_VERIFICATION_REQUIRED_CODE,
+    draftSaved,
+    draftJobId,
   };
 }
 
@@ -320,27 +343,30 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
     [],
   );
 
-  const persistDraft = useCallback(async (options?: { keepalive?: boolean }) => {
+  const persistDraft = useCallback(async (options?: {
+    keepalive?: boolean;
+    force?: boolean;
+  }): Promise<string | null> => {
     if (
       skipAutosaveRef.current ||
       isSavingDraftRef.current ||
       isActiveEditMode
     ) {
-      return;
+      return draftIdRef.current;
     }
 
     const currentFormData = formDataRef.current;
     const currentStep = activeStepRef.current;
 
     if (!hasMeaningfulPostJobDraftContent(currentFormData)) {
-      return;
+      return draftIdRef.current;
     }
 
     const payload = mapWizardDataToDraftPayload(currentFormData, currentStep);
     const signature = JSON.stringify(payload);
 
-    if (signature === lastSavedSignatureRef.current) {
-      return;
+    if (!options?.force && signature === lastSavedSignatureRef.current) {
+      return draftIdRef.current;
     }
 
     isSavingDraftRef.current = true;
@@ -358,13 +384,13 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       await queryClient.invalidateQueries({
         queryKey: EMPLOYER_JOBS_QUERY_KEYS.all,
       });
+      return draftIdRef.current;
     } catch {
       // Autosave failures should not interrupt form editing.
+      return draftIdRef.current;
     } finally {
       isSavingDraftRef.current = false;
     }
-
-    void options;
   }, [isActiveEditMode, queryClient]);
 
   const scheduleDraftAutosave = useCallback(() => {
@@ -632,16 +658,35 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       return;
     }
 
-    // Draft autosave remains allowed; only submit/publish/live-update is gated.
-    if (!isEmployerVerifiedForJobs(verificationStatusRef.current)) {
-      setSubmitError(EMPLOYER_VERIFICATION_REQUIRED_MESSAGE);
-      setShowVerificationCta(true);
-      return;
-    }
-
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = null;
+    }
+
+    // Persist draft before any verification gate so data is never lost.
+    if (!isActiveEditMode) {
+      skipAutosaveRef.current = false;
+      await persistDraft({ force: true });
+    }
+
+    // Database is the source of truth — bypass stale React Query cache.
+    try {
+      const profile = await fetchFreshEmployerProfile(queryClient);
+      const nextStatus = profile.verificationStatus ?? "pending";
+      setVerificationStatus(nextStatus);
+      verificationStatusRef.current = nextStatus;
+    } catch {
+      // Keep last known status; server gate remains authoritative on submit.
+    }
+
+    if (!isEmployerVerifiedForJobs(verificationStatusRef.current)) {
+      setSubmitError(
+        draftIdRef.current
+          ? EMPLOYER_VERIFICATION_REQUIRED_DRAFT_SAVED_MESSAGE
+          : EMPLOYER_VERIFICATION_REQUIRED_MESSAGE,
+      );
+      setShowVerificationCta(true);
+      return;
     }
 
     skipAutosaveRef.current = true;
@@ -692,18 +737,30 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       if (!isActiveEditMode) {
         skipAutosaveRef.current = false;
       }
-      const resolved = resolvePostJobSubmitError(error);
+      const resolved = readVerificationErrorDetails(error);
+      if (resolved.draftJobId) {
+        draftIdRef.current = resolved.draftJobId;
+        window.history.replaceState(
+          null,
+          "",
+          ROUTES.postJobEdit(resolved.draftJobId),
+        );
+        setLoadedJobStatus("draft");
+      }
       setSubmitError(
         resolved.isVerificationRequired
-          ? EMPLOYER_VERIFICATION_REQUIRED_MESSAGE
+          ? resolved.draftSaved || Boolean(draftIdRef.current)
+            ? EMPLOYER_VERIFICATION_REQUIRED_DRAFT_SAVED_MESSAGE
+            : EMPLOYER_VERIFICATION_REQUIRED_MESSAGE
           : getApiErrorMessage(
               error,
-              isActiveEditMode
-                ? "Unable to update job. Please try again."
-                : "Unable to post job. Please try again.",
+              "Unable to post this job. Please try again.",
             ),
       );
-      setShowVerificationCta(resolved.isVerificationRequired);
+      if (resolved.isVerificationRequired) {
+        setShowVerificationCta(true);
+      }
+    } finally {
       setIsSubmitting(false);
     }
   };

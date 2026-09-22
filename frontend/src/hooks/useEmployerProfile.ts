@@ -13,8 +13,12 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 
-/** Profile data changes rarely; share one cache across the employer workspace. */
-export const EMPLOYER_PROFILE_STALE_TIME_MS = 5 * 60_000;
+/**
+ * Profile changes infrequently, but verification can flip while a session is open.
+ * Keep a short stale window and refetch on focus so Post Job / dashboard stay aligned
+ * with the database (source of truth).
+ */
+export const EMPLOYER_PROFILE_STALE_TIME_MS = 30_000;
 export const EMPLOYER_PROFILE_GC_TIME_MS = 30 * 60_000;
 
 export async function fetchEmployerProfileQuery(): Promise<EmployerLoginPublic> {
@@ -27,9 +31,9 @@ export const employerProfileQueryOptions = {
   queryFn: fetchEmployerProfileQuery,
   staleTime: EMPLOYER_PROFILE_STALE_TIME_MS,
   gcTime: EMPLOYER_PROFILE_GC_TIME_MS,
-  refetchOnWindowFocus: false,
-  refetchOnReconnect: false,
-  refetchOnMount: false,
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
+  refetchOnMount: true,
 } as const;
 
 /**
@@ -60,5 +64,16 @@ export function ensureEmployerProfile(
     queryKey: employerProfileQueryOptions.queryKey,
     queryFn: employerProfileQueryOptions.queryFn,
     staleTime: employerProfileQueryOptions.staleTime,
+  });
+}
+
+/** Always bypass cache — used before job submit so DB verification wins. */
+export function fetchFreshEmployerProfile(
+  queryClient: QueryClient,
+): Promise<EmployerLoginPublic> {
+  return queryClient.fetchQuery({
+    queryKey: employerProfileQueryOptions.queryKey,
+    queryFn: employerProfileQueryOptions.queryFn,
+    staleTime: 0,
   });
 }

@@ -341,31 +341,14 @@ async function loadKpis(now: Date): Promise<OperationsEmployerKpis> {
       ],
     }),
     EmployerModel.countDocuments({
-      $or: [
-        { verificationStatus: "verified" },
-        {
-          $and: [
-            { verificationStatus: { $in: [null, undefined, ""] } },
-            { isWhatsappVerified: true },
-            { registrationStatus: "completed" },
-          ],
-        },
-      ],
+      verificationStatus: { $in: ["verified", "approved"] },
     }),
     EmployerModel.countDocuments({
       $or: [
         { verificationStatus: "pending" },
-        {
-          $and: [
-            { verificationStatus: { $in: [null, undefined, ""] } },
-            {
-              $or: [
-                { isWhatsappVerified: false },
-                { registrationStatus: { $ne: "completed" } },
-              ],
-            },
-          ],
-        },
+        { verificationStatus: null },
+        { verificationStatus: "" },
+        { verificationStatus: { $exists: false } },
       ],
     }),
     EmployerModel.countDocuments({ status: "suspended" }),
@@ -413,32 +396,15 @@ async function loadPeriodStats(
       EmployerModel.countDocuments(match),
       EmployerModel.countDocuments({
         ...match,
-        $or: [
-          { verificationStatus: "verified" },
-          {
-            $and: [
-              { verificationStatus: { $in: [null, undefined, ""] } },
-              { isWhatsappVerified: true },
-              { registrationStatus: "completed" },
-            ],
-          },
-        ],
+        verificationStatus: { $in: ["verified", "approved"] },
       }),
       EmployerModel.countDocuments({
         ...match,
         $or: [
           { verificationStatus: "pending" },
-          {
-            $and: [
-              { verificationStatus: { $in: [null, undefined, ""] } },
-              {
-                $or: [
-                  { isWhatsappVerified: false },
-                  { registrationStatus: { $ne: "completed" } },
-                ],
-              },
-            ],
-          },
+          { verificationStatus: null },
+          { verificationStatus: "" },
+          { verificationStatus: { $exists: false } },
         ],
       }),
       EmployerModel.countDocuments({ ...match, status: "suspended" }),
@@ -594,16 +560,7 @@ export const operationsEmployersService = {
       const vs = query.verificationStatus.trim().toLowerCase();
       if (vs === "verified") {
         andClauses.push({
-          $or: [
-            { verificationStatus: "verified" },
-            {
-              $and: [
-                { verificationStatus: { $in: [null, undefined, ""] } },
-                { isWhatsappVerified: true },
-                { registrationStatus: "completed" },
-              ],
-            },
-          ],
+          verificationStatus: { $in: ["verified", "approved"] },
         });
       } else if (vs === "rejected") {
         andClauses.push({ verificationStatus: "rejected" });
@@ -611,17 +568,9 @@ export const operationsEmployersService = {
         andClauses.push({
           $or: [
             { verificationStatus: "pending" },
-            {
-              $and: [
-                { verificationStatus: { $in: [null, undefined, ""] } },
-                {
-                  $or: [
-                    { isWhatsappVerified: false },
-                    { registrationStatus: { $ne: "completed" } },
-                  ],
-                },
-              ],
-            },
+            { verificationStatus: null },
+            { verificationStatus: "" },
+            { verificationStatus: { $exists: false } },
           ],
         });
       }

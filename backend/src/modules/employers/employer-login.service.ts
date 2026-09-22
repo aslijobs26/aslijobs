@@ -210,40 +210,60 @@ function buildEmployerDisplayName(employer: {
 }
 
 async function findLoginEligibleEmployer(whatsappNumber: string) {
-  const employer = await EmployerModel.findOne({ whatsappNumber }).select(
-    "+otpHash +otpExpiresAt +otpAttempts +lastOtpSentAt +refreshTokenHash +refreshTokenExpiresAt",
-  );
+  const candidates = await EmployerModel.find({ whatsappNumber })
+    .select(
+      "+otpHash +otpExpiresAt +otpAttempts +lastOtpSentAt +refreshTokenHash +refreshTokenExpiresAt",
+    )
+    .sort({ updatedAt: -1 })
+    .limit(20);
 
-  if (!employer) {
+  if (candidates.length === 0) {
     throw new AppError("Employer not registered.", HTTP_STATUS.NOT_FOUND);
   }
 
-  if (employer.status === "suspended") {
-    throw new AppError(
-      "Your account is currently suspended. Please contact support.",
-      HTTP_STATUS.FORBIDDEN,
-    );
-  }
+  const loginEligible = candidates.filter(
+    (employer) =>
+      employer.status !== "suspended" &&
+      employer.status !== "inactive" &&
+      employer.isWhatsappVerified &&
+      employer.registrationStatus === "completed",
+  );
 
-  if (employer.status === "inactive") {
-    throw new AppError(
-      "Your account is currently inactive. Please contact support.",
-      HTTP_STATUS.FORBIDDEN,
-    );
-  }
+  if (loginEligible.length === 0) {
+    const first = candidates[0]!;
+    if (first.status === "suspended") {
+      throw new AppError(
+        "Your account is currently suspended. Please contact support.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
 
-  // Pending verificationStatus must not block login.
-  if (
-    !employer.isWhatsappVerified ||
-    employer.registrationStatus !== "completed"
-  ) {
+    if (first.status === "inactive") {
+      throw new AppError(
+        "Your account is currently inactive. Please contact support.",
+        HTTP_STATUS.FORBIDDEN,
+      );
+    }
+
     throw new AppError(
       "Complete your registration first.",
       HTTP_STATUS.CONFLICT,
     );
   }
 
-  return employer;
+  // Prefer Ops-verified account when duplicate WhatsApp rows exist.
+  loginEligible.sort((left, right) => {
+    const leftVerified = left.verificationStatus === "verified" ? 1 : 0;
+    const rightVerified = right.verificationStatus === "verified" ? 1 : 0;
+    if (rightVerified !== leftVerified) {
+      return rightVerified - leftVerified;
+    }
+    const leftTime = left.updatedAt?.getTime?.() ?? 0;
+    const rightTime = right.updatedAt?.getTime?.() ?? 0;
+    return rightTime - leftTime;
+  });
+
+  return loginEligible[0]!;
 }
 
 async function issueAndPersistLoginOtp(

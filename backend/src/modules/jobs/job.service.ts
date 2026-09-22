@@ -15,6 +15,7 @@ import { JobModel, type JobDocument } from "./job.model.js";
 import { jobViewService } from "./job-view.service.js";
 import {
   assertEmployerVerifiedForJobAction,
+  isEmployerVerifiedForJobs,
 } from "./employer-job-verification.guard.js";
 import {
   buildPublicEmployerVerificationStages,
@@ -1277,6 +1278,20 @@ export class JobService {
     const employerObjectId = employer._id;
     const jobId = await generateJobId();
     const isDraft = input.status === "draft";
+
+    // Unverified employers must not lose form data: persist as draft, then block submit.
+    if (!isDraft && !isEmployerVerifiedForJobs(employer)) {
+      const draftResult = await this.createJob(employerId, {
+        ...input,
+        status: "draft",
+      });
+      assertEmployerVerifiedForJobAction(employer, "submit", {
+        draftSaved: true,
+        jobId: draftResult.job.id,
+        jobPublicId: draftResult.job.jobId,
+      });
+    }
+
     // Drafts are private WIP — verification required only for submission.
     if (!isDraft) {
       assertEmployerVerifiedForJobAction(employer, "submit");

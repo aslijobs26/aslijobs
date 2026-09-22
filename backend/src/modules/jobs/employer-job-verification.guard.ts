@@ -70,6 +70,11 @@ export function isEmployerVerifiedForJobs(
 export function assertEmployerVerifiedForJobAction(
   employer: EmployerVerificationSnapshot | null | undefined,
   action: EmployerJobVerificationAction,
+  extras?: {
+    draftSaved?: boolean;
+    jobId?: string;
+    jobPublicId?: string;
+  },
 ): void {
   if (isEmployerVerifiedForJobs(employer)) {
     return;
@@ -83,11 +88,25 @@ export function assertEmployerVerifiedForJobAction(
     action,
     employerId,
     verificationStatus,
+    draftSaved: extras?.draftSaved === true,
+    jobId: extras?.jobId,
   });
 
-  throw new AppError(ACTION_MESSAGES[action], HTTP_STATUS.FORBIDDEN, {
+  const message =
+    extras?.draftSaved === true
+      ? `${ACTION_MESSAGES[action]} Your job has been saved as a draft. You can submit it after verification.`
+      : ACTION_MESSAGES[action];
+
+  throw new AppError(message, HTTP_STATUS.FORBIDDEN, {
     code: EMPLOYER_VERIFICATION_REQUIRED_CODE,
     verificationStatus,
+    ...(extras?.draftSaved === true
+      ? {
+          draftSaved: true,
+          jobId: extras.jobId,
+          jobPublicId: extras.jobPublicId,
+        }
+      : {}),
   });
 }
 

@@ -17,6 +17,7 @@ export async function connectDB(): Promise<void> {
     });
 
     const databaseName = mongoose.connection.db?.databaseName ?? "unknown";
+    // Log database name only (never URI/credentials). Confirm production uses the intended DB.
     console.log(`MongoDB connected successfully: ${databaseName}`);
 
     // Keep job_views indexes aligned after schema evolution (drops obsolete uniques).
@@ -37,6 +38,7 @@ export async function connectDB(): Promise<void> {
     }
 
     // Application uniqueness: active (non-withdrawn) only — enables re-apply after withdraw.
+    // Uses `$in` of active statuses because MongoDB rejects `$ne` in partialFilterExpression.
     try {
       const { ApplicationModel } = await import(
         "../modules/applications/application.model.js"

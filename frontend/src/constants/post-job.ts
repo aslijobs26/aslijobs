@@ -30,6 +30,10 @@ export const EMPLOYER_VERIFICATION_REQUIRED_CODE =
 export const EMPLOYER_VERIFICATION_REQUIRED_MESSAGE =
   "Your employer account must be verified before you can post a job.";
 
+/** Shown when submit is blocked but the job was persisted as a draft. */
+export const EMPLOYER_VERIFICATION_REQUIRED_DRAFT_SAVED_MESSAGE =
+  "Your employer account is awaiting verification. Your job has been saved as a draft. You can submit it after verification.";
+
 export const POST_JOB_STEPS: PostJobStep[] = [
   {
     id: "job-information",
