@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import {
   POST_JOB_PERK_OPTIONS,
   POST_JOB_SALARY_PERIOD_OPTIONS,
@@ -12,7 +13,6 @@ import type {
   SalaryType,
 } from "@/types/post-job";
 import { cn } from "@/utils/cn";
-import { ChevronDown } from "lucide-react";
 import type { RefObject } from "react";
 import { PostJobFormField } from "./PostJobFormField";
 import { PostJobChipButton } from "./PostJobChipButton";
@@ -45,57 +45,6 @@ type LocationSalaryFormProps = {
   onContinue: () => void;
   scrollContainerRef?: RefObject<HTMLFormElement | null>;
 };
-
-function SelectField({
-  id,
-  label,
-  value,
-  placeholder,
-  options,
-  onChange,
-  error,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  placeholder: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
-  error?: string;
-}) {
-  return (
-    <PostJobFormField id={id} label={label} error={error}>
-      <div className="relative">
-        <select
-          id={id}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className={cn(
-            postJobInputClassName,
-            "cursor-pointer appearance-none pr-10",
-            !value && "text-muted",
-            error && "border-red-500 focus:border-red-500 focus:ring-red-500/20",
-          )}
-          aria-invalid={Boolean(error)}
-        >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-foreground/70"
-          strokeWidth={2}
-          aria-hidden="true"
-        />
-      </div>
-    </PostJobFormField>
-  );
-}
 
 export function LocationSalaryForm({
   formData,
@@ -231,28 +180,32 @@ export function LocationSalaryForm({
                   "sm:grid-cols-2 sm:max-w-[28rem]",
               )}
             >
-              <SelectField
+              <EmployerRegisterSearchableSelect
                 id="salary-type"
                 label="Salary Range"
                 value={formData.salaryType}
                 placeholder="Select salary type"
                 options={POST_JOB_SALARY_TYPE_OPTIONS}
+                hideSearch
                 onChange={(value) =>
                   onFieldChange("salaryType", value as SalaryType)
                 }
                 error={fieldErrors.salaryType}
+                aria-invalid={Boolean(fieldErrors.salaryType)}
               />
 
-              <SelectField
+              <EmployerRegisterSearchableSelect
                 id="salary-period"
                 label="Salary Period"
                 value={formData.salaryPeriod}
                 placeholder="Select period"
                 options={POST_JOB_SALARY_PERIOD_OPTIONS}
+                hideSearch
                 onChange={(value) =>
                   onFieldChange("salaryPeriod", value as SalaryPeriod)
                 }
                 error={fieldErrors.salaryPeriod}
+                aria-invalid={Boolean(fieldErrors.salaryPeriod)}
               />
 
               {formData.salaryType === "fixed" ? (

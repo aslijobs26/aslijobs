@@ -76,6 +76,14 @@ app.use(
       callback(null, false);
     },
     credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Request-Id",
+      "Accept",
+    ],
+    maxAge: 86_400,
   }),
 );
 app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));

@@ -77,7 +77,7 @@ export const EMPLOYER_JOB_TYPE_LABELS = {
 
 export const EMPLOYER_JOB_STATUS_LABELS = {
   all: "All Jobs",
-  pending_approval: "Pending Approval",
+  pending_approval: "Under Review",
   active: "Live",
   paused: "Paused",
   draft: "Draft",

@@ -30,7 +30,6 @@ import type {
   WorkMode,
 } from "@/types/post-job";
 import { cn } from "@/utils/cn";
-import { ChevronDown } from "lucide-react";
 import type { ReactNode, RefObject } from "react";
 import {
   postJobCardClassName,
@@ -110,8 +109,10 @@ function RadioIndicator({ checked }: RadioIndicatorProps) {
   );
 }
 
-const contractPeriodFieldShellClassName =
-  "flex h-12 w-full overflow-hidden rounded-md border border-border bg-surface text-sm text-foreground transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 lg-short:h-11 lg-compact:h-10 lg-tight:h-10";
+const contractPeriodAmountInputClassName =
+  "h-12 w-full rounded-md border border-border bg-surface px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20";
+
+const compactSelectTriggerClassName = "h-12 lg:h-12";
 
 function ContractPeriodField({
   id,
@@ -126,6 +127,7 @@ function ContractPeriodField({
 }) {
   const { amount, unit } = parseContractPeriodStoredValue(value);
   const unitSelectId = `${id}-unit`;
+  const unitLabel = `${ariaLabel ?? "Contract period"} unit`;
 
   const updateContractPeriod = (
     nextAmount: string,
@@ -135,7 +137,7 @@ function ContractPeriodField({
   };
 
   return (
-    <div className={contractPeriodFieldShellClassName}>
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(6.25rem,7.5rem)] gap-2">
       <input
         id={id}
         type="text"
@@ -147,30 +149,21 @@ function ContractPeriodField({
         }
         placeholder="0"
         aria-label={ariaLabel}
-        className="min-w-0 flex-1 border-0 bg-transparent px-3.5 outline-none placeholder:text-muted"
+        className={contractPeriodAmountInputClassName}
       />
-      <div className="relative flex shrink-0 items-center border-l border-border">
-        <select
-          id={unitSelectId}
-          value={unit}
-          aria-label={`${ariaLabel ?? "Contract period"} unit`}
-          onChange={(event) =>
-            updateContractPeriod(amount, event.target.value as ContractPeriodUnit)
-          }
-          className="h-full min-w-[5.75rem] cursor-pointer appearance-none border-0 bg-transparent py-0 pl-3 pr-8 text-sm outline-none sm:min-w-[6.25rem]"
-        >
-          {POST_JOB_CONTRACT_PERIOD_UNITS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-foreground/70"
-          strokeWidth={2}
-          aria-hidden="true"
-        />
-      </div>
+      <EmployerRegisterSearchableSelect
+        id={unitSelectId}
+        label={unitLabel}
+        hideLabel
+        hideSearch
+        value={unit}
+        placeholder="Unit"
+        options={POST_JOB_CONTRACT_PERIOD_UNITS}
+        onChange={(nextUnit) =>
+          updateContractPeriod(amount, nextUnit as ContractPeriodUnit)
+        }
+        triggerClassName={compactSelectTriggerClassName}
+      />
     </div>
   );
 }
@@ -190,6 +183,7 @@ function ManualTimeField({
 }) {
   const { time, meridiem } = parsePartTimeManualStoredValue(value);
   const meridiemSelectId = `${id}-meridiem`;
+  const meridiemLabel = `${ariaLabel ?? "Time"} AM or PM`;
 
   const updateManualTime = (
     nextTime: string,
@@ -199,7 +193,7 @@ function ManualTimeField({
   };
 
   return (
-    <div className={contractPeriodFieldShellClassName}>
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(4.75rem,5.5rem)] gap-2">
       <input
         id={id}
         type="text"
@@ -213,75 +207,20 @@ function ManualTimeField({
         }
         placeholder={placeholder}
         aria-label={ariaLabel}
-        className="min-w-0 flex-1 border-0 bg-transparent px-3.5 outline-none placeholder:text-muted"
+        className={contractPeriodAmountInputClassName}
       />
-      <div className="relative flex shrink-0 items-center border-l border-border">
-        <select
-          id={meridiemSelectId}
-          value={meridiem}
-          aria-label={`${ariaLabel ?? "Time"} AM or PM`}
-          onChange={(event) =>
-            updateManualTime(time, event.target.value as PartTimeMeridiem)
-          }
-          className="h-full min-w-[4.5rem] cursor-pointer appearance-none border-0 bg-transparent py-0 pl-3 pr-8 text-sm outline-none"
-        >
-          {PART_TIME_MERIDIEM_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-foreground/70"
-          strokeWidth={2}
-          aria-hidden="true"
-        />
-      </div>
-    </div>
-  );
-}
-
-function TimingSelectInput({
-  id,
-  value,
-  placeholder,
-  options,
-  onChange,
-  "aria-label": ariaLabel,
-}: {
-  id: string;
-  value: string;
-  placeholder: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
-  "aria-label"?: string;
-}) {
-  return (
-    <div className="relative">
-      <select
-        id={id}
-        value={value}
-        aria-label={ariaLabel}
-        onChange={(event) => onChange(event.target.value)}
-        className={cn(
-          inputClassName,
-          "cursor-pointer appearance-none pr-10",
-          !value && "text-muted",
-        )}
-      >
-        <option value="" disabled>
-          {placeholder}
-        </option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-foreground/70"
-        strokeWidth={2}
-        aria-hidden="true"
+      <EmployerRegisterSearchableSelect
+        id={meridiemSelectId}
+        label={meridiemLabel}
+        hideLabel
+        hideSearch
+        value={meridiem}
+        placeholder="AM/PM"
+        options={[...PART_TIME_MERIDIEM_OPTIONS]}
+        onChange={(nextMeridiem) =>
+          updateManualTime(time, nextMeridiem as PartTimeMeridiem)
+        }
+        triggerClassName={compactSelectTriggerClassName}
       />
     </div>
   );
@@ -526,15 +465,18 @@ export function JobInformationForm({
 
           {formData.partTimeSchedule === "flexible-hours" ? (
             <div className="flex min-w-0 flex-col gap-2">
-              <TimingSelectInput
+              <EmployerRegisterSearchableSelect
                 id="part-time-flexible-hours"
+                label="Flexible working hours"
+                hideLabel
+                hideSearch
                 value={formData.partTimeFlexibleHours}
                 placeholder="Select hours"
-                aria-label="Flexible working hours"
                 options={PART_TIME_FLEXIBLE_HOURS_OPTIONS}
                 onChange={(value) =>
                   onFieldChange("partTimeFlexibleHours", value)
                 }
+                triggerClassName={compactSelectTriggerClassName}
               />
               {fieldErrors.partTimeFlexibleHours ? (
                 <p className="text-xs font-medium text-red-600" role="alert">

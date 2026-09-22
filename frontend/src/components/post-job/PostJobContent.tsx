@@ -680,7 +680,14 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       await queryClient.invalidateQueries({
         queryKey: EMPLOYER_JOBS_QUERY_KEYS.all,
       });
-      router.replace(ROUTES.POST_JOB_SUCCESS);
+
+      const submittedJobId = createdJob?.id?.trim() ?? "";
+      if (submittedJobId) {
+        router.replace(ROUTES.employerJobUnderReview(submittedJobId));
+      } else {
+        // Fail-safe if API response omitted id — keep legacy confirmation page.
+        router.replace(ROUTES.POST_JOB_SUCCESS);
+      }
     } catch (error) {
       if (!isActiveEditMode) {
         skipAutosaveRef.current = false;

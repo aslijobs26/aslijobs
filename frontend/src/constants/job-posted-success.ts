@@ -32,7 +32,7 @@ export const JOB_POSTED_SUCCESS_SUPPORT_SUBTITLE =
   "Our support team is here to help you find the right candidates.";
 export const JOB_POSTED_SUCCESS_SUPPORT_CTA = "Contact Support";
 
-export const JOB_POSTED_SUCCESS_STATUS_ACTIVE = "Pending Approval";
+export const JOB_POSTED_SUCCESS_STATUS_ACTIVE = "Under Review";
 export const JOB_POSTED_SUCCESS_VISIBILITY_PUBLIC = "Not public yet";
 export const JOB_POSTED_SUCCESS_APPLICATIONS_SUFFIX = "(So far)";
 

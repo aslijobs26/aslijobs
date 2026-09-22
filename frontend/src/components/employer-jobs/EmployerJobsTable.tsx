@@ -460,7 +460,7 @@ function EmployerJobsTableRow({
               className="inline-flex w-fit max-w-full items-center justify-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold leading-none whitespace-nowrap text-amber-950 ring-1 ring-inset ring-amber-300/70 xl:text-xs"
               title="Waiting for Operations review"
             >
-              Pending
+              Under Review
             </span>
           ) : job.status === "active" &&
             (job.liveChangeReviewStatus === "pending_approval" ||

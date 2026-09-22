@@ -4,6 +4,8 @@ export const ROUTES = {
   POST_JOB: "/post-job",
   postJobEdit: (jobId: string) => `/post-job/${jobId}`,
   POST_JOB_SUCCESS: "/post-job/success",
+  employerJobUnderReview: (jobMongoId: string) =>
+    `/employer/jobs/${jobMongoId}/under-review`,
   FIND_JOBS: "/jobs",
   jobPublic: (publicJobId: string) => `/jobs/${publicJobId}`,
   EMPLOYER_REGISTER: "/employer/register",

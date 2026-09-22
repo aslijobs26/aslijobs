@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import {
   POST_JOB_ADDITIONAL_REQUIREMENT_TOGGLES,
   POST_JOB_EDUCATION_OPTIONS,
@@ -20,7 +21,6 @@ import type {
   WalkInOption,
 } from "@/types/post-job";
 import { cn } from "@/utils/cn";
-import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import type { RefObject } from "react";
 import { PostJobChipButton } from "./PostJobChipButton";
@@ -62,52 +62,6 @@ type CandidateInterviewFormProps = {
   onPostJob: () => void;
   scrollContainerRef?: RefObject<HTMLFormElement | null>;
 };
-
-function SelectInput({
-  id,
-  value,
-  placeholder,
-  options,
-  onChange,
-  "aria-label": ariaLabel,
-}: {
-  id: string;
-  value: string;
-  placeholder: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
-  "aria-label"?: string;
-}) {
-  return (
-    <div className="relative">
-      <select
-        id={id}
-        value={value}
-        aria-label={ariaLabel}
-        onChange={(event) => onChange(event.target.value)}
-        className={cn(
-          postJobInputClassName,
-          "cursor-pointer appearance-none pr-10",
-          !value && "text-muted",
-        )}
-      >
-        <option value="" disabled>
-          {placeholder}
-        </option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-foreground/70"
-        strokeWidth={2}
-        aria-hidden="true"
-      />
-    </div>
-  );
-}
 
 function sanitizeNumericInput(value: string) {
   return value.replace(/\D/g, "");
@@ -497,44 +451,36 @@ export function CandidateInterviewForm({
                         )}
                       >
                         <div className="flex min-w-0 flex-col gap-2">
-                          <SelectInput
+                          <EmployerRegisterSearchableSelect
                             id="walk-in-start-time"
+                            label="Walk-in start time"
+                            hideLabel
+                            hideSearch
                             value={formData.walkInStartTime}
                             placeholder="Start time"
-                            aria-label="Walk-in start time"
                             options={POST_JOB_WALK_IN_TIME_OPTIONS}
                             onChange={(value) =>
                               onFieldChange("walkInStartTime", value)
                             }
+                            error={fieldErrors.walkInStartTime}
+                            aria-invalid={Boolean(fieldErrors.walkInStartTime)}
                           />
-                          {fieldErrors.walkInStartTime ? (
-                            <p
-                              className="text-xs font-medium text-red-600"
-                              role="alert"
-                            >
-                              {fieldErrors.walkInStartTime}
-                            </p>
-                          ) : null}
                         </div>
                         <div className="flex min-w-0 flex-col gap-2">
-                          <SelectInput
+                          <EmployerRegisterSearchableSelect
                             id="walk-in-end-time"
+                            label="Walk-in end time"
+                            hideLabel
+                            hideSearch
                             value={formData.walkInEndTime}
                             placeholder="End time"
-                            aria-label="Walk-in end time"
                             options={POST_JOB_WALK_IN_TIME_OPTIONS}
                             onChange={(value) =>
                               onFieldChange("walkInEndTime", value)
                             }
+                            error={fieldErrors.walkInEndTime}
+                            aria-invalid={Boolean(fieldErrors.walkInEndTime)}
                           />
-                          {fieldErrors.walkInEndTime ? (
-                            <p
-                              className="text-xs font-medium text-red-600"
-                              role="alert"
-                            >
-                              {fieldErrors.walkInEndTime}
-                            </p>
-                          ) : null}
                         </div>
                       </div>
                     </div>

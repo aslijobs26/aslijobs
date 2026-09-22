@@ -173,6 +173,12 @@ export function getOperationsAuthErrorMessage(
     if (error.response?.status === 429) {
       return "Too many login attempts. Please try again later.";
     }
+
+    if (!error.response) {
+      if (error.code === "ERR_NETWORK" || /network error/i.test(error.message)) {
+        return "Unable to reach the AsliJobs API. Check your connection and that the Admin app is configured with the production API URL.";
+      }
+    }
   }
 
   if (error instanceof Error && error.message.trim()) {
