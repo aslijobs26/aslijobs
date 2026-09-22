@@ -1,0 +1,23 @@
+# Render Blueprint for AsliJobs API (optional — dashboard settings can mirror this).
+#
+# CRITICAL: With NODE_ENV=production, plain `npm install` omits devDependencies.
+# TypeScript compilation needs typescript + @types/* at BUILD time.
+# Use `npm run render-build` (== npm ci --include=dev && npm run build).
+#
+# Runtime start remains `npm start` (node dist/server.js).
+# NODE_ENV must stay production for database safety guards.
+
+services:
+  - type: web
+    name: aslijobs-backend
+    runtime: node
+    rootDir: backend
+    plan: starter
+    buildCommand: npm run render-build
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Set remaining secrets in the Render dashboard (never commit URIs/secrets):
+      # MONGO_URI, JWT_*, WHATSAPP_*, FRONTEND_URL, ADMIN_URL, etc.

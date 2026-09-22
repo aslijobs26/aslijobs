@@ -360,9 +360,18 @@ export const listEmployerJobsQuerySchema = z
     jobId: z
       .string()
       .trim()
-      .regex(/^AJ-\d{4}-\d{6}$/i, "Invalid public job id")
-      .transform((value) => value.toUpperCase())
-      .optional(),
+      .optional()
+      .transform((value) => {
+        if (!value) {
+          return undefined;
+        }
+        // Ignore malformed filter values so a stale session filter cannot
+        // break the entire My Jobs page (400 → "Unable to load jobs").
+        if (!/^AJ-\d{4}-\d{6}$/i.test(value)) {
+          return undefined;
+        }
+        return value.toUpperCase();
+      }),
     jobType: z
       .string()
       .optional()
@@ -394,7 +403,20 @@ export const listEmployerJobsQuerySchema = z
       .string()
       .optional()
       .transform((value) => parseCsvSlugs(value)),
-    postedQuick: z.enum(EMPLOYER_JOBS_POSTED_QUICK_FILTERS).optional(),
+    postedQuick: z
+      .string()
+      .optional()
+      .transform((value) => {
+        const trimmed = value?.trim() ?? "";
+        if (!trimmed) {
+          return undefined;
+        }
+        return (EMPLOYER_JOBS_POSTED_QUICK_FILTERS as readonly string[]).includes(
+          trimmed,
+        )
+          ? (trimmed as (typeof EMPLOYER_JOBS_POSTED_QUICK_FILTERS)[number])
+          : undefined;
+      }),
     postedFrom: z.string().trim().optional().default(""),
     postedTo: z.string().trim().optional().default(""),
     applications: z
@@ -671,9 +693,16 @@ const employerJobsBulkFilterSchema = z
     jobId: z
       .string()
       .trim()
-      .regex(/^AJ-\d{4}-\d{6}$/i, "Invalid public job id")
-      .transform((value) => value.toUpperCase())
-      .optional(),
+      .optional()
+      .transform((value) => {
+        if (!value) {
+          return undefined;
+        }
+        if (!/^AJ-\d{4}-\d{6}$/i.test(value)) {
+          return undefined;
+        }
+        return value.toUpperCase();
+      }),
     jobType: z
       .string()
       .optional()

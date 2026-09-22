@@ -80,16 +80,16 @@ export async function readPrivateFileBuffer(
   const fileName = (ref.originalName?.trim() || "file").replace(/"/g, "");
   const storagePath = ref.storagePath?.trim() || "";
   const remoteUrl = ref.url?.trim() || "";
+  const provider = providerOf(ref);
 
-  if (providerOf(ref) === "local" || storagePath) {
-    if (storagePath) {
-      const absolute = resolveLocalAbsolutePath(storagePath);
-      if (!existsSync(absolute)) {
-        throw new AppError("File not found", HTTP_STATUS.NOT_FOUND);
-      }
-      const buffer = await readFile(absolute);
-      return { buffer, mimeType, fileName };
+  // Cloudinary stores public_id in storagePath — never resolve that as a local path.
+  if (provider === "local" && storagePath) {
+    const absolute = resolveLocalAbsolutePath(storagePath);
+    if (!existsSync(absolute)) {
+      throw new AppError("File not found", HTTP_STATUS.NOT_FOUND);
     }
+    const buffer = await readFile(absolute);
+    return { buffer, mimeType, fileName };
   }
 
   if (remoteUrl.startsWith("http://") || remoteUrl.startsWith("https://")) {
@@ -97,7 +97,7 @@ export async function readPrivateFileBuffer(
     return { buffer, mimeType, fileName };
   }
 
-  if (remoteUrl.startsWith("/")) {
+  if (provider === "local" && remoteUrl.startsWith("/")) {
     const absolute = resolveLocalAbsolutePath(remoteUrl.replace(/^\/+/, ""));
     if (!existsSync(absolute)) {
       throw new AppError("File not found", HTTP_STATUS.NOT_FOUND);

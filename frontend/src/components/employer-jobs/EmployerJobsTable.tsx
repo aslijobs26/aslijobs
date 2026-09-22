@@ -63,6 +63,7 @@ type EmployerJobsTableProps = {
   jobs: EmployerJobListItem[];
   isLoading: boolean;
   isError: boolean;
+  errorMessage?: string;
   isMutating: boolean;
   page: number;
   limit: number;
@@ -120,6 +121,7 @@ export function EmployerJobsTable({
   jobs,
   isLoading,
   isError,
+  errorMessage,
   isMutating,
   page,
   limit,
@@ -217,7 +219,7 @@ export function EmployerJobsTable({
                     {EMPLOYER_JOBS_ERROR_TITLE}
                   </p>
                   <p className="mt-1 text-sm text-muted">
-                    {EMPLOYER_JOBS_ERROR_DESCRIPTION}
+                    {errorMessage?.trim() || EMPLOYER_JOBS_ERROR_DESCRIPTION}
                   </p>
                   <button
                     type="button"

@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 import app from "./app.js";
-import { connectDB } from "./config/db.js";
+import { connectDB, getConnectedDatabaseName } from "./config/db.js";
 import { env } from "./config/env.js";
 import { startNotificationRetentionScheduler } from "./modules/notifications/notification.retention.js";
 import { clearAllRbacCaches } from "./modules/rbac/rbac-context.cache.js";
@@ -56,6 +56,9 @@ async function shutdown(signal: string): Promise<void> {
 async function startServer(): Promise<void> {
   console.log("Connecting to MongoDB...");
   await connectDB();
+  console.log(
+    `[startup] Environment: ${env.NODE_ENV}; Database: ${getConnectedDatabaseName() ?? "none"}`,
+  );
   const { ensureDefaultOperationsAdmin } = await import(
     "./modules/operations/auth/ensure-default-operations-admin.js"
   );
@@ -78,6 +81,9 @@ async function startServer(): Promise<void> {
   httpServer = app.listen(env.PORT, () => {
     console.log(`AsliJobs API running on port ${env.PORT}`);
     console.log(`[AsliJobs OTP] provider=${env.OTP_PROVIDER}`);
+    console.log(
+      `[startup] ready environment=${env.NODE_ENV} database=${getConnectedDatabaseName() ?? "none"}`,
+    );
   });
 
   process.on("SIGTERM", () => {

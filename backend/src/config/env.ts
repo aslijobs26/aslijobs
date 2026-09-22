@@ -3,10 +3,17 @@ import { z } from "zod";
 import { normalizeOrigin } from "../utils/cors-origins.js";
 
 /**
- * Always prefer values from backend/.env over stale shell/IDE-injected env.
- * tsx watch does not reload .env; Cursor/dotenv may pre-inject older values.
+ * Environment loading policy:
+ * - Local development: load backend/.env and prefer it over stale shell injects.
+ * - Render / production: platform environment variables are authoritative.
+ *   Never let a committed or accidentally-copied `.env` override MONGO_URI.
  */
-config({ override: true });
+const isPlatformProductionRuntime =
+  process.env.RENDER === "true" || process.env.NODE_ENV === "production";
+
+if (!isPlatformProductionRuntime) {
+  config({ override: true });
+}
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(5000),
@@ -193,6 +200,24 @@ if (parsed.data.NODE_ENV === "production") {
   ) {
     console.error(
       "Production refused to start: WhatsApp OTP credentials and template are required.",
+    );
+    process.exit(1);
+  }
+  // Render (and similar hosts) use ephemeral disks — local uploads vanish on
+  // redeploy and do not work across multiple instances.
+  if (parsed.data.STORAGE_PROVIDER !== "cloudinary") {
+    console.error(
+      "Production refused to start: STORAGE_PROVIDER must be cloudinary.",
+    );
+    process.exit(1);
+  }
+  if (
+    !parsed.data.CLOUDINARY_CLOUD_NAME?.trim() ||
+    !parsed.data.CLOUDINARY_API_KEY?.trim() ||
+    !parsed.data.CLOUDINARY_API_SECRET?.trim()
+  ) {
+    console.error(
+      "Production refused to start: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are required.",
     );
     process.exit(1);
   }

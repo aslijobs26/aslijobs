@@ -2,11 +2,11 @@
 
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { ROUTES } from "@/constants/routes";
+import { useAuthenticatedMediaUrl } from "@/hooks/use-authenticated-media-url";
 import { useJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
 import { cn } from "@/utils/cn";
 import { clearJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { getInitials } from "@/utils/job-seeker-profile";
-import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import {
   Bookmark,
   Bell,
@@ -49,9 +49,9 @@ export function JobSeekerProfileMenu({
 
   const displayName =
     profileQuery.data?.fullName?.trim() || "Job Seeker";
-  const photoUrl = profileQuery.data?.profilePhoto?.url
-    ? resolveMediaUrl(profileQuery.data.profilePhoto.url)
-    : null;
+  const { url: photoUrl } = useAuthenticatedMediaUrl(
+    profileQuery.data?.profilePhoto?.url ?? null,
+  );
   const showPhoto = Boolean(photoUrl) && !photoFailed;
 
   useEffect(() => {

@@ -12,6 +12,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import path from "node:path";
 import { env } from "./config/env.js";
+import { getConnectedDatabaseName } from "./config/db.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { requestIdMiddleware } from "./middleware/request-id.middleware.js";
@@ -194,6 +195,8 @@ app.get("/api/v1/health", (_req, res) => {
       uptimeSeconds: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
       environment: env.NODE_ENV,
+      // Database name only — never credentials or full URI.
+      database: getConnectedDatabaseName(),
     },
   });
 });

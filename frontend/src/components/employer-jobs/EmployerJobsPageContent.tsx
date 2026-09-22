@@ -22,11 +22,13 @@ import {
 import {
   EMPLOYER_JOBS_DEFAULT_PAGE_SIZE,
   EMPLOYER_JOBS_DELETE_UI_ENABLED,
+  EMPLOYER_JOBS_ERROR_DESCRIPTION,
   EMPLOYER_JOBS_QUERY_KEYS,
   EMPLOYER_JOBS_SEARCH_DEBOUNCE_MS,
   EMPLOYER_JOBS_STATUS_TABS,
   type EmployerJobsStatusTabId,
 } from "@/constants/employer-jobs";
+import { ROUTES } from "@/constants/routes";
 import { useCan } from "@/providers/employer-permission-provider";
 import {
   bulkDeleteEmployerJobs,
@@ -50,9 +52,11 @@ import {
 import { getApiErrorMessage, normalizeApiError } from "@/utils/normalize-api-error";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
 import { X } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 function toStatusFilter(
   tab: EmployerJobsStatusTabId,
 ): JobStatus | undefined {
@@ -75,6 +79,7 @@ type SelectionMode = "ids" | "filtered" | "all";
 
 export function EmployerJobsPageContent() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { can } = useCan();
   const canDeleteJobs =
@@ -163,9 +168,32 @@ export function EmployerJobsPageContent() {
     queryKey: EMPLOYER_JOBS_QUERY_KEYS.list(listParams),
     queryFn: () => fetchEmployerJobs(listParams),
     staleTime: 45_000,
-    refetchOnMount: true,
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      // Retry briefly after auth refresh races (401) or transient network blips.
+      if (status === 401) {
+        return failureCount < 2;
+      }
+      if (status === 400 || status === 403 || status === 404) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
+
+  useEffect(() => {
+    const onAuthChange = () => {
+      void queryClient.invalidateQueries({
+        queryKey: EMPLOYER_JOBS_QUERY_KEYS.all,
+      });
+    };
+    window.addEventListener("aslijobs:employer-auth-change", onAuthChange);
+    return () => {
+      window.removeEventListener("aslijobs:employer-auth-change", onAuthChange);
+    };
+  }, [queryClient]);
 
   const statsQuery = useQuery({
     queryKey: EMPLOYER_JOBS_QUERY_KEYS.stats(),
@@ -312,6 +340,16 @@ export function EmployerJobsPageContent() {
   const handleTabChange = (tab: EmployerJobsStatusTabId) => {
     setStatusTab(tab);
     setPage(1);
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (tab === "all") {
+      nextParams.delete("tab");
+    } else {
+      nextParams.set("tab", tab);
+    }
+    const query = nextParams.toString();
+    router.replace(query ? `${ROUTES.EMPLOYER_JOBS}?${query}` : ROUTES.EMPLOYER_JOBS, {
+      scroll: false,
+    });
   };
 
   const handleLimitChange = (nextLimit: number) => {
@@ -504,6 +542,14 @@ export function EmployerJobsPageContent() {
             jobs={jobs}
             isLoading={jobsQuery.isLoading}
             isError={jobsQuery.isError}
+            errorMessage={
+              jobsQuery.error
+                ? getApiErrorMessage(
+                    jobsQuery.error,
+                    EMPLOYER_JOBS_ERROR_DESCRIPTION,
+                  )
+                : undefined
+            }
             isMutating={isMutating}
             page={pagination?.page ?? page}
             limit={pagination?.limit ?? limit}

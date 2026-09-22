@@ -35,10 +35,23 @@ export function useAuthenticatedMediaUrl(
           : apiPath;
         const response = await apiClient.get<Blob>(path, {
           responseType: "blob",
+          // Default apiClient JSON content-type must not ride on binary GETs.
+          headers: { "Content-Type": undefined },
         });
         if (cancelled) {
           return;
         }
+
+        const contentType = String(
+          response.headers["content-type"] ?? "",
+        ).toLowerCase();
+        if (
+          contentType.includes("application/json") ||
+          contentType.includes("text/html")
+        ) {
+          throw new Error("Unexpected non-media response");
+        }
+
         objectUrl = URL.createObjectURL(response.data);
         setUrl(objectUrl);
       } catch {

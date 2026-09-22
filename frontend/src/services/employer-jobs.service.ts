@@ -106,25 +106,84 @@ export async function fetchEmployerJobs(params: ListEmployerJobsParams = {}) {
   const response = await apiClient.get<ApiSuccess<EmployerJobsListResponse>>(
     "/jobs/mine",
     {
-      params,
-      headers: {
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
+      params: sanitizeListEmployerJobsParams(params),
     },
   );
   return response.data.data;
 }
 
+const PUBLIC_JOB_ID_PATTERN = /^AJ-\d{4}-\d{6}$/i;
+
+/** Drop empty/invalid query values so Zod validation never 400s the list page. */
+export function sanitizeListEmployerJobsParams(
+  params: ListEmployerJobsParams,
+): Record<string, string | number> {
+  const next: Record<string, string | number> = {};
+
+  if (params.status) {
+    next.status = params.status;
+  }
+  if (params.search?.trim()) {
+    next.search = params.search.trim();
+  }
+  if (params.page !== undefined) {
+    next.page = params.page;
+  }
+  if (params.limit !== undefined) {
+    next.limit = params.limit;
+  }
+  if (params.jobId?.trim() && PUBLIC_JOB_ID_PATTERN.test(params.jobId.trim())) {
+    next.jobId = params.jobId.trim().toUpperCase();
+  }
+  if (params.jobType?.trim()) {
+    next.jobType = params.jobType.trim();
+  }
+  if (params.workMode?.trim()) {
+    next.workMode = params.workMode.trim();
+  }
+  if (params.experience?.trim()) {
+    next.experience = params.experience.trim();
+  }
+  if (params.minSalary !== undefined) {
+    next.minSalary = params.minSalary;
+  }
+  if (params.maxSalary !== undefined) {
+    next.maxSalary = params.maxSalary;
+  }
+  if (params.city?.trim()) {
+    next.city = params.city.trim();
+  }
+  if (params.state?.trim()) {
+    next.state = params.state.trim();
+  }
+  if (params.businessCategory?.trim()) {
+    next.businessCategory = params.businessCategory.trim();
+  }
+  if (params.postedQuick?.trim()) {
+    next.postedQuick = params.postedQuick.trim();
+  }
+  if (params.postedFrom?.trim()) {
+    next.postedFrom = params.postedFrom.trim();
+  }
+  if (params.postedTo?.trim()) {
+    next.postedTo = params.postedTo.trim();
+  }
+  if (params.applications?.trim()) {
+    next.applications = params.applications.trim();
+  }
+  if (params.minVacancies !== undefined) {
+    next.minVacancies = params.minVacancies;
+  }
+  if (params.maxVacancies !== undefined) {
+    next.maxVacancies = params.maxVacancies;
+  }
+
+  return next;
+}
+
 export async function fetchEmployerJobStats() {
   const response = await apiClient.get<ApiSuccess<EmployerJobStatsResponse>>(
     "/jobs/mine/stats",
-    {
-      headers: {
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    },
   );
   return response.data.data;
 }

@@ -32,6 +32,30 @@ The API runs at `http://localhost:5000`.
 - `npm run build` — Compile TypeScript to `dist/`
 - `npm run start` — Run production build
 - `npm run typecheck` — Type-check without emitting files
+- `npm run render-build` — **Render Build Command**: `npm ci --include=dev && npm run build`
+
+## Render (production)
+
+Keep `NODE_ENV=production` in the Render environment (required for DB safety guards).
+
+**Build Command** (required):
+
+```bash
+npm run render-build
+```
+
+Do **not** use bare `npm install && npm run build` when `NODE_ENV=production` —
+npm will omit `devDependencies` (`typescript`, `@types/node`, `@types/express`, …)
+and `tsc` will fail with missing `process` / `express` types.
+
+**Start Command**:
+
+```bash
+npm start
+```
+
+Temporary DB bridge while migrating live data off `aslijobs_test` is documented in
+`docs/database-cutover-aslijobs-prod.md`.
 
 ## Health Check
 

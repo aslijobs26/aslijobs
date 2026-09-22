@@ -4,11 +4,17 @@
  * (e.g. https://aslijobs-backend.onrender.com instead of .../api/v1).
  */
 export function resolveApiUrl(rawValue: string | undefined): string {
-  const fallback = "http://localhost:5000/api/v1";
   const trimmed = rawValue?.trim().replace(/\/+$/, "") ?? "";
 
   if (!trimmed) {
-    return fallback;
+    // Next.js inlines NODE_ENV at build time. Never ship a localhost API
+    // base into a production browser bundle.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "NEXT_PUBLIC_API_URL is missing from this production frontend build. Set it to https://aslijobs-backend.onrender.com/api/v1 and redeploy.",
+      );
+    }
+    return "http://localhost:5000/api/v1";
   }
 
   if (trimmed.endsWith("/api/v1")) {

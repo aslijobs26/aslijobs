@@ -17,6 +17,7 @@ import {
   type JobSeekerSettingsSectionId,
 } from "@/constants/job-seeker-settings";
 import { ROUTES } from "@/constants/routes";
+import { useAuthenticatedMediaUrl } from "@/hooks/use-authenticated-media-url";
 import { useJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
 import { fetchMyResume } from "@/services/job-seeker-resume.service";
 import {
@@ -31,7 +32,6 @@ import {
   jobTypeLabel,
   languageLabel,
 } from "@/utils/job-seeker-profile";
-import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -120,6 +120,9 @@ export function JobSeekerSettingsPageContent() {
   const searchParams = useSearchParams();
   const profileQuery = useJobSeekerProfile();
   const jobSeeker = profileQuery.data;
+  const { url: avatarUrl } = useAuthenticatedMediaUrl(
+    jobSeeker?.profilePhoto?.url ?? null,
+  );
 
   const resumeQuery = useQuery({
     queryKey: JOB_SEEKER_RESUME_QUERY_KEY,
@@ -262,7 +265,6 @@ export function JobSeekerSettingsPageContent() {
   }
 
   const phone = formatWhatsappNumber(jobSeeker.whatsappNumber);
-  const avatarUrl = resolveMediaUrl(jobSeeker.profilePhoto?.url ?? null);
   const lastLoginLabel = formatLastLogin(jobSeeker.lastLoginAt);
 
   let content: ReactNode = null;
