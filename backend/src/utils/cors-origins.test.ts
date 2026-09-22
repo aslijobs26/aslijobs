@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   buildAllowedCorsOrigins,
   buildDevelopmentCorsPorts,
+  isAsliJobsAdminVercelOrigin,
   isCorsOriginAllowed,
   isDevelopmentLanOriginAllowed,
   isPrivateOrLoopbackHostname,
@@ -46,6 +47,59 @@ describe("cors LAN development helpers", () => {
   });
 });
 
+describe("AsliJobs Admin Vercel origin matcher", () => {
+  it("allows the live git-main Admin deployment host", () => {
+    assert.equal(
+      isAsliJobsAdminVercelOrigin(
+        "https://aslijobs-admin-git-main-asli-jobs.vercel.app",
+      ),
+      true,
+    );
+  });
+
+  it("allows team production and default Vercel Admin hosts", () => {
+    assert.equal(
+      isAsliJobsAdminVercelOrigin("https://aslijobs-admin.vercel.app"),
+      true,
+    );
+    assert.equal(
+      isAsliJobsAdminVercelOrigin("https://aslijobs-admin-asli-jobs.vercel.app"),
+      true,
+    );
+    assert.equal(
+      isAsliJobsAdminVercelOrigin(
+        "https://aslijobs-admin-git-feature-x-asli-jobs.vercel.app",
+      ),
+      true,
+    );
+  });
+
+  it("rejects other Vercel projects, http, and spoofed hosts", () => {
+    assert.equal(
+      isAsliJobsAdminVercelOrigin("https://other-project-asli-jobs.vercel.app"),
+      false,
+    );
+    assert.equal(
+      isAsliJobsAdminVercelOrigin(
+        "https://aslijobs-admin-git-main-other-team.vercel.app",
+      ),
+      false,
+    );
+    assert.equal(
+      isAsliJobsAdminVercelOrigin(
+        "http://aslijobs-admin-git-main-asli-jobs.vercel.app",
+      ),
+      false,
+    );
+    assert.equal(
+      isAsliJobsAdminVercelOrigin(
+        "https://aslijobs-admin.vercel.app.evil.com",
+      ),
+      false,
+    );
+  });
+});
+
 describe("production Admin CORS allowlist", () => {
   it("always allows Vercel Admin and custom Admin domain", () => {
     const allowed = buildAllowedCorsOrigins({
@@ -60,6 +114,13 @@ describe("production Admin CORS allowlist", () => {
     );
     assert.equal(
       isCorsOriginAllowed("https://admin.aslijobs.com", allowed),
+      true,
+    );
+    assert.equal(
+      isCorsOriginAllowed(
+        "https://aslijobs-admin-git-main-asli-jobs.vercel.app",
+        allowed,
+      ),
       true,
     );
     for (const origin of PRODUCTION_ADMIN_ORIGINS) {

@@ -75,7 +75,12 @@ async function withCorsTestServer(
 describe("Operations auth CORS HTTP behavior", () => {
   it("allows Vercel Admin and custom Admin OPTIONS preflight with credentials", async () => {
     await withCorsTestServer(async (baseUrl) => {
-      for (const origin of PRODUCTION_ADMIN_ORIGINS) {
+      const origins = [
+        ...PRODUCTION_ADMIN_ORIGINS,
+        "https://aslijobs-admin-git-main-asli-jobs.vercel.app",
+      ];
+
+      for (const origin of new Set(origins)) {
         const response = await fetch(`${baseUrl}/api/v1/operations/auth/login`, {
           method: "OPTIONS",
           headers: {

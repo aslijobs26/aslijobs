@@ -5,14 +5,51 @@
 
 /**
  * Canonical ASLI OS Operations Admin production origins.
- * Always allowed (in addition to ADMIN_URL / CORS_ALLOWED_ORIGINS) so both
- * the Vercel deployment and the custom domain can authenticate against Render.
- * Do not add wildcards or preview-deployment patterns here.
+ * Always allowed (in addition to ADMIN_URL / CORS_ALLOWED_ORIGINS).
+ *
+ * Includes:
+ * - custom domain
+ * - default Vercel production host
+ * - Vercel team production host (`{project}-{team}.vercel.app`)
+ * - current main-branch deployment host (git-main)
  */
 export const PRODUCTION_ADMIN_ORIGINS = [
   "https://admin.aslijobs.com",
   "https://aslijobs-admin.vercel.app",
+  "https://aslijobs-admin-asli-jobs.vercel.app",
+  "https://aslijobs-admin-git-main-asli-jobs.vercel.app",
 ] as const;
+
+/**
+ * Vercel hostnames for THIS Admin project only (team: asli-jobs).
+ * Allows production + git-branch deployments of `aslijobs-admin`, nothing else.
+ */
+const ASLI_JOBS_ADMIN_VERCEL_HOST_PATTERN =
+  /^(aslijobs-admin\.vercel\.app|aslijobs-admin-asli-jobs\.vercel\.app|aslijobs-admin-git-[a-z0-9-]+-asli-jobs\.vercel\.app)$/i;
+
+/**
+ * Returns true when Origin is an https deployment of the AsliJobs Admin
+ * Vercel project (production or branch). Rejects other projects/teams.
+ */
+export function isAsliJobsAdminVercelOrigin(origin: string): boolean {
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "https:") {
+      return false;
+    }
+    if (parsed.username || parsed.password || parsed.port) {
+      return false;
+    }
+    return ASLI_JOBS_ADMIN_VERCEL_HOST_PATTERN.test(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
 
 export function normalizeOrigin(url: string): string {
   return url.trim().replace(/\/+$/, "");
@@ -123,6 +160,7 @@ export function buildAllowedCorsOrigins(input: {
 
 /**
  * Exact Origin match used by Express CORS. Origins never include a trailing slash.
+ * Also allows scoped AsliJobs Admin Vercel deployment hosts (this project only).
  */
 export function isCorsOriginAllowed(
   requestOrigin: string | undefined,
@@ -132,7 +170,10 @@ export function isCorsOriginAllowed(
     // Non-browser clients (health checks, server-to-server) omit Origin.
     return true;
   }
-  return allowedOrigins.includes(requestOrigin);
+  if (allowedOrigins.includes(requestOrigin)) {
+    return true;
+  }
+  return isAsliJobsAdminVercelOrigin(requestOrigin);
 }
 
 function defaultPortForProtocol(protocol: string): string {
