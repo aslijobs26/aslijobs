@@ -18,6 +18,10 @@ import {
   isEmployerVerifiedForJobs,
 } from "./employer-job-verification.guard.js";
 import {
+  EMPLOYER_JOBS_LIST_SORT,
+  buildEmployerOwnedJobMatch,
+} from "./employer-job-ownership.js";
+import {
   buildPublicEmployerVerificationStages,
   isJobPubliclyEligible,
 } from "./public-job-eligibility.js";
@@ -1436,7 +1440,7 @@ export class JobService {
     } as ListEmployerJobsQuery;
 
     const andClauses: Record<string, unknown>[] = [
-      { employerId: new mongoose.Types.ObjectId(employerId) },
+      buildEmployerOwnedJobMatch(employerId),
       buildSearchFilter(normalizedQuery.search),
       ...buildEmployerJobsAdvancedFilter(normalizedQuery),
     ];
@@ -1458,19 +1462,18 @@ export class JobService {
     }
 
     const filter = this.buildEmployerJobsListFilter(employerId, query);
+    const ownershipMatch = buildEmployerOwnedJobMatch(employerId);
     const skip = (query.page - 1) * query.limit;
 
     const [jobs, total, statusCounts, jobOptions] = await Promise.all([
       JobModel.find(filter)
-        .sort({ publishedAt: -1, createdAt: -1 })
+        .sort({ ...EMPLOYER_JOBS_LIST_SORT })
         .skip(skip)
         .limit(query.limit),
       JobModel.countDocuments(filter),
       JobModel.aggregate<{ _id: JobStatus; count: number }>([
         {
-          $match: {
-            employerId: new mongoose.Types.ObjectId(employerId),
-          },
+          $match: ownershipMatch,
         },
         {
           $group: {
@@ -1479,11 +1482,9 @@ export class JobService {
           },
         },
       ]),
-      JobModel.find({
-        employerId: new mongoose.Types.ObjectId(employerId),
-      })
+      JobModel.find(ownershipMatch)
         .select("jobId jobTitle status")
-        .sort({ publishedAt: -1, createdAt: -1 })
+        .sort({ ...EMPLOYER_JOBS_LIST_SORT })
         .lean(),
     ]);
 
@@ -1539,7 +1540,7 @@ export class JobService {
     // Auto-heal legacy orphans so dashboard counters never stay stale.
     await ensureEmployerJobRelationsConsistent(employerId);
 
-    const employerObjectId = new mongoose.Types.ObjectId(employerId);
+    const ownershipMatch = buildEmployerOwnedJobMatch(employerId);
 
     const [jobTotalsResult, applicationTotals, recentJobs, statusCounts] =
       await Promise.all([
@@ -1548,7 +1549,7 @@ export class JobService {
           interviews: number;
           views: number;
         }>([
-          { $match: { employerId: employerObjectId } },
+          { $match: ownershipMatch },
           {
             $group: {
               _id: null,
@@ -1563,11 +1564,11 @@ export class JobService {
           },
         ]),
         loadEmployerApplicationMetricsTotals(employerId),
-        JobModel.find({ employerId: employerObjectId })
-          .sort({ publishedAt: -1, createdAt: -1 })
+        JobModel.find(ownershipMatch)
+          .sort({ ...EMPLOYER_JOBS_LIST_SORT })
           .limit(5),
         JobModel.aggregate<{ _id: JobStatus; count: number }>([
-          { $match: { employerId: employerObjectId } },
+          { $match: ownershipMatch },
           { $group: { _id: "$status", count: { $sum: 1 } } },
         ]),
       ]);
@@ -1687,9 +1688,11 @@ export class JobService {
     const previousStatus = job.status as JobStatus;
     const updateResult = await JobModel.updateOne(
       {
-        _id: job._id,
-        employerId: new mongoose.Types.ObjectId(employerId),
-        status: previousStatus,
+        $and: [
+          { _id: job._id },
+          buildEmployerOwnedJobMatch(employerId),
+          { status: previousStatus },
+        ],
       },
       { $set },
     );
@@ -1823,21 +1826,25 @@ export class JobService {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
-    const employerObjectId = new mongoose.Types.ObjectId(employerId);
+    const ownershipMatch = buildEmployerOwnedJobMatch(employerId);
     let filter: Record<string, unknown>;
 
     if (body.mode === "ids") {
       const uniqueIds = [...new Set(body.ids)];
       filter = {
-        employerId: employerObjectId,
-        _id: {
-          $in: uniqueIds.map((id) => new mongoose.Types.ObjectId(id)),
-        },
+        $and: [
+          ownershipMatch,
+          {
+            _id: {
+              $in: uniqueIds.map((id) => new mongoose.Types.ObjectId(id)),
+            },
+          },
+        ],
       };
     } else if (body.mode === "filtered") {
       filter = this.buildEmployerJobsListFilter(employerId, body.filters);
     } else {
-      filter = { employerId: employerObjectId };
+      filter = ownershipMatch;
     }
 
     const jobs = await JobModel.find(filter).select("_id jobId").lean();
@@ -2488,12 +2495,29 @@ export class JobService {
     }
 
     const job = await JobModel.findOne({
-      _id: jobMongoId,
-      employerId: new mongoose.Types.ObjectId(employerId),
+      $and: [
+        { _id: jobMongoId },
+        buildEmployerOwnedJobMatch(employerId),
+      ],
     });
 
     if (!job) {
       throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    // Heal legacy rows that only stored companyId (or omitted one side).
+    const ownerObjectId = new mongoose.Types.ObjectId(employerId);
+    let healed = false;
+    if (!job.employerId) {
+      job.employerId = ownerObjectId;
+      healed = true;
+    }
+    if (!job.companyId) {
+      job.companyId = ownerObjectId;
+      healed = true;
+    }
+    if (healed) {
+      await job.save();
     }
 
     return job;

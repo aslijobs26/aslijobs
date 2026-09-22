@@ -104,7 +104,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
             {JOB_UNDER_REVIEW_ERROR_RETRY}
           </button>
           <Link
-            href={ROUTES.EMPLOYER_JOBS}
+            href={ROUTES.employerJobsTab("pending_approval")}
             className="inline-flex h-11 items-center justify-center rounded-md bg-primary-soft px-5 text-sm font-bold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             {JOB_UNDER_REVIEW_GO_TO_JOBS}
@@ -383,7 +383,15 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
 
         <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-4">
           <Link
-            href={ROUTES.EMPLOYER_JOBS}
+            href={
+              phase === "under_review" || phase === "live_change_review"
+                ? ROUTES.employerJobsTab("pending_approval")
+                : phase === "rejected"
+                  ? ROUTES.employerJobsTab("rejected")
+                  : phase === "live"
+                    ? ROUTES.employerJobsTab("active")
+                    : ROUTES.EMPLOYER_JOBS
+            }
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border bg-surface px-5 text-sm font-bold text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:w-auto"
           >
             <BriefcaseBusiness className="size-4" aria-hidden />

@@ -24,6 +24,7 @@ import {
   EMPLOYER_JOBS_DELETE_UI_ENABLED,
   EMPLOYER_JOBS_QUERY_KEYS,
   EMPLOYER_JOBS_SEARCH_DEBOUNCE_MS,
+  EMPLOYER_JOBS_STATUS_TABS,
   type EmployerJobsStatusTabId,
 } from "@/constants/employer-jobs";
 import { useCan } from "@/providers/employer-permission-provider";
@@ -50,23 +51,38 @@ import { getApiErrorMessage, normalizeApiError } from "@/utils/normalize-api-err
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 function toStatusFilter(
   tab: EmployerJobsStatusTabId,
 ): JobStatus | undefined {
   return tab === "all" ? undefined : tab;
 }
 
+function parseStatusTabParam(
+  value: string | null,
+): EmployerJobsStatusTabId {
+  if (
+    value &&
+    (EMPLOYER_JOBS_STATUS_TABS as readonly string[]).includes(value)
+  ) {
+    return value as EmployerJobsStatusTabId;
+  }
+  return "all";
+}
+
 type SelectionMode = "ids" | "filtered" | "all";
 
 export function EmployerJobsPageContent() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const { can } = useCan();
   const canDeleteJobs =
     EMPLOYER_JOBS_DELETE_UI_ENABLED && can("jobs", "delete");
 
-  const [statusTab, setStatusTab] = useState<EmployerJobsStatusTabId>("all");
+  const [statusTab, setStatusTab] = useState<EmployerJobsStatusTabId>(() =>
+    parseStatusTabParam(searchParams.get("tab")),
+  );
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -82,6 +98,19 @@ export function EmployerJobsPageContent() {
     null,
   );
   const isFirstSearchDebounce = useRef(true);
+
+  const statusTabFromUrl = searchParams.get("tab");
+  const previousTabFromUrlRef = useRef<string | null>(statusTabFromUrl);
+
+  useEffect(() => {
+    if (previousTabFromUrlRef.current === statusTabFromUrl) {
+      return;
+    }
+    previousTabFromUrlRef.current = statusTabFromUrl;
+    const nextTab = parseStatusTabParam(statusTabFromUrl);
+    setStatusTab(nextTab);
+    setPage(1);
+  }, [statusTabFromUrl]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {

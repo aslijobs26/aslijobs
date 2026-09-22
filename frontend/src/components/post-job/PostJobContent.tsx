@@ -14,6 +14,7 @@ import {
   createEmployerJob,
   createEmployerJobDraft,
   fetchEmployerJob,
+  invalidateEmployerJobCascadeCaches,
   publishEmployerJobDraft,
   updateEmployerActiveJob,
   updateEmployerJobDraft,
@@ -722,9 +723,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       const successSummary = buildJobPostedSuccessSummary(formData, createdJob);
       setJobPostedSuccessSummary(successSummary);
 
-      await queryClient.invalidateQueries({
-        queryKey: EMPLOYER_JOBS_QUERY_KEYS.all,
-      });
+      await invalidateEmployerJobCascadeCaches(queryClient);
 
       const submittedJobId = createdJob?.id?.trim() ?? "";
       if (submittedJobId) {

@@ -16,6 +16,8 @@ export const ROUTES = {
   EMPLOYER_UNAUTHORIZED: "/employer/unauthorized",
   EMPLOYER_DASHBOARD: "/employer/dashboard",
   EMPLOYER_JOBS: "/employer/jobs",
+  employerJobsTab: (tab: string) =>
+    `/employer/jobs?tab=${encodeURIComponent(tab)}`,
   EMPLOYER_CANDIDATES: "/employer/candidates",
   employerCandidateDetail: (applicationId: string) =>
     `/employer/candidates/${applicationId}`,
