@@ -53,11 +53,15 @@ import Link from "next/link";
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  type Ref,
 } from "react";
+import { createPortal } from "react-dom";
 
 type EmployerJobsTableProps = {
   jobs: EmployerJobListItem[];
@@ -303,8 +307,10 @@ function EmployerJobsTableRow({
   onPreview,
 }: EmployerJobsTableRowProps) {
   const menuId = useId();
-  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const { can } = useCan();
   const canReadJobs = can("jobs", "read");
   const canUpdateJobs = can("jobs", "update");
@@ -321,18 +327,61 @@ function EmployerJobsTableRow({
         job.status === "closed")) ||
     canDeleteJobs;
 
+  useLayoutEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    const updatePosition = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) {
+        return;
+      }
+
+      const rect = trigger.getBoundingClientRect();
+      const menuHeight = menuRef.current?.offsetHeight ?? 140;
+      const gap = 4;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpward = spaceBelow < menuHeight + gap && rect.top > spaceBelow;
+
+      setMenuStyle({
+        position: "fixed",
+        top: openUpward
+          ? Math.max(8, rect.top - menuHeight - gap)
+          : rect.bottom + gap,
+        right: Math.max(8, window.innerWidth - rect.right),
+        zIndex: 60,
+      });
+    };
+
+    updatePosition();
+    // Remeasure after the menu paints so upward flip uses the real height.
+    const frameId = window.requestAnimationFrame(updatePosition);
+    window.addEventListener("resize", updatePosition);
+    // Capture scroll from the table overflow container too.
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [menuOpen]);
+
   useEffect(() => {
     if (!menuOpen) {
       return;
     }
 
     const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
-        rootRef.current &&
-        !rootRef.current.contains(event.target as Node)
+        triggerRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
       ) {
-        setMenuOpen(false);
+        return;
       }
+      setMenuOpen(false);
     };
 
     const handleEscape = (event: KeyboardEvent) => {
@@ -599,8 +648,9 @@ function EmployerJobsTableRow({
           ) : null}
 
           {hasMoreActions ? (
-            <div ref={rootRef} className="relative">
+            <div className="relative">
               <IconActionButton
+                buttonRef={triggerRef}
                 label="More actions"
                 disabled={disabled}
                 aria-haspopup="menu"
@@ -611,53 +661,58 @@ function EmployerJobsTableRow({
                 <MoreVertical className="size-3.5" />
               </IconActionButton>
 
-              {menuOpen ? (
-                <div
-                  id={menuId}
-                  role="menu"
-                  tabIndex={-1}
-                  onKeyDown={handleMenuKeyDown}
-                  className="absolute top-full right-0 z-20 mt-1 min-w-[9.5rem] overflow-hidden rounded-lg border border-border bg-surface py-1 text-sm shadow-lg"
-                >
-                  {canUpdateJobs && canClose ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="flex w-full px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-hero-bg focus-visible:bg-hero-bg focus-visible:outline-none"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        onStatusAction(job.id, "close");
-                      }}
+              {menuOpen
+                ? createPortal(
+                    <div
+                      ref={menuRef}
+                      id={menuId}
+                      role="menu"
+                      tabIndex={-1}
+                      style={menuStyle}
+                      onKeyDown={handleMenuKeyDown}
+                      className="min-w-[9.5rem] overflow-hidden rounded-lg border border-border bg-surface py-1 text-sm shadow-lg"
                     >
-                      Close job
-                    </button>
-                  ) : null}
-                  {canUpdateJobs && canReactivate ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="flex w-full px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-hero-bg focus-visible:bg-hero-bg focus-visible:outline-none"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        onStatusAction(job.id, "reactivate");
-                      }}
-                    >
-                      Activate job
-                    </button>
-                  ) : null}
-                  {canDeleteJobs ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 focus-visible:bg-red-50 focus-visible:outline-none"
-                      onClick={handleDelete}
-                    >
-                      <Trash2 className="size-3.5" aria-hidden="true" />
-                      Delete
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
+                      {canUpdateJobs && canClose ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-hero-bg focus-visible:bg-hero-bg focus-visible:outline-none"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            onStatusAction(job.id, "close");
+                          }}
+                        >
+                          Close job
+                        </button>
+                      ) : null}
+                      {canUpdateJobs && canReactivate ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-hero-bg focus-visible:bg-hero-bg focus-visible:outline-none"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            onStatusAction(job.id, "reactivate");
+                          }}
+                        >
+                          Activate job
+                        </button>
+                      ) : null}
+                      {canDeleteJobs ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 focus-visible:bg-red-50 focus-visible:outline-none"
+                          onClick={handleDelete}
+                        >
+                          <Trash2 className="size-3.5" aria-hidden="true" />
+                          Delete
+                        </button>
+                      ) : null}
+                    </div>,
+                    document.body,
+                  )
+                : null}
             </div>
           ) : null}
         </div>
@@ -701,6 +756,7 @@ type IconActionButtonProps = {
   disabled?: boolean;
   title?: string;
   onClick?: () => void;
+  buttonRef?: Ref<HTMLButtonElement>;
   "aria-haspopup"?: "menu";
   "aria-expanded"?: boolean;
   "aria-controls"?: string;
@@ -712,10 +768,12 @@ function IconActionButton({
   disabled = false,
   title,
   onClick,
+  buttonRef,
   ...ariaProps
 }: IconActionButtonProps) {
   return (
     <button
+      ref={buttonRef}
       type="button"
       aria-label={label}
       title={title ?? label}

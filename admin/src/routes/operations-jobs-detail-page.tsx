@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Check } from "lucide-react";
 import { CloseJobConfirmDialog } from "../components/operations/jobs/detail/CloseJobConfirmDialog";
+import { ApproveJobConfirmDialog } from "../components/operations/jobs/detail/ApproveJobConfirmDialog";
 import { JobActivityPanel } from "../components/operations/jobs/detail/JobActivityPanel";
 import { JobApplicationsPanel } from "../components/operations/jobs/detail/JobApplicationsPanel";
 import { JobChangeReviewPanel } from "../components/operations/jobs/detail/JobChangeReviewPanel";
@@ -32,8 +33,10 @@ export function OperationsJobsDetailPage() {
   const [applicationsLimit, setApplicationsLimit] = useState(10);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [closeError, setCloseError] = useState<string | null>(null);
   const [rejectError, setRejectError] = useState<string | null>(null);
+  const [approveError, setApproveError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const detailQuery = useOperationsJobDetail(jobId);
@@ -113,12 +116,12 @@ export function OperationsJobsDetailPage() {
       return;
     }
 
-    const confirmed = window.confirm(
-      job.isLiveChangeReview
-        ? `Approve and publish changes for job ${job.jobId}? The live listing will be updated and the employer will be notified.`
-        : `Approve and publish job ${job.jobId}? It will become live for candidates and the employer will be notified.`,
-    );
-    if (!confirmed) {
+    setApproveError(null);
+    setApproveDialogOpen(true);
+  };
+
+  const handleConfirmApproveJob = () => {
+    if (!job) {
       return;
     }
 
@@ -126,6 +129,8 @@ export function OperationsJobsDetailPage() {
       { action: "approve" },
       {
         onSuccess: (result) => {
+          setApproveDialogOpen(false);
+          setApproveError(null);
           setStatusMessage(
             result.message ||
               (job.isLiveChangeReview
@@ -137,12 +142,12 @@ export function OperationsJobsDetailPage() {
           if (isAxiosError(error)) {
             const message = error.response?.data?.message;
             if (typeof message === "string" && message.trim()) {
-              window.alert(message.trim());
+              setApproveError(message.trim());
               return;
             }
           }
 
-          window.alert(
+          setApproveError(
             job.isLiveChangeReview
               ? "Failed to approve these job changes."
               : "Failed to approve this job.",
@@ -409,6 +414,24 @@ export function OperationsJobsDetailPage() {
           </>
         ) : null}
       </div>
+
+      {job ? (
+        <ApproveJobConfirmDialog
+          open={approveDialogOpen}
+          jobTitle={job.jobTitle}
+          jobId={job.jobId}
+          isLiveChangeReview={Boolean(job.isLiveChangeReview)}
+          isSubmitting={statusMutation.isPending && approveDialogOpen}
+          errorMessage={approveError}
+          onCancel={() => {
+            if (!statusMutation.isPending) {
+              setApproveDialogOpen(false);
+              setApproveError(null);
+            }
+          }}
+          onConfirm={handleConfirmApproveJob}
+        />
+      ) : null}
 
       {job ? (
         <CloseJobConfirmDialog

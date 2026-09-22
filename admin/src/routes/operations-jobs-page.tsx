@@ -7,6 +7,7 @@ import {
   JobsTableFilters,
   type JobsTableFiltersState,
 } from "../components/operations/jobs/JobsTableFilters";
+import { ApproveJobConfirmDialog } from "../components/operations/jobs/detail/ApproveJobConfirmDialog";
 import { CloseJobConfirmDialog } from "../components/operations/jobs/detail/CloseJobConfirmDialog";
 import {
   JobsAnalyticsKpiSkeleton,
@@ -46,9 +47,7 @@ function statusActionConfirmMessage(
     case "reactivate":
       return `Activate job ${job.jobId}? It will become live for candidates.`;
     case "approve":
-      return job.isLiveChangeReview
-        ? `Approve and publish changes for job ${job.jobId}? The live listing will be updated and the employer will be notified.`
-        : `Approve and publish job ${job.jobId}? It will become live for candidates and the employer will be notified.`;
+      return null;
     case "expire":
       return `Mark job ${job.jobId} as expired? It will be hidden from candidates.`;
     case "close":
@@ -221,8 +220,11 @@ export function OperationsJobsPage() {
   const [rejectTarget, setRejectTarget] = useState<OperationsJobListItem | null>(
     null,
   );
+  const [approveTarget, setApproveTarget] =
+    useState<OperationsJobListItem | null>(null);
   const [closeError, setCloseError] = useState<string | null>(null);
   const [rejectError, setRejectError] = useState<string | null>(null);
+  const [approveError, setApproveError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const overviewListParams = useMemo(
@@ -303,6 +305,12 @@ export function OperationsJobsPage() {
       return;
     }
 
+    if (action === "approve") {
+      setApproveError(null);
+      setApproveTarget(job);
+      return;
+    }
+
     const confirmMessage = statusActionConfirmMessage(job, action);
     if (confirmMessage && !window.confirm(confirmMessage)) {
       return;
@@ -311,13 +319,6 @@ export function OperationsJobsPage() {
     statusMutation.mutate(
       { jobId: job.jobId, action },
       {
-        onSuccess: (result) => {
-          if (action === "approve") {
-            setStatusMessage(
-              result.message || "Job approved and published successfully.",
-            );
-          }
-        },
         onError: (error) => {
           if (isAxiosError(error)) {
             const message = error.response?.data?.message;
@@ -328,6 +329,43 @@ export function OperationsJobsPage() {
           }
 
           window.alert("Failed to update job status.");
+        },
+      },
+    );
+  };
+
+  const handleConfirmApproveJob = () => {
+    if (!approveTarget) {
+      return;
+    }
+
+    statusMutation.mutate(
+      { jobId: approveTarget.jobId, action: "approve" },
+      {
+        onSuccess: (result) => {
+          setApproveTarget(null);
+          setApproveError(null);
+          setStatusMessage(
+            result.message ||
+              (approveTarget.isLiveChangeReview
+                ? "Job changes approved and published successfully."
+                : "Job approved and published successfully."),
+          );
+        },
+        onError: (error) => {
+          if (isAxiosError(error)) {
+            const message = error.response?.data?.message;
+            if (typeof message === "string" && message.trim()) {
+              setApproveError(message.trim());
+              return;
+            }
+          }
+
+          setApproveError(
+            approveTarget.isLiveChangeReview
+              ? "Failed to approve these job changes."
+              : "Failed to approve this job.",
+          );
         },
       },
     );
@@ -620,6 +658,24 @@ export function OperationsJobsPage() {
           </div>
         ) : null}
       </div>
+
+      {approveTarget ? (
+        <ApproveJobConfirmDialog
+          open
+          jobTitle={approveTarget.jobTitle}
+          jobId={approveTarget.jobId}
+          isLiveChangeReview={Boolean(approveTarget.isLiveChangeReview)}
+          isSubmitting={statusMutation.isPending}
+          errorMessage={approveError}
+          onCancel={() => {
+            if (!statusMutation.isPending) {
+              setApproveTarget(null);
+              setApproveError(null);
+            }
+          }}
+          onConfirm={handleConfirmApproveJob}
+        />
+      ) : null}
 
       {closeTarget ? (
         <CloseJobConfirmDialog
