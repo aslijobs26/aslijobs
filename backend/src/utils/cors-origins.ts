@@ -3,6 +3,17 @@
  * Browser Origin never includes a trailing slash; env URLs often do.
  */
 
+/**
+ * Canonical ASLI OS Operations Admin production origins.
+ * Always allowed (in addition to ADMIN_URL / CORS_ALLOWED_ORIGINS) so both
+ * the Vercel deployment and the custom domain can authenticate against Render.
+ * Do not add wildcards or preview-deployment patterns here.
+ */
+export const PRODUCTION_ADMIN_ORIGINS = [
+  "https://admin.aslijobs.com",
+  "https://aslijobs-admin.vercel.app",
+] as const;
+
 export function normalizeOrigin(url: string): string {
   return url.trim().replace(/\/+$/, "");
 }
@@ -55,7 +66,9 @@ export function expandLocalhostOrigins(origin: string): string[] {
   try {
     const parsed = new URL(normalized);
     if (parsed.hostname === "localhost") {
-      origins.add(`${parsed.protocol}//127.0.0.1${parsed.port ? `:${parsed.port}` : ""}`);
+      origins.add(
+        `${parsed.protocol}//127.0.0.1${parsed.port ? `:${parsed.port}` : ""}`,
+      );
     } else if (parsed.hostname === "127.0.0.1") {
       origins.add(
         `${parsed.protocol}//localhost${parsed.port ? `:${parsed.port}` : ""}`,
@@ -90,6 +103,12 @@ export function buildAllowedCorsOrigins(input: {
     }
   }
 
+  // Always include canonical production Admin hosts so Render CORS works even
+  // when ADMIN_URL is set to only one of them (custom domain vs Vercel).
+  for (const origin of PRODUCTION_ADMIN_ORIGINS) {
+    allowed.add(origin);
+  }
+
   for (const extra of input.extraOrigins ?? []) {
     const normalized = normalizeOrigin(extra);
     if (normalized) {
@@ -100,6 +119,20 @@ export function buildAllowedCorsOrigins(input: {
   }
 
   return [...allowed];
+}
+
+/**
+ * Exact Origin match used by Express CORS. Origins never include a trailing slash.
+ */
+export function isCorsOriginAllowed(
+  requestOrigin: string | undefined,
+  allowedOrigins: readonly string[],
+): boolean {
+  if (!requestOrigin) {
+    // Non-browser clients (health checks, server-to-server) omit Origin.
+    return true;
+  }
+  return allowedOrigins.includes(requestOrigin);
 }
 
 function defaultPortForProtocol(protocol: string): string {

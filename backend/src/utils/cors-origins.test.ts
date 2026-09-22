@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  buildAllowedCorsOrigins,
   buildDevelopmentCorsPorts,
+  isCorsOriginAllowed,
   isDevelopmentLanOriginAllowed,
   isPrivateOrLoopbackHostname,
+  normalizeOrigin,
+  PRODUCTION_ADMIN_ORIGINS,
 } from "./cors-origins.js";
 
 describe("cors LAN development helpers", () => {
@@ -38,6 +42,107 @@ describe("cors LAN development helpers", () => {
     assert.equal(
       isDevelopmentLanOriginAllowed("https://evil.example:3000", ports),
       false,
+    );
+  });
+});
+
+describe("production Admin CORS allowlist", () => {
+  it("always allows Vercel Admin and custom Admin domain", () => {
+    const allowed = buildAllowedCorsOrigins({
+      frontendUrl: "https://www.aslijobs.com",
+      // Only one Admin host configured — both production hosts must still work.
+      adminUrl: "https://admin.aslijobs.com",
+    });
+
+    assert.equal(
+      isCorsOriginAllowed("https://aslijobs-admin.vercel.app", allowed),
+      true,
+    );
+    assert.equal(
+      isCorsOriginAllowed("https://admin.aslijobs.com", allowed),
+      true,
+    );
+    for (const origin of PRODUCTION_ADMIN_ORIGINS) {
+      assert.ok(allowed.includes(origin));
+    }
+  });
+
+  it("allows public website apex and www variants", () => {
+    const allowed = buildAllowedCorsOrigins({
+      frontendUrl: "https://www.aslijobs.com",
+      adminUrl: "https://admin.aslijobs.com",
+    });
+
+    assert.equal(isCorsOriginAllowed("https://www.aslijobs.com", allowed), true);
+    assert.equal(isCorsOriginAllowed("https://aslijobs.com", allowed), true);
+  });
+
+  it("rejects unauthorized origins", () => {
+    const allowed = buildAllowedCorsOrigins({
+      frontendUrl: "https://www.aslijobs.com",
+      adminUrl: "https://admin.aslijobs.com",
+      extraOrigins: ["https://staging.aslijobs.com"],
+    });
+
+    assert.equal(
+      isCorsOriginAllowed("https://malicious-example.com", allowed),
+      false,
+    );
+    assert.equal(
+      isCorsOriginAllowed("https://aslijobs-admin.vercel.app.evil.com", allowed),
+      false,
+    );
+    assert.equal(
+      isCorsOriginAllowed("https://admin.aslijobs.com/", allowed),
+      false,
+    );
+  });
+
+  it("strips trailing slashes from configured origins", () => {
+    assert.equal(
+      normalizeOrigin("https://admin.aslijobs.com/"),
+      "https://admin.aslijobs.com",
+    );
+
+    const allowed = buildAllowedCorsOrigins({
+      frontendUrl: "https://www.aslijobs.com/",
+      adminUrl: "https://admin.aslijobs.com/",
+      extraOrigins: ["https://preview.example.com/"],
+    });
+
+    assert.equal(isCorsOriginAllowed("https://admin.aslijobs.com", allowed), true);
+    assert.equal(
+      isCorsOriginAllowed("https://preview.example.com", allowed),
+      true,
+    );
+  });
+
+  it("allows requests with no Origin (non-browser clients)", () => {
+    const allowed = buildAllowedCorsOrigins({
+      frontendUrl: "https://www.aslijobs.com",
+      adminUrl: "https://admin.aslijobs.com",
+    });
+    assert.equal(isCorsOriginAllowed(undefined, allowed), true);
+  });
+
+  it("merges CORS_ALLOWED_ORIGINS extras without dropping production Admin hosts", () => {
+    const allowed = buildAllowedCorsOrigins({
+      frontendUrl: "http://localhost:3000",
+      adminUrl: "http://localhost:5173",
+      extraOrigins: ["https://staging.aslijobs.com"],
+    });
+
+    assert.equal(
+      isCorsOriginAllowed("https://staging.aslijobs.com", allowed),
+      true,
+    );
+    assert.equal(
+      isCorsOriginAllowed("https://aslijobs-admin.vercel.app", allowed),
+      true,
+    );
+    assert.equal(
+      isCorsOriginAllowed("https://admin.aslijobs.com", allowed),
+      true,
     );
   });
 });

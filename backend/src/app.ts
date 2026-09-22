@@ -1,5 +1,11 @@
-import cookieParser from "cookie-parser";
+import {
+  buildAllowedCorsOrigins,
+  buildDevelopmentCorsPorts,
+  isCorsOriginAllowed,
+  isDevelopmentLanOriginAllowed,
+} from "./utils/cors-origins.js";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
@@ -11,11 +17,6 @@ import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { requestIdMiddleware } from "./middleware/request-id.middleware.js";
 import { isSensitiveUploadPublicPath } from "./modules/storage/private-file.service.js";
 import apiRouter from "./routes/index.js";
-import {
-  buildAllowedCorsOrigins,
-  buildDevelopmentCorsPorts,
-  isDevelopmentLanOriginAllowed,
-} from "./utils/cors-origins.js";
 
 const app = express();
 
@@ -62,23 +63,11 @@ app.use(
 app.use(
   cors({
     origin(origin, callback) {
-      // Non-browser clients (health checks, server-to-server) omit Origin.
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-
-      if (allowedCorsOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-
-      // Next.js / Vite Network URLs use LAN IPs (e.g. http://192.168.x.x:3000).
-      // Without this, browser OTP send/verify calls are blocked by CORS even
-      // though WhatsApp delivery itself is healthy.
       if (
-        developmentCorsPorts &&
-        isDevelopmentLanOriginAllowed(origin, developmentCorsPorts)
+        isCorsOriginAllowed(origin, allowedCorsOrigins) ||
+        (developmentCorsPorts != null &&
+          origin != null &&
+          isDevelopmentLanOriginAllowed(origin, developmentCorsPorts))
       ) {
         callback(null, true);
         return;
