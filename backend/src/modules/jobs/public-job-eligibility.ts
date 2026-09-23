@@ -7,9 +7,11 @@ import {
 } from "./employer-job-verification.guard.js";
 
 /**
- * Aggregation stages appended after an initial $match on jobs.
+ * Aggregation stages appended after an initial $match (and preferably after
+ * $sort/$skip/$limit) on jobs.
  * Filters out employer-created active jobs whose employer is not verified,
- * without N+1 lookups.
+ * without N+1 lookups. Callers must apply these stages only to the page slice
+ * whenever possible — never before pagination on unbounded matches.
  */
 export function buildPublicEmployerVerificationStages(): PipelineStage[] {
   return [

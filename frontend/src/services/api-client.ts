@@ -42,13 +42,38 @@ type RefreshResponse = {
   };
 };
 
+/**
+ * Avoid default Content-Type: application/json on bodyless requests.
+ * That header is not CORS-safelisted and forces an OPTIONS preflight on every
+ * cross-origin GET (including anonymous /jobs/public), doubling production latency.
+ */
+function applyCorsSafeContentType(config: InternalAxiosRequestConfig): void {
+  const method = (config.method ?? "get").toLowerCase();
+  const headers = AxiosHeaders.from(config.headers ?? {});
+  const isBodyless =
+    method === "get" ||
+    method === "head" ||
+    method === "options" ||
+    method === "delete";
+
+  if (isBodyless && config.data == null) {
+    headers.delete("Content-Type");
+  } else if (
+    !isBodyless &&
+    config.data != null &&
+    !(typeof FormData !== "undefined" && config.data instanceof FormData) &&
+    !headers.has("Content-Type")
+  ) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  config.headers = headers;
+}
+
 export const apiClient = axios.create({
   // Resolved per request so LAN Network URLs remap localhost → page host.
   baseURL: getApiUrl(),
   timeout: 30_000,
-  headers: {
-    "Content-Type": "application/json",
-  },
   withCredentials: true,
 });
 
@@ -56,19 +81,18 @@ export const apiClient = axios.create({
 const refreshClient = axios.create({
   baseURL: getApiUrl(),
   timeout: 15_000,
-  headers: {
-    "Content-Type": "application/json",
-  },
   withCredentials: true,
 });
 
 apiClient.interceptors.request.use((config) => {
   config.baseURL = getApiUrl();
+  applyCorsSafeContentType(config);
   return config;
 });
 
 refreshClient.interceptors.request.use((config) => {
   config.baseURL = getApiUrl();
+  applyCorsSafeContentType(config);
   return config;
 });
 
@@ -93,8 +117,10 @@ function resolveAuthRealm(
     requestUrl.includes("/saved-jobs") ||
     isPublicJobsRequest;
 
+  // Public jobs use optional job-seeker auth only — never attach an employer
+  // Bearer token (that forces CORS preflight and is the wrong principal).
   if (isPublicJobsRequest) {
-    return getJobSeekerAccessToken() ? "job-seeker" : "employer";
+    return "job-seeker";
   }
 
   return isJobSeekerRequest ? "job-seeker" : "employer";

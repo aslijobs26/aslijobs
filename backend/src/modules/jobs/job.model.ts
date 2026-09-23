@@ -535,6 +535,8 @@ const jobSchema = new Schema(
 );
 
 jobSchema.index({ employerId: 1, status: 1, createdAt: -1 });
+/** Public Jobs listing default sort: active → publishedAt/createdAt. */
+jobSchema.index({ status: 1, publishedAt: -1, createdAt: -1 });
 jobSchema.index({
   jobTitle: "text",
   jobId: "text",

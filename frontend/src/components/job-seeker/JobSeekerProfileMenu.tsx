@@ -33,6 +33,12 @@ type JobSeekerProfileMenuProps = {
   onLogout?: () => void;
 };
 
+const MENU_ITEM_CLASS =
+  "flex items-center gap-3 rounded-md px-2.5 py-2 text-xs font-medium text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:gap-3.5 sm:rounded-lg sm:px-3 sm:py-2.5 sm:text-sm";
+
+const MENU_ICON_CLASS =
+  "size-4 shrink-0 text-muted sm:size-[1.125rem]";
+
 export function JobSeekerProfileMenu({
   className,
   onLogout,
@@ -170,15 +176,16 @@ export function JobSeekerProfileMenu({
           />
 
           <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-[0_8px_24px_rgba(26,43,60,0.12)] sm:rounded-xl">
-            <div className="p-1 sm:p-1.5">
+            <div className="px-1 py-1.5 sm:px-1.5 sm:py-2">
               <Link
                 href={ROUTES.JOB_SEEKER_PROFILE}
                 role="menuitem"
-                className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:gap-2 sm:rounded-lg sm:px-2.5 sm:py-2 sm:text-sm"
+                className={MENU_ITEM_CLASS}
                 onClick={() => setIsOpen(false)}
               >
                 <UserRound
-                  className="size-3.5 text-primary sm:size-4"
+                  className={MENU_ICON_CLASS}
+                  strokeWidth={1.75}
                   aria-hidden="true"
                 />
                 Profile
@@ -186,11 +193,12 @@ export function JobSeekerProfileMenu({
               <Link
                 href={ROUTES.JOB_SEEKER_SAVED_JOBS}
                 role="menuitem"
-                className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:gap-2 sm:rounded-lg sm:px-2.5 sm:py-2 sm:text-sm"
+                className={MENU_ITEM_CLASS}
                 onClick={() => setIsOpen(false)}
               >
                 <Bookmark
-                  className="size-3.5 text-primary sm:size-4"
+                  className={MENU_ICON_CLASS}
+                  strokeWidth={1.75}
                   aria-hidden="true"
                 />
                 Saved Jobs
@@ -198,11 +206,12 @@ export function JobSeekerProfileMenu({
               <Link
                 href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
                 role="menuitem"
-                className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:gap-2 sm:rounded-lg sm:px-2.5 sm:py-2 sm:text-sm"
+                className={MENU_ITEM_CLASS}
                 onClick={() => setIsOpen(false)}
               >
                 <Briefcase
-                  className="size-3.5 text-primary sm:size-4"
+                  className={MENU_ICON_CLASS}
+                  strokeWidth={1.75}
                   aria-hidden="true"
                 />
                 My Applications
@@ -210,11 +219,12 @@ export function JobSeekerProfileMenu({
               <Link
                 href={ROUTES.JOB_SEEKER_MY_RESUME}
                 role="menuitem"
-                className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:gap-2 sm:rounded-lg sm:px-2.5 sm:py-2 sm:text-sm"
+                className={MENU_ITEM_CLASS}
                 onClick={() => setIsOpen(false)}
               >
                 <FileText
-                  className="size-3.5 text-primary sm:size-4"
+                  className={MENU_ICON_CLASS}
+                  strokeWidth={1.75}
                   aria-hidden="true"
                 />
                 My Resume
@@ -222,25 +232,30 @@ export function JobSeekerProfileMenu({
               <Link
                 href={ROUTES.JOB_SEEKER_NOTIFICATIONS}
                 role="menuitem"
-                className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:gap-2 sm:rounded-lg sm:px-2.5 sm:py-2 sm:text-sm"
+                className={MENU_ITEM_CLASS}
                 onClick={() => setIsOpen(false)}
               >
                 <Bell
-                  className="size-3.5 text-primary sm:size-4"
+                  className={MENU_ICON_CLASS}
+                  strokeWidth={1.75}
                   aria-hidden="true"
                 />
                 Notifications
               </Link>
             </div>
 
-            <div className="border-t border-border-subtle p-1 sm:p-1.5">
+            <div className="border-t border-border-subtle px-1 py-1.5 sm:px-1.5 sm:py-2">
               <button
                 type="button"
                 role="menuitem"
-                className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 sm:gap-2 sm:rounded-lg sm:px-2.5 sm:py-2 sm:text-sm"
+                className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 sm:gap-3.5 sm:rounded-lg sm:px-3 sm:py-2.5 sm:text-sm"
                 onClick={handleLogoutRequest}
               >
-                <LogOut className="size-3.5 sm:size-4" aria-hidden="true" />
+                <LogOut
+                  className="size-4 shrink-0 sm:size-[1.125rem]"
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                />
                 Logout
               </button>
             </div>

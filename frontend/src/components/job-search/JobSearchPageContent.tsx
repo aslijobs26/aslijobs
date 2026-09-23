@@ -164,6 +164,7 @@ export function JobSearchPageContent() {
     queryKey: ["public-jobs", seekerAuthKey, seekerAuthEpoch, listParams],
     queryFn: ({ signal }) => fetchPublicActiveJobs(listParams, { signal }),
     placeholderData: (previous) => previous,
+    staleTime: 30_000,
   });
 
   const jobs = useMemo(
@@ -431,7 +432,7 @@ export function JobSearchPageContent() {
                     {detailJobId ? (
                       <JobSearchOverviewPanel
                         job={detailQuery.data?.job}
-                        isLoading={detailQuery.isLoading || jobsQuery.isLoading}
+                        isLoading={detailQuery.isLoading}
                         isError={detailQuery.isError}
                         bookmarked={bookmarkedIds.has(detailJobId)}
                         onToggleBookmark={() =>

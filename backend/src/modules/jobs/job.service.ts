@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { type PipelineStage } from "mongoose";
 import {
   JOB_STATUSES,
   type JobStatus,
@@ -1135,35 +1135,57 @@ async function loadEmployerPosterImageMap(
 }
 
 function toPublicJobListItem(
-  job: JobDocument,
+  job: JobDocument | Record<string, unknown>,
   options?: { isApplied?: boolean; companyLogoUrl?: string },
 ) {
+  const descriptionRaw =
+    typeof job.description === "string" ? job.description : "";
+  // Listing cards do not render full HTML descriptions; keep payload small.
+  const description =
+    descriptionRaw.length > 600
+      ? `${descriptionRaw.slice(0, 600)}…`
+      : descriptionRaw;
+
+  const publishedAtValue = job.publishedAt;
+  const createdAtValue = job.createdAt;
+
   return {
-    id: job._id.toString(),
-    jobId: job.jobId,
-    companyName: job.companyName,
-    jobTitle: job.jobTitle,
-    jobType: job.jobType,
-    workMode: job.workMode,
-    vacancies: job.vacancies,
-    description: job.description,
-    state: job.state,
-    stateName: job.stateName,
-    city: job.city,
-    cityName: job.cityName,
-    salaryType: job.salaryType,
+    id: String(job._id),
+    jobId: String(job.jobId ?? ""),
+    companyName: String(job.companyName ?? ""),
+    jobTitle: String(job.jobTitle ?? ""),
+    jobType: job.jobType as JobDocument["jobType"],
+    workMode: job.workMode as JobDocument["workMode"],
+    vacancies: Number(job.vacancies ?? 0),
+    description,
+    state: String(job.state ?? ""),
+    stateName: String(job.stateName ?? ""),
+    city: String(job.city ?? ""),
+    cityName: String(job.cityName ?? ""),
+    salaryType: job.salaryType as JobDocument["salaryType"],
     salaryPeriod: normalizeSalaryPeriod(job.salaryPeriod),
-    fixedSalary: job.fixedSalary,
-    minimumSalary: job.minimumSalary,
-    maximumSalary: job.maximumSalary,
-    perks: job.perks,
-    education: job.education,
-    experience: job.experience,
-    publishedAt: toIsoDateString(job.publishedAt),
-    applyWhatsAppNumber: toPublicApplyWhatsAppNumber(job.contactMobile),
-    createdAt: job.createdAt,
+    fixedSalary:
+      job.fixedSalary == null ? null : Number(job.fixedSalary),
+    minimumSalary:
+      job.minimumSalary == null ? null : Number(job.minimumSalary),
+    maximumSalary:
+      job.maximumSalary == null ? null : Number(job.maximumSalary),
+    perks: Array.isArray(job.perks) ? (job.perks as string[]) : [],
+    education: Array.isArray(job.education)
+      ? (job.education as string[])
+      : [],
+    experience: String(job.experience ?? ""),
+    publishedAt: toIsoDateString(
+      publishedAtValue as Date | string | null | undefined,
+    ),
+    applyWhatsAppNumber: toPublicApplyWhatsAppNumber(
+      job.contactMobile as string | null | undefined,
+    ),
+    createdAt:
+      toIsoDateString(createdAtValue as Date | string | null | undefined) ??
+      new Date(0).toISOString(),
     isApplied: options?.isApplied === true,
-    views: job.views ?? 0,
+    views: Number(job.views ?? 0),
     companyLogoUrl: options?.companyLogoUrl?.trim() || "",
   };
 }
@@ -2302,13 +2324,11 @@ export class JobService {
 
     const candidateDocs = await JobModel.aggregate([
       { $match: filter },
-      ...buildPublicEmployerVerificationStages(),
       { $sort: { publishedAt: -1, createdAt: -1 } },
       { $limit: 40 },
+      // Verify only the candidate page slice — not every active job in the DB.
+      ...buildPublicEmployerVerificationStages(),
     ]);
-    const candidates = candidateDocs.map(
-      (doc) => JobModel.hydrate(doc) as JobDocument,
-    );
 
     const sourceContext = {
       jobTitle: sourceJob.jobTitle,
@@ -2319,10 +2339,10 @@ export class JobService {
       businessCategory: sourceJob.businessCategory ?? "",
     };
 
-    const rankedEntries = candidates
+    const rankedEntries = candidateDocs
       .map((candidate) => ({
         candidate,
-        score: scoreSimilarJob(candidate, sourceContext),
+        score: scoreSimilarJob(candidate as JobDocument, sourceContext),
       }))
       .filter((entry) => entry.score > 0)
       .sort((left, right) => {
@@ -2330,23 +2350,31 @@ export class JobService {
           return right.score - left.score;
         }
 
-        const rightPublished = right.candidate.publishedAt?.getTime() ?? 0;
-        const leftPublished = left.candidate.publishedAt?.getTime() ?? 0;
+        const rightPublished =
+          right.candidate.publishedAt instanceof Date
+            ? right.candidate.publishedAt.getTime()
+            : new Date(String(right.candidate.publishedAt ?? 0)).getTime();
+        const leftPublished =
+          left.candidate.publishedAt instanceof Date
+            ? left.candidate.publishedAt.getTime()
+            : new Date(String(left.candidate.publishedAt ?? 0)).getTime();
         return rightPublished - leftPublished;
       })
       .slice(0, query.limit);
 
-    const appliedIds = await getAppliedJobMongoIdSet(
-      jobSeekerId,
-      rankedEntries.map((entry) => entry.candidate._id.toString()),
-    );
-    const posterImageMap = await loadEmployerPosterImageMap(
-      rankedEntries.map((entry) => entry.candidate),
-    );
+    const [appliedIds, posterImageMap] = await Promise.all([
+      getAppliedJobMongoIdSet(
+        jobSeekerId,
+        rankedEntries.map((entry) => String(entry.candidate._id)),
+      ),
+      loadEmployerPosterImageMap(
+        rankedEntries.map((entry) => entry.candidate),
+      ),
+    ]);
 
     const ranked = rankedEntries.map((entry) =>
       toPublicJobListItem(entry.candidate, {
-        isApplied: appliedIds.has(entry.candidate._id.toString()),
+        isApplied: appliedIds.has(String(entry.candidate._id)),
         companyLogoUrl:
           posterImageMap.get(getJobEmployerId(entry.candidate)) ?? "",
       }),
@@ -2377,69 +2405,91 @@ export class JobService {
     const useLocationRelevanceSort =
       query.sort === "relevant" && shouldUseCityAsLocationPriority(query);
 
-    const jobsPromise = useSalarySort
-      ? JobModel.aggregate([
-          { $match: filter },
-          ...verificationStages,
-          { $addFields: { effectiveSalary: EFFECTIVE_SALARY_EXPRESSION } },
-          {
-            $sort: {
-              effectiveSalary: salaryDirection,
-              publishedAt: -1,
-              createdAt: -1,
-            },
-          },
-          { $skip: skip },
-          { $limit: query.limit },
-        ]).then((docs) =>
-          docs.map((doc) => JobModel.hydrate(doc) as JobDocument),
-        )
-      : useLocationRelevanceSort
-        ? JobModel.aggregate([
-            { $match: filter },
-            ...verificationStages,
-            {
-              $addFields: {
-                locationRelevanceRank: buildLocationRelevanceRankExpr(
-                  query.city,
-                ),
-              },
-            },
-            {
-              $sort: {
-                locationRelevanceRank: -1,
-                publishedAt: -1,
-                createdAt: -1,
-              },
-            },
-            { $skip: skip },
-            { $limit: query.limit },
-          ]).then((docs) =>
-            docs.map((doc) => JobModel.hydrate(doc) as JobDocument),
-          )
-        : JobModel.aggregate([
-            { $match: filter },
-            ...verificationStages,
-            { $sort: { publishedAt: -1, createdAt: -1 } },
-            { $skip: skip },
-            { $limit: query.limit },
-          ]).then((docs) =>
-            docs.map((doc) => JobModel.hydrate(doc) as JobDocument),
-          );
+    /**
+     * CRITICAL: $sort → $skip → $limit BEFORE employer $lookup.
+     * Previously verification ran on every matched active job, then truncated —
+     * that made the listing scale with total active jobs, not page size.
+     * Publish gates already block unverified employers from going active;
+     * lookup remains a safety net on the page slice only.
+     */
+    const listPipeline: PipelineStage[] = [{ $match: filter }];
 
-    const [jobDocs, totalResult, cityFacets] = await Promise.all([
-      jobsPromise,
-      JobModel.aggregate<{ total: number }>([
-        { $match: filter },
-        ...verificationStages,
-        { $count: "total" },
-      ]),
+    if (useSalarySort) {
+      listPipeline.push(
+        { $addFields: { effectiveSalary: EFFECTIVE_SALARY_EXPRESSION } },
+        {
+          $sort: {
+            effectiveSalary: salaryDirection,
+            publishedAt: -1,
+            createdAt: -1,
+          },
+        },
+      );
+    } else if (useLocationRelevanceSort) {
+      listPipeline.push(
+        {
+          $addFields: {
+            locationRelevanceRank: buildLocationRelevanceRankExpr(query.city),
+          },
+        },
+        {
+          $sort: {
+            locationRelevanceRank: -1,
+            publishedAt: -1,
+            createdAt: -1,
+          },
+        },
+      );
+    } else {
+      listPipeline.push({ $sort: { publishedAt: -1, createdAt: -1 } });
+    }
+
+    listPipeline.push(
+      { $skip: skip },
+      { $limit: query.limit },
+      ...verificationStages,
+      {
+        $project: {
+          jobId: 1,
+          companyName: 1,
+          jobTitle: 1,
+          jobType: 1,
+          workMode: 1,
+          vacancies: 1,
+          description: 1,
+          state: 1,
+          stateName: 1,
+          city: 1,
+          cityName: 1,
+          salaryType: 1,
+          salaryPeriod: 1,
+          fixedSalary: 1,
+          minimumSalary: 1,
+          maximumSalary: 1,
+          perks: 1,
+          education: 1,
+          experience: 1,
+          publishedAt: 1,
+          contactMobile: 1,
+          createdAt: 1,
+          views: 1,
+          employerId: 1,
+          companyId: 1,
+          creationSource: 1,
+        },
+      },
+    );
+
+    const [jobDocs, total, cityFacets] = await Promise.all([
+      JobModel.aggregate(listPipeline),
+      // Count uses the same status/filter match. Employer verification is
+      // enforced at publish time; skipping per-doc $lookup keeps count O(index).
+      JobModel.countDocuments(filter),
       JobModel.aggregate<{
         _id: { city: string; cityName: string };
         count: number;
       }>([
         { $match: facetFilter },
-        ...verificationStages,
         {
           $group: {
             _id: { city: "$city", cityName: "$cityName" },
@@ -2451,17 +2501,17 @@ export class JobService {
       ]),
     ]);
 
-    const total = totalResult[0]?.total ?? 0;
-
-    const appliedIds = await getAppliedJobMongoIdSet(
-      jobSeekerId,
-      jobDocs.map((job) => job._id.toString()),
-    );
-    const posterImageMap = await loadEmployerPosterImageMap(jobDocs);
+    const [appliedIds, posterImageMap] = await Promise.all([
+      getAppliedJobMongoIdSet(
+        jobSeekerId,
+        jobDocs.map((job) => String(job._id)),
+      ),
+      loadEmployerPosterImageMap(jobDocs),
+    ]);
 
     const jobs = jobDocs.map((job) =>
       toPublicJobListItem(job, {
-        isApplied: appliedIds.has(job._id.toString()),
+        isApplied: appliedIds.has(String(job._id)),
         companyLogoUrl: posterImageMap.get(getJobEmployerId(job)) ?? "",
       }),
     );
