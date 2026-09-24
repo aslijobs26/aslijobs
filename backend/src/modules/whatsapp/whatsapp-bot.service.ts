@@ -13,9 +13,10 @@ import { understandMessage } from "./sarvam.client.js";
 import {
   askLocationCopy,
   capabilityCopy,
+  clarifyAmbiguousCopy,
+  denyPrivateCopy,
   clarifyJobTitle,
   detectLanguage,
-  fallbackCopy,
   formatSalaryLabel,
   greetingCopy,
   languageFromHint,
@@ -25,7 +26,9 @@ import {
   renderApplicationReply,
   renderCoverageReply,
   renderEmployerReply,
+  matchesRequestedRole,
   renderJobSearchReply,
+  serviceErrorCopy,
   toPublicJobsLookup,
   unauthorizedCopy,
   type BotUnderstanding,
@@ -133,7 +136,7 @@ export async function handleConversationalMessage(input: {
     );
     await whatsAppService.sendTextMessage(
       input.from,
-      fallbackCopy(detectLanguage(input.text)),
+      serviceErrorCopy(detectLanguage(input.text)),
     );
   }
 }
@@ -170,6 +173,8 @@ async function buildReply(
     case "HELP":
     case "UNRELATED":
       return say(capabilityCopy(understanding.language));
+    case "CLARIFY":
+      return say(clarifyAmbiguousCopy(understanding.language));
     case "HOW_TO_APPLY":
       return say(
         understanding.language === "te"
@@ -185,6 +190,12 @@ async function buildReply(
       );
     case "JOB_DETAILS": {
       if (remembered.length === 0) return say(clarifyJobTitle(understanding.language));
+      if (understanding.focus === "company") {
+        const names = remembered
+          .map((job, index) => `${index + 1}. ${job.companyName || "—"} — ${job.jobTitle}`)
+          .join("\n");
+        return say(names, remembered);
+      }
       return say(renderJobSearchReply({
         language: understanding.language,
         location: understanding.location,
@@ -243,7 +254,7 @@ async function buildReply(
     case "EMPLOYER_JOBS":
     case "EMPLOYER_JOB_STATUS":
     case "EMPLOYER_APPLICATION_COUNT": {
-      if (!employer) return say(unauthorizedCopy(understanding.language, "employer"));
+      if (!employer) return say(denyPrivateCopy(understanding.language));
       const query = listEmployerJobsQuerySchema.parse({
         limit: 20,
         page: 1,
@@ -371,15 +382,18 @@ async function loadJobs(
     sort: "latest",
   });
   const result = await jobService.listPublicActiveJobs(query, jobSeekerId);
-  return {
-    total: result.pagination.total,
-    jobs: result.jobs.map((job) => ({
+  const jobs = result.jobs
+    .filter((job) => matchesRequestedRole(job.jobTitle, search))
+    .map((job) => ({
       jobTitle: job.jobTitle,
       companyName: job.companyName,
       cityName: job.cityName,
       stateName: job.stateName,
       jobId: job.jobId,
       salaryLabel: formatSalaryLabel(job),
-    })),
+    }));
+  return {
+    total: jobs.length,
+    jobs,
   };
 }

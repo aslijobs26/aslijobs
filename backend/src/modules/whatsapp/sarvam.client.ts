@@ -94,9 +94,8 @@ export async function understandMessage(
   previous?: BotLanguage | null,
   hint?: BotLanguage | null,
 ): Promise<BotUnderstanding> {
-  const local = understandLocally(text, previous, hint);
   if (!env.SARVAM_API_KEY.trim()) {
-    return local;
+    return understandLocally(text, previous, hint);
   }
 
   const started = Date.now();
@@ -116,7 +115,7 @@ export async function understandMessage(
           {
             role: "system",
             content:
-              "Extract WhatsApp job-assistant intent. Reply with JSON only: {\"intent\":\"GREETING|JOB_SEARCH|JOB_COUNT|PROFILE_MATCH|MY_SKILLS|MY_APPLICATIONS|APPLICATION_STATUS|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_APPLICATION_COUNT|UNKNOWN\",\"language\":\"en|hi|te\",\"location\":\"\",\"category\":\"\",\"jobQuery\":\"\"}. Do not invent jobs.",
+              "You only classify a WhatsApp message for AsliJobs. Do not answer the user and do not invent jobs, companies, salaries, or counts. Reply with JSON only: {\"intent\":\"GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|UNRELATED|UNKNOWN\",\"language\":\"en|hi|te|ta|kn|ml\",\"location\":\"\",\"category\":\"\",\"jobQuery\":\"\",\"openSearch\":false,\"confidence\":0.0,\"focus\":\"\"}. language is the language of THIS message, including romanized Telugu or Hindi. category and location are canonical English names such as Driver or Hyderabad. openSearch is true only when the user wants any job, not a specific role. Use UNRELATED for weather, sports, jokes, and general knowledge. Use CLARIFY only when the request is ambiguous.",
           },
           { role: "user", content: text.slice(0, 500) },
         ],
@@ -127,7 +126,7 @@ export async function understandMessage(
       console.error(
         `[Sarvam] intent failed status=${response.status} latencyMs=${Date.now() - started}`,
       );
-      return local;
+      return understandLocally(text, previous, hint);
     }
 
     const body = (await response.json()) as {
@@ -143,6 +142,6 @@ export async function understandMessage(
         error instanceof Error ? error.name : "unknown"
       }`,
     );
-    return local;
+    return understandLocally(text, previous, hint);
   }
 }

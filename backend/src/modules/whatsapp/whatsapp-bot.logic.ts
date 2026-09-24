@@ -17,12 +17,15 @@ export const BOT_INTENTS = [
   "EMPLOYER_JOB_STATUS",
   "EMPLOYER_APPLICATION_COUNT",
   "HELP",
+  "CLARIFY",
   "UNRELATED",
   "UNKNOWN",
 ] as const;
 
 export type BotIntent = (typeof BOT_INTENTS)[number];
 export type BotLanguage = "en" | "hi" | "te" | "ta" | "kn" | "ml";
+
+export type BotScope = "PUBLIC_JOBS" | "OWN_DATA" | "OWN_EMPLOYER_DATA" | "NONE";
 
 export type BotUnderstanding = {
   intent: BotIntent;
@@ -32,6 +35,10 @@ export type BotUnderstanding = {
   jobQuery: string;
   /** Search jobs in a place without a specific title. */
   openSearch: boolean;
+  scope: BotScope;
+  requiresAuth: boolean;
+  confidence: number;
+  focus: "" | "salary" | "company";
 };
 
 export type PublicJobFact = {
@@ -60,7 +67,7 @@ const PLACES: Array<{ canonical: string; forms: string[] }> = [
   { canonical: "Madhapur", forms: ["madhapur", "మాధాపూర్", "మాదాపూర్", "माधापुर"] },
   { canonical: "Gachibowli", forms: ["gachibowli", "గచ్చిబౌలి", "गच्चीबोवली"] },
   { canonical: "Kukatpally", forms: ["kukatpally", "kukatpalli", "కూకట్‌పల్లి", "కూకట్పల్లి", "కూకట్‌పల్లి"] },
-  { canonical: "Hyderabad", forms: ["hyderabad", "హైదరాబాద్", "హైదరాబాదు", "हैदराबाद", "ஹைதராபாத்", "ಹೈದರಾಬಾದ್", "ഹൈദരാബാദ്"] },
+  { canonical: "Hyderabad", forms: ["hyderabad", "హైదరాబాద్", "హైదరాబాదు", "हैदराबाद", "ஹைதராபாத்", "ஹைதராபாத்தில்", "ಹೈದರಾಬಾದ್", "ಹೈದರಾಬಾದ್‌ನಲ್ಲಿ", "ഹൈദരാബാദ്", "ഹൈദരാബാദിൽ"] },
   { canonical: "Secunderabad", forms: ["secunderabad", "సికింద్రాబాద్", "सिकंदराबाद"] },
   { canonical: "Bangalore", forms: ["bangalore", "bengaluru", "బెంగళూరు", "बैंगलोर"] },
   { canonical: "Chennai", forms: ["chennai", "చెన్నై", "चेन्नई"] },
@@ -185,7 +192,7 @@ export function detectLanguage(
   if (TELUGU_SCRIPT.test(text) || ROMAN_TELUGU.test(text)) return "te";
   if (HINDI_SCRIPT.test(text) || ROMAN_HINDI.test(text)) return "hi";
   const trimmed = text.trim();
-  const clearEnglish = /\b(i want|jobs?|hello|please|are there)\b/i.test(trimmed);
+  const clearEnglish = /\b(i want|i need|hello|please|are there|show me)\b/i.test(trimmed);
   if (clearEnglish) return "en";
   if (hint && hint !== "en") return hint;
   if (previous && previous !== "en" && trimmed.length > 0 && trimmed.length < 40) {
@@ -200,13 +207,41 @@ export function nationalPhone(from: string): string {
 }
 
 const understandingSchema = z.object({
-  intent: z.enum(BOT_INTENTS).optional(),
-  language: z.enum(["en", "hi", "te", "ta", "kn", "ml"]).optional(),
-  location: z.string().optional(),
-  category: z.string().optional(),
-  jobQuery: z.string().optional(),
+  intent: z.enum(BOT_INTENTS),
+  language: z.enum(["en", "hi", "te", "ta", "kn", "ml"]),
+  location: z.string().optional().default(""),
+  category: z.string().optional().default(""),
+  jobQuery: z.string().optional().default(""),
   jobTitle: z.string().optional(),
+  openSearch: z.boolean().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  focus: z.enum(["", "salary", "company"]).optional(),
 });
+
+function scopeForIntent(intent: BotIntent): BotScope {
+  if (
+    intent === "EMPLOYER_JOBS" ||
+    intent === "EMPLOYER_JOB_STATUS" ||
+    intent === "EMPLOYER_APPLICATION_COUNT"
+  ) {
+    return "OWN_EMPLOYER_DATA";
+  }
+  if (
+    intent === "MY_APPLICATIONS" ||
+    intent === "APPLICATION_COUNT" ||
+    intent === "APPLICATION_STATUS" ||
+    intent === "APPLIED_COVERAGE" ||
+    intent === "PROFILE_JOBS" ||
+    intent === "PROFILE_MATCH" ||
+    intent === "MY_SKILLS"
+  ) {
+    return "OWN_DATA";
+  }
+  if (intent === "JOB_SEARCH" || intent === "JOB_DETAILS" || intent === "JOB_COUNT") {
+    return "PUBLIC_JOBS";
+  }
+  return "NONE";
+}
 
 export function understandLocally(
   text: string,
@@ -219,38 +254,49 @@ export function understandLocally(
   const category = extractRole(text);
   const mentionsJob = includesAny(text, JOB_WORDS) || /\bjobs?\b/i.test(folded);
   const mentionsRequest = includesAny(text, REQUEST_WORDS);
+  const ownApply =
+    /apply|applied|అప్లై|చేశా|applications?|అప్లికేషన్|आवेदन/i.test(text);
   const profile =
-    /profile|ప్రొఫైల్|ప్రొఫైల్|సరిపోయే|प्रोफाइल|प्रोफ़ाइल|suitable/i.test(text) &&
-    (mentionsJob || mentionsRequest || /jobs?/i.test(folded));
-  const applications =
-    /applications?|అప్లికేషన్|అప్లికేషన్స్|आवेदन/i.test(text);
-  const employer =
-    /నా\s*jobs|my posted jobs|which jobs did i post|i posted|నా posted|posted job/i.test(
+    /profile|ప్రొఫైల్|సరిపోయే|प्रोफाइल|प्रोफ़ाइल|suitable/i.test(text) &&
+    (mentionsJob || mentionsRequest || /jobs?/i.test(folded) || ownApply);
+  const applications = ownApply;
+  const myPosted =
+    /నా\s*jobs|my posted jobs|which jobs did i post|i posted|నా posted|posted job|my jobs/i.test(
       text,
-    ) ||
+    );
+  const employer =
+    myPosted ||
     (/(applications?|applied|applicants|వచ్చాయి)/i.test(text) &&
-      /(my job|my jobs|నా\s*jobs|for my)/i.test(text));
+      /(my job|my jobs|నా\s*jobs|for my|posted)/i.test(text));
+  const ambiguousReceived =
+    /applications?|అప్లికేషన్/i.test(text) &&
+    /వచ్చాయి|received/i.test(text) &&
+    !myPosted;
   const greeting = /^(హాయ్|హలో|నమస్తే|नमस्ते|हाय|hi|hello|hey|hy)\b/i.test(
     text.trim(),
   );
   const unrelated =
-    /cricket|joke|weather|assignment|who won|today'?s match|movie/i.test(text) &&
-    !mentionsJob &&
-    !category;
+    /cricket|joke|weather|assignment|who won|today'?s match|movie|elon|president|recipe|python|show database|all employers/i.test(
+      text,
+    ) && !ownApply;
   const appliedAll =
     /అన్ని|all jobs|सभी|எல்லா|ಎಲ್ಲಾ|എല്ലാ/i.test(text) &&
     /apply|applied|అప్లై|చేశా/i.test(text);
   const salaryAsk =
     /salary|జీతం|వేతనం|वेतन|तनख्वाह|சம்பளம்|ಸಂಬಳ|ശമ്പളം/i.test(text) &&
-    !category &&
-    !location;
+    !/\b(jobs?|kavali|chahiye|want)\b/i.test(folded);
+  const companyAsk =
+    /company|కంపెనీ|कंपनी|நிறுவனம்/i.test(text) && !category && text.trim().length < 60;
 
   let intent: BotIntent = "UNKNOWN";
   if (unrelated) intent = "UNRELATED";
   else if (/^(help|సహాయం|मदद)\b|what can you do/i.test(text.trim())) intent = "HELP";
-  else if (greeting && text.trim().length < 20 && !mentionsJob) intent = "GREETING";
+  else if (greeting && text.trim().length < 20 && !mentionsJob && !ownApply) intent = "GREETING";
   else if (profile) intent = "PROFILE_JOBS";
   else if (appliedAll) intent = "APPLIED_COVERAGE";
+  else if (/company|కంపెనీ|कंपनी/i.test(text) && applications && !myPosted) {
+    intent = "EMPLOYER_APPLICATION_COUNT";
+  } else if (ambiguousReceived) intent = "CLARIFY";
   else if (employer) {
     intent = /status|స్టేటస్|స్టేజ్|स्थिति/i.test(text)
       ? "EMPLOYER_JOB_STATUS"
@@ -266,7 +312,7 @@ export function understandLocally(
   } else if (/how (do|to) i apply|apply cheyya|apply kaise/i.test(folded)) {
     intent = "HOW_TO_APPLY";
   } else if (/my skills|skills unnayi|నైపుణ్యాలు/i.test(text)) intent = "MY_SKILLS";
-  else if (salaryAsk) intent = "JOB_DETAILS";
+  else if (salaryAsk || companyAsk) intent = "JOB_DETAILS";
   else if (
     category ||
     mentionsJob ||
@@ -279,6 +325,7 @@ export function understandLocally(
   }
 
   const openSearch = intent === "JOB_SEARCH" && !category && (mentionsJob || mentionsRequest);
+  const scope = scopeForIntent(intent);
 
   return {
     intent,
@@ -287,6 +334,10 @@ export function understandLocally(
     category,
     jobQuery: category,
     openSearch,
+    scope,
+    requiresAuth: scope === "OWN_DATA" || scope === "OWN_EMPLOYER_DATA",
+    confidence: intent === "UNKNOWN" ? 0.35 : intent === "CLARIFY" ? 0.7 : 0.94,
+    focus: companyAsk ? "company" : salaryAsk ? "salary" : "",
   };
 }
 
@@ -298,24 +349,47 @@ export function parseUnderstanding(
 ): BotUnderstanding {
   const local = understandLocally(fallbackText, previous, hint);
   try {
-    const parsed = understandingSchema.safeParse(JSON.parse(raw));
+    const json = JSON.parse(raw) as unknown;
+    const parsed = understandingSchema.safeParse(json);
     if (!parsed.success) return local;
-    const remoteIntent = parsed.data.intent ?? "UNKNOWN";
-    const remoteCategory = normalizeRole(
-      cleanSlot(parsed.data.jobTitle) || cleanSlot(parsed.data.category),
+    const confidence = parsed.data.confidence ?? 0.8;
+    if (confidence < 0.55 || parsed.data.intent === "UNKNOWN") return local;
+    const category = normalizeRole(
+      cleanSlot(parsed.data.jobTitle) || cleanSlot(parsed.data.category) || cleanSlot(parsed.data.jobQuery),
     );
-    const remoteLocation = normalizePlace(cleanSlot(parsed.data.location));
+    const location = normalizePlace(cleanSlot(parsed.data.location));
+    const intent = parsed.data.intent;
+    const openSearch = parsed.data.openSearch ?? (intent === "JOB_SEARCH" && !category);
     return {
-      intent: local.intent !== "UNKNOWN" ? local.intent : remoteIntent,
-      language: local.language,
-      location: local.location || remoteLocation,
-      category: local.category || remoteCategory,
-      jobQuery: local.category || remoteCategory,
-      openSearch: local.openSearch,
+      intent,
+      language: resolveLanguage(fallbackText, parsed.data.language, previous, hint),
+      location,
+      category,
+      jobQuery: category,
+      openSearch,
+      scope: scopeForIntent(intent),
+      requiresAuth: scopeForIntent(intent) !== "PUBLIC_JOBS" && scopeForIntent(intent) !== "NONE",
+      confidence,
+      focus: parsed.data.focus ?? "",
     };
   } catch {
     return local;
   }
+}
+
+function resolveLanguage(
+  text: string,
+  aiLanguage: BotLanguage,
+  previous?: BotLanguage | null,
+  hint?: BotLanguage | null,
+): BotLanguage {
+  if (TAMIL_SCRIPT.test(text)) return "ta";
+  if (KANNADA_SCRIPT.test(text)) return "kn";
+  if (MALAYALAM_SCRIPT.test(text)) return "ml";
+  if (TELUGU_SCRIPT.test(text)) return "te";
+  if (HINDI_SCRIPT.test(text)) return "hi";
+  if (aiLanguage !== "en") return aiLanguage;
+  return detectLanguage(text, previous, hint);
 }
 
 export function mergePending(
@@ -324,7 +398,7 @@ export function mergePending(
 ): BotUnderstanding {
   if (!previous) return next;
   const location = next.location || previous.location;
-  const category = next.category || previous.category;
+  const category = next.openSearch && next.location && !next.category ? "" : next.category || previous.category;
   const continued = next.intent === "UNKNOWN" && Boolean(location || category);
   return {
     ...next,
@@ -333,6 +407,7 @@ export function mergePending(
     jobQuery: category,
     intent: continued ? "JOB_SEARCH" : next.intent,
     openSearch: next.openSearch && !category,
+    scope: continued ? "PUBLIC_JOBS" : next.scope,
   };
 }
 
@@ -390,7 +465,7 @@ export function renderJobSearchReply(input: {
   if (input.language === "te") {
     const lead = input.widenedTo
       ? `${place}లో ${role} జాబ్స్ కనిపించలేదు. ${labelPlace(input.widenedTo, "te")}లో ఇవి ఉన్నాయి:`
-      : `అవును 👍 ${place ? `${place}లో ` : ""}${count} ${role} జాబ్స్ ఉన్నాయి.`;
+      : `అవును 👍 ${place ? `${place}లో ` : ""}${count} ${role} ఉద్యోగాలు దొరికాయి.`;
     return `${lead}\n\n${lines.join("\n\n")}\n\nమీకు కావాల్సిన జాబ్‌పై మరిన్ని వివరాలు కావాలంటే చెప్పండి.`;
   }
   if (input.language === "hi") {
@@ -449,7 +524,38 @@ export function capabilityCopy(language: BotLanguage): string {
   if (language === "ml") {
     return "AsliJobs ജോലികൾ, അപേക്ഷകൾ, പ്രൊഫൈൽ നിർദ്ദേശങ്ങൾ, employer ജോലി വിവരങ്ങൾ എന്നിവയിൽ സഹായിക്കാം. ഇവയിൽ ഒന്ന് ചോദിക്കൂ.";
   }
-  return "I can help you with AsliJobs jobs, applications, profile-based job recommendations, and employer job/application information. Please ask me one of these.";
+  return "I can help you with AsliJobs job search, job details, applications, application status, your profile, and employer information available to your account. What would you like to know?";
+}
+
+export function clarifyAmbiguousCopy(language: BotLanguage): string {
+  if (language === "te") {
+    return "మీరు మీరు apply చేసిన jobs గురించి అడుగుతున్నారా, లేక మీరు post చేసిన jobs కి వచ్చిన applications గురించా?";
+  }
+  if (language === "hi") {
+    return "आप अपने किए गए आवेदनों के बारे में पूछ रहे हैं, या अपनी पोस्ट की गई नौकरियों पर आए आवेदनों के बारे में?";
+  }
+  return "Are you asking about applications you submitted, or applications received on jobs you posted?";
+}
+
+export function denyPrivateCopy(language: BotLanguage): string {
+  if (language === "te") {
+    return "ఇతర employer లేదా ఇతర వ్యక్తుల application వివరాలు చూపించలేను. మీ సొంత account కి ఉన్న సమాచారం మాత్రమే చెప్పగలను.";
+  }
+  if (language === "hi") {
+    return "मैं किसी और employer या किसी और व्यक्ति के आवेदन नहीं दिखा सकता. केवल आपके अपने खाते का डेटा उपलब्ध है.";
+  }
+  return "I can only show data linked to your own account. Private employer or another person's applications are not available.";
+}
+
+export function serviceErrorCopy(language: BotLanguage): string {
+  if (language === "te") {
+    return "క్షమించండి, ప్రస్తుతం సమాచారం తీసుకోలేకపోయాను. దయచేసి కొద్దిసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.";
+  }
+  if (language === "hi") return "क्षमा करें, अभी जानकारी नहीं ला सका. कृपया थोड़ी देर बाद फिर कोशिश करें.";
+  if (language === "ta") return "மன்னிக்கவும், இப்போது தகவலை பெற முடியவில்லை. சிறிது நேரம் கழித்து முயற்சிக்கவும்.";
+  if (language === "kn") return "ಕ್ಷಮಿಸಿ, ಈಗ ಮಾಹಿತಿ ತರಲು ಆಗಲಿಲ್ಲ. ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.";
+  if (language === "ml") return "ക്ഷമിക്കണം, ഇപ്പോൾ വിവരം എടുക്കാൻ കഴിഞ്ഞില്ല. കുറച്ച് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കൂ.";
+  return "Sorry, I couldn't fetch that information right now. Please try again.";
 }
 
 export function greetingCopy(input: {
@@ -636,6 +742,15 @@ function extractPlace(text: string): string {
     place.forms.some((form) => text.toLowerCase().includes(form.toLowerCase())),
   );
   return hit?.canonical ?? "";
+}
+
+export function matchesRequestedRole(title: string, role: string): boolean {
+  const requested = role.trim();
+  if (!requested) return true;
+  const folded = title.toLowerCase();
+  const canonical = extractRole(requested) || requested;
+  const forms = ROLES.find((item) => item.canonical === canonical)?.forms ?? [canonical];
+  return forms.some((form) => folded.includes(form.toLowerCase()));
 }
 
 function extractRole(text: string): string {
