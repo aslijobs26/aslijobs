@@ -11,14 +11,17 @@ import { WhatsAppSessionModel } from "./whatsapp-session.model.js";
 import { WhatsAppService } from "./whatsapp.service.js";
 import { understandMessage } from "./sarvam.client.js";
 import {
+  clarifyJobTitle,
   detectLanguage,
   fallbackCopy,
-  formatJobFacts,
+  formatSalaryLabel,
   greetingCopy,
   mergePending,
   nationalPhone,
+  parentCity,
+  renderJobSearchReply,
+  toPublicJobsLookup,
   unauthorizedCopy,
-  type BotLanguage,
   type BotUnderstanding,
   type PublicJobFact,
 } from "./whatsapp-bot.logic.js";
@@ -116,13 +119,19 @@ async function buildReply(phone: string, understanding: BotUnderstanding): Promi
     case "MY_SKILLS":
       if (!seeker) return unauthorizedCopy(understanding.language, "seeker");
       return `Skills: ${(seeker.skills ?? []).slice(0, 12).join(", ") || "—"}\nRole: ${seeker.jobRole || "—"}`;
-    case "PROFILE_MATCH": {
+    case "PROFILE_MATCH":
+    case "PROFILE_JOBS": {
       if (!seeker) return unauthorizedCopy(understanding.language, "seeker");
-      const search = [seeker.jobRole, ...(seeker.skills ?? []).slice(0, 3)]
-        .filter(Boolean)
-        .join(" ");
       const location = seeker.preferredJobLocation || seeker.city || "";
-      return searchJobs(understanding.language, search, location, seeker._id.toString());
+      return searchJobs(
+        {
+          ...understanding,
+          category: seeker.jobRole?.trim() || "",
+          location,
+          openSearch: !seeker.jobRole?.trim(),
+        },
+        seeker._id.toString(),
+      );
     }
     case "MY_APPLICATIONS":
     case "APPLICATION_STATUS": {
@@ -168,52 +177,61 @@ async function buildReply(phone: string, understanding: BotUnderstanding): Promi
     case "JOB_COUNT":
     case "JOB_SEARCH":
     default: {
-      if (understanding.intent === "UNKNOWN") {
-        return understanding.language === "te"
-          ? "Job, application, leda profile gurinchi adagandi."
-          : understanding.language === "hi"
-            ? "Job, application, ya profile ke baare mein poochhiye."
-            : "Ask about jobs, your applications, or your profile.";
+      if (understanding.intent === "UNKNOWN" || (!understanding.category && !understanding.openSearch)) {
+        return clarifyJobTitle(understanding.language);
       }
-      const search = [understanding.category, understanding.jobQuery]
-        .filter(Boolean)
-        .join(" ");
-      return searchJobs(
-        understanding.language,
-        search || understanding.category,
-        understanding.location,
-        seeker?._id.toString(),
-      );
+      return searchJobs(understanding, seeker?._id.toString());
     }
   }
 }
 
 async function searchJobs(
-  language: BotLanguage,
-  search: string,
-  location: string,
+  understanding: BotUnderstanding,
   jobSeekerId?: string,
 ): Promise<string> {
+  const lookup = toPublicJobsLookup(understanding);
+  const primary = await loadJobs(lookup.search, lookup.city, jobSeekerId);
+  if (primary.length > 0 || !understanding.location) {
+    return renderJobSearchReply({
+      language: understanding.language,
+      location: understanding.location,
+      jobTitle: understanding.category,
+      jobs: primary,
+    });
+  }
+
+  const widerCity = parentCity(understanding.location);
+  const wider = widerCity
+    ? await loadJobs(lookup.search, widerCity, jobSeekerId)
+    : [];
+  return renderJobSearchReply({
+    language: understanding.language,
+    location: understanding.location,
+    jobTitle: understanding.category,
+    jobs: wider,
+    widenedTo: wider.length > 0 ? widerCity : undefined,
+  });
+}
+
+async function loadJobs(
+  search: string,
+  city: string,
+  jobSeekerId?: string,
+): Promise<PublicJobFact[]> {
   const query = publicJobsQuerySchema.parse({
-    search: search.trim(),
-    city: location.trim(),
+    search,
+    city,
     limit: 5,
     page: 1,
-    sort: "relevant",
+    sort: "latest",
   });
   const result = await jobService.listPublicActiveJobs(query, jobSeekerId);
-  const facts: PublicJobFact[] = result.jobs.map((job) => ({
+  return result.jobs.map((job) => ({
     jobTitle: job.jobTitle,
     companyName: job.companyName,
     cityName: job.cityName,
     stateName: job.stateName,
     jobId: job.jobId,
+    salaryLabel: formatSalaryLabel(job),
   }));
-  const countLine =
-    language === "te"
-      ? `Kanipinchina active jobs: ${result.pagination?.total ?? facts.length}`
-      : language === "hi"
-        ? `Active jobs: ${result.pagination?.total ?? facts.length}`
-        : `Active jobs found: ${result.pagination?.total ?? facts.length}`;
-  return `${countLine}\n${formatJobFacts(facts, language)}`;
 }
