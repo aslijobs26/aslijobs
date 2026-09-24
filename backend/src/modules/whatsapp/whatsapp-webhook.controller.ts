@@ -4,7 +4,12 @@ import { claimWhatsAppEvent } from "./whatsapp-processed-event.model.js";
 import { verifyWhatsAppSignature } from "./whatsapp-signature.js";
 import { handleConversationalMessage } from "./whatsapp-bot.service.js";
 import { WhatsAppService } from "./whatsapp.service.js";
-import { fallbackCopy, detectLanguage } from "./whatsapp-bot.logic.js";
+import {
+  nationalPhone,
+  voiceUnclearCopy,
+  type BotLanguage,
+} from "./whatsapp-bot.logic.js";
+import { WhatsAppSessionModel } from "./whatsapp-session.model.js";
 import { transcribeWhatsAppAudio } from "./sarvam.client.js";
 
 const whatsAppService = new WhatsAppService();
@@ -96,31 +101,41 @@ async function processWebhook(body: {
           continue;
         }
 
-        const text = await extractText(message);
-        if (!text) continue;
+        const extracted = await extractText(message);
+        if (!extracted?.text) continue;
 
         console.info(
-          `[WhatsAppWebhook] routed conversational type=${message.type ?? "unknown"}`,
+          `[WhatsAppWebhook] routed conversational type=${message.type ?? "unknown"} messageId=${messageId}`,
         );
-        await handleConversationalMessage({ from, text });
+        await handleConversationalMessage({
+          from,
+          text: extracted.text,
+          languageHint: extracted.languageHint,
+          messageId,
+          messageType: message.type,
+        });
       }
     }
   }
 }
 
-async function extractText(message: IncomingMessage): Promise<string | null> {
+async function extractText(
+  message: IncomingMessage,
+): Promise<{ text: string; languageHint: string } | null> {
   if (message.type === "text") {
-    return message.text?.body?.trim() || null;
+    const text = message.text?.body?.trim() || "";
+    return text ? { text, languageHint: "" } : null;
   }
   if (message.type === "button") {
-    return message.button?.text?.trim() || null;
+    const text = message.button?.text?.trim() || "";
+    return text ? { text, languageHint: "" } : null;
   }
   if (message.type === "interactive") {
-    return (
+    const text =
       message.interactive?.button_reply?.title?.trim() ||
       message.interactive?.list_reply?.title?.trim() ||
-      null
-    );
+      "";
+    return text ? { text, languageHint: "" } : null;
   }
   if (message.type === "audio" && message.audio?.id) {
     try {
@@ -129,16 +144,24 @@ async function extractText(message: IncomingMessage): Promise<string | null> {
         buffer: media.buffer,
         mimeType: message.audio.mime_type || media.mimeType,
       });
-      return speech.transcript;
+      console.info("[WhatsAppWebhook] voice transcript ready");
+      return speech.transcript
+        ? { text: speech.transcript, languageHint: speech.languageHint }
+        : null;
     } catch (error) {
       console.error(
         `[WhatsAppWebhook] voice failed reason=${
           error instanceof Error ? error.name : "unknown"
         }`,
       );
+      const phone = nationalPhone(message.from ?? "");
+      const session = phone
+        ? await WhatsAppSessionModel.findOne({ phone }).select("language").lean()
+        : null;
+      const language = (session?.language ?? "en") as BotLanguage;
       await whatsAppService.sendTextMessage(
         message.from ?? "",
-        fallbackCopy(detectLanguage("")),
+        voiceUnclearCopy(language),
       );
       return null;
     }

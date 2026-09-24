@@ -1,20 +1,28 @@
+import { z } from "zod";
+
 export const BOT_INTENTS = [
   "GREETING",
   "JOB_SEARCH",
+  "JOB_DETAILS",
   "JOB_COUNT",
   "PROFILE_MATCH",
   "PROFILE_JOBS",
   "MY_SKILLS",
   "MY_APPLICATIONS",
+  "APPLICATION_COUNT",
   "APPLICATION_STATUS",
+  "APPLIED_COVERAGE",
   "HOW_TO_APPLY",
   "EMPLOYER_JOBS",
+  "EMPLOYER_JOB_STATUS",
   "EMPLOYER_APPLICATION_COUNT",
+  "HELP",
+  "UNRELATED",
   "UNKNOWN",
 ] as const;
 
 export type BotIntent = (typeof BOT_INTENTS)[number];
-export type BotLanguage = "en" | "hi" | "te";
+export type BotLanguage = "en" | "hi" | "te" | "ta" | "kn" | "ml";
 
 export type BotUnderstanding = {
   intent: BotIntent;
@@ -37,16 +45,22 @@ export type PublicJobFact = {
 
 const TELUGU_SCRIPT = /[\u0C00-\u0C7F]/;
 const HINDI_SCRIPT = /[\u0900-\u097F]/;
+const TAMIL_SCRIPT = /[\u0B80-\u0BFF]/;
+const KANNADA_SCRIPT = /[\u0C80-\u0CFF]/;
+const MALAYALAM_SCRIPT = /[\u0D00-\u0D7F]/;
 
 const ROMAN_TELUGU =
   /\b(undha|unda|vundha|vunda|unnaya|unnayi|unnai|kavali|kaavali|cheppu|cheppandi|chudandi|chupinchu|naaku|nenu|pani)\b|\blo\b/i;
-const ROMAN_HINDI = /\b(kya|hai|hain|mujhe|chahiye|dikhao|naukri)\b/i;
+const ROMAN_HINDI = /\b(kya|hai|hain|mujhe|chahiye|dikhao|naukri|mereko|mein)\b/i;
+const ROMAN_TAMIL = /\b(venum|venam|irukka|irukku|enakku|velai)\b/i;
+const ROMAN_KANNADA = /\b(beku|ideya|nanage|kelasa)\b/i;
+const ROMAN_MALAYALAM = /\b(venam|undo|enikku|joli)\b/i;
 
 const PLACES: Array<{ canonical: string; forms: string[] }> = [
   { canonical: "Madhapur", forms: ["madhapur", "మాధాపూర్", "మాదాపూర్", "माधापुर"] },
   { canonical: "Gachibowli", forms: ["gachibowli", "గచ్చిబౌలి", "गच्चीबोवली"] },
   { canonical: "Kukatpally", forms: ["kukatpally", "kukatpalli", "కూకట్‌పల్లి", "కూకట్పల్లి", "కూకట్‌పల్లి"] },
-  { canonical: "Hyderabad", forms: ["hyderabad", "హైదరాబాద్", "హైదరాబాదు", "हैदराबाद"] },
+  { canonical: "Hyderabad", forms: ["hyderabad", "హైదరాబాద్", "హైదరాబాదు", "हैदराबाद", "ஹைதராபாத்", "ಹೈದರಾಬಾದ್", "ഹൈദരാബാദ്"] },
   { canonical: "Secunderabad", forms: ["secunderabad", "సికింద్రాబాద్", "सिकंदराबाद"] },
   { canonical: "Bangalore", forms: ["bangalore", "bengaluru", "బెంగళూరు", "बैंगलोर"] },
   { canonical: "Chennai", forms: ["chennai", "చెన్నై", "चेन्नई"] },
@@ -59,10 +73,10 @@ const PLACES: Array<{ canonical: string; forms: string[] }> = [
 ];
 
 const ROLES: Array<{ canonical: string; forms: string[] }> = [
-  { canonical: "Driver", forms: ["driver", "డ్రైవర్", "డ్రైవరు", "ड्राइवर"] },
+  { canonical: "Driver", forms: ["driver", "డ్రైవర్", "డ్రైవరు", "ड्राइवर", "டிரைவர்", "ಡ್ರೈವರ್", "ഡ്രൈവർ"] },
   { canonical: "Delivery", forms: ["delivery", "డెలివరీ", "డెలివరి", "डिलीवरी"] },
   { canonical: "Watchman", forms: ["watchman", "security", "వాచ్‌మన్", "వాచ్మన్", "वॉचमैन"] },
-  { canonical: "Electrician", forms: ["electrician", "ఎలక్ట్రీషియన్", "इलेक्ट्रीशियन"] },
+  { canonical: "Electrician", forms: ["electrician", "ఎలక్ట్రీషియన్", "इलेक्ट्रीशियन", "எலக்ட்ரீஷியன்"] },
   { canonical: "Carpenter", forms: ["carpenter", "కార్పెంటర్", "कारपेंटर"] },
   { canonical: "Plumber", forms: ["plumber", "ప్లంబర్", "प्लंबर"] },
   { canonical: "Cook", forms: ["cook", "వంటవాడు", "रसोइया"] },
@@ -76,12 +90,15 @@ const JOB_WORDS = [
   "ఉద్యోగాలు",
   "జాబ్",
   "జాబ్స్",
-  "జాబ్స్",
   "పని",
   "नौकरी",
   "नौकरियां",
   "जॉब",
   "जॉब्स",
+  "வேலை",
+  "ಕೆಲಸ",
+  "ಉದ್ಯೋಗ",
+  "ജോലി",
 ];
 
 const REQUEST_WORDS = [
@@ -146,9 +163,34 @@ const CITY_LEVEL = new Set([
   "Warangal",
 ]);
 
-export function detectLanguage(text: string): BotLanguage {
+export function languageFromHint(hint: string | null | undefined): BotLanguage | null {
+  const code = hint?.trim().toLowerCase() ?? "";
+  if (code.startsWith("te")) return "te";
+  if (code.startsWith("hi")) return "hi";
+  if (code.startsWith("ta")) return "ta";
+  if (code.startsWith("kn")) return "kn";
+  if (code.startsWith("ml")) return "ml";
+  if (code.startsWith("en")) return "en";
+  return null;
+}
+
+export function detectLanguage(
+  text: string,
+  previous?: BotLanguage | null,
+  hint?: BotLanguage | null,
+): BotLanguage {
+  if (TAMIL_SCRIPT.test(text) || ROMAN_TAMIL.test(text)) return "ta";
+  if (KANNADA_SCRIPT.test(text) || ROMAN_KANNADA.test(text)) return "kn";
+  if (MALAYALAM_SCRIPT.test(text) || ROMAN_MALAYALAM.test(text)) return "ml";
   if (TELUGU_SCRIPT.test(text) || ROMAN_TELUGU.test(text)) return "te";
   if (HINDI_SCRIPT.test(text) || ROMAN_HINDI.test(text)) return "hi";
+  const trimmed = text.trim();
+  const clearEnglish = /\b(i want|jobs?|hello|please|are there)\b/i.test(trimmed);
+  if (clearEnglish) return "en";
+  if (hint && hint !== "en") return hint;
+  if (previous && previous !== "en" && trimmed.length > 0 && trimmed.length < 40) {
+    return previous;
+  }
   return "en";
 }
 
@@ -157,34 +199,75 @@ export function nationalPhone(from: string): string {
   return digits.length >= 10 ? digits.slice(-10) : digits;
 }
 
-export function understandLocally(text: string): BotUnderstanding {
-  const language = detectLanguage(text);
+const understandingSchema = z.object({
+  intent: z.enum(BOT_INTENTS).optional(),
+  language: z.enum(["en", "hi", "te", "ta", "kn", "ml"]).optional(),
+  location: z.string().optional(),
+  category: z.string().optional(),
+  jobQuery: z.string().optional(),
+  jobTitle: z.string().optional(),
+});
+
+export function understandLocally(
+  text: string,
+  previous?: BotLanguage | null,
+  hint?: BotLanguage | null,
+): BotUnderstanding {
+  const language = detectLanguage(text, previous, hint);
   const folded = text.toLowerCase();
   const location = extractPlace(text);
   const category = extractRole(text);
   const mentionsJob = includesAny(text, JOB_WORDS) || /\bjobs?\b/i.test(folded);
   const mentionsRequest = includesAny(text, REQUEST_WORDS);
   const profile =
-    /profile|ప్రొఫైల్|సరిపోయే|प्रोफाइल|suitable/i.test(text) &&
+    /profile|ప్రొఫైల్|ప్రొఫైల్|సరిపోయే|प्रोफाइल|प्रोफ़ाइल|suitable/i.test(text) &&
     (mentionsJob || mentionsRequest || /jobs?/i.test(folded));
   const applications =
     /applications?|అప్లికేషన్|అప్లికేషన్స్|आवेदन/i.test(text);
+  const employer =
+    /నా\s*jobs|my posted jobs|which jobs did i post|i posted|నా posted|posted job/i.test(
+      text,
+    ) ||
+    (/(applications?|applied|applicants|వచ్చాయి)/i.test(text) &&
+      /(my job|my jobs|నా\s*jobs|for my)/i.test(text));
   const greeting = /^(హాయ్|హలో|నమస్తే|नमस्ते|हाय|hi|hello|hey|hy)\b/i.test(
     text.trim(),
   );
+  const unrelated =
+    /cricket|joke|weather|assignment|who won|today'?s match|movie/i.test(text) &&
+    !mentionsJob &&
+    !category;
+  const appliedAll =
+    /అన్ని|all jobs|सभी|எல்லா|ಎಲ್ಲಾ|എല്ലാ/i.test(text) &&
+    /apply|applied|అప్లై|చేశా/i.test(text);
+  const salaryAsk =
+    /salary|జీతం|వేతనం|वेतन|तनख्वाह|சம்பளம்|ಸಂಬಳ|ശമ്പളം/i.test(text) &&
+    !category &&
+    !location;
 
   let intent: BotIntent = "UNKNOWN";
-  if (greeting && text.trim().length < 20) intent = "GREETING";
+  if (unrelated) intent = "UNRELATED";
+  else if (/^(help|సహాయం|मदद)\b|what can you do/i.test(text.trim())) intent = "HELP";
+  else if (greeting && text.trim().length < 20 && !mentionsJob) intent = "GREETING";
   else if (profile) intent = "PROFILE_JOBS";
-  else if (applications) intent = "MY_APPLICATIONS";
-  else if (/how (do|to) i apply|apply cheyya|apply kaise/i.test(folded)) {
+  else if (appliedAll) intent = "APPLIED_COVERAGE";
+  else if (employer) {
+    intent = /status|స్టేటస్|స్టేజ్|स्थिति/i.test(text)
+      ? "EMPLOYER_JOB_STATUS"
+      : /ఎన్ని|how many|applications?|applied|వచ్చాయి/i.test(text)
+        ? "EMPLOYER_APPLICATION_COUNT"
+        : "EMPLOYER_JOBS";
+  } else if (applications) {
+    intent = /status|స్టేటస్|స్టేజ్|स्थिति|நிலை/i.test(text)
+      ? "APPLICATION_STATUS"
+      : /ఎన్ని|how many|कितनी|எத்தனை|ಎಷ್ಟು|എത്ര/i.test(text)
+        ? "APPLICATION_COUNT"
+        : "MY_APPLICATIONS";
+  } else if (/how (do|to) i apply|apply cheyya|apply kaise/i.test(folded)) {
     intent = "HOW_TO_APPLY";
   } else if (/my skills|skills unnayi|నైపుణ్యాలు/i.test(text)) intent = "MY_SKILLS";
-  else if (/my posted jobs|how many applications/i.test(folded)) {
-    intent = /how many applications/i.test(folded)
-      ? "EMPLOYER_APPLICATION_COUNT"
-      : "EMPLOYER_JOBS";
-  } else if (
+  else if (salaryAsk) intent = "JOB_DETAILS";
+  else if (
     category ||
     mentionsJob ||
     (location && mentionsRequest) ||
@@ -207,15 +290,21 @@ export function understandLocally(text: string): BotUnderstanding {
   };
 }
 
-export function parseUnderstanding(raw: string, fallbackText: string): BotUnderstanding {
-  const local = understandLocally(fallbackText);
+export function parseUnderstanding(
+  raw: string,
+  fallbackText: string,
+  previous?: BotLanguage | null,
+  hint?: BotLanguage | null,
+): BotUnderstanding {
+  const local = understandLocally(fallbackText, previous, hint);
   try {
-    const parsed = JSON.parse(raw) as Partial<BotUnderstanding> & { jobTitle?: string };
-    const remoteIntent = BOT_INTENTS.includes(parsed.intent as BotIntent)
-      ? (parsed.intent as BotIntent)
-      : "UNKNOWN";
-    const remoteCategory = normalizeRole(cleanSlot(parsed.jobTitle) || cleanSlot(parsed.category));
-    const remoteLocation = normalizePlace(cleanSlot(parsed.location));
+    const parsed = understandingSchema.safeParse(JSON.parse(raw));
+    if (!parsed.success) return local;
+    const remoteIntent = parsed.data.intent ?? "UNKNOWN";
+    const remoteCategory = normalizeRole(
+      cleanSlot(parsed.data.jobTitle) || cleanSlot(parsed.data.category),
+    );
+    const remoteLocation = normalizePlace(cleanSlot(parsed.data.location));
     return {
       intent: local.intent !== "UNKNOWN" ? local.intent : remoteIntent,
       language: local.language,
@@ -284,14 +373,18 @@ export function renderJobSearchReply(input: {
     if (input.language === "hi") {
       return `अभी ${place || "इस जगह"} में ${role || "नौकरी"} नहीं मिली। हैदराबाद के दूसरे इलाकों में देखें?`;
     }
+    if (input.language === "ta" || input.language === "kn" || input.language === "ml") {
+      return regionalLead(input.language, "empty", place, role, "");
+    }
     return `I could not find ${role || "jobs"}${place ? ` in ${place}` : ""}. Should I look in nearby Hyderabad areas?`;
   }
 
   const lines = input.jobs.slice(0, 5).map((job, index) => {
-    const where = job.cityName || job.stateName;
+    const where = labelPlace(job.cityName, input.language) || job.cityName || job.stateName;
     const salary = job.salaryLabel ? `\n💰 ${job.salaryLabel}` : "";
     const company = job.companyName ? ` — ${job.companyName}` : "";
-    return `${index + 1}. ${job.jobTitle}${company}${where ? `\n📍 ${where}` : ""}${salary}`;
+    const title = localizeJobTitle(job.jobTitle, input.language);
+    return `${index + 1}. ${title}${company}${where ? `\n📍 ${where}` : ""}${salary}`;
   });
 
   if (input.language === "te") {
@@ -306,6 +399,12 @@ export function renderJobSearchReply(input: {
       : `${place ? `${place} में ` : ""}${count} ${role} की नौकरियां मिली हैं.`;
     return `${lead}\n\n${lines.join("\n\n")}`;
   }
+  if (input.language === "ta" || input.language === "kn" || input.language === "ml") {
+    const lead = input.widenedTo
+      ? regionalLead(input.language, "widen", place, role, labelPlace(input.widenedTo, input.language))
+      : regionalLead(input.language, "found", place, role, String(count));
+    return `${lead}\n\n${lines.join("\n\n")}\n\n${regionalLead(input.language, "more", "", "", "")}`;
+  }
   const lead = input.widenedTo
     ? `No ${role || "jobs"} in ${place}. These are in ${input.widenedTo}:`
     : `I found ${count} active ${role || "job"} listing${count === 1 ? "" : "s"}${place ? ` in ${place}` : ""}.`;
@@ -319,7 +418,38 @@ export function clarifyJobTitle(language: BotLanguage): string {
   if (language === "hi") {
     return "आपको कौन सी नौकरी चाहिए बताइए। उदाहरण: 'माधापुर में ड्राइवर की नौकरी चाहिए'.";
   }
+  if (language === "ta") return "எந்த வேலை வேண்டும் என்று சொல்லுங்கள். உதாரணம்: 'ஹைதராபாத் டிரைவர் வேலை'.";
+  if (language === "kn") return "ಯಾವ ಕೆಲಸ ಬೇಕು ಹೇಳಿ. ಉದಾಹರಣೆ: 'ಹೈದರಾಬಾದ್ ಡ್ರೈವರ್ ಕೆಲಸ'.";
+  if (language === "ml") return "ഏത് ജോലി വേണം എന്ന് പറയൂ. ഉദാഹരണം: 'ഹൈദരാബാദ് ഡ്രൈവർ ജോലി'.";
   return "Tell me what kind of job you're looking for. For example: 'driver jobs in Madhapur'.";
+}
+
+export function askLocationCopy(language: BotLanguage): string {
+  if (language === "te") return "ఏ ప్రాంతంలో జాబ్ కావాలో చెప్పండి. ఉదాహరణ: హైదరాబాద్.";
+  if (language === "hi") return "किस जगह नौकरी चाहिए? उदाहरण: हैदराबाद.";
+  if (language === "ta") return "எந்த ஊரில் வேலை வேண்டும்? உதாரணம்: ஹைதராபாத்.";
+  if (language === "kn") return "ಯಾವ ಊರಲ್ಲಿ ಕೆಲಸ ಬೇಕು? ಉದಾಹರಣೆ: ಹೈದರಾಬಾದ್.";
+  if (language === "ml") return "ഏത് സ്ഥലത്ത് ജോലി വേണം? ഉദാഹരണം: ഹൈദരാബാദ്.";
+  return "Sure 👍 Which location are you looking for?";
+}
+
+export function capabilityCopy(language: BotLanguage): string {
+  if (language === "te") {
+    return "నేను AsliJobs జాబ్స్, అప్లికేషన్స్, ప్రొఫైల్ సూచనలు, మరియు employer జాబ్ వివరాలతో సహాయం చేయగలను. వీటిలో ఒకటి అడగండి.";
+  }
+  if (language === "hi") {
+    return "मैं AsliJobs नौकरियां, आवेदन, प्रोफाइल सुझाव, और employer जॉब जानकारी में मदद कर सकता हूँ. इनमें से कुछ पूछें.";
+  }
+  if (language === "ta") {
+    return "AsliJobs வேலைகள், விண்ணப்பங்கள், சுயவிவர பரிந்துரைகள், மற்றும் employer வேலை தகவலில் உதவ முடியும். இவற்றில் ஒன்றைக் கேளுங்கள்.";
+  }
+  if (language === "kn") {
+    return "ನಾನು AsliJobs ಉದ್ಯೋಗಗಳು, ಅರ್ಜಿಗಳು, ಪ್ರೊಫೈಲ್ ಸಲಹೆಗಳು, ಮತ್ತು employer ಉದ್ಯೋಗ ಮಾಹಿತಿಯಲ್ಲಿ ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. ಇವುಗಳಲ್ಲಿ ಒಂದನ್ನು ಕೇಳಿ.";
+  }
+  if (language === "ml") {
+    return "AsliJobs ജോലികൾ, അപേക്ഷകൾ, പ്രൊഫൈൽ നിർദ്ദേശങ്ങൾ, employer ജോലി വിവരങ്ങൾ എന്നിവയിൽ സഹായിക്കാം. ഇവയിൽ ഒന്ന് ചോദിക്കൂ.";
+  }
+  return "I can help you with AsliJobs jobs, applications, profile-based job recommendations, and employer job/application information. Please ask me one of these.";
 }
 
 export function greetingCopy(input: {
@@ -341,15 +471,149 @@ export function fallbackCopy(language: BotLanguage): string {
   return clarifyJobTitle(language);
 }
 
+export function voiceUnclearCopy(language: BotLanguage): string {
+  if (language === "te") {
+    return "మీ వాయిస్ మెసేజ్ నాకు స్పష్టంగా అర్థం కాలేదు. దయచేసి మరోసారి చెప్పండి.";
+  }
+  if (language === "hi") {
+    return "मुझे आपका वॉइस मैसेज साफ़ समझ नहीं आया। कृपया दोबारा भेजें।";
+  }
+  if (language === "ta") {
+    return "உங்கள் குரல் செய்தி தெளிவாகப் புரியவில்லை. தயவுசெய்து மீண்டும் சொல்லுங்கள்.";
+  }
+  if (language === "kn") {
+    return "ನಿಮ್ಮ ಧ್ವನಿ ಸಂದೇಶ ಸ್ಪಷ್ಟವಾಗಿ ಅರ್ಥವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಹೇಳಿ.";
+  }
+  if (language === "ml") {
+    return "നിങ്ങളുടെ വോയ്സ് സന്ദേശം വ്യക്തമായി മനസ്സിലായില്ല. ദയവായി വീണ്ടും പറയൂ.";
+  }
+  return "I couldn't understand the voice message clearly. Please try again.";
+}
+
 export function unauthorizedCopy(language: BotLanguage, kind: "seeker" | "employer"): string {
   if (kind === "employer") {
-    if (language === "te") return "ఈ నంబర్ employer account కి లింక్ కాలేదు.";
-    if (language === "hi") return "यह नंबर किसी employer account से जुड़ा नहीं है.";
+    if (language === "te") {
+      return "మీ WhatsApp number ఏ employer account కి link కాలేదు. ముందుగా employer account link చేయండి.";
+    }
+    if (language === "hi") return "यह नंबर किसी employer account से जुड़ा नहीं है. पहले employer account लिंक करें.";
+    if (language === "ta") return "இந்த WhatsApp எண் employer கணக்குடன் இணைக்கப்படவில்லை.";
+    if (language === "kn") return "ಈ WhatsApp ಸಂಖ್ಯೆ employer ಖಾತೆಗೆ ಲಿಂಕ್ ಆಗಿಲ್ಲ.";
+    if (language === "ml") return "ഈ WhatsApp നമ്പർ employer അക്കൗണ്ടുമായി ബന്ധിപ്പിച്ചിട്ടില്ല.";
     return "This WhatsApp number is not linked to an employer account.";
   }
-  if (language === "te") return "ఈ నంబర్ job seeker account కి లింక్ కాలేదు.";
-  if (language === "hi") return "यह नंबर किसी job seeker account से जुड़ा नहीं है.";
-  return "This WhatsApp number is not linked to a job seeker account.";
+  if (language === "te") {
+    return "మీ WhatsApp number తో AsliJobs profile కనిపించలేదు. ముందుగా AsliJobs లో register/login చేయండి.";
+  }
+  if (language === "hi") return "इस नंबर पर AsliJobs प्रोफाइल नहीं मिली. पहले register/login करें.";
+  if (language === "ta") return "இந்த எண்ணில் AsliJobs சுயவிவரம் இல்லை. முதலில் register/login செய்யுங்கள்.";
+  if (language === "kn") return "ಈ ಸಂಖ್ಯೆಯಲ್ಲಿ AsliJobs ಪ್ರೊಫೈಲ್ ಕಾಣಿಸಲಿಲ್ಲ. ಮೊದಲು register/login ಮಾಡಿ.";
+  if (language === "ml") return "ഈ നമ്പറിൽ AsliJobs പ്രൊഫൈൽ കണ്ടില്ല. ആദ്യം register/login ചെയ്യൂ.";
+  return "This WhatsApp number is not linked to an AsliJobs profile. Please register or log in first.";
+}
+
+export function renderApplicationReply(input: {
+  language: BotLanguage;
+  total: number;
+  lines: string[];
+  mode: "list" | "count" | "status";
+}): string {
+  const { language, total, lines, mode } = input;
+  if (total === 0) {
+    if (language === "te") return "మీ applications ఇప్పుడు లేవు.";
+    if (language === "hi") return "अभी कोई आवेदन नहीं मिला.";
+    if (language === "ta") return "உங்கள் விண்ணப்பங்கள் இப்போது இல்லை.";
+    if (language === "kn") return "ನಿಮ್ಮ ಅರ್ಜಿಗಳು ಈಗ ಇಲ್ಲ.";
+    if (language === "ml") return "നിങ്ങളുടെ അപേക്ഷകൾ ഇപ്പോൾ ഇല്ല.";
+    return "You do not have applications yet.";
+  }
+  const head =
+    language === "te"
+      ? mode === "count"
+        ? `మీ దగ్గర ${total} applications ఉన్నాయి.`
+        : `మీ ${total} applications:`
+      : language === "hi"
+        ? mode === "count"
+          ? `आपके ${total} आवेदन हैं.`
+          : `आपके ${total} आवेदन:`
+        : mode === "count"
+          ? `You have ${total} applications.`
+          : `Your ${total} applications:`;
+  if (mode === "count") return head;
+  return `${head}\n${lines.join("\n")}`;
+}
+
+export function renderCoverageReply(input: {
+  language: BotLanguage;
+  applied: number;
+  compared: number;
+  matched: number;
+  totalListed: number;
+  bounded: boolean;
+}): string {
+  const missing = Math.max(input.compared - input.matched, 0);
+  if (input.bounded) {
+    if (input.language === "te") {
+      return `చూసిన ${input.compared} ఉద్యోగాల్లో మీరు ${input.matched} కి apply చేశారు. మొత్తం applications ${input.applied}. అన్ని ఉద్యోగాలను ఈ చాట్‌లో పూర్తిగా సరిపోల్చలేను.`;
+    }
+    return `Of the ${input.compared} jobs I checked, you applied to ${input.matched}. Your applications: ${input.applied}. I cannot confirm every job on the site from this chat.`;
+  }
+  if (input.language === "te") {
+    return `మీరు ${input.totalListed} ఉద్యోగాల్లో ${input.matched} ఉద్యోగాలకు apply చేశారు. మిగిలిన ${missing} ఉద్యోగాలకు ఇంకా apply చేయలేదు.`;
+  }
+  if (input.language === "hi") {
+    return `आपने ${input.totalListed} नौकरियों में से ${input.matched} पर आवेदन किया है. बाकी ${missing} पर अभी आवेदन नहीं है.`;
+  }
+  return `You applied to ${input.matched} of ${input.totalListed} jobs. ${missing} are still not applied.`;
+}
+
+export function renderEmployerReply(input: {
+  language: BotLanguage;
+  lines: string[];
+  totalApplications: number;
+  mode: "jobs" | "count" | "status";
+}): string {
+  if (input.lines.length === 0) {
+    if (input.language === "te") return "మీరు ఇంకా జాబ్స్ పోస్ట్ చేయలేదు.";
+    if (input.language === "hi") return "आपने अभी कोई नौकरी पोस्ट नहीं की.";
+    return "You have no posted jobs yet.";
+  }
+  if (input.mode === "count") {
+    if (input.language === "te") {
+      return `మీ జాబ్స్‌కు ${input.totalApplications} applications వచ్చాయి.\n${input.lines.join("\n")}`;
+    }
+    if (input.language === "hi") {
+      return `आपकी नौकरियों पर ${input.totalApplications} आवेदन आए हैं.\n${input.lines.join("\n")}`;
+    }
+    return `Applications on your jobs: ${input.totalApplications}\n${input.lines.join("\n")}`;
+  }
+  if (input.language === "te") return `మీ జాబ్స్:\n${input.lines.join("\n")}`;
+  if (input.language === "hi") return `आपकी नौकरियां:\n${input.lines.join("\n")}`;
+  return `Your jobs:\n${input.lines.join("\n")}`;
+}
+
+function regionalLead(
+  language: BotLanguage,
+  kind: "found" | "widen" | "empty" | "more",
+  place: string,
+  role: string,
+  extra: string,
+): string {
+  if (language === "ta") {
+    if (kind === "found") return `${place ? `${place}ல் ` : ""}${extra} ${role} வேலைகள் உள்ளன.`;
+    if (kind === "widen") return `${place}ல் ${role} வேலை இல்லை. ${extra}ல் இவை உள்ளன:`;
+    if (kind === "empty") return `${place || "இந்த இடம்"}ல் ${role} வேலை கிடைக்கவில்லை.`;
+    return "மேலும் வேலைகள் வேண்டுமானால் சொல்லுங்கள்.";
+  }
+  if (language === "kn") {
+    if (kind === "found") return `${place ? `${place}ನಲ್ಲಿ ` : ""}${extra} ${role} ಕೆಲಸಗಳಿವೆ.`;
+    if (kind === "widen") return `${place}ನಲ್ಲಿ ${role} ಕೆಲಸ ಇಲ್ಲ. ${extra}ನಲ್ಲಿ ಇವು ಇವೆ:`;
+    if (kind === "empty") return `${place || "ಈ ಸ್ಥಳ"}ದಲ್ಲಿ ${role} ಕೆಲಸ ಸಿಗಲಿಲ್ಲ.`;
+    return "ಇನ್ನಷ್ಟು ಕೆಲಸ ಬೇಕಾದರೆ ಹೇಳಿ.";
+  }
+  if (kind === "found") return `${place ? `${place}ൽ ` : ""}${extra} ${role} ജോലികൾ ഉണ്ട്.`;
+  if (kind === "widen") return `${place}ൽ ${role} ജോലി കണ്ടില്ല. ${extra}ൽ ഇവ ഉണ്ട്:`;
+  if (kind === "empty") return `${place || "ഈ സ്ഥലം"}ത്ത് ${role} ജോലി കണ്ടില്ല.`;
+  return "കൂടുതൽ ജോലികൾ വേണമെങ്കിൽ പറയൂ.";
 }
 
 export function formatSalaryLabel(job: {
@@ -399,6 +663,15 @@ function labelPlace(place: string, language: BotLanguage): string {
   if (language === "te") return TE_PLACE[place] ?? place;
   if (language === "hi") return HI_PLACE[place] ?? place;
   return place;
+}
+
+function localizeJobTitle(title: string, language: BotLanguage): string {
+  if (language === "en") return title;
+  const role = extractRole(title);
+  if (!role) return title;
+  const localized = labelRole(role, language);
+  if (title.trim().toLowerCase() === role.toLowerCase()) return localized;
+  return `${localized} (${title})`;
 }
 
 function labelRole(role: string, language: BotLanguage): string {

@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { describe, it } from "node:test";
 import {
+  clarifyJobTitle,
   mergePending,
   nationalPhone,
   parseUnderstanding,
   renderJobSearchReply,
   toPublicJobsLookup,
   understandLocally,
+  voiceUnclearCopy,
 } from "./whatsapp-bot.logic.js";
 import { verifyWhatsAppSignature } from "./whatsapp-signature.js";
 
@@ -41,7 +43,7 @@ describe("whatsapp bot", () => {
     assert.equal(delivery.category, "Delivery");
 
     const apps = understandLocally("నా అప్లికేషన్స్ ఏ స్టేజ్ లో ఉన్నాయి?");
-    assert.equal(apps.intent, "MY_APPLICATIONS");
+    assert.equal(apps.intent, "APPLICATION_STATUS");
     assert.equal(apps.language, "te");
 
     const profile = understandLocally("నా ప్రొఫైల్ కి సరిపోయే జాబ్స్ ఉన్నాయా?");
@@ -86,7 +88,8 @@ describe("whatsapp bot", () => {
       ],
     });
     assert.match(telugu, /అవును/);
-    assert.match(telugu, /Driver/);
+    assert.match(telugu, /డ్రైవర్/);
+    assert.match(telugu, /Acme/);
     assert.match(telugu, /₹18,000–₹25,000/);
     assert.doesNotMatch(telugu, /Kanipinchina/);
 
@@ -117,6 +120,68 @@ describe("whatsapp bot", () => {
     );
     assert.equal(parsed.intent, "MY_APPLICATIONS");
     assert.equal(parseUnderstanding("not-json", "hello").intent, "GREETING");
+  });
+
+  it("classifies the required languages, applications, employer, and unrelated questions", () => {
+    const english = understandLocally("I want driver jobs in Hyderabad");
+    assert.equal(english.intent, "JOB_SEARCH");
+    assert.equal(english.language, "en");
+    assert.equal(english.category, "Driver");
+    assert.equal(english.location, "Hyderabad");
+
+    const hindi = understandLocally("हैदराबाद में ड्राइवर की नौकरी है?");
+    assert.equal(hindi.language, "hi");
+    assert.equal(hindi.category, "Driver");
+    assert.equal(hindi.location, "Hyderabad");
+
+    const kannada = understandLocally("ಹೈದರಾಬಾದ್ ಡ್ರೈವರ್ ಕೆಲಸ");
+    assert.equal(kannada.language, "kn");
+    assert.equal(kannada.intent, "JOB_SEARCH");
+    assert.equal(kannada.category, "Driver");
+
+    const malayalam = understandLocally("ഹൈദരാബാദ് ഡ്രൈവർ ജോലി");
+    assert.equal(malayalam.language, "ml");
+    assert.equal(malayalam.intent, "JOB_SEARCH");
+    assert.equal(malayalam.category, "Driver");
+
+    const mixed = understandLocally("naku Hyderabad lo electrician job kavali");
+    assert.equal(mixed.language, "te");
+    assert.equal(mixed.category, "Electrician");
+    assert.equal(mixed.location, "Hyderabad");
+
+    assert.equal(understandLocally("driver", "te").language, "te");
+    assert.equal(understandLocally("నా applications ఎన్ని?").intent, "APPLICATION_COUNT");
+    assert.equal(understandLocally("నా applications status ఏంటి?").intent, "APPLICATION_STATUS");
+    assert.equal(understandLocally("నా profile కి jobs ఉన్నాయా?").intent, "PROFILE_JOBS");
+    assert.equal(
+      understandLocally("నా jobs కి ఎన్ని applications వచ్చాయి?").intent,
+      "EMPLOYER_APPLICATION_COUNT",
+    );
+    assert.equal(understandLocally("Who won today's match?").intent, "UNRELATED");
+    assert.equal(understandLocally("నేను అన్ని jobs కి apply చేశాను").intent, "APPLIED_COVERAGE");
+  });
+
+  it("treats a voice transcript as a normal job search", () => {
+    const english = understandLocally("I want electrician jobs in Hyderabad");
+    assert.equal(english.intent, "JOB_SEARCH");
+    assert.equal(english.language, "en");
+    assert.equal(english.category, "Electrician");
+    assert.equal(english.location, "Hyderabad");
+
+    const telugu = understandLocally("హైదరాబాద్‌లో ఎలక్ట్రీషియన్ ఉద్యోగాలు కావాలి");
+    assert.equal(telugu.language, "te");
+    assert.equal(telugu.category, "Electrician");
+    assert.equal(telugu.location, "Hyderabad");
+
+    const tamil = understandLocally("ஹைதராபாத் டிரைவர்");
+    assert.equal(tamil.language, "ta");
+    assert.equal(tamil.category, "Driver");
+    assert.equal(tamil.location, "Hyderabad");
+  });
+
+  it("does not use the job-clarification line for a failed voice note", () => {
+    assert.notEqual(voiceUnclearCopy("en"), clarifyJobTitle("en"));
+    assert.match(voiceUnclearCopy("te"), /వాయిస్/);
   });
 
   it("accepts a valid Meta signature and rejects a bad one", () => {
