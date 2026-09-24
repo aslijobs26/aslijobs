@@ -88,7 +88,16 @@ app.use(
   }),
 );
 app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
-app.use(express.json({ limit: "2mb" }));
+app.use(
+  express.json({
+    limit: "2mb",
+    verify(req, _res, buf) {
+      if (req.url?.includes("/whatsapp/webhook")) {
+        (req as Express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+      }
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -164,6 +173,9 @@ const apiRateLimit = rateLimit({
   skip: (req) => {
     const pathName = req.path;
     if (pathName === "/health" || pathName === "/api/v1/health") {
+      return true;
+    }
+    if (pathName.includes("/whatsapp/webhook")) {
       return true;
     }
     if (isHighFrequencyOperationsRead(pathName)) {

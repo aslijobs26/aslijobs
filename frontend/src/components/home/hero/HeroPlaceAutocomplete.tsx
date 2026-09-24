@@ -7,10 +7,7 @@ import {
 
 export type { PlaceSuggestion } from "@/types/nominatim-location";
 
-type HeroPlaceAutocompleteProps = Omit<
-  PlaceAutocompleteProps,
-  "showIcon" | "controlClassName" | "inputClassName"
-> & {
+type HeroPlaceAutocompleteProps = Omit<PlaceAutocompleteProps, "showIcon"> & {
   iconClassName?: string;
 };
 

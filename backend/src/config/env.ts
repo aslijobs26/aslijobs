@@ -115,8 +115,10 @@ const envSchema = z.object({
   WHATSAPP_ACCESS_TOKEN: z.string().optional().default(""),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(""),
   WHATSAPP_VERIFY_TOKEN: z.string().optional().default(""),
-  META_APP_ID: z.string().optional(),
-  META_APP_SECRET: z.string().optional(),
+  META_APP_ID: z.string().optional().default(""),
+  META_APP_SECRET: z.string().optional().default(""),
+  /** Sarvam AI key for WhatsApp speech-to-text and intent understanding. */
+  SARVAM_API_KEY: z.string().optional().default(""),
   /**
    * Minutes before the same visitor (guest or job seeker) can count
    * another view on the same job. Default: 30.

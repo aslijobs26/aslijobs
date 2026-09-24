@@ -15,7 +15,7 @@ export function WhatsAppIcon({ className, fill = false }: WhatsAppIconProps) {
         )}
         aria-hidden
       >
-        <i className="bi bi-whatsapp text-[1.25rem] leading-none text-white mobile:text-[1.35rem] md:text-[1.75rem] xl:text-[2rem]" />
+        <i className="bi bi-whatsapp text-[0.8rem] leading-none text-white mobile:text-[0.9rem] md:text-[1rem] lg:text-[1.1rem] xl:text-[1.35rem] 2xl:text-[2rem]" />
       </span>
     );
   }

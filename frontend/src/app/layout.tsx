@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="min-h-screen bg-white font-sans antialiased">
+      <body className="min-h-screen overflow-x-clip bg-white font-sans antialiased">
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>

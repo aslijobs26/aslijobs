@@ -7,7 +7,7 @@ import { WhatsAppIcon } from "./HeroIcons";
 
 export function HeroContent() {
   return (
-    <div className="flex flex-col justify-start pt-4 mobile:px-0.5 mobile:pt-3 sm:pt-6 lg:mt-20 lg:px-0 lg:pt-0 lg:pr-8 xl:mt-24">
+    <div className="relative z-20 flex flex-col justify-start pt-4 mobile:px-0.5 mobile:pt-3 sm:pt-6 lg:mt-20 lg:px-0 lg:pt-0 lg:pr-8 xl:mt-24">
       <h1 className="text-4xl font-bold leading-tight tracking-tight text-foreground mobile:text-[1.75rem] mobile:leading-[1.12] sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
         {HERO_HEADING.line1}
         <br />
@@ -23,7 +23,7 @@ export function HeroContent() {
         </span>
       </p>
 
-      <div className="mt-6 mobile:mt-5 lg:mt-7">
+      <div className="mt-6 pb-1 mobile:mt-5 lg:mt-7 lg:pb-2">
         <p className="text-sm font-semibold text-muted mobile:text-[0.8125rem]">
           Multi-language Support
         </p>

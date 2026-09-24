@@ -13,30 +13,40 @@ import { WhatsAppIcon } from "./HeroIcons";
 
 const PHONE_MESSAGE_ID = "hero-phone-message";
 
-const iconClassName = "size-5";
+/** Glyph scales with card — largest only at 2xl. */
+const iconClassName =
+  "size-3 mobile:size-3.5 md:size-3.5 lg:size-4 xl:size-4 2xl:size-5";
 
+/**
+ * Floating card anchors.
+ * Bottom cards: z-30 in front of the person (z-[1]).
+ * xl/2xl use mild offsets so left cards stay in the illustration column
+ * (not over the language chips).
+ */
 const FLOATING_POSITIONS: Record<HeroFeatureCardPosition, string> = {
   "top-left":
-    "absolute z-40 left-0 top-2 w-max mobile:left-0 mobile:top-1 mobile:z-40 mobile:max-w-[10.75rem] md:top-0 md:z-20 md:max-w-[48%] lg:z-20 lg:-left-36 lg:top-[1%] lg:w-auto lg:max-w-[200px] xl:-left-40 xl:max-w-[220px]",
+    "absolute z-10 -left-2 top-0 w-max max-w-[8.5rem] mobile:-left-3 mobile:top-0 mobile:max-w-[9.25rem] md:-left-4 md:top-0 md:max-w-[10rem] lg:z-20 lg:-left-10 lg:top-[14%] lg:max-w-[11rem] xl:-left-14 xl:top-[16%] xl:max-w-[13rem] 2xl:-left-16 2xl:top-[18%] 2xl:max-w-[14rem]",
   "top-right":
-    "absolute z-40 right-0 top-10 w-max mobile:right-0 mobile:top-1 mobile:z-40 mobile:max-w-[10.75rem] md:top-0 md:z-20 md:max-w-[48%] lg:z-20 lg:-right-36 lg:top-[1%] lg:w-auto lg:max-w-[200px] xl:-right-40 xl:max-w-[220px]",
+    "absolute z-10 -right-2 top-6 w-max max-w-[8.5rem] mobile:-right-3 mobile:top-0 mobile:max-w-[9.25rem] md:-right-4 md:top-0 md:max-w-[10rem] lg:z-20 lg:-right-10 lg:top-[12%] lg:max-w-[11rem] xl:-right-14 xl:top-[14%] xl:max-w-[13rem] 2xl:-right-16 2xl:top-[16%] 2xl:max-w-[14rem]",
   "bottom-left":
-    "absolute z-40 bottom-8 left-0 w-max mobile:bottom-[18%] mobile:left-0 mobile:z-40 mobile:max-w-[10.75rem] md:bottom-1 md:max-w-[48%] lg:bottom-[12%] lg:-left-40 lg:z-20 lg:w-auto lg:max-w-[200px] xl:-left-44 xl:max-w-[220px]",
+    "absolute z-30 -left-2 bottom-4 w-max max-w-[8.5rem] mobile:-left-3 mobile:bottom-[14%] mobile:max-w-[9.25rem] md:-left-4 md:bottom-1 md:max-w-[10rem] lg:-left-6 lg:bottom-[10%] lg:max-w-[11rem] xl:-left-4 xl:bottom-[12%] xl:max-w-[13rem] 2xl:-left-6 2xl:bottom-[14%] 2xl:max-w-[14rem]",
   "bottom-right":
-    "absolute z-40 bottom-2 right-0 w-max mobile:bottom-[12%] mobile:right-0 mobile:z-40 mobile:max-w-[10.75rem] md:bottom-1 md:max-w-[48%] lg:bottom-[12%] lg:-right-40 lg:z-20 lg:w-auto lg:max-w-[200px] xl:-right-44 xl:max-w-[220px]",
+    "absolute z-30 -right-2 bottom-1 w-max max-w-[8.5rem] mobile:-right-3 mobile:bottom-[8%] mobile:max-w-[9.25rem] md:-right-4 md:bottom-1 md:max-w-[10rem] lg:-right-6 lg:bottom-[18%] lg:max-w-[11rem] xl:-right-4 xl:bottom-[20%] xl:max-w-[13rem] 2xl:-right-6 2xl:bottom-[22%] 2xl:max-w-[14rem]",
 };
 
 const CARD_DESKTOP_POSITION_OVERRIDES: Partial<Record<HeroFeatureId, string>> = {
-  "voice-search": "lg:top-[18%] xl:top-[20%]",
-  "whatsapp-first": "lg:top-[16%] xl:top-[17%]",
-  "verified-jobs": "lg:bottom-[14%] xl:bottom-[16%] lg:-left-32 xl:-left-36",
-  "in-your-language": "lg:bottom-[22%] xl:bottom-[24%]",
+  "voice-search": "lg:top-[16%] xl:top-[17%] 2xl:top-[18%]",
+  "whatsapp-first": "lg:top-[14%] xl:top-[15%] 2xl:top-[16%]",
+  "verified-jobs": "lg:bottom-[12%] xl:bottom-[13%] 2xl:bottom-[14%]",
+  "in-your-language": "lg:bottom-[20%] xl:bottom-[22%] 2xl:bottom-[24%]",
 };
 
-const MOBILE_CARD_COMPACT =
-  "w-fit max-w-[min(100%,11.5rem)] gap-2 px-2.5 py-2 mobile:w-full mobile:max-w-full mobile:gap-2 mobile:px-3 mobile:py-2.5 mobile:[&>div:first-child]:size-8 [&>div:first-child]:size-8 md:max-w-[calc(100vw-2rem)] md:gap-2 md:px-2 md:py-2 md:[&>div:first-child]:size-9 lg:w-full lg:max-w-none lg:gap-2 lg:px-2.5 lg:py-2";
-
-const DESKTOP_CARD_ICON_SIZES = "lg:[&>div:first-child]:size-14";
+/**
+ * Card chrome only — icon box + padding scale by breakpoint.
+ * Mobile/tablet get comfortable padding; xl+ stays denser until 2xl.
+ */
+const CARD_SIZE_SCALE =
+  "w-max max-w-full gap-1.5 px-2.5 py-2 mobile:gap-2 mobile:px-3 mobile:py-2.5 [&>div:first-child]:size-6 mobile:[&>div:first-child]:size-7 md:gap-2 md:px-3 md:py-2.5 md:[&>div:first-child]:size-7 lg:gap-1.5 lg:px-2 lg:py-1.5 lg:[&>div:first-child]:size-8 xl:gap-2 xl:px-2.5 xl:py-2 xl:[&>div:first-child]:size-10 2xl:gap-2.5 2xl:px-2.5 2xl:py-2 2xl:[&>div:first-child]:size-14";
 
 const FLOAT_ANIMATIONS: Record<string, string> = {
   "voice-search": "animate-hero-float-voice",
@@ -87,12 +97,44 @@ export function HeroVisual() {
   const clearFeature = (id: HeroFeatureId) =>
     setActiveFeature((current) => (current === id ? null : current));
 
+  const topCards = HERO_FEATURE_CARDS.filter(
+    (card) => card.position === "top-left" || card.position === "top-right",
+  );
+  const bottomCards = HERO_FEATURE_CARDS.filter(
+    (card) =>
+      card.position === "bottom-left" || card.position === "bottom-right",
+  );
+
+  const renderFeatureCard = (card: (typeof HERO_FEATURE_CARDS)[number]) => (
+    <div
+      key={card.id}
+      className={cn(
+        FLOATING_POSITIONS[card.position],
+        CARD_DESKTOP_POSITION_OVERRIDES[card.id],
+        "rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+      )}
+      tabIndex={0}
+      aria-describedby={PHONE_MESSAGE_ID}
+      onMouseEnter={() => setActiveFeature(card.id)}
+      onMouseLeave={() => clearFeature(card.id)}
+      onFocus={() => setActiveFeature(card.id)}
+      onBlur={() => clearFeature(card.id)}
+    >
+      <HeroFeatureCard
+        title={card.title}
+        description={card.description}
+        icon={getFeatureIcon(card.id)}
+        iconContainerClassName={getIconContainerClassName(card.id)}
+        className={cn(FLOAT_ANIMATIONS[card.id], CARD_SIZE_SCALE)}
+      />
+    </div>
+  );
+
   return (
     <div className="relative mt-2 flex w-full min-w-0 flex-col items-center mobile:mt-1.5 md:mt-4 lg:mt-0 lg:items-center lg:justify-start">
       <div
         className={cn(
-          "hero-illustration-group relative w-full max-w-[min(100%,318px)] mobile:max-w-[min(100%,340px)] md:max-w-[380px] lg:mx-auto lg:max-w-[580px]",
-          "lg:-translate-x-10 xl:-translate-x-8 2xl:-translate-x-6",
+          "hero-illustration-group relative w-full max-w-[min(100%,318px)] mobile:max-w-[min(100%,340px)] md:max-w-[380px] lg:mx-auto lg:max-w-[100%] lg:min-w-0 xl:max-w-[620px] 2xl:max-w-[680px]",
         )}
       >
         <div
@@ -100,49 +142,33 @@ export function HeroVisual() {
           aria-hidden="true"
         />
 
-        <div className="relative mx-auto min-h-[400px] w-full px-0 mobile:min-h-[440px] mobile:px-1 md:min-h-[460px] md:px-0 lg:min-h-0 lg:max-w-[440px] lg:px-0">
+        <div className="relative isolate mx-auto min-h-[340px] w-full min-w-0 overflow-visible px-0 mobile:min-h-[380px] mobile:px-1 md:min-h-[420px] md:px-0 lg:min-h-0 lg:max-w-[460px] xl:max-w-[500px] 2xl:max-w-[540px] lg:px-0">
           <div
-            className="pointer-events-none absolute left-[calc(50%+1rem)] top-[36%] z-0 hidden size-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-25 lg:block"
+            className="pointer-events-none absolute left-1/2 top-[36%] z-0 hidden size-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-25 xl:size-[380px] 2xl:size-[420px] lg:block"
             aria-hidden="true"
           />
 
-          {HERO_FEATURE_CARDS.map((card) => (
-            <div
-              key={card.id}
-              className={cn(
-                FLOATING_POSITIONS[card.position],
-                CARD_DESKTOP_POSITION_OVERRIDES[card.id],
-                "rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-              )}
-              tabIndex={0}
-              aria-describedby={PHONE_MESSAGE_ID}
-              onMouseEnter={() => setActiveFeature(card.id)}
-              onMouseLeave={() => clearFeature(card.id)}
-              onFocus={() => setActiveFeature(card.id)}
-              onBlur={() => clearFeature(card.id)}
-            >
-              <HeroFeatureCard
-                title={card.title}
-                description={card.description}
-                icon={getFeatureIcon(card.id)}
-                iconContainerClassName={getIconContainerClassName(card.id)}
-                className={cn(
-                  FLOAT_ANIMATIONS[card.id],
-                  MOBILE_CARD_COMPACT,
-                  DESKTOP_CARD_ICON_SIZES,
-                  card.id === "whatsapp-first" &&
-                    "lg:[&>div:first-child]:size-14",
-                )}
-              />
-            </div>
-          ))}
+          {topCards.map(renderFeatureCard)}
 
-          <Image
-            src={heroPersonImage}
-            alt="Job seeker browsing jobs on WhatsApp"
-            priority
-            className="absolute left-1/2 top-[50%] z-30 h-auto w-[68%] max-w-[220px] -translate-x-1/2 -translate-y-1/2 object-contain mobile:top-[50%] mobile:w-[62%] mobile:max-w-[220px] md:top-[48%] md:w-[80%] md:max-w-[300px] lg:relative lg:left-auto lg:top-auto lg:z-10 lg:mx-auto lg:ml-8 lg:w-full lg:max-w-[397px] lg:translate-x-0 lg:translate-y-0 lg:-mt-2"
-          />
+          {/* Person stays behind bottom cards (z-[1] < z-30). */}
+          <div
+            className={cn(
+              "pointer-events-none absolute left-1/2 top-[50%] z-[1] w-[56%] max-w-[160px] -translate-x-1/2 -translate-y-1/2",
+              "mobile:w-[54%] mobile:max-w-[180px] md:top-[48%] md:w-[64%] md:max-w-[230px]",
+              "lg:relative lg:left-auto lg:top-auto lg:z-[1] lg:mx-auto lg:mt-[-0.5rem] lg:w-full lg:max-w-[270px] lg:translate-x-0 lg:translate-y-0",
+              "xl:max-w-[310px] 2xl:max-w-[350px]",
+            )}
+          >
+            <Image
+              src={heroPersonImage}
+              alt="Job seeker browsing jobs on WhatsApp"
+              priority
+              className="h-auto w-full object-contain"
+            />
+          </div>
+
+          {/* Bottom cards after person in DOM + z-30 → clearly in front on xl. */}
+          {bottomCards.map(renderFeatureCard)}
 
           <HeroPhoneMessageBubble
             id={PHONE_MESSAGE_ID}

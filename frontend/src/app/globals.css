@@ -407,11 +407,14 @@ body {
 }
 
 @layer components {
-  /* Landing hero — mobile only (<768px); md+ layouts unchanged */
+  /* Landing hero — clip on small screens; allow floating cards to breathe on lg+ */
   .landing-hero-section {
-    @media (width < 768px) {
-      width: 100%;
-      max-width: 100%;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+
+    @media (width >= 1024px) {
+      overflow-x: visible;
     }
   }
 

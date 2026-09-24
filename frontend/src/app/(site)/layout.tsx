@@ -10,7 +10,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
       <AnalyticsBeacon portal="public_site" />
       <Navbar />
       {/* Clearance for FloatingBottomNav on mobile (footer is hidden below md). */}
-      <div className="pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] md:pb-0">
+      <div className="min-w-0 overflow-x-clip pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] md:pb-0">
         {children}
       </div>
       <Footer />

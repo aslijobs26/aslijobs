@@ -119,6 +119,92 @@ export class WhatsAppService {
     );
   }
 
+  /**
+   * Session text reply inside the user-initiated 24-hour window.
+   * Transactional templates (OTP and future alerts) stay on sendOtpMessage / templates.
+   */
+  async sendTextMessage(phoneNumber: string, body: string): Promise<void> {
+    if (!env.WHATSAPP_ACCESS_TOKEN.trim() || !env.WHATSAPP_PHONE_NUMBER_ID.trim()) {
+      console.error("[WhatsAppService] text reply skipped: credentials missing");
+      return;
+    }
+
+    const recipient = toWhatsAppCloudRecipient(phoneNumber);
+    const version = env.WHATSAPP_API_VERSION.replace(/^\/+|\/+$/g, "");
+    const url = `https://graph.facebook.com/${version}/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+    const text = body.trim().slice(0, 4000);
+    const started = Date.now();
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(15_000),
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: recipient,
+        type: "text",
+        text: { preview_url: false, body: text },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(
+        `[WhatsAppService] text reply failed status=${response.status} latencyMs=${Date.now() - started}`,
+      );
+      return;
+    }
+
+    console.info(
+      `[WhatsAppService] text reply sent latencyMs=${Date.now() - started}`,
+    );
+  }
+
+  async downloadMedia(mediaId: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    if (!env.WHATSAPP_ACCESS_TOKEN.trim()) {
+      throw new Error("WhatsApp media download is not configured");
+    }
+
+    const version = env.WHATSAPP_API_VERSION.replace(/^\/+|\/+$/g, "");
+    const meta = await fetch(
+      `https://graph.facebook.com/${version}/${encodeURIComponent(mediaId)}`,
+      {
+        headers: { Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}` },
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    if (!meta.ok) {
+      throw new Error(`WhatsApp media metadata failed status=${meta.status}`);
+    }
+
+    const payload = (await meta.json()) as { url?: string; mime_type?: string };
+    const mediaUrl = payload.url?.trim();
+    if (!mediaUrl) {
+      throw new Error("WhatsApp media URL missing");
+    }
+
+    const file = await fetch(mediaUrl, {
+      headers: { Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}` },
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!file.ok) {
+      throw new Error(`WhatsApp media download failed status=${file.status}`);
+    }
+
+    const bytes = Buffer.from(await file.arrayBuffer());
+    if (bytes.length === 0 || bytes.length > 8_000_000) {
+      throw new Error("WhatsApp media size is invalid");
+    }
+
+    return {
+      buffer: bytes,
+      mimeType: payload.mime_type?.trim() || "audio/ogg",
+    };
+  }
+
   private async handleMetaFailure(response: Response): Promise<never> {
     let errorCode: number | undefined;
     let errorSubcode: number | undefined;
