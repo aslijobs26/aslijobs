@@ -83,7 +83,7 @@ const ROLES: Array<{ canonical: string; forms: string[] }> = [
   { canonical: "Driver", forms: ["driver", "డ్రైవర్", "డ్రైవరు", "ड्राइवर", "டிரைவர்", "ಡ್ರೈವರ್", "ഡ്രൈവർ"] },
   { canonical: "Delivery", forms: ["delivery", "డెలివరీ", "డెలివరి", "डिलीवरी"] },
   { canonical: "Watchman", forms: ["watchman", "security", "వాచ్‌మన్", "వాచ్మన్", "वॉचमैन"] },
-  { canonical: "Electrician", forms: ["electrician", "ఎలక్ట్రీషియన్", "इलेक्ट्रीशियन", "எலக்ட்ரீஷியன்"] },
+  { canonical: "Electrician", forms: ["electrician", "electrical", "ఎలక్ట్రీషియన్", "इलेक्ट्रीशियन", "எலக்ட்ரீஷியன்"] },
   { canonical: "Carpenter", forms: ["carpenter", "కార్పెంటర్", "कारपेंटर"] },
   { canonical: "Plumber", forms: ["plumber", "ప్లంబర్", "प्लंबर"] },
   { canonical: "Cook", forms: ["cook", "వంటవాడు", "रसोइया"] },
@@ -214,8 +214,10 @@ const understandingSchema = z.object({
   jobQuery: z.string().optional().default(""),
   jobTitle: z.string().optional(),
   openSearch: z.boolean().optional(),
-  confidence: z.number().min(0).max(1).optional(),
-  focus: z.enum(["", "salary", "company"]).optional(),
+  confidence: z.coerce.number().optional(),
+  focus: z.string().optional(),
+  requestedAction: z.string().optional(),
+  isOutOfScope: z.boolean().optional(),
 });
 
 function scopeForIntent(intent: BotIntent): BotScope {
@@ -341,25 +343,45 @@ export function understandLocally(
   };
 }
 
+export function minimalUnderstanding(
+  text: string,
+  previous?: BotLanguage | null,
+  hint?: BotLanguage | null,
+): BotUnderstanding {
+  return {
+    intent: "UNKNOWN",
+    language: detectLanguage(text, previous, hint),
+    location: "",
+    category: "",
+    jobQuery: "",
+    openSearch: false,
+    scope: "NONE",
+    requiresAuth: false,
+    confidence: 0,
+    focus: "",
+  };
+}
+
 export function parseUnderstanding(
   raw: string,
   fallbackText: string,
   previous?: BotLanguage | null,
   hint?: BotLanguage | null,
 ): BotUnderstanding {
-  const local = understandLocally(fallbackText, previous, hint);
   try {
     const json = JSON.parse(raw) as unknown;
     const parsed = understandingSchema.safeParse(json);
-    if (!parsed.success) return local;
-    const confidence = parsed.data.confidence ?? 0.8;
-    if (confidence < 0.55 || parsed.data.intent === "UNKNOWN") return local;
+    if (!parsed.success) return minimalUnderstanding(fallbackText, previous, hint);
     const category = normalizeRole(
       cleanSlot(parsed.data.jobTitle) || cleanSlot(parsed.data.category) || cleanSlot(parsed.data.jobQuery),
     );
     const location = normalizePlace(cleanSlot(parsed.data.location));
-    const intent = parsed.data.intent;
-    const openSearch = parsed.data.openSearch ?? (intent === "JOB_SEARCH" && !category);
+    const intent = parsed.data.isOutOfScope ? "UNRELATED" : parsed.data.intent;
+    const openSearch = category ? false : (parsed.data.openSearch ?? intent === "JOB_SEARCH");
+    const scope = scopeForIntent(intent);
+    const rawConfidence = parsed.data.confidence ?? 0.8;
+    const confidence = Math.min(1, Math.max(0, rawConfidence > 1 ? rawConfidence / 100 : rawConfidence));
+    const focus = parsed.data.focus === "salary" || parsed.data.focus === "company" ? parsed.data.focus : "";
     return {
       intent,
       language: resolveLanguage(fallbackText, parsed.data.language, previous, hint),
@@ -367,13 +389,13 @@ export function parseUnderstanding(
       category,
       jobQuery: category,
       openSearch,
-      scope: scopeForIntent(intent),
-      requiresAuth: scopeForIntent(intent) !== "PUBLIC_JOBS" && scopeForIntent(intent) !== "NONE",
+      scope,
+      requiresAuth: scope === "OWN_DATA" || scope === "OWN_EMPLOYER_DATA",
       confidence,
-      focus: parsed.data.focus ?? "",
+      focus,
     };
   } catch {
-    return local;
+    return minimalUnderstanding(fallbackText, previous, hint);
   }
 }
 

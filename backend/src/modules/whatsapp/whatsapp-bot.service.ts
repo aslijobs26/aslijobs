@@ -10,30 +10,17 @@ import {
 } from "../jobs/job.validation.js";
 import { WhatsAppSessionModel } from "./whatsapp-session.model.js";
 import { WhatsAppService } from "./whatsapp.service.js";
-import { understandMessage } from "./sarvam.client.js";
+import { generateFinalReply, understandMessage } from "./sarvam.client.js";
 import {
-  askLocationCopy,
-  capabilityCopy,
-  chooseAccountRole,
-  clarifyAmbiguousCopy,
-  denyPrivateCopy,
-  clarifyJobTitle,
   detectLanguage,
   formatSalaryLabel,
-  greetingCopy,
-  registrationCopy,
   languageFromHint,
   mergePending,
   nationalPhone,
   parentCity,
-  renderApplicationReply,
-  renderCoverageReply,
-  renderEmployerReply,
   matchesRequestedRole,
-  renderJobSearchReply,
   serviceErrorCopy,
   toPublicJobsLookup,
-  unauthorizedCopy,
   type AccountKind,
   type BotUnderstanding,
   type PublicJobFact,
@@ -60,6 +47,89 @@ function phoneHash(phone: string): string {
   return createHash("sha256").update(phone).digest("hex").slice(0, 12);
 }
 
+function maskPhone(phone: string): string {
+  return phone.length <= 4 ? "****" : `****${phone.slice(-4)}`;
+}
+
+function clip(text: string): string {
+  return text.replace(/\s+/g, " ").slice(0, 180);
+}
+
+function accountLabel(kind: AccountKind): string {
+  if (kind === "seeker") return "JOB_SEEKER";
+  if (kind === "employer") return "EMPLOYER";
+  if (kind === "both") return "BOTH";
+  return "NEW_USER";
+}
+
+type LinkedAccount = {
+  seeker: {
+    _id: { toString(): string };
+    fullName?: string;
+    city?: string;
+    jobRole?: string;
+    skills?: string[];
+    preferredJobLocation?: string;
+  } | null;
+  employer: { _id: { toString(): string }; companyName?: string } | null;
+  linked: AccountKind;
+  seekerId: string;
+  employerId: string;
+};
+
+async function lookupAccount(phone: string): Promise<LinkedAccount> {
+  const [seeker, employer] = await Promise.all([
+    JobSeekerModel.findOne({ whatsappNumber: phone })
+      .select("fullName city state jobRole skills preferredJobLocation experienceType")
+      .lean(),
+    EmployerModel.findOne({ whatsappNumber: phone }).select("companyName").lean(),
+  ]);
+  const linked: AccountKind =
+    seeker && employer ? "both" : seeker ? "seeker" : employer ? "employer" : "none";
+  return {
+    seeker,
+    employer,
+    linked,
+    seekerId: seeker?._id.toString() ?? "",
+    employerId: employer?._id.toString() ?? "",
+  };
+}
+
+function registrationFacts(): { seekerRegisterUrl: string; employerRegisterUrl: string } {
+  const origin = env.FRONTEND_URL.replace(/\/+$/, "");
+  return {
+    seekerRegisterUrl: `${origin}/job-seeker/register`,
+    employerRegisterUrl: `${origin}/employer/register`,
+  };
+}
+
+function describeTurn(
+  understanding: BotUnderstanding,
+  turn: BotTurn,
+): { allowed: boolean; scope: string; service: string; filters: string; resultCount: number } {
+  const situation = String(turn.facts.situation ?? "");
+  const jobs = Array.isArray(turn.facts.jobs) ? turn.facts.jobs.length : turn.shownJobs.length;
+  const total = typeof turn.facts.total === "number" ? turn.facts.total : jobs;
+  const denied = situation === "denied" || (situation === "new_user" && understanding.requiresAuth);
+  const service =
+    situation === "jobs" || situation === "job_details"
+      ? "listPublicActiveJobs"
+      : situation === "count" || situation === "status" || situation === "list" || situation === "applied_coverage"
+        ? "listForSeeker"
+        : situation.startsWith("EMPLOYER_")
+          ? "listEmployerJobs"
+          : situation === "profile"
+            ? "jobSeekerProfile"
+            : "none";
+  return {
+    allowed: !denied,
+    scope: understanding.scope,
+    service,
+    filters: `role=${understanding.category || "-"} city=${understanding.location || "-"}`,
+    resultCount: typeof turn.facts.totalApplications === "number" ? turn.facts.totalApplications : total,
+  };
+}
+
 export async function handleConversationalMessage(input: {
   from: string;
   text: string;
@@ -75,12 +145,14 @@ export async function handleConversationalMessage(input: {
   const started = Date.now();
   try {
     const session = await WhatsAppSessionModel.findOne({ phone }).lean();
+    const identity = await lookupAccount(phone);
     const hint = languageFromHint(input.languageHint);
-    const understanding = await understandMessage(
-      input.text,
-      session?.language,
-      hint,
-    );
+    const understood = await understandMessage(input.text, session?.language, hint, {
+      accountType: accountLabel(identity.linked),
+      priorLocation: session?.pendingLocation || session?.lastLocation || "",
+      priorRole: session?.pendingCategory || session?.lastCategory || "",
+    });
+    const understanding = understood.understanding;
     const merged = mergePending(
       session
         ? {
@@ -99,7 +171,7 @@ export async function handleConversationalMessage(input: {
       salaryLabel: job.salaryLabel ?? "",
     }));
 
-    const turn = await buildReply(phone, merged, remembered, session?.activeRole ?? "", input.text);
+    const turn = await buildReply(identity, merged, remembered, session?.activeRole ?? "");
     const waitingForLocation =
       merged.intent === "JOB_SEARCH" && !merged.location && Boolean(merged.category || merged.openSearch);
     const waitingForRole =
@@ -129,10 +201,49 @@ export async function handleConversationalMessage(input: {
       },
       { upsert: true },
     );
+    const generated = await generateFinalReply({
+      originalText: input.text,
+      language: merged.language,
+      accountType: accountLabel(identity.linked),
+      facts: turn.facts,
+      priorLocation: session?.lastLocation || "",
+      priorRole: session?.lastCategory || "",
+    });
+    const trace = describeTurn(merged, turn);
     console.info(
-      `[WhatsAppBot] ok phone=${phoneHash(phone)} messageId=${input.messageId ?? "-"} type=${input.messageType ?? "text"} account=${turn.accountType} language=${merged.language} intent=${merged.intent} role=${merged.category || "-"} location=${merged.location || "-"} ms=${Date.now() - started}`,
+      [
+        "[WHATSAPP]",
+        `phone=${maskPhone(phone)}`,
+        `messageType=${input.messageType ?? "text"}`,
+        "[ACCOUNT]",
+        `accountType=${accountLabel(identity.linked)}`,
+        `seekerId=${identity.seekerId || "-"}`,
+        `employerId=${identity.employerId || "-"}`,
+        "[SARVAM UNDERSTANDING]",
+        `source=${understood.source}`,
+        `rawMessage=${clip(input.text)}`,
+        `intent=${merged.intent}`,
+        `language=${merged.language}`,
+        `location=${merged.location || "-"}`,
+        `role=${merged.category || "-"}`,
+        `confidence=${merged.confidence}`,
+        "[AUTHORIZATION]",
+        `allowed=${trace.allowed}`,
+        `scope=${trace.scope}`,
+        "[DATABASE]",
+        `service=${trace.service}`,
+        `filters=${trace.filters}`,
+        `resultCount=${trace.resultCount}`,
+        "[SARVAM FINAL]",
+        `language=${merged.language}`,
+        `responseGenerated=${generated ? "yes" : "no"}`,
+        `ms=${Date.now() - started}`,
+      ].join(" "),
     );
-    await whatsAppService.sendTextMessage(input.from, turn.text);
+    await whatsAppService.sendTextMessage(
+      input.from,
+      generated ?? serviceErrorCopy(merged.language),
+    );
   } catch (error) {
     console.error(
       `[WhatsAppBot] failed phone=${phoneHash(phone)} messageId=${input.messageId ?? "-"} type=${input.messageType ?? "text"} ms=${Date.now() - started} reason=${
@@ -148,6 +259,7 @@ export async function handleConversationalMessage(input: {
 
 type BotTurn = {
   text: string;
+  facts: Record<string, unknown>;
   shownJobs: PublicJobFact[];
   accountType: AccountKind;
   activeRole: "" | "seeker" | "employer";
@@ -160,8 +272,14 @@ function say(
     accountType: "none",
     activeRole: "",
   },
+  facts: Record<string, unknown> = {},
 ): BotTurn {
-  return { text, shownJobs, ...meta };
+  return {
+    text,
+    facts: Object.keys(facts).length > 0 ? facts : { note: text },
+    shownJobs,
+    ...meta,
+  };
 }
 
 function resolveActiveRole(
@@ -178,85 +296,84 @@ function resolveActiveRole(
 }
 
 async function buildReply(
-  phone: string,
+  identity: LinkedAccount,
   understanding: BotUnderstanding,
   remembered: PublicJobFact[],
   savedRole: string,
-  text: string,
 ): Promise<BotTurn> {
-  const [seeker, employer] = await Promise.all([
-    JobSeekerModel.findOne({ whatsappNumber: phone })
-      .select("fullName city state jobRole skills preferredJobLocation experienceType")
-      .lean(),
-    EmployerModel.findOne({ whatsappNumber: phone })
-      .select("companyName")
-      .lean(),
-  ]);
-  const linked: AccountKind =
-    seeker && employer ? "both" : seeker ? "seeker" : employer ? "employer" : "none";
-  const picked = chooseAccountRole(text);
-  const activeRole = resolveActiveRole(linked, savedRole, picked);
+  const { seeker, employer, linked } = identity;
+  const activeRole = resolveActiveRole(
+    linked,
+    savedRole,
+    understanding.scope === "OWN_EMPLOYER_DATA"
+      ? "employer"
+      : understanding.scope === "OWN_DATA"
+        ? "seeker"
+        : null,
+  );
   const accountType: AccountKind =
     linked === "both" ? (activeRole === "employer" ? "employer" : activeRole === "seeker" ? "seeker" : "both") : linked;
   const meta = { accountType: linked === "both" && !activeRole ? "both" : accountType, activeRole };
-  const reply = (text: string, shownJobs: PublicJobFact[] = []) => say(text, shownJobs, meta);
+  const reply = (facts: Record<string, unknown>, shownJobs: PublicJobFact[] = []) =>
+    say(
+      "",
+      shownJobs,
+      meta,
+      linked === "none" ? { ...facts, registration: registrationFacts() } : facts,
+    );
   const asSeeker = accountType === "seeker";
   const asEmployer = accountType === "employer";
 
-  if (linked === "both" && !activeRole) {
-    return reply(greetingCopy({ language: understanding.language, account: "both", name: "" }));
+  const displayName = asEmployer
+    ? employer?.companyName?.trim() || ""
+    : seeker?.fullName?.trim() || "";
+
+  if (
+    linked === "both" &&
+    !activeRole &&
+    understanding.scope !== "PUBLIC_JOBS"
+  ) {
+    return reply({ situation: "choose_account", accountType: "both" });
   }
-  if (linked === "none" && picked) {
-    const origin = env.FRONTEND_URL.replace(/\/+$/, "");
-    const url = picked === "employer" ? `${origin}/employer/register` : `${origin}/job-seeker/register`;
-    return reply(registrationCopy({ language: understanding.language, role: picked, url }));
+  if (linked === "none" && understanding.requiresAuth) {
+    return reply({
+      situation: "new_user",
+      reason: understanding.scope === "OWN_EMPLOYER_DATA" ? "employer_account_required" : "job_seeker_account_required",
+    });
   }
 
   switch (understanding.intent) {
     case "GREETING":
-      return reply(
-        greetingCopy({
-          language: understanding.language,
-          account: accountType,
-          name: asEmployer ? employer?.companyName?.trim() || "" : seeker?.fullName?.trim() || "",
-        }),
-      );
+      return reply({ situation: "greeting", accountType, name: displayName });
     case "HELP":
     case "UNRELATED":
-      return reply(capabilityCopy(understanding.language, accountType));
+      return reply({ situation: understanding.intent === "UNRELATED" ? "out_of_scope" : "help", accountType });
     case "CLARIFY":
-      return reply(clarifyAmbiguousCopy(understanding.language));
+      return reply({ situation: "clarify", accountType, missing: "which_account_data" });
     case "HOW_TO_APPLY":
-      return reply(
-        understanding.language === "te"
-          ? "జాబ్ తెరిచి Apply బటన్ ఉపయోగించండి. లింక్ అయిన అకౌంట్ ఉంటే మీ ప్రొఫైల్‌తో apply అవుతుంది."
-          : understanding.language === "hi"
-            ? "नौकरी खोलकर Apply बटन दबाएँ. लिंक किया अकाउंट हो तो प्रोफाइल के साथ आवेदन होता है."
-            : "Open a job and use Apply. A linked account applies with your profile.",
-      );
+      return reply({ situation: "how_to_apply", accountType });
     case "MY_SKILLS":
-      if (!asSeeker || !seeker) return reply(unauthorizedCopy(understanding.language, "seeker"));
-      return reply(
-        `Skills: ${(seeker.skills ?? []).slice(0, 12).join(", ") || "—"}\nRole: ${seeker.jobRole || "—"}`,
-      );
+      if (!asSeeker || !seeker) return reply({ situation: "denied", reason: "seeker_required" });
+      return reply({
+        situation: "profile",
+        name: seeker.fullName,
+        role: seeker.jobRole || "",
+        skills: (seeker.skills ?? []).slice(0, 12),
+      });
     case "JOB_DETAILS": {
-      if (remembered.length === 0) return reply(clarifyJobTitle(understanding.language));
-      if (understanding.focus === "company") {
-        const names = remembered
-          .map((job, index) => `${index + 1}. ${job.companyName || "—"} — ${job.jobTitle}`)
-          .join("\n");
-        return reply(names, remembered);
-      }
-      return reply(renderJobSearchReply({
-        language: understanding.language,
-        location: understanding.location,
-        jobTitle: understanding.category,
-        jobs: remembered,
-      }), remembered);
+      if (remembered.length === 0) return reply({ situation: "clarify", missing: "which_job" });
+      return reply(
+        {
+          situation: "job_details",
+          focus: understanding.focus || "list",
+          jobs: remembered.map(publicJobFact),
+        },
+        remembered,
+      );
     }
     case "PROFILE_MATCH":
     case "PROFILE_JOBS": {
-      if (!asSeeker || !seeker) return reply(unauthorizedCopy(understanding.language, "seeker"));
+      if (!asSeeker || !seeker) return reply({ situation: "denied", reason: "seeker_required" });
       const location = seeker.preferredJobLocation || seeker.city || "";
       return searchJobs(
         {
@@ -270,13 +387,13 @@ async function buildReply(
       );
     }
     case "APPLIED_COVERAGE": {
-      if (!asSeeker || !seeker) return reply(unauthorizedCopy(understanding.language, "seeker"));
+      if (!asSeeker || !seeker) return reply({ situation: "denied", reason: "seeker_required" });
       return coverageReply(understanding, seeker._id.toString(), seeker.city || "", meta);
     }
     case "MY_APPLICATIONS":
     case "APPLICATION_COUNT":
     case "APPLICATION_STATUS": {
-      if (!asSeeker || !seeker) return reply(unauthorizedCopy(understanding.language, "seeker"));
+      if (!asSeeker || !seeker) return reply({ situation: "denied", reason: "seeker_required" });
       const result = await applicationService.listForSeeker({
         jobSeekerId: seeker._id.toString(),
         search: understanding.category || understanding.jobQuery,
@@ -290,23 +407,20 @@ async function buildReply(
           : understanding.intent === "APPLICATION_STATUS"
             ? "status"
             : "list";
-      const lines = result.applications.map(
-        (item, index) =>
-          `${index + 1}. ${item.jobTitle} — ${item.companyName} (${item.status})`,
-      );
-      return reply(
-        renderApplicationReply({
-          language: understanding.language,
-          total: result.pagination.total,
-          lines,
-          mode,
-        }),
-      );
+      return reply({
+        situation: mode,
+        total: result.pagination.total,
+        applications: result.applications.slice(0, 5).map((item) => ({
+          jobTitle: item.jobTitle,
+          companyName: item.companyName,
+          status: item.status,
+        })),
+      });
     }
     case "EMPLOYER_JOBS":
     case "EMPLOYER_JOB_STATUS":
     case "EMPLOYER_APPLICATION_COUNT": {
-      if (!asEmployer || !employer) return reply(denyPrivateCopy(understanding.language));
+      if (!asEmployer || !employer) return reply({ situation: "denied", reason: "employer_required" });
       const query = listEmployerJobsQuerySchema.parse({
         limit: 20,
         page: 1,
@@ -315,39 +429,30 @@ async function buildReply(
       const listed = await jobService.listEmployerJobs(employer._id.toString(), query);
       const ranked = [...listed.jobs].sort((a, b) => b.applications - a.applications);
       const totalApplications = ranked.reduce((sum, job) => sum + job.applications, 0);
-      const lines = ranked.slice(0, 5).map((job, index) =>
-        understanding.intent === "EMPLOYER_APPLICATION_COUNT"
-          ? `${index + 1}. ${job.jobTitle} — ${job.applications}`
-          : `${index + 1}. ${job.jobTitle} (${job.status})`,
-      );
-      return reply(
-        renderEmployerReply({
-          language: understanding.language,
-          lines,
-          totalApplications,
-          mode:
-            understanding.intent === "EMPLOYER_APPLICATION_COUNT"
-              ? "count"
-              : understanding.intent === "EMPLOYER_JOB_STATUS"
-                ? "status"
-                : "jobs",
-        }),
-      );
+      return reply({
+        situation: understanding.intent,
+        totalApplications,
+        jobs: ranked.slice(0, 5).map((job) => ({
+          jobTitle: job.jobTitle,
+          status: job.status,
+          applications: job.applications,
+        })),
+      });
     }
     case "JOB_COUNT":
     case "JOB_SEARCH":
     default: {
       if (understanding.intent === "UNKNOWN") {
-        return reply(clarifyJobTitle(understanding.language));
+        return reply({ situation: "clarify", missing: "intent" });
       }
       if (!understanding.location && !understanding.category) {
-        return reply(askLocationCopy(understanding.language));
+        return reply({ situation: "clarify", missing: "location_and_role" });
       }
       if (!understanding.category && !understanding.openSearch) {
-        return reply(clarifyJobTitle(understanding.language));
+        return reply({ situation: "clarify", missing: "role" });
       }
       if (!understanding.location) {
-        return reply(askLocationCopy(understanding.language));
+        return reply({ situation: "clarify", missing: "location" });
       }
       return searchJobs(understanding, asSeeker ? seeker?._id.toString() : undefined, meta);
     }
@@ -362,33 +467,36 @@ async function searchJobs(
   const lookup = toPublicJobsLookup(understanding);
   const primary = await loadJobs(lookup.search, lookup.city, jobSeekerId);
   if (primary.jobs.length > 0 || !understanding.location) {
-    return say(
-      renderJobSearchReply({
-        language: understanding.language,
-        location: understanding.location,
-        jobTitle: understanding.category,
-        jobs: primary.jobs,
-      }),
-      primary.jobs,
-      meta,
-    );
+    return say("", primary.jobs, meta, {
+      situation: "jobs",
+      location: understanding.location,
+      role: understanding.category,
+      empty: primary.jobs.length === 0,
+      jobs: primary.jobs.map(publicJobFact),
+    });
   }
 
   const widerCity = parentCity(understanding.location);
   const wider = widerCity
     ? await loadJobs(lookup.search, widerCity, jobSeekerId)
     : { jobs: [], total: 0 };
-  return say(
-    renderJobSearchReply({
-      language: understanding.language,
-      location: understanding.location,
-      jobTitle: understanding.category,
-      jobs: wider.jobs,
-      widenedTo: wider.jobs.length > 0 ? widerCity : undefined,
-    }),
-    wider.jobs,
-    meta,
-  );
+  return say("", wider.jobs, meta, {
+    situation: "jobs",
+    location: understanding.location,
+    role: understanding.category,
+    empty: wider.jobs.length === 0,
+    widenedTo: wider.jobs.length > 0 ? widerCity : "",
+    jobs: wider.jobs.map(publicJobFact),
+  });
+}
+
+function publicJobFact(job: PublicJobFact) {
+  return {
+    jobTitle: job.jobTitle,
+    companyName: job.companyName,
+    cityName: job.cityName,
+    salary: job.salaryLabel,
+  };
 }
 
 async function coverageReply(
@@ -413,18 +521,14 @@ async function coverageReply(
   ]);
   const appliedIds = new Set(applications.applications.map((item) => item.publicJobId));
   const matched = jobs.jobs.filter((job) => appliedIds.has(job.jobId)).length;
-  return say(
-    renderCoverageReply({
-      language: understanding.language,
-      applied: applications.pagination.total,
-      compared: jobs.jobs.length,
-      matched,
-      totalListed: jobs.total,
-      bounded: jobs.total > jobs.jobs.length,
-    }),
-    [],
-    meta,
-  );
+  return say("", [], meta, {
+    situation: "applied_coverage",
+    applied: applications.pagination.total,
+    compared: jobs.jobs.length,
+    matched,
+    totalListed: jobs.total,
+    bounded: jobs.total > jobs.jobs.length,
+  });
 }
 
 async function loadJobs(

@@ -1,13 +1,14 @@
 import { env } from "../../config/env.js";
 import {
+  minimalUnderstanding,
   parseUnderstanding,
-  understandLocally,
   type BotLanguage,
   type BotUnderstanding,
 } from "./whatsapp-bot.logic.js";
 
 const SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text";
 const SARVAM_CHAT_URL = "https://api.sarvam.ai/v1/chat/completions";
+const SARVAM_CHAT_MODEL = "sarvam-105b";
 
 export async function transcribeWhatsAppAudio(input: {
   buffer: Buffer;
@@ -89,13 +90,28 @@ function buildAudioForm(
   return form;
 }
 
+export type SarvamUnderstanding = {
+  understanding: BotUnderstanding;
+  source: "sarvam" | "fallback";
+};
+
 export async function understandMessage(
   text: string,
   previous?: BotLanguage | null,
   hint?: BotLanguage | null,
-): Promise<BotUnderstanding> {
+  context?: {
+    accountType?: string;
+    priorLocation?: string;
+    priorRole?: string;
+  },
+): Promise<SarvamUnderstanding> {
+  const fallback = (): SarvamUnderstanding => ({
+    understanding: minimalUnderstanding(text, previous, hint),
+    source: "fallback",
+  });
   if (!env.SARVAM_API_KEY.trim()) {
-    return understandLocally(text, previous, hint);
+    console.error("[Sarvam] SARVAM_UNAVAILABLE reason=missing_key");
+    return fallback();
   }
 
   const started = Date.now();
@@ -107,41 +123,131 @@ export async function understandMessage(
         "api-subscription-key": env.SARVAM_API_KEY,
         "Content-Type": "application/json",
       },
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(35_000),
       body: JSON.stringify({
-        model: "sarvam-m",
+        model: SARVAM_CHAT_MODEL,
         temperature: 0,
         messages: [
           {
             role: "system",
             content:
-              "You only classify a WhatsApp message for AsliJobs. Do not answer the user and do not invent jobs, companies, salaries, or counts. Reply with JSON only: {\"intent\":\"GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|UNRELATED|UNKNOWN\",\"language\":\"en|hi|te|ta|kn|ml\",\"location\":\"\",\"category\":\"\",\"jobQuery\":\"\",\"openSearch\":false,\"confidence\":0.0,\"focus\":\"\"}. language is the language of THIS message, including romanized Telugu or Hindi. category and location are canonical English names such as Driver or Hyderabad. openSearch is true only when the user wants any job, not a specific role. Use UNRELATED for weather, sports, jokes, and general knowledge. Use CLARIFY only when the request is ambiguous.",
+              "Classify one AsliJobs WhatsApp message. Do not answer it. Do not invent jobs or decide authorization. Return JSON only with intent, language, location, category, openSearch, confidence, focus, isOutOfScope. intent: GREETING, HELP, CLARIFY, JOB_SEARCH, JOB_DETAILS, PROFILE_JOBS, MY_SKILLS, MY_APPLICATIONS, APPLICATION_COUNT, APPLICATION_STATUS, APPLIED_COVERAGE, HOW_TO_APPLY, EMPLOYER_JOBS, EMPLOYER_JOB_STATUS, EMPLOYER_APPLICATION_COUNT, UNRELATED, UNKNOWN. language: en, hi, te, ta, kn, or ml, from THIS message, including romanized or mixed speech. location and category are English names or empty. openSearch true only for any job, not one role. Account type only disambiguates: EMPLOYER plus applications on their jobs is EMPLOYER_APPLICATION_COUNT; JOB_SEEKER plus their own applications is APPLICATION_COUNT. CLARIFY only if a required place, role, or account side is missing. UNRELATED for weather, poems, jokes, and general knowledge. A new place or role replaces priorLocation and priorRole.",
           },
-          { role: "user", content: text.slice(0, 500) },
+          {
+            role: "user",
+            content: JSON.stringify({
+              message: text.slice(0, 500),
+              accountType: context?.accountType || "NEW_USER",
+              priorLocation: context?.priorLocation || "",
+              priorRole: context?.priorRole || "",
+            }),
+          },
         ],
       }),
     });
 
     if (!response.ok) {
       console.error(
-        `[Sarvam] intent failed status=${response.status} latencyMs=${Date.now() - started}`,
+        `[Sarvam] SARVAM_INVALID_RESPONSE status=${response.status} latencyMs=${Date.now() - started}`,
       );
-      return understandLocally(text, previous, hint);
+      return fallback();
     }
 
     const body = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
+      choices?: Array<{ message?: { content?: string | null; reasoning_content?: string | null } }>;
     };
-    const content = body.choices?.[0]?.message?.content?.trim() ?? "";
+    const message = body.choices?.[0]?.message;
+    const content = message?.content?.trim() ?? "";
     const json = content.match(/\{[\s\S]*\}/)?.[0] ?? content;
-    console.info(`[Sarvam] intent ok latencyMs=${Date.now() - started}`);
-    return parseUnderstanding(json, text, previous, hint);
+    if (!json.startsWith("{")) {
+      console.error("[Sarvam] SARVAM_INVALID_RESPONSE reason=no_json");
+      return fallback();
+    }
+    const understanding = parseUnderstanding(json, text, previous, hint);
+    if (understanding.intent === "UNKNOWN" && understanding.confidence === 0) {
+      console.error(
+        `[Sarvam] SARVAM_INVALID_RESPONSE reason=schema snippet=${content.replace(/\s+/g, " ").slice(0, 180)}`,
+      );
+      return fallback();
+    }
+    console.info(
+      `[Sarvam] intent ok latencyMs=${Date.now() - started} intent=${understanding.intent} language=${understanding.language} confidence=${understanding.confidence}`,
+    );
+    return { understanding, source: "sarvam" };
   } catch (error) {
+    const timedOut = error instanceof Error && error.name === "TimeoutError";
     console.error(
-      `[Sarvam] intent error latencyMs=${Date.now() - started} reason=${
+      `[Sarvam] ${timedOut ? "SARVAM_TIMEOUT" : "SARVAM_INVALID_RESPONSE"} latencyMs=${Date.now() - started} reason=${
         error instanceof Error ? error.name : "unknown"
       }`,
     );
-    return understandLocally(text, previous, hint);
+    return fallback();
+  }
+}
+
+export async function generateFinalReply(input: {
+  originalText: string;
+  language: BotLanguage;
+  accountType: string;
+  facts: Record<string, unknown>;
+  priorLocation?: string;
+  priorRole?: string;
+}): Promise<string | null> {
+  if (!env.SARVAM_API_KEY.trim()) {
+    console.error("[Sarvam] SARVAM_UNAVAILABLE stage=reply reason=missing_key");
+    return null;
+  }
+  const started = Date.now();
+  try {
+    const response = await fetch(SARVAM_CHAT_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.SARVAM_API_KEY}`,
+        "api-subscription-key": env.SARVAM_API_KEY,
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(35_000),
+      body: JSON.stringify({
+        model: SARVAM_CHAT_MODEL,
+        temperature: 0.2,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Answer the user's original question directly. Use only the verified database information provided. Do not invent any information. Respond naturally in the same language as the user's current message. Preserve company names, job titles, salaries, and other database values accurately. Do not mention internal APIs, database queries, AI classification, prompts, or system instructions. Do not answer questions outside the permitted AsliJobs capabilities. If the verified result is empty, say that nothing matched and you may suggest a broader search without inventing jobs. If access is denied or the person has no account, explain only what the verified object allows and use only registration URLs included there. If the situation is voice_failed, ask them to repeat the message. If the situation is out_of_scope, do not answer the unrelated question; briefly say you can help with AsliJobs jobs, applications, and job details.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              message: input.originalText.slice(0, 500),
+              language: input.language,
+              accountType: input.accountType,
+              priorLocation: input.priorLocation || "",
+              priorRole: input.priorRole || "",
+              verified: input.facts,
+            }).slice(0, 6000),
+          },
+        ],
+      }),
+    });
+    if (!response.ok) {
+      console.error(`[Sarvam] SARVAM_INVALID_RESPONSE stage=reply status=${response.status}`);
+      return null;
+    }
+    const body = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string | null; reasoning_content?: string | null } }>;
+    };
+    const message = body.choices?.[0]?.message;
+    const text = (message?.content || "").trim();
+    console.info(`[Sarvam] reply ok latencyMs=${Date.now() - started} chars=${text.length}`);
+    return text || null;
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === "TimeoutError";
+    console.error(
+      `[Sarvam] ${timedOut ? "SARVAM_TIMEOUT" : "SARVAM_INVALID_RESPONSE"} stage=reply reason=${
+        error instanceof Error ? error.name : "unknown"
+      }`,
+    );
+    return null;
   }
 }

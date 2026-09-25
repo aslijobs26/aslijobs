@@ -123,7 +123,7 @@ describe("whatsapp bot", () => {
       "na applications",
     );
     assert.equal(parsed.intent, "MY_APPLICATIONS");
-    assert.equal(parseUnderstanding("not-json", "hello").intent, "GREETING");
+    assert.equal(parseUnderstanding("not-json", "hello").intent, "UNKNOWN");
   });
 
   it("classifies the required languages, applications, employer, and unrelated questions", () => {
@@ -263,7 +263,20 @@ describe("whatsapp bot", () => {
     assert.equal(telugu.language, "te");
     assert.equal(telugu.category, "Driver");
 
-    assert.equal(parseUnderstanding('{"intent":"JOB_SEARCH","language":"en","confidence":0.2}', "hello").intent, "GREETING");
+    assert.equal(
+      parseUnderstanding('{"intent":"JOB_SEARCH","language":"en","confidence":0.2}', "hello").intent,
+      "JOB_SEARCH",
+    );
+    const posted = parseUnderstanding(
+      JSON.stringify({
+        intent: "EMPLOYER_APPLICATION_COUNT",
+        language: "te",
+        confidence: 0.9,
+      }),
+      "నేను పోస్ట్ చేసిన జాబ్స్ కి ఎన్ని applications వచ్చాయి",
+    );
+    assert.equal(posted.intent, "EMPLOYER_APPLICATION_COUNT");
+    assert.equal(posted.scope, "OWN_EMPLOYER_DATA");
   });
 
   it("does not treat a different role as a match and replaces stale location", () => {
