@@ -508,23 +508,39 @@ export function askLocationCopy(language: BotLanguage): string {
   return "Sure 👍 Which location are you looking for?";
 }
 
-export function capabilityCopy(language: BotLanguage): string {
-  if (language === "te") {
-    return "నేను AsliJobs జాబ్స్, అప్లికేషన్స్, ప్రొఫైల్ సూచనలు, మరియు employer జాబ్ వివరాలతో సహాయం చేయగలను. వీటిలో ఒకటి అడగండి.";
+export type AccountKind = "seeker" | "employer" | "both" | "none";
+
+export function chooseAccountRole(text: string): "seeker" | "employer" | null {
+  const trimmed = text.trim();
+  const employer = /\b(employer|hiring|hire)\b|నియమించ|भर्ती|ஆள் எடுக்க|ನೇಮಕ|നിയമിക്ക/i.test(trimmed);
+  const seeker = /\b(job seeker|looking for a job|need a job|find a job)\b|ఉద్యోగం కావాలి|नौकरी चाहिए|வேலை வேண்டும்|ಕೆಲಸ ಬೇಕು|ജോലി വേണം/i.test(
+    trimmed,
+  );
+  if (employer && !seeker) return "employer";
+  if (seeker && !employer) return "seeker";
+  return null;
+}
+
+export function capabilityCopy(language: BotLanguage, account: AccountKind = "seeker"): string {
+  if (account === "employer") {
+    if (language === "te") return "నేను మీరు పోస్ట్ చేసిన ఉద్యోగాలు, వాటి స్థితి, మరియు వాటికి వచ్చిన దరఖాస్తుల గురించి సహాయం చేయగలను.";
+    if (language === "hi") return "मैं आपकी पोस्ट की गई नौकरियों, उनकी स्थिति, और उन पर आए आवेदनों में मदद कर सकता हूँ.";
+    if (language === "ta") return "நீங்கள் போஸ்ட் செய்த வேலைகள், அவற்றின் நிலை, மற்றும் வந்த விண்ணப்பங்களில் உதவ முடியும்.";
+    if (language === "kn") return "ನೀವು ಪೋಸ್ಟ್ ಮಾಡಿದ ಉದ್ಯೋಗಗಳು, ಅವುಗಳ ಸ್ಥಿತಿ, ಮತ್ತು ಬಂದ ಅರ್ಜಿಗಳ ಬಗ್ಗೆ ಸಹಾಯ ಮಾಡುತ್ತೇನೆ.";
+    if (language === "ml") return "നിങ്ങൾ പോസ്റ്റ് ചെയ്ത ജോലികൾ, അവയുടെ നില, വന്ന അപേക്ഷകൾ എന്നിവയിൽ സഹായിക്കാം.";
+    return "I can help with your posted jobs, their status, and the applications those jobs received.";
   }
-  if (language === "hi") {
-    return "मैं AsliJobs नौकरियां, आवेदन, प्रोफाइल सुझाव, और employer जॉब जानकारी में मदद कर सकता हूँ. इनमें से कुछ पूछें.";
+  if (account === "none" || account === "both") {
+    if (language === "te") return "మీరు ఉద్యోగం వెతుకుతున్నారా, లేక ఉద్యోగులను నియమించాలనుకుంటున్నారా?";
+    if (language === "hi") return "क्या आप नौकरी ढूंढ रहे हैं, या कर्मचारियों को रखना चाहते हैं?";
+    return "Are you looking for a job, or are you an employer who wants to hire?";
   }
-  if (language === "ta") {
-    return "AsliJobs வேலைகள், விண்ணப்பங்கள், சுயவிவர பரிந்துரைகள், மற்றும் employer வேலை தகவலில் உதவ முடியும். இவற்றில் ஒன்றைக் கேளுங்கள்.";
-  }
-  if (language === "kn") {
-    return "ನಾನು AsliJobs ಉದ್ಯೋಗಗಳು, ಅರ್ಜಿಗಳು, ಪ್ರೊಫೈಲ್ ಸಲಹೆಗಳು, ಮತ್ತು employer ಉದ್ಯೋಗ ಮಾಹಿತಿಯಲ್ಲಿ ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. ಇವುಗಳಲ್ಲಿ ಒಂದನ್ನು ಕೇಳಿ.";
-  }
-  if (language === "ml") {
-    return "AsliJobs ജോലികൾ, അപേക്ഷകൾ, പ്രൊഫൈൽ നിർദ്ദേശങ്ങൾ, employer ജോലി വിവരങ്ങൾ എന്നിവയിൽ സഹായിക്കാം. ഇവയിൽ ഒന്ന് ചോദിക്കൂ.";
-  }
-  return "I can help you with AsliJobs job search, job details, applications, application status, your profile, and employer information available to your account. What would you like to know?";
+  if (language === "te") return "నేను ఉద్యోగాలు వెతకడం, మీ దరఖాస్తులు, వాటి స్థితి, మరియు మీ ప్రొఫైల్‌కు సరిపోయే ఉద్యోగాల్లో సహాయం చేయగలను.";
+  if (language === "hi") return "मैं नौकरी खोज, आपके आवेदन, उनकी स्थिति, और आपकी प्रोफाइल के अनुसार नौकरियों में मदद कर सकता हूँ.";
+  if (language === "ta") return "வேலை தேடல், உங்கள் விண்ணப்பங்கள், அவற்றின் நிலை, மற்றும் உங்கள் சுயவிவரத்துக்கு பொருந்தும் வேலைகளில் உதவ முடியும்.";
+  if (language === "kn") return "ಉದ್ಯೋಗ ಹುಡುಕಾಟ, ನಿಮ್ಮ ಅರ್ಜಿಗಳು, ಅವುಗಳ ಸ್ಥಿತಿ, ಮತ್ತು ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ಗೆ ಸೂಕ್ತ ಉದ್ಯೋಗಗಳಲ್ಲಿ ಸಹಾಯ ಮಾಡುತ್ತೇನೆ.";
+  if (language === "ml") return "ജോലി തിരയൽ, നിങ്ങളുടെ അപേക്ഷകൾ, അവയുടെ നില, പ്രൊഫൈലിന് അനുയോജ്യമായ ജോലികൾ എന്നിവയിൽ സഹായിക്കാം.";
+  return "I can help you find jobs, check your applications and their status, and see jobs that match your profile.";
 }
 
 export function clarifyAmbiguousCopy(language: BotLanguage): string {
@@ -560,17 +576,79 @@ export function serviceErrorCopy(language: BotLanguage): string {
 
 export function greetingCopy(input: {
   language: BotLanguage;
-  known: boolean;
+  account: AccountKind;
   name: string;
 }): string {
+  const name = input.name.trim();
+  if (input.account === "both") {
+    if (input.language === "te") {
+      return "మీ WhatsApp నంబర్ ఒకటి కంటే ఎక్కువ AsliJobs ఖాతాలకు లింక్ అయి ఉంది. ఉద్యోగం వెతకాలా, లేక employer గా కొనసాగాలా?";
+    }
+    if (input.language === "hi") {
+      return "आपका WhatsApp नंबर एक से अधिक AsliJobs खातों से जुड़ा है. नौकरी खोजनी है या employer के रूप में जारी रखना है?";
+    }
+    return "Your WhatsApp number is linked to more than one AsliJobs account. Continue as a job seeker or as an employer?";
+  }
+  if (input.account === "none") {
+    if (input.language === "te") {
+      return "హాయ్ 👋 AsliJobs కి స్వాగతం. ఇక్కడ ఉద్యోగాలు వెతకొచ్చు, employers కార్మికులను నియమించుకోవచ్చు. మీరు ఉద్యోగం వెతుకుతున్నారా, లేక నియమించాలనుకుంటున్నారా?";
+    }
+    if (input.language === "hi") {
+      return "नमस्ते 👋 AsliJobs में आपका स्वागत है. यहाँ नौकरी मिल सकती है और employer भर्ती कर सकते हैं. आप नौकरी ढूंढ रहे हैं या भर्ती करना चाहते हैं?";
+    }
+    return "Hi 👋 Welcome to AsliJobs. People find jobs here, and employers hire workers. Are you looking for a job, or do you want to hire?";
+  }
+  if (input.account === "employer") {
+    const who = name ? ` ${name}` : "";
+    if (input.language === "te") {
+      return `హాయ్${who} 👋 AsliJobs కి తిరిగి స్వాగతం.\n\nమీరు పోస్ట్ చేసిన ఉద్యోగాలు, వాటి స్థితి, మరియు వచ్చిన దరఖాస్తులు చూడొచ్చు. ఏమి తెలుసుకోవాలి?`;
+    }
+    if (input.language === "hi") {
+      return `नमस्ते${who} 👋 AsliJobs में वापस स्वागत है.\n\nआप अपनी पोस्ट की गई नौकरियां, उनकी स्थिति, और आए आवेदन देख सकते हैं. क्या जानना है?`;
+    }
+    if (input.language === "ta") {
+      return `வணக்கம்${who} 👋 AsliJobs-க்கு மீண்டும் வரவேற்கிறோம்.\n\nநீங்கள் போஸ்ட் செய்த வேலைகள், நிலை, மற்றும் வந்த விண்ணப்பங்களை பார்க்கலாம்.`;
+    }
+    if (input.language === "kn") {
+      return `ನಮಸ್ಕಾರ${who} 👋 AsliJobs ಗೆ ಮತ್ತೆ ಸ್ವಾಗತ.\n\nನೀವು ಪೋಸ್ಟ್ ಮಾಡಿದ ಉದ್ಯೋಗಗಳು, ಸ್ಥಿತಿ, ಮತ್ತು ಬಂದ ಅರ್ಜಿಗಳನ್ನು ನೋಡಬಹುದು.`;
+    }
+    if (input.language === "ml") {
+      return `ഹായ്${who} 👋 AsliJobs-ലേക്ക് വീണ്ടും സ്വാഗതം.\n\nനിങ്ങൾ പോസ്റ്റ് ചെയ്ത ജോലികൾ, നില, വന്ന അപേക്ഷകൾ എന്നിവ കാണാം.`;
+    }
+    return `Hi${who} 👋 Welcome back to AsliJobs.\n\nYou can view your posted jobs, their status, and the applications they received. What would you like to know?`;
+  }
+  const who = name ? ` ${name}` : "";
   if (input.language === "te") {
-    return "నమస్తే 👋 AsliJobs కి స్వాగతం!\n\nనేను మీకు:\n• జాబ్స్ వెతకడంలో\n• మీ అప్లికేషన్స్ చెక్ చేయడంలో\n• మీ ప్రొఫైల్‌కు సరిపోయే జాబ్స్ సూచించడంలో\n\nసహాయం చేయగలను.\n\nఉదాహరణ:\n'హైదరాబాద్‌లో డ్రైవర్ జాబ్స్ ఉన్నాయా?' అని అడగండి.";
+    return `హాయ్${who} 👋 AsliJobs కి తిరిగి స్వాగతం.\n\nఉద్యోగాలు వెతకొచ్చు, మీ దరఖాస్తులు మరియు వాటి స్థితి చూడొచ్చు, మీ ప్రొఫైల్‌కు సరిపోయే ఉద్యోగాలు అడగొచ్చు. ఏ ఉద్యోగం కావాలి?`;
   }
   if (input.language === "hi") {
-    return "नमस्ते 👋 AsliJobs में आपका स्वागत है!\n\nमैं नौकरी खोज, आपके आवेदन, और प्रोफाइल के हिसाब से नौकरियां बता सकता हूँ.\n\nउदाहरण: 'हैदराबाद में ड्राइवर की नौकरी है क्या?'";
+    return `नमस्ते${who} 👋 AsliJobs में वापस स्वागत है.\n\nनौकरी खोज, आपके आवेदन और उनकी स्थिति, और प्रोफाइल के अनुसार नौकरियां पूछ सकते हैं. कौन सी नौकरी चाहिए?`;
   }
-  const name = input.known && input.name ? ` ${input.name}` : "";
-  return `Hello${name} 👋 Welcome to AsliJobs.\n\nI can search jobs, check your applications, or suggest jobs from your profile.\n\nTry: "Are there driver jobs in Madhapur?"`;
+  if (input.language === "ta") {
+    return `வணக்கம்${who} 👋 AsliJobs-க்கு மீண்டும் வரவேற்கிறோம்.\n\nவேலை தேடலாம், உங்கள் விண்ணப்பங்களையும் நிலையையும் பார்க்கலாம். எந்த வேலை வேண்டும்?`;
+  }
+  if (input.language === "kn") {
+    return `ನಮಸ್ಕಾರ${who} 👋 AsliJobs ಗೆ ಮತ್ತೆ ಸ್ವಾಗತ.\n\nಉದ್ಯೋಗ ಹುಡುಕಬಹುದು, ನಿಮ್ಮ ಅರ್ಜಿಗಳು ಮತ್ತು ಸ್ಥಿತಿ ನೋಡಬಹುದು. ಯಾವ ಕೆಲಸ ಬೇಕು?`;
+  }
+  if (input.language === "ml") {
+    return `ഹായ്${who} 👋 AsliJobs-ലേക്ക് വീണ്ടും സ്വാഗതം.\n\nജോലി തിരയാം, അപേക്ഷകളും നിലയും കാണാം. ഏത് ജോലി വേണം?`;
+  }
+  return `Hi${who} 👋 Welcome back to AsliJobs.\n\nYou can find jobs, check your applications and their status, and ask for jobs that match your profile. What kind of job are you looking for?`;
+}
+
+export function registrationCopy(input: {
+  language: BotLanguage;
+  role: "seeker" | "employer";
+  url: string;
+}): string {
+  if (input.role === "employer") {
+    if (input.language === "te") return `Employer ఖాతా ఇక్కడ రిజిస్టర్ చేయండి: ${input.url}`;
+    if (input.language === "hi") return `Employer खाता यहाँ रजिस्टर करें: ${input.url}`;
+    return `Register your employer account here: ${input.url}`;
+  }
+  if (input.language === "te") return `ఉద్యోగం కోసం ఇక్కడ రిజిస్టర్ చేయండి: ${input.url}`;
+  if (input.language === "hi") return `नौकरी के लिए यहाँ रजिस्टर करें: ${input.url}`;
+  return `Register as a job seeker here: ${input.url}`;
 }
 
 export function fallbackCopy(language: BotLanguage): string {

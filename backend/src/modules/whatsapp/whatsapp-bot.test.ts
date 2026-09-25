@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { describe, it } from "node:test";
 import {
+  chooseAccountRole,
   clarifyJobTitle,
+  greetingCopy,
+  registrationCopy,
   mergePending,
   nationalPhone,
   parseUnderstanding,
@@ -274,6 +277,26 @@ describe("whatsapp bot", () => {
     assert.equal(merged.location, "Bangalore");
     assert.equal(merged.category, "");
     assert.equal(merged.openSearch, true);
+  });
+
+  it("greets a seeker, an employer, an unknown number, and a dual account differently", () => {
+    const seeker = greetingCopy({ language: "en", account: "seeker", name: "Chandu" });
+    const employer = greetingCopy({ language: "en", account: "employer", name: "Harshad" });
+    const unknown = greetingCopy({ language: "en", account: "none", name: "" });
+    const both = greetingCopy({ language: "te", account: "both", name: "" });
+    assert.match(seeker, /Chandu/);
+    assert.match(seeker, /applications/i);
+    assert.doesNotMatch(seeker, /posted jobs/i);
+    assert.match(employer, /Harshad/);
+    assert.match(employer, /posted jobs/i);
+    assert.doesNotMatch(employer, /match your profile/i);
+    assert.match(unknown, /looking for a job/i);
+    assert.match(both, /ఒకటి కంటే ఎక్కువ/);
+    assert.equal(chooseAccountRole("Hi"), null);
+    assert.equal(chooseAccountRole("I need a job"), "seeker");
+    assert.equal(chooseAccountRole("I want to hire workers"), "employer");
+    assert.match(registrationCopy({ language: "en", role: "seeker", url: "https://aslijobs.com/job-seeker/register" }), /job-seeker\/register/);
+    assert.match(registrationCopy({ language: "te", role: "employer", url: "https://aslijobs.com/employer/register" }), /employer\/register/);
   });
 
   it("accepts a valid Meta signature and rejects a bad one", () => {

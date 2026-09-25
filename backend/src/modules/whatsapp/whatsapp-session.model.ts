@@ -8,6 +8,11 @@ const whatsAppSessionSchema = new Schema(
       enum: ["en", "hi", "te", "ta", "kn", "ml"],
       default: "en",
     },
+    activeRole: {
+      type: String,
+      enum: ["", "seeker", "employer"],
+      default: "",
+    },
     pendingLocation: { type: String, default: "" },
     pendingCategory: { type: String, default: "" },
     lastLocation: { type: String, default: "" },
