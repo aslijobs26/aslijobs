@@ -11,7 +11,7 @@ export default function JobSeekerRegisterPage() {
   return (
     <main className="employer-register-page job-seeker-register-page">
       <JobSeekerRegisterContent>
-        <EmployerRegisterPanel />
+        <EmployerRegisterPanel variant="seeker" />
       </JobSeekerRegisterContent>
     </main>
   );

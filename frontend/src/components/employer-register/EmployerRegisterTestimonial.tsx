@@ -8,40 +8,12 @@ import {
 import type { EmployerRegisterTestimonial as Testimonial } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
 import Image from "next/image";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type TransitionEvent,
-} from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 const SLIDE_COUNT = EMPLOYER_REGISTER_TESTIMONIALS.length;
 
-const EXTENDED_SLIDES: Testimonial[] = [
-  EMPLOYER_REGISTER_TESTIMONIALS[SLIDE_COUNT - 1],
-  ...EMPLOYER_REGISTER_TESTIMONIALS,
-  EMPLOYER_REGISTER_TESTIMONIALS[0],
-];
-
-const EXTENDED_SLIDE_COUNT = EXTENDED_SLIDES.length;
-
-/** First real card (Sneha Patel) sits at track index 1 (index 0 is the loop clone). */
-const INITIAL_TRACK_INDEX = 1;
-
-function getRealIndex(trackIndex: number) {
-  if (trackIndex === 0) {
-    return SLIDE_COUNT - 1;
-  }
-
-  if (trackIndex === SLIDE_COUNT + 1) {
-    return 0;
-  }
-
-  return trackIndex - 1;
-}
+/** Priya Reddy is shown first to match the reference design. */
+const INITIAL_INDEX = 1;
 
 function TestimonialCard({
   testimonial,
@@ -76,97 +48,42 @@ function TestimonialCard({
 }
 
 export function EmployerRegisterTestimonial() {
-  const [trackIndex, setTrackIndex] = useState(INITIAL_TRACK_INDEX);
-  const [isTransitionEnabled, setIsTransitionEnabled] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(INITIAL_INDEX);
   const [isHovered, setIsHovered] = useState(false);
-  const [isAutoplayReady, setIsAutoplayReady] = useState(false);
-  const isJumpingRef = useRef(false);
-
-  const goToRealIndex = useCallback((realIndex: number) => {
-    setIsTransitionEnabled(true);
-    setTrackIndex(realIndex + 1);
-  }, []);
-
-  const goToNext = useCallback(() => {
-    setIsTransitionEnabled(true);
-    setTrackIndex((current) => current + 1);
-  }, []);
-
-  useLayoutEffect(() => {
-    setTrackIndex(INITIAL_TRACK_INDEX);
-    setIsTransitionEnabled(false);
-  }, []);
+  const [isPageVisible, setIsPageVisible] = useState(true);
 
   useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      setIsTransitionEnabled(true);
-      setIsAutoplayReady(true);
-    });
-
+    const syncVisibility = () => {
+      setIsPageVisible(document.visibilityState === "visible");
+    };
+    syncVisibility();
+    document.addEventListener("visibilitychange", syncVisibility);
     return () => {
-      window.cancelAnimationFrame(frameId);
+      document.removeEventListener("visibilitychange", syncVisibility);
     };
   }, []);
 
   useEffect(() => {
-    if (!isAutoplayReady || isHovered) {
+    if (isHovered || !isPageVisible || SLIDE_COUNT < 2) {
       return;
     }
 
     const intervalId = window.setInterval(() => {
-      goToNext();
+      setActiveIndex((current) => (current + 1) % SLIDE_COUNT);
     }, EMPLOYER_REGISTER_TESTIMONIAL_AUTOPLAY_MS);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [goToNext, isAutoplayReady, isHovered]);
+  }, [isHovered, isPageVisible]);
 
-  const handleTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
-    if (event.propertyName !== "transform" || isJumpingRef.current) {
-      return;
-    }
-
-    if (trackIndex === 0) {
-      isJumpingRef.current = true;
-      setIsTransitionEnabled(false);
-      setTrackIndex(SLIDE_COUNT);
-      return;
-    }
-
-    if (trackIndex === SLIDE_COUNT + 1) {
-      isJumpingRef.current = true;
-      setIsTransitionEnabled(false);
-      setTrackIndex(INITIAL_TRACK_INDEX);
-    }
-  };
-
-  useEffect(() => {
-    if (isTransitionEnabled || !isJumpingRef.current) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        isJumpingRef.current = false;
-        setIsTransitionEnabled(true);
-      });
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [isTransitionEnabled, trackIndex]);
-
-  const activeDotIndex = getRealIndex(trackIndex);
+  const safeIndex = ((activeIndex % SLIDE_COUNT) + SLIDE_COUNT) % SLIDE_COUNT;
 
   const trackStyle = {
-    "--testimonial-slide-count": EXTENDED_SLIDE_COUNT,
-    "--testimonial-track-index": trackIndex,
-    transform: `translateX(calc(-100% * ${trackIndex} / ${EXTENDED_SLIDE_COUNT}))`,
-    transitionDuration: isTransitionEnabled
-      ? `${EMPLOYER_REGISTER_TESTIMONIAL_TRANSITION_MS}ms`
-      : "0ms",
+    "--testimonial-slide-count": SLIDE_COUNT,
+    "--testimonial-track-index": safeIndex,
+    transform: `translateX(calc(-100% * ${safeIndex} / ${SLIDE_COUNT}))`,
+    transitionDuration: `${EMPLOYER_REGISTER_TESTIMONIAL_TRANSITION_MS}ms`,
   } as CSSProperties;
 
   return (
@@ -176,23 +93,16 @@ export function EmployerRegisterTestimonial() {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="employer-register-testimonial-viewport">
-        <div
-          className={cn(
-            "employer-register-testimonial-track",
-            !isTransitionEnabled && "employer-register-testimonial-track--instant",
-          )}
-          style={trackStyle}
-          onTransitionEnd={handleTransitionEnd}
-        >
-          {EXTENDED_SLIDES.map((testimonial, index) => (
+        <div className="employer-register-testimonial-track" style={trackStyle}>
+          {EMPLOYER_REGISTER_TESTIMONIALS.map((testimonial, index) => (
             <div
-              key={`${testimonial.id}-${index}`}
+              key={testimonial.id}
               className="employer-register-testimonial-slide"
-              aria-hidden={index !== trackIndex}
+              aria-hidden={index !== safeIndex}
             >
               <TestimonialCard
                 testimonial={testimonial}
-                priority={index === INITIAL_TRACK_INDEX}
+                priority={index === INITIAL_INDEX}
               />
             </div>
           ))}
@@ -200,12 +110,12 @@ export function EmployerRegisterTestimonial() {
       </div>
 
       <div
-        className="employer-register-testimonial-dots"
+        className={cn("employer-register-testimonial-dots")}
         role="tablist"
         aria-label="Testimonial slides"
       >
         {EMPLOYER_REGISTER_TESTIMONIALS.map((testimonial, index) => {
-          const isActive = index === activeDotIndex;
+          const isActive = index === safeIndex;
 
           return (
             <button
@@ -218,7 +128,7 @@ export function EmployerRegisterTestimonial() {
                 "employer-register-testimonial-dot transition-colors",
                 isActive ? "bg-surface" : "bg-surface/35",
               )}
-              onClick={() => goToRealIndex(index)}
+              onClick={() => setActiveIndex(index)}
             />
           );
         })}

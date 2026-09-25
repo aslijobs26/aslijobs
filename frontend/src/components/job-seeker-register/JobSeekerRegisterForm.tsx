@@ -633,7 +633,7 @@ export function JobSeekerRegisterForm() {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full" data-register-step={step}>
       <h1 className="employer-register-form-heading">{heading}</h1>
 
       <form

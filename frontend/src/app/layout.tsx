@@ -1,6 +1,6 @@
 import { QueryProvider } from "@/providers/query-provider";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Prosto_One } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -8,6 +8,13 @@ const inter = Inter({
   display: "swap",
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
   variable: "--font-inter",
+});
+
+const prostoOne = Prosto_One({
+  subsets: ["latin"],
+  display: "swap",
+  weight: "400",
+  variable: "--font-prosto",
 });
 
 export const metadata: Metadata = {
@@ -21,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} ${prostoOne.variable}`}>
       <body className="min-h-screen overflow-x-clip bg-white font-sans antialiased">
         <QueryProvider>{children}</QueryProvider>
       </body>

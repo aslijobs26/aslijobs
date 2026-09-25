@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 export default function JobSeekerLoginPage() {
   return (
-    <main>
+    <main className="employer-register-page job-seeker-register-page">
       <JobSeekerLoginContent>
-        <EmployerRegisterPanel />
+        <EmployerRegisterPanel variant="seeker" />
       </JobSeekerLoginContent>
     </main>
   );
