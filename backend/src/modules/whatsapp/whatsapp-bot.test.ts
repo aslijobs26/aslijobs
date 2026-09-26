@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { describe, it } from "node:test";
+import { readFileSync } from "node:fs";
 import {
   applyCurrentMessageSearchRules,
+  buildDeterministicReply,
   chooseAccountRole,
   clarifyJobTitle,
   detectLanguage,
   detectProtocolTurn,
   greetingCopy,
+  isCacheableSituation,
   JOBS_FOR_AI_LIMIT,
   looksLikeStalePublicJobReply,
+  properNounsFromFacts,
   PUBLIC_JOB_FETCH_LIMIT,
   registrationCopy,
   mergePending,
@@ -24,7 +28,20 @@ import {
   understandLocally,
   voiceUnclearCopy,
 } from "./whatsapp-bot.logic.js";
-import { compactFacts, UNDERSTAND_SYSTEM, REPLY_SYSTEM } from "./sarvam.client.js";
+import { compactFacts, SARVAM_CHAT_URL, UNDERSTAND_SYSTEM } from "./sarvam.client.js";
+import {
+  clearTranslationCache,
+  detectGeneratedLanguage,
+  localizeDeterministicReply,
+  protectProperNouns,
+  restoreProperNouns,
+  SARVAM_TRANSLATE_URL,
+  shouldTranslate,
+  toSarvamLanguageCode,
+  translateText,
+  translationCacheSize,
+  whatsappAiCallPlan,
+} from "./sarvam-translate.client.js";
 import { verifyWhatsAppSignature } from "./whatsapp-signature.js";
 import { publicJobsQuerySchema } from "../jobs/job.validation.js";
 
@@ -332,15 +349,11 @@ describe("whatsapp bot", () => {
     assert.match(protocolReply("ack", "en", "seeker", ""), /Okay/);
   });
 
-  it("keeps compact Sarvam prompts and does not send long language essays", () => {
+  it("keeps compact Sarvam understand prompts and does not send a Chat LLM reply prompt", () => {
     assert.ok(UNDERSTAND_SYSTEM.length < 780);
-    assert.ok(REPLY_SYSTEM.length < 280);
     assert.doesNotMatch(UNDERSTAND_SYSTEM, /supported languages include/i);
-    assert.doesNotMatch(REPLY_SYSTEM, /Preserve company names, job titles, salaries/);
-    assert.doesNotMatch(REPLY_SYSTEM, /most relevant|up to 3|max 5 short/i);
-    assert.match(REPLY_SYSTEM, /every job/i);
     assert.match(UNDERSTAND_SYSTEM, /EMPLOYER_APPLICATION_COUNT/);
-    assert.match(REPLY_SYSTEM, /THIS q/i);
+    assert.doesNotMatch(UNDERSTAND_SYSTEM, /Reply in lang/);
   });
 
   it("answers the current message and does not reuse a previous Hyderabad job search", () => {
@@ -675,5 +688,291 @@ describe("whatsapp bot", () => {
       false,
     );
     assert.equal(verifyWhatsAppSignature(body, undefined, ""), true);
+  });
+});
+
+const hyderabadFacts = {
+  situation: "jobs",
+  location: "Hyderabad",
+  role: "",
+  total: 2,
+  jobs: [
+    {
+      jobTitle: "Carpenter",
+      companyName: "Harshad Shaik Construction",
+      cityName: "Hyderabad",
+      salary: "₹30,000",
+    },
+    {
+      jobTitle: "Electrician",
+      companyName: "Chandu Organization",
+      cityName: "Hyderabad",
+      salary: "₹40,000",
+    },
+  ],
+};
+
+function mockTranslateFetch(translatedText: string): { fetchImpl: typeof fetch; calls: Array<string | URL> } {
+  const calls: Array<string | URL> = [];
+  const fetchImpl = (async (url: string | URL, init?: RequestInit) => {
+    calls.push(url);
+    const body = JSON.parse(String(init?.body ?? "{}")) as {
+      source_language_code?: string;
+      target_language_code?: string;
+    };
+    assert.equal(String(url), SARVAM_TRANSLATE_URL);
+    assert.notEqual(String(url), SARVAM_CHAT_URL);
+    assert.ok(body.source_language_code);
+    assert.ok(body.target_language_code);
+    return new Response(JSON.stringify({ translated_text: translatedText }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof fetch;
+  return { fetchImpl, calls };
+}
+
+describe("whatsapp translation cost", () => {
+  it("answers Telugu, English, Hindi, and romanized questions in the current message language", () => {
+    const telugu = understandLocally("హైదరాబాద్ లో ఎలక్ట్రీషియన్ జాబ్స్ ఉన్నాయా?");
+    assert.equal(telugu.language, "te");
+    const teluguReply = buildDeterministicReply("te", hyderabadFacts) ?? "";
+    assert.match(teluguReply, /Carpenter|కార్పెంటర్/);
+    assert.match(teluguReply, /Electrician|ఎలక్ట్రీషియన్/);
+    assert.equal(detectGeneratedLanguage(teluguReply, "te"), "te");
+    assert.equal(shouldTranslate("te", "te"), false);
+
+    const english = understandLocally("How many jobs are available in Hyderabad?");
+    assert.equal(english.language, "en");
+    const englishReply = buildDeterministicReply("en", hyderabadFacts) ?? "";
+    assert.match(englishReply, /I found 2/);
+    assert.equal(detectGeneratedLanguage(englishReply, "en"), "en");
+    assert.equal(shouldTranslate("en", "en"), false);
+
+    const hindi = understandLocally("Hyderabad mein driver jobs hain kya?");
+    assert.equal(hindi.language, "hi");
+    assert.equal(hindi.category, "Driver");
+    const hindiReply = buildDeterministicReply("hi", { ...hyderabadFacts, role: "Driver" }) ?? "";
+    assert.match(hindiReply, /नौकर/);
+    assert.equal(detectGeneratedLanguage(hindiReply, "hi"), "hi");
+
+    const romanTelugu = understandLocally("Hyderabad lo electrician jobs unnaya?");
+    assert.equal(romanTelugu.language, "te");
+    assert.equal(romanTelugu.intent, "JOB_SEARCH");
+    assert.equal(romanTelugu.category, "Electrician");
+
+    const romanHindi = understandLocally("Hyderabad mein driver jobs hain kya?");
+    assert.equal(romanHindi.language, "hi");
+  });
+
+  it("skips Translation API when source and target languages match", async () => {
+    const { fetchImpl, calls } = mockTranslateFetch("should-not-run");
+    const result = await translateText({
+      text: "Welcome back to AsliJobs",
+      sourceLanguage: "en",
+      targetLanguage: "en",
+      fetchImpl,
+    });
+    assert.equal(result.skipped, true);
+    assert.equal(result.translated, false);
+    assert.equal(result.text, "Welcome back to AsliJobs");
+    assert.equal(calls.length, 0);
+  });
+
+  it("calls official Translation API once when languages differ and never Chat LLM", async () => {
+    const { fetchImpl, calls } = mockTranslateFetch("AsliJobsకి స్వాగతం");
+    const result = await translateText({
+      text: "Welcome back to AsliJobs",
+      sourceLanguage: "en",
+      targetLanguage: "te",
+      fetchImpl,
+    });
+    assert.equal(result.translated, true);
+    assert.equal(result.skipped, false);
+    assert.equal(calls.length, 1);
+    assert.equal(String(calls[0]), SARVAM_TRANSLATE_URL);
+    assert.equal(toSarvamLanguageCode("te"), "te-IN");
+    assert.equal(toSarvamLanguageCode("hi"), "hi-IN");
+    assert.equal(toSarvamLanguageCode("en"), "en-IN");
+  });
+
+  it("does not fall back to Chat LLM when Translation API fails", async () => {
+    const calls: string[] = [];
+    const fetchImpl = (async (url: string | URL) => {
+      calls.push(String(url));
+      return new Response("nope", { status: 500 });
+    }) as typeof fetch;
+    const result = await localizeDeterministicReply({
+      language: "te",
+      facts: { situation: "how_to_apply" },
+      fetchImpl,
+    });
+    assert.equal(result.failed, true);
+    assert.equal(result.chatLlmUsed, false);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0], SARVAM_TRANSLATE_URL);
+    assert.equal(calls.includes(SARVAM_CHAT_URL), false);
+  });
+
+  it("uses zero Chat LLM calls for Hi and Thanks", () => {
+    assert.equal(detectProtocolTurn("Hi"), "greeting");
+    assert.equal(detectProtocolTurn("Hello"), "greeting");
+    assert.equal(detectProtocolTurn("Thanks"), "thanks");
+    assert.equal(detectProtocolTurn("Bye"), "ack");
+    const hi = whatsappAiCallPlan({ protocol: true, voice: false, needsTranslation: false });
+    const thanks = whatsappAiCallPlan({ protocol: true, voice: false, needsTranslation: false });
+    assert.equal(hi.chatLlmCalls, 0);
+    assert.equal(hi.finalChatLlmCalls, 0);
+    assert.equal(hi.translateCalls, 0);
+    assert.equal(thanks.chatLlmCalls, 0);
+  });
+
+  it("keeps Hyderabad and Electrician database facts unchanged", () => {
+    const all = buildDeterministicReply("en", hyderabadFacts) ?? "";
+    assert.match(all, /Carpenter/);
+    assert.match(all, /Electrician/);
+    assert.match(all, /Harshad Shaik Construction/);
+    assert.match(all, /Chandu Organization/);
+    assert.match(all, /₹30,000/);
+    assert.match(all, /₹40,000/);
+
+    const electricianFacts = {
+      ...hyderabadFacts,
+      role: "Electrician",
+      total: 1,
+      jobs: [hyderabadFacts.jobs[1]],
+    };
+    const electrician = buildDeterministicReply("en", electricianFacts) ?? "";
+    assert.match(electrician, /Electrician/);
+    assert.doesNotMatch(electrician, /Carpenter/);
+    assert.equal(
+      selectVerifiedJobsForReply(
+        [
+          {
+            jobTitle: "Carpenter",
+            companyName: "Harshad Shaik Construction",
+            cityName: "Hyderabad",
+            stateName: "Telangana",
+            jobId: "AJ-CARP",
+            salaryLabel: "₹30,000",
+          },
+          {
+            jobTitle: "Electrician",
+            companyName: "Chandu Organization",
+            cityName: "Hyderabad",
+            stateName: "Telangana",
+            jobId: "AJ-ELEC",
+            salaryLabel: "₹40,000",
+          },
+        ],
+        "Electrician",
+        2,
+      ).jobs[0]?.jobTitle,
+      "Electrician",
+    );
+  });
+
+  it("renders employer applications and denies seeker-only access to employer data", () => {
+    const employer = buildDeterministicReply("en", {
+      situation: "EMPLOYER_APPLICATION_COUNT",
+      totalApplications: 4,
+      jobs: [{ jobTitle: "Carpenter", applications: 4 }],
+    });
+    assert.match(employer ?? "", /Applications on your jobs: 4/);
+    assert.match(employer ?? "", /Carpenter/);
+
+    const denied = buildDeterministicReply("en", {
+      situation: "denied",
+      reason: "employer_required",
+    });
+    assert.match(denied ?? "", /not linked to an employer account/i);
+  });
+
+  it("uses STT plus one understand call for voice, with no final Chat LLM", () => {
+    const voice = whatsappAiCallPlan({ protocol: false, voice: true, needsTranslation: false });
+    assert.equal(voice.sttCalls, 1);
+    assert.equal(voice.chatLlmCalls, 1);
+    assert.equal(voice.finalChatLlmCalls, 0);
+    assert.equal(voice.translateCalls, 0);
+    const roman = understandLocally("Hyderabad lo electrician jobs unnaya?");
+    assert.equal(roman.intent, "JOB_SEARCH");
+    assert.equal(roman.category, "Electrician");
+  });
+
+  it("does not translate twice and does not make a duplicate Chat LLM call", () => {
+    const jobQuery = whatsappAiCallPlan({ protocol: false, voice: false, needsTranslation: false });
+    assert.equal(jobQuery.chatLlmCalls, 1);
+    assert.equal(jobQuery.finalChatLlmCalls, 0);
+    assert.equal(jobQuery.translateCalls, 0);
+    const translated = whatsappAiCallPlan({ protocol: false, voice: false, needsTranslation: true });
+    assert.equal(translated.translateCalls, 1);
+    assert.equal(translated.chatLlmCalls, 1);
+  });
+
+  it("caches static translations and never caches personalized job rows", async () => {
+    clearTranslationCache();
+    const { fetchImpl, calls } = mockTranslateFetch("AsliJobsకి స్వాగతం");
+    const first = await translateText({
+      text: "Welcome back to AsliJobs",
+      sourceLanguage: "en",
+      targetLanguage: "te",
+      cache: true,
+      fetchImpl,
+    });
+    const second = await translateText({
+      text: "Welcome back to AsliJobs",
+      sourceLanguage: "en",
+      targetLanguage: "te",
+      cache: true,
+      fetchImpl,
+    });
+    assert.equal(first.translated, true);
+    assert.equal(second.translated, true);
+    assert.equal(calls.length, 1);
+    assert.equal(translationCacheSize(), 1);
+    assert.equal(isCacheableSituation("greeting", {}), true);
+    assert.equal(isCacheableSituation("jobs", hyderabadFacts), false);
+    assert.equal(isCacheableSituation("EMPLOYER_APPLICATION_COUNT", {}), false);
+    clearTranslationCache();
+  });
+
+  it("keeps company names, titles, salaries, and IDs out of translation", () => {
+    const nouns = properNounsFromFacts(hyderabadFacts);
+    assert.ok(nouns.includes("Harshad Shaik Construction"));
+    assert.ok(nouns.includes("Chandu Organization"));
+    assert.ok(nouns.includes("₹30,000"));
+    const draft = "2 jobs at Harshad Shaik Construction and Chandu Organization. Salary ₹30,000.";
+    const protectedText = protectProperNouns(draft, nouns);
+    assert.doesNotMatch(protectedText.text, /Harshad Shaik Construction/);
+    assert.doesNotMatch(protectedText.text, /Chandu Organization/);
+    const restored = restoreProperNouns("translated __AJ0__ and __AJ1__. Salary __AJ2__.", [
+      "Harshad Shaik Construction",
+      "Chandu Organization",
+      "₹30,000",
+    ]);
+    assert.match(restored, /Harshad Shaik Construction/);
+    assert.match(restored, /Chandu Organization/);
+    assert.match(restored, /₹30,000/);
+  });
+
+  it("proves production WhatsApp files no longer send translation or final replies through Chat LLM", () => {
+    const service = readFileSync(new URL("./whatsapp-bot.service.ts", import.meta.url), "utf8");
+    const chat = readFileSync(new URL("./sarvam.client.ts", import.meta.url), "utf8");
+    const translate = readFileSync(new URL("./sarvam-translate.client.ts", import.meta.url), "utf8");
+    assert.doesNotMatch(service, /generateFinalReply/);
+    assert.doesNotMatch(service, /REPLY_SYSTEM/);
+    assert.match(service, /localizeDeterministicReply/);
+    assert.match(service, /understandMessage/);
+    assert.doesNotMatch(chat, /generateFinalReply/);
+    assert.doesNotMatch(chat, /REPLY_SYSTEM/);
+    assert.doesNotMatch(chat, /api\.sarvam\.ai\/translate/);
+    assert.match(chat, /sarvam-105b/);
+    assert.match(chat, /v1\/chat\/completions/);
+    assert.match(translate, /https:\/\/api\.sarvam\.ai\/translate/);
+    assert.match(translate, /mayura:v1/);
+    assert.doesNotMatch(translate, /chat\/completions/);
+    assert.doesNotMatch(translate, /sarvam-105b/);
+    assert.equal(SARVAM_TRANSLATE_URL, "https://api.sarvam.ai/translate");
+    assert.equal(SARVAM_CHAT_URL, "https://api.sarvam.ai/v1/chat/completions");
   });
 });

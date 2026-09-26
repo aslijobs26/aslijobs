@@ -776,6 +776,204 @@ export function askLocationCopy(language: BotLanguage): string {
   return "Sure 👍 Which location are you looking for?";
 }
 
+export function howToApplyCopy(_language: BotLanguage): string {
+  return "To apply, log in to AsliJobs, open the job, and tap Apply.";
+}
+
+export function profileCopy(input: {
+  language: BotLanguage;
+  name: string;
+  role: string;
+  skills: string[];
+}): string {
+  const name = input.name.trim();
+  const role = input.role.trim() || "-";
+  const skills = input.skills.filter(Boolean).join(", ");
+  if (input.language === "te") {
+    return `${name ? `${name}: ` : ""}మీ role ${role}${skills ? `. Skills: ${skills}` : ""}.`;
+  }
+  if (input.language === "hi") {
+    return `${name ? `${name}: ` : ""}आपकी role ${role}${skills ? `. Skills: ${skills}` : ""}.`;
+  }
+  return `${name ? `${name}: ` : ""}Your role is ${role}${skills ? `. Skills: ${skills}` : ""}.`;
+}
+
+export function buildDeterministicReply(
+  language: BotLanguage,
+  facts: Record<string, unknown>,
+): string | null {
+  const situation = String(facts.situation ?? "");
+  if (situation === "greeting") {
+    return greetingCopy({
+      language,
+      account: (facts.accountType as AccountKind) || "none",
+      name: String(facts.name ?? ""),
+    });
+  }
+  if (situation === "help" || situation === "out_of_scope") {
+    return capabilityCopy(language, (facts.accountType as AccountKind) || "seeker");
+  }
+  if (situation === "how_to_apply") {
+    return howToApplyCopy(language);
+  }
+  if (situation === "choose_account") {
+    return greetingCopy({ language, account: "both", name: "" });
+  }
+  if (situation === "denied") {
+    return String(facts.reason ?? "") === "employer_required"
+      ? unauthorizedCopy(language, "employer")
+      : denyPrivateCopy(language);
+  }
+  if (situation === "new_user") {
+    const registration =
+      facts.registration && typeof facts.registration === "object"
+        ? (facts.registration as { seekerRegisterUrl?: string; employerRegisterUrl?: string })
+        : {};
+    const employerNeeded = String(facts.reason ?? "") === "employer_account_required";
+    return [
+      unauthorizedCopy(language, employerNeeded ? "employer" : "seeker"),
+      registrationCopy({
+        language,
+        role: employerNeeded ? "employer" : "seeker",
+        url: employerNeeded
+          ? registration.employerRegisterUrl || ""
+          : registration.seekerRegisterUrl || "",
+      }),
+    ]
+      .filter((line) => line.trim())
+      .join("\n");
+  }
+  if (situation === "clarify") {
+    const missing = String(facts.missing ?? "");
+    if (missing === "location") return askLocationCopy(language);
+    if (missing === "which_account_data") return clarifyAmbiguousCopy(language);
+    return clarifyJobTitle(language);
+  }
+  if (situation === "profile") {
+    return profileCopy({
+      language,
+      name: String(facts.name ?? ""),
+      role: String(facts.role ?? ""),
+      skills: Array.isArray(facts.skills) ? facts.skills.map((item) => String(item)) : [],
+    });
+  }
+  if (situation === "jobs" || situation === "job_details") {
+    const jobs = Array.isArray(facts.jobs)
+      ? (facts.jobs as Array<Record<string, unknown>>)
+      : [];
+    return renderJobSearchReply({
+      language,
+      location: String(facts.location ?? ""),
+      jobTitle: String(facts.role ?? ""),
+      jobs: jobs.map((job) => ({
+        jobTitle: String(job.jobTitle ?? ""),
+        companyName: String(job.companyName ?? ""),
+        cityName: String(job.cityName ?? ""),
+        stateName: "",
+        jobId: "",
+        salaryLabel: String(job.salary ?? job.salaryLabel ?? ""),
+      })),
+      widenedTo: facts.widenedTo ? String(facts.widenedTo) : undefined,
+      total: typeof facts.total === "number" ? facts.total : undefined,
+    });
+  }
+  if (situation === "count" || situation === "status" || situation === "list") {
+    const applications = Array.isArray(facts.applications)
+      ? (facts.applications as Array<{ jobTitle?: string; companyName?: string; status?: string }>)
+      : [];
+    return renderApplicationReply({
+      language,
+      total: Number(facts.total ?? 0),
+      lines: applications.map(
+        (item, index) =>
+          `${index + 1}. ${item.jobTitle ?? ""} — ${item.companyName ?? ""} (${item.status ?? ""})`,
+      ),
+      mode: situation,
+    });
+  }
+  if (
+    situation === "EMPLOYER_JOBS" ||
+    situation === "EMPLOYER_JOB_STATUS" ||
+    situation === "EMPLOYER_APPLICATION_COUNT"
+  ) {
+    const jobs = Array.isArray(facts.jobs)
+      ? (facts.jobs as Array<{ jobTitle?: string; status?: string; applications?: number }>)
+      : [];
+    return renderEmployerReply({
+      language,
+      totalApplications: Number(facts.totalApplications ?? 0),
+      lines: jobs.map((job, index) =>
+        situation === "EMPLOYER_APPLICATION_COUNT"
+          ? `${index + 1}. ${job.jobTitle ?? ""} — ${job.applications ?? 0}`
+          : `${index + 1}. ${job.jobTitle ?? ""} (${job.status ?? ""})`,
+      ),
+      mode:
+        situation === "EMPLOYER_APPLICATION_COUNT"
+          ? "count"
+          : situation === "EMPLOYER_JOB_STATUS"
+            ? "status"
+            : "jobs",
+    });
+  }
+  if (situation === "applied_coverage") {
+    return renderCoverageReply({
+      language,
+      applied: Number(facts.applied ?? 0),
+      compared: Number(facts.compared ?? 0),
+      matched: Number(facts.matched ?? 0),
+      totalListed: Number(facts.totalListed ?? 0),
+      bounded: Boolean(facts.bounded),
+    });
+  }
+  return null;
+}
+
+export function properNounsFromFacts(facts: Record<string, unknown>): string[] {
+  const terms: string[] = [];
+  const add = (value: unknown) => {
+    if (typeof value === "string" && value.trim().length > 1) {
+      terms.push(value.trim());
+    }
+  };
+  add(facts.location);
+  add(facts.role);
+  add(facts.name);
+  add(facts.widenedTo);
+  if (Array.isArray(facts.jobs)) {
+    for (const job of facts.jobs) {
+      if (!job || typeof job !== "object") continue;
+      const row = job as Record<string, unknown>;
+      add(row.jobTitle);
+      add(row.companyName);
+      add(row.cityName);
+      add(row.salary);
+      add(row.salaryLabel);
+    }
+  }
+  if (Array.isArray(facts.applications)) {
+    for (const item of facts.applications) {
+      if (!item || typeof item !== "object") continue;
+      const row = item as Record<string, unknown>;
+      add(row.jobTitle);
+      add(row.companyName);
+    }
+  }
+  return terms;
+}
+
+export function isCacheableSituation(situation: string, facts: Record<string, unknown>): boolean {
+  if (situation === "greeting") return !String(facts.name ?? "").trim();
+  return (
+    situation === "help" ||
+    situation === "out_of_scope" ||
+    situation === "how_to_apply" ||
+    situation === "choose_account" ||
+    situation === "clarify" ||
+    situation === "denied" ||
+    situation === "new_user"
+  );
+}
+
 export type AccountKind = "seeker" | "employer" | "both" | "none";
 
 export function chooseAccountRole(text: string): "seeker" | "employer" | null {

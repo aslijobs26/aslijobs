@@ -10,29 +10,23 @@ import {
 } from "../jobs/job.validation.js";
 import { WhatsAppSessionModel } from "./whatsapp-session.model.js";
 import { WhatsAppService } from "./whatsapp.service.js";
-import { generateFinalReply, understandMessage } from "./sarvam.client.js";
+import { understandMessage } from "./sarvam.client.js";
+import { localizeDeterministicReply, whatsappAiCallPlan } from "./sarvam-translate.client.js";
 import {
   detectLanguage,
   detectProtocolTurn,
   formatSalaryLabel,
-  greetingCopy,
   languageFromHint,
   isFollowUpFragment,
-  looksLikeStalePublicJobReply,
   nationalPhone,
   parentCity,
   PUBLIC_JOB_FETCH_LIMIT,
   resolveTurnUnderstanding,
   selectVerifiedJobsForReply,
   protocolReply,
-  renderApplicationReply,
-  renderCoverageReply,
-  renderEmployerReply,
-  renderJobSearchReply,
   serviceErrorCopy,
   toPublicJobsLookup,
   type AccountKind,
-  type BotLanguage,
   type BotUnderstanding,
   type PublicJobFact,
 } from "./whatsapp-bot.logic.js";
@@ -62,10 +56,6 @@ function phoneHash(phone: string): string {
 
 function maskPhone(phone: string): string {
   return phone.length <= 4 ? "****" : `****${phone.slice(-4)}`;
-}
-
-function clip(text: string): string {
-  return text.replace(/\s+/g, " ").slice(0, 180);
 }
 
 function accountLabel(kind: AccountKind): string {
@@ -112,89 +102,6 @@ async function lookupAccount(phone: string): Promise<LinkedAccount> {
   };
   accountCache.set(phone, { value, expires: Date.now() + ACCOUNT_CACHE_MS });
   return value;
-}
-
-function fallbackFromFacts(
-  language: BotLanguage,
-  facts: Record<string, unknown>,
-): string | null {
-  const situation = String(facts.situation ?? "");
-  if (situation === "greeting") {
-    return greetingCopy({
-      language,
-      account: (facts.accountType as AccountKind) || "none",
-      name: String(facts.name ?? ""),
-    });
-  }
-  if (situation === "jobs") {
-    const jobs = Array.isArray(facts.jobs)
-      ? (facts.jobs as Array<Record<string, unknown>>)
-      : [];
-    return renderJobSearchReply({
-      language,
-      location: String(facts.location ?? ""),
-      jobTitle: String(facts.role ?? ""),
-      jobs: jobs.map((job) => ({
-        jobTitle: String(job.jobTitle ?? ""),
-        companyName: String(job.companyName ?? ""),
-        cityName: String(job.cityName ?? ""),
-        stateName: "",
-        jobId: "",
-        salaryLabel: String(job.salary ?? job.salaryLabel ?? ""),
-      })),
-      widenedTo: facts.widenedTo ? String(facts.widenedTo) : undefined,
-      total: typeof facts.total === "number" ? facts.total : undefined,
-    });
-  }
-  if (situation === "count" || situation === "status" || situation === "list") {
-    const applications = Array.isArray(facts.applications)
-      ? (facts.applications as Array<{ jobTitle?: string; companyName?: string; status?: string }>)
-      : [];
-    return renderApplicationReply({
-      language,
-      total: Number(facts.total ?? 0),
-      lines: applications.map(
-        (item, index) =>
-          `${index + 1}. ${item.jobTitle ?? ""} — ${item.companyName ?? ""} (${item.status ?? ""})`,
-      ),
-      mode: situation,
-    });
-  }
-  if (
-    situation === "EMPLOYER_JOBS" ||
-    situation === "EMPLOYER_JOB_STATUS" ||
-    situation === "EMPLOYER_APPLICATION_COUNT"
-  ) {
-    const jobs = Array.isArray(facts.jobs)
-      ? (facts.jobs as Array<{ jobTitle?: string; status?: string; applications?: number }>)
-      : [];
-    return renderEmployerReply({
-      language,
-      totalApplications: Number(facts.totalApplications ?? 0),
-      lines: jobs.map((job, index) =>
-        situation === "EMPLOYER_APPLICATION_COUNT"
-          ? `${index + 1}. ${job.jobTitle ?? ""} — ${job.applications ?? 0}`
-          : `${index + 1}. ${job.jobTitle ?? ""} (${job.status ?? ""})`,
-      ),
-      mode:
-        situation === "EMPLOYER_APPLICATION_COUNT"
-          ? "count"
-          : situation === "EMPLOYER_JOB_STATUS"
-            ? "status"
-            : "jobs",
-    });
-  }
-  if (situation === "applied_coverage") {
-    return renderCoverageReply({
-      language,
-      applied: Number(facts.applied ?? 0),
-      compared: Number(facts.compared ?? 0),
-      matched: Number(facts.matched ?? 0),
-      totalListed: Number(facts.totalListed ?? 0),
-      bounded: Boolean(facts.bounded),
-    });
-  }
-  return null;
 }
 
 function registrationFacts(): { seekerRegisterUrl: string; employerRegisterUrl: string } {
@@ -250,7 +157,6 @@ export async function handleConversationalMessage(input: {
     session_lookup: 0,
     sarvam_understand: 0,
     db_query: 0,
-    sarvam_final: 0,
     whatsapp_send: 0,
   };
   try {
@@ -279,8 +185,15 @@ export async function handleConversationalMessage(input: {
       const sendStarted = Date.now();
       await whatsAppService.sendTextMessage(input.from, text);
       timing.whatsapp_send = Date.now() - sendStarted;
+      const plan = whatsappAiCallPlan({ protocol: true, voice: input.messageType === "audio", needsTranslation: false });
       console.info(
-        `[WA-PERF] protocol=${protocol} account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms sarvam_understand=0ms db_query=0ms sarvam_final=0ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
+        `[WA-TRACE] messageId=${input.messageId ?? "-"} phone=${maskPhone(phone)} accountType=${accountLabel(identity.linked)} protocol=${protocol} understand=skip db=skip translation=skip chatLlmCalls=${plan.chatLlmCalls} translateCalls=${plan.translateCalls} finalChatLlmCalls=${plan.finalChatLlmCalls} totalMs=${Date.now() - started}`,
+      );
+      console.info(
+        `[WA-AI-COST] stage=PROTOCOL provider=none model=none inputTokens=0 outputTokens=0 totalTokens=0 durationMs=${Date.now() - started}`,
+      );
+      console.info(
+        `[WA-PERF] protocol=${protocol} account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms sarvam_understand=0ms db_query=0ms translate=0ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
       );
       return;
     }
@@ -359,51 +272,41 @@ export async function handleConversationalMessage(input: {
       },
       { upsert: true },
     );
-    const finalStarted = Date.now();
-    const generated =
-      understood.source === "sarvam"
-        ? await generateFinalReply({
-            originalText: input.text,
-            language: merged.language,
-            accountType: accountLabel(identity.linked),
-            facts: { ...turn.facts, intent: merged.intent },
-          })
-        : null;
-    timing.sarvam_final = Date.now() - finalStarted;
-    const stale =
-      generated &&
-      looksLikeStalePublicJobReply(
-        generated,
-        String(turn.facts.situation ?? ""),
-        remembered.map((job) => job.jobTitle),
-      );
-    const replyText =
-      generated && !stale
-        ? generated
-        : fallbackFromFacts(merged.language, turn.facts) ?? serviceErrorCopy(merged.language);
+    const localizeStarted = Date.now();
+    const localized = await localizeDeterministicReply({
+      language: merged.language,
+      facts: { ...turn.facts, intent: merged.intent },
+    });
+    const translateMs = Date.now() - localizeStarted;
+    const replyText = localized.text;
+    const plan = whatsappAiCallPlan({
+      protocol: false,
+      voice: input.messageType === "audio",
+      needsTranslation: !localized.skipped,
+    });
     const trace = describeTurn(merged, turn);
     console.info(
       [
         "[WA-TRACE]",
         `messageId=${input.messageId ?? "-"}`,
         `phone=${maskPhone(phone)}`,
-        `text=${clip(input.text)}`,
         `accountType=${accountLabel(identity.linked)}`,
-        `prevLocation=${session?.lastLocation || "-"}`,
-        `prevRole=${session?.lastCategory || "-"}`,
-        `sarvamIntent=${understood.understanding.intent}`,
         `intent=${merged.intent}`,
         `language=${merged.language}`,
+        `generatedLanguage=${localized.generatedLanguage}`,
         `role=${merged.category || "ANY"}`,
         `location=${merged.location || "-"}`,
         `source=${understood.source}`,
+        `understand=chat-llm`,
+        `db=${trace.service}`,
+        `response=deterministic`,
+        `translation=${localized.skipped ? "skip" : localized.failed ? "failed" : localized.translated ? "once" : "none"}`,
+        `chatLlmCalls=${plan.chatLlmCalls}`,
+        `finalChatLlmCalls=${plan.finalChatLlmCalls}`,
+        `translateCalls=${plan.translateCalls}`,
         `service=${trace.service}`,
-        `filters=${trace.filters}`,
         `dbResults=${trace.resultCount}`,
         `facts=${String(turn.facts.situation ?? "-")}`,
-        `jobsForAI=${Array.isArray(turn.facts.jobs) ? turn.facts.jobs.length : 0}`,
-        `staleReply=${stale ? "yes" : "no"}`,
-        `final=${generated && !stale ? "sarvam" : "fallback"}`,
         `totalMs=${Date.now() - started}`,
       ].join(" "),
     );
@@ -418,7 +321,7 @@ export async function handleConversationalMessage(input: {
         `employerId=${identity.employerId || "-"}`,
         "[SARVAM UNDERSTANDING]",
         `source=${understood.source}`,
-        `rawMessage=${clip(input.text)}`,
+        `textChars=${input.text.trim().length}`,
         `intent=${merged.intent}`,
         `language=${merged.language}`,
         `location=${merged.location || "-"}`,
@@ -431,16 +334,18 @@ export async function handleConversationalMessage(input: {
         `service=${trace.service}`,
         `filters=${trace.filters}`,
         `resultCount=${trace.resultCount}`,
-        "[SARVAM FINAL]",
+        "[REPLY]",
         `language=${merged.language}`,
-        `responseGenerated=${generated && !stale ? "yes" : "no"}`,
+        `deterministic=yes`,
+        `chatLlmFinal=no`,
+        `translated=${localized.translated ? "yes" : "no"}`,
       ].join(" "),
     );
     const sendStarted = Date.now();
     await whatsAppService.sendTextMessage(input.from, replyText);
     timing.whatsapp_send = Date.now() - sendStarted;
     console.info(
-      `[WA-PERF] account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms sarvam_understand=${timing.sarvam_understand}ms db_query=${timing.db_query}ms sarvam_final=${timing.sarvam_final}ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
+      `[WA-PERF] account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms sarvam_understand=${timing.sarvam_understand}ms db_query=${timing.db_query}ms translate=${translateMs}ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
     );
   } catch (error) {
     console.error(

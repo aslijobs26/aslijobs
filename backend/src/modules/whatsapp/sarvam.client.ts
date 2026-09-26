@@ -8,16 +8,12 @@ import {
 } from "./whatsapp-bot.logic.js";
 
 const SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text";
-const SARVAM_CHAT_URL = "https://api.sarvam.ai/v1/chat/completions";
-const SARVAM_CHAT_MODEL = "sarvam-105b";
+export const SARVAM_CHAT_URL = "https://api.sarvam.ai/v1/chat/completions";
+export const SARVAM_CHAT_MODEL = "sarvam-105b";
 const UNDERSTAND_TIMEOUT_MS = 20_000;
-const REPLY_TIMEOUT_MS = 20_000;
 
 export const UNDERSTAND_SYSTEM =
   "AsliJobs classifier. JSON only. Fields: intent,language,location,category,openSearch,confidence. intent=GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_SKILLS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|UNRELATED|UNKNOWN. language=en|hi|te|ta|kn|ml from THIS message only. Posted/my jobs + applications = EMPLOYER_APPLICATION_COUNT. Public job hunt = JOB_SEARCH. Ignore prev unless THIS message is only a role or place follow-up. Do not answer, authorize, or invent jobs.";
-
-export const REPLY_SYSTEM =
-  "Reply in lang to THIS q only. Use only v. Answer v.s. If v.s is employer/apps, do not mention public jobs. Mention every job in v.jobs. If v.total exceeds v.jobs, say more exist. Do not invent or reuse old jobs.";
 
 type SarvamUsage = {
   prompt_tokens?: number;
@@ -30,7 +26,7 @@ type ChatChoice = {
 };
 
 function logSarvam(input: {
-  stage: "UNDERSTAND" | "FINAL" | "STT";
+  stage: "UNDERSTAND" | "STT";
   model: string;
   latencyMs: number;
   ok: boolean;
@@ -48,6 +44,10 @@ function logSarvam(input: {
     `[Sarvam] stage=${input.stage} model=${input.model} ok=${input.ok ? "yes" : "no"} latencyMs=${input.latencyMs} inChars=${input.inChars} outChars=${input.outChars}${tokens}${
       input.extra ? ` ${input.extra}` : ""
     }`,
+  );
+  const provider = input.stage === "STT" ? "sarvam-stt" : "sarvam";
+  console.info(
+    `[WA-AI-COST] stage=${input.stage} provider=${provider} model=${input.model} inputTokens=${input.usage?.prompt_tokens ?? "-"} outputTokens=${input.usage?.completion_tokens ?? "-"} totalTokens=${input.usage?.total_tokens ?? "-"} durationMs=${input.latencyMs}`,
   );
 }
 
@@ -332,90 +332,4 @@ export function compactFacts(facts: Record<string, unknown>): Record<string, unk
         }
       : {}),
   };
-}
-
-export async function generateFinalReply(input: {
-  originalText: string;
-  language: BotLanguage;
-  accountType: string;
-  facts: Record<string, unknown>;
-  priorLocation?: string;
-  priorRole?: string;
-}): Promise<string | null> {
-  if (!env.SARVAM_API_KEY.trim()) {
-    console.error("[Sarvam] SARVAM_UNAVAILABLE stage=reply reason=missing_key");
-    return null;
-  }
-  const userContent = JSON.stringify({
-    q: input.originalText.slice(0, 280),
-    lang: input.language,
-    acct: input.accountType,
-    v: compactFacts(input.facts),
-  });
-  const inChars = REPLY_SYSTEM.length + userContent.length;
-  const started = Date.now();
-  try {
-    const response = await fetch(SARVAM_CHAT_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.SARVAM_API_KEY}`,
-        "api-subscription-key": env.SARVAM_API_KEY,
-        "Content-Type": "application/json",
-      },
-      signal: AbortSignal.timeout(REPLY_TIMEOUT_MS),
-      body: JSON.stringify({
-        model: SARVAM_CHAT_MODEL,
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: REPLY_SYSTEM },
-          { role: "user", content: userContent },
-        ],
-      }),
-    });
-    if (!response.ok) {
-      console.error(`[Sarvam] SARVAM_INVALID_RESPONSE stage=reply status=${response.status}`);
-      logSarvam({
-        stage: "FINAL",
-        model: SARVAM_CHAT_MODEL,
-        latencyMs: Date.now() - started,
-        ok: false,
-        inChars,
-        outChars: 0,
-        extra: `status=${response.status}`,
-      });
-      return null;
-    }
-    const body = (await response.json()) as {
-      choices?: ChatChoice[];
-      usage?: SarvamUsage;
-    };
-    const text = (body.choices?.[0]?.message?.content || "").trim();
-    logSarvam({
-      stage: "FINAL",
-      model: SARVAM_CHAT_MODEL,
-      latencyMs: Date.now() - started,
-      ok: Boolean(text),
-      inChars,
-      outChars: text.length,
-      usage: body.usage,
-    });
-    return text || null;
-  } catch (error) {
-    const timedOut = error instanceof Error && error.name === "TimeoutError";
-    console.error(
-      `[Sarvam] ${timedOut ? "SARVAM_TIMEOUT" : "SARVAM_INVALID_RESPONSE"} stage=reply reason=${
-        error instanceof Error ? error.name : "unknown"
-      }`,
-    );
-    logSarvam({
-      stage: "FINAL",
-      model: SARVAM_CHAT_MODEL,
-      latencyMs: Date.now() - started,
-      ok: false,
-      inChars,
-      outChars: 0,
-      extra: timedOut ? "timeout" : "error",
-    });
-    return null;
-  }
 }
