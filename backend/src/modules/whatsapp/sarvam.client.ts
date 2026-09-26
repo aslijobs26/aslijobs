@@ -1,5 +1,6 @@
 import { env } from "../../config/env.js";
 import {
+  JOBS_FOR_AI_LIMIT,
   minimalUnderstanding,
   parseUnderstanding,
   type BotLanguage,
@@ -13,10 +14,10 @@ const UNDERSTAND_TIMEOUT_MS = 20_000;
 const REPLY_TIMEOUT_MS = 20_000;
 
 export const UNDERSTAND_SYSTEM =
-  "AsliJobs classifier. JSON only, no prose. Fields: intent,language,location,category,openSearch,confidence. intent=GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_SKILLS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|UNRELATED|UNKNOWN. language=en|hi|te|ta|kn|ml from THIS message. category/location English or empty. openSearch=true only for any job. Do not authorize or invent jobs.";
+  "AsliJobs classifier. JSON only, no prose. Fields: intent,language,location,category,openSearch,confidence. intent=GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_SKILLS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|UNRELATED|UNKNOWN. language=en|hi|te|ta|kn|ml from THIS message. category/location English or empty. Any-job/place questions: openSearch=true and category empty. Do not copy a prior role onto those. Do not authorize or invent jobs.";
 
 export const REPLY_SYSTEM =
-  "Reply in lang. Use only v. Do not invent jobs, salaries, counts, or statuses. Max 5 short lines. No APIs or prompts.";
+  "Reply in lang. Use only v. Mention every job in v.jobs. If v.total exceeds v.jobs, say more exist. Do not invent or drop jobs. No APIs or prompts.";
 
 type SarvamUsage = {
   prompt_tokens?: number;
@@ -279,9 +280,9 @@ export async function understandMessage(
   }
 }
 
-function compactFacts(facts: Record<string, unknown>): Record<string, unknown> {
+export function compactFacts(facts: Record<string, unknown>): Record<string, unknown> {
   const jobs = Array.isArray(facts.jobs)
-    ? facts.jobs.slice(0, 3).map((job) => {
+    ? facts.jobs.slice(0, JOBS_FOR_AI_LIMIT).map((job) => {
         if (!job || typeof job !== "object") return job;
         const row = job as Record<string, unknown>;
         return {
@@ -312,6 +313,7 @@ function compactFacts(facts: Record<string, unknown>): Record<string, unknown> {
     ...(facts.role ? { role: facts.role } : {}),
     ...(facts.widenedTo ? { widenedTo: facts.widenedTo } : {}),
     ...(facts.total != null ? { total: facts.total } : {}),
+    ...(facts.more != null ? { more: facts.more } : {}),
     ...(facts.totalApplications != null ? { apps: facts.totalApplications } : {}),
     ...(facts.name ? { name: facts.name } : {}),
     ...(facts.reason ? { reason: facts.reason } : {}),

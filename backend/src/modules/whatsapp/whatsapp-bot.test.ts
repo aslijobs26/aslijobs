@@ -2,23 +2,28 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { describe, it } from "node:test";
 import {
+  applyCurrentMessageSearchRules,
   chooseAccountRole,
   clarifyJobTitle,
   detectProtocolTurn,
   greetingCopy,
+  JOBS_FOR_AI_LIMIT,
+  PUBLIC_JOB_FETCH_LIMIT,
   registrationCopy,
   mergePending,
   nationalPhone,
   parseUnderstanding,
   protocolReply,
   renderJobSearchReply,
+  selectVerifiedJobsForReply,
   toPublicJobsLookup,
   matchesRequestedRole,
   understandLocally,
   voiceUnclearCopy,
 } from "./whatsapp-bot.logic.js";
-import { UNDERSTAND_SYSTEM, REPLY_SYSTEM } from "./sarvam.client.js";
+import { compactFacts, UNDERSTAND_SYSTEM, REPLY_SYSTEM } from "./sarvam.client.js";
 import { verifyWhatsAppSignature } from "./whatsapp-signature.js";
+import { publicJobsQuerySchema } from "../jobs/job.validation.js";
 
 describe("whatsapp bot", () => {
   it("normalizes cloud recipient numbers to 10 digits", () => {
@@ -325,10 +330,197 @@ describe("whatsapp bot", () => {
   });
 
   it("keeps compact Sarvam prompts and does not send long language essays", () => {
-    assert.ok(UNDERSTAND_SYSTEM.length < 520);
-    assert.ok(REPLY_SYSTEM.length < 180);
+    assert.ok(UNDERSTAND_SYSTEM.length < 620);
+    assert.ok(REPLY_SYSTEM.length < 220);
     assert.doesNotMatch(UNDERSTAND_SYSTEM, /supported languages include/i);
     assert.doesNotMatch(REPLY_SYSTEM, /Preserve company names, job titles, salaries/);
+    assert.doesNotMatch(REPLY_SYSTEM, /most relevant|up to 3|max 5 short/i);
+    assert.match(REPLY_SYSTEM, /every job/i);
+  });
+
+  it("returns every Hyderabad job on a broad search and does not inherit a previous role", () => {
+    const hyderabadJobs = [
+      {
+        jobTitle: "Carpenter",
+        companyName: "Harshad Shaik Construction",
+        cityName: "Hyderabad",
+        stateName: "Telangana",
+        jobId: "AJ-CARP",
+        salaryLabel: "₹30,000",
+      },
+      {
+        jobTitle: "Electrician",
+        companyName: "Chandu Organization",
+        cityName: "Hyderabad",
+        stateName: "Telangana",
+        jobId: "AJ-ELEC",
+        salaryLabel: "₹40,000",
+      },
+    ];
+
+    const english = applyCurrentMessageSearchRules(
+      "Are there any jobs available in Hyderabad?",
+      understandLocally("Are there any jobs available in Hyderabad?"),
+    );
+    assert.equal(english.intent, "JOB_SEARCH");
+    assert.equal(english.language, "en");
+    assert.equal(english.location, "Hyderabad");
+    assert.equal(english.category, "");
+    assert.equal(english.openSearch, true);
+    assert.deepEqual(toPublicJobsLookup(english), { search: "", city: "Hyderabad" });
+
+    const englishSelected = selectVerifiedJobsForReply(hyderabadJobs, "", 2);
+    assert.equal(englishSelected.total, 2);
+    assert.equal(englishSelected.jobs.length, 2);
+    assert.deepEqual(
+      englishSelected.jobs.map((job) => job.jobTitle),
+      ["Carpenter", "Electrician"],
+    );
+    const englishReply = renderJobSearchReply({
+      language: "en",
+      location: "Hyderabad",
+      jobTitle: "",
+      jobs: englishSelected.jobs,
+      total: englishSelected.total,
+    });
+    assert.match(englishReply, /Carpenter/);
+    assert.match(englishReply, /Electrician/);
+    assert.match(englishReply, /Harshad Shaik Construction/);
+    assert.match(englishReply, /Chandu Organization/);
+
+    const teluguText = "Hyderabad lo jobs unnaya?";
+    const telugu = applyCurrentMessageSearchRules(teluguText, understandLocally(teluguText));
+    assert.equal(telugu.language, "te");
+    assert.equal(telugu.location, "Hyderabad");
+    assert.equal(telugu.category, "");
+    assert.equal(telugu.openSearch, true);
+    const teluguSelected = selectVerifiedJobsForReply(hyderabadJobs, "", 2);
+    assert.equal(teluguSelected.total, 2);
+    const teluguReply = renderJobSearchReply({
+      language: "te",
+      location: "Hyderabad",
+      jobTitle: "",
+      jobs: teluguSelected.jobs,
+      total: teluguSelected.total,
+    });
+    assert.match(teluguReply, /Carpenter|కార్పెంటర్/);
+    assert.match(teluguReply, /Electrician|ఎలక్ట్రీషియన్/);
+
+    const electrician = applyCurrentMessageSearchRules(
+      "Electrician jobs in Hyderabad",
+      understandLocally("Electrician jobs in Hyderabad"),
+    );
+    assert.equal(electrician.category, "Electrician");
+    assert.equal(electrician.openSearch, false);
+    assert.deepEqual(toPublicJobsLookup(electrician), {
+      search: "Electrician",
+      city: "Hyderabad",
+    });
+    const electricianOnly = selectVerifiedJobsForReply(hyderabadJobs, "Electrician", 2);
+    assert.equal(electricianOnly.total, 1);
+    assert.equal(electricianOnly.jobs[0]?.jobTitle, "Electrician");
+    assert.equal(
+      electricianOnly.jobs.some((job) => job.jobTitle === "Carpenter"),
+      false,
+    );
+
+    const sarvamLeak = applyCurrentMessageSearchRules(
+      "Are there any jobs available in Hyderabad?",
+      parseUnderstanding(
+        JSON.stringify({
+          intent: "JOB_SEARCH",
+          language: "en",
+          location: "Hyderabad",
+          category: "Carpenter",
+          openSearch: false,
+          confidence: 0.9,
+        }),
+        "Are there any jobs available in Hyderabad?",
+      ),
+    );
+    assert.equal(sarvamLeak.category, "");
+    assert.equal(sarvamLeak.openSearch, true);
+
+    const afterDriver = applyCurrentMessageSearchRules(
+      "Are there any jobs in Hyderabad?",
+      mergePending(
+        { location: "", category: "Driver" },
+        understandLocally("Are there any jobs in Hyderabad?"),
+      ),
+    );
+    assert.equal(afterDriver.category, "");
+    assert.equal(afterDriver.openSearch, true);
+    assert.equal(afterDriver.location, "Hyderabad");
+    assert.deepEqual(toPublicJobsLookup(afterDriver), { search: "", city: "Hyderabad" });
+
+    const followUp = applyCurrentMessageSearchRules(
+      "Electrician jobs",
+      mergePending(
+        { location: "Hyderabad", category: "" },
+        understandLocally("Electrician jobs"),
+      ),
+    );
+    assert.equal(followUp.category, "Electrician");
+    assert.equal(followUp.location, "Hyderabad");
+    assert.equal(followUp.openSearch, false);
+
+    const plumber = selectVerifiedJobsForReply(hyderabadJobs, "Plumber", 2);
+    assert.equal(plumber.total, 0);
+    assert.equal(plumber.jobs.length, 0);
+
+    const website = publicJobsQuerySchema.parse({
+      search: "",
+      city: "Hyderabad",
+      sort: "relevant",
+    });
+    const whatsapp = publicJobsQuerySchema.parse({
+      ...toPublicJobsLookup(english),
+      limit: PUBLIC_JOB_FETCH_LIMIT,
+      page: 1,
+      sort: "latest",
+    });
+    assert.equal(website.search, "");
+    assert.equal(whatsapp.search, "");
+    assert.deepEqual(website.city, whatsapp.city);
+    assert.equal(PUBLIC_JOB_FETCH_LIMIT, 20);
+    assert.equal(JOBS_FOR_AI_LIMIT, 8);
+
+    const facts = compactFacts({
+      situation: "jobs",
+      location: "Hyderabad",
+      role: "",
+      total: 2,
+      more: false,
+      jobs: englishSelected.jobs.map((job) => ({
+        jobTitle: job.jobTitle,
+        companyName: job.companyName,
+        cityName: job.cityName,
+        salary: job.salaryLabel,
+      })),
+    });
+    const aiJobs = facts.jobs as Array<{ title?: string }>;
+    assert.equal(facts.total, 2);
+    assert.equal(aiJobs.length, 2);
+    assert.deepEqual(
+      aiJobs.map((job) => job.title),
+      ["Carpenter", "Electrician"],
+    );
+
+    const hundred = selectVerifiedJobsForReply(
+      Array.from({ length: 20 }, (_, index) => ({
+        jobTitle: `Role ${index + 1}`,
+        companyName: "Co",
+        cityName: "Hyderabad",
+        stateName: "Telangana",
+        jobId: `AJ-${index + 1}`,
+        salaryLabel: "₹10,000",
+      })),
+      "",
+      100,
+    );
+    assert.equal(hundred.total, 100);
+    assert.equal(hundred.jobs.length, JOBS_FOR_AI_LIMIT);
+    assert.equal(hundred.hasMore, true);
   });
 
   it("accepts a valid Meta signature and rejects a bad one", () => {

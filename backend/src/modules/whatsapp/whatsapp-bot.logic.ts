@@ -426,7 +426,8 @@ export function parseUnderstanding(
     );
     const location = normalizePlace(cleanSlot(parsed.data.location));
     const intent = parsed.data.isOutOfScope ? "UNRELATED" : parsed.data.intent;
-    const openSearch = category ? false : (parsed.data.openSearch ?? intent === "JOB_SEARCH");
+    const openSearch =
+      !category && (intent === "JOB_SEARCH" || intent === "JOB_COUNT" || Boolean(parsed.data.openSearch));
     const scope = scopeForIntent(intent);
     const rawConfidence = parsed.data.confidence ?? 0.8;
     const confidence = Math.min(1, Math.max(0, rawConfidence > 1 ? rawConfidence / 100 : rawConfidence));
@@ -463,6 +464,11 @@ function resolveLanguage(
   return detectLanguage(text, previous, hint);
 }
 
+/** Website page size is 20; WhatsApp fetches one public page then compacts for Sarvam. */
+export const PUBLIC_JOB_FETCH_LIMIT = 20;
+/** Compact verified jobs sent to Sarvam. Never used as the database match total. */
+export const JOBS_FOR_AI_LIMIT = 8;
+
 export function mergePending(
   previous: { location: string; category: string } | null,
   next: BotUnderstanding,
@@ -479,6 +485,64 @@ export function mergePending(
     intent: continued ? "JOB_SEARCH" : next.intent,
     openSearch: next.openSearch && !category,
     scope: continued ? "PUBLIC_JOBS" : next.scope,
+  };
+}
+
+/**
+ * Current-message rules beat Sarvam slots and session memory.
+ * Broad "any jobs in Hyderabad" must not keep a previous role.
+ * An explicit role in this message is a hard filter.
+ */
+export function applyCurrentMessageSearchRules(
+  text: string,
+  understanding: BotUnderstanding,
+): BotUnderstanding {
+  if (understanding.intent !== "JOB_SEARCH" && understanding.intent !== "JOB_COUNT") {
+    return understanding;
+  }
+
+  const roleInMessage = extractRole(text);
+  const locationInMessage = extractPlace(text);
+  const mentionsJob = includesAny(text, JOB_WORDS) || /\bjobs?\b/i.test(text);
+  const mentionsRequest = includesAny(text, REQUEST_WORDS);
+  const location = locationInMessage || understanding.location;
+
+  if (roleInMessage) {
+    return {
+      ...understanding,
+      location,
+      category: roleInMessage,
+      jobQuery: roleInMessage,
+      openSearch: false,
+    };
+  }
+
+  if ((mentionsJob || mentionsRequest) && location) {
+    return {
+      ...understanding,
+      location,
+      category: "",
+      jobQuery: "",
+      openSearch: true,
+    };
+  }
+
+  return understanding;
+}
+
+export function selectVerifiedJobsForReply<T extends { jobTitle: string }>(
+  jobs: T[],
+  role: string,
+  dbTotal: number,
+): { total: number; jobs: T[]; hasMore: boolean } {
+  const matched = jobs.filter((job) => matchesRequestedRole(job.jobTitle, role));
+  const dropped = jobs.length - matched.length;
+  const total = dropped > 0 ? Math.max(0, dbTotal - dropped) : dbTotal;
+  const shown = matched.slice(0, JOBS_FOR_AI_LIMIT);
+  return {
+    total,
+    jobs: shown,
+    hasMore: total > shown.length,
   };
 }
 
@@ -504,10 +568,11 @@ export function renderJobSearchReply(input: {
   jobTitle: string;
   jobs: PublicJobFact[];
   widenedTo?: string;
+  total?: number;
 }): string {
   const place = labelPlace(input.location, input.language);
   const role = labelRole(input.jobTitle, input.language);
-  const count = input.jobs.length;
+  const count = input.total ?? input.jobs.length;
 
   if (count === 0) {
     if (input.language === "te") {
@@ -525,7 +590,7 @@ export function renderJobSearchReply(input: {
     return `I could not find ${role || "jobs"}${place ? ` in ${place}` : ""}. Should I look in nearby Hyderabad areas?`;
   }
 
-  const lines = input.jobs.slice(0, 5).map((job, index) => {
+  const lines = input.jobs.slice(0, JOBS_FOR_AI_LIMIT).map((job, index) => {
     const where = labelPlace(job.cityName, input.language) || job.cityName || job.stateName;
     const salary = job.salaryLabel ? `\n💰 ${job.salaryLabel}` : "";
     const company = job.companyName ? ` — ${job.companyName}` : "";
@@ -543,7 +608,11 @@ export function renderJobSearchReply(input: {
     const lead = input.widenedTo
       ? `${place} में ${role} की नौकरी नहीं मिली। ${labelPlace(input.widenedTo, "hi")} में ये मिलीं:`
       : `${place ? `${place} में ` : ""}${count} ${role} की नौकरियां मिली हैं.`;
-    return `${lead}\n\n${lines.join("\n\n")}`;
+    const more =
+      count > input.jobs.length
+        ? `\n\nकुल ${count} नौकरियां हैं. पहली ${input.jobs.length} दिखा रहे हैं.`
+        : "";
+    return `${lead}\n\n${lines.join("\n\n")}${more}`;
   }
   if (input.language === "ta" || input.language === "kn" || input.language === "ml") {
     const lead = input.widenedTo
@@ -554,7 +623,11 @@ export function renderJobSearchReply(input: {
   const lead = input.widenedTo
     ? `No ${role || "jobs"} in ${place}. These are in ${input.widenedTo}:`
     : `I found ${count} active ${role || "job"} listing${count === 1 ? "" : "s"}${place ? ` in ${place}` : ""}.`;
-  return `${lead}\n\n${lines.join("\n\n")}`;
+  const more =
+    count > input.jobs.length
+      ? `\n\nThere are ${count} matching jobs. Showing the first ${input.jobs.length}.`
+      : "";
+  return `${lead}\n\n${lines.join("\n\n")}${more}`;
 }
 
 export function clarifyJobTitle(language: BotLanguage): string {
