@@ -17,11 +17,12 @@ import {
   formatSalaryLabel,
   greetingCopy,
   languageFromHint,
-  mergePending,
-  applyCurrentMessageSearchRules,
+  isFollowUpFragment,
+  looksLikeStalePublicJobReply,
   nationalPhone,
   parentCity,
   PUBLIC_JOB_FETCH_LIMIT,
+  resolveTurnUnderstanding,
   selectVerifiedJobsForReply,
   protocolReply,
   renderApplicationReply,
@@ -285,24 +286,22 @@ export async function handleConversationalMessage(input: {
     }
 
     const understandStarted = Date.now();
+    const followUp = isFollowUpFragment(input.text);
     const understood = await understandMessage(input.text, session?.language, hint, {
       accountType: accountLabel(identity.linked),
-      priorLocation: session?.pendingLocation || session?.lastLocation || "",
-      priorRole: session?.pendingCategory || session?.lastCategory || "",
+      priorLocation: followUp ? session?.pendingLocation || session?.lastLocation || "" : "",
+      priorRole: followUp ? session?.pendingCategory || session?.lastCategory || "" : "",
     });
     timing.sarvam_understand = Date.now() - understandStarted;
-    const understanding = understood.understanding;
-    const merged = applyCurrentMessageSearchRules(
+    const merged = resolveTurnUnderstanding(
       input.text,
-      mergePending(
-        session
-          ? {
-              location: session.pendingLocation || session.lastLocation || "",
-              category: session.pendingCategory || session.lastCategory || "",
-            }
-          : null,
-        understanding,
-      ),
+      understood.understanding,
+      session
+        ? {
+            location: session.pendingLocation || session.lastLocation || "",
+            category: session.pendingCategory || session.lastCategory || "",
+          }
+        : null,
     );
     const remembered = (session?.lastJobs ?? []).map((job) => ({
       jobId: job.jobId ?? "",
@@ -314,7 +313,12 @@ export async function handleConversationalMessage(input: {
     }));
 
     const dbStarted = Date.now();
-    const turn = await buildReply(identity, merged, remembered, session?.activeRole ?? "");
+    const turn = await buildReply(
+      identity,
+      merged,
+      merged.intent === "JOB_DETAILS" ? remembered : [],
+      session?.activeRole ?? "",
+    );
     timing.db_query = Date.now() - dbStarted;
     const waitingForLocation =
       merged.intent === "JOB_SEARCH" && !merged.location && Boolean(merged.category || merged.openSearch);
@@ -328,19 +332,29 @@ export async function handleConversationalMessage(input: {
         activeRole: turn.activeRole,
         pendingLocation: waitingForRole ? merged.location : "",
         pendingCategory: waitingForLocation ? merged.category : "",
-        lastLocation: merged.location || session?.lastLocation || "",
-        lastCategory: merged.openSearch ? "" : merged.category || session?.lastCategory || "",
-        ...(turn.shownJobs.length > 0
-          ? {
-              lastJobs: turn.shownJobs.slice(0, 3).map((job) => ({
-                jobId: job.jobId,
-                jobTitle: job.jobTitle,
-                companyName: job.companyName,
-                cityName: job.cityName,
-                salaryLabel: job.salaryLabel,
-              })),
-            }
-          : {}),
+        lastLocation:
+          merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT" || merged.intent === "JOB_DETAILS"
+            ? merged.location || session?.lastLocation || ""
+            : session?.lastLocation || "",
+        lastCategory:
+          merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT"
+            ? merged.openSearch
+              ? ""
+              : merged.category || session?.lastCategory || ""
+            : session?.lastCategory || "",
+        ...(merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT" || merged.intent === "JOB_DETAILS"
+          ? turn.shownJobs.length > 0
+            ? {
+                lastJobs: turn.shownJobs.slice(0, 3).map((job) => ({
+                  jobId: job.jobId,
+                  jobTitle: job.jobTitle,
+                  companyName: job.companyName,
+                  cityName: job.cityName,
+                  salaryLabel: job.salaryLabel,
+                })),
+              }
+            : {}
+          : { lastJobs: [] }),
         lastInteractionAt: new Date(),
       },
       { upsert: true },
@@ -352,13 +366,47 @@ export async function handleConversationalMessage(input: {
             originalText: input.text,
             language: merged.language,
             accountType: accountLabel(identity.linked),
-            facts: turn.facts,
+            facts: { ...turn.facts, intent: merged.intent },
           })
         : null;
     timing.sarvam_final = Date.now() - finalStarted;
+    const stale =
+      generated &&
+      looksLikeStalePublicJobReply(
+        generated,
+        String(turn.facts.situation ?? ""),
+        remembered.map((job) => job.jobTitle),
+      );
     const replyText =
-      generated ?? fallbackFromFacts(merged.language, turn.facts) ?? serviceErrorCopy(merged.language);
+      generated && !stale
+        ? generated
+        : fallbackFromFacts(merged.language, turn.facts) ?? serviceErrorCopy(merged.language);
     const trace = describeTurn(merged, turn);
+    console.info(
+      [
+        "[WA-TRACE]",
+        `messageId=${input.messageId ?? "-"}`,
+        `phone=${maskPhone(phone)}`,
+        `text=${clip(input.text)}`,
+        `accountType=${accountLabel(identity.linked)}`,
+        `prevLocation=${session?.lastLocation || "-"}`,
+        `prevRole=${session?.lastCategory || "-"}`,
+        `sarvamIntent=${understood.understanding.intent}`,
+        `intent=${merged.intent}`,
+        `language=${merged.language}`,
+        `role=${merged.category || "ANY"}`,
+        `location=${merged.location || "-"}`,
+        `source=${understood.source}`,
+        `service=${trace.service}`,
+        `filters=${trace.filters}`,
+        `dbResults=${trace.resultCount}`,
+        `facts=${String(turn.facts.situation ?? "-")}`,
+        `jobsForAI=${Array.isArray(turn.facts.jobs) ? turn.facts.jobs.length : 0}`,
+        `staleReply=${stale ? "yes" : "no"}`,
+        `final=${generated && !stale ? "sarvam" : "fallback"}`,
+        `totalMs=${Date.now() - started}`,
+      ].join(" "),
+    );
     console.info(
       [
         "[WHATSAPP]",
@@ -385,7 +433,7 @@ export async function handleConversationalMessage(input: {
         `resultCount=${trace.resultCount}`,
         "[SARVAM FINAL]",
         `language=${merged.language}`,
-        `responseGenerated=${generated ? "yes" : "no"}`,
+        `responseGenerated=${generated && !stale ? "yes" : "no"}`,
       ].join(" "),
     );
     const sendStarted = Date.now();

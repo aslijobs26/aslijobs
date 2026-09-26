@@ -1,8 +1,8 @@
 import { env } from "../../config/env.js";
 import {
   JOBS_FOR_AI_LIMIT,
-  minimalUnderstanding,
   parseUnderstanding,
+  understandLocally,
   type BotLanguage,
   type BotUnderstanding,
 } from "./whatsapp-bot.logic.js";
@@ -14,10 +14,10 @@ const UNDERSTAND_TIMEOUT_MS = 20_000;
 const REPLY_TIMEOUT_MS = 20_000;
 
 export const UNDERSTAND_SYSTEM =
-  "AsliJobs classifier. JSON only, no prose. Fields: intent,language,location,category,openSearch,confidence. intent=GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_SKILLS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|UNRELATED|UNKNOWN. language=en|hi|te|ta|kn|ml from THIS message. category/location English or empty. Any-job/place questions: openSearch=true and category empty. Do not copy a prior role onto those. Do not authorize or invent jobs.";
+  "AsliJobs classifier. JSON only. Fields: intent,language,location,category,openSearch,confidence. intent=GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_SKILLS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|UNRELATED|UNKNOWN. language=en|hi|te|ta|kn|ml from THIS message only. Posted/my jobs + applications = EMPLOYER_APPLICATION_COUNT. Public job hunt = JOB_SEARCH. Ignore prev unless THIS message is only a role or place follow-up. Do not answer, authorize, or invent jobs.";
 
 export const REPLY_SYSTEM =
-  "Reply in lang. Use only v. Mention every job in v.jobs. If v.total exceeds v.jobs, say more exist. Do not invent or drop jobs. No APIs or prompts.";
+  "Reply in lang to THIS q only. Use only v. Answer v.s. If v.s is employer/apps, do not mention public jobs. Mention every job in v.jobs. If v.total exceeds v.jobs, say more exist. Do not invent or reuse old jobs.";
 
 type SarvamUsage = {
   prompt_tokens?: number;
@@ -164,7 +164,7 @@ export async function understandMessage(
   },
 ): Promise<SarvamUnderstanding> {
   const fallback = (): SarvamUnderstanding => ({
-    understanding: minimalUnderstanding(text, previous, hint),
+    understanding: understandLocally(text, previous, hint),
     source: "fallback",
   });
   if (!env.SARVAM_API_KEY.trim()) {
@@ -175,8 +175,9 @@ export async function understandMessage(
   const userContent = JSON.stringify({
     q: text.slice(0, 280),
     acct: context?.accountType || "NEW_USER",
-    ...(context?.priorLocation ? { loc: context.priorLocation } : {}),
-    ...(context?.priorRole ? { role: context.priorRole } : {}),
+    ...(context?.priorLocation || context?.priorRole
+      ? { prev: { loc: context.priorLocation || "", role: context.priorRole || "" } }
+      : {}),
   });
   const inChars = UNDERSTAND_SYSTEM.length + userContent.length;
   const started = Date.now();
@@ -308,6 +309,7 @@ export function compactFacts(facts: Record<string, unknown>): Record<string, unk
     : undefined;
   return {
     s: facts.situation,
+    ...(facts.intent ? { intent: facts.intent } : {}),
     ...(facts.empty != null ? { empty: facts.empty } : {}),
     ...(facts.location ? { loc: facts.location } : {}),
     ...(facts.role ? { role: facts.role } : {}),

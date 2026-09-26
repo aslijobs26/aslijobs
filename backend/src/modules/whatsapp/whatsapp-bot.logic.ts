@@ -57,7 +57,7 @@ const KANNADA_SCRIPT = /[\u0C80-\u0CFF]/;
 const MALAYALAM_SCRIPT = /[\u0D00-\u0D7F]/;
 
 const ROMAN_TELUGU =
-  /\b(undha|unda|vundha|vunda|unnaya|unnayi|unnai|kavali|kaavali|cheppu|cheppandi|chudandi|chupinchu|naaku|nenu|pani)\b|\blo\b/i;
+  /\b(undha|unda|vundha|vunda|unnaya|unnayi|unnai|kavali|kaavali|cheppu|cheppandi|chudandi|chupinchu|naaku|nenu|enni|vachayi|chesina|pani)\b|\blo\b/i;
 const ROMAN_HINDI = /\b(kya|hai|hain|mujhe|chahiye|dikhao|naukri|mereko|mein)\b/i;
 const ROMAN_TAMIL = /\b(venum|venam|irukka|irukku|enakku|velai)\b/i;
 const ROMAN_KANNADA = /\b(beku|ideya|nanage|kelasa)\b/i;
@@ -311,14 +311,13 @@ export function understandLocally(
     /profile|ప్రొఫైల్|సరిపోయే|प्रोफाइल|प्रोफ़ाइल|suitable/i.test(text) &&
     (mentionsJob || mentionsRequest || /jobs?/i.test(folded) || ownApply);
   const applications = ownApply;
-  const myPosted =
-    /నా\s*jobs|my posted jobs|which jobs did i post|i posted|నా posted|posted job|my jobs/i.test(
-      text,
-    );
+  const myPosted = looksLikeOwnPostedJobsQuestion(text);
   const employer =
     myPosted ||
-    (/(applications?|applied|applicants|వచ్చాయి)/i.test(text) &&
-      /(my job|my jobs|నా\s*jobs|for my|posted)/i.test(text));
+    (/(applications?|applied|applicants|వచ్చాయి|vachayi)/i.test(text) &&
+      /(my job|my jobs|నా\s*jobs|\bna jobs\b|for my|posted|post\s*chesina|nenu\s+post)/i.test(
+        text,
+      ));
   const ambiguousReceived =
     /applications?|అప్లికేషన్/i.test(text) &&
     /వచ్చాయి|received/i.test(text) &&
@@ -351,7 +350,7 @@ export function understandLocally(
   else if (employer) {
     intent = /status|స్టేటస్|స్టేజ్|स्थिति/i.test(text)
       ? "EMPLOYER_JOB_STATUS"
-      : /ఎన్ని|how many|applications?|applied|వచ్చాయి/i.test(text)
+      : /ఎన్ని|how many|applications?|applied|వచ్చాయి|vachayi|\benni\b/i.test(text)
         ? "EMPLOYER_APPLICATION_COUNT"
         : "EMPLOYER_JOBS";
   } else if (applications) {
@@ -469,23 +468,145 @@ export const PUBLIC_JOB_FETCH_LIMIT = 20;
 /** Compact verified jobs sent to Sarvam. Never used as the database match total. */
 export const JOBS_FOR_AI_LIMIT = 8;
 
+const JOB_SEARCH_INTENTS = new Set<BotIntent>(["JOB_SEARCH", "JOB_COUNT", "JOB_DETAILS"]);
+
+export function looksLikeOwnPostedJobsQuestion(text: string): boolean {
+  const seekerApply = /apply\s*ches|apply\s*chey|applied|అప్లై|చేశా/i.test(text);
+  if (seekerApply) return false;
+  return /post\s*chesina|nenu\s+post|i posted|my posted|na posted|posted jobs?|which jobs did i post|\bna jobs\b|నా\s*jobs|\bmy jobs\b|నా posted|పోస్ట్/i.test(
+    text,
+  );
+}
+
+export function isFollowUpFragment(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 48) return false;
+  if (looksLikeOwnPostedJobsQuestion(text)) return false;
+  if (/applications?|applicants|అప్లికేషన్|आवेदन|apply|applied/i.test(text)) return false;
+  const role = extractRole(trimmed);
+  const place = extractPlace(trimmed);
+  const words = trimmed.split(/\s+/).filter(Boolean).length;
+  if (role && !place && words <= 4) return true;
+  if (place && words <= 6) return true;
+  return false;
+}
+
+export function looksLikeStalePublicJobReply(
+  generated: string,
+  situation: string,
+  rememberedTitles: string[],
+): boolean {
+  if (situation === "jobs" || situation === "job_details") return false;
+  const folded = generated.toLowerCase();
+  if (rememberedTitles.some((title) => title && folded.includes(title.toLowerCase()))) {
+    return true;
+  }
+  return /hyderabad lo \d+\s*jobs|హైదరాబాద్.*ఉద్యోగ/i.test(generated);
+}
+
+function isPrivateIntent(intent: BotIntent): boolean {
+  return (
+    intent === "EMPLOYER_JOBS" ||
+    intent === "EMPLOYER_JOB_STATUS" ||
+    intent === "EMPLOYER_APPLICATION_COUNT" ||
+    intent === "MY_APPLICATIONS" ||
+    intent === "APPLICATION_COUNT" ||
+    intent === "APPLICATION_STATUS" ||
+    intent === "APPLIED_COVERAGE" ||
+    intent === "PROFILE_JOBS" ||
+    intent === "PROFILE_MATCH" ||
+    intent === "MY_SKILLS"
+  );
+}
+
+export function validateCurrentMessageIntent(
+  text: string,
+  understanding: BotUnderstanding,
+): BotUnderstanding {
+  if (looksLikeOwnPostedJobsQuestion(text) && /applications?|applicants|enni|ఎన్ని|vachayi|వచ్చాయి|how many/i.test(text)) {
+    return {
+      ...understanding,
+      intent: "EMPLOYER_APPLICATION_COUNT",
+      location: "",
+      category: "",
+      jobQuery: "",
+      openSearch: false,
+      scope: "OWN_EMPLOYER_DATA",
+      requiresAuth: true,
+    };
+  }
+  if (looksLikeOwnPostedJobsQuestion(text) && JOB_SEARCH_INTENTS.has(understanding.intent)) {
+    return {
+      ...understanding,
+      intent: "EMPLOYER_JOBS",
+      location: "",
+      category: "",
+      jobQuery: "",
+      openSearch: false,
+      scope: "OWN_EMPLOYER_DATA",
+      requiresAuth: true,
+    };
+  }
+  return understanding;
+}
+
 export function mergePending(
   previous: { location: string; category: string } | null,
   next: BotUnderstanding,
+  text = "",
 ): BotUnderstanding {
   if (!previous) return next;
+  if (isPrivateIntent(next.intent) || next.intent === "GREETING" || next.intent === "HELP" || next.intent === "UNRELATED" || next.intent === "HOW_TO_APPLY" || next.intent === "CLARIFY") {
+    return {
+      ...next,
+      location: next.location,
+      category: next.category,
+      jobQuery: next.category,
+      openSearch: false,
+    };
+  }
+
+  if (next.intent === "UNKNOWN") {
+    if (!isFollowUpFragment(text)) {
+      return next;
+    }
+    const location = next.location || previous.location;
+    const category = next.category || previous.category;
+    return {
+      ...next,
+      location,
+      category,
+      jobQuery: category,
+      intent: "JOB_SEARCH",
+      openSearch: !category,
+      scope: "PUBLIC_JOBS",
+    };
+  }
+
+  if (!JOB_SEARCH_INTENTS.has(next.intent)) {
+    return next;
+  }
+
   const location = next.location || previous.location;
   const category = next.openSearch && next.location && !next.category ? "" : next.category || previous.category;
-  const continued = next.intent === "UNKNOWN" && Boolean(location || category);
   return {
     ...next,
     location,
     category,
     jobQuery: category,
-    intent: continued ? "JOB_SEARCH" : next.intent,
     openSearch: next.openSearch && !category,
-    scope: continued ? "PUBLIC_JOBS" : next.scope,
   };
+}
+
+export function resolveTurnUnderstanding(
+  text: string,
+  raw: BotUnderstanding,
+  previous: { location: string; category: string } | null,
+): BotUnderstanding {
+  return applyCurrentMessageSearchRules(
+    text,
+    mergePending(previous, validateCurrentMessageIntent(text, raw), text),
+  );
 }
 
 /**
@@ -498,6 +619,9 @@ export function applyCurrentMessageSearchRules(
   understanding: BotUnderstanding,
 ): BotUnderstanding {
   if (understanding.intent !== "JOB_SEARCH" && understanding.intent !== "JOB_COUNT") {
+    return understanding;
+  }
+  if (looksLikeOwnPostedJobsQuestion(text) || isPrivateIntent(understanding.intent)) {
     return understanding;
   }
 

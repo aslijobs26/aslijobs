@@ -5,9 +5,11 @@ import {
   applyCurrentMessageSearchRules,
   chooseAccountRole,
   clarifyJobTitle,
+  detectLanguage,
   detectProtocolTurn,
   greetingCopy,
   JOBS_FOR_AI_LIMIT,
+  looksLikeStalePublicJobReply,
   PUBLIC_JOB_FETCH_LIMIT,
   registrationCopy,
   mergePending,
@@ -15,6 +17,7 @@ import {
   parseUnderstanding,
   protocolReply,
   renderJobSearchReply,
+  resolveTurnUnderstanding,
   selectVerifiedJobsForReply,
   toPublicJobsLookup,
   matchesRequestedRole,
@@ -330,12 +333,149 @@ describe("whatsapp bot", () => {
   });
 
   it("keeps compact Sarvam prompts and does not send long language essays", () => {
-    assert.ok(UNDERSTAND_SYSTEM.length < 620);
-    assert.ok(REPLY_SYSTEM.length < 220);
+    assert.ok(UNDERSTAND_SYSTEM.length < 780);
+    assert.ok(REPLY_SYSTEM.length < 280);
     assert.doesNotMatch(UNDERSTAND_SYSTEM, /supported languages include/i);
     assert.doesNotMatch(REPLY_SYSTEM, /Preserve company names, job titles, salaries/);
     assert.doesNotMatch(REPLY_SYSTEM, /most relevant|up to 3|max 5 short/i);
     assert.match(REPLY_SYSTEM, /every job/i);
+    assert.match(UNDERSTAND_SYSTEM, /EMPLOYER_APPLICATION_COUNT/);
+    assert.match(REPLY_SYSTEM, /THIS q/i);
+  });
+
+  it("answers the current message and does not reuse a previous Hyderabad job search", () => {
+    const previous = { location: "Hyderabad", category: "" };
+    const hyderabadJobs = [
+      {
+        jobTitle: "Carpenter",
+        companyName: "Harshad Shaik Construction",
+        cityName: "Hyderabad",
+        stateName: "Telangana",
+        jobId: "AJ-CARP",
+        salaryLabel: "₹30,000",
+      },
+      {
+        jobTitle: "Electrician",
+        companyName: "Chandu Organization",
+        cityName: "Hyderabad",
+        stateName: "Telangana",
+        jobId: "AJ-ELEC",
+        salaryLabel: "₹40,000",
+      },
+    ];
+
+    const q1 = resolveTurnUnderstanding(
+      "Hyderabad lo jobs unnaya?",
+      understandLocally("Hyderabad lo jobs unnaya?"),
+      null,
+    );
+    assert.equal(q1.intent, "JOB_SEARCH");
+    assert.equal(q1.location, "Hyderabad");
+    assert.equal(q1.openSearch, true);
+    const q1Jobs = selectVerifiedJobsForReply(hyderabadJobs, "", 2);
+    assert.equal(q1Jobs.total, 2);
+    assert.equal(q1Jobs.jobs.length, 2);
+
+    const q2 = resolveTurnUnderstanding(
+      "Electrician jobs unnaya?",
+      understandLocally("Electrician jobs unnaya?"),
+      previous,
+    );
+    assert.equal(q2.intent, "JOB_SEARCH");
+    assert.equal(q2.category, "Electrician");
+    assert.equal(q2.location, "Hyderabad");
+    assert.equal(selectVerifiedJobsForReply(hyderabadJobs, "Electrician", 2).jobs[0]?.jobTitle, "Electrician");
+
+    const q3 = resolveTurnUnderstanding(
+      "Vizag lo jobs unnaya?",
+      understandLocally("Vizag lo jobs unnaya?"),
+      previous,
+    );
+    assert.equal(q3.location, "Visakhapatnam");
+    assert.notEqual(q3.location, "Hyderabad");
+    assert.equal(q3.openSearch, true);
+    assert.deepEqual(toPublicJobsLookup(q3), { search: "", city: "Visakhapatnam" });
+
+    const employerQ = "Nenu post chesina jobs ki enni applications vachayi?";
+    const q4 = resolveTurnUnderstanding(employerQ, understandLocally(employerQ), previous);
+    assert.equal(q4.intent, "EMPLOYER_APPLICATION_COUNT");
+    assert.equal(q4.scope, "OWN_EMPLOYER_DATA");
+    assert.equal(q4.location, "");
+    assert.equal(q4.openSearch, false);
+
+    const q4Unknown = resolveTurnUnderstanding(
+      employerQ,
+      parseUnderstanding('{"intent":"UNKNOWN","language":"en","confidence":0}', employerQ),
+      previous,
+    );
+    assert.equal(q4Unknown.intent, "EMPLOYER_APPLICATION_COUNT");
+    assert.notEqual(q4Unknown.intent, "JOB_SEARCH");
+
+    const q4SarvamLeak = resolveTurnUnderstanding(
+      employerQ,
+      parseUnderstanding(
+        JSON.stringify({
+          intent: "JOB_SEARCH",
+          language: "en",
+          location: "Hyderabad",
+          category: "",
+          openSearch: true,
+          confidence: 0.9,
+        }),
+        employerQ,
+      ),
+      previous,
+    );
+    assert.equal(q4SarvamLeak.intent, "EMPLOYER_APPLICATION_COUNT");
+    assert.equal(q4SarvamLeak.location, "");
+
+    const posted = resolveTurnUnderstanding(
+      "Na posted jobs ki applications enni vachayi?",
+      understandLocally("Na posted jobs ki applications enni vachayi?"),
+      previous,
+    );
+    assert.equal(posted.intent, "EMPLOYER_APPLICATION_COUNT");
+
+    const naJobs = resolveTurnUnderstanding(
+      "Na jobs ki enni applications vachayi?",
+      understandLocally("Na jobs ki enni applications vachayi?"),
+      previous,
+    );
+    assert.equal(naJobs.intent, "EMPLOYER_APPLICATION_COUNT");
+
+    assert.equal(detectProtocolTurn("Hi"), "greeting");
+    assert.equal(understandLocally("what jobs are available in Hyderabad?").language, "en");
+    assert.equal(understandLocally("hyderabad lo jobs unnaya?").language, "te");
+    assert.equal(detectLanguage(employerQ), "te");
+
+    const voice = understandLocally("Hyderabad lo electrician jobs unnaya?");
+    assert.equal(voice.intent, "JOB_SEARCH");
+    assert.equal(voice.category, "Electrician");
+    assert.equal(voice.location, "Hyderabad");
+
+    assert.equal(
+      looksLikeStalePublicJobReply(
+        "Hyderabad lo 2 jobs unnayi. Carpenter and Electrician.",
+        "EMPLOYER_APPLICATION_COUNT",
+        ["Carpenter", "Electrician"],
+      ),
+      true,
+    );
+    assert.equal(
+      looksLikeStalePublicJobReply(
+        "Your posted jobs received 4 applications.",
+        "EMPLOYER_APPLICATION_COUNT",
+        ["Carpenter"],
+      ),
+      false,
+    );
+
+    const unknownKept = mergePending(
+      previous,
+      parseUnderstanding('{"intent":"UNKNOWN","language":"en","confidence":0}', "random sentence here"),
+      "random sentence here",
+    );
+    assert.equal(unknownKept.intent, "UNKNOWN");
   });
 
   it("returns every Hyderabad job on a broad search and does not inherit a previous role", () => {
