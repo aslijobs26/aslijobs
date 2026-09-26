@@ -4,17 +4,20 @@ import { describe, it } from "node:test";
 import {
   chooseAccountRole,
   clarifyJobTitle,
+  detectProtocolTurn,
   greetingCopy,
   registrationCopy,
   mergePending,
   nationalPhone,
   parseUnderstanding,
+  protocolReply,
   renderJobSearchReply,
   toPublicJobsLookup,
   matchesRequestedRole,
   understandLocally,
   voiceUnclearCopy,
 } from "./whatsapp-bot.logic.js";
+import { UNDERSTAND_SYSTEM, REPLY_SYSTEM } from "./sarvam.client.js";
 import { verifyWhatsAppSignature } from "./whatsapp-signature.js";
 
 describe("whatsapp bot", () => {
@@ -310,6 +313,22 @@ describe("whatsapp bot", () => {
     assert.equal(chooseAccountRole("I want to hire workers"), "employer");
     assert.match(registrationCopy({ language: "en", role: "seeker", url: "https://aslijobs.com/job-seeker/register" }), /job-seeker\/register/);
     assert.match(registrationCopy({ language: "te", role: "employer", url: "https://aslijobs.com/employer/register" }), /employer\/register/);
+  });
+
+  it("treats only whole-message protocol text as a lightweight turn", () => {
+    assert.equal(detectProtocolTurn("Hi"), "greeting");
+    assert.equal(detectProtocolTurn("Thank you"), "thanks");
+    assert.equal(detectProtocolTurn("Ok"), "ack");
+    assert.equal(detectProtocolTurn("I need electrician jobs in Hyderabad"), null);
+    assert.equal(detectProtocolTurn("Hi, electrician jobs in Hyderabad"), null);
+    assert.match(protocolReply("ack", "en", "seeker", ""), /Okay/);
+  });
+
+  it("keeps compact Sarvam prompts and does not send long language essays", () => {
+    assert.ok(UNDERSTAND_SYSTEM.length < 520);
+    assert.ok(REPLY_SYSTEM.length < 180);
+    assert.doesNotMatch(UNDERSTAND_SYSTEM, /supported languages include/i);
+    assert.doesNotMatch(REPLY_SYSTEM, /Preserve company names, job titles, salaries/);
   });
 
   it("accepts a valid Meta signature and rejects a bad one", () => {

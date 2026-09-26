@@ -13,15 +13,23 @@ import { WhatsAppService } from "./whatsapp.service.js";
 import { generateFinalReply, understandMessage } from "./sarvam.client.js";
 import {
   detectLanguage,
+  detectProtocolTurn,
   formatSalaryLabel,
+  greetingCopy,
   languageFromHint,
   mergePending,
   nationalPhone,
   parentCity,
   matchesRequestedRole,
+  protocolReply,
+  renderApplicationReply,
+  renderCoverageReply,
+  renderEmployerReply,
+  renderJobSearchReply,
   serviceErrorCopy,
   toPublicJobsLookup,
   type AccountKind,
+  type BotLanguage,
   type BotUnderstanding,
   type PublicJobFact,
 } from "./whatsapp-bot.logic.js";
@@ -29,6 +37,8 @@ import {
 const whatsAppService = new WhatsAppService();
 
 const recentReplies = new Map<string, number[]>();
+const ACCOUNT_CACHE_MS = 60_000;
+const accountCache = new Map<string, { value: LinkedAccount; expires: number }>();
 
 function allowReply(phone: string): boolean {
   const now = Date.now();
@@ -78,21 +88,109 @@ type LinkedAccount = {
 };
 
 async function lookupAccount(phone: string): Promise<LinkedAccount> {
+  const cached = accountCache.get(phone);
+  if (cached && cached.expires > Date.now()) {
+    return cached.value;
+  }
   const [seeker, employer] = await Promise.all([
     JobSeekerModel.findOne({ whatsappNumber: phone })
-      .select("fullName city state jobRole skills preferredJobLocation experienceType")
+      .select("fullName city jobRole skills preferredJobLocation")
       .lean(),
     EmployerModel.findOne({ whatsappNumber: phone }).select("companyName").lean(),
   ]);
   const linked: AccountKind =
     seeker && employer ? "both" : seeker ? "seeker" : employer ? "employer" : "none";
-  return {
+  const value: LinkedAccount = {
     seeker,
     employer,
     linked,
     seekerId: seeker?._id.toString() ?? "",
     employerId: employer?._id.toString() ?? "",
   };
+  accountCache.set(phone, { value, expires: Date.now() + ACCOUNT_CACHE_MS });
+  return value;
+}
+
+function fallbackFromFacts(
+  language: BotLanguage,
+  facts: Record<string, unknown>,
+): string | null {
+  const situation = String(facts.situation ?? "");
+  if (situation === "greeting") {
+    return greetingCopy({
+      language,
+      account: (facts.accountType as AccountKind) || "none",
+      name: String(facts.name ?? ""),
+    });
+  }
+  if (situation === "jobs") {
+    const jobs = Array.isArray(facts.jobs)
+      ? (facts.jobs as Array<Record<string, unknown>>)
+      : [];
+    return renderJobSearchReply({
+      language,
+      location: String(facts.location ?? ""),
+      jobTitle: String(facts.role ?? ""),
+      jobs: jobs.map((job) => ({
+        jobTitle: String(job.jobTitle ?? ""),
+        companyName: String(job.companyName ?? ""),
+        cityName: String(job.cityName ?? ""),
+        stateName: "",
+        jobId: "",
+        salaryLabel: String(job.salary ?? job.salaryLabel ?? ""),
+      })),
+      widenedTo: facts.widenedTo ? String(facts.widenedTo) : undefined,
+    });
+  }
+  if (situation === "count" || situation === "status" || situation === "list") {
+    const applications = Array.isArray(facts.applications)
+      ? (facts.applications as Array<{ jobTitle?: string; companyName?: string; status?: string }>)
+      : [];
+    return renderApplicationReply({
+      language,
+      total: Number(facts.total ?? 0),
+      lines: applications.map(
+        (item, index) =>
+          `${index + 1}. ${item.jobTitle ?? ""} — ${item.companyName ?? ""} (${item.status ?? ""})`,
+      ),
+      mode: situation,
+    });
+  }
+  if (
+    situation === "EMPLOYER_JOBS" ||
+    situation === "EMPLOYER_JOB_STATUS" ||
+    situation === "EMPLOYER_APPLICATION_COUNT"
+  ) {
+    const jobs = Array.isArray(facts.jobs)
+      ? (facts.jobs as Array<{ jobTitle?: string; status?: string; applications?: number }>)
+      : [];
+    return renderEmployerReply({
+      language,
+      totalApplications: Number(facts.totalApplications ?? 0),
+      lines: jobs.map((job, index) =>
+        situation === "EMPLOYER_APPLICATION_COUNT"
+          ? `${index + 1}. ${job.jobTitle ?? ""} — ${job.applications ?? 0}`
+          : `${index + 1}. ${job.jobTitle ?? ""} (${job.status ?? ""})`,
+      ),
+      mode:
+        situation === "EMPLOYER_APPLICATION_COUNT"
+          ? "count"
+          : situation === "EMPLOYER_JOB_STATUS"
+            ? "status"
+            : "jobs",
+    });
+  }
+  if (situation === "applied_coverage") {
+    return renderCoverageReply({
+      language,
+      applied: Number(facts.applied ?? 0),
+      compared: Number(facts.compared ?? 0),
+      matched: Number(facts.matched ?? 0),
+      totalListed: Number(facts.totalListed ?? 0),
+      bounded: Boolean(facts.bounded),
+    });
+  }
+  return null;
 }
 
 function registrationFacts(): { seekerRegisterUrl: string; employerRegisterUrl: string } {
@@ -143,15 +241,53 @@ export async function handleConversationalMessage(input: {
   }
 
   const started = Date.now();
+  const timing = {
+    account_lookup: 0,
+    session_lookup: 0,
+    sarvam_understand: 0,
+    db_query: 0,
+    sarvam_final: 0,
+    whatsapp_send: 0,
+  };
   try {
-    const session = await WhatsAppSessionModel.findOne({ phone }).lean();
-    const identity = await lookupAccount(phone);
+    const lookupStarted = Date.now();
+    const [session, identity] = await Promise.all([
+      WhatsAppSessionModel.findOne({ phone }).lean(),
+      lookupAccount(phone),
+    ]);
+    timing.account_lookup = Date.now() - lookupStarted;
+    timing.session_lookup = timing.account_lookup;
+
     const hint = languageFromHint(input.languageHint);
+    const protocol = detectProtocolTurn(input.text);
+    if (protocol) {
+      const language = detectLanguage(input.text, session?.language, hint);
+      const name =
+        identity.linked === "employer"
+          ? identity.employer?.companyName?.trim() || ""
+          : identity.seeker?.fullName?.trim() || "";
+      const text = protocolReply(protocol, language, identity.linked, name);
+      await WhatsAppSessionModel.findOneAndUpdate(
+        { phone },
+        { phone, language, lastInteractionAt: new Date() },
+        { upsert: true },
+      );
+      const sendStarted = Date.now();
+      await whatsAppService.sendTextMessage(input.from, text);
+      timing.whatsapp_send = Date.now() - sendStarted;
+      console.info(
+        `[WA-PERF] protocol=${protocol} account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms sarvam_understand=0ms db_query=0ms sarvam_final=0ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
+      );
+      return;
+    }
+
+    const understandStarted = Date.now();
     const understood = await understandMessage(input.text, session?.language, hint, {
       accountType: accountLabel(identity.linked),
       priorLocation: session?.pendingLocation || session?.lastLocation || "",
       priorRole: session?.pendingCategory || session?.lastCategory || "",
     });
+    timing.sarvam_understand = Date.now() - understandStarted;
     const understanding = understood.understanding;
     const merged = mergePending(
       session
@@ -171,7 +307,9 @@ export async function handleConversationalMessage(input: {
       salaryLabel: job.salaryLabel ?? "",
     }));
 
+    const dbStarted = Date.now();
     const turn = await buildReply(identity, merged, remembered, session?.activeRole ?? "");
+    timing.db_query = Date.now() - dbStarted;
     const waitingForLocation =
       merged.intent === "JOB_SEARCH" && !merged.location && Boolean(merged.category || merged.openSearch);
     const waitingForRole =
@@ -188,7 +326,7 @@ export async function handleConversationalMessage(input: {
         lastCategory: merged.category || session?.lastCategory || "",
         ...(turn.shownJobs.length > 0
           ? {
-              lastJobs: turn.shownJobs.slice(0, 5).map((job) => ({
+              lastJobs: turn.shownJobs.slice(0, 3).map((job) => ({
                 jobId: job.jobId,
                 jobTitle: job.jobTitle,
                 companyName: job.companyName,
@@ -201,14 +339,19 @@ export async function handleConversationalMessage(input: {
       },
       { upsert: true },
     );
-    const generated = await generateFinalReply({
-      originalText: input.text,
-      language: merged.language,
-      accountType: accountLabel(identity.linked),
-      facts: turn.facts,
-      priorLocation: session?.lastLocation || "",
-      priorRole: session?.lastCategory || "",
-    });
+    const finalStarted = Date.now();
+    const generated =
+      understood.source === "sarvam"
+        ? await generateFinalReply({
+            originalText: input.text,
+            language: merged.language,
+            accountType: accountLabel(identity.linked),
+            facts: turn.facts,
+          })
+        : null;
+    timing.sarvam_final = Date.now() - finalStarted;
+    const replyText =
+      generated ?? fallbackFromFacts(merged.language, turn.facts) ?? serviceErrorCopy(merged.language);
     const trace = describeTurn(merged, turn);
     console.info(
       [
@@ -237,12 +380,13 @@ export async function handleConversationalMessage(input: {
         "[SARVAM FINAL]",
         `language=${merged.language}`,
         `responseGenerated=${generated ? "yes" : "no"}`,
-        `ms=${Date.now() - started}`,
       ].join(" "),
     );
-    await whatsAppService.sendTextMessage(
-      input.from,
-      generated ?? serviceErrorCopy(merged.language),
+    const sendStarted = Date.now();
+    await whatsAppService.sendTextMessage(input.from, replyText);
+    timing.whatsapp_send = Date.now() - sendStarted;
+    console.info(
+      `[WA-PERF] account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms sarvam_understand=${timing.sarvam_understand}ms db_query=${timing.db_query}ms sarvam_final=${timing.sarvam_final}ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
     );
   } catch (error) {
     console.error(
@@ -397,7 +541,7 @@ async function buildReply(
       const result = await applicationService.listForSeeker({
         jobSeekerId: seeker._id.toString(),
         search: understanding.category || understanding.jobQuery,
-        limit: 5,
+        limit: 3,
         page: 1,
         sort: "newest",
       });
@@ -410,7 +554,7 @@ async function buildReply(
       return reply({
         situation: mode,
         total: result.pagination.total,
-        applications: result.applications.slice(0, 5).map((item) => ({
+        applications: result.applications.slice(0, 3).map((item) => ({
           jobTitle: item.jobTitle,
           companyName: item.companyName,
           status: item.status,
@@ -422,7 +566,7 @@ async function buildReply(
     case "EMPLOYER_APPLICATION_COUNT": {
       if (!asEmployer || !employer) return reply({ situation: "denied", reason: "employer_required" });
       const query = listEmployerJobsQuerySchema.parse({
-        limit: 20,
+        limit: 5,
         page: 1,
         search: understanding.category || "",
       });
@@ -432,7 +576,7 @@ async function buildReply(
       return reply({
         situation: understanding.intent,
         totalApplications,
-        jobs: ranked.slice(0, 5).map((job) => ({
+        jobs: ranked.slice(0, 3).map((job) => ({
           jobTitle: job.jobTitle,
           status: job.status,
           applications: job.applications,
@@ -514,7 +658,7 @@ async function coverageReply(
     loadJobs(lookup.search, lookup.city, jobSeekerId),
     applicationService.listForSeeker({
       jobSeekerId,
-      limit: 50,
+      limit: 10,
       page: 1,
       sort: "newest",
     }),
@@ -539,7 +683,7 @@ async function loadJobs(
   const query = publicJobsQuerySchema.parse({
     search,
     city,
-    limit: 5,
+    limit: 3,
     page: 1,
     sort: "latest",
   });

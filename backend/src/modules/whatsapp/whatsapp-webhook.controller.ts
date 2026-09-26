@@ -10,7 +10,7 @@ import {
   type BotLanguage,
 } from "./whatsapp-bot.logic.js";
 import { WhatsAppSessionModel } from "./whatsapp-session.model.js";
-import { generateFinalReply, transcribeWhatsAppAudio } from "./sarvam.client.js";
+import { transcribeWhatsAppAudio } from "./sarvam.client.js";
 
 const whatsAppService = new WhatsAppService();
 
@@ -159,15 +159,9 @@ async function extractText(
         ? await WhatsAppSessionModel.findOne({ phone }).select("language").lean()
         : null;
       const language = (session?.language ?? "en") as BotLanguage;
-      const generated = await generateFinalReply({
-        originalText: "",
-        language,
-        accountType: "unknown",
-        facts: { situation: "voice_failed" },
-      });
       await whatsAppService.sendTextMessage(
         message.from ?? "",
-        generated ?? voiceUnclearCopy(language),
+        voiceUnclearCopy(language),
       );
       return null;
     }

@@ -206,6 +206,55 @@ export function nationalPhone(from: string): string {
   return digits.length >= 10 ? digits.slice(-10) : digits;
 }
 
+export type ProtocolTurn = "greeting" | "thanks" | "ack";
+
+/** Whole-message protocol only. Never used to classify jobs or applications. */
+export function detectProtocolTurn(text: string): ProtocolTurn | null {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 24) return null;
+  if (
+    /^(hi|hello|hey|hy|హాయ్|హలో|నమస్తే|नमस्ते|हाय|வணக்கம்|ನಮಸ್ಕಾರ|നമസ്കാരം)!?$/i.test(
+      trimmed,
+    )
+  ) {
+    return "greeting";
+  }
+  if (
+    /^(thanks|thank you|धन्यवाद|ధన్యవాదాలు|நன்றி|ಧನ್ಯವಾದ|നന്ദി)\.?$/i.test(trimmed)
+  ) {
+    return "thanks";
+  }
+  if (/^(ok|okay|oke|bye|goodbye|సరే|ठीक|सही|சரி|ಸರಿ|ശരി|బై)\.?$/i.test(trimmed)) {
+    return "ack";
+  }
+  return null;
+}
+
+export function protocolReply(
+  turn: ProtocolTurn,
+  language: BotLanguage,
+  account: AccountKind,
+  name: string,
+): string {
+  if (turn === "greeting") {
+    return greetingCopy({ language, account, name });
+  }
+  if (turn === "thanks") {
+    if (language === "te") return "సరే 👍 ఇంకా ఏమైనా కావాలా?";
+    if (language === "hi") return "शुक्रिया 👍 और कुछ चाहिए?";
+    if (language === "ta") return "நன்றி 👍 வேறு ஏதாவது வேண்டுமா?";
+    if (language === "kn") return "ಧನ್ಯವಾದ 👍 ಇನ್ನೇನಾದರೂ ಬೇಕೇ?";
+    if (language === "ml") return "നന്ദി 👍 മറ്റെന്തെങ്കിലും വേണോ?";
+    return "You're welcome. Anything else I can help with?";
+  }
+  if (language === "te") return "సరే 👍";
+  if (language === "hi") return "ठीक है 👍";
+  if (language === "ta") return "சரி 👍";
+  if (language === "kn") return "ಸರಿ 👍";
+  if (language === "ml") return "ശരി 👍";
+  return "Okay 👍";
+}
+
 const understandingSchema = z.object({
   intent: z.enum(BOT_INTENTS),
   language: z.enum(["en", "hi", "te", "ta", "kn", "ml"]),
