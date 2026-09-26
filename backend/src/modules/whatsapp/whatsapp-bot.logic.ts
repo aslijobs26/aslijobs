@@ -50,6 +50,21 @@ export type PublicJobFact = {
   salaryLabel: string;
 };
 
+/** Website public job page: frontend/src/app/(site)/jobs/[jobId]/page.tsx and ROUTES.jobPublic. */
+export function sanitizePublicJobId(jobId: string): string {
+  const id = jobId.trim();
+  if (!id || id.length > 64) return "";
+  if (/[/?#\s]/.test(id) || /^https?:/i.test(id)) return "";
+  return id;
+}
+
+export function buildPublicJobApplyUrl(jobId: string, frontendOrigin: string): string {
+  const id = sanitizePublicJobId(jobId);
+  const origin = frontendOrigin.trim().replace(/\/+$/, "");
+  if (!id || !origin) return "";
+  return `${origin}/jobs/${encodeURIComponent(id)}`;
+}
+
 const TELUGU_SCRIPT = /[\u0C00-\u0C7F]/;
 const HINDI_SCRIPT = /[\u0900-\u097F]/;
 const TAMIL_SCRIPT = /[\u0B80-\u0BFF]/;
@@ -693,6 +708,8 @@ export function renderJobSearchReply(input: {
   jobs: PublicJobFact[];
   widenedTo?: string;
   total?: number;
+  frontendOrigin?: string;
+  includeApplyLinks?: boolean;
 }): string {
   const place = labelPlace(input.location, input.language);
   const role = labelRole(input.jobTitle, input.language);
@@ -719,7 +736,12 @@ export function renderJobSearchReply(input: {
     const salary = job.salaryLabel ? `\n💰 ${job.salaryLabel}` : "";
     const company = job.companyName ? ` — ${job.companyName}` : "";
     const title = localizeJobTitle(job.jobTitle, input.language);
-    return `${index + 1}. ${title}${company}${where ? `\n📍 ${where}` : ""}${salary}`;
+    const applyUrl =
+      input.includeApplyLinks === false
+        ? ""
+        : buildPublicJobApplyUrl(job.jobId, input.frontendOrigin ?? "");
+    const apply = applyUrl ? `\n👉 Apply Now: ${applyUrl}` : "";
+    return `${index + 1}. ${title}${company}${where ? `\n📍 ${where}` : ""}${salary}${apply}`;
   });
 
   if (input.language === "te") {
@@ -870,11 +892,13 @@ export function buildDeterministicReply(
         companyName: String(job.companyName ?? ""),
         cityName: String(job.cityName ?? ""),
         stateName: "",
-        jobId: "",
+        jobId: String(job.jobId ?? ""),
         salaryLabel: String(job.salary ?? job.salaryLabel ?? ""),
       })),
       widenedTo: facts.widenedTo ? String(facts.widenedTo) : undefined,
       total: typeof facts.total === "number" ? facts.total : undefined,
+      frontendOrigin: String(facts.applyOrigin ?? ""),
+      includeApplyLinks: String(facts.accountType ?? "") !== "employer",
     });
   }
   if (situation === "count" || situation === "status" || situation === "list") {
@@ -948,6 +972,7 @@ export function properNounsFromFacts(facts: Record<string, unknown>): string[] {
       add(row.cityName);
       add(row.salary);
       add(row.salaryLabel);
+      add(row.jobId);
     }
   }
   if (Array.isArray(facts.applications)) {

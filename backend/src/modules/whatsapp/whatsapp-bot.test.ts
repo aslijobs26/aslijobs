@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import {
   applyCurrentMessageSearchRules,
   buildDeterministicReply,
+  buildPublicJobApplyUrl,
   chooseAccountRole,
   clarifyJobTitle,
   detectLanguage,
@@ -130,9 +131,12 @@ describe("whatsapp bot", () => {
       location: "Madhapur",
       jobTitle: "Driver",
       jobs: [],
+      frontendOrigin: "https://aslijobs.com",
     });
     assert.match(empty, /కనిపించలేదు/);
     assert.doesNotMatch(empty, /Kanipinchina/);
+    assert.doesNotMatch(empty, /Apply Now/);
+    assert.doesNotMatch(empty, /\/jobs\//);
   });
 
   it("keeps prior location when the next turn only gives a category", () => {
@@ -974,5 +978,182 @@ describe("whatsapp translation cost", () => {
     assert.doesNotMatch(translate, /sarvam-105b/);
     assert.equal(SARVAM_TRANSLATE_URL, "https://api.sarvam.ai/translate");
     assert.equal(SARVAM_CHAT_URL, "https://api.sarvam.ai/v1/chat/completions");
+    const logic = readFileSync(new URL("./whatsapp-bot.logic.ts", import.meta.url), "utf8");
+    assert.match(logic, /buildPublicJobApplyUrl/);
+    assert.match(logic, /\/jobs\/\$\{encodeURIComponent\(id\)\}/);
+    assert.doesNotMatch(logic, /sarvam-105b/);
+  });
+});
+
+const APPLY_ORIGIN = "https://aslijobs.com";
+
+describe("whatsapp job seeker apply links", () => {
+  it("builds one job-specific Apply Now URL from the database jobId", () => {
+    const jobId = "AJ-ELEC-9K2";
+    const url = buildPublicJobApplyUrl(jobId, APPLY_ORIGIN);
+    assert.equal(url, `${APPLY_ORIGIN}/jobs/${jobId}`);
+    const reply = renderJobSearchReply({
+      language: "en",
+      location: "Hyderabad",
+      jobTitle: "Electrician",
+      frontendOrigin: APPLY_ORIGIN,
+      jobs: [
+        {
+          jobTitle: "Electrician",
+          companyName: "Chandu Organization",
+          cityName: "Hyderabad",
+          stateName: "Telangana",
+          jobId,
+          salaryLabel: "₹40,000",
+        },
+      ],
+    });
+    assert.match(reply, /Electrician/);
+    assert.match(reply, /👉 Apply Now: https:\/\/aslijobs\.com\/jobs\/AJ-ELEC-9K2/);
+    assert.equal(reply.includes("/jobs/AJ-CARP"), false);
+  });
+
+  it("gives each matching job its own Apply Now URL and never swaps IDs", () => {
+    const carpenterId = "AJ-CARP-1";
+    const electricianId = "AJ-ELEC-2";
+    const reply = renderJobSearchReply({
+      language: "en",
+      location: "Hyderabad",
+      jobTitle: "",
+      frontendOrigin: APPLY_ORIGIN,
+      jobs: [
+        {
+          jobTitle: "Carpenter",
+          companyName: "Harshad Shaik Construction",
+          cityName: "Hyderabad",
+          stateName: "Telangana",
+          jobId: carpenterId,
+          salaryLabel: "₹30,000",
+        },
+        {
+          jobTitle: "Electrician",
+          companyName: "Chandu Organization",
+          cityName: "Hyderabad",
+          stateName: "Telangana",
+          jobId: electricianId,
+          salaryLabel: "₹40,000",
+        },
+      ],
+    });
+    const carpenterBlock = reply.slice(0, reply.indexOf("2. "));
+    const electricianBlock = reply.slice(reply.indexOf("2. "));
+    assert.match(carpenterBlock, /Carpenter/);
+    assert.match(carpenterBlock, new RegExp(`/jobs/${carpenterId}`));
+    assert.doesNotMatch(carpenterBlock, new RegExp(`/jobs/${electricianId}`));
+    assert.match(electricianBlock, /Electrician/);
+    assert.match(electricianBlock, new RegExp(`/jobs/${electricianId}`));
+    assert.doesNotMatch(electricianBlock, new RegExp(`/jobs/${carpenterId}`));
+  });
+
+  it("does not add Apply Now when no jobs match", () => {
+    const empty = renderJobSearchReply({
+      language: "en",
+      location: "Hyderabad",
+      jobTitle: "Plumber",
+      frontendOrigin: APPLY_ORIGIN,
+      jobs: [],
+      total: 0,
+    });
+    assert.match(empty, /could not find/i);
+    assert.doesNotMatch(empty, /Apply Now/);
+    assert.doesNotMatch(empty, /\/jobs\//);
+  });
+
+  it("preserves the database jobId through deterministic reply facts", () => {
+    const facts = {
+      situation: "jobs",
+      location: "Hyderabad",
+      role: "Electrician",
+      accountType: "seeker",
+      applyOrigin: APPLY_ORIGIN,
+      total: 1,
+      jobs: [
+        {
+          jobTitle: "Electrician",
+          companyName: "Chandu Organization",
+          cityName: "Hyderabad",
+          jobId: "AJ-ELEC-2",
+          salary: "₹40,000",
+        },
+      ],
+    };
+    const reply = buildDeterministicReply("en", facts) ?? "";
+    assert.match(reply, /Chandu Organization/);
+    assert.match(reply, /👉 Apply Now: https:\/\/aslijobs\.com\/jobs\/AJ-ELEC-2/);
+    assert.equal(buildPublicJobApplyUrl("AJ-ELEC-2", APPLY_ORIGIN), "https://aslijobs.com/jobs/AJ-ELEC-2");
+  });
+
+  it("does not invent Apply Now URLs from empty or unsafe job IDs", () => {
+    assert.equal(buildPublicJobApplyUrl("", APPLY_ORIGIN), "");
+    assert.equal(buildPublicJobApplyUrl("https://evil.example/jobs/x", APPLY_ORIGIN), "");
+    assert.equal(buildPublicJobApplyUrl("AJ/1", APPLY_ORIGIN), "");
+    const reply = renderJobSearchReply({
+      language: "en",
+      location: "Hyderabad",
+      jobTitle: "Driver",
+      frontendOrigin: APPLY_ORIGIN,
+      jobs: [
+        {
+          jobTitle: "Driver",
+          companyName: "Acme",
+          cityName: "Hyderabad",
+          stateName: "Telangana",
+          jobId: "",
+          salaryLabel: "₹18,000",
+        },
+      ],
+    });
+    assert.match(reply, /Acme/);
+    assert.doesNotMatch(reply, /Apply Now/);
+  });
+
+  it("does not attach job-seeker Apply Now links to employer job-search replies", () => {
+    const reply = buildDeterministicReply("en", {
+      situation: "jobs",
+      location: "Hyderabad",
+      accountType: "employer",
+      applyOrigin: APPLY_ORIGIN,
+      total: 1,
+      jobs: [
+        {
+          jobTitle: "Carpenter",
+          companyName: "Harshad Shaik Construction",
+          cityName: "Hyderabad",
+          jobId: "AJ-CARP-1",
+          salary: "₹30,000",
+        },
+      ],
+    });
+    assert.match(reply ?? "", /Carpenter/);
+    assert.doesNotMatch(reply ?? "", /Apply Now/);
+  });
+
+  it("keeps Apply Now URLs in Telugu, English, and Hindi job-search replies", () => {
+    const jobs = [
+      {
+        jobTitle: "Carpenter",
+        companyName: "Harshad Shaik Construction",
+        cityName: "Hyderabad",
+        stateName: "Telangana",
+        jobId: "AJ-CARP-1",
+        salaryLabel: "₹30,000",
+      },
+    ];
+    for (const language of ["te", "en", "hi"] as const) {
+      const reply = renderJobSearchReply({
+        language,
+        location: "Hyderabad",
+        jobTitle: "",
+        frontendOrigin: APPLY_ORIGIN,
+        jobs,
+      });
+      assert.match(reply, /Harshad Shaik Construction/);
+      assert.match(reply, /👉 Apply Now: https:\/\/aslijobs\.com\/jobs\/AJ-CARP-1/);
+    }
   });
 });

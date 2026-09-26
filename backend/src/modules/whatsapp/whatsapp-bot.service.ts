@@ -275,7 +275,12 @@ export async function handleConversationalMessage(input: {
     const localizeStarted = Date.now();
     const localized = await localizeDeterministicReply({
       language: merged.language,
-      facts: { ...turn.facts, intent: merged.intent },
+      facts: {
+        ...turn.facts,
+        intent: merged.intent,
+        accountType: turn.accountType,
+        applyOrigin: env.FRONTEND_URL,
+      },
     });
     const translateMs = Date.now() - localizeStarted;
     const replyText = localized.text;
@@ -620,6 +625,7 @@ function publicJobFact(job: PublicJobFact) {
     companyName: job.companyName,
     cityName: job.cityName,
     salary: job.salaryLabel,
+    jobId: job.jobId,
   };
 }
 
