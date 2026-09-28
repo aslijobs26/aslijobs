@@ -6,7 +6,7 @@ import {
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { OperationsCanKey } from "../components/operations/auth/OperationsCanKey";
 import { EmployerDocumentsPanel } from "../components/operations/employers/detail/EmployerDocumentsPanel";
@@ -95,6 +95,17 @@ export function OperationsVerificationReviewPage() {
         ? mapVerificationDocuments(verification.documents)
         : [],
     [verification],
+  );
+
+  const fetchVerificationDocumentBlob = useCallback(
+    (documentId: string) => {
+      const id = verification?.id;
+      if (!id) {
+        return Promise.reject(new Error("Verification not found."));
+      }
+      return fetchOperationsVerificationDocumentBlob(id, documentId);
+    },
+    [verification?.id],
   );
 
   const closeModal = () => {
@@ -434,12 +445,7 @@ export function OperationsVerificationReviewPage() {
             <EmployerDocumentsPanel
               documents={mappedDocuments}
               employerId={verification.id}
-              fetchDocumentBlob={(documentId) =>
-                fetchOperationsVerificationDocumentBlob(
-                  verification.id,
-                  documentId,
-                )
-              }
+              fetchDocumentBlob={fetchVerificationDocumentBlob}
             />
           </>
         ) : null}

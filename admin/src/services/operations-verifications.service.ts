@@ -1,4 +1,8 @@
 import { apiClient } from "./api-client";
+import {
+  fileNameFromContentDisposition,
+  isJsonOrHtmlBlob,
+} from "../utils/document-preview";
 import type {
   OperationsVerificationDetail,
   OperationsVerificationsAnalyticsParams,
@@ -147,14 +151,13 @@ export async function fetchOperationsVerificationDocumentBlob(
     { responseType: "blob" },
   );
 
-  const contentDisposition = response.headers["content-disposition"];
-  const filenameMatch =
-    typeof contentDisposition === "string"
-      ? /filename="?([^"]+)"?/i.exec(contentDisposition)
-      : null;
+  const contentType = String(response.headers["content-type"] ?? "");
+  if (isJsonOrHtmlBlob(response.data, contentType)) {
+    throw new Error("Unable to preview this document.");
+  }
 
   return {
     blob: response.data,
-    fileName: filenameMatch?.[1]?.trim() || "document",
+    fileName: fileNameFromContentDisposition(response.headers["content-disposition"]),
   };
 }

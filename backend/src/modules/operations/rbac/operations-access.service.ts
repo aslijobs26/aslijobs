@@ -121,6 +121,19 @@ export function assertOperationsPermissionKey(
   }
 }
 
+export function assertAnyOperationsPermissionKey(
+  access: OperationsResolvedAccess | undefined,
+  keys: readonly string[],
+): void {
+  if (keys.some((key) => operationsAccessCanKey(access, key))) {
+    return;
+  }
+  throw new AppError(
+    "Access denied. You do not have permission to perform this action.",
+    HTTP_STATUS.FORBIDDEN,
+  );
+}
+
 /**
  * Prefer a catalog key when the actor already has fine-grained grants
  * for that module. Fall back to the coarse matrix for legacy enum roles.

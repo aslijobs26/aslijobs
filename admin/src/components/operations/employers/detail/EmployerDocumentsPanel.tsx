@@ -1,8 +1,14 @@
 import { Download, ExternalLink, Eye, FileText, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { isAxiosError } from "axios";
 import { fetchOperationsEmployerDocumentBlob } from "../../../../services/operations-employers.service";
 import type { OperationsEmployerDocumentItem } from "../../../../types/operations-employers";
+import {
+  detectDocumentPreviewKind,
+  normalizeDocumentBlobForPreview,
+  previewErrorMessageFromStatus,
+} from "../../../../utils/document-preview";
 import { resolveMediaUrl } from "../../../../utils/resolve-media-url";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import { OperationsCanKey } from "../../auth/OperationsCanKey";
@@ -28,10 +34,7 @@ function formatBytes(bytes: number): string {
 }
 
 function isPdfDocument(doc: OperationsEmployerDocumentItem): boolean {
-  return (
-    Boolean(doc.mimeType?.includes("pdf")) ||
-    doc.originalName.toLowerCase().endsWith(".pdf")
-  );
+  return detectDocumentPreviewKind(doc.originalName, doc.mimeType) === "pdf";
 }
 
 function hasDirectUrl(doc: OperationsEmployerDocumentItem): boolean {
@@ -53,6 +56,9 @@ export function EmployerDocumentsPanel({
 }: EmployerDocumentsPanelProps) {
   const titleId = useId();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const fetchBlobRef = useRef(fetchDocumentBlob);
+  const objectUrlRef = useRef<string | null>(null);
+  fetchBlobRef.current = fetchDocumentBlob;
   const [previewDoc, setPreviewDoc] =
     useState<OperationsEmployerDocumentItem | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -61,51 +67,72 @@ export function EmployerDocumentsPanel({
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const revokePreviewUrl = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  };
+
   useEffect(() => {
     if (!previewDoc) {
+      revokePreviewUrl();
+      setPreviewUrl(null);
       return;
     }
 
     let cancelled = false;
-    let objectUrl: string | null = null;
 
     const loadPreview = async () => {
       setIsLoadingPreview(true);
       setPreviewError(null);
       setPreviewUrl(null);
+      revokePreviewUrl();
 
       try {
-        if (fetchDocumentBlob) {
-          const { blob } = await fetchDocumentBlob(previewDoc.id);
-          if (cancelled) return;
-          objectUrl = URL.createObjectURL(blob);
-          setPreviewUrl(objectUrl);
-          return;
-        }
+        const blobFetcher = fetchBlobRef.current;
+        let sourceBlob: Blob;
+        let fileName = previewDoc.originalName;
 
-        if (employerId) {
-          const { blob } = await fetchOperationsEmployerDocumentBlob(
+        if (blobFetcher) {
+          const result = await blobFetcher(previewDoc.id);
+          sourceBlob = result.blob;
+          fileName = result.fileName || previewDoc.originalName;
+        } else if (employerId) {
+          const result = await fetchOperationsEmployerDocumentBlob(
             employerId,
             previewDoc.id,
           );
-          if (cancelled) return;
-          objectUrl = URL.createObjectURL(blob);
-          setPreviewUrl(objectUrl);
+          sourceBlob = result.blob;
+          fileName = result.fileName || previewDoc.originalName;
+        } else {
+          const directUrl = resolveMediaUrl(previewDoc.url);
+          if (!directUrl) {
+            throw new Error("Document unavailable");
+          }
+          if (!cancelled) {
+            setPreviewUrl(directUrl);
+          }
           return;
         }
 
-        const directUrl = resolveMediaUrl(previewDoc.url);
-        if (!directUrl) {
-          throw new Error("Document unavailable");
-        }
+        const previewBlob = await normalizeDocumentBlobForPreview(
+          sourceBlob,
+          fileName,
+          sourceBlob.type,
+        );
+        if (cancelled) return;
+        const objectUrl = URL.createObjectURL(previewBlob);
+        objectUrlRef.current = objectUrl;
+        setPreviewUrl(objectUrl);
+      } catch (error) {
         if (!cancelled) {
-          setPreviewUrl(directUrl);
-        }
-      } catch {
-        if (!cancelled) {
-          setPreviewError(
-            "Unable to load document preview. You can still try downloading the file.",
-          );
+          const status = isAxiosError(error) ? error.response?.status : undefined;
+          console.error("[VerificationDocuments] preview failed", {
+            status: status ?? "unknown",
+            reason: error instanceof Error ? error.name : "unknown",
+          });
+          setPreviewError(previewErrorMessageFromStatus(status));
         }
       } finally {
         if (!cancelled) {
@@ -118,11 +145,14 @@ export function EmployerDocumentsPanel({
 
     return () => {
       cancelled = true;
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
     };
-  }, [previewDoc, employerId, fetchDocumentBlob]);
+  }, [previewDoc, employerId]);
+
+  useEffect(() => {
+    return () => {
+      revokePreviewUrl();
+    };
+  }, []);
 
   useEffect(() => {
     if (!previewDoc) {
@@ -148,8 +178,10 @@ export function EmployerDocumentsPanel({
   }, [previewDoc]);
 
   const closePreview = () => {
+    revokePreviewUrl();
     setPreviewDoc(null);
     setPreviewError(null);
+    setPreviewUrl(null);
   };
 
   const handleDownload = async (doc: OperationsEmployerDocumentItem) => {
@@ -198,7 +230,12 @@ export function EmployerDocumentsPanel({
         const result = fetchDocumentBlob
           ? await fetchDocumentBlob(doc.id)
           : await fetchOperationsEmployerDocumentBlob(employerId!, doc.id);
-        const url = URL.createObjectURL(result.blob);
+        const previewBlob = await normalizeDocumentBlobForPreview(
+          result.blob,
+          result.fileName || doc.originalName,
+          result.blob.type,
+        );
+        const url = URL.createObjectURL(previewBlob);
         window.open(url, "_blank", "noopener,noreferrer");
         window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       } catch {
@@ -352,7 +389,7 @@ export function EmployerDocumentsPanel({
               aria-modal="true"
               aria-labelledby={titleId}
             >
-              <div className="flex h-[92vh] max-h-[92vh] w-full max-w-4xl flex-col rounded-xl border border-border-subtle bg-surface shadow-2xl animate-in fade-in-0 zoom-in-95">
+              <div className="flex h-[92vh] max-h-[92vh] min-h-0 w-full max-w-4xl flex-col rounded-xl border border-border-subtle bg-surface shadow-2xl animate-in fade-in-0 zoom-in-95">
                 <div className="flex items-center justify-between gap-2 border-b border-border-subtle p-3 sm:px-4">
                   <div className="min-w-0 flex-1">
                     <h3
@@ -369,7 +406,15 @@ export function EmployerDocumentsPanel({
                       className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                     >
                       <ExternalLink className="size-3.5" aria-hidden="true" />
-                      <span className="hidden sm:inline">Open Original</span>
+                      <span className="hidden sm:inline">Open in new tab</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDownload(previewDoc)}
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    >
+                      <Download className="size-3.5" aria-hidden="true" />
+                      <span className="hidden sm:inline">Download</span>
                     </button>
                     <button
                       ref={closeButtonRef}
@@ -383,28 +428,48 @@ export function EmployerDocumentsPanel({
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-auto bg-hero-bg/40 p-2 sm:p-4">
+                <div className="flex min-h-0 flex-1 flex-col bg-hero-bg/40">
                   {isLoadingPreview ? (
                     <div className="flex size-full items-center justify-center text-xs text-muted">
                       Loading preview…
                     </div>
                   ) : null}
                   {!isLoadingPreview && previewError ? (
-                    <div className="flex size-full items-center justify-center text-xs text-danger">
-                      {previewError}
+                    <div className="flex size-full flex-col items-center justify-center gap-3 px-4 text-center">
+                      <p className="text-sm font-medium text-danger" role="alert">
+                        {previewError}
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleOpenExternal(previewDoc)}
+                          className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-hero-bg/60"
+                        >
+                          <ExternalLink className="size-3.5" aria-hidden="true" />
+                          Open in new tab
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDownload(previewDoc)}
+                          className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-hero-bg/60"
+                        >
+                          <Download className="size-3.5" aria-hidden="true" />
+                          Download
+                        </button>
+                      </div>
                     </div>
                   ) : null}
                   {!isLoadingPreview && previewUrl && isPdfDocument(previewDoc) ? (
                     <iframe
-                      src={previewUrl}
+                      src={`${previewUrl}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`}
                       title={previewDoc.originalName}
-                      className="size-full rounded-lg border border-border-subtle bg-white"
+                      className="min-h-0 h-full w-full flex-1 border-0 bg-white"
                     />
                   ) : null}
                   {!isLoadingPreview &&
                   previewUrl &&
                   !isPdfDocument(previewDoc) ? (
-                    <div className="flex size-full items-center justify-center">
+                    <div className="flex size-full items-center justify-center overflow-auto p-2 sm:p-4">
                       <img
                         src={previewUrl}
                         alt={previewDoc.originalName}

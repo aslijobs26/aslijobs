@@ -2,7 +2,11 @@ import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
 import { sendSuccess } from "../../../utils/api-response.js";
-import { assertOperationsPermissionKey } from "../rbac/operations-access.service.js";
+import {
+  assertAnyOperationsPermissionKey,
+  assertOperationsPermissionKey,
+} from "../rbac/operations-access.service.js";
+import { resolveDocumentFileHeaders } from "../documents/document-preview-headers.js";
 import { operationsRegistrationAwarenessService } from "../registration-awareness/operations-registration-awareness.service.js";
 import { operationsVerificationsService } from "./operations-verifications.service.js";
 import type {
@@ -140,10 +144,10 @@ export const operationsVerificationsController = {
 
   async downloadDocument(req: Request, res: Response): Promise<void> {
     const access = requireAccess(req);
-    assertOperationsPermissionKey(
-      access,
+    assertAnyOperationsPermissionKey(access, [
+      "employers.profile.documents.view",
       "employers.profile.documents.download",
-    );
+    ]);
     const { id, documentId } =
       req.params as OperationsVerificationDocumentParams;
     const file = await operationsVerificationsService.openDocument(
@@ -151,11 +155,13 @@ export const operationsVerificationsController = {
       documentId,
     );
 
-    res.setHeader("Content-Type", file.mimeType);
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${file.fileName.replace(/"/g, "")}"`,
-    );
+    const headers = resolveDocumentFileHeaders({
+      mimeType: file.mimeType,
+      fileName: file.fileName,
+      disposition: "inline",
+    });
+    res.setHeader("Content-Type", headers.contentType);
+    res.setHeader("Content-Disposition", headers.contentDisposition);
     if (file.contentLength != null) {
       res.setHeader("Content-Length", String(file.contentLength));
     }

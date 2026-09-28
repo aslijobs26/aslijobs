@@ -6,6 +6,7 @@
   "scripts": {
     "generate:district-maps": "node scripts/generate-india-district-maps.mjs",
     "dev": "vite",
+    "test": "node --experimental-strip-types --test src/utils/document-preview.test.ts",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
     "lint": "oxlint",

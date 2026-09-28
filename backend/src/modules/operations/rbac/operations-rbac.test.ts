@@ -12,6 +12,7 @@ import {
   projectGrantedKeysToMatrix,
 } from "./operations-permission-projection.js";
 import { isOperationsPermissionKey } from "./operations-permission-catalog.js";
+import { assertAnyOperationsPermissionKey } from "./operations-access.service.js";
 
 function accessForKeys(
   grantedKeys: string[],
@@ -299,5 +300,30 @@ describe("module entry access", () => {
     );
     const access = accessForKeys(["candidates.list.view"]);
     assert.equal(operationsAccessCanModule(access, "candidates"), true);
+  });
+});
+
+describe("verification document preview authorization", () => {
+  it("allows preview when the actor has documents.view", () => {
+    const access = accessForKeys(["employers.profile.documents.view"]);
+    assert.doesNotThrow(() =>
+      assertAnyOperationsPermissionKey(access, [
+        "employers.profile.documents.view",
+        "employers.profile.documents.download",
+      ]),
+    );
+  });
+
+  it("denies preview when the actor has neither view nor download", () => {
+    const access = accessForKeys(["employers.list.view"]);
+    assert.throws(
+      () =>
+        assertAnyOperationsPermissionKey(access, [
+          "employers.profile.documents.view",
+          "employers.profile.documents.download",
+        ]),
+      (error: unknown) =>
+        error instanceof AppError && error.statusCode === 403,
+    );
   });
 });
