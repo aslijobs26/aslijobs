@@ -87,7 +87,7 @@ export function HeroSearchForm() {
                   query: event.target.value,
                 }))
               }
-              placeholder="e.g. Driver, Delivery Boy, Electrician"
+              placeholder="e.g. Driver, Delivery Executive, Electrician"
               className={inputClassName}
               autoComplete="off"
             />

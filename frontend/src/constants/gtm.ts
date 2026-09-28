@@ -1,0 +1,1 @@
+export const GTM_CONTAINER_ID = "GTM-TTLF4X35";

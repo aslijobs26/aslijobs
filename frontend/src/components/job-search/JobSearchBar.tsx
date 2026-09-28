@@ -125,7 +125,7 @@ export function JobSearchBar({
               type="search"
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
-              placeholder="e.g. Driver, Delivery Boy, Sales Executive"
+              placeholder="e.g. Driver, Delivery Executive, Sales Executive"
               className={inputClassName}
               autoComplete="off"
             />

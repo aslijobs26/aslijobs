@@ -10,12 +10,12 @@ export const HERO_LANGUAGES = [
 ] as const;
 
 export const HERO_HEADING = {
-  line1: "Find Jobs Easy .",
+  line1: "Find Jobs Easy.",
   line2: "On WhatsApp.",
 } as const;
 
 export const HERO_SUPPORTING = {
-  line1: "The fastest way to hire workers or find jobs.",
+  line1: "The fastest way to hire people or find jobs.",
   line2: "Simple • Multilingual • WhatsApp First",
 } as const;
 
@@ -63,7 +63,7 @@ export const HERO_SEARCH_DEFAULTS = {
 } as const;
 
 export const HERO_POPULAR_SEARCHES = [
-  "Delivery Boy",
+  "Delivery Executive",
   "Driver",
   "Helper",
   "Cook",

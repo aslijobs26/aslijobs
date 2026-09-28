@@ -406,6 +406,37 @@ body {
   }
 }
 
+@keyframes whatsapp-fab-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow:
+      0 6px 18px rgba(37, 211, 102, 0.4),
+      0 0 0 0 rgba(37, 211, 102, 0.3);
+  }
+
+  50% {
+    transform: translateY(-5px);
+    box-shadow:
+      0 12px 26px rgba(37, 211, 102, 0.55),
+      0 0 0 8px rgba(37, 211, 102, 0);
+  }
+}
+
+@utility animate-whatsapp-fab {
+  animation: whatsapp-fab-idle 2.6s ease-in-out infinite;
+
+  &:hover,
+  &:focus-visible,
+  &:active {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 @keyframes auth-panel-twinkle {
   0%,
   100% {

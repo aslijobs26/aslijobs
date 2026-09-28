@@ -1,5 +1,6 @@
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
 import { FloatingBottomNav } from "@/components/layout/FloatingBottomNav";
+import { FloatingWhatsAppButton } from "@/components/layout/FloatingWhatsAppButton";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/footer/Footer";
 import type { ReactNode } from "react";
@@ -15,6 +16,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
       </div>
       <Footer />
       <FloatingBottomNav />
+      <FloatingWhatsAppButton />
     </>
   );
 }

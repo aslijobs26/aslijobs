@@ -1,3 +1,7 @@
+import {
+  GoogleTagManagerNoscript,
+  GoogleTagManagerScript,
+} from "@/components/analytics/GoogleTagManager";
 import { QueryProvider } from "@/providers/query-provider";
 import type { Metadata } from "next";
 import { Inter, Prosto_One } from "next/font/google";
@@ -30,6 +34,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${prostoOne.variable}`}>
       <body className="min-h-screen overflow-x-clip bg-white font-sans antialiased">
+        <GoogleTagManagerNoscript />
+        <GoogleTagManagerScript />
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
