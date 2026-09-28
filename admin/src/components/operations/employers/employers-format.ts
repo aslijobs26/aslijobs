@@ -4,6 +4,22 @@ import type {
   OperationsEmployerVerificationStatus,
 } from "../../../types/operations-employers";
 
+const OPERATIONS_DISPLAY_TIMEZONE = "Asia/Kolkata";
+
+const DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  timeZone: OPERATIONS_DISPLAY_TIMEZONE,
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+};
+
+const TIME_FORMAT: Intl.DateTimeFormatOptions = {
+  timeZone: OPERATIONS_DISPLAY_TIMEZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: true,
+};
+
 export function formatEmployerDateTime(iso: string | null | undefined): {
   date: string;
   time: string;
@@ -18,17 +34,37 @@ export function formatEmployerDateTime(iso: string | null | undefined): {
   }
 
   return {
-    date: new Intl.DateTimeFormat("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(date),
-    time: new Intl.DateTimeFormat("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    }).format(date),
+    date: new Intl.DateTimeFormat("en-IN", DATE_FORMAT).format(date),
+    time: new Intl.DateTimeFormat("en-IN", TIME_FORMAT).format(date),
   };
+}
+
+export function formatEmployerRegisteredParts(employer: {
+  registeredAt: string | null;
+  registeredAtDate?: string;
+  registeredAtTime?: string;
+}): { date: string; time: string } {
+  const formatted = formatEmployerDateTime(employer.registeredAt);
+  if (formatted.date !== "—") {
+    return formatted;
+  }
+
+  return {
+    date: employer.registeredAtDate?.trim() || "—",
+    time: employer.registeredAtTime?.trim() || "",
+  };
+}
+
+export function formatEmployerRegisteredLabel(employer: {
+  registeredAt: string | null;
+  registeredAtDate?: string;
+  registeredAtTime?: string;
+}): string {
+  const parts = formatEmployerRegisteredParts(employer);
+  if (!parts.time) {
+    return parts.date;
+  }
+  return `${parts.date} ${parts.time}`;
 }
 
 export function formatEmployerDateTimeFull(iso: string | null | undefined): string {

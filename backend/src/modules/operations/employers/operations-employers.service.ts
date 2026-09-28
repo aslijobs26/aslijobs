@@ -44,6 +44,11 @@ import type { OperationsResolvedAccess } from "../rbac/operations-access.types.j
 import { operationsAccessCanKey } from "../rbac/operations-access.service.js";
 import { EMPLOYER_FIELD_PERMISSION_KEYS } from "../rbac/operations-permission-catalog.js";
 import { sanitizeEmployerListItem } from "../rbac/operations-field-sanitize.js";
+import {
+  formatEmployerDisplayDate,
+  formatEmployerDisplayTime,
+  resolveEmployerDateRange,
+} from "./operations-employers-datetime.js";
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -54,104 +59,10 @@ function text(value: unknown): string {
   return String(value).trim();
 }
 
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
-}
-
-function endOfLocalDay(date: Date): Date {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    23,
-    59,
-    59,
-    999,
-  );
-}
-
-function parseDateOnly(value: string): Date | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = new Date(`${trimmed}T00:00:00`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function resolveDateRange(input: {
-  datePreset: OperationsEmployerDatePreset;
-  dateFrom: string;
-  dateTo: string;
-}): { from: Date | null; to: Date | null; preset: OperationsEmployerDatePreset } {
-  const now = new Date();
-
-  switch (input.datePreset) {
-    case "today":
-      return {
-        preset: "today",
-        from: startOfLocalDay(now),
-        to: endOfLocalDay(now),
-      };
-    case "yesterday": {
-      const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
-      return {
-        preset: "yesterday",
-        from: startOfLocalDay(yesterday),
-        to: endOfLocalDay(yesterday),
-      };
-    }
-    case "last_7_days": {
-      const from = startOfLocalDay(now);
-      from.setDate(from.getDate() - 6);
-      return { preset: "last_7_days", from, to: endOfLocalDay(now) };
-    }
-    case "last_30_days": {
-      const from = startOfLocalDay(now);
-      from.setDate(from.getDate() - 29);
-      return { preset: "last_30_days", from, to: endOfLocalDay(now) };
-    }
-    case "custom": {
-      const fromRaw = parseDateOnly(input.dateFrom);
-      const toRaw = parseDateOnly(input.dateTo);
-      return {
-        preset: "custom",
-        from: fromRaw ? startOfLocalDay(fromRaw) : null,
-        to: toRaw ? endOfLocalDay(toRaw) : fromRaw ? endOfLocalDay(fromRaw) : null,
-      };
-    }
-    default:
-      return { preset: "all", from: null, to: null };
-  }
-}
-
 function formatEmployerDisplayId(id: string): string {
   const cleaned = id.replace(/[^a-fA-F0-9]/g, "");
   const segment = cleaned.length >= 8 ? cleaned.slice(-8).toUpperCase() : cleaned.toUpperCase();
   return `EMP-${segment || "00000000"}`;
-}
-
-function formatDisplayDate(date: Date | string | null | undefined): string {
-  if (!date) return "—";
-  const d = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(d);
-}
-
-function formatDisplayTime(date: Date | string | null | undefined): string {
-  if (!date) return "";
-  const d = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  }).format(d);
 }
 
 function resolveDisplayName(employer: {
@@ -311,10 +222,24 @@ function formatDocumentTypeLabel(type: string): string {
 }
 
 async function loadKpis(now: Date): Promise<OperationsEmployerKpis> {
-  const startToday = startOfLocalDay(now);
-  const endToday = endOfLocalDay(now);
-  const start7 = startOfLocalDay(now);
-  start7.setDate(start7.getDate() - 6);
+  const todayWindow = resolveEmployerDateRange({
+    datePreset: "today",
+    dateFrom: "",
+    dateTo: "",
+    now,
+  });
+  const weekWindow = resolveEmployerDateRange({
+    datePreset: "last_7_days",
+    dateFrom: "",
+    dateTo: "",
+    now,
+  });
+  if (!todayWindow.from || !todayWindow.to || !weekWindow.from) {
+    throw new Error("Employer KPI date windows must be bounded");
+  }
+  const startToday = todayWindow.from;
+  const endToday = todayWindow.to;
+  const start7 = weekWindow.from;
 
   const [
     totalEmployers,
@@ -377,7 +302,7 @@ async function loadPeriodStats(
   dateFrom: string,
   dateTo: string,
 ): Promise<OperationsEmployersPeriodStats> {
-  const window = resolveDateRange({
+  const window = resolveEmployerDateRange({
     datePreset: preset,
     dateFrom,
     dateTo,
@@ -767,7 +692,7 @@ export const operationsEmployersService = {
     }
 
     // Date range filter
-    const dateRange = resolveDateRange({
+    const dateRange = resolveEmployerDateRange({
       datePreset: query.datePreset,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
@@ -873,8 +798,8 @@ export const operationsEmployersService = {
         city,
         state,
         registeredAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : null,
-        registeredAtDate: formatDisplayDate(doc.createdAt),
-        registeredAtTime: formatDisplayTime(doc.createdAt),
+        registeredAtDate: formatEmployerDisplayDate(doc.createdAt),
+        registeredAtTime: formatEmployerDisplayTime(doc.createdAt),
         verificationSubmittedAt: submittedAt
           ? new Date(submittedAt).toISOString()
           : null,
@@ -882,7 +807,7 @@ export const operationsEmployersService = {
         verificationStatus: vStatus,
         verificationStatusLabel: resolveVerificationStatusLabel(vStatus),
         verifiedAt: doc.verifiedAt ? new Date(doc.verifiedAt).toISOString() : null,
-        verifiedAtDate: doc.verifiedAt ? formatDisplayDate(doc.verifiedAt) : "—",
+        verifiedAtDate: doc.verifiedAt ? formatEmployerDisplayDate(doc.verifiedAt) : "—",
         status: eStatus,
         statusLabel: resolveEmployerStatusLabel(eStatus),
         activeJobsCount: activeJobsMap.get(id) ?? 0,
@@ -1043,8 +968,8 @@ export const operationsEmployersService = {
       registeredAt: employerDoc.createdAt
         ? new Date(employerDoc.createdAt).toISOString()
         : null,
-      registeredAtDate: formatDisplayDate(employerDoc.createdAt),
-      registeredAtTime: formatDisplayTime(employerDoc.createdAt),
+      registeredAtDate: formatEmployerDisplayDate(employerDoc.createdAt),
+      registeredAtTime: formatEmployerDisplayTime(employerDoc.createdAt),
       verificationSubmittedAt: employerDoc.verificationSubmittedAt
         ? new Date(employerDoc.verificationSubmittedAt).toISOString()
         : employerDoc.createdAt
@@ -1057,7 +982,7 @@ export const operationsEmployersService = {
         ? new Date(employerDoc.verifiedAt).toISOString()
         : null,
       verifiedAtDate: employerDoc.verifiedAt
-        ? formatDisplayDate(employerDoc.verifiedAt)
+        ? formatEmployerDisplayDate(employerDoc.verifiedAt)
         : "—",
       status: eStatus,
       statusLabel: resolveEmployerStatusLabel(eStatus),

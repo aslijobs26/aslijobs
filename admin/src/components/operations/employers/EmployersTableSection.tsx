@@ -8,6 +8,7 @@ import { OperationsBadge } from "../../ui/OperationsBadge";
 import {
   employerAvatarInitials,
   employerStatusBadgeVariant,
+  formatEmployerRegisteredParts,
   industryOrAccountLabel,
   verificationStatusBadgeVariant,
 } from "./employers-format";
@@ -173,6 +174,7 @@ export function EmployersTableSection({
                 const logoUrl = resolveMediaUrl(emp.logoUrl);
                 const companyName =
                   emp.companyName || emp.displayName || "—";
+                const registered = formatEmployerRegisteredParts(emp);
 
                 return (
                   <tr
@@ -238,11 +240,11 @@ export function EmployersTableSection({
 
                     <td className="whitespace-nowrap px-3 py-3 text-muted sm:px-3.5 xl:px-2.5 xl:py-2">
                       <span className="block font-medium text-foreground xl:text-[11px]">
-                        {emp.registeredAtDate}
+                        {registered.date}
                       </span>
-                      {emp.registeredAtTime ? (
+                      {registered.time ? (
                         <span className="block text-[11px] xl:text-[10px]">
-                          {emp.registeredAtTime}
+                          {registered.time}
                         </span>
                       ) : null}
                     </td>

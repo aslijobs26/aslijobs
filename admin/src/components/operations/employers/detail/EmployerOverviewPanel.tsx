@@ -13,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import type { OperationsEmployerDetail } from "../../../../types/operations-employers";
-import { formatIndustryOrCategory } from "../employers-format";
+import { formatEmployerRegisteredLabel, formatIndustryOrCategory } from "../employers-format";
 
 interface EmployerOverviewPanelProps {
   employer: OperationsEmployerDetail;
@@ -226,7 +226,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
               />
               <InfoRow
                 label="Registered On"
-                value={`${employer.registeredAtDate} ${employer.registeredAtTime}`}
+                value={formatEmployerRegisteredLabel(employer)}
               />
             </div>
           </SectionCard>
@@ -324,7 +324,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
               />
               <InfoRow
                 label="Registered On"
-                value={`${employer.registeredAtDate} ${employer.registeredAtTime}`}
+                value={formatEmployerRegisteredLabel(employer)}
               />
             </div>
           </SectionCard>
@@ -450,7 +450,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
               />
               <InfoRow
                 label="Registered On"
-                value={`${employer.registeredAtDate} ${employer.registeredAtTime}`}
+                value={formatEmployerRegisteredLabel(employer)}
               />
             </div>
           </SectionCard>

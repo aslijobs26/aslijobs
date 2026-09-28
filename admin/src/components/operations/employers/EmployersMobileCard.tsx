@@ -14,6 +14,7 @@ import { resolveMediaUrl } from "../../../utils/resolve-media-url";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import {
   employerAvatarInitials,
+  formatEmployerRegisteredParts,
   formatIndustryOrCategory,
   industryOrAccountLabel,
 } from "./employers-format";
@@ -135,6 +136,7 @@ export function EmployersMobileCard({
       ? employer.location.trim()
       : "Not specified";
   const jobsPosted = employer.totalJobsCount ?? 0;
+  const registered = formatEmployerRegisteredParts(employer);
 
   return (
     <li className="list-none overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_12px_rgba(15,23,42,0.03)]">
@@ -209,9 +211,9 @@ export function EmployersMobileCard({
           <span className="inline-flex min-w-0 items-center gap-1 truncate">
             <CalendarDays className="size-3 shrink-0" aria-hidden="true" />
             <span className="truncate">
-              {employer.registeredAtDate}
-              {employer.registeredAtTime ? (
-                <span className="text-muted/80"> · {employer.registeredAtTime}</span>
+              {registered.date}
+              {registered.time ? (
+                <span className="text-muted/80"> · {registered.time}</span>
               ) : null}
             </span>
           </span>

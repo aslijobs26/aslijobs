@@ -1,5 +1,6 @@
 import { Activity, CheckCircle2, Clock, ShieldCheck, UserCheck } from "lucide-react";
 import type { OperationsEmployerDetail } from "../../../../types/operations-employers";
+import { formatEmployerDateTimeFull, formatEmployerRegisteredLabel } from "../employers-format";
 
 interface EmployerActivityPanelProps {
   employer: OperationsEmployerDetail;
@@ -10,7 +11,7 @@ export function EmployerActivityPanel({ employer }: EmployerActivityPanelProps) 
     {
       title: "Employer Account Registered",
       description: `Account created for ${employer.displayName} with phone ${employer.phone || "—"}.`,
-      date: `${employer.registeredAtDate} ${employer.registeredAtTime}`,
+      date: formatEmployerRegisteredLabel(employer),
       icon: UserCheck,
       iconColor: "text-primary",
       iconBg: "bg-primary-light",
@@ -22,7 +23,7 @@ export function EmployerActivityPanel({ employer }: EmployerActivityPanelProps) 
             description: `Employer was verified by Operations. Remarks: ${
               employer.verificationRemarks || "Verification approved."
             }`,
-            date: employer.verifiedAtDate,
+            date: formatEmployerDateTimeFull(employer.verifiedAt),
             icon: ShieldCheck,
             iconColor: "text-success",
             iconBg: "bg-success/10",
@@ -48,14 +49,7 @@ export function EmployerActivityPanel({ employer }: EmployerActivityPanelProps) 
           {
             title: "Last Employer Login",
             description: "Employer logged in to AsliJobs employer portal.",
-            date: new Date(employer.lastLoginAt).toLocaleString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            }),
+            date: formatEmployerDateTimeFull(employer.lastLoginAt),
             icon: CheckCircle2,
             iconColor: "text-chart-accent",
             iconBg: "bg-chart-accent/10",
