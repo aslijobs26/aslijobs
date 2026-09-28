@@ -74,6 +74,33 @@ describe("job moderation — verification + eligibility chain", () => {
     }
   });
 
+  it("blocks unverified publish after the draft has been retained", () => {
+    assert.throws(
+      () =>
+        assertEmployerVerifiedForJobAction(
+          { verificationStatus: "pending" },
+          "publish",
+          {
+            draftSaved: true,
+            jobId: "507f1f77bcf86cd799439011",
+            jobPublicId: "AJ-2026-000010",
+          },
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        const details = error.details as {
+          code?: string;
+          draftSaved?: boolean;
+          status?: string;
+        };
+        assert.equal(details.code, EMPLOYER_VERIFICATION_REQUIRED_CODE);
+        assert.equal(details.draftSaved, true);
+        assert.equal(details.status, "draft");
+        return true;
+      },
+    );
+  });
+
   it("treats creationSource spoofing: only operations is trusted", () => {
     assert.equal(isEmployerCreatedJobSource("operations"), false);
     assert.equal(isEmployerCreatedJobSource("employer"), true);

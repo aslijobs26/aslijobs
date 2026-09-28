@@ -1,5 +1,5 @@
 import { WhatsAppIcon } from "@/components/home/hero/HeroIcons";
-import { WHATSAPP_JOIN_URL } from "@/constants/cta";
+import { WHATSAPP_CONTACT_URL } from "@/constants/cta";
 import { ExternalLink, QrCode } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,8 +7,6 @@ import Link from "next/link";
 const whatsappQrCodePath = process.env.NEXT_PUBLIC_WHATSAPP_QR_IMAGE;
 
 export function FooterWhatsAppPanel() {
-  const isExternal = WHATSAPP_JOIN_URL.startsWith("http");
-
   return (
     <aside
       aria-label="WhatsApp support"
@@ -21,9 +19,9 @@ export function FooterWhatsAppPanel() {
       </p>
 
       <Link
-        href={WHATSAPP_JOIN_URL}
-        target={isExternal ? "_blank" : undefined}
-        rel={isExternal ? "noopener noreferrer" : undefined}
+        href={WHATSAPP_CONTACT_URL}
+        target="_blank"
+        rel="noopener noreferrer"
         className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-whatsapp px-4 text-sm font-semibold text-surface transition-colors hover:bg-whatsapp-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/40 sm:w-auto lg:h-9 lg:gap-1.5 lg:px-3 lg:text-xs lg:whitespace-nowrap"
       >
         <WhatsAppIcon className="shrink-0 text-base text-surface lg:text-sm" />

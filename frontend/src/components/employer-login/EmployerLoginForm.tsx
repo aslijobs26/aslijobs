@@ -320,7 +320,7 @@ export function EmployerLoginForm() {
             <button
               type="submit"
               className="employer-register-form-submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isOtpComplete}
               aria-busy={isSubmitting}
             >
               {EMPLOYER_LOGIN_CONTINUE_LABEL}
@@ -337,7 +337,9 @@ export function EmployerLoginForm() {
             <button
               type="submit"
               className="employer-register-form-submit"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting || !isValidEmployerWhatsappNumber(whatsappNumber)
+              }
               aria-busy={isSubmitting}
             >
               {EMPLOYER_LOGIN_SEND_OTP_LABEL}

@@ -2040,7 +2040,24 @@ export class JobService {
     const employer = await EmployerModel.findById(employerId)
       .select("verificationStatus")
       .lean();
-    assertEmployerVerifiedForJobAction(employer, "publish");
+
+    if (!isEmployerVerifiedForJobs(employer)) {
+      applyCreateInputToJob(job, input);
+      const now = new Date();
+      job.status = "draft";
+      job.completedStep = 3;
+      job.lastEditedAt = now;
+      job.wizardSnapshot = null;
+      job.publishedAt = null;
+      job.submittedForApprovalAt = null;
+      job.lastStatusChangedAt = now;
+      await job.save();
+      assertEmployerVerifiedForJobAction(employer, "publish", {
+        draftSaved: true,
+        jobId: job._id.toString(),
+        jobPublicId: job.jobId,
+      });
+    }
 
     const previousWasRejected = job.status === "rejected";
     applyCreateInputToJob(job, input);

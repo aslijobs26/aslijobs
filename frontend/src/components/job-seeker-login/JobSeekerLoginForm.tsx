@@ -144,6 +144,10 @@ export function JobSeekerLoginForm() {
   const { secondsLeft, isCoolingDown, startCooldown, resetCooldown } =
     useOtpResendCooldown();
 
+  const isOtpComplete = otpDigits.every(
+    (digit) => digit.length === 1 && /\d/.test(digit),
+  );
+
   const whatsappErrorId = "job-seeker-login-whatsapp-error";
   const otpErrorId = "job-seeker-login-otp-error";
   const formErrorId = "job-seeker-login-form-error";
@@ -407,7 +411,7 @@ export function JobSeekerLoginForm() {
             <button
               type="submit"
               className="employer-register-form-submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isOtpComplete}
               aria-busy={isSubmitting || undefined}
             >
               {isSubmitting
@@ -430,7 +434,9 @@ export function JobSeekerLoginForm() {
             <button
               type="submit"
               className="employer-register-form-submit"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting || !isValidJobSeekerWhatsappNumber(whatsappNumber)
+              }
               aria-busy={isSubmitting || undefined}
             >
               {isSubmitting

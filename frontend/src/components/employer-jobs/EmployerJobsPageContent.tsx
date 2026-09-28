@@ -1,6 +1,7 @@
 "use client";
 
 import { EmployerJobPreviewModal } from "@/components/employer-jobs/EmployerJobPreviewModal";
+import { EmployerVerificationRequiredModal } from "@/components/post-job/EmployerVerificationRequiredModal";
 import { EmployerJobsBulkDeleteModal } from "@/components/employer-jobs/EmployerJobsBulkDeleteModal";
 import { EmployerJobsBulkToolbar } from "@/components/employer-jobs/EmployerJobsBulkToolbar";
 import { EmployerJobsHeader } from "@/components/employer-jobs/EmployerJobsHeader";
@@ -46,10 +47,10 @@ import type {
 } from "@/types/employer-jobs";
 import { resolveEmptyPageFallback } from "@/utils/list-pagination";
 import {
-  EMPLOYER_VERIFICATION_REQUIRED_CODE,
-  EMPLOYER_VERIFICATION_REQUIRED_MESSAGE,
-} from "@/constants/post-job";
-import { getApiErrorMessage, normalizeApiError } from "@/utils/normalize-api-error";
+  readEmployerVerificationRequiredDetails,
+  type EmployerVerificationGateStatus,
+} from "@/utils/employer-verification-required";
+import { getApiErrorMessage } from "@/utils/normalize-api-error";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -102,6 +103,10 @@ export function EmployerJobsPageContent() {
   const [deleteModal, setDeleteModal] = useState<"selected" | "all" | null>(
     null,
   );
+  const [verificationGate, setVerificationGate] = useState<{
+    jobId: string;
+    verificationStatus: EmployerVerificationGateStatus | null;
+  } | null>(null);
   const isFirstSearchDebounce = useRef(true);
 
   const statusTabFromUrl = searchParams.get("tab");
@@ -249,15 +254,19 @@ export function EmployerJobsPageContent() {
 
       await invalidateJobsData();
     },
-    onError: (error) => {
-      const normalized = normalizeApiError(error);
-      const message =
-        normalized.code === EMPLOYER_VERIFICATION_REQUIRED_CODE
-          ? normalized.message || EMPLOYER_VERIFICATION_REQUIRED_MESSAGE
-          : getApiErrorMessage(
-              error,
-              "Unable to update job status. Please try again.",
-            );
+    onError: (error, variables) => {
+      const resolved = readEmployerVerificationRequiredDetails(error);
+      if (resolved.isVerificationRequired) {
+        setVerificationGate({
+          jobId: variables.jobId,
+          verificationStatus: resolved.verificationStatus,
+        });
+        return;
+      }
+      const message = getApiErrorMessage(
+        error,
+        "Unable to update job status. Please try again.",
+      );
       showAppToast(message, "error");
     },
   });
@@ -617,6 +626,27 @@ export function EmployerJobsPageContent() {
             }
           }}
           onConfirm={handleConfirmBulkDelete}
+        />
+      ) : null}
+
+      {verificationGate ? (
+        <EmployerVerificationRequiredModal
+          verificationStatus={verificationGate.verificationStatus}
+          showViewDraft
+          onCompleteVerification={() => {
+            router.push(ROUTES.EMPLOYER_COMPANY_PROFILE);
+          }}
+          onContinueLater={() => {
+            setVerificationGate(null);
+          }}
+          onViewDraft={() => {
+            const jobId = verificationGate.jobId;
+            setVerificationGate(null);
+            router.push(ROUTES.postJobEdit(jobId));
+          }}
+          onClose={() => {
+            setVerificationGate(null);
+          }}
         />
       ) : null}
     </div>

@@ -1,5 +1,5 @@
 import type { FooterNavGroup } from "@/types/footer";
-import { WHATSAPP_JOIN_URL } from "./cta";
+import { WHATSAPP_CONTACT_URL } from "./cta";
 import { ROUTES } from "./routes";
 
 export const FOOTER_NAV_GROUPS: FooterNavGroup[] = [
@@ -92,7 +92,7 @@ export const FOOTER_NAV_GROUPS: FooterNavGroup[] = [
       {
         id: "whatsapp-support",
         label: "WhatsApp Support",
-        href: WHATSAPP_JOIN_URL,
+        href: WHATSAPP_CONTACT_URL,
       },
     ],
   },

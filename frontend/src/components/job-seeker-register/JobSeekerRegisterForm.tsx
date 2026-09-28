@@ -356,6 +356,13 @@ export function JobSeekerRegisterForm() {
   const { secondsLeft, isCoolingDown, startCooldown, resetCooldown } =
     useOtpResendCooldown();
 
+  const isOtpComplete = otpDigits.every(
+    (digit) => digit.length === 1 && /\d/.test(digit),
+  );
+  const canSendAccountOtp =
+    Boolean(fullName.trim()) &&
+    isValidJobSeekerWhatsappNumber(whatsappNumber);
+
   const fullNameErrorId = "job-seeker-register-full-name-error";
   const whatsappErrorId = "job-seeker-register-whatsapp-error";
   const otpErrorId = "job-seeker-register-otp-error";
@@ -819,7 +826,11 @@ export function JobSeekerRegisterForm() {
         <button
           type="submit"
           className="employer-register-form-submit"
-          disabled={isSubmitting}
+          disabled={
+            isSubmitting ||
+            (step === "account" && !canSendAccountOtp) ||
+            (step === "otp" && !isOtpComplete)
+          }
           aria-busy={isSubmitting || undefined}
         >
           {isSubmitting

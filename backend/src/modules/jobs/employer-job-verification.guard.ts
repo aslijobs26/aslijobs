@@ -105,6 +105,7 @@ export function assertEmployerVerifiedForJobAction(
           draftSaved: true,
           jobId: extras.jobId,
           jobPublicId: extras.jobPublicId,
+          status: "draft",
         }
       : {}),
   });

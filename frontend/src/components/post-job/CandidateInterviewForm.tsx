@@ -10,7 +10,6 @@ import {
   POST_JOB_LONG_TEXT_MAX_LENGTH,
   POST_JOB_WALK_IN_TIME_OPTIONS,
 } from "@/constants/post-job";
-import { ROUTES } from "@/constants/routes";
 import type {
   AdditionalRequirementsState,
   CandidateInterviewFormData,
@@ -21,7 +20,6 @@ import type {
   WalkInOption,
 } from "@/types/post-job";
 import { cn } from "@/utils/cn";
-import Link from "next/link";
 import type { RefObject } from "react";
 import { PostJobChipButton } from "./PostJobChipButton";
 import { PostJobFormField } from "./PostJobFormField";
@@ -51,7 +49,6 @@ type CandidateInterviewFormProps = {
   formData: CandidateInterviewFormData;
   fieldErrors?: Record<string, string>;
   submitError?: string;
-  showVerificationCta?: boolean;
   isSubmitting?: boolean;
   isEditMode?: boolean;
   onFieldChange: <K extends keyof CandidateInterviewFormData>(
@@ -71,7 +68,6 @@ export function CandidateInterviewForm({
   formData,
   fieldErrors = {},
   submitError,
-  showVerificationCta = false,
   isSubmitting = false,
   isEditMode = false,
   onFieldChange,
@@ -607,18 +603,6 @@ export function CandidateInterviewForm({
           {submitError ? (
             <div className="space-y-1.5" role="alert">
               <p className="text-xs font-medium text-red-600">{submitError}</p>
-              {showVerificationCta ? (
-                <p className="text-xs text-muted">
-                  You can still save this job as a draft.{" "}
-                  <Link
-                    href={ROUTES.EMPLOYER_COMPANY_PROFILE}
-                    className="font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                  >
-                    View company profile
-                  </Link>{" "}
-                  to check your verification status.
-                </p>
-              ) : null}
             </div>
           ) : null}
 

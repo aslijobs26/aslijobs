@@ -74,10 +74,14 @@ describe("employer job verification guard", () => {
           code?: string;
           draftSaved?: boolean;
           jobId?: string;
+          status?: string;
+          verificationStatus?: string;
         };
         assert.equal(details.code, EMPLOYER_VERIFICATION_REQUIRED_CODE);
         assert.equal(details.draftSaved, true);
         assert.equal(details.jobId, "507f1f77bcf86cd799439011");
+        assert.equal(details.status, "draft");
+        assert.equal(details.verificationStatus, "pending");
         assert.match(error.message, /saved as a draft/i);
         return true;
       },

@@ -34,6 +34,36 @@ export const EMPLOYER_VERIFICATION_REQUIRED_MESSAGE =
 export const EMPLOYER_VERIFICATION_REQUIRED_DRAFT_SAVED_MESSAGE =
   "Your employer account is awaiting verification. Your job has been saved as a draft. You can submit it after verification.";
 
+export const EMPLOYER_VERIFICATION_REQUIRED_MODAL_TITLE =
+  "Employer Verification Required";
+
+export const EMPLOYER_VERIFICATION_REQUIRED_MODAL_BODY =
+  "Your employer account is not verified yet. Please complete the required verification before publishing this job.";
+
+export const EMPLOYER_VERIFICATION_REQUIRED_MODAL_PENDING_BODY =
+  "Your employer verification is still under review. You can publish this job after it is approved.";
+
+export const EMPLOYER_VERIFICATION_REQUIRED_MODAL_REJECTED_BODY =
+  "Your employer verification was not approved. Please update your documents and submit again before publishing this job.";
+
+export const EMPLOYER_VERIFICATION_REQUIRED_MODAL_DRAFT_NOTE =
+  "Your job has been saved as a draft, so you won't lose the information you've entered.";
+
+export const EMPLOYER_VERIFICATION_REQUIRED_MODAL_DRAFT_POINT =
+  "Your job details have been saved as a draft.";
+
+export const EMPLOYER_VERIFICATION_REQUIRED_MODAL_VERIFY_POINT =
+  "Complete verification to publish this job.";
+
+export const EMPLOYER_VERIFICATION_REQUIRED_MODAL_COMPLETE_CTA =
+  "Complete Verification";
+
+export const EMPLOYER_VERIFICATION_REQUIRED_MODAL_LATER_CTA =
+  "Continue Later";
+
+export const EMPLOYER_VERIFICATION_REQUIRED_MODAL_VIEW_DRAFT_CTA =
+  "View Draft";
+
 export const POST_JOB_STEPS: PostJobStep[] = [
   {
     id: "job-information",
