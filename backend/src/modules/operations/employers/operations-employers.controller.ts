@@ -11,6 +11,7 @@ import {
   sanitizeEmployerListItem,
 } from "../rbac/operations-field-sanitize.js";
 import { operationsRegistrationAwarenessService } from "../registration-awareness/operations-registration-awareness.service.js";
+import { resolveDocumentFileHeaders } from "../documents/document-preview-headers.js";
 import { operationsEmployersService } from "./operations-employers.service.js";
 import type {
   CreateOperationsEmployerBody,
@@ -189,11 +190,13 @@ export const operationsEmployersController = {
       documentId,
     );
 
-    res.setHeader("Content-Type", file.mimeType);
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${file.fileName.replace(/"/g, "")}"`,
-    );
+    const headers = resolveDocumentFileHeaders({
+      mimeType: file.mimeType,
+      fileName: file.fileName,
+      disposition: "inline",
+    });
+    res.setHeader("Content-Type", headers.contentType);
+    res.setHeader("Content-Disposition", headers.contentDisposition);
     if (file.contentLength != null) {
       res.setHeader("Content-Length", String(file.contentLength));
     }

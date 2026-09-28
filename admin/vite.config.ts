@@ -164,6 +164,9 @@ export default defineConfig(() => {
       tailwindcss(),
       backendReadyPlugin(() => lastProxyFailureAt),
     ],
+    optimizeDeps: {
+      exclude: ["pdfjs-dist"],
+    },
     server: {
       port: 5173,
       strictPort: true,

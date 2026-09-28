@@ -1,5 +1,5 @@
 import { Download, ExternalLink, Eye, FileText, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { isAxiosError } from "axios";
 import { fetchOperationsEmployerDocumentBlob } from "../../../../services/operations-employers.service";
@@ -9,9 +9,15 @@ import {
   normalizeDocumentBlobForPreview,
   previewErrorMessageFromStatus,
 } from "../../../../utils/document-preview";
+import { pdfPreviewObjectUrl } from "../../../../utils/pdf-preview-layout";
 import { resolveMediaUrl } from "../../../../utils/resolve-media-url";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import { OperationsCanKey } from "../../auth/OperationsCanKey";
+
+const DocumentPdfPreview = lazy(async () => {
+  const module = await import("../../documents/DocumentPdfPreview");
+  return { default: module.DocumentPdfPreview };
+});
 
 type FetchEmployerDocumentBlob = (
   documentId: string,
@@ -62,6 +68,7 @@ export function EmployerDocumentsPanel({
   const [previewDoc, setPreviewDoc] =
     useState<OperationsEmployerDocumentItem | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -78,6 +85,7 @@ export function EmployerDocumentsPanel({
     if (!previewDoc) {
       revokePreviewUrl();
       setPreviewUrl(null);
+      setPreviewBlob(null);
       return;
     }
 
@@ -87,6 +95,7 @@ export function EmployerDocumentsPanel({
       setIsLoadingPreview(true);
       setPreviewError(null);
       setPreviewUrl(null);
+      setPreviewBlob(null);
       revokePreviewUrl();
 
       try {
@@ -124,6 +133,7 @@ export function EmployerDocumentsPanel({
         if (cancelled) return;
         const objectUrl = URL.createObjectURL(previewBlob);
         objectUrlRef.current = objectUrl;
+        setPreviewBlob(previewBlob);
         setPreviewUrl(objectUrl);
       } catch (error) {
         if (!cancelled) {
@@ -182,6 +192,7 @@ export function EmployerDocumentsPanel({
     setPreviewDoc(null);
     setPreviewError(null);
     setPreviewUrl(null);
+    setPreviewBlob(null);
   };
 
   const handleDownload = async (doc: OperationsEmployerDocumentItem) => {
@@ -236,7 +247,7 @@ export function EmployerDocumentsPanel({
           result.blob.type,
         );
         const url = URL.createObjectURL(previewBlob);
-        window.open(url, "_blank", "noopener,noreferrer");
+        window.open(pdfPreviewObjectUrl(url), "_blank", "noopener,noreferrer");
         window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       } catch {
         setActionError("Unable to open document. Please try again.");
@@ -384,12 +395,12 @@ export function EmployerDocumentsPanel({
       {previewDoc
         ? createPortal(
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-xs"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4"
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
             >
-              <div className="flex h-[92vh] max-h-[92vh] min-h-0 w-full max-w-4xl flex-col rounded-xl border border-border-subtle bg-surface shadow-2xl animate-in fade-in-0 zoom-in-95">
+              <div className="flex h-[92vh] max-h-[92vh] min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-2xl">
                 <div className="flex items-center justify-between gap-2 border-b border-border-subtle p-3 sm:px-4">
                   <div className="min-w-0 flex-1">
                     <h3
@@ -428,16 +439,19 @@ export function EmployerDocumentsPanel({
                   </div>
                 </div>
 
-                <div className="flex min-h-0 flex-1 flex-col bg-hero-bg/40">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-hero-bg/40">
                   {isLoadingPreview ? (
-                    <div className="flex size-full items-center justify-center text-xs text-muted">
+                    <div className="flex min-h-0 flex-1 items-center justify-center text-xs text-muted">
                       Loading preview…
                     </div>
                   ) : null}
                   {!isLoadingPreview && previewError ? (
-                    <div className="flex size-full flex-col items-center justify-center gap-3 px-4 text-center">
+                    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
                       <p className="text-sm font-medium text-danger" role="alert">
                         {previewError}
+                      </p>
+                      <p className="text-xs text-muted">
+                        Please try Open in New Tab or Download.
                       </p>
                       <div className="flex flex-wrap items-center justify-center gap-2">
                         <button
@@ -459,22 +473,72 @@ export function EmployerDocumentsPanel({
                       </div>
                     </div>
                   ) : null}
-                  {!isLoadingPreview && previewUrl && isPdfDocument(previewDoc) ? (
-                    <iframe
-                      src={`${previewUrl}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`}
-                      title={previewDoc.originalName}
-                      className="min-h-0 h-full w-full flex-1 border-0 bg-white"
-                    />
+                  {!isLoadingPreview &&
+                  !previewError &&
+                  previewBlob &&
+                  isPdfDocument(previewDoc) ? (
+                    <Suspense
+                      fallback={
+                        <div className="flex min-h-0 flex-1 items-center justify-center text-xs text-muted">
+                          Loading preview…
+                        </div>
+                      }
+                    >
+                      <DocumentPdfPreview
+                        blob={previewBlob}
+                        fileName={previewDoc.originalName}
+                        onOpenInNewTab={() => void handleOpenExternal(previewDoc)}
+                        onDownload={() => void handleDownload(previewDoc)}
+                      />
+                    </Suspense>
                   ) : null}
                   {!isLoadingPreview &&
+                  !previewError &&
                   previewUrl &&
-                  !isPdfDocument(previewDoc) ? (
-                    <div className="flex size-full items-center justify-center overflow-auto p-2 sm:p-4">
+                  detectDocumentPreviewKind(
+                    previewDoc.originalName,
+                    previewDoc.mimeType,
+                  ) === "image" ? (
+                    <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-2 sm:p-4">
                       <img
                         src={previewUrl}
                         alt={previewDoc.originalName}
                         className="max-h-full max-w-full rounded-lg object-contain shadow-md"
                       />
+                    </div>
+                  ) : null}
+                  {!isLoadingPreview &&
+                  !previewError &&
+                  !isPdfDocument(previewDoc) &&
+                  detectDocumentPreviewKind(
+                    previewDoc.originalName,
+                    previewDoc.mimeType,
+                  ) === "unsupported" ? (
+                    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
+                      <p className="text-sm font-medium text-foreground" role="status">
+                        Preview not supported for this file type.
+                      </p>
+                      <p className="text-xs text-muted">
+                        Please try Open in New Tab or Download.
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleOpenExternal(previewDoc)}
+                          className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-hero-bg/60"
+                        >
+                          <ExternalLink className="size-3.5" aria-hidden="true" />
+                          Open in new tab
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDownload(previewDoc)}
+                          className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-hero-bg/60"
+                        >
+                          <Download className="size-3.5" aria-hidden="true" />
+                          Download
+                        </button>
+                      </div>
                     </div>
                   ) : null}
                 </div>

@@ -6,7 +6,7 @@
   "scripts": {
     "generate:district-maps": "node scripts/generate-india-district-maps.mjs",
     "dev": "vite",
-    "test": "node --experimental-strip-types --test src/utils/document-preview.test.ts",
+    "test": "node --experimental-strip-types --test src/utils/document-preview.test.ts src/utils/pdf-preview-layout.test.ts",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
     "lint": "oxlint",
@@ -27,6 +27,7 @@
     "d3-geo": "^3.1.1",
     "isomorphic-dompurify": "^3.23.0",
     "lucide-react": "^1.23.0",
+    "pdfjs-dist": "^6.3.289",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-hook-form": "^7.81.0",

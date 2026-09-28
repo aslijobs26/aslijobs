@@ -50,6 +50,16 @@ describe("verification document preview utils", () => {
     );
   });
 
+  it("treats GST octet-stream PDFs as previewable PDFs", () => {
+    assert.equal(
+      detectDocumentPreviewKind(
+        "3-DISHHA_GST_CERTIFICATE.pdf",
+        "application/octet-stream",
+      ),
+      "pdf",
+    );
+  });
+
   it("maps auth and missing-document errors", () => {
     assert.match(previewErrorMessageFromStatus(403), /permission/i);
     assert.match(previewErrorMessageFromStatus(404), /not be found/i);
