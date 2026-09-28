@@ -87,7 +87,7 @@ export function EmployerCandidatesPageContent() {
   const [sort, setSort] = useState<"newest" | "oldest" | "updated">(
     (searchParams.get("sort") as "newest" | "oldest" | "updated") || "newest",
   );
-  const [activeTab, setActiveTab] = useState<CandidatesDetailTab>("profile");
+  const [activeTab, setActiveTab] = useState<CandidatesDetailTab>("resume");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);

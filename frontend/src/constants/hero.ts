@@ -10,7 +10,7 @@ export const HERO_LANGUAGES = [
 ] as const;
 
 export const HERO_HEADING = {
-  line1: "Find Real Jobs.",
+  line1: "Find Jobs Easy .",
   line2: "On WhatsApp.",
 } as const;
 
