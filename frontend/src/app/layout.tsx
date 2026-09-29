@@ -33,9 +33,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${prostoOne.variable}`}>
+      <head>
+        <GoogleTagManagerScript />
+      </head>
       <body className="min-h-screen overflow-x-clip bg-white font-sans antialiased">
         <GoogleTagManagerNoscript />
-        <GoogleTagManagerScript />
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
