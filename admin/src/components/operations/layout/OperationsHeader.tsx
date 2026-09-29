@@ -108,7 +108,7 @@ export function OperationsHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex min-w-0 shrink-0 items-center border-b border-border-subtle bg-surface/95 backdrop-blur-sm",
+        "sticky top-0 z-30 flex min-w-0 shrink-0 items-center overflow-x-clip border-b border-border-subtle bg-surface/95 backdrop-blur-sm",
         isCompact
           ? "h-14 gap-2 px-2 sm:gap-3 sm:px-3 lg:px-4"
           : "h-14 gap-2 px-2.5 sm:h-16 sm:gap-3 sm:px-4 lg:px-5",

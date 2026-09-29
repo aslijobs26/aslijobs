@@ -113,6 +113,24 @@ body {
   min-height: 100dvh;
 }
 
+/*
+ * Operations dashboard: one viewport-tall shell. Prevents html/body and #root
+ * from growing past 100dvh (nested h-dvh + min-height causes extra bars on
+ * Windows classic scrollbars, iOS Safari, and Android Chrome).
+ */
+html.operations-shell-lock,
+html.operations-shell-lock body,
+html.operations-shell-lock #root {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html.operations-shell-lock #root {
+  min-height: 0;
+}
+
 @utility scrollbar-hidden {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -122,6 +140,11 @@ body {
     display: none;
     width: 0;
     height: 0;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    display: none;
   }
 }
 

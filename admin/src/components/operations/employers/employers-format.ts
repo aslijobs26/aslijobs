@@ -146,7 +146,31 @@ export function formatIndustryOrCategory(val: string | null | undefined): string
     .replace(/\bKpo\b/g, "KPO");
 }
 
-/** Same industry / account fallback used by the employers table. */
+/** The employer-provided business or professional name for Operations lists. */
+export function employerProvidedDisplayName(
+  employer: Pick<
+    OperationsEmployerListItem,
+    "displayName" | "companyName" | "establishmentName"
+  >,
+): string {
+  const displayName = employer.displayName?.trim();
+  if (displayName && displayName !== "—") {
+    return displayName;
+  }
+
+  const companyName = employer.companyName?.trim();
+  if (companyName && companyName !== "—") {
+    return companyName;
+  }
+
+  const establishmentName = employer.establishmentName?.trim();
+  if (establishmentName && establishmentName !== "—") {
+    return establishmentName;
+  }
+
+  return "—";
+}
+
 export function industryOrAccountLabel(
   employer: OperationsEmployerListItem,
 ): string {

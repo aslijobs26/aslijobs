@@ -14,6 +14,7 @@ import { resolveMediaUrl } from "../../../utils/resolve-media-url";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import {
   employerAvatarInitials,
+  employerProvidedDisplayName,
   formatEmployerRegisteredParts,
   formatIndustryOrCategory,
   industryOrAccountLabel,
@@ -126,8 +127,7 @@ export function EmployersMobileCard({
 }: EmployersMobileCardProps) {
   const logoUrl = resolveMediaUrl(employer.logoUrl);
   const profilePath = operationsEmployerDetailPath(employer.id);
-  const companyName =
-    employer.companyName || employer.displayName || "—";
+  const companyName = employerProvidedDisplayName(employer);
   const rawIndustry = industryOrAccountLabel(employer);
   const industryLabel =
     formatIndustryOrCategory(rawIndustry) || rawIndustry;
@@ -156,14 +156,17 @@ export function EmployersMobileCard({
             </span>
 
             <span className="min-w-0 flex-1">
-              <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <span className="truncate text-[13px] font-semibold tracking-tight text-foreground group-hover:text-primary">
+              <span className="flex min-w-0 items-start gap-1.5">
+                <span
+                  className="min-w-0 flex-1 break-words text-[13px] font-semibold leading-snug tracking-tight text-foreground group-hover:text-primary"
+                  title={companyName}
+                >
                   {companyName}
                 </span>
                 {employer.isNewRegistration ? (
                   <OperationsBadge
                     variant="high"
-                    className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wider"
+                    className="shrink-0 px-1.5 py-0 text-[9px] font-bold uppercase tracking-wider"
                   >
                     <span aria-label="New registration">New</span>
                   </OperationsBadge>

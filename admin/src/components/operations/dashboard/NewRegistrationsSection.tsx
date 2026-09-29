@@ -14,6 +14,16 @@ import { cn } from "../../../utils/cn";
 
 type RecentTab = "employers" | "candidates";
 
+/** Visible rows in the recent list; remaining accounts scroll inside the card. */
+const RECENT_ACCOUNT_ROW_MIN_CLASS = "min-h-[3.875rem]";
+const RECENT_ACCOUNTS_LIST_CLASS =
+  "max-h-[calc(3*3.875rem)] overflow-y-auto overscroll-y-contain scrollbar-hidden";
+
+const recentAccountLinkClassName = cn(
+  "flex items-start justify-between gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+  RECENT_ACCOUNT_ROW_MIN_CLASS,
+);
+
 function formatCount(value: number | null | undefined) {
   if (value == null) {
     return "—";
@@ -52,17 +62,17 @@ function RecentEmployerRow({
     <li>
       <Link
         to={item.actionPath}
-        className="flex items-start justify-between gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        className={recentAccountLinkClassName}
       >
         <span className="min-w-0">
-          <span className="flex flex-wrap items-center gap-1.5">
-            <span className="truncate text-[12px] font-semibold text-foreground">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="min-w-0 truncate text-[12px] font-semibold text-foreground">
               {item.displayName}
             </span>
             {item.awarenessState === "new" ? (
               <OperationsBadge
                 variant="high"
-                className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
+                className="shrink-0 px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
               >
                 NEW
               </OperationsBadge>
@@ -89,17 +99,17 @@ function RecentCandidateRow({
     <li>
       <Link
         to={item.actionPath}
-        className="flex items-start justify-between gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        className={recentAccountLinkClassName}
       >
         <span className="min-w-0">
-          <span className="flex flex-wrap items-center gap-1.5">
-            <span className="truncate text-[12px] font-semibold text-foreground">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="min-w-0 truncate text-[12px] font-semibold text-foreground">
               {item.displayName}
             </span>
             {item.awarenessState === "new" ? (
               <OperationsBadge
                 variant="high"
-                className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
+                className="shrink-0 px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
               >
                 NEW
               </OperationsBadge>
@@ -315,7 +325,17 @@ export function NewRegistrationsSection() {
                 registrations.
               </p>
             ) : (
-              <ul className="divide-y divide-border-subtle/80">
+              <ul
+                className={cn(
+                  "divide-y divide-border-subtle/80",
+                  RECENT_ACCOUNTS_LIST_CLASS,
+                )}
+                aria-label={
+                  activeTab === "employers"
+                    ? "Recent employer registrations"
+                    : "Recent jobseeker registrations"
+                }
+              >
                 {activeTab === "employers"
                   ? (recentItems as OperationsRecentEmployerRegistration[]).map(
                       (item) => (

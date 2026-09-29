@@ -17,6 +17,7 @@ import { JobsKpiStrip } from "../components/operations/jobs/JobsKpiStrip";
 import { JobsAskAsliCard } from "../components/operations/jobs/overview/JobsAskAsliCard";
 import { JobsOverviewAnalytics } from "../components/operations/jobs/overview/JobsOverviewAnalytics";
 import { JobsOverviewHeader } from "../components/operations/jobs/overview/JobsOverviewHeader";
+import { JobsPendingApprovalDot } from "../components/operations/jobs/JobsPendingApprovalDot";
 import { JobsQuickActions } from "../components/operations/jobs/overview/JobsQuickActions";
 import { JobsTableSection } from "../components/operations/jobs/JobsTableSection";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
@@ -578,7 +579,7 @@ export function OperationsJobsPage() {
                       </span>
                     </h2>
                     <div
-                      className="-mx-0.5 flex min-w-0 items-center gap-1.5 overflow-x-auto px-0.5 pb-0.5 scrollbar-hidden"
+                      className="flex min-w-0 items-center gap-1.5 overflow-x-auto overflow-y-clip overscroll-x-contain scrollbar-hidden"
                       role="tablist"
                       aria-label="Recent job posting tabs"
                     >
@@ -609,12 +610,19 @@ export function OperationsJobsPage() {
                         ] as const
                       ).map((item) => {
                         const selected = tab === item.id;
+                        const hasPendingApprovals =
+                          item.id === "pending_approval" && item.count > 0;
                         return (
                           <button
                             key={item.id}
                             type="button"
                             role="tab"
                             aria-selected={selected}
+                            aria-label={
+                              hasPendingApprovals
+                                ? `${item.label}, ${item.count.toLocaleString("en-IN")}, jobs waiting for review`
+                                : `${item.label}, ${item.count.toLocaleString("en-IN")}`
+                            }
                             onClick={() => handleTabChange(item.id)}
                       className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:h-8 max-sm:gap-1 max-sm:px-2 max-sm:text-[10px] xl:h-7 xl:gap-1 xl:px-2 xl:text-[9px] ${
                               selected
@@ -622,6 +630,7 @@ export function OperationsJobsPage() {
                                 : "ops-brand-border-glow border-border bg-surface text-muted hover:bg-primary-light/50"
                             }`}
                           >
+                            <JobsPendingApprovalDot visible={hasPendingApprovals} />
                             {item.label}
                             <span className="tabular-nums xl:text-[8px]">
                               {item.count.toLocaleString("en-IN")}

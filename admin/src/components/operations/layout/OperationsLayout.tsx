@@ -40,6 +40,15 @@ export function OperationsLayout({
     : OPERATIONS_SIDEBAR_COLLAPSED_WIDTH;
 
   useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("operations-shell-lock");
+
+    return () => {
+      root.classList.remove("operations-shell-lock");
+    };
+  }, []);
+
+  useEffect(() => {
     if (!mobileNavOpen) {
       return;
     }
@@ -64,7 +73,7 @@ export function OperationsLayout({
   return (
     <div
       className={cn(
-        "h-dvh overflow-hidden bg-hero-bg",
+        "flex h-dvh max-h-dvh overflow-hidden bg-hero-bg",
         isCompact && "operations-dashboard-density",
       )}
       style={
@@ -85,7 +94,7 @@ export function OperationsLayout({
         density={density}
       />
 
-      <div className="flex h-dvh min-w-0 flex-col transition-[padding] duration-200 ease-out lg:pl-[var(--operations-sidebar-current-width)]">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-hidden transition-[padding] duration-200 ease-out lg:pl-[var(--operations-sidebar-current-width)]">
         <OperationsHeader
           title={title}
           subtitle={subtitle}
@@ -95,7 +104,7 @@ export function OperationsLayout({
         />
         <main
           className={cn(
-            "min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain scrollbar-hidden",
+            "min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-y-contain scrollbar-hidden",
             isCompact
               ? "px-2 py-2 sm:px-3 sm:py-2.5 lg:px-3.5 lg:py-2.5"
               : "px-2.5 py-2.5 sm:px-4 sm:py-4 lg:px-5 lg:py-4",

@@ -1,5 +1,6 @@
 import type { OperationsJobTab, OperationsJobsTabCounts } from "../../../types/operations-jobs";
 import { cn } from "../../../utils/cn";
+import { JobsPendingApprovalDot } from "./JobsPendingApprovalDot";
 
 interface JobsTabsProps {
   activeTab: OperationsJobTab;
@@ -21,7 +22,7 @@ const TABS: { id: OperationsJobTab; label: string; shortLabel: string }[] = [
 export function JobsTabs({ activeTab, counts, onChange }: JobsTabsProps) {
   return (
     <div
-      className="-mx-0.5 flex min-w-0 items-center gap-1.5 overflow-x-auto px-0.5 pb-0.5 scrollbar-hidden sm:gap-2 lg:flex-wrap lg:overflow-visible lg:pb-0"
+      className="flex min-w-0 items-center gap-1.5 overflow-x-auto overflow-y-clip overscroll-x-contain scrollbar-hidden sm:gap-2 lg:flex-wrap lg:overflow-visible"
       role="tablist"
       aria-label="Job status tabs"
     >
@@ -29,6 +30,8 @@ export function JobsTabs({ activeTab, counts, onChange }: JobsTabsProps) {
         const selected = activeTab === tab.id;
         const count = counts[tab.id];
         const countLabel = count.toLocaleString("en-IN");
+        const hasPendingApprovals =
+          tab.id === "pending_approval" && count > 0;
 
         return (
           <button
@@ -36,7 +39,11 @@ export function JobsTabs({ activeTab, counts, onChange }: JobsTabsProps) {
             type="button"
             role="tab"
             aria-selected={selected}
-            aria-label={`${tab.label}, ${countLabel}`}
+            aria-label={
+              hasPendingApprovals
+                ? `${tab.label}, ${countLabel}, jobs waiting for review`
+                : `${tab.label}, ${countLabel}`
+            }
             onClick={() => onChange(tab.id)}
             className={cn(
               "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold whitespace-nowrap transition-[colors,box-shadow,border-color]",
@@ -47,6 +54,7 @@ export function JobsTabs({ activeTab, counts, onChange }: JobsTabsProps) {
                 : "ops-brand-border-glow border-border bg-surface text-muted hover:border-primary-soft/40 hover:bg-primary-light/50 hover:text-foreground",
             )}
           >
+            <JobsPendingApprovalDot visible={hasPendingApprovals} />
             <span className="sm:hidden">{tab.shortLabel}</span>
             <span className="hidden sm:inline">{tab.label}</span>
             <span

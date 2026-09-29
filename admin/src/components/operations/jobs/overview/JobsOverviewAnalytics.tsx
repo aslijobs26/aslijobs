@@ -150,7 +150,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
           {!hasTrend ? (
             <EmptyState message="No posting activity in this period." />
           ) : (
-            <div className="h-52 min-w-0 max-sm:h-44 sm:h-56 xl:h-44">
+            <div className="h-52 min-w-0 overflow-hidden max-sm:h-44 sm:h-56 xl:h-44">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={postingsTrend}
@@ -222,7 +222,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
             <EmptyState message="No status data available." />
           ) : (
             <div className="flex min-h-28 min-w-0 flex-col gap-4 max-sm:min-h-24 max-sm:gap-3 sm:flex-row sm:items-center xl:min-h-24 xl:gap-2.5">
-              <div className="relative mx-auto size-36 shrink-0 max-sm:size-32 xl:size-24">
+              <div className="relative mx-auto size-36 shrink-0 overflow-hidden max-sm:size-32 xl:size-24">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -328,7 +328,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
             <EmptyState message="No employment type data available." />
           ) : (
             <div className="flex min-h-28 min-w-0 flex-col gap-4 max-sm:min-h-24 max-sm:gap-3 sm:flex-row sm:items-center xl:min-h-24 xl:gap-2.5">
-              <div className="relative mx-auto size-36 shrink-0 max-sm:size-32 xl:size-24">
+              <div className="relative mx-auto size-36 shrink-0 overflow-hidden max-sm:size-32 xl:size-24">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie

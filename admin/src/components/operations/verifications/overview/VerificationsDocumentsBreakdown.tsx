@@ -1,15 +1,11 @@
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import type { OperationsVerificationsNamedCount } from "../../../../types/operations-verifications";
-import { cn } from "../../../../utils/cn";
 import { OperationsCard } from "../../../ui/OperationsCard";
 
 interface VerificationsDocumentsBreakdownProps {
   items: OperationsVerificationsNamedCount[];
 }
-
-const BARS_SCROLL_CLASS =
-  "max-h-[calc((2.5rem*5)+(0.625rem*4))] overflow-y-auto overscroll-contain scrollbar-hidden xl:max-h-[calc((2rem*5)+(0.375rem*4))]";
 
 export function VerificationsDocumentsBreakdown({
   items,
@@ -35,12 +31,7 @@ export function VerificationsDocumentsBreakdown({
           No document data available.
         </p>
       ) : (
-        <ul
-          className={cn(
-            "flex min-h-44 flex-col gap-2.5 xl:min-h-36 xl:gap-1.5",
-            BARS_SCROLL_CLASS,
-          )}
-        >
+        <ul className="flex min-h-44 flex-col gap-2.5 xl:min-h-36 xl:gap-1.5">
           {rows.slice(0, 12).map((item) => (
             <li key={item.key} className="min-w-0 shrink-0">
               <div className="mb-1 flex items-center justify-between gap-2 text-[11px] xl:mb-0.5 xl:text-[10px]">

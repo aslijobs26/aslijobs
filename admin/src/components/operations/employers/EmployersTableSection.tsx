@@ -7,6 +7,7 @@ import { resolveMediaUrl } from "../../../utils/resolve-media-url";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import {
   employerAvatarInitials,
+  employerProvidedDisplayName,
   employerStatusBadgeVariant,
   formatEmployerRegisteredParts,
   industryOrAccountLabel,
@@ -172,8 +173,7 @@ export function EmployersTableSection({
               !isError &&
               employers.map((emp) => {
                 const logoUrl = resolveMediaUrl(emp.logoUrl);
-                const companyName =
-                  emp.companyName || emp.displayName || "—";
+                const companyName = employerProvidedDisplayName(emp);
                 const registered = formatEmployerRegisteredParts(emp);
 
                 return (
@@ -181,7 +181,7 @@ export function EmployersTableSection({
                     key={emp.id}
                     className="align-middle transition-colors hover:bg-hero-bg/30"
                   >
-                    <td className="max-w-[15rem] py-3 pl-4 pr-3 sm:pr-3.5 xl:max-w-[12rem] xl:py-2 xl:pl-3 xl:pr-2.5">
+                    <td className="py-3 pl-4 pr-3 sm:pr-3.5 xl:py-2 xl:pl-3 xl:pr-2.5">
                       <Link
                         to={operationsEmployerDetailPath(emp.id)}
                         className="flex min-w-0 items-center gap-2.5 xl:gap-2"
@@ -198,14 +198,17 @@ export function EmployersTableSection({
                           )}
                         </span>
                         <div className="min-w-0">
-                          <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                            <span className="truncate text-xs font-semibold text-foreground hover:text-primary xl:text-[11px]">
+                          <span className="flex min-w-0 items-start gap-1.5">
+                            <span
+                              className="min-w-0 flex-1 break-words text-xs font-semibold leading-snug text-foreground hover:text-primary xl:text-[11px]"
+                              title={companyName}
+                            >
                               {companyName}
                             </span>
                             {emp.isNewRegistration ? (
                               <OperationsBadge
                                 variant="high"
-                                className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
+                                className="shrink-0 px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide"
                               >
                                 <span aria-label="New registration">NEW</span>
                               </OperationsBadge>

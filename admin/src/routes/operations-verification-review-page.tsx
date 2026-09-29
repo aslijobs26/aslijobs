@@ -1,24 +1,17 @@
 import { isAxiosError } from "axios";
 import {
-  ArrowLeft,
   CheckCircle2,
   FileWarning,
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
 import { useCallback, useId, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { OperationsCanKey } from "../components/operations/auth/OperationsCanKey";
 import { EmployerDocumentsPanel } from "../components/operations/employers/detail/EmployerDocumentsPanel";
 import { EmployerOverviewPanel } from "../components/operations/employers/detail/EmployerOverviewPanel";
-import {
-  employerAvatarInitials,
-  formatEmployerDateTimeFull,
-  formatEmployerDisplayId,
-} from "../components/operations/employers/employers-format";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
-import { verificationOperationalStatusBadgeVariant } from "../components/operations/verifications/verifications-format";
-import { OperationsBadge } from "../components/ui/OperationsBadge";
+import { VerificationReviewHeader } from "../components/operations/verifications/VerificationReviewHeader";
 import { OPERATIONS_ROUTES } from "../constants/operations-routes";
 import { useOperationsEmployerDetail } from "../hooks/use-operations-employers";
 import {
@@ -29,7 +22,6 @@ import {
 import { fetchOperationsVerificationDocumentBlob } from "../services/operations-verifications.service";
 import type { OperationsEmployerDocumentItem } from "../types/operations-employers";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
-import { resolveMediaUrl } from "../utils/resolve-media-url";
 
 function ReviewSkeleton() {
   return (
@@ -202,14 +194,6 @@ export function OperationsVerificationReviewPage() {
     return "Failed to load verification details.";
   })();
 
-  const logoUrl = verification ? resolveMediaUrl(verification.logoUrl) : null;
-  const submittedOn = verification
-    ? formatEmployerDateTimeFull(verification.submittedAt)
-    : "—";
-  const accountTypeLabel = verification?.accountType
-    ? verification.accountType.charAt(0).toUpperCase() +
-      verification.accountType.slice(1).toLowerCase()
-    : verification?.organizationType || "—";
   const canApprove = Boolean(verification?.allowedActions.canApprove);
   const canReject = Boolean(verification?.allowedActions.canReject);
   const canRequestDocuments = Boolean(
@@ -239,134 +223,7 @@ export function OperationsVerificationReviewPage() {
           </div>
         ) : verification ? (
           <>
-            <div className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm ops-brand-border-glow sm:p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex min-w-0 items-start gap-3 sm:gap-3.5">
-                  <Link
-                    to={OPERATIONS_ROUTES.VERIFICATIONS}
-                    aria-label="Back to Verifications"
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-muted transition-colors hover:bg-hero-bg/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:size-9"
-                  >
-                    <ArrowLeft className="size-4" aria-hidden="true" />
-                  </Link>
-
-                  <span className="inline-flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-light text-sm font-bold text-primary sm:size-14">
-                    {logoUrl ? (
-                      <img
-                        src={logoUrl}
-                        alt=""
-                        className="size-full object-cover"
-                      />
-                    ) : (
-                      employerAvatarInitials(verification.displayName)
-                    )}
-                  </span>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                      <h1 className="break-words text-base font-bold text-foreground sm:text-lg">
-                        {verification.displayName}
-                      </h1>
-                      <span className="font-mono text-[11px] font-semibold text-muted sm:text-xs">
-                        {verification.displayId ||
-                          formatEmployerDisplayId(verification.id)}
-                      </span>
-                      <OperationsBadge
-                        variant={verificationOperationalStatusBadgeVariant(
-                          verification.operationalStatus,
-                        )}
-                      >
-                        {verification.statusLabel}
-                      </OperationsBadge>
-                    </div>
-
-                    <dl className="mt-2 grid gap-1.5 text-xs text-muted sm:grid-cols-2 lg:grid-cols-3">
-                      <div>
-                        <dt className="text-[10px] uppercase tracking-wide">
-                          Account Type
-                        </dt>
-                        <dd className="font-semibold text-foreground">
-                          {accountTypeLabel}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-[10px] uppercase tracking-wide">
-                          Submitted On
-                        </dt>
-                        <dd className="font-semibold text-foreground">
-                          {submittedOn}
-                        </dd>
-                      </div>
-                      {verification.location &&
-                      verification.location !== "—" ? (
-                        <div>
-                          <dt className="text-[10px] uppercase tracking-wide">
-                            Location
-                          </dt>
-                          <dd className="font-semibold text-foreground">
-                            {verification.location}
-                          </dd>
-                        </div>
-                      ) : null}
-                      {verification.assignedToLabel?.trim() ? (
-                        <div>
-                          <dt className="text-[10px] uppercase tracking-wide">
-                            Assigned To
-                          </dt>
-                          <dd className="font-semibold text-foreground">
-                            {verification.assignedToLabel}
-                          </dd>
-                        </div>
-                      ) : null}
-                      {verification.slaLabel ? (
-                        <div>
-                          <dt className="text-[10px] uppercase tracking-wide">
-                            SLA
-                          </dt>
-                          <dd className="font-semibold text-foreground">
-                            {verification.slaLabel}
-                          </dd>
-                        </div>
-                      ) : null}
-                      {verification.verificationStatus === "verified" &&
-                      verification.verifiedAt ? (
-                        <div>
-                          <dt className="text-[10px] uppercase tracking-wide">
-                            Verified At
-                          </dt>
-                          <dd className="font-semibold text-foreground">
-                            {formatEmployerDateTimeFull(verification.verifiedAt)}
-                          </dd>
-                        </div>
-                      ) : null}
-                      {verification.verificationStatus === "rejected" &&
-                      verification.rejectedAt ? (
-                        <div>
-                          <dt className="text-[10px] uppercase tracking-wide">
-                            Rejected At
-                          </dt>
-                          <dd className="font-semibold text-foreground">
-                            {formatEmployerDateTimeFull(verification.rejectedAt)}
-                          </dd>
-                        </div>
-                      ) : null}
-                    </dl>
-
-                    {verification.verificationStatus === "rejected" &&
-                    verification.verificationRemarks?.trim() ? (
-                      <div className="mt-3 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-danger">
-                          Previous rejection reason
-                        </p>
-                        <p className="mt-1 text-xs text-foreground whitespace-pre-wrap">
-                          {verification.verificationRemarks}
-                        </p>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <VerificationReviewHeader verification={verification} />
 
             <div className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
               <h2 className="text-xs font-bold uppercase tracking-wider text-foreground">
