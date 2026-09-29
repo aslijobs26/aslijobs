@@ -1,5 +1,6 @@
 "use client";
 
+import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import { cn } from "@/utils/cn";
 import { getCompanyInitials } from "@/utils/job-search-format";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
@@ -34,7 +35,7 @@ export function JobPosterAvatar({
           key={resolvedUrl}
           src={resolvedUrl}
           alt=""
-          className="size-full object-cover"
+          className={PROFILE_IMAGE_FIT_CLASSNAME}
           onError={() => setFailedUrl(resolvedUrl)}
         />
       ) : (

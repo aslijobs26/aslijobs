@@ -8,6 +8,7 @@ import {
   EMPLOYER_DASHBOARD_ROLE_LABEL,
 } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
+import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import { useCanOptional } from "@/providers/employer-permission-provider";
 import type { EmployerLoginPublic } from "@/services/employer-login.service";
@@ -156,16 +157,18 @@ function EmployerProfileAvatar({
 
   if (resolvedImageUrl && !hasImageError) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- backend upload URL; not a Next Image domain asset
-      <img
-        src={resolvedImageUrl}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        onError={() => setHasImageError(true)}
-        className="inline-flex size-9 shrink-0 rounded-full object-cover"
-        aria-hidden="true"
-      />
+      <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-hero-bg">
+        {/* eslint-disable-next-line @next/next/no-img-element -- backend upload URL; not a Next Image domain asset */}
+        <img
+          src={resolvedImageUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setHasImageError(true)}
+          className={PROFILE_IMAGE_FIT_CLASSNAME}
+          aria-hidden="true"
+        />
+      </span>
     );
   }
 

@@ -8,6 +8,7 @@ import {
   EMPLOYER_REGISTER_IMAGE_ACCEPT,
   EMPLOYER_REGISTER_IMAGE_UPLOAD_HINT,
 } from "@/constants/employer-register";
+import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import type { EmployerRegisterImagePreview } from "@/types/employer-register";
 import { Images, X } from "lucide-react";
 import {
@@ -170,7 +171,11 @@ export function EmployerImageUploadField({
             aria-hidden="true"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={displayUrl} alt="" className="size-full object-cover" />
+            <img
+              src={displayUrl}
+              alt=""
+              className={PROFILE_IMAGE_FIT_CLASSNAME}
+            />
           </span>
           <div className="employer-register-document-preview-copy">
             <p className="employer-register-document-preview-name">

@@ -3,6 +3,7 @@
 import { DeactivateAccountModal } from "@/components/job-seeker-settings/DeactivateAccountModal";
 import { SettingsAccountSidebar } from "@/components/job-seeker-settings/SettingsAccountSidebar";
 import { ROUTES } from "@/constants/routes";
+import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import {
   BadgeCheck,
   Camera,
@@ -70,15 +71,17 @@ export function AccountSettingsPanel({
               <div className="flex min-w-0 items-start gap-4">
                 <div className="relative size-[4.5rem] shrink-0">
                   {showImage ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- backend upload URL
-                    <img
-                      src={avatarUrl ?? ""}
-                      alt=""
-                      width={72}
-                      height={72}
-                      onError={() => setHasImageError(true)}
-                      className="size-[4.5rem] rounded-full object-cover"
-                    />
+                    <span className="flex size-[4.5rem] items-center justify-center overflow-hidden rounded-full bg-hero-bg">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- backend upload URL */}
+                      <img
+                        src={avatarUrl ?? ""}
+                        alt=""
+                        width={72}
+                        height={72}
+                        onError={() => setHasImageError(true)}
+                        className={PROFILE_IMAGE_FIT_CLASSNAME}
+                      />
+                    </span>
                   ) : (
                     <span
                       className="inline-flex size-[4.5rem] items-center justify-center rounded-full bg-primary text-lg font-bold text-surface"

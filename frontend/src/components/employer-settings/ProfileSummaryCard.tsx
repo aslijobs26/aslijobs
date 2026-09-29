@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/utils/cn";
+import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import { Camera, Mail, Pencil, Phone } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -62,15 +63,17 @@ export function ProfileSummaryCard({
         <div className="flex min-w-0 items-start gap-3 sm:gap-3.5">
           <div className="relative shrink-0">
             {showImage ? (
-              // eslint-disable-next-line @next/next/no-img-element -- backend upload URL
-              <img
-                src={avatarUrl ?? ""}
-                alt=""
-                width={72}
-                height={72}
-                onError={() => setHasImageError(true)}
-                className="size-14 rounded-full object-cover ring-2 ring-primary-light sm:size-[4.5rem]"
-              />
+              <span className="relative flex size-14 items-center justify-center overflow-hidden rounded-full bg-hero-bg ring-2 ring-primary-light sm:size-[4.5rem]">
+                {/* eslint-disable-next-line @next/next/no-img-element -- backend upload URL */}
+                <img
+                  src={avatarUrl ?? ""}
+                  alt=""
+                  width={72}
+                  height={72}
+                  onError={() => setHasImageError(true)}
+                  className={PROFILE_IMAGE_FIT_CLASSNAME}
+                />
+              </span>
             ) : (
               <span
                 className="inline-flex size-14 items-center justify-center rounded-full bg-primary text-base font-bold text-surface sm:size-[4.5rem] sm:text-lg"

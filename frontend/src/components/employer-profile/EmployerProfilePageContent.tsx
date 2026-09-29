@@ -11,13 +11,12 @@ import {
   EmployerSocialBrandIcon,
   type EmployerSocialBrand,
 } from "@/components/layout/footer/footer-social-icons";
-import {
-  EMPLOYER_JOBS_QUERY_KEYS,
-} from "@/constants/employer-jobs";
+import { EMPLOYER_JOBS_QUERY_KEYS } from "@/constants/employer-jobs";
 import {
   EMPLOYER_REGISTER_IMAGE_UPLOAD_HINT,
   EMPLOYER_REGISTER_INDUSTRY_OPTIONS,
 } from "@/constants/employer-register";
+import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import { useCan } from "@/providers/employer-permission-provider";
 import { employerProfileQueryKey } from "@/services/employer-login.service";
@@ -602,7 +601,7 @@ export function EmployerProfilePageContent() {
                     alt={`${displayName} ${
                       isBusinessProfile ? "logo" : "profile photo"
                     }`}
-                    className="size-full object-cover"
+                    className={PROFILE_IMAGE_FIT_CLASSNAME}
                     fallback={
                       <span className="text-2xl font-bold text-primary">
                         {getInitials(displayName)}
@@ -1215,7 +1214,7 @@ export function EmployerProfilePageContent() {
                   alt={`${displayName} ${
                     isBusinessProfile ? "logo" : "profile photo"
                   }`}
-                  className="size-full object-cover"
+                  className={PROFILE_IMAGE_FIT_CLASSNAME}
                   fallback={
                     <span className="text-2xl font-bold text-primary">
                       {getInitials(displayName)}

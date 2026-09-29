@@ -1,5 +1,6 @@
 "use client";
 
+import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import type { JobSeekerPublic } from "@/types/job-seeker";
 import { useAuthenticatedMediaUrl } from "@/hooks/use-authenticated-media-url";
 import { getInitials } from "@/utils/job-seeker-profile";
@@ -49,7 +50,9 @@ export function JobSeekerProfilePhotoAvatar({
   return (
     <div className="relative inline-flex shrink-0">
       <div
-        className={`relative overflow-hidden rounded-full border-2 border-primary/20 bg-primary-soft ${sizeClass}`}
+        className={`relative overflow-hidden rounded-full border-2 border-primary/20 ${sizeClass} ${
+          photoUrl ? "bg-hero-bg" : "bg-primary-soft"
+        }`}
       >
         {photoUrl ? (
           <Image
@@ -57,7 +60,7 @@ export function JobSeekerProfilePhotoAvatar({
             alt=""
             width={dimension}
             height={dimension}
-            className="size-full object-cover"
+            className={PROFILE_IMAGE_FIT_CLASSNAME}
             unoptimized
           />
         ) : (

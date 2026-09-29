@@ -2,6 +2,7 @@
 
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { ROUTES } from "@/constants/routes";
+import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import { useAuthenticatedMediaUrl } from "@/hooks/use-authenticated-media-url";
 import { useJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
 import { cn } from "@/utils/cn";
@@ -130,7 +131,12 @@ export function JobSeekerProfileMenu({
         onKeyDown={handleTriggerKeyDown}
       >
         <span
-          className="relative inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-soft text-xs font-bold text-surface sm:size-9 sm:text-sm"
+          className={cn(
+            "relative inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold sm:size-9 sm:text-sm",
+            showPhoto && photoUrl
+              ? "bg-hero-bg"
+              : "bg-primary-soft text-surface",
+          )}
           aria-hidden="true"
         >
           {showPhoto && photoUrl ? (
@@ -139,7 +145,7 @@ export function JobSeekerProfileMenu({
               alt=""
               width={36}
               height={36}
-              className="size-full object-cover"
+              className={PROFILE_IMAGE_FIT_CLASSNAME}
               unoptimized
               onError={() => setPhotoFailed(true)}
             />

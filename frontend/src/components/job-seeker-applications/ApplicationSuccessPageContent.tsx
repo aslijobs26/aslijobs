@@ -4,6 +4,7 @@ import { WhatsAppIcon } from "@/components/home/hero/HeroIcons";
 import { JobPostedSuccessIcon } from "@/components/job-posted-success/JobPostedSuccessIcon";
 import { JobSeekerAuthGuard } from "@/components/job-seeker/JobSeekerAuthGuard";
 import { ROUTES } from "@/constants/routes";
+import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import { fetchSeekerApplication } from "@/services/job-seeker-applications.service";
 import { APPLICATION_STATUS_LABELS } from "@/types/job-seeker-applications";
 import { getApplicationSuccessWhatsAppContext } from "@/utils/application-success";
@@ -140,7 +141,7 @@ function ApplicationSuccessBody() {
                 <img
                   src={companyLogoUrl}
                   alt=""
-                  className="size-full object-cover"
+                  className={PROFILE_IMAGE_FIT_CLASSNAME}
                 />
               ) : (
                 <Building2 className="size-6 text-primary" aria-hidden="true" />
