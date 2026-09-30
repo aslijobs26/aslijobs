@@ -59,9 +59,13 @@ const iconMap = {
   linkedin: LinkedInIcon,
 } as const;
 
+/** Employer profiles store X as `twitter`. Public-site `x` is not a profile brand. */
 export type EmployerSocialBrand =
-  | SocialPlatform
+  | "linkedin"
+  | "facebook"
+  | "instagram"
   | "twitter"
+  | "youtube"
   | "website";
 
 export function EmployerSocialBrandIcon({
