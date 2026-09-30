@@ -2,6 +2,7 @@
 
 import { EmployerAuthGuard } from "@/components/employer-dashboard/EmployerAuthGuard";
 import { JobPostedSuccessIcon } from "@/components/job-posted-success/JobPostedSuccessIcon";
+import { EmployerPostJobLink } from "@/components/post-job/EmployerPostJobLink";
 import { EMPLOYER_JOBS_QUERY_KEYS } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
 import { useTranslate, type MessageKey } from "@/i18n/translate";
@@ -453,13 +454,10 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
             </Link>
           ) : null}
 
-          <Link
-            href={ROUTES.POST_JOB}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-primary-soft/40 bg-primary-light px-5 text-sm font-bold text-primary transition-colors hover:bg-primary-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:w-auto"
-          >
+          <EmployerPostJobLink className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-primary-soft/40 bg-primary-light px-5 text-sm font-bold text-primary transition-colors hover:bg-primary-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:w-auto">
             <Plus className="size-4" aria-hidden />
             {t("employer.underReview.postAnother")}
-          </Link>
+          </EmployerPostJobLink>
         </div>
       </div>
     </main>

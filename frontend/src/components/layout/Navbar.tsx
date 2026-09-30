@@ -18,9 +18,10 @@ import {
   JOB_SEEKER_ACCESS_TOKEN_STORAGE_KEY,
   JOB_SEEKER_AUTH_CHANGE_EVENT,
 } from "@/utils/job-seeker-auth-storage";
+import { BriefcaseBusiness, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Container } from "./Container";
 import { NavbarLanguageButton } from "./NavbarLanguageButton";
 
@@ -128,15 +129,16 @@ export function Navbar() {
               </>
             ) : (
               <>
+                <NavbarMobileRegisterMenu />
                 <Link
                   href={ROUTES.JOB_SEEKER_REGISTER}
-                  className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-primary-soft px-3 text-sm font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 mobile:h-8 mobile:min-h-8 mobile:px-2 mobile:text-xs sm:px-3.5 xl:h-10 xl:px-5 xl:text-[15px]"
+                  className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-primary-soft px-3 text-sm font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 mobile:hidden sm:px-3.5 xl:h-10 xl:px-5 xl:text-[15px]"
                 >
                   {t("navbar.jobSeeker")}
                 </Link>
                 <Link
                   href={ROUTES.EMPLOYER_REGISTER}
-                  className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-primary bg-transparent px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 mobile:h-8 mobile:min-h-8 mobile:px-2 mobile:text-xs sm:px-3.5 xl:h-10 xl:px-5 xl:text-[15px]"
+                  className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-primary bg-transparent px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 mobile:hidden sm:px-3.5 xl:h-10 xl:px-5 xl:text-[15px]"
                 >
                   <span className="xl:hidden">{t("navbar.employers")}</span>
                   <span className="hidden xl:inline">{t("navbar.employersPostJob")}</span>
@@ -147,5 +149,85 @@ export function Navbar() {
         </div>
       </Container>
     </header>
+  );
+}
+
+function NavbarMobileRegisterMenu() {
+  const t = useTranslate();
+  const menuId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
+  const itemClassName =
+    "flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30";
+
+  return (
+    <div ref={rootRef} className="relative hidden mobile:block">
+      <button
+        type="button"
+        className="inline-flex size-8 min-h-8 items-center justify-center rounded-md border border-border-subtle text-nav transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        aria-label={t("navbar.registerMenuAria")}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-controls={menuId}
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        <UserRound className="size-4" strokeWidth={2} aria-hidden="true" />
+      </button>
+
+      {isOpen ? (
+        <div
+          id={menuId}
+          role="menu"
+          aria-label={t("navbar.registerMenuAria")}
+          className="absolute top-full right-0 z-50 mt-1 min-w-[9.25rem] origin-top-right overflow-hidden rounded-md border border-border-subtle bg-surface py-0.5 shadow-md"
+        >
+          <Link
+            href={ROUTES.JOB_SEEKER_REGISTER}
+            role="menuitem"
+            className={itemClassName}
+            onClick={() => setIsOpen(false)}
+          >
+            <UserRound className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+            {t("navbar.jobSeeker")}
+          </Link>
+          <Link
+            href={ROUTES.EMPLOYER_REGISTER}
+            role="menuitem"
+            className={itemClassName}
+            onClick={() => setIsOpen(false)}
+          >
+            <BriefcaseBusiness className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+            {t("navbar.employers")}
+          </Link>
+        </div>
+      ) : null}
+    </div>
   );
 }

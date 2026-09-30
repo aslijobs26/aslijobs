@@ -528,6 +528,7 @@ export const publicJobIdParamsSchema = z.object({
 
 export const similarPublicJobsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(10).optional().default(5),
+  language: z.string().trim().optional().default(""),
 });
 
 export const updateJobStatusSchema = z.object({

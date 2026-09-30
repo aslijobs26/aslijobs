@@ -3,7 +3,7 @@
 import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type { EmployerVerificationGateStatus } from "@/utils/employer-verification-required";
 import { cn } from "@/utils/cn";
-import { Check, Lock, X } from "lucide-react";
+import { Check, Clock3, Lock, X } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
 
 type EmployerVerificationRequiredModalProps = {
@@ -22,9 +22,33 @@ function modalBodyKey(
     return "employer.verification.rejectedBody";
   }
   if (verificationStatus === "pending") {
-    return "employer.verification.pendingBody";
+    return "employer.verification.pendingModalBody";
   }
   return "employer.verification.body";
+}
+
+type ModalCopyKeys = {
+  title: MessageKey;
+  firstPoint: MessageKey;
+  secondPoint: MessageKey;
+  primaryCta: MessageKey;
+};
+
+function modalCopyKeys(isPending: boolean): ModalCopyKeys {
+  if (isPending) {
+    return {
+      title: "employer.verification.pendingTitle",
+      firstPoint: "employer.verification.pendingDraftPoint",
+      secondPoint: "employer.verification.pendingPublishPoint",
+      primaryCta: "employer.verification.pendingProfileCta",
+    };
+  }
+  return {
+    title: "employer.verification.title",
+    firstPoint: "employer.verification.draftPoint",
+    secondPoint: "employer.verification.verifyPoint",
+    primaryCta: "employer.verification.completeCta",
+  };
 }
 
 export function EmployerVerificationRequiredModal({
@@ -64,8 +88,11 @@ export function EmployerVerificationRequiredModal({
     };
   }, [onClose]);
 
-  const title = t("employer.verification.title");
+  const isPending = verificationStatus === "pending";
+  const copy = modalCopyKeys(isPending);
+  const title = t(copy.title);
   const description = t(modalBodyKey(verificationStatus));
+  const StatusIcon = isPending ? Clock3 : Lock;
 
   return (
     <div className="fixed inset-0 z-50" role="presentation">
@@ -99,8 +126,15 @@ export function EmployerVerificationRequiredModal({
           </button>
 
           <div className="flex flex-col items-center px-1 pt-3 text-center sm:pt-4">
-            <span className="inline-flex size-14 items-center justify-center rounded-full bg-primary-light text-primary ring-1 ring-primary/15">
-              <Lock className="size-7" strokeWidth={2} aria-hidden="true" />
+            <span
+              className={cn(
+                "inline-flex size-14 items-center justify-center rounded-full ring-1",
+                isPending
+                  ? "bg-amber-50 text-amber-700 ring-amber-200"
+                  : "bg-primary-light text-primary ring-primary/15",
+              )}
+            >
+              <StatusIcon className="size-7" strokeWidth={2} aria-hidden="true" />
             </span>
 
             <h2
@@ -124,9 +158,7 @@ export function EmployerVerificationRequiredModal({
                 strokeWidth={2.5}
                 aria-hidden="true"
               />
-              <span className="min-w-0 break-words">
-                {t("employer.verification.draftPoint")}
-              </span>
+              <span className="min-w-0 break-words">{t(copy.firstPoint)}</span>
             </li>
             <li className="flex items-start gap-2.5 text-sm leading-relaxed text-foreground">
               <Check
@@ -134,15 +166,15 @@ export function EmployerVerificationRequiredModal({
                 strokeWidth={2.5}
                 aria-hidden="true"
               />
-              <span className="min-w-0 break-words">
-                {t("employer.verification.verifyPoint")}
-              </span>
+              <span className="min-w-0 break-words">{t(copy.secondPoint)}</span>
             </li>
           </ul>
 
-          <p className="mt-3 text-center text-xs leading-relaxed text-muted sm:text-sm">
-            {t("employer.verification.draftNote")}
-          </p>
+          {isPending ? null : (
+            <p className="mt-3 text-center text-xs leading-relaxed text-muted sm:text-sm">
+              {t("employer.verification.draftNote")}
+            </p>
+          )}
 
           <div className="mt-5 flex flex-col gap-2.5 sm:mt-6">
             <button
@@ -151,7 +183,7 @@ export function EmployerVerificationRequiredModal({
               onClick={onCompleteVerification}
               className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary-soft px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              {t("employer.verification.completeCta")}
+              {t(copy.primaryCta)}
             </button>
             <button
               type="button"

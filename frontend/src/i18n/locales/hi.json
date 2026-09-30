@@ -29,7 +29,8 @@
     "employers": "नियोक्ता",
     "employersPostJob": "नियोक्ता / नौकरी पोस्ट करें",
     "selectLanguage": "भाषा चुनें",
-    "availableLanguages": "उपलब्ध भाषाएँ"
+    "availableLanguages": "उपलब्ध भाषाएँ",
+    "registerMenuAria": "पंजीकरण विकल्प खोलें"
   },
   "nav": {
     "home": "होम", "jobs": "नौकरियाँ", "post": "पोस्ट", "saved": "सेव", "profile": "प्रोफ़ाइल",

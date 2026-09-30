@@ -7,6 +7,7 @@ import {
   type EmployerProfileEditSection,
 } from "@/components/employer-profile/EmployerProfileEditModal";
 import { EmployerProfileDialog } from "@/components/employer-profile/EmployerProfileDialog";
+import { EmployerVerificationReviewBanner } from "@/components/employer-profile/EmployerVerificationReviewBanner";
 import {
   EmployerSocialBrandIcon,
   type EmployerSocialBrand,
@@ -542,40 +543,31 @@ export function EmployerProfilePageContent() {
         </div>
       </header>
 
-      {isVerificationRejected || isVerificationPending ? (
+      {isVerificationRejected ? (
         <section
-          className={cn(
-            "mt-4 rounded-xl border p-4 shadow-sm",
-            isVerificationRejected
-              ? "border-red-200 bg-red-50/80"
-              : "border-amber-200 bg-amber-50/80",
-          )}
+          className="mt-4 rounded-xl border border-red-200 bg-red-50/80 p-4 shadow-sm"
           aria-live="polite"
         >
           <p className="text-sm font-semibold text-foreground">
-            {isVerificationRejected
-              ? "Account verification was rejected"
-              : "Account verification is pending"}
+            Account verification was rejected
           </p>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            {isVerificationRejected
-              ? profile.verificationRemarks?.trim() ||
-                "Please update your company details if needed, then submit again for Operations review."
-              : "You can save job drafts, but submitting or publishing jobs requires Operations verification."}
+            {profile.verificationRemarks?.trim() ||
+              "Please update your company details if needed, then submit again for Operations review."}
           </p>
-          {isVerificationRejected ? (
-            <button
-              type="button"
-              disabled={resubmitVerificationMutation.isPending}
-              onClick={() => void resubmitVerificationMutation.mutateAsync()}
-              className="mt-3 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
-            >
-              {resubmitVerificationMutation.isPending
-                ? "Submitting…"
-                : "Submit Again"}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            disabled={resubmitVerificationMutation.isPending}
+            onClick={() => void resubmitVerificationMutation.mutateAsync()}
+            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+          >
+            {resubmitVerificationMutation.isPending
+              ? "Submitting…"
+              : "Submit Again"}
+          </button>
         </section>
+      ) : isVerificationPending ? (
+        <EmployerVerificationReviewBanner />
       ) : null}
 
       <div className="mt-5 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,0.9fr)]">

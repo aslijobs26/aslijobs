@@ -7,6 +7,7 @@ import {
   type JobDetailsRailJob,
 } from "@/constants/job-details-page";
 import { ROUTES } from "@/constants/routes";
+import { useSiteLanguage } from "@/i18n/site-language";
 import {
   fetchSimilarPublicJobs,
   type PublicJobListItem,
@@ -139,12 +140,13 @@ function buildSimilarJobsViewAllHref(source: SimilarJobsSource): string {
 }
 
 function SimilarJobsRailCard({ source }: { source: SimilarJobsSource | null }) {
+  const siteLanguage = useSiteLanguage();
   const similarQuery = useQuery({
-    queryKey: ["public-job-similar", source?.jobId],
+    queryKey: ["public-job-similar", source?.jobId, siteLanguage.code],
     queryFn: ({ signal }) =>
       fetchSimilarPublicJobs(
         source!.jobId,
-        { limit: SIMILAR_JOBS_FETCH_LIMIT },
+        { limit: SIMILAR_JOBS_FETCH_LIMIT, language: siteLanguage.code },
         { signal },
       ),
     enabled: Boolean(source?.jobId),

@@ -3,6 +3,7 @@
 import indiaPromoImage from "@/assets/job-details-india-promo.png";
 import whatsappPromoImage from "@/assets/job-details-whatsapp-promo.png";
 import { ProfileStrengthCircle } from "@/components/job-seeker-profile/ProfileStrengthCircle";
+import { EmployerPostJobLink } from "@/components/post-job/EmployerPostJobLink";
 import { WHATSAPP_JOIN_URL } from "@/constants/cta";
 import {
   JOB_DETAILS_SAFETY_TIPS,
@@ -174,12 +175,9 @@ export function JobDetailsRightRail() {
             </p>
           </div>
         </div>
-        <Link
-          href={ROUTES.POST_JOB}
-          className="mt-3.5 inline-flex w-full items-center justify-center rounded-lg bg-primary px-3 py-2 text-[13px] font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-        >
+        <EmployerPostJobLink className="mt-3.5 inline-flex w-full items-center justify-center rounded-lg bg-primary px-3 py-2 text-[13px] font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35">
           Post a Job
-        </Link>
+        </EmployerPostJobLink>
       </section>
 
       <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-[0_1px_4px_rgba(26,43,60,0.04)]">

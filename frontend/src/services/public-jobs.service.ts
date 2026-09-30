@@ -126,7 +126,7 @@ export async function fetchPublicActiveJobByPublicId(
 /** Related active jobs ranked for the given public job. Excludes the source job. */
 export async function fetchSimilarPublicJobs(
   publicJobId: string,
-  params: { limit?: number } = {},
+  params: { limit?: number; language?: string } = {},
   options?: { signal?: AbortSignal },
 ) {
   const response = await apiClient.get<

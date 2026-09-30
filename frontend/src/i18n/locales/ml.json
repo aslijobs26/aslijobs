@@ -29,7 +29,8 @@
     "employers": "തൊഴിലുടമകൾ",
     "employersPostJob": "തൊഴിലുടമകൾ / ജോലി പോസ്റ്റ്",
     "selectLanguage": "ഭാഷ തിരഞ്ഞെടുക്കുക",
-    "availableLanguages": "ലഭ്യമായ ഭാഷകൾ"
+    "availableLanguages": "ലഭ്യമായ ഭാഷകൾ",
+    "registerMenuAria": "രജിസ്ട്രേഷൻ ഓപ്ഷനുകൾ തുറക്കുക"
   },
   "nav": {
     "home": "ഹോം", "jobs": "ജോലികൾ", "post": "പോസ്റ്റ്", "saved": "സേവ്", "profile": "പ്രൊഫൈൽ",

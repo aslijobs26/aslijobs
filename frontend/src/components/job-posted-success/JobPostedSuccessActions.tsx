@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerPostJobLink } from "@/components/post-job/EmployerPostJobLink";
 import {
   JOB_POSTED_SUCCESS_GO_TO_JOBS,
   JOB_POSTED_SUCCESS_POST_ANOTHER,
@@ -19,13 +20,10 @@ export function JobPostedSuccessActions() {
         {JOB_POSTED_SUCCESS_GO_TO_JOBS}
       </Link>
 
-      <Link
-        href={ROUTES.POST_JOB}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary-soft px-6 text-sm font-bold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:w-auto sm:min-w-[11rem]"
-      >
+      <EmployerPostJobLink className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary-soft px-6 text-sm font-bold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:w-auto sm:min-w-[11rem]">
         <Plus className="size-4" strokeWidth={2.5} aria-hidden="true" />
         {JOB_POSTED_SUCCESS_POST_ANOTHER}
-      </Link>
+      </EmployerPostJobLink>
     </div>
   );
 }

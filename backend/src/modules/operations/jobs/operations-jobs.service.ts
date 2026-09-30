@@ -24,7 +24,6 @@ import type {
 import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-image.js";
 import { EmployerModel } from "../../employers/employer.model.js";
 import { JobModel, type JobDocument } from "../../jobs/job.model.js";
-import { queueJobContentTranslation } from "../../jobs/job-content-translation.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import {
   applyApprovedCreateInputToJob,
@@ -2047,7 +2046,6 @@ export const operationsJobsService = {
       // Approval succeeds even if notification fails.
     }
 
-    queueJobContentTranslation(freshJob._id.toString());
     return this.getJobDetail(freshJob.jobId);
   },
 

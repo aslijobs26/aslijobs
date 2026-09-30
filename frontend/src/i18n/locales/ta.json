@@ -29,7 +29,8 @@
     "employers": "முதலாளிகள்",
     "employersPostJob": "முதலாளிகள் / வேலை பதிவு",
     "selectLanguage": "மொழியைத் தேர்ந்தெடுக்கவும்",
-    "availableLanguages": "கிடைக்கும் மொழிகள்"
+    "availableLanguages": "கிடைக்கும் மொழிகள்",
+    "registerMenuAria": "பதிவு விருப்பங்களைத் திறக்கவும்"
   },
   "nav": {
     "home": "முகப்பு", "jobs": "வேலைகள்", "post": "பதிவு", "saved": "சேமிப்பு", "profile": "சுயவிவரம்",

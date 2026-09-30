@@ -1,7 +1,9 @@
 "use client";
 
 import { HeroEmployerConfirmModal } from "@/components/home/hero/HeroEmployerConfirmModal";
+import { EmployerVerificationUnderReviewModal } from "@/components/post-job/EmployerVerificationUnderReviewModal";
 import { ROUTES } from "@/constants/routes";
+import { usePostJobAccessGate } from "@/hooks/usePostJobAccessGate";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,7 +16,7 @@ type HeroEmployerPostJobLinkProps = {
 
 /**
  * Landing-page "Post a Job" CTA only.
- * Authenticated employers go to Post Job.
+ * Authenticated employers go to Post Job (or see the under-review modal).
  * Everyone else is asked to confirm they are an employer, then sent to
  * Employer Login (post-login redirect is always Employer Dashboard).
  */
@@ -24,6 +26,8 @@ export function HeroEmployerPostJobLink({
 }: HeroEmployerPostJobLinkProps) {
   const router = useRouter();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const { isUnderReviewModalOpen, closeUnderReviewModal, handlePostJobClick } =
+    usePostJobAccessGate();
 
   const closeConfirm = useCallback(() => {
     setIsConfirmOpen(false);
@@ -43,6 +47,7 @@ export function HeroEmployerPostJobLink({
     }
 
     if (getEmployerAccessToken()) {
+      handlePostJobClick(event);
       return;
     }
 
@@ -61,7 +66,7 @@ export function HeroEmployerPostJobLink({
         href={ROUTES.POST_JOB}
         className={className}
         aria-haspopup="dialog"
-        aria-expanded={isConfirmOpen}
+        aria-expanded={isConfirmOpen || isUnderReviewModalOpen}
         onClick={handleClick}
       >
         {children}
@@ -72,6 +77,10 @@ export function HeroEmployerPostJobLink({
           onClose={closeConfirm}
           onContinue={handleContinueAsEmployer}
         />
+      ) : null}
+
+      {isUnderReviewModalOpen ? (
+        <EmployerVerificationUnderReviewModal onClose={closeUnderReviewModal} />
       ) : null}
     </>
   );

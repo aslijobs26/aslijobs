@@ -1,6 +1,7 @@
 "use client";
 
 import { ROUTES } from "@/constants/routes";
+import { EmployerPostJobLink } from "@/components/post-job/EmployerPostJobLink";
 import { Can } from "@/components/rbac/Can";
 import { useTranslate } from "@/i18n/translate";
 import {
@@ -26,10 +27,7 @@ export function EmployerJobsQuickActions() {
         <ul className="mt-2.5 space-y-0.5">
           <Can module="jobs" action="create">
             <li>
-              <Link
-                href={ROUTES.POST_JOB}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              >
+              <EmployerPostJobLink className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
                 <PlusCircle className="size-4 shrink-0" aria-hidden="true" />
                 <span className="min-w-0 flex-1 break-words">
                   {t("employer.common.postNewJob")}
@@ -38,7 +36,7 @@ export function EmployerJobsQuickActions() {
                   className="size-3.5 shrink-0 opacity-70"
                   aria-hidden="true"
                 />
-              </Link>
+              </EmployerPostJobLink>
             </li>
           </Can>
           <li>

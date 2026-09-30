@@ -1,6 +1,7 @@
 "use client";
 
 import welcomeIllustration from "@/assets/employer-dashboard/welcome-banner-illustration-v4.png";
+import { EmployerPostJobLink } from "@/components/post-job/EmployerPostJobLink";
 import { Can } from "@/components/rbac/Can";
 import { EMPLOYER_DASHBOARD_HERO_ROW_HEIGHT_CLASS } from "@/constants/employer-dashboard-home";
 import { ROUTES } from "@/constants/routes";
@@ -73,10 +74,7 @@ export function DashboardWelcomeBanner({
 
           <div className="mt-4 flex flex-wrap items-center gap-1.5 sm:mt-5 sm:max-w-[62%] sm:gap-3 md:max-w-[58%]">
             <Can module="jobs" action="create">
-              <Link
-                href={ROUTES.POST_JOB}
-                className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-2.5 text-[0.6875rem] font-semibold text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm"
-              >
+              <EmployerPostJobLink className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-2.5 text-[0.6875rem] font-semibold text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm">
                 <span className="inline-flex size-5 items-center justify-center rounded-md bg-surface/20 sm:size-6">
                   <Plus
                     className="size-3 sm:size-3.5"
@@ -85,7 +83,7 @@ export function DashboardWelcomeBanner({
                   />
                 </span>
                 {t("employer.common.postNewJob")}
-              </Link>
+              </EmployerPostJobLink>
             </Can>
             <Can module="candidates" action="read">
               <Link

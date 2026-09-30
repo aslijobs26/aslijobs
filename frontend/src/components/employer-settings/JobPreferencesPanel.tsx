@@ -2,8 +2,10 @@
 
 import { SettingCard } from "@/components/employer-settings/SettingCard";
 import { SettingsSection } from "@/components/employer-settings/SettingsSection";
+import { EmployerVerificationUnderReviewModal } from "@/components/post-job/EmployerVerificationUnderReviewModal";
 import { EMPLOYER_JOBS_QUERY_KEYS } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
+import { usePostJobAccessGate } from "@/hooks/usePostJobAccessGate";
 import { fetchEmployerJobStats } from "@/services/employer-jobs.service";
 import { useQuery } from "@tanstack/react-query";
 import { Briefcase, Plus } from "lucide-react";
@@ -14,6 +16,12 @@ type JobPreferencesPanelProps = {
 };
 
 export function JobPreferencesPanel({ canCreateJob }: JobPreferencesPanelProps) {
+  const {
+    isUnderReview,
+    isUnderReviewModalOpen,
+    openUnderReviewModal,
+    closeUnderReviewModal,
+  } = usePostJobAccessGate();
   const statsQuery = useQuery({
     queryKey: EMPLOYER_JOBS_QUERY_KEYS.stats(),
     queryFn: fetchEmployerJobStats,
@@ -79,10 +87,15 @@ export function JobPreferencesPanel({ canCreateJob }: JobPreferencesPanelProps) 
             title="Post a job"
             description="Set type, salary, and expiry on each posting"
             icon={Plus}
-            href={ROUTES.POST_JOB}
+            href={isUnderReview ? undefined : ROUTES.POST_JOB}
+            onClick={isUnderReview ? openUnderReviewModal : undefined}
           />
         ) : null}
       </div>
+
+      {isUnderReviewModalOpen ? (
+        <EmployerVerificationUnderReviewModal onClose={closeUnderReviewModal} />
+      ) : null}
     </div>
   );
 }

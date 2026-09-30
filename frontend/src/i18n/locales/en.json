@@ -29,7 +29,8 @@
     "employers": "Employers",
     "employersPostJob": "Employers / Post Job",
     "selectLanguage": "Select language",
-    "availableLanguages": "Available languages"
+    "availableLanguages": "Available languages",
+    "registerMenuAria": "Open registration options"
   },
   "nav": {
     "home": "Home",

@@ -96,6 +96,33 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Unlayered so these beat utility text-lg/text-sm on Indic home section headers. */
+html:is(:lang(hi), :lang(te), :lang(ta), :lang(kn), :lang(ml)) .discovery-section-title {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+html:is(:lang(hi), :lang(te), :lang(ta), :lang(kn), :lang(ml)) .discovery-section-action {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+@media (width >= 768px) {
+  html:is(:lang(hi), :lang(te), :lang(ta), :lang(kn), :lang(ml)) .discovery-section-title {
+    font-size: 1.0625rem;
+  }
+
+  html:is(:lang(hi), :lang(te), :lang(ta), :lang(kn), :lang(ml)) .discovery-section-action {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (width >= 1024px) {
+  html:is(:lang(hi), :lang(te), :lang(ta), :lang(kn), :lang(ml)) .discovery-section-title {
+    font-size: 1.125rem;
+  }
+}
+
 /*
  * Desktop site footer overscroll: paint the footer color instead of a white
  * canvas. Avoid 100vh box-shadow stretch hacks — they inflate overflow.
@@ -1761,11 +1788,26 @@ body {
       right: 1.5rem;
       max-width: calc(100% - 3rem);
     }
-  }
 
-  @media (width < 380px) {
-    .employer-register-login-prompt {
+    @media (width < 768px) {
+      position: static;
+      top: auto;
+      right: auto;
+      left: auto;
+      z-index: auto;
+      display: flex;
+      width: 100%;
+      max-width: 100%;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: baseline;
+      gap: 0 0.25rem;
+      margin: 0 0 0.5rem;
+      padding-right: 0.15rem;
+      font-size: 0.6875rem;
+      line-height: 1.35;
       white-space: normal;
+      overflow-wrap: break-word;
     }
   }
 
@@ -2040,6 +2082,190 @@ body:has(.employer-register-page) {
   .employer-register-page.job-seeker-register-page
     .employer-register-form-container {
     margin-inline: auto;
+  }
+}
+
+/*
+ * Mobile auth (job seeker + employer, login + register):
+ * one solid sheet tucked over the testimonial, docked to the bottom of
+ * the viewport. Translucent glass is avoided so the card does not pick
+ * up a purple “header” strip from the brand panel.
+ */
+@media (width < 768px) {
+  html:has(.employer-register-page),
+  body:has(.employer-register-page) {
+    min-height: 100dvh;
+  }
+
+  .employer-register-page {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+  }
+
+  .employer-register-page .employer-register-layout {
+    display: flex;
+    min-height: 100dvh;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
+  .employer-register-page .employer-register-panel {
+    flex: 1 0 auto;
+    min-height: auto;
+    height: auto;
+    overflow: hidden;
+  }
+
+  .employer-register-page .employer-register-panel-content {
+    flex: 1 1 auto;
+    min-height: auto;
+    height: auto;
+    padding-top: 2.75rem;
+    padding-bottom: 2rem;
+  }
+
+  .employer-register-page .employer-register-logo-link {
+    top: 0.35rem;
+  }
+
+  .employer-register-page .employer-register-scale-group {
+    flex: 1 1 auto;
+    min-height: 0;
+    justify-content: flex-end;
+    margin-bottom: 0;
+    overflow: visible;
+  }
+
+  .employer-register-page .auth-brand-headline {
+    font-size: clamp(1.75rem, 8cqi, 2.125rem);
+    margin-bottom: 0.25rem;
+  }
+
+  .employer-register-page .auth-brand-art--seeker {
+    width: min(100%, 48vh);
+    margin-bottom: calc(-0.08 * min(100%, 48vh));
+  }
+
+  .employer-register-page .employer-register-scale-group .auth-brand-art--employer {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: -1.15rem;
+    overflow: visible;
+  }
+
+  .employer-register-page .auth-role-chip {
+    font-size: 0.625rem;
+    padding: 0.4em 0.6em;
+    animation: none;
+  }
+
+  .employer-register-page .auth-role-chip--plumber {
+    top: 3%;
+    left: 60%;
+  }
+
+  .employer-register-page .auth-role-chip--driver {
+    top: 29%;
+    left: 72%;
+  }
+
+  .employer-register-page .auth-role-chip--guard {
+    top: 55%;
+    left: 62%;
+  }
+
+  .employer-register-page .auth-role-chip--maid {
+    top: 73%;
+    left: 56%;
+  }
+
+  .employer-register-page .employer-register-form-section {
+    position: relative;
+    z-index: 2;
+    flex: 0 0 auto;
+    margin-top: -1.5rem;
+    padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
+    background-color: transparent;
+  }
+
+  .employer-register-page .employer-register-form-container {
+    position: relative;
+    width: min(24.5rem, calc(100% - 2rem));
+    margin-inline: auto;
+    padding-top: 0.85rem;
+    padding-right: 1.1rem;
+    padding-bottom: 1.15rem;
+    padding-left: 1.1rem;
+    overflow: visible;
+    border: 1px solid rgb(226 232 240 / 95%);
+    border-radius: 1.25rem;
+    background-color: #fff;
+    box-shadow: 0 14px 36px rgb(15 23 42 / 12%);
+  }
+
+  .employer-register-page .employer-register-form-container > .employer-register-login-prompt {
+    position: static;
+    z-index: auto;
+    inset: auto;
+    top: auto;
+    right: auto;
+    left: auto;
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 0 0.25rem;
+    margin: 0 0 0.5rem;
+    padding-right: 0.15rem;
+    font-size: 0.6875rem;
+    line-height: 1.35;
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .employer-register-page .employer-register-account-type-options {
+    gap: 0.65rem 1rem;
+  }
+
+  .employer-register-page .employer-register-account-type-option {
+    font-size: 0.75rem;
+  }
+
+  .employer-register-page .employer-register-form-heading {
+    font-size: 1.0625rem;
+    line-height: 1.3;
+    white-space: normal;
+  }
+
+  .employer-register-page .employer-register-form-heading + p {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .employer-register-page .employer-register-form-fields {
+    margin-top: 1.15rem;
+    gap: 0.9rem;
+  }
+
+  .employer-register-page .employer-register-form-label {
+    font-size: 0.75rem;
+  }
+
+  .employer-register-page .employer-register-form-input,
+  .employer-register-page .employer-register-searchable-select-trigger,
+  .employer-register-page .employer-register-place-autocomplete-control {
+    height: 2.625rem;
+    font-size: 0.8125rem;
+  }
+
+  .employer-register-page .employer-register-form-submit {
+    height: 2.625rem;
+    font-size: 0.875rem;
   }
 }
 

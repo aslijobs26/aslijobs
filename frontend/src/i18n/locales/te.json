@@ -29,7 +29,8 @@
     "employers": "యజమానులు",
     "employersPostJob": "యజమానులు / ఉద్యోగం పోస్ట్ చేయండి",
     "selectLanguage": "భాషను ఎంచుకోండి",
-    "availableLanguages": "అందుబాటులో ఉన్న భాషలు"
+    "availableLanguages": "అందుబాటులో ఉన్న భాషలు",
+    "registerMenuAria": "నమోదు ఎంపికలను తెరవండి"
   },
   "nav": {
     "home": "హోమ్", "jobs": "ఉద్యోగాలు", "post": "పోస్ట్", "saved": "సేవ్", "profile": "ప్రొఫైల్",

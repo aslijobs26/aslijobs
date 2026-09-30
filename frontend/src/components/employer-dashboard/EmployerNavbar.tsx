@@ -3,12 +3,12 @@
 import { EmployerProfileMenu } from "@/components/employer-dashboard/EmployerProfileMenu";
 import { NavbarLanguageButton } from "@/components/layout/NavbarLanguageButton";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { EmployerPostJobLink } from "@/components/post-job/EmployerPostJobLink";
 import { Can } from "@/components/rbac/Can";
 import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { Menu } from "lucide-react";
-import Link from "next/link";
 
 type EmployerNavbarProps = {
   onSidebarToggle: () => void;
@@ -39,12 +39,9 @@ export function EmployerNavbar({
 
       <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
         <Can module="jobs" action="create">
-          <Link
-            href={ROUTES.POST_JOB}
-            className="inline-flex h-9 shrink-0 items-center rounded-lg bg-primary-soft px-2.5 text-xs font-semibold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-10 sm:px-4 sm:text-sm"
-          >
+          <EmployerPostJobLink className="inline-flex h-9 shrink-0 items-center rounded-lg bg-primary-soft px-2.5 text-xs font-semibold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-10 sm:px-4 sm:text-sm">
             <span className="whitespace-nowrap">{t("employer.shell.postJob")}</span>
-          </Link>
+          </EmployerPostJobLink>
         </Can>
 
         <NotificationBell viewAllHref={ROUTES.EMPLOYER_NOTIFICATIONS} />

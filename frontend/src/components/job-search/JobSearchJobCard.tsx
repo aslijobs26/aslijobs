@@ -16,12 +16,12 @@ import {
 import {
   Bookmark,
   Briefcase,
+  Bus,
   ChevronRight,
   Fuel,
   GraduationCap,
   IndianRupee,
   MapPin,
-  Plane,
   ShieldCheck,
   User,
 } from "lucide-react";
@@ -77,7 +77,7 @@ function buildCardTags(job: PublicJobListItem): CardTag[] {
 
     const icon =
       perk === "travel_allowance" ? (
-        <Plane className="size-3 shrink-0" strokeWidth={2} aria-hidden="true" />
+        <Bus className="size-3 shrink-0" strokeWidth={2} aria-hidden="true" />
       ) : perk === "petrol_allowance" ? (
         <Fuel className="size-3 shrink-0" strokeWidth={2} aria-hidden="true" />
       ) : (

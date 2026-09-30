@@ -29,7 +29,8 @@
     "employers": "ಉದ್ಯೋಗದಾತರು",
     "employersPostJob": "ಉದ್ಯೋಗದಾತರು / ಉದ್ಯೋಗ ಪೋಸ್ಟ್",
     "selectLanguage": "ಭಾಷೆ ಆಯ್ಕೆಮಾಡಿ",
-    "availableLanguages": "ಲಭ್ಯ ಭಾಷೆಗಳು"
+    "availableLanguages": "ಲಭ್ಯ ಭಾಷೆಗಳು",
+    "registerMenuAria": "ನೋಂದಣಿ ಆಯ್ಕೆಗಳನ್ನು ತೆರೆಯಿರಿ"
   },
   "nav": {
     "home": "ಮುಖಪುಟ", "jobs": "ಉದ್ಯೋಗಗಳು", "post": "ಪೋಸ್ಟ್", "saved": "ಉಳಿಸಿದವು", "profile": "ಪ್ರೊಫೈಲ್",

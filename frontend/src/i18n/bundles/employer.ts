@@ -562,6 +562,19 @@ const en = {
       completeCta: "Complete Verification",
       laterCta: "Continue Later",
       viewDraftCta: "View Draft",
+      pendingTitle: "Account Verification Pending",
+      pendingModalBody:
+        "Your account is currently under review. Once your account is verified, you can post and publish jobs.",
+      pendingDraftPoint:
+        "You can continue saving this job as a Draft. Your details are safe.",
+      pendingPublishPoint:
+        "Submitting or publishing is available once Operations verifies your account.",
+      pendingProfileCta: "View Account Status",
+      underReviewTitle: "Account Verification Under Review",
+      underReviewBody:
+        "Your account is currently under review by our Operations team. Once your account is verified, you will be able to post jobs on AsliJobs.",
+      underReviewSupport:
+        "You can complete and update your employer profile while your account is under review.",
       closeDialogAria: "Close employer verification required dialog",
       closeNamedAria: "Close {title}",
     },
@@ -1130,6 +1143,19 @@ const hi: EmployerMessages = {
       completeCta: "सत्यापन पूरा करें",
       laterCta: "बाद में जारी रखें",
       viewDraftCta: "ड्राफ्ट देखें",
+      pendingTitle: "खाता सत्यापन लंबित है",
+      pendingModalBody:
+        "आपका खाता अभी समीक्षा में है। खाता सत्यापित होने के बाद आप जॉब पोस्ट और प्रकाशित कर सकते हैं।",
+      pendingDraftPoint:
+        "आप इस जॉब को ड्राफ्ट के रूप में सेव करना जारी रख सकते हैं। आपकी जानकारी सुरक्षित है।",
+      pendingPublishPoint:
+        "ऑपरेशंस टीम द्वारा आपका खाता सत्यापित होने के बाद जमा करना या प्रकाशित करना उपलब्ध होगा।",
+      pendingProfileCta: "खाते की स्थिति देखें",
+      underReviewTitle: "खाता सत्यापन समीक्षा में है",
+      underReviewBody:
+        "आपका खाता अभी हमारी ऑपरेशंस टीम द्वारा समीक्षा में है। खाता सत्यापित होने के बाद आप AsliJobs पर जॉब पोस्ट कर सकेंगे।",
+      underReviewSupport:
+        "खाता समीक्षा में रहने के दौरान आप अपनी नियोक्ता प्रोफ़ाइल पूरी और अपडेट कर सकते हैं।",
       closeDialogAria: "नियोक्ता सत्यापन आवश्यक डायलॉग बंद करें",
       closeNamedAria: "{title} बंद करें",
     },
@@ -1696,6 +1722,19 @@ const te: EmployerMessages = {
       completeCta: "ధృవీకరణను పూర్తి చేయండి",
       laterCta: "తర్వాత కొనసాగించండి",
       viewDraftCta: "డ్రాఫ్ట్ చూడండి",
+      pendingTitle: "ఖాతా ధృవీకరణ పెండింగ్‌లో ఉంది",
+      pendingModalBody:
+        "మీ ఖాతా ప్రస్తుతం సమీక్షలో ఉంది. మీ ఖాతా ధృవీకరించబడిన తర్వాత మీరు జాబ్‌లను పోస్ట్ చేసి ప్రచురించవచ్చు.",
+      pendingDraftPoint:
+        "మీరు ఈ జాబ్‌ను డ్రాఫ్ట్‌గా సేవ్ చేయడం కొనసాగించవచ్చు. మీ వివరాలు సురక్షితంగా ఉన్నాయి.",
+      pendingPublishPoint:
+        "ఆపరేషన్స్ బృందం మీ ఖాతాను ధృవీకరించిన తర్వాత సమర్పించడం లేదా ప్రచురించడం అందుబాటులో ఉంటుంది.",
+      pendingProfileCta: "ఖాతా స్థితి చూడండి",
+      underReviewTitle: "ఖాతా ధృవీకరణ సమీక్షలో ఉంది",
+      underReviewBody:
+        "మీ ఖాతా ప్రస్తుతం మా ఆపరేషన్స్ బృందం సమీక్షలో ఉంది. మీ ఖాతా ధృవీకరించబడిన తర్వాత మీరు AsliJobsలో జాబ్‌లను పోస్ట్ చేయగలరు.",
+      underReviewSupport:
+        "మీ ఖాతా సమీక్షలో ఉన్నప్పుడు మీరు మీ యజమాని ప్రొఫైల్‌ను పూర్తి చేసి అప్‌డేట్ చేయవచ్చు.",
       closeDialogAria: "యజమాని ధృవీకరణ అవసరం డైలాగ్‌ను మూసివేయండి",
       closeNamedAria: "{title} మూసివేయండి",
     },
@@ -2262,6 +2301,19 @@ const ta: EmployerMessages = {
       completeCta: "சரிபார்ப்பை முடி",
       laterCta: "பின்னர் தொடர்",
       viewDraftCta: "வரைவைப் பார்",
+      pendingTitle: "கணக்கு சரிபார்ப்பு நிலுவையில் உள்ளது",
+      pendingModalBody:
+        "உங்கள் கணக்கு தற்போது மதிப்பாய்வில் உள்ளது. உங்கள் கணக்கு சரிபார்க்கப்பட்டதும் வேலைகளை இடுகையிட்டு வெளியிடலாம்.",
+      pendingDraftPoint:
+        "இந்த வேலையை வரைவாகச் சேமிப்பதைத் தொடரலாம். உங்கள் விவரங்கள் பாதுகாப்பாக உள்ளன.",
+      pendingPublishPoint:
+        "செயல்பாட்டுக் குழு உங்கள் கணக்கைச் சரிபார்த்த பிறகு சமர்ப்பித்தல் அல்லது வெளியிடுதல் கிடைக்கும்.",
+      pendingProfileCta: "கணக்கு நிலையைப் பார்",
+      underReviewTitle: "கணக்கு சரிபார்ப்பு மதிப்பாய்வில் உள்ளது",
+      underReviewBody:
+        "உங்கள் கணக்கு தற்போது எங்கள் செயல்பாட்டுக் குழுவின் மதிப்பாய்வில் உள்ளது. உங்கள் கணக்கு சரிபார்க்கப்பட்டதும் AsliJobs-இல் வேலைகளை இடுகையிடலாம்.",
+      underReviewSupport:
+        "உங்கள் கணக்கு மதிப்பாய்வில் இருக்கும்போது உங்கள் முதலாளி சுயவிவரத்தை நிறைவு செய்து புதுப்பிக்கலாம்.",
       closeDialogAria: "முதலாளி சரிபார்ப்பு தேவை உரையாடலை மூடு",
       closeNamedAria: "{title} மூடு",
     },
@@ -2828,6 +2880,19 @@ const kn: EmployerMessages = {
       completeCta: "ಪರಿಶೀಲನೆ ಪೂರ್ಣಗೊಳಿಸಿ",
       laterCta: "ನಂತರ ಮುಂದುವರಿಸಿ",
       viewDraftCta: "ಡ್ರಾಫ್ಟ್ ನೋಡಿ",
+      pendingTitle: "ಖಾತೆ ಪರಿಶೀಲನೆ ಬಾಕಿ ಇದೆ",
+      pendingModalBody:
+        "ನಿಮ್ಮ ಖಾತೆ ಪ್ರಸ್ತುತ ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ. ನಿಮ್ಮ ಖಾತೆ ಪರಿಶೀಲಿಸಲ್ಪಟ್ಟ ನಂತರ ನೀವು ಉದ್ಯೋಗಗಳನ್ನು ಪೋಸ್ಟ್ ಮಾಡಿ ಪ್ರಕಟಿಸಬಹುದು.",
+      pendingDraftPoint:
+        "ನೀವು ಈ ಉದ್ಯೋಗವನ್ನು ಡ್ರಾಫ್ಟ್ ಆಗಿ ಉಳಿಸುವುದನ್ನು ಮುಂದುವರಿಸಬಹುದು. ನಿಮ್ಮ ವಿವರಗಳು ಸುರಕ್ಷಿತವಾಗಿವೆ.",
+      pendingPublishPoint:
+        "ಕಾರ್ಯಾಚರಣೆ ತಂಡ ನಿಮ್ಮ ಖಾತೆಯನ್ನು ಪರಿಶೀಲಿಸಿದ ನಂತರ ಸಲ್ಲಿಸುವುದು ಅಥವಾ ಪ್ರಕಟಿಸುವುದು ಲಭ್ಯವಿರುತ್ತದೆ.",
+      pendingProfileCta: "ಖಾತೆ ಸ್ಥಿತಿ ನೋಡಿ",
+      underReviewTitle: "ಖಾತೆ ಪರಿಶೀಲನೆ ಪರಾಮರ್ಶೆಯಲ್ಲಿದೆ",
+      underReviewBody:
+        "ನಿಮ್ಮ ಖಾತೆ ಪ್ರಸ್ತುತ ನಮ್ಮ ಕಾರ್ಯಾಚರಣೆ ತಂಡದ ಪರಾಮರ್ಶೆಯಲ್ಲಿದೆ. ನಿಮ್ಮ ಖಾತೆ ಪರಿಶೀಲಿಸಲ್ಪಟ್ಟ ನಂತರ ನೀವು AsliJobs ನಲ್ಲಿ ಉದ್ಯೋಗಗಳನ್ನು ಪೋಸ್ಟ್ ಮಾಡಬಹುದು.",
+      underReviewSupport:
+        "ನಿಮ್ಮ ಖಾತೆ ಪರಾಮರ್ಶೆಯಲ್ಲಿರುವಾಗ ನಿಮ್ಮ ಉದ್ಯೋಗದಾತ ಪ್ರೊಫೈಲ್ ಅನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ ಅಪ್‌ಡೇಟ್ ಮಾಡಬಹುದು.",
       closeDialogAria: "ಉದ್ಯೋಗದಾತ ಪರಿಶೀಲನೆ ಅಗತ್ಯ ಸಂವಾದವನ್ನು ಮುಚ್ಚಿ",
       closeNamedAria: "{title} ಮುಚ್ಚಿ",
     },
@@ -3394,6 +3459,19 @@ const ml: EmployerMessages = {
       completeCta: "സ്ഥിരീകരണം പൂർത്തിയാക്കുക",
       laterCta: "പിന്നീട് തുടരുക",
       viewDraftCta: "ഡ്രാഫ്റ്റ് കാണുക",
+      pendingTitle: "അക്കൗണ്ട് സ്ഥിരീകരണം തീർപ്പാക്കാനുണ്ട്",
+      pendingModalBody:
+        "നിങ്ങളുടെ അക്കൗണ്ട് ഇപ്പോൾ അവലോകനത്തിലാണ്. അക്കൗണ്ട് സ്ഥിരീകരിച്ചുകഴിഞ്ഞാൽ നിങ്ങൾക്ക് ജോലികൾ പോസ്റ്റ് ചെയ്യാനും പ്രസിദ്ധീകരിക്കാനും കഴിയും.",
+      pendingDraftPoint:
+        "ഈ ജോലി ഡ്രാഫ്റ്റായി സേവ് ചെയ്യുന്നത് തുടരാം. നിങ്ങളുടെ വിവരങ്ങൾ സുരക്ഷിതമാണ്.",
+      pendingPublishPoint:
+        "ഓപ്പറേഷൻസ് ടീം നിങ്ങളുടെ അക്കൗണ്ട് സ്ഥിരീകരിച്ച ശേഷം സമർപ്പിക്കാനോ പ്രസിദ്ധീകരിക്കാനോ കഴിയും.",
+      pendingProfileCta: "അക്കൗണ്ട് നില കാണുക",
+      underReviewTitle: "അക്കൗണ്ട് സ്ഥിരീകരണം അവലോകനത്തിലാണ്",
+      underReviewBody:
+        "നിങ്ങളുടെ അക്കൗണ്ട് ഇപ്പോൾ ഞങ്ങളുടെ ഓപ്പറേഷൻസ് ടീമിന്റെ അവലോകനത്തിലാണ്. അക്കൗണ്ട് സ്ഥിരീകരിച്ചുകഴിഞ്ഞാൽ നിങ്ങൾക്ക് AsliJobs-ൽ ജോലികൾ പോസ്റ്റ് ചെയ്യാൻ കഴിയും.",
+      underReviewSupport:
+        "അക്കൗണ്ട് അവലോകനത്തിലായിരിക്കുമ്പോൾ നിങ്ങളുടെ തൊഴിലുടമ പ്രൊഫൈൽ പൂർത്തിയാക്കാനും അപ്‌ഡേറ്റ് ചെയ്യാനും കഴിയും.",
       closeDialogAria: "തൊഴിലുടമ സ്ഥിരീകരണം ആവശ്യമാണ് ഡയലോഗ് അടയ്ക്കുക",
       closeNamedAria: "{title} അടയ്ക്കുക",
     },

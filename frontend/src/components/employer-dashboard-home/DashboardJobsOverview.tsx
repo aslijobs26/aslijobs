@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerPostJobLink } from "@/components/post-job/EmployerPostJobLink";
 import { Can } from "@/components/rbac/Can";
 import {
   EMPLOYER_JOBS_DELETE_UI_ENABLED,
@@ -106,12 +107,9 @@ export function DashboardJobsOverview({
             {t("employer.dashboard.noJobsDescription")}
           </p>
           {canCreateJobs ? (
-            <Link
-              href={ROUTES.POST_JOB}
-              className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
+            <EmployerPostJobLink className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
               {t("employer.common.postNewJob")}
-            </Link>
+            </EmployerPostJobLink>
           ) : null}
         </div>
       ) : null}

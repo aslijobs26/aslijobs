@@ -14,8 +14,8 @@ import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
 import { parseJobContentLanguage } from "./job-content-language.js";
 import {
-  queueJobContentTranslation,
   resolveJobContent,
+  translateJobContentOnDemand,
 } from "./job-content-translation.js";
 import { jobViewService } from "./job-view.service.js";
 import {
@@ -1424,7 +1424,6 @@ export class JobService {
     });
 
     if (!isDraft) {
-      queueJobContentTranslation(job._id.toString());
       scheduleJobPendingOpsNotification({
         publicJobId: job.jobId,
         jobMongoId: job._id.toString(),
@@ -2103,7 +2102,6 @@ export class JobService {
     job.rejectionReason = "";
     job.reviewNotificationSentAt = null;
     await job.save();
-    queueJobContentTranslation(job._id.toString());
 
     scheduleJobPendingOpsNotification({
       publicJobId: job.jobId,
@@ -2237,6 +2235,15 @@ export class JobService {
       throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
     }
 
+    const requestedLanguage = parseJobContentLanguage(options?.language);
+    const ensured = requestedLanguage
+      ? await translateJobContentOnDemand({
+          jobMongoId: job._id.toString(),
+          publicJobId: job.jobId,
+          language: requestedLanguage,
+        })
+      : null;
+
     const jobSeekerId = options?.jobSeekerId;
     let views = job.views ?? 0;
 
@@ -2257,6 +2264,17 @@ export class JobService {
       job._id.toString(),
     ]);
     const posterImageMap = await loadEmployerPosterImageMap([job]);
+    const localizedContent =
+      ensured?.content ??
+      resolveJobContent(
+        {
+          jobTitle: job.jobTitle ?? "",
+          description: job.description ?? "",
+          interviewInstructions: job.interviewInstructions ?? "",
+          contentTranslations: job.contentTranslations as never,
+        },
+        requestedLanguage,
+      );
 
     return {
       job: {
@@ -2265,6 +2283,9 @@ export class JobService {
           companyLogoUrl: posterImageMap.get(getJobEmployerId(job)) ?? "",
           language: options?.language,
         }),
+        jobTitle: localizedContent.jobTitle,
+        // Detail views render the full description; the list payload is truncated.
+        description: localizedContent.description,
         views,
         address: job.address,
         landmark: job.landmark,
@@ -2278,15 +2299,7 @@ export class JobService {
         walkInEndDate: job.walkInEndDate,
         walkInStartTime: job.walkInStartTime,
         walkInEndTime: job.walkInEndTime,
-        interviewInstructions: resolveJobContent(
-          {
-            jobTitle: job.jobTitle ?? "",
-            description: job.description ?? "",
-            interviewInstructions: job.interviewInstructions ?? "",
-            contentTranslations: job.contentTranslations as never,
-          },
-          parseJobContentLanguage(options?.language),
-        ).interviewInstructions,
+        interviewInstructions: localizedContent.interviewInstructions,
         contactPersonName: job.contactPersonName?.trim() || null,
       },
     };
@@ -2425,6 +2438,7 @@ export class JobService {
         isApplied: appliedIds.has(String(entry.candidate._id)),
         companyLogoUrl:
           posterImageMap.get(getJobEmployerId(entry.candidate)) ?? "",
+        language: query.language,
       }),
     );
 
@@ -2492,6 +2506,7 @@ export class JobService {
       listPipeline.push({ $sort: { publishedAt: -1, createdAt: -1 } });
     }
 
+    const contentLanguage = parseJobContentLanguage(query.language);
     listPipeline.push(
       { $skip: skip },
       { $limit: query.limit },
@@ -2524,6 +2539,9 @@ export class JobService {
           employerId: 1,
           companyId: 1,
           creationSource: 1,
+          ...(contentLanguage
+            ? { [`contentTranslations.${contentLanguage}`]: 1 }
+            : {}),
         },
       },
     );

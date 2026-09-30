@@ -446,6 +446,8 @@ function EmployerJobsTableRow({
   const canReactivate =
     (job.status === "closed" || job.status === "expired") &&
     String(job.reviewDecision ?? "").toLowerCase() === "approved";
+  const hasMenuItems =
+    (canUpdateJobs && (canClose || canReactivate)) || canDeleteJobs;
 
   return (
     <tr
@@ -665,16 +667,16 @@ function EmployerJobsTableRow({
               <IconActionButton
                 buttonRef={triggerRef}
                 label={t("employer.common.moreActions")}
-                disabled={disabled}
+                disabled={disabled || !hasMenuItems}
                 aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                aria-controls={menuId}
+                aria-expanded={menuOpen && hasMenuItems}
+                aria-controls={hasMenuItems ? menuId : undefined}
                 onClick={() => setMenuOpen((open) => !open)}
               >
                 <MoreVertical className="size-3.5" />
               </IconActionButton>
 
-              {menuOpen
+              {menuOpen && hasMenuItems
                 ? createPortal(
                     <div
                       ref={menuRef}
