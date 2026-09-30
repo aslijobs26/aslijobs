@@ -1,17 +1,22 @@
+"use client";
+
 import { DiscoverySectionHeader } from "@/components/home/discovery/DiscoverySectionHeader";
 import {
   POPULAR_JOBS_HYDERABAD,
   POPULAR_JOBS_VIEW_ALL_HREF,
 } from "@/constants/popular-jobs";
+import { useTranslate } from "@/i18n/translate";
 import { JobCard } from "./JobCard";
 
 export function PopularJobsSection() {
+  const t = useTranslate();
+
   return (
     <section aria-labelledby="trending-jobs-in-hyderabad">
       <DiscoverySectionHeader
-        title="Trending jobs in Hyderabad"
+        title={t("home.jobsDiscovery.trendingTitle")}
         titleId="trending-jobs-in-hyderabad"
-        actionLabel="View all jobs →"
+        actionLabel={t("home.jobsDiscovery.viewAllJobs")}
         actionHref={POPULAR_JOBS_VIEW_ALL_HREF}
       />
 

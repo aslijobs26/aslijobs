@@ -1,9 +1,8 @@
+"use client";
+
 import { EmployerLoginForm } from "@/components/employer-login/EmployerLoginForm";
-import {
-  EMPLOYER_LOGIN_REGISTER_LABEL,
-  EMPLOYER_LOGIN_REGISTER_PROMPT,
-} from "@/constants/employer-login";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 
@@ -12,6 +11,8 @@ type EmployerLoginContentProps = {
 };
 
 export function EmployerLoginContent({ children }: EmployerLoginContentProps) {
+  const t = useTranslate();
+
   return (
     <div className="employer-register-layout employer-register-layout--login">
       {/* Mobile: branding first (top). Desktop: CSS order moves form left. */}
@@ -19,20 +20,22 @@ export function EmployerLoginContent({ children }: EmployerLoginContentProps) {
 
       <section className="employer-register-form-section">
         <div className="employer-register-form-container">
-          <p className="employer-register-login-prompt">
-            {EMPLOYER_LOGIN_REGISTER_PROMPT}{" "}
+          <p className="employer-register-login-prompt break-words">
+            {t("auth.common.noAccountPrompt")}{" "}
             <Link
               href={ROUTES.EMPLOYER_REGISTER}
               className="font-bold text-foreground underline underline-offset-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              {EMPLOYER_LOGIN_REGISTER_LABEL}
+              {t("auth.common.register")}
             </Link>
           </p>
 
           <div className="employer-register-form-body">
             <Suspense
               fallback={
-                <p className="text-sm text-muted">Loading login…</p>
+                <p className="text-sm text-muted">
+                  {t("auth.common.loadingLogin")}
+                </p>
               }
             >
               <EmployerLoginForm />

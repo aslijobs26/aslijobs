@@ -1,6 +1,7 @@
 "use client";
 
 import { EMPLOYER_REGISTER_OTP_LENGTH } from "@/constants/employer-register";
+import { useTranslate } from "@/i18n/translate";
 import {
   useEffect,
   useRef,
@@ -32,6 +33,7 @@ export function EmployerRegisterOtpInput({
   "aria-describedby": ariaDescribedBy,
   "aria-required": ariaRequired = true,
 }: EmployerRegisterOtpInputProps) {
+  const t = useTranslate();
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -123,7 +125,7 @@ export function EmployerRegisterOtpInput({
     <div
       className="employer-register-otp-boxes"
       role="group"
-      aria-label="One-time password"
+      aria-label={t("auth.common.otpGroupAria")}
       aria-invalid={ariaInvalid || undefined}
       aria-describedby={ariaDescribedBy}
       aria-required={ariaRequired || undefined}
@@ -146,7 +148,10 @@ export function EmployerRegisterOtpInput({
           aria-invalid={ariaInvalid || undefined}
           aria-describedby={ariaDescribedBy}
           aria-required={ariaRequired || undefined}
-          aria-label={`Digit ${index + 1} of ${EMPLOYER_REGISTER_OTP_LENGTH}`}
+          aria-label={t("auth.common.otpDigitAria", {
+            index: index + 1,
+            total: EMPLOYER_REGISTER_OTP_LENGTH,
+          })}
           onChange={(event) => handleChange(index, event)}
           onKeyDown={(event) => handleKeyDown(index, event)}
           onPaste={handlePaste}

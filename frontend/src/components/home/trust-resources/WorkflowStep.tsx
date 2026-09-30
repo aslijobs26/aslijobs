@@ -28,12 +28,12 @@ export function WorkflowStep({ step }: WorkflowStepProps) {
         <WorkflowIcon icon={step.icon} />
       </div>
 
-      <h3 className="text-xs font-bold leading-snug sm:text-base">
+      <h3 className="max-w-full break-words text-xs font-bold leading-snug sm:text-base">
         <span className="text-foreground">{step.stepNumber}. </span>
         <span className="text-primary">{step.title}</span>
       </h3>
 
-      <p className="mt-1.5 max-w-[11.5rem] whitespace-pre-line text-[0.6875rem] leading-relaxed text-muted sm:mt-2 sm:max-w-[14rem] sm:text-sm">
+      <p className="mt-1.5 max-w-[11.5rem] whitespace-pre-line break-words text-[0.6875rem] leading-relaxed text-muted sm:mt-2 sm:max-w-[14rem] sm:text-sm">
         {step.description}
       </p>
     </article>

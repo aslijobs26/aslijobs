@@ -5,8 +5,8 @@ import { JobPostedSuccessIcon } from "@/components/job-posted-success/JobPostedS
 import { JobSeekerAuthGuard } from "@/components/job-seeker/JobSeekerAuthGuard";
 import { ROUTES } from "@/constants/routes";
 import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
+import { useTranslate } from "@/i18n/translate";
 import { fetchSeekerApplication } from "@/services/job-seeker-applications.service";
-import { APPLICATION_STATUS_LABELS } from "@/types/job-seeker-applications";
 import { getApplicationSuccessWhatsAppContext } from "@/utils/application-success";
 import { cn } from "@/utils/cn";
 import { formatJobSearchJobType } from "@/utils/job-search-format";
@@ -17,6 +17,7 @@ import { Building2, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useMemo, type ReactNode } from "react";
+import { APPLICATION_STATUS_LABEL_KEYS } from "./applied-jobs-utils";
 
 function formatAppliedDate(value: string): string {
   const date = new Date(value);
@@ -31,6 +32,7 @@ function formatAppliedDate(value: string): string {
 }
 
 function ApplicationSuccessBody() {
+  const t = useTranslate();
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId")?.trim() ?? "";
   const jobIdParam = searchParams.get("jobId")?.trim() ?? "";
@@ -75,10 +77,10 @@ function ApplicationSuccessBody() {
   if (!applicationId) {
     return (
       <CenteredMessage
-        title="Application not found"
-        message="We couldn't find this application. Open Applied Jobs to review your submissions."
+        title={t("seeker.applicationSuccess.notFoundTitle")}
+        message={t("seeker.applicationSuccess.notFoundBody")}
         actionHref={ROUTES.JOB_SEEKER_APPLIED_JOBS}
-        actionLabel="View Applied Jobs"
+        actionLabel={t("seeker.applicationSuccess.viewAppliedJobs")}
       />
     );
   }
@@ -86,7 +88,9 @@ function ApplicationSuccessBody() {
   if (detailQuery.isLoading) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-hero-bg px-6">
-        <p className="text-sm text-muted">Loading your application…</p>
+        <p className="text-sm text-muted">
+          {t("seeker.applicationSuccess.loading")}
+        </p>
       </div>
     );
   }
@@ -94,17 +98,17 @@ function ApplicationSuccessBody() {
   if (detailQuery.isError || !application) {
     return (
       <CenteredMessage
-        title="Couldn't load application details"
-        message="Your application may still have been submitted. Check Applied Jobs or try again."
+        title={t("seeker.applicationSuccess.loadErrorTitle")}
+        message={t("seeker.applicationSuccess.loadErrorBody")}
         actionHref={ROUTES.JOB_SEEKER_APPLIED_JOBS}
-        actionLabel="View Applied Jobs"
+        actionLabel={t("seeker.applicationSuccess.viewAppliedJobs")}
         secondaryAction={
           <button
             type="button"
             onClick={() => void detailQuery.refetch()}
             className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-4 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            Retry
+            {t("seeker.common.retry")}
           </button>
         }
       />
@@ -116,6 +120,10 @@ function ApplicationSuccessBody() {
     formatJobSearchJobType(application.workMode) ||
     "—";
   const companyLogoUrl = resolveMediaUrl(application.companyLogoUrl);
+  const statusLabel = t(
+    APPLICATION_STATUS_LABEL_KEYS[application.status] ??
+      "seeker.status.submitted",
+  );
 
   return (
     <main className="min-h-dvh bg-hero-bg">
@@ -124,13 +132,11 @@ function ApplicationSuccessBody() {
           <JobPostedSuccessIcon />
         </div>
 
-        <h1 className="text-center text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          Application Submitted Successfully 🎉
+        <h1 className="break-words text-center text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          {t("seeker.applicationSuccess.title")}
         </h1>
-        <p className="mt-3 max-w-xl text-center text-sm leading-relaxed text-muted sm:text-base">
-          Your application has been submitted successfully. The employer will
-          review your profile and update your application status. You can track
-          the complete hiring process from your Applied Jobs page.
+        <p className="mt-3 max-w-xl break-words text-center text-sm leading-relaxed text-muted sm:text-base">
+          {t("seeker.applicationSuccess.body")}
         </p>
 
         <section className="mt-8 w-full rounded-xl border border-border-subtle bg-surface p-4 shadow-[0_2px_10px_rgba(26,43,60,0.04)] sm:p-6">
@@ -152,28 +158,37 @@ function ApplicationSuccessBody() {
                 {application.jobTitle}
               </h2>
               <p className="text-sm text-muted">
-                {application.companyName || "Company"}
+                {application.companyName || t("seeker.common.company")}
               </p>
             </div>
-            <span className="inline-flex h-fit shrink-0 rounded-full bg-primary-light px-2.5 py-1 text-xs font-semibold text-primary ring-1 ring-inset ring-primary/20">
-              {APPLICATION_STATUS_LABELS[application.status] || "Applied"}
+            <span className="inline-flex h-fit max-w-[40%] shrink-0 break-words rounded-full bg-primary-light px-2.5 py-1 text-xs font-semibold text-primary ring-1 ring-inset ring-primary/20">
+              {statusLabel}
             </span>
           </div>
 
           <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <InfoRow label="Location" value={application.location || "—"} />
-            <InfoRow label="Salary" value={application.salaryLabel || "—"} />
-            <InfoRow label="Employment type" value={employmentType} />
             <InfoRow
-              label="Applied date"
+              label={t("seeker.applicationSuccess.location")}
+              value={application.location || "—"}
+            />
+            <InfoRow
+              label={t("seeker.applicationSuccess.salary")}
+              value={application.salaryLabel || "—"}
+            />
+            <InfoRow
+              label={t("seeker.applicationSuccess.employmentType")}
+              value={employmentType}
+            />
+            <InfoRow
+              label={t("seeker.applicationSuccess.appliedDate")}
               value={formatAppliedDate(application.appliedAt)}
             />
             <InfoRow
-              label="Application status"
-              value={APPLICATION_STATUS_LABELS[application.status] || "Applied"}
+              label={t("seeker.applicationSuccess.applicationStatus")}
+              value={statusLabel}
             />
             <InfoRow
-              label="Resume version submitted"
+              label={t("seeker.applicationSuccess.resumeVersionSubmitted")}
               value={`v${application.resumeVersion}`}
             />
           </dl>
@@ -181,15 +196,13 @@ function ApplicationSuccessBody() {
 
         <section className="mt-4 w-full rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-foreground">
-            What happens next?
+            {t("seeker.applicationSuccess.nextTitle")}
           </h3>
           <ul className="mt-3 space-y-2 text-sm text-muted">
-            <NextStep>Employer receives your application.</NextStep>
-            <NextStep>Employer reviews your resume.</NextStep>
-            <NextStep>
-              You will receive updates whenever your application status changes.
-            </NextStep>
-            <NextStep>Track everything from Applied Jobs.</NextStep>
+            <NextStep>{t("seeker.applicationSuccess.nextReceives")}</NextStep>
+            <NextStep>{t("seeker.applicationSuccess.nextReviews")}</NextStep>
+            <NextStep>{t("seeker.applicationSuccess.nextUpdates")}</NextStep>
+            <NextStep>{t("seeker.applicationSuccess.nextTrack")}</NextStep>
           </ul>
         </section>
 
@@ -198,19 +211,19 @@ function ApplicationSuccessBody() {
             href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
             className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            View Applied Jobs
+            {t("seeker.applicationSuccess.viewAppliedJobs")}
           </Link>
           <Link
             href={ROUTES.FIND_JOBS}
             className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            Continue Browsing Jobs
+            {t("seeker.applicationSuccess.continueBrowsing")}
           </Link>
           <Link
             href={ROUTES.JOB_SEEKER_PROFILE}
             className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            Go to Profile
+            {t("seeker.applicationSuccess.goToProfile")}
           </Link>
 
           {whatsappUrl ? (
@@ -221,7 +234,7 @@ function ApplicationSuccessBody() {
               className="mt-1 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-whatsapp/30 bg-benefit-whatsapp-surface px-4 text-sm font-semibold text-whatsapp-dark transition-colors hover:bg-whatsapp-cta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/30"
             >
               <WhatsAppIcon className="text-base text-whatsapp" />
-              Contact Employer on WhatsApp
+              {t("seeker.applicationSuccess.contactWhatsapp")}
             </a>
           ) : null}
         </div>
@@ -232,8 +245,8 @@ function ApplicationSuccessBody() {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-hero-bg/80 px-3 py-2.5">
-      <dt className="text-xs font-medium text-muted">{label}</dt>
+    <div className="min-w-0 rounded-lg bg-hero-bg/80 px-3 py-2.5">
+      <dt className="break-words text-xs font-medium text-muted">{label}</dt>
       <dd className="mt-0.5 text-sm font-semibold text-foreground break-words">
         {value}
       </dd>
@@ -269,8 +282,8 @@ function CenteredMessage({
   return (
     <div className="flex min-h-dvh items-center justify-center bg-hero-bg px-6">
       <div className="w-full max-w-md text-center">
-        <h1 className="text-xl font-bold text-foreground">{title}</h1>
-        <p className="mt-2 text-sm text-muted">{message}</p>
+        <h1 className="break-words text-xl font-bold text-foreground">{title}</h1>
+        <p className="mt-2 break-words text-sm text-muted">{message}</p>
         <Link
           href={actionHref}
           className={cn(
@@ -287,12 +300,14 @@ function CenteredMessage({
 }
 
 export function ApplicationSuccessPageContent() {
+  const t = useTranslate();
+
   return (
     <JobSeekerAuthGuard>
       <Suspense
         fallback={
           <div className="flex min-h-dvh items-center justify-center bg-hero-bg px-6">
-            <p className="text-sm text-muted">Loading…</p>
+            <p className="text-sm text-muted">{t("seeker.common.loading")}</p>
           </div>
         }
       >

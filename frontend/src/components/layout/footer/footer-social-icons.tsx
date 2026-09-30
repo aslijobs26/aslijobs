@@ -52,10 +52,11 @@ function WebsiteIcon(props: SocialIconProps) {
 }
 
 const iconMap = {
+  x: XTwitterIcon,
   facebook: FacebookIcon,
   instagram: InstagramIcon,
-  linkedin: LinkedInIcon,
   youtube: YouTubeIcon,
+  linkedin: LinkedInIcon,
 } as const;
 
 export type EmployerSocialBrand =

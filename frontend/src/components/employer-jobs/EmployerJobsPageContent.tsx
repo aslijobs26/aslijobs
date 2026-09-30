@@ -23,13 +23,13 @@ import {
 import {
   EMPLOYER_JOBS_DEFAULT_PAGE_SIZE,
   EMPLOYER_JOBS_DELETE_UI_ENABLED,
-  EMPLOYER_JOBS_ERROR_DESCRIPTION,
   EMPLOYER_JOBS_QUERY_KEYS,
   EMPLOYER_JOBS_SEARCH_DEBOUNCE_MS,
   EMPLOYER_JOBS_STATUS_TABS,
   type EmployerJobsStatusTabId,
 } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { useCan } from "@/providers/employer-permission-provider";
 import {
   bulkDeleteEmployerJobs,
@@ -79,6 +79,7 @@ function parseStatusTabParam(
 type SelectionMode = "ids" | "filtered" | "all";
 
 export function EmployerJobsPageContent() {
+  const t = useTranslate();
   const queryClient = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -265,7 +266,7 @@ export function EmployerJobsPageContent() {
       }
       const message = getApiErrorMessage(
         error,
-        "Unable to update job status. Please try again.",
+        t("employer.jobs.toastStatusFailed"),
       );
       showAppToast(message, "error");
     },
@@ -286,10 +287,10 @@ export function EmployerJobsPageContent() {
       const total = Math.max(0, (jobsQuery.data?.pagination.total ?? 1) - 1);
       const totalPages = Math.max(1, Math.ceil(total / limit));
       setPage((current) => resolveEmptyPageFallback(current, totalPages));
-      showAppToast("Job deleted successfully.", "success");
+      showAppToast(t("employer.jobs.toastDeleted"), "success");
     },
     onError: () => {
-      showAppToast("Unable to delete job. Please try again.", "error");
+      showAppToast(t("employer.jobs.toastDeleteFailed"), "error");
     },
   });
 
@@ -311,14 +312,16 @@ export function EmployerJobsPageContent() {
       showAppToast(
         result.deletedCount === 0
           ? orphanApps > 0
-            ? `Cleaned ${orphanApps} orphan application(s) and related hiring data.`
-            : "No jobs were deleted."
-          : `${result.deletedCount} job(s) deleted successfully.`,
+            ? t("employer.jobs.toastOrphanCleanup", { count: orphanApps })
+            : t("employer.jobs.toastNothingDeleted")
+          : t("employer.jobs.toastBulkDeleted", {
+              count: result.deletedCount,
+            }),
         "success",
       );
     },
     onError: () => {
-      showAppToast("Unable to delete jobs. Please try again.", "error");
+      showAppToast(t("employer.jobs.toastBulkDeleteFailed"), "error");
     },
   });
 
@@ -371,7 +374,7 @@ export function EmployerJobsPageContent() {
   const counts = jobsQuery.data?.counts;
   const stats = statsQuery.data?.stats;
   const activeFilterCount = countActiveEmployerJobsFilters(appliedFilters);
-  const filterChips = buildEmployerJobsFilterChips(appliedFilters);
+  const filterChips = buildEmployerJobsFilterChips(appliedFilters, t);
   const filteredTotal = pagination?.total ?? 0;
   const totalJobs = stats?.totalJobs ?? counts?.all ?? filteredTotal;
   const applicationCount = stats?.applications ?? 0;
@@ -508,7 +511,7 @@ export function EmployerJobsPageContent() {
           {filterChips.length > 0 ? (
             <div
               className="-mt-1 flex flex-wrap items-center gap-1.5"
-              aria-label="Active job filters"
+              aria-label={t("employer.jobs.activeFiltersAria")}
             >
               {filterChips.map((chip) => (
                 <button
@@ -519,7 +522,9 @@ export function EmployerJobsPageContent() {
                 >
                   <span className="truncate">{chip.label}</span>
                   <X className="size-3 shrink-0" aria-hidden="true" />
-                  <span className="sr-only">Remove {chip.label} filter</span>
+                  <span className="sr-only">
+                    {t("employer.jobs.removeFilter", { label: chip.label })}
+                  </span>
                 </button>
               ))}
             </div>
@@ -555,7 +560,7 @@ export function EmployerJobsPageContent() {
               jobsQuery.error
                 ? getApiErrorMessage(
                     jobsQuery.error,
-                    EMPLOYER_JOBS_ERROR_DESCRIPTION,
+                    t("employer.jobs.errorDescription"),
                   )
                 : undefined
             }

@@ -3,23 +3,13 @@
 import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { EmployerRegisterOtpInput } from "@/components/employer-register/EmployerRegisterOtpInput";
+import { useAuthMessageTranslator } from "@/components/employer-register/useAuthMessageTranslator";
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
-import {
-  EMPLOYER_LOGIN_CONTINUE_LABEL,
-  EMPLOYER_LOGIN_HEADING,
-  EMPLOYER_LOGIN_OTP_DESCRIPTION,
-  EMPLOYER_LOGIN_OTP_HEADING,
-  EMPLOYER_LOGIN_OTP_LENGTH,
-  EMPLOYER_LOGIN_RESEND_LABEL,
-  EMPLOYER_LOGIN_RESEND_PROMPT,
-  EMPLOYER_LOGIN_SEND_OTP_LABEL,
-  EMPLOYER_LOGIN_SUBTITLE,
-  EMPLOYER_LOGIN_WHATSAPP_LABEL,
-  EMPLOYER_LOGIN_WHATSAPP_PLACEHOLDER,
-} from "@/constants/employer-login";
+import { EMPLOYER_LOGIN_OTP_LENGTH } from "@/constants/employer-login";
 import { isValidEmployerWhatsappNumber } from "@/constants/employer-register";
 import { ROUTES } from "@/constants/routes";
 import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
+import { useTranslate } from "@/i18n/translate";
 import {
   resendEmployerLoginOtp,
   sendEmployerLoginOtp,
@@ -50,6 +40,8 @@ const OTP_FIELD_MESSAGES = new Set<string>([
 ]);
 
 export function EmployerLoginForm() {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -227,10 +219,10 @@ export function EmployerLoginForm() {
   return (
     <div className="w-full">
       <h1 className="employer-register-form-heading">
-        {EMPLOYER_LOGIN_HEADING}
+        {t("auth.employerLogin.heading")}
       </h1>
-      <p className="mt-2 text-sm leading-relaxed text-muted">
-        {EMPLOYER_LOGIN_SUBTITLE}
+      <p className="mt-2 break-words text-sm leading-relaxed text-muted">
+        {t("auth.employerLogin.subtitle")}
       </p>
 
       <form
@@ -246,7 +238,7 @@ export function EmployerLoginForm() {
             required
             className="employer-register-form-label"
           >
-            {EMPLOYER_LOGIN_WHATSAPP_LABEL}
+            {t("auth.common.whatsappLabel")}
           </RequiredFieldLabel>
           <input
             id="employer-login-whatsapp"
@@ -255,7 +247,7 @@ export function EmployerLoginForm() {
             inputMode="numeric"
             value={whatsappNumber}
             onChange={(event) => handleWhatsappChange(event.target.value)}
-            placeholder={EMPLOYER_LOGIN_WHATSAPP_PLACEHOLDER}
+            placeholder={t("auth.common.whatsappPlaceholder")}
             autoComplete="tel"
             className="employer-register-form-input"
             aria-required="true"
@@ -267,7 +259,7 @@ export function EmployerLoginForm() {
           />
           <FieldError
             id="whatsappNumber-error"
-            message={fieldErrors.whatsappNumber}
+            message={translateMessage(fieldErrors.whatsappNumber)}
           />
         </div>
 
@@ -275,10 +267,10 @@ export function EmployerLoginForm() {
           <div className="employer-register-otp-section">
             <div className="employer-register-form-stack">
               <h2 className="employer-register-otp-heading">
-                {EMPLOYER_LOGIN_OTP_HEADING}
+                {t("auth.common.otpHeading")}
               </h2>
-              <p className="employer-register-otp-description">
-                {EMPLOYER_LOGIN_OTP_DESCRIPTION}
+              <p className="employer-register-otp-description break-words">
+                {t("auth.common.otpDescription")}
               </p>
             </div>
 
@@ -293,10 +285,13 @@ export function EmployerLoginForm() {
               aria-invalid={Boolean(fieldErrors.otp)}
               aria-describedby={fieldErrors.otp ? "otp-error" : undefined}
             />
-            <FieldError id="otp-error" message={fieldErrors.otp} />
+            <FieldError
+              id="otp-error"
+              message={translateMessage(fieldErrors.otp)}
+            />
 
-            <p className="text-center text-sm text-muted">
-              {EMPLOYER_LOGIN_RESEND_PROMPT}{" "}
+            <p className="break-words text-center text-sm text-muted">
+              {t("auth.common.resendPrompt")}{" "}
               <button
                 type="button"
                 className="employer-register-send-otp-link inline align-baseline"
@@ -306,14 +301,14 @@ export function EmployerLoginForm() {
                 disabled={isSubmitting || isCoolingDown}
               >
                 {isCoolingDown
-                  ? `Resend OTP in ${secondsLeft}s`
-                  : EMPLOYER_LOGIN_RESEND_LABEL}
+                  ? t("auth.common.resendOtpIn", { seconds: secondsLeft })
+                  : t("auth.common.resendOtp")}
               </button>
             </p>
 
             {errorMessage ? (
               <p className="text-sm font-medium text-red-600" role="alert">
-                {errorMessage}
+                {translateMessage(errorMessage)}
               </p>
             ) : null}
 
@@ -323,14 +318,14 @@ export function EmployerLoginForm() {
               disabled={isSubmitting || !isOtpComplete}
               aria-busy={isSubmitting}
             >
-              {EMPLOYER_LOGIN_CONTINUE_LABEL}
+              {t("auth.common.continue")}
             </button>
           </div>
         ) : (
           <>
             {errorMessage ? (
               <p className="text-sm font-medium text-red-600" role="alert">
-                {errorMessage}
+                {translateMessage(errorMessage)}
               </p>
             ) : null}
 
@@ -342,7 +337,7 @@ export function EmployerLoginForm() {
               }
               aria-busy={isSubmitting}
             >
-              {EMPLOYER_LOGIN_SEND_OTP_LABEL}
+              {t("auth.common.sendOtp")}
             </button>
           </>
         )}

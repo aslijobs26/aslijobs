@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start --port 3000",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "node scripts/patch-next-streaming-metadata.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

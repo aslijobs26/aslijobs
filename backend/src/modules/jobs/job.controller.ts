@@ -300,6 +300,7 @@ export class JobController {
       jobSeekerId: req.jobSeekerId,
       visitorType: visitor.visitorType,
       visitorId: visitor.visitorId,
+      language: typeof req.query.language === "string" ? req.query.language : "",
     });
 
     if (visitor.shouldSetGuestCookie) {

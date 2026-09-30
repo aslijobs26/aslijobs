@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import type { EmployerDashboardSourceSlice } from "@/utils/employer-dashboard-home";
 import { cn } from "@/utils/cn";
 
@@ -54,6 +55,7 @@ export function DashboardSourcesPerformance({
   total,
   isLoading = false,
 }: DashboardSourcesPerformanceProps) {
+  const t = useTranslate();
   const paths = slices.reduce<
     Array<
       EmployerDashboardSourceSlice & {
@@ -78,10 +80,12 @@ export function DashboardSourcesPerformance({
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
-        <h2 className="text-base font-bold text-foreground">
-          Sources Performance
+        <h2 className="min-w-0 break-words text-base font-bold text-foreground">
+          {t("employer.dashboard.sourcesPerformance")}
         </h2>
-        <span className="text-xs font-semibold text-muted">Live</span>
+        <span className="shrink-0 text-xs font-semibold text-muted">
+          {t("employer.common.live")}
+        </span>
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-5 p-4 sm:p-5">
@@ -91,7 +95,7 @@ export function DashboardSourcesPerformance({
 
         {!isLoading && slices.length === 0 ? (
           <p className="px-2 text-center text-sm text-muted">
-            Source data will appear once applications start coming in.
+            {t("employer.dashboard.sourcesEmpty")}
           </p>
         ) : null}
 
@@ -102,7 +106,9 @@ export function DashboardSourcesPerformance({
                 viewBox="-54 -54 108 108"
                 className="size-full"
                 role="img"
-                aria-label={`Total applications ${total}`}
+                aria-label={t("employer.dashboard.totalApplicationsAria", {
+                  count: total,
+                })}
               >
                 {paths.map((path) => (
                   <path
@@ -117,7 +123,9 @@ export function DashboardSourcesPerformance({
                 <p className="text-xl font-bold tabular-nums text-foreground">
                   {total.toLocaleString("en-IN")}
                 </p>
-                <p className="text-[0.6875rem] font-medium text-muted">Total</p>
+                <p className="text-[0.6875rem] font-medium text-muted">
+                  {t("employer.common.total")}
+                </p>
               </div>
             </div>
 
@@ -133,7 +141,11 @@ export function DashboardSourcesPerformance({
                       style={{ backgroundColor: slice.color }}
                       aria-hidden="true"
                     />
-                    <span className="truncate font-medium">{slice.label}</span>
+                    <span className="truncate font-medium">
+                      {slice.id === "platform"
+                        ? t("employer.dashboard.sourcePlatform")
+                        : slice.label}
+                    </span>
                   </span>
                   <span
                     className={cn(
@@ -146,7 +158,7 @@ export function DashboardSourcesPerformance({
               ))}
             </ul>
             <p className="text-center text-[0.6875rem] leading-relaxed text-muted">
-              Tracked through the AsliJobs application channel.
+              {t("employer.dashboard.sourcesFootnote")}
             </p>
           </>
         ) : null}

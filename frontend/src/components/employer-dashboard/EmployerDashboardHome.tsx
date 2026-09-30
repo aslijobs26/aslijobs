@@ -17,11 +17,9 @@ import {
   type EmployerDashboardFunnelPeriod,
   type EmployerDashboardStatKey,
 } from "@/constants/employer-dashboard-home";
-import {
-  EMPLOYER_JOBS_DELETE_CONFIRM,
-  EMPLOYER_JOBS_QUERY_KEYS,
-} from "@/constants/employer-jobs";
+import { EMPLOYER_JOBS_QUERY_KEYS } from "@/constants/employer-jobs";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
+import { useTranslate } from "@/i18n/translate";
 import { useCan } from "@/providers/employer-permission-provider";
 import {
   deleteEmployerJob,
@@ -151,6 +149,7 @@ async function fetchFunnelStages(
 }
 
 export function EmployerDashboardHome() {
+  const t = useTranslate();
   const queryClient = useQueryClient();
   const { can, isLoading: permissionsLoading } = useCan();
   const [funnelPeriod, setFunnelPeriod] =
@@ -224,11 +223,11 @@ export function EmployerDashboardHome() {
   const deleteMutation = useMutation({
     mutationFn: deleteEmployerJob,
     onSuccess: async () => {
-      showAppToast("Job deleted.", "success");
+      showAppToast(t("employer.jobs.toastDeleted"), "success");
       await invalidateEmployerJobCascadeCaches(queryClient);
     },
     onError: () => {
-      showAppToast("Unable to delete job.", "error");
+      showAppToast(t("employer.jobs.toastDeleteFailed"), "error");
     },
   });
 
@@ -238,7 +237,7 @@ export function EmployerDashboardHome() {
     : null;
   const displayName = profile
     ? getEmployerDashboardDisplayName(profile)
-    : "Employer";
+    : t("employer.terms.employer");
 
   const metricValues = useMemo(
     () =>
@@ -265,7 +264,7 @@ export function EmployerDashboardHome() {
   const handleDeleteJob = (jobId: string) => {
     if (
       typeof window !== "undefined" &&
-      !window.confirm(EMPLOYER_JOBS_DELETE_CONFIRM)
+      !window.confirm(t("employer.jobs.deleteConfirm"))
     ) {
       return;
     }

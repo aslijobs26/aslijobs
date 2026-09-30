@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  EMPLOYER_JOBS_BULK_CLEAR_SELECTION,
-  EMPLOYER_JOBS_BULK_DELETE_ALL,
-  EMPLOYER_JOBS_BULK_DELETE_SELECTED,
-  EMPLOYER_JOBS_BULK_SELECT_FILTERED,
-} from "@/constants/employer-jobs";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 
 type EmployerJobsBulkToolbarProps = {
@@ -33,6 +28,8 @@ export function EmployerJobsBulkToolbar({
   onDeleteSelected,
   onDeleteAll,
 }: EmployerJobsBulkToolbarProps) {
+  const t = useTranslate();
+
   if (selectedCount <= 0 && !isAllSelection) {
     return null;
   }
@@ -47,16 +44,24 @@ export function EmployerJobsBulkToolbar({
     <div
       className="flex flex-col gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3"
       role="region"
-      aria-label="Bulk job actions"
+      aria-label={t("employer.jobs.bulkActionsAria")}
     >
-      <p className="text-sm font-semibold text-foreground">
-        {selectedCount.toLocaleString("en-IN")}{" "}
-        {selectedCount === 1 ? "Job Selected" : "Jobs Selected"}
+      <p className="min-w-0 break-words text-sm font-semibold text-foreground">
+        {t(
+          selectedCount === 1
+            ? "employer.jobs.jobSelected"
+            : "employer.jobs.jobsSelected",
+          { count: selectedCount.toLocaleString("en-IN") },
+        )}
         {isFilteredSelection ? (
-          <span className="ml-1 font-medium text-muted">(all filtered)</span>
+          <span className="ml-1 font-medium text-muted">
+            ({t("employer.jobs.allFiltered")})
+          </span>
         ) : null}
         {isAllSelection ? (
-          <span className="ml-1 font-medium text-muted">(all jobs)</span>
+          <span className="ml-1 font-medium text-muted">
+            ({t("employer.jobs.allJobsLower")})
+          </span>
         ) : null}
       </p>
 
@@ -68,7 +73,7 @@ export function EmployerJobsBulkToolbar({
             disabled={isDeleting}
             className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
           >
-            {EMPLOYER_JOBS_BULK_SELECT_FILTERED}
+            {t("employer.jobs.selectAllFiltered")}
             <span className="ml-1 text-muted">
               ({filteredTotal.toLocaleString("en-IN")})
             </span>
@@ -81,7 +86,7 @@ export function EmployerJobsBulkToolbar({
           disabled={isDeleting}
           className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
         >
-          {EMPLOYER_JOBS_BULK_CLEAR_SELECTION}
+          {t("employer.jobs.clearSelection")}
         </button>
 
         {canDelete ? (
@@ -94,7 +99,7 @@ export function EmployerJobsBulkToolbar({
                 "inline-flex min-h-9 items-center justify-center rounded-lg bg-pin-state px-3 text-xs font-semibold text-surface transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30 disabled:opacity-60",
               )}
             >
-              {EMPLOYER_JOBS_BULK_DELETE_SELECTED}
+              {t("employer.jobs.deleteSelected")}
             </button>
             <button
               type="button"
@@ -102,7 +107,7 @@ export function EmployerJobsBulkToolbar({
               disabled={isDeleting}
               className="inline-flex min-h-9 items-center justify-center rounded-lg border border-pin-state/40 bg-surface px-3 text-xs font-semibold text-pin-state transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30 disabled:opacity-60"
             >
-              {EMPLOYER_JOBS_BULK_DELETE_ALL}
+              {t("employer.jobs.deleteAllJobs")}
             </button>
           </>
         ) : null}

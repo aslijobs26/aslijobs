@@ -10,6 +10,7 @@ import {
   formatJobSearchLocationLabel,
   toJobSearchLocationSlug,
 } from "@/utils/job-search-url";
+import { useTranslate } from "@/i18n/translate";
 import { RotateCcw, Search } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
@@ -68,6 +69,7 @@ export function JobSearchBar({
   const [syncedKey, setSyncedKey] = useState(
     () => `${state.q}|${state.state}|${citiesKey}|${locationLabel}`,
   );
+  const t = useTranslate();
 
   const nextKey = `${state.q}|${state.state}|${citiesKey}|${locationLabel}`;
   if (nextKey !== syncedKey) {
@@ -104,7 +106,7 @@ export function JobSearchBar({
     <form
       onSubmit={handleSubmit}
       className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
-      aria-label="Refine job search"
+      aria-label={t("jobs.refineSearch")}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-start lg:gap-3">
         <div className="flex min-w-0 flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
@@ -112,7 +114,7 @@ export function JobSearchBar({
             htmlFor="job-search-keyword"
             className="text-xs font-semibold text-foreground sm:text-sm"
           >
-            What job are you looking for?
+            {t("jobs.keywordLabel")}
           </label>
           <div className={controlClassName}>
             <Search
@@ -125,7 +127,7 @@ export function JobSearchBar({
               type="search"
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
-              placeholder="e.g. Driver, Delivery Executive, Sales Executive"
+              placeholder={t("jobs.keywordPlaceholder")}
               className={inputClassName}
               autoComplete="off"
             />
@@ -137,13 +139,13 @@ export function JobSearchBar({
             htmlFor="job-search-state"
             className="text-xs font-semibold text-foreground sm:text-sm"
           >
-            Select State
+            {t("jobs.selectState")}
           </label>
           <PlaceAutocomplete
             id="job-search-state"
             mode="state"
             value={stateInput}
-            placeholder="e.g. Telangana"
+            placeholder={t("jobs.statePlaceholder")}
             iconClassName="text-pin-state"
             controlClassName={controlClassName}
             inputClassName={inputClassName}
@@ -169,7 +171,7 @@ export function JobSearchBar({
             htmlFor="job-search-city"
             className="text-xs font-semibold text-foreground sm:text-sm"
           >
-            Select City
+            {t("jobs.selectCity")}
           </label>
           <PlaceAutocomplete
             id="job-search-city"
@@ -184,7 +186,7 @@ export function JobSearchBar({
                 ? getCityPlaceholderForState(
                     resolveDisplayState(selectedState) || stateInput,
                   )
-                : "Select a state first"
+                : t("jobs.selectStateFirst")
             }
             controlClassName={controlClassName}
             inputClassName={inputClassName}
@@ -216,10 +218,10 @@ export function JobSearchBar({
           </span>
           <button
             type="submit"
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-xs font-bold text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:text-sm lg:min-w-[148px]"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-center text-xs font-bold text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:min-h-12 sm:text-sm lg:min-w-[148px]"
           >
             <Search className="size-[18px]" strokeWidth={2.5} aria-hidden="true" />
-            Search Jobs
+            <span className="min-w-0 break-words">{t("jobs.searchJobs")}</span>
           </button>
           <button
             type="button"
@@ -227,7 +229,7 @@ export function JobSearchBar({
             className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
           >
             <RotateCcw className="size-3.5" strokeWidth={2} aria-hidden="true" />
-            Clear all
+            {t("jobs.clearAll")}
           </button>
         </div>
       </div>

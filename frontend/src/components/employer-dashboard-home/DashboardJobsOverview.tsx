@@ -3,14 +3,10 @@
 import { Can } from "@/components/rbac/Can";
 import {
   EMPLOYER_JOBS_DELETE_UI_ENABLED,
-  EMPLOYER_JOB_STATUS_LABELS,
   EMPLOYER_JOB_STATUS_PILL_CLASS,
-  EMPLOYER_LIVE_CHANGE_PENDING_LABEL_SHORT,
-  EMPLOYER_LIVE_CHANGE_PENDING_TITLE,
-  EMPLOYER_LIVE_CHANGE_REJECTED_LABEL_SHORT,
-  EMPLOYER_LIVE_CHANGE_REJECTED_TITLE,
 } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { useCan } from "@/providers/employer-permission-provider";
 import type { EmployerJobListItem } from "@/types/employer-jobs";
 import { cn } from "@/utils/cn";
@@ -44,6 +40,7 @@ export function DashboardJobsOverview({
   onDelete,
 }: DashboardJobsOverviewProps) {
   const router = useRouter();
+  const t = useTranslate();
   const { can } = useCan();
   const canReadJobs = can("jobs", "read");
   const canUpdateJobs = can("jobs", "update");
@@ -58,13 +55,15 @@ export function DashboardJobsOverview({
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
-        <h2 className="text-base font-bold text-foreground">Jobs Overview</h2>
+        <h2 className="min-w-0 break-words text-base font-bold text-foreground">
+          {t("employer.dashboard.jobsOverview")}
+        </h2>
         <Can module="jobs" action="read">
           <Link
             href={ROUTES.EMPLOYER_JOBS}
-            className="text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="shrink-0 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            View All
+            {t("employer.common.viewAll")}
           </Link>
         </Can>
       </div>
@@ -84,7 +83,7 @@ export function DashboardJobsOverview({
       {isError ? (
         <div className="px-4 py-10 text-center sm:px-5">
           <p className="text-sm font-semibold text-foreground">
-            Unable to load jobs
+            {t("employer.jobs.errorTitle")}
           </p>
           {onRetry ? (
             <button
@@ -92,7 +91,7 @@ export function DashboardJobsOverview({
               onClick={onRetry}
               className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-4 text-sm font-semibold text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              Try again
+              {t("employer.common.tryAgain")}
             </button>
           ) : null}
         </div>
@@ -100,16 +99,18 @@ export function DashboardJobsOverview({
 
       {!isLoading && !isError && jobs.length === 0 ? (
         <div className="px-4 py-10 text-center sm:px-5">
-          <p className="text-sm font-semibold text-foreground">No jobs yet</p>
+          <p className="text-sm font-semibold text-foreground">
+            {t("employer.dashboard.noJobsTitle")}
+          </p>
           <p className="mt-1 text-xs text-muted">
-            Post your first job to start hiring.
+            {t("employer.dashboard.noJobsDescription")}
           </p>
           {canCreateJobs ? (
             <Link
               href={ROUTES.POST_JOB}
               className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              Post New Job
+              {t("employer.common.postNewJob")}
             </Link>
           ) : null}
         </div>
@@ -120,21 +121,23 @@ export function DashboardJobsOverview({
           <table className="w-full min-w-[40rem] border-collapse text-left">
             <thead>
               <tr className="border-b border-border-subtle bg-hero-bg/70">
-                {[
-                  "Job",
-                  "Status",
-                  "Applications",
-                  "Shortlisted",
-                  "Hired",
-                  "Views",
-                  "Actions",
-                ].map((column) => (
+                {(
+                  [
+                    "employer.columns.job",
+                    "employer.columns.status",
+                    "employer.columns.applications",
+                    "employer.columns.shortlisted",
+                    "employer.columns.hired",
+                    "employer.columns.views",
+                    "employer.columns.actions",
+                  ] as const
+                ).map((columnKey) => (
                   <th
-                    key={column}
+                    key={columnKey}
                     scope="col"
                     className="whitespace-nowrap px-3 py-2.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted first:pl-4 last:pr-4 sm:px-4"
                   >
-                    {column}
+                    {t(columnKey)}
                   </th>
                 ))}
               </tr>
@@ -159,7 +162,9 @@ export function DashboardJobsOverview({
                     tabIndex={canReadJobs ? 0 : undefined}
                     aria-label={
                       canReadJobs
-                        ? `Open ${job.jobTitle} on the jobs page`
+                        ? t("employer.dashboard.openJobAria", {
+                            title: job.jobTitle,
+                          })
                         : undefined
                     }
                     onClick={canReadJobs ? openEmployerJobs : undefined}
@@ -195,8 +200,8 @@ export function DashboardJobsOverview({
                           )}
                           title={
                             job.liveChangeReviewStatus === "pending_approval"
-                              ? EMPLOYER_LIVE_CHANGE_PENDING_TITLE
-                              : EMPLOYER_LIVE_CHANGE_REJECTED_TITLE
+                              ? t("employer.jobs.liveChangePendingTitle")
+                              : t("employer.jobs.liveChangeRejectedTitle")
                           }
                         >
                           <span
@@ -205,7 +210,7 @@ export function DashboardJobsOverview({
                               EMPLOYER_JOB_STATUS_PILL_CLASS.active,
                             )}
                           >
-                            {EMPLOYER_JOB_STATUS_LABELS.active}
+                            {t("employer.status.job.active")}
                           </span>
                           <span
                             className={cn(
@@ -216,8 +221,8 @@ export function DashboardJobsOverview({
                             )}
                           >
                             {job.liveChangeReviewStatus === "pending_approval"
-                              ? EMPLOYER_LIVE_CHANGE_PENDING_LABEL_SHORT
-                              : EMPLOYER_LIVE_CHANGE_REJECTED_LABEL_SHORT}
+                              ? t("employer.jobs.liveChangePendingShort")
+                              : t("employer.jobs.liveChangeRejectedShort")}
                           </span>
                         </div>
                       ) : (
@@ -227,7 +232,7 @@ export function DashboardJobsOverview({
                             EMPLOYER_JOB_STATUS_PILL_CLASS[job.status],
                           )}
                         >
-                          {EMPLOYER_JOB_STATUS_LABELS[job.status]}
+                          {t(`employer.status.job.${job.status}`)}
                         </span>
                       )}
                     </td>
@@ -254,7 +259,9 @@ export function DashboardJobsOverview({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                          aria-label={`View ${job.jobTitle}`}
+                          aria-label={t("employer.jobs.viewJobAria", {
+                            title: job.jobTitle,
+                          })}
                         >
                           <Eye className="size-4" aria-hidden="true" />
                         </a>
@@ -262,7 +269,9 @@ export function DashboardJobsOverview({
                           <Link
                             href={`${ROUTES.POST_JOB}/${job.id}`}
                             className="inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                            aria-label={`Edit ${job.jobTitle}`}
+                            aria-label={t("employer.jobs.editJobAria", {
+                              title: job.jobTitle,
+                            })}
                           >
                             <Pencil className="size-4" aria-hidden="true" />
                           </Link>
@@ -273,12 +282,16 @@ export function DashboardJobsOverview({
                             void shareOrCopyText({
                               url: publicUrl,
                               title: job.jobTitle,
-                              text: `Hiring for ${job.jobTitle} on AsliJobs`,
-                              successMessage: "Job link copied.",
+                              text: t("employer.jobs.shareText", {
+                                title: job.jobTitle,
+                              }),
+                              successMessage: t("employer.jobs.linkCopied"),
                             });
                           }}
                           className="inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                          aria-label={`Share ${job.jobTitle}`}
+                          aria-label={t("employer.jobs.shareJobAria", {
+                            title: job.jobTitle,
+                          })}
                         >
                           <Share2 className="size-4" aria-hidden="true" />
                         </button>
@@ -288,7 +301,9 @@ export function DashboardJobsOverview({
                             disabled={isDeleting}
                             onClick={() => onDelete?.(job.id)}
                             className="inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-red-50 hover:text-pin-state focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
-                            aria-label={`Delete ${job.jobTitle}`}
+                            aria-label={t("employer.jobs.deleteJobAria", {
+                              title: job.jobTitle,
+                            })}
                           >
                             <Trash2 className="size-4" aria-hidden="true" />
                           </button>

@@ -93,6 +93,7 @@ export type FetchPublicJobsParams = {
   minSalary?: number;
   maxSalary?: number;
   sort?: PublicJobSort;
+  language?: string;
 };
 
 /** Only Active jobs are returned by the API. */
@@ -110,11 +111,14 @@ export async function fetchPublicActiveJobs(
 /** Only Active jobs are returned. Non-active public IDs yield 404. */
 export async function fetchPublicActiveJobByPublicId(
   publicJobId: string,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; language?: string },
 ) {
   const response = await apiClient.get<ApiSuccess<{ job: PublicJobDetail }>>(
     `/jobs/public/${encodeURIComponent(publicJobId)}`,
-    { signal: options?.signal },
+    {
+      signal: options?.signal,
+      params: options?.language ? { language: options.language } : undefined,
+    },
   );
   return response.data.data;
 }

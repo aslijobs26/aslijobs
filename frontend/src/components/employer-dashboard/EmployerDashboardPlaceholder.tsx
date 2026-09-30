@@ -1,24 +1,22 @@
-import {
-  EMPLOYER_DASHBOARD_PLACEHOLDER_BACK_LABEL,
-  EMPLOYER_DASHBOARD_PLACEHOLDER_DESCRIPTION,
-  EMPLOYER_DASHBOARD_PLACEHOLDER_HEADING,
-  EMPLOYER_DASHBOARD_PLACEHOLDER_PHASES_NOTE,
-  EMPLOYER_DASHBOARD_PLACEHOLDER_ROUTING_NOTE,
-} from "@/constants/employer-dashboard";
+"use client";
+
 import { ROUTES } from "@/constants/routes";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 
 type EmployerDashboardPlaceholderProps = {
-  title: string;
+  titleKey: MessageKey;
 };
 
 export function EmployerDashboardPlaceholder({
-  title,
+  titleKey,
 }: EmployerDashboardPlaceholderProps) {
+  const t = useTranslate();
+
   return (
     <div className="flex min-h-full flex-1 items-center justify-center px-6 py-16">
-      <div className="w-full max-w-lg text-center">
+      <div className="w-full min-w-0 max-w-lg text-center">
         <span
           className="mx-auto inline-flex size-12 items-center justify-center rounded-full bg-primary-light text-primary-soft"
           aria-hidden="true"
@@ -26,31 +24,31 @@ export function EmployerDashboardPlaceholder({
           <FileText className="size-5" strokeWidth={2} />
         </span>
 
-        <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground">
-          {title}
+        <h1 className="mt-4 break-words text-2xl font-bold tracking-tight text-foreground">
+          {t(titleKey)}
         </h1>
 
         <p className="mt-3 text-base font-semibold text-foreground">
-          {EMPLOYER_DASHBOARD_PLACEHOLDER_HEADING}
+          {t("employer.placeholder.heading")}
         </p>
 
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          {EMPLOYER_DASHBOARD_PLACEHOLDER_DESCRIPTION}
+          {t("employer.placeholder.description")}
         </p>
 
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          {EMPLOYER_DASHBOARD_PLACEHOLDER_ROUTING_NOTE}
+          {t("employer.placeholder.routingNote")}
         </p>
 
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          {EMPLOYER_DASHBOARD_PLACEHOLDER_PHASES_NOTE}
+          {t("employer.placeholder.phasesNote")}
         </p>
 
         <Link
           href={ROUTES.EMPLOYER_DASHBOARD}
           className="mt-6 inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-primary-soft transition-colors hover:border-primary-soft/40 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
-          ← {EMPLOYER_DASHBOARD_PLACEHOLDER_BACK_LABEL}
+          ← {t("employer.placeholder.backToDashboard")}
         </Link>
       </div>
     </div>

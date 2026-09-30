@@ -1,13 +1,12 @@
 "use client";
 
+import { APPLICATION_STATUS_LABEL_KEYS } from "@/components/job-seeker-applications/applied-jobs-utils";
 import { JobSeekerActivityListSkeleton } from "@/components/job-seeker-dashboard/skeletons/JobSeekerPageSkeletons";
 import { ResumeStatusBadge } from "@/components/job-seeker-resume/ResumeStatusBadge";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import type { JobSeekerPublic } from "@/types/job-seeker";
-import {
-  APPLICATION_STATUS_LABELS,
-  type SeekerApplicationListItem,
-} from "@/types/job-seeker-applications";
+import type { SeekerApplicationListItem } from "@/types/job-seeker-applications";
 import type { PublicResume } from "@/types/job-seeker-resume";
 import type { NotificationListItem } from "@/types/notifications";
 import type { SavedJobListItem } from "@/types/saved-jobs";
@@ -51,6 +50,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { JobSeekerProfileEditModalState } from "./JobSeekerProfileEditModals";
+import { translateProfileOptionLabel } from "./profile-i18n";
 
 type JobSeekerProfileTabPanelsProps = {
   activeTab: JobSeekerProfileTab;
@@ -93,7 +93,7 @@ function SectionCard({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2
           id={id ? `${id}-heading` : undefined}
-          className="text-sm font-bold text-foreground sm:text-base"
+          className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base"
         >
           {title}
         </h2>
@@ -121,6 +121,15 @@ export function JobSeekerProfileTabPanels({
   onDownloadResume,
   onRegenerateResume,
 }: JobSeekerProfileTabPanelsProps) {
+  const t = useTranslate();
+  const notSetLabel = t("seeker.common.notSet");
+  const optionLabel = (value: string | null | undefined, label: string) =>
+    value && label ? translateProfileOptionLabel(value, label, t) : "";
+  const jobTypeText = optionLabel(jobSeeker.jobType, jobTypeLabel(jobSeeker.jobType));
+  const workModeText = optionLabel(
+    jobSeeker.workMode,
+    workModeLabel(jobSeeker.workMode),
+  );
   const summary = resolveProfessionalSummary(jobSeeker, resume);
   const skills = resolveSkills(jobSeeker, resume);
   const experiences = sortExperiencesChronologically(jobSeeker.experiences ?? []);
@@ -132,7 +141,7 @@ export function JobSeekerProfileTabPanels({
     return (
       <div className="space-y-4">
         <SectionCard
-          title="About me"
+          title={t("seeker.profilePanels.aboutMe")}
           action={
             <button
               type="button"
@@ -140,18 +149,17 @@ export function JobSeekerProfileTabPanels({
               onClick={() => onOpenModal({ type: "about" })}
             >
               <Pencil className="size-3.5" aria-hidden="true" />
-              Edit
+              {t("seeker.common.edit")}
             </button>
           }
         >
           {summary ? (
-            <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground sm:text-sm">
+            <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground sm:text-sm">
               {summary}
             </p>
           ) : (
-            <p className="text-xs text-muted sm:text-sm">
-              Add a professional summary to help employers understand your
-              background.
+            <p className="break-words text-xs text-muted sm:text-sm">
+              {t("seeker.profilePanels.aboutEmpty")}
             </p>
           )}
         </SectionCard>
@@ -160,39 +168,43 @@ export function JobSeekerProfileTabPanels({
           {(
             [
               {
-                label: "Current role",
-                value: jobSeeker.jobRole || "Not set",
+                id: "current-role",
+                label: t("seeker.profilePanels.currentRole"),
+                value: jobSeeker.jobRole,
                 icon: Briefcase,
               },
               {
-                label: "Experience",
-                value: experienceLabel || "Not set",
+                id: "experience",
+                label: t("seeker.profilePanels.experience"),
+                value: experienceLabel,
                 icon: Clock3,
               },
               {
-                label: "Location",
-                value: locationLabel || "Not set",
+                id: "location",
+                label: t("seeker.profilePanels.location"),
+                value: locationLabel,
                 icon: MapPin,
               },
               {
-                label: "Expected salary",
-                value: formatExpectedSalary(jobSeeker) || "Not set",
+                id: "expected-salary",
+                label: t("seeker.profilePanels.expectedSalary"),
+                value: formatExpectedSalary(jobSeeker),
                 icon: Banknote,
               },
             ] as const
           ).map((card) => {
             const Icon = card.icon;
-            const isEmpty = card.value === "Not set";
+            const isEmpty = !card.value;
             return (
               <div
-                key={card.label}
+                key={card.id}
                 className="flex items-start gap-3 rounded-2xl border border-border-subtle bg-surface p-4"
               >
                 <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium text-muted sm:text-xs">
+                  <p className="break-words text-[11px] font-medium text-muted sm:text-xs">
                     {card.label}
                   </p>
                   <p
@@ -201,7 +213,7 @@ export function JobSeekerProfileTabPanels({
                       isEmpty ? "text-muted" : "text-foreground",
                     )}
                   >
-                    {card.value}
+                    {card.value || notSetLabel}
                   </p>
                 </div>
               </div>
@@ -209,10 +221,10 @@ export function JobSeekerProfileTabPanels({
           })}
         </div>
 
-        <SectionCard title="Latest experience">
+        <SectionCard title={t("seeker.profilePanels.latestExperience")}>
           {latestExperience ? (
             <div className="rounded-xl border border-border-subtle bg-surface p-3.5">
-              <p className="text-xs font-bold text-foreground sm:text-sm">
+              <p className="break-words text-xs font-bold text-foreground sm:text-sm">
                 {latestExperience.jobRole} · {latestExperience.companyName}
               </p>
               <p className="mt-1 text-[11px] text-muted sm:text-xs">
@@ -226,23 +238,23 @@ export function JobSeekerProfileTabPanels({
               ) : null}
             </div>
           ) : (
-            <p className="text-xs text-muted sm:text-sm">
+            <p className="break-words text-xs text-muted sm:text-sm">
               {jobSeeker.experienceType === "fresher"
-                ? "You marked yourself as a fresher."
-                : "Add work experience to showcase your career."}
+                ? t("seeker.profilePanels.fresherNote")
+                : t("seeker.profilePanels.addExperienceHint")}
             </p>
           )}
         </SectionCard>
 
         <SectionCard
-          title="Top skills"
+          title={t("seeker.profilePanels.topSkills")}
           action={
             <button
               type="button"
               className={iconButtonClassName}
               onClick={() => onOpenModal({ type: "skills" })}
             >
-              Manage
+              {t("seeker.profilePanels.manage")}
             </button>
           }
         >
@@ -258,8 +270,8 @@ export function JobSeekerProfileTabPanels({
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-muted sm:text-sm">
-              Add skills to improve matching.
+            <p className="break-words text-xs text-muted sm:text-sm">
+              {t("seeker.profilePanels.skillsMatchHint")}
             </p>
           )}
         </SectionCard>
@@ -269,12 +281,12 @@ export function JobSeekerProfileTabPanels({
             <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-surface sm:size-10">
               <Sparkles className="size-4 sm:size-5" aria-hidden="true" />
             </span>
-            <div>
-              <p className="text-xs font-bold text-foreground sm:text-sm">
-                AI profile insights
+            <div className="min-w-0">
+              <p className="break-words text-xs font-bold text-foreground sm:text-sm">
+                {t("seeker.profilePanels.aiInsights")}
               </p>
-              <p className="mt-0.5 text-[11px] text-muted sm:text-xs">
-                Get tailored suggestions to improve your profile and resume.
+              <p className="mt-0.5 break-words text-[11px] text-muted sm:text-xs">
+                {t("seeker.profilePanels.aiInsightsBody")}
               </p>
             </div>
           </div>
@@ -282,10 +294,10 @@ export function JobSeekerProfileTabPanels({
             type="button"
             className="mt-3 inline-flex min-h-9 w-full items-center justify-center rounded-xl bg-primary px-4 text-xs font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-0 sm:min-h-10 sm:w-auto sm:text-sm"
             onClick={() =>
-              showAppToast("AI profile insights are coming soon.", "info")
+              showAppToast(t("seeker.profilePanels.aiComingSoon"), "info")
             }
           >
-            Explore
+            {t("seeker.profilePanels.explore")}
           </button>
         </div>
       </div>
@@ -296,10 +308,14 @@ export function JobSeekerProfileTabPanels({
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-muted sm:text-sm">
+          <p className="min-w-0 break-words text-xs text-muted sm:text-sm">
             {jobSeeker.experienceType === "fresher"
-              ? "You are registered as a fresher."
-              : `${experiences.length} experience ${experiences.length === 1 ? "entry" : "entries"}`}
+              ? t("seeker.profilePanels.registeredFresher")
+              : experiences.length === 1
+                ? t("seeker.profilePanels.experienceCountOne")
+                : t("seeker.profilePanels.experienceCountMany", {
+                    count: experiences.length,
+                  })}
           </p>
           <button
             type="button"
@@ -309,12 +325,14 @@ export function JobSeekerProfileTabPanels({
             }
           >
             <Plus className="size-3.5 sm:size-4" aria-hidden="true" />
-            Add experience
+            {t("seeker.profilePanels.addExperience")}
           </button>
         </div>
         {experiences.length === 0 ? (
-          <SectionCard title="Work experience">
-            <p className="text-xs text-muted sm:text-sm">No experience added yet.</p>
+          <SectionCard title={t("seeker.profilePanels.workExperience")}>
+            <p className="text-xs text-muted sm:text-sm">
+              {t("seeker.profilePanels.noExperience")}
+            </p>
           </SectionCard>
         ) : (
           experiences.map((entry, index) => {
@@ -324,7 +342,10 @@ export function JobSeekerProfileTabPanels({
             return (
             <SectionCard
               key={`${entry.companyName}-${entry.startDate}-${index}`}
-              title={`${entry.jobRole} at ${entry.companyName}`}
+              title={t("seeker.profilePanels.experienceTitle", {
+                role: entry.jobRole,
+                company: entry.companyName,
+              })}
               action={
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -339,7 +360,7 @@ export function JobSeekerProfileTabPanels({
                     }
                   >
                     <Pencil className="size-3.5" aria-hidden="true" />
-                    Edit
+                    {t("seeker.common.edit")}
                   </button>
                   <button
                     type="button"
@@ -350,7 +371,7 @@ export function JobSeekerProfileTabPanels({
                     onClick={() => void onDeleteExperience(experienceIndex)}
                   >
                     <Trash2 className="size-3.5" aria-hidden="true" />
-                    Delete
+                    {t("seeker.common.delete")}
                   </button>
                 </div>
               }
@@ -367,9 +388,9 @@ export function JobSeekerProfileTabPanels({
               {entry.responsibilities ? (
                 <div className="mt-3">
                   <p className="text-[11px] font-semibold uppercase text-muted sm:text-xs">
-                    Responsibilities
+                    {t("seeker.profilePanels.responsibilities")}
                   </p>
-                  <p className="mt-1 whitespace-pre-wrap text-xs text-foreground sm:text-sm">
+                  <p className="mt-1 whitespace-pre-wrap break-words text-xs text-foreground sm:text-sm">
                     {entry.responsibilities}
                   </p>
                 </div>
@@ -377,9 +398,9 @@ export function JobSeekerProfileTabPanels({
               {entry.achievements ? (
                 <div className="mt-3">
                   <p className="text-[11px] font-semibold uppercase text-muted sm:text-xs">
-                    Achievements
+                    {t("seeker.profilePanels.achievements")}
                   </p>
-                  <p className="mt-1 whitespace-pre-wrap text-xs text-foreground sm:text-sm">
+                  <p className="mt-1 whitespace-pre-wrap break-words text-xs text-foreground sm:text-sm">
                     {entry.achievements}
                   </p>
                 </div>
@@ -405,7 +426,7 @@ export function JobSeekerProfileTabPanels({
                 onClick={() => onOpenModal({ type: "education" })}
               >
                 <Pencil className="size-3.5" aria-hidden="true" />
-                Edit
+                {t("seeker.common.edit")}
               </button>
               <button
                 type="button"
@@ -416,7 +437,7 @@ export function JobSeekerProfileTabPanels({
                 onClick={() => void onDeleteEducation()}
               >
                 <Trash2 className="size-3.5" aria-hidden="true" />
-                Remove
+                {t("seeker.common.remove")}
               </button>
             </>
           ) : (
@@ -426,22 +447,25 @@ export function JobSeekerProfileTabPanels({
               onClick={() => onOpenModal({ type: "education" })}
             >
               <Plus className="size-3.5 sm:size-4" aria-hidden="true" />
-              Add education
+              {t("seeker.profilePanels.addEducation")}
             </button>
           )}
         </div>
-        <SectionCard title="Education">
+        <SectionCard title={t("seeker.profilePanels.education")}>
           {education?.level ? (
             <div className="flex gap-3">
               <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-10">
                 <GraduationCap className="size-4 sm:size-5" aria-hidden="true" />
               </span>
-              <div>
-                <p className="text-xs font-bold text-foreground sm:text-sm">
+              <div className="min-w-0">
+                <p className="break-words text-xs font-bold text-foreground sm:text-sm">
                   {educationTitle(education)}
                 </p>
-                <p className="text-xs text-muted sm:text-sm">
-                  {educationLevelLabel(education.level)}
+                <p className="break-words text-xs text-muted sm:text-sm">
+                  {optionLabel(
+                    education.level,
+                    educationLevelLabel(education.level),
+                  )}
                 </p>
                 {educationInstitution(education) ? (
                   <p className="mt-1 text-xs text-foreground sm:text-sm">
@@ -450,13 +474,17 @@ export function JobSeekerProfileTabPanels({
                 ) : null}
                 {education.passingYear ? (
                   <p className="mt-1 text-[11px] text-muted sm:text-xs">
-                    Passed {education.passingYear}
+                    {t("seeker.profilePanels.passed", {
+                      year: education.passingYear,
+                    })}
                   </p>
                 ) : null}
               </div>
             </div>
           ) : (
-            <p className="text-xs text-muted sm:text-sm">No education added yet.</p>
+            <p className="text-xs text-muted sm:text-sm">
+              {t("seeker.profilePanels.noEducation")}
+            </p>
           )}
         </SectionCard>
       </div>
@@ -466,7 +494,7 @@ export function JobSeekerProfileTabPanels({
   if (activeTab === "skills") {
     return (
       <SectionCard
-        title="Skills"
+        title={t("seeker.profilePanels.skills")}
         action={
           <button
             type="button"
@@ -474,7 +502,7 @@ export function JobSeekerProfileTabPanels({
             onClick={() => onOpenModal({ type: "skills" })}
           >
             <Pencil className="size-3.5" aria-hidden="true" />
-            Edit skills
+            {t("seeker.profilePanels.editSkills")}
           </button>
         }
       >
@@ -490,8 +518,8 @@ export function JobSeekerProfileTabPanels({
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-muted sm:text-sm">
-            Add skills to highlight your strengths.
+          <p className="break-words text-xs text-muted sm:text-sm">
+            {t("seeker.profilePanels.skillsStrengthHint")}
           </p>
         )}
       </SectionCard>
@@ -501,24 +529,26 @@ export function JobSeekerProfileTabPanels({
   if (activeTab === "documents") {
     const hasResume = Boolean(resume && resume.status !== "NOT_GENERATED");
     return (
-      <SectionCard title="Resume">
+      <SectionCard title={t("seeker.profilePanels.resume")}>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-semibold text-foreground sm:text-sm">
-              My Resume
+              {t("seeker.profilePanels.myResume")}
             </p>
             {resume ? (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <ResumeStatusBadge status={resume.status} />
                 {resume.updatedAt ? (
                   <span className="text-[11px] text-muted sm:text-xs">
-                    Updated {formatRelativeUpdatedAt(resume.updatedAt)}
+                    {t("seeker.profile.updated", {
+                      date: formatRelativeUpdatedAt(resume.updatedAt),
+                    })}
                   </span>
                 ) : null}
               </div>
             ) : (
-              <p className="mt-1 text-xs text-muted sm:text-sm">
-                No resume generated yet. Open the resume builder to create one.
+              <p className="mt-1 break-words text-xs text-muted sm:text-sm">
+                {t("seeker.profilePanels.noResume")}
               </p>
             )}
           </div>
@@ -527,7 +557,7 @@ export function JobSeekerProfileTabPanels({
               href={ROUTES.JOB_SEEKER_MY_RESUME}
               className={iconButtonClassName}
             >
-              Open builder
+              {t("seeker.profilePanels.openBuilder")}
             </Link>
             <button
               type="button"
@@ -536,7 +566,7 @@ export function JobSeekerProfileTabPanels({
               onClick={() => void onDownloadResume()}
             >
               <Download className="size-3.5" aria-hidden="true" />
-              Download PDF
+              {t("seeker.profilePanels.downloadPdf")}
             </button>
             <button
               type="button"
@@ -545,7 +575,7 @@ export function JobSeekerProfileTabPanels({
               onClick={onRegenerateResume}
             >
               <RefreshCw className="size-3.5" aria-hidden="true" />
-              Regenerate
+              {t("seeker.profilePanels.regenerate")}
             </button>
           </div>
         </div>
@@ -555,53 +585,62 @@ export function JobSeekerProfileTabPanels({
 
   if (activeTab === "preferences") {
     const preferenceTiles: {
+      id: string;
       label: string;
       value: string;
       icon: LucideIcon;
     }[] = [
       {
-        label: "Job type",
-        value: jobTypeLabel(jobSeeker.jobType) || "Not set",
+        id: "job-type",
+        label: t("seeker.profilePanels.jobType"),
+        value: jobTypeText,
         icon: Briefcase,
       },
       {
-        label: "Work mode",
-        value: workModeLabel(jobSeeker.workMode) || "Not set",
+        id: "work-mode",
+        label: t("seeker.profilePanels.workMode"),
+        value: workModeText,
         icon: Building2,
       },
       {
-        label: "Preferred location",
-        value: jobSeeker.preferredJobLocation || "Not set",
+        id: "preferred-location",
+        label: t("seeker.profilePanels.preferredLocation"),
+        value: jobSeeker.preferredJobLocation,
         icon: MapPin,
       },
       {
-        label: "Expected salary",
-        value: formatExpectedSalary(jobSeeker) || "Not set",
+        id: "expected-salary",
+        label: t("seeker.profilePanels.expectedSalary"),
+        value: formatExpectedSalary(jobSeeker),
         icon: Banknote,
       },
       {
-        label: "Availability",
-        value: availabilityLabel(jobSeeker.availabilityStatus) || "Not set",
+        id: "availability",
+        label: t("seeker.profilePanels.availability"),
+        value: optionLabel(
+          jobSeeker.availabilityStatus,
+          availabilityLabel(jobSeeker.availabilityStatus),
+        ),
         icon: Clock3,
       },
       {
-        label: "Current location",
-        value:
-          [jobSeeker.city, jobSeeker.state, jobSeeker.pincode]
-            .filter(Boolean)
-            .join(", ") || "Not set",
+        id: "current-location",
+        label: t("seeker.profilePanels.currentLocation"),
+        value: [jobSeeker.city, jobSeeker.state, jobSeeker.pincode]
+          .filter(Boolean)
+          .join(", "),
         icon: MapPin,
       },
     ];
 
     const languages = jobSeeker.languages ?? [];
     const whatsappLabel =
-      formatWhatsappNumber(jobSeeker.whatsappNumber) || "Not set";
+      formatWhatsappNumber(jobSeeker.whatsappNumber) || notSetLabel;
 
     return (
       <div className="space-y-4">
         <SectionCard
-          title="Career preferences"
+          title={t("seeker.profilePanels.careerPreferences")}
           action={
             <button
               type="button"
@@ -609,26 +648,26 @@ export function JobSeekerProfileTabPanels({
               onClick={() => onOpenModal({ type: "preferences" })}
             >
               <Pencil className="size-3.5" aria-hidden="true" />
-              Edit
+              {t("seeker.common.edit")}
             </button>
           }
         >
           <div className="rounded-xl border border-primary/15 bg-primary-light/50 px-4 py-4 sm:px-5">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-primary sm:text-xs">
-              Target role
+              {t("seeker.profilePanels.targetRole")}
             </p>
-            <p className="mt-1 text-base font-bold tracking-tight text-foreground sm:text-lg">
-              {jobSeeker.jobRole.trim() || "Add your preferred job role"}
+            <p className="mt-1 break-words text-base font-bold tracking-tight text-foreground sm:text-lg">
+              {jobSeeker.jobRole.trim() || t("seeker.profilePanels.addTargetRole")}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {jobTypeLabel(jobSeeker.jobType) ? (
+              {jobTypeText ? (
                 <span className="inline-flex items-center rounded-lg bg-surface px-2 py-0.5 text-[11px] font-semibold text-foreground sm:px-2.5 sm:py-1 sm:text-xs">
-                  {jobTypeLabel(jobSeeker.jobType)}
+                  {jobTypeText}
                 </span>
               ) : null}
-              {workModeLabel(jobSeeker.workMode) ? (
+              {workModeText ? (
                 <span className="inline-flex items-center rounded-lg bg-surface px-2 py-0.5 text-[11px] font-semibold text-foreground sm:px-2.5 sm:py-1 sm:text-xs">
-                  {workModeLabel(jobSeeker.workMode)}
+                  {workModeText}
                 </span>
               ) : null}
               {jobSeeker.preferredJobLocation.trim() ? (
@@ -643,17 +682,17 @@ export function JobSeekerProfileTabPanels({
           <dl className="mt-4 grid gap-3 sm:grid-cols-2">
             {preferenceTiles.map((tile) => {
               const Icon = tile.icon;
-              const isEmpty = tile.value === "Not set";
+              const isEmpty = !tile.value;
               return (
                 <div
-                  key={tile.label}
+                  key={tile.id}
                   className="flex items-start gap-3 rounded-xl border border-border-subtle bg-hero-bg/70 p-3.5"
                 >
                   <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-9">
                     <Icon className="size-3.5 sm:size-4" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <dt className="text-[11px] font-medium text-muted sm:text-xs">
+                    <dt className="break-words text-[11px] font-medium text-muted sm:text-xs">
                       {tile.label}
                     </dt>
                     <dd
@@ -662,7 +701,7 @@ export function JobSeekerProfileTabPanels({
                         isEmpty ? "text-muted" : "text-foreground",
                       )}
                     >
-                      {tile.value}
+                      {tile.value || notSetLabel}
                     </dd>
                   </div>
                 </div>
@@ -671,13 +710,13 @@ export function JobSeekerProfileTabPanels({
           </dl>
         </SectionCard>
 
-        <SectionCard title="Languages & contact">
+        <SectionCard title={t("seeker.profilePanels.languagesContact")}>
           <div className="space-y-4">
             <div>
               <div className="mb-2 flex items-center gap-2">
                 <Globe2 className="size-3.5 text-primary sm:size-4" aria-hidden="true" />
                 <p className="text-xs font-semibold text-foreground sm:text-sm">
-                  Languages
+                  {t("seeker.profilePanels.languages")}
                 </p>
               </div>
               {languages.length > 0 ? (
@@ -693,7 +732,7 @@ export function JobSeekerProfileTabPanels({
                 </ul>
               ) : (
                 <p className="text-xs text-muted sm:text-sm">
-                  No languages added yet.
+                  {t("seeker.profilePanels.noLanguages")}
                 </p>
               )}
             </div>
@@ -704,14 +743,14 @@ export function JobSeekerProfileTabPanels({
               </span>
               <div className="min-w-0">
                 <p className="text-[11px] font-medium text-muted sm:text-xs">
-                  WhatsApp
+                  {t("seeker.profilePanels.whatsapp")}
                 </p>
                 <p className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm">
                   {whatsappLabel}
                 </p>
                 {jobSeeker.isWhatsappVerified ? (
                   <p className="mt-1 text-[11px] font-medium text-resource-guide-icon sm:text-xs">
-                    Verified for sign-in
+                    {t("seeker.profilePanels.verifiedSignIn")}
                   </p>
                 ) : null}
               </div>
@@ -725,11 +764,13 @@ export function JobSeekerProfileTabPanels({
   if (activeTab === "activity") {
     return (
       <div className="space-y-4">
-        <SectionCard title="Recently applied">
+        <SectionCard title={t("seeker.profilePanels.recentlyApplied")}>
           {isApplicationsLoading ? (
             <JobSeekerActivityListSkeleton rows={3} />
           ) : applications.length === 0 ? (
-            <p className="text-xs text-muted sm:text-sm">No applications yet.</p>
+            <p className="text-xs text-muted sm:text-sm">
+              {t("seeker.profilePanels.noApplications")}
+            </p>
           ) : (
             <ul className="divide-y divide-border-subtle">
               {applications.map((application) => (
@@ -749,8 +790,9 @@ export function JobSeekerProfileTabPanels({
                       {application.companyName}
                     </p>
                     <p className="mt-0.5 text-[11px] font-medium text-primary sm:text-xs">
-                      {APPLICATION_STATUS_LABELS[application.status] ??
-                        application.status}
+                      {APPLICATION_STATUS_LABEL_KEYS[application.status]
+                        ? t(APPLICATION_STATUS_LABEL_KEYS[application.status])
+                        : application.status}
                     </p>
                   </div>
                 </li>
@@ -759,11 +801,13 @@ export function JobSeekerProfileTabPanels({
           )}
         </SectionCard>
 
-        <SectionCard title="Saved jobs">
+        <SectionCard title={t("seeker.profilePanels.savedJobs")}>
           {isSavedJobsLoading ? (
             <JobSeekerActivityListSkeleton rows={3} />
           ) : savedJobs.length === 0 ? (
-            <p className="text-xs text-muted sm:text-sm">No saved jobs yet.</p>
+            <p className="text-xs text-muted sm:text-sm">
+              {t("seeker.profilePanels.noSavedJobs")}
+            </p>
           ) : (
             <ul className="divide-y divide-border-subtle">
               {savedJobs.map((job) => (
@@ -783,11 +827,13 @@ export function JobSeekerProfileTabPanels({
           )}
         </SectionCard>
 
-        <SectionCard title="Notifications">
+        <SectionCard title={t("seeker.profilePanels.notifications")}>
           {isNotificationsLoading ? (
             <JobSeekerActivityListSkeleton rows={2} />
           ) : notifications.length === 0 ? (
-            <p className="text-xs text-muted sm:text-sm">No notifications yet.</p>
+            <p className="text-xs text-muted sm:text-sm">
+              {t("seeker.profilePanels.noNotifications")}
+            </p>
           ) : (
             <ul className="divide-y divide-border-subtle">
               {notifications.map((notification) => (
@@ -809,7 +855,7 @@ export function JobSeekerProfileTabPanels({
             href={ROUTES.JOB_SEEKER_NOTIFICATIONS}
             className="mt-3 inline-flex text-xs font-semibold text-primary underline underline-offset-2 sm:text-sm"
           >
-            View all notifications
+            {t("seeker.profilePanels.viewAllNotifications")}
           </Link>
         </SectionCard>
       </div>

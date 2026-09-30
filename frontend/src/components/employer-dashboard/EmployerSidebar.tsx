@@ -4,11 +4,9 @@ import { SkeletonBone } from "@/components/shared/skeletons/SkeletonBone";
 import asliLogo from "@/assets/AsliLogo.svg";
 import asliLogoMark from "@/assets/logos/Frame 130.png";
 import { EmployerSidebarItem } from "@/components/employer-dashboard/EmployerSidebarItem";
+import { EMPLOYER_NAV_ITEM_MESSAGE_KEYS } from "@/components/employer-dashboard/employer-message-keys";
 import {
-  EMPLOYER_DASHBOARD_HELP_CTA,
   EMPLOYER_DASHBOARD_HELP_ICON,
-  EMPLOYER_DASHBOARD_HELP_SUBTITLE,
-  EMPLOYER_DASHBOARD_HELP_TITLE,
   EMPLOYER_DASHBOARD_LOGO_TAGLINE,
   EMPLOYER_DASHBOARD_NAV_ITEMS,
   EMPLOYER_DASHBOARD_SIDEBAR_COLLAPSED_WIDTH,
@@ -17,6 +15,7 @@ import {
 import { NAV_ITEM_PERMISSION_MODULE } from "@/constants/employer-rbac";
 import { ROUTES } from "@/constants/routes";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
+import { useTranslate } from "@/i18n/translate";
 import { useCan } from "@/providers/employer-permission-provider";
 import {
   employerMessageQueryKeys,
@@ -47,6 +46,7 @@ export function EmployerSidebar({
   onMobileClose,
 }: EmployerSidebarProps) {
   const pathname = usePathname();
+  const t = useTranslate();
   const isHelpCenterActive =
     pathname === ROUTES.EMPLOYER_HELP_CENTER ||
     pathname.startsWith(`${ROUTES.EMPLOYER_HELP_CENTER}/`);
@@ -82,7 +82,9 @@ export function EmployerSidebar({
   const navItems = useMemo<EmployerDashboardNavItem[]>(() => {
     const unread = messagesUnreadQuery.data ?? 0;
     const messagesBadgeLoading = messagesUnreadQuery.isLoading;
-    return EMPLOYER_DASHBOARD_NAV_ITEMS.map((item) => {
+    return EMPLOYER_DASHBOARD_NAV_ITEMS.map((baseItem) => {
+      const labelKey = EMPLOYER_NAV_ITEM_MESSAGE_KEYS[baseItem.id];
+      const item = labelKey ? { ...baseItem, label: t(labelKey) } : baseItem;
       if (item.id === "messages") {
         return {
           ...item,
@@ -99,7 +101,7 @@ export function EmployerSidebar({
           ...item,
           label:
             profileQuery.data?.accountType === "individual"
-              ? "Individual Profile"
+              ? t("employer.nav.individualProfile")
               : item.label,
           showOnboardingDot: showCompanyProfileOnboardingDot || undefined,
         };
@@ -123,6 +125,7 @@ export function EmployerSidebar({
     showCompanyProfileOnboardingDot,
     can,
     permissionsLoading,
+    t,
   ]);
 
   return (
@@ -137,7 +140,7 @@ export function EmployerSidebar({
       />
 
       <aside
-        aria-label="Employer dashboard navigation"
+        aria-label={t("employer.shell.sidebarAria")}
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex h-dvh flex-col border-r border-border-subtle bg-surface transition-[width,transform] duration-200 ease-out",
           collapsed
@@ -163,7 +166,7 @@ export function EmployerSidebar({
           <Link
             href={ROUTES.HOME}
             onClick={onMobileClose}
-            aria-label="AsliJobs home"
+            aria-label={t("navbar.homeAria")}
             className={cn(
               "rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
               collapsed
@@ -205,7 +208,7 @@ export function EmployerSidebar({
             "flex-1 overflow-y-auto overflow-x-hidden py-3",
             collapsed ? "px-2" : "px-3",
           )}
-          aria-label="Primary"
+          aria-label={t("employer.shell.primaryNavAria")}
         >
           <ul className="flex flex-col gap-1">
             {permissionsLoading
@@ -253,10 +256,10 @@ export function EmployerSidebar({
           {!collapsed ? (
             <div className="rounded-xl bg-hero-bg p-3.5">
               <p className="text-sm font-bold text-foreground">
-                {EMPLOYER_DASHBOARD_HELP_TITLE}
+                {t("employer.shell.helpTitle")}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted">
-                {EMPLOYER_DASHBOARD_HELP_SUBTITLE}
+                {t("employer.shell.helpSubtitle")}
               </p>
               <Link
                 href={ROUTES.EMPLOYER_HELP_CENTER}
@@ -269,7 +272,7 @@ export function EmployerSidebar({
                   strokeWidth={2}
                   aria-hidden="true"
                 />
-                {EMPLOYER_DASHBOARD_HELP_CTA}
+                {t("employer.shell.helpCta")}
               </Link>
             </div>
           ) : (
@@ -278,8 +281,8 @@ export function EmployerSidebar({
               onClick={onMobileClose}
               aria-current={isHelpCenterActive ? "page" : undefined}
               className="inline-flex w-full items-center justify-center rounded-lg border border-border bg-surface p-2.5 text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              aria-label={EMPLOYER_DASHBOARD_HELP_CTA}
-              title={EMPLOYER_DASHBOARD_HELP_CTA}
+              aria-label={t("employer.shell.helpCta")}
+              title={t("employer.shell.helpCta")}
             >
               <HelpIcon className="size-4" strokeWidth={2} aria-hidden="true" />
             </Link>
@@ -289,7 +292,11 @@ export function EmployerSidebar({
             type="button"
             onClick={onCollapseToggle}
             className="mt-2 hidden w-full items-center justify-center rounded-lg p-2 text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:inline-flex"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={
+              collapsed
+                ? t("employer.shell.expandSidebar")
+                : t("employer.shell.collapseSidebar")
+            }
           >
             <ChevronsLeft
               className={cn(

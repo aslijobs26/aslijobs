@@ -1,3 +1,4 @@
+import type { MessageKey } from "@/i18n/translate";
 import type {
   SavedJobsAdvancedFilters,
   SavedJobsSort,
@@ -21,40 +22,43 @@ export const EMPTY_SAVED_JOBS_FILTERS: SavedJobsAdvancedFilters = {
 
 export const SAVED_JOBS_STATS_TABS: {
   key: SavedJobsStatsFilter;
-  label: string;
+  labelKey: MessageKey;
   statsKey: keyof SavedJobsStats;
   tone: "primary" | "neutral" | "success" | "warning" | "danger";
 }[] = [
-  { key: "all", label: "All Saved", statsKey: "total", tone: "primary" },
-  { key: "recent", label: "Recent", statsKey: "recent", tone: "neutral" },
+  { key: "all", labelKey: "seeker.saved.tabAll", statsKey: "total", tone: "primary" },
+  { key: "recent", labelKey: "seeker.saved.tabRecent", statsKey: "recent", tone: "neutral" },
   {
     key: "high_match",
-    label: "High Match",
+    labelKey: "seeker.saved.tabHighMatch",
     statsKey: "highMatch",
     tone: "success",
   },
-  { key: "applied", label: "Applied", statsKey: "applied", tone: "warning" },
-  { key: "expired", label: "Expired", statsKey: "expired", tone: "danger" },
+  { key: "applied", labelKey: "seeker.saved.tabApplied", statsKey: "applied", tone: "warning" },
+  { key: "expired", labelKey: "seeker.saved.tabExpired", statsKey: "expired", tone: "danger" },
 ];
 
 export const SAVED_JOBS_SORT_OPTIONS: {
   value: SavedJobsSort;
-  label: string;
+  labelKey: MessageKey;
 }[] = [
-  { value: "recently_saved", label: "Recently Saved" },
-  { value: "newest", label: "Newest" },
-  { value: "oldest", label: "Oldest" },
-  { value: "salary_high", label: "Salary High" },
-  { value: "salary_low", label: "Salary Low" },
-  { value: "company_az", label: "Company A-Z" },
-  { value: "highest_match", label: "Highest Match" },
+  { value: "recently_saved", labelKey: "seeker.saved.sortRecentlySaved" },
+  { value: "newest", labelKey: "seeker.saved.sortNewest" },
+  { value: "oldest", labelKey: "seeker.saved.sortOldest" },
+  { value: "salary_high", labelKey: "seeker.saved.sortSalaryHigh" },
+  { value: "salary_low", labelKey: "seeker.saved.sortSalaryLow" },
+  { value: "company_az", labelKey: "seeker.saved.sortCompany" },
+  { value: "highest_match", labelKey: "seeker.saved.sortHighestMatch" },
 ];
 
 /** Real Job.partTimeSchedule values from Job Posting. */
-export const SAVED_JOBS_SCHEDULE_OPTIONS = [
-  { value: "fixed-timings", label: "Fixed timings" },
-  { value: "flexible-hours", label: "Flexible hours" },
-] as const;
+export const SAVED_JOBS_SCHEDULE_OPTIONS: {
+  value: string;
+  labelKey: MessageKey;
+}[] = [
+  { value: "fixed-timings", labelKey: "seeker.savedFilters.fixedTimings" },
+  { value: "flexible-hours", labelKey: "seeker.savedFilters.flexibleHours" },
+];
 
 export const SAVED_JOBS_SALARY_OPTIONS = [
   { value: "", label: "Any" },

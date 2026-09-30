@@ -1,6 +1,8 @@
 "use client";
 
 import { JOB_SEARCH_SORT_OPTIONS } from "@/constants/job-search";
+import { useTranslate } from "@/i18n/translate";
+import { formatJobSearchSort } from "@/utils/job-search-format";
 import type { PublicJobSort } from "@/services/public-jobs.service";
 import { cn } from "@/utils/cn";
 import { ArrowUpDown, Check, ChevronDown } from "lucide-react";
@@ -23,15 +25,13 @@ export function JobSearchResultsHeader({
   const labelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const t = useTranslate();
+  const selectedLabel = formatJobSearchSort(sort);
 
   const formattedTotal = total.toLocaleString("en-IN");
   const title = locationLabel
-    ? `${formattedTotal} jobs found in ${locationLabel}`
-    : `${formattedTotal} jobs found`;
-
-  const selected =
-    JOB_SEARCH_SORT_OPTIONS.find((option) => option.value === sort) ??
-    JOB_SEARCH_SORT_OPTIONS[0]!;
+    ? t("jobs.jobsFoundIn", { count: formattedTotal, location: locationLabel })
+    : t("jobs.jobsFound", { count: formattedTotal });
 
   useEffect(() => {
     if (!isOpen) {
@@ -85,7 +85,7 @@ export function JobSearchResultsHeader({
             aria-expanded={isOpen}
             aria-controls={listboxId}
             aria-labelledby={labelId}
-            aria-label={`Sort jobs: ${selected.label}`}
+            aria-label={t("jobs.sortBy", { label: selectedLabel })}
             onClick={() => setIsOpen((current) => !current)}
             className={cn(
               "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2 text-left text-sm font-semibold shadow-sm",
@@ -97,7 +97,7 @@ export function JobSearchResultsHeader({
                 : "border-border text-foreground",
             )}
           >
-            <span className="min-w-0 flex-1 truncate">{selected.label}</span>
+            <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
             <ChevronDown
               className={cn(
                 "size-4 shrink-0 text-muted transition-transform",
@@ -135,7 +135,7 @@ export function JobSearchResultsHeader({
                           : "font-medium text-foreground hover:bg-primary-light/50",
                       )}
                     >
-                      <span className="truncate">{option.label}</span>
+                      <span className="truncate">{formatJobSearchSort(option.value)}</span>
                       {isSelected ? (
                         <Check
                           className="size-4 shrink-0 text-primary"

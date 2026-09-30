@@ -9,6 +9,22 @@ import {
 } from "@/constants/job-search";
 import type { PublicJobListItem } from "@/services/public-jobs.service";
 import { getIndianStateAbbreviation } from "@/utils/employer-jobs-format";
+import { staticJobLabel } from "@/i18n/job-ui-labels";
+import { getSiteLanguageCode } from "@/i18n/site-language";
+import { translate, type MessageKey } from "@/i18n/translate";
+
+const DATE_LOCALES: Record<string, string> = {
+  en: "en-IN",
+  hi: "hi-IN",
+  te: "te-IN",
+  ta: "ta-IN",
+  kn: "kn-IN",
+  ml: "ml-IN",
+};
+
+function siteDateLocale(): string {
+  return DATE_LOCALES[getSiteLanguageCode()] ?? "en-IN";
+}
 
 type SalaryPeriodValue = "per-month" | "per-year" | string | null | undefined;
 
@@ -16,11 +32,12 @@ function resolveSalaryPeriodSuffix(
   period: SalaryPeriodValue,
   style: "long" | "short",
 ): string {
+  const language = getSiteLanguageCode();
   const isYear = period === "per-year";
   if (style === "short") {
-    return isYear ? "/yr" : "/mo";
+    return translate(language, isYear ? "jobs.perYearShort" : "jobs.perMonthShort");
   }
-  return isYear ? " /year" : " /month";
+  return translate(language, isYear ? "jobs.perYear" : "jobs.perMonth");
 }
 
 export function formatJobSearchSalary(job: {
@@ -47,14 +64,18 @@ export function formatJobSearchSalary(job: {
   }
 
   if (job.minimumSalary != null) {
-    return `From ${formatAmount(job.minimumSalary)}${period}`;
+    return translate(getSiteLanguageCode(), "jobs.salaryFrom", {
+      amount: `${formatAmount(job.minimumSalary)}${period}`,
+    });
   }
 
   if (job.maximumSalary != null) {
-    return `Up to ${formatAmount(job.maximumSalary)}${period}`;
+    return translate(getSiteLanguageCode(), "jobs.salaryUpTo", {
+      amount: `${formatAmount(job.maximumSalary)}${period}`,
+    });
   }
 
-  return "Salary not disclosed";
+  return translate(getSiteLanguageCode(), "jobs.salaryNotDisclosed");
 }
 
 /** Compact amount for job cards: 18K, 1L, 1.5L */
@@ -147,32 +168,116 @@ export function formatJobSearchLocationCompact(
   return cityLabel || stateAbbr || "—";
 }
 
+const EXPERIENCE_KEYS: Record<string, MessageKey> = {
+  fresher: "jobs.fresher",
+  "6_month": "jobs.months6",
+  "1_year": "jobs.year1",
+  "2_year": "jobs.years2",
+  "3_year": "jobs.years3",
+  "4_year": "jobs.years4",
+  "5_year": "jobs.years5",
+  "6_year": "jobs.years6",
+  "10_year": "jobs.years10",
+};
+
+const EDUCATION_KEYS: Record<string, MessageKey> = {
+  "10th_or_below": "jobs.tenth",
+  "12th_pass": "jobs.twelfth",
+  diploma: "jobs.diploma",
+  iti: "jobs.iti",
+  graduate: "jobs.graduate",
+  post_graduate: "jobs.postGraduate",
+};
+
+const PERK_KEYS: Record<string, MessageKey> = {
+  travel_allowance: "jobs.travelAllowance",
+  food_meals: "jobs.foodMeals",
+  accommodation: "jobs.accommodation",
+  petrol_allowance: "jobs.petrolAllowance",
+  mobile_bill_allowance: "jobs.mobileBill",
+  internet_allowance: "jobs.internet",
+  annual_bonus: "jobs.annualBonus",
+  laptop: "jobs.laptop",
+  pf: "jobs.pf",
+};
+
+const GENDER_KEYS: Record<string, MessageKey> = {
+  male: "jobs.male",
+  female: "jobs.female",
+  other: "jobs.other",
+  any: "jobs.any",
+};
+
+const SPOKEN_LANGUAGE_KEYS: Record<string, MessageKey> = {
+  english: "jobs.langEnglish",
+  telugu: "jobs.langTelugu",
+  hindi: "jobs.langHindi",
+  tamil: "jobs.langTamil",
+  kannada: "jobs.langKannada",
+  malayalam: "jobs.langMalayalam",
+};
+
+function localizedEnum(
+  key: MessageKey | undefined,
+  englishFallback: string | undefined,
+  raw: string,
+): string {
+  if (!key) return englishFallback ?? raw;
+  return translate(getSiteLanguageCode(), key);
+}
+
+const SORT_KEYS: Record<string, MessageKey> = {
+  relevant: "jobs.sortRelevant",
+  latest: "jobs.sortLatest",
+  salary_desc: "jobs.sortSalaryDesc",
+  salary_asc: "jobs.sortSalaryAsc",
+};
+
+const MOBILE_SORT_KEYS: Record<string, MessageKey> = {
+  relevant: "jobs.sortRelevant",
+  latest: "jobs.newest",
+  salary_desc: "jobs.salaryHighToLow",
+  salary_asc: "jobs.salaryLowToHigh",
+};
+
+export function formatJobSearchSort(sort: string): string {
+  return localizedEnum(SORT_KEYS[sort], undefined, sort);
+}
+
+export function formatJobSearchSortMobile(sort: string): string {
+  return localizedEnum(MOBILE_SORT_KEYS[sort], undefined, sort);
+}
+
 export function formatJobSearchJobType(jobType: string): string {
-  return JOB_SEARCH_JOB_TYPE_LABELS[jobType] ?? jobType;
+  return staticJobLabel("jobType", jobType, getSiteLanguageCode()) ?? JOB_SEARCH_JOB_TYPE_LABELS[jobType] ?? jobType;
 }
 
 export function formatJobSearchExperience(experience: string): string {
-  return JOB_SEARCH_EXPERIENCE_LABELS[experience] ?? experience;
+  return localizedEnum(EXPERIENCE_KEYS[experience], JOB_SEARCH_EXPERIENCE_LABELS[experience], experience);
 }
 
 export function formatJobSearchEducation(education: string): string {
-  return JOB_SEARCH_EDUCATION_LABELS[education] ?? education;
+  return localizedEnum(EDUCATION_KEYS[education], JOB_SEARCH_EDUCATION_LABELS[education], education);
 }
 
 export function formatJobSearchPerk(perk: string): string {
-  return JOB_SEARCH_PERK_LABELS[perk] ?? perk;
+  return localizedEnum(PERK_KEYS[perk], JOB_SEARCH_PERK_LABELS[perk], perk);
 }
 
 export function formatJobSearchGender(gender: string): string {
-  return JOB_SEARCH_GENDER_LABELS[gender] ?? gender;
+  return localizedEnum(GENDER_KEYS[gender], JOB_SEARCH_GENDER_LABELS[gender], gender);
 }
 
 export function formatJobSearchLanguage(language: string): string {
-  return JOB_SEARCH_LANGUAGE_LABELS[language] ?? language;
+  return localizedEnum(SPOKEN_LANGUAGE_KEYS[language], JOB_SEARCH_LANGUAGE_LABELS[language], language);
 }
 
 export function formatJobSearchWorkMode(workMode: string): string {
-  return JOB_SEARCH_WORK_MODE_LABELS[workMode] ?? workMode;
+  return (
+    staticJobLabel("workMode", workMode, getSiteLanguageCode()) ??
+    JOB_SEARCH_WORK_MODE_LABELS[workMode] ??
+    workMode
+  );
 }
 
 export function formatJobSearchWalkInDate(value: string | null | undefined): string {
@@ -186,7 +291,7 @@ export function formatJobSearchWalkInDate(value: string | null | undefined): str
     return trimmed;
   }
 
-  return new Intl.DateTimeFormat("en-IN", {
+  return new Intl.DateTimeFormat(siteDateLocale(), {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -220,7 +325,7 @@ export function formatJobSearchWalkInTime(value: string | null | undefined): str
   const date = new Date();
   date.setHours(hours, minutes, 0, 0);
 
-  return new Intl.DateTimeFormat("en-IN", {
+  return new Intl.DateTimeFormat(siteDateLocale(), {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
@@ -268,35 +373,36 @@ export function formatJobSearchRelativeTime(
   }
 
   const diffMs = Date.now() - date.getTime();
+  const language = getSiteLanguageCode();
   if (diffMs < 0) {
-    return "Just now";
+    return translate(language, "jobs.justNow");
   }
 
   const minutes = Math.floor(diffMs / 60_000);
   if (minutes < 1) {
-    return "Just now";
+    return translate(language, "jobs.justNow");
   }
   if (minutes < 60) {
-    return `${minutes}m ago`;
+    return translate(language, "jobs.minutesAgo", { count: minutes });
   }
 
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
-    return `${hours}h ago`;
+    return translate(language, "jobs.hoursAgo", { count: hours });
   }
 
   const days = Math.floor(hours / 24);
   if (days < 30) {
-    return `${days}d ago`;
+    return translate(language, "jobs.daysAgo", { count: days });
   }
 
   const months = Math.floor(days / 30);
   if (months < 12) {
-    return `${months}mo ago`;
+    return translate(language, "jobs.monthsAgo", { count: months });
   }
 
   const years = Math.floor(months / 12);
-  return `${years}y ago`;
+  return translate(language, "jobs.yearsAgo", { count: years });
 }
 
 export function getCompanyInitials(companyName: string): string {
@@ -321,7 +427,7 @@ export function buildJobSearchCardTags(job: PublicJobListItem): string[] {
   }
 
   if (job.experience === "fresher") {
-    tags.push("Freshers can apply");
+    tags.push(translate(getSiteLanguageCode(), "jobs.freshersCanApply"));
   }
 
   for (const perk of job.perks.slice(0, 1)) {

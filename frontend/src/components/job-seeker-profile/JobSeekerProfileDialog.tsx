@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { X } from "lucide-react";
 import { useEffect, useId, useRef, type ReactNode } from "react";
@@ -21,6 +22,8 @@ export function JobSeekerProfileDialog({
   onClose,
   wide = false,
 }: JobSeekerProfileDialogProps) {
+  const t = useTranslate();
+  const closeLabel = t("seeker.profile.closeDialog", { title });
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -49,7 +52,7 @@ export function JobSeekerProfileDialog({
     <div className="fixed inset-0 z-50" role="presentation">
       <button
         type="button"
-        aria-label={`Close ${title}`}
+        aria-label={closeLabel}
         className="absolute inset-0 bg-foreground/40"
         onClick={onClose}
       />
@@ -70,12 +73,12 @@ export function JobSeekerProfileDialog({
             <div className="min-w-0">
               <h2
                 id={titleId}
-                className="text-lg font-bold tracking-tight text-foreground"
+                className="break-words text-lg font-bold tracking-tight text-foreground"
               >
                 {title}
               </h2>
               {description ? (
-                <p id={descriptionId} className="mt-1 text-sm text-muted">
+                <p id={descriptionId} className="mt-1 break-words text-sm text-muted">
                   {description}
                 </p>
               ) : null}
@@ -84,7 +87,7 @@ export function JobSeekerProfileDialog({
               type="button"
               onClick={onClose}
               className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              aria-label={`Close ${title}`}
+              aria-label={closeLabel}
             >
               <X className="size-5" aria-hidden="true" />
             </button>

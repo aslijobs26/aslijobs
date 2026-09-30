@@ -674,20 +674,20 @@ export function JobSeekerHelpSupportPageContent() {
             </p>
             <div className="mt-3 flex flex-wrap gap-2 sm:mt-4 sm:gap-2.5">
               {SOCIAL_LINKS.map((link) => {
-                const isExternal = link.href.startsWith("http");
                 return (
                   <a
                     key={link.id}
                     href={link.href}
-                    target={isExternal ? "_blank" : undefined}
-                    rel={isExternal ? "noopener noreferrer" : undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     aria-label={link.label}
                     className={cn(
                       "flex size-9 items-center justify-center rounded-full text-surface transition-[filter] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:size-10",
+                      link.id === "x" && "bg-social-x",
                       link.id === "facebook" && "bg-social-facebook",
                       link.id === "instagram" && "bg-social-instagram",
-                      link.id === "linkedin" && "bg-social-linkedin",
                       link.id === "youtube" && "bg-social-youtube",
+                      link.id === "linkedin" && "bg-social-linkedin",
                     )}
                   >
                     <SocialIcon platform={link.id} className="size-4" />

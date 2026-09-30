@@ -41,11 +41,11 @@ export function ResourceCard({ resource }: ResourceCardProps) {
         <ResourceIcon icon={resource.icon} />
       </div>
 
-      <h3 className="text-sm font-bold text-foreground sm:text-base">
+      <h3 className="break-words text-sm font-bold text-foreground sm:text-base">
         {resource.title}
       </h3>
 
-      <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-muted sm:text-sm">
+      <p className="mt-2 whitespace-pre-line break-words text-xs leading-relaxed text-muted sm:text-sm">
         {resource.description}
       </p>
     </Link>

@@ -82,13 +82,14 @@
   --color-workflow-neutral-surface: #f7f9fb;
   --color-workflow-connector: #aec5c5;
   --color-category-construction-surface: #faf0e3;
+  --color-social-x: #000000;
   --color-social-facebook: #1877f2;
   --color-social-linkedin: #0a66c2;
   --color-social-youtube: #ff0000;
   --color-pin-state: #e53935;
   --color-employer-register-panel: #014a42;
   --color-employer-register-card: #026a5f;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), var(--font-devanagari), var(--font-telugu), var(--font-tamil), var(--font-kannada), var(--font-malayalam), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
@@ -96,9 +97,8 @@ body {
 }
 
 /*
- * Desktop site footer overscroll: when rubber-banding past the bottom,
- * paint the footer color instead of the default white canvas.
- * Scoped to md+ and only when the public site footer is mounted.
+ * Desktop site footer overscroll: paint the footer color instead of a white
+ * canvas. Avoid 100vh box-shadow stretch hacks — they inflate overflow.
  */
 @media (min-width: 768px) {
   html:has([data-site-footer]) {

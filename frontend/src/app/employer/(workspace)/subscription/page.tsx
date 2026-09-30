@@ -9,5 +9,5 @@ export const metadata = createEmployerModuleMetadata({
 });
 
 export default function EmployerSubscriptionPage() {
-  return <EmployerModulePage title="Subscription" />;
+  return <EmployerModulePage titleKey="employer.nav.subscription" />;
 }

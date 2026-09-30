@@ -1,6 +1,7 @@
 "use client";
 
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import type { SeekerApplicationListItem } from "@/types/job-seeker-applications";
 import {
   formatJobSearchJobType,
@@ -21,7 +22,7 @@ import { useState } from "react";
 import {
   applicationStatusIcon,
   buildStatusContext,
-  cardStatusLabel,
+  cardStatusLabelKey,
   statusBadgeClasses,
 } from "./applied-jobs-utils";
 
@@ -79,10 +80,15 @@ function CompanyLogo({
 }
 
 export function AppliedJobCard({ application }: AppliedJobCardProps) {
+  const t = useTranslate();
   const href = ROUTES.jobSeekerApplicationDetail(application.id);
   const StatusIcon = applicationStatusIcon(application.status);
-  const statusLabel = cardStatusLabel(application.status);
-  const statusContext = buildStatusContext(application);
+  const statusLabel = t(cardStatusLabelKey(application.status));
+  const statusContext = buildStatusContext(application, t);
+  const companyLabel = application.companyName || t("seeker.common.company");
+  const jobIdLabel = t("seeker.applications.jobId", {
+    id: application.publicJobId,
+  });
   const { amount: salaryAmount, period: salaryPeriod } = splitSalaryLabel(
     application.salaryLabel,
   );
@@ -107,7 +113,11 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
     <article className="group relative">
       <Link
         href={href}
-        aria-label={`${application.jobTitle} at ${application.companyName || "company"}. Status ${statusLabel}. View details.`}
+        aria-label={t("seeker.applications.cardAria", {
+          title: application.jobTitle,
+          company: companyLabel,
+          status: statusLabel,
+        })}
         className={cn(
           "block rounded-xl border border-border-subtle bg-surface shadow-[0_1px_3px_rgba(26,43,60,0.04)] transition-colors",
           "hover:border-primary/30 hover:bg-primary-light/10",
@@ -128,13 +138,11 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
                 {application.jobTitle}
               </h2>
               <p className="truncate text-[11px] leading-4 text-muted">
-                {application.companyName || "Company"}
+                {companyLabel}
               </p>
               <p className="flex min-w-0 items-center gap-1 text-[10px] leading-4 text-muted">
                 <IdCard className="size-2.5 shrink-0" aria-hidden="true" />
-                <span className="truncate">
-                  Job ID: {application.publicJobId}
-                </span>
+                <span className="truncate">{jobIdLabel}</span>
               </p>
             </div>
 
@@ -230,13 +238,11 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
               {application.jobTitle}
             </h2>
             <p className="mt-1 truncate text-sm leading-5 text-muted">
-              {application.companyName || "Company"}
+              {companyLabel}
             </p>
             <p className="mt-1.5 flex items-center gap-1.5 text-xs leading-5 text-muted">
               <IdCard className="size-3.5 shrink-0" aria-hidden="true" />
-              <span className="truncate">
-                Job ID: {application.publicJobId}
-              </span>
+              <span className="truncate">{jobIdLabel}</span>
             </p>
           </div>
 

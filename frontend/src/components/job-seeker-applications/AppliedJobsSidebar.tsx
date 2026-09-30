@@ -3,6 +3,7 @@
 import { SkeletonBone } from "@/components/shared/skeletons/SkeletonBone";
 import { WHATSAPP_JOIN_URL } from "@/constants/cta";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type { NotificationListItem } from "@/types/notifications";
 import type { SeekerApplicationStats } from "@/types/job-seeker-applications";
 import { cn } from "@/utils/cn";
@@ -35,7 +36,7 @@ type ReminderCard = {
   title: string;
   body: string;
   href: string;
-  cta: string;
+  ctaKey: MessageKey;
   icon: LucideIcon;
   tone: ReminderTone;
   createdAt: string;
@@ -53,14 +54,14 @@ function reminderIcon(notification: NotificationListItem): LucideIcon {
   return Send;
 }
 
-function reminderCta(notification: NotificationListItem): string {
+function reminderCtaKey(notification: NotificationListItem): MessageKey {
   if (notification.category === "interview") {
-    return "View Details";
+    return "seeker.common.viewDetails";
   }
   if (notification.category === "offer") {
-    return "View Offer";
+    return "seeker.applicationSidebar.viewOffer";
   }
-  return "View Application";
+  return "seeker.applicationSidebar.viewApplication";
 }
 
 /**
@@ -69,6 +70,7 @@ function reminderCta(notification: NotificationListItem): string {
  */
 function pickReminders(
   notifications: NotificationListItem[],
+  fallbackTitle: string,
 ): ReminderCard[] {
   const hiringNotifications = [...notifications]
     .filter(
@@ -95,10 +97,10 @@ function pickReminders(
 
   return [...latestByApplication.values()].slice(0, 3).map((notification, index) => ({
     id: notification.id,
-    title: notification.title || "Application Update",
+    title: notification.title || fallbackTitle,
     body: notification.body,
     href: notification.actionPath || ROUTES.JOB_SEEKER_APPLIED_JOBS,
-    cta: reminderCta(notification),
+    ctaKey: reminderCtaKey(notification),
     icon: reminderIcon(notification),
     tone: REMINDER_TONE_CYCLE[index % REMINDER_TONE_CYCLE.length]!,
     createdAt: notification.createdAt,
@@ -189,8 +191,10 @@ function OverviewMetric({
   const colors = OVERVIEW_METRIC_TONES[tone];
 
   return (
-    <div className={cn("rounded-lg px-3 py-2.5", colors.surface)}>
-      <p className={cn("text-[11px] font-medium", colors.label)}>{label}</p>
+    <div className={cn("min-w-0 rounded-lg px-3 py-2.5", colors.surface)}>
+      <p className={cn("break-words text-[11px] font-medium", colors.label)}>
+        {label}
+      </p>
       {loading ? (
         <div className="mt-1 h-5 w-8 animate-pulse rounded bg-surface/60" />
       ) : (
@@ -208,16 +212,23 @@ export function AppliedJobsSidebar({
   notifications,
   notificationsLoading,
 }: AppliedJobsSidebarProps) {
-  const reminders = pickReminders(notifications);
+  const t = useTranslate();
+  const reminders = pickReminders(
+    notifications,
+    t("seeker.applicationSidebar.reminderFallback"),
+  );
   const total = getTotalAppliedCount(stats);
   const successRate = getSuccessRatePercent(stats);
   const whatsappExternal = WHATSAPP_JOIN_URL.startsWith("http");
 
   return (
-    <aside className="flex flex-col gap-4 lg:sticky lg:top-20" aria-label="Application insights">
+    <aside
+      className="flex flex-col gap-4 lg:sticky lg:top-20"
+      aria-label={t("seeker.applicationSidebar.aria")}
+    >
       <section className="rounded-xl border border-border-subtle bg-resource-resume-surface/60 p-4 shadow-[0_1px_4px_rgba(26,43,60,0.04)]">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="inline-flex items-center gap-2 text-sm font-bold text-foreground">
+          <h2 className="inline-flex min-w-0 items-center gap-2 break-words text-sm font-bold text-foreground">
             {/* eslint-disable-next-line @next/next/no-img-element -- static PNG icon asset */}
             <img
               src="/images/asli-ai-reminders-bot.png"
@@ -226,13 +237,13 @@ export function AppliedJobsSidebar({
               height={36}
               className="size-9 shrink-0 object-contain bg-transparent"
             />
-            Asli AI Reminders
+            {t("seeker.applicationSidebar.remindersTitle")}
           </h2>
           <Link
             href={ROUTES.JOB_SEEKER_NOTIFICATIONS}
-            className="text-xs font-semibold text-resource-salary-icon hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="shrink-0 text-xs font-semibold text-resource-salary-icon hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            View All
+            {t("seeker.common.viewAll")}
           </Link>
         </div>
 
@@ -246,8 +257,7 @@ export function AppliedJobsSidebar({
             ))
           ) : reminders.length === 0 ? (
             <p className="rounded-xl bg-surface px-3 py-4 text-xs text-muted shadow-[0_1px_3px_rgba(26,43,60,0.04)]">
-              No reminders right now. We&apos;ll surface interview and offer
-              updates here.
+              {t("seeker.applicationSidebar.noReminders")}
             </p>
           ) : (
             reminders.map((card) => {
@@ -285,7 +295,7 @@ export function AppliedJobsSidebar({
                       tone.button,
                     )}
                   >
-                    {card.cta}
+                    {t(card.ctaKey)}
                   </Link>
                 </article>
               );
@@ -300,11 +310,11 @@ export function AppliedJobsSidebar({
           target={whatsappExternal ? "_blank" : undefined}
           rel={whatsappExternal ? "noopener noreferrer" : undefined}
           className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/40 focus-visible:ring-offset-2"
-          aria-label="Chat on WhatsApp for application support"
+          aria-label={t("seeker.applicationSidebar.whatsappAria")}
         >
           <Image
             src={whatsappSupportImage}
-            alt="WhatsApp Support — Get real-time updates on your applications, interviews and more. Chat on WhatsApp."
+            alt={t("seeker.applicationSidebar.whatsappAlt")}
             className="h-auto w-full"
             sizes="(min-width: 1024px) 304px, 100vw"
             priority={false}
@@ -314,50 +324,50 @@ export function AppliedJobsSidebar({
 
       <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-[0_1px_4px_rgba(26,43,60,0.04)]">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-foreground">
-            Application Overview
+          <h2 className="min-w-0 break-words text-sm font-bold text-foreground">
+            {t("seeker.applicationSidebar.overviewTitle")}
           </h2>
           <Link
             href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
-            className="text-xs font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="shrink-0 text-xs font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            View Report
+            {t("seeker.common.viewReport")}
           </Link>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <OverviewMetric
-            label="Total Applied"
+            label={t("seeker.applicationSidebar.totalApplied")}
             value={total}
             loading={statsLoading}
             tone="primary"
           />
           <OverviewMetric
-            label="Under Review"
+            label={t("seeker.status.underReview")}
             value={getStatsChipCount("underReview", stats)}
             loading={statsLoading}
             tone="orange"
           />
           <OverviewMetric
-            label="Shortlisted"
+            label={t("seeker.status.shortlisted")}
             value={getStatsChipCount("shortlisted", stats)}
             loading={statsLoading}
             tone="purple"
           />
           <OverviewMetric
-            label="Interviews"
+            label={t("seeker.applicationSidebar.interviews")}
             value={getStatsChipCount("interview", stats)}
             loading={statsLoading}
             tone="teal"
           />
           <OverviewMetric
-            label="Offers"
+            label={t("seeker.applicationSidebar.offers")}
             value={getStatsChipCount("offer", stats)}
             loading={statsLoading}
             tone="green"
           />
           <OverviewMetric
-            label="Rejected"
+            label={t("seeker.status.rejected")}
             value={getStatsChipCount("rejected", stats)}
             loading={statsLoading}
             tone="red"
@@ -366,7 +376,9 @@ export function AppliedJobsSidebar({
 
         <div className="mt-4 rounded-lg bg-primary-light/50 px-3 py-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-muted">Success Rate</p>
+            <p className="min-w-0 break-words text-xs font-medium text-muted">
+              {t("seeker.applicationSidebar.successRate")}
+            </p>
             {statsLoading ? (
               <SkeletonBone className="h-5 w-10 rounded" />
             ) : (
@@ -381,7 +393,7 @@ export function AppliedJobsSidebar({
             aria-valuenow={statsLoading ? undefined : successRate}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Application success rate"
+            aria-label={t("seeker.applicationSidebar.successRateAria")}
             aria-busy={statsLoading}
           >
             {statsLoading ? (

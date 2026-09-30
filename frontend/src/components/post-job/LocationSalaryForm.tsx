@@ -6,6 +6,7 @@ import {
   POST_JOB_SALARY_PERIOD_OPTIONS,
   POST_JOB_SALARY_TYPE_OPTIONS,
 } from "@/constants/post-job";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type {
   LocationAndSalaryFormData,
   PostJobPerkId,
@@ -13,6 +14,7 @@ import type {
   SalaryType,
 } from "@/types/post-job";
 import { cn } from "@/utils/cn";
+import { formatJobSearchPerk } from "@/utils/job-search-format";
 import type { RefObject } from "react";
 import { PostJobFormField } from "./PostJobFormField";
 import { PostJobChipButton } from "./PostJobChipButton";
@@ -34,6 +36,16 @@ import {
   postJobTextareaClassName,
 } from "./post-job-form-styles";
 
+const SALARY_TYPE_KEYS: Record<SalaryType, MessageKey> = {
+  fixed: "employer.postJob.salary.fixed",
+  range: "employer.postJob.salary.range",
+};
+
+const SALARY_PERIOD_KEYS: Record<SalaryPeriod, MessageKey> = {
+  "per-month": "employer.postJob.salary.perMonth",
+  "per-year": "employer.postJob.salary.perYear",
+};
+
 type LocationSalaryFormProps = {
   formData: LocationAndSalaryFormData;
   fieldErrors?: Record<string, string>;
@@ -54,6 +66,16 @@ export function LocationSalaryForm({
   onContinue,
   scrollContainerRef,
 }: LocationSalaryFormProps) {
+  const t = useTranslate();
+  const salaryTypeOptions = POST_JOB_SALARY_TYPE_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(SALARY_TYPE_KEYS[option.value]),
+  }));
+  const salaryPeriodOptions = POST_JOB_SALARY_PERIOD_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(SALARY_PERIOD_KEYS[option.value]),
+  }));
+
   const togglePerk = (perkId: PostJobPerkId) => {
     const isSelected = formData.perks.includes(perkId);
     onFieldChange(
@@ -73,7 +95,7 @@ export function LocationSalaryForm({
         id="location-salary-heading"
         className={postJobCardHeadingClassName}
       >
-        Location & Salary
+        {t("employer.postJob.steps.locationSalary.title")}
       </h2>
 
       <form
@@ -88,14 +110,14 @@ export function LocationSalaryForm({
           <div className={postJobFormGridGapClassName}>
             <PostJobFormField
               id="job-state"
-              label="State"
+              label={t("employer.postJob.state")}
               error={fieldErrors.state}
             >
               <PostJobPlaceAutocomplete
                 id="job-state"
                 mode="state"
                 value={formData.state}
-                placeholder="Search state"
+                placeholder={t("employer.postJob.searchState")}
                 hasError={Boolean(fieldErrors.state)}
                 onChange={(value) => {
                   onFieldChange("state", value);
@@ -109,7 +131,7 @@ export function LocationSalaryForm({
             </PostJobFormField>
             <PostJobFormField
               id="job-city"
-              label="City"
+              label={t("employer.postJob.city")}
               error={fieldErrors.city}
             >
               <PostJobPlaceAutocomplete
@@ -120,8 +142,8 @@ export function LocationSalaryForm({
                 disabled={!formData.state.trim()}
                 placeholder={
                   formData.state.trim()
-                    ? "Search city"
-                    : "Select a state first"
+                    ? t("employer.postJob.searchCity")
+                    : t("jobs.selectStateFirst")
                 }
                 hasError={Boolean(fieldErrors.city)}
                 onChange={(value) => onFieldChange("city", value)}
@@ -134,14 +156,14 @@ export function LocationSalaryForm({
 
           <PostJobFormField
             id="job-address"
-            label="Job Address"
+            label={t("employer.postJob.jobAddress")}
             error={fieldErrors.address}
           >
             <textarea
               id="job-address"
               value={formData.address}
               onChange={(event) => onFieldChange("address", event.target.value)}
-              placeholder="Enter complete job address"
+              placeholder={t("employer.postJob.jobAddressPlaceholder")}
               className={cn(
                 postJobTextareaClassName,
                 fieldErrors.address &&
@@ -153,7 +175,7 @@ export function LocationSalaryForm({
 
           <PostJobFormField
             id="job-landmark"
-            label="Landmark (Optional)"
+            label={t("employer.postJob.landmarkOptional")}
             error={fieldErrors.landmark}
           >
             <input
@@ -161,13 +183,13 @@ export function LocationSalaryForm({
               type="text"
               value={formData.landmark}
               onChange={(event) => onFieldChange("landmark", event.target.value)}
-              placeholder="Enter a nearby landmark"
+              placeholder={t("employer.postJob.landmarkPlaceholder")}
               className={postJobInputClassName}
             />
           </PostJobFormField>
 
           <div className={postJobFormSubsectionClassName}>
-            <h3 className={postJobSectionHeadingClassName}>Salary</h3>
+            <h3 className={postJobSectionHeadingClassName}>{t("jobs.salary")}</h3>
 
             <div
               className={cn(
@@ -182,10 +204,10 @@ export function LocationSalaryForm({
             >
               <EmployerRegisterSearchableSelect
                 id="salary-type"
-                label="Salary Range"
+                label={t("jobs.salaryRange")}
                 value={formData.salaryType}
-                placeholder="Select salary type"
-                options={POST_JOB_SALARY_TYPE_OPTIONS}
+                placeholder={t("employer.postJob.salary.typePlaceholder")}
+                options={salaryTypeOptions}
                 hideSearch
                 onChange={(value) =>
                   onFieldChange("salaryType", value as SalaryType)
@@ -196,10 +218,10 @@ export function LocationSalaryForm({
 
               <EmployerRegisterSearchableSelect
                 id="salary-period"
-                label="Salary Period"
+                label={t("employer.postJob.salary.period")}
                 value={formData.salaryPeriod}
-                placeholder="Select period"
-                options={POST_JOB_SALARY_PERIOD_OPTIONS}
+                placeholder={t("employer.postJob.salary.periodPlaceholder")}
+                options={salaryPeriodOptions}
                 hideSearch
                 onChange={(value) =>
                   onFieldChange("salaryPeriod", value as SalaryPeriod)
@@ -211,7 +233,7 @@ export function LocationSalaryForm({
               {formData.salaryType === "fixed" ? (
                 <PostJobFormField
                   id="salary-incentives"
-                  label="Fixed Salary"
+                  label={t("employer.postJob.salary.fixedSalary")}
                   error={fieldErrors.incentives}
                 >
                   <input
@@ -237,7 +259,7 @@ export function LocationSalaryForm({
                 <>
                   <PostJobFormField
                     id="salary-min"
-                    label="Minimum Salary"
+                    label={t("employer.postJob.salary.minimum")}
                     error={fieldErrors.salaryMin}
                   >
                     <input
@@ -248,7 +270,7 @@ export function LocationSalaryForm({
                       onChange={(event) =>
                         onFieldChange("salaryMin", event.target.value)
                       }
-                      placeholder="Enter minimum salary"
+                      placeholder={t("employer.postJob.salary.minimumPlaceholder")}
                       className={cn(
                         postJobInputClassName,
                         fieldErrors.salaryMin &&
@@ -259,7 +281,7 @@ export function LocationSalaryForm({
                   </PostJobFormField>
                   <PostJobFormField
                     id="salary-max"
-                    label="Maximum Salary"
+                    label={t("employer.postJob.salary.maximum")}
                     error={fieldErrors.salaryMax}
                   >
                     <input
@@ -270,7 +292,7 @@ export function LocationSalaryForm({
                       onChange={(event) =>
                         onFieldChange("salaryMax", event.target.value)
                       }
-                      placeholder="Enter maximum salary"
+                      placeholder={t("employer.postJob.salary.maximumPlaceholder")}
                       className={cn(
                         postJobInputClassName,
                         fieldErrors.salaryMax &&
@@ -285,7 +307,9 @@ export function LocationSalaryForm({
           </div>
 
           <fieldset className={postJobFormSubsectionClassName}>
-            <legend className={postJobFieldLabelClassName}>Additional Perks</legend>
+            <legend className={postJobFieldLabelClassName}>
+              {t("employer.postJob.additionalPerks")}
+            </legend>
             <div className={postJobPerkWrapClassName}>
               {POST_JOB_PERK_OPTIONS.map((perk) => {
                 const isSelected = formData.perks.includes(perk.value);
@@ -293,7 +317,7 @@ export function LocationSalaryForm({
                 return (
                   <PostJobChipButton
                     key={perk.value}
-                    label={perk.label}
+                    label={formatJobSearchPerk(perk.value)}
                     isSelected={isSelected}
                     onClick={() => togglePerk(perk.value)}
                   />
@@ -308,7 +332,7 @@ export function LocationSalaryForm({
               onClick={onBack}
               className={cn(postJobBackButtonClassName, "w-full sm:w-auto")}
             >
-              Back
+              {t("common.back")}
             </button>
             <button
               type="submit"
@@ -317,7 +341,7 @@ export function LocationSalaryForm({
                 "w-full sm:w-auto sm:min-w-[156px]",
               )}
             >
-              Continue
+              {t("common.continue")}
             </button>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
+import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { cn } from "@/utils/cn";
 import {
@@ -98,9 +99,14 @@ function SectionHeading({ children }: { children: ReactNode }) {
   );
 }
 
-function formatMissingValue(value: string | null | undefined): string {
+const LOCATION_NOT_SPECIFIED = "Location not specified";
+
+function formatMissingValue(
+  value: string | null | undefined,
+  notSpecifiedLabel: string,
+): string {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : "Not specified";
+  return trimmed ? trimmed : notSpecifiedLabel;
 }
 
 /**
@@ -114,6 +120,7 @@ export function EmployerJobPreviewArticle({
   companyLogoUrl,
   onRetry,
 }: EmployerJobPreviewArticleProps) {
+  const t = useTranslate();
   const [bookmarked, setBookmarked] = useState(false);
 
   if (isLoading) {
@@ -138,39 +145,42 @@ export function EmployerJobPreviewArticle({
   if (isError || !job) {
     return (
       <article className="rounded-xl border border-border-subtle bg-surface p-8 text-center shadow-[0_2px_10px_rgba(26,43,60,0.04)]">
-        <p className="text-sm text-muted">Unable to load this job.</p>
+        <p className="text-sm text-muted">{t("jobs.unableToLoad")}</p>
         {onRetry ? (
           <button
             type="button"
             onClick={onRetry}
             className="mt-3 text-sm font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            Try again
+            {t("jobs.tryAgain")}
           </button>
         ) : null}
       </article>
     );
   }
 
+  const notSpecified = t("employer.common.notSpecified");
   const salary = formatJobSearchSalary(job);
-  const location = formatJobSearchLocation(
+  const rawLocation = formatJobSearchLocation(
     job.cityName,
     job.stateName,
     job.city,
     job.state,
   );
+  const hasLocation = Boolean(rawLocation) && rawLocation !== LOCATION_NOT_SPECIFIED;
+  const location = hasLocation ? rawLocation : notSpecified;
   const employmentType = formatJobSearchJobType(job.jobType);
   const experience = formatJobSearchExperience(job.experience);
   const education =
     job.education.length > 0
       ? job.education.map(formatJobSearchEducation).join(", ")
-      : "Not specified";
-  const openings = job.vacancies > 0 ? String(job.vacancies) : "Not specified";
+      : notSpecified;
+  const openings = job.vacancies > 0 ? String(job.vacancies) : notSpecified;
   const workMode = formatJobSearchWorkMode(job.workMode);
   const genderLabel =
     job.gender.length > 0
       ? job.gender.map(formatJobSearchGender).join(", ")
-      : "Any";
+      : t("jobs.any");
   const languageChips = job.languages
     .map(formatJobSearchLanguage)
     .filter(Boolean);
@@ -187,9 +197,7 @@ export function EmployerJobPreviewArticle({
   const descriptionText = job.description?.trim() ?? "";
   const hasDescription = !isJobDescriptionEmpty(descriptionText);
   const hasAddress = Boolean(
-    job.address?.trim() ||
-      (location && location !== "Location not specified") ||
-      job.landmark?.trim(),
+    job.address?.trim() || hasLocation || job.landmark?.trim(),
   );
   const showWalkIn = job.walkInEnabled;
   const recruiterName =
@@ -218,7 +226,7 @@ export function EmployerJobPreviewArticle({
                   strokeWidth={2.25}
                   aria-hidden="true"
                 />
-                Verified
+                {t("employer.common.verified")}
               </span>
             </div>
             <p className="mt-1 text-sm font-medium break-words text-muted">
@@ -231,7 +239,7 @@ export function EmployerJobPreviewArticle({
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
-                Posted {posted}
+                {t("employer.common.postedAgo", { time: posted })}
               </p>
             ) : null}
           </div>
@@ -239,7 +247,7 @@ export function EmployerJobPreviewArticle({
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              aria-label="Share job"
+              aria-label={t("jobs.shareJob")}
               disabled
               className="inline-flex size-9 cursor-default items-center justify-center rounded-lg border border-border-subtle text-muted"
             >
@@ -248,7 +256,9 @@ export function EmployerJobPreviewArticle({
             <button
               type="button"
               onClick={() => setBookmarked((current) => !current)}
-              aria-label={bookmarked ? "Remove bookmark" : "Save job"}
+              aria-label={
+                bookmarked ? t("jobs.removeBookmark") : t("jobs.saveJob")
+              }
               aria-pressed={bookmarked}
               className={cn(
                 "inline-flex size-9 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
@@ -269,45 +279,45 @@ export function EmployerJobPreviewArticle({
 
         <div
           className="mt-6 border-t border-border-subtle pt-5"
-          aria-label="Job information"
+          aria-label={t("jobs.jobInformation")}
         >
           <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-3">
-            <MetaField label="Salary" icon={Wallet}>
+            <MetaField label={t("jobs.salary")} icon={Wallet}>
               {salary}
             </MetaField>
-            <MetaField label="Location" icon={MapPin}>
+            <MetaField label={t("jobs.location")} icon={MapPin}>
               {location}
             </MetaField>
-            <MetaField label="Employment Type" icon={Briefcase}>
+            <MetaField label={t("jobs.employmentType")} icon={Briefcase}>
               {employmentType}
             </MetaField>
-            <MetaField label="Experience" icon={User}>
+            <MetaField label={t("jobs.experience")} icon={User}>
               {experience}
             </MetaField>
-            <MetaField label="Qualification" icon={GraduationCap}>
+            <MetaField label={t("jobs.qualification")} icon={GraduationCap}>
               {education}
             </MetaField>
-            <MetaField label="Openings" icon={Users}>
+            <MetaField label={t("jobs.openings")} icon={Users}>
               {openings}
             </MetaField>
-            <MetaField label="Work Mode" icon={Building2}>
+            <MetaField label={t("jobs.workMode")} icon={Building2}>
               {workMode}
             </MetaField>
-            <MetaField label="Gender Preference" icon={VenusAndMars}>
+            <MetaField label={t("jobs.genderPreference")} icon={VenusAndMars}>
               {genderLabel}
             </MetaField>
-            <MetaField label="Languages" icon={Globe2}>
+            <MetaField label={t("jobs.languages")} icon={Globe2}>
               {languageChips.length > 0 ? (
                 <ChipList values={languageChips} />
               ) : (
-                "Not specified"
+                notSpecified
               )}
             </MetaField>
           </div>
 
           {perkChips.length > 0 ? (
             <div className="mt-5">
-              <MetaField label="Benefits" icon={Gift}>
+              <MetaField label={t("jobs.benefits")} icon={Gift}>
                 <ChipList values={perkChips} />
               </MetaField>
             </div>
@@ -317,7 +327,7 @@ export function EmployerJobPreviewArticle({
 
       <div className="divide-y divide-border-subtle px-5 sm:px-7">
         <section className="py-6">
-          <SectionHeading>Job Description</SectionHeading>
+          <SectionHeading>{t("jobs.jobDescription")}</SectionHeading>
           <p className="mt-3 text-sm font-semibold text-foreground">
             {job.jobTitle}
           </p>
@@ -328,66 +338,78 @@ export function EmployerJobPreviewArticle({
             />
           ) : (
             <p className="mt-2 text-[15px] leading-[1.75] text-muted">
-              No description provided.
+              {t("employer.common.noDescription")}
             </p>
           )}
         </section>
 
         <section className="py-6">
-          <SectionHeading>Address</SectionHeading>
+          <SectionHeading>{t("jobs.address")}</SectionHeading>
           <div className="mt-3 space-y-1 text-[15px] leading-[1.7] break-words text-muted">
             {hasAddress ? (
               <>
                 {job.address?.trim() ? <p>{job.address.trim()}</p> : null}
-                {location && location !== "Location not specified" ? (
-                  <p>{location}</p>
-                ) : null}
+                {hasLocation ? <p>{location}</p> : null}
                 {job.landmark?.trim() ? (
-                  <p>Landmark: {job.landmark.trim()}</p>
+                  <p>
+                    {t("employer.common.landmarkValue", {
+                      landmark: job.landmark.trim(),
+                    })}
+                  </p>
                 ) : null}
               </>
             ) : (
-              <p>Not specified</p>
+              <p>{notSpecified}</p>
             )}
           </div>
         </section>
 
         {showWalkIn ? (
           <section className="py-6">
-            <SectionHeading>Walk-in Details</SectionHeading>
+            <SectionHeading>{t("jobs.walkInDetails")}</SectionHeading>
             <div className="mt-3 space-y-3 text-[15px] leading-[1.7] break-words text-muted">
               <div>
                 <p className="text-[11px] font-medium tracking-[0.04em] text-muted uppercase">
-                  Interview Address
+                  {t("jobs.interviewAddress")}
                 </p>
                 <p className="mt-1">
                   {formatMissingValue(
-                    job.interviewAddress ||
-                      (location !== "Location not specified" ? location : ""),
+                    job.interviewAddress || (hasLocation ? location : ""),
+                    notSpecified,
                   )}
                 </p>
               </div>
               <div>
                 <p className="text-[11px] font-medium tracking-[0.04em] text-muted uppercase">
-                  Date
+                  {t("jobs.date")}
                 </p>
-                <p className="mt-1">{formatMissingValue(walkInDate)}</p>
+                <p className="mt-1">
+                  {formatMissingValue(walkInDate, notSpecified)}
+                </p>
               </div>
               <div>
                 <p className="text-[11px] font-medium tracking-[0.04em] text-muted uppercase">
-                  Time
+                  {t("jobs.time")}
                 </p>
-                <p className="mt-1">{formatMissingValue(walkInTime)}</p>
+                <p className="mt-1">
+                  {formatMissingValue(walkInTime, notSpecified)}
+                </p>
               </div>
             </div>
           </section>
         ) : null}
 
         <section className="py-6">
-          <SectionHeading>Recruiter</SectionHeading>
+          <SectionHeading>{t("jobs.recruiter")}</SectionHeading>
           <div className="mt-3 space-y-1 text-[15px] leading-[1.7] break-words text-muted">
             <p className="font-medium text-foreground">{recruiterName}</p>
-            {recruiterWhatsApp ? <p>WhatsApp: {recruiterWhatsApp}</p> : null}
+            {recruiterWhatsApp ? (
+              <p>
+                {t("employer.common.whatsappValue", {
+                  number: recruiterWhatsApp,
+                })}
+              </p>
+            ) : null}
           </div>
         </section>
       </div>

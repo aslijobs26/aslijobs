@@ -1,6 +1,7 @@
 "use client";
 
 import { postJobDateFieldShellClassName } from "./post-job-form-styles";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import {
@@ -194,6 +195,7 @@ export function PostJobDatePicker({
   "aria-required": ariaRequired = false,
   "aria-describedby": ariaDescribedBy,
 }: PostJobDatePickerProps) {
+  const t = useTranslate();
   const listboxId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -499,7 +501,11 @@ export function PostJobDatePicker({
             id={listboxId}
             role="dialog"
             aria-modal="false"
-            aria-label={ariaLabel ? `${ariaLabel} calendar` : "Date calendar"}
+            aria-label={
+              ariaLabel
+                ? t("employer.postJob.datePicker.namedCalendar", { label: ariaLabel })
+                : t("employer.postJob.datePicker.calendar")
+            }
             style={{
               top: position.top,
               left: position.left,
@@ -534,7 +540,7 @@ export function PostJobDatePicker({
                         !canNavigatePreviousMonth &&
                           "cursor-not-allowed opacity-40 hover:border-border",
                       )}
-                      aria-label="Previous month"
+                      aria-label={t("employer.postJob.datePicker.previousMonth")}
                     >
                       <ChevronLeft
                         className="size-3.5"
@@ -547,7 +553,7 @@ export function PostJobDatePicker({
                       <button
                         type="button"
                         onClick={openMonthPanel}
-                        aria-label="Select month"
+                        aria-label={t("employer.postJob.datePicker.selectMonth")}
                         className="inline-flex min-w-0 flex-1 items-center justify-center rounded-md border border-border bg-surface px-1 py-1 text-xs font-semibold text-foreground transition-colors hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                       >
                         {SHORT_MONTH_NAMES[visibleMonth.month]}
@@ -556,7 +562,7 @@ export function PostJobDatePicker({
                       <button
                         type="button"
                         onClick={openYearPanel}
-                        aria-label="Select year"
+                        aria-label={t("employer.postJob.datePicker.selectYear")}
                         className="inline-flex shrink-0 items-center justify-center rounded-md border border-border bg-surface px-1 py-1 text-xs font-semibold tabular-nums text-foreground transition-colors hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                       >
                         {visibleMonth.year}
@@ -572,7 +578,7 @@ export function PostJobDatePicker({
                         !canNavigateNextMonth &&
                           "cursor-not-allowed opacity-40 hover:border-border",
                       )}
-                      aria-label="Next month"
+                      aria-label={t("employer.postJob.datePicker.nextMonth")}
                     >
                       <ChevronRight
                         className="size-3.5"
@@ -584,8 +590,8 @@ export function PostJobDatePicker({
                 ) : null}
 
                 {panelView === "months" ? (
-                  <p className="w-full text-center text-xs font-bold text-foreground">
-                    Select Month
+                  <p className="w-full truncate text-center text-xs font-bold text-foreground">
+                    {t("employer.postJob.datePicker.selectMonth")}
                   </p>
                 ) : null}
 
@@ -600,7 +606,7 @@ export function PostJobDatePicker({
                         !canNavigatePreviousYearRange &&
                           "cursor-not-allowed opacity-40 hover:border-border",
                       )}
-                      aria-label="Previous years"
+                      aria-label={t("employer.postJob.datePicker.previousYears")}
                     >
                       <ChevronLeft
                         className="size-3.5"
@@ -620,7 +626,7 @@ export function PostJobDatePicker({
                         !canNavigateNextYearRange &&
                           "cursor-not-allowed opacity-40 hover:border-border",
                       )}
-                      aria-label="Next years"
+                      aria-label={t("employer.postJob.datePicker.nextYears")}
                     >
                       <ChevronRight
                         className="size-3.5"

@@ -3,6 +3,7 @@
 import { WHATSAPP_JOIN_URL } from "@/constants/cta";
 import { EMPLOYER_DASHBOARD_SUPPORT_PHONE } from "@/constants/employer-dashboard-home";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import {
   BookOpen,
   Headphones,
@@ -35,7 +36,7 @@ function SupportItem({
         className={className}
       >
         {icon}
-        <span>{label}</span>
+        <span className="min-w-0 break-words">{label}</span>
       </a>
     );
   }
@@ -43,18 +44,19 @@ function SupportItem({
   return (
     <Link href={href} className={className}>
       {icon}
-      <span>{label}</span>
+      <span className="min-w-0 break-words">{label}</span>
     </Link>
   );
 }
 
 export function DashboardSupportCard() {
+  const t = useTranslate();
   const phoneHref = EMPLOYER_DASHBOARD_SUPPORT_PHONE
     ? `tel:${EMPLOYER_DASHBOARD_SUPPORT_PHONE.replace(/\s+/g, "")}`
     : ROUTES.CONTACT;
   const phoneLabel = EMPLOYER_DASHBOARD_SUPPORT_PHONE
-    ? `Call Support (${EMPLOYER_DASHBOARD_SUPPORT_PHONE})`
-    : "Call Support";
+    ? `${t("employer.dashboard.callSupport")} (${EMPLOYER_DASHBOARD_SUPPORT_PHONE})`
+    : t("employer.dashboard.callSupport");
   const whatsappExternal = WHATSAPP_JOIN_URL.startsWith("http");
 
   return (
@@ -63,9 +65,13 @@ export function DashboardSupportCard() {
         <span className="inline-flex size-9 items-center justify-center rounded-lg bg-primary-light text-primary">
           <Headphones className="size-4" aria-hidden="true" />
         </span>
-        <div>
-          <h2 className="text-sm font-bold text-foreground">Need Help?</h2>
-          <p className="text-xs text-muted">We are here to support your hiring</p>
+        <div className="min-w-0">
+          <h2 className="text-sm font-bold text-foreground">
+            {t("employer.shell.helpTitle")}
+          </h2>
+          <p className="break-words text-xs text-muted">
+            {t("employer.dashboard.supportSubtitle")}
+          </p>
         </div>
       </div>
 
@@ -79,7 +85,7 @@ export function DashboardSupportCard() {
                 aria-hidden="true"
               />
             }
-            label="Live Chat"
+            label={t("employer.dashboard.liveChat")}
           />
         </li>
         <li>
@@ -92,7 +98,7 @@ export function DashboardSupportCard() {
                 aria-hidden="true"
               />
             }
-            label="WhatsApp Support"
+            label={t("footer.whatsappSupport")}
           />
         </li>
         <li>
@@ -117,7 +123,7 @@ export function DashboardSupportCard() {
                 aria-hidden="true"
               />
             }
-            label="Help Center"
+            label={t("employer.shell.helpCenter")}
           />
         </li>
       </ul>

@@ -1,15 +1,11 @@
 "use client";
 
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
-import {
-  EMPLOYER_DASHBOARD_AVATAR_INITIALS,
-  EMPLOYER_DASHBOARD_ACCOUNT_NAME,
-  EMPLOYER_DASHBOARD_PROFILE_MENU_LOGOUT,
-  EMPLOYER_DASHBOARD_ROLE_LABEL,
-} from "@/constants/employer-dashboard";
+import { EMPLOYER_DASHBOARD_AVATAR_INITIALS } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
 import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import { useCanOptional } from "@/providers/employer-permission-provider";
 import type { EmployerLoginPublic } from "@/services/employer-login.service";
 import type {
@@ -49,35 +45,35 @@ type EmployerProfileMenuProps = {
 };
 
 type ProfileMenuLink = {
-  label: string;
+  labelKey: MessageKey;
   href: string;
   icon: typeof Briefcase;
   module: TeamPermissionModule | null;
 };
 
 const PROFILE_MENU_JOBS_LINK: ProfileMenuLink = {
-  label: "My Jobs",
+  labelKey: "employer.profileMenu.myJobs",
   href: ROUTES.EMPLOYER_JOBS,
   icon: Briefcase,
   module: "jobs",
 };
 
 const PROFILE_MENU_COMPANY_LINK: ProfileMenuLink = {
-  label: "Company Profile",
+  labelKey: "employer.nav.companyProfile",
   href: ROUTES.EMPLOYER_COMPANY_PROFILE,
   icon: Building2,
   module: "company_profile",
 };
 
 const PROFILE_MENU_MY_PROFILE_LINK: ProfileMenuLink = {
-  label: "My Profile",
+  labelKey: "employer.profileMenu.myProfile",
   href: ROUTES.EMPLOYER_TEAM_MEMBER_PROFILE,
   icon: User,
   module: null,
 };
 
 const PROFILE_MENU_SETTINGS_LINK: ProfileMenuLink = {
-  label: "Settings",
+  labelKey: "employer.nav.settings",
   href: ROUTES.EMPLOYER_SETTINGS,
   icon: Settings,
   module: "settings",
@@ -101,14 +97,17 @@ function isEmployerWorkspacePath(pathname: string): boolean {
   return pathname === "/employer" || pathname.startsWith("/employer/");
 }
 
-function getEmployerDisplayName(employer: EmployerLoginPublic): string {
+function getEmployerDisplayName(
+  employer: EmployerLoginPublic,
+  fallbackName: string,
+): string {
   const fullName = `${employer.firstName} ${employer.lastName}`.trim();
 
   if (employer.accountType === "individual") {
     return (
       employer.establishmentName.trim() ||
       fullName ||
-      EMPLOYER_DASHBOARD_ACCOUNT_NAME
+      fallbackName
     );
   }
 
@@ -124,7 +123,7 @@ function getEmployerDisplayName(employer: EmployerLoginPublic): string {
     return fullName;
   }
 
-  return employer.companyName.trim() || EMPLOYER_DASHBOARD_ACCOUNT_NAME;
+  return employer.companyName.trim() || fallbackName;
 }
 
 function getEmployerInitials(displayName: string): string {
@@ -195,6 +194,9 @@ export function EmployerProfileMenu({
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = usePathname();
+  const t = useTranslate();
+  const accountFallbackName = t("employer.profileMenu.accountName");
+  const employerRoleLabel = t("employer.terms.employer");
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -211,8 +213,8 @@ export function EmployerProfileMenu({
   const identity = useMemo<ProfileIdentity>(() => {
     const employer = employerProfileQuery.data;
     const organizationName = employer
-      ? getEmployerDisplayName(employer)
-      : EMPLOYER_DASHBOARD_ACCOUNT_NAME;
+      ? getEmployerDisplayName(employer, accountFallbackName)
+      : accountFallbackName;
     const employerAvatarUrl = employer ? getEmployerAvatarUrl(employer) : null;
 
     const actor =
@@ -221,11 +223,15 @@ export function EmployerProfileMenu({
         : null;
 
     if (actor) {
-      const memberName =
-        actor.fullName.trim() || EMPLOYER_DASHBOARD_ACCOUNT_NAME;
-      const roleName = actor.roleName.trim() || session?.roleName || "Member";
+      const memberName = actor.fullName.trim() || accountFallbackName;
+      const roleName =
+        actor.roleName.trim() ||
+        session?.roleName ||
+        t("employer.profileMenu.memberFallback");
       const companyName =
-        actor.companyName.trim() || organizationName || "Organization";
+        actor.companyName.trim() ||
+        organizationName ||
+        t("employer.profileMenu.organizationFallback");
 
       return {
         // Company is the primary workplace identity for team members.
@@ -244,39 +250,41 @@ export function EmployerProfileMenu({
 
     return {
       primaryName: organizationName,
-      secondaryLabel: EMPLOYER_DASHBOARD_ROLE_LABEL,
+      secondaryLabel: employerRoleLabel,
       avatarInitials: getEmployerInitials(organizationName),
       avatarImageUrl: employerAvatarUrl,
       actor: null,
     };
-  }, [employerProfileQuery.data, session]);
+  }, [
+    accountFallbackName,
+    employerProfileQuery.data,
+    employerRoleLabel,
+    session,
+    t,
+  ]);
 
   const profileMenuLinks = useMemo(() => {
     const isTeamMember = Boolean(
       session?.principalType === "member" && session.actor,
     );
 
-    const primaryLink =
+    const websiteLink: ProfileMenuLink = {
+      labelKey: "employer.profileMenu.website",
+      href: ROUTES.HOME,
+      icon: Globe,
+      module: null,
+    };
+    const primaryLink: ProfileMenuLink =
       isEmployerWorkspacePath(pathname)
-        ? {
-            label: "Website",
-            href: ROUTES.HOME,
-            icon: Globe,
-            module: null as TeamPermissionModule | null,
-          }
+        ? websiteLink
         : !hasProvider || can("dashboard", "read")
           ? {
-              label: "Dashboard",
+              labelKey: "employer.nav.dashboard",
               href: ROUTES.EMPLOYER_DASHBOARD,
               icon: Home,
-              module: "dashboard" as TeamPermissionModule | null,
+              module: "dashboard",
             }
-          : {
-              label: "Website",
-              href: ROUTES.HOME,
-              icon: Globe,
-              module: null as TeamPermissionModule | null,
-            };
+          : websiteLink;
 
     const secondaryLinks: ProfileMenuLink[] = isTeamMember
       ? [
@@ -289,7 +297,7 @@ export function EmployerProfileMenu({
           employerProfileQuery.data?.accountType === "individual"
             ? {
                 ...PROFILE_MENU_COMPANY_LINK,
-                label: "Individual Profile",
+                labelKey: "employer.nav.individualProfile",
               }
             : PROFILE_MENU_COMPANY_LINK,
           PROFILE_MENU_SETTINGS_LINK,
@@ -380,8 +388,11 @@ export function EmployerProfileMenu({
 
   const actor = identity.actor;
   const ariaLabel = actor
-    ? `Team member profile menu for ${actor.fullName} at ${identity.primaryName}`
-    : "Employer profile menu";
+    ? t("employer.profileMenu.memberMenuAria", {
+        name: actor.fullName,
+        company: identity.primaryName,
+      })
+    : t("employer.profileMenu.menuAria");
 
   return (
     <div ref={rootRef} className={cn("relative", className)}>
@@ -455,7 +466,7 @@ export function EmployerProfileMenu({
                 {identity.primaryName}
               </p>
               <p className="truncate text-xs text-muted">
-                {EMPLOYER_DASHBOARD_ROLE_LABEL}
+                {employerRoleLabel}
               </p>
             </>
           )}
@@ -477,7 +488,7 @@ export function EmployerProfileMenu({
                 strokeWidth={2}
                 aria-hidden="true"
               />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
@@ -491,7 +502,7 @@ export function EmployerProfileMenu({
           onClick={handleLogoutRequest}
         >
           <LogOut className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
-          {EMPLOYER_DASHBOARD_PROFILE_MENU_LOGOUT}
+          {t("common.logout")}
         </button>
       </div>
 

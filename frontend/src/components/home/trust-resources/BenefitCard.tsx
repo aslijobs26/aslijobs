@@ -46,11 +46,11 @@ export function BenefitCard({ benefit }: BenefitCardProps) {
         <BenefitIcon icon={benefit.icon} />
       </div>
 
-      <h3 className="whitespace-pre-line text-center text-sm font-bold leading-tight text-foreground sm:text-base">
+      <h3 className="max-w-full whitespace-pre-line break-words text-center text-sm font-bold leading-tight text-foreground sm:text-base">
         {benefit.title}
       </h3>
 
-      <p className="mt-2 whitespace-pre-line text-center text-xs leading-relaxed text-muted sm:text-sm">
+      <p className="mt-2 max-w-full whitespace-pre-line break-words text-center text-xs leading-relaxed text-muted sm:text-sm">
         {benefit.description}
       </p>
     </article>

@@ -2,9 +2,17 @@
 
 import { EMPLOYER_DASHBOARD_SUBSCRIPTION_OVERVIEW } from "@/constants/employer-dashboard-home";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { Check } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+
+const SUBSCRIPTION_BENEFIT_KEYS = [
+  "employer.subscription.benefitPostJobs",
+  "employer.subscription.benefitUnlimitedApplications",
+  "employer.subscription.benefitAnalytics",
+  "employer.subscription.benefitPrioritySupport",
+] as const;
 
 function usagePercent(used: number, limit: number): number {
   if (limit <= 0) {
@@ -36,10 +44,12 @@ function ProgressMeter({
   percent: number;
   barClassName: string;
 }) {
+  const t = useTranslate();
+
   return (
     <div className="mt-auto w-full pt-2 sm:pt-2.5">
       <p className="mb-1 text-center text-[0.5625rem] font-semibold text-primary sm:text-[0.625rem] lg:text-[0.6875rem]">
-        {percent}% Used
+        {t("employer.subscription.percentUsed", { percent })}
       </p>
       <div
         className="h-1 w-full overflow-hidden rounded-full bg-hero-bg sm:h-1.5"
@@ -58,6 +68,7 @@ function ProgressMeter({
 }
 
 export function DashboardSubscriptionOverview() {
+  const t = useTranslate();
   const data = EMPLOYER_DASHBOARD_SUBSCRIPTION_OVERVIEW;
   const jobPostsPercent = usagePercent(
     data.jobPostsUsed.used,
@@ -78,33 +89,35 @@ export function DashboardSubscriptionOverview() {
           id="dashboard-subscription-overview-title"
           className="text-sm font-bold text-foreground sm:text-base lg:text-lg"
         >
-          {data.title}
+          {t("employer.subscription.title")}
         </h2>
-        <p className="mt-0.5 text-xs text-muted sm:text-sm">{data.subtitle}</p>
+        <p className="mt-0.5 text-xs text-muted sm:text-sm">
+          {t("employer.subscription.subtitle")}
+        </p>
       </header>
 
       <div className="-mx-0.5 overflow-x-auto px-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <div className="grid min-w-[40rem] grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.35fr)_minmax(0,1.35fr)] items-stretch gap-1.5 sm:min-w-0 sm:gap-2 lg:gap-2.5 xl:gap-3">
         <MetricCard>
           <p className="text-[0.5625rem] font-medium leading-tight text-muted sm:text-[0.625rem] lg:text-[0.6875rem]">
-            Current Plan
+            {t("employer.subscription.currentPlan")}
           </p>
           <div className="mt-1.5 flex min-w-0 flex-col items-start gap-1 sm:mt-2">
             <p className="w-full truncate text-[0.6875rem] font-bold leading-tight text-foreground sm:text-xs lg:text-sm">
               {data.planName}
             </p>
             <span className="inline-flex items-center rounded-full bg-benefit-whatsapp-surface px-1.5 py-0.5 text-[0.5rem] font-semibold text-benefit-whatsapp-icon sm:px-2 sm:text-[0.5625rem] lg:text-[0.625rem]">
-              {data.planStatus}
+              {t("employer.subscription.statusActive")}
             </span>
           </div>
           <p className="mt-auto pt-2 text-[0.5625rem] leading-snug text-muted sm:text-[0.625rem] lg:text-[0.6875rem]">
-            {data.renewsOnLabel} {data.renewsOn}
+            {t("employer.subscription.renewsOn", { date: data.renewsOn })}
           </p>
         </MetricCard>
 
         <MetricCard>
           <p className="text-[0.5625rem] font-medium leading-tight text-muted sm:text-[0.625rem] lg:text-[0.6875rem]">
-            Job Posts Used
+            {t("employer.subscription.jobPostsUsed")}
           </p>
           <p className="mt-1.5 text-[0.6875rem] font-bold tabular-nums text-foreground sm:mt-2 sm:text-xs lg:text-sm">
             {data.jobPostsUsed.used} / {data.jobPostsUsed.limit}
@@ -114,7 +127,7 @@ export function DashboardSubscriptionOverview() {
 
         <MetricCard>
           <p className="text-[0.5625rem] font-medium leading-tight text-muted sm:text-[0.625rem] lg:text-[0.6875rem]">
-            Active Job Posts
+            {t("employer.subscription.activeJobPosts")}
           </p>
           <p className="mt-1.5 text-[0.6875rem] font-bold tabular-nums text-foreground sm:mt-2 sm:text-xs lg:text-sm">
             {data.activeJobPosts.used} / {data.activeJobPosts.limit}
@@ -127,27 +140,29 @@ export function DashboardSubscriptionOverview() {
 
         <MetricCard>
           <p className="text-[0.5625rem] font-medium leading-tight text-muted sm:text-[0.625rem] lg:text-[0.6875rem]">
-            Applications
+            {t("employer.stats.applications")}
           </p>
           <p className="mt-1.5 text-[0.6875rem] font-bold tabular-nums leading-snug text-foreground sm:mt-2 sm:text-xs lg:text-sm">
             {data.applications.used.toLocaleString("en-IN")} /{" "}
-            {data.applications.limitLabel}
+            {data.applications.isUnlimited
+              ? t("employer.subscription.unlimited")
+              : data.applications.limitLabel}
           </p>
           {data.applications.isUnlimited ? (
             <span className="mt-auto inline-flex w-fit items-center rounded-full bg-benefit-whatsapp-surface px-1.5 py-0.5 text-[0.5rem] font-semibold text-benefit-whatsapp-icon sm:px-2 sm:text-[0.5625rem] lg:text-[0.625rem]">
-              Unlimited
+              {t("employer.subscription.unlimited")}
             </span>
           ) : null}
         </MetricCard>
 
         <MetricCard>
           <p className="text-[0.6875rem] font-bold text-foreground sm:text-xs lg:text-sm">
-            {data.benefitsTitle}
+            {t("employer.subscription.benefitsTitle")}
           </p>
           <ul className="mt-1.5 flex flex-1 flex-col gap-1 sm:mt-2 sm:gap-1.5">
-            {data.benefits.map((benefit) => (
+            {SUBSCRIPTION_BENEFIT_KEYS.map((benefitKey) => (
               <li
-                key={benefit}
+                key={benefitKey}
                 className="flex items-start gap-1 text-[0.5625rem] leading-snug text-foreground sm:gap-1.5 sm:text-[0.625rem] lg:text-[0.6875rem]"
               >
                 <span className="mt-0.5 inline-flex size-3 shrink-0 items-center justify-center rounded-full bg-benefit-whatsapp-surface text-benefit-whatsapp-icon sm:size-3.5 lg:size-4">
@@ -157,7 +172,7 @@ export function DashboardSubscriptionOverview() {
                     aria-hidden="true"
                   />
                 </span>
-                <span className="min-w-0">{benefit}</span>
+                <span className="min-w-0 break-words">{t(benefitKey)}</span>
               </li>
             ))}
           </ul>
@@ -165,18 +180,18 @@ export function DashboardSubscriptionOverview() {
             href={ROUTES.EMPLOYER_SUBSCRIPTION}
             className="mt-2 inline-flex h-7 w-full items-center justify-center rounded-md bg-primary px-2 text-[0.625rem] font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-2.5 sm:h-8 sm:rounded-lg sm:text-xs lg:h-9 lg:text-sm"
           >
-            {data.upgradeLabel}
+            {t("employer.subscription.upgradePlan")}
           </Link>
         </MetricCard>
 
         <MetricCard>
           <p className="text-[0.6875rem] font-bold text-foreground sm:text-xs lg:text-sm">
-            {data.billingTitle}
+            {t("employer.subscription.billingTitle")}
           </p>
           <dl className="mt-1.5 grid grid-cols-1 gap-1.5 sm:mt-2 sm:gap-2 lg:grid-cols-2">
             <div className="min-w-0">
               <dt className="text-[0.5625rem] text-muted sm:text-[0.625rem] lg:text-xs">
-                {data.nextBillingLabel}
+                {t("employer.subscription.nextBilling")}
               </dt>
               <dd className="mt-0.5 truncate text-[0.6875rem] font-semibold text-foreground sm:text-xs lg:text-sm">
                 {data.nextBilling}
@@ -184,7 +199,7 @@ export function DashboardSubscriptionOverview() {
             </div>
             <div className="min-w-0">
               <dt className="text-[0.5625rem] text-muted sm:text-[0.625rem] lg:text-xs">
-                {data.amountLabel}
+                {t("employer.subscription.amount")}
               </dt>
               <dd className="mt-0.5 text-[0.6875rem] font-semibold tabular-nums text-foreground sm:text-xs lg:text-sm">
                 {data.amount}
@@ -194,7 +209,7 @@ export function DashboardSubscriptionOverview() {
 
           <div className="mt-auto pt-2">
             <p className="text-[0.5625rem] text-muted sm:text-[0.625rem] lg:text-xs">
-              {data.paymentMethodLabel}
+              {t("employer.subscription.paymentMethod")}
             </p>
             <div className="mt-1 flex flex-col gap-1.5 sm:mt-1.5 lg:flex-row lg:items-center lg:justify-between lg:gap-2">
               <p className="min-w-0 truncate text-[0.6875rem] font-semibold tracking-wide text-foreground sm:text-xs lg:text-sm">
@@ -204,7 +219,7 @@ export function DashboardSubscriptionOverview() {
                 href={ROUTES.EMPLOYER_SUBSCRIPTION}
                 className="inline-flex h-6 w-fit shrink-0 items-center rounded-md bg-primary-light px-2 text-[0.5625rem] font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-7 sm:px-2.5 sm:text-xs"
               >
-                {data.manageLabel}
+                {t("employer.subscription.manage")}
               </Link>
             </div>
           </div>

@@ -1,4 +1,8 @@
+"use client";
+
+import { HERO_CTA_KEYS } from "@/components/home/home-i18n";
 import { HERO_CTA_CARDS } from "@/constants/cta";
+import { useTranslate } from "@/i18n/translate";
 import { Headset, Users } from "lucide-react";
 import { HeroCtaCard } from "./HeroCtaCard";
 import { WhatsAppIcon } from "./HeroIcons";
@@ -28,19 +32,24 @@ function heroCtaIcon(variant: (typeof HERO_CTA_CARDS)[number]["variant"]) {
 }
 
 export function HeroCtaRow() {
+  const t = useTranslate();
+
   return (
     <div className="grid grid-cols-1 items-stretch gap-2.5 mobile:gap-2.5 sm:gap-4 lg:grid-cols-3">
-      {HERO_CTA_CARDS.map((card) => (
-        <HeroCtaCard
-          key={card.id}
-          title={card.title}
-          description={card.description}
-          actionLabel={card.actionLabel}
-          href={card.href}
-          variant={card.variant}
-          icon={heroCtaIcon(card.variant)}
-        />
-      ))}
+      {HERO_CTA_CARDS.map((card) => {
+        const keys = HERO_CTA_KEYS[card.variant];
+        return (
+          <HeroCtaCard
+            key={card.id}
+            title={t(keys.title)}
+            description={t(keys.description)}
+            actionLabel={t(keys.action)}
+            href={card.href}
+            variant={card.variant}
+            icon={heroCtaIcon(card.variant)}
+          />
+        );
+      })}
     </div>
   );
 }

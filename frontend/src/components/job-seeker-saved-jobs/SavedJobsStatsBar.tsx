@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import type { SavedJobsStats, SavedJobsStatsFilter } from "@/types/saved-jobs";
 import { cn } from "@/utils/cn";
 import { SAVED_JOBS_STATS_TABS, statsTabToneClasses } from "./saved-jobs-utils";
@@ -17,11 +18,13 @@ export function SavedJobsStatsBar({
   isLoading,
   onChange,
 }: SavedJobsStatsBarProps) {
+  const t = useTranslate();
+
   return (
     <div
       className="flex gap-2 overflow-x-auto pb-1 scrollbar-hidden"
       role="tablist"
-      aria-label="Saved jobs filters"
+      aria-label={t("seeker.saved.tabsAria")}
     >
       {SAVED_JOBS_STATS_TABS.map((tab) => {
         const count = stats?.[tab.statsKey];
@@ -40,7 +43,7 @@ export function SavedJobsStatsBar({
               statsTabToneClasses(tab.tone, isActive),
             )}
           >
-            <span>{tab.label}</span>
+            <span>{t(tab.labelKey)}</span>
             <span
               className={cn(
                 "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums leading-none",

@@ -1,4 +1,5 @@
 import { EmployerDashboardPlaceholder } from "@/components/employer-dashboard/EmployerDashboardPlaceholder";
+import type { MessageKey } from "@/i18n/translate";
 import type { Metadata } from "next";
 
 type EmployerModulePageConfig = {
@@ -16,6 +17,6 @@ export function createEmployerModuleMetadata({
   };
 }
 
-export function EmployerModulePage({ title }: { title: string }) {
-  return <EmployerDashboardPlaceholder title={title} />;
+export function EmployerModulePage({ titleKey }: { titleKey: MessageKey }) {
+  return <EmployerDashboardPlaceholder titleKey={titleKey} />;
 }

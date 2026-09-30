@@ -1,11 +1,22 @@
 import {
   JOB_TYPE_OPTIONS,
   POST_JOB_EXPERIENCE_OPTIONS,
+  WORK_MODE_OPTIONS,
 } from "@/constants/post-job";
+import type { MessageKey } from "@/i18n/translate";
 import type { ListEmployerJobsParams } from "@/services/employer-jobs.service";
-import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import type { JobType, PostJobExperienceId, WorkMode } from "@/types/post-job";
+import {
+  formatJobSearchExperience,
+  formatJobSearchJobType,
+  formatJobSearchWorkMode,
+} from "@/utils/job-search-format";
 import { toJobSearchLocationSlug } from "@/utils/job-search-url";
+
+export type EmployerJobsTranslate = (
+  key: MessageKey,
+  values?: Record<string, string | number>,
+) => string;
 
 export const EMPLOYER_JOBS_FILTERS_STORAGE_KEY = "employer-jobs:filters:v1";
 
@@ -66,83 +77,48 @@ export const DEFAULT_EMPLOYER_JOBS_FILTERS: EmployerJobsFiltersState = {
   maxVacancies: "",
 };
 
-export const EMPLOYER_JOBS_WORK_MODE_FILTER_OPTIONS: {
-  value: WorkMode;
-  label: string;
+export const EMPLOYER_JOBS_WORK_MODE_FILTER_VALUES: readonly WorkMode[] =
+  WORK_MODE_OPTIONS.map((option) => option.value);
+
+export const EMPLOYER_JOBS_JOB_TYPE_FILTER_VALUES: readonly JobType[] =
+  JOB_TYPE_OPTIONS.map((option) => option.value);
+
+export const EMPLOYER_JOBS_EXPERIENCE_FILTER_VALUES: readonly PostJobExperienceId[] =
+  POST_JOB_EXPERIENCE_OPTIONS.map((option) => option.value);
+
+export const EMPLOYER_JOBS_POSTED_QUICK_OPTIONS: readonly {
+  value: EmployerJobsPostedQuickFilter;
+  labelKey: MessageKey;
 }[] = [
-  { value: "office", label: "On-site" },
-  { value: "home", label: "Remote" },
-  { value: "both", label: "Hybrid" },
-  { value: "field", label: "Field" },
+  { value: "", labelKey: "employer.jobs.filter.anyTime" },
+  { value: "today", labelKey: "employer.jobs.filter.today" },
+  { value: "last_7_days", labelKey: "employer.jobs.filter.last7Days" },
+  { value: "last_30_days", labelKey: "employer.jobs.filter.last30Days" },
+  { value: "last_90_days", labelKey: "employer.jobs.filter.last90Days" },
+  { value: "custom", labelKey: "employer.jobs.filter.customRange" },
 ];
 
-export const EMPLOYER_JOBS_JOB_TYPE_FILTER_OPTIONS = JOB_TYPE_OPTIONS.map(
-  (option) => ({
-    value: option.value,
-    label: option.label,
-  }),
-);
+export const EMPLOYER_JOBS_APPLICATION_BAND_VALUES: readonly EmployerJobsApplicationBand[] =
+  ["0", "1-10", "11-25", "26-50", "51+"];
 
-export const EMPLOYER_JOBS_EXPERIENCE_FILTER_OPTIONS =
-  POST_JOB_EXPERIENCE_OPTIONS.map((option) => ({
-    value: option.value,
-    label: option.label,
-  }));
+export function formatEmployerJobsApplicationBand(
+  band: EmployerJobsApplicationBand,
+  t: EmployerJobsTranslate,
+): string {
+  return band === "0"
+    ? t("employer.jobs.filter.noApplications")
+    : band.replace("-", "–");
+}
 
-export const EMPLOYER_JOBS_POSTED_QUICK_OPTIONS: EmployerRegisterSelectOption[] =
-  [
-    { value: "", label: "Any Time" },
-    { value: "today", label: "Today" },
-    { value: "last_7_days", label: "Last 7 Days" },
-    { value: "last_30_days", label: "Last 30 Days" },
-    { value: "last_90_days", label: "Last 90 Days" },
-    { value: "custom", label: "Custom Date Range" },
-  ];
-
-export const EMPLOYER_JOBS_APPLICATION_BAND_OPTIONS: {
-  value: EmployerJobsApplicationBand;
-  label: string;
-}[] = [
-  { value: "0", label: "No Applications" },
-  { value: "1-10", label: "1–10" },
-  { value: "11-25", label: "11–25" },
-  { value: "26-50", label: "26–50" },
-  { value: "51+", label: "51+" },
-];
-
-const JOB_TYPE_LABELS = Object.fromEntries(
-  EMPLOYER_JOBS_JOB_TYPE_FILTER_OPTIONS.map((option) => [
-    option.value,
-    option.label,
-  ]),
-) as Record<JobType, string>;
-
-const WORK_MODE_LABELS = Object.fromEntries(
-  EMPLOYER_JOBS_WORK_MODE_FILTER_OPTIONS.map((option) => [
-    option.value,
-    option.label,
-  ]),
-) as Record<WorkMode, string>;
-
-const EXPERIENCE_LABELS = Object.fromEntries(
-  EMPLOYER_JOBS_EXPERIENCE_FILTER_OPTIONS.map((option) => [
-    option.value,
-    option.label,
-  ]),
-) as Record<PostJobExperienceId, string>;
-
-const APPLICATION_BAND_LABELS = Object.fromEntries(
-  EMPLOYER_JOBS_APPLICATION_BAND_OPTIONS.map((option) => [
-    option.value,
-    option.label,
-  ]),
-) as Record<EmployerJobsApplicationBand, string>;
-
-const POSTED_QUICK_LABELS = Object.fromEntries(
-  EMPLOYER_JOBS_POSTED_QUICK_OPTIONS.filter((option) => option.value).map(
-    (option) => [option.value, option.label],
-  ),
-) as Record<Exclude<EmployerJobsPostedQuickFilter, "">, string>;
+function formatPostedQuickLabel(
+  value: EmployerJobsPostedQuickFilter,
+  t: EmployerJobsTranslate,
+): string {
+  const option = EMPLOYER_JOBS_POSTED_QUICK_OPTIONS.find(
+    (item) => item.value === value,
+  );
+  return option ? t(option.labelKey) : value;
+}
 
 export type EmployerJobsFilterChip = {
   id: string;
@@ -188,45 +164,53 @@ export function employerJobsFiltersAreActive(
 export function countActiveEmployerJobsFilters(
   filters: EmployerJobsFiltersState,
 ): number {
-  return buildEmployerJobsFilterChips(filters).length;
+  return buildEmployerJobsFilterChips(filters, (key) => key).length;
 }
 
 export function buildEmployerJobsFilterChips(
   filters: EmployerJobsFiltersState,
+  t: EmployerJobsTranslate,
 ): EmployerJobsFilterChip[] {
   const chips: EmployerJobsFilterChip[] = [];
 
   for (const jobType of filters.jobTypes) {
     chips.push({
       id: `jobType:${jobType}`,
-      label: JOB_TYPE_LABELS[jobType] ?? jobType,
+      label: formatJobSearchJobType(jobType),
     });
   }
 
   for (const workMode of filters.workModes) {
     chips.push({
       id: `workMode:${workMode}`,
-      label: WORK_MODE_LABELS[workMode] ?? workMode,
+      label: formatJobSearchWorkMode(workMode),
     });
   }
 
   for (const experience of filters.experience) {
     chips.push({
       id: `experience:${experience}`,
-      label: EXPERIENCE_LABELS[experience] ?? experience,
+      label: formatJobSearchExperience(experience),
     });
   }
 
   const minSalary = parseOptionalNumber(filters.minSalary);
   const maxSalary = parseOptionalNumber(filters.maxSalary);
   if (minSalary !== undefined || maxSalary !== undefined) {
-    let label = "Salary";
+    let label = t("employer.jobs.filter.salary");
     if (minSalary !== undefined && maxSalary !== undefined) {
-      label = `Salary ${formatSalaryChipAmount(minSalary)}–${formatSalaryChipAmount(maxSalary)}`;
+      label = t("employer.jobs.filter.salaryRangeChip", {
+        min: formatSalaryChipAmount(minSalary),
+        max: formatSalaryChipAmount(maxSalary),
+      });
     } else if (minSalary !== undefined) {
-      label = `Salary ${formatSalaryChipAmount(minSalary)}+`;
+      label = t("employer.jobs.filter.salaryMinChip", {
+        min: formatSalaryChipAmount(minSalary),
+      });
     } else if (maxSalary !== undefined) {
-      label = `Salary up to ${formatSalaryChipAmount(maxSalary)}`;
+      label = t("employer.jobs.filter.salaryMaxChip", {
+        max: formatSalaryChipAmount(maxSalary),
+      });
     }
     chips.push({ id: "salary", label });
   }
@@ -253,7 +237,7 @@ export function buildEmployerJobsFilterChips(
   if (filters.postedQuick && filters.postedQuick !== "custom") {
     chips.push({
       id: "postedQuick",
-      label: POSTED_QUICK_LABELS[filters.postedQuick] ?? filters.postedQuick,
+      label: formatPostedQuickLabel(filters.postedQuick, t),
     });
   } else if (
     filters.postedQuick === "custom" &&
@@ -263,27 +247,30 @@ export function buildEmployerJobsFilterChips(
     const to = filters.postedTo || "…";
     chips.push({
       id: "postedQuick",
-      label: `Posted ${from} – ${to}`,
+      label: t("employer.jobs.filter.postedRangeChip", { from, to }),
     });
   }
 
   for (const band of filters.applications) {
     chips.push({
       id: `applications:${band}`,
-      label: APPLICATION_BAND_LABELS[band] ?? band,
+      label: formatEmployerJobsApplicationBand(band, t),
     });
   }
 
   const minVacancies = parseOptionalNumber(filters.minVacancies);
   const maxVacancies = parseOptionalNumber(filters.maxVacancies);
   if (minVacancies !== undefined || maxVacancies !== undefined) {
-    let label = "Openings";
+    let label = t("employer.jobs.filter.openings");
     if (minVacancies !== undefined && maxVacancies !== undefined) {
-      label = `Openings ${minVacancies}–${maxVacancies}`;
+      label = t("employer.jobs.filter.openingsRangeChip", {
+        min: minVacancies,
+        max: maxVacancies,
+      });
     } else if (minVacancies !== undefined) {
-      label = `Openings ${minVacancies}+`;
+      label = t("employer.jobs.filter.openingsMinChip", { min: minVacancies });
     } else if (maxVacancies !== undefined) {
-      label = `Openings up to ${maxVacancies}`;
+      label = t("employer.jobs.filter.openingsMaxChip", { max: maxVacancies });
     }
     chips.push({ id: "vacancies", label });
   }
@@ -462,27 +449,27 @@ export function createLocationSelection(suggestion: {
 }
 
 function isJobType(value: string): value is JobType {
-  return EMPLOYER_JOBS_JOB_TYPE_FILTER_OPTIONS.some(
-    (option) => option.value === value,
+  return (EMPLOYER_JOBS_JOB_TYPE_FILTER_VALUES as readonly string[]).includes(
+    value,
   );
 }
 
 function isWorkMode(value: string): value is WorkMode {
-  return EMPLOYER_JOBS_WORK_MODE_FILTER_OPTIONS.some(
-    (option) => option.value === value,
+  return (EMPLOYER_JOBS_WORK_MODE_FILTER_VALUES as readonly string[]).includes(
+    value,
   );
 }
 
 function isExperience(value: string): value is PostJobExperienceId {
-  return EMPLOYER_JOBS_EXPERIENCE_FILTER_OPTIONS.some(
-    (option) => option.value === value,
-  );
+  return (
+    EMPLOYER_JOBS_EXPERIENCE_FILTER_VALUES as readonly string[]
+  ).includes(value);
 }
 
 function isApplicationBand(value: string): value is EmployerJobsApplicationBand {
-  return EMPLOYER_JOBS_APPLICATION_BAND_OPTIONS.some(
-    (option) => option.value === value,
-  );
+  return (
+    EMPLOYER_JOBS_APPLICATION_BAND_VALUES as readonly string[]
+  ).includes(value);
 }
 
 function isPostedQuick(value: string): value is EmployerJobsPostedQuickFilter {

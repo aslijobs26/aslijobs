@@ -25,10 +25,10 @@ export function HeroFeatureCard({
         {icon}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-px">
-        <p className="whitespace-nowrap text-[10px] font-bold leading-tight text-foreground mobile:text-[11px] md:text-xs lg:text-xs xl:text-sm 2xl:text-base">
+        <p className="text-balance break-words text-[10px] font-bold leading-tight text-foreground mobile:text-[11px] md:text-xs lg:text-xs xl:text-sm 2xl:text-base">
           {title}
         </p>
-        <p className="whitespace-nowrap text-[9px] leading-snug text-muted mobile:text-[10px] md:text-[11px] lg:text-[11px] xl:text-xs 2xl:text-sm">
+        <p className="text-balance break-words text-[9px] leading-snug text-muted mobile:text-[10px] md:text-[11px] lg:text-[11px] xl:text-xs 2xl:text-sm">
           {description}
         </p>
       </div>

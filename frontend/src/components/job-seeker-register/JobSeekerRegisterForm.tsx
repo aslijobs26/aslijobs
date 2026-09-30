@@ -4,32 +4,22 @@ import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { EmployerRegisterOtpInput } from "@/components/employer-register/EmployerRegisterOtpInput";
 import {
+  AUTH_VALIDATION_COPY,
+  useAuthMessageTranslator,
+} from "@/components/employer-register/useAuthMessageTranslator";
+import {
   EMPTY_EDUCATION,
   JobSeekerRegisterEducationExperienceStep,
 } from "@/components/job-seeker-register/JobSeekerRegisterEducationExperienceStep";
 import { JobSeekerRegisterPreferencesStep } from "@/components/job-seeker-register/JobSeekerRegisterPreferencesStep";
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import {
-  JOB_SEEKER_REGISTER_CREATE_ACCOUNT_LABEL,
-  JOB_SEEKER_REGISTER_CONTINUE_LABEL,
-  JOB_SEEKER_REGISTER_EDUCATION_HEADING,
-  JOB_SEEKER_REGISTER_FULL_NAME_LABEL,
-  JOB_SEEKER_REGISTER_FULL_NAME_PLACEHOLDER,
-  JOB_SEEKER_REGISTER_HEADING,
-  JOB_SEEKER_REGISTER_OTP_DESCRIPTION,
-  JOB_SEEKER_REGISTER_OTP_HEADING,
   JOB_SEEKER_REGISTER_OTP_LENGTH,
-  JOB_SEEKER_REGISTER_PREFERENCES_HEADING,
-  JOB_SEEKER_REGISTER_RESEND_LABEL,
-  JOB_SEEKER_REGISTER_RESEND_PROMPT,
-  JOB_SEEKER_REGISTER_SEND_OTP_LABEL,
-  JOB_SEEKER_REGISTER_VERIFY_OTP_LABEL,
-  JOB_SEEKER_REGISTER_WHATSAPP_LABEL,
-  JOB_SEEKER_REGISTER_WHATSAPP_PLACEHOLDER,
   isValidJobSeekerWhatsappNumber,
 } from "@/constants/job-seeker-register";
 import { ROUTES } from "@/constants/routes";
 import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
+import { useTranslate } from "@/i18n/translate";
 import {
   completeJobSeekerRegistration,
   registerJobSeekerAccount,
@@ -145,40 +135,40 @@ function validatePreferencesFields(preferences: {
   const errors: AuthFieldErrors = {};
 
   if (!preferences.dateOfBirth.trim()) {
-    errors.dateOfBirth = "Date of birth is required.";
+    errors.dateOfBirth = AUTH_VALIDATION_COPY.dateOfBirthRequired;
   }
 
   if (!preferences.gender) {
-    errors.gender = "Gender is required.";
+    errors.gender = AUTH_VALIDATION_COPY.genderRequired;
   }
 
   if (!preferences.jobRole.trim()) {
-    errors.jobRole = "Job role is required.";
+    errors.jobRole = AUTH_VALIDATION_COPY.jobRoleRequired;
   }
 
   if (!preferences.jobType) {
-    errors.jobType = "Job type is required.";
+    errors.jobType = AUTH_VALIDATION_COPY.jobTypeRequired;
   }
 
   if (!preferences.workMode) {
-    errors.workMode = "Work mode is required.";
+    errors.workMode = AUTH_VALIDATION_COPY.workModeRequired;
   }
 
   if (!preferences.preferredJobLocation.trim()) {
-    errors.preferredJobLocation = "Preferred job location is required.";
+    errors.preferredJobLocation = AUTH_VALIDATION_COPY.preferredLocationRequired;
   }
 
   if (!preferences.expectedSalary.trim()) {
-    errors.expectedSalary = "Expected salary is required.";
+    errors.expectedSalary = AUTH_VALIDATION_COPY.expectedSalaryRequired;
   } else if (
     !/^\d+$/.test(preferences.expectedSalary) ||
     Number(preferences.expectedSalary) <= 0
   ) {
-    errors.expectedSalary = "Expected salary must be greater than 0.";
+    errors.expectedSalary = AUTH_VALIDATION_COPY.expectedSalaryPositive;
   }
 
   if (!preferences.expectedSalaryPeriod) {
-    errors.expectedSalaryPeriod = "Salary period is required.";
+    errors.expectedSalaryPeriod = AUTH_VALIDATION_COPY.salaryPeriodRequired;
   }
 
   return errors;
@@ -199,34 +189,37 @@ function validateEducationFields(
 
   switch (education.level) {
     case "below_10th":
-      requireField("schoolName", "School name is required.");
+      requireField("schoolName", AUTH_VALIDATION_COPY.schoolNameRequired);
       break;
     case "10th_pass":
-      requireField("schoolName", "School name is required.");
-      requireField("board", "Board is required.");
-      requireField("passingYear", "Passing year is required.");
+      requireField("schoolName", AUTH_VALIDATION_COPY.schoolNameRequired);
+      requireField("board", AUTH_VALIDATION_COPY.boardRequired);
+      requireField("passingYear", AUTH_VALIDATION_COPY.passingYearRequired);
       break;
     case "intermediate":
-      requireField("collegeName", "College name is required.");
-      requireField("stream", "Stream is required.");
-      requireField("passingYear", "Passing year is required.");
+      requireField("collegeName", AUTH_VALIDATION_COPY.collegeNameRequired);
+      requireField("stream", AUTH_VALIDATION_COPY.streamRequired);
+      requireField("passingYear", AUTH_VALIDATION_COPY.passingYearRequired);
       break;
     case "iti":
-      requireField("instituteName", "Institute name is required.");
-      requireField("trade", "Trade is required.");
-      requireField("passingYear", "Passing year is required.");
+      requireField("instituteName", AUTH_VALIDATION_COPY.instituteNameRequired);
+      requireField("trade", AUTH_VALIDATION_COPY.tradeRequired);
+      requireField("passingYear", AUTH_VALIDATION_COPY.passingYearRequired);
       break;
     case "diploma":
-      requireField("collegeName", "College name is required.");
-      requireField("branch", "Branch is required.");
-      requireField("passingYear", "Passing year is required.");
+      requireField("collegeName", AUTH_VALIDATION_COPY.collegeNameRequired);
+      requireField("branch", AUTH_VALIDATION_COPY.branchRequired);
+      requireField("passingYear", AUTH_VALIDATION_COPY.passingYearRequired);
       break;
     case "graduation":
     case "post_graduation":
-      requireField("collegeName", "College name is required.");
-      requireField("degree", "Degree is required.");
-      requireField("specialization", "Specialization is required.");
-      requireField("passingYear", "Passing year is required.");
+      requireField("collegeName", AUTH_VALIDATION_COPY.collegeNameRequired);
+      requireField("degree", AUTH_VALIDATION_COPY.degreeRequired);
+      requireField(
+        "specialization",
+        AUTH_VALIDATION_COPY.specializationRequired,
+      );
+      requireField("passingYear", AUTH_VALIDATION_COPY.passingYearRequired);
       break;
     default:
       break;
@@ -252,12 +245,12 @@ function validateEducationStep(params: {
   const errors = validateEducationFields(education);
 
   if (!experienceType) {
-    errors.experienceType = "Select fresher or experienced.";
+    errors.experienceType = AUTH_VALIDATION_COPY.experienceTypeRequired;
   }
 
   if (experienceType === "experienced") {
     if (experiences.length === 0) {
-      errors.experiences = "Add at least one work experience.";
+      errors.experiences = AUTH_VALIDATION_COPY.experiencesRequired;
     }
 
     const today = new Date();
@@ -267,57 +260,57 @@ function validateEducationStep(params: {
       const prefix = `experiences.${index}`;
 
       if (!entry.companyName.trim()) {
-        errors[`${prefix}.companyName`] = "Company name is required.";
+        errors[`${prefix}.companyName`] = AUTH_VALIDATION_COPY.companyNameRequired;
       }
       if (!entry.jobRole.trim()) {
-        errors[`${prefix}.jobRole`] = "Job role is required.";
+        errors[`${prefix}.jobRole`] = AUTH_VALIDATION_COPY.jobRoleRequired;
       }
       if (!entry.industry.trim()) {
-        errors[`${prefix}.industry`] = "Industry is required.";
+        errors[`${prefix}.industry`] = AUTH_VALIDATION_COPY.industryRequired;
       }
       if (!entry.startDate) {
-        errors[`${prefix}.startDate`] = "Start date is required.";
+        errors[`${prefix}.startDate`] = AUTH_VALIDATION_COPY.startDateRequired;
       } else if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.startDate)) {
-        errors[`${prefix}.startDate`] = "Start date must be a valid date.";
+        errors[`${prefix}.startDate`] = AUTH_VALIDATION_COPY.startDateInvalid;
       } else if (entry.startDate > todayIso) {
-        errors[`${prefix}.startDate`] = "Start date cannot be in the future.";
+        errors[`${prefix}.startDate`] = AUTH_VALIDATION_COPY.startDateFuture;
       }
 
       if (!entry.currentlyWorking) {
         if (!entry.endDate) {
-          errors[`${prefix}.endDate`] =
-            "End date is required unless currently working.";
+          errors[`${prefix}.endDate`] = AUTH_VALIDATION_COPY.endDateRequired;
         } else if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.endDate)) {
-          errors[`${prefix}.endDate`] = "End date must be a valid date.";
+          errors[`${prefix}.endDate`] = AUTH_VALIDATION_COPY.endDateInvalid;
         } else if (entry.endDate > todayIso) {
-          errors[`${prefix}.endDate`] = "End date cannot be in the future.";
+          errors[`${prefix}.endDate`] = AUTH_VALIDATION_COPY.endDateFuture;
         } else if (entry.startDate && entry.endDate < entry.startDate) {
-          errors[`${prefix}.endDate`] =
-            "End date cannot be before start date.";
+          errors[`${prefix}.endDate`] = AUTH_VALIDATION_COPY.endDateBeforeStart;
         }
       }
 
       if (!entry.salary.trim()) {
-        errors[`${prefix}.salary`] = "Salary is required.";
+        errors[`${prefix}.salary`] = AUTH_VALIDATION_COPY.salaryRequired;
       }
       if (!entry.location.trim()) {
-        errors[`${prefix}.location`] = "Location is required.";
+        errors[`${prefix}.location`] = AUTH_VALIDATION_COPY.locationRequired;
       }
     }
   }
 
   if (languages.length === 0) {
-    errors.languages = "Select at least one language.";
+    errors.languages = AUTH_VALIDATION_COPY.languagesRequired;
   }
 
   if (!availabilityStatus) {
-    errors.availabilityStatus = "Please select your availability status.";
+    errors.availabilityStatus = AUTH_VALIDATION_COPY.availabilityRequired;
   }
 
   return errors;
 }
 
 export function JobSeekerRegisterForm() {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
   const router = useRouter();
   const queryClient = useQueryClient();
   const otpSectionRef = useRef<HTMLDivElement>(null);
@@ -398,10 +391,10 @@ export function JobSeekerRegisterForm() {
 
   const heading =
     step === "preferences"
-      ? JOB_SEEKER_REGISTER_PREFERENCES_HEADING
+      ? t("auth.jobSeekerRegister.preferencesHeading")
       : step === "education"
-        ? JOB_SEEKER_REGISTER_EDUCATION_HEADING
-        : JOB_SEEKER_REGISTER_HEADING;
+        ? t("auth.jobSeekerRegister.educationHeading")
+        : t("auth.jobSeekerRegister.heading");
 
   const clearErrors = () => {
     setFormError(null);
@@ -459,9 +452,7 @@ export function JobSeekerRegisterForm() {
       );
 
       if (!result?.jobSeekerId) {
-        setFormError(
-          "OTP was sent but the registration session is incomplete. Please try again.",
-        );
+        setFormError(AUTH_VALIDATION_COPY.registrationSessionIncomplete);
         return;
       }
 
@@ -501,7 +492,7 @@ export function JobSeekerRegisterForm() {
     }
 
     if (!jobSeekerId) {
-      setFormError("Registration session expired. Please start again.");
+      setFormError(AUTH_VALIDATION_COPY.sessionExpiredStartAgain);
       return;
     }
 
@@ -534,7 +525,7 @@ export function JobSeekerRegisterForm() {
     }
 
     if (!registrationContinuationToken) {
-      setFormError("Registration session expired. Please verify OTP again.");
+      setFormError(AUTH_VALIDATION_COPY.sessionExpiredVerifyAgain);
       return;
     }
 
@@ -573,7 +564,7 @@ export function JobSeekerRegisterForm() {
     }
 
     if (!registrationContinuationToken) {
-      setFormError("Registration session expired. Please verify OTP again.");
+      setFormError(AUTH_VALIDATION_COPY.sessionExpiredVerifyAgain);
       return;
     }
 
@@ -659,7 +650,7 @@ export function JobSeekerRegisterForm() {
                 required
                 className="employer-register-form-label"
               >
-                {JOB_SEEKER_REGISTER_FULL_NAME_LABEL}
+                {t("auth.jobSeekerRegister.fullNameLabel")}
               </RequiredFieldLabel>
               <input
                 id="job-seeker-register-full-name"
@@ -670,7 +661,7 @@ export function JobSeekerRegisterForm() {
                   setFullName(event.target.value);
                   clearSingleFieldError("fullName");
                 }}
-                placeholder={JOB_SEEKER_REGISTER_FULL_NAME_PLACEHOLDER}
+                placeholder={t("auth.jobSeekerRegister.fullNamePlaceholder")}
                 autoComplete="name"
                 className="employer-register-form-input"
                 aria-required="true"
@@ -680,7 +671,10 @@ export function JobSeekerRegisterForm() {
                 }
                 disabled={isSubmitting || step === "otp"}
               />
-              <FieldError id={fullNameErrorId} message={fieldErrors.fullName} />
+              <FieldError
+                id={fullNameErrorId}
+                message={translateMessage(fieldErrors.fullName)}
+              />
             </div>
 
             <div className="employer-register-form-stack">
@@ -689,7 +683,7 @@ export function JobSeekerRegisterForm() {
                 required
                 className="employer-register-form-label"
               >
-                {JOB_SEEKER_REGISTER_WHATSAPP_LABEL}
+                {t("auth.common.whatsappLabel")}
               </RequiredFieldLabel>
               <input
                 id="job-seeker-register-whatsapp"
@@ -706,7 +700,7 @@ export function JobSeekerRegisterForm() {
                     resetCooldown();
                   }
                 }}
-                placeholder={JOB_SEEKER_REGISTER_WHATSAPP_PLACEHOLDER}
+                placeholder={t("auth.common.whatsappPlaceholder")}
                 autoComplete="tel"
                 className="employer-register-form-input"
                 aria-required="true"
@@ -718,7 +712,7 @@ export function JobSeekerRegisterForm() {
               />
               <FieldError
                 id={whatsappErrorId}
-                message={fieldErrors.whatsappNumber}
+                message={translateMessage(fieldErrors.whatsappNumber)}
               />
             </div>
           </>
@@ -732,10 +726,10 @@ export function JobSeekerRegisterForm() {
           >
             <div className="employer-register-form-stack">
               <h2 className="employer-register-otp-heading">
-                {JOB_SEEKER_REGISTER_OTP_HEADING}
+                {t("auth.common.otpHeading")}
               </h2>
-              <p className="employer-register-otp-description">
-                {JOB_SEEKER_REGISTER_OTP_DESCRIPTION}
+              <p className="employer-register-otp-description break-words">
+                {t("auth.common.otpDescription")}
               </p>
             </div>
 
@@ -750,10 +744,13 @@ export function JobSeekerRegisterForm() {
               aria-invalid={Boolean(fieldErrors.otp)}
               aria-describedby={fieldErrors.otp ? otpErrorId : undefined}
             />
-            <FieldError id={otpErrorId} message={fieldErrors.otp} />
+            <FieldError
+              id={otpErrorId}
+              message={translateMessage(fieldErrors.otp)}
+            />
 
-            <p className="text-center text-sm text-muted">
-              {JOB_SEEKER_REGISTER_RESEND_PROMPT}{" "}
+            <p className="break-words text-center text-sm text-muted">
+              {t("auth.common.resendPrompt")}{" "}
               <button
                 type="button"
                 className="employer-register-send-otp-link inline align-baseline"
@@ -763,8 +760,8 @@ export function JobSeekerRegisterForm() {
                 disabled={isSubmitting || isCoolingDown}
               >
                 {isCoolingDown
-                  ? `Resend OTP in ${secondsLeft}s`
-                  : JOB_SEEKER_REGISTER_RESEND_LABEL}
+                  ? t("auth.common.resendOtpIn", { seconds: secondsLeft })
+                  : t("auth.common.resendOtp")}
               </button>
             </p>
           </div>
@@ -819,7 +816,7 @@ export function JobSeekerRegisterForm() {
 
         {formError ? (
           <p id={formErrorId} className="text-sm font-medium text-red-600" role="alert">
-            {formError}
+            {translateMessage(formError)}
           </p>
         ) : null}
 
@@ -834,14 +831,14 @@ export function JobSeekerRegisterForm() {
           aria-busy={isSubmitting || undefined}
         >
           {isSubmitting
-            ? "Please wait…"
+            ? t("auth.common.pleaseWait")
             : step === "account"
-              ? JOB_SEEKER_REGISTER_SEND_OTP_LABEL
+              ? t("auth.common.sendOtp")
               : step === "otp"
-                ? JOB_SEEKER_REGISTER_VERIFY_OTP_LABEL
+                ? t("auth.common.verifyOtp")
                 : step === "preferences"
-                  ? JOB_SEEKER_REGISTER_CONTINUE_LABEL
-                  : JOB_SEEKER_REGISTER_CREATE_ACCOUNT_LABEL}
+                  ? t("auth.common.continue")
+                  : t("auth.common.createAccount")}
         </button>
       </form>
     </div>

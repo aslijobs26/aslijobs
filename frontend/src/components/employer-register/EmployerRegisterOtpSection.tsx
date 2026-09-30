@@ -1,16 +1,10 @@
 "use client";
 
 import { FieldError } from "@/components/auth/FieldError";
-import {
-  EMPLOYER_REGISTER_OTP_DESCRIPTION,
-  EMPLOYER_REGISTER_OTP_HEADING,
-  EMPLOYER_REGISTER_OTP_SUCCESS_LABEL,
-  EMPLOYER_REGISTER_OTP_VERIFY_LABEL,
-  EMPLOYER_REGISTER_RESEND_LABEL,
-  EMPLOYER_REGISTER_RESEND_PROMPT,
-} from "@/constants/employer-register";
+import { useTranslate } from "@/i18n/translate";
 import { Check } from "lucide-react";
 import { EmployerRegisterOtpInput } from "./EmployerRegisterOtpInput";
+import { useAuthMessageTranslator } from "./useAuthMessageTranslator";
 
 type EmployerRegisterOtpSectionProps = {
   otpDigits: string[];
@@ -33,6 +27,8 @@ export function EmployerRegisterOtpSection({
   onVerify,
   onResend,
 }: EmployerRegisterOtpSectionProps) {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
   const isOtpComplete = otpDigits.every(
     (digit) => digit.length === 1 && /\d/.test(digit),
   );
@@ -48,8 +44,8 @@ export function EmployerRegisterOtpSection({
         <span className="employer-register-otp-success-icon" aria-hidden="true">
           <Check className="size-4" strokeWidth={2.5} />
         </span>
-        <p className="employer-register-otp-success-text">
-          {EMPLOYER_REGISTER_OTP_SUCCESS_LABEL}
+        <p className="employer-register-otp-success-text min-w-0 break-words">
+          {t("auth.common.otpVerified")}
         </p>
       </div>
     );
@@ -59,10 +55,10 @@ export function EmployerRegisterOtpSection({
     <div className="employer-register-otp-section">
       <div className="employer-register-form-stack">
         <h2 className="employer-register-otp-heading">
-          {EMPLOYER_REGISTER_OTP_HEADING}
+          {t("auth.common.otpHeading")}
         </h2>
-        <p className="employer-register-otp-description">
-          {EMPLOYER_REGISTER_OTP_DESCRIPTION}
+        <p className="employer-register-otp-description break-words">
+          {t("auth.common.otpDescription")}
         </p>
       </div>
 
@@ -74,11 +70,11 @@ export function EmployerRegisterOtpSection({
         aria-invalid={Boolean(otpError)}
         aria-describedby={otpError ? "otp-error" : undefined}
       />
-      <FieldError id="otp-error" message={otpError} />
+      <FieldError id="otp-error" message={translateMessage(otpError)} />
 
       {onResend ? (
-        <p className="text-center text-sm text-muted">
-          {EMPLOYER_REGISTER_RESEND_PROMPT}{" "}
+        <p className="break-words text-center text-sm text-muted">
+          {t("auth.common.resendPrompt")}{" "}
           <button
             type="button"
             className="employer-register-send-otp-link inline align-baseline"
@@ -86,8 +82,8 @@ export function EmployerRegisterOtpSection({
             disabled={isSubmitting || isCoolingDown}
           >
             {isCoolingDown
-              ? `Resend OTP in ${resendSecondsLeft}s`
-              : EMPLOYER_REGISTER_RESEND_LABEL}
+              ? t("auth.common.resendOtpIn", { seconds: resendSecondsLeft })
+              : t("auth.common.resendOtp")}
           </button>
         </p>
       ) : null}
@@ -98,7 +94,7 @@ export function EmployerRegisterOtpSection({
         disabled={!isOtpComplete || isSubmitting}
         onClick={onVerify}
       >
-        {EMPLOYER_REGISTER_OTP_VERIFY_LABEL}
+        {t("auth.common.verifyOtp")}
       </button>
     </div>
   );

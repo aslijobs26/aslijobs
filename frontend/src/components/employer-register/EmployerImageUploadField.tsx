@@ -6,9 +6,9 @@ import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import {
   EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES,
   EMPLOYER_REGISTER_IMAGE_ACCEPT,
-  EMPLOYER_REGISTER_IMAGE_UPLOAD_HINT,
 } from "@/constants/employer-register";
 import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
+import { useTranslate } from "@/i18n/translate";
 import type { EmployerRegisterImagePreview } from "@/types/employer-register";
 import { Images, X } from "lucide-react";
 import {
@@ -19,6 +19,7 @@ import {
   type DragEvent,
   type KeyboardEvent,
 } from "react";
+import { useAuthMessageTranslator } from "./useAuthMessageTranslator";
 
 type EmployerImageUploadFieldProps = {
   label: string;
@@ -74,13 +75,18 @@ export function EmployerImageUploadField({
   onInvalidFile,
   onRemoveExisting,
 }: EmployerImageUploadFieldProps) {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
+  const uploadHint = t("auth.employerRegister.imageUploadHint");
   const generatedId = useId();
   const inputId = name ? `${name}-upload` : generatedId;
   const resolvedErrorId = errorId ?? (name ? `${name}-error` : undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const objectUrl = preview?.previewUrl ?? null;
   const displayUrl = objectUrl || existingImageUrl || null;
-  const fieldLabel = optional ? `${label} (Optional)` : label;
+  const fieldLabel = optional
+    ? t("auth.common.optionalLabel", { label })
+    : label;
   const isRequired = required && !optional;
 
   useEffect(() => {
@@ -179,7 +185,7 @@ export function EmployerImageUploadField({
           </span>
           <div className="employer-register-document-preview-copy">
             <p className="employer-register-document-preview-name">
-              {preview?.name ?? "Current image"}
+              {preview?.name ?? t("auth.employerRegister.currentImage")}
             </p>
             {preview ? (
               <p className="employer-register-document-preview-size">
@@ -187,14 +193,16 @@ export function EmployerImageUploadField({
               </p>
             ) : (
               <p className="employer-register-document-preview-size">
-                Saved on your profile
+                {t("auth.employerRegister.savedOnProfile")}
               </p>
             )}
           </div>
           <button
             type="button"
             className="employer-register-document-preview-remove"
-            aria-label={`Remove ${fieldLabel.toLowerCase()}`}
+            aria-label={t("auth.employerRegister.removeImage", {
+              label: fieldLabel.toLowerCase(),
+            })}
             onClick={handleRemove}
           >
             <X className="size-4" strokeWidth={2.25} aria-hidden="true" />
@@ -206,7 +214,7 @@ export function EmployerImageUploadField({
           className="employer-register-document-dropzone"
           role="button"
           tabIndex={0}
-          aria-label={`${fieldLabel}. ${EMPLOYER_REGISTER_IMAGE_UPLOAD_HINT}`}
+          aria-label={`${fieldLabel}. ${uploadHint}`}
           aria-invalid={Boolean(error) || undefined}
           aria-required={isRequired || undefined}
           aria-describedby={error ? resolvedErrorId : undefined}
@@ -224,11 +232,11 @@ export function EmployerImageUploadField({
               strokeWidth={1.75}
             />
           </span>
-          <p className="employer-register-document-dropzone-primary">
+          <p className="employer-register-document-dropzone-primary break-words">
             {label}
           </p>
-          <p className="employer-register-document-dropzone-hint">
-            {EMPLOYER_REGISTER_IMAGE_UPLOAD_HINT}
+          <p className="employer-register-document-dropzone-hint break-words">
+            {uploadHint}
           </p>
         </div>
       )}
@@ -244,7 +252,7 @@ export function EmployerImageUploadField({
         onChange={handleFileInputChange}
       />
 
-      <FieldError id={resolvedErrorId} message={error} />
+      <FieldError id={resolvedErrorId} message={translateMessage(error)} />
     </div>
   );
 }

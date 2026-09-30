@@ -15,6 +15,7 @@ import {
 } from "@/components/job-seeker-saved-jobs/saved-jobs-utils";
 import { ListPagination } from "@/components/shared/ListPagination";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import {
   fetchSavedJobs,
   removeSavedJob,
@@ -81,6 +82,7 @@ function SavedJobsSkeletonList() {
 }
 
 export function SavedJobsPageContent() {
+  const t = useTranslate();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -282,10 +284,10 @@ export function SavedJobsPageContent() {
   const removeMutation = useMutation({
     mutationFn: (publicJobId: string) => removeSavedJob(publicJobId),
     onError: () => {
-      showAppToast("Couldn’t remove saved job. Please try again.", "error");
+      showAppToast(t("seeker.saved.removeError"), "error");
     },
     onSuccess: async () => {
-      showAppToast("Removed from saved jobs");
+      showAppToast(t("seeker.saved.removeSuccess"));
       // If this was the last card on the page, step back before refresh.
       if (jobs.length <= 1 && page > 1) {
         updateUrl({ page: page - 1 });
@@ -315,15 +317,15 @@ export function SavedJobsPageContent() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17.5rem] xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0">
           <header>
-            <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            <h1 className="flex min-w-0 items-center gap-2.5 break-words text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               <Bookmark
                 className="size-7 shrink-0 fill-primary text-primary sm:size-8"
                 aria-hidden="true"
               />
-              Saved Jobs
+              {t("seeker.saved.title")}
             </h1>
-            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-muted sm:text-[0.9375rem]">
-              Jobs you saved for later.
+            <p className="mt-1.5 max-w-xl break-words text-sm leading-relaxed text-muted sm:text-[0.9375rem]">
+              {t("seeker.saved.subtitle")}
             </p>
           </header>
 
@@ -352,7 +354,7 @@ export function SavedJobsPageContent() {
                 )}
               >
                 <Filter className="size-3.5 shrink-0" aria-hidden="true" />
-                <span>Filters</span>
+                <span>{t("seeker.common.filters")}</span>
                 {activeFilterCount > 0 ? (
                   <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-surface">
                     {activeFilterCount}
@@ -387,14 +389,14 @@ export function SavedJobsPageContent() {
                 aria-hidden="true"
               />
               <label htmlFor="saved-jobs-search" className="sr-only">
-                Search saved jobs
+                {t("seeker.saved.searchLabel")}
               </label>
               <input
                 id="saved-jobs-search"
                 type="search"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search by job title, company, location or skills"
+                placeholder={t("seeker.saved.searchPlaceholder")}
                 className={cn(
                   "h-11 w-full rounded-xl border border-border bg-surface py-2.5 pr-3 pl-10 text-xs text-foreground shadow-sm placeholder:text-muted sm:text-sm",
                   "outline-none transition-[border-color,box-shadow] hover:border-primary/25",
@@ -407,7 +409,7 @@ export function SavedJobsPageContent() {
 
           {isRefreshing ? (
             <p className="mt-3 text-xs text-muted" aria-live="polite">
-              Updating saved jobs…
+              {t("seeker.saved.updating")}
             </p>
           ) : null}
 
@@ -416,18 +418,18 @@ export function SavedJobsPageContent() {
               <SavedJobsSkeletonList />
             ) : listQuery.isError && jobs.length === 0 ? (
               <div className="rounded-xl border border-border-subtle bg-surface px-4 py-12 text-center">
-                <p className="text-sm font-medium text-foreground">
-                  Couldn&apos;t load saved jobs
+                <p className="break-words text-sm font-medium text-foreground">
+                  {t("seeker.saved.loadErrorTitle")}
                 </p>
-                <p className="mt-1 text-sm text-muted">
-                  Please check your connection and try again.
+                <p className="mt-1 break-words text-sm text-muted">
+                  {t("seeker.common.checkConnection")}
                 </p>
                 <button
                   type="button"
                   onClick={() => void listQuery.refetch()}
                   className="mt-4 inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 >
-                  Retry
+                  {t("seeker.common.retry")}
                 </button>
               </div>
             ) : jobs.length === 0 ? (
@@ -436,17 +438,17 @@ export function SavedJobsPageContent() {
                   className="mx-auto size-10 text-muted"
                   aria-hidden="true"
                 />
-                <p className="mt-3 text-base font-semibold text-foreground">
-                  No Saved Jobs
+                <p className="mt-3 break-words text-base font-semibold text-foreground">
+                  {t("seeker.saved.emptyTitle")}
                 </p>
-                <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-                  Save roles you like while browsing, then manage them here.
+                <p className="mx-auto mt-1 max-w-sm break-words text-sm text-muted">
+                  {t("seeker.saved.emptyBody")}
                 </p>
                 <Link
                   href={ROUTES.FIND_JOBS}
                   className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 >
-                  Browse Jobs
+                  {t("seeker.common.browseJobs")}
                 </Link>
               </div>
             ) : (
@@ -472,8 +474,8 @@ export function SavedJobsPageContent() {
                   totalPages={pagination.totalPages}
                   onPageChange={goToPage}
                   isLoading={listQuery.isFetching}
-                  ariaLabel="Saved jobs pagination"
-                  entityLabel="jobs"
+                  ariaLabel={t("seeker.saved.paginationAria")}
+                  entityLabel={t("seeker.saved.entityLabel")}
                 />
               </div>
             )}

@@ -1,7 +1,10 @@
+"use client";
+
 import {
   EMPLOYER_JOB_STAT_CARDS,
   type EmployerJobStatKey,
 } from "@/constants/employer-jobs";
+import { useTranslate } from "@/i18n/translate";
 import { formatEmployerJobCount } from "@/utils/employer-jobs-format";
 import { cn } from "@/utils/cn";
 
@@ -16,9 +19,11 @@ export function EmployerJobsStats({
   isLoading = false,
   className,
 }: EmployerJobsStatsProps) {
+  const t = useTranslate();
+
   return (
     <section
-      aria-label="Job performance statistics"
+      aria-label={t("employer.jobs.statsAria")}
       className={cn(
         "grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6",
         className,
@@ -46,8 +51,8 @@ export function EmployerJobsStats({
               />
             </div>
 
-            <p className="mt-2 text-[10px] font-medium leading-tight text-muted sm:mt-3 sm:text-xs">
-              {card.label}
+            <p className="mt-2 break-words text-[10px] font-medium leading-tight text-muted sm:mt-3 sm:text-xs">
+              {t(`employer.stats.${card.key}`)}
             </p>
 
             {isLoading ? (

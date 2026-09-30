@@ -1,12 +1,18 @@
+"use client";
+
+import { HIRING_SOLUTION_KEYS } from "@/components/home/home-i18n";
 import { Container } from "@/components/layout/Container";
 import {
   HIRING_SOLUTIONS,
   HIRING_SOLUTIONS_SECTION,
 } from "@/constants/hiring-solutions";
+import { useTranslate } from "@/i18n/translate";
 import Link from "next/link";
 import { HiringSolutionCard } from "./HiringSolutionCard";
 
 export function HiringSolutionsSection() {
+  const t = useTranslate();
+
   return (
     <section
       aria-labelledby="hiring-solutions-heading"
@@ -17,12 +23,12 @@ export function HiringSolutionsSection() {
           <div className="min-w-0">
             <h2
               id="hiring-solutions-heading"
-              className="text-xl font-bold text-foreground sm:text-2xl"
+              className="text-balance break-words text-xl font-bold text-foreground sm:text-2xl"
             >
-              {HIRING_SOLUTIONS_SECTION.title}
+              {t("home.hiring.title")}
             </h2>
-            <p className="mt-1.5 text-sm text-muted sm:text-base">
-              {HIRING_SOLUTIONS_SECTION.description}
+            <p className="mt-1.5 break-words text-sm text-muted sm:text-base">
+              {t("home.hiring.description")}
             </p>
           </div>
 
@@ -30,14 +36,26 @@ export function HiringSolutionsSection() {
             href={HIRING_SOLUTIONS_SECTION.compareHref}
             className="shrink-0 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            {HIRING_SOLUTIONS_SECTION.compareLabel}
+            {t("home.hiring.compare")}
           </Link>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
-          {HIRING_SOLUTIONS.map((solution) => (
-            <HiringSolutionCard key={solution.id} solution={solution} />
-          ))}
+          {HIRING_SOLUTIONS.map((solution) => {
+            const keys = HIRING_SOLUTION_KEYS[solution.id];
+            return (
+              <HiringSolutionCard
+                key={solution.id}
+                solution={{
+                  ...solution,
+                  title: t(keys.title),
+                  subtitle: t(keys.subtitle),
+                  features: keys.features.map((featureKey) => t(featureKey)),
+                  actionLabel: t(keys.action),
+                }}
+              />
+            );
+          })}
         </div>
       </Container>
     </section>

@@ -2,6 +2,7 @@
 
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { Menu } from "lucide-react";
 import Link from "next/link";
@@ -15,6 +16,8 @@ export function JobSeekerTopBar({
   onSidebarToggle,
   className,
 }: JobSeekerTopBarProps) {
+  const t = useTranslate();
+
   return (
     <header
       className={cn(
@@ -26,7 +29,7 @@ export function JobSeekerTopBar({
         type="button"
         onClick={onSidebarToggle}
         className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-nav transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        aria-label="Toggle sidebar"
+        aria-label={t("seeker.nav.toggleSidebar")}
       >
         <Menu className="size-5" strokeWidth={2} aria-hidden="true" />
       </button>
@@ -42,7 +45,7 @@ export function JobSeekerTopBar({
           href={ROUTES.FIND_JOBS}
           className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:px-4 sm:text-sm"
         >
-          Browse Jobs
+          {t("seeker.common.browseJobs")}
         </Link>
         <NotificationBell viewAllHref={ROUTES.JOB_SEEKER_NOTIFICATIONS} />
       </div>

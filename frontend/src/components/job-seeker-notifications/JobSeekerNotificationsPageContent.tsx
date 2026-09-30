@@ -7,6 +7,7 @@ import {
   notificationIconToneClass,
 } from "@/components/notifications/notification-utils";
 import { ListPagination } from "@/components/shared/ListPagination";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import {
   clearAllNotifications,
   deleteNotification,
@@ -39,14 +40,26 @@ type CategoryFilterTone =
 
 const CATEGORY_FILTERS: {
   key: NotificationCategoryFilter;
-  label: string;
+  labelKey: MessageKey;
   tone: CategoryFilterTone;
 }[] = [
-  { key: "all", label: "All", tone: "primary" },
-  { key: "application", label: "Application", tone: "blue" },
-  { key: "interview", label: "Interview", tone: "orange" },
-  { key: "offer", label: "Offer", tone: "green" },
-  { key: "system", label: "System", tone: "purple" },
+  { key: "all", labelKey: "seeker.notifications.all", tone: "primary" },
+  {
+    key: "application",
+    labelKey: "seeker.notifications.categoryApplication",
+    tone: "blue",
+  },
+  {
+    key: "interview",
+    labelKey: "seeker.notifications.categoryInterview",
+    tone: "orange",
+  },
+  { key: "offer", labelKey: "seeker.notifications.categoryOffer", tone: "green" },
+  {
+    key: "system",
+    labelKey: "seeker.notifications.categorySystem",
+    tone: "purple",
+  },
 ];
 
 const CATEGORY_TONE_CLASSES: Record<
@@ -87,10 +100,13 @@ function categoryFilterToneClasses(
   return isActive ? classes.active : classes.idle;
 }
 
-const READ_FILTERS: { key: NotificationReadStatusFilter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "unread", label: "Unread" },
-  { key: "read", label: "Read" },
+const READ_FILTERS: {
+  key: NotificationReadStatusFilter;
+  labelKey: MessageKey;
+}[] = [
+  { key: "all", labelKey: "seeker.notifications.all" },
+  { key: "unread", labelKey: "seeker.notifications.unread" },
+  { key: "read", labelKey: "seeker.notifications.read" },
 ];
 
 function parseReadStatus(value: string | null): NotificationReadStatusFilter {
@@ -122,6 +138,7 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 export function JobSeekerNotificationsPageContent() {
+  const t = useTranslate();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -291,11 +308,7 @@ export function JobSeekerNotificationsPageContent() {
   };
 
   const handleClearAll = () => {
-    if (
-      !window.confirm(
-        "Clear all notifications from your inbox? This cannot be undone.",
-      )
-    ) {
+    if (!window.confirm(t("seeker.notifications.clearConfirm"))) {
       return;
     }
     clearAllMutation.mutate();
@@ -307,11 +320,11 @@ export function JobSeekerNotificationsPageContent() {
         <div className="min-w-0">
           <header className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-3xl">
-                Notifications
+              <h1 className="break-words text-xl font-bold tracking-tight text-foreground sm:text-3xl">
+                {t("seeker.notifications.title")}
               </h1>
-              <p className="mt-1.5 text-xs text-muted sm:text-[0.9375rem]">
-                Stay updated on applications, interviews, and offers.
+              <p className="mt-1.5 break-words text-xs text-muted sm:text-[0.9375rem]">
+                {t("seeker.notifications.subtitle")}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4">
@@ -321,7 +334,7 @@ export function JobSeekerNotificationsPageContent() {
                 onClick={handleClearAll}
                 className="text-xs font-semibold text-foreground underline-offset-2 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline sm:text-sm"
               >
-                Clear all
+                {t("seeker.notifications.clearAll")}
               </button>
               <button
                 type="button"
@@ -329,7 +342,7 @@ export function JobSeekerNotificationsPageContent() {
                 onClick={() => markAllMutation.mutate()}
                 className="text-xs font-semibold text-foreground underline-offset-2 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline sm:text-sm"
               >
-                Mark all as read
+                {t("seeker.notifications.markAllRead")}
               </button>
             </div>
           </header>
@@ -341,14 +354,14 @@ export function JobSeekerNotificationsPageContent() {
                 aria-hidden="true"
               />
               <label htmlFor="job-seeker-notifications-search" className="sr-only">
-                Search notifications
+                {t("seeker.notifications.searchLabel")}
               </label>
               <input
                 id="job-seeker-notifications-search"
                 type="search"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search notifications"
+                placeholder={t("seeker.notifications.searchPlaceholder")}
                 className="w-full rounded-xl border border-border-subtle bg-surface py-2.5 pr-3 pl-10 text-sm text-foreground shadow-sm placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               />
             </div>
@@ -356,7 +369,7 @@ export function JobSeekerNotificationsPageContent() {
             <div
               className="flex gap-2 overflow-x-auto pb-0.5 max-lg:scrollbar-hidden"
               role="tablist"
-              aria-label="Read status"
+              aria-label={t("seeker.notifications.readStatusAria")}
             >
               {READ_FILTERS.map((filter) => {
                 const isActive = readStatus === filter.key;
@@ -376,7 +389,7 @@ export function JobSeekerNotificationsPageContent() {
                         : "bg-surface text-foreground ring-1 ring-inset ring-border-subtle hover:bg-primary-light/50",
                     )}
                   >
-                    {filter.label}
+                    {t(filter.labelKey)}
                   </button>
                 );
               })}
@@ -385,7 +398,7 @@ export function JobSeekerNotificationsPageContent() {
             <div
               className="flex gap-2 overflow-x-auto pb-0.5 max-lg:scrollbar-hidden"
               role="tablist"
-              aria-label="Notification category"
+              aria-label={t("seeker.notifications.categoryAria")}
             >
               {CATEGORY_FILTERS.map((filter) => {
                 const isActive = category === filter.key;
@@ -403,7 +416,7 @@ export function JobSeekerNotificationsPageContent() {
                       categoryFilterToneClasses(filter.tone, isActive),
                     )}
                   >
-                    {filter.label}
+                    {t(filter.labelKey)}
                   </button>
                 );
               })}
@@ -412,7 +425,11 @@ export function JobSeekerNotificationsPageContent() {
 
           <div className="mt-5 space-y-3">
             {listQuery.isLoading ? (
-              <div className="space-y-3" aria-busy="true">
+              <div
+                className="space-y-3"
+                aria-busy="true"
+                aria-label={t("seeker.loading.notifications")}
+              >
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div
                     key={index}
@@ -422,15 +439,15 @@ export function JobSeekerNotificationsPageContent() {
               </div>
             ) : listQuery.isError ? (
               <div className="rounded-2xl border border-border-subtle bg-surface px-4 py-12 text-center shadow-sm">
-                <p className="text-sm text-muted">
-                  Could not load notifications. Please try again.
+                <p className="break-words text-sm text-muted">
+                  {t("seeker.notifications.loadError")}
                 </p>
                 <button
                   type="button"
                   className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                   onClick={() => void listQuery.refetch()}
                 >
-                  Retry
+                  {t("seeker.common.retry")}
                 </button>
               </div>
             ) : notifications.length === 0 ? (
@@ -438,15 +455,15 @@ export function JobSeekerNotificationsPageContent() {
                 <span className="mx-auto inline-flex size-14 items-center justify-center rounded-full bg-primary-light text-primary">
                   <Bell className="size-7" aria-hidden="true" />
                 </span>
-                <p className="mt-4 text-base font-semibold text-foreground">
+                <p className="mt-4 break-words text-base font-semibold text-foreground">
                   {hasActiveFilters
-                    ? "No notifications found"
-                    : "No notifications yet"}
+                    ? t("seeker.notifications.emptyFilteredTitle")
+                    : t("seeker.notifications.emptyTitle")}
                 </p>
-                <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted">
+                <p className="mx-auto mt-1.5 max-w-sm break-words text-sm text-muted">
                   {hasActiveFilters
-                    ? "Try adjusting your search or filters."
-                    : "Updates about applications, interviews, and offers will appear here."}
+                    ? t("seeker.notifications.emptyFilteredBody")
+                    : t("seeker.notifications.emptyBody")}
                 </p>
               </div>
             ) : (
@@ -474,7 +491,7 @@ export function JobSeekerNotificationsPageContent() {
                             {!notification.isRead ? (
                               <span
                                 className="size-2 shrink-0 rounded-full bg-pin-state"
-                                aria-label="Unread"
+                                aria-label={t("seeker.notifications.unread")}
                               />
                             ) : null}
                           </h2>
@@ -494,7 +511,7 @@ export function JobSeekerNotificationsPageContent() {
                               onClick={() => void openNotification(notification)}
                               className="inline-flex min-h-8 items-center justify-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-9 sm:px-3.5 sm:text-xs"
                             >
-                              View details
+                              {t("seeker.common.viewDetails")}
                             </button>
                           ) : null}
                           <button
@@ -503,11 +520,13 @@ export function JobSeekerNotificationsPageContent() {
                             onClick={() =>
                               deleteMutation.mutate(notification.id)
                             }
-                            aria-label={`Delete notification: ${notification.title}`}
+                            aria-label={t("seeker.notifications.deleteAria", {
+                              title: notification.title,
+                            })}
                             className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-pin-state/40 bg-surface px-3 text-[11px] font-semibold text-pin-state transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:px-3.5 sm:text-xs"
                           >
                             <Trash2 className="size-3.5" aria-hidden="true" />
-                            Delete
+                            {t("seeker.common.delete")}
                           </button>
                         </div>
                       </div>
@@ -526,8 +545,8 @@ export function JobSeekerNotificationsPageContent() {
               totalPages={pagination.totalPages}
               onPageChange={(nextPage) => updateUrl({ page: nextPage })}
               isLoading={listQuery.isFetching}
-              ariaLabel="Notifications pagination"
-              entityLabel="notifications"
+              ariaLabel={t("seeker.notifications.paginationAria")}
+              entityLabel={t("seeker.notifications.entityLabel")}
             />
           ) : null}
         </div>

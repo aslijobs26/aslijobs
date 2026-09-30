@@ -1,5 +1,6 @@
 import { createEmployerModuleMetadata } from "@/components/employer-dashboard/EmployerModulePage";
 import { EmployerJobsPageContent } from "@/components/employer-jobs/EmployerJobsPageContent";
+import { EmployerJobsPageFallback } from "@/components/employer-jobs/EmployerJobsPageFallback";
 import { Suspense } from "react";
 
 export const metadata = createEmployerModuleMetadata({
@@ -9,11 +10,7 @@ export const metadata = createEmployerModuleMetadata({
 
 export default function EmployerJobsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="px-4 py-8 text-sm text-muted sm:px-6">Loading jobs…</div>
-      }
-    >
+    <Suspense fallback={<EmployerJobsPageFallback />}>
       <EmployerJobsPageContent />
     </Suspense>
   );

@@ -4,6 +4,7 @@ import { JobSeekerProfilePageSkeleton } from "@/components/job-seeker-dashboard/
 import { JOB_SEEKER_RESUME_QUERY_KEY } from "@/constants/job-seeker-profile";
 import { ROUTES } from "@/constants/routes";
 import { useJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
+import { useTranslate } from "@/i18n/translate";
 import { fetchSeekerApplications } from "@/services/job-seeker-applications.service";
 import {
   downloadMyResumePdf,
@@ -24,7 +25,6 @@ import {
   formatRelativeUpdatedAt,
   formatWhatsappNumber,
   JOB_SEEKER_PROFILE_TABS,
-  JOB_SEEKER_PROFILE_TAB_LABELS,
   parseProfileTab,
   type JobSeekerProfileTab,
 } from "@/utils/job-seeker-profile";
@@ -42,10 +42,16 @@ import {
 import { JobSeekerProfilePhotoAvatar } from "./JobSeekerProfilePhotoAvatar";
 import { JobSeekerProfileSidebar } from "./JobSeekerProfileSidebar";
 import { JobSeekerProfileTabPanels } from "./JobSeekerProfileTabPanels";
+import {
+  PROFILE_TAB_LABEL_KEYS,
+  translateProfileTag,
+  translateStrengthMessage,
+} from "./profile-i18n";
 import { ProfileStrengthCircle } from "./ProfileStrengthCircle";
 import { useJobSeekerProfileMutations } from "./useJobSeekerProfileMutations";
 
 export function JobSeekerProfileDashboard() {
+  const t = useTranslate();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -99,11 +105,11 @@ export function JobSeekerProfileDashboard() {
     mutationFn: regenerateMyResume,
     onSuccess: (resume) => {
       queryClient.setQueryData(JOB_SEEKER_RESUME_QUERY_KEY, resume);
-      showAppToast("Resume regenerated successfully.", "success");
+      showAppToast(t("seeker.profile.regenerateSuccess"), "success");
     },
     onError: (error) => {
       showAppToast(
-        getApiErrorMessage(error, "Could not regenerate resume."),
+        getApiErrorMessage(error, t("seeker.profile.regenerateError")),
         "error",
       );
     },
@@ -164,16 +170,16 @@ export function JobSeekerProfileDashboard() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
-      showAppToast("PDF download started.", "success");
+      showAppToast(t("seeker.profile.downloadStarted"), "success");
     } catch (error) {
       showAppToast(
-        getApiErrorMessage(error, "Could not download resume PDF."),
+        getApiErrorMessage(error, t("seeker.profile.downloadError")),
         "error",
       );
     } finally {
       setIsDownloading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleDeleteExperience = useCallback(
     async (index: number) => {
@@ -214,23 +220,26 @@ export function JobSeekerProfileDashboard() {
   if (profileQuery.isError || !jobSeeker) {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-16 text-center sm:px-6">
-        <h1 className="text-2xl font-bold text-foreground">Profile</h1>
-        <p className="mt-3 text-sm text-muted">
-          We couldn&apos;t load your profile. Please try again.
+        <h1 className="text-2xl font-bold text-foreground">
+          {t("seeker.profile.heading")}
+        </h1>
+        <p className="mt-3 break-words text-sm text-muted">
+          {t("seeker.profile.loadError")}
         </p>
         <Link
           href={ROUTES.FIND_JOBS}
           className="mt-6 inline-flex text-sm font-semibold text-primary underline underline-offset-2"
         >
-          Browse jobs
+          {t("seeker.common.browseJobs")}
         </Link>
       </div>
     );
   }
 
-  const fullName = jobSeeker.fullName?.trim() || "Job Seeker";
+  const fullName = jobSeeker.fullName?.trim() || t("seeker.common.jobSeeker");
   const locationLabel = formatCurrentLocation(jobSeeker);
   const updatedLabel = formatRelativeUpdatedAt(jobSeeker.updatedAt);
+  const strengthMessage = translateStrengthMessage(strength.message, t);
 
   const phoneLabel = formatWhatsappNumber(jobSeeker.whatsappNumber);
 
@@ -264,24 +273,24 @@ export function JobSeekerProfileDashboard() {
                 />
                 <div className="min-w-0 flex-1 sm:pt-0.5">
                   <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                    <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-[1.75rem]">
+                    <h1 className="min-w-0 break-words text-lg font-bold tracking-tight text-foreground sm:text-[1.75rem]">
                       {fullName}
                     </h1>
                     {jobSeeker.isWhatsappVerified ? (
                       <span
                         className="inline-flex items-center gap-1 rounded-full bg-resource-guide-icon-surface p-1 text-resource-guide-icon sm:rounded-md sm:px-2 sm:py-0.5 sm:text-[11px] sm:font-semibold"
-                        title="WhatsApp verified"
-                        aria-label="Verified"
+                        title={t("seeker.profile.whatsappVerified")}
+                        aria-label={t("seeker.common.verified")}
                       >
                         <BadgeCheck className="size-3.5" aria-hidden="true" />
                         <span className="hidden sm:inline" aria-hidden="true">
-                          Verified
+                          {t("seeker.common.verified")}
                         </span>
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-1 text-xs font-semibold text-foreground sm:text-sm">
-                    {jobSeeker.jobRole?.trim() || "Job Seeker"}
+                  <p className="mt-1 break-words text-xs font-semibold text-foreground sm:text-sm">
+                    {jobSeeker.jobRole?.trim() || t("seeker.common.jobSeeker")}
                   </p>
                   <ul className="mt-3 hidden flex-row flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted sm:flex">
                     {locationLabel ? (
@@ -304,7 +313,7 @@ export function JobSeekerProfileDashboard() {
                     ) : null}
                     {updatedLabel ? (
                       <li className="hidden text-xs text-muted lg:inline">
-                        Updated {updatedLabel}
+                        {t("seeker.profile.updated", { date: updatedLabel })}
                       </li>
                     ) : null}
                   </ul>
@@ -315,7 +324,7 @@ export function JobSeekerProfileDashboard() {
                           key={tag}
                           className="rounded-lg border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-foreground"
                         >
-                          {tag}
+                          {translateProfileTag(tag, t)}
                         </li>
                       ))}
                     </ul>
@@ -350,7 +359,7 @@ export function JobSeekerProfileDashboard() {
                       key={tag}
                       className="rounded-md border border-border-subtle bg-surface px-2 py-0.5 text-[11px] font-semibold text-foreground"
                     >
-                      {tag}
+                      {translateProfileTag(tag, t)}
                     </li>
                   ))}
                 </ul>
@@ -370,25 +379,27 @@ export function JobSeekerProfileDashboard() {
                 className="hidden sm:inline-flex"
               />
               <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground sm:text-sm">
-                  Profile {strength.percent}%
+                <p className="break-words text-xs font-bold text-foreground sm:text-sm">
+                  {t("seeker.profile.strengthPercent", {
+                    percent: strength.percent,
+                  })}
                 </p>
-                <p className="mt-0.5 text-[11px] leading-snug text-muted sm:text-xs">
-                  {strength.message}
+                <p className="mt-0.5 break-words text-[11px] leading-snug text-muted sm:text-xs">
+                  {strengthMessage}
                 </p>
                 <button
                   type="button"
                   className="mt-1.5 text-[11px] font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-xs"
                   onClick={() => setTab("preferences")}
                 >
-                  Improve profile →
+                  {t("seeker.profile.improve")}
                 </button>
               </div>
             </div>
           </div>
           {updatedLabel ? (
             <p className="mt-4 text-[11px] text-muted sm:text-xs lg:hidden">
-              Last updated {updatedLabel}
+              {t("seeker.profile.lastUpdated", { date: updatedLabel })}
             </p>
           ) : null}
         </div>
@@ -399,7 +410,7 @@ export function JobSeekerProfileDashboard() {
           <div
             className="overflow-x-auto scrollbar-hidden"
             role="tablist"
-            aria-label="Profile sections"
+            aria-label={t("seeker.profile.sectionsAria")}
           >
             <div className="flex min-w-max gap-0.5 border-b border-border-subtle">
               {JOB_SEEKER_PROFILE_TABS.map((tab) => {
@@ -420,7 +431,7 @@ export function JobSeekerProfileDashboard() {
                     )}
                     onClick={() => setTab(tab)}
                   >
-                    {JOB_SEEKER_PROFILE_TAB_LABELS[tab]}
+                    {t(PROFILE_TAB_LABEL_KEYS[tab])}
                   </button>
                 );
               })}
@@ -460,7 +471,7 @@ export function JobSeekerProfileDashboard() {
         <div className="min-w-0">
           <JobSeekerProfileSidebar
             strengthPercent={strength.percent}
-            strengthMessage={strength.message}
+            strengthMessage={strengthMessage}
             checklist={completion.checklist}
             completionPercent={completion.percent}
             onOpenPersonal={() => setActiveModal({ type: "personal" })}

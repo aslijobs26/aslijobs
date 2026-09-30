@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 
 type ProfileStrengthCircleProps = {
@@ -16,6 +17,7 @@ export function ProfileStrengthCircle({
   className,
   variant = "default",
 }: ProfileStrengthCircleProps) {
+  const t = useTranslate();
   const isSoft = variant === "soft";
   const strokeWidth = isSoft
     ? 5.5
@@ -49,7 +51,7 @@ export function ProfileStrengthCircle({
       )}
       style={{ width: size, height: size }}
       role="progressbar"
-      aria-label={`Profile strength ${clamped}%`}
+      aria-label={t("seeker.profile.strengthAria", { percent: clamped })}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={clamped}

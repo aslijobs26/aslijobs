@@ -3,6 +3,7 @@
 import { JobSeekerWorkspaceShellSkeleton } from "@/components/job-seeker-dashboard/skeletons/JobSeekerPageSkeletons";
 import { ROUTES } from "@/constants/routes";
 import { ensureJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
+import { useTranslate } from "@/i18n/translate";
 import { isUnauthorizedAuthError } from "@/utils/auth-errors";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import {
@@ -22,6 +23,7 @@ type JobSeekerAuthGuardProps = {
 type AuthStatus = "checking" | "authenticated" | "transient_error";
 
 export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
+  const t = useTranslate();
   const router = useRouter();
   const queryClient = useQueryClient();
   const queryClientRef = useRef(queryClient);
@@ -92,12 +94,11 @@ export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
   if (status === "transient_error") {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-hero-bg px-6 text-center">
-        <p className="text-sm font-medium text-foreground">
-          Unable to verify your session right now.
+        <p className="break-words text-sm font-medium text-foreground">
+          {t("seeker.session.errorTitle")}
         </p>
-        <p className="max-w-sm text-sm text-muted">
-          This is usually temporary (network or rate limiting). Your login was
-          not cleared.
+        <p className="max-w-sm break-words text-sm text-muted">
+          {t("seeker.session.errorBody")}
         </p>
         <button
           type="button"
@@ -107,7 +108,7 @@ export function JobSeekerAuthGuard({ children }: JobSeekerAuthGuardProps) {
           }}
           className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
-          Try again
+          {t("seeker.common.tryAgain")}
         </button>
       </div>
     );

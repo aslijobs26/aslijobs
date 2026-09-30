@@ -1,10 +1,10 @@
 "use client";
 
-import { EMPLOYER_APPLICATION_STATUS_LABELS } from "@/types/employer-applications";
 import type { EmployerApplicationListItem } from "@/types/employer-applications";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
-import { formatEmployerDashboardRelativeTime } from "@/utils/employer-dashboard-home";
+import { formatJobSearchRelativeTime } from "@/utils/job-search-format";
 import Link from "next/link";
 
 type DashboardRecentApplicationsProps = {
@@ -46,17 +46,19 @@ export function DashboardRecentApplications({
   isError = false,
   onRetry,
 }: DashboardRecentApplicationsProps) {
+  const t = useTranslate();
+
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
-        <h2 className="text-base font-bold text-foreground">
-          Recent Applications
+        <h2 className="min-w-0 break-words text-base font-bold text-foreground">
+          {t("employer.dashboard.recentApplications")}
         </h2>
         <Link
           href={ROUTES.EMPLOYER_CANDIDATES}
-          className="text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="shrink-0 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
-          View All
+          {t("employer.common.viewAll")}
         </Link>
       </div>
 
@@ -75,7 +77,7 @@ export function DashboardRecentApplications({
       {isError ? (
         <div className="px-4 py-10 text-center sm:px-5">
           <p className="text-sm font-semibold text-foreground">
-            Unable to load applications
+            {t("employer.dashboard.applicationsError")}
           </p>
           {onRetry ? (
             <button
@@ -83,7 +85,7 @@ export function DashboardRecentApplications({
               onClick={onRetry}
               className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-4 text-sm font-semibold text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              Try again
+              {t("employer.common.tryAgain")}
             </button>
           ) : null}
         </div>
@@ -92,10 +94,10 @@ export function DashboardRecentApplications({
       {!isLoading && !isError && applications.length === 0 ? (
         <div className="px-4 py-10 text-center sm:px-5">
           <p className="text-sm font-semibold text-foreground">
-            No applications yet
+            {t("employer.dashboard.noApplicationsTitle")}
           </p>
           <p className="mt-1 text-xs text-muted">
-            New candidates will appear here as they apply.
+            {t("employer.dashboard.noApplicationsDescription")}
           </p>
         </div>
       ) : null}
@@ -126,8 +128,7 @@ export function DashboardRecentApplications({
                           "bg-slate-100 text-slate-600",
                       )}
                     >
-                      {EMPLOYER_APPLICATION_STATUS_LABELS[application.status] ??
-                        application.status}
+                      {t(`employer.status.application.${application.status}`)}
                     </span>
                   </div>
                   <p className="mt-0.5 truncate text-xs text-muted">
@@ -139,9 +140,10 @@ export function DashboardRecentApplications({
                       application.candidateLocation,
                     ]
                       .filter(Boolean)
-                      .join(" · ") || "Details unavailable"}
+                      .join(" · ") ||
+                      t("employer.dashboard.detailsUnavailable")}
                     {" · "}
-                    {formatEmployerDashboardRelativeTime(application.appliedAt)}
+                    {formatJobSearchRelativeTime(application.appliedAt)}
                   </p>
                 </div>
               </Link>

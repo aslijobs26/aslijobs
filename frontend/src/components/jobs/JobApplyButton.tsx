@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslate } from "@/i18n/translate";
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/utils/cn";
@@ -24,6 +27,8 @@ export function JobApplyButton({
   startIcon,
   endIcon,
 }: JobApplyButtonProps) {
+  const t = useTranslate();
+
   if (isApplied) {
     return (
       <button
@@ -39,7 +44,7 @@ export function JobApplyButton({
         )}
       >
         <Check className="size-4 shrink-0" strokeWidth={2.5} aria-hidden="true" />
-        Applied
+        {t("jobs.applied")}
       </button>
     );
   }
@@ -52,7 +57,7 @@ export function JobApplyButton({
       className={cn(className, "disabled:cursor-not-allowed disabled:opacity-60")}
     >
       {startIcon}
-      {isApplying ? "Submitting…" : "Apply Now"}
+      {isApplying ? t("jobs.submitting") : t("jobs.applyNow")}
       {endIcon}
     </button>
   );

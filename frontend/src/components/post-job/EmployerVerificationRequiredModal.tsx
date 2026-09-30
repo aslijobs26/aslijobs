@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  EMPLOYER_VERIFICATION_REQUIRED_MODAL_BODY,
-  EMPLOYER_VERIFICATION_REQUIRED_MODAL_COMPLETE_CTA,
-  EMPLOYER_VERIFICATION_REQUIRED_MODAL_DRAFT_NOTE,
-  EMPLOYER_VERIFICATION_REQUIRED_MODAL_DRAFT_POINT,
-  EMPLOYER_VERIFICATION_REQUIRED_MODAL_LATER_CTA,
-  EMPLOYER_VERIFICATION_REQUIRED_MODAL_PENDING_BODY,
-  EMPLOYER_VERIFICATION_REQUIRED_MODAL_REJECTED_BODY,
-  EMPLOYER_VERIFICATION_REQUIRED_MODAL_TITLE,
-  EMPLOYER_VERIFICATION_REQUIRED_MODAL_VERIFY_POINT,
-  EMPLOYER_VERIFICATION_REQUIRED_MODAL_VIEW_DRAFT_CTA,
-} from "@/constants/post-job";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type { EmployerVerificationGateStatus } from "@/utils/employer-verification-required";
 import { cn } from "@/utils/cn";
 import { Check, Lock, X } from "lucide-react";
@@ -26,16 +15,16 @@ type EmployerVerificationRequiredModalProps = {
   onClose: () => void;
 };
 
-function modalBodyCopy(
+function modalBodyKey(
   verificationStatus: EmployerVerificationGateStatus | null | undefined,
-): string {
+): MessageKey {
   if (verificationStatus === "rejected") {
-    return EMPLOYER_VERIFICATION_REQUIRED_MODAL_REJECTED_BODY;
+    return "employer.verification.rejectedBody";
   }
   if (verificationStatus === "pending") {
-    return EMPLOYER_VERIFICATION_REQUIRED_MODAL_PENDING_BODY;
+    return "employer.verification.pendingBody";
   }
-  return EMPLOYER_VERIFICATION_REQUIRED_MODAL_BODY;
+  return "employer.verification.body";
 }
 
 export function EmployerVerificationRequiredModal({
@@ -46,6 +35,7 @@ export function EmployerVerificationRequiredModal({
   onViewDraft,
   onClose,
 }: EmployerVerificationRequiredModalProps) {
+  const t = useTranslate();
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -74,13 +64,14 @@ export function EmployerVerificationRequiredModal({
     };
   }, [onClose]);
 
-  const description = modalBodyCopy(verificationStatus);
+  const title = t("employer.verification.title");
+  const description = t(modalBodyKey(verificationStatus));
 
   return (
     <div className="fixed inset-0 z-50" role="presentation">
       <button
         type="button"
-        aria-label="Close employer verification required dialog"
+        aria-label={t("employer.verification.closeDialogAria")}
         className="absolute inset-0 bg-foreground/45"
         onClick={onClose}
       />
@@ -102,7 +93,7 @@ export function EmployerVerificationRequiredModal({
             type="button"
             onClick={onClose}
             className="absolute top-3 right-3 inline-flex size-11 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            aria-label={`Close ${EMPLOYER_VERIFICATION_REQUIRED_MODAL_TITLE}`}
+            aria-label={t("employer.verification.closeNamedAria", { title })}
           >
             <X className="size-4" strokeWidth={2.25} aria-hidden="true" />
           </button>
@@ -114,9 +105,9 @@ export function EmployerVerificationRequiredModal({
 
             <h2
               id={titleId}
-              className="mt-4 text-lg font-bold tracking-tight text-foreground sm:text-xl"
+              className="mt-4 text-lg font-bold tracking-tight break-words text-foreground sm:text-xl"
             >
-              {EMPLOYER_VERIFICATION_REQUIRED_MODAL_TITLE}
+              {title}
             </h2>
             <p
               id={descriptionId}
@@ -133,7 +124,9 @@ export function EmployerVerificationRequiredModal({
                 strokeWidth={2.5}
                 aria-hidden="true"
               />
-              <span>{EMPLOYER_VERIFICATION_REQUIRED_MODAL_DRAFT_POINT}</span>
+              <span className="min-w-0 break-words">
+                {t("employer.verification.draftPoint")}
+              </span>
             </li>
             <li className="flex items-start gap-2.5 text-sm leading-relaxed text-foreground">
               <Check
@@ -141,12 +134,14 @@ export function EmployerVerificationRequiredModal({
                 strokeWidth={2.5}
                 aria-hidden="true"
               />
-              <span>{EMPLOYER_VERIFICATION_REQUIRED_MODAL_VERIFY_POINT}</span>
+              <span className="min-w-0 break-words">
+                {t("employer.verification.verifyPoint")}
+              </span>
             </li>
           </ul>
 
           <p className="mt-3 text-center text-xs leading-relaxed text-muted sm:text-sm">
-            {EMPLOYER_VERIFICATION_REQUIRED_MODAL_DRAFT_NOTE}
+            {t("employer.verification.draftNote")}
           </p>
 
           <div className="mt-5 flex flex-col gap-2.5 sm:mt-6">
@@ -156,14 +151,14 @@ export function EmployerVerificationRequiredModal({
               onClick={onCompleteVerification}
               className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary-soft px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              {EMPLOYER_VERIFICATION_REQUIRED_MODAL_COMPLETE_CTA}
+              {t("employer.verification.completeCta")}
             </button>
             <button
               type="button"
               onClick={onContinueLater}
               className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              {EMPLOYER_VERIFICATION_REQUIRED_MODAL_LATER_CTA}
+              {t("employer.verification.laterCta")}
             </button>
             {showViewDraft && onViewDraft ? (
               <button
@@ -171,7 +166,7 @@ export function EmployerVerificationRequiredModal({
                 onClick={onViewDraft}
                 className="inline-flex h-11 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               >
-                {EMPLOYER_VERIFICATION_REQUIRED_MODAL_VIEW_DRAFT_CTA}
+                {t("employer.verification.viewDraftCta")}
               </button>
             ) : null}
           </div>

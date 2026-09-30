@@ -1,6 +1,7 @@
 "use client";
 
 import { createLocationSelection } from "@/components/employer-jobs/jobs-filters";
+import { useTranslate } from "@/i18n/translate";
 import { searchIndiaPreferredLocations } from "@/services/nominatim-location.service";
 import type { PlaceSuggestion } from "@/types/nominatim-location";
 import { cn } from "@/utils/cn";
@@ -24,12 +25,13 @@ type JobsLocationAutocompleteProps = {
 export function JobsLocationAutocomplete({
   id,
   value,
-  placeholder = "City or state",
+  placeholder,
   inputClassName,
   onSelect,
   onClear,
   onInputChange,
 }: JobsLocationAutocompleteProps) {
+  const t = useTranslate();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const committedValueRef = useRef("");
@@ -100,7 +102,7 @@ export function JobsLocationAutocomplete({
         id={id}
         type="text"
         value={value}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("employer.common.cityOrState")}
         autoComplete="off"
         role="combobox"
         aria-expanded={showDropdown}
@@ -131,10 +133,14 @@ export function JobsLocationAutocomplete({
           className="absolute z-30 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
         >
           {isLoading ? (
-            <li className="px-3 py-2 text-xs text-muted">Searching…</li>
+            <li className="px-3 py-2 text-xs text-muted">
+              {t("employer.common.searching")}
+            </li>
           ) : null}
           {!isLoading && visibleSuggestions.length === 0 ? (
-            <li className="px-3 py-2 text-xs text-muted">No locations found</li>
+            <li className="px-3 py-2 text-xs text-muted">
+              {t("employer.common.noLocationsFound")}
+            </li>
           ) : null}
           {visibleSuggestions.map((suggestion) => {
             const selected = suggestion.label === value;

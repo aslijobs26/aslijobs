@@ -1,21 +1,21 @@
-import {
-  EMPLOYER_JOBS_HOW_IT_WORKS_LABEL,
-  EMPLOYER_JOBS_PAGE_SUBTITLE,
-  EMPLOYER_JOBS_PAGE_TITLE,
-} from "@/constants/employer-jobs";
+"use client";
+
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { CirclePlay } from "lucide-react";
 import Link from "next/link";
 
 export function EmployerJobsHeader() {
+  const t = useTranslate();
+
   return (
     <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-[1.625rem]">
-          {EMPLOYER_JOBS_PAGE_TITLE}
+          {t("employer.nav.jobs")}
         </h1>
-        <p className="mt-0.5 max-w-xl text-xs leading-snug text-muted sm:text-sm">
-          {EMPLOYER_JOBS_PAGE_SUBTITLE}
+        <p className="mt-0.5 max-w-xl break-words text-xs leading-snug text-muted sm:text-sm">
+          {t("employer.jobs.pageSubtitle")}
         </p>
       </div>
 
@@ -28,7 +28,7 @@ export function EmployerJobsHeader() {
           aria-hidden="true"
           strokeWidth={2}
         />
-        {EMPLOYER_JOBS_HOW_IT_WORKS_LABEL}
+        {t("employer.jobs.howItWorks")}
       </Link>
     </header>
   );

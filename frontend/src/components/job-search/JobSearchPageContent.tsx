@@ -10,6 +10,7 @@ import { JobSearchResultsHeader } from "@/components/job-search/JobSearchResults
 import { JobSearchWhatsAppBanner } from "@/components/job-search/JobSearchWhatsAppBanner";
 import { JOB_SEARCH_RETURN_KEY } from "@/components/jobs/PublicJobDetailPage";
 import { ROUTES } from "@/constants/routes";
+import { useSiteLanguage } from "@/i18n/site-language";
 import {
   fetchPublicActiveJobByPublicId,
   fetchPublicActiveJobs,
@@ -73,6 +74,7 @@ export function JobSearchPageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const siteLanguage = useSiteLanguage();
   const isSplitView = useSyncExternalStore(
     subscribeToSplitViewMedia,
     getSplitViewSnapshot,
@@ -154,8 +156,11 @@ export function JobSearchPageContent() {
   }, []);
 
   const listParams = useMemo(
-    () => buildFetchPublicJobsParams(urlState),
-    [urlState],
+    () => ({
+      ...buildFetchPublicJobsParams(urlState),
+      language: siteLanguage.code,
+    }),
+    [siteLanguage.code, urlState],
   );
 
   const seekerAuthKey = getJobSeekerAccessToken() ? "seeker" : "anon";
@@ -220,9 +225,12 @@ export function JobSearchPageContent() {
     selectedJobId || (isSplitView ? jobs[0]?.jobId : "") || "";
 
   const detailQuery = useQuery({
-    queryKey: ["public-job", seekerAuthKey, seekerAuthEpoch, detailJobId],
+    queryKey: ["public-job", seekerAuthKey, seekerAuthEpoch, detailJobId, siteLanguage.code],
     queryFn: ({ signal }) =>
-      fetchPublicActiveJobByPublicId(detailJobId, { signal }),
+      fetchPublicActiveJobByPublicId(detailJobId, {
+        signal,
+        language: siteLanguage.code,
+      }),
     enabled: Boolean(detailJobId) && isSplitView,
     retry: false,
   });

@@ -1,18 +1,19 @@
 "use client";
 
-import {
-  EMPLOYER_JOBS_BULK_DELETE_CONFIRM_LABEL,
-  EMPLOYER_JOBS_BULK_DELETE_DESCRIPTION,
-  EMPLOYER_JOBS_BULK_DELETE_TITLE,
-  EMPLOYER_JOBS_BULK_DELETE_WARNING,
-  EMPLOYER_JOBS_CASCADE_DELETE_ITEMS,
-  EMPLOYER_JOBS_DELETE_ALL_CONFIRM_HINT,
-  EMPLOYER_JOBS_DELETE_ALL_CONFIRM_LABEL,
-  EMPLOYER_JOBS_DELETE_ALL_DESCRIPTION,
-  EMPLOYER_JOBS_DELETE_ALL_TITLE,
-} from "@/constants/employer-jobs";
+import { useTranslate } from "@/i18n/translate";
 import { X } from "lucide-react";
 import { useEffect, useId, useState } from "react";
+
+const CASCADE_DELETE_ITEM_KEYS = [
+  "employer.jobs.cascade.jobDetails",
+  "employer.jobs.cascade.applications",
+  "employer.jobs.cascade.savedCandidates",
+  "employer.jobs.cascade.shortlistedCandidates",
+  "employer.jobs.cascade.interviewRecords",
+  "employer.jobs.cascade.calendarEvents",
+  "employer.jobs.cascade.notifications",
+  "employer.jobs.cascade.analytics",
+] as const;
 
 type EmployerJobsBulkDeleteModalProps = {
   variant: "selected" | "all";
@@ -31,6 +32,7 @@ export function EmployerJobsBulkDeleteModal({
   onClose,
   onConfirm,
 }: EmployerJobsBulkDeleteModalProps) {
+  const t = useTranslate();
   const titleId = useId();
   const confirmId = useId();
   const [confirmText, setConfirmText] = useState("");
@@ -56,7 +58,7 @@ export function EmployerJobsBulkDeleteModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <button
         type="button"
-        aria-label="Close dialog backdrop"
+        aria-label={t("employer.common.closeDialog")}
         className="absolute inset-0 bg-foreground/40"
         onClick={() => {
           if (!isSubmitting) {
@@ -71,19 +73,19 @@ export function EmployerJobsBulkDeleteModal({
         className="relative z-10 w-full max-w-md overflow-hidden rounded-t-2xl border border-border-subtle bg-surface shadow-xl sm:rounded-2xl"
       >
         <div className="flex items-start justify-between gap-3 border-b border-border-subtle px-4 py-3 sm:px-5">
-          <div>
+          <div className="min-w-0">
             <h2
               id={titleId}
-              className="text-base font-semibold text-foreground"
+              className="break-words text-base font-semibold text-foreground"
             >
               {isAll
-                ? EMPLOYER_JOBS_DELETE_ALL_TITLE
-                : EMPLOYER_JOBS_BULK_DELETE_TITLE}
+                ? t("employer.jobs.deleteAllJobs")
+                : t("employer.jobs.bulkDeleteTitle")}
             </h2>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 break-words text-sm text-muted">
               {isAll
-                ? EMPLOYER_JOBS_DELETE_ALL_DESCRIPTION
-                : EMPLOYER_JOBS_BULK_DELETE_DESCRIPTION}
+                ? t("employer.jobs.deleteAllDescription")
+                : t("employer.jobs.bulkDeleteDescription")}
             </p>
           </div>
           <button
@@ -91,7 +93,7 @@ export function EmployerJobsBulkDeleteModal({
             onClick={onClose}
             disabled={isSubmitting}
             className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
-            aria-label="Close"
+            aria-label={t("common.close")}
           >
             <X className="size-5" aria-hidden="true" />
           </button>
@@ -100,35 +102,36 @@ export function EmployerJobsBulkDeleteModal({
         <div className="space-y-3 px-4 py-4 sm:px-5">
           <div className="rounded-xl border border-border-subtle bg-hero-bg/60 px-3 py-3">
             <p className="text-sm font-semibold text-foreground">
-              {jobCount.toLocaleString("en-IN")}{" "}
-              {jobCount === 1 ? "Job" : "Jobs"}
+              {t(jobCount === 1 ? "employer.jobs.jobCountOne" : "employer.jobs.jobCountMany", {
+                count: jobCount.toLocaleString("en-IN"),
+              })}
             </p>
             {isAll ? (
               <p className="mt-1 text-xs text-muted">
-                Applications attached:{" "}
+                {t("employer.jobs.applicationsAttached")}{" "}
                 <span className="font-semibold text-foreground">
                   {applicationCount.toLocaleString("en-IN")}
                 </span>
               </p>
             ) : null}
             <p className="mt-2 text-xs font-semibold text-foreground">
-              Permanently removes:
+              {t("employer.jobs.permanentlyRemoves")}
             </p>
             <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-muted">
-              {EMPLOYER_JOBS_CASCADE_DELETE_ITEMS.map((item) => (
-                <li key={item}>{item}</li>
+              {CASCADE_DELETE_ITEM_KEYS.map((itemKey) => (
+                <li key={itemKey}>{t(itemKey)}</li>
               ))}
             </ul>
           </div>
 
-          <p className="text-xs font-semibold text-pin-state">
-            {EMPLOYER_JOBS_BULK_DELETE_WARNING}
+          <p className="break-words text-xs font-semibold text-pin-state">
+            {t("employer.jobs.bulkDeleteWarning")}
           </p>
 
           {isAll ? (
             <label className="block" htmlFor={confirmId}>
               <span className="mb-1.5 block text-xs font-semibold text-foreground">
-                {EMPLOYER_JOBS_DELETE_ALL_CONFIRM_HINT}
+                {t("employer.jobs.deleteAllConfirmHint")}
               </span>
               <input
                 id={confirmId}
@@ -150,7 +153,7 @@ export function EmployerJobsBulkDeleteModal({
             disabled={isSubmitting}
             className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-4 text-sm font-semibold text-foreground hover:bg-primary-light/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -159,10 +162,10 @@ export function EmployerJobsBulkDeleteModal({
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-pin-state px-4 text-sm font-semibold text-surface hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30 disabled:opacity-60"
           >
             {isSubmitting
-              ? "Deleting…"
+              ? t("employer.common.deleting")
               : isAll
-                ? EMPLOYER_JOBS_DELETE_ALL_CONFIRM_LABEL
-                : EMPLOYER_JOBS_BULK_DELETE_CONFIRM_LABEL}
+                ? t("employer.jobs.deleteAllJobs")
+                : t("employer.jobs.bulkDeleteTitle")}
           </button>
         </div>
       </div>

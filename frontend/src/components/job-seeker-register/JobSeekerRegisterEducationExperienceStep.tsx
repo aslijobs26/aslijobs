@@ -3,12 +3,14 @@
 import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
+import { useAuthMessageTranslator } from "@/components/employer-register/useAuthMessageTranslator";
 import { PostJobDatePicker } from "@/components/post-job/PostJobDatePicker";
 import {
   JOB_SEEKER_AVAILABILITY_STATUS_OPTIONS,
   JOB_SEEKER_EDUCATION_OPTIONS,
   JOB_SEEKER_LANGUAGE_OPTIONS,
 } from "@/constants/job-seeker-register";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type {
   JobSeekerAvailabilityStatus,
   JobSeekerEducation,
@@ -20,6 +22,11 @@ import type {
 import type { AuthFieldErrors } from "@/utils/auth-field-errors";
 import { cn } from "@/utils/cn";
 import { Check } from "lucide-react";
+import {
+  AVAILABILITY_LABEL_KEYS,
+  EDUCATION_LEVEL_LABEL_KEYS,
+  localizeOptions,
+} from "./job-seeker-register-option-labels";
 
 export const EMPTY_EDUCATION: JobSeekerEducation = {
   level: "no_formal_education",
@@ -52,6 +59,14 @@ export function createEmptyExperience(): JobSeekerExperienceEntry {
     achievements: "",
   };
 }
+
+const EXPERIENCE_TYPE_OPTIONS: ReadonlyArray<{
+  value: JobSeekerExperienceType;
+  labelKey: MessageKey;
+}> = [
+  { value: "fresher", labelKey: "auth.jobSeekerRegister.fresher" },
+  { value: "experienced", labelKey: "auth.jobSeekerRegister.experienced" },
+];
 
 type JobSeekerRegisterEducationExperienceStepProps = {
   education: JobSeekerEducation;
@@ -90,6 +105,7 @@ function Field({
   required?: boolean;
   error?: string | null;
 }) {
+  const translateMessage = useAuthMessageTranslator();
   const errorId = `${id}-error`;
 
   return (
@@ -114,7 +130,7 @@ function Field({
         aria-invalid={Boolean(error) || undefined}
         aria-describedby={error ? errorId : undefined}
       />
-      <FieldError id={errorId} message={error} />
+      <FieldError id={errorId} message={translateMessage(error)} />
     </div>
   );
 }
@@ -124,6 +140,7 @@ function renderEducationFields(
   disabled: boolean,
   fieldErrors: AuthFieldErrors,
   onChange: (patch: Partial<JobSeekerEducation>) => void,
+  translateKey: (key: MessageKey) => string,
   onClearFieldError?: (field: string) => void,
 ) {
   const level = education.level;
@@ -139,12 +156,30 @@ function renderEducationFields(
     return null;
   }
 
+  const passingYearField = (
+    <Field
+      id="js-edu-year"
+      name="education.passingYear"
+      label={translateKey("auth.jobSeekerRegister.passingYear")}
+      value={education.passingYear}
+      required
+      error={fieldErrors["education.passingYear"]}
+      onChange={(passingYear) =>
+        clearAndPatch({
+          passingYear: passingYear.replace(/\D/g, "").slice(0, 4),
+        })
+      }
+      disabled={disabled}
+      placeholder="YYYY"
+    />
+  );
+
   if (level === "below_10th") {
     return (
       <Field
         id="js-edu-school"
         name="education.schoolName"
-        label="School Name"
+        label={translateKey("auth.jobSeekerRegister.schoolName")}
         value={education.schoolName}
         required
         error={fieldErrors["education.schoolName"]}
@@ -160,7 +195,7 @@ function renderEducationFields(
         <Field
           id="js-edu-school"
           name="education.schoolName"
-          label="School Name"
+          label={translateKey("auth.jobSeekerRegister.schoolName")}
           value={education.schoolName}
           required
           error={fieldErrors["education.schoolName"]}
@@ -170,28 +205,14 @@ function renderEducationFields(
         <Field
           id="js-edu-board"
           name="education.board"
-          label="Board"
+          label={translateKey("auth.jobSeekerRegister.board")}
           value={education.board}
           required
           error={fieldErrors["education.board"]}
           onChange={(board) => clearAndPatch({ board })}
           disabled={disabled}
         />
-        <Field
-          id="js-edu-year"
-          name="education.passingYear"
-          label="Passing Year"
-          value={education.passingYear}
-          required
-          error={fieldErrors["education.passingYear"]}
-          onChange={(passingYear) =>
-            clearAndPatch({
-              passingYear: passingYear.replace(/\D/g, "").slice(0, 4),
-            })
-          }
-          disabled={disabled}
-          placeholder="YYYY"
-        />
+        {passingYearField}
       </>
     );
   }
@@ -202,7 +223,7 @@ function renderEducationFields(
         <Field
           id="js-edu-college"
           name="education.collegeName"
-          label="College Name"
+          label={translateKey("auth.jobSeekerRegister.collegeName")}
           value={education.collegeName}
           required
           error={fieldErrors["education.collegeName"]}
@@ -212,28 +233,14 @@ function renderEducationFields(
         <Field
           id="js-edu-stream"
           name="education.stream"
-          label="Stream"
+          label={translateKey("auth.jobSeekerRegister.stream")}
           value={education.stream}
           required
           error={fieldErrors["education.stream"]}
           onChange={(stream) => clearAndPatch({ stream })}
           disabled={disabled}
         />
-        <Field
-          id="js-edu-year"
-          name="education.passingYear"
-          label="Passing Year"
-          value={education.passingYear}
-          required
-          error={fieldErrors["education.passingYear"]}
-          onChange={(passingYear) =>
-            clearAndPatch({
-              passingYear: passingYear.replace(/\D/g, "").slice(0, 4),
-            })
-          }
-          disabled={disabled}
-          placeholder="YYYY"
-        />
+        {passingYearField}
       </>
     );
   }
@@ -244,7 +251,7 @@ function renderEducationFields(
         <Field
           id="js-edu-institute"
           name="education.instituteName"
-          label="Institute Name"
+          label={translateKey("auth.jobSeekerRegister.instituteName")}
           value={education.instituteName}
           required
           error={fieldErrors["education.instituteName"]}
@@ -254,28 +261,14 @@ function renderEducationFields(
         <Field
           id="js-edu-trade"
           name="education.trade"
-          label="Trade"
+          label={translateKey("auth.jobSeekerRegister.trade")}
           value={education.trade}
           required
           error={fieldErrors["education.trade"]}
           onChange={(trade) => clearAndPatch({ trade })}
           disabled={disabled}
         />
-        <Field
-          id="js-edu-year"
-          name="education.passingYear"
-          label="Passing Year"
-          value={education.passingYear}
-          required
-          error={fieldErrors["education.passingYear"]}
-          onChange={(passingYear) =>
-            clearAndPatch({
-              passingYear: passingYear.replace(/\D/g, "").slice(0, 4),
-            })
-          }
-          disabled={disabled}
-          placeholder="YYYY"
-        />
+        {passingYearField}
       </>
     );
   }
@@ -286,7 +279,7 @@ function renderEducationFields(
         <Field
           id="js-edu-college"
           name="education.collegeName"
-          label="College Name"
+          label={translateKey("auth.jobSeekerRegister.collegeName")}
           value={education.collegeName}
           required
           error={fieldErrors["education.collegeName"]}
@@ -296,28 +289,14 @@ function renderEducationFields(
         <Field
           id="js-edu-branch"
           name="education.branch"
-          label="Branch"
+          label={translateKey("auth.jobSeekerRegister.branch")}
           value={education.branch}
           required
           error={fieldErrors["education.branch"]}
           onChange={(branch) => clearAndPatch({ branch })}
           disabled={disabled}
         />
-        <Field
-          id="js-edu-year"
-          name="education.passingYear"
-          label="Passing Year"
-          value={education.passingYear}
-          required
-          error={fieldErrors["education.passingYear"]}
-          onChange={(passingYear) =>
-            clearAndPatch({
-              passingYear: passingYear.replace(/\D/g, "").slice(0, 4),
-            })
-          }
-          disabled={disabled}
-          placeholder="YYYY"
-        />
+        {passingYearField}
       </>
     );
   }
@@ -327,7 +306,7 @@ function renderEducationFields(
       <Field
         id="js-edu-college"
         name="education.collegeName"
-        label="College Name"
+        label={translateKey("auth.jobSeekerRegister.collegeName")}
         value={education.collegeName}
         required
         error={fieldErrors["education.collegeName"]}
@@ -337,7 +316,7 @@ function renderEducationFields(
       <Field
         id="js-edu-degree"
         name="education.degree"
-        label="Degree"
+        label={translateKey("auth.jobSeekerRegister.degree")}
         value={education.degree}
         required
         error={fieldErrors["education.degree"]}
@@ -347,28 +326,14 @@ function renderEducationFields(
       <Field
         id="js-edu-specialization"
         name="education.specialization"
-        label="Specialization"
+        label={translateKey("auth.jobSeekerRegister.specialization")}
         value={education.specialization}
         required
         error={fieldErrors["education.specialization"]}
         onChange={(specialization) => clearAndPatch({ specialization })}
         disabled={disabled}
       />
-      <Field
-        id="js-edu-year"
-        name="education.passingYear"
-        label="Passing Year"
-        value={education.passingYear}
-        required
-        error={fieldErrors["education.passingYear"]}
-        onChange={(passingYear) =>
-          clearAndPatch({
-            passingYear: passingYear.replace(/\D/g, "").slice(0, 4),
-          })
-        }
-        disabled={disabled}
-        placeholder="YYYY"
-      />
+      {passingYearField}
     </>
   );
 }
@@ -395,12 +360,24 @@ export function JobSeekerRegisterEducationExperienceStep({
   onAvailabilityStatusChange,
   onClearFieldError,
 }: JobSeekerRegisterEducationExperienceStepProps) {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
   const todayIso = getLocalTodayIso();
   const educationLevelErrorId = "job-seeker-register-education-error";
   const experienceTypeErrorId = "job-seeker-experience-type-error";
   const experiencesErrorId = "job-seeker-experiences-error";
   const languagesErrorId = "job-seeker-languages-error";
   const availabilityErrorId = "job-seeker-register-availability-error";
+  const educationOptions = localizeOptions(
+    JOB_SEEKER_EDUCATION_OPTIONS,
+    EDUCATION_LEVEL_LABEL_KEYS,
+    t,
+  );
+  const availabilityOptions = localizeOptions(
+    JOB_SEEKER_AVAILABILITY_STATUS_OPTIONS,
+    AVAILABILITY_LABEL_KEYS,
+    t,
+  );
 
   const updateEducation = (patch: Partial<JobSeekerEducation>) => {
     onEducationChange({ ...education, ...patch });
@@ -432,15 +409,17 @@ export function JobSeekerRegisterEducationExperienceStep({
   return (
     <>
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">Education</h2>
+        <h2 className="text-sm font-semibold text-foreground">
+          {t("auth.jobSeekerRegister.educationTitle")}
+        </h2>
         <div className="employer-register-form-stack">
           <EmployerRegisterSearchableSelect
             id="job-seeker-register-education"
             name="education.level"
-            label="Education"
+            label={t("auth.jobSeekerRegister.educationLabel")}
             value={education.level}
-            placeholder="Select education"
-            options={JOB_SEEKER_EDUCATION_OPTIONS}
+            placeholder={t("auth.jobSeekerRegister.educationPlaceholder")}
+            options={educationOptions}
             onChange={(value) => {
               onClearFieldError?.("education.level");
               onEducationChange({
@@ -459,7 +438,7 @@ export function JobSeekerRegisterEducationExperienceStep({
           />
           <FieldError
             id={educationLevelErrorId}
-            message={fieldErrors["education.level"]}
+            message={translateMessage(fieldErrors["education.level"])}
           />
         </div>
         {renderEducationFields(
@@ -467,26 +446,24 @@ export function JobSeekerRegisterEducationExperienceStep({
           disabled,
           fieldErrors,
           updateEducation,
+          t,
           onClearFieldError,
         )}
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">Experience</h2>
+        <h2 className="text-sm font-semibold text-foreground">
+          {t("auth.jobSeekerRegister.experienceTitle")}
+        </h2>
         <fieldset className="space-y-2" aria-describedby={experienceTypeErrorId}>
-          <legend className="employer-register-form-label">
-            Do you have work experience?{" "}
+          <legend className="employer-register-form-label break-words">
+            {t("auth.jobSeekerRegister.hasExperience")}{" "}
             <span className="text-red-600" aria-hidden="true">
               *
             </span>
           </legend>
           <div className="flex flex-wrap gap-2">
-            {(
-              [
-                { value: "fresher", label: "Fresher" },
-                { value: "experienced", label: "Experienced" },
-              ] as const
-            ).map((option) => (
+            {EXPERIENCE_TYPE_OPTIONS.map((option) => (
               <label
                 key={option.value}
                 className={cn(
@@ -522,13 +499,13 @@ export function JobSeekerRegisterEducationExperienceStep({
                     }
                   }}
                 />
-                {option.label}
+                {t(option.labelKey)}
               </label>
             ))}
           </div>
           <FieldError
             id={experienceTypeErrorId}
-            message={fieldErrors.experienceType}
+            message={translateMessage(fieldErrors.experienceType)}
           />
         </fieldset>
 
@@ -543,8 +520,10 @@ export function JobSeekerRegisterEducationExperienceStep({
                   className="space-y-3 rounded-xl border border-border-subtle p-3"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-foreground">
-                      Experience {index + 1}
+                    <p className="min-w-0 break-words text-sm font-semibold text-foreground">
+                      {t("auth.jobSeekerRegister.experienceNumber", {
+                        number: index + 1,
+                      })}
                     </p>
                     {experiences.length > 1 ? (
                       <button
@@ -557,14 +536,14 @@ export function JobSeekerRegisterEducationExperienceStep({
                           )
                         }
                       >
-                        Remove
+                        {t("auth.common.remove")}
                       </button>
                     ) : null}
                   </div>
                   <Field
                     id={`js-exp-company-${index}`}
                     name={`experiences.${index}.companyName`}
-                    label="Company Name"
+                    label={t("auth.jobSeekerRegister.companyName")}
                     value={entry.companyName}
                     required
                     error={fieldErrors[`experiences.${index}.companyName`]}
@@ -576,7 +555,7 @@ export function JobSeekerRegisterEducationExperienceStep({
                   <Field
                     id={`js-exp-role-${index}`}
                     name={`experiences.${index}.jobRole`}
-                    label="Job Role"
+                    label={t("auth.jobSeekerRegister.jobRole")}
                     value={entry.jobRole}
                     required
                     error={fieldErrors[`experiences.${index}.jobRole`]}
@@ -586,7 +565,7 @@ export function JobSeekerRegisterEducationExperienceStep({
                   <Field
                     id={`js-exp-industry-${index}`}
                     name={`experiences.${index}.industry`}
-                    label="Industry"
+                    label={t("auth.jobSeekerRegister.industry")}
                     value={entry.industry}
                     required
                     error={fieldErrors[`experiences.${index}.industry`]}
@@ -602,7 +581,7 @@ export function JobSeekerRegisterEducationExperienceStep({
                         required
                         className="employer-register-form-label"
                       >
-                        Start Date
+                        {t("auth.jobSeekerRegister.startDate")}
                       </RequiredFieldLabel>
                       <PostJobDatePicker
                         id={`js-exp-start-${index}`}
@@ -621,7 +600,7 @@ export function JobSeekerRegisterEducationExperienceStep({
                                 : entry.endDate,
                           })
                         }
-                        aria-label="Experience start date"
+                        aria-label={t("auth.jobSeekerRegister.startDateAria")}
                         aria-required
                         aria-invalid={Boolean(
                           fieldErrors[`experiences.${index}.startDate`],
@@ -634,9 +613,9 @@ export function JobSeekerRegisterEducationExperienceStep({
                       />
                       <FieldError
                         id={startErrorId}
-                        message={
-                          fieldErrors[`experiences.${index}.startDate`]
-                        }
+                        message={translateMessage(
+                          fieldErrors[`experiences.${index}.startDate`],
+                        )}
                       />
                     </div>
                     <div className="employer-register-form-stack">
@@ -645,15 +624,17 @@ export function JobSeekerRegisterEducationExperienceStep({
                         required={!entry.currentlyWorking}
                         className="employer-register-form-label"
                       >
-                        End Date
+                        {t("auth.jobSeekerRegister.endDate")}
                       </RequiredFieldLabel>
                       {entry.currentlyWorking ? (
                         <div
                           id={`js-exp-end-${index}`}
                           className="flex h-12 w-full items-center rounded-md border border-border bg-hero-bg px-3.5 text-sm font-medium text-muted"
-                          aria-label="Experience end date Present"
+                          aria-label={t(
+                            "auth.jobSeekerRegister.endDatePresentAria",
+                          )}
                         >
-                          Present
+                          {t("auth.jobSeekerRegister.present")}
                         </div>
                       ) : (
                         <PostJobDatePicker
@@ -668,7 +649,7 @@ export function JobSeekerRegisterEducationExperienceStep({
                           onChange={(endDate) =>
                             updateExperience(index, { endDate })
                           }
-                          aria-label="Experience end date"
+                          aria-label={t("auth.jobSeekerRegister.endDateAria")}
                           aria-required
                           aria-invalid={Boolean(
                             fieldErrors[`experiences.${index}.endDate`],
@@ -682,7 +663,9 @@ export function JobSeekerRegisterEducationExperienceStep({
                       )}
                       <FieldError
                         id={endErrorId}
-                        message={fieldErrors[`experiences.${index}.endDate`]}
+                        message={translateMessage(
+                          fieldErrors[`experiences.${index}.endDate`],
+                        )}
                       />
                     </div>
                   </div>
@@ -698,23 +681,23 @@ export function JobSeekerRegisterEducationExperienceStep({
                         })
                       }
                     />
-                    Currently Working
+                    {t("auth.jobSeekerRegister.currentlyWorking")}
                   </label>
                   <Field
                     id={`js-exp-duration-${index}`}
                     name={`experiences.${index}.duration`}
-                    label="Experience Duration"
+                    label={t("auth.jobSeekerRegister.duration")}
                     value={entry.duration}
                     onChange={(duration) =>
                       updateExperience(index, { duration })
                     }
                     disabled={disabled}
-                    placeholder="e.g. 2 years"
+                    placeholder={t("auth.jobSeekerRegister.durationPlaceholder")}
                   />
                   <Field
                     id={`js-exp-salary-${index}`}
                     name={`experiences.${index}.salary`}
-                    label="Salary"
+                    label={t("auth.jobSeekerRegister.salary")}
                     value={entry.salary}
                     required
                     error={fieldErrors[`experiences.${index}.salary`]}
@@ -728,7 +711,7 @@ export function JobSeekerRegisterEducationExperienceStep({
                   <Field
                     id={`js-exp-location-${index}`}
                     name={`experiences.${index}.location`}
-                    label="Location"
+                    label={t("auth.jobSeekerRegister.location")}
                     value={entry.location}
                     required
                     error={fieldErrors[`experiences.${index}.location`]}
@@ -746,17 +729,17 @@ export function JobSeekerRegisterEducationExperienceStep({
           <>
             <FieldError
               id={experiencesErrorId}
-              message={fieldErrors.experiences}
+              message={translateMessage(fieldErrors.experiences)}
             />
             <button
               type="button"
-              className="inline-flex h-10 items-center justify-center rounded-lg border border-primary/30 bg-primary-light px-3 text-sm font-semibold text-primary"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-primary/30 bg-primary-light px-3 text-sm font-semibold text-primary"
               disabled={disabled}
               onClick={() =>
                 onExperiencesChange([...experiences, createEmptyExperience()])
               }
             >
-              Add Another Experience
+              {t("auth.jobSeekerRegister.addAnotherExperience")}
             </button>
           </>
         ) : null}
@@ -764,7 +747,7 @@ export function JobSeekerRegisterEducationExperienceStep({
 
       <section className="space-y-3" aria-describedby={languagesErrorId}>
         <h2 className="text-sm font-semibold text-foreground">
-          Known Languages{" "}
+          {t("auth.jobSeekerRegister.languagesTitle")}{" "}
           <span className="text-red-600" aria-hidden="true">
             *
           </span>
@@ -806,7 +789,10 @@ export function JobSeekerRegisterEducationExperienceStep({
             );
           })}
         </ul>
-        <FieldError id={languagesErrorId} message={fieldErrors.languages} />
+        <FieldError
+          id={languagesErrorId}
+          message={translateMessage(fieldErrors.languages)}
+        />
       </section>
 
       <section className="space-y-4">
@@ -814,10 +800,10 @@ export function JobSeekerRegisterEducationExperienceStep({
           <EmployerRegisterSearchableSelect
             id="job-seeker-register-availability"
             name="availabilityStatus"
-            label="Availability Status"
+            label={t("auth.jobSeekerRegister.availabilityLabel")}
             value={availabilityStatus}
-            placeholder="Select your availability"
-            options={JOB_SEEKER_AVAILABILITY_STATUS_OPTIONS}
+            placeholder={t("auth.jobSeekerRegister.availabilityPlaceholder")}
+            options={availabilityOptions}
             onChange={(value) => {
               onClearFieldError?.("availabilityStatus");
               onAvailabilityStatusChange(value as JobSeekerAvailabilityStatus);
@@ -831,7 +817,7 @@ export function JobSeekerRegisterEducationExperienceStep({
           />
           <FieldError
             id={availabilityErrorId}
-            message={fieldErrors.availabilityStatus}
+            message={translateMessage(fieldErrors.availabilityStatus)}
           />
         </div>
       </section>

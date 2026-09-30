@@ -12,6 +12,7 @@ import {
 import { getCompanyStrengthValueFromRange } from "@/constants/employer-register";
 import { EMPLOYER_JOBS_QUERY_KEYS } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import {
   createEmployerJob,
   createEmployerJobDraft,
@@ -170,6 +171,7 @@ type PostJobContentProps = {
 
 export function PostJobContent({ draftJobId }: PostJobContentProps) {
   const router = useRouter();
+  const t = useTranslate();
   const queryClient = useQueryClient();
   const [activeStep, setActiveStep] =
     useState<PostJobActiveStep>(POST_JOB_INITIAL_STEP);
@@ -181,7 +183,9 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [isHydratingDraft, setIsHydratingDraft] = useState(Boolean(draftJobId));
-  const [draftLoadError, setDraftLoadError] = useState("");
+  const [draftLoadError, setDraftLoadError] = useState<
+    { kind: "unsupported-status" } | { kind: "request-failed"; message: string } | null
+  >(null);
   const [loadedJobStatus, setLoadedJobStatus] = useState<JobStatus | null>(
     null,
   );
@@ -378,7 +382,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
 
     const loadDraft = async () => {
       setIsHydratingDraft(true);
-      setDraftLoadError("");
+      setDraftLoadError(null);
 
       try {
         const result = await fetchEmployerJob(draftJobId);
@@ -414,18 +418,17 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
           return;
         }
 
-        setDraftLoadError(
-          "Only draft, rejected, or active jobs can be edited here.",
-        );
+        setDraftLoadError({ kind: "unsupported-status" });
         setIsHydratingDraft(false);
       } catch (error) {
         if (cancelled) {
           return;
         }
 
-        setDraftLoadError(
-          getApiErrorMessage(error, "Unable to load job. Please try again."),
-        );
+        setDraftLoadError({
+          kind: "request-failed",
+          message: getApiErrorMessage(error, ""),
+        });
       } finally {
         if (!cancelled) {
           setIsHydratingDraft(false);
@@ -689,10 +692,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
         });
       } else {
         setSubmitError(
-          getApiErrorMessage(
-            error,
-            "Unable to post this job. Please try again.",
-          ),
+          getApiErrorMessage(error, t("employer.postJob.postFailed")),
         );
       }
     } finally {
@@ -704,15 +704,24 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   if (isHydratingDraft) {
     return (
       <div className={postJobContentShellClassName}>
-        <p className="text-sm text-muted">Loading job…</p>
+        <p className="text-sm text-muted" role="status">
+          {t("employer.postJob.loadingJob")}
+        </p>
       </div>
     );
   }
 
   if (draftLoadError) {
+    const draftLoadErrorMessage =
+      draftLoadError.kind === "unsupported-status"
+        ? t("employer.postJob.editNotAllowed")
+        : draftLoadError.message || t("employer.postJob.loadFailed");
+
     return (
       <div className={postJobContentShellClassName}>
-        <p className="text-sm text-red-600">{draftLoadError}</p>
+        <p className="break-words text-sm text-red-600" role="alert">
+          {draftLoadErrorMessage}
+        </p>
       </div>
     );
   }

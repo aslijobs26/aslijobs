@@ -574,7 +574,12 @@ async function searchJobs(
 ): Promise<BotTurn> {
   const lookup = toPublicJobsLookup(understanding);
   const role = lookup.search || "ANY";
-  const primary = await loadJobs(lookup.search, lookup.city, jobSeekerId);
+  const primary = await loadJobs(
+    lookup.search,
+    lookup.city,
+    jobSeekerId,
+    understanding.language,
+  );
   if (primary.jobs.length > 0 || !understanding.location) {
     logWhatsAppJobs({
       intent: understanding.intent,
@@ -597,7 +602,7 @@ async function searchJobs(
 
   const widerCity = parentCity(understanding.location);
   const wider = widerCity
-    ? await loadJobs(lookup.search, widerCity, jobSeekerId)
+    ? await loadJobs(lookup.search, widerCity, jobSeekerId, understanding.language)
     : { jobs: [], total: 0, dbMatches: 0, hasMore: false };
   logWhatsAppJobs({
     intent: understanding.intent,
@@ -641,7 +646,7 @@ async function coverageReply(
     openSearch: !understanding.category,
   });
   const [jobs, applications] = await Promise.all([
-    loadJobs(lookup.search, lookup.city, jobSeekerId),
+    loadJobs(lookup.search, lookup.city, jobSeekerId, understanding.language),
     applicationService.listForSeeker({
       jobSeekerId,
       limit: 10,
@@ -678,6 +683,7 @@ async function loadJobs(
   search: string,
   city: string,
   jobSeekerId?: string,
+  language?: string,
 ): Promise<{ jobs: PublicJobFact[]; total: number; dbMatches: number; hasMore: boolean }> {
   const query = publicJobsQuerySchema.parse({
     search,
@@ -685,6 +691,7 @@ async function loadJobs(
     limit: PUBLIC_JOB_FETCH_LIMIT,
     page: 1,
     sort: "latest",
+    language: language ?? "",
   });
   const result = await jobService.listPublicActiveJobs(query, jobSeekerId);
   const selected = selectVerifiedJobsForReply(result.jobs, search, result.pagination.total);

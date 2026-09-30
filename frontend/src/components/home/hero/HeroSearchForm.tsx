@@ -1,8 +1,10 @@
 "use client";
 
 import { HeroPlaceAutocomplete } from "@/components/home/hero/HeroPlaceAutocomplete";
+import { translateCityPlaceholder } from "@/components/home/home-i18n";
 import { HERO_SEARCH_DEFAULTS } from "@/constants/hero";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { getCityPlaceholderForState } from "@/services/nominatim-location.service";
 import type { HeroSearchFormValues } from "@/types/hero";
 import { cn } from "@/utils/cn";
@@ -38,6 +40,7 @@ const inputClassName =
   "min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted mobile:text-[13px] sm:text-sm";
 
 export function HeroSearchForm() {
+  const t = useTranslate();
   const router = useRouter();
   const [values, setValues] = useState<HeroSearchFormValues>({
     ...HERO_SEARCH_DEFAULTS,
@@ -63,12 +66,12 @@ export function HeroSearchForm() {
     <form
       onSubmit={handleSubmit}
       className="rounded-xl border border-border-subtle bg-surface p-3 shadow-lg mobile:mx-0 mobile:mb-1 mobile:rounded-2xl mobile:p-3.5 sm:p-5 md:p-6 lg:mx-0 lg:mb-0 lg:rounded-3xl lg:p-6 xl:p-8"
-      aria-label="Job search"
+      aria-label={t("home.search.formAria")}
     >
       <div className="grid grid-cols-1 gap-3 mobile:gap-3.5 sm:grid-cols-2 sm:gap-4 md:gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end lg:gap-3 xl:gap-5">
         <SearchField
           id="hero-search-query"
-          label="Search Job, Role or Keyword"
+          label={t("home.search.queryLabel")}
           className="sm:col-span-2 lg:col-span-1"
         >
           <div className={controlClassName}>
@@ -87,19 +90,19 @@ export function HeroSearchForm() {
                   query: event.target.value,
                 }))
               }
-              placeholder="e.g. Driver, Delivery Executive, Electrician"
+              placeholder={t("home.search.queryPlaceholder")}
               className={inputClassName}
               autoComplete="off"
             />
           </div>
         </SearchField>
 
-        <SearchField id="hero-search-state" label="Select State">
+        <SearchField id="hero-search-state" label={t("jobs.selectState")}>
           <HeroPlaceAutocomplete
             id="hero-search-state"
             mode="state"
             value={stateInput}
-            placeholder="e.g. Telangana"
+            placeholder={t("jobs.statePlaceholder")}
             iconClassName="text-pin-state"
             controlClassName={controlClassName}
             inputClassName={inputClassName}
@@ -124,7 +127,7 @@ export function HeroSearchForm() {
           />
         </SearchField>
 
-        <SearchField id="hero-search-city" label="Select City">
+        <SearchField id="hero-search-city" label={t("jobs.selectCity")}>
           <HeroPlaceAutocomplete
             id="hero-search-city"
             mode="city"
@@ -133,8 +136,8 @@ export function HeroSearchForm() {
             disabled={!values.state}
             placeholder={
               values.state
-                ? getCityPlaceholderForState(values.state)
-                : "Select a state first"
+                ? translateCityPlaceholder(getCityPlaceholderForState(values.state), t)
+                : t("jobs.selectStateFirst")
             }
             controlClassName={controlClassName}
             inputClassName={inputClassName}
@@ -166,7 +169,7 @@ export function HeroSearchForm() {
               strokeWidth={2.5}
               aria-hidden="true"
             />
-            Search Jobs
+            {t("jobs.searchJobs")}
           </button>
         </div>
       </div>

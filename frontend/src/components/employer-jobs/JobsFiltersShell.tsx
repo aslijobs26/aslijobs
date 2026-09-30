@@ -3,6 +3,7 @@
 import { JobsFilterPanel } from "@/components/employer-jobs/JobsFilterPanel";
 import type { EmployerJobsFiltersState } from "@/components/employer-jobs/jobs-filters";
 import type { EmployerJobListOption } from "@/types/employer-jobs";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { useEffect, useId, useRef } from "react";
 
@@ -23,6 +24,7 @@ export function JobsFiltersShell({
   onApply,
   onClear,
 }: JobsFiltersShellProps) {
+  const t = useTranslate();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -60,7 +62,7 @@ export function JobsFiltersShell({
     <div className="fixed inset-0 z-50" role="presentation">
       <button
         type="button"
-        aria-label="Close filters"
+        aria-label={t("employer.jobs.closeFilters")}
         className="absolute inset-0 bg-foreground/30 backdrop-blur-[1px]"
         onClick={onClose}
       />
@@ -80,7 +82,7 @@ export function JobsFiltersShell({
         )}
       >
         <span id={titleId} className="sr-only">
-          Job filters
+          {t("employer.jobs.filtersAria")}
         </span>
         <JobsFilterPanel
           key={JSON.stringify(filters)}

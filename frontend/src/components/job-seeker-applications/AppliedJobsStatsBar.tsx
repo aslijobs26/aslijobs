@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import type { SeekerApplicationStats } from "@/types/job-seeker-applications";
 import { cn } from "@/utils/cn";
 import {
@@ -22,11 +23,13 @@ export function AppliedJobsStatsBar({
   isLoading,
   onChange,
 }: AppliedJobsStatsBarProps) {
+  const t = useTranslate();
+
   return (
     <div
       className="flex gap-2 overflow-x-auto pb-1 scrollbar-hidden"
       role="tablist"
-      aria-label="Application status filters"
+      aria-label={t("seeker.applications.chipsAria")}
     >
       {APPLIED_JOBS_STATS_FILTERS.map((chip) => {
         const count = getStatsChipCount(chip.key, stats);
@@ -45,7 +48,7 @@ export function AppliedJobsStatsBar({
               statsChipToneClasses(chip.tone, isActive),
             )}
           >
-            <span>{chip.label}</span>
+            <span>{t(chip.labelKey)}</span>
             {isLoading ? (
               <span
                 className="inline-block size-5 shrink-0 animate-pulse rounded-full bg-current/15"
@@ -59,7 +62,9 @@ export function AppliedJobsStatsBar({
                     ? "bg-surface/80 text-current"
                     : "bg-current/10 text-current",
                 )}
-                aria-label={`${typeof count === "number" ? count : 0} applications`}
+                aria-label={t("seeker.applications.countAria", {
+                  count: typeof count === "number" ? count : 0,
+                })}
               >
                 {typeof count === "number" ? count : "—"}
               </span>

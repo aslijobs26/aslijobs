@@ -3,23 +3,13 @@
 import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { EmployerRegisterOtpInput } from "@/components/employer-register/EmployerRegisterOtpInput";
+import { useAuthMessageTranslator } from "@/components/employer-register/useAuthMessageTranslator";
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
-import {
-  JOB_SEEKER_LOGIN_CONTINUE_LABEL,
-  JOB_SEEKER_LOGIN_HEADING,
-  JOB_SEEKER_LOGIN_OTP_DESCRIPTION,
-  JOB_SEEKER_LOGIN_OTP_HEADING,
-  JOB_SEEKER_LOGIN_OTP_LENGTH,
-  JOB_SEEKER_LOGIN_RESEND_LABEL,
-  JOB_SEEKER_LOGIN_RESEND_PROMPT,
-  JOB_SEEKER_LOGIN_SEND_OTP_LABEL,
-  JOB_SEEKER_LOGIN_SUBTITLE,
-  JOB_SEEKER_LOGIN_WHATSAPP_LABEL,
-  JOB_SEEKER_LOGIN_WHATSAPP_PLACEHOLDER,
-} from "@/constants/job-seeker-login";
+import { JOB_SEEKER_LOGIN_OTP_LENGTH } from "@/constants/job-seeker-login";
 import { isValidJobSeekerWhatsappNumber } from "@/constants/job-seeker-register";
 import { ROUTES } from "@/constants/routes";
 import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
+import { useTranslate } from "@/i18n/translate";
 import {
   resendJobSeekerLoginOtp,
   sendJobSeekerLoginOtp,
@@ -131,6 +121,8 @@ function validateOtpDigits(otpDigits: string[]): AuthFieldErrors {
 }
 
 export function JobSeekerLoginForm() {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -311,10 +303,10 @@ export function JobSeekerLoginForm() {
   return (
     <div className="w-full">
       <h1 className="employer-register-form-heading">
-        {JOB_SEEKER_LOGIN_HEADING}
+        {t("auth.jobSeekerLogin.heading")}
       </h1>
-      <p className="mt-2 text-sm leading-relaxed text-muted">
-        {JOB_SEEKER_LOGIN_SUBTITLE}
+      <p className="mt-2 break-words text-sm leading-relaxed text-muted">
+        {t("auth.jobSeekerLogin.subtitle")}
       </p>
 
       <form
@@ -331,7 +323,7 @@ export function JobSeekerLoginForm() {
             required
             className="employer-register-form-label"
           >
-            {JOB_SEEKER_LOGIN_WHATSAPP_LABEL}
+            {t("auth.common.whatsappLabel")}
           </RequiredFieldLabel>
           <input
             id="job-seeker-login-whatsapp"
@@ -340,7 +332,7 @@ export function JobSeekerLoginForm() {
             inputMode="numeric"
             value={whatsappNumber}
             onChange={(event) => handleWhatsappChange(event.target.value)}
-            placeholder={JOB_SEEKER_LOGIN_WHATSAPP_PLACEHOLDER}
+            placeholder={t("auth.common.whatsappPlaceholder")}
             autoComplete="tel"
             className="employer-register-form-input"
             aria-required="true"
@@ -352,7 +344,7 @@ export function JobSeekerLoginForm() {
           />
           <FieldError
             id={whatsappErrorId}
-            message={fieldErrors.whatsappNumber}
+            message={translateMessage(fieldErrors.whatsappNumber)}
           />
         </div>
 
@@ -360,12 +352,12 @@ export function JobSeekerLoginForm() {
           <div className="employer-register-otp-section">
             <div className="employer-register-form-stack">
               <h2 className="employer-register-otp-heading">
-                {JOB_SEEKER_LOGIN_OTP_HEADING}
+                {t("auth.common.otpHeading")}
               </h2>
-              <p className="employer-register-otp-description">
+              <p className="employer-register-otp-description break-words">
                 {registrationResumeJobSeekerId
-                  ? "Your signup is incomplete. Enter the WhatsApp code to continue registration."
-                  : JOB_SEEKER_LOGIN_OTP_DESCRIPTION}
+                  ? t("auth.jobSeekerLogin.resumeDescription")
+                  : t("auth.common.otpDescription")}
               </p>
             </div>
 
@@ -380,10 +372,13 @@ export function JobSeekerLoginForm() {
               aria-invalid={Boolean(fieldErrors.otp)}
               aria-describedby={fieldErrors.otp ? otpErrorId : undefined}
             />
-            <FieldError id={otpErrorId} message={fieldErrors.otp} />
+            <FieldError
+              id={otpErrorId}
+              message={translateMessage(fieldErrors.otp)}
+            />
 
-            <p className="text-center text-sm text-muted">
-              {JOB_SEEKER_LOGIN_RESEND_PROMPT}{" "}
+            <p className="break-words text-center text-sm text-muted">
+              {t("auth.common.resendPrompt")}{" "}
               <button
                 type="button"
                 className="employer-register-send-otp-link inline align-baseline"
@@ -393,8 +388,8 @@ export function JobSeekerLoginForm() {
                 disabled={isSubmitting || isCoolingDown}
               >
                 {isCoolingDown
-                  ? `Resend OTP in ${secondsLeft}s`
-                  : JOB_SEEKER_LOGIN_RESEND_LABEL}
+                  ? t("auth.common.resendOtpIn", { seconds: secondsLeft })
+                  : t("auth.common.resendOtp")}
               </button>
             </p>
 
@@ -404,7 +399,7 @@ export function JobSeekerLoginForm() {
                 className="text-sm font-medium text-red-600"
                 role="alert"
               >
-                {formError}
+                {translateMessage(formError)}
               </p>
             ) : null}
 
@@ -415,8 +410,8 @@ export function JobSeekerLoginForm() {
               aria-busy={isSubmitting || undefined}
             >
               {isSubmitting
-                ? "Please wait…"
-                : JOB_SEEKER_LOGIN_CONTINUE_LABEL}
+                ? t("auth.common.pleaseWait")
+                : t("auth.common.continue")}
             </button>
           </div>
         ) : (
@@ -427,7 +422,7 @@ export function JobSeekerLoginForm() {
                 className="text-sm font-medium text-red-600"
                 role="alert"
               >
-                {formError}
+                {translateMessage(formError)}
               </p>
             ) : null}
 
@@ -440,8 +435,8 @@ export function JobSeekerLoginForm() {
               aria-busy={isSubmitting || undefined}
             >
               {isSubmitting
-                ? "Please wait…"
-                : JOB_SEEKER_LOGIN_SEND_OTP_LABEL}
+                ? t("auth.common.pleaseWait")
+                : t("auth.common.sendOtp")}
             </button>
           </>
         )}

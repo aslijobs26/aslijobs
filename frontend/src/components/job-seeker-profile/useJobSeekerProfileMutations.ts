@@ -7,6 +7,7 @@ import {
 import {
   JOB_SEEKER_PROFILE_QUERY_KEY,
 } from "@/hooks/useJobSeekerProfile";
+import { useTranslate } from "@/i18n/translate";
 import {
   deleteJobSeekerProfilePhoto,
   updateJobSeekerProfile,
@@ -23,9 +24,10 @@ import { getApiErrorMessage } from "./get-api-error-message";
 export function useJobSeekerProfileMutations(options?: {
   successMessage?: string;
 }) {
+  const t = useTranslate();
   const queryClient = useQueryClient();
   const successMessage =
-    options?.successMessage ?? "Profile updated successfully.";
+    options?.successMessage ?? t("seeker.profile.updateSuccess");
 
   const updateMutation = useMutation({
     mutationFn: (input: UpdateJobSeekerProfileInput) =>
@@ -43,7 +45,7 @@ export function useJobSeekerProfileMutations(options?: {
     },
     onError: (error) => {
       showAppToast(
-        getApiErrorMessage(error, "Could not update profile. Try again."),
+        getApiErrorMessage(error, t("seeker.profile.updateError")),
         "error",
       );
     },
@@ -53,11 +55,11 @@ export function useJobSeekerProfileMutations(options?: {
     mutationFn: (file: File) => uploadJobSeekerProfilePhoto(file),
     onSuccess: (jobSeeker: JobSeekerPublic) => {
       queryClient.setQueryData(JOB_SEEKER_PROFILE_QUERY_KEY, jobSeeker);
-      showAppToast("Profile photo updated.", "success");
+      showAppToast(t("seeker.profile.photoUpdated"), "success");
     },
     onError: (error) => {
       showAppToast(
-        getApiErrorMessage(error, "Could not upload photo. Try again."),
+        getApiErrorMessage(error, t("seeker.profile.photoUploadError")),
         "error",
       );
     },
@@ -67,11 +69,11 @@ export function useJobSeekerProfileMutations(options?: {
     mutationFn: () => deleteJobSeekerProfilePhoto(),
     onSuccess: (jobSeeker: JobSeekerPublic) => {
       queryClient.setQueryData(JOB_SEEKER_PROFILE_QUERY_KEY, jobSeeker);
-      showAppToast("Profile photo removed.", "success");
+      showAppToast(t("seeker.profile.photoRemoved"), "success");
     },
     onError: (error) => {
       showAppToast(
-        getApiErrorMessage(error, "Could not remove photo. Try again."),
+        getApiErrorMessage(error, t("seeker.profile.photoRemoveError")),
         "error",
       );
     },

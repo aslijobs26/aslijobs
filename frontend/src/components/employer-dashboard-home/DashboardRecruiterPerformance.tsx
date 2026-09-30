@@ -2,11 +2,11 @@
 
 import {
   EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_PLACEHOLDER,
-  EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_TITLE,
   EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_Y_MAX,
   EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_Y_STEP,
 } from "@/constants/employer-dashboard-home";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import Link from "next/link";
 
 type RecruiterPerformanceBar = {
@@ -31,6 +31,7 @@ function buildYAxisTicks(max: number, step: number): number[] {
 export function DashboardRecruiterPerformance({
   bars = EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_PLACEHOLDER,
 }: DashboardRecruiterPerformanceProps) {
+  const t = useTranslate();
   const yTicks = buildYAxisTicks(
     EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_Y_MAX,
     EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_Y_STEP,
@@ -45,15 +46,15 @@ export function DashboardRecruiterPerformance({
       <div className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
         <h2
           id="dashboard-recruiter-performance-title"
-          className="text-base font-bold text-foreground"
+          className="min-w-0 break-words text-base font-bold text-foreground"
         >
-          {EMPLOYER_DASHBOARD_RECRUITER_PERFORMANCE_TITLE}
+          {t("employer.dashboard.recruiterPerformance")}
         </h2>
         <Link
           href={ROUTES.EMPLOYER_INTERVIEWS}
           className="shrink-0 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
-          View All
+          {t("employer.common.viewAll")}
         </Link>
       </div>
 
@@ -61,7 +62,7 @@ export function DashboardRecruiterPerformance({
         <div
           className="relative flex min-h-[16rem] flex-1 gap-2 sm:gap-3"
           role="img"
-          aria-label="Bar chart of interviews completed by recruiter"
+          aria-label={t("employer.dashboard.recruiterChartAria")}
         >
           {/* Y-axis labels + grid */}
           <div
@@ -105,10 +106,16 @@ export function DashboardRecruiterPerformance({
                     <div
                       className="w-full max-w-[2.25rem] rounded-t-md bg-primary transition-[height] duration-500 ease-out sm:max-w-[2.75rem]"
                       style={{ height: `${heightPercent}%` }}
-                      title={`${bar.name}: ${bar.interviewed} interviewed`}
+                      title={t("employer.dashboard.recruiterBarLabel", {
+                        name: bar.name,
+                        count: bar.interviewed,
+                      })}
                     >
                       <span className="sr-only">
-                        {bar.name}: {bar.interviewed} interviewed
+                        {t("employer.dashboard.recruiterBarLabel", {
+                          name: bar.name,
+                          count: bar.interviewed,
+                        })}
                       </span>
                     </div>
                   </li>

@@ -1,4 +1,7 @@
+"use client";
+
 import { SkeletonBone, SkeletonKpiStrip } from "@/components/shared/skeletons/SkeletonBone";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 
 const PAGE_SHELL =
@@ -15,8 +18,10 @@ function PageHeaderSkeleton() {
 
 /** Profile hub (de facto dashboard). */
 export function JobSeekerProfilePageSkeleton() {
+  const t = useTranslate();
+
   return (
-    <div className={PAGE_SHELL} aria-busy="true" aria-label="Loading profile">
+    <div className={PAGE_SHELL} aria-busy="true" aria-label={t("seeker.loading.profile")}>
       <div className="animate-pulse space-y-5">
         <div className="rounded-2xl border border-border-subtle bg-surface p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -67,8 +72,10 @@ function CardListSkeleton({ count = 4 }: { count?: number }) {
 
 /** Applied jobs / saved jobs list pages. */
 export function JobSeekerListPageSkeleton() {
+  const t = useTranslate();
+
   return (
-    <div className={PAGE_SHELL} aria-busy="true" aria-label="Loading">
+    <div className={PAGE_SHELL} aria-busy="true" aria-label={t("seeker.loading.generic")}>
       <PageHeaderSkeleton />
       <SkeletonBone className="mt-4 h-10 w-full rounded-full" />
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -83,8 +90,10 @@ export function JobSeekerListPageSkeleton() {
 }
 
 export function JobSeekerNotificationsPageSkeleton() {
+  const t = useTranslate();
+
   return (
-    <div className={PAGE_SHELL} aria-busy="true" aria-label="Loading notifications">
+    <div className={PAGE_SHELL} aria-busy="true" aria-label={t("seeker.loading.notifications")}>
       <PageHeaderSkeleton />
       <SkeletonBone className="mt-4 h-10 w-full max-w-md rounded-full" />
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
@@ -100,8 +109,10 @@ export function JobSeekerNotificationsPageSkeleton() {
 }
 
 export function JobSeekerResumePageSkeleton() {
+  const t = useTranslate();
+
   return (
-    <div className={PAGE_SHELL} aria-busy="true" aria-label="Loading resume">
+    <div className={PAGE_SHELL} aria-busy="true" aria-label={t("seeker.loading.resume")}>
       <PageHeaderSkeleton />
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <SkeletonBone className="min-h-[32rem] w-full rounded-2xl" />
@@ -115,8 +126,10 @@ export function JobSeekerResumePageSkeleton() {
 }
 
 export function JobSeekerSettingsPageSkeleton() {
+  const t = useTranslate();
+
   return (
-    <div className={PAGE_SHELL} aria-busy="true" aria-label="Loading settings">
+    <div className={PAGE_SHELL} aria-busy="true" aria-label={t("seeker.loading.settings")}>
       <SkeletonBone className="h-8 w-40 rounded-lg" />
       <SkeletonBone className="mt-2 h-4 w-72 max-w-full rounded" />
       <div className="mt-6 flex flex-col gap-4 lg:flex-row">
@@ -138,8 +151,10 @@ export function JobSeekerSettingsPageSkeleton() {
 }
 
 export function JobSeekerApplicationDetailSkeleton() {
+  const t = useTranslate();
+
   return (
-    <div className={PAGE_SHELL} aria-busy="true" aria-label="Loading application">
+    <div className={PAGE_SHELL} aria-busy="true" aria-label={t("seeker.loading.application")}>
       <SkeletonBone className="h-8 w-32 rounded-lg" />
       <SkeletonBone className="mt-4 h-40 w-full rounded-2xl" />
       <SkeletonBone className="mt-4 h-64 w-full rounded-2xl" />
@@ -148,8 +163,10 @@ export function JobSeekerApplicationDetailSkeleton() {
 }
 
 export function JobSeekerWorkspaceShellSkeleton() {
+  const t = useTranslate();
+
   return (
-    <div className="min-h-dvh bg-hero-bg" aria-busy="true" aria-label="Loading workspace">
+    <div className="min-h-dvh bg-hero-bg" aria-busy="true" aria-label={t("seeker.loading.workspace")}>
       <aside className="fixed inset-y-0 left-0 hidden w-[var(--seeker-sidebar-width,16rem)] border-r border-border-subtle bg-surface p-3 lg:block">
         <SkeletonBone className="h-10 w-32" />
         <div className="mt-6 space-y-2">

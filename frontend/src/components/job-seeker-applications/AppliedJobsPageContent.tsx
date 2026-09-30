@@ -21,6 +21,7 @@ import {
 } from "@/components/job-seeker-applications/applied-jobs-utils";
 import { ListPagination } from "@/components/shared/ListPagination";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import {
   fetchSeekerApplicationStats,
   fetchSeekerApplications,
@@ -58,6 +59,7 @@ type AppliedJobsPageContentProps = {
 export function AppliedJobsPageContent({
   showBackLink = false,
 }: AppliedJobsPageContentProps) {
+  const t = useTranslate();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -311,7 +313,7 @@ export function AppliedJobsPageContent({
             href={ROUTES.JOB_SEEKER_PROFILE}
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            Back to profile
+            {t("seeker.applications.backToProfile")}
           </Link>
         </div>
       ) : null}
@@ -319,11 +321,11 @@ export function AppliedJobsPageContent({
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17.5rem] xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0">
           <header>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              My Applications
+            <h1 className="break-words text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              {t("seeker.applications.title")}
             </h1>
-            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-muted sm:text-[0.9375rem]">
-              Track and manage all your job applications in one place.
+            <p className="mt-1.5 max-w-xl break-words text-sm leading-relaxed text-muted sm:text-[0.9375rem]">
+              {t("seeker.applications.subtitle")}
             </p>
           </header>
 
@@ -345,14 +347,14 @@ export function AppliedJobsPageContent({
                 aria-hidden="true"
               />
               <label htmlFor="my-applications-search" className="sr-only">
-                Search by job title or company
+                {t("seeker.applications.searchLabel")}
               </label>
               <input
                 id="my-applications-search"
                 type="search"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search by Job Title or Company"
+                placeholder={t("seeker.applications.searchPlaceholder")}
                 className={cn(
                   "h-11 w-full rounded-xl border border-border bg-surface py-2.5 pr-3 pl-10 text-xs text-foreground shadow-sm placeholder:text-muted sm:text-sm",
                   "outline-none transition-[border-color,box-shadow] hover:border-primary/25",
@@ -379,7 +381,7 @@ export function AppliedJobsPageContent({
                   className="size-3.5 shrink-0 sm:size-4"
                   aria-hidden="true"
                 />
-                <span>Filters</span>
+                <span>{t("seeker.common.filters")}</span>
                 {activeFilterCount > 0 ? (
                   <span className="inline-flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-surface sm:size-5 sm:text-[10px]">
                     {activeFilterCount}
@@ -398,27 +400,27 @@ export function AppliedJobsPageContent({
 
           {isRefreshing ? (
             <p className="mt-3 text-xs text-muted" aria-live="polite">
-              Updating applications…
+              {t("seeker.applications.updating")}
             </p>
           ) : null}
 
           <div className="mt-5">
             {isInitialLoading ? (
-              <AppliedJobsSkeletonList />
+              <AppliedJobsSkeletonList ariaLabel={t("seeker.loading.applications")} />
             ) : listQuery.isError && applications.length === 0 ? (
               <div className="rounded-xl border border-border-subtle bg-surface px-4 py-12 text-center">
-                <p className="text-sm font-medium text-foreground">
-                  Couldn&apos;t load your applications
+                <p className="break-words text-sm font-medium text-foreground">
+                  {t("seeker.applications.loadErrorTitle")}
                 </p>
-                <p className="mt-1 text-sm text-muted">
-                  Please check your connection and try again.
+                <p className="mt-1 break-words text-sm text-muted">
+                  {t("seeker.common.checkConnection")}
                 </p>
                 <button
                   type="button"
                   className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                   onClick={() => void listQuery.refetch()}
                 >
-                  Retry
+                  {t("seeker.common.retry")}
                 </button>
               </div>
             ) : applications.length === 0 ? (
@@ -447,8 +449,8 @@ export function AppliedJobsPageContent({
                   totalPages={pagination.totalPages}
                   onPageChange={(nextPage) => updateUrl({ page: nextPage })}
                   isLoading={listQuery.isFetching}
-                  ariaLabel="Applications pagination"
-                  entityLabel="applications"
+                  ariaLabel={t("seeker.applications.paginationAria")}
+                  entityLabel={t("seeker.applications.entityLabel")}
                 />
               </>
             )}
@@ -483,9 +485,9 @@ export function AppliedJobsPageContent({
   );
 }
 
-function AppliedJobsSkeletonList() {
+function AppliedJobsSkeletonList({ ariaLabel }: { ariaLabel: string }) {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Loading applications">
+    <div className="space-y-3" aria-busy="true" aria-label={ariaLabel}>
       {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
@@ -507,15 +509,17 @@ function AppliedJobsSkeletonList() {
 }
 
 function EmptyAppliedJobsState({ hasFilters }: { hasFilters: boolean }) {
+  const t = useTranslate();
+
   if (hasFilters) {
     return (
       <div className="rounded-xl border border-border-subtle bg-surface px-4 py-12 text-center">
         <Briefcase className="mx-auto size-10 text-muted" aria-hidden="true" />
-        <h2 className="mt-4 text-base font-semibold text-foreground">
-          No matching applications
+        <h2 className="mt-4 break-words text-base font-semibold text-foreground">
+          {t("seeker.applications.emptyFilteredTitle")}
         </h2>
-        <p className="mt-1 text-sm text-muted">
-          Try a different search, status pill, or clear filters.
+        <p className="mt-1 break-words text-sm text-muted">
+          {t("seeker.applications.emptyFilteredBody")}
         </p>
       </div>
     );
@@ -526,18 +530,17 @@ function EmptyAppliedJobsState({ hasFilters }: { hasFilters: boolean }) {
       <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-primary-light">
         <Briefcase className="size-8 text-primary" aria-hidden="true" />
       </div>
-      <h2 className="mt-5 text-lg font-semibold text-foreground">
-        No Applications Yet
+      <h2 className="mt-5 break-words text-lg font-semibold text-foreground">
+        {t("seeker.applications.emptyTitle")}
       </h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-        Browse open roles and apply with your AsliJobs resume. Your applications
-        will show up here with live hiring status.
+      <p className="mx-auto mt-2 max-w-md break-words text-sm text-muted">
+        {t("seeker.applications.emptyBody")}
       </p>
       <Link
         href={ROUTES.FIND_JOBS}
         className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
       >
-        Browse Jobs
+        {t("seeker.common.browseJobs")}
       </Link>
     </div>
   );

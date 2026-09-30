@@ -2,14 +2,9 @@
 
 import welcomeIllustration from "@/assets/employer-dashboard/welcome-banner-illustration-v4.png";
 import { Can } from "@/components/rbac/Can";
-import {
-  EMPLOYER_DASHBOARD_HERO_ROW_HEIGHT_CLASS,
-  EMPLOYER_DASHBOARD_POST_JOB_LABEL,
-  EMPLOYER_DASHBOARD_SEARCH_CANDIDATES_LABEL,
-  EMPLOYER_DASHBOARD_WELCOME_BADGE,
-  EMPLOYER_DASHBOARD_WELCOME_TAGLINE,
-} from "@/constants/employer-dashboard-home";
+import { EMPLOYER_DASHBOARD_HERO_ROW_HEIGHT_CLASS } from "@/constants/employer-dashboard-home";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { Plus, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,6 +18,8 @@ export function DashboardWelcomeBanner({
   displayName,
   isLoading = false,
 }: DashboardWelcomeBannerProps) {
+  const t = useTranslate();
+
   return (
     <section
       className={`relative overflow-hidden rounded-2xl border border-border-subtle bg-employer-welcome-surface shadow-sm ${EMPLOYER_DASHBOARD_HERO_ROW_HEIGHT_CLASS}`}
@@ -49,7 +46,7 @@ export function DashboardWelcomeBanner({
           <div className="min-w-0 max-w-[54%] sm:max-w-[62%] md:max-w-[58%]">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-light px-2.5 py-1 text-[0.6875rem] font-semibold text-primary sm:text-xs">
               <span aria-hidden="true">👋</span>
-              {EMPLOYER_DASHBOARD_WELCOME_BADGE}
+              {t("employer.dashboard.welcomeBadge")}
             </span>
 
             {isLoading ? (
@@ -59,7 +56,9 @@ export function DashboardWelcomeBanner({
               </div>
             ) : (
               <h1 className="mt-3 text-xl font-bold leading-[1.2] tracking-tight text-foreground sm:text-[1.75rem] lg:text-[1.875rem]">
-                <span className="block">Welcome back,</span>
+                <span className="block">
+                  {t("employer.dashboard.welcomeBack")}
+                </span>
                 <span className="block truncate text-primary">
                   {displayName}!
                   <span aria-hidden="true"> 👋</span>
@@ -68,11 +67,11 @@ export function DashboardWelcomeBanner({
             )}
 
             <p className="mt-2 text-sm leading-relaxed text-muted sm:mt-2.5 sm:text-[0.9375rem]">
-              {EMPLOYER_DASHBOARD_WELCOME_TAGLINE}
+              {t("employer.dashboard.welcomeTagline")}
             </p>
           </div>
 
-          <div className="mt-4 flex flex-nowrap items-center gap-1.5 sm:mt-5 sm:max-w-[62%] sm:gap-3 md:max-w-[58%]">
+          <div className="mt-4 flex flex-wrap items-center gap-1.5 sm:mt-5 sm:max-w-[62%] sm:gap-3 md:max-w-[58%]">
             <Can module="jobs" action="create">
               <Link
                 href={ROUTES.POST_JOB}
@@ -85,7 +84,7 @@ export function DashboardWelcomeBanner({
                     strokeWidth={2.5}
                   />
                 </span>
-                {EMPLOYER_DASHBOARD_POST_JOB_LABEL}
+                {t("employer.common.postNewJob")}
               </Link>
             </Can>
             <Can module="candidates" action="read">
@@ -96,7 +95,7 @@ export function DashboardWelcomeBanner({
                 <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary-light text-primary sm:size-6">
                   <Search className="size-3 sm:size-3.5" aria-hidden="true" />
                 </span>
-                {EMPLOYER_DASHBOARD_SEARCH_CANDIDATES_LABEL}
+                {t("employer.common.searchCandidates")}
               </Link>
             </Can>
           </div>

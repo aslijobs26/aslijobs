@@ -3,6 +3,7 @@
 import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import type { JobSeekerPublic } from "@/types/job-seeker";
 import { useAuthenticatedMediaUrl } from "@/hooks/use-authenticated-media-url";
+import { useTranslate } from "@/i18n/translate";
 import { getInitials } from "@/utils/job-seeker-profile";
 import { Camera, Loader2, Trash2 } from "lucide-react";
 import Image from "next/image";
@@ -25,9 +26,10 @@ export function JobSeekerProfilePhotoAvatar({
   onUpload,
   onRemove,
 }: JobSeekerProfilePhotoAvatarProps) {
+  const t = useTranslate();
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const fullName = jobSeeker.fullName?.trim() || "Job Seeker";
+  const fullName = jobSeeker.fullName?.trim() || t("seeker.common.jobSeeker");
   const { url: photoUrl } = useAuthenticatedMediaUrl(
     jobSeeker.profilePhoto?.url ?? null,
   );
@@ -77,7 +79,7 @@ export function JobSeekerProfilePhotoAvatar({
               className="size-8 animate-spin text-surface"
               aria-hidden="true"
             />
-            <span className="sr-only">Uploading photo</span>
+            <span className="sr-only">{t("seeker.profile.uploadingPhoto")}</span>
           </span>
         ) : null}
       </div>
@@ -87,7 +89,7 @@ export function JobSeekerProfilePhotoAvatar({
         className="absolute -bottom-1 -right-1 inline-flex size-9 cursor-pointer items-center justify-center rounded-full border border-border-subtle bg-surface text-primary shadow-sm hover:bg-primary-light focus-within:outline-none focus-within:ring-2 focus-within:ring-primary/30"
       >
         <Camera className="size-4" aria-hidden="true" />
-        <span className="sr-only">Upload profile photo</span>
+        <span className="sr-only">{t("seeker.profile.uploadPhoto")}</span>
       </label>
       <input
         ref={inputRef}
@@ -103,7 +105,7 @@ export function JobSeekerProfilePhotoAvatar({
         <button
           type="button"
           className="absolute -left-1 -top-1 inline-flex size-8 items-center justify-center rounded-full border border-border-subtle bg-surface text-red-600 shadow-sm hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
-          aria-label="Remove profile photo"
+          aria-label={t("seeker.profile.removePhoto")}
           onClick={() => void onRemove()}
         >
           <Trash2 className="size-3.5" aria-hidden="true" />

@@ -26,7 +26,7 @@ const iconSurfaceVariants = {
 
 const actionClassName = (variant: HeroCtaCardProps["variant"]) =>
   cn(
-    "inline-flex h-11 min-h-11 w-full shrink-0 items-center justify-center rounded-xl px-5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 mobile:min-h-11 sm:w-auto",
+    "inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl px-5 py-2 text-center text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 mobile:min-h-11 sm:w-auto",
     buttonVariants[variant],
   );
 
@@ -74,10 +74,10 @@ export function HeroCtaCard({
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col pt-0.5">
-        <h3 className="text-base font-bold leading-snug text-foreground mobile:text-[0.9375rem] sm:text-lg">
+        <h3 className="break-words text-base font-bold leading-snug text-foreground mobile:text-[0.9375rem] sm:text-lg">
           {title}
         </h3>
-        <p className="mt-1 text-sm leading-snug text-muted sm:text-[15px]">
+        <p className="mt-1 break-words text-sm leading-snug text-muted sm:text-[15px]">
           {description}
         </p>
         <div className="mt-auto pt-3 sm:pt-4">{action}</div>

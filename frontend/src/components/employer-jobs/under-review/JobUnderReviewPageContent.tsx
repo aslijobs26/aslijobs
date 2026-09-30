@@ -3,46 +3,19 @@
 import { EmployerAuthGuard } from "@/components/employer-dashboard/EmployerAuthGuard";
 import { JobPostedSuccessIcon } from "@/components/job-posted-success/JobPostedSuccessIcon";
 import { EMPLOYER_JOBS_QUERY_KEYS } from "@/constants/employer-jobs";
-import {
-  JOB_UNDER_REVIEW_EDIT_RESUBMIT,
-  JOB_UNDER_REVIEW_ERROR_RETRY,
-  JOB_UNDER_REVIEW_ERROR_TITLE,
-  JOB_UNDER_REVIEW_FIELD_STATUS,
-  JOB_UNDER_REVIEW_FIELD_SUBMITTED,
-  JOB_UNDER_REVIEW_FIELD_TYPE,
-  JOB_UNDER_REVIEW_GO_TO_JOBS,
-  JOB_UNDER_REVIEW_LEAD,
-  JOB_UNDER_REVIEW_LIVE_CHANGE_LEAD,
-  JOB_UNDER_REVIEW_LIVE_CHANGE_TITLE,
-  JOB_UNDER_REVIEW_LIVE_LEAD,
-  JOB_UNDER_REVIEW_LIVE_TITLE,
-  JOB_UNDER_REVIEW_LOADING,
-  JOB_UNDER_REVIEW_NOT_FOUND,
-  JOB_UNDER_REVIEW_POST_ANOTHER,
-  JOB_UNDER_REVIEW_REFRESH,
-  JOB_UNDER_REVIEW_REJECTED_LEAD,
-  JOB_UNDER_REVIEW_REJECTED_TITLE,
-  JOB_UNDER_REVIEW_SLA,
-  JOB_UNDER_REVIEW_STATUS_BADGE,
-  JOB_UNDER_REVIEW_SUCCESS_TITLE,
-  JOB_UNDER_REVIEW_SUMMARY_HEADING,
-  JOB_UNDER_REVIEW_TIMELINE_HEADING,
-  JOB_UNDER_REVIEW_TIMELINE_LIVE,
-  JOB_UNDER_REVIEW_TIMELINE_PENDING,
-  JOB_UNDER_REVIEW_TIMELINE_REJECTED,
-  JOB_UNDER_REVIEW_VIEW_LIVE,
-} from "@/constants/job-under-review";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import { fetchEmployerJob } from "@/services/employer-jobs.service";
+import type { JobStatus } from "@/types/employer-jobs";
 import { getApiErrorMessage } from "@/utils/normalize-api-error";
 import { cn } from "@/utils/cn";
 import {
-  formatEmployerJobEmploymentTypeLabel,
   formatEmployerJobSubmittedAt,
   formatEmployerJobSummaryLocation,
-  getEmployerFacingJobStatusLabel,
   resolveEmployerJobUiPhase,
+  type EmployerJobUiPhase,
 } from "@/utils/employer-job-under-review";
+import { formatJobSearchJobType } from "@/utils/job-search-format";
 import { useQuery } from "@tanstack/react-query";
 import {
   BriefcaseBusiness,
@@ -62,7 +35,72 @@ type JobUnderReviewPageContentProps = {
   jobMongoId: string;
 };
 
+type TimelineStepKeys = {
+  id: "submitted" | "verification" | "live";
+  labelKey: MessageKey;
+  detailKey: MessageKey;
+};
+
+const TIMELINE_STEP_LABEL_KEYS = {
+  submitted: "employer.underReview.timeline.submitted",
+  verification: "employer.underReview.timeline.verification",
+  live: "employer.underReview.timeline.live",
+} as const satisfies Record<TimelineStepKeys["id"], MessageKey>;
+
+function getTimelineSteps(phase: EmployerJobUiPhase): TimelineStepKeys[] {
+  const verificationDetailKey: MessageKey =
+    phase === "live"
+      ? "employer.underReview.timeline.approved"
+      : phase === "rejected"
+        ? "employer.underReview.timeline.rejected"
+        : "employer.underReview.timeline.underReview";
+  const liveDetailKey: MessageKey =
+    phase === "live"
+      ? "employer.underReview.timeline.completed"
+      : phase === "rejected"
+        ? "employer.underReview.timeline.waitingResubmission"
+        : "employer.underReview.timeline.afterApproval";
+
+  return [
+    {
+      id: "submitted",
+      labelKey: TIMELINE_STEP_LABEL_KEYS.submitted,
+      detailKey: "employer.underReview.timeline.completed",
+    },
+    {
+      id: "verification",
+      labelKey: TIMELINE_STEP_LABEL_KEYS.verification,
+      detailKey: verificationDetailKey,
+    },
+    {
+      id: "live",
+      labelKey: TIMELINE_STEP_LABEL_KEYS.live,
+      detailKey: liveDetailKey,
+    },
+  ];
+}
+
+function getStatusLabelKey(
+  phase: EmployerJobUiPhase,
+  status: JobStatus,
+): MessageKey {
+  if (phase === "under_review") {
+    return "employer.status.job.pending_approval";
+  }
+  if (phase === "live_change_review") {
+    return "employer.jobs.liveChangePendingLabel";
+  }
+  if (phase === "live") {
+    return "employer.status.job.active";
+  }
+  if (phase === "rejected") {
+    return "employer.status.job.rejected";
+  }
+  return `employer.status.job.${status}`;
+}
+
 function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
+  const t = useTranslate();
   const jobQuery = useQuery({
     queryKey: EMPLOYER_JOBS_QUERY_KEYS.detail(jobMongoId),
     queryFn: () => fetchEmployerJob(jobMongoId),
@@ -74,7 +112,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
   if (jobQuery.isLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center px-6">
-        <p className="text-sm text-muted">{JOB_UNDER_REVIEW_LOADING}</p>
+        <p className="text-sm text-muted">{t("employer.underReview.loading")}</p>
       </div>
     );
   }
@@ -85,15 +123,15 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
       : undefined;
     const message =
       status === 403 || status === 404
-        ? JOB_UNDER_REVIEW_NOT_FOUND
-        : getApiErrorMessage(jobQuery.error, JOB_UNDER_REVIEW_ERROR_TITLE);
+        ? t("employer.underReview.notFound")
+        : getApiErrorMessage(jobQuery.error, t("employer.underReview.errorTitle"));
 
     return (
       <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-4 px-6 py-16 text-center">
-        <h1 className="text-xl font-bold text-foreground">
-          {JOB_UNDER_REVIEW_ERROR_TITLE}
+        <h1 className="text-xl font-bold break-words text-foreground">
+          {t("employer.underReview.errorTitle")}
         </h1>
-        <p className="text-sm text-muted">{message}</p>
+        <p className="text-sm break-words text-muted">{message}</p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
@@ -101,13 +139,13 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
             className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-border bg-surface px-5 text-sm font-bold text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
             <RefreshCw className="size-4" aria-hidden />
-            {JOB_UNDER_REVIEW_ERROR_RETRY}
+            {t("employer.common.tryAgain")}
           </button>
           <Link
             href={ROUTES.employerJobsTab("pending_approval")}
             className="inline-flex h-11 items-center justify-center rounded-md bg-primary-soft px-5 text-sm font-bold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            {JOB_UNDER_REVIEW_GO_TO_JOBS}
+            {t("employer.underReview.goToJobs")}
           </Link>
         </div>
       </div>
@@ -116,35 +154,34 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
 
   const job = jobQuery.data.job;
   const phase = resolveEmployerJobUiPhase(job);
-  const statusLabel = getEmployerFacingJobStatusLabel(job);
+  const statusLabel = t(getStatusLabelKey(phase, job.status));
   const location = formatEmployerJobSummaryLocation(job);
-  const employmentType = formatEmployerJobEmploymentTypeLabel(job.jobType);
+  const employmentType = job.jobType?.trim()
+    ? formatJobSearchJobType(job.jobType)
+    : "—";
   const submittedAt = formatEmployerJobSubmittedAt(job);
 
-  const heading =
+  const heading = t(
     phase === "live"
-      ? JOB_UNDER_REVIEW_LIVE_TITLE
+      ? "employer.underReview.liveTitle"
       : phase === "rejected"
-        ? JOB_UNDER_REVIEW_REJECTED_TITLE
+        ? "employer.underReview.rejectedTitle"
         : phase === "live_change_review"
-          ? JOB_UNDER_REVIEW_LIVE_CHANGE_TITLE
-          : JOB_UNDER_REVIEW_SUCCESS_TITLE;
+          ? "employer.underReview.liveChangeTitle"
+          : "employer.underReview.successTitle",
+  );
 
-  const lead =
+  const lead = t(
     phase === "live"
-      ? JOB_UNDER_REVIEW_LIVE_LEAD
+      ? "employer.underReview.liveLead"
       : phase === "rejected"
-        ? JOB_UNDER_REVIEW_REJECTED_LEAD
+        ? "employer.underReview.rejectedLead"
         : phase === "live_change_review"
-          ? JOB_UNDER_REVIEW_LIVE_CHANGE_LEAD
-          : JOB_UNDER_REVIEW_LEAD;
+          ? "employer.underReview.liveChangeLead"
+          : "employer.underReview.lead",
+  );
 
-  const timeline =
-    phase === "live"
-      ? JOB_UNDER_REVIEW_TIMELINE_LIVE
-      : phase === "rejected"
-        ? JOB_UNDER_REVIEW_TIMELINE_REJECTED
-        : JOB_UNDER_REVIEW_TIMELINE_PENDING;
+  const timeline = getTimelineSteps(phase);
 
   const completedStepIndex =
     phase === "live" ? 2 : phase === "rejected" ? 1 : 1;
@@ -169,7 +206,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
 
           <h1
             id="job-under-review-heading"
-            className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl"
+            className="text-2xl font-bold tracking-tight break-words text-foreground sm:text-3xl lg:text-4xl"
           >
             {heading}
           </h1>
@@ -180,7 +217,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
                 className="size-1.5 rounded-full bg-amber-500"
                 aria-hidden
               />
-              {JOB_UNDER_REVIEW_STATUS_BADGE}
+              {t("employer.status.job.pending_approval")}
             </p>
           )}
 
@@ -190,7 +227,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
 
           {phase === "under_review" || phase === "live_change_review" ? (
             <p className="mt-2 max-w-2xl text-sm font-medium text-foreground sm:text-base">
-              {JOB_UNDER_REVIEW_SLA}
+              {t("employer.underReview.sla")}
             </p>
           ) : null}
 
@@ -221,7 +258,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-muted">
-                    {JOB_UNDER_REVIEW_SUMMARY_HEADING}
+                    {t("employer.underReview.summaryHeading")}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <h2
@@ -269,7 +306,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
                     )}
                     aria-hidden
                   />
-                  {JOB_UNDER_REVIEW_REFRESH}
+                  {t("employer.underReview.refresh")}
                 </button>
               </div>
 
@@ -303,7 +340,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
                     strokeWidth={2}
                     aria-hidden
                   />
-                  {JOB_UNDER_REVIEW_FIELD_TYPE}
+                  {t("jobs.employmentType")}
                 </dt>
                 <dd className="mt-1 text-sm font-bold text-foreground">
                   {employmentType}
@@ -311,7 +348,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
               </div>
               <div className="sm:border-l sm:border-border-subtle sm:px-4 lg:px-5">
                 <dt className="inline-flex items-center gap-1.5 text-xs font-medium text-muted">
-                  {JOB_UNDER_REVIEW_FIELD_STATUS}
+                  {t("employer.columns.status")}
                 </dt>
                 <dd className="mt-1 text-sm font-bold text-foreground">
                   {statusLabel}
@@ -324,7 +361,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
                     strokeWidth={2}
                     aria-hidden
                   />
-                  {JOB_UNDER_REVIEW_FIELD_SUBMITTED}
+                  {t("employer.underReview.submitted")}
                 </dt>
                 <dd className="mt-1 text-sm font-bold text-foreground">
                   {submittedAt}
@@ -342,7 +379,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
             id="job-under-review-timeline-heading"
             className="text-base font-bold text-foreground sm:text-lg"
           >
-            {JOB_UNDER_REVIEW_TIMELINE_HEADING}
+            {t("employer.underReview.timelineHeading")}
           </h2>
           <ol className="mt-4 space-y-4">
             {timeline.map((step, index) => {
@@ -369,10 +406,10 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground">
-                      {index + 1}. {step.label}
+                      {index + 1}. {t(step.labelKey)}
                     </p>
                     <p className="mt-0.5 text-xs text-muted sm:text-sm">
-                      {step.detail}
+                      {t(step.detailKey)}
                     </p>
                   </div>
                 </li>
@@ -395,7 +432,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border bg-surface px-5 text-sm font-bold text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:w-auto"
           >
             <BriefcaseBusiness className="size-4" aria-hidden />
-            {JOB_UNDER_REVIEW_GO_TO_JOBS}
+            {t("employer.underReview.goToJobs")}
           </Link>
 
           {phase === "rejected" ? (
@@ -403,7 +440,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
               href={ROUTES.postJobEdit(job.id)}
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary-soft px-5 text-sm font-bold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:w-auto"
             >
-              {JOB_UNDER_REVIEW_EDIT_RESUBMIT}
+              {t("employer.underReview.editResubmit")}
             </Link>
           ) : null}
 
@@ -412,7 +449,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
               href={ROUTES.jobPublic(job.jobId)}
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary-soft px-5 text-sm font-bold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:w-auto"
             >
-              {JOB_UNDER_REVIEW_VIEW_LIVE}
+              {t("employer.underReview.viewLive")}
             </Link>
           ) : null}
 
@@ -421,7 +458,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-primary-soft/40 bg-primary-light px-5 text-sm font-bold text-primary transition-colors hover:bg-primary-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:w-auto"
           >
             <Plus className="size-4" aria-hidden />
-            {JOB_UNDER_REVIEW_POST_ANOTHER}
+            {t("employer.underReview.postAnother")}
           </Link>
         </div>
       </div>

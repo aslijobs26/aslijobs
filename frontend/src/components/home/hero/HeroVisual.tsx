@@ -1,12 +1,21 @@
 "use client";
 
 import heroPersonImage from "@/assets/image/hero-img.png";
+import {
+  HERO_FEATURE_KEYS,
+  HERO_FEATURE_MESSAGE_KEYS,
+} from "@/components/home/home-i18n";
 import { HERO_FEATURE_CARDS, HERO_FEATURE_MESSAGES } from "@/constants/hero";
-import type { HeroFeatureCardPosition, HeroFeatureId } from "@/types/hero";
+import { useTranslate } from "@/i18n/translate";
+import type {
+  HeroFeatureCardPosition,
+  HeroFeatureId,
+  HeroFeatureMessage,
+} from "@/types/hero";
 import { cn } from "@/utils/cn";
 import { Languages, Mic, ShieldCheck } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { HeroFeatureCard } from "./HeroFeatureCard";
 import { HeroPhoneMessageBubble } from "./HeroPhoneMessageBubble";
 import { WhatsAppIcon } from "./HeroIcons";
@@ -83,19 +92,25 @@ function getIconContainerClassName(id: string) {
 }
 
 export function HeroVisual() {
+  const t = useTranslate();
   const [activeFeature, setActiveFeature] = useState<HeroFeatureId | null>(null);
   // Keep the last feature so its text stays put while the bubble fades out.
   const [displayedFeature, setDisplayedFeature] =
     useState<HeroFeatureId | null>(null);
 
-  useEffect(() => {
-    if (activeFeature) {
-      setDisplayedFeature(activeFeature);
-    }
-  }, [activeFeature]);
+  const showFeature = (id: HeroFeatureId) => {
+    setActiveFeature(id);
+    setDisplayedFeature(id);
+  };
 
   const clearFeature = (id: HeroFeatureId) =>
     setActiveFeature((current) => (current === id ? null : current));
+
+  const getFeatureMessage = (id: HeroFeatureId): HeroFeatureMessage => {
+    const message = HERO_FEATURE_MESSAGES[id];
+    const messageKey = HERO_FEATURE_MESSAGE_KEYS[id];
+    return messageKey ? { ...message, text: t(messageKey) } : message;
+  };
 
   const topCards = HERO_FEATURE_CARDS.filter(
     (card) => card.position === "top-left" || card.position === "top-right",
@@ -115,14 +130,14 @@ export function HeroVisual() {
       )}
       tabIndex={0}
       aria-describedby={PHONE_MESSAGE_ID}
-      onMouseEnter={() => setActiveFeature(card.id)}
+      onMouseEnter={() => showFeature(card.id)}
       onMouseLeave={() => clearFeature(card.id)}
-      onFocus={() => setActiveFeature(card.id)}
+      onFocus={() => showFeature(card.id)}
       onBlur={() => clearFeature(card.id)}
     >
       <HeroFeatureCard
-        title={card.title}
-        description={card.description}
+        title={t(HERO_FEATURE_KEYS[card.id].title)}
+        description={t(HERO_FEATURE_KEYS[card.id].description)}
         icon={getFeatureIcon(card.id)}
         iconContainerClassName={getIconContainerClassName(card.id)}
         className={cn(FLOAT_ANIMATIONS[card.id], CARD_SIZE_SCALE)}
@@ -161,7 +176,7 @@ export function HeroVisual() {
           >
             <Image
               src={heroPersonImage}
-              alt="Job seeker browsing jobs on WhatsApp"
+              alt={t("home.hero.imageAlt")}
               priority
               className="h-auto w-full object-contain"
             />
@@ -174,9 +189,7 @@ export function HeroVisual() {
             id={PHONE_MESSAGE_ID}
             visible={activeFeature !== null}
             message={
-              displayedFeature
-                ? HERO_FEATURE_MESSAGES[displayedFeature]
-                : null
+              displayedFeature ? getFeatureMessage(displayedFeature) : null
             }
           />
         </div>

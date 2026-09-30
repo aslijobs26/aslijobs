@@ -1,8 +1,8 @@
-import {
-  APPLICATION_STATUS_LABELS,
-  type ApplicationStatus,
-  type SeekerApplicationListItem,
-  type SeekerApplicationStats,
+import type { MessageKey, useTranslate } from "@/i18n/translate";
+import type {
+  ApplicationStatus,
+  SeekerApplicationListItem,
+  SeekerApplicationStats,
 } from "@/types/job-seeker-applications";
 import { cn } from "@/utils/cn";
 import {
@@ -17,6 +17,23 @@ import {
   type LucideIcon,
   XCircle,
 } from "lucide-react";
+
+type Translate = ReturnType<typeof useTranslate>;
+
+export const APPLICATION_STATUS_LABEL_KEYS: Record<ApplicationStatus, MessageKey> = {
+  submitted: "seeker.status.submitted",
+  viewed: "seeker.status.viewed",
+  under_review: "seeker.status.underReview",
+  shortlisted: "seeker.status.shortlisted",
+  interview_scheduled: "seeker.status.interviewScheduled",
+  interview_completed: "seeker.status.interviewCompleted",
+  offer_sent: "seeker.status.offerSent",
+  selected: "seeker.status.selected",
+  joined: "seeker.status.joined",
+  did_not_join: "seeker.status.didNotJoin",
+  rejected: "seeker.status.rejected",
+  withdrawn: "seeker.status.withdrawn",
+};
 
 export type AppliedJobsStatsFilter =
   | "all"
@@ -64,14 +81,14 @@ export const APPLIED_JOBS_FILTER_WINDOW_SIZE = 100;
 
 export const APPLIED_JOBS_SORT_OPTIONS: {
   value: AppliedJobsSort;
-  label: string;
+  labelKey: MessageKey;
 }[] = [
-  { value: "newest", label: "Newest Applied" },
-  { value: "oldest", label: "Oldest Applied" },
-  { value: "updated", label: "Recently Updated" },
-  { value: "salary_high", label: "Salary High" },
-  { value: "salary_low", label: "Salary Low" },
-  { value: "company", label: "Company A-Z" },
+  { value: "newest", labelKey: "seeker.applications.sortNewest" },
+  { value: "oldest", labelKey: "seeker.applications.sortOldest" },
+  { value: "updated", labelKey: "seeker.applications.sortUpdated" },
+  { value: "salary_high", labelKey: "seeker.applications.sortSalaryHigh" },
+  { value: "salary_low", labelKey: "seeker.applications.sortSalaryLow" },
+  { value: "company", labelKey: "seeker.applications.sortCompany" },
 ];
 
 export type AppliedJobsStatsChipTone =
@@ -86,23 +103,23 @@ export type AppliedJobsStatsChipTone =
 
 export const APPLIED_JOBS_STATS_FILTERS: {
   key: AppliedJobsStatsFilter;
-  label: string;
+  labelKey: MessageKey;
   statuses?: ApplicationStatus[];
   backendStatus?: ApplicationStatus;
   statsKey?: keyof SeekerApplicationStats;
   tone: AppliedJobsStatsChipTone;
 }[] = [
-  { key: "all", label: "All", tone: "primary" },
+  { key: "all", labelKey: "seeker.applications.chipAll", tone: "primary" },
   {
     key: "applied",
-    label: "Applied",
+    labelKey: "seeker.status.submitted",
     statuses: ["submitted", "viewed"],
     statsKey: "applied",
     tone: "blue",
   },
   {
     key: "underReview",
-    label: "Under Review",
+    labelKey: "seeker.status.underReview",
     statuses: ["under_review"],
     backendStatus: "under_review",
     statsKey: "underReview",
@@ -110,7 +127,7 @@ export const APPLIED_JOBS_STATS_FILTERS: {
   },
   {
     key: "shortlisted",
-    label: "Shortlisted",
+    labelKey: "seeker.status.shortlisted",
     statuses: ["shortlisted"],
     backendStatus: "shortlisted",
     statsKey: "shortlisted",
@@ -118,14 +135,14 @@ export const APPLIED_JOBS_STATS_FILTERS: {
   },
   {
     key: "interview",
-    label: "Interview",
+    labelKey: "seeker.status.interview",
     statuses: ["interview_scheduled", "interview_completed"],
     statsKey: "interview",
     tone: "teal",
   },
   {
     key: "offer",
-    label: "Offer",
+    labelKey: "seeker.status.offer",
     statuses: ["offer_sent"],
     backendStatus: "offer_sent",
     statsKey: "offer",
@@ -133,7 +150,7 @@ export const APPLIED_JOBS_STATS_FILTERS: {
   },
   {
     key: "rejected",
-    label: "Rejected",
+    labelKey: "seeker.status.rejected",
     statuses: ["rejected"],
     backendStatus: "rejected",
     statsKey: "rejected",
@@ -141,7 +158,7 @@ export const APPLIED_JOBS_STATS_FILTERS: {
   },
   {
     key: "withdrawn",
-    label: "Withdrawn",
+    labelKey: "seeker.status.withdrawn",
     statuses: ["withdrawn"],
     backendStatus: "withdrawn",
     statsKey: "withdrawn",
@@ -214,7 +231,10 @@ export function formatAppliedDate(value: string | null | undefined): string {
   }).format(date);
 }
 
-export function formatRelativeTime(value: string | null | undefined): string {
+export function formatRelativeTime(
+  value: string | null | undefined,
+  t: Translate,
+): string {
   if (!value) {
     return "—";
   }
@@ -231,22 +251,24 @@ export function formatRelativeTime(value: string | null | undefined): string {
   const diffDays = Math.floor(diffMs / 86_400_000);
 
   if (diffMinutes < 1) {
-    return "Just now";
+    return t("seeker.applications.justNow");
   }
   if (diffMinutes < 60) {
-    return `${diffMinutes} min ago`;
+    return t("seeker.applications.minutesAgo", { count: diffMinutes });
   }
   if (diffHours < 24) {
-    return diffHours === 1 ? "1 hour ago" : `${diffHours} hours ago`;
+    return diffHours === 1
+      ? t("seeker.applications.hourAgo")
+      : t("seeker.applications.hoursAgo", { count: diffHours });
   }
   if (diffDays === 0) {
-    return "Today";
+    return t("seeker.applications.today");
   }
   if (diffDays === 1) {
-    return "Yesterday";
+    return t("seeker.applications.yesterday");
   }
   if (diffDays < 7) {
-    return `${diffDays} days ago`;
+    return t("seeker.applications.daysAgo", { count: diffDays });
   }
 
   return formatAppliedDate(value);
@@ -308,6 +330,7 @@ export function applicationStatusIcon(
 
 export function buildStatusContext(
   application: SeekerApplicationListItem,
+  t: Translate,
 ): { label: string; date: string } {
   const status = application.status;
   const statusDate = formatAppliedDate(
@@ -322,61 +345,54 @@ export function buildStatusContext(
     const dateLabel = formatAppliedDate(application.interviewDate);
     const time = application.interviewTime?.trim();
     return {
-      label: "Interview on",
+      label: t("seeker.applications.interviewOn"),
       date: time ? `${dateLabel}, ${time}` : dateLabel,
     };
   }
 
   if (status === "offer_sent") {
-    return { label: "Offer received", date: statusDate };
+    return { label: t("seeker.applications.offerReceived"), date: statusDate };
   }
 
   if (status === "under_review" || status === "viewed") {
-    return { label: "Application seen", date: statusDate };
+    return { label: t("seeker.applications.applicationSeen"), date: statusDate };
   }
 
-  if (status === "shortlisted") {
-    return { label: "Shortlisted", date: statusDate };
-  }
-
-  if (status === "rejected") {
-    return { label: "Rejected", date: statusDate };
-  }
-
-  if (status === "did_not_join") {
-    return { label: "Did Not Join", date: statusDate };
-  }
-
-  if (status === "withdrawn") {
-    return { label: "Withdrawn", date: statusDate };
-  }
-
-  if (status === "selected" || status === "joined") {
+  if (
+    status === "shortlisted" ||
+    status === "rejected" ||
+    status === "did_not_join" ||
+    status === "withdrawn" ||
+    status === "selected" ||
+    status === "joined"
+  ) {
     return {
-      label: APPLICATION_STATUS_LABELS[status],
+      label: t(APPLICATION_STATUS_LABEL_KEYS[status]),
       date: statusDate,
     };
   }
 
-  return { label: "Applied on", date: appliedDate };
+  return { label: t("seeker.applications.appliedOn"), date: appliedDate };
 }
 
 export function buildStatusContextLine(
   application: SeekerApplicationListItem,
+  t: Translate,
 ): string {
-  const context = buildStatusContext(application);
+  const context = buildStatusContext(application, t);
   return `${context.label} ${context.date}`.trim();
 }
 
 export function buildQuickSummary(
   application: SeekerApplicationListItem,
+  t: Translate,
 ): { headline: string; timeLabel: string } {
-  const headline = APPLICATION_STATUS_LABELS[application.status];
+  const headline = t(APPLICATION_STATUS_LABEL_KEYS[application.status]);
   const timeSource =
     application.lastStatusUpdatedAt ?? application.appliedAt;
   return {
     headline,
-    timeLabel: formatRelativeTime(timeSource),
+    timeLabel: formatRelativeTime(timeSource, t),
   };
 }
 
@@ -671,17 +687,15 @@ export function statusBadgeClasses(
 }
 
 /** Compact labels for list cards so badges stay single-line across devices. */
-export function cardStatusLabel(status: ApplicationStatus): string {
+export function cardStatusLabelKey(status: ApplicationStatus): MessageKey {
   switch (status) {
     case "interview_scheduled":
     case "interview_completed":
-      return "Interview";
+      return "seeker.status.interview";
     case "offer_sent":
-      return "Offer";
-    case "under_review":
-      return "Under Review";
+      return "seeker.status.offer";
     default:
-      return APPLICATION_STATUS_LABELS[status];
+      return APPLICATION_STATUS_LABEL_KEYS[status];
   }
 }
 

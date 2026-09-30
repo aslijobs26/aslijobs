@@ -1,11 +1,16 @@
+"use client";
+
 import { Container } from "@/components/layout/Container";
+import { useTranslate } from "@/i18n/translate";
 import { LocationDiscoverySection } from "./LocationDiscoverySection";
 import { PopularJobsSection } from "./PopularJobsSection";
 
 export function JobsDiscoverySection() {
+  const t = useTranslate();
+
   return (
     <section
-      aria-label="Popular jobs and locations"
+      aria-label={t("home.jobsDiscovery.sectionAria")}
       className="bg-surface pb-10 sm:pb-12 lg:pb-14"
     >
       <Container className="flex flex-col gap-10 sm:gap-12">

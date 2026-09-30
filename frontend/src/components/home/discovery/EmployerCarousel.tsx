@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import type { Employer } from "@/types/discovery";
 import { cn } from "@/utils/cn";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -21,6 +22,7 @@ const MANUAL_EASE = 0.15;
 const MAX_FRAME_SECONDS = 0.05;
 
 export function EmployerCarousel({ employers }: EmployerCarouselProps) {
+  const t = useTranslate();
   // Render the employer sequence twice so the track can loop seamlessly: once
   // the offset passes the first set's width we wrap by exactly that width and
   // the identical second set is already in place — no gap, flicker, or reset.
@@ -164,7 +166,7 @@ export function EmployerCarousel({ employers }: EmployerCarouselProps) {
     >
       <button
         type="button"
-        aria-label="Previous employers"
+        aria-label={t("home.discovery.previousEmployers")}
         onClick={() => nudge("left")}
         className={cn(
           "absolute left-2 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-sm transition-colors hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:pointer-events-none disabled:opacity-40 sm:left-3",
@@ -199,7 +201,7 @@ export function EmployerCarousel({ employers }: EmployerCarouselProps) {
                   {employer.logo ? (
                     <Image
                       src={employer.logo}
-                      alt={`${employer.name} logo`}
+                      alt={t("home.common.logoAlt", { name: employer.name })}
                       fill
                       sizes="112px"
                       className="object-contain object-center p-2"
@@ -223,7 +225,7 @@ export function EmployerCarousel({ employers }: EmployerCarouselProps) {
 
       <button
         type="button"
-        aria-label="Next employers"
+        aria-label={t("home.discovery.nextEmployers")}
         onClick={() => nudge("right")}
         className={cn(
           "absolute right-2 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-sm transition-colors hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:pointer-events-none disabled:opacity-40 sm:right-3",

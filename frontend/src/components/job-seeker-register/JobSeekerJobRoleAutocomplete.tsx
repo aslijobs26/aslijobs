@@ -2,6 +2,8 @@
 
 import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
+import { useAuthMessageTranslator } from "@/components/employer-register/useAuthMessageTranslator";
+import { useTranslate } from "@/i18n/translate";
 import { searchJobSeekerRoles } from "@/services/job-seeker-register.service";
 import { cn } from "@/utils/cn";
 import { useEffect, useId, useRef, useState } from "react";
@@ -31,6 +33,8 @@ export function JobSeekerJobRoleAutocomplete({
   error,
   onChange,
 }: JobSeekerJobRoleAutocompleteProps) {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
   const listId = useId();
   const errorId = `${id}-error`;
   const rootRef = useRef<HTMLDivElement>(null);
@@ -126,26 +130,30 @@ export function JobSeekerJobRoleAutocomplete({
             className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-border bg-surface py-1 shadow-lg"
           >
             {isLoading ? (
-              <li className="px-3 py-2 text-sm text-muted">Searching…</li>
+              <li className="px-3 py-2 text-sm text-muted">
+                {t("auth.common.searching")}
+              </li>
             ) : null}
             {showCustomOption ? (
               <li role="option">
                 <button
                   type="button"
-                  className="flex w-full px-3 py-2 text-left text-sm font-medium text-primary hover:bg-primary-light"
+                  className="flex w-full break-words px-3 py-2 text-left text-sm font-medium text-primary hover:bg-primary-light"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
                     onChange(value.trim());
                     setIsOpen(false);
                   }}
                 >
-                  Use “{value.trim()}”
+                  {t("auth.jobSeekerRegister.useCustomRole", {
+                    value: value.trim(),
+                  })}
                 </button>
               </li>
             ) : null}
             {!isLoading && roles.length === 0 && !showCustomOption ? (
               <li className="px-3 py-2 text-sm text-muted">
-                No matching roles. Keep typing to use a custom role.
+                {t("auth.jobSeekerRegister.noMatchingRoles")}
               </li>
             ) : null}
             {roles.map((role) => (
@@ -171,7 +179,7 @@ export function JobSeekerJobRoleAutocomplete({
           </ul>
         ) : null}
       </div>
-      <FieldError id={errorId} message={error} />
+      <FieldError id={errorId} message={translateMessage(error)} />
     </div>
   );
 }

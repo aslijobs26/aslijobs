@@ -4,14 +4,10 @@ import { FieldError } from "@/components/auth/FieldError";
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import {
   EMPLOYER_REGISTER_DOCUMENT_ACCEPT,
-  EMPLOYER_REGISTER_DOCUMENT_HELPER_TEXT,
   EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES,
   EMPLOYER_REGISTER_DOCUMENT_TYPE_OPTIONS,
-  EMPLOYER_REGISTER_DOCUMENT_UPLOAD_HINT,
-  EMPLOYER_REGISTER_DOCUMENT_UPLOAD_PRIMARY,
-  EMPLOYER_REGISTER_DOCUMENT_VERIFICATION_SUBTITLE,
-  EMPLOYER_REGISTER_DOCUMENT_VERIFICATION_TITLE,
 } from "@/constants/employer-register";
+import { useTranslate } from "@/i18n/translate";
 import type {
   EmployerRegisterDocumentPreview,
   EmployerRegisterDocumentType,
@@ -27,6 +23,8 @@ import {
   type KeyboardEvent,
 } from "react";
 import { EmployerImageUploadField } from "./EmployerImageUploadField";
+import { IDENTITY_DOCUMENT_LABEL_KEYS } from "./employer-register-document-labels";
+import { useAuthMessageTranslator } from "./useAuthMessageTranslator";
 
 type EmployerRegisterDocumentVerificationProps = {
   documentType: EmployerRegisterDocumentType | null;
@@ -98,6 +96,10 @@ export function EmployerRegisterDocumentVerification({
   onDocumentTypeErrorClear,
   onDocumentFileErrorChange,
 }: EmployerRegisterDocumentVerificationProps) {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
+  const uploadPrimary = t("auth.employerRegister.documentUploadPrimary");
+  const uploadHint = t("auth.employerRegister.documentUploadHint");
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -158,10 +160,10 @@ export function EmployerRegisterDocumentVerification({
           id="employer-register-document-verification-title"
           className="employer-register-form-label"
         >
-          {EMPLOYER_REGISTER_DOCUMENT_VERIFICATION_TITLE}
+          {t("auth.employerRegister.documentVerificationTitle")}
         </h2>
-        <p className="employer-register-document-subtitle">
-          {EMPLOYER_REGISTER_DOCUMENT_VERIFICATION_SUBTITLE}
+        <p className="employer-register-document-subtitle break-words">
+          {t("auth.employerRegister.documentVerificationSubtitle")}
         </p>
       </div>
 
@@ -169,7 +171,7 @@ export function EmployerRegisterDocumentVerification({
         id="documentType"
         className="employer-register-document-type-options"
         role="radiogroup"
-        aria-label="Government ID type"
+        aria-label={t("auth.employerRegister.governmentIdAria")}
         aria-invalid={Boolean(documentTypeError) || undefined}
         aria-describedby={documentTypeError ? "documentType-error" : undefined}
       >
@@ -198,12 +200,17 @@ export function EmployerRegisterDocumentVerification({
                 className="sr-only"
               />
               <DocumentTypeRadioIndicator checked={checked} />
-              <span>{option.label}</span>
+              <span className="min-w-0 break-words">
+                {t(IDENTITY_DOCUMENT_LABEL_KEYS[option.value])}
+              </span>
             </label>
           );
         })}
       </div>
-      <FieldError id="documentType-error" message={documentTypeError} />
+      <FieldError
+        id="documentType-error"
+        message={translateMessage(documentTypeError)}
+      />
 
       {documentType ? (
         <div className="employer-register-form-stack">
@@ -226,7 +233,7 @@ export function EmployerRegisterDocumentVerification({
               <button
                 type="button"
                 className="employer-register-document-preview-remove"
-                aria-label="Remove selected document"
+                aria-label={t("auth.employerRegister.removeSelectedDocument")}
                 onClick={() => {
                   onDocumentPreviewChange(null);
                   onDocumentFileErrorChange?.(null);
@@ -241,7 +248,7 @@ export function EmployerRegisterDocumentVerification({
               className="employer-register-document-dropzone"
               role="button"
               tabIndex={0}
-              aria-label={`${EMPLOYER_REGISTER_DOCUMENT_UPLOAD_PRIMARY}. ${EMPLOYER_REGISTER_DOCUMENT_UPLOAD_HINT}`}
+              aria-label={`${uploadPrimary}. ${uploadHint}`}
               aria-invalid={Boolean(documentFileError) || undefined}
               aria-describedby={
                 documentFileError ? "documentFile-error" : undefined
@@ -261,11 +268,11 @@ export function EmployerRegisterDocumentVerification({
                   aria-hidden="true"
                 />
               </span>
-              <p className="employer-register-document-dropzone-primary">
-                {EMPLOYER_REGISTER_DOCUMENT_UPLOAD_PRIMARY}
+              <p className="employer-register-document-dropzone-primary break-words">
+                {uploadPrimary}
               </p>
-              <p className="employer-register-document-dropzone-hint">
-                {EMPLOYER_REGISTER_DOCUMENT_UPLOAD_HINT}
+              <p className="employer-register-document-dropzone-hint break-words">
+                {uploadHint}
               </p>
             </div>
           )}
@@ -281,16 +288,19 @@ export function EmployerRegisterDocumentVerification({
             onChange={handleFileInputChange}
           />
 
-          <FieldError id="documentFile-error" message={documentFileError} />
+          <FieldError
+            id="documentFile-error"
+            message={translateMessage(documentFileError)}
+          />
 
-          <p className="employer-register-document-helper">
-            {EMPLOYER_REGISTER_DOCUMENT_HELPER_TEXT}
+          <p className="employer-register-document-helper break-words">
+            {t("auth.employerRegister.documentHelper")}
           </p>
         </div>
       ) : null}
 
       <EmployerImageUploadField
-        label="Upload Profile Photo"
+        label={t("auth.employerRegister.uploadProfilePhoto")}
         optional
         preview={profilePhotoPreview}
         onPreviewChange={onProfilePhotoPreviewChange}

@@ -509,6 +509,7 @@ export const publicJobsQuerySchema = z.object({
     z.coerce.number().nonnegative().optional(),
   ),
   sort: z.enum(PUBLIC_JOB_SORTS).optional().default("relevant"),
+  language: z.string().trim().optional().default(""),
 });
 
 export const jobIdParamsSchema = z.object({

@@ -16,6 +16,12 @@ import {
   searchIndiaCities,
 } from "@/services/nominatim-location.service";
 import type { JobSearchUrlState } from "@/types/job-search";
+import {
+  formatJobSearchExperience,
+  formatJobSearchJobType,
+  formatJobSearchWorkMode,
+} from "@/utils/job-search-format";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { toJobSearchLocationSlug } from "@/utils/job-search-url";
 import { ChevronDown, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
@@ -441,6 +447,7 @@ export function JobSearchFiltersSidebar({
   presentation = "sidebar",
   panels,
 }: JobSearchFiltersSidebarProps) {
+  const t = useTranslate();
   const isPanel = presentation === "panel";
   const showPanel = (id: JobSearchFilterPanelId) =>
     !panels || panels.includes(id);
@@ -646,7 +653,7 @@ export function JobSearchFiltersSidebar({
               strokeWidth={2.25}
               aria-hidden="true"
             />
-            Clear All
+            {t("jobs.clearAll")}
           </button>
         </div>
       ) : null}
@@ -675,7 +682,7 @@ export function JobSearchFiltersSidebar({
       ) : null}
 
       {showPanel("location") ? (
-        <FilterSection title="Location" collapsible={sectionCollapsible}
+        <FilterSection title={t("jobs.location")} collapsible={sectionCollapsible}
           showTitle={sectionShowTitle}
           showBorder={sectionShowBorder}>
           {!state.state ? (
@@ -740,7 +747,7 @@ export function JobSearchFiltersSidebar({
                   onClick={() => setShowAllCities((current) => !current)}
                   className="px-2 text-sm font-semibold text-primary-soft transition-colors hover:text-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/30"
                 >
-                  {showAllCities ? "Show Less" : "+ Show More"}
+                  {showAllCities ? t("jobs.showLess") : t("jobs.showMore")}
                 </button>
               ) : null}
             </div>
@@ -749,7 +756,7 @@ export function JobSearchFiltersSidebar({
       ) : null}
 
       {showPanel("experience") ? (
-        <FilterSection title="Experience" collapsible={sectionCollapsible}
+        <FilterSection title={t("jobs.experience")} collapsible={sectionCollapsible}
           showTitle={sectionShowTitle}
           showBorder={sectionShowBorder}>
           <ul className="space-y-0.5">
@@ -759,7 +766,7 @@ export function JobSearchFiltersSidebar({
                 <li key={option.value}>
                   <FilterCheckboxRow
                     checked={checked}
-                    label={option.label}
+                    label={formatJobSearchExperience(option.value)}
                     onChange={() =>
                       onChange({
                         experience: toggleValue(state.experience, option.value),
@@ -775,7 +782,7 @@ export function JobSearchFiltersSidebar({
       ) : null}
 
       {showPanel("salary") ? (
-        <FilterSection title="Salary Range" collapsible={sectionCollapsible}
+        <FilterSection title={t("jobs.salaryRange")} collapsible={sectionCollapsible}
           showTitle={sectionShowTitle}
           showBorder={sectionShowBorder}>
           <SalaryRangeFilter
@@ -787,7 +794,7 @@ export function JobSearchFiltersSidebar({
       ) : null}
 
       {showPanel("jobType") ? (
-        <FilterSection title="Job Type" collapsible={sectionCollapsible}
+        <FilterSection title={t("jobs.jobType")} collapsible={sectionCollapsible}
           showTitle={sectionShowTitle}
           showBorder={sectionShowBorder}>
           <ul className="space-y-0.5">
@@ -797,7 +804,7 @@ export function JobSearchFiltersSidebar({
                 <li key={option.value}>
                   <FilterCheckboxRow
                     checked={checked}
-                    label={option.label}
+                    label={formatJobSearchJobType(option.value)}
                     onChange={() =>
                       onChange({
                         jobType: toggleValue(state.jobType, option.value),
@@ -814,18 +821,24 @@ export function JobSearchFiltersSidebar({
 
       {showPanel("gender") ? (
         <FilterSection
-          title="Gender Preference"
+          title={t("jobs.genderPreference")}
           collapsible={sectionCollapsible}
           showTitle={sectionShowTitle}
           showBorder={sectionShowBorder}
         >
           <ul className="space-y-0.5">
             {JOB_SEARCH_GENDER_OPTIONS.map((option) => (
-              <li key={option.label}>
+              <li key={option.value || "any"}>
                 <FilterRadioRow
                   name="job-search-gender"
                   checked={state.gender === option.value}
-                  label={option.label}
+                  label={
+                    option.value === "male"
+                      ? t("jobs.maleOnly")
+                      : option.value === "female"
+                        ? t("jobs.femaleOnly")
+                        : t("jobs.any")
+                  }
                   onChange={() =>
                     onChange({
                       gender: option.value,
@@ -841,7 +854,7 @@ export function JobSearchFiltersSidebar({
 
       {showPanel("workMode") && (isPanel || showMoreFilters) ? (
         <FilterSection
-          title="Work Mode"
+          title={t("jobs.workMode")}
           defaultOpen
           collapsible={sectionCollapsible}
           showTitle={sectionShowTitle}
@@ -854,7 +867,7 @@ export function JobSearchFiltersSidebar({
                 <li key={option.value}>
                   <FilterCheckboxRow
                     checked={checked}
-                    label={option.label}
+                    label={formatJobSearchWorkMode(option.value)}
                     onChange={() =>
                       onChange({
                         workMode: toggleValue(state.workMode, option.value),
@@ -880,7 +893,7 @@ export function JobSearchFiltersSidebar({
             strokeWidth={2}
             aria-hidden="true"
           />
-          {showMoreFilters ? "Hide More Filters" : "More Filters"}
+          {showMoreFilters ? t("jobs.hideMoreFilters") : t("jobs.moreFilters")}
         </button>
       ) : null}
     </aside>

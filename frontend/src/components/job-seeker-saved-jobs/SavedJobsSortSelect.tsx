@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import type { SavedJobsSort } from "@/types/saved-jobs";
 import { cn } from "@/utils/cn";
 import { Check, ChevronDown } from "lucide-react";
@@ -15,6 +16,7 @@ export function SavedJobsSortSelect({
   value,
   onChange,
 }: SavedJobsSortSelectProps) {
+  const t = useTranslate();
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -22,6 +24,7 @@ export function SavedJobsSortSelect({
   const selected =
     SAVED_JOBS_SORT_OPTIONS.find((option) => option.value === value) ??
     SAVED_JOBS_SORT_OPTIONS[0]!;
+  const selectedLabel = t(selected.labelKey);
 
   useEffect(() => {
     if (!isOpen) {
@@ -50,7 +53,9 @@ export function SavedJobsSortSelect({
 
   return (
     <div ref={rootRef} className="relative inline-flex items-center gap-2 text-sm text-muted">
-      <span className="hidden shrink-0 font-medium sm:inline">Sort by:</span>
+      <span className="hidden shrink-0 font-medium sm:inline">
+        {t("seeker.saved.sortBy")}
+      </span>
       <div className="relative">
         <button
           type="button"
@@ -58,7 +63,7 @@ export function SavedJobsSortSelect({
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           aria-controls={listboxId}
-          aria-label={`Sort saved jobs: ${selected.label}`}
+          aria-label={t("seeker.saved.sortAria", { label: selectedLabel })}
           onClick={() => setIsOpen((current) => !current)}
           className={cn(
             "inline-flex h-9 min-w-[9.5rem] items-center justify-between gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-left text-xs font-semibold text-foreground shadow-sm sm:h-10 sm:min-w-[11rem] sm:gap-2 sm:rounded-xl sm:px-3 sm:text-sm",
@@ -67,7 +72,7 @@ export function SavedJobsSortSelect({
             isOpen && "border-primary ring-2 ring-primary/20",
           )}
         >
-          <span className="truncate">{selected.label}</span>
+          <span className="truncate">{selectedLabel}</span>
           <ChevronDown
             className={cn(
               "size-3.5 shrink-0 text-muted transition-transform sm:size-4",
@@ -81,7 +86,7 @@ export function SavedJobsSortSelect({
           <ul
             id={listboxId}
             role="listbox"
-            aria-label="Sort options"
+            aria-label={t("seeker.common.sortOptions")}
             className="absolute top-[calc(100%+0.35rem)] right-0 z-40 min-w-full overflow-hidden rounded-xl border border-border-subtle bg-surface py-1.5 shadow-[0_8px_24px_rgba(26,43,60,0.12)]"
           >
             {SAVED_JOBS_SORT_OPTIONS.map((option) => {
@@ -104,7 +109,7 @@ export function SavedJobsSortSelect({
                         : "font-medium text-foreground hover:bg-primary-light/50",
                     )}
                   >
-                    <span className="truncate">{option.label}</span>
+                    <span className="truncate">{t(option.labelKey)}</span>
                     {isSelected ? (
                       <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
                     ) : null}

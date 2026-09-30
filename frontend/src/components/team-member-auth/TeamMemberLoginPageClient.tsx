@@ -2,6 +2,7 @@
 
 import { ROUTES } from "@/constants/routes";
 import { RBAC_QUERY_KEYS } from "@/constants/employer-rbac";
+import { useTranslate } from "@/i18n/translate";
 import { loginTeamMember } from "@/services/employer-team.service";
 import { getTeamApiErrorMessage } from "@/utils/employer-team";
 import { establishEmployerClientSession } from "@/utils/employer-session";
@@ -11,6 +12,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 function TeamMemberLoginForm() {
+  const t = useTranslate();
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -32,16 +34,19 @@ function TeamMemberLoginForm() {
       router.replace(ROUTES.EMPLOYER_DASHBOARD);
     },
     onError: (error) => {
-      setErrorMessage(getTeamApiErrorMessage(error, "Login failed."));
+      setErrorMessage(
+        getTeamApiErrorMessage(error, t("auth.team.loginFailed")),
+      );
     },
   });
 
   return (
     <div className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-6 shadow-sm sm:p-8">
-      <h1 className="text-xl font-bold text-foreground">Team Member Login</h1>
-      <p className="mt-1 text-sm text-muted">
-        Sign in with the email and password you created when accepting your
-        invitation.
+      <h1 className="break-words text-xl font-bold text-foreground">
+        {t("auth.team.heading")}
+      </h1>
+      <p className="mt-1 break-words text-sm text-muted">
+        {t("auth.team.subtitle")}
       </p>
 
       {activated ? (
@@ -49,7 +54,7 @@ function TeamMemberLoginForm() {
           role="status"
           className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
         >
-          Account created successfully. Please sign in.
+          {t("auth.team.activated")}
         </p>
       ) : null}
 
@@ -73,7 +78,9 @@ function TeamMemberLoginForm() {
         ) : null}
 
         <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-foreground">Email</span>
+          <span className="mb-1.5 block font-medium text-foreground">
+            {t("auth.team.email")}
+          </span>
           <input
             type="email"
             required
@@ -86,7 +93,7 @@ function TeamMemberLoginForm() {
 
         <label className="block text-sm">
           <span className="mb-1.5 block font-medium text-foreground">
-            Password
+            {t("auth.team.password")}
           </span>
           <input
             type="password"
@@ -102,19 +109,21 @@ function TeamMemberLoginForm() {
         <button
           type="submit"
           disabled={loginMutation.isPending}
-          className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary text-sm font-semibold text-surface hover:bg-primary-hover disabled:opacity-50"
+          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-primary px-3 text-sm font-semibold text-surface hover:bg-primary-hover disabled:opacity-50"
         >
-          {loginMutation.isPending ? "Signing in..." : "Sign In"}
+          {loginMutation.isPending
+            ? t("auth.team.signingIn")
+            : t("auth.team.signIn")}
         </button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-muted">
-        Employer account?{" "}
+      <p className="mt-4 break-words text-center text-sm text-muted">
+        {t("auth.team.employerAccount")}{" "}
         <Link
           href={ROUTES.EMPLOYER_LOGIN}
           className="font-semibold text-primary hover:underline"
         >
-          Login here
+          {t("auth.team.loginHere")}
         </Link>
       </p>
     </div>
@@ -122,6 +131,8 @@ function TeamMemberLoginForm() {
 }
 
 export function TeamMemberLoginPageClient() {
+  const t = useTranslate();
+
   return (
     <div className="flex min-h-dvh items-center justify-center bg-hero-bg px-4 py-10">
       <Suspense
@@ -130,7 +141,7 @@ export function TeamMemberLoginPageClient() {
             className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-8 text-center text-sm text-muted"
             role="status"
           >
-            Loading...
+            {t("auth.team.loading")}
           </div>
         }
       >

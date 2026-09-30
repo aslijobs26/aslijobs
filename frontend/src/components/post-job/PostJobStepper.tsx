@@ -1,6 +1,7 @@
 "use client";
 
 import { POST_JOB_STEPS } from "@/constants/post-job";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type {
   PostJobActiveStep,
   PostJobStep,
@@ -17,6 +18,24 @@ const STEP_ICON_GLYPH = "size-4 sm:size-[1.125rem]";
 
 const STEP_STATE_TRANSITION_CLASS =
   "transition-colors duration-300 ease-out motion-reduce:transition-none";
+
+const STEP_COPY_KEYS: Record<
+  PostJobStepIcon,
+  { titleKey: MessageKey; descriptionKey: MessageKey }
+> = {
+  "job-information": {
+    titleKey: "employer.postJob.steps.jobInformation.title",
+    descriptionKey: "employer.postJob.steps.jobInformation.description",
+  },
+  location: {
+    titleKey: "employer.postJob.steps.locationSalary.title",
+    descriptionKey: "employer.postJob.steps.locationSalary.description",
+  },
+  candidate: {
+    titleKey: "employer.postJob.steps.candidateInterview.title",
+    descriptionKey: "employer.postJob.steps.candidateInterview.description",
+  },
+};
 
 function StepIcon({ icon }: { icon: PostJobStepIcon }) {
   switch (icon) {
@@ -89,6 +108,9 @@ function StepItem({
   isLast,
   onSelect,
 }: StepItemProps) {
+  const t = useTranslate();
+  const copyKeys = STEP_COPY_KEYS[step.icon];
+
   return (
     <li
       className={cn(
@@ -134,19 +156,19 @@ function StepItem({
 
         <div className="min-w-0 flex-1 pt-0.5">
           <p className="text-[0.65rem] font-medium uppercase tracking-[0.06em] text-muted sm:text-xs">
-            STEP {step.stepNumber}
+            {t("employer.postJob.stepNumber", { number: step.stepNumber })}
           </p>
           <p
             className={cn(
-              "mt-0.5 text-sm font-bold leading-tight sm:text-[0.9375rem]",
+              "mt-0.5 text-sm font-bold leading-tight break-words sm:text-[0.9375rem]",
               STEP_STATE_TRANSITION_CLASS,
               isActive ? "text-foreground" : "text-foreground/90",
             )}
           >
-            {step.title}
+            {t(copyKeys.titleKey)}
           </p>
-          <p className="mt-0.5 hidden text-xs leading-snug text-muted sm:block">
-            {step.description}
+          <p className="mt-0.5 hidden text-xs leading-snug break-words text-muted sm:block">
+            {t(copyKeys.descriptionKey)}
           </p>
         </div>
       </button>
@@ -163,9 +185,11 @@ export function PostJobStepper({
   activeStep,
   onStepChange,
 }: PostJobStepperProps) {
+  const t = useTranslate();
+
   return (
     <nav
-      aria-label="Post job progress"
+      aria-label={t("employer.postJob.progressAria")}
       className={postJobStepperClassName}
     >
       <div

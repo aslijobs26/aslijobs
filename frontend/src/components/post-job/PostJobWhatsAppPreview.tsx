@@ -14,9 +14,11 @@ import {
   POST_JOB_PREVIEW_LANGUAGE_OPTIONS,
   type PostJobPreviewLanguageId,
 } from "@/constants/post-job";
+import { useTranslate } from "@/i18n/translate";
 import type { PostJobWizardFormData } from "@/types/post-job";
 import { buildWhatsAppPreviewContent } from "@/utils/build-whatsapp-preview";
 import { cn } from "@/utils/cn";
+import { formatJobSearchLanguage } from "@/utils/job-search-format";
 import { Check, ChevronDown, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
@@ -28,25 +30,24 @@ type PostJobWhatsAppPreviewProps = {
 export function PostJobWhatsAppPreview({
   formData,
 }: PostJobWhatsAppPreviewProps) {
+  const t = useTranslate();
   const [language, setLanguage] =
     useState<PostJobPreviewLanguageId>("english");
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const preview = buildWhatsAppPreviewContent(formData);
-  const selectedLanguageLabel =
-    POST_JOB_PREVIEW_LANGUAGE_OPTIONS.find((option) => option.value === language)
-      ?.label ?? "English";
+  const selectedLanguageLabel = formatJobSearchLanguage(language);
 
   return (
     <aside
-      aria-label="WhatsApp message preview"
+      aria-label={t("employer.postJob.whatsappPreview.title")}
       className="flex h-full min-h-full w-full flex-col rounded-2xl bg-[#EEFFFB] p-4 sm:p-5"
     >
-      <div className="mb-4">
-        <h2 className="text-base font-bold text-foreground sm:text-lg">
-          WhatsApp Message Preview
+      <div className="mb-4 min-w-0">
+        <h2 className="break-words text-base font-bold text-foreground sm:text-lg">
+          {t("employer.postJob.whatsappPreview.title")}
         </h2>
-        <p className="mt-1 text-xs leading-snug text-muted sm:text-sm">
-          This is how your job will appear to candidates on WhatsApp
+        <p className="mt-1 break-words text-xs leading-snug text-muted sm:text-sm">
+          {t("employer.postJob.whatsappPreview.subtitle")}
         </p>
       </div>
 
@@ -75,7 +76,7 @@ export function PostJobWhatsAppPreview({
         {isLanguageOpen ? (
           <ul
             role="listbox"
-            aria-label="Preview language"
+            aria-label={t("employer.postJob.whatsappPreview.languageAria")}
             className="absolute inset-x-0 z-20 mt-1 overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-lg"
           >
             {POST_JOB_PREVIEW_LANGUAGE_OPTIONS.map((option) => {
@@ -96,7 +97,7 @@ export function PostJobWhatsAppPreview({
                       setIsLanguageOpen(false);
                     }}
                   >
-                    <span>{option.label}</span>
+                    <span>{formatJobSearchLanguage(option.value)}</span>
                     {selected ? (
                       <Check
                         className="size-4 shrink-0 text-primary-soft"

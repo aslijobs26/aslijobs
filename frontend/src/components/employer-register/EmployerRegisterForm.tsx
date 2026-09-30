@@ -4,19 +4,15 @@ import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import {
-  EMPLOYER_REGISTER_ACCOUNT_TYPE_LABEL,
   EMPLOYER_REGISTER_ACCOUNT_TYPE_OPTIONS,
-  EMPLOYER_REGISTER_CONTINUE_LABEL,
   EMPLOYER_REGISTER_DEFAULT_ACCOUNT_TYPE,
-  EMPLOYER_REGISTER_HEADING,
   EMPLOYER_REGISTER_INITIAL_FORM_DATA,
   EMPLOYER_REGISTER_OTP_LENGTH,
-  EMPLOYER_REGISTER_SEND_OTP_LABEL,
-  EMPLOYER_REGISTER_SUBMIT_LABEL,
   isBusinessEmployerAccountType,
   isValidEmployerWhatsappNumber,
 } from "@/constants/employer-register";
 import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import {
   completeEmployerIndividualIdentity,
   registerEmployerAccount,
@@ -43,6 +39,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { EmployerRegisterDocumentVerification } from "./EmployerRegisterDocumentVerification";
 import { EmployerRegisterOtpSection } from "./EmployerRegisterOtpSection";
+import {
+  AUTH_VALIDATION_COPY,
+  useAuthMessageTranslator,
+} from "./useAuthMessageTranslator";
+
+const ACCOUNT_TYPE_LABEL_KEYS: Readonly<
+  Record<EmployerRegisterAccountType, MessageKey>
+> = {
+  company: "auth.employerRegister.accountTypeCompany",
+  consultancy: "auth.employerRegister.accountTypeConsultancy",
+  individual: "auth.employerRegister.accountTypeIndividual",
+};
 
 const EMPTY_OTP_DIGITS = Array.from(
   { length: EMPLOYER_REGISTER_OTP_LENGTH },
@@ -88,6 +96,8 @@ export function EmployerRegisterForm({
     employerId: string,
   ) => void;
 }) {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<EmployerRegisterFormData>(
     EMPLOYER_REGISTER_INITIAL_FORM_DATA,
@@ -115,15 +125,11 @@ export function EmployerRegisterForm({
   const isBusinessAccount = isBusinessEmployerAccountType(accountType);
   const isIndividualAccount = accountType === "individual";
   const businessNameLabel = isConsultancyAccount
-    ? "Consultancy Name"
-    : "Company/Business Name";
+    ? t("auth.employerRegister.consultancyName")
+    : t("auth.employerRegister.companyBusinessName");
   const businessNamePlaceholder = isConsultancyAccount
-    ? "Enter Consultancy Name"
-    : "Enter company name";
-  const firstNamePlaceholder = "Enter First Name";
-  const lastNamePlaceholder = "Enter Last Name";
-  const whatsappPlaceholder = "Enter WhatsApp Number";
-  const emailPlaceholder = "Enter Email Address";
+    ? t("auth.employerRegister.consultancyNamePlaceholder")
+    : t("auth.employerRegister.companyNamePlaceholder");
   const canSendOtp =
     isValidEmployerWhatsappNumber(formData.whatsappNumber) &&
     !isOtpVisible &&
@@ -314,7 +320,7 @@ export function EmployerRegisterForm({
     }
 
     if (!employerId) {
-      setErrorMessage("Please verify your WhatsApp number first");
+      setErrorMessage(AUTH_VALIDATION_COPY.verifyWhatsappFirst);
       return;
     }
 
@@ -406,13 +412,13 @@ export function EmployerRegisterForm({
   };
 
   const submitLabel = isWhatsappVerified
-    ? EMPLOYER_REGISTER_CONTINUE_LABEL
-    : EMPLOYER_REGISTER_SUBMIT_LABEL;
+    ? t("auth.common.continue")
+    : t("auth.common.createAccount");
 
   return (
     <div className="w-full">
       <h1 className="employer-register-form-heading">
-        {EMPLOYER_REGISTER_HEADING}
+        {t("auth.employerRegister.heading")}
       </h1>
 
       <form
@@ -422,12 +428,12 @@ export function EmployerRegisterForm({
       >
         <fieldset className="employer-register-account-type">
           <legend className="sr-only">
-            {EMPLOYER_REGISTER_ACCOUNT_TYPE_LABEL}
+            {t("auth.employerRegister.accountTypeLabel")}
           </legend>
           <div
             className="employer-register-account-type-options"
             role="radiogroup"
-            aria-label={EMPLOYER_REGISTER_ACCOUNT_TYPE_LABEL}
+            aria-label={t("auth.employerRegister.accountTypeLabel")}
           >
             {EMPLOYER_REGISTER_ACCOUNT_TYPE_OPTIONS.map((option) => {
               const checked = accountType === option.value;
@@ -449,7 +455,9 @@ export function EmployerRegisterForm({
                     className="sr-only"
                   />
                   <AccountTypeRadioIndicator checked={checked} />
-                  <span>{option.label}</span>
+                  <span className="min-w-0 break-words">
+                    {t(ACCOUNT_TYPE_LABEL_KEYS[option.value])}
+                  </span>
                 </label>
               );
             })}
@@ -472,7 +480,7 @@ export function EmployerRegisterForm({
                     required
                     className="employer-register-form-label"
                   >
-                    Establishment Name
+                    {t("auth.employerRegister.establishmentName")}
                   </RequiredFieldLabel>
                   <input
                     id="establishment-name"
@@ -482,7 +490,9 @@ export function EmployerRegisterForm({
                     onChange={(event) =>
                       updateField("establishmentName", event.target.value)
                     }
-                    placeholder="Enter Establishment Name"
+                    placeholder={t(
+                      "auth.employerRegister.establishmentNamePlaceholder",
+                    )}
                     autoComplete="organization"
                     className="employer-register-form-input"
                     aria-required="true"
@@ -495,7 +505,7 @@ export function EmployerRegisterForm({
                   />
                   <FieldError
                     id="establishmentName-error"
-                    message={fieldErrors.establishmentName}
+                    message={translateMessage(fieldErrors.establishmentName)}
                   />
                 </>
               ) : (
@@ -527,7 +537,7 @@ export function EmployerRegisterForm({
                   />
                   <FieldError
                     id="companyName-error"
-                    message={fieldErrors.companyName}
+                    message={translateMessage(fieldErrors.companyName)}
                   />
                 </>
               )}
@@ -542,7 +552,7 @@ export function EmployerRegisterForm({
               required
               className="employer-register-form-label"
             >
-              First Name
+              {t("auth.employerRegister.firstName")}
             </RequiredFieldLabel>
             <input
               id="first-name"
@@ -550,7 +560,7 @@ export function EmployerRegisterForm({
               type="text"
               value={formData.firstName}
               onChange={(event) => updateField("firstName", event.target.value)}
-              placeholder={firstNamePlaceholder}
+              placeholder={t("auth.employerRegister.firstNamePlaceholder")}
               autoComplete="given-name"
               className="employer-register-form-input"
               aria-required="true"
@@ -559,7 +569,10 @@ export function EmployerRegisterForm({
                 fieldErrors.firstName ? "firstName-error" : undefined
               }
             />
-            <FieldError id="firstName-error" message={fieldErrors.firstName} />
+            <FieldError
+              id="firstName-error"
+              message={translateMessage(fieldErrors.firstName)}
+            />
           </div>
 
           <div className="employer-register-form-stack">
@@ -568,7 +581,7 @@ export function EmployerRegisterForm({
               required
               className="employer-register-form-label"
             >
-              Last Name
+              {t("auth.employerRegister.lastName")}
             </RequiredFieldLabel>
             <input
               id="last-name"
@@ -576,7 +589,7 @@ export function EmployerRegisterForm({
               type="text"
               value={formData.lastName}
               onChange={(event) => updateField("lastName", event.target.value)}
-              placeholder={lastNamePlaceholder}
+              placeholder={t("auth.employerRegister.lastNamePlaceholder")}
               autoComplete="family-name"
               className="employer-register-form-input"
               aria-required="true"
@@ -585,7 +598,10 @@ export function EmployerRegisterForm({
                 fieldErrors.lastName ? "lastName-error" : undefined
               }
             />
-            <FieldError id="lastName-error" message={fieldErrors.lastName} />
+            <FieldError
+              id="lastName-error"
+              message={translateMessage(fieldErrors.lastName)}
+            />
           </div>
         </div>
 
@@ -594,7 +610,7 @@ export function EmployerRegisterForm({
             htmlFor="email-address"
             className="employer-register-form-label"
           >
-            Email Address
+            {t("auth.employerRegister.emailAddress")}
           </RequiredFieldLabel>
           <input
             id="email-address"
@@ -604,7 +620,7 @@ export function EmployerRegisterForm({
             onChange={(event) =>
               updateField("emailAddress", event.target.value)
             }
-            placeholder={emailPlaceholder}
+            placeholder={t("auth.employerRegister.emailAddressPlaceholder")}
             autoComplete="email"
             className="employer-register-form-input"
             aria-invalid={Boolean(fieldErrors.emailAddress)}
@@ -614,7 +630,7 @@ export function EmployerRegisterForm({
           />
           <FieldError
             id="emailAddress-error"
-            message={fieldErrors.emailAddress}
+            message={translateMessage(fieldErrors.emailAddress)}
           />
         </div>
 
@@ -624,7 +640,7 @@ export function EmployerRegisterForm({
             required
             className="employer-register-form-label"
           >
-            WhatsApp Number
+            {t("auth.common.whatsappLabel")}
           </RequiredFieldLabel>
           <input
             id="whatsapp-number"
@@ -638,7 +654,7 @@ export function EmployerRegisterForm({
                 event.target.value.replace(/\D/g, "").slice(0, 10),
               )
             }
-            placeholder={whatsappPlaceholder}
+            placeholder={t("auth.common.whatsappPlaceholder")}
             autoComplete="tel"
             className="employer-register-form-input"
             aria-required="true"
@@ -649,7 +665,7 @@ export function EmployerRegisterForm({
           />
           <FieldError
             id="whatsappNumber-error"
-            message={fieldErrors.whatsappNumber}
+            message={translateMessage(fieldErrors.whatsappNumber)}
           />
           {canSendOtp ? (
             <button
@@ -657,7 +673,7 @@ export function EmployerRegisterForm({
               className="employer-register-send-otp-link"
               onClick={handleSendOtp}
             >
-              {EMPLOYER_REGISTER_SEND_OTP_LABEL}
+              {t("auth.common.sendOtp")}
             </button>
           ) : null}
         </div>
@@ -720,7 +736,7 @@ export function EmployerRegisterForm({
             className="text-sm font-medium text-red-600"
             role="alert"
           >
-            {errorMessage}
+            {translateMessage(errorMessage)}
           </p>
         ) : null}
 

@@ -80,7 +80,7 @@ type HiringSolutionCardProps = {
 export function HiringSolutionCard({ solution }: HiringSolutionCardProps) {
   const theme = themeStyles[solution.id];
   const actionClassName = cn(
-    "inline-flex h-11 min-h-11 w-full items-center justify-center rounded-xl border-2 bg-surface px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2",
+    "inline-flex min-h-11 w-full items-center justify-center rounded-xl border-2 bg-surface px-4 py-2 text-center text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2",
     theme.button,
   );
 
@@ -100,7 +100,7 @@ export function HiringSolutionCard({ solution }: HiringSolutionCardProps) {
         <SolutionIcon variant={solution.id} />
       </div>
 
-      <h3 className="text-base font-bold tracking-wide text-foreground">
+      <h3 className="break-words text-base font-bold tracking-wide text-foreground">
         {solution.title}
       </h3>
       <p className="mt-1 text-sm text-muted">{solution.subtitle}</p>

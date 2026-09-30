@@ -6,6 +6,7 @@ import {
   EMPLOYER_DASHBOARD_FUNNEL_STAGES,
   type EmployerDashboardFunnelPeriod,
 } from "@/constants/employer-dashboard-home";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import type { EmployerDashboardFunnelStage } from "@/utils/employer-dashboard-home";
 
@@ -28,23 +29,30 @@ export function DashboardRecruitmentFunnel({
   onPeriodChange,
   isLoading = false,
 }: DashboardRecruitmentFunnelProps) {
+  const t = useTranslate();
   const maxCount = Math.max(...stages.map((stage) => stage.count), 1);
+  const periodOptions = EMPLOYER_DASHBOARD_FUNNEL_PERIOD_OPTIONS.map(
+    (option) => ({
+      value: option.value,
+      label: t(`employer.dashboard.funnelPeriod.${option.value}`),
+    }),
+  );
 
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
-        <h2 className="text-base font-bold text-foreground">
-          Recruitment Funnel
+        <h2 className="min-w-0 break-words text-base font-bold text-foreground">
+          {t("employer.dashboard.recruitmentFunnel")}
         </h2>
         <div className="min-w-[7.5rem] shrink-0">
           <EmployerRegisterSearchableSelect
             id="dashboard-funnel-period"
-            label="Funnel period"
+            label={t("employer.dashboard.funnelPeriodLabel")}
             hideLabel
             hideSearch
             value={period}
-            placeholder="This Month"
-            options={EMPLOYER_DASHBOARD_FUNNEL_PERIOD_OPTIONS}
+            placeholder={t("employer.dashboard.funnelPeriod.this_month")}
+            options={periodOptions}
             onChange={(value) =>
               onPeriodChange(value as EmployerDashboardFunnelPeriod)
             }
@@ -57,7 +65,7 @@ export function DashboardRecruitmentFunnel({
       <div className="flex flex-1 flex-col px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
         <ul
           className="flex flex-1 flex-col justify-center gap-2.5"
-          aria-label="Funnel stages"
+          aria-label={t("employer.dashboard.funnelStagesAria")}
         >
           {isLoading
             ? Array.from({ length: 6 }).map((_, index) => (
@@ -78,12 +86,13 @@ export function DashboardRecruitmentFunnel({
                 </li>
               ))
             : EMPLOYER_DASHBOARD_FUNNEL_STAGES.map((stageMeta) => {
-                const stage =
-                  stages.find((item) => item.id === stageMeta.id) ?? {
-                    id: stageMeta.id,
-                    label: stageMeta.label,
-                    count: 0,
-                  };
+                const stageCount =
+                  stages.find((item) => item.id === stageMeta.id)?.count ?? 0;
+                const stage = {
+                  id: stageMeta.id,
+                  label: t(`employer.dashboard.funnelStage.${stageMeta.id}`),
+                  count: stageCount,
+                };
                 const fillPercent = Math.max(
                   0,
                   Math.min(100, (stage.count / maxCount) * 100),
@@ -141,7 +150,9 @@ export function DashboardRecruitmentFunnel({
         </ul>
 
         <div className="mt-5 flex items-center justify-between gap-3 border-t border-border-subtle pt-4">
-          <p className="text-sm font-medium text-muted">Conversion Rate</p>
+          <p className="min-w-0 text-sm font-medium text-muted">
+            {t("employer.dashboard.conversionRate")}
+          </p>
           <p className="text-xl font-bold tabular-nums text-primary sm:text-2xl">
             {isLoading ? "…" : `${conversionRate}%`}
           </p>

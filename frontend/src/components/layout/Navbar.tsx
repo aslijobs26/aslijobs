@@ -4,7 +4,7 @@ import asliLogo from "@/assets/AsliLogo.svg";
 import { EmployerProfileMenu } from "@/components/employer-dashboard/EmployerProfileMenu";
 import { JobSeekerProfileMenu } from "@/components/job-seeker/JobSeekerProfileMenu";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { BRAND_TAGLINE } from "@/constants/brand";
+import { useTranslate } from "@/i18n/translate";
 import { ROUTES } from "@/constants/routes";
 import {
   EMPLOYER_ACCESS_TOKEN_STORAGE_KEY,
@@ -91,6 +91,7 @@ export function Navbar() {
   const handleJobSeekerLogout = () => {
     setIsJobSeekerAuthenticated(false);
   };
+  const t = useTranslate();
 
   return (
     <header className="sticky top-0 z-50 overflow-x-clip border-b border-border-subtle bg-surface shadow-[0_1px_3px_rgba(15,23,42,0.08)]">
@@ -98,7 +99,7 @@ export function Navbar() {
         <div className="flex min-h-[72px] items-center gap-3 py-2 mobile:min-h-16 mobile:gap-2 mobile:py-1.5 sm:gap-4 lg:min-h-[80px] lg:gap-6 lg:py-2">
           <Link
             href={ROUTES.HOME}
-            aria-label="AsliJobs home"
+            aria-label={t("navbar.homeAria")}
             className="flex min-w-0 shrink flex-col items-start gap-0.5 rounded-sm pl-1 mobile:pl-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mr-0 lg:pl-0"
           >
             <Image
@@ -111,7 +112,7 @@ export function Navbar() {
               aria-hidden
             />
             <p className="max-w-[9.5rem] truncate whitespace-nowrap text-[7px] font-bold leading-tight text-muted mobile:max-w-[8.75rem] sm:max-w-none sm:text-[8px] lg:text-[9px]">
-              {BRAND_TAGLINE}
+              {t("navbar.tagline")}
             </p>
           </Link>
 
@@ -131,14 +132,14 @@ export function Navbar() {
                   href={ROUTES.JOB_SEEKER_REGISTER}
                   className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-primary-soft px-3 text-sm font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 mobile:h-8 mobile:min-h-8 mobile:px-2 mobile:text-xs sm:px-3.5 xl:h-10 xl:px-5 xl:text-[15px]"
                 >
-                  Job Seeker
+                  {t("navbar.jobSeeker")}
                 </Link>
                 <Link
                   href={ROUTES.EMPLOYER_REGISTER}
                   className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-primary bg-transparent px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 mobile:h-8 mobile:min-h-8 mobile:px-2 mobile:text-xs sm:px-3.5 xl:h-10 xl:px-5 xl:text-[15px]"
                 >
-                  <span className="xl:hidden">Employers</span>
-                  <span className="hidden xl:inline">Employers / Post Job</span>
+                  <span className="xl:hidden">{t("navbar.employers")}</span>
+                  <span className="hidden xl:inline">{t("navbar.employersPostJob")}</span>
                 </Link>
               </>
             )}

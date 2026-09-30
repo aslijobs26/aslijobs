@@ -1,6 +1,7 @@
 "use client";
 
 import { SkeletonBone } from "@/components/shared/skeletons/SkeletonBone";
+import { useTranslate } from "@/i18n/translate";
 import type { EmployerDashboardNavItem } from "@/types/employer-dashboard";
 import { cn } from "@/utils/cn";
 import Link from "next/link";
@@ -18,10 +19,11 @@ export function EmployerSidebarItem({
   collapsed = false,
   onNavigate,
 }: EmployerSidebarItemProps) {
+  const t = useTranslate();
   const Icon = item.icon;
   const hasOnboardingDot = Boolean(item.showOnboardingDot);
   const ariaLabel = hasOnboardingDot
-    ? `${item.label}, your profile needs attention`
+    ? t("employer.shell.profileNeedsAttention", { label: item.label })
     : undefined;
 
   return (

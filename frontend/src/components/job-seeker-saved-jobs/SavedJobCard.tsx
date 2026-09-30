@@ -1,6 +1,7 @@
 "use client";
 
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import type { SavedJobListItem } from "@/types/saved-jobs";
 import { formatJobSearchJobType } from "@/utils/job-search-format";
 import { protectedApply } from "@/utils/job-apply-auth";
@@ -85,6 +86,7 @@ export function SavedJobCard({
   onRemove,
   isRemoving = false,
 }: SavedJobCardProps) {
+  const t = useTranslate();
   const menuId = useId();
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const desktopMenuRef = useRef<HTMLDivElement>(null);
@@ -140,15 +142,18 @@ export function SavedJobCard({
       if (navigator.share) {
         await navigator.share({
           title: job.jobTitle,
-          text: `${job.jobTitle} at ${job.companyName}`,
+          text: t("seeker.savedCard.shareText", {
+            title: job.jobTitle,
+            company: job.companyName,
+          }),
           url,
         });
         return;
       }
       await navigator.clipboard.writeText(url);
-      showAppToast("Job link copied");
+      showAppToast(t("seeker.savedCard.linkCopied"));
     } catch {
-      showAppToast("Unable to share right now");
+      showAppToast(t("seeker.savedCard.shareError"));
     }
   };
 
@@ -178,12 +183,23 @@ export function SavedJobCard({
   };
 
   const ctaLabel = isApplying
-    ? "Applying…"
+    ? t("seeker.common.applying")
     : isApplied
-      ? "Applied"
+      ? t("seeker.common.applied")
       : job.isExpired
-        ? "Expired"
-        : "Apply Now";
+        ? t("seeker.common.expired")
+        : t("seeker.common.applyNow");
+  const savedOnDateLabel = savedLabel
+    ? t("seeker.savedCard.savedOnDate", { date: savedLabel })
+    : "";
+  const showReportToast = () => {
+    setMenuOpen(false);
+    showAppToast(t("seeker.savedCard.reportToast"));
+  };
+  const showHideToast = () => {
+    setMenuOpen(false);
+    showAppToast(t("seeker.savedCard.hideToast"));
+  };
 
   const mobileMenuId = `${menuId}-mobile`;
   const desktopMenuId = `${menuId}-desktop`;
@@ -217,25 +233,27 @@ export function SavedJobCard({
               </h2>
               {isApplied ? (
                 <span className="inline-flex rounded-full bg-resource-interview-surface px-1.5 py-0.5 text-[10px] font-bold text-resource-interview-icon">
-                  Applied
+                  {t("seeker.common.applied")}
                 </span>
               ) : null}
               {job.isExpired ? (
                 <span className="inline-flex rounded-full bg-primary-light px-1.5 py-0.5 text-[10px] font-bold text-pin-state">
-                  Expired
+                  {t("seeker.common.expired")}
                 </span>
               ) : null}
             </div>
 
             <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] font-medium text-foreground/80">
-              <span className="truncate">{job.companyName || "Company"}</span>
+              <span className="truncate">
+                {job.companyName || t("seeker.common.company")}
+              </span>
               {job.isVerified ? (
                 <span className="inline-flex shrink-0 items-center gap-0.5 text-[10px] font-semibold text-resource-guide-icon">
                   <CheckCircle2
                     className="size-3 shrink-0 fill-resource-guide-icon text-surface"
                     aria-hidden="true"
                   />
-                  Verified
+                  {t("seeker.common.verified")}
                 </span>
               ) : null}
             </p>
@@ -281,7 +299,7 @@ export function SavedJobCard({
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
                   "disabled:cursor-not-allowed disabled:opacity-60",
                 )}
-                aria-label="Remove from saved jobs"
+                aria-label={t("seeker.savedCard.removeAria")}
               >
                 <Bookmark className="size-3.5 fill-current" aria-hidden="true" />
               </button>
@@ -292,7 +310,7 @@ export function SavedJobCard({
                 aria-controls={mobileMenuId}
                 onClick={() => setMenuOpen((current) => !current)}
                 className="inline-flex size-8 items-center justify-center rounded-lg border border-border-subtle bg-surface text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                aria-label="More actions"
+                aria-label={t("seeker.common.moreActions")}
               >
                 <MoreVertical className="size-3.5" aria-hidden="true" />
               </button>
@@ -314,19 +332,15 @@ export function SavedJobCard({
                   void onRemove(job.publicJobId);
                 }}
                 onShare={() => void handleShare()}
-                onReport={() => {
-                  setMenuOpen(false);
-                  showAppToast("Thanks — we’ll review this job.");
-                }}
-                onHide={() => {
-                  setMenuOpen(false);
-                  showAppToast("We’ll show fewer similar jobs.");
-                }}
+                onReport={showReportToast}
+                onHide={showHideToast}
               />
             ) : null}
             {savedLabel ? (
               <p className="text-right text-[10px] leading-3.5 text-muted">
-                <span className="block whitespace-nowrap">Saved on</span>
+                <span className="block whitespace-nowrap">
+                  {t("seeker.savedCard.savedOn")}
+                </span>
                 <span className="mt-0.5 block whitespace-nowrap font-semibold text-foreground">
                   {savedLabel}
                 </span>
@@ -357,7 +371,7 @@ export function SavedJobCard({
           {savedLabel ? (
             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-resource-resume-surface px-2 py-0.5 text-[10px] font-semibold text-resource-resume-icon">
               <CalendarDays className="size-3 shrink-0" aria-hidden="true" />
-              Saved on {savedLabel}
+              {savedOnDateLabel}
             </span>
           ) : null}
         </div>
@@ -421,12 +435,12 @@ export function SavedJobCard({
                   </h2>
                   {job.isExpired ? (
                     <span className="inline-flex rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-bold text-pin-state">
-                      Expired
+                      {t("seeker.common.expired")}
                     </span>
                   ) : null}
                   {isApplied ? (
                     <span className="inline-flex rounded-full bg-resource-interview-surface px-2 py-0.5 text-[10px] font-bold text-resource-interview-icon">
-                      Applied
+                      {t("seeker.common.applied")}
                     </span>
                   ) : null}
                 </div>
@@ -439,7 +453,7 @@ export function SavedJobCard({
                         className="size-3.5 shrink-0 fill-resource-guide-icon text-surface"
                         aria-hidden="true"
                       />
-                      Verified
+                      {t("seeker.common.verified")}
                     </span>
                   ) : null}
                 </p>
@@ -497,7 +511,7 @@ export function SavedJobCard({
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 sm:hidden">
               {savedLabel ? (
                 <span className="inline-flex rounded-md bg-resource-salary-surface px-2.5 py-1 text-[11px] font-semibold text-resource-salary-icon">
-                  Saved on {savedLabel}
+                  {savedOnDateLabel}
                 </span>
               ) : (
                 <span />
@@ -520,7 +534,7 @@ export function SavedJobCard({
                 "hover:border-primary/35 hover:bg-primary-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
                 "disabled:cursor-not-allowed disabled:opacity-60",
               )}
-              aria-label="Remove from saved jobs"
+              aria-label={t("seeker.savedCard.removeAria")}
             >
               <Bookmark className="size-4 fill-current" aria-hidden="true" />
             </button>
@@ -532,7 +546,7 @@ export function SavedJobCard({
               aria-controls={desktopMenuId}
               onClick={() => setMenuOpen((current) => !current)}
               className="inline-flex size-10 items-center justify-center rounded-xl border border-border-subtle bg-surface text-muted hover:bg-primary-light/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              aria-label="More actions"
+              aria-label={t("seeker.common.moreActions")}
             >
               <MoreVertical className="size-4" aria-hidden="true" />
             </button>
@@ -554,14 +568,8 @@ export function SavedJobCard({
                   void onRemove(job.publicJobId);
                 }}
                 onShare={() => void handleShare()}
-                onReport={() => {
-                  setMenuOpen(false);
-                  showAppToast("Thanks — we’ll review this job.");
-                }}
-                onHide={() => {
-                  setMenuOpen(false);
-                  showAppToast("We’ll show fewer similar jobs.");
-                }}
+                onReport={showReportToast}
+                onHide={showHideToast}
               />
             ) : null}
           </div>
@@ -570,7 +578,7 @@ export function SavedJobCard({
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
           {savedLabel ? (
             <span className="hidden rounded-md bg-resource-salary-surface px-2.5 py-1 text-[11px] font-semibold text-resource-salary-icon sm:inline-flex">
-              Saved on {savedLabel}
+              {savedOnDateLabel}
             </span>
           ) : (
             <span className="hidden sm:inline-flex" />
@@ -626,11 +634,13 @@ function CardActionsMenu({
   onReport,
   onHide,
 }: CardActionsMenuProps) {
+  const t = useTranslate();
+
   return (
     <ul
       id={menuId}
       role="menu"
-      className="absolute top-[calc(100%+0.35rem)] right-0 z-30 w-48 overflow-hidden rounded-xl border border-border-subtle bg-surface py-1.5 shadow-[0_8px_24px_rgba(26,43,60,0.12)]"
+      className="absolute top-[calc(100%+0.35rem)] right-0 z-30 w-52 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border-subtle bg-surface py-1.5 shadow-[0_8px_24px_rgba(26,43,60,0.12)]"
     >
       <li role="none">
         <Link
@@ -640,7 +650,7 @@ function CardActionsMenu({
           onClick={onView}
         >
           <Eye className="size-4 text-muted" aria-hidden="true" />
-          View Job
+          {t("seeker.common.viewJob")}
         </Link>
       </li>
       <li role="none">
@@ -652,7 +662,9 @@ function CardActionsMenu({
           className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-primary-light/50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <CheckCircle2 className="size-4 text-muted" aria-hidden="true" />
-          {isApplied ? "Already Applied" : "Apply Now"}
+          {isApplied
+            ? t("seeker.savedCard.alreadyApplied")
+            : t("seeker.common.applyNow")}
         </button>
       </li>
       <li role="none">
@@ -663,7 +675,7 @@ function CardActionsMenu({
           className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-primary-light/50"
         >
           <Trash2 className="size-4 text-muted" aria-hidden="true" />
-          Remove Saved Job
+          {t("seeker.savedCard.removeSaved")}
         </button>
       </li>
       <li role="none">
@@ -674,7 +686,7 @@ function CardActionsMenu({
           className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-primary-light/50"
         >
           <Share2 className="size-4 text-muted" aria-hidden="true" />
-          Share
+          {t("seeker.savedCard.share")}
         </button>
       </li>
       <li role="none">
@@ -685,7 +697,7 @@ function CardActionsMenu({
           className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-primary-light/50"
         >
           <Flag className="size-4 text-muted" aria-hidden="true" />
-          Report Job
+          {t("seeker.savedCard.reportJob")}
         </button>
       </li>
       <li role="none">
@@ -696,7 +708,7 @@ function CardActionsMenu({
           className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-primary-light/50"
         >
           <Eye className="size-4 text-muted" aria-hidden="true" />
-          Hide Similar Jobs
+          {t("seeker.savedCard.hideSimilar")}
         </button>
       </li>
     </ul>

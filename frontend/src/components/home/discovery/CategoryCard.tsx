@@ -44,7 +44,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
         <CategoryIcon icon={category.icon} />
       </div>
 
-      <span className="text-center text-sm font-bold leading-tight text-foreground">
+      <span className="max-w-full break-words text-center text-sm font-bold leading-tight text-foreground">
         {category.name}
       </span>
 

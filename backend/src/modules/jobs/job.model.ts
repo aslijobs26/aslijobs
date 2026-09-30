@@ -527,6 +527,25 @@ const jobSchema = new Schema(
       default: null,
       index: true,
     },
+    /**
+     * Language the employer wrote. Canonical jobTitle/description stay in
+     * that language and are never replaced by translations.
+     */
+    contentLanguage: {
+      type: String,
+      enum: ["en", "hi", "te", "ta", "kn", "ml"],
+      default: "en",
+    },
+    translationStatus: {
+      type: String,
+      enum: ["none", "pending", "complete", "partial", "failed"],
+      default: "none",
+      index: true,
+    },
+    contentTranslations: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
   },
   {
     timestamps: true,

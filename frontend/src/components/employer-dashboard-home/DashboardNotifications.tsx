@@ -1,9 +1,10 @@
 "use client";
 
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import type { NotificationListItem } from "@/types/notifications";
 import { cn } from "@/utils/cn";
-import { formatEmployerDashboardRelativeTime } from "@/utils/employer-dashboard-home";
+import { formatJobSearchRelativeTime } from "@/utils/job-search-format";
 import {
   Bell,
   Briefcase,
@@ -40,6 +41,7 @@ export function DashboardNotifications({
   unreadCount,
   isLoading = false,
 }: DashboardNotificationsProps) {
+  const t = useTranslate();
   const latestNotifications = notifications.slice(
     0,
     DASHBOARD_NOTIFICATIONS_PREVIEW_LIMIT,
@@ -49,7 +51,9 @@ export function DashboardNotifications({
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-foreground">Notifications</h2>
+          <h2 className="text-sm font-bold text-foreground">
+            {t("employer.dashboard.notifications")}
+          </h2>
           {unreadCount > 0 ? (
             <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-pin-state px-1.5 py-0.5 text-[0.625rem] font-bold text-surface">
               {unreadCount > 99 ? "99+" : unreadCount}
@@ -60,7 +64,7 @@ export function DashboardNotifications({
           href={ROUTES.EMPLOYER_NOTIFICATIONS}
           className="text-xs font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
-          View All
+          {t("employer.common.viewAll")}
         </Link>
       </div>
 
@@ -81,7 +85,9 @@ export function DashboardNotifications({
       {!isLoading && latestNotifications.length === 0 ? (
         <div className="flex flex-col items-center px-4 py-8 text-center">
           <Bell className="size-5 text-muted" aria-hidden="true" />
-          <p className="mt-2 text-sm text-muted">No notifications yet</p>
+          <p className="mt-2 text-sm text-muted">
+            {t("employer.dashboard.noNotifications")}
+          </p>
         </div>
       ) : null}
 
@@ -120,15 +126,13 @@ export function DashboardNotifications({
                       {notification.body}
                     </p>
                     <p className="mt-1 text-[0.625rem] font-medium text-muted">
-                      {formatEmployerDashboardRelativeTime(
-                        notification.createdAt,
-                      )}
+                      {formatJobSearchRelativeTime(notification.createdAt)}
                     </p>
                   </div>
                   {!notification.isRead ? (
                     <span
                       className="mt-1.5 size-2 shrink-0 rounded-full bg-primary"
-                      aria-label="Unread"
+                      aria-label={t("employer.common.unread")}
                     />
                   ) : null}
                 </Link>

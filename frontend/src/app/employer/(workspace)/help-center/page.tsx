@@ -10,5 +10,5 @@ export const metadata = createEmployerModuleMetadata({
 });
 
 export default function EmployerHelpCenterPage() {
-  return <EmployerModulePage title={EMPLOYER_DASHBOARD_HELP_CENTER_TITLE} />;
+  return <EmployerModulePage titleKey="employer.shell.helpCenter" />;
 }

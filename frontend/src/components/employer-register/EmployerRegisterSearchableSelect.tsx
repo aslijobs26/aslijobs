@@ -2,6 +2,7 @@
 
 import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
+import { useTranslate } from "@/i18n/translate";
 import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
 import { Check, ChevronDown, Plus, Search } from "lucide-react";
@@ -14,6 +15,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { useAuthMessageTranslator } from "./useAuthMessageTranslator";
 
 type EmployerRegisterSearchableSelectProps = {
   id: string;
@@ -81,8 +83,11 @@ export function EmployerRegisterSearchableSelect({
   triggerClassName,
   optionClassName,
   panelClassName,
-  countLabel = "items",
+  countLabel,
 }: EmployerRegisterSearchableSelectProps) {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
+  const resolvedCountLabel = countLabel ?? t("auth.select.items");
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -368,12 +373,16 @@ export function EmployerRegisterSearchableSelect({
                   onKeyDown={handleSearchKeyDown}
                   placeholder={
                     searchPlaceholder ??
-                    (allowCustom ? "Search or type to add..." : "Search...")
+                    (allowCustom
+                      ? t("auth.select.searchOrAdd")
+                      : t("auth.select.search"))
                   }
                   className="employer-register-searchable-select-search-input"
                   autoFocus
                   aria-label={
-                    allowCustom ? `Search or add ${label}` : `Search ${label}`
+                    allowCustom
+                      ? t("auth.select.searchOrAddAria", { label })
+                      : t("auth.select.searchAria", { label })
                   }
                 />
               </div>
@@ -396,7 +405,7 @@ export function EmployerRegisterSearchableSelect({
                     onClick={() => selectOption(trimmedQuery)}
                   >
                     <span className="employer-register-searchable-select-option-label">
-                      Add &ldquo;{trimmedQuery}&rdquo;
+                      {t("auth.select.addCustom", { value: trimmedQuery })}
                     </span>
                     <Plus
                       className="size-4 shrink-0"
@@ -409,7 +418,7 @@ export function EmployerRegisterSearchableSelect({
 
               {filteredOptions.length === 0 && !canAddCustom ? (
                 <li className="employer-register-searchable-select-empty">
-                  No results found
+                  {t("auth.select.noResults")}
                 </li>
               ) : (
                 filteredOptions.map((option) => {
@@ -445,7 +454,7 @@ export function EmployerRegisterSearchableSelect({
                           {typeof option.count === "number" ? (
                             <span
                               className="tabular-nums text-sm font-semibold text-muted"
-                              aria-label={`${option.count} ${countLabel}`}
+                              aria-label={`${option.count} ${resolvedCountLabel}`}
                             >
                               {option.count}
                             </span>
@@ -467,7 +476,7 @@ export function EmployerRegisterSearchableSelect({
           </div>
         ) : null}
       </div>
-      <FieldError id={resolvedErrorId} message={error} />
+      <FieldError id={resolvedErrorId} message={translateMessage(error)} />
     </div>
   );
 }

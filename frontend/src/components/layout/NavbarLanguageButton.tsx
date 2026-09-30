@@ -1,10 +1,11 @@
 "use client";
 
 import {
-  SITE_DEFAULT_LANGUAGE,
   SITE_LANGUAGE_OPTIONS,
   type SiteLanguageOption,
 } from "@/constants/site-language";
+import { useSiteLanguage, writeSiteLanguage } from "@/i18n/site-language";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { Check, ChevronDown, Globe } from "lucide-react";
 import {
@@ -19,8 +20,8 @@ export function NavbarLanguageButton({ className }: { className?: string }) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] =
-    useState<SiteLanguageOption>(SITE_DEFAULT_LANGUAGE);
+  const selectedLanguage = useSiteLanguage();
+  const t = useTranslate();
 
   useEffect(() => {
     if (!isOpen) {
@@ -56,7 +57,7 @@ export function NavbarLanguageButton({ className }: { className?: string }) {
   };
 
   const selectLanguage = (option: SiteLanguageOption) => {
-    setSelectedLanguage(option);
+    writeSiteLanguage(option);
     setIsOpen(false);
   };
 
@@ -65,7 +66,7 @@ export function NavbarLanguageButton({ className }: { className?: string }) {
       <button
         type="button"
         className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md border border-border-subtle px-2 text-xs font-medium text-nav transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 mobile:h-8 mobile:min-h-8 mobile:px-2 sm:h-10 sm:gap-1.5 sm:px-3 sm:text-sm xl:text-[15px]"
-        aria-label="Select language"
+        aria-label={t("navbar.selectLanguage")}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}
@@ -95,7 +96,7 @@ export function NavbarLanguageButton({ className }: { className?: string }) {
         <ul
           id={listboxId}
           role="listbox"
-          aria-label="Available languages"
+          aria-label={t("navbar.availableLanguages")}
           className="absolute right-0 z-50 mt-2 min-w-[10.5rem] overflow-hidden rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
         >
           {SITE_LANGUAGE_OPTIONS.map((option) => {

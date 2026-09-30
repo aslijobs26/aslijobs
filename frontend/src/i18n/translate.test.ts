@@ -1,0 +1,84 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import en from "./locales/en.json" with { type: "json" };
+import hi from "./locales/hi.json" with { type: "json" };
+import kn from "./locales/kn.json" with { type: "json" };
+import ml from "./locales/ml.json" with { type: "json" };
+import ta from "./locales/ta.json" with { type: "json" };
+import te from "./locales/te.json" with { type: "json" };
+import { translate } from "./translate";
+
+function leafPaths(value: unknown, prefix = ""): string[] {
+  if (typeof value === "string") return [prefix];
+  if (!value || typeof value !== "object") return [];
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+    leafPaths(child, prefix ? `${prefix}.${key}` : key),
+  );
+}
+
+const catalogs = { en, hi, te, ta, kn, ml };
+
+describe("static i18n catalogs", () => {
+  it("defaults English copy for shared actions", () => {
+    assert.equal(translate("en", "common.save"), "Save");
+    assert.equal(translate("en", "jobs.applyNow"), "Apply Now");
+    assert.equal(translate("en", "navbar.jobSeeker"), "Job Seeker");
+  });
+
+  it("changes static UI copy for every supported language", () => {
+    assert.notEqual(translate("te", "jobs.applyNow"), translate("en", "jobs.applyNow"));
+    assert.notEqual(translate("hi", "jobs.applyNow"), translate("en", "jobs.applyNow"));
+    assert.notEqual(translate("ta", "jobs.applyNow"), translate("en", "jobs.applyNow"));
+    assert.notEqual(translate("kn", "jobs.applyNow"), translate("en", "jobs.applyNow"));
+    assert.notEqual(translate("ml", "jobs.applyNow"), translate("en", "jobs.applyNow"));
+    assert.equal(translate("te", "navbar.jobSeeker"), "ఉద్యోగార్థి");
+    assert.equal(translate("hi", "jobs.fullTime"), "पूर्णकालिक");
+    assert.equal(translate("ta", "jobs.office"), "அலுவலகம்");
+    assert.equal(translate("kn", "footer.contactUs"), "ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ");
+    assert.equal(translate("ml", "nav.profile"), "പ്രൊഫൈൽ");
+  });
+
+  it("falls back to English when a language is missing a key", () => {
+    const jobs = te.jobs as { applyNow?: string };
+    const original = jobs.applyNow;
+    delete jobs.applyNow;
+    try {
+      assert.equal(translate("te", "jobs.applyNow"), "Apply Now");
+    } finally {
+      jobs.applyNow = original;
+    }
+  });
+
+  it("keeps the same keys in every locale", () => {
+    const englishKeys = leafPaths(en).sort();
+    for (const [code, catalog] of Object.entries(catalogs)) {
+      assert.deepEqual(leafPaths(catalog).sort(), englishKeys, code);
+    }
+  });
+
+  it("does not call fetch while resolving static copy", () => {
+    const original = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (() => {
+      calls += 1;
+      throw new Error("static i18n must not fetch");
+    }) as typeof fetch;
+    try {
+      for (const code of ["en", "te", "hi", "ta", "kn", "ml"] as const) {
+        translate(code, "jobs.applyNow");
+        translate(code, "jobs.fullTime");
+        translate(code, "footer.rights");
+        translate(code, "common.somethingWentWrong");
+      }
+      assert.equal(calls, 0);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("interpolates counts without leaving the placeholder", () => {
+    assert.equal(translate("en", "jobs.minutesAgo", { count: 4 }), "4m ago");
+    assert.match(translate("hi", "jobs.jobsFound", { count: 3 }), /3/);
+    assert.doesNotMatch(translate("te", "jobs.hoursAgo", { count: 2 }), /\{count\}/);
+  });
+});

@@ -5,21 +5,16 @@ import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import {
   EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS,
-  EMPLOYER_REGISTER_BUSINESS_VERIFICATION_TITLE,
-  EMPLOYER_REGISTER_COMPANY_PROFILE_HEADING,
   EMPLOYER_REGISTER_COMPANY_STRENGTH_OPTIONS,
-  EMPLOYER_REGISTER_CONSULTANCY_PROFILE_HEADING,
-  EMPLOYER_REGISTER_CONTINUE_LABEL,
   EMPLOYER_REGISTER_DOCUMENT_ACCEPT,
   EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES,
-  EMPLOYER_REGISTER_DOCUMENT_UPLOAD_HINT,
-  EMPLOYER_REGISTER_DOCUMENT_UPLOAD_PRIMARY,
   EMPLOYER_REGISTER_INDUSTRY_OPTIONS,
   EMPLOYER_REGISTER_INITIAL_COMPANY_PROFILE_DATA,
   EMPLOYER_REGISTER_PINCODE_LOCATION_MAP,
   EMPLOYER_REGISTER_PINCODE_OPTIONS,
   getEmployerRegisterBusinessCategoryOptions,
 } from "@/constants/employer-register";
+import { useTranslate } from "@/i18n/translate";
 import { completeEmployerCompanyProfile } from "@/services/employer-register.service";
 import type {
   EmployerRegisterBusinessDocumentType,
@@ -49,6 +44,8 @@ import {
 import { EmployerImageUploadField } from "./EmployerImageUploadField";
 import { EmployerRegisterPlaceAutocomplete } from "./EmployerRegisterPlaceAutocomplete";
 import { EmployerRegisterSearchableSelect } from "./EmployerRegisterSearchableSelect";
+import { BUSINESS_DOCUMENT_LABEL_KEYS } from "./employer-register-document-labels";
+import { useAuthMessageTranslator } from "./useAuthMessageTranslator";
 
 function formatFileSize(sizeBytes: number) {
   if (sizeBytes < 1024) {
@@ -90,6 +87,8 @@ export function EmployerRegisterCompanyProfileForm({
   initialCompanyName = "",
   onContinue,
 }: EmployerRegisterCompanyProfileFormProps) {
+  const t = useTranslate();
+  const translateMessage = useAuthMessageTranslator();
   const queryClient = useQueryClient();
   const isConsultancy = accountType === "consultancy";
   const fileInputId = useId();
@@ -110,13 +109,24 @@ export function EmployerRegisterCompanyProfileForm({
     formData.industry,
   );
 
+  const businessDocumentOptions = EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS.map(
+    (option) => ({
+      value: option.value,
+      label: t(BUSINESS_DOCUMENT_LABEL_KEYS[option.value]),
+    }),
+  );
+  const uploadPrimary = t("auth.employerRegister.documentUploadPrimary");
+  const uploadHint = t("auth.employerRegister.documentUploadHint");
+
   const profileHeading = isConsultancy
-    ? EMPLOYER_REGISTER_CONSULTANCY_PROFILE_HEADING
-    : EMPLOYER_REGISTER_COMPANY_PROFILE_HEADING;
-  const nameLabel = isConsultancy ? "Consultancy Name" : "Company / Business Name";
+    ? t("auth.employerRegister.consultancyProfileHeading")
+    : t("auth.employerRegister.companyProfileHeading");
+  const nameLabel = isConsultancy
+    ? t("auth.employerRegister.consultancyName")
+    : t("auth.employerRegister.profileCompanyName");
   const namePlaceholder = isConsultancy
-    ? "Enter Consultancy Name"
-    : "Enter Company / Business Name";
+    ? t("auth.employerRegister.consultancyNamePlaceholder")
+    : t("auth.employerRegister.profileCompanyNamePlaceholder");
 
   const clearField = (field: string) => {
     setFieldErrors((current) => clearFieldError(current, field));
@@ -338,7 +348,7 @@ export function EmployerRegisterCompanyProfileForm({
           required
           className="employer-register-form-label"
         >
-          Company Address
+          {t("auth.employerRegister.companyAddress")}
         </RequiredFieldLabel>
         <textarea
           id="company-profile-address"
@@ -358,7 +368,7 @@ export function EmployerRegisterCompanyProfileForm({
         />
         <FieldError
           id="companyAddress-error"
-          message={fieldErrors.companyAddress}
+          message={translateMessage(fieldErrors.companyAddress)}
         />
       </div>
 
@@ -369,14 +379,18 @@ export function EmployerRegisterCompanyProfileForm({
             required
             className="employer-register-form-label"
           >
-            State
+            {t("auth.employerRegister.state")}
           </RequiredFieldLabel>
           <EmployerRegisterPlaceAutocomplete
             id="company-profile-state"
             name="state"
             mode="state"
             value={formData.state}
-            placeholder={isConsultancy ? "Select State" : "Search State"}
+            placeholder={
+              isConsultancy
+                ? t("auth.employerRegister.selectState")
+                : t("auth.employerRegister.searchState")
+            }
             aria-required
             aria-invalid={Boolean(fieldErrors.state)}
             aria-describedby={
@@ -401,7 +415,10 @@ export function EmployerRegisterCompanyProfileForm({
               clearField("city");
             }}
           />
-          <FieldError id="state-error" message={fieldErrors.state} />
+          <FieldError
+            id="state-error"
+            message={translateMessage(fieldErrors.state)}
+          />
         </div>
 
         <div className="employer-register-form-stack">
@@ -410,7 +427,7 @@ export function EmployerRegisterCompanyProfileForm({
             required
             className="employer-register-form-label"
           >
-            City
+            {t("auth.employerRegister.city")}
           </RequiredFieldLabel>
           <EmployerRegisterPlaceAutocomplete
             id="company-profile-city"
@@ -422,9 +439,9 @@ export function EmployerRegisterCompanyProfileForm({
             placeholder={
               formData.state.trim()
                 ? isConsultancy
-                  ? "Select City"
-                  : "Search City"
-                : "Select a state first"
+                  ? t("auth.employerRegister.selectCity")
+                  : t("auth.employerRegister.searchCity")
+                : t("auth.employerRegister.selectStateFirst")
             }
             aria-required
             aria-invalid={Boolean(fieldErrors.city)}
@@ -434,18 +451,21 @@ export function EmployerRegisterCompanyProfileForm({
               updateField("city", suggestion.city);
             }}
           />
-          <FieldError id="city-error" message={fieldErrors.city} />
+          <FieldError
+            id="city-error"
+            message={translateMessage(fieldErrors.city)}
+          />
         </div>
 
         <EmployerRegisterSearchableSelect
           id="company-profile-pincode"
           name="pincode"
-          label="Pincode"
+          label={t("auth.employerRegister.pincode")}
           required
           allowCustom
           initialVisibleCount={5}
           value={formData.pincode}
-          placeholder="Select Pincode"
+          placeholder={t("auth.employerRegister.selectPincode")}
           options={EMPLOYER_REGISTER_PINCODE_OPTIONS}
           onChange={handlePincodeChange}
           error={fieldErrors.pincode}
@@ -487,7 +507,10 @@ export function EmployerRegisterCompanyProfileForm({
               fieldErrors.companyName ? "companyName-error" : undefined
             }
           />
-          <FieldError id="companyName-error" message={fieldErrors.companyName} />
+          <FieldError
+            id="companyName-error"
+            message={translateMessage(fieldErrors.companyName)}
+          />
         </div>
 
         {isConsultancy ? (
@@ -498,10 +521,10 @@ export function EmployerRegisterCompanyProfileForm({
               <EmployerRegisterSearchableSelect
                 id="company-profile-industry"
                 name="industry"
-                label="Industry"
+                label={t("auth.employerRegister.industry")}
                 required
                 value={formData.industry}
-                placeholder="Select Industry"
+                placeholder={t("auth.employerRegister.selectIndustry")}
                 options={EMPLOYER_REGISTER_INDUSTRY_OPTIONS}
                 onChange={handleIndustryChange}
                 error={fieldErrors.industry}
@@ -510,11 +533,11 @@ export function EmployerRegisterCompanyProfileForm({
               <EmployerRegisterSearchableSelect
                 id="company-profile-business-category"
                 name="businessCategory"
-                label="Business Category"
+                label={t("auth.employerRegister.businessCategory")}
                 required
                 disabled={!formData.industry}
                 value={formData.businessCategory}
-                placeholder="Select Business Category"
+                placeholder={t("auth.employerRegister.selectBusinessCategory")}
                 options={businessCategoryOptions}
                 onChange={(value) => updateField("businessCategory", value)}
                 error={fieldErrors.businessCategory}
@@ -523,10 +546,10 @@ export function EmployerRegisterCompanyProfileForm({
               <EmployerRegisterSearchableSelect
                 id="company-profile-strength"
                 name="companyStrength"
-                label="Company Strength"
+                label={t("auth.employerRegister.companyStrength")}
                 required
                 value={formData.companyStrength}
-                placeholder="Select Strength"
+                placeholder={t("auth.employerRegister.selectStrength")}
                 options={EMPLOYER_REGISTER_COMPANY_STRENGTH_OPTIONS}
                 onChange={(value) => updateField("companyStrength", value)}
                 error={fieldErrors.companyStrength}
@@ -545,8 +568,8 @@ export function EmployerRegisterCompanyProfileForm({
               strokeWidth={2}
               aria-hidden="true"
             />
-            <h2 className="employer-register-form-label">
-              {EMPLOYER_REGISTER_BUSINESS_VERIFICATION_TITLE}{" "}
+            <h2 className="employer-register-form-label min-w-0 break-words">
+              {t("auth.employerRegister.businessVerificationTitle")}{" "}
               <span className="text-red-600" aria-hidden="true">
                 *
               </span>
@@ -557,12 +580,12 @@ export function EmployerRegisterCompanyProfileForm({
             <EmployerRegisterSearchableSelect
               id="company-profile-verification-document"
               name="verificationDocument"
-              label="Select Document"
+              label={t("auth.employerRegister.selectDocument")}
               hideLabel
               required
               value={formData.verificationDocument}
-              placeholder="Select Document"
-              options={EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS}
+              placeholder={t("auth.employerRegister.selectDocument")}
+              options={businessDocumentOptions}
               onChange={(value) => {
                 updateField(
                   "verificationDocument",
@@ -597,7 +620,7 @@ export function EmployerRegisterCompanyProfileForm({
                   <button
                     type="button"
                     className="employer-register-document-preview-remove"
-                    aria-label="Remove selected document"
+                    aria-label={t("auth.employerRegister.removeSelectedDocument")}
                     onClick={() => {
                       setDocumentPreview(null);
                       clearField("documentFile");
@@ -612,7 +635,7 @@ export function EmployerRegisterCompanyProfileForm({
                   className="employer-register-document-dropzone"
                   role="button"
                   tabIndex={0}
-                  aria-label={`${EMPLOYER_REGISTER_DOCUMENT_UPLOAD_PRIMARY}. ${EMPLOYER_REGISTER_DOCUMENT_UPLOAD_HINT}`}
+                  aria-label={`${uploadPrimary}. ${uploadHint}`}
                   aria-invalid={Boolean(fieldErrors.documentFile) || undefined}
                   aria-describedby={
                     fieldErrors.documentFile ? "documentFile-error" : undefined
@@ -631,11 +654,11 @@ export function EmployerRegisterCompanyProfileForm({
                       strokeWidth={1.75}
                     />
                   </span>
-                  <p className="employer-register-document-dropzone-primary">
-                    {EMPLOYER_REGISTER_DOCUMENT_UPLOAD_PRIMARY}
+                  <p className="employer-register-document-dropzone-primary break-words">
+                    {uploadPrimary}
                   </p>
-                  <p className="employer-register-document-dropzone-hint">
-                    {EMPLOYER_REGISTER_DOCUMENT_UPLOAD_HINT}
+                  <p className="employer-register-document-dropzone-hint break-words">
+                    {uploadHint}
                   </p>
                 </div>
               )}
@@ -652,13 +675,13 @@ export function EmployerRegisterCompanyProfileForm({
               />
               <FieldError
                 id="documentFile-error"
-                message={fieldErrors.documentFile}
+                message={translateMessage(fieldErrors.documentFile)}
               />
             </>
           ) : null}
 
           <EmployerImageUploadField
-            label="Upload Company Logo"
+            label={t("auth.employerRegister.uploadCompanyLogo")}
             name="companyLogo"
             required={isConsultancy}
             optional={!isConsultancy}
@@ -683,7 +706,7 @@ export function EmployerRegisterCompanyProfileForm({
             className="text-sm font-medium text-red-600"
             role="alert"
           >
-            {errorMessage}
+            {translateMessage(errorMessage)}
           </p>
         ) : null}
 
@@ -693,7 +716,7 @@ export function EmployerRegisterCompanyProfileForm({
           disabled={isSubmitting}
           aria-busy={isSubmitting}
         >
-          {isSubmitting ? "Please wait…" : EMPLOYER_REGISTER_CONTINUE_LABEL}
+          {isSubmitting ? t("auth.common.pleaseWait") : t("auth.common.continue")}
         </button>
       </form>
     </div>

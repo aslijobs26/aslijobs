@@ -12,6 +12,11 @@ import { EmployerModel } from "../employers/employer.model.js";
 import { ApplicationModel } from "../applications/application.model.js";
 import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
+import { parseJobContentLanguage } from "./job-content-language.js";
+import {
+  queueJobContentTranslation,
+  resolveJobContent,
+} from "./job-content-translation.js";
 import { jobViewService } from "./job-view.service.js";
 import {
   assertEmployerVerifiedForJobAction,
@@ -171,6 +176,8 @@ function toJobPublic(
     contactEmail: job.contactEmail,
     contactMobile: job.contactMobile,
     status: job.status,
+    contentLanguage: job.contentLanguage ?? "en",
+    translationStatus: job.translationStatus ?? "none",
     publishedAt: toIsoDateString(job.publishedAt),
     completedStep: job.completedStep ?? 1,
     lastEditedAt: job.lastEditedAt ?? job.updatedAt,
@@ -1136,10 +1143,22 @@ async function loadEmployerPosterImageMap(
 
 function toPublicJobListItem(
   job: JobDocument | Record<string, unknown>,
-  options?: { isApplied?: boolean; companyLogoUrl?: string },
+  options?: { isApplied?: boolean; companyLogoUrl?: string; language?: string | null },
 ) {
-  const descriptionRaw =
-    typeof job.description === "string" ? job.description : "";
+  const localized = resolveJobContent(
+    {
+      jobTitle: String(job.jobTitle ?? ""),
+      description: typeof job.description === "string" ? job.description : "",
+      interviewInstructions:
+        typeof job.interviewInstructions === "string" ? job.interviewInstructions : "",
+      contentTranslations:
+        job.contentTranslations && typeof job.contentTranslations === "object"
+          ? (job.contentTranslations as never)
+          : null,
+    },
+    parseJobContentLanguage(options?.language),
+  );
+  const descriptionRaw = localized.description;
   // Listing cards do not render full HTML descriptions; keep payload small.
   const description =
     descriptionRaw.length > 600
@@ -1153,7 +1172,7 @@ function toPublicJobListItem(
     id: String(job._id),
     jobId: String(job.jobId ?? ""),
     companyName: String(job.companyName ?? ""),
-    jobTitle: String(job.jobTitle ?? ""),
+    jobTitle: localized.jobTitle,
     jobType: job.jobType as JobDocument["jobType"],
     workMode: job.workMode as JobDocument["workMode"],
     vacancies: Number(job.vacancies ?? 0),
@@ -1405,6 +1424,7 @@ export class JobService {
     });
 
     if (!isDraft) {
+      queueJobContentTranslation(job._id.toString());
       scheduleJobPendingOpsNotification({
         publicJobId: job.jobId,
         jobMongoId: job._id.toString(),
@@ -2083,6 +2103,7 @@ export class JobService {
     job.rejectionReason = "";
     job.reviewNotificationSentAt = null;
     await job.save();
+    queueJobContentTranslation(job._id.toString());
 
     scheduleJobPendingOpsNotification({
       publicJobId: job.jobId,
@@ -2187,6 +2208,7 @@ export class JobService {
       jobSeekerId?: string;
       visitorType?: "guest" | "jobSeeker";
       visitorId?: string;
+      language?: string | null;
     },
   ) {
     const job = await JobModel.findOne({
@@ -2241,6 +2263,7 @@ export class JobService {
         ...toPublicJobListItem(job, {
           isApplied: appliedIds.has(job._id.toString()),
           companyLogoUrl: posterImageMap.get(getJobEmployerId(job)) ?? "",
+          language: options?.language,
         }),
         views,
         address: job.address,
@@ -2255,7 +2278,15 @@ export class JobService {
         walkInEndDate: job.walkInEndDate,
         walkInStartTime: job.walkInStartTime,
         walkInEndTime: job.walkInEndTime,
-        interviewInstructions: job.interviewInstructions,
+        interviewInstructions: resolveJobContent(
+          {
+            jobTitle: job.jobTitle ?? "",
+            description: job.description ?? "",
+            interviewInstructions: job.interviewInstructions ?? "",
+            contentTranslations: job.contentTranslations as never,
+          },
+          parseJobContentLanguage(options?.language),
+        ).interviewInstructions,
         contactPersonName: job.contactPersonName?.trim() || null,
       },
     };
@@ -2530,6 +2561,7 @@ export class JobService {
       toPublicJobListItem(job, {
         isApplied: appliedIds.has(String(job._id)),
         companyLogoUrl: posterImageMap.get(getJobEmployerId(job)) ?? "",
+        language: query.language,
       }),
     );
 

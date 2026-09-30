@@ -1,7 +1,7 @@
 "use client";
 
-import { EMPLOYER_REGISTER_LOGIN_PROMPT } from "@/constants/employer-register";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import type {
   EmployerRegisterAccountType,
   EmployerRegisterFormData,
@@ -21,6 +21,7 @@ type EmployerRegisterContentProps = {
 export function EmployerRegisterContent({
   children,
 }: EmployerRegisterContentProps) {
+  const t = useTranslate();
   const router = useRouter();
   const [step, setStep] = useState<EmployerRegisterStep>("account");
   const [accountFormSnapshot, setAccountFormSnapshot] =
@@ -45,13 +46,13 @@ export function EmployerRegisterContent({
 
       <section className="employer-register-form-section">
         <div className="employer-register-form-container">
-          <p className="employer-register-login-prompt">
-            {EMPLOYER_REGISTER_LOGIN_PROMPT}{" "}
+          <p className="employer-register-login-prompt break-words">
+            {t("auth.common.haveAccountPrompt")}{" "}
             <Link
               href={ROUTES.EMPLOYER_LOGIN}
               className="font-bold text-foreground underline underline-offset-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              Login
+              {t("auth.common.login")}
             </Link>
           </p>
 

@@ -21,6 +21,7 @@ import {
   WORK_MODE_OPTIONS,
   type PartTimeMeridiem,
 } from "@/constants/post-job";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type {
   ContractPeriodUnit,
   EmployerAccountType,
@@ -30,6 +31,10 @@ import type {
   WorkMode,
 } from "@/types/post-job";
 import { cn } from "@/utils/cn";
+import {
+  formatJobSearchJobType,
+  formatJobSearchWorkMode,
+} from "@/utils/job-search-format";
 import type { ReactNode, RefObject } from "react";
 import {
   postJobCardClassName,
@@ -59,6 +64,24 @@ const textareaClassName = cn(
   postJobTextareaClassName,
   "resize-none",
 );
+
+const CONTRACT_UNIT_KEYS: Record<ContractPeriodUnit, MessageKey> = {
+  days: "employer.postJob.units.days",
+  months: "employer.postJob.units.months",
+  years: "employer.postJob.units.years",
+};
+
+const PART_TIME_SCHEDULE_KEYS: Record<PartTimeScheduleType, MessageKey> = {
+  "fixed-timings": "employer.postJob.partTime.fixedTimings",
+  "flexible-hours": "employer.postJob.partTime.flexibleHours",
+};
+
+const WORK_MODE_DESCRIPTION_KEYS: Record<WorkMode, MessageKey> = {
+  office: "employer.postJob.workModeDescription.office",
+  field: "employer.postJob.workModeDescription.field",
+  both: "employer.postJob.workModeDescription.both",
+  home: "employer.postJob.workModeDescription.home",
+};
 
 type FormFieldProps = {
   id: string;
@@ -125,9 +148,16 @@ function ContractPeriodField({
   onChange: (value: string) => void;
   "aria-label"?: string;
 }) {
+  const t = useTranslate();
   const { amount, unit } = parseContractPeriodStoredValue(value);
   const unitSelectId = `${id}-unit`;
-  const unitLabel = `${ariaLabel ?? "Contract period"} unit`;
+  const unitLabel = t("employer.postJob.unitAria", {
+    label: ariaLabel ?? t("employer.postJob.contractPeriod"),
+  });
+  const unitOptions = POST_JOB_CONTRACT_PERIOD_UNITS.map((option) => ({
+    value: option.value,
+    label: t(CONTRACT_UNIT_KEYS[option.value]),
+  }));
 
   const updateContractPeriod = (
     nextAmount: string,
@@ -157,8 +187,8 @@ function ContractPeriodField({
         hideLabel
         hideSearch
         value={unit}
-        placeholder="Unit"
-        options={POST_JOB_CONTRACT_PERIOD_UNITS}
+        placeholder={t("employer.postJob.unitPlaceholder")}
+        options={unitOptions}
         onChange={(nextUnit) =>
           updateContractPeriod(amount, nextUnit as ContractPeriodUnit)
         }
@@ -181,9 +211,12 @@ function ManualTimeField({
   onChange: (value: string) => void;
   "aria-label"?: string;
 }) {
+  const t = useTranslate();
   const { time, meridiem } = parsePartTimeManualStoredValue(value);
   const meridiemSelectId = `${id}-meridiem`;
-  const meridiemLabel = `${ariaLabel ?? "Time"} AM or PM`;
+  const meridiemLabel = t("employer.postJob.meridiemAria", {
+    label: ariaLabel ?? t("jobs.time"),
+  });
 
   const updateManualTime = (
     nextTime: string,
@@ -244,8 +277,20 @@ export function JobInformationForm({
   onContinue: () => void;
   scrollContainerRef?: RefObject<HTMLFormElement | null>;
 }) {
+  const t = useTranslate();
   const isConsultancy = accountType === "consultancy";
   const isIndividual = accountType === "individual";
+  const flexibleHourOptions = PART_TIME_FLEXIBLE_HOURS_OPTIONS.map(
+    (option) => ({
+      value: option.value,
+      label: t(
+        option.value === "1"
+          ? "employer.postJob.partTime.hourOne"
+          : "employer.postJob.partTime.hourMany",
+        { count: option.value },
+      ),
+    }),
+  );
   const businessCategoryOptions =
     getEmployerRegisterBusinessCategoryOptions(formData.industry);
 
@@ -288,7 +333,11 @@ export function JobInformationForm({
         <div className={postJobFormGridGapClassName}>
           <FormField
             id="company-details"
-            label={isIndividual ? "Establishment Name" : "Company Name"}
+            label={
+              isIndividual
+                ? t("employer.postJob.establishmentName")
+                : t("employer.postJob.companyName")
+            }
             error={fieldErrors.companyDetails}
           >
             <input
@@ -300,8 +349,8 @@ export function JobInformationForm({
               }
               placeholder={
                 isIndividual
-                  ? "Enter Establishment Name"
-                  : "Enter company name"
+                  ? t("employer.postJob.establishmentNamePlaceholder")
+                  : t("employer.postJob.companyNamePlaceholder")
               }
               className={inputClassNameWithError(fieldErrors.companyDetails)}
               autoComplete="organization"
@@ -310,7 +359,7 @@ export function JobInformationForm({
 
           <FormField
             id="job-title"
-            label="Job Title / Designation"
+            label={t("employer.postJob.jobTitleLabel")}
             error={fieldErrors.jobTitle}
           >
             <input
@@ -318,7 +367,7 @@ export function JobInformationForm({
               type="text"
               value={formData.jobTitle}
               onChange={(event) => onFieldChange("jobTitle", event.target.value)}
-              placeholder="Enter Job Title"
+              placeholder={t("employer.postJob.jobTitlePlaceholder")}
               className={inputClassNameWithError(fieldErrors.jobTitle)}
             />
           </FormField>
@@ -326,7 +375,7 @@ export function JobInformationForm({
       ) : (
         <FormField
           id="job-title"
-          label="Job Title / Designation"
+          label={t("employer.postJob.jobTitleLabel")}
           error={fieldErrors.jobTitle}
         >
           <input
@@ -334,14 +383,14 @@ export function JobInformationForm({
             type="text"
             value={formData.jobTitle}
             onChange={(event) => onFieldChange("jobTitle", event.target.value)}
-            placeholder="Enter Job Title"
+            placeholder={t("employer.postJob.jobTitlePlaceholder")}
             className={inputClassNameWithError(fieldErrors.jobTitle)}
           />
         </FormField>
       )}
 
       <fieldset id="job-type-group" className="space-y-3">
-        <legend className={fieldLabelClassName}>Job Type</legend>
+        <legend className={fieldLabelClassName}>{t("jobs.jobType")}</legend>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {JOB_TYPE_OPTIONS.map((option) => {
             const checked = formData.jobType === option.value;
@@ -369,8 +418,8 @@ export function JobInformationForm({
                   className="sr-only"
                 />
                 <RadioIndicator checked={checked} />
-                <span className="text-sm font-medium text-foreground">
-                  {option.label}
+                <span className="min-w-0 break-words text-sm font-medium text-foreground">
+                  {formatJobSearchJobType(option.value)}
                 </span>
               </label>
             );
@@ -385,7 +434,9 @@ export function JobInformationForm({
 
       {formData.jobType === "part-time" ? (
         <fieldset id="part-time-schedule-group" className="space-y-3">
-          <legend className={fieldLabelClassName}>Part-time Schedule</legend>
+          <legend className={fieldLabelClassName}>
+            {t("employer.postJob.partTime.schedule")}
+          </legend>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {PART_TIME_SCHEDULE_OPTIONS.map((option) => {
               const checked = formData.partTimeSchedule === option.value;
@@ -415,8 +466,8 @@ export function JobInformationForm({
                     className="sr-only"
                   />
                   <RadioIndicator checked={checked} />
-                  <span className="text-sm font-medium text-foreground">
-                    {option.label}
+                  <span className="min-w-0 break-words text-sm font-medium text-foreground">
+                    {t(PART_TIME_SCHEDULE_KEYS[option.value])}
                   </span>
                 </label>
               );
@@ -434,8 +485,8 @@ export function JobInformationForm({
                 <ManualTimeField
                   id="part-time-start-time"
                   value={formData.partTimeStartTime}
-                  placeholder="Start time"
-                  aria-label="Part-time start time"
+                  placeholder={t("employer.postJob.partTime.startTime")}
+                  aria-label={t("employer.postJob.partTime.startTimeAria")}
                   onChange={(value) =>
                     onFieldChange("partTimeStartTime", value)
                   }
@@ -450,8 +501,8 @@ export function JobInformationForm({
                 <ManualTimeField
                   id="part-time-end-time"
                   value={formData.partTimeEndTime}
-                  placeholder="End time"
-                  aria-label="Part-time end time"
+                  placeholder={t("employer.postJob.partTime.endTime")}
+                  aria-label={t("employer.postJob.partTime.endTimeAria")}
                   onChange={(value) => onFieldChange("partTimeEndTime", value)}
                 />
                 {fieldErrors.partTimeEndTime ? (
@@ -467,12 +518,12 @@ export function JobInformationForm({
             <div className="flex min-w-0 flex-col gap-2">
               <EmployerRegisterSearchableSelect
                 id="part-time-flexible-hours"
-                label="Flexible working hours"
+                label={t("employer.postJob.partTime.flexibleHoursAria")}
                 hideLabel
                 hideSearch
                 value={formData.partTimeFlexibleHours}
-                placeholder="Select hours"
-                options={PART_TIME_FLEXIBLE_HOURS_OPTIONS}
+                placeholder={t("employer.postJob.partTime.selectHours")}
+                options={flexibleHourOptions}
                 onChange={(value) =>
                   onFieldChange("partTimeFlexibleHours", value)
                 }
@@ -490,13 +541,15 @@ export function JobInformationForm({
 
       {formData.jobType === "contract" ? (
         <fieldset className="space-y-3">
-          <legend className={fieldLabelClassName}>Contract Period</legend>
+          <legend className={fieldLabelClassName}>
+            {t("employer.postJob.contractPeriod")}
+          </legend>
           <div className={postJobSalaryRangeGridClassName}>
             <div className="flex min-w-0 flex-col gap-2">
               <ContractPeriodField
                 id="contract-period-from"
                 value={formData.contractPeriodFrom}
-                aria-label="Contract period start"
+                aria-label={t("employer.postJob.contractPeriodStart")}
                 onChange={(value) =>
                   onFieldChange("contractPeriodFrom", value)
                 }
@@ -511,7 +564,7 @@ export function JobInformationForm({
               <ContractPeriodField
                 id="contract-period-to"
                 value={formData.contractPeriodTo}
-                aria-label="Contract period end"
+                aria-label={t("employer.postJob.contractPeriodEnd")}
                 onChange={(value) =>
                   onFieldChange("contractPeriodTo", value)
                 }
@@ -527,7 +580,7 @@ export function JobInformationForm({
       ) : null}
 
       <fieldset id="work-mode-group" className="space-y-3">
-        <legend className={fieldLabelClassName}>Work Mode</legend>
+        <legend className={fieldLabelClassName}>{t("jobs.workMode")}</legend>
         <div className={postJobWorkModeGridClassName}>
           {WORK_MODE_OPTIONS.map((option) => {
             const checked = formData.workMode === option.value;
@@ -556,11 +609,11 @@ export function JobInformationForm({
                 />
                 <RadioIndicator checked={checked} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate whitespace-nowrap text-[0.6875rem] font-bold leading-none text-foreground sm:text-xs lg:text-[0.8125rem]">
-                    {option.label}
+                  <span className="block break-words text-[0.6875rem] font-bold leading-tight text-foreground sm:text-xs lg:text-[0.8125rem]">
+                    {formatJobSearchWorkMode(option.value)}
                   </span>
-                  <span className="mt-1.5 block text-[0.625rem] leading-snug text-muted sm:text-[0.6875rem] lg:text-xs">
-                    {option.description}
+                  <span className="mt-1.5 block break-words text-[0.625rem] leading-snug text-muted sm:text-[0.6875rem] lg:text-xs">
+                    {t(WORK_MODE_DESCRIPTION_KEYS[option.value])}
                   </span>
                 </span>
               </label>
@@ -576,7 +629,7 @@ export function JobInformationForm({
 
       <FormField
         id="job-vacancies"
-        label="Number of Vacancies"
+        label={t("employer.postJob.vacancies")}
         error={fieldErrors.vacancies}
       >
         <input
@@ -587,7 +640,7 @@ export function JobInformationForm({
           inputMode="numeric"
           value={formData.vacancies}
           onChange={(event) => onFieldChange("vacancies", event.target.value)}
-          placeholder="Select number of vacancies"
+          placeholder={t("employer.postJob.vacanciesPlaceholder")}
           className={inputClassNameWithError(fieldErrors.vacancies)}
           aria-invalid={Boolean(fieldErrors.vacancies)}
         />
@@ -595,7 +648,7 @@ export function JobInformationForm({
 
       <FormField
         id="job-description"
-        label="Job Description"
+        label={t("jobs.jobDescription")}
         error={fieldErrors.jobDescription}
       >
         <JobDescriptionEditor
@@ -603,7 +656,7 @@ export function JobInformationForm({
           value={formData.jobDescription}
           onChange={(next) => onFieldChange("jobDescription", next)}
           maxLength={POST_JOB_LONG_TEXT_MAX_LENGTH}
-          placeholder="Describe the job role, responsibilities and requirements."
+          placeholder={t("employer.postJob.jobDescriptionPlaceholder")}
           hasError={Boolean(fieldErrors.jobDescription)}
           aria-invalid={Boolean(fieldErrors.jobDescription)}
           aria-describedby="job-description-count"
@@ -615,7 +668,7 @@ export function JobInformationForm({
           type="submit"
           className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary-soft px-8 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:bg-primary-soft-hover sm:h-12 sm:w-auto sm:min-w-[148px]"
         >
-          Continue
+          {t("common.continue")}
         </button>
       </div>
     </>
@@ -631,7 +684,7 @@ export function JobInformationForm({
           id="job-information-heading"
           className={postJobCardHeadingClassName}
         >
-          Job Information
+          {t("employer.postJob.steps.jobInformation.title")}
         </h2>
 
         <form
@@ -668,13 +721,13 @@ export function JobInformationForm({
             id="company-details-heading"
             className={postJobCardHeadingClassName}
           >
-            Company Details
+            {t("employer.postJob.companyDetails")}
           </h2>
 
           <div className={postJobFormGridGapClassName}>
             <FormField
               id="company-details"
-              label="Recruiting For *"
+              label={t("employer.postJob.recruitingFor")}
               error={fieldErrors.companyDetails}
             >
               <input
@@ -684,7 +737,7 @@ export function JobInformationForm({
                 onChange={(event) =>
                   onFieldChange("companyDetails", event.target.value)
                 }
-                placeholder="Enter Company Name"
+                placeholder={t("employer.postJob.companyNamePlaceholder")}
                 className={inputClassNameWithError(fieldErrors.companyDetails)}
                 autoComplete="organization"
               />
@@ -693,11 +746,11 @@ export function JobInformationForm({
             <div className="flex min-w-0 flex-col gap-2">
               <EmployerRegisterSearchableSelect
                 id="job-company-size"
-                label="Company Size"
+                label={t("employer.postJob.companySize")}
                 required
                 allowCustom
                 value={formData.companySize}
-                placeholder="Select Company Size"
+                placeholder={t("employer.postJob.companySizePlaceholder")}
                 options={EMPLOYER_REGISTER_COMPANY_STRENGTH_OPTIONS}
                 onChange={(value) => onFieldChange("companySize", value)}
               />
@@ -711,10 +764,10 @@ export function JobInformationForm({
             <div className="flex min-w-0 flex-col gap-2">
               <EmployerRegisterSearchableSelect
                 id="job-industry"
-                label="Industry"
+                label={t("employer.postJob.industry")}
                 required
                 value={formData.industry}
-                placeholder="Select Industry"
+                placeholder={t("employer.postJob.industryPlaceholder")}
                 options={EMPLOYER_REGISTER_INDUSTRY_OPTIONS}
                 onChange={handleIndustryChange}
               />
@@ -728,11 +781,11 @@ export function JobInformationForm({
             <div className="flex min-w-0 flex-col gap-2">
               <EmployerRegisterSearchableSelect
                 id="job-business-category"
-                label="Business Category"
+                label={t("employer.postJob.businessCategory")}
                 required
                 disabled={!formData.industry}
                 value={formData.businessCategory}
-                placeholder="Select Business Category"
+                placeholder={t("employer.postJob.businessCategoryPlaceholder")}
                 options={businessCategoryOptions}
                 onChange={(value) => onFieldChange("businessCategory", value)}
               />
@@ -748,7 +801,7 @@ export function JobInformationForm({
             id="job-information-heading"
             className={postJobCardHeadingClassName}
           >
-            Job Information
+            {t("employer.postJob.steps.jobInformation.title")}
           </h2>
 
           {jobInformationFields}

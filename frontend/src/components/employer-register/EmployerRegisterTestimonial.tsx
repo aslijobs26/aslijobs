@@ -5,6 +5,7 @@ import {
   EMPLOYER_REGISTER_TESTIMONIAL_AUTOPLAY_MS,
   EMPLOYER_REGISTER_TESTIMONIAL_TRANSITION_MS,
 } from "@/constants/employer-register";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type { EmployerRegisterTestimonial as Testimonial } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
 import Image from "next/image";
@@ -15,6 +16,23 @@ const SLIDE_COUNT = EMPLOYER_REGISTER_TESTIMONIALS.length;
 /** Priya Reddy is shown first to match the reference design. */
 const INITIAL_INDEX = 1;
 
+const TESTIMONIAL_COPY_KEYS: Readonly<
+  Record<string, { quote: MessageKey; designation: MessageKey }>
+> = {
+  "sneha-patel": {
+    quote: "auth.testimonial.snehaQuote",
+    designation: "auth.testimonial.snehaDesignation",
+  },
+  "priya-reddy": {
+    quote: "auth.testimonial.priyaQuote",
+    designation: "auth.testimonial.priyaDesignation",
+  },
+  "rahul-sharma": {
+    quote: "auth.testimonial.rahulQuote",
+    designation: "auth.testimonial.rahulDesignation",
+  },
+};
+
 function TestimonialCard({
   testimonial,
   priority = false,
@@ -22,14 +40,19 @@ function TestimonialCard({
   testimonial: Testimonial;
   priority?: boolean;
 }) {
+  const t = useTranslate();
+  const copyKeys = TESTIMONIAL_COPY_KEYS[testimonial.id];
+
   return (
     <article className="employer-register-testimonial-card">
-      <p className="employer-register-testimonial-quote">{testimonial.quote}</p>
+      <p className="employer-register-testimonial-quote break-words">
+        {copyKeys ? t(copyKeys.quote) : testimonial.quote}
+      </p>
 
       <div className="employer-register-testimonial-author">
         <Image
           src={testimonial.avatar}
-          alt={testimonial.avatarAlt}
+          alt={t("auth.testimonial.avatarAlt", { name: testimonial.name })}
           width={40}
           height={40}
           sizes="40px"
@@ -38,8 +61,8 @@ function TestimonialCard({
         />
         <div className="employer-register-testimonial-author-copy">
           <p className="employer-register-testimonial-name">{testimonial.name}</p>
-          <p className="employer-register-testimonial-role">
-            {testimonial.designation}
+          <p className="employer-register-testimonial-role break-words">
+            {copyKeys ? t(copyKeys.designation) : testimonial.designation}
           </p>
         </div>
       </div>
@@ -48,6 +71,7 @@ function TestimonialCard({
 }
 
 export function EmployerRegisterTestimonial() {
+  const t = useTranslate();
   const [activeIndex, setActiveIndex] = useState(INITIAL_INDEX);
   const [isHovered, setIsHovered] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
@@ -112,7 +136,7 @@ export function EmployerRegisterTestimonial() {
       <div
         className={cn("employer-register-testimonial-dots")}
         role="tablist"
-        aria-label="Testimonial slides"
+        aria-label={t("auth.testimonial.slidesAria")}
       >
         {EMPLOYER_REGISTER_TESTIMONIALS.map((testimonial, index) => {
           const isActive = index === safeIndex;
@@ -122,7 +146,9 @@ export function EmployerRegisterTestimonial() {
               key={testimonial.id}
               type="button"
               role="tab"
-              aria-label={`Show testimonial from ${testimonial.name}`}
+              aria-label={t("auth.testimonial.showFrom", {
+                name: testimonial.name,
+              })}
               aria-selected={isActive}
               className={cn(
                 "employer-register-testimonial-dot transition-colors",

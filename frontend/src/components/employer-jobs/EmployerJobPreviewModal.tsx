@@ -4,6 +4,7 @@ import { EmployerJobPreviewArticle } from "@/components/employer-jobs/EmployerJo
 import { EMPLOYER_JOBS_QUERY_KEYS } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
+import { useTranslate } from "@/i18n/translate";
 import { useCan } from "@/providers/employer-permission-provider";
 import { fetchEmployerJob } from "@/services/employer-jobs.service";
 import { cn } from "@/utils/cn";
@@ -31,6 +32,7 @@ export function EmployerJobPreviewModal({
   jobMongoId,
   onClose,
 }: EmployerJobPreviewModalProps) {
+  const t = useTranslate();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
@@ -152,7 +154,7 @@ export function EmployerJobPreviewModal({
     <div className="fixed inset-0 z-50 print:static print:z-auto" role="presentation">
       <button
         type="button"
-        aria-label="Close job preview"
+        aria-label={t("employer.jobs.closePreview")}
         className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm print:hidden"
         onClick={onClose}
       />
@@ -188,12 +190,12 @@ export function EmployerJobPreviewModal({
                 className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200/80"
               >
                 <Eye className="size-3" aria-hidden="true" />
-                Preview Mode
+                {t("employer.jobs.previewMode")}
               </span>
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close preview"
+                aria-label={t("employer.jobs.closePreview")}
                 className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 print:hidden"
               >
                 <X className="size-5" aria-hidden="true" />
@@ -223,7 +225,7 @@ export function EmployerJobPreviewModal({
                   "text-muted hover:bg-hero-bg",
                 )}
               >
-                Close Preview
+                {t("employer.jobs.closePreview")}
               </button>
               {canEdit && employerJob ? (
                 <Link
@@ -234,7 +236,7 @@ export function EmployerJobPreviewModal({
                   )}
                 >
                   <Pencil className="size-3.5" aria-hidden="true" />
-                  Edit Job
+                  {t("employer.jobs.editJob")}
                 </Link>
               ) : null}
             </div>

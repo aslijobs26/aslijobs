@@ -5,6 +5,7 @@ import { ROUTES } from "@/constants/routes";
 import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import { useAuthenticatedMediaUrl } from "@/hooks/use-authenticated-media-url";
 import { useJobSeekerProfile } from "@/hooks/useJobSeekerProfile";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { clearJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { getInitials } from "@/utils/job-seeker-profile";
@@ -44,6 +45,7 @@ export function JobSeekerProfileMenu({
   className,
   onLogout,
 }: JobSeekerProfileMenuProps) {
+  const t = useTranslate();
   const router = useRouter();
   const queryClient = useQueryClient();
   const menuId = useId();
@@ -55,7 +57,7 @@ export function JobSeekerProfileMenu({
   const profileQuery = useJobSeekerProfile();
 
   const displayName =
-    profileQuery.data?.fullName?.trim() || "Job Seeker";
+    profileQuery.data?.fullName?.trim() || t("seeker.common.jobSeeker");
   const { url: photoUrl } = useAuthenticatedMediaUrl(
     profileQuery.data?.profilePhoto?.url ?? null,
   );
@@ -123,7 +125,7 @@ export function JobSeekerProfileMenu({
       <button
         type="button"
         className="inline-flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        aria-label="Job seeker profile menu"
+        aria-label={t("seeker.nav.profileMenuAria")}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-controls={menuId}
@@ -157,7 +159,9 @@ export function JobSeekerProfileMenu({
           <span className="block max-w-[9.5rem] truncate text-sm font-semibold text-foreground">
             {displayName}
           </span>
-          <span className="block truncate text-xs text-muted">Job Seeker</span>
+          <span className="block max-w-[9.5rem] truncate text-xs text-muted">
+            {t("seeker.common.jobSeeker")}
+          </span>
         </span>
         <ChevronDown
           className={cn(
@@ -194,7 +198,7 @@ export function JobSeekerProfileMenu({
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
-                Profile
+                <span className="min-w-0 break-words">{t("seeker.nav.profile")}</span>
               </Link>
               <Link
                 href={ROUTES.JOB_SEEKER_SAVED_JOBS}
@@ -207,7 +211,7 @@ export function JobSeekerProfileMenu({
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
-                Saved Jobs
+                <span className="min-w-0 break-words">{t("seeker.nav.savedJobs")}</span>
               </Link>
               <Link
                 href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
@@ -220,7 +224,9 @@ export function JobSeekerProfileMenu({
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
-                My Applications
+                <span className="min-w-0 break-words">
+                  {t("seeker.nav.myApplications")}
+                </span>
               </Link>
               <Link
                 href={ROUTES.JOB_SEEKER_MY_RESUME}
@@ -233,7 +239,7 @@ export function JobSeekerProfileMenu({
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
-                My Resume
+                <span className="min-w-0 break-words">{t("seeker.nav.myResume")}</span>
               </Link>
               <Link
                 href={ROUTES.JOB_SEEKER_NOTIFICATIONS}
@@ -246,7 +252,9 @@ export function JobSeekerProfileMenu({
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
-                Notifications
+                <span className="min-w-0 break-words">
+                  {t("seeker.nav.notifications")}
+                </span>
               </Link>
             </div>
 
@@ -262,7 +270,7 @@ export function JobSeekerProfileMenu({
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
-                Logout
+                <span className="min-w-0 break-words">{t("seeker.nav.logout")}</span>
               </button>
             </div>
           </div>

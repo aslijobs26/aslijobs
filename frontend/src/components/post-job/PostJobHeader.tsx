@@ -1,6 +1,7 @@
 "use client";
 
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import { ArrowLeft, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ const iconButtonClassName =
 
 export function PostJobHeader() {
   const router = useRouter();
+  const t = useTranslate();
 
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -33,18 +35,18 @@ export function PostJobHeader() {
 
   return (
     <header className="border-b border-border-subtle bg-surface">
-      <div className="mx-auto flex h-14 w-full max-w-[1200px] items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-14 w-full max-w-[1200px] items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={handleBack}
             className={iconButtonClassName}
-            aria-label="Go back"
+            aria-label={t("employer.postJob.goBack")}
           >
             <ArrowLeft className="size-5" strokeWidth={2} aria-hidden="true" />
           </button>
-          <h1 className="text-base font-bold text-foreground sm:text-lg">
-            Post Job
+          <h1 className="truncate text-base font-bold text-foreground sm:text-lg">
+            {t("employer.shell.postJob")}
           </h1>
         </div>
 
@@ -52,7 +54,7 @@ export function PostJobHeader() {
           type="button"
           onClick={handleClose}
           className={iconButtonClassName}
-          aria-label="Close post job page"
+          aria-label={t("employer.postJob.closePage")}
         >
           <X className="size-5" strokeWidth={2} aria-hidden="true" />
         </button>

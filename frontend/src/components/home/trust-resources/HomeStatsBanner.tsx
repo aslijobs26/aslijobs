@@ -1,4 +1,8 @@
+"use client";
+
+import { HOME_STAT_LABEL_KEYS } from "@/components/home/home-i18n";
 import { HOME_STATS } from "@/constants/home-stats";
+import { useTranslate } from "@/i18n/translate";
 import type { HomeStatIconKey } from "@/types/home-stats";
 import { cn } from "@/utils/cn";
 import {
@@ -32,8 +36,10 @@ function StatIcon({ icon }: { icon: HomeStatIconKey }): ReactNode {
 }
 
 export function HomeStatsBanner() {
+  const t = useTranslate();
+
   return (
-    <section aria-label="AsliJobs platform statistics">
+    <section aria-label={t("home.trust.statsAria")}>
       <div className="rounded-2xl bg-stats-banner px-4 py-2 mobile:px-4 mobile:py-1.5 md:px-5 md:py-6 lg:px-4 lg:py-7 xl:px-5 xl:py-8">
         <ul className="flex flex-col md:flex-row md:items-stretch md:overflow-x-auto md:overscroll-x-contain md:[-ms-overflow-style:none] md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:hidden">
           {HOME_STATS.map((stat, index) => (
@@ -59,8 +65,8 @@ export function HomeStatsBanner() {
                 <p className="text-lg font-bold leading-none tracking-tight text-white md:text-xl lg:text-2xl">
                   {stat.value}
                 </p>
-                <p className="mt-1 text-xs leading-snug text-white/90 md:mt-1.5 md:text-xs lg:text-sm">
-                  {stat.label}
+                <p className="mt-1 break-words text-xs leading-snug text-white/90 md:mt-1.5 md:text-xs lg:text-sm">
+                  {t(HOME_STAT_LABEL_KEYS[stat.icon])}
                 </p>
               </div>
             </li>

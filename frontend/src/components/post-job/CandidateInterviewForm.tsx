@@ -10,6 +10,7 @@ import {
   POST_JOB_LONG_TEXT_MAX_LENGTH,
   POST_JOB_WALK_IN_TIME_OPTIONS,
 } from "@/constants/post-job";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type {
   AdditionalRequirementsState,
   CandidateInterviewFormData,
@@ -20,6 +21,11 @@ import type {
   WalkInOption,
 } from "@/types/post-job";
 import { cn } from "@/utils/cn";
+import {
+  formatJobSearchEducation,
+  formatJobSearchExperience,
+  formatJobSearchGender,
+} from "@/utils/job-search-format";
 import type { RefObject } from "react";
 import { PostJobChipButton } from "./PostJobChipButton";
 import { PostJobFormField } from "./PostJobFormField";
@@ -60,6 +66,15 @@ type CandidateInterviewFormProps = {
   scrollContainerRef?: RefObject<HTMLFormElement | null>;
 };
 
+const ADDITIONAL_REQUIREMENT_KEYS: Record<
+  keyof AdditionalRequirementsState,
+  MessageKey
+> = {
+  language: "employer.postJob.requirements.language",
+  gender: "jobs.gender",
+  age: "employer.postJob.requirements.age",
+};
+
 function sanitizeNumericInput(value: string) {
   return value.replace(/\D/g, "");
 }
@@ -75,6 +90,8 @@ export function CandidateInterviewForm({
   onPostJob,
   scrollContainerRef,
 }: CandidateInterviewFormProps) {
+  const t = useTranslate();
+
   const toggleEducation = (educationId: PostJobEducationId) => {
     const isSelected = formData.education.includes(educationId);
     onFieldChange(
@@ -153,7 +170,7 @@ export function CandidateInterviewForm({
         id="candidate-interview-heading"
         className={postJobCardHeadingClassName}
       >
-        Candidate & Interview
+        {t("employer.postJob.steps.candidateInterview.title")}
       </h2>
 
       <form
@@ -167,12 +184,14 @@ export function CandidateInterviewForm({
       >
         <div className={postJobFormSectionsClassName}>
           <fieldset id="education-group" className={postJobFormSubsectionClassName}>
-            <legend className={postJobFieldLabelClassName}>Education Qualification</legend>
+            <legend className={postJobFieldLabelClassName}>
+              {t("employer.postJob.educationQualification")}
+            </legend>
             <div className={postJobPerkWrapClassName}>
               {POST_JOB_EDUCATION_OPTIONS.map((option) => (
                 <PostJobChipButton
                   key={option.value}
-                  label={option.label}
+                  label={formatJobSearchEducation(option.value)}
                   isSelected={formData.education.includes(option.value)}
                   onClick={() => toggleEducation(option.value)}
                 />
@@ -187,13 +206,13 @@ export function CandidateInterviewForm({
 
           <fieldset id="experience-group" className={postJobFormSubsectionClassName}>
             <legend className={postJobFieldLabelClassName}>
-              Experience Required
+              {t("employer.postJob.experienceRequired")}
             </legend>
             <div className={postJobPerkWrapClassName}>
               {POST_JOB_EXPERIENCE_OPTIONS.map((option) => (
                 <PostJobChipButton
                   key={option.value}
-                  label={option.label}
+                  label={formatJobSearchExperience(option.value)}
                   isSelected={formData.experienceRequired === option.value}
                   onClick={() => selectExperience(option.value)}
                 />
@@ -208,7 +227,7 @@ export function CandidateInterviewForm({
 
           <fieldset className={postJobFormSubsectionClassName}>
             <legend className={postJobFieldLabelClassName}>
-              Additional Requirements
+              {t("employer.postJob.additionalRequirements")}
             </legend>
             <div className="flex flex-wrap gap-2.5 sm:gap-3 lg-short:gap-2 lg-compact:gap-2 lg-tight:gap-1.5">
               {POST_JOB_ADDITIONAL_REQUIREMENT_TOGGLES.map((toggle) => {
@@ -228,7 +247,7 @@ export function CandidateInterviewForm({
                         : "border-border bg-surface text-foreground hover:border-primary/20",
                     )}
                   >
-                    {toggle.label}
+                    {t(ADDITIONAL_REQUIREMENT_KEYS[toggle.key])}
                   </button>
                 );
               })}
@@ -237,7 +256,9 @@ export function CandidateInterviewForm({
 
           {formData.additionalRequirements.language ? (
             <fieldset id="language-group" className={postJobFormSubsectionClassName}>
-              <legend className={postJobFieldLabelClassName}>Language Required</legend>
+              <legend className={postJobFieldLabelClassName}>
+                {t("employer.postJob.languageRequired")}
+              </legend>
               <div className={postJobPerkWrapClassName}>
                 {POST_JOB_LANGUAGE_OPTIONS.map((option) => (
                   <PostJobChipButton
@@ -258,12 +279,12 @@ export function CandidateInterviewForm({
 
           {formData.additionalRequirements.gender ? (
             <fieldset id="gender-group" className={postJobFormSubsectionClassName}>
-              <legend className={postJobFieldLabelClassName}>Gender</legend>
+              <legend className={postJobFieldLabelClassName}>{t("jobs.gender")}</legend>
               <div className={postJobPerkWrapClassName}>
                 {POST_JOB_GENDER_OPTIONS.map((option) => (
                   <PostJobChipButton
                     key={option.value}
-                    label={option.label}
+                    label={formatJobSearchGender(option.value)}
                     isSelected={formData.gender.includes(option.value)}
                     onClick={() => toggleGender(option.value)}
                   />
@@ -279,7 +300,9 @@ export function CandidateInterviewForm({
 
           {formData.additionalRequirements.age ? (
             <fieldset className={postJobFormSubsectionClassName}>
-              <legend className={postJobFieldLabelClassName}>Age Range</legend>
+              <legend className={postJobFieldLabelClassName}>
+                {t("employer.postJob.ageRange")}
+              </legend>
               <div className={postJobSalaryRangeGridClassName}>
                 <input
                   id="age-min"
@@ -289,8 +312,8 @@ export function CandidateInterviewForm({
                   onChange={(event) =>
                     handleAgeChange("ageMin", event.target.value)
                   }
-                  placeholder="Minimum Age"
-                  aria-label="Minimum age"
+                  placeholder={t("employer.postJob.minimumAge")}
+                  aria-label={t("employer.postJob.minimumAge")}
                   min={0}
                   className={cn(
                     postJobInputClassName,
@@ -307,8 +330,8 @@ export function CandidateInterviewForm({
                   onChange={(event) =>
                     handleAgeChange("ageMax", event.target.value)
                   }
-                  placeholder="Maximum Age"
-                  aria-label="Maximum age"
+                  placeholder={t("employer.postJob.maximumAge")}
+                  aria-label={t("employer.postJob.maximumAge")}
                   min={0}
                   className={cn(
                     postJobInputClassName,
@@ -332,17 +355,19 @@ export function CandidateInterviewForm({
           ) : null}
 
           <div className={postJobFormSubsectionClassName}>
-            <h3 className={postJobSectionHeadingClassName}>Interview</h3>
+            <h3 className={postJobSectionHeadingClassName}>
+              {t("employer.postJob.interview")}
+            </h3>
 
             <div className="space-y-3 lg-short:space-y-2.5 lg-compact:space-y-2 lg-tight:space-y-1.5">
               <div>
                 <span className={postJobFieldLabelClassName}>
-                  Is this a walk-in interview?
+                  {t("employer.postJob.isWalkIn")}
                 </span>
                 <div
                   className="mt-2 flex flex-wrap gap-2.5 sm:gap-3"
                   role="group"
-                  aria-label="Walk-in interview"
+                  aria-label={t("employer.postJob.walkInInterview")}
                 >
                   {(["yes", "no"] as const).map((option) => {
                     const isSelected = formData.walkIn === option;
@@ -360,7 +385,7 @@ export function CandidateInterviewForm({
                             : "border-border bg-surface text-foreground hover:border-primary/20",
                         )}
                       >
-                        {option === "yes" ? "Yes" : "No"}
+                        {option === "yes" ? t("common.yes") : t("common.no")}
                       </button>
                     );
                   })}
@@ -371,7 +396,7 @@ export function CandidateInterviewForm({
                 <>
                   <PostJobFormField
                     id="walk-in-address"
-                    label="Walk-in Interview Address"
+                    label={t("employer.postJob.walkInAddress")}
                     error={fieldErrors.walkInAddress}
                   >
                     <textarea
@@ -380,7 +405,7 @@ export function CandidateInterviewForm({
                       onChange={(event) =>
                         onFieldChange("walkInAddress", event.target.value)
                       }
-                      placeholder="Enter Complete interview Address"
+                      placeholder={t("employer.postJob.walkInAddressPlaceholder")}
                       className={postJobTextareaClassName}
                     />
                   </PostJobFormField>
@@ -388,7 +413,7 @@ export function CandidateInterviewForm({
                   <div className={postJobFormRowGapClassName}>
                     <div className={postJobFormSubsectionClassName}>
                       <span className={postJobFieldLabelClassName}>
-                        Walk-in Dates*
+                        {t("employer.postJob.walkInDates")}
                       </span>
                       <div
                         className={cn(
@@ -400,8 +425,8 @@ export function CandidateInterviewForm({
                           <PostJobDatePicker
                             id="walk-in-start-date"
                             value={formData.walkInStartDate}
-                            placeholder="Start date"
-                            aria-label="Walk-in start date"
+                            placeholder={t("employer.postJob.startDate")}
+                            aria-label={t("employer.postJob.walkInStartDate")}
                             onChange={handleWalkInStartDateChange}
                           />
                           {fieldErrors.walkInStartDate ? (
@@ -417,9 +442,9 @@ export function CandidateInterviewForm({
                           <PostJobDatePicker
                             id="walk-in-end-date"
                             value={formData.walkInEndDate}
-                            placeholder="End date"
+                            placeholder={t("employer.postJob.endDate")}
                             minDate={formData.walkInStartDate || undefined}
-                            aria-label="Walk-in end date"
+                            aria-label={t("employer.postJob.walkInEndDate")}
                             onChange={(value) =>
                               onFieldChange("walkInEndDate", value)
                             }
@@ -438,7 +463,7 @@ export function CandidateInterviewForm({
 
                     <div className={postJobFormSubsectionClassName}>
                       <span className={postJobFieldLabelClassName}>
-                        Walk-in Time
+                        {t("employer.postJob.walkInTime")}
                       </span>
                       <div
                         className={cn(
@@ -449,11 +474,11 @@ export function CandidateInterviewForm({
                         <div className="flex min-w-0 flex-col gap-2">
                           <EmployerRegisterSearchableSelect
                             id="walk-in-start-time"
-                            label="Walk-in start time"
+                            label={t("employer.postJob.walkInStartTime")}
                             hideLabel
                             hideSearch
                             value={formData.walkInStartTime}
-                            placeholder="Start time"
+                            placeholder={t("employer.postJob.partTime.startTime")}
                             options={POST_JOB_WALK_IN_TIME_OPTIONS}
                             onChange={(value) =>
                               onFieldChange("walkInStartTime", value)
@@ -465,11 +490,11 @@ export function CandidateInterviewForm({
                         <div className="flex min-w-0 flex-col gap-2">
                           <EmployerRegisterSearchableSelect
                             id="walk-in-end-time"
-                            label="Walk-in end time"
+                            label={t("employer.postJob.walkInEndTime")}
                             hideLabel
                             hideSearch
                             value={formData.walkInEndTime}
-                            placeholder="End time"
+                            placeholder={t("employer.postJob.partTime.endTime")}
                             options={POST_JOB_WALK_IN_TIME_OPTIONS}
                             onChange={(value) =>
                               onFieldChange("walkInEndTime", value)
@@ -486,7 +511,7 @@ export function CandidateInterviewForm({
 
               <PostJobFormField
                 id="other-instructions"
-                label="Other Instructions"
+                label={t("jobs.otherInstructions")}
                 error={fieldErrors.otherInstructions}
               >
                 <textarea
@@ -499,7 +524,7 @@ export function CandidateInterviewForm({
                     )
                   }
                   maxLength={POST_JOB_LONG_TEXT_MAX_LENGTH}
-                  placeholder="Mention required documents, or any other interview instruction"
+                  placeholder={t("employer.postJob.otherInstructionsPlaceholder")}
                   className={cn(
                     postJobTextareaClassName,
                     fieldErrors.otherInstructions &&
@@ -521,7 +546,7 @@ export function CandidateInterviewForm({
 
           <fieldset className={postJobFormSubsectionClassName}>
             <legend className={postJobFieldLabelClassName}>
-              Contact Details
+              {t("employer.postJob.contactDetails")}
             </legend>
             <div className={postJobContactGridClassName}>
               <div className="flex min-w-0 flex-col gap-2">
@@ -532,8 +557,8 @@ export function CandidateInterviewForm({
                   onChange={(event) =>
                     onFieldChange("contactName", event.target.value)
                   }
-                  placeholder="Name"
-                  aria-label="Contact name"
+                  placeholder={t("employer.postJob.contactName")}
+                  aria-label={t("employer.postJob.contactNameAria")}
                   className={cn(
                     postJobInputClassName,
                     fieldErrors.contactName &&
@@ -555,8 +580,8 @@ export function CandidateInterviewForm({
                   onChange={(event) =>
                     onFieldChange("contactEmail", event.target.value)
                   }
-                  placeholder="Email"
-                  aria-label="Contact email"
+                  placeholder={t("employer.postJob.contactEmail")}
+                  aria-label={t("employer.postJob.contactEmailAria")}
                   className={cn(
                     postJobInputClassName,
                     fieldErrors.contactEmail &&
@@ -582,8 +607,8 @@ export function CandidateInterviewForm({
                       sanitizeNumericInput(event.target.value),
                     )
                   }
-                  placeholder="Mobile Number"
-                  aria-label="Contact mobile number"
+                  placeholder={t("employer.postJob.contactMobile")}
+                  aria-label={t("employer.postJob.contactMobileAria")}
                   className={cn(
                     postJobInputClassName,
                     fieldErrors.contactMobile &&
@@ -602,7 +627,9 @@ export function CandidateInterviewForm({
 
           {submitError ? (
             <div className="space-y-1.5" role="alert">
-              <p className="text-xs font-medium text-red-600">{submitError}</p>
+              <p className="break-words text-xs font-medium text-red-600">
+                {submitError}
+              </p>
             </div>
           ) : null}
 
@@ -612,7 +639,7 @@ export function CandidateInterviewForm({
               onClick={onBack}
               className={cn(postJobBackButtonClassName, "w-full sm:w-auto")}
             >
-              Back
+              {t("common.back")}
             </button>
             <button
               type="submit"
@@ -624,11 +651,11 @@ export function CandidateInterviewForm({
             >
               {isSubmitting
                 ? isEditMode
-                  ? "Updating..."
-                  : "Posting..."
+                  ? t("employer.postJob.updatingShort")
+                  : t("employer.postJob.postingShort")
                 : isEditMode
-                  ? "Update Job"
-                  : "Post Job"}
+                  ? t("employer.postJob.updateJob")
+                  : t("employer.shell.postJob")}
             </button>
           </div>
         </div>

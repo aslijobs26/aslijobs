@@ -5,16 +5,19 @@ import {
   type JobSearchFilterPanelId,
 } from "@/components/job-search/JobSearchFiltersSidebar";
 import {
-  JOB_SEARCH_EXPERIENCE_LABELS,
-  JOB_SEARCH_GENDER_LABELS,
-  JOB_SEARCH_JOB_TYPE_LABELS,
   JOB_SEARCH_SORT_OPTIONS,
-  JOB_SEARCH_WORK_MODE_LABELS,
 } from "@/constants/job-search";
 import type { PublicJobCityFacet, PublicJobSort } from "@/services/public-jobs.service";
 import type { JobSearchUrlState } from "@/types/job-search";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
-import { formatJobSearchSalaryAmountShort } from "@/utils/job-search-format";
+import {
+  formatJobSearchExperience,
+  formatJobSearchJobType,
+  formatJobSearchSalaryAmountShort,
+  formatJobSearchSortMobile,
+  formatJobSearchWorkMode,
+} from "@/utils/job-search-format";
 import {
   ArrowUpDown,
   Banknote,
@@ -367,6 +370,7 @@ export function JobSearchMobileFilters({
   onClearFilters,
 }: JobSearchMobileFiltersProps) {
   const [openSheet, setOpenSheet] = useState<MobileSheetId | null>(null);
+  const t = useTranslate();
   const [draft, setDraft] = useState<JobSearchUrlState>(() =>
     cloneFilterSlice(state),
   );
@@ -403,7 +407,7 @@ export function JobSearchMobileFilters({
     for (const value of state.experience) {
       chips.push({
         id: `exp-${value}`,
-        label: JOB_SEARCH_EXPERIENCE_LABELS[value] ?? value,
+        label: formatJobSearchExperience(value),
         onRemove: () =>
           onChange({
             experience: state.experience.filter((item) => item !== value),
@@ -429,7 +433,7 @@ export function JobSearchMobileFilters({
     for (const value of state.jobType) {
       chips.push({
         id: `type-${value}`,
-        label: JOB_SEARCH_JOB_TYPE_LABELS[value] ?? value,
+        label: formatJobSearchJobType(value),
         onRemove: () =>
           onChange({
             jobType: state.jobType.filter((item) => item !== value),
@@ -441,7 +445,12 @@ export function JobSearchMobileFilters({
     if (state.gender) {
       chips.push({
         id: "gender",
-        label: JOB_SEARCH_GENDER_LABELS[state.gender] ?? state.gender,
+        label:
+          state.gender === "male"
+            ? t("jobs.maleOnly")
+            : state.gender === "female"
+              ? t("jobs.femaleOnly")
+              : t("jobs.any"),
         onRemove: () => onChange({ gender: "", page: 1 }),
       });
     }
@@ -449,7 +458,7 @@ export function JobSearchMobileFilters({
     for (const value of state.workMode) {
       chips.push({
         id: `mode-${value}`,
-        label: JOB_SEARCH_WORK_MODE_LABELS[value] ?? value,
+        label: formatJobSearchWorkMode(value),
         onRemove: () =>
           onChange({
             workMode: state.workMode.filter((item) => item !== value),
@@ -467,7 +476,7 @@ export function JobSearchMobileFilters({
     }
 
     return chips;
-  }, [cityNameBySlug, onChange, state]);
+  }, [cityNameBySlug, onChange, state, t]);
 
   const closeSheet = () => setOpenSheet(null);
 
@@ -504,37 +513,37 @@ export function JobSearchMobileFilters({
   }[] = [
     {
       id: "location",
-      label: "Location",
+      label: t("jobs.location"),
       icon: <MapPin className="size-3.5" strokeWidth={2} />,
     },
     {
       id: "experience",
-      label: "Experience",
+      label: t("jobs.experience"),
       icon: <TrendingUp className="size-3.5" strokeWidth={2} />,
     },
     {
       id: "salary",
-      label: "Salary",
+      label: t("jobs.salary"),
       icon: <Banknote className="size-3.5" strokeWidth={2} />,
     },
     {
       id: "jobType",
-      label: "Job Type",
+      label: t("jobs.jobType"),
       icon: <Briefcase className="size-3.5" strokeWidth={2} />,
     },
     {
       id: "gender",
-      label: "Gender",
+      label: t("jobs.gender"),
       icon: <User className="size-3.5" strokeWidth={2} />,
     },
     {
       id: "sort",
-      label: "Sort",
+      label: t("jobs.sort"),
       icon: <ArrowUpDown className="size-3.5" strokeWidth={2} />,
     },
     {
       id: "more",
-      label: "More",
+      label: t("jobs.more"),
       icon: <SlidersHorizontal className="size-3.5" strokeWidth={2} />,
     },
   ];
@@ -570,7 +579,7 @@ export function JobSearchMobileFilters({
               >
                 <span className="truncate">{chip.label}</span>
                 <X className="size-3.5 shrink-0" strokeWidth={2.25} aria-hidden="true" />
-                <span className="sr-only">Remove {chip.label}</span>
+                <span className="sr-only">{t("jobs.removeChip", { label: chip.label })}</span>
               </button>
             </li>
           ))}
@@ -589,14 +598,14 @@ export function JobSearchMobileFilters({
               onClick={handleReset}
               className="inline-flex h-11 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-sm font-bold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              Reset
+              {t("jobs.reset")}
             </button>
             <button
               type="button"
               onClick={handleApply}
               className="inline-flex h-11 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              {openSheet === "more" ? "Done" : "Apply Filters"}
+              {openSheet === "more" ? t("jobs.done") : t("jobs.applyFilters")}
             </button>
           </div>
         }
@@ -625,13 +634,7 @@ export function JobSearchMobileFilters({
                       className="job-search-filter-radio"
                     />
                     <span className="text-sm font-medium text-foreground">
-                      {option.label === "Latest"
-                        ? "Newest"
-                        : option.label === "Highest Salary"
-                          ? "Salary High to Low"
-                          : option.label === "Lowest Salary"
-                            ? "Salary Low to High"
-                            : option.label}
+                      {formatJobSearchSortMobile(option.value)}
                     </span>
                   </label>
                 </li>

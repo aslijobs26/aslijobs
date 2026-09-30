@@ -28,7 +28,7 @@ export function DiscoverySectionHeader({
       <h2
         id={titleId}
         className={cn(
-          "text-lg font-bold text-foreground sm:text-xl",
+          "min-w-0 text-balance break-words text-lg font-bold text-foreground sm:text-xl",
           titleClassName,
         )}
       >

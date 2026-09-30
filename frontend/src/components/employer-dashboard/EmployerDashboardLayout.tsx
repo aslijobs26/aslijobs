@@ -80,7 +80,7 @@ export function EmployerDashboardLayout({
             <main className="flex flex-1 flex-col">
               <EmployerPermissionRouteGuard>
                 {children ?? (
-                  <EmployerDashboardPlaceholder title="Dashboard" />
+                  <EmployerDashboardPlaceholder titleKey="employer.nav.dashboard" />
                 )}
               </EmployerPermissionRouteGuard>
             </main>

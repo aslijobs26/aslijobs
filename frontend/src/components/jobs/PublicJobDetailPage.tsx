@@ -3,6 +3,7 @@
 import { JobSearchMobileJobDetails } from "@/components/job-search/JobSearchMobileJobDetails";
 import { JobDetailsPageLayout } from "@/components/jobs/JobDetailsPageLayout";
 import { ROUTES } from "@/constants/routes";
+import { useSiteLanguage } from "@/i18n/site-language";
 import { fetchPublicActiveJobByPublicId } from "@/services/public-jobs.service";
 import {
   fetchSavedJobIds,
@@ -61,6 +62,7 @@ export function PublicJobDetailPage({ publicJobId }: PublicJobDetailPageProps) {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const siteLanguage = useSiteLanguage();
   const [seekerAuthEpoch, setSeekerAuthEpoch] = useState(0);
   const isMobile = useSyncExternalStore(
     subscribeToMobileMedia,
@@ -82,9 +84,12 @@ export function PublicJobDetailPage({ publicJobId }: PublicJobDetailPageProps) {
   const seekerAuthKey = getJobSeekerAccessToken() ? "seeker" : "anon";
 
   const jobQuery = useQuery({
-    queryKey: ["public-job", seekerAuthKey, seekerAuthEpoch, publicJobId],
+    queryKey: ["public-job", seekerAuthKey, seekerAuthEpoch, publicJobId, siteLanguage.code],
     queryFn: ({ signal }) =>
-      fetchPublicActiveJobByPublicId(publicJobId, { signal }),
+      fetchPublicActiveJobByPublicId(publicJobId, {
+        signal,
+        language: siteLanguage.code,
+      }),
     retry: false,
   });
 

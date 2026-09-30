@@ -3,6 +3,7 @@
 import {
   EMPLOYER_JOBS_PAGE_SIZE_OPTIONS,
 } from "@/constants/employer-jobs";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -25,6 +26,8 @@ export function EmployerJobsPagination({
   onLimitChange,
   isLoading = false,
 }: EmployerJobsPaginationProps) {
+  const t = useTranslate();
+
   if (total === 0 && !isLoading) {
     return null;
   }
@@ -37,19 +40,18 @@ export function EmployerJobsPagination({
 
   return (
     <div className="flex flex-col gap-2.5 border-t border-border-subtle px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-      <p className="text-sm text-muted">
-        Showing{" "}
-        <span className="font-semibold text-foreground">
-          {start} to {end}
-        </span>{" "}
-        of <span className="font-semibold text-foreground">{total}</span> jobs
+      <p className="min-w-0 break-words text-sm text-muted">
+        {t("employer.jobs.paginationSummary", { start, end, total })}
       </p>
 
       <div className="flex flex-wrap items-center gap-2.5">
-        <nav aria-label="Jobs pagination" className="flex items-center gap-1">
+        <nav
+          aria-label={t("employer.jobs.paginationAria")}
+          className="flex items-center gap-1"
+        >
           <button
             type="button"
-            aria-label="Previous page"
+            aria-label={t("employer.common.previousPage")}
             disabled={page <= 1 || isLoading}
             onClick={() => onPageChange(page - 1)}
             className="inline-flex size-8 items-center justify-center rounded-md border border-border bg-surface text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-40"
@@ -76,7 +78,9 @@ export function EmployerJobsPagination({
               <button
                 key={pageNumber}
                 type="button"
-                aria-label={`Page ${pageNumber}`}
+                aria-label={t("employer.common.pageNumber", {
+                  page: pageNumber,
+                })}
                 aria-current={isCurrent ? "page" : undefined}
                 disabled={isLoading}
                 onClick={() => onPageChange(pageNumber)}
@@ -94,7 +98,7 @@ export function EmployerJobsPagination({
 
           <button
             type="button"
-            aria-label="Next page"
+            aria-label={t("employer.common.nextPage")}
             disabled={page >= safeTotalPages || isLoading}
             onClick={() => onPageChange(page + 1)}
             className="inline-flex size-8 items-center justify-center rounded-md border border-border bg-surface text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-40"
@@ -104,7 +108,7 @@ export function EmployerJobsPagination({
         </nav>
 
         <label className="inline-flex items-center gap-2 text-sm text-muted">
-          <span>Rows per page</span>
+          <span>{t("employer.common.rowsPerPage")}</span>
           <select
             value={limit}
             disabled={isLoading}

@@ -1,3 +1,11 @@
+"use client";
+
+import {
+  translateJobTag,
+  translatePostedAt,
+  translateSalaryPeriod,
+} from "@/components/home/home-i18n";
+import { useTranslate } from "@/i18n/translate";
 import type { PopularJob } from "@/types/jobs-discovery";
 import { cn } from "@/utils/cn";
 import { ChevronRight, MapPin } from "lucide-react";
@@ -9,6 +17,9 @@ type JobCardProps = {
 };
 
 export function JobCard({ job }: JobCardProps) {
+  const t = useTranslate();
+  const postedAt = translatePostedAt(job.postedAt, t);
+
   return (
     <Link
       href={job.href}
@@ -33,7 +44,7 @@ export function JobCard({ job }: JobCardProps) {
         {job.companyLogo ? (
           <Image
             src={job.companyLogo}
-            alt={`${job.companyName} logo`}
+            alt={t("home.common.logoAlt", { name: job.companyName })}
             fill
             sizes="(max-width: 639px) 48px, 40px"
             className={cn(
@@ -66,7 +77,7 @@ export function JobCard({ job }: JobCardProps) {
 
           <div className="flex shrink-0 items-center gap-0.5 pt-0.5 sm:hidden">
             <span className="whitespace-nowrap text-[0.625rem] text-muted">
-              {job.postedAt}
+              {postedAt}
             </span>
             <ChevronRight
               className="size-3.5 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
@@ -87,7 +98,9 @@ export function JobCard({ job }: JobCardProps) {
 
         <p className="mt-1 text-xs font-bold leading-snug text-foreground sm:mt-2 sm:text-sm">
           {job.salaryMin} - {job.salaryMax}{" "}
-          <span className="font-normal text-muted">/{job.salaryPeriod}</span>
+          <span className="font-normal text-muted">
+            {translateSalaryPeriod(job.salaryPeriod, t)}
+          </span>
         </p>
 
         <div className="mt-1.5 flex flex-wrap gap-1 sm:mt-3 sm:gap-2">
@@ -96,13 +109,13 @@ export function JobCard({ job }: JobCardProps) {
               key={tag}
               className="rounded-md bg-primary-light px-1.5 py-0.5 text-[0.625rem] font-medium text-primary sm:rounded-full sm:px-2.5 sm:text-xs"
             >
-              {tag}
+              {translateJobTag(tag, t)}
             </span>
           ))}
         </div>
 
         <p className="mt-auto hidden pt-3 text-xs text-muted sm:block">
-          {job.postedAt}
+          {postedAt}
         </p>
       </div>
     </Link>

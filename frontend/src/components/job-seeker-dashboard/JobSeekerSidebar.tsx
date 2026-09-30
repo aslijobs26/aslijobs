@@ -11,6 +11,7 @@ import {
   JOB_SEEKER_DASHBOARD_SIDEBAR_WIDTH,
 } from "@/constants/job-seeker-dashboard";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { clearJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { ChevronsLeft, LogOut, X } from "lucide-react";
@@ -40,6 +41,7 @@ export function JobSeekerSidebar({
   onCollapseToggle,
   onMobileClose,
 }: JobSeekerSidebarProps) {
+  const t = useTranslate();
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -76,7 +78,7 @@ export function JobSeekerSidebar({
       />
 
       <aside
-        aria-label="Job seeker dashboard navigation"
+        aria-label={t("seeker.nav.dashboardAria")}
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex h-dvh flex-col border-r border-border-subtle bg-surface transition-[width,transform] duration-200 ease-out",
           collapsed
@@ -104,7 +106,7 @@ export function JobSeekerSidebar({
           <Link
             href={ROUTES.HOME}
             onClick={onMobileClose}
-            aria-label="AsliJobs home"
+            aria-label={t("seeker.nav.homeAria")}
             className={cn(
               "rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
               collapsed
@@ -144,7 +146,7 @@ export function JobSeekerSidebar({
             type="button"
             onClick={onMobileClose}
             className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
-            aria-label="Close navigation menu"
+            aria-label={t("seeker.nav.closeMenu")}
           >
             <X className="size-5" strokeWidth={2} aria-hidden="true" />
           </button>
@@ -155,7 +157,7 @@ export function JobSeekerSidebar({
             "flex-1 overflow-y-auto overflow-x-hidden py-3 scrollbar-hidden",
             collapsed ? "px-2" : "px-3",
           )}
-          aria-label="Primary"
+          aria-label={t("seeker.nav.primaryAria")}
         >
           <ul className="flex flex-col gap-1">
             {JOB_SEEKER_DASHBOARD_NAV_ITEMS.map((item) => (
@@ -180,21 +182,28 @@ export function JobSeekerSidebar({
           <button
             type="button"
             onClick={handleLogoutRequest}
-            title={collapsed ? "Logout" : undefined}
+            title={collapsed ? t("seeker.nav.logout") : undefined}
+            aria-label={collapsed ? t("seeker.nav.logout") : undefined}
             className={cn(
               "flex w-full items-center rounded-lg text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200",
               collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
             )}
           >
             <LogOut className="size-[1.125rem] shrink-0" aria-hidden="true" />
-            {!collapsed ? <span>Logout</span> : null}
+            {!collapsed ? (
+              <span className="min-w-0 truncate">{t("seeker.nav.logout")}</span>
+            ) : null}
           </button>
 
           <button
             type="button"
             onClick={onCollapseToggle}
             className="mt-2 hidden w-full items-center justify-center rounded-lg p-2 text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:inline-flex"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={
+              collapsed
+                ? t("seeker.nav.expandSidebar")
+                : t("seeker.nav.collapseSidebar")
+            }
           >
             <ChevronsLeft
               className={cn(

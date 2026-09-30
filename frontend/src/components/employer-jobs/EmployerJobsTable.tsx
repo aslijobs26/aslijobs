@@ -3,22 +3,10 @@
 import { EmployerTableRowsSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
 import { EmployerJobsPagination } from "@/components/employer-jobs/EmployerJobsPagination";
 import {
-  EMPLOYER_JOB_STATUS_LABELS,
   EMPLOYER_JOB_STATUS_PILL_CLASS,
-  EMPLOYER_JOB_TYPE_LABELS,
-  EMPLOYER_JOBS_DELETE_CONFIRM,
   EMPLOYER_JOBS_DELETE_UI_ENABLED,
-  EMPLOYER_JOBS_EMPTY_DESCRIPTION,
-  EMPLOYER_JOBS_EMPTY_TITLE,
-  EMPLOYER_JOBS_ERROR_DESCRIPTION,
-  EMPLOYER_JOBS_ERROR_TITLE,
-  EMPLOYER_JOBS_RETRY_LABEL,
-  EMPLOYER_JOBS_TABLE_COLUMNS,
-  EMPLOYER_LIVE_CHANGE_PENDING_LABEL_SHORT,
-  EMPLOYER_LIVE_CHANGE_PENDING_TITLE,
-  EMPLOYER_LIVE_CHANGE_REJECTED_LABEL_SHORT,
-  EMPLOYER_LIVE_CHANGE_REJECTED_TITLE,
 } from "@/constants/employer-jobs";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type {
   EmployerJobListItem,
   JobStatusAction,
@@ -29,9 +17,12 @@ import {
   formatEmployerJobLocation,
   formatEmployerJobLocationFull,
   formatEmployerJobPostedAbsolute,
-  formatEmployerJobPostedRelative,
   getEmployerJobPostedAt,
 } from "@/utils/employer-jobs-format";
+import {
+  formatJobSearchJobType,
+  formatJobSearchRelativeTime,
+} from "@/utils/job-search-format";
 import { ROUTES } from "@/constants/routes";
 import { useCan } from "@/providers/employer-permission-provider";
 import {
@@ -115,6 +106,19 @@ const COLUMN_WIDTHS = [
   "w-[11%]",
 ] as const;
 
+const TABLE_COLUMN_KEYS = [
+  "employer.columns.jobTitle",
+  "employer.columns.jobId",
+  "employer.columns.location",
+  "employer.columns.applications",
+  "employer.columns.shortlisted",
+  "employer.columns.hired",
+  "employer.columns.views",
+  "employer.columns.status",
+  "employer.columns.postedOn",
+  "employer.columns.actions",
+] as const satisfies readonly MessageKey[];
+
 const HEADER_CELL_CLASS =
   "whitespace-nowrap px-3 py-2.5 text-[10px] font-semibold tracking-wide text-muted uppercase first:pl-4 last:pr-4 xl:px-3.5 xl:py-3 xl:text-[11px] xl:first:pl-5 xl:last:pr-5";
 
@@ -145,9 +149,9 @@ export function EmployerJobsTable({
   onToggleRow,
   onTogglePage,
 }: EmployerJobsTableProps) {
+  const t = useTranslate();
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
-  const columnCount =
-    EMPLOYER_JOBS_TABLE_COLUMNS.length + (canSelect ? 1 : 0);
+  const columnCount = TABLE_COLUMN_KEYS.length + (canSelect ? 1 : 0);
   const columnWidths = canSelect ? COLUMN_WIDTHS_WITH_SELECT : COLUMN_WIDTHS;
 
   useEffect(() => {
@@ -173,7 +177,7 @@ export function EmployerJobsTable({
                 key={
                   canSelect && index === 0
                     ? "select"
-                    : EMPLOYER_JOBS_TABLE_COLUMNS[canSelect ? index - 1 : index]
+                    : TABLE_COLUMN_KEYS[canSelect ? index - 1 : index]
                 }
                 className={widthClass}
               />
@@ -183,7 +187,7 @@ export function EmployerJobsTable({
             <tr className="border-b border-border-subtle bg-hero-bg/70">
               {canSelect ? (
                 <th scope="col" className={HEADER_CELL_CLASS}>
-                  <span className="sr-only">Select jobs</span>
+                  <span className="sr-only">{t("employer.jobs.selectJobs")}</span>
                   <input
                     ref={headerCheckboxRef}
                     type="checkbox"
@@ -199,13 +203,13 @@ export function EmployerJobsTable({
                     }
                     onChange={(event) => onTogglePage(event.target.checked)}
                     className="size-3.5 rounded border-border text-primary focus:ring-primary/30"
-                    aria-label="Select all jobs on this page"
+                    aria-label={t("employer.jobs.selectAllOnPage")}
                   />
                 </th>
               ) : null}
-              {EMPLOYER_JOBS_TABLE_COLUMNS.map((column) => (
-                <th key={column} scope="col" className={HEADER_CELL_CLASS}>
-                  {column}
+              {TABLE_COLUMN_KEYS.map((columnKey) => (
+                <th key={columnKey} scope="col" className={HEADER_CELL_CLASS}>
+                  {t(columnKey)}
                 </th>
               ))}
             </tr>
@@ -220,17 +224,17 @@ export function EmployerJobsTable({
                   className="px-4 py-14 text-center"
                 >
                   <p className="text-base font-semibold text-foreground">
-                    {EMPLOYER_JOBS_ERROR_TITLE}
+                    {t("employer.jobs.errorTitle")}
                   </p>
-                  <p className="mt-1 text-sm text-muted">
-                    {errorMessage?.trim() || EMPLOYER_JOBS_ERROR_DESCRIPTION}
+                  <p className="mt-1 break-words text-sm text-muted">
+                    {errorMessage?.trim() || t("employer.jobs.errorDescription")}
                   </p>
                   <button
                     type="button"
                     onClick={onRetry}
                     className="mt-4 inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                   >
-                    {EMPLOYER_JOBS_RETRY_LABEL}
+                    {t("employer.common.tryAgain")}
                   </button>
                 </td>
               </tr>
@@ -241,10 +245,10 @@ export function EmployerJobsTable({
                   className="px-4 py-14 text-center"
                 >
                   <p className="text-base font-semibold text-foreground">
-                    {EMPLOYER_JOBS_EMPTY_TITLE}
+                    {t("employer.jobs.emptyTitle")}
                   </p>
-                  <p className="mt-1 text-sm text-muted">
-                    {EMPLOYER_JOBS_EMPTY_DESCRIPTION}
+                  <p className="mt-1 break-words text-sm text-muted">
+                    {t("employer.jobs.emptyDescription")}
                   </p>
                 </td>
               </tr>
@@ -306,6 +310,7 @@ function EmployerJobsTableRow({
   onDelete,
   onPreview,
 }: EmployerJobsTableRowProps) {
+  const t = useTranslate();
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -413,17 +418,20 @@ function EmployerJobsTableRow({
   );
   const postedAt = getEmployerJobPostedAt(job);
   const absoluteDate = formatEmployerJobPostedAbsolute(postedAt);
-  const relativeDate = formatEmployerJobPostedRelative(postedAt);
-  const jobTypeLabel = job.jobType
-    ? EMPLOYER_JOB_TYPE_LABELS[job.jobType]
-    : "—";
-  const openingsLabel = `${job.vacancies} ${job.vacancies === 1 ? "Opening" : "Openings"}`;
+  const relativeDate = formatJobSearchRelativeTime(postedAt);
+  const jobTypeLabel = job.jobType ? formatJobSearchJobType(job.jobType) : "—";
+  const openingsLabel = t(
+    job.vacancies === 1
+      ? "employer.jobs.openingCountOne"
+      : "employer.jobs.openingCountMany",
+    { count: job.vacancies },
+  );
 
   const primaryAction = getPrimaryStatusAction(job.status);
 
   const handleDelete = () => {
     setMenuOpen(false);
-    if (window.confirm(EMPLOYER_JOBS_DELETE_CONFIRM)) {
+    if (window.confirm(t("employer.jobs.deleteConfirm"))) {
       onDelete(job.id);
     }
   };
@@ -455,7 +463,9 @@ function EmployerJobsTableRow({
             onChange={() => onToggleRow(job.id)}
             onClick={(event) => event.stopPropagation()}
             className="size-3.5 rounded border-border text-primary focus:ring-primary/30"
-            aria-label={`Select ${job.jobTitle}`}
+            aria-label={t("employer.jobs.selectJobAria", {
+              title: job.jobTitle,
+            })}
           />
         </td>
       ) : null}
@@ -487,7 +497,10 @@ function EmployerJobsTableRow({
           <Link
             href={`${ROUTES.EMPLOYER_CANDIDATES}?jobId=${encodeURIComponent(job.jobId)}`}
             className="text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            aria-label={`View ${formatEmployerJobCount(job.applications)} applications for ${job.jobTitle}`}
+            aria-label={t("employer.jobs.viewApplicationsAria", {
+              count: formatEmployerJobCount(job.applications),
+              title: job.jobTitle,
+            })}
           >
             {formatEmployerJobCount(job.applications)}
           </Link>
@@ -509,9 +522,9 @@ function EmployerJobsTableRow({
           {job.status === "pending_approval" ? (
             <span
               className="inline-flex w-fit max-w-full items-center justify-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold leading-none whitespace-nowrap text-amber-950 ring-1 ring-inset ring-amber-300/70 xl:text-xs"
-              title="Waiting for Operations review"
+              title={t("employer.jobs.waitingForReview")}
             >
-              Under Review
+              {t("employer.status.job.pending_approval")}
             </span>
           ) : job.status === "active" &&
             (job.liveChangeReviewStatus === "pending_approval" ||
@@ -525,8 +538,8 @@ function EmployerJobsTableRow({
               )}
               title={
                 job.liveChangeReviewStatus === "pending_approval"
-                  ? EMPLOYER_LIVE_CHANGE_PENDING_TITLE
-                  : EMPLOYER_LIVE_CHANGE_REJECTED_TITLE
+                  ? t("employer.jobs.liveChangePendingTitle")
+                  : t("employer.jobs.liveChangeRejectedTitle")
               }
             >
               <span
@@ -535,7 +548,7 @@ function EmployerJobsTableRow({
                   EMPLOYER_JOB_STATUS_PILL_CLASS.active,
                 )}
               >
-                {EMPLOYER_JOB_STATUS_LABELS.active}
+                {t("employer.status.job.active")}
               </span>
               <span
                 className={cn(
@@ -546,8 +559,8 @@ function EmployerJobsTableRow({
                 )}
               >
                 {job.liveChangeReviewStatus === "pending_approval"
-                  ? EMPLOYER_LIVE_CHANGE_PENDING_LABEL_SHORT
-                  : EMPLOYER_LIVE_CHANGE_REJECTED_LABEL_SHORT}
+                  ? t("employer.jobs.liveChangePendingShort")
+                  : t("employer.jobs.liveChangeRejectedShort")}
               </span>
               {job.liveChangeReviewStatus === "rejected" &&
               job.liveChangeRejectionReason ? (
@@ -566,7 +579,7 @@ function EmployerJobsTableRow({
                 EMPLOYER_JOB_STATUS_PILL_CLASS[job.status],
               )}
             >
-              {EMPLOYER_JOB_STATUS_LABELS[job.status]}
+              {t(`employer.status.job.${job.status}`)}
             </span>
           )}
           {job.status === "rejected" && job.rejectionReason ? (
@@ -593,9 +606,9 @@ function EmployerJobsTableRow({
         <div className="flex items-center justify-start gap-1.5">
           {canReadJobs ? (
             <IconActionButton
-              label="Preview job"
+              label={t("employer.jobs.previewJob")}
               disabled={disabled}
-              title="Preview job posting"
+              title={t("employer.jobs.previewJobPosting")}
               onClick={() => onPreview(job.id)}
             >
               <Eye className="size-3.5" />
@@ -609,10 +622,10 @@ function EmployerJobsTableRow({
               href={ROUTES.postJobEdit(job.id)}
               aria-label={
                 job.status === "draft"
-                  ? "Edit draft job"
+                  ? t("employer.jobs.editDraftJob")
                   : job.status === "rejected"
-                    ? "Edit rejected job"
-                    : "Edit active job"
+                    ? t("employer.jobs.editRejectedJob")
+                    : t("employer.jobs.editActiveJob")
               }
               className="inline-flex size-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
@@ -622,7 +635,7 @@ function EmployerJobsTableRow({
 
           {canUpdateJobs && primaryAction ? (
             <IconActionButton
-              label={primaryAction.label}
+              label={t(primaryAction.labelKey)}
               disabled={disabled}
               onClick={() => onStatusAction(job.id, primaryAction.action)}
             >
@@ -632,14 +645,14 @@ function EmployerJobsTableRow({
 
           {job.status === "active" ? (
             <IconActionButton
-              label="Share job"
+              label={t("jobs.shareJob")}
               disabled={disabled}
               onClick={() => {
                 void shareOrCopyText({
                   title: job.jobTitle,
-                  text: `Check out this job on AsliJobs: ${job.jobTitle}`,
+                  text: t("employer.jobs.shareText", { title: job.jobTitle }),
                   url: buildAbsolutePublicJobUrl(job.jobId),
-                  successMessage: "Job link copied successfully.",
+                  successMessage: t("employer.jobs.linkCopied"),
                 });
               }}
             >
@@ -651,7 +664,7 @@ function EmployerJobsTableRow({
             <div className="relative">
               <IconActionButton
                 buttonRef={triggerRef}
-                label="More actions"
+                label={t("employer.common.moreActions")}
                 disabled={disabled}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
@@ -682,7 +695,7 @@ function EmployerJobsTableRow({
                             onStatusAction(job.id, "close");
                           }}
                         >
-                          Close job
+                          {t("employer.jobs.closeJob")}
                         </button>
                       ) : null}
                       {canUpdateJobs && canReactivate ? (
@@ -695,7 +708,7 @@ function EmployerJobsTableRow({
                             onStatusAction(job.id, "reactivate");
                           }}
                         >
-                          Activate job
+                          {t("employer.jobs.activateJob")}
                         </button>
                       ) : null}
                       {canDeleteJobs ? (
@@ -706,7 +719,7 @@ function EmployerJobsTableRow({
                           onClick={handleDelete}
                         >
                           <Trash2 className="size-3.5" aria-hidden="true" />
-                          Delete
+                          {t("common.delete")}
                         </button>
                       ) : null}
                     </div>,
@@ -723,27 +736,30 @@ function EmployerJobsTableRow({
 
 function getPrimaryStatusAction(status: EmployerJobListItem["status"]): {
   action: JobStatusAction;
-  label: string;
+  labelKey: MessageKey;
   icon: ReactNode;
 } | null {
   if (status === "active") {
     return {
       action: "pause",
-      label: "Pause job",
+      labelKey: "employer.jobs.pauseJob",
       icon: <Pause className="size-3.5" />,
     };
   }
   if (status === "paused") {
     return {
       action: "resume",
-      label: "Resume job",
+      labelKey: "employer.jobs.resumeJob",
       icon: <Play className="size-3.5" />,
     };
   }
   if (status === "draft" || status === "rejected") {
     return {
       action: "publish",
-      label: status === "rejected" ? "Resubmit job" : "Publish job",
+      labelKey:
+        status === "rejected"
+          ? "employer.jobs.resubmitJob"
+          : "employer.jobs.publishJob",
       icon: <Send className="size-3.5" />,
     };
   }

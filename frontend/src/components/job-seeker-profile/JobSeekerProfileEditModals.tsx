@@ -15,6 +15,7 @@ import {
   JOB_SEEKER_REGISTER_SALARY_PERIOD_OPTIONS,
   JOB_SEEKER_WORK_MODE_OPTIONS,
 } from "@/constants/job-seeker-register";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type { PublicResume } from "@/types/job-seeker-resume";
 import type {
   JobSeekerAvailabilityStatus,
@@ -37,6 +38,13 @@ import { showAppToast } from "@/utils/share-job";
 import { Check } from "lucide-react";
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import { JobSeekerProfileDialog } from "./JobSeekerProfileDialog";
+import { localizeProfileOptions } from "./profile-i18n";
+
+type Translate = ReturnType<typeof useTranslate>;
+
+function requiredLabel(t: Translate, key: MessageKey): string {
+  return `${t(key)}*`;
+}
 
 export type JobSeekerProfileEditModalState =
   | { type: "personal" }
@@ -70,7 +78,7 @@ const secondaryButtonClassName =
 function DialogFooter({
   onClose,
   isSaving,
-  submitLabel = "Save changes",
+  submitLabel,
   formId,
 }: {
   onClose: () => void;
@@ -78,6 +86,7 @@ function DialogFooter({
   submitLabel?: string;
   formId: string;
 }) {
+  const t = useTranslate();
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <button
@@ -86,7 +95,7 @@ function DialogFooter({
         onClick={onClose}
         disabled={isSaving}
       >
-        Cancel
+        {t("seeker.common.cancel")}
       </button>
       <button
         type="submit"
@@ -94,7 +103,9 @@ function DialogFooter({
         className={primaryButtonClassName}
         disabled={isSaving}
       >
-        {isSaving ? "Saving…" : submitLabel}
+        {isSaving
+          ? t("seeker.profileModals.saving")
+          : (submitLabel ?? t("seeker.profileModals.saveChanges"))}
       </button>
     </div>
   );
@@ -121,16 +132,21 @@ function normalizeExperienceEntry(
 function renderEducationFields(
   education: JobSeekerEducation,
   onChange: (patch: Partial<JobSeekerEducation>) => void,
+  t: Translate,
 ) {
   const level = education.level;
 
   if (level === "no_formal_education") {
     return (
-      <p className="text-sm text-muted">
-        No additional education details are required for this level.
+      <p className="break-words text-sm text-muted">
+        {t("seeker.profileModals.noEducationDetails")}
       </p>
     );
   }
+
+  const schoolNameLabel = requiredLabel(t, "seeker.profileModals.schoolName");
+  const collegeNameLabel = requiredLabel(t, "seeker.profileModals.collegeName");
+  const passingYearLabel = requiredLabel(t, "seeker.profileModals.passingYear");
 
   const field = (
     id: string,
@@ -155,17 +171,22 @@ function renderEducationFields(
   );
 
   if (level === "below_10th") {
-    return field("edu-school", "School Name*", education.schoolName, "schoolName");
+    return field("edu-school", schoolNameLabel, education.schoolName, "schoolName");
   }
 
   if (level === "10th_pass") {
     return (
       <>
-        {field("edu-school", "School Name*", education.schoolName, "schoolName")}
-        {field("edu-board", "Board*", education.board, "board")}
+        {field("edu-school", schoolNameLabel, education.schoolName, "schoolName")}
+        {field(
+          "edu-board",
+          requiredLabel(t, "seeker.profileModals.board"),
+          education.board,
+          "board",
+        )}
         {field(
           "edu-year",
-          "Passing Year*",
+          passingYearLabel,
           education.passingYear,
           "passingYear",
           "YYYY",
@@ -179,14 +200,19 @@ function renderEducationFields(
       <>
         {field(
           "edu-college",
-          "College Name*",
+          collegeNameLabel,
           education.collegeName,
           "collegeName",
         )}
-        {field("edu-stream", "Stream*", education.stream, "stream")}
+        {field(
+          "edu-stream",
+          requiredLabel(t, "seeker.profileModals.stream"),
+          education.stream,
+          "stream",
+        )}
         {field(
           "edu-year",
-          "Passing Year*",
+          passingYearLabel,
           education.passingYear,
           "passingYear",
           "YYYY",
@@ -200,14 +226,19 @@ function renderEducationFields(
       <>
         {field(
           "edu-institute",
-          "Institute Name*",
+          requiredLabel(t, "seeker.profileModals.instituteName"),
           education.instituteName,
           "instituteName",
         )}
-        {field("edu-trade", "Trade*", education.trade, "trade")}
+        {field(
+          "edu-trade",
+          requiredLabel(t, "seeker.profileModals.trade"),
+          education.trade,
+          "trade",
+        )}
         {field(
           "edu-year",
-          "Passing Year*",
+          passingYearLabel,
           education.passingYear,
           "passingYear",
           "YYYY",
@@ -221,14 +252,19 @@ function renderEducationFields(
       <>
         {field(
           "edu-college",
-          "College Name*",
+          collegeNameLabel,
           education.collegeName,
           "collegeName",
         )}
-        {field("edu-branch", "Branch*", education.branch, "branch")}
+        {field(
+          "edu-branch",
+          requiredLabel(t, "seeker.profileModals.branch"),
+          education.branch,
+          "branch",
+        )}
         {field(
           "edu-year",
-          "Passing Year*",
+          passingYearLabel,
           education.passingYear,
           "passingYear",
           "YYYY",
@@ -241,20 +277,25 @@ function renderEducationFields(
     <>
       {field(
         "edu-college",
-        "College Name*",
+        collegeNameLabel,
         education.collegeName,
         "collegeName",
       )}
-      {field("edu-degree", "Degree*", education.degree, "degree")}
+      {field(
+        "edu-degree",
+        requiredLabel(t, "seeker.profileModals.degree"),
+        education.degree,
+        "degree",
+      )}
       {field(
         "edu-specialization",
-        "Specialization*",
+        requiredLabel(t, "seeker.profileModals.specialization"),
         education.specialization,
         "specialization",
       )}
       {field(
         "edu-year",
-        "Passing Year*",
+        passingYearLabel,
         education.passingYear,
         "passingYear",
         "YYYY",
@@ -278,6 +319,7 @@ function AboutModal({
   onClose,
   onSave,
 }: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
+  const t = useTranslate();
   const formId = useId();
   const resolvedSummary = resolveProfessionalSummary(jobSeeker, resume);
   const [summary, setSummary] = useState(resolvedSummary);
@@ -294,8 +336,8 @@ function AboutModal({
 
   return (
     <JobSeekerProfileDialog
-      title="About me"
-      description="Write a short professional summary employers will see on your profile."
+      title={t("seeker.profileModals.aboutTitle")}
+      description={t("seeker.profileModals.aboutDescription")}
       onClose={onClose}
       footer={
         <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
@@ -307,7 +349,7 @@ function AboutModal({
         onSubmit={(event) => void handleSubmit(event)}
       >
         <label htmlFor="profile-summary" className={labelClassName}>
-          Professional summary
+          {t("seeker.profileModals.summaryLabel")}
         </label>
         <textarea
           id="profile-summary"
@@ -315,7 +357,7 @@ function AboutModal({
           value={summary}
           onChange={(event) => setSummary(event.target.value)}
           className={`${inputClassName} min-h-[9rem] resize-y py-2.5`}
-          placeholder="Describe your experience, strengths, and career goals…"
+          placeholder={t("seeker.profileModals.summaryPlaceholder")}
         />
       </form>
     </JobSeekerProfileDialog>
@@ -328,7 +370,9 @@ function PersonalModal({
   onClose,
   onSave,
 }: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
+  const t = useTranslate();
   const formId = useId();
+  const genderOptions = localizeProfileOptions(JOB_SEEKER_GENDER_OPTIONS, t);
   const [fullName, setFullName] = useState(jobSeeker.fullName ?? "");
   const [dateOfBirth, setDateOfBirth] = useState(jobSeeker.dateOfBirth ?? "");
   const [gender, setGender] = useState(jobSeeker.gender ?? "");
@@ -343,7 +387,7 @@ function PersonalModal({
     event.preventDefault();
     const trimmedName = fullName.trim();
     if (!trimmedName) {
-      showAppToast("Full name is required.", "error");
+      showAppToast(t("seeker.profileModals.fullNameRequired"), "error");
       return;
     }
 
@@ -363,8 +407,8 @@ function PersonalModal({
 
   return (
     <JobSeekerProfileDialog
-      title="Personal details"
-      description="Update your name and basic personal information."
+      title={t("seeker.profileModals.personalTitle")}
+      description={t("seeker.profileModals.personalDescription")}
       onClose={onClose}
       footer={
         <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
@@ -377,7 +421,7 @@ function PersonalModal({
       >
         <div className="space-y-1.5 sm:col-span-2">
           <label htmlFor="profile-full-name" className={labelClassName}>
-            Full name*
+            {requiredLabel(t, "seeker.profileModals.fullName")}
           </label>
           <input
             id="profile-full-name"
@@ -390,20 +434,20 @@ function PersonalModal({
         </div>
         <div className="space-y-1.5">
           <label htmlFor="profile-dob" className={labelClassName}>
-            Date of birth
+            {t("seeker.profileModals.dateOfBirth")}
           </label>
           <PostJobDatePicker
             id="profile-dob"
             value={dateOfBirth}
             onChange={setDateOfBirth}
-            placeholder="Select date of birth"
+            placeholder={t("seeker.profileModals.dateOfBirthPlaceholder")}
             compact
-            aria-label="Date of birth"
+            aria-label={t("seeker.profileModals.dateOfBirth")}
           />
         </div>
         <div className="space-y-1.5">
           <label htmlFor="profile-gender" className={labelClassName}>
-            Gender
+            {t("seeker.profileModals.gender")}
           </label>
           <select
             id="profile-gender"
@@ -411,8 +455,8 @@ function PersonalModal({
             value={gender}
             onChange={(event) => setGender(event.target.value)}
           >
-            <option value="">Select gender</option>
-            {JOB_SEEKER_GENDER_OPTIONS.map((option) => (
+            <option value="">{t("seeker.profileModals.selectGender")}</option>
+            {genderOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -436,6 +480,7 @@ function ExperienceModal({
     { type: "experience" }
   >;
 }) {
+  const t = useTranslate();
   const formId = useId();
   const todayIso = getLocalTodayIso();
   const initialEntry = useMemo(() => {
@@ -461,7 +506,7 @@ function ExperienceModal({
     event.preventDefault();
     const normalizedEntry = normalizeExperienceEntry(entry);
     if (!normalizedEntry.salary) {
-      showAppToast("Salary is required for work experience.", "error");
+      showAppToast(t("seeker.profileModals.salaryRequired"), "error");
       return;
     }
 
@@ -483,9 +528,11 @@ function ExperienceModal({
   return (
     <JobSeekerProfileDialog
       title={
-        activeModal.mode === "edit" ? "Edit experience" : "Add experience"
+        activeModal.mode === "edit"
+          ? t("seeker.profileModals.editExperience")
+          : t("seeker.profileModals.addExperience")
       }
-      description="Include your role, company, and key details."
+      description={t("seeker.profileModals.experienceDescription")}
       onClose={onClose}
       wide
       footer={
@@ -499,7 +546,7 @@ function ExperienceModal({
       >
         <div className="space-y-1.5 sm:col-span-2">
           <label htmlFor="exp-company" className={labelClassName}>
-            Company name*
+            {requiredLabel(t, "seeker.profileModals.companyName")}
           </label>
           <input
             id="exp-company"
@@ -511,7 +558,7 @@ function ExperienceModal({
         </div>
         <div className="space-y-1.5">
           <label htmlFor="exp-role" className={labelClassName}>
-            Job role*
+            {requiredLabel(t, "seeker.profileModals.jobRole")}
           </label>
           <input
             id="exp-role"
@@ -523,7 +570,7 @@ function ExperienceModal({
         </div>
         <div className="space-y-1.5">
           <label htmlFor="exp-industry" className={labelClassName}>
-            Industry*
+            {requiredLabel(t, "seeker.profileModals.industry")}
           </label>
           <input
             id="exp-industry"
@@ -535,7 +582,7 @@ function ExperienceModal({
         </div>
         <div className="space-y-1.5">
           <label htmlFor="exp-start" className={labelClassName}>
-            Start date*
+            {requiredLabel(t, "seeker.profileModals.startDate")}
           </label>
           <PostJobDatePicker
             id="exp-start"
@@ -550,19 +597,21 @@ function ExperienceModal({
                   entry.endDate && entry.endDate < startDate ? "" : entry.endDate,
               })
             }
-            aria-label="Experience start date"
+            aria-label={t("seeker.profileModals.startDateAria")}
           />
         </div>
         <div className="space-y-1.5">
           <label htmlFor="exp-end" className={labelClassName}>
-            End date{entry.currentlyWorking ? "" : "*"}
+            {entry.currentlyWorking
+              ? t("seeker.profileModals.endDate")
+              : requiredLabel(t, "seeker.profileModals.endDate")}
           </label>
           {entry.currentlyWorking ? (
             <div
               id="exp-end"
               className="flex h-11 items-center rounded-lg border border-border-subtle bg-hero-bg px-3 text-sm text-muted"
             >
-              Present
+              {t("seeker.profileModals.present")}
             </div>
           ) : (
             <PostJobDatePicker
@@ -573,7 +622,7 @@ function ExperienceModal({
               minDate={entry.startDate || undefined}
               maxDate={todayIso}
               onChange={(endDate) => patch({ endDate })}
-              aria-label="Experience end date"
+              aria-label={t("seeker.profileModals.endDateAria")}
             />
           )}
         </div>
@@ -589,24 +638,24 @@ function ExperienceModal({
                 })
               }
             />
-            Currently working here
+            {t("seeker.profileModals.currentlyWorking")}
           </label>
         </div>
         <div className="space-y-1.5">
           <label htmlFor="exp-duration" className={labelClassName}>
-            Duration
+            {t("seeker.profileModals.duration")}
           </label>
           <input
             id="exp-duration"
             className={inputClassName}
             value={entry.duration}
-            placeholder="e.g. 2 years"
+            placeholder={t("seeker.profileModals.durationPlaceholder")}
             onChange={(event) => patch({ duration: event.target.value })}
           />
         </div>
         <div className="space-y-1.5">
           <label htmlFor="exp-salary" className={labelClassName}>
-            Salary*
+            {requiredLabel(t, "seeker.profileModals.salary")}
           </label>
           <input
             id="exp-salary"
@@ -622,7 +671,7 @@ function ExperienceModal({
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <label htmlFor="exp-location" className={labelClassName}>
-            Location*
+            {requiredLabel(t, "seeker.profileModals.location")}
           </label>
           <input
             id="exp-location"
@@ -634,7 +683,7 @@ function ExperienceModal({
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <label htmlFor="exp-responsibilities" className={labelClassName}>
-            Responsibilities
+            {t("seeker.profileModals.responsibilities")}
           </label>
           <textarea
             id="exp-responsibilities"
@@ -648,7 +697,7 @@ function ExperienceModal({
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <label htmlFor="exp-achievements" className={labelClassName}>
-            Achievements
+            {t("seeker.profileModals.achievements")}
           </label>
           <textarea
             id="exp-achievements"
@@ -669,7 +718,9 @@ function EducationModal({
   onClose,
   onSave,
 }: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
+  const t = useTranslate();
   const formId = useId();
+  const educationOptions = localizeProfileOptions(JOB_SEEKER_EDUCATION_OPTIONS, t);
   const [education, setEducation] = useState<JobSeekerEducation>(
     jobSeeker.education ?? { ...EMPTY_EDUCATION },
   );
@@ -686,8 +737,8 @@ function EducationModal({
 
   return (
     <JobSeekerProfileDialog
-      title="Education"
-      description="Update your highest qualification."
+      title={t("seeker.profileModals.educationTitle")}
+      description={t("seeker.profileModals.educationDescription")}
       onClose={onClose}
       footer={
         <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
@@ -700,10 +751,10 @@ function EducationModal({
       >
         <EmployerRegisterSearchableSelect
           id="profile-edu-level"
-          label="Education level*"
+          label={requiredLabel(t, "seeker.profileModals.educationLevel")}
           value={education.level}
-          placeholder="Select education level"
-          options={JOB_SEEKER_EDUCATION_OPTIONS}
+          placeholder={t("seeker.profileModals.selectEducationLevel")}
+          options={educationOptions}
           onChange={(value) =>
             setEducation({
               ...EMPTY_EDUCATION,
@@ -713,8 +764,10 @@ function EducationModal({
           required
         />
         <div className="grid gap-4">
-          {renderEducationFields(education, (patch) =>
-            setEducation((current) => ({ ...current, ...patch })),
+          {renderEducationFields(
+            education,
+            (patch) => setEducation((current) => ({ ...current, ...patch })),
+            t,
           )}
         </div>
       </form>
@@ -729,6 +782,7 @@ function SkillsModal({
   onClose,
   onSave,
 }: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
+  const t = useTranslate();
   const formId = useId();
   const resolvedSkills = resolveSkills(jobSeeker, resume);
   const [raw, setRaw] = useState(resolvedSkills.join(", "));
@@ -750,8 +804,8 @@ function SkillsModal({
 
   return (
     <JobSeekerProfileDialog
-      title="Skills"
-      description="Separate skills with commas."
+      title={t("seeker.profileModals.skillsTitle")}
+      description={t("seeker.profileModals.skillsDescription")}
       onClose={onClose}
       footer={
         <DialogFooter onClose={onClose} isSaving={isSaving} formId={formId} />
@@ -763,7 +817,7 @@ function SkillsModal({
         onSubmit={(event) => void handleSubmit(event)}
       >
         <label htmlFor="profile-skills" className={labelClassName}>
-          Your skills
+          {t("seeker.profileModals.yourSkills")}
         </label>
         <textarea
           id="profile-skills"
@@ -771,7 +825,7 @@ function SkillsModal({
           className={`${inputClassName} min-h-[7rem] resize-y py-2.5`}
           value={raw}
           onChange={(event) => setRaw(event.target.value)}
-          placeholder="e.g. Customer service, Excel, Hindi communication"
+          placeholder={t("seeker.profileModals.skillsPlaceholder")}
         />
       </form>
     </JobSeekerProfileDialog>
@@ -784,7 +838,18 @@ function PreferencesModal({
   onClose,
   onSave,
 }: Omit<JobSeekerProfileEditModalsProps, "activeModal">) {
+  const t = useTranslate();
   const formId = useId();
+  const jobTypeOptions = localizeProfileOptions(JOB_SEEKER_JOB_TYPE_OPTIONS, t);
+  const workModeOptions = localizeProfileOptions(JOB_SEEKER_WORK_MODE_OPTIONS, t);
+  const salaryPeriodOptions = localizeProfileOptions(
+    JOB_SEEKER_REGISTER_SALARY_PERIOD_OPTIONS,
+    t,
+  );
+  const availabilityOptions = localizeProfileOptions(
+    JOB_SEEKER_AVAILABILITY_STATUS_OPTIONS,
+    t,
+  );
   const [jobRole, setJobRole] = useState(jobSeeker.jobRole ?? "");
   const [jobType, setJobType] = useState(jobSeeker.jobType ?? "");
   const [workMode, setWorkMode] = useState(jobSeeker.workMode ?? "");
@@ -840,15 +905,15 @@ function PreferencesModal({
     const trimmedRole = jobRole.trim();
     const trimmedLocation = preferredJobLocation.trim();
     if (!trimmedRole) {
-      showAppToast("Job role is required.", "error");
+      showAppToast(t("seeker.profileModals.jobRoleRequired"), "error");
       return;
     }
     if (!trimmedLocation) {
-      showAppToast("Preferred job location is required.", "error");
+      showAppToast(t("seeker.profileModals.locationRequired"), "error");
       return;
     }
     if (languages.length < 1) {
-      showAppToast("Select at least one language.", "error");
+      showAppToast(t("seeker.profileModals.languageRequired"), "error");
       return;
     }
 
@@ -880,8 +945,8 @@ function PreferencesModal({
 
   return (
     <JobSeekerProfileDialog
-      title="Career preferences"
-      description="Help employers match you with the right roles."
+      title={t("seeker.profileModals.preferencesTitle")}
+      description={t("seeker.profileModals.preferencesDescription")}
       onClose={onClose}
       wide
       footer={
@@ -895,7 +960,7 @@ function PreferencesModal({
       >
         <div className="space-y-1.5 sm:col-span-2">
           <label htmlFor="pref-role" className={labelClassName}>
-            Job role*
+            {requiredLabel(t, "seeker.profileModals.jobRole")}
           </label>
           <input
             id="pref-role"
@@ -907,23 +972,23 @@ function PreferencesModal({
         </div>
         <EmployerRegisterSearchableSelect
           id="pref-job-type"
-          label="Job type"
+          label={t("seeker.profileModals.jobType")}
           value={jobType}
-          placeholder="Select job type"
-          options={JOB_SEEKER_JOB_TYPE_OPTIONS}
+          placeholder={t("seeker.profileModals.selectJobType")}
+          options={jobTypeOptions}
           onChange={setJobType}
         />
         <EmployerRegisterSearchableSelect
           id="pref-work-mode"
-          label="Work mode"
+          label={t("seeker.profileModals.workMode")}
           value={workMode}
-          placeholder="Select work mode"
-          options={JOB_SEEKER_WORK_MODE_OPTIONS}
+          placeholder={t("seeker.profileModals.selectWorkMode")}
+          options={workModeOptions}
           onChange={setWorkMode}
         />
         <div className="space-y-1.5 sm:col-span-2">
           <label htmlFor="pref-location" className={labelClassName}>
-            Preferred job location*
+            {requiredLabel(t, "seeker.profileModals.preferredLocation")}
           </label>
           <input
             id="pref-location"
@@ -935,7 +1000,7 @@ function PreferencesModal({
         </div>
         <div className="space-y-1.5">
           <label htmlFor="pref-salary" className={labelClassName}>
-            Expected salary*
+            {requiredLabel(t, "seeker.profileModals.expectedSalary")}
           </label>
           <input
             id="pref-salary"
@@ -949,17 +1014,17 @@ function PreferencesModal({
         </div>
         <EmployerRegisterSearchableSelect
           id="pref-salary-period"
-          label="Salary period"
+          label={t("seeker.profileModals.salaryPeriod")}
           value={expectedSalaryPeriod}
-          placeholder="Select period"
-          options={JOB_SEEKER_REGISTER_SALARY_PERIOD_OPTIONS}
+          placeholder={t("seeker.profileModals.selectPeriod")}
+          options={salaryPeriodOptions}
           onChange={(value) =>
             setExpectedSalaryPeriod(value === "per-year" ? "per-year" : "per-month")
           }
         />
         <div className="space-y-1.5">
           <label htmlFor="pref-city" className={labelClassName}>
-            Current city
+            {t("seeker.profileModals.currentCity")}
           </label>
           <input
             id="pref-city"
@@ -970,7 +1035,7 @@ function PreferencesModal({
         </div>
         <div className="space-y-1.5">
           <label htmlFor="pref-state" className={labelClassName}>
-            State
+            {t("seeker.profileModals.state")}
           </label>
           <input
             id="pref-state"
@@ -981,7 +1046,7 @@ function PreferencesModal({
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <label htmlFor="pref-pincode" className={labelClassName}>
-            Pincode
+            {t("seeker.profileModals.pincode")}
           </label>
           <input
             id="pref-pincode"
@@ -993,7 +1058,7 @@ function PreferencesModal({
           />
         </div>
         <div className="sm:col-span-2">
-          <p className={labelClassName}>Languages</p>
+          <p className={labelClassName}>{t("seeker.profileModals.languages")}</p>
           <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {JOB_SEEKER_LANGUAGE_OPTIONS.map((option) => {
               const selected = languages.includes(option.value);
@@ -1033,10 +1098,10 @@ function PreferencesModal({
         <div className="sm:col-span-2">
           <EmployerRegisterSearchableSelect
             id="pref-availability"
-            label="Availability"
+            label={t("seeker.profileModals.availability")}
             value={availabilityStatus}
-            placeholder="Select availability"
-            options={JOB_SEEKER_AVAILABILITY_STATUS_OPTIONS}
+            placeholder={t("seeker.profileModals.selectAvailability")}
+            options={availabilityOptions}
             onChange={setAvailabilityStatus}
           />
         </div>

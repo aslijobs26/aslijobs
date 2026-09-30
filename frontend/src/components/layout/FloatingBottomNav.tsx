@@ -17,6 +17,7 @@ import {
   fetchSavedJobIds,
   savedJobsQueryKeys,
 } from "@/services/saved-jobs.service";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import {
   EMPLOYER_ACCESS_TOKEN_STORAGE_KEY,
@@ -101,30 +102,33 @@ export function FloatingBottomNav() {
   }, []);
 
   useEffect(() => {
-    const footer = document.querySelector("footer");
-    if (!footer) {
-      setIsFooterVisible(false);
-      return;
-    }
+    let frame = 0;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (!entry) {
-          return;
-        }
-        setIsFooterVisible(entry.isIntersecting);
-      },
-      {
-        root: null,
-        threshold: 0.08,
-        rootMargin: "0px",
-      },
-    );
+    const update = () => {
+      const footer = document.querySelector("[data-site-footer]");
+      if (!footer) {
+        setIsFooterVisible(false);
+        return;
+      }
 
-    observer.observe(footer);
+      const rect = footer.getBoundingClientRect();
+      // Any visible part of the footer hides the bar, including when the
+      // footer is taller than the screen. A ratio threshold misses that case.
+      setIsFooterVisible(rect.top < window.innerHeight && rect.bottom > 0);
+    };
+
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+
+    schedule();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
     return () => {
-      observer.disconnect();
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
     };
   }, [pathname]);
 
@@ -211,10 +215,13 @@ export function FloatingBottomNav() {
   }, [audience, can, hasProvider, permissionsLoading]);
 
   const isVisible = !isFooterVisible;
+  const t = useTranslate();
+  const labelFor = (id: FloatingBottomNavItem["id"]) =>
+    t(`nav.${id}` as MessageKey);
 
   return (
     <nav
-      aria-label="Mobile floating navigation"
+      aria-label={t("nav.mobileAria")}
       aria-hidden={!isVisible}
       className={cn(
         "pointer-events-none fixed inset-x-0 bottom-0 z-40 hidden",
@@ -260,8 +267,8 @@ export function FloatingBottomNav() {
                 aria-current={active ? "page" : undefined}
                 aria-label={
                   badgeCount > 0
-                    ? `${item.label}, ${badgeCount} unread`
-                    : item.label
+                    ? `${labelFor(item.id)}, ${badgeCount}`
+                    : labelFor(item.id)
                 }
                 className={cn(
                   "relative flex min-w-0 flex-1 basis-0 flex-col items-center justify-center",
@@ -323,7 +330,7 @@ export function FloatingBottomNav() {
                       : "font-medium text-muted",
                   )}
                 >
-                  {item.label}
+                  {labelFor(item.id)}
                 </span>
               </Link>
             );

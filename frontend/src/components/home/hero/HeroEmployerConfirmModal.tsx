@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { Users, X } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
@@ -13,6 +14,7 @@ export function HeroEmployerConfirmModal({
   onClose,
   onContinue,
 }: HeroEmployerConfirmModalProps) {
+  const t = useTranslate();
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -41,7 +43,7 @@ export function HeroEmployerConfirmModal({
     <div className="fixed inset-0 z-50" role="presentation">
       <button
         type="button"
-        aria-label="Close dialog"
+        aria-label={t("home.employerConfirm.closeDialog")}
         className="absolute inset-0 bg-foreground/45"
         onClick={onClose}
       />
@@ -63,7 +65,7 @@ export function HeroEmployerConfirmModal({
             type="button"
             onClick={onClose}
             className="absolute top-3 right-3 inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            aria-label="Close Are you an Employer?"
+            aria-label={t("home.employerConfirm.closeAria")}
           >
             <X className="size-4" strokeWidth={2.25} aria-hidden="true" />
           </button>
@@ -79,15 +81,15 @@ export function HeroEmployerConfirmModal({
 
             <h2
               id={titleId}
-              className="mt-4 text-lg font-bold tracking-tight text-foreground sm:text-xl"
+              className="mt-4 text-balance break-words text-lg font-bold tracking-tight text-foreground sm:text-xl"
             >
-              Are you an Employer?
+              {t("home.employerConfirm.title")}
             </h2>
             <p
               id={descriptionId}
-              className="mt-2 max-w-[17.5rem] text-sm leading-relaxed text-muted"
+              className="mt-2 max-w-[17.5rem] break-words text-sm leading-relaxed text-muted"
             >
-              Post jobs and hire suitable candidates through AsliJobs.
+              {t("home.employerConfirm.description")}
             </p>
           </div>
 
@@ -95,16 +97,16 @@ export function HeroEmployerConfirmModal({
             <button
               type="button"
               onClick={onContinue}
-              className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-primary px-4 py-2 text-center text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              Continue as Employer
+              {t("home.employerConfirm.continue")}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-border-subtle bg-surface px-4 py-2 text-center text-sm font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>

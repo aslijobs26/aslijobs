@@ -2,21 +2,26 @@
 
 import {
   DEFAULT_EMPLOYER_JOBS_FILTERS,
-  EMPLOYER_JOBS_APPLICATION_BAND_OPTIONS,
-  EMPLOYER_JOBS_EXPERIENCE_FILTER_OPTIONS,
-  EMPLOYER_JOBS_JOB_TYPE_FILTER_OPTIONS,
+  EMPLOYER_JOBS_APPLICATION_BAND_VALUES,
+  EMPLOYER_JOBS_EXPERIENCE_FILTER_VALUES,
+  EMPLOYER_JOBS_JOB_TYPE_FILTER_VALUES,
   EMPLOYER_JOBS_POSTED_QUICK_OPTIONS,
-  EMPLOYER_JOBS_WORK_MODE_FILTER_OPTIONS,
+  EMPLOYER_JOBS_WORK_MODE_FILTER_VALUES,
   employerJobsFiltersAreActive,
-  type EmployerJobsApplicationBand,
+  formatEmployerJobsApplicationBand,
   type EmployerJobsFiltersState,
   type EmployerJobsPostedQuickFilter,
 } from "@/components/employer-jobs/jobs-filters";
 import { JobsLocationAutocomplete } from "@/components/employer-jobs/JobsLocationAutocomplete";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
+import { useTranslate } from "@/i18n/translate";
 import type { EmployerJobListOption } from "@/types/employer-jobs";
-import type { JobType, PostJobExperienceId, WorkMode } from "@/types/post-job";
 import { cn } from "@/utils/cn";
+import {
+  formatJobSearchExperience,
+  formatJobSearchJobType,
+  formatJobSearchWorkMode,
+} from "@/utils/job-search-format";
 import { Filter, X } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 
@@ -85,7 +90,7 @@ function FilterCheckboxRow({
         onChange={(event) => onChange(event.target.checked)}
         className="size-3.5 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-primary/30"
       />
-      <span>{label}</span>
+      <span className="min-w-0 break-words">{label}</span>
     </label>
   );
 }
@@ -105,6 +110,7 @@ export function JobsFilterPanel({
   onCancel,
   className,
 }: JobsFilterPanelProps) {
+  const t = useTranslate();
   const [draft, setDraft] = useState<EmployerJobsFiltersState>(filters);
   const locationInputId = useId();
   const minSalaryId = useId();
@@ -117,12 +123,15 @@ export function JobsFilterPanel({
   const hasActiveFilters = employerJobsFiltersAreActive(draft);
   const appliedAreActive = employerJobsFiltersAreActive(filters);
   const postedJobOptions = [
-    { value: "", label: "All Posted Jobs" },
+    { value: "", label: t("employer.jobs.filter.allPostedJobs") },
     ...jobOptions.map((job) => ({
       value: job.jobId,
       label: job.jobTitle,
     })),
   ];
+  const postedQuickOptions = EMPLOYER_JOBS_POSTED_QUICK_OPTIONS.map(
+    (option) => ({ value: option.value, label: t(option.labelKey) }),
+  );
 
   const patch = (partial: Partial<EmployerJobsFiltersState>) => {
     setDraft((current) => ({ ...current, ...partial }));
@@ -140,7 +149,9 @@ export function JobsFilterPanel({
           <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
             <Filter className="size-3" aria-hidden="true" />
           </span>
-          <h2 className="text-sm font-semibold text-foreground">Filters</h2>
+          <h2 className="text-sm font-semibold text-foreground">
+            {t("employer.jobs.filters")}
+          </h2>
         </div>
         <button
           type="button"
@@ -152,30 +163,26 @@ export function JobsFilterPanel({
           className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[0.6875rem] font-semibold text-muted transition-colors hover:bg-hero-bg hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           <X className="size-3" aria-hidden="true" />
-          Clear All
+          {t("employer.jobs.filter.clearAll")}
         </button>
       </div>
 
       <div
         tabIndex={0}
-        aria-label="Filter options"
+        aria-label={t("employer.jobs.filter.optionsAria")}
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 scrollbar-hidden"
       >
         <div className="flex flex-col gap-3">
-        <FilterField label="Employment Type">
+        <FilterField label={t("jobs.employmentType")}>
           <div className="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface p-1.5">
-            {EMPLOYER_JOBS_JOB_TYPE_FILTER_OPTIONS.map((option) => (
+            {EMPLOYER_JOBS_JOB_TYPE_FILTER_VALUES.map((jobType) => (
               <FilterCheckboxRow
-                key={option.value}
-                checked={draft.jobTypes.includes(option.value)}
-                label={option.label}
+                key={jobType}
+                checked={draft.jobTypes.includes(jobType)}
+                label={formatJobSearchJobType(jobType)}
                 onChange={(enabled) =>
                   patch({
-                    jobTypes: toggleValue(
-                      draft.jobTypes,
-                      option.value as JobType,
-                      enabled,
-                    ),
+                    jobTypes: toggleValue(draft.jobTypes, jobType, enabled),
                   })
                 }
               />
@@ -183,20 +190,16 @@ export function JobsFilterPanel({
           </div>
         </FilterField>
 
-        <FilterField label="Work Mode">
+        <FilterField label={t("jobs.workMode")}>
           <div className="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface p-1.5">
-            {EMPLOYER_JOBS_WORK_MODE_FILTER_OPTIONS.map((option) => (
+            {EMPLOYER_JOBS_WORK_MODE_FILTER_VALUES.map((workMode) => (
               <FilterCheckboxRow
-                key={option.value}
-                checked={draft.workModes.includes(option.value)}
-                label={option.label}
+                key={workMode}
+                checked={draft.workModes.includes(workMode)}
+                label={formatJobSearchWorkMode(workMode)}
                 onChange={(enabled) =>
                   patch({
-                    workModes: toggleValue(
-                      draft.workModes,
-                      option.value as WorkMode,
-                      enabled,
-                    ),
+                    workModes: toggleValue(draft.workModes, workMode, enabled),
                   })
                 }
               />
@@ -204,18 +207,18 @@ export function JobsFilterPanel({
           </div>
         </FilterField>
 
-        <FilterField label="Experience">
+        <FilterField label={t("jobs.experience")}>
           <div className="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface p-1.5">
-            {EMPLOYER_JOBS_EXPERIENCE_FILTER_OPTIONS.map((option) => (
+            {EMPLOYER_JOBS_EXPERIENCE_FILTER_VALUES.map((experience) => (
               <FilterCheckboxRow
-                key={option.value}
-                checked={draft.experience.includes(option.value)}
-                label={option.label}
+                key={experience}
+                checked={draft.experience.includes(experience)}
+                label={formatJobSearchExperience(experience)}
                 onChange={(enabled) =>
                   patch({
                     experience: toggleValue(
                       draft.experience,
-                      option.value as PostJobExperienceId,
+                      experience,
                       enabled,
                     ),
                   })
@@ -226,33 +229,43 @@ export function JobsFilterPanel({
         </FilterField>
 
         <div className="grid grid-cols-2 gap-2">
-          <FilterField label="Min Salary (₹/mo)" htmlFor={minSalaryId}>
+          <FilterField
+            label={t("employer.jobs.filter.minSalary")}
+            htmlFor={minSalaryId}
+          >
             <input
               id={minSalaryId}
               type="number"
               inputMode="numeric"
               min={0}
               value={draft.minSalary}
-              placeholder="e.g. 15000"
+              placeholder={t("employer.jobs.filter.examplePlaceholder", {
+                value: "15000",
+              })}
               className={fieldClassName}
               onChange={(event) => patch({ minSalary: event.target.value })}
             />
           </FilterField>
-          <FilterField label="Max Salary (₹/mo)" htmlFor={maxSalaryId}>
+          <FilterField
+            label={t("employer.jobs.filter.maxSalary")}
+            htmlFor={maxSalaryId}
+          >
             <input
               id={maxSalaryId}
               type="number"
               inputMode="numeric"
               min={0}
               value={draft.maxSalary}
-              placeholder="e.g. 40000"
+              placeholder={t("employer.jobs.filter.examplePlaceholder", {
+                value: "40000",
+              })}
               className={fieldClassName}
               onChange={(event) => patch({ maxSalary: event.target.value })}
             />
           </FilterField>
         </div>
 
-        <FilterField label="Location" htmlFor={locationInputId}>
+        <FilterField label={t("jobs.location")} htmlFor={locationInputId}>
           <JobsLocationAutocomplete
             id={locationInputId}
             value={draft.locationLabel}
@@ -271,15 +284,15 @@ export function JobsFilterPanel({
           />
         </FilterField>
 
-        <FilterField label="Posted Job">
+        <FilterField label={t("employer.jobs.filter.postedJob")}>
           <EmployerRegisterSearchableSelect
             id="employer-jobs-filter-posted-job"
-            label="Posted Job"
+            label={t("employer.jobs.filter.postedJob")}
             hideLabel
             value={draft.postedJobId}
-            placeholder="All Posted Jobs"
+            placeholder={t("employer.jobs.filter.allPostedJobs")}
             options={postedJobOptions}
-            searchPlaceholder="Search posted jobs"
+            searchPlaceholder={t("employer.jobs.filter.searchPostedJobs")}
             onChange={(value) =>
               patch({
                 postedJobId: value,
@@ -291,15 +304,15 @@ export function JobsFilterPanel({
           />
         </FilterField>
 
-        <FilterField label="Date Posted">
+        <FilterField label={t("employer.jobs.filter.datePosted")}>
           <EmployerRegisterSearchableSelect
             id="employer-jobs-filter-posted"
-            label="Date Posted"
+            label={t("employer.jobs.filter.datePosted")}
             hideLabel
             hideSearch
             value={draft.postedQuick}
-            placeholder="Any Time"
-            options={EMPLOYER_JOBS_POSTED_QUICK_OPTIONS}
+            placeholder={t("employer.jobs.filter.anyTime")}
+            options={postedQuickOptions}
             onChange={(value) =>
               patch({
                 postedQuick: value as EmployerJobsPostedQuickFilter,
@@ -314,7 +327,10 @@ export function JobsFilterPanel({
 
         {draft.postedQuick === "custom" ? (
           <div className="grid grid-cols-2 gap-2">
-            <FilterField label="From" htmlFor={postedFromId}>
+            <FilterField
+              label={t("employer.jobs.filter.from")}
+              htmlFor={postedFromId}
+            >
               <input
                 id={postedFromId}
                 type="date"
@@ -323,7 +339,10 @@ export function JobsFilterPanel({
                 onChange={(event) => patch({ postedFrom: event.target.value })}
               />
             </FilterField>
-            <FilterField label="To" htmlFor={postedToId}>
+            <FilterField
+              label={t("employer.jobs.filter.to")}
+              htmlFor={postedToId}
+            >
               <input
                 id={postedToId}
                 type="date"
@@ -335,18 +354,18 @@ export function JobsFilterPanel({
           </div>
         ) : null}
 
-        <FilterField label="Applications">
+        <FilterField label={t("employer.stats.applications")}>
           <div className="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface p-1.5">
-            {EMPLOYER_JOBS_APPLICATION_BAND_OPTIONS.map((option) => (
+            {EMPLOYER_JOBS_APPLICATION_BAND_VALUES.map((band) => (
               <FilterCheckboxRow
-                key={option.value}
-                checked={draft.applications.includes(option.value)}
-                label={option.label}
+                key={band}
+                checked={draft.applications.includes(band)}
+                label={formatEmployerJobsApplicationBand(band, t)}
                 onChange={(enabled) =>
                   patch({
                     applications: toggleValue(
                       draft.applications,
-                      option.value as EmployerJobsApplicationBand,
+                      band,
                       enabled,
                     ),
                   })
@@ -357,7 +376,10 @@ export function JobsFilterPanel({
         </FilterField>
 
         <div className="grid grid-cols-2 gap-2">
-          <FilterField label="Min Openings" htmlFor={minVacanciesId}>
+          <FilterField
+            label={t("employer.jobs.filter.minOpenings")}
+            htmlFor={minVacanciesId}
+          >
             <input
               id={minVacanciesId}
               type="number"
@@ -369,7 +391,10 @@ export function JobsFilterPanel({
               onChange={(event) => patch({ minVacancies: event.target.value })}
             />
           </FilterField>
-          <FilterField label="Max Openings" htmlFor={maxVacanciesId}>
+          <FilterField
+            label={t("employer.jobs.filter.maxOpenings")}
+            htmlFor={maxVacanciesId}
+          >
             <input
               id={maxVacanciesId}
               type="number"
@@ -391,14 +416,14 @@ export function JobsFilterPanel({
           onClick={onCancel}
           className="inline-flex h-9 flex-1 items-center justify-center rounded-lg border border-border bg-surface text-sm font-semibold text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           type="button"
           onClick={() => onApply(draft)}
           className="inline-flex h-9 flex-[1.4] items-center justify-center rounded-lg bg-primary text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
-          Apply Filters
+          {t("jobs.applyFilters")}
         </button>
       </div>
     </section>

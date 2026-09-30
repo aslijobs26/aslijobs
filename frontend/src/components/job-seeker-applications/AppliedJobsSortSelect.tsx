@@ -4,6 +4,7 @@ import {
   APPLIED_JOBS_SORT_OPTIONS,
   type AppliedJobsSort,
 } from "@/components/job-seeker-applications/applied-jobs-utils";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { ArrowUpDown, Check, ChevronDown } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
@@ -17,6 +18,7 @@ export function AppliedJobsSortSelect({
   value,
   onChange,
 }: AppliedJobsSortSelectProps) {
+  const t = useTranslate();
   const listboxId = useId();
   const labelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -25,6 +27,7 @@ export function AppliedJobsSortSelect({
   const selected =
     APPLIED_JOBS_SORT_OPTIONS.find((option) => option.value === value) ??
     APPLIED_JOBS_SORT_OPTIONS[0]!;
+  const selectedLabel = t(selected.labelKey);
 
   useEffect(() => {
     if (!isOpen) {
@@ -65,7 +68,7 @@ export function AppliedJobsSortSelect({
           strokeWidth={2.25}
           aria-hidden="true"
         />
-        Sort
+        {t("seeker.applications.sortLabel")}
       </span>
 
       <div className="relative min-w-[9.5rem] sm:min-w-[11rem]">
@@ -76,7 +79,7 @@ export function AppliedJobsSortSelect({
           aria-expanded={isOpen}
           aria-controls={listboxId}
           aria-labelledby={labelId}
-          aria-label={`Sort applications: ${selected.label}`}
+          aria-label={t("seeker.applications.sortAria", { label: selectedLabel })}
           onClick={() => setIsOpen((current) => !current)}
           className={cn(
             "inline-flex h-9 w-full items-center justify-between gap-1.5 rounded-lg border bg-surface px-2.5 text-left text-xs font-semibold shadow-sm sm:h-11 sm:gap-2 sm:rounded-xl sm:px-3 sm:text-sm",
@@ -88,7 +91,7 @@ export function AppliedJobsSortSelect({
               : "border-border text-foreground",
           )}
         >
-          <span className="min-w-0 flex-1 truncate">{selected.label}</span>
+          <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
           <ChevronDown
             className={cn(
               "size-3.5 shrink-0 text-muted transition-transform sm:size-4",
@@ -103,7 +106,7 @@ export function AppliedJobsSortSelect({
           <ul
             id={listboxId}
             role="listbox"
-            aria-label="Sort options"
+            aria-label={t("seeker.common.sortOptions")}
             className="absolute top-[calc(100%+0.4rem)] left-0 z-40 w-full overflow-hidden rounded-xl border border-border-subtle bg-surface py-1.5 shadow-[0_10px_28px_rgba(26,43,60,0.14)]"
           >
             {APPLIED_JOBS_SORT_OPTIONS.map((option) => {
@@ -126,7 +129,7 @@ export function AppliedJobsSortSelect({
                         : "font-medium text-foreground hover:bg-primary-light/50",
                     )}
                   >
-                    <span className="truncate">{option.label}</span>
+                    <span className="truncate">{t(option.labelKey)}</span>
                     {isSelected ? (
                       <Check
                         className="size-4 shrink-0 text-primary"

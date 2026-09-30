@@ -1,15 +1,16 @@
+"use client";
+
 import logoWhite from "@/assets/employer-register/logo-white.png";
 import panelGradient from "@/assets/auth-visual/panel-gradient.png";
 import seekerArt from "@/assets/auth-visual/job-seeker-illustration.png";
 import employerPerson from "@/assets/auth-visual/employer-person.png";
 import employerGlass from "@/assets/auth-visual/employer-glass.png";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { EmployerRegisterTestimonial } from "./EmployerRegisterTestimonial";
-
-const EMPLOYER_ROLE_LABELS = ["Plumber", "Driver", "Security Guard", "Maid"] as const;
 
 const PANEL_SPARKLES: ReadonlyArray<{
   top: string;
@@ -38,10 +39,11 @@ type EmployerRegisterPanelProps = {
 export function EmployerRegisterPanel({
   variant = "employer",
 }: EmployerRegisterPanelProps) {
-  const headline =
+  const t = useTranslate();
+  const headlineTop =
     variant === "seeker"
-      ? ["Your Next Job", "Starts Here"]
-      : ["Your Next Hire", "Starts Here"];
+      ? t("auth.panel.seekerHeadlineTop")
+      : t("auth.panel.employerHeadlineTop");
 
   return (
     <aside className="employer-register-panel">
@@ -75,7 +77,7 @@ export function EmployerRegisterPanel({
 
         <Link
           href={ROUTES.HOME}
-          aria-label="AsliJobs home"
+          aria-label={t("auth.panel.homeAria")}
           className="employer-register-logo-link"
         >
           <Image
@@ -89,10 +91,10 @@ export function EmployerRegisterPanel({
         </Link>
 
         <div className="employer-register-panel-body">
-          <h2 className="auth-brand-headline">
-            {headline[0]}
+          <h2 className="auth-brand-headline min-w-0 break-words">
+            {headlineTop}
             <br />
-            {headline[1]}
+            {t("auth.panel.headlineBottom")}
           </h2>
 
           <div className="employer-register-scale-group">
@@ -121,16 +123,16 @@ export function EmployerRegisterPanel({
                   priority
                 />
                 <span className="auth-role-chip auth-role-chip--plumber">
-                  {EMPLOYER_ROLE_LABELS[0]}
+                  {t("auth.panel.rolePlumber")}
                 </span>
                 <span className="auth-role-chip auth-role-chip--driver">
-                  {EMPLOYER_ROLE_LABELS[1]}
+                  {t("auth.panel.roleDriver")}
                 </span>
                 <span className="auth-role-chip auth-role-chip--guard">
-                  {EMPLOYER_ROLE_LABELS[2]}
+                  {t("auth.panel.roleSecurityGuard")}
                 </span>
                 <span className="auth-role-chip auth-role-chip--maid">
-                  {EMPLOYER_ROLE_LABELS[3]}
+                  {t("auth.panel.roleMaid")}
                 </span>
               </div>
             )}

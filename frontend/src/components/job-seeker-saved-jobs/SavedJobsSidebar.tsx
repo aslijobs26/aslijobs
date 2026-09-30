@@ -8,12 +8,19 @@ import {
   JOB_SEARCH_WORK_MODE_OPTIONS,
 } from "@/constants/job-search";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import type {
   SavedJobsAdvancedFilters,
   SavedJobsStats,
 } from "@/types/saved-jobs";
 import { cn } from "@/utils/cn";
+import {
+  formatJobSearchExperience,
+  formatJobSearchJobType,
+  formatJobSearchPerk,
+  formatJobSearchWorkMode,
+} from "@/utils/job-search-format";
 import { ArrowRight, MapPin, Star, X } from "lucide-react";
 import Link from "next/link";
 import {
@@ -43,20 +50,6 @@ const fieldClassName =
 const selectTriggerClassName =
   "!h-10 !min-h-10 w-full !rounded-lg !border-border !px-3 !text-sm !font-medium !shadow-sm";
 
-const perkOptions: EmployerRegisterSelectOption[] = [
-  { value: "", label: "Any benefit" },
-  ...Object.entries(JOB_SEARCH_PERK_LABELS).map(([value, label]) => ({
-    value,
-    label,
-  })),
-];
-
-const salaryOptions: EmployerRegisterSelectOption[] =
-  SAVED_JOBS_SALARY_OPTIONS.map((option) => ({
-    value: option.value,
-    label: option.label,
-  }));
-
 function ToggleChip({
   label,
   selected,
@@ -72,7 +65,7 @@ function ToggleChip({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "inline-flex min-h-9 items-center justify-center rounded-lg border px-2.5 text-xs font-semibold transition-colors",
+        "inline-flex min-h-9 min-w-0 items-center justify-center break-words rounded-lg border px-2.5 py-1 text-center text-xs font-semibold transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
         selected
           ? "border-primary bg-primary text-surface"
@@ -92,6 +85,28 @@ export function SavedJobsFiltersForm({
   onClose,
   className,
 }: SavedJobsFiltersFormProps) {
+  const t = useTranslate();
+  const anyLabel = t("seeker.savedFilters.any");
+  const salaryOptions: EmployerRegisterSelectOption[] =
+    SAVED_JOBS_SALARY_OPTIONS.map((option) => ({
+      value: option.value,
+      label: option.value ? option.label : anyLabel,
+    }));
+  const perkOptions: EmployerRegisterSelectOption[] = [
+    { value: "", label: t("seeker.savedFilters.anyBenefit") },
+    ...Object.keys(JOB_SEARCH_PERK_LABELS).map((value) => ({
+      value,
+      label: formatJobSearchPerk(value),
+    })),
+  ];
+  const experienceOptions: EmployerRegisterSelectOption[] = [
+    { value: "", label: t("seeker.savedFilters.anyExperience") },
+    ...JOB_SEARCH_EXPERIENCE_OPTIONS.map((option) => ({
+      value: option.value,
+      label: formatJobSearchExperience(option.value),
+    })),
+  ];
+
   const patch = (partial: Partial<SavedJobsAdvancedFilters>) => {
     onChangeFilters({ ...filters, ...partial });
   };
@@ -108,22 +123,24 @@ export function SavedJobsFiltersForm({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-foreground">Filter Saved Jobs</h2>
-        <div className="flex items-center gap-2">
+        <h2 className="min-w-0 break-words text-sm font-bold text-foreground">
+          {t("seeker.savedFilters.title")}
+        </h2>
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={onClearFilters}
             disabled={!hasActiveFilters}
             className="text-xs font-semibold text-primary hover:text-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Clear All
+            {t("seeker.savedFilters.clearAll")}
           </button>
           {onClose ? (
             <button
               type="button"
               onClick={onClose}
               className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary-light/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              aria-label="Close filters"
+              aria-label={t("seeker.common.closeFilters")}
             >
               <X className="size-4" aria-hidden="true" />
             </button>
@@ -134,7 +151,7 @@ export function SavedJobsFiltersForm({
       <div className="mt-3 space-y-3">
         <div>
           <label htmlFor={`${idPrefix}-location`} className="sr-only">
-            Location
+            {t("seeker.savedFilters.location")}
           </label>
           <div className="relative">
             <MapPin
@@ -146,7 +163,7 @@ export function SavedJobsFiltersForm({
               type="search"
               value={filters.location}
               onChange={(event) => patch({ location: event.target.value })}
-              placeholder="City or state"
+              placeholder={t("seeker.savedFilters.locationPlaceholder")}
               className={cn(fieldClassName, "pl-9")}
               autoComplete="off"
             />
@@ -155,28 +172,32 @@ export function SavedJobsFiltersForm({
 
         <div className="grid grid-cols-2 gap-2">
           <div className="min-w-0 [&_.employer-register-form-stack]:gap-0">
-            <p className="mb-1 text-xs font-semibold text-muted">Min Salary</p>
+            <p className="mb-1 break-words text-xs font-semibold text-muted">
+              {t("seeker.savedFilters.minSalary")}
+            </p>
             <EmployerRegisterSearchableSelect
               id={`${idPrefix}-min-salary`}
-              label="Min Salary"
+              label={t("seeker.savedFilters.minSalary")}
               hideLabel
               hideSearch
               value={filters.minSalary}
-              placeholder="Min Salary"
+              placeholder={t("seeker.savedFilters.minSalary")}
               options={salaryOptions}
               onChange={(value) => patch({ minSalary: value })}
               triggerClassName={selectTriggerClassName}
             />
           </div>
           <div className="min-w-0 [&_.employer-register-form-stack]:gap-0">
-            <p className="mb-1 text-xs font-semibold text-muted">Max Salary</p>
+            <p className="mb-1 break-words text-xs font-semibold text-muted">
+              {t("seeker.savedFilters.maxSalary")}
+            </p>
             <EmployerRegisterSearchableSelect
               id={`${idPrefix}-max-salary`}
-              label="Max Salary"
+              label={t("seeker.savedFilters.maxSalary")}
               hideLabel
               hideSearch
               value={filters.maxSalary}
-              placeholder="Max Salary"
+              placeholder={t("seeker.savedFilters.maxSalary")}
               options={salaryOptions}
               onChange={(value) => patch({ maxSalary: value })}
               triggerClassName={selectTriggerClassName}
@@ -185,12 +206,14 @@ export function SavedJobsFiltersForm({
         </div>
 
         <div>
-          <p className="mb-1.5 text-xs font-semibold text-muted">Job Type</p>
+          <p className="mb-1.5 text-xs font-semibold text-muted">
+            {t("seeker.savedFilters.jobType")}
+          </p>
           <div className="grid grid-cols-2 gap-1.5">
             {JOB_SEARCH_JOB_TYPE_OPTIONS.map((option) => (
               <ToggleChip
                 key={option.value}
-                label={option.label}
+                label={formatJobSearchJobType(option.value)}
                 selected={filters.jobType === option.value}
                 onClick={() =>
                   patch({
@@ -204,12 +227,14 @@ export function SavedJobsFiltersForm({
         </div>
 
         <div>
-          <p className="mb-1.5 text-xs font-semibold text-muted">Work Mode</p>
+          <p className="mb-1.5 text-xs font-semibold text-muted">
+            {t("seeker.savedFilters.workMode")}
+          </p>
           <div className="grid grid-cols-2 gap-1.5">
             {JOB_SEARCH_WORK_MODE_OPTIONS.map((option) => (
               <ToggleChip
                 key={option.value}
-                label={option.label}
+                label={formatJobSearchWorkMode(option.value)}
                 selected={filters.workMode === option.value}
                 onClick={() =>
                   patch({
@@ -223,12 +248,14 @@ export function SavedJobsFiltersForm({
         </div>
 
         <div>
-          <p className="mb-1.5 text-xs font-semibold text-muted">Schedule</p>
+          <p className="mb-1.5 text-xs font-semibold text-muted">
+            {t("seeker.savedFilters.schedule")}
+          </p>
           <div className="grid grid-cols-2 gap-1.5">
             {SAVED_JOBS_SCHEDULE_OPTIONS.map((option) => (
               <ToggleChip
                 key={option.value}
-                label={option.label}
+                label={t(option.labelKey)}
                 selected={filters.schedule === option.value}
                 onClick={() =>
                   patch({
@@ -243,25 +270,21 @@ export function SavedJobsFiltersForm({
 
         <details className="rounded-lg border border-border-subtle bg-workflow-neutral-surface/60 px-3 py-2">
           <summary className="cursor-pointer list-none text-xs font-semibold text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
-            More Filters
+            {t("seeker.savedFilters.moreFilters")}
           </summary>
           <div className="mt-3 space-y-3">
             <div className="min-w-0 [&_.employer-register-form-stack]:gap-0">
-              <p className="mb-1 text-xs font-semibold text-muted">Experience</p>
+              <p className="mb-1 text-xs font-semibold text-muted">
+                {t("seeker.savedFilters.experience")}
+              </p>
               <EmployerRegisterSearchableSelect
                 id={`${idPrefix}-experience`}
-                label="Experience"
+                label={t("seeker.savedFilters.experience")}
                 hideLabel
                 hideSearch
                 value={filters.experience}
-                placeholder="Any experience"
-                options={[
-                  { value: "", label: "Any experience" },
-                  ...JOB_SEARCH_EXPERIENCE_OPTIONS.map((option) => ({
-                    value: option.value,
-                    label: option.label,
-                  })),
-                ]}
+                placeholder={t("seeker.savedFilters.anyExperience")}
+                options={experienceOptions}
                 onChange={(value) => patch({ experience: value })}
                 triggerClassName={selectTriggerClassName}
               />
@@ -272,28 +295,30 @@ export function SavedJobsFiltersForm({
                 htmlFor={`${idPrefix}-company`}
                 className="mb-1 block text-xs font-semibold text-muted"
               >
-                Company
+                {t("seeker.savedFilters.company")}
               </label>
               <input
                 id={`${idPrefix}-company`}
                 type="search"
                 value={filters.company}
                 onChange={(event) => patch({ company: event.target.value })}
-                placeholder="Company name"
+                placeholder={t("seeker.savedFilters.companyPlaceholder")}
                 className={fieldClassName}
                 autoComplete="off"
               />
             </div>
 
             <div className="min-w-0 [&_.employer-register-form-stack]:gap-0">
-              <p className="mb-1 text-xs font-semibold text-muted">Benefits</p>
+              <p className="mb-1 text-xs font-semibold text-muted">
+                {t("seeker.savedFilters.benefits")}
+              </p>
               <EmployerRegisterSearchableSelect
                 id={`${idPrefix}-perk`}
-                label="Benefits"
+                label={t("seeker.savedFilters.benefits")}
                 hideLabel
                 hideSearch={perkOptions.length <= 10}
                 value={filters.perk}
-                placeholder="Any benefit"
+                placeholder={t("seeker.savedFilters.anyBenefit")}
                 options={perkOptions}
                 onChange={(value) => patch({ perk: value })}
                 triggerClassName={selectTriggerClassName}
@@ -312,6 +337,8 @@ export function SavedJobsSidebar({
   onChangeFilters,
   onClearFilters,
 }: SavedJobsSidebarProps) {
+  const t = useTranslate();
+
   return (
     <aside className="space-y-4 lg:sticky lg:top-24">
       <SavedJobsFiltersForm
@@ -333,14 +360,17 @@ export function SavedJobsSidebar({
             className="size-10 shrink-0 object-contain bg-transparent"
           />
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold tracking-wide text-resource-resume-icon">
-              Ask Asli AI <span className="font-semibold opacity-80">(BETA)</span>
+            <p className="break-words text-xs font-bold tracking-wide text-resource-resume-icon">
+              {t("seeker.savedSidebar.askAi")}{" "}
+              <span className="font-semibold opacity-80">
+                {t("seeker.savedSidebar.beta")}
+              </span>
             </p>
-            <p className="mt-1 text-sm font-medium text-foreground">
-              Tell me if there are better jobs than my saved jobs.
+            <p className="mt-1 break-words text-sm font-medium text-foreground">
+              {t("seeker.savedSidebar.askAiPrompt")}
             </p>
             <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-resource-resume-icon">
-              Coming soon
+              {t("seeker.common.comingSoon")}
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </p>
           </div>
@@ -353,14 +383,14 @@ export function SavedJobsSidebar({
             <Star className="size-5 fill-current" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h2 className="text-sm font-bold text-foreground">
-              Never miss a better job!
+            <h2 className="break-words text-sm font-bold text-foreground">
+              {t("seeker.savedSidebar.neverMiss")}
             </h2>
-            <p className="mt-1 text-xs leading-relaxed text-muted">
-              Get alerts for similar jobs and salary drops.
+            <p className="mt-1 break-words text-xs leading-relaxed text-muted">
+              {t("seeker.savedSidebar.alertsBody")}
             </p>
             <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-resource-interview-icon">
-              Coming soon
+              {t("seeker.common.comingSoon")}
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </p>
           </div>
@@ -369,36 +399,46 @@ export function SavedJobsSidebar({
 
       <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-foreground">Saved Jobs Overview</h2>
+          <h2 className="min-w-0 break-words text-sm font-bold text-foreground">
+            {t("seeker.savedSidebar.overviewTitle")}
+          </h2>
           <Link
             href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
-            className="text-xs font-semibold text-primary hover:text-primary-hover"
+            className="shrink-0 text-xs font-semibold text-primary hover:text-primary-hover"
           >
-            View Report
+            {t("seeker.common.viewReport")}
           </Link>
         </div>
 
         <dl className="mt-3 grid grid-cols-2 gap-3">
-          <div className="rounded-lg bg-primary-light/60 px-3 py-2.5">
-            <dt className="text-[11px] font-medium text-muted">Total Saved</dt>
+          <div className="min-w-0 rounded-lg bg-primary-light/60 px-3 py-2.5">
+            <dt className="break-words text-[11px] font-medium text-muted">
+              {t("seeker.savedSidebar.totalSaved")}
+            </dt>
             <dd className="mt-1 text-lg font-bold tabular-nums text-primary">
               {stats?.total ?? 0}
             </dd>
           </div>
-          <div className="rounded-lg bg-resource-interview-surface px-3 py-2.5">
-            <dt className="text-[11px] font-medium text-muted">Applied</dt>
+          <div className="min-w-0 rounded-lg bg-resource-interview-surface px-3 py-2.5">
+            <dt className="break-words text-[11px] font-medium text-muted">
+              {t("seeker.savedSidebar.applied")}
+            </dt>
             <dd className="mt-1 text-lg font-bold tabular-nums text-resource-interview-icon">
               {stats?.applied ?? 0}
             </dd>
           </div>
-          <div className="rounded-lg bg-resource-guide-surface px-3 py-2.5">
-            <dt className="text-[11px] font-medium text-muted">High Match</dt>
+          <div className="min-w-0 rounded-lg bg-resource-guide-surface px-3 py-2.5">
+            <dt className="break-words text-[11px] font-medium text-muted">
+              {t("seeker.savedSidebar.highMatch")}
+            </dt>
             <dd className="mt-1 text-lg font-bold tabular-nums text-resource-guide-icon">
               {stats?.highMatch ?? 0}
             </dd>
           </div>
-          <div className="rounded-lg bg-resource-resume-surface px-3 py-2.5">
-            <dt className="text-[11px] font-medium text-muted">Recent</dt>
+          <div className="min-w-0 rounded-lg bg-resource-resume-surface px-3 py-2.5">
+            <dt className="break-words text-[11px] font-medium text-muted">
+              {t("seeker.savedSidebar.recent")}
+            </dt>
             <dd className="mt-1 text-lg font-bold tabular-nums text-resource-resume-icon">
               {stats?.recent ?? 0}
             </dd>

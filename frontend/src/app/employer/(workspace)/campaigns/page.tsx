@@ -9,5 +9,5 @@ export const metadata = createEmployerModuleMetadata({
 });
 
 export default function EmployerCampaignsPage() {
-  return <EmployerModulePage title="Campaigns" />;
+  return <EmployerModulePage titleKey="employer.nav.campaigns" />;
 }

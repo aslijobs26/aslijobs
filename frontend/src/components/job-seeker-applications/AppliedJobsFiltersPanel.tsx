@@ -5,6 +5,7 @@ import {
   JOB_SEARCH_WORK_MODE_OPTIONS,
 } from "@/constants/job-search";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
+import { useTranslate } from "@/i18n/translate";
 import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import {
   formatJobSearchJobType,
@@ -72,6 +73,7 @@ export function AppliedJobsFiltersPanel({
   onApply,
   onClose,
 }: AppliedJobsFiltersPanelProps) {
+  const t = useTranslate();
   const [draft, setDraft] = useState<AppliedJobsAdvancedFilters>(filters);
 
   useEffect(() => {
@@ -85,13 +87,13 @@ export function AppliedJobsFiltersPanel({
     const known = new Set<string>(knownValues);
     const extras = jobTypes.filter((value) => !known.has(value));
     return [
-      { value: "", label: "All job types" },
+      { value: "", label: t("seeker.applicationFilters.allJobTypes") },
       ...[...knownValues, ...extras].map((jobType) => ({
         value: jobType,
         label: formatJobSearchJobType(jobType),
       })),
     ];
-  }, [jobTypes]);
+  }, [jobTypes, t]);
 
   const workModeOptions = useMemo((): EmployerRegisterSelectOption[] => {
     const knownValues = JOB_SEARCH_WORK_MODE_OPTIONS.map(
@@ -100,20 +102,20 @@ export function AppliedJobsFiltersPanel({
     const known = new Set<string>(knownValues);
     const extras = workModes.filter((value) => !known.has(value));
     return [
-      { value: "", label: "All work modes" },
+      { value: "", label: t("seeker.applicationFilters.allWorkModes") },
       ...[...knownValues, ...extras].map((workMode) => ({
         value: workMode,
         label: formatJobSearchWorkMode(workMode),
       })),
     ];
-  }, [workModes]);
+  }, [workModes, t]);
 
   const shiftOptions = useMemo((): EmployerRegisterSelectOption[] => {
     return [
-      { value: "", label: "All schedules" },
+      { value: "", label: t("seeker.applicationFilters.allSchedules") },
       ...shifts.map((shift) => ({ value: shift, label: shift })),
     ];
-  }, [shifts]);
+  }, [shifts, t]);
 
   if (!open) {
     return null;
@@ -141,26 +143,29 @@ export function AppliedJobsFiltersPanel({
             id="applied-jobs-filters-title"
             className="text-base font-bold text-foreground"
           >
-            Filters
+            {t("seeker.common.filters")}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="inline-flex size-10 items-center justify-center rounded-xl text-muted transition-colors hover:bg-primary-light/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-            aria-label="Close filters"
+            aria-label={t("seeker.common.closeFilters")}
           >
             <X className="size-5" aria-hidden="true" />
           </button>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-          <FilterField id="filter-location" label="Location">
+          <FilterField
+            id="filter-location"
+            label={t("seeker.applicationFilters.location")}
+          >
             <input
               id="filter-location"
               list="applied-jobs-locations"
               value={draft.location}
               onChange={(event) => patch({ location: event.target.value })}
-              placeholder="City or state"
+              placeholder={t("seeker.applicationFilters.locationPlaceholder")}
               className={inputClassName}
               autoComplete="off"
             />
@@ -171,13 +176,16 @@ export function AppliedJobsFiltersPanel({
             </datalist>
           </FilterField>
 
-          <FilterField id="filter-company" label="Company">
+          <FilterField
+            id="filter-company"
+            label={t("seeker.applicationFilters.company")}
+          >
             <input
               id="filter-company"
               list="applied-jobs-companies"
               value={draft.company}
               onChange={(event) => patch({ company: event.target.value })}
-              placeholder="Company name"
+              placeholder={t("seeker.applicationFilters.companyPlaceholder")}
               className={inputClassName}
               autoComplete="off"
             />
@@ -188,42 +196,51 @@ export function AppliedJobsFiltersPanel({
             </datalist>
           </FilterField>
 
-          <FilterField id="filter-job-type" label="Job Type">
+          <FilterField
+            id="filter-job-type"
+            label={t("seeker.applicationFilters.jobType")}
+          >
             <EmployerRegisterSearchableSelect
               id="filter-job-type"
-              label="Job Type"
+              label={t("seeker.applicationFilters.jobType")}
               hideLabel
               hideSearch={jobTypeOptions.length <= 8}
               value={draft.jobType}
-              placeholder="All job types"
+              placeholder={t("seeker.applicationFilters.allJobTypes")}
               options={jobTypeOptions}
               onChange={(value) => patch({ jobType: value })}
               triggerClassName={selectTriggerClassName}
             />
           </FilterField>
 
-          <FilterField id="filter-work-mode" label="Work Mode">
+          <FilterField
+            id="filter-work-mode"
+            label={t("seeker.applicationFilters.workMode")}
+          >
             <EmployerRegisterSearchableSelect
               id="filter-work-mode"
-              label="Work Mode"
+              label={t("seeker.applicationFilters.workMode")}
               hideLabel
               hideSearch={workModeOptions.length <= 8}
               value={draft.workMode}
-              placeholder="All work modes"
+              placeholder={t("seeker.applicationFilters.allWorkModes")}
               options={workModeOptions}
               onChange={(value) => patch({ workMode: value })}
               triggerClassName={selectTriggerClassName}
             />
           </FilterField>
 
-          <FilterField id="filter-shift" label="Shift / Schedule">
+          <FilterField
+            id="filter-shift"
+            label={t("seeker.applicationFilters.shift")}
+          >
             <EmployerRegisterSearchableSelect
               id="filter-shift"
-              label="Shift / Schedule"
+              label={t("seeker.applicationFilters.shift")}
               hideLabel
               hideSearch={shiftOptions.length <= 8}
               value={draft.shift}
-              placeholder="All schedules"
+              placeholder={t("seeker.applicationFilters.allSchedules")}
               options={shiftOptions}
               onChange={(value) => patch({ shift: value })}
               triggerClassName={selectTriggerClassName}
@@ -231,7 +248,10 @@ export function AppliedJobsFiltersPanel({
           </FilterField>
 
           <div className="grid grid-cols-2 gap-3">
-            <FilterField id="filter-from" label="Applied From">
+            <FilterField
+              id="filter-from"
+              label={t("seeker.applicationFilters.appliedFrom")}
+            >
               <input
                 id="filter-from"
                 type="date"
@@ -240,7 +260,10 @@ export function AppliedJobsFiltersPanel({
                 className={inputClassName}
               />
             </FilterField>
-            <FilterField id="filter-to" label="Applied To">
+            <FilterField
+              id="filter-to"
+              label={t("seeker.applicationFilters.appliedTo")}
+            >
               <input
                 id="filter-to"
                 type="date"
@@ -252,7 +275,10 @@ export function AppliedJobsFiltersPanel({
             </FilterField>
           </div>
 
-          <FilterField id="filter-min-salary" label="Minimum Salary (₹)">
+          <FilterField
+            id="filter-min-salary"
+            label={t("seeker.applicationFilters.minSalary")}
+          >
             <input
               id="filter-min-salary"
               type="number"
@@ -261,7 +287,7 @@ export function AppliedJobsFiltersPanel({
               inputMode="numeric"
               value={draft.minSalary}
               onChange={(event) => patch({ minSalary: event.target.value })}
-              placeholder="e.g. 15000"
+              placeholder={t("seeker.applicationFilters.minSalaryPlaceholder")}
               className={inputClassName}
             />
           </FilterField>
@@ -280,7 +306,7 @@ export function AppliedJobsFiltersPanel({
               "transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
             )}
           >
-            Clear
+            {t("seeker.applicationFilters.clear")}
           </button>
           <button
             type="button"
@@ -290,7 +316,7 @@ export function AppliedJobsFiltersPanel({
             }}
             className="inline-flex h-11 flex-1 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            Apply Filters
+            {t("seeker.applicationFilters.apply")}
           </button>
         </div>
       </div>

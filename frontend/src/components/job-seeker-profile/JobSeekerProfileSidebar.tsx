@@ -1,6 +1,7 @@
 "use client";
 
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import type {
   JobSeekerProfileTab,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import { translateChecklistLabel } from "./profile-i18n";
 import { ProfileStrengthCircle } from "./ProfileStrengthCircle";
 
 type JobSeekerProfileSidebarProps = {
@@ -37,6 +39,7 @@ export function JobSeekerProfileSidebar({
   onSelectTab,
   completionPercent,
 }: JobSeekerProfileSidebarProps) {
+  const t = useTranslate();
   const menuId = useId();
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -63,14 +66,16 @@ export function JobSeekerProfileSidebar({
             className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:gap-2 sm:text-sm"
             onClick={onOpenPersonal}
           >
-            <Pencil className="size-3.5 sm:size-4" aria-hidden="true" />
-            Edit Profile
+            <Pencil className="size-3.5 shrink-0 sm:size-4" aria-hidden="true" />
+            <span className="min-w-0 break-words">
+              {t("seeker.profileSidebar.editProfile")}
+            </span>
           </button>
           <div ref={menuRef} className="relative">
             <button
               type="button"
               className="inline-flex size-10 items-center justify-center rounded-xl border border-border-subtle bg-surface text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-              aria-label="More profile actions"
+              aria-label={t("seeker.profileSidebar.moreActions")}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               aria-controls={menuOpen ? menuId : undefined}
@@ -90,7 +95,7 @@ export function JobSeekerProfileSidebar({
                   className="block rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-primary-light sm:text-sm"
                   onClick={() => setMenuOpen(false)}
                 >
-                  My Resume
+                  {t("seeker.nav.myResume")}
                 </Link>
                 <Link
                   href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
@@ -98,7 +103,7 @@ export function JobSeekerProfileSidebar({
                   className="block rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-primary-light sm:text-sm"
                   onClick={() => setMenuOpen(false)}
                 >
-                  My Applications
+                  {t("seeker.nav.myApplications")}
                 </Link>
                 <Link
                   href={ROUTES.JOB_SEEKER_SAVED_JOBS}
@@ -106,7 +111,7 @@ export function JobSeekerProfileSidebar({
                   className="block rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-primary-light sm:text-sm"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Saved Jobs
+                  {t("seeker.nav.savedJobs")}
                 </Link>
                 <Link
                   href={ROUTES.JOB_SEEKER_SETTINGS}
@@ -114,7 +119,7 @@ export function JobSeekerProfileSidebar({
                   className="block rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-primary-light sm:text-sm"
                   onClick={() => setMenuOpen(false)}
                 >
-                  Settings
+                  {t("seeker.nav.settings")}
                 </Link>
               </div>
             ) : null}
@@ -132,12 +137,14 @@ export function JobSeekerProfileSidebar({
               id="profile-completion-heading"
               className="text-sm font-bold text-foreground sm:text-base"
             >
-              Profile Completion
+              {t("seeker.profileSidebar.completionTitle")}
             </h2>
-            <p className="mt-1 text-xs font-semibold text-primary sm:text-sm">
-              {completionPercent}% complete
+            <p className="mt-1 break-words text-xs font-semibold text-primary sm:text-sm">
+              {t("seeker.profileSidebar.completePercent", {
+                percent: completionPercent,
+              })}
             </p>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-muted sm:text-xs">
+            <p className="mt-1.5 break-words text-[11px] leading-relaxed text-muted sm:text-xs">
               {strengthMessage}
             </p>
           </div>
@@ -146,7 +153,7 @@ export function JobSeekerProfileSidebar({
         <div
           className="mt-4 h-2 overflow-hidden rounded-full bg-primary-light"
           role="progressbar"
-          aria-label="Profile completion"
+          aria-label={t("seeker.profileSidebar.completionAria")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={completionPercent}
@@ -176,8 +183,8 @@ export function JobSeekerProfileSidebar({
                     <Check className="size-3" strokeWidth={3} />
                   ) : null}
                 </span>
-                <span className="truncate font-medium text-foreground">
-                  {item.label}
+                <span className="min-w-0 break-words font-medium text-foreground">
+                  {translateChecklistLabel(item, t)}
                 </span>
               </span>
               <span
@@ -186,7 +193,9 @@ export function JobSeekerProfileSidebar({
                   item.completed ? "text-primary" : "text-muted",
                 )}
               >
-                {item.completed ? "Done" : "Pending"}
+                {item.completed
+                  ? t("seeker.profileSidebar.done")
+                  : t("seeker.profileSidebar.pending")}
               </span>
             </li>
           ))}
@@ -196,7 +205,7 @@ export function JobSeekerProfileSidebar({
           className="mt-3 text-[11px] font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-xs"
           onClick={() => onSelectTab("overview")}
         >
-          View full progress →
+          {t("seeker.profileSidebar.viewProgress")}
         </button>
       </section>
 
@@ -208,7 +217,7 @@ export function JobSeekerProfileSidebar({
           id="quick-actions-heading"
           className="text-sm font-bold text-foreground sm:text-base"
         >
-          Quick actions
+          {t("seeker.profileSidebar.quickActions")}
         </h2>
         <ul className="mt-3 space-y-2">
           <li>
@@ -219,7 +228,9 @@ export function JobSeekerProfileSidebar({
               <span className="inline-flex size-7 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-8">
                 <Sparkles className="size-3.5 sm:size-4" aria-hidden="true" />
               </span>
-              Resume Builder
+              <span className="min-w-0 break-words">
+                {t("seeker.profileSidebar.resumeBuilder")}
+              </span>
             </Link>
           </li>
           <li>
@@ -230,7 +241,9 @@ export function JobSeekerProfileSidebar({
               <span className="inline-flex size-7 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-8">
                 <Upload className="size-3.5 sm:size-4" aria-hidden="true" />
               </span>
-              Upload Resume
+              <span className="min-w-0 break-words">
+                {t("seeker.profileSidebar.uploadResume")}
+              </span>
             </Link>
           </li>
           <li>
@@ -245,7 +258,9 @@ export function JobSeekerProfileSidebar({
               <span className="inline-flex size-7 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-8">
                 <FileText className="size-3.5 sm:size-4" aria-hidden="true" />
               </span>
-              Career Preferences
+              <span className="min-w-0 break-words">
+                {t("seeker.profileSidebar.careerPreferences")}
+              </span>
             </button>
           </li>
         </ul>

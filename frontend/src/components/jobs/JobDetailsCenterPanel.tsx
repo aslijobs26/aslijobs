@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
@@ -131,6 +132,7 @@ export function JobDetailsCenterPanel({
   onRetry,
   previewMode = false,
 }: JobDetailsCenterPanelProps) {
+  const t = useTranslate();
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
@@ -163,14 +165,14 @@ export function JobDetailsCenterPanel({
   if (isError || !job) {
     return (
       <article className="rounded-xl border border-border-subtle bg-surface p-8 text-center shadow-[0_2px_10px_rgba(26,43,60,0.04)]">
-        <p className="text-sm text-muted">Unable to load this job.</p>
+        <p className="text-sm text-muted">{t("jobs.unableToLoad")}</p>
         {onRetry ? (
           <button
             type="button"
             onClick={onRetry}
             className="mt-3 text-sm font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            Try again
+            {t("jobs.tryAgain")}
           </button>
         ) : null}
       </article>
@@ -195,7 +197,7 @@ export function JobDetailsCenterPanel({
   const genderLabel =
     job.gender.length > 0
       ? job.gender.map(formatJobSearchGender).join(", ")
-      : "Any";
+      : t("jobs.any");
   const languageChips = job.languages
     .map(formatJobSearchLanguage)
     .filter(Boolean);
@@ -226,7 +228,7 @@ export function JobDetailsCenterPanel({
       title: job.jobTitle,
       text: `${job.jobTitle} at ${job.companyName}`,
       url: buildAbsolutePublicJobUrl(job.jobId),
-      successMessage: "Job link copied",
+      successMessage: t("jobs.linkCopied"),
     });
   };
 
@@ -310,7 +312,7 @@ export function JobDetailsCenterPanel({
               <button
                 type="button"
                 onClick={handleShare}
-                aria-label="Share job"
+                aria-label={t("jobs.shareJob")}
                 className="inline-flex size-9 items-center justify-center rounded-lg border border-border-subtle text-muted transition-colors hover:border-primary/25 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               >
                 <Share2 className="size-4" strokeWidth={2} aria-hidden="true" />
@@ -318,7 +320,7 @@ export function JobDetailsCenterPanel({
               <button
                 type="button"
                 onClick={handleBookmarkClick}
-                aria-label={bookmarked ? "Remove bookmark" : "Save job"}
+                aria-label={bookmarked ? t("jobs.removeBookmark") : t("jobs.saveJob")}
                 aria-pressed={bookmarked}
                 className={cn(
                   "inline-flex size-9 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
@@ -338,48 +340,48 @@ export function JobDetailsCenterPanel({
           )}
         </header>
 
-        <div className="mt-6 border-t border-border-subtle pt-5" aria-label="Job information">
+        <div className="mt-6 border-t border-border-subtle pt-5" aria-label={t("jobs.jobInformation")}>
           <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-3">
             {salary ? (
-              <MetaField label="Salary" icon={Wallet}>
+              <MetaField label={t("jobs.salary")} icon={Wallet}>
                 {salary}
               </MetaField>
             ) : null}
             {location ? (
-              <MetaField label="Location" icon={MapPin}>
+              <MetaField label={t("jobs.location")} icon={MapPin}>
                 {location}
               </MetaField>
             ) : null}
             {employmentType ? (
-              <MetaField label="Employment Type" icon={Briefcase}>
+              <MetaField label={t("jobs.employmentType")} icon={Briefcase}>
                 {employmentType}
               </MetaField>
             ) : null}
             {experience ? (
-              <MetaField label="Experience" icon={User}>
+              <MetaField label={t("jobs.experience")} icon={User}>
                 {experience}
               </MetaField>
             ) : null}
             {education ? (
-              <MetaField label="Qualification" icon={GraduationCap}>
+              <MetaField label={t("jobs.qualification")} icon={GraduationCap}>
                 {education}
               </MetaField>
             ) : null}
             {openings ? (
-              <MetaField label="Openings" icon={Users}>
+              <MetaField label={t("jobs.openings")} icon={Users}>
                 {openings}
               </MetaField>
             ) : null}
             {workMode ? (
-              <MetaField label="Work Mode" icon={Building2}>
+              <MetaField label={t("jobs.workMode")} icon={Building2}>
                 {workMode}
               </MetaField>
             ) : null}
-            <MetaField label="Gender Preference" icon={VenusAndMars}>
+            <MetaField label={t("jobs.genderPreference")} icon={VenusAndMars}>
               {genderLabel}
             </MetaField>
             {languageChips.length > 0 ? (
-              <MetaField label="Languages" icon={Globe2}>
+              <MetaField label={t("jobs.languages")} icon={Globe2}>
                 <ChipList values={languageChips} />
               </MetaField>
             ) : null}
@@ -387,7 +389,7 @@ export function JobDetailsCenterPanel({
 
           {perkChips.length > 0 ? (
             <div className="mt-5">
-              <MetaField label="Benefits" icon={Gift}>
+              <MetaField label={t("jobs.benefits")} icon={Gift}>
                 <ChipList values={perkChips} />
               </MetaField>
             </div>
@@ -397,7 +399,7 @@ export function JobDetailsCenterPanel({
 
       <div className="divide-y divide-border-subtle px-5 sm:px-7">
         <section className="py-6">
-          <SectionHeading>Job Description</SectionHeading>
+          <SectionHeading>{t("jobs.jobDescription")}</SectionHeading>
           {hasDescription ? (
             <>
               <div
@@ -420,7 +422,7 @@ export function JobDetailsCenterPanel({
                   className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                   aria-expanded={descriptionExpanded}
                 >
-                  {descriptionExpanded ? "Show less" : "Show more"}
+                  {descriptionExpanded ? t("jobs.showLessText") : t("jobs.showMoreText")}
                   <ChevronDown
                     className={cn(
                       "size-4 transition-transform",
@@ -448,7 +450,7 @@ export function JobDetailsCenterPanel({
                       strokeWidth={1.75}
                       aria-hidden="true"
                     />
-                    <SectionHeading>Address</SectionHeading>
+                    <SectionHeading>{t("jobs.address")}</SectionHeading>
                   </div>
                   <div className="mt-3 space-y-1 text-[15px] leading-[1.7] text-muted">
                     {job.address ? <p>{job.address}</p> : null}
@@ -466,23 +468,23 @@ export function JobDetailsCenterPanel({
                       strokeWidth={1.75}
                       aria-hidden="true"
                     />
-                    <SectionHeading>Walk-in Details</SectionHeading>
+                    <SectionHeading>{t("jobs.walkInDetails")}</SectionHeading>
                   </div>
                   <div className="mt-3 space-y-3 text-[15px] leading-[1.7] text-muted">
                     <div>
                       <p className="text-[11px] font-medium tracking-[0.04em] text-muted uppercase">
-                        Interview Address
+                        {t("jobs.interviewAddress")}
                       </p>
                       <p className="mt-1">
                         {job.interviewAddress ||
                           location ||
-                          "Address shared by recruiter"}
+                          t("jobs.addressShared")}
                       </p>
                     </div>
                     {walkInDate ? (
                       <div>
                         <p className="text-[11px] font-medium tracking-[0.04em] text-muted uppercase">
-                          Date
+                          {t("jobs.date")}
                         </p>
                         <p className="mt-1">{walkInDate}</p>
                       </div>
@@ -490,7 +492,7 @@ export function JobDetailsCenterPanel({
                     {walkInTime ? (
                       <div>
                         <p className="text-[11px] font-medium tracking-[0.04em] text-muted uppercase">
-                          Time
+                          {t("jobs.time")}
                         </p>
                         <p className="mt-1">{walkInTime}</p>
                       </div>
@@ -504,7 +506,7 @@ export function JobDetailsCenterPanel({
 
         {instructionLines.length > 0 ? (
           <section className="py-6">
-            <SectionHeading>Other Instructions</SectionHeading>
+            <SectionHeading>{t("jobs.otherInstructions")}</SectionHeading>
             <ul className="mt-3 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
               {instructionLines.map((line) => (
                 <li
@@ -525,7 +527,7 @@ export function JobDetailsCenterPanel({
         {job.contactPersonName || job.applyWhatsAppNumber ? (
           <section className="py-6">
             <p className="text-[15px] leading-[1.7] text-muted">
-              <span className="font-semibold text-foreground">Recruiter:</span>{" "}
+              <span className="font-semibold text-foreground">{t("jobs.recruiter")}:</span>{" "}
               {job.contactPersonName || "—"}
               {job.applyWhatsAppNumber
                 ? `  ·  WhatsApp: ${job.applyWhatsAppNumber}`
@@ -576,7 +578,7 @@ export function JobDetailsCenterPanel({
                 fill={bookmarked ? "currentColor" : "none"}
                 aria-hidden="true"
               />
-              {bookmarked ? "Saved" : "Save Job"}
+              {bookmarked ? t("jobs.saved") : t("jobs.saveJobAction")}
             </button>
           </div>
         </div>
