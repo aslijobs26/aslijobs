@@ -7,6 +7,7 @@ import {
   HIRING_SOLUTIONS_SECTION,
 } from "@/constants/hiring-solutions";
 import { useTranslate } from "@/i18n/translate";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { HiringSolutionCard } from "./HiringSolutionCard";
 
@@ -34,9 +35,10 @@ export function HiringSolutionsSection() {
 
           <Link
             href={HIRING_SOLUTIONS_SECTION.compareHref}
-            className="shrink-0 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             {t("home.hiring.compare")}
+            <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
           </Link>
         </div>
 
