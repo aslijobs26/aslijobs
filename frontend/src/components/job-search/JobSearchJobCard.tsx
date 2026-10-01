@@ -2,6 +2,7 @@
 
 import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import { useTranslate } from "@/i18n/translate";
 import { protectedApply } from "@/utils/job-apply-auth";
 import { cn } from "@/utils/cn";
 import {
@@ -105,6 +106,7 @@ export function JobSearchJobCard({
   onSelect,
   onToggleBookmark,
 }: JobSearchJobCardProps) {
+  const t = useTranslate();
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
   const isApplied = appliedLocally || job.isApplied === true;
@@ -323,7 +325,7 @@ export function JobSearchJobCard({
             onClick={handleViewDetailsClick}
             className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl border border-[#E5E7EB] bg-surface px-4 text-xs font-medium text-primary transition-colors hover:border-primary/35 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-[13px]"
           >
-            View Details
+            {t("common.viewDetails")}
             <ChevronRight
               className="size-3.5"
               strokeWidth={2}
