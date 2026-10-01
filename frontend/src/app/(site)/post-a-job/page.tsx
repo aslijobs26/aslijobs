@@ -1,12 +1,14 @@
-import { JobSeekerContentPage } from "@/components/job-seeker-content/JobSeekerContentPage";
-import { POST_A_JOB_CONTENT } from "@/constants/employer-content";
+import { PostAJobPageContent } from "@/components/employer-content/PostAJobPageContent";
+import { publicContentBundle } from "@/i18n/bundles/public-content";
 import type { Metadata } from "next";
 
+const english = publicContentBundle.en.publicContent.postAJob;
+
 export const metadata: Metadata = {
-  title: `${POST_A_JOB_CONTENT.title} | AsliJobs`,
-  description: POST_A_JOB_CONTENT.metaDescription,
+  title: `${english.title} | AsliJobs`,
+  description: english.metaDescription,
 };
 
 export default function PostAJobContentPage() {
-  return <JobSeekerContentPage content={POST_A_JOB_CONTENT} />;
+  return <PostAJobPageContent />;
 }

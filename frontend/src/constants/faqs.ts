@@ -1,210 +1,167 @@
-import type { FaqCategory } from "@/types/faqs";
+import type { FaqCategoryDefinition } from "@/types/faqs";
 
-export const FAQ_PAGE_TITLE = "FAQs";
-
-export const FAQ_PAGE_SUBTITLE =
-  "Find quick answers to common questions about AsliJobs, job search, employer hiring, WhatsApp alerts, safety, and support.";
-
-export const FAQ_SEARCH_PLACEHOLDER = "Search FAQs...";
-
-export const FAQ_EMPTY_TITLE = "No FAQs found";
-
-export const FAQ_EMPTY_DESCRIPTION =
-  "Try a different keyword, or browse the categories below after clearing your search.";
-
-export const FAQ_HELP_TITLE = "Still have questions?";
-
-export const FAQ_HELP_DESCRIPTION =
-  "Can't find the answer you're looking for?\nOur support team is here to help.";
-
-export const FAQ_HELP_CONTACT_LABEL = "Contact Support";
-
-export const FAQ_HELP_WHATSAPP_LABEL = "WhatsApp Support";
-
-export const FAQ_CATEGORIES: FaqCategory[] = [
+export const FAQ_CATEGORIES: FaqCategoryDefinition[] = [
   {
     id: "general",
-    title: "General",
+    titleKey: "faqs.categories.general.title",
     items: [
       {
         id: "what-is-aslijobs",
-        question: "What is AsliJobs?",
-        answer:
-          "AsliJobs is a WhatsApp-based job portal that helps India’s blue-collar and grey-collar workforce find suitable jobs and helps employers hire the right candidates easily.",
+        questionKey: "faqs.categories.general.whatIsAslijobs.question",
+        answerKey: "faqs.categories.general.whatIsAslijobs.answer",
       },
       {
         id: "how-does-aslijobs-work",
-        question: "How does AsliJobs work?",
-        answer:
-          "AsliJobs works through WhatsApp. Job seekers can receive job alerts and apply for jobs, while employers can post jobs and connect with suitable candidates.",
+        questionKey: "faqs.categories.general.howDoesAslijobsWork.question",
+        answerKey: "faqs.categories.general.howDoesAslijobsWork.answer",
       },
       {
         id: "need-to-download-app",
-        question: "Do I need to download an app?",
-        answer:
-          "No. Job seekers and employers do not need to download any app. AsliJobs works directly through WhatsApp, making it simple and easy to use.",
+        questionKey: "faqs.categories.general.needToDownloadApp.question",
+        answerKey: "faqs.categories.general.needToDownloadApp.answer",
       },
       {
         id: "which-cities",
-        question: "Which cities does AsliJobs serve?",
-        answer:
-          "AsliJobs serves job seekers and employers across India. Job seekers can search and apply for jobs from anywhere, while employers can post jobs from any location. Job availability may vary depending on the city, area, locality, and current employer openings.",
+        questionKey: "faqs.categories.general.whichCities.question",
+        answerKey: "faqs.categories.general.whichCities.answer",
       },
       {
         id: "job-categories",
-        question: "Which job categories are available?",
-        answer:
-          "AsliJobs supports industries such as manufacturing, construction, logistics and transportation, warehousing, retail, hospitality, facility management, security services, automotive, healthcare support, and other blue-collar and grey-collar sectors.",
+        questionKey: "faqs.categories.general.jobCategories.question",
+        answerKey: "faqs.categories.general.jobCategories.answer",
       },
     ],
   },
   {
     id: "job-seekers",
-    title: "Job Seekers",
+    titleKey: "faqs.categories.jobSeekers.title",
     items: [
       {
         id: "free-for-job-seekers",
-        question: "Is AsliJobs free for job seekers?",
-        answer:
-          "Yes. AsliJobs is free for job seekers to search and apply for jobs.",
+        questionKey: "faqs.categories.jobSeekers.freeForJobSeekers.question",
+        answerKey: "faqs.categories.jobSeekers.freeForJobSeekers.answer",
       },
       {
         id: "job-alerts",
-        question: "How will job seekers receive job alerts?",
-        answer:
-          "Job seekers will receive job alerts on WhatsApp based on their location, job category, experience, and profile details.",
+        questionKey: "faqs.categories.jobSeekers.jobAlerts.question",
+        answerKey: "faqs.categories.jobSeekers.jobAlerts.answer",
       },
       {
         id: "should-pay-for-job",
-        question: "Should job seekers pay money to get a job?",
-        answer:
-          "No. Job seekers should not pay money for job confirmation. If anyone asks for payment, report it to AsliJobs immediately.",
+        questionKey: "faqs.categories.jobSeekers.shouldPayForJob.question",
+        answerKey: "faqs.categories.jobSeekers.shouldPayForJob.answer",
       },
       {
         id: "job-search-status-badge",
-        question: "What is the job search status badge?",
-        answer:
-          "This badge indicates that you are actively looking for a job. You need to enable this badge on your AsliJobs profile to receive job alerts. If the badge is turned off, you will not receive job alerts.",
+        questionKey: "faqs.categories.jobSeekers.jobSearchStatusBadge.question",
+        answerKey: "faqs.categories.jobSeekers.jobSearchStatusBadge.answer",
       },
     ],
   },
   {
     id: "employers",
-    title: "Employers",
+    titleKey: "faqs.categories.employers.title",
     items: [
       {
         id: "employer-free-or-paid",
-        question: "Are employer services free or paid?",
-        answer:
-          "AsliJobs offers both free and paid services for employers. Employers can choose paid hiring plans, promoted jobs, or campaign promotions based on their hiring requirements.",
+        questionKey: "faqs.categories.employers.employerFreeOrPaid.question",
+        answerKey: "faqs.categories.employers.employerFreeOrPaid.answer",
       },
       {
         id: "how-employers-post-job",
-        question: "How do employers post a job?",
-        answer:
-          "Employers can post a job by sharing details like job title, location, salary, work timing, openings, experience required, and benefits.",
+        questionKey: "faqs.categories.employers.howEmployersPostJob.question",
+        answerKey: "faqs.categories.employers.howEmployersPostJob.answer",
       },
       {
         id: "promoted-job",
-        question: "What is a promoted job?",
-        answer:
-          "A promoted job is a paid job post given extra visibility so more suitable job seekers can see and apply for it.",
+        questionKey: "faqs.categories.employers.promotedJob.question",
+        answerKey: "faqs.categories.employers.promotedJob.answer",
       },
     ],
   },
   {
     id: "job-applications",
-    title: "Job Applications",
+    titleKey: "faqs.categories.jobApplications.title",
     items: [
       {
         id: "how-job-seekers-apply",
-        question: "How do job seekers apply for a job?",
-        answer:
-          "Job seekers can apply directly through WhatsApp by replying to a job alert or selecting the Apply option. They can also apply through the AsliJobs website.",
+        questionKey: "faqs.categories.jobApplications.howJobSeekersApply.question",
+        answerKey: "faqs.categories.jobApplications.howJobSeekersApply.answer",
       },
       {
         id: "how-employers-receive-applications",
-        question: "How will employers receive applications?",
-        answer:
-          "Employers can view applications through the employer dashboard or receive updates shared by the AsliJobs team.",
+        questionKey:
+          "faqs.categories.jobApplications.howEmployersReceiveApplications.question",
+        answerKey: "faqs.categories.jobApplications.howEmployersReceiveApplications.answer",
       },
       {
         id: "after-job-seeker-applies",
-        question: "What happens after a job seeker applies?",
-        answer:
-          "After a job seeker applies, the application is shared with the employer. Further updates like shortlisting, interview details, or selection status will be shared through WhatsApp.",
+        questionKey: "faqs.categories.jobApplications.afterJobSeekerApplies.question",
+        answerKey: "faqs.categories.jobApplications.afterJobSeekerApplies.answer",
       },
       {
         id: "how-employers-shortlist",
-        question: "How can employers shortlist candidates?",
-        answer:
-          "Employers can review candidate details and shortlist profiles that match their hiring requirements.",
+        questionKey: "faqs.categories.jobApplications.howEmployersShortlist.question",
+        answerKey: "faqs.categories.jobApplications.howEmployersShortlist.answer",
       },
     ],
   },
   {
     id: "languages",
-    title: "Languages",
+    titleKey: "faqs.categories.languages.title",
     items: [
       {
         id: "supported-languages",
-        question: "Which languages does AsliJobs support?",
-        answer:
-          "AsliJobs supports English, Hindi, Telugu, Tamil, Kannada, and Malayalam.",
+        questionKey: "faqs.categories.languages.supportedLanguages.question",
+        answerKey: "faqs.categories.languages.supportedLanguages.answer",
       },
       {
         id: "change-language",
-        question: "Can users change their language preference?",
-        answer:
-          "Yes. Users can change their preferred language through the AsliJobs website, WhatsApp, or by contacting AsliJobs support.",
+        questionKey: "faqs.categories.languages.changeLanguage.question",
+        answerKey: "faqs.categories.languages.changeLanguage.answer",
       },
     ],
   },
   {
     id: "safety",
-    title: "Safety",
+    titleKey: "faqs.categories.safety.title",
     items: [
       {
         id: "report-fake-job",
-        question: "How can users report a fake job?",
-        answer:
-          "Users can report a fake or suspicious job by contacting AsliJobs support and sharing the job details, employer name, issue, and screenshots if available.",
+        questionKey: "faqs.categories.safety.reportFakeJob.question",
+        answerKey: "faqs.categories.safety.reportFakeJob.answer",
       },
     ],
   },
   {
     id: "profile-account",
-    title: "Profile & Account",
+    titleKey: "faqs.categories.profileAccount.title",
     items: [
       {
         id: "update-profile",
-        question: "How can users update their profile details?",
-        answer:
-          "Job seekers can update their profile details through their profile on the AsliJobs website, while employers can update their details through the employer dashboard. Users can also contact AsliJobs support through WhatsApp or the available support options.",
+        questionKey: "faqs.categories.profileAccount.updateProfile.question",
+        answerKey: "faqs.categories.profileAccount.updateProfile.answer",
       },
       {
         id: "deactivate-account",
-        question: "How can users deactivate their account?",
-        answer:
-          "Job seekers can deactivate their account through their profile settings on the AsliJobs website, while employers can deactivate their account through the employer dashboard. Users can also contact AsliJobs support for assistance with account deactivation.",
+        questionKey: "faqs.categories.profileAccount.deactivateAccount.question",
+        answerKey: "faqs.categories.profileAccount.deactivateAccount.answer",
       },
     ],
   },
   {
     id: "support",
-    title: "Support",
+    titleKey: "faqs.categories.support.title",
     items: [
       {
         id: "contact-support",
-        question: "How can users contact AsliJobs support?",
-        answer:
-          "You can contact AsliJobs support through WhatsApp, phone, or email.",
+        questionKey: "faqs.categories.support.contactSupport.question",
+        answerKey: "faqs.categories.support.contactSupport.answer",
       },
       {
         id: "more-help",
-        question: "Where can users get more help?",
-        answer:
-          "For detailed answers, users can visit the AsliJobs Help Center or contact AsliJobs support.",
+        questionKey: "faqs.categories.support.moreHelp.question",
+        answerKey: "faqs.categories.support.moreHelp.answer",
       },
     ],
   },

@@ -1,8 +1,13 @@
 import type { SiteLanguageCode } from "../constants/site-language";
 import { authBundle } from "./bundles/auth";
 import { employerBundle } from "./bundles/employer";
+import { faqsBundle } from "./bundles/faqs";
+import { guidelinesBundle } from "./bundles/guidelines";
 import { homeBundle } from "./bundles/home";
+import { privacyBundle } from "./bundles/privacy";
+import { publicContentBundle } from "./bundles/public-content";
 import { seekerBundle } from "./bundles/seeker";
+import { termsBundle } from "./bundles/terms";
 import { useSiteLanguage } from "./site-language";
 import en from "./locales/en.json";
 import hi from "./locales/hi.json";
@@ -12,13 +17,28 @@ import ta from "./locales/ta.json";
 import te from "./locales/te.json";
 
 const CORE = { en, hi, te, ta, kn, ml } as const;
-const BUNDLES = [homeBundle, authBundle, seekerBundle, employerBundle] as const;
+const BUNDLES = [
+  homeBundle,
+  authBundle,
+  seekerBundle,
+  employerBundle,
+  faqsBundle,
+  guidelinesBundle,
+  publicContentBundle,
+  termsBundle,
+  privacyBundle,
+] as const;
 
 type Messages = typeof en &
   (typeof homeBundle)["en"] &
   (typeof authBundle)["en"] &
   (typeof seekerBundle)["en"] &
-  (typeof employerBundle)["en"];
+  (typeof employerBundle)["en"] &
+  (typeof faqsBundle)["en"] &
+  (typeof guidelinesBundle)["en"] &
+  (typeof publicContentBundle)["en"] &
+  (typeof termsBundle)["en"] &
+  (typeof privacyBundle)["en"];
 
 export type { Messages };
 

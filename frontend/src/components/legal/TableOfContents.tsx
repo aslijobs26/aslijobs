@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import type { MouseEvent } from "react";
 
@@ -45,6 +46,7 @@ export function TableOfContents({
   onNavigate,
   className,
 }: TableOfContentsProps) {
+  const t = useTranslate();
   const handleClick = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
     event.preventDefault();
 
@@ -72,7 +74,7 @@ export function TableOfContents({
   };
 
   return (
-    <nav aria-label="On this page sections" className={className}>
+    <nav aria-label={t("legalChrome.onThisPageAria")} className={className}>
       <ul className="space-y-0.5">
         {items.map((item) => {
           const isActive = item.id === activeId;

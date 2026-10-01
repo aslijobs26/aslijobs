@@ -346,26 +346,20 @@ export function JobSearchPageContent() {
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 xl:px-10 lg:py-8">
-      <h1 className="text-lg font-bold text-foreground sm:text-xl">
-        Search Jobs
-      </h1>
-
-      <div className="mt-5">
-        <JobSearchBar
-          state={urlState}
-          locationLabel={locationLabel}
-          onSearch={({ q, state: nextState, cities }) => {
-            patchUrlState({
-              q,
-              state: nextState,
-              cities,
-              page: 1,
-              job: "",
-            });
-          }}
-          onClearAll={handleClearAll}
-        />
-      </div>
+      <JobSearchBar
+        state={urlState}
+        locationLabel={locationLabel}
+        onSearch={({ q, state: nextState, cities }) => {
+          patchUrlState({
+            q,
+            state: nextState,
+            cities,
+            page: 1,
+            job: "",
+          });
+        }}
+        onClearAll={handleClearAll}
+      />
 
       <div className="mt-4 md:hidden">
         <JobSearchMobileFilters

@@ -1,20 +1,12 @@
 "use client";
 
+import { localizeHelpCategories } from "@/components/help-center/localize-help-center";
 import { Container } from "@/components/layout/Container";
 import { WHATSAPP_JOIN_URL } from "@/constants/cta";
-import {
-  HELP_CENTER_CALL_LABEL,
-  HELP_CENTER_CATEGORIES,
-  HELP_CENTER_EMAIL_LABEL,
-  HELP_CENTER_EMPTY_DESCRIPTION,
-  HELP_CENTER_EMPTY_TITLE,
-  HELP_CENTER_PAGE_TITLE,
-  HELP_CENTER_SEARCH_PLACEHOLDER,
-  HELP_CENTER_SUPPORT_DESCRIPTION,
-  HELP_CENTER_SUPPORT_TITLE,
-  HELP_CENTER_WHATSAPP_LABEL,
-} from "@/constants/help-center";
 import { ROUTES } from "@/constants/routes";
+import { helpCenterBundle } from "@/i18n/bundles/help-center";
+import { useTranslate } from "@/i18n/translate";
+import { useSiteLanguage } from "@/i18n/site-language";
 import { useActiveLegalSection } from "@/hooks/useActiveLegalSection";
 import type { HelpCenterArticle, HelpCenterCategory } from "@/types/help-center";
 import { cn } from "@/utils/cn";
@@ -160,14 +152,22 @@ function HelpAccordionItem({
 }
 
 export function HelpCenterPageContent() {
+  const t = useTranslate();
+  const language = useSiteLanguage();
+  const copy = helpCenterBundle[language.code].helpCenter;
   const [query, setQuery] = useState("");
   const [openArticleId, setOpenArticleId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const chipsRef = useRef<HTMLDivElement>(null);
 
+  const categories = useMemo(
+    () => localizeHelpCategories(language.code),
+    [language.code],
+  );
+
   const filteredCategories = useMemo(
-    () => filterHelpCategories(HELP_CENTER_CATEGORIES, query),
-    [query],
+    () => filterHelpCategories(categories, query),
+    [categories, query],
   );
 
   const sectionIds = useMemo(
@@ -185,14 +185,19 @@ export function HelpCenterPageContent() {
     offsetPx: 140,
   });
 
-  useEffect(() => {
-    if (
-      openArticleId &&
-      !flatVisibleArticles.some((article) => article.id === openArticleId)
-    ) {
-      setOpenArticleId(null);
-    }
-  }, [flatVisibleArticles, openArticleId]);
+  const updateQuery = (nextQuery: string) => {
+    setQuery(nextQuery);
+    setOpenArticleId((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const stillVisible = filterHelpCategories(categories, nextQuery).some((category) =>
+        category.articles.some((article) => article.id === current),
+      );
+      return stillVisible ? current : null;
+    });
+  };
 
   useEffect(() => {
     const hash = window.location.hash.replace("#", "");
@@ -200,7 +205,7 @@ export function HelpCenterPageContent() {
       return;
     }
 
-    const exists = HELP_CENTER_CATEGORIES.some(
+    const exists = categories.some(
       (category) => category.id === hash,
     );
     if (!exists) {
@@ -225,7 +230,7 @@ export function HelpCenterPageContent() {
       );
       window.scrollTo({ top, behavior: "smooth" });
     }, 0);
-  }, [activateSection]);
+  }, [activateSection, categories]);
 
   const handleToggle = (articleId: string) => {
     setOpenArticleId((current) => (current === articleId ? null : articleId));
@@ -295,32 +300,32 @@ export function HelpCenterPageContent() {
     <main className="bg-hero-bg/40">
       <section className="border-b border-border-subtle bg-legal-hero-surface">
         <Container className="py-8 sm:py-10 lg:py-12">
-          <nav aria-label="Breadcrumb" className="text-xs text-muted sm:text-sm">
+          <nav aria-label={t("faqs.breadcrumbAria")} className="text-xs text-muted sm:text-sm">
             <ol className="flex flex-wrap items-center gap-2">
               <li>
                 <Link
                   href={ROUTES.HOME}
                   className="font-medium transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 >
-                  Home
+                  {t("common.home")}
                 </Link>
               </li>
               <li aria-hidden="true" className="text-border">
                 &gt;
               </li>
               <li className="font-semibold text-foreground" aria-current="page">
-                Help Center
+                {copy.pageTitle}
               </li>
             </ol>
           </nav>
 
           <div className="mx-auto mt-8 max-w-3xl text-center sm:mt-10">
             <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              {HELP_CENTER_PAGE_TITLE}
+              {copy.pageTitle}
             </h1>
 
             <label className="relative mt-8 block text-left">
-              <span className="sr-only">{HELP_CENTER_SEARCH_PLACEHOLDER}</span>
+              <span className="sr-only">{copy.searchPlaceholder}</span>
               <Search
                 className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted sm:size-5"
                 strokeWidth={1.75}
@@ -330,8 +335,8 @@ export function HelpCenterPageContent() {
                 ref={searchInputRef}
                 type="search"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={HELP_CENTER_SEARCH_PLACEHOLDER}
+                onChange={(event) => updateQuery(event.target.value)}
+                placeholder={copy.searchPlaceholder}
                 className="h-11 w-full rounded-2xl border border-border bg-surface pr-4 pl-11 text-xs text-foreground shadow-[0_8px_24px_rgba(26,43,60,0.05)] outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 sm:h-14 sm:pl-12 sm:text-[15px]"
               />
             </label>
@@ -345,9 +350,9 @@ export function HelpCenterPageContent() {
             ref={chipsRef}
             className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             role="tablist"
-            aria-label="Help categories"
+            aria-label={copy.categoriesAria}
           >
-            {HELP_CENTER_CATEGORIES.map((category) => {
+            {categories.map((category) => {
               const isActive = activeId === category.id;
               return (
                 <button
@@ -383,34 +388,34 @@ export function HelpCenterPageContent() {
                 />
               </span>
               <h2 className="mt-5 text-lg font-bold text-foreground sm:text-xl">
-                {HELP_CENTER_EMPTY_TITLE}
+                {copy.emptyTitle}
               </h2>
               <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted sm:text-sm">
-                {HELP_CENTER_EMPTY_DESCRIPTION}
+                {copy.emptyDescription}
               </p>
               <button
                 type="button"
                 onClick={() => {
-                  setQuery("");
+                  updateQuery("");
                   searchInputRef.current?.focus();
                 }}
                 className="mt-6 inline-flex h-10 items-center justify-center rounded-xl border border-border bg-surface px-5 text-xs font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:text-sm"
               >
-                Clear search
+                {copy.clearSearch}
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[16.5rem_minmax(0,1fr)] xl:gap-12">
               <aside className="hidden lg:block">
                 <nav
-                  aria-label="Help categories"
+                  aria-label={copy.categoriesAria}
                   className="sticky top-28 rounded-2xl border border-border-subtle bg-surface p-3 shadow-[0_8px_24px_rgba(26,43,60,0.04)]"
                 >
                   <p className="px-3 pt-2 pb-3 text-xs font-bold tracking-wide text-muted uppercase">
-                    Categories
+                    {copy.categoriesLabel}
                   </p>
                   <ul className="space-y-1">
-                    {HELP_CENTER_CATEGORIES.map((category) => {
+                    {categories.map((category) => {
                       const isActive = activeId === category.id;
                       return (
                         <li key={category.id}>
@@ -476,10 +481,10 @@ export function HelpCenterPageContent() {
                 <aside className="overflow-hidden rounded-[1.5rem] border border-primary/15 bg-surface shadow-[0_16px_40px_rgba(26,43,60,0.07)]">
                   <div className="bg-legal-hero-surface px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
                     <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-3xl">
-                      {HELP_CENTER_SUPPORT_TITLE}
+                      {copy.supportTitle}
                     </h2>
                     <p className="mt-3 max-w-2xl text-xs leading-relaxed text-muted sm:text-base">
-                      {HELP_CENTER_SUPPORT_DESCRIPTION}
+                      {copy.supportDescription}
                     </p>
 
                     <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -489,19 +494,19 @@ export function HelpCenterPageContent() {
                         rel="noopener noreferrer"
                         className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-xs font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:px-6 sm:text-sm"
                       >
-                        {HELP_CENTER_WHATSAPP_LABEL}
+                        {copy.whatsapp}
                       </a>
                       <Link
                         href={ROUTES.CONTACT}
                         className="inline-flex h-11 items-center justify-center rounded-xl border border-border bg-surface px-5 text-xs font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:px-6 sm:text-sm"
                       >
-                        {HELP_CENTER_CALL_LABEL}
+                        {copy.call}
                       </Link>
                       <Link
                         href={ROUTES.CONTACT}
                         className="inline-flex h-11 items-center justify-center rounded-xl border border-border bg-surface px-5 text-xs font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:px-6 sm:text-sm"
                       >
-                        {HELP_CENTER_EMAIL_LABEL}
+                        {copy.email}
                       </Link>
                     </div>
                   </div>

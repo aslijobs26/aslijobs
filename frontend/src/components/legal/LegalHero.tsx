@@ -1,9 +1,15 @@
+"use client";
+
+import { useTranslate } from "@/i18n/translate";
+
 type LegalHeroProps = {
   title: string;
   lastUpdated: string;
 };
 
 export function LegalHero({ title, lastUpdated }: LegalHeroProps) {
+  const t = useTranslate();
+
   return (
     <section className="relative overflow-hidden bg-legal-hero-surface">
       <div className="relative mx-auto flex max-w-7xl flex-col items-center px-4 py-12 text-center sm:px-6 sm:py-20 lg:px-8 lg:py-24 xl:px-10">
@@ -11,7 +17,7 @@ export function LegalHero({ title, lastUpdated }: LegalHeroProps) {
           {title}
         </h1>
         <p className="mt-4 text-[11px] text-muted sm:mt-6 sm:text-xs md:text-base">
-          Last Updated: {lastUpdated}
+          {t("legalChrome.lastUpdated", { date: lastUpdated })}
         </p>
       </div>
     </section>

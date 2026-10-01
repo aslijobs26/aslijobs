@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslate } from "@/i18n/translate";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import {
@@ -19,8 +20,9 @@ export function LegalSidebar({
   onItemSelect,
 }: LegalSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const t = useTranslate();
   const activeLabel =
-    items.find((item) => item.id === activeId)?.label ?? "On this page";
+    items.find((item) => item.id === activeId)?.label ?? t("legalChrome.onThisPage");
 
   return (
     <>
@@ -34,7 +36,7 @@ export function LegalSidebar({
         >
           <span className="min-w-0">
             <span className="block text-[10px] font-medium uppercase tracking-wide text-muted sm:text-xs">
-              On this page
+              {t("legalChrome.onThisPage")}
             </span>
             <span className="mt-0.5 block truncate text-[11px] font-medium text-foreground sm:text-xs md:text-sm">
               {activeLabel}
@@ -61,7 +63,7 @@ export function LegalSidebar({
       <aside className="hidden lg:block">
         <div className="sticky top-28 bg-transparent pr-2">
           <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wide text-muted">
-            On this page
+            {t("legalChrome.onThisPage")}
           </p>
           <TableOfContents
             items={items}

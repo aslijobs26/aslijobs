@@ -1,5 +1,8 @@
+"use client";
+
 import { Container } from "@/components/layout/Container";
 import { ROUTES } from "@/constants/routes";
+import { useTranslate } from "@/i18n/translate";
 import type {
   JobSeekerContentPageData,
   JobSeekerContentSection,
@@ -22,6 +25,7 @@ function isSafetySection(variant: JobSeekerContentSection["variant"]) {
 }
 
 export function JobSeekerContentPage({ content }: JobSeekerContentPageProps) {
+  const t = useTranslate();
   const [lead, ...supportingIntro] = content.intro;
 
   return (
@@ -37,14 +41,14 @@ export function JobSeekerContentPage({ content }: JobSeekerContentPageProps) {
         />
 
         <Container className="relative py-6 sm:py-10 lg:py-12">
-          <nav aria-label="Breadcrumb" className="text-[11px] text-muted sm:text-sm">
+          <nav aria-label={t("faqs.breadcrumbAria")} className="text-[11px] text-muted sm:text-sm">
             <ol className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <li>
                 <Link
                   href={ROUTES.HOME}
                   className="font-medium transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 >
-                  Home
+                  {t("common.home")}
                 </Link>
               </li>
               <li aria-hidden="true" className="text-border">

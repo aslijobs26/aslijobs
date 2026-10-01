@@ -2155,29 +2155,34 @@ body:has(.employer-register-page) {
   }
 
   .employer-register-page .auth-role-chip {
-    font-size: 0.625rem;
-    padding: 0.4em 0.6em;
+    font-size: 0.5625rem;
+    line-height: 1.25;
+    max-width: 6.75rem;
+    padding: 0.35em 0.55em;
+    white-space: normal;
     animation: none;
   }
 
+  /* Same arc as desktop, with a little extra gap between cards on mobile. */
   .employer-register-page .auth-role-chip--plumber {
-    top: 3%;
-    left: 60%;
+    top: 7%;
+    left: 61%;
   }
 
   .employer-register-page .auth-role-chip--driver {
-    top: 29%;
-    left: 72%;
+    top: 26%;
+    left: 76%;
+    right: auto;
   }
 
   .employer-register-page .auth-role-chip--guard {
-    top: 55%;
-    left: 62%;
+    top: 45%;
+    left: 67%;
   }
 
   .employer-register-page .auth-role-chip--maid {
-    top: 73%;
-    left: 56%;
+    top: 64%;
+    left: 52%;
   }
 
   .employer-register-page .employer-register-form-section {
@@ -2266,6 +2271,15 @@ body:has(.employer-register-page) {
   .employer-register-page .employer-register-form-submit {
     height: 2.625rem;
     font-size: 0.875rem;
+  }
+}
+
+@media (width < 768px) {
+  html:is(:lang(hi), :lang(te), :lang(ta), :lang(kn), :lang(ml))
+    .employer-register-page
+    .auth-role-chip {
+    font-size: 0.5rem;
+    max-width: 6.25rem;
   }
 }
 

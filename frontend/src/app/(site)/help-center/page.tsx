@@ -1,11 +1,12 @@
 import { HelpCenterPageContent } from "@/components/help-center/HelpCenterPageContent";
-import { HELP_CENTER_PAGE_TITLE } from "@/constants/help-center";
+import { helpCenterBundle } from "@/i18n/bundles/help-center";
 import type { Metadata } from "next";
 
+const english = helpCenterBundle.en.helpCenter;
+
 export const metadata: Metadata = {
-  title: `${HELP_CENTER_PAGE_TITLE} | AsliJobs`,
-  description:
-    "AsliJobs Help Center with guides for job seekers, employers, WhatsApp, safety, payments, and support.",
+  title: `${english.pageTitle} | AsliJobs`,
+  description: english.supportDescription,
 };
 
 export default function HelpCenterPage() {

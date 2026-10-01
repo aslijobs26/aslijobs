@@ -1,11 +1,13 @@
+import type { MessageKey } from "@/i18n/translate";
+
 export type FooterNavLink = {
   id: string;
-  label: string;
+  labelKey: MessageKey;
   href: string;
 };
 
 export type FooterNavGroup = {
   id: string;
-  title: string;
+  titleKey: MessageKey;
   links: FooterNavLink[];
 };

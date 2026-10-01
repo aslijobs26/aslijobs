@@ -5,93 +5,93 @@ import { ROUTES } from "./routes";
 export const FOOTER_NAV_GROUPS: FooterNavGroup[] = [
   {
     id: "job-seekers",
-    title: "For Job Seekers",
+    titleKey: "footer.jobSeekers",
     links: [
-      { id: "find-jobs", label: "Find Jobs", href: ROUTES.JOB_SEEKER_FIND_JOBS },
+      { id: "find-jobs", labelKey: "footer.findJobs", href: ROUTES.JOB_SEEKER_FIND_JOBS },
       {
         id: "browse-by-city",
-        label: "Browse by City",
+        labelKey: "footer.browseByCity",
         href: ROUTES.BROWSE_BY_CITY,
       },
       {
         id: "browse-by-state",
-        label: "Browse by State",
+        labelKey: "footer.browseByState",
         href: ROUTES.BROWSE_BY_STATE,
       },
       {
         id: "job-categories",
-        label: "Job Categories",
+        labelKey: "footer.jobCategories",
         href: ROUTES.JOB_CATEGORIES,
       },
       {
         id: "job-seeker-guide",
-        label: "Job Seeker Guide",
+        labelKey: "footer.jobSeekerGuide",
         href: ROUTES.JOB_SEEKER_GUIDE,
       },
     ],
   },
   {
     id: "employers",
-    title: "For Employers",
+    titleKey: "footer.employers",
     links: [
-      { id: "post-a-job", label: "Post a Job", href: ROUTES.EMPLOYER_POST_A_JOB },
+      { id: "post-a-job", labelKey: "footer.postAJob", href: ROUTES.EMPLOYER_POST_A_JOB },
       {
         id: "employer-login",
-        label: "Employer Login",
+        labelKey: "footer.employerLogin",
         href: ROUTES.EMPLOYER_LOGIN_INFO,
       },
       {
         id: "pricing-plans",
-        label: "Pricing Plans",
+        labelKey: "footer.pricingPlans",
         href: ROUTES.PRICING_PLANS,
       },
       {
         id: "employer-guide",
-        label: "Employer Guide",
+        labelKey: "footer.employerGuide",
         href: ROUTES.EMPLOYER_GUIDE,
       },
     ],
   },
   {
     id: "resources",
-    title: "Resources",
+    titleKey: "footer.resources",
     links: [
-      { id: "faqs", label: "FAQs", href: `${ROUTES.RESOURCES}?resource=faqs` },
+      { id: "faqs", labelKey: "footer.faqs", href: `${ROUTES.RESOURCES}?resource=faqs` },
       {
         id: "terms",
-        label: "Terms & Conditions",
+        labelKey: "footer.terms",
         href: ROUTES.TERMS_AND_CONDITIONS,
       },
       {
         id: "privacy",
-        label: "Privacy Policy",
+        labelKey: "footer.privacy",
         href: ROUTES.PRIVACY_POLICY,
       },
       {
         id: "guidelines",
-        label: "Guidelines",
+        labelKey: "footer.guidelines",
         href: ROUTES.GUIDELINES,
       },
       {
         id: "sitemap",
-        label: "Sitemap",
+        labelKey: "footer.sitemap",
         href: `${ROUTES.RESOURCES}?page=sitemap`,
       },
     ],
   },
   {
     id: "support",
-    title: "Support",
+    titleKey: "footer.support",
     links: [
       {
         id: "help-center",
-        label: "Help Center",
+        labelKey: "footer.helpCenter",
         href: `${ROUTES.RESOURCES}?resource=help-center`,
       },
-      { id: "contact-us", label: "Contact Us", href: ROUTES.CONTACT },
+      { id: "contact-us", labelKey: "footer.contactUs", href: ROUTES.CONTACT },
       {
         id: "whatsapp-support",
-        label: "WhatsApp Support",
+        labelKey: "footer.whatsappSupport",
         href: WHATSAPP_CONTACT_URL,
       },
     ],

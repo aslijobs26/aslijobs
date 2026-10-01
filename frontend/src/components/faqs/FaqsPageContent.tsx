@@ -1,25 +1,16 @@
 "use client";
 
+import { localizeFaqCategories } from "@/components/faqs/faq-catalog";
 import { Container } from "@/components/layout/Container";
 import { WHATSAPP_JOIN_URL } from "@/constants/cta";
-import {
-  FAQ_CATEGORIES,
-  FAQ_EMPTY_DESCRIPTION,
-  FAQ_EMPTY_TITLE,
-  FAQ_HELP_CONTACT_LABEL,
-  FAQ_HELP_DESCRIPTION,
-  FAQ_HELP_TITLE,
-  FAQ_HELP_WHATSAPP_LABEL,
-  FAQ_PAGE_SUBTITLE,
-  FAQ_PAGE_TITLE,
-  FAQ_SEARCH_PLACEHOLDER,
-} from "@/constants/faqs";
 import { ROUTES } from "@/constants/routes";
+import { translate, useTranslate } from "@/i18n/translate";
+import { useSiteLanguage } from "@/i18n/site-language";
 import type { FaqCategory, FaqItem } from "@/types/faqs";
 import { cn } from "@/utils/cn";
 import { ChevronDown, Search, SearchX } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 function normalizeSearchValue(value: string) {
   return value.trim().toLowerCase();
@@ -133,13 +124,20 @@ function FaqAccordionItem({
 }
 
 export function FaqsPageContent() {
+  const t = useTranslate();
+  const language = useSiteLanguage();
   const [query, setQuery] = useState("");
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const categories = useMemo(
+    () => localizeFaqCategories((key) => translate(language.code, key)),
+    [language.code],
+  );
+
   const filteredCategories = useMemo(
-    () => filterFaqCategories(FAQ_CATEGORIES, query),
-    [query],
+    () => filterFaqCategories(categories, query),
+    [categories, query],
   );
 
   const flatVisibleItems = useMemo(
@@ -147,14 +145,19 @@ export function FaqsPageContent() {
     [filteredCategories],
   );
 
-  useEffect(() => {
-    if (
-      openItemId &&
-      !flatVisibleItems.some((item) => item.id === openItemId)
-    ) {
-      setOpenItemId(null);
-    }
-  }, [flatVisibleItems, openItemId]);
+  const updateQuery = (nextQuery: string) => {
+    setQuery(nextQuery);
+    setOpenItemId((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const stillVisible = filterFaqCategories(categories, nextQuery).some((category) =>
+        category.items.some((item) => item.id === current),
+      );
+      return stillVisible ? current : null;
+    });
+  };
 
   const handleToggle = (itemId: string) => {
     setOpenItemId((current) => (current === itemId ? null : itemId));
@@ -178,41 +181,44 @@ export function FaqsPageContent() {
     document.getElementById(`faq-trigger-${nextItem.id}`)?.focus();
   };
 
-  const helpDescriptionLines = FAQ_HELP_DESCRIPTION.split("\n");
+  const helpDescriptionLines = [
+    t("faqs.helpDescriptionLine1"),
+    t("faqs.helpDescriptionLine2"),
+  ];
 
   return (
     <main className="bg-hero-bg/40">
       <section className="border-b border-border-subtle bg-legal-hero-surface">
         <Container className="py-8 sm:py-10 lg:py-12">
-          <nav aria-label="Breadcrumb" className="text-xs text-muted sm:text-sm">
+          <nav aria-label={t("faqs.breadcrumbAria")} className="text-xs text-muted sm:text-sm">
             <ol className="flex flex-wrap items-center gap-2">
               <li>
                 <Link
                   href={ROUTES.HOME}
                   className="font-medium transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 >
-                  Home
+                  {t("common.home")}
                 </Link>
               </li>
               <li aria-hidden="true" className="text-border">
                 &gt;
               </li>
               <li className="font-semibold text-foreground" aria-current="page">
-                FAQs
+                {t("faqs.pageTitle")}
               </li>
             </ol>
           </nav>
 
           <div className="mx-auto mt-8 max-w-3xl text-center sm:mt-10">
             <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              {FAQ_PAGE_TITLE}
+              {t("faqs.pageTitle")}
             </h1>
             <p className="mt-4 text-xs leading-relaxed text-muted sm:text-base lg:text-lg">
-              {FAQ_PAGE_SUBTITLE}
+              {t("faqs.subtitle")}
             </p>
 
             <label className="relative mt-8 block text-left">
-              <span className="sr-only">{FAQ_SEARCH_PLACEHOLDER}</span>
+              <span className="sr-only">{t("faqs.searchPlaceholder")}</span>
               <Search
                 className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted sm:size-5"
                 strokeWidth={1.75}
@@ -222,8 +228,8 @@ export function FaqsPageContent() {
                 ref={searchInputRef}
                 type="search"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={FAQ_SEARCH_PLACEHOLDER}
+                onChange={(event) => updateQuery(event.target.value)}
+                placeholder={t("faqs.searchPlaceholder")}
                 className="h-11 w-full rounded-2xl border border-border bg-surface pr-4 pl-11 text-xs text-foreground shadow-[0_8px_24px_rgba(26,43,60,0.05)] outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 sm:h-14 sm:pl-12 sm:text-[15px]"
               />
             </label>
@@ -243,20 +249,20 @@ export function FaqsPageContent() {
                 />
               </span>
               <h2 className="mt-5 text-lg font-bold text-foreground sm:text-xl">
-                {FAQ_EMPTY_TITLE}
+                {t("faqs.emptyTitle")}
               </h2>
               <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-muted sm:text-sm">
-                {FAQ_EMPTY_DESCRIPTION}
+                {t("faqs.emptyDescription")}
               </p>
               <button
                 type="button"
                 onClick={() => {
-                  setQuery("");
+                  updateQuery("");
                   searchInputRef.current?.focus();
                 }}
                 className="mt-6 inline-flex h-10 items-center justify-center rounded-xl border border-border bg-surface px-5 text-xs font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:text-sm"
               >
-                Clear search
+                {t("faqs.clearSearch")}
               </button>
             </div>
           ) : (
@@ -300,7 +306,7 @@ export function FaqsPageContent() {
           <aside className="mt-12 overflow-hidden rounded-[1.5rem] border border-primary/15 bg-surface shadow-[0_16px_40px_rgba(26,43,60,0.07)] sm:mt-16">
             <div className="bg-legal-hero-surface px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
               <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-3xl">
-                {FAQ_HELP_TITLE}
+                {t("faqs.helpTitle")}
               </h2>
               <div className="mt-3 space-y-1 text-xs leading-relaxed text-muted sm:text-base">
                 {helpDescriptionLines.map((line) => (
@@ -313,7 +319,7 @@ export function FaqsPageContent() {
                   href={ROUTES.CONTACT}
                   className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-xs font-bold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:px-6 sm:text-sm"
                 >
-                  {FAQ_HELP_CONTACT_LABEL}
+                  {t("faqs.helpContact")}
                 </Link>
                 <a
                   href={WHATSAPP_JOIN_URL}
@@ -321,7 +327,7 @@ export function FaqsPageContent() {
                   rel="noopener noreferrer"
                   className="inline-flex h-11 items-center justify-center rounded-xl border border-border bg-surface px-5 text-xs font-bold text-foreground transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:px-6 sm:text-sm"
                 >
-                  {FAQ_HELP_WHATSAPP_LABEL}
+                  {t("faqs.helpWhatsapp")}
                 </a>
               </div>
             </div>

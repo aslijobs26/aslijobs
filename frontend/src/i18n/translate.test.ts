@@ -35,7 +35,34 @@ describe("static i18n catalogs", () => {
     assert.equal(translate("hi", "jobs.fullTime"), "पूर्णकालिक");
     assert.equal(translate("ta", "jobs.office"), "அலுவலகம்");
     assert.equal(translate("kn", "footer.contactUs"), "ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ");
+    assert.equal(translate("te", "footer.employers"), "యజమానుల కోసం");
+    assert.equal(translate("te", "footer.faqs"), "తరచుగా అడిగే ప్రశ్నలు");
+    assert.equal(translate("hi", "footer.support"), "सहायता");
+    assert.equal(translate("hi", "footer.terms"), "नियम और शर्तें");
+    assert.notEqual(translate("ta", "footer.helpCenter"), translate("en", "footer.helpCenter"));
     assert.equal(translate("ml", "nav.profile"), "പ്രൊഫൈൽ");
+    assert.notEqual(translate("te", "faqs.subtitle"), translate("en", "faqs.subtitle"));
+    assert.equal(translate("hi", "faqs.categories.general.whatIsAslijobs.question"), "AsliJobs क्या है?");
+    assert.equal(translate("te", "guidelines.meta.title"), "మార్గదర్శకాలు");
+    assert.equal(translate("hi", "publicContent.postAJob.title"), "नौकरी पोस्ट करें");
+    assert.equal(translate("hi", "terms.meta.title"), "नियम और शर्तें");
+    assert.equal(translate("hi", "privacy.meta.title"), "गोपनीयता नीति");
+    assert.notEqual(
+      translate("te", "privacy.sections.overview.p1"),
+      translate("en", "privacy.sections.overview.p1"),
+    );
+    assert.notEqual(
+      translate("te", "terms.sections.overview.p1"),
+      translate("en", "terms.sections.overview.p1"),
+    );
+    assert.notEqual(
+      translate("te", "publicContent.postAJob.intro"),
+      translate("en", "publicContent.postAJob.intro"),
+    );
+    assert.notEqual(
+      translate("hi", "guidelines.sections.introduction.p1"),
+      translate("en", "guidelines.sections.introduction.p1"),
+    );
   });
 
   it("falls back to English when a language is missing a key", () => {
@@ -68,6 +95,11 @@ describe("static i18n catalogs", () => {
         translate(code, "jobs.applyNow");
         translate(code, "jobs.fullTime");
         translate(code, "footer.rights");
+        translate(code, "footer.employers");
+        translate(code, "footer.faqs");
+        translate(code, "footer.helpCenter");
+        translate(code, "faqs.pageTitle");
+        translate(code, "guidelines.meta.title");
         translate(code, "common.somethingWentWrong");
       }
       assert.equal(calls, 0);

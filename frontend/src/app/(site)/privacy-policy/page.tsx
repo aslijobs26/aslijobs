@@ -1,10 +1,12 @@
 import { PrivacyPolicyPage } from "@/components/legal/PrivacyPolicyPage";
+import { privacyBundle } from "@/i18n/bundles/privacy";
 import type { Metadata } from "next";
 
+const english = privacyBundle.en.privacy.meta;
+
 export const metadata: Metadata = {
-  title: "Privacy Policy | AsliJobs",
-  description:
-    "AsliJobs Privacy Policy explaining how user information is collected, used, stored, and protected.",
+  title: `${english.title} | AsliJobs`,
+  description: english.description,
 };
 
 export default function PrivacyPolicyRoute() {

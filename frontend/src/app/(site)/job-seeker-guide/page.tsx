@@ -1,12 +1,14 @@
-import { JobSeekerContentPage } from "@/components/job-seeker-content/JobSeekerContentPage";
-import { JOB_SEEKER_GUIDE_CONTENT } from "@/constants/job-seeker-content";
+import { LocalizedPublicPage } from "@/components/job-seeker-content/LocalizedPublicPage";
+import { publicPagesBundle } from "@/i18n/bundles/public-pages";
 import type { Metadata } from "next";
 
+const english = publicPagesBundle.en.publicPages.jobSeekerGuide;
+
 export const metadata: Metadata = {
-  title: `${JOB_SEEKER_GUIDE_CONTENT.title} | AsliJobs`,
-  description: JOB_SEEKER_GUIDE_CONTENT.metaDescription,
+  title: `${english.title} | AsliJobs`,
+  description: english.metaDescription,
 };
 
 export default function JobSeekerGuidePage() {
-  return <JobSeekerContentPage content={JOB_SEEKER_GUIDE_CONTENT} />;
+  return <LocalizedPublicPage pageKey="jobSeekerGuide" />;
 }
