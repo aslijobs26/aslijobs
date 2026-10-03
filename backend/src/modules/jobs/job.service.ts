@@ -14,9 +14,10 @@ import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
 import { parseJobContentLanguage } from "./job-content-language.js";
 import {
+  queueJobContentTranslation,
   resolveJobContent,
-  translateJobContentOnDemand,
 } from "./job-content-translation.js";
+import { serveJobDetailTranslation } from "./job-translation.queue.js";
 import { jobViewService } from "./job-view.service.js";
 import {
   assertEmployerVerifiedForJobAction,
@@ -1424,6 +1425,7 @@ export class JobService {
     });
 
     if (!isDraft) {
+      queueJobContentTranslation(job._id.toString());
       scheduleJobPendingOpsNotification({
         publicJobId: job.jobId,
         jobMongoId: job._id.toString(),
@@ -2236,13 +2238,16 @@ export class JobService {
     }
 
     const requestedLanguage = parseJobContentLanguage(options?.language);
-    const ensured = requestedLanguage
-      ? await translateJobContentOnDemand({
-          jobMongoId: job._id.toString(),
-          publicJobId: job.jobId,
-          language: requestedLanguage,
-        })
-      : null;
+    const translation = await serveJobDetailTranslation({
+      jobMongoId: job._id.toString(),
+      language: requestedLanguage,
+      job: {
+        jobTitle: job.jobTitle ?? "",
+        description: job.description ?? "",
+        interviewInstructions: job.interviewInstructions ?? "",
+        contentTranslations: (job.contentTranslations ?? null) as never,
+      },
+    });
 
     const jobSeekerId = options?.jobSeekerId;
     let views = job.views ?? 0;
@@ -2264,17 +2269,7 @@ export class JobService {
       job._id.toString(),
     ]);
     const posterImageMap = await loadEmployerPosterImageMap([job]);
-    const localizedContent =
-      ensured?.content ??
-      resolveJobContent(
-        {
-          jobTitle: job.jobTitle ?? "",
-          description: job.description ?? "",
-          interviewInstructions: job.interviewInstructions ?? "",
-          contentTranslations: job.contentTranslations as never,
-        },
-        requestedLanguage,
-      );
+    const localizedContent = translation.content;
 
     return {
       job: {
@@ -2301,6 +2296,9 @@ export class JobService {
         walkInEndTime: job.walkInEndTime,
         interviewInstructions: localizedContent.interviewInstructions,
         contactPersonName: job.contactPersonName?.trim() || null,
+        language: translation.language,
+        translationStatus: translation.translationStatus,
+        isTranslated: translation.isTranslated,
       },
     };
   }
@@ -2871,6 +2869,7 @@ export class JobService {
     job.publishedAt = now;
     job.lastStatusChangedAt = now;
     await job.save();
+    queueJobContentTranslation(job._id.toString());
 
     scheduleJobModerationAudit({
       actorUserId: operationsUserId,

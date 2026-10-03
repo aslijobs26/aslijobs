@@ -475,6 +475,8 @@ export async function translateRequestedJobLanguage(input: {
   language: JobContentLanguage;
   publicJobId?: string;
   fetchImpl?: typeof fetch;
+  /** Worker retries bypass the public request cooldown. */
+  forceRetry?: boolean;
 }): Promise<{
   content: SourceFields;
   event: JobTranslationLogEvent;
@@ -517,7 +519,7 @@ export async function translateRequestedJobLanguage(input: {
   }
 
   const stored = input.existing?.[input.language];
-  if (shouldSkipFailedTranslationRetry(stored, input.source)) {
+  if (!input.forceRetry && shouldSkipFailedTranslationRetry(stored, input.source)) {
     logJobTranslation("TRANSLATION_SKIPPED", {
       jobId: input.publicJobId,
       language: input.language,
@@ -571,11 +573,80 @@ export async function translateRequestedJobLanguage(input: {
  * Single Sarvam boundary for job content. List pages must not call this in a loop.
  * Detail pages call it once for the requested language.
  */
+export type PublicJobTranslationStatus = "pending" | "completed" | "failed" | "none";
+
+/**
+ * Decides what a job-detail request may return without calling a translation
+ * provider. Missing translations stay on the original text and can be queued.
+ */
+export function resolvePublicJobTranslationView(
+  job: TranslatableJob,
+  language: JobContentLanguage | null,
+): {
+  content: SourceFields;
+  language: JobContentLanguage | null;
+  translationStatus: PublicJobTranslationStatus;
+  isTranslated: boolean;
+  shouldEnqueue: boolean;
+} {
+  const source = readSource(job);
+  if (!language) {
+    return {
+      content: source,
+      language: null,
+      translationStatus: "none",
+      isTranslated: false,
+      shouldEnqueue: false,
+    };
+  }
+
+  const sample = `${source.jobTitle}\n${source.description}\n${source.interviewInstructions}`;
+  const sourceLanguage = detectJobContentLanguage(sample);
+  if (!sample.trim() || language === sourceLanguage) {
+    return {
+      content: source,
+      language,
+      translationStatus: "none",
+      isTranslated: false,
+      shouldEnqueue: false,
+    };
+  }
+
+  if (!languageNeedsTranslation(job, language)) {
+    return {
+      content: resolveJobContent({ ...job, ...source }, language),
+      language,
+      translationStatus: "completed",
+      isTranslated: true,
+      shouldEnqueue: false,
+    };
+  }
+
+  if (shouldSkipFailedTranslationRetry(job.contentTranslations?.[language], source)) {
+    return {
+      content: source,
+      language,
+      translationStatus: "failed",
+      isTranslated: false,
+      shouldEnqueue: false,
+    };
+  }
+
+  return {
+    content: source,
+    language,
+    translationStatus: "pending",
+    isTranslated: false,
+    shouldEnqueue: true,
+  };
+}
+
 export async function translateJobContentOnDemand(input: {
   jobMongoId: string;
   publicJobId?: string;
   language: JobContentLanguage | null;
   fetchImpl?: typeof fetch;
+  forceRetry?: boolean;
 }): Promise<{
   content: SourceFields;
   event: JobTranslationLogEvent;
@@ -617,6 +688,7 @@ export async function translateJobContentOnDemand(input: {
         language: input.language!,
         publicJobId: input.publicJobId,
         fetchImpl: input.fetchImpl,
+        forceRetry: input.forceRetry,
       });
       if (result.event === "TRANSLATION_CREATED" || result.event === "TRANSLATION_FAILED") {
         await JobModel.updateOne(
@@ -641,14 +713,24 @@ export async function translateJobContentOnDemand(input: {
   );
 }
 
-/** @deprecated Eager all-language translation is disabled to control Sarvam cost. */
-export function queueJobContentTranslation(
-  _jobMongoId: string,
-  _fetchImpl?: typeof fetch,
-): void {
-  logJobTranslation("TRANSLATION_SKIPPED", {
-    reason: "eager_queue_disabled",
-  });
+/**
+ * Queues background translation for configured languages.
+ * Never translates inside the caller’s request.
+ */
+export function queueJobContentTranslation(jobMongoId: string): void {
+  void import("./job-translation.queue.js")
+    .then((queue) => {
+      queue.scheduleJobContentTranslations(jobMongoId);
+    })
+    .catch((error: unknown) => {
+      console.error("[JOB-TRANSLATE] event=TRANSLATION_FAILED", {
+        jobId: jobMongoId,
+        language: "-",
+        attempt: 0,
+        error: error instanceof Error ? error.message : "enqueue_failed",
+        timestamp: new Date().toISOString(),
+      });
+    });
 }
 
 export async function persistJobContentTranslation(

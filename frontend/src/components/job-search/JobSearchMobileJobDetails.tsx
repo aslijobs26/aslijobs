@@ -2,6 +2,7 @@
 
 import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkeletons";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { getJobDescriptionPlainTextLength } from "@/utils/job-description-html";
@@ -355,6 +356,7 @@ export function JobSearchMobileJobDetails({
           <p className="mt-1.5 text-[13px] leading-snug font-medium text-[#374151]">
             {job.companyName}
           </p>
+          <JobTranslationPendingNote translationStatus={job.translationStatus} />
           {posted ? (
             <p className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-[#9CA3AF]">
               <Clock3

@@ -42,6 +42,8 @@ import {
 import {
   assertEmployerStatusChangeAllowed,
   isEmployerTerminalStatus,
+  isStatusBeforeInterviewScheduled,
+  resolveStatusBeforeInterview,
 } from "./employer-status-transition.js";
 import type {
   ApplicationHistoryActor,
@@ -2603,13 +2605,23 @@ export class ApplicationService {
       cancelledByName: "",
     };
 
-    // First schedule = no prior active interview date. Reschedule/update keeps hiring status.
     const isFirstSchedule = !text(previousInterview.date);
     const action: "scheduled" | "updated" = isFirstSchedule
       ? "scheduled"
       : "updated";
+    // Earlier stages advance to Interview Scheduled; later stages keep their status on reschedule.
+    const nextStatus: ApplicationStatus = isStatusBeforeInterviewScheduled(
+      currentStatus,
+    )
+      ? "interview_scheduled"
+      : currentStatus;
+    const statusChanging = nextStatus !== currentStatus;
 
-    if (interviewsEqual(previousInterview, nextInterview) && !isFirstSchedule) {
+    if (
+      interviewsEqual(previousInterview, nextInterview) &&
+      !isFirstSchedule &&
+      !statusChanging
+    ) {
       const detail = await this.loadEmployerDetail({
         employerId: input.employerId,
         applicationId: input.applicationId,
@@ -2625,12 +2637,10 @@ export class ApplicationService {
     const actorName = text(input.updatedByName) || "Employer";
 
     application.interview = toInterviewDocument(nextInterview);
+    application.status = nextStatus;
 
-    // Scheduling an interview creates/updates the interview activity only.
-    // Hiring status stays unchanged (e.g. Shortlisted) until the employer
-    // explicitly advances the pipeline.
     appendStatusHistory(application, {
-      status: currentStatus,
+      status: nextStatus,
       at: now,
       actorType: "employer",
       remark: isFirstSchedule
@@ -2715,8 +2725,14 @@ export class ApplicationService {
       cancelledByName: actorName,
     });
 
+    const nextStatus: ApplicationStatus =
+      currentStatus === "interview_scheduled"
+        ? resolveStatusBeforeInterview(mapStatusHistory(application.statusHistory))
+        : currentStatus;
+    application.status = nextStatus;
+
     appendStatusHistory(application, {
-      status: currentStatus,
+      status: nextStatus,
       at: now,
       actorType: "employer",
       remark: `Interview Cancelled by ${actorName}. Reason: ${reason}`,

@@ -34,6 +34,26 @@ The API runs at `http://localhost:5000`.
 - `npm run typecheck` — Type-check without emitting files
 - `npm run render-build` — **Render Build Command**: `npm ci --include=dev && npm run build`
 
+- `npm run translation:worker` — Dedicated translation worker (also starts inside `npm run dev`)
+- `npm run translation:backfill` — Queue translations for existing active jobs
+
+## Job translation
+
+Public job details never wait on the translation provider. Missing translations are queued and the original text is returned immediately.
+
+Redis is optional:
+
+```bash
+# Redis (local). Then set REDIS_URL=redis://127.0.0.1:6379 in backend/.env
+docker run --name aslijobs-redis -p 6379:6379 redis:7
+
+# Worker. The API process also starts this runtime.
+npm run translation:worker
+
+# Existing active jobs, resumable with --after=<mongoId>
+npm run translation:backfill
+```
+
 ## Render (production)
 
 Keep `NODE_ENV=production` in the Render environment (required for DB safety guards).

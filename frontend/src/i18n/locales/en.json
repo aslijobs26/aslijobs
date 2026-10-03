@@ -177,6 +177,7 @@
     "addressShared": "Address shared by recruiter",
     "unableToLoad": "Unable to load this job.",
     "unableToLoadClosed": "Unable to load this job. It may have been closed or removed.",
+    "translationPending": "Showing the original text while this job is translated.",
     "tryAgain": "Try again",
     "jobDescription": "Job Description",
     "address": "Address",

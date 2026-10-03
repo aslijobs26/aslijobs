@@ -16,8 +16,10 @@ import {
   detectLanguage,
   detectProtocolTurn,
   formatSalaryLabel,
-  languageFromHint,
+  isConfidentLocalUnderstanding,
   isFollowUpFragment,
+  languageFromHint,
+  lookingAtQuestionCopy,
   nationalPhone,
   parentCity,
   PUBLIC_JOB_FETCH_LIMIT,
@@ -26,6 +28,7 @@ import {
   protocolReply,
   serviceErrorCopy,
   toPublicJobsLookup,
+  understandLocally,
   type AccountKind,
   type BotUnderstanding,
   type PublicJobFact,
@@ -198,14 +201,40 @@ export async function handleConversationalMessage(input: {
       return;
     }
 
-    const understandStarted = Date.now();
+    const understandStarted = performance.now();
     const followUp = isFollowUpFragment(input.text);
-    const understood = await understandMessage(input.text, session?.language, hint, {
+    const prior = {
       accountType: accountLabel(identity.linked),
       priorLocation: followUp ? session?.pendingLocation || session?.lastLocation || "" : "",
       priorRole: followUp ? session?.pendingCategory || session?.lastCategory || "" : "",
-    });
-    timing.sarvam_understand = Date.now() - understandStarted;
+    };
+    const local = understandLocally(input.text, session?.language, hint);
+    const localMs = performance.now() - understandStarted;
+    let understood: Awaited<ReturnType<typeof understandMessage>>;
+    if (isConfidentLocalUnderstanding(local)) {
+      understood = { understanding: local, source: "local" };
+      timing.sarvam_understand = 0;
+      console.info(`[WhatsApp] language_detection: ${Math.round(localMs)}ms`);
+      console.info(`[WhatsApp] intent_detection: ${Math.round(localMs)}ms source=local`);
+    } else {
+      const languageForAck = detectLanguage(input.text, session?.language, hint);
+      const [remote] = await Promise.all([
+        understandMessage(input.text, session?.language, hint, prior),
+        whatsAppService
+          .sendTextMessage(input.from, lookingAtQuestionCopy(languageForAck))
+          .catch((error: unknown) => {
+            console.error(
+              `[WhatsApp] ack_failed reason=${error instanceof Error ? error.name : "unknown"}`,
+            );
+          }),
+      ]);
+      understood = remote;
+      timing.sarvam_understand = performance.now() - understandStarted;
+      console.info(`[WhatsApp] language_detection: ${Math.round(localMs)}ms`);
+      console.info(
+        `[WhatsApp] intent_detection: ${Math.round(timing.sarvam_understand)}ms source=${understood.source}`,
+      );
+    }
     const merged = resolveTurnUnderstanding(
       input.text,
       understood.understanding,
@@ -237,7 +266,7 @@ export async function handleConversationalMessage(input: {
       merged.intent === "JOB_SEARCH" && !merged.location && Boolean(merged.category || merged.openSearch);
     const waitingForRole =
       merged.intent === "JOB_SEARCH" && Boolean(merged.location) && !merged.category && !merged.openSearch;
-    await WhatsAppSessionModel.findOneAndUpdate(
+    const sessionWrite = WhatsAppSessionModel.findOneAndUpdate(
       { phone },
       {
         phone,
@@ -272,22 +301,26 @@ export async function handleConversationalMessage(input: {
       },
       { upsert: true },
     );
-    const localizeStarted = Date.now();
-    const localized = await localizeDeterministicReply({
-      language: merged.language,
-      facts: {
-        ...turn.facts,
-        intent: merged.intent,
-        accountType: turn.accountType,
-        applyOrigin: env.FRONTEND_URL,
-      },
-    });
-    const translateMs = Date.now() - localizeStarted;
+    const localizeStarted = performance.now();
+    const [localized] = await Promise.all([
+      localizeDeterministicReply({
+        language: merged.language,
+        facts: {
+          ...turn.facts,
+          intent: merged.intent,
+          accountType: turn.accountType,
+          applyOrigin: env.FRONTEND_URL,
+        },
+      }),
+      sessionWrite,
+    ]);
+    const translateMs = performance.now() - localizeStarted;
     const replyText = localized.text;
     const plan = whatsappAiCallPlan({
       protocol: false,
       voice: input.messageType === "audio",
       needsTranslation: !localized.skipped,
+      skipUnderstand: understood.source === "local",
     });
     const trace = describeTurn(merged, turn);
     console.info(
@@ -302,7 +335,7 @@ export async function handleConversationalMessage(input: {
         `role=${merged.category || "ANY"}`,
         `location=${merged.location || "-"}`,
         `source=${understood.source}`,
-        `understand=chat-llm`,
+        `understand=${understood.source === "local" ? "local" : "chat-llm"}`,
         `db=${trace.service}`,
         `response=deterministic`,
         `translation=${localized.skipped ? "skip" : localized.failed ? "failed" : localized.translated ? "once" : "none"}`,
@@ -349,6 +382,12 @@ export async function handleConversationalMessage(input: {
     const sendStarted = Date.now();
     await whatsAppService.sendTextMessage(input.from, replyText);
     timing.whatsapp_send = Date.now() - sendStarted;
+    const totalMs = Date.now() - started;
+    console.info(`[WhatsApp] job_search: ${timing.db_query}ms`);
+    console.info(`[WhatsApp] LLM: ${Math.round(timing.sarvam_understand)}ms`);
+    console.info(`[WhatsApp] translation: ${Math.round(translateMs)}ms`);
+    console.info(`[WhatsApp] whatsapp_send: ${timing.whatsapp_send}ms`);
+    console.info(`[WhatsApp] total: ${totalMs}ms`);
     console.info(
       `[WA-PERF] account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms sarvam_understand=${timing.sarvam_understand}ms db_query=${timing.db_query}ms translate=${translateMs}ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
     );

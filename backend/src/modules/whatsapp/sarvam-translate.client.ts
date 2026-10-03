@@ -183,9 +183,10 @@ export function whatsappAiCallPlan(input: {
   protocol: boolean;
   voice: boolean;
   needsTranslation: boolean;
+  skipUnderstand?: boolean;
 }): { chatLlmCalls: number; sttCalls: number; translateCalls: number; finalChatLlmCalls: number } {
   return {
-    chatLlmCalls: input.protocol ? 0 : 1,
+    chatLlmCalls: input.protocol || input.skipUnderstand ? 0 : 1,
     finalChatLlmCalls: 0,
     sttCalls: input.voice ? 1 : 0,
     translateCalls: input.protocol || !input.needsTranslation ? 0 : 1,

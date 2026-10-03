@@ -59,6 +59,12 @@ export type PublicJobDetail = PublicJobListItem & {
   walkInEndTime: string;
   interviewInstructions: string;
   contactPersonName: string | null;
+  /** Requested site language, when one was sent. */
+  language?: string | null;
+  /** completed when this response is in the requested language. */
+  translationStatus?: "pending" | "completed" | "failed" | "none";
+  /** False while the original text is shown because translation is not ready. */
+  isTranslated?: boolean;
 };
 
 export type PublicJobCityFacet = {
@@ -121,6 +127,17 @@ export async function fetchPublicActiveJobByPublicId(
     },
   );
   return response.data.data;
+}
+
+/** Poll a few times while a background translation is still pending. */
+export function publicJobDetailRefetchInterval(
+  translationStatus: PublicJobDetail["translationStatus"],
+  dataUpdateCount: number,
+): number | false {
+  if (translationStatus !== "pending" || dataUpdateCount >= 5) {
+    return false;
+  }
+  return 8_000;
 }
 
 /** Related active jobs ranked for the given public job. Excludes the source job. */

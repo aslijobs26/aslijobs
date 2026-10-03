@@ -168,6 +168,7 @@
     "addressShared": "भर्तीकर्ता द्वारा साझा पता",
     "unableToLoad": "यह नौकरी लोड नहीं हो सकी.",
     "unableToLoadClosed": "यह नौकरी लोड नहीं हो सकी. यह बंद हो सकती है.",
+    "translationPending": "इस नौकरी का अनुवाद हो रहा है. अभी मूल पाठ दिख रहा है.",
     "tryAgain": "फिर कोशिश करें",
     "jobDescription": "नौकरी का विवरण",
     "address": "पता",

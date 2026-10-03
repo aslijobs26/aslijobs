@@ -3,6 +3,8 @@ import app from "./app.js";
 import { connectDB, getConnectedDatabaseName } from "./config/db.js";
 import { env } from "./config/env.js";
 import { startNotificationRetentionScheduler } from "./modules/notifications/notification.retention.js";
+import { startJobTranslationRuntime } from "./modules/jobs/job-translation.queue.js";
+import { startWhatsAppInboundRuntime } from "./modules/whatsapp/whatsapp-inbound.queue.js";
 import { clearAllRbacCaches } from "./modules/rbac/rbac-context.cache.js";
 import { logEmailConfigurationStatus } from "./modules/team/team-invitation-email.service.js";
 import mongoose from "mongoose";
@@ -11,6 +13,8 @@ let httpServer: Server | null = null;
 let isShuttingDown = false;
 let stopNotificationRetention: (() => void) | null = null;
 let stopWorkReconcile: (() => void) | null = null;
+let stopJobTranslation: (() => Promise<void>) | null = null;
+let stopWhatsAppInbound: (() => Promise<void>) | null = null;
 
 async function shutdown(signal: string): Promise<void> {
   if (isShuttingDown) {
@@ -30,6 +34,14 @@ async function shutdown(signal: string): Promise<void> {
     stopNotificationRetention = null;
     stopWorkReconcile?.();
     stopWorkReconcile = null;
+    if (stopJobTranslation) {
+      await stopJobTranslation();
+      stopJobTranslation = null;
+    }
+    if (stopWhatsAppInbound) {
+      await stopWhatsAppInbound();
+      stopWhatsAppInbound = null;
+    }
     if (httpServer) {
       await new Promise<void>((resolve, reject) => {
         httpServer?.close((error) => {
@@ -77,6 +89,8 @@ async function startServer(): Promise<void> {
   );
   await ensureOperationsWorkDepartments();
   stopWorkReconcile = startOperationsWorkReconcileScheduler();
+  stopJobTranslation = startJobTranslationRuntime();
+  stopWhatsAppInbound = startWhatsAppInboundRuntime();
 
   httpServer = app.listen(env.PORT, () => {
     console.log(`AsliJobs API running on port ${env.PORT}`);

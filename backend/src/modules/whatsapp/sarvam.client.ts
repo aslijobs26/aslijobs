@@ -10,7 +10,7 @@ import {
 const SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text";
 export const SARVAM_CHAT_URL = "https://api.sarvam.ai/v1/chat/completions";
 export const SARVAM_CHAT_MODEL = "sarvam-105b";
-const UNDERSTAND_TIMEOUT_MS = 20_000;
+const UNDERSTAND_TIMEOUT_MS = 8_000;
 
 export const UNDERSTAND_SYSTEM =
   "AsliJobs classifier. JSON only. Fields: intent,language,location,category,openSearch,confidence. intent=GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_SKILLS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|UNRELATED|UNKNOWN. language=en|hi|te|ta|kn|ml from THIS message only. Posted/my jobs + applications = EMPLOYER_APPLICATION_COUNT. Public job hunt = JOB_SEARCH. Ignore prev unless THIS message is only a role or place follow-up. Do not answer, authorize, or invent jobs.";
@@ -150,7 +150,7 @@ function buildAudioForm(
 
 export type SarvamUnderstanding = {
   understanding: BotUnderstanding;
-  source: "sarvam" | "fallback";
+  source: "sarvam" | "fallback" | "local";
 };
 
 export async function understandMessage(
@@ -193,6 +193,7 @@ export async function understandMessage(
       body: JSON.stringify({
         model: SARVAM_CHAT_MODEL,
         temperature: 0,
+        max_tokens: 160,
         messages: [
           { role: "system", content: UNDERSTAND_SYSTEM },
           { role: "user", content: userContent },

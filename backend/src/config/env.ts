@@ -147,6 +147,29 @@ const envSchema = z.object({
     .int()
     .min(60_000)
     .default(3_600_000),
+  /**
+   * Optional Redis URL for the job-translation queue and translation cache.
+   * When empty, translations still queue in MongoDB and the API never waits
+   * on the translation provider.
+   */
+  REDIS_URL: z.string().optional().default(""),
+  /** Comma-separated job content languages. Unknown codes are ignored. */
+  JOB_TRANSLATION_LANGUAGES: z.string().default("en,hi,te,ta,kn,ml"),
+  JOB_TRANSLATION_CACHE_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(60)
+    .max(60 * 60 * 24 * 30)
+    .default(86_400),
+  JOB_TRANSLATION_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(8).default(3),
+  JOB_TRANSLATION_WORKER_CONCURRENCY: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(8)
+    .default(1),
+  /** Parallel WhatsApp AI jobs when REDIS_URL is set. */
+  WHATSAPP_INBOUND_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(4),
 });
 
 const parsed = envSchema.safeParse(process.env);

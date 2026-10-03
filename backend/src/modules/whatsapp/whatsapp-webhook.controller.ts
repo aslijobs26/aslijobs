@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { env } from "../../config/env.js";
 import { claimWhatsAppEvent } from "./whatsapp-processed-event.model.js";
 import { verifyWhatsAppSignature } from "./whatsapp-signature.js";
-import { handleConversationalMessage } from "./whatsapp-bot.service.js";
+import { enqueueWhatsAppInbound } from "./whatsapp-inbound.queue.js";
 import { WhatsAppService } from "./whatsapp.service.js";
 import {
   nationalPhone,
@@ -51,7 +51,9 @@ export function receiveWhatsAppWebhook(req: Request, res: Response): void {
     return;
   }
 
+  console.info("[WhatsApp] webhook_received");
   res.sendStatus(200);
+  console.info("[WhatsApp] webhook_ack");
 
   const body = req.body as {
     entry?: Array<{
@@ -101,13 +103,17 @@ async function processWebhook(body: {
           continue;
         }
 
+        const parsedAt = performance.now();
         const extracted = await extractText(message);
         if (!extracted?.text) continue;
+        console.info(
+          `[WhatsApp] message_parsed: ${Math.round(performance.now() - parsedAt)}ms type=${message.type ?? "unknown"}`,
+        );
 
         console.info(
           `[WhatsAppWebhook] routed conversational type=${message.type ?? "unknown"} messageId=${messageId}`,
         );
-        await handleConversationalMessage({
+        await enqueueWhatsAppInbound({
           from,
           text: extracted.text,
           languageHint: extracted.languageHint,

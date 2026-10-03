@@ -14,6 +14,7 @@ import { useSiteLanguage } from "@/i18n/site-language";
 import {
   fetchPublicActiveJobByPublicId,
   fetchPublicActiveJobs,
+  publicJobDetailRefetchInterval,
 } from "@/services/public-jobs.service";
 import {
   fetchSavedJobIds,
@@ -233,6 +234,11 @@ export function JobSearchPageContent() {
       }),
     enabled: Boolean(detailJobId) && isSplitView,
     retry: false,
+    refetchInterval: (query) =>
+      publicJobDetailRefetchInterval(
+        query.state.data?.job.translationStatus,
+        query.state.dataUpdateCount,
+      ),
   });
 
   const locationLabel = useMemo(() => {

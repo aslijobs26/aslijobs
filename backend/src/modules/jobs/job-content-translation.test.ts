@@ -11,6 +11,7 @@ import {
   isTranslationRetryCoolingDown,
   needsJobContentTranslation,
   resolveJobContent,
+  resolvePublicJobTranslationView,
   shouldSkipFailedTranslationRetry,
   translateJobHtmlField,
   translateRequestedJobLanguage,
@@ -454,5 +455,89 @@ describe("job content translation", () => {
     assert.equal(isTranslationRetryCoolingDown(new Date().toISOString()), true);
     assert.equal(isTranslationRetryCoolingDown(new Date(Date.now() - 11 * 60_000).toISOString()), false);
     assert.equal(isTranslationRetryCoolingDown(null), false);
+  });
+});
+
+describe("public job translation view", () => {
+  it("returns English immediately and does not enqueue", () => {
+    const view = resolvePublicJobTranslationView(source, "en");
+    assert.equal(view.translationStatus, "none");
+    assert.equal(view.shouldEnqueue, false);
+    assert.equal(view.isTranslated, false);
+    assert.equal(view.content.jobTitle, source.jobTitle);
+  });
+
+  it("returns the original immediately when Telugu is missing and asks for one background task", () => {
+    const view = resolvePublicJobTranslationView(source, "te");
+    assert.equal(view.translationStatus, "pending");
+    assert.equal(view.isTranslated, false);
+    assert.equal(view.shouldEnqueue, true);
+    assert.equal(view.content.description, source.description);
+  });
+
+  it("returns a stored Telugu translation without enqueueing", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "tr:Electrician",
+        description: "tr:We are looking for an experienced electrician.",
+        interviewInstructions: "tr:Bring ID proof.",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(source.description),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+        status: "completed",
+      },
+    };
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "te",
+    );
+    assert.equal(view.translationStatus, "completed");
+    assert.equal(view.isTranslated, true);
+    assert.equal(view.shouldEnqueue, false);
+    assert.equal(view.content.jobTitle, "tr:Electrician");
+  });
+
+  it("does not enqueue again while a failed translation is cooling down", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "",
+        description: "",
+        interviewInstructions: "",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(source.description),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+        lastAttemptAt: new Date().toISOString(),
+        status: "failed",
+      },
+    };
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "te",
+    );
+    assert.equal(view.translationStatus, "failed");
+    assert.equal(view.shouldEnqueue, false);
+    assert.equal(view.content.jobTitle, source.jobTitle);
+  });
+
+  it("hides a stale translation and queues a fresh one", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "పాత శీర్షిక",
+        description: "పాత వివరణ",
+        interviewInstructions: "పాత సూచన",
+        jobTitleHash: hashJobField("Old title"),
+        descriptionHash: hashJobField("Old description"),
+        interviewInstructionsHash: hashJobField("Old instructions"),
+        status: "completed",
+      },
+    };
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "te",
+    );
+    assert.equal(view.translationStatus, "pending");
+    assert.equal(view.shouldEnqueue, true);
+    assert.equal(view.content.jobTitle, source.jobTitle);
+    assert.equal(view.content.description, source.description);
   });
 });

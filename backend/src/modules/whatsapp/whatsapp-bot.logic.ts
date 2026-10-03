@@ -325,6 +325,7 @@ export function understandLocally(
   const profile =
     /profile|ప్రొఫైల్|సరిపోయే|प्रोफाइल|प्रोफ़ाइल|suitable/i.test(text) &&
     (mentionsJob || mentionsRequest || /jobs?/i.test(folded) || ownApply);
+  const howToApply = /how (do|to|can) i apply|apply cheyya|apply kaise|apply ela/i.test(folded);
   const applications = ownApply;
   const myPosted = looksLikeOwnPostedJobsQuestion(text);
   const employer =
@@ -368,14 +369,13 @@ export function understandLocally(
       : /ఎన్ని|how many|applications?|applied|వచ్చాయి|vachayi|\benni\b/i.test(text)
         ? "EMPLOYER_APPLICATION_COUNT"
         : "EMPLOYER_JOBS";
-  } else if (applications) {
+  } else if (howToApply) intent = "HOW_TO_APPLY";
+  else if (applications) {
     intent = /status|స్టేటస్|స్టేజ్|स्थिति|நிலை/i.test(text)
       ? "APPLICATION_STATUS"
       : /ఎన్ని|how many|कितनी|எத்தனை|ಎಷ್ಟು|എത്ര/i.test(text)
         ? "APPLICATION_COUNT"
         : "MY_APPLICATIONS";
-  } else if (/how (do|to) i apply|apply cheyya|apply kaise/i.test(folded)) {
-    intent = "HOW_TO_APPLY";
   } else if (/my skills|skills unnayi|నైపుణ్యాలు/i.test(text)) intent = "MY_SKILLS";
   else if (salaryAsk || companyAsk) intent = "JOB_DETAILS";
   else if (
@@ -404,6 +404,20 @@ export function understandLocally(
     confidence: intent === "UNKNOWN" ? 0.35 : intent === "CLARIFY" ? 0.7 : 0.94,
     focus: companyAsk ? "company" : salaryAsk ? "salary" : "",
   };
+}
+
+/** High-confidence local reads do not need a classifier model. */
+export function isConfidentLocalUnderstanding(understanding: BotUnderstanding): boolean {
+  return understanding.intent !== "UNKNOWN" && understanding.confidence >= 0.9;
+}
+
+export function lookingAtQuestionCopy(language: BotLanguage): string {
+  if (language === "te") return "మీ ప్రశ్నను చూస్తున్నాను...";
+  if (language === "hi") return "आपका सवाल देख रहा हूँ...";
+  if (language === "ta") return "உங்கள் கேள்வியை பார்க்கிறேன்...";
+  if (language === "kn") return "ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ನೋಡುತ್ತಿದ್ದೇನೆ...";
+  if (language === "ml") return "നിങ്ങളുടെ ചോദ്യം നോക്കുന്നു...";
+  return "Looking at your question...";
 }
 
 export function minimalUnderstanding(

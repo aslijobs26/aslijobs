@@ -108,6 +108,22 @@ export function isStatusBeforeInterviewScheduled(
   return currentIndex < interviewIndex;
 }
 
+/**
+ * Hiring status to restore when an interview is cancelled while the application
+ * is in Interview Scheduled: the latest earlier pipeline stage from history.
+ */
+export function resolveStatusBeforeInterview(
+  history: ReadonlyArray<{ status?: ApplicationStatus | string | null }>,
+): ApplicationStatus {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const status = history[index]?.status;
+    if (status && isStatusBeforeInterviewScheduled(status)) {
+      return status as ApplicationStatus;
+    }
+  }
+  return "shortlisted";
+}
+
 export function hasRequiredInterviewDetails(
   interview: ApplicationInterview | null | undefined,
 ): boolean {
@@ -208,7 +224,7 @@ export function assertEmployerStatusChangeAllowed(
   assertValidEmployerStatusTransition(from, to);
 
   if (to === "interview_completed") {
-    // Interview activity may exist while hiring status is still Shortlisted.
+    // Legacy applications may hold an active interview while still Shortlisted.
     if (from !== "interview_scheduled" && from !== "shortlisted") {
       throw new AppError(
         "Schedule and complete an interview before marking it as completed.",

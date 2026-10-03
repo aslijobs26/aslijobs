@@ -4,7 +4,10 @@ import { JobSearchMobileJobDetails } from "@/components/job-search/JobSearchMobi
 import { JobDetailsPageLayout } from "@/components/jobs/JobDetailsPageLayout";
 import { ROUTES } from "@/constants/routes";
 import { useSiteLanguage } from "@/i18n/site-language";
-import { fetchPublicActiveJobByPublicId } from "@/services/public-jobs.service";
+import {
+  fetchPublicActiveJobByPublicId,
+  publicJobDetailRefetchInterval,
+} from "@/services/public-jobs.service";
 import {
   fetchSavedJobIds,
   removeSavedJob,
@@ -91,6 +94,11 @@ export function PublicJobDetailPage({ publicJobId }: PublicJobDetailPageProps) {
         language: siteLanguage.code,
       }),
     retry: false,
+    refetchInterval: (query) =>
+      publicJobDetailRefetchInterval(
+        query.state.data?.job.translationStatus,
+        query.state.dataUpdateCount,
+      ),
   });
 
   const savedIdsQuery = useQuery({

@@ -12,6 +12,7 @@ import {
   detectProtocolTurn,
   greetingCopy,
   isCacheableSituation,
+  isConfidentLocalUnderstanding,
   JOBS_FOR_AI_LIMIT,
   looksLikeStalePublicJobReply,
   properNounsFromFacts,
@@ -1155,5 +1156,47 @@ describe("whatsapp job seeker apply links", () => {
       assert.match(reply, /Harshad Shaik Construction/);
       assert.match(reply, /👉 Apply Now: https:\/\/aslijobs\.com\/jobs\/AJ-CARP-1/);
     }
+  });
+});
+
+describe("whatsapp fast path", () => {
+  it("classifies greetings, FAQs, and clear job searches without a model", () => {
+    const started = performance.now();
+    const greeting = detectProtocolTurn("Hi");
+    const faq = understandLocally("How can I apply for a job?");
+    const roman = understandLocally("Hyderabad lo delivery jobs kavali");
+    const telugu = understandLocally("నాకు హైదరాబాద్‌లో డెలివరీ ఉద్యోగాలు కావాలి");
+    const hindi = understandLocally("मुझे हैदराबाद में डिलीवरी की नौकरी चाहिए");
+    const unclear = understandLocally("can you check something for me please");
+    const elapsed = performance.now() - started;
+
+    assert.equal(greeting, "greeting");
+    assert.equal(faq.intent, "HOW_TO_APPLY");
+    assert.equal(isConfidentLocalUnderstanding(faq), true);
+    assert.equal(roman.intent, "JOB_SEARCH");
+    assert.equal(roman.location.toLowerCase(), "hyderabad");
+    assert.equal(roman.category.toLowerCase(), "delivery");
+    assert.equal(isConfidentLocalUnderstanding(roman), true);
+    assert.equal(telugu.intent, "JOB_SEARCH");
+    assert.equal(telugu.language, "te");
+    assert.equal(isConfidentLocalUnderstanding(telugu), true);
+    assert.equal(hindi.language, "hi");
+    assert.equal(isConfidentLocalUnderstanding(hindi), true);
+    assert.equal(isConfidentLocalUnderstanding(unclear), false);
+    assert.ok(elapsed < 50, `local classification took ${elapsed}ms`);
+  });
+
+  it("keeps the model call only for uncertain messages", () => {
+    const service = readFileSync(new URL("./whatsapp-bot.service.ts", import.meta.url), "utf8");
+    assert.match(service, /isConfidentLocalUnderstanding/);
+    assert.match(service, /understandMessage/);
+    const plan = whatsappAiCallPlan({
+      protocol: false,
+      voice: false,
+      needsTranslation: false,
+      skipUnderstand: true,
+    });
+    assert.equal(plan.chatLlmCalls, 0);
+    assert.equal(plan.translateCalls, 0);
   });
 });

@@ -3,6 +3,7 @@
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { protectedApply } from "@/utils/job-apply-auth";
 import {
@@ -295,6 +296,7 @@ export function JobDetailsCenterPanel({
             <p className="mt-1 text-sm font-medium text-muted">
               {job.companyName}
             </p>
+            <JobTranslationPendingNote translationStatus={job.translationStatus} />
             {posted ? (
               <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-muted">
                 <Clock3
