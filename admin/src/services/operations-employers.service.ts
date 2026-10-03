@@ -43,6 +43,10 @@ export async function fetchOperationsEmployers(
         analyticsPreset: params.analyticsPreset || undefined,
         analyticsFrom: params.analyticsFrom || undefined,
         analyticsTo: params.analyticsTo || undefined,
+        kpi: params.kpi || undefined,
+        kpiPreset: params.kpi ? params.kpiPreset : undefined,
+        kpiDateFrom: params.kpi ? params.kpiDateFrom || undefined : undefined,
+        kpiDateTo: params.kpi ? params.kpiDateTo || undefined : undefined,
       },
     },
   );

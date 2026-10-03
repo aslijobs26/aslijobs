@@ -11,12 +11,15 @@ import { PlacementsFunnel } from "../components/operations/placements/overview/P
 import { PlacementsJoiningStatusDonut } from "../components/operations/placements/overview/PlacementsJoiningStatusDonut";
 import { PlacementsKeyInsights } from "../components/operations/placements/overview/PlacementsKeyInsights";
 import { PlacementsOverviewHeader } from "../components/operations/placements/overview/PlacementsOverviewHeader";
+import { PlacementsKpiDrilldown } from "../components/operations/placements/overview/PlacementsKpiDrilldown";
 import { PlacementsOverviewKpiStrip } from "../components/operations/placements/overview/PlacementsOverviewKpiStrip";
 import { PlacementsQuickActions } from "../components/operations/placements/overview/PlacementsQuickActions";
 import { PlacementsTimeToJoin } from "../components/operations/placements/overview/PlacementsTimeToJoin";
 import { PlacementsTrendChart } from "../components/operations/placements/overview/PlacementsTrendChart";
 import { PlacementsPageSkeleton } from "../components/operations/placements/PlacementsPageSkeleton";
 import { PlacementsTableSection } from "../components/operations/placements/PlacementsTableSection";
+import { PLACEMENT_OVERVIEW_KPI_VIEWS } from "../constants/operations-placements-overview";
+import { useOperationsKpiView } from "../hooks/use-operations-kpi-view";
 import {
   useExportOperationsPlacements,
   useOperationsPlacementsAnalytics,
@@ -108,6 +111,9 @@ function queryErrorMessage(error: unknown, fallback: string): string {
 
 export function OperationsPlacementsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [activeKpi, handleKpiSelect] = useOperationsKpiView(
+    PLACEMENT_OVERVIEW_KPI_VIEWS,
+  );
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState(
@@ -167,7 +173,9 @@ export function OperationsPlacementsPage() {
   );
 
   const analyticsQuery = useOperationsPlacementsAnalytics(analyticsFilters);
-  const listQuery = useOperationsPlacementsList(listQueryParams);
+  const listQuery = useOperationsPlacementsList(listQueryParams, {
+    enabled: activeKpi == null,
+  });
   const exportMutation = useExportOperationsPlacements();
 
   const analytics = analyticsQuery.data;
@@ -232,7 +240,7 @@ export function OperationsPlacementsPage() {
 
   const isInitialLoading =
     (analyticsQuery.isLoading && !analytics) ||
-    (listQuery.isLoading && !listData);
+    (listQuery.isLoading && !listData && !analytics);
 
   const listErrorMessage = listQuery.error
     ? queryErrorMessage(
@@ -296,81 +304,110 @@ export function OperationsPlacementsPage() {
             ) : null}
 
             {analytics ? (
-              <PlacementsOverviewKpiStrip kpis={analytics.kpis} />
+              <PlacementsOverviewKpiStrip
+                kpis={analytics.kpis}
+                selectedKpi={activeKpi}
+                onSelect={handleKpiSelect}
+              />
             ) : null}
 
-            {analytics ? (
-              <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
-                <PlacementsTrendChart
-                  data={analytics.trend}
-                  rangeLabel={analytics.range.label}
-                  isOverall={analyticsFilters.preset === "all"}
-                />
-                <PlacementsFunnel stages={analytics.funnel} />
-                <PlacementsByCategory items={analytics.byCategory} />
-                <PlacementsByLocation
-                  items={analytics.byLocation.states}
-                  isLoading={analyticsQuery.isFetching && !analytics}
-                  isError={analyticsQuery.isError}
-                  onRetry={() => void analyticsQuery.refetch()}
-                />
-                <PlacementsJoiningStatusDonut
-                  total={analytics.joiningStatus.total}
-                  segments={analytics.joiningStatus.segments}
-                />
-                <PlacementsTimeToJoin
-                  avgDays={analytics.timeToJoin.avgDays}
-                  trendPercent={analytics.timeToJoin.trendPercent}
-                  series={analytics.timeToJoin.series}
-                  preset={analyticsFilters.preset}
-                  onPresetChange={handlePresetChange}
-                />
-              </div>
-            ) : null}
-
-            <OperationsOverviewSplit
-              rail={
-                <>
-                  {analytics ? (
-                    <PlacementsKeyInsights insights={analytics.insights} />
-                  ) : null}
-                  <PlacementsQuickActions
-                    onExport={handleExport}
-                    isExporting={exportMutation.isPending}
-                  />
-                  <PlacementsAskAsliCard />
-                </>
-              }
-            >
-              <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
-                <PlacementsTableSection
-                  items={listData?.items ?? []}
-                  totalItems={listData?.pagination.total ?? 0}
-                  tabCounts={analytics?.tabs ?? EMPTY_TAB_COUNTS}
-                  activeTab={activeTab}
-                  onTabChange={handleTabChange}
-                  search={search}
-                  onSearchChange={handleSearchChange}
-                  isLoading={listQuery.isFetching && !listData}
-                  isError={listQuery.isError}
-                  errorMessage={listErrorMessage}
-                  onRetry={() => void listQuery.refetch()}
-                />
-
-                {listData?.pagination ? (
-                  <div className="border-t border-border-subtle p-3 xl:p-2.5">
-                    <JobsPaginationBar
-                      pagination={listData.pagination}
-                      onPageChange={setPage}
-                      onLimitChange={(newLimit: number) => {
-                        setLimit(newLimit);
-                        setPage(1);
-                      }}
+            {activeKpi ? (
+              <PlacementsKpiDrilldown
+                key={activeKpi}
+                kpi={activeKpi}
+                cardCount={
+                  analytics?.kpis[PLACEMENT_OVERVIEW_KPI_VIEWS[activeKpi].countKey]
+                }
+                cardCaption={
+                  analytics?.kpis[PLACEMENT_OVERVIEW_KPI_VIEWS[activeKpi].captionKey]
+                }
+                analyticsFilters={analyticsFilters}
+                onBack={() => handleKpiSelect(null)}
+                getErrorMessage={(error) =>
+                  queryErrorMessage(
+                    error,
+                    "Failed to load placements. Please try again.",
+                  )
+                }
+              />
+            ) : (
+              <>
+                {analytics ? (
+                  <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    <PlacementsTrendChart
+                      data={analytics.trend}
+                      rangeLabel={analytics.range.label}
+                      isOverall={analyticsFilters.preset === "all"}
+                    />
+                    <PlacementsFunnel stages={analytics.funnel} />
+                    <PlacementsByCategory items={analytics.byCategory} />
+                    <PlacementsByLocation
+                      items={analytics.byLocation.states}
+                      isLoading={analyticsQuery.isFetching && !analytics}
+                      isError={analyticsQuery.isError}
+                      onRetry={() => void analyticsQuery.refetch()}
+                    />
+                    <PlacementsJoiningStatusDonut
+                      total={analytics.joiningStatus.total}
+                      segments={analytics.joiningStatus.segments}
+                    />
+                    <PlacementsTimeToJoin
+                      avgDays={analytics.timeToJoin.avgDays}
+                      trendPercent={analytics.timeToJoin.trendPercent}
+                      series={analytics.timeToJoin.series}
+                      preset={analyticsFilters.preset}
+                      onPresetChange={handlePresetChange}
                     />
                   </div>
                 ) : null}
-              </div>
-            </OperationsOverviewSplit>
+
+                <OperationsOverviewSplit
+                  rail={
+                    <>
+                      {analytics ? (
+                        <PlacementsKeyInsights insights={analytics.insights} />
+                      ) : null}
+                      <PlacementsQuickActions
+                        onExport={handleExport}
+                        isExporting={exportMutation.isPending}
+                      />
+                      <PlacementsAskAsliCard />
+                    </>
+                  }
+                >
+                  <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
+                    <PlacementsTableSection
+                      items={listData?.items ?? []}
+                      totalItems={listData?.pagination.total ?? 0}
+                      statusTabs={{
+                        counts: analytics?.tabs ?? EMPTY_TAB_COUNTS,
+                        activeTab,
+                        onTabChange: handleTabChange,
+                      }}
+                      search={search}
+                      onSearchChange={handleSearchChange}
+                      isLoading={listQuery.isFetching && !listData}
+                      isError={listQuery.isError}
+                      errorMessage={listErrorMessage}
+                      onRetry={() => void listQuery.refetch()}
+                    />
+
+                    {listData?.pagination ? (
+                      <div className="border-t border-border-subtle p-3 xl:p-2.5">
+                        <JobsPaginationBar
+                          pagination={listData.pagination}
+                          onPageChange={setPage}
+                          onLimitChange={(newLimit: number) => {
+                            setLimit(newLimit);
+                            setPage(1);
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </OperationsOverviewSplit>
+              </>
+            )}
 
             {exportMutation.isError ? (
               <p className="text-xs text-danger" role="alert">

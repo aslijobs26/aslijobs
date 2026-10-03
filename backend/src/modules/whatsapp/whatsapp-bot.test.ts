@@ -27,6 +27,8 @@ import {
   selectVerifiedJobsForReply,
   toPublicJobsLookup,
   matchesRequestedRole,
+  parentCity,
+  placeCityAliases,
   understandLocally,
   voiceUnclearCopy,
 } from "./whatsapp-bot.logic.js";
@@ -1198,5 +1200,121 @@ describe("whatsapp fast path", () => {
     });
     assert.equal(plan.chatLlmCalls, 0);
     assert.equal(plan.translateCalls, 0);
+  });
+});
+
+describe("whatsapp job search — requested city is the source of truth", () => {
+  const resolve = (text: string, previous: { location: string; category: string } | null = null) =>
+    resolveTurnUnderstanding(text, understandLocally(text), previous);
+
+  const chennaiElectrician = {
+    jobTitle: "Electrician",
+    companyName: "Chennai Power Works",
+    cityName: "Chennai",
+    stateName: "Tamil Nadu",
+    jobId: "AJ-CHN-ELEC",
+    salaryLabel: "₹22,000",
+  };
+
+  it("extracts Chennai + Electrician from Roman Telugu, Telugu, English, Hindi and Tamil", () => {
+    for (const text of [
+      "Chennai lo yundha electrician job",
+      "Chennai lo electrician jobs unnaya?",
+      "Chennai electrician job kavali",
+      "Chennai lo electrician job undha?",
+      "Chennai lo electrician jobs kavali",
+      "చెన్నైలో ఎలక్ట్రిషియన్ ఉద్యోగాలు ఉన్నాయా?",
+      "Electrician jobs in Chennai",
+      "चेन्नई में इलेक्ट्रीशियन की नौकरी है?",
+      "சென்னையில் எலக்ட்ரீஷியன் வேலை இருக்கா?",
+    ]) {
+      const understood = resolve(text);
+      assert.equal(understood.intent, "JOB_SEARCH", text);
+      assert.equal(understood.location, "Chennai", text);
+      assert.equal(understood.category, "Electrician", text);
+      assert.equal(isConfidentLocalUnderstanding(understandLocally(text)), true, text);
+      assert.deepEqual(toPublicJobsLookup(understood), { search: "Electrician", city: "Chennai" });
+    }
+  });
+
+  it("normalizes city spellings and scripts to one canonical city", () => {
+    for (const text of ["Chennai", "chennai", " CHENNAI ", "Chennai lo", "Chennaiలో", "చెన్నై", "சென்னை", "சென்னையில்"]) {
+      assert.equal(understandLocally(`${text} electrician job`).location, "Chennai", text);
+    }
+    assert.deepEqual(placeCityAliases("Bangalore"), ["Bangalore", "bangalore", "bengaluru"]);
+    assert.ok(placeCityAliases("Visakhapatnam").includes("vizag"));
+  });
+
+  it("keeps other city and role combinations independent", () => {
+    assert.deepEqual(
+      [resolve("Hyderabad lo electrician jobs kavali")].map((u) => [u.location, u.category])[0],
+      ["Hyderabad", "Electrician"],
+    );
+    assert.deepEqual(toPublicJobsLookup(resolve("Hyderabad lo delivery jobs")), { search: "Delivery", city: "Hyderabad" });
+    assert.deepEqual(toPublicJobsLookup(resolve("Chennai lo delivery jobs")), { search: "Delivery", city: "Chennai" });
+    assert.deepEqual(toPublicJobsLookup(resolve("Bangalore lo electrician jobs")), { search: "Electrician", city: "Bangalore" });
+    assert.deepEqual(toPublicJobsLookup(resolve("Vizag lo electrician jobs")), { search: "Electrician", city: "Visakhapatnam" });
+  });
+
+  it("lets an explicit new city override the previous city while keeping the role", () => {
+    const a = resolve("Chennai lo unnaya?", { location: "Hyderabad", category: "Electrician" });
+    assert.equal(a.location, "Chennai");
+    assert.equal(a.category, "Electrician");
+    assert.equal(a.openSearch, false);
+
+    const b = resolve("Chennai lo?", { location: "", category: "Electrician" });
+    assert.equal(b.location, "Chennai");
+    assert.equal(b.category, "Electrician");
+
+    const c = resolve("Coimbatore lo?", { location: "Chennai", category: "Electrician" });
+    assert.equal(c.location, "Coimbatore");
+    assert.equal(c.category, "Electrician");
+  });
+
+  it("uses the message city over a Hyderabad profile/previous city", () => {
+    const understood = resolve("Chennai lo electrician job kavali", { location: "Hyderabad", category: "" });
+    assert.equal(understood.location, "Chennai");
+    assert.notEqual(toPublicJobsLookup(understood).city, "Hyderabad");
+  });
+
+  it("falls back to conversation context only when no city is given", () => {
+    const understood = resolve("Electrician jobs", { location: "Hyderabad", category: "" });
+    assert.equal(understood.location, "Hyderabad");
+    assert.equal(understood.category, "Electrician");
+  });
+
+  it("never widens an explicit city search to Hyderabad", () => {
+    assert.equal(parentCity("Chennai"), "");
+    assert.equal(parentCity("Bhimavaram"), "");
+    assert.equal(parentCity("Coimbatore"), "");
+    assert.equal(parentCity("Madhapur"), "Hyderabad");
+  });
+
+  it("renders the Chennai jobs that exist and a Chennai-only empty reply otherwise", () => {
+    const found = renderJobSearchReply({
+      language: "te",
+      location: "Chennai",
+      jobTitle: "Electrician",
+      jobs: [chennaiElectrician],
+      total: 1,
+      frontendOrigin: "https://aslijobs.com",
+    });
+    assert.match(found, /చెన్నైలో 1/);
+    assert.match(found, /AJ-CHN-ELEC/);
+    assert.doesNotMatch(found, /హైదరాబాద్|Hyderabad/);
+
+    for (const language of ["te", "hi", "en", "ta", "kn", "ml"] as const) {
+      const empty = renderJobSearchReply({ language, location: "Chennai", jobTitle: "Electrician", jobs: [] });
+      assert.doesNotMatch(empty, /హైదరాబాద్|हैदराबाद|Hyderabad|ஹைதராபாத்|ಹೈದರಾಬಾದ್|ഹൈദരാബാദ്/, language);
+      assert.match(empty, /Chennai|చెన్నై|चेन्नई/, language);
+    }
+  });
+
+  it("verifies roles on source titles, including Telugu spelling variants", () => {
+    assert.equal(matchesRequestedRole("Electrician", "Electrician"), true);
+    assert.equal(matchesRequestedRole("ఎలక్ట్రిషియన్", "Electrician"), true);
+    assert.equal(selectVerifiedJobsForReply([chennaiElectrician], "Electrician", 1).jobs.length, 1);
+    const service = readFileSync(new URL("./whatsapp-bot.service.ts", import.meta.url), "utf8");
+    assert.doesNotMatch(service, /loadJobs\([^)]*understanding\.language/);
   });
 });

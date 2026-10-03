@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  EMPLOYER_OVERVIEW_KPIS,
+  EMPLOYERS_ANALYTICS_PRESETS,
+} from "./operations-employers-analytics.js";
 
 const isoDateStringSchema = z
   .string()
@@ -37,6 +41,14 @@ export const listOperationsEmployersQuerySchema = z.object({
     .default("today"),
   analyticsFrom: isoDateStringSchema.optional().default(""),
   analyticsTo: isoDateStringSchema.optional().default(""),
+  /** Overview KPI card drill-down; scoped by the overview analytics range. */
+  kpi: z
+    .enum(["", ...EMPLOYER_OVERVIEW_KPIS])
+    .optional()
+    .default(""),
+  kpiPreset: z.enum(EMPLOYERS_ANALYTICS_PRESETS).optional().default("all"),
+  kpiDateFrom: isoDateStringSchema.optional().default(""),
+  kpiDateTo: isoDateStringSchema.optional().default(""),
 });
 
 export type ListOperationsEmployersQuery = z.infer<

@@ -1,6 +1,6 @@
 import { cn } from "../../../utils/cn";
 
-function SkeletonBone({ className }: { className?: string }) {
+export function SkeletonBone({ className }: { className?: string }) {
   return (
     <span
       aria-hidden="true"

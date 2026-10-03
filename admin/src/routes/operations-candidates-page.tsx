@@ -7,6 +7,7 @@ import {
 } from "../components/operations/candidates/CandidatesFiltersBar";
 import { CandidatesPageSkeleton } from "../components/operations/candidates/CandidatesPageSkeleton";
 import { CandidatesTableSection } from "../components/operations/candidates/CandidatesTableSection";
+import { CandidatesKpiDrilldown } from "../components/operations/candidates/overview/CandidatesKpiDrilldown";
 import { CandidatesByExperience } from "../components/operations/candidates/overview/CandidatesByExperience";
 import { CandidatesByLanguage } from "../components/operations/candidates/overview/CandidatesByLanguage";
 import { CandidatesByLocation } from "../components/operations/candidates/overview/CandidatesByLocation";
@@ -21,12 +22,17 @@ import { CandidatesTopCategories } from "../components/operations/candidates/ove
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
-import { OPERATIONS_CANDIDATE_GENDERS, OPERATIONS_CANDIDATE_GENDER_LABELS } from "../constants/operations-candidates";
+import {
+  CANDIDATE_OVERVIEW_KPI_VIEWS,
+  EMPTY_CANDIDATES_FILTERS,
+  EMPTY_CANDIDATES_FILTER_OPTIONS,
+} from "../constants/operations-candidates-overview";
 import {
   useExportOperationsCandidates,
   useOperationsCandidates,
   useOperationsCandidatesAnalytics,
 } from "../hooks/use-operations-candidates";
+import { useOperationsKpiView } from "../hooks/use-operations-kpi-view";
 import type {
   OperationsCandidatesAnalyticsParams,
   OperationsCandidatesAnalyticsPreset,
@@ -34,17 +40,6 @@ import type {
   OperationsCandidatesOverviewTab,
 } from "../types/operations-candidates";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
-
-const EMPTY_FILTERS: CandidatesFiltersState = {
-  search: "",
-  location: "",
-  experience: "",
-  gender: "",
-  preferredRole: "",
-  profileStatus: "",
-  applicationPresence: "",
-  registrationPreset: "",
-};
 
 const EMPTY_TABS = {
   all: 0,
@@ -126,8 +121,11 @@ export function OperationsCandidatesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [activeKpi, handleKpiSelect] = useOperationsKpiView(
+    CANDIDATE_OVERVIEW_KPI_VIEWS,
+  );
   const [filters, setFilters] = useState<CandidatesFiltersState>(() => ({
-    ...EMPTY_FILTERS,
+    ...EMPTY_CANDIDATES_FILTERS,
     search: searchParams.get("search")?.trim() ?? "",
   }));
   const [activeTab, setActiveTab] = useState<OperationsCandidatesOverviewTab>(
@@ -207,13 +205,16 @@ export function OperationsCandidatesPage() {
   );
 
   const analyticsQuery = useOperationsCandidatesAnalytics(analyticsFilters);
-  const candidatesQuery = useOperationsCandidates(listParams);
+  const candidatesQuery = useOperationsCandidates(listParams, {
+    enabled: activeKpi == null,
+  });
   const exportMutation = useExportOperationsCandidates();
   const analytics = analyticsQuery.data;
   const listData = candidatesQuery.data;
   const isInitialLoading =
-    (candidatesQuery.isLoading && !listData) ||
-    (analyticsQuery.isLoading && !analytics && !listData);
+    !analytics &&
+    !listData &&
+    (candidatesQuery.isLoading || analyticsQuery.isLoading);
 
   const syncAnalytics = (next: OperationsCandidatesAnalyticsParams) => {
     setAnalyticsFilters(next);
@@ -348,97 +349,112 @@ export function OperationsCandidatesPage() {
             ) : null}
 
             {analytics ? (
-              <>
-                <CandidatesOverviewKpiStrip kpis={analytics.kpis} />
-                <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
-                  <CandidatesRegistrationTrendChart
-                    data={analytics.registrationTrend}
-                    isOverall={analyticsFilters.preset === "all"}
-                  />
-                  <CandidatesProfileFunnel stages={analytics.onboardingFunnel} />
-                  <CandidatesByLanguage
-                    items={analytics.byLanguage}
-                    total={analytics.languageTotal}
-                  />
-                  <CandidatesByLocation
-                    items={analytics.byLocation}
-                    cities={analytics.byCity ?? []}
-                  />
-                  <CandidatesByExperience items={analytics.byExperience} />
-                  <CandidatesTopCategories items={analytics.topJobCategories} />
-                </div>
-              </>
+              <CandidatesOverviewKpiStrip
+                kpis={analytics.kpis}
+                selectedKpi={activeKpi}
+                onSelect={handleKpiSelect}
+              />
             ) : null}
 
-            <OperationsOverviewSplit
-              rail={
-                <>
-                  <CandidatesQuickActions
-                    onExport={handleExport}
-                    isExporting={exportMutation.isPending}
-                  />
-                  <CandidatesAskAsliCard />
-                </>
-              }
-            >
-              <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
-                <CandidatesTableSection
-                  applications={listData?.applications ?? []}
-                  totalCandidates={listData?.pagination.total ?? 0}
-                  isLoading={candidatesQuery.isFetching && !listData}
-                  isError={candidatesQuery.isError}
-                  errorMessage={listError}
-                  onRetry={() => void candidatesQuery.refetch()}
-                  toolbar={
-                    <div className="flex min-w-0 flex-col gap-2.5 max-sm:gap-2 xl:gap-1.5">
-                      <CandidatesOverviewTabs
-                        activeTab={activeTab}
-                        counts={analytics?.tabs ?? EMPTY_TABS}
-                        onChange={handleTabChange}
-                      />
-                      <CandidatesFiltersBar
-                        filters={filters}
-                        filterOptions={
-                          listData?.filterOptions ?? {
-                            jobs: [],
-                            employers: [],
-                            locations: [],
-                            experienceLevels: [],
-                            genders: OPERATIONS_CANDIDATE_GENDERS.map((value) => ({
-                              value,
-                              label: OPERATIONS_CANDIDATE_GENDER_LABELS[value],
-                            })),
-                            preferredRoles: [],
-                            profileStatuses: [],
-                          }
-                        }
-                        onChange={handleFiltersChange}
-                        onClear={() => {
-                          setFilters(EMPTY_FILTERS);
-                          setPage(1);
-                          const params = new URLSearchParams(searchParams);
-                          params.delete("search");
-                          setSearchParams(params, { replace: true });
-                        }}
-                      />
-                    </div>
-                  }
-                />
-                {listData?.pagination ? (
-                  <div className="border-t border-border-subtle p-3 max-sm:p-2.5 xl:p-2.5">
-                    <JobsPaginationBar
-                      pagination={listData.pagination}
-                      ariaLabel="Jobseekers pagination"
-                      onPageChange={setPage}
-                      onLimitChange={(next) => {
-                        setLimit(next);
-                        setPage(1);
-                      }}
+            {activeKpi ? (
+              <CandidatesKpiDrilldown
+                key={activeKpi}
+                kpi={activeKpi}
+                cardCount={
+                  analytics?.kpis[CANDIDATE_OVERVIEW_KPI_VIEWS[activeKpi].valueKey]
+                }
+                cardCaption={
+                  analytics?.kpis[CANDIDATE_OVERVIEW_KPI_VIEWS[activeKpi].captionKey]
+                }
+                analyticsFilters={analyticsFilters}
+                onBack={() => handleKpiSelect(null)}
+                getErrorMessage={(error) =>
+                  errorMessage(error, "Failed to load jobseekers.")
+                }
+              />
+            ) : (
+              <>
+                {analytics ? (
+                  <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    <CandidatesRegistrationTrendChart
+                      data={analytics.registrationTrend}
+                      isOverall={analyticsFilters.preset === "all"}
                     />
+                    <CandidatesProfileFunnel stages={analytics.onboardingFunnel} />
+                    <CandidatesByLanguage
+                      items={analytics.byLanguage}
+                      total={analytics.languageTotal}
+                    />
+                    <CandidatesByLocation
+                      items={analytics.byLocation}
+                      cities={analytics.byCity ?? []}
+                    />
+                    <CandidatesByExperience items={analytics.byExperience} />
+                    <CandidatesTopCategories items={analytics.topJobCategories} />
                   </div>
                 ) : null}
-              </div>
-            </OperationsOverviewSplit>
+
+                <OperationsOverviewSplit
+                  rail={
+                    <>
+                      <CandidatesQuickActions
+                        onExport={handleExport}
+                        isExporting={exportMutation.isPending}
+                      />
+                      <CandidatesAskAsliCard />
+                    </>
+                  }
+                >
+                  <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
+                    <CandidatesTableSection
+                      applications={listData?.applications ?? []}
+                      totalCandidates={listData?.pagination.total ?? 0}
+                      isLoading={candidatesQuery.isFetching && !listData}
+                      isError={candidatesQuery.isError}
+                      errorMessage={listError}
+                      onRetry={() => void candidatesQuery.refetch()}
+                      toolbar={
+                        <div className="flex min-w-0 flex-col gap-2.5 max-sm:gap-2 xl:gap-1.5">
+                          <CandidatesOverviewTabs
+                            activeTab={activeTab}
+                            counts={analytics?.tabs ?? EMPTY_TABS}
+                            onChange={handleTabChange}
+                          />
+                          <CandidatesFiltersBar
+                            filters={filters}
+                            filterOptions={
+                              listData?.filterOptions ??
+                              EMPTY_CANDIDATES_FILTER_OPTIONS
+                            }
+                            onChange={handleFiltersChange}
+                            onClear={() => {
+                              setFilters(EMPTY_CANDIDATES_FILTERS);
+                              setPage(1);
+                              const params = new URLSearchParams(searchParams);
+                              params.delete("search");
+                              setSearchParams(params, { replace: true });
+                            }}
+                          />
+                        </div>
+                      }
+                    />
+                    {listData?.pagination ? (
+                      <div className="border-t border-border-subtle p-3 max-sm:p-2.5 xl:p-2.5">
+                        <JobsPaginationBar
+                          pagination={listData.pagination}
+                          ariaLabel="Jobseekers pagination"
+                          onPageChange={setPage}
+                          onLimitChange={(next) => {
+                            setLimit(next);
+                            setPage(1);
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </OperationsOverviewSplit>
+              </>
+            )}
           </>
         )}
       </div>

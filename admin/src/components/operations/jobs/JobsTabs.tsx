@@ -8,7 +8,11 @@ interface JobsTabsProps {
   onChange: (tab: OperationsJobTab) => void;
 }
 
-const TABS: { id: OperationsJobTab; label: string; shortLabel: string }[] = [
+const TABS: {
+  id: keyof OperationsJobsTabCounts & OperationsJobTab;
+  label: string;
+  shortLabel: string;
+}[] = [
   { id: "all", label: "All Status", shortLabel: "All" },
   { id: "pending_approval", label: "Pending Approval", shortLabel: "Pending" },
   { id: "live", label: "Live", shortLabel: "Live" },

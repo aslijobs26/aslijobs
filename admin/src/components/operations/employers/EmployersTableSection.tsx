@@ -14,6 +14,7 @@ import {
   verificationStatusBadgeVariant,
 } from "./employers-format";
 import { EmployersMobileCard } from "./EmployersMobileCard";
+import { SkeletonBone } from "./EmployersPageSkeleton";
 import { EmployersRowActions } from "./EmployersRowActions";
 
 interface EmployersTableSectionProps {
@@ -28,7 +29,11 @@ interface EmployersTableSectionProps {
   onReject?: (employer: OperationsEmployerListItem) => void;
   onToggleStatus?: (employer: OperationsEmployerListItem) => void;
   toolbar?: ReactNode;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
+
+const SKELETON_ROW_COUNT = 5;
 
 function TableMessage({
   children,
@@ -61,13 +66,13 @@ export function EmployersTableSection({
   onReject,
   onToggleStatus,
   toolbar,
+  emptyTitle = "No employers found",
+  emptyDescription = "Try adjusting your search or tab filters.",
 }: EmployersTableSectionProps) {
   const emptyMessage = (
     <div className="space-y-1">
-      <p className="text-sm font-medium text-foreground xl:text-xs">No employers found</p>
-      <p className="text-xs text-muted xl:text-[11px]">
-        Try adjusting your search or tab filters.
-      </p>
+      <p className="text-sm font-medium text-foreground xl:text-xs">{emptyTitle}</p>
+      <p className="text-xs text-muted xl:text-[11px]">{emptyDescription}</p>
     </div>
   );
 
@@ -102,10 +107,15 @@ export function EmployersTableSection({
         </div>
       </div>
 
-      <ul className="flex flex-col gap-2.5 p-2.5 max-sm:gap-2 max-sm:p-2 sm:hidden">
+      <ul
+        className="flex flex-col gap-2.5 p-2.5 max-sm:gap-2 max-sm:p-2 sm:hidden"
+        aria-busy={isLoading}
+      >
         {isLoading ? (
-          <li className="px-2 py-10 text-center text-xs text-muted">
-            Loading employers…
+          <li role="status" aria-label="Loading employers" className="space-y-2">
+            {Array.from({ length: 3 }, (_, index) => (
+              <SkeletonBone key={index} className="h-24 w-full rounded-xl" />
+            ))}
           </li>
         ) : null}
         {!isLoading && isError ? (
@@ -157,12 +167,23 @@ export function EmployersTableSection({
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-subtle">
-            {isLoading ? (
-              <TableMessage>
-                <span className="text-xs text-muted xl:text-[11px]">Loading employers…</span>
-              </TableMessage>
-            ) : null}
+          <tbody className="divide-y divide-border-subtle" aria-busy={isLoading}>
+            {isLoading
+              ? Array.from({ length: SKELETON_ROW_COUNT }, (_, rowIndex) => (
+                  <tr key={rowIndex} aria-hidden="true">
+                    {Array.from({ length: 8 }, (_, cellIndex) => (
+                      <td
+                        key={cellIndex}
+                        className="px-3 py-3 first:pl-4 last:pr-4 xl:px-2.5 xl:py-2"
+                      >
+                        <SkeletonBone
+                          className={cellIndex === 0 ? "h-8 w-40" : "h-3.5 w-16"}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              : null}
             {!isLoading && isError ? (
               <TableMessage>{errorBlock}</TableMessage>
             ) : null}

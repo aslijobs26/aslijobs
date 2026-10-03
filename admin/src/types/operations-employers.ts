@@ -121,7 +121,19 @@ export interface OperationsEmployersListParams {
   analyticsPreset?: OperationsEmployerDatePreset;
   analyticsFrom?: string;
   analyticsTo?: string;
+  kpi?: OperationsEmployerOverviewKpi;
+  kpiPreset?: OperationsEmployersAnalyticsPreset;
+  kpiDateFrom?: string;
+  kpiDateTo?: string;
 }
+
+/** Overview KPI card whose employers are shown in the drill-down list. */
+export type OperationsEmployerOverviewKpi =
+  | "total"
+  | "new"
+  | "verified"
+  | "active"
+  | "hiring";
 
 export interface OperationsEmployerDocumentItem {
   id: string;

@@ -308,6 +308,74 @@ export function resolveCandidatesAnalyticsDateRange(input: {
   };
 }
 
+export const CANDIDATE_OVERVIEW_KPIS = [
+  "total",
+  "new",
+  "complete",
+  "verified",
+  "active",
+] as const;
+
+export type CandidateOverviewKpi = (typeof CANDIDATE_OVERVIEW_KPIS)[number];
+
+export interface CandidateOverviewKpiWindow {
+  isOverall: boolean;
+  from: Date;
+  to: Date;
+  last30From: Date;
+  now: Date;
+}
+
+export function resolveCandidateOverviewKpiWindow(
+  range: Pick<OperationsCandidatesAnalyticsRange, "preset" | "from" | "to">,
+  now: Date,
+): CandidateOverviewKpiWindow {
+  const last30From = startOfLocalDay(now);
+  last30From.setDate(last30From.getDate() - 29);
+  return {
+    isOverall: range.preset === "all",
+    from: new Date(range.from),
+    to: new Date(range.to),
+    last30From,
+    now,
+  };
+}
+
+/**
+ * Jobseeker filter behind each overview KPI card. Used for both the card count
+ * and the drill-down list so the two always agree.
+ */
+export async function buildCandidateOverviewKpiFilter(
+  kpi: CandidateOverviewKpi,
+  window: CandidateOverviewKpiWindow,
+): Promise<Record<string, unknown>> {
+  const cohortFilter = window.isOverall
+    ? {}
+    : createdAtRangeFilter(window.from, window.to);
+
+  switch (kpi) {
+    case "total":
+      return window.isOverall ? {} : { createdAt: { $lte: window.to } };
+    case "new":
+      return window.isOverall
+        ? createdAtRangeFilter(window.last30From, endOfLocalDay(window.now))
+        : cohortFilter;
+    case "complete":
+      return { ...cohortFilter, registrationStatus: "COMPLETED" };
+    case "verified":
+      return { ...cohortFilter, isWhatsappVerified: true };
+    case "active": {
+      const ids = await ApplicationModel.distinct("jobSeekerId", {
+        appliedAt: {
+          $gte: window.isOverall ? window.last30From : window.from,
+          $lte: endOfLocalDay(window.now),
+        },
+      });
+      return { _id: { $in: ids.filter(Boolean) } };
+    }
+  }
+}
+
 function dateBucketExpression(
   field: "createdAt" | "updatedAt",
   granularity: "day" | "week" | "month",
@@ -467,7 +535,18 @@ export async function getOperationsCandidatesAnalytics(
   const previousCohortFilter = isOverall
     ? { _id: { $exists: false } }
     : createdAtRangeFilter(previousFrom, previousTo);
-  const networkAsOfFilter = isOverall ? {} : { createdAt: { $lte: to } };
+  const kpiWindow = resolveCandidateOverviewKpiWindow(resolved, now);
+  const [
+    totalKpiFilter,
+    newKpiFilter,
+    completeKpiFilter,
+    verifiedKpiFilter,
+    activeKpiFilter,
+  ] = await Promise.all(
+    CANDIDATE_OVERVIEW_KPIS.map((kpi) =>
+      buildCandidateOverviewKpiFilter(kpi, kpiWindow),
+    ),
+  );
 
   const [
     totalJobseekers,
@@ -476,7 +555,7 @@ export async function getOperationsCandidatesAnalytics(
     profileCompleted,
     previousProfileCompleted,
     verifiedJobseekers,
-    activeJobseekerIds,
+    activeJobseekers,
     previousActiveIds,
     funnelFacetRows,
     completedSeriesRows,
@@ -490,12 +569,8 @@ export async function getOperationsCandidatesAnalytics(
     tabIncomplete,
     tabVerificationPending,
   ] = await Promise.all([
-    JobSeekerModel.countDocuments(networkAsOfFilter),
-    JobSeekerModel.countDocuments(
-      isOverall
-        ? createdAtRangeFilter(last30Start, endOfLocalDay(now))
-        : cohortFilter,
-    ),
+    JobSeekerModel.countDocuments(totalKpiFilter),
+    JobSeekerModel.countDocuments(newKpiFilter),
     JobSeekerModel.countDocuments(
       isOverall
         ? createdAtRangeFilter(
@@ -504,24 +579,13 @@ export async function getOperationsCandidatesAnalytics(
           )
         : previousCohortFilter,
     ),
-    JobSeekerModel.countDocuments({
-      ...cohortFilter,
-      registrationStatus: "COMPLETED",
-    }),
+    JobSeekerModel.countDocuments(completeKpiFilter),
     JobSeekerModel.countDocuments({
       ...previousCohortFilter,
       registrationStatus: "COMPLETED",
     }),
-    JobSeekerModel.countDocuments({
-      ...cohortFilter,
-      isWhatsappVerified: true,
-    }),
-    ApplicationModel.distinct("jobSeekerId", {
-      appliedAt: {
-        $gte: isOverall ? last30Start : from,
-        $lte: endOfLocalDay(now),
-      },
-    }),
+    JobSeekerModel.countDocuments(verifiedKpiFilter),
+    JobSeekerModel.countDocuments(activeKpiFilter),
     ApplicationModel.distinct("jobSeekerId", {
       appliedAt: isOverall
         ? {
@@ -633,7 +697,6 @@ export async function getOperationsCandidatesAnalytics(
   const skillsPreferencesCount = funnelCount(funnelFacet.preferences);
   const profileCompleteFunnelCount = funnelCount(funnelFacet.complete);
 
-  const activeJobseekers = activeJobseekerIds.filter(Boolean).length;
   const previousActive = previousActiveIds.filter(Boolean).length;
   const funnelBase = Math.max(funnelBaseCount, 1);
   const profileCompletedPercent = percentOf(

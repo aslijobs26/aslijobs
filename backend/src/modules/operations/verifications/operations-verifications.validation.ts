@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { EMPLOYER_DOCUMENT_TYPES } from "../../../constants/employer.constants.js";
 import { VERIFICATIONS_ANALYTICS_PRESETS } from "./operations-verifications.types.js";
+import { VERIFICATION_OVERVIEW_KPIS } from "./operations-verifications-analytics.js";
 
 const isoDateStringSchema = z
   .string()
@@ -56,6 +57,14 @@ export const listOperationsVerificationsQuerySchema = z.object({
     .default("submittedAt"),
   sortDirection: z.enum(["asc", "desc"]).optional().default("desc"),
   employerType: z.string().trim().max(50).optional().default(""),
+  /** Overview KPI card drill-down; scoped by the overview analytics range. */
+  kpi: z
+    .enum(["", ...VERIFICATION_OVERVIEW_KPIS])
+    .optional()
+    .default(""),
+  kpiPreset: z.enum(VERIFICATIONS_ANALYTICS_PRESETS).optional().default("all"),
+  kpiDateFrom: isoDateStringSchema.optional().default(""),
+  kpiDateTo: isoDateStringSchema.optional().default(""),
 });
 
 export type ListOperationsVerificationsQuery = z.infer<

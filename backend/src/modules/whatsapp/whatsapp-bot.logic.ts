@@ -72,7 +72,7 @@ const KANNADA_SCRIPT = /[\u0C80-\u0CFF]/;
 const MALAYALAM_SCRIPT = /[\u0D00-\u0D7F]/;
 
 const ROMAN_TELUGU =
-  /\b(undha|unda|vundha|vunda|unnaya|unnayi|unnai|kavali|kaavali|cheppu|cheppandi|chudandi|chupinchu|naaku|nenu|enni|vachayi|chesina|pani)\b|\blo\b/i;
+  /\b(undha|unda|vundha|vunda|yundha|yunda|unnaya|unnayi|unnai|kavali|kaavali|cheppu|cheppandi|chudandi|chupinchu|naaku|nenu|enni|vachayi|chesina|pani)\b|\blo\b/i;
 const ROMAN_HINDI = /\b(kya|hai|hain|mujhe|chahiye|dikhao|naukri|mereko|mein)\b/i;
 const ROMAN_TAMIL = /\b(venum|venam|irukka|irukku|enakku|velai)\b/i;
 const ROMAN_KANNADA = /\b(beku|ideya|nanage|kelasa)\b/i;
@@ -84,21 +84,43 @@ const PLACES: Array<{ canonical: string; forms: string[] }> = [
   { canonical: "Kukatpally", forms: ["kukatpally", "kukatpalli", "కూకట్‌పల్లి", "కూకట్పల్లి", "కూకట్‌పల్లి"] },
   { canonical: "Hyderabad", forms: ["hyderabad", "హైదరాబాద్", "హైదరాబాదు", "हैदराबाद", "ஹைதராபாத்", "ஹைதராபாத்தில்", "ಹೈದರಾಬಾದ್", "ಹೈದರಾಬಾದ್‌ನಲ್ಲಿ", "ഹൈദരാബാദ്", "ഹൈദരാബാദിൽ"] },
   { canonical: "Secunderabad", forms: ["secunderabad", "సికింద్రాబాద్", "सिकंदराबाद"] },
-  { canonical: "Bangalore", forms: ["bangalore", "bengaluru", "బెంగళూరు", "बैंगलोर"] },
-  { canonical: "Chennai", forms: ["chennai", "చెన్నై", "चेन्नई"] },
-  { canonical: "Mumbai", forms: ["mumbai", "ముంబై", "मुंबई"] },
-  { canonical: "Delhi", forms: ["delhi", "ఢిల్లీ", "दिल्ली"] },
+  { canonical: "Bangalore", forms: ["bangalore", "bengaluru", "బెంగళూరు", "बैंगलोर", "बेंगलुरु", "பெங்களூ", "ಬೆಂಗಳೂರು", "ബെംഗളൂരു", "ബാംഗ്ലൂർ"] },
+  { canonical: "Chennai", forms: ["chennai", "చెన్నై", "चेन्नई", "சென்னை", "ಚೆನ್ನೈ", "ചെന്നൈ"] },
+  { canonical: "Coimbatore", forms: ["coimbatore", "కోయంబత్తూరు", "कोयंबटूर", "கோயம்புத்தூர்", "கோவை", "ಕೊಯಮತ್ತೂರು", "കോയമ്പത്തൂർ"] },
+  { canonical: "Madurai", forms: ["madurai", "మదురై", "मदुरै", "மதுரை"] },
+  { canonical: "Mumbai", forms: ["mumbai", "ముంబై", "मुंबई", "மும்பை", "ಮುಂಬೈ", "മുംബൈ"] },
+  { canonical: "Delhi", forms: ["delhi", "ఢిల్లీ", "दिल्ली", "டெல்லி", "ದೆಹಲಿ", "ഡൽഹി"] },
   { canonical: "Pune", forms: ["pune", "పూణె", "पुणे"] },
-  { canonical: "Vijayawada", forms: ["vijayawada", "విజయవాడ"] },
-  { canonical: "Visakhapatnam", forms: ["visakhapatnam", "vizag", "విశాఖపట్నం"] },
+  { canonical: "Kochi", forms: ["kochi", "cochin", "కొచ్చి", "कोच्चि", "கொச்சி", "ಕೊಚ್ಚಿ", "കൊച്ചി"] },
+  { canonical: "Mysore", forms: ["mysore", "mysuru", "మైసూరు", "मैसूर", "ಮೈಸೂರು"] },
+  { canonical: "Vijayawada", forms: ["vijayawada", "విజయవాడ", "विजयवाड़ा"] },
+  { canonical: "Visakhapatnam", forms: ["visakhapatnam", "vizag", "vishakapatnam", "విశాఖపట్నం", "వైజాగ్", "विशाखापत्तनम"] },
   { canonical: "Warangal", forms: ["warangal", "వరంగల్"] },
+  { canonical: "Guntur", forms: ["guntur", "గుంటూరు"] },
+  { canonical: "Tirupati", forms: ["tirupati", "tirupathi", "తిరుపతి", "तिरुपति"] },
+  { canonical: "Nellore", forms: ["nellore", "నెల్లూరు"] },
+  { canonical: "Kakinada", forms: ["kakinada", "కాకినాడ"] },
+  { canonical: "Rajahmundry", forms: ["rajahmundry", "rajamundry", "rajamahendravaram", "రాజమండ్రి", "రాజమహేంద్రవరం"] },
+  { canonical: "Bhimavaram", forms: ["bhimavaram", "భీమవరం"] },
+  { canonical: "Tadepalligudem", forms: ["tadepalligudem", "tadepallegudem", "తాడేపల్లిగూడెం"] },
+  { canonical: "Eluru", forms: ["eluru", "ఏలూరు"] },
+  { canonical: "Karimnagar", forms: ["karimnagar", "కరీంనగర్"] },
+  { canonical: "Nizamabad", forms: ["nizamabad", "నిజామాబాద్"] },
+  { canonical: "Khammam", forms: ["khammam", "ఖమ్మం"] },
 ];
+
+/** Neighbourhoods searched again at city level when they have no results. */
+const PLACE_PARENT_CITY: Record<string, string> = {
+  Madhapur: "Hyderabad",
+  Gachibowli: "Hyderabad",
+  Kukatpally: "Hyderabad",
+};
 
 const ROLES: Array<{ canonical: string; forms: string[] }> = [
   { canonical: "Driver", forms: ["driver", "డ్రైవర్", "డ్రైవరు", "ड्राइवर", "டிரைவர்", "ಡ್ರೈವರ್", "ഡ്രൈവർ"] },
   { canonical: "Delivery", forms: ["delivery", "డెలివరీ", "డెలివరి", "डिलीवरी"] },
   { canonical: "Watchman", forms: ["watchman", "security", "వాచ్‌మన్", "వాచ్మన్", "वॉचमैन"] },
-  { canonical: "Electrician", forms: ["electrician", "electrical", "ఎలక్ట్రీషియన్", "इलेक्ट्रीशियन", "எலக்ட்ரீஷியன்"] },
+  { canonical: "Electrician", forms: ["electrician", "electrical", "ఎలక్ట్రీషియన్", "ఎలక్ట్రిషియన్", "ఎలెక్ట్రీషియన్", "ఎలెక్ట్రిషియన్", "इलेक्ट्रीशियन", "इलेक्ट्रिशियन", "बिजली मिस्त्री", "எலக்ட்ரீஷியன்", "எலக்ட்ரிஷியன்", "ಎಲೆಕ್ಟ್ರಿಷಿಯನ್", "ಎಲೆಕ್ಟ್ರೀಷಿಯನ್", "ഇലക്ട്രീഷ്യൻ", "ഇലക്ട്രിഷ്യൻ"] },
   { canonical: "Carpenter", forms: ["carpenter", "కార్పెంటర్", "कारपेंटर"] },
   { canonical: "Plumber", forms: ["plumber", "ప్లంబర్", "प्लंबर"] },
   { canonical: "Cook", forms: ["cook", "వంటవాడు", "रसोइया"] },
@@ -128,6 +150,8 @@ const REQUEST_WORDS = [
   "unda",
   "vundha",
   "vunda",
+  "yundha",
+  "yunda",
   "unnaya",
   "unnayi",
   "kavali",
@@ -150,12 +174,17 @@ const TE_PLACE: Record<string, string> = {
   Kukatpally: "కూకట్‌పల్లి",
   Hyderabad: "హైదరాబాద్",
   Secunderabad: "సికింద్రాబాద్",
+  Chennai: "చెన్నై",
+  Bangalore: "బెంగళూరు",
+  Vijayawada: "విజయవాడ",
+  Visakhapatnam: "విశాఖపట్నం",
 };
 const HI_PLACE: Record<string, string> = {
   Madhapur: "माधापुर",
   Hyderabad: "हैदराबाद",
   Gachibowli: "गच्चीबोवली",
   Kukatpally: "कुकटपल्ली",
+  Chennai: "चेन्नई",
 };
 const TE_ROLE: Record<string, string> = {
   Driver: "డ్రైవర్",
@@ -171,19 +200,6 @@ const HI_ROLE: Record<string, string> = {
   Watchman: "वॉचमैन",
   Electrician: "इलेक्ट्रीशियन",
 };
-
-const CITY_LEVEL = new Set([
-  "Hyderabad",
-  "Secunderabad",
-  "Bangalore",
-  "Chennai",
-  "Mumbai",
-  "Delhi",
-  "Pune",
-  "Vijayawada",
-  "Visakhapatnam",
-  "Warangal",
-]);
 
 export function languageFromHint(hint: string | null | undefined): BotLanguage | null {
   const code = hint?.trim().toLowerCase() ?? "";
@@ -617,7 +633,10 @@ export function mergePending(
   }
 
   const location = next.location || previous.location;
-  const category = next.openSearch && next.location && !next.category ? "" : next.category || previous.category;
+  // "jobs in Chennai" is a broad search; "Chennai lo unnaya?" only changes the city.
+  const broadAsk =
+    next.openSearch && Boolean(next.location) && !next.category && (!text || mentionsJobWord(text));
+  const category = broadAsk ? "" : next.category || previous.category;
   return {
     ...next,
     location,
@@ -656,7 +675,7 @@ export function applyCurrentMessageSearchRules(
 
   const roleInMessage = extractRole(text);
   const locationInMessage = extractPlace(text);
-  const mentionsJob = includesAny(text, JOB_WORDS) || /\bjobs?\b/i.test(text);
+  const mentionsJob = mentionsJobWord(text);
   const mentionsRequest = includesAny(text, REQUEST_WORDS);
   const location = locationInMessage || understanding.location;
 
@@ -668,6 +687,10 @@ export function applyCurrentMessageSearchRules(
       jobQuery: roleInMessage,
       openSearch: false,
     };
+  }
+
+  if (!mentionsJob && mentionsRequest && locationInMessage && understanding.category) {
+    return { ...understanding, location, openSearch: false };
   }
 
   if ((mentionsJob || mentionsRequest) && location) {
@@ -710,9 +733,18 @@ export function toPublicJobsLookup(input: {
   };
 }
 
+/** Latin spellings of a place, so "Bangalore" also matches jobs stored as "bengaluru". */
+export function placeCityAliases(location: string): string[] {
+  const trimmed = location.trim();
+  if (!trimmed) return [];
+  const place = PLACES.find((item) => item.canonical === (extractPlace(trimmed) || trimmed));
+  const latin = (place?.forms ?? []).filter((form) => /^[a-z][a-z\s-]*$/i.test(form));
+  return [...new Set([trimmed, ...(place ? [place.canonical] : []), ...latin])];
+}
+
+/** City to retry for a neighbourhood search; never a different city than the one asked for. */
 export function parentCity(location: string): string {
-  if (!location || CITY_LEVEL.has(location)) return "";
-  return "Hyderabad";
+  return PLACE_PARENT_CITY[location] ?? "";
 }
 
 export function renderJobSearchReply(input: {
@@ -731,18 +763,18 @@ export function renderJobSearchReply(input: {
 
   if (count === 0) {
     if (input.language === "te") {
-      return `ప్రస్తుతం ${place || "ఈ ప్రాంతం"}లో ${role || ""} జాబ్స్ కనిపించలేదు. హైదరాబాద్‌లోని ఇతర ప్రాంతాల్లో ${role || "జాబ్స్"} వెతకాలా?`.replace(
+      return `ప్రస్తుతం ${place || "ఈ ప్రాంతం"}లో ${input.jobTitle ? role : ""} జాబ్స్ కనిపించలేదు. వేరే ప్రాంతం లేదా వేరే జాబ్ కావాలంటే చెప్పండి.`.replace(
         /\s+/g,
         " ",
       );
     }
     if (input.language === "hi") {
-      return `अभी ${place || "इस जगह"} में ${role || "नौकरी"} नहीं मिली। हैदराबाद के दूसरे इलाकों में देखें?`;
+      return `अभी ${place || "इस जगह"} में ${role || "नौकरी"} नहीं मिली। किसी दूसरी जगह या दूसरी नौकरी के लिए बताइए।`;
     }
     if (input.language === "ta" || input.language === "kn" || input.language === "ml") {
       return regionalLead(input.language, "empty", place, role, "");
     }
-    return `I could not find ${role || "jobs"}${place ? ` in ${place}` : ""}. Should I look in nearby Hyderabad areas?`;
+    return `I could not find ${role || "jobs"}${place ? ` in ${place}` : ""}. Tell me another location or job type to search.`;
   }
 
   const lines = input.jobs.slice(0, JOBS_FOR_AI_LIMIT).map((job, index) => {
@@ -1349,6 +1381,10 @@ function normalizePlace(value: string): string {
 
 function normalizeRole(value: string): string {
   return value ? extractRole(value) || value : "";
+}
+
+function mentionsJobWord(text: string): boolean {
+  return includesAny(text, JOB_WORDS) || /\bjobs?\b/i.test(text);
 }
 
 function includesAny(text: string, words: string[]): boolean {

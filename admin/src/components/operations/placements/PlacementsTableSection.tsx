@@ -21,9 +21,12 @@ import {
 interface PlacementsTableSectionProps {
   items: OperationsPlacementListItem[];
   totalItems: number;
-  tabCounts: OperationsPlacementsTabCounts;
-  activeTab: OperationsPlacementsTableTab;
-  onTabChange: (tab: OperationsPlacementsTableTab) => void;
+  /** Status tabs; omit to hide them when the status is fixed by the caller. */
+  statusTabs?: {
+    counts: OperationsPlacementsTabCounts;
+    activeTab: OperationsPlacementsTableTab;
+    onTabChange: (tab: OperationsPlacementsTableTab) => void;
+  };
   search: string;
   onSearchChange: (value: string) => void;
   isLoading: boolean;
@@ -33,6 +36,9 @@ interface PlacementsTableSectionProps {
   showViewAll?: boolean;
   hideInlineSearch?: boolean;
   toolbar?: ReactNode;
+  title?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
 const TABS: {
@@ -84,9 +90,7 @@ function dateLabel(iso: string | null): string {
 export function PlacementsTableSection({
   items,
   totalItems,
-  tabCounts,
-  activeTab,
-  onTabChange,
+  statusTabs,
   search,
   onSearchChange,
   isLoading,
@@ -96,15 +100,16 @@ export function PlacementsTableSection({
   showViewAll = true,
   hideInlineSearch = false,
   toolbar,
+  title = "Recent Placements",
+  emptyTitle = "No placements found",
+  emptyDescription = "Try adjusting your search or status filters.",
 }: PlacementsTableSectionProps) {
   const emptyMessage = (
     <div className="space-y-1">
       <p className="text-sm font-medium text-foreground xl:text-xs">
-        No placements found
+        {emptyTitle}
       </p>
-      <p className="text-xs text-muted xl:text-[11px]">
-        Try adjusting your search or status filters.
-      </p>
+      <p className="text-xs text-muted xl:text-[11px]">{emptyDescription}</p>
     </div>
   );
 
@@ -131,7 +136,7 @@ export function PlacementsTableSection({
         <div className="flex min-w-0 flex-col gap-2.5 xl:gap-2">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-foreground xl:text-[13px]">
-              Recent Placements{" "}
+              {title}{" "}
               <span className="font-semibold tabular-nums text-muted xl:text-[12px]">
                 ({totalItems.toLocaleString("en-IN")})
               </span>
@@ -146,48 +151,50 @@ export function PlacementsTableSection({
             ) : null}
           </div>
 
-          <div
-            className="-mx-0.5 flex min-w-0 items-end gap-0 overflow-x-auto overscroll-x-contain border-b border-border-subtle px-0.5 scrollbar-hidden"
-            role="tablist"
-            aria-label="Placement status tabs"
-          >
-            {TABS.map((tab) => {
-              const selected = activeTab === tab.id;
-              const count = tabCounts[tab.countKey];
-              const countLabel = count.toLocaleString("en-IN");
+          {statusTabs ? (
+            <div
+              className="-mx-0.5 flex min-w-0 items-end gap-0 overflow-x-auto overscroll-x-contain border-b border-border-subtle px-0.5 scrollbar-hidden"
+              role="tablist"
+              aria-label="Placement status tabs"
+            >
+              {TABS.map((tab) => {
+                const selected = statusTabs.activeTab === tab.id;
+                const count = statusTabs.counts[tab.countKey];
+                const countLabel = count.toLocaleString("en-IN");
 
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  aria-label={`${tab.label}, ${countLabel}`}
-                  onClick={() => onTabChange(tab.id)}
-                  className={cn(
-                    "inline-flex h-9 shrink-0 items-center gap-1.5 border-b-2 px-3 text-[12px] font-semibold whitespace-nowrap transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                    "max-sm:h-8 max-sm:gap-1 max-sm:px-2.5 max-sm:text-[11px]",
-                    "xl:h-8 xl:px-2.5 xl:text-[11px]",
-                    selected
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted hover:text-foreground",
-                  )}
-                >
-                  <span className="sm:hidden">{tab.shortLabel}</span>
-                  <span className="hidden sm:inline">{tab.label}</span>
-                  <span
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    aria-label={`${tab.label}, ${countLabel}`}
+                    onClick={() => statusTabs.onTabChange(tab.id)}
                     className={cn(
-                      "tabular-nums",
-                      selected ? "text-primary" : "text-muted",
+                      "inline-flex h-9 shrink-0 items-center gap-1.5 border-b-2 px-3 text-[12px] font-semibold whitespace-nowrap transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                      "max-sm:h-8 max-sm:gap-1 max-sm:px-2.5 max-sm:text-[11px]",
+                      "xl:h-8 xl:px-2.5 xl:text-[11px]",
+                      selected
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted hover:text-foreground",
                     )}
                   >
-                    ({countLabel})
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    <span className="sm:hidden">{tab.shortLabel}</span>
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span
+                      className={cn(
+                        "tabular-nums",
+                        selected ? "text-primary" : "text-muted",
+                      )}
+                    >
+                      ({countLabel})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
 
           {!hideInlineSearch ? (
             <label className="relative block min-w-0 max-w-md">

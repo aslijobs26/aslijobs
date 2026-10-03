@@ -6,16 +6,24 @@ import {
   FileCheck2,
   type LucideIcon,
 } from "lucide-react";
-import type { OperationsJobsKpis } from "../../../types/operations-jobs";
+import type {
+  OperationsJobsKpis,
+  OperationsJobTab,
+} from "../../../types/operations-jobs";
 import { cn } from "../../../utils/cn";
 
 interface JobsKpiStripProps {
   kpis: OperationsJobsKpis;
   isLoading?: boolean;
+  /** Jobs list tab currently shown for a selected card; null when no card is selected. */
+  selectedTab?: OperationsJobTab | null;
+  /** When provided, cards become buttons that open the matching jobs list. */
+  onSelect?: (tab: OperationsJobTab) => void;
 }
 
 const KPI_CONFIG: {
   id: keyof OperationsJobsKpis;
+  tab: OperationsJobTab;
   label: string;
   caption: (kpis: OperationsJobsKpis) => string;
   icon: LucideIcon;
@@ -25,6 +33,7 @@ const KPI_CONFIG: {
 }[] = [
   {
     id: "totalJobs",
+    tab: "all",
     label: "Total Jobs",
     caption: () => "Across all employers",
     icon: Briefcase,
@@ -35,6 +44,7 @@ const KPI_CONFIG: {
   },
   {
     id: "pendingApprovalJobs",
+    tab: "pending_approval",
     label: "Pending Approval",
     caption: (kpis) =>
       kpis.totalJobs > 0
@@ -48,6 +58,7 @@ const KPI_CONFIG: {
   },
   {
     id: "atRiskJobs",
+    tab: "at_risk",
     label: "At Risk of Expiry",
     caption: () => "Closing in 7 days",
     icon: AlertTriangle,
@@ -58,6 +69,7 @@ const KPI_CONFIG: {
   },
   {
     id: "activeJobs",
+    tab: "live",
     label: "Active Jobs",
     caption: (kpis) =>
       kpis.totalJobs > 0
@@ -71,6 +83,7 @@ const KPI_CONFIG: {
   },
   {
     id: "filledClosedJobs",
+    tab: "filled_closed",
     label: "Filled / Closed",
     caption: () => "Closed + expired",
     icon: Clock3,
@@ -95,7 +108,12 @@ function readKpi(kpis: OperationsJobsKpis, id: keyof OperationsJobsKpis): number
   return kpis[id] ?? 0;
 }
 
-export function JobsKpiStrip({ kpis, isLoading }: JobsKpiStripProps) {
+export function JobsKpiStrip({
+  kpis,
+  isLoading,
+  selectedTab = null,
+  onSelect,
+}: JobsKpiStripProps) {
   return (
     <section
       aria-label="Jobs overview KPIs"
@@ -103,14 +121,16 @@ export function JobsKpiStrip({ kpis, isLoading }: JobsKpiStripProps) {
     >
       {KPI_CONFIG.map((item) => {
         const Icon = item.icon;
-        return (
-          <article
-            key={item.id}
-            className={cn(
-              "ops-brand-border-glow flex min-w-0 flex-col justify-between rounded-xl border p-3.5 shadow-sm max-lg:p-3 max-sm:p-2.5 max-lg:last:col-span-2 lg:last:col-span-1",
-              item.cardClassName,
-            )}
-          >
+        const selected = selectedTab === item.tab;
+        const cardClassName = cn(
+          "ops-brand-border-glow flex min-w-0 flex-col justify-between rounded-xl border p-3.5 text-left shadow-sm max-lg:p-3 max-sm:p-2.5 max-lg:last:col-span-2 lg:last:col-span-1",
+          item.cardClassName,
+          onSelect &&
+            "cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          selected && "ring-2 ring-primary/50",
+        );
+        const content = (
+          <>
             <div className="flex items-start justify-between gap-2 max-sm:gap-1.5">
               <div className="min-w-0">
                 <p className="text-[11px] font-medium text-muted max-sm:text-[10px]">
@@ -133,6 +153,23 @@ export function JobsKpiStrip({ kpis, isLoading }: JobsKpiStripProps) {
             <p className="mt-3 truncate text-[11px] font-medium text-muted max-sm:mt-2 max-sm:text-[10px]">
               {isLoading ? "…" : item.caption(kpis)}
             </p>
+          </>
+        );
+
+        return onSelect ? (
+          <button
+            key={item.id}
+            type="button"
+            aria-pressed={selected}
+            aria-label={`${item.label}: ${formatCount(readKpi(kpis, item.id))}. ${selected ? "Hide job list and show analytics" : "Show these jobs"}`}
+            onClick={() => onSelect(item.tab)}
+            className={cardClassName}
+          >
+            {content}
+          </button>
+        ) : (
+          <article key={item.id} className={cardClassName}>
+            {content}
           </article>
         );
       })}

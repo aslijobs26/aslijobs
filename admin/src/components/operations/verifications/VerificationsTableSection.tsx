@@ -20,6 +20,9 @@ interface VerificationsTableSectionProps {
   errorMessage?: string;
   onRetry?: () => void;
   toolbar?: ReactNode;
+  title?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
 function TableMessage({
@@ -62,15 +65,16 @@ export function VerificationsTableSection({
   errorMessage,
   onRetry,
   toolbar,
+  title = "Recent Verifications",
+  emptyTitle = "No verification submissions found",
+  emptyDescription = "Try adjusting your search or tab filters.",
 }: VerificationsTableSectionProps) {
   const emptyMessage = (
     <div className="space-y-1">
       <p className="text-sm font-medium text-foreground xl:text-xs">
-        No verification submissions found
+        {emptyTitle}
       </p>
-      <p className="text-xs text-muted xl:text-[11px]">
-        Try adjusting your search or tab filters.
-      </p>
+      <p className="text-xs text-muted xl:text-[11px]">{emptyDescription}</p>
     </div>
   );
 
@@ -96,7 +100,7 @@ export function VerificationsTableSection({
       <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4 xl:px-3 xl:py-2">
         <div className="flex min-w-0 flex-col gap-2.5 xl:gap-2">
           <h2 className="text-sm font-semibold text-foreground xl:text-[13px]">
-            Recent Verifications{" "}
+            {title}{" "}
             <span className="font-semibold tabular-nums text-muted xl:text-[12px]">
               ({totalItems.toLocaleString("en-IN")})
             </span>

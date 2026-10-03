@@ -33,7 +33,12 @@ import type {
   UpdateOperationsEmployerStatusBody,
   UpdateOperationsEmployerVerificationBody,
 } from "./operations-employers.validation.js";
-import { getOperationsEmployersAnalytics } from "./operations-employers-analytics.js";
+import {
+  buildEmployerOverviewKpiFilter,
+  getOperationsEmployersAnalytics,
+  resolveEmployerOverviewKpiWindow,
+  resolveEmployersAnalyticsDateRange,
+} from "./operations-employers-analytics.js";
 import { SLA_TARGET_DAYS } from "../verifications/operations-verifications-analytics.js";
 import {
   buildOperationsEmployersExportFile,
@@ -703,6 +708,22 @@ export const operationsEmployersService = {
       if (dateRange.from) range.$gte = dateRange.from;
       if (dateRange.to) range.$lte = dateRange.to;
       andClauses.push({ createdAt: range });
+    }
+
+    if (query.kpi) {
+      const kpiRange = resolveEmployersAnalyticsDateRange({
+        preset: query.kpiPreset,
+        dateFrom: query.kpiDateFrom,
+        dateTo: query.kpiDateTo,
+        now,
+      });
+      const kpiFilter = await buildEmployerOverviewKpiFilter(
+        query.kpi,
+        resolveEmployerOverviewKpiWindow(kpiRange, now),
+      );
+      if (Object.keys(kpiFilter).length > 0) {
+        andClauses.push(kpiFilter);
+      }
     }
 
     const filter: Record<string, unknown> =

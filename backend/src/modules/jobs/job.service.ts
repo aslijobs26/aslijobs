@@ -249,7 +249,7 @@ function toOptionalNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function toLocationSlug(value: string): string {
+export function toLocationSlug(value: string): string {
   return value
     .trim()
     .toLowerCase()

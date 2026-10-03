@@ -3,7 +3,7 @@ import { env } from "../../config/env.js";
 import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
 import { EmployerModel } from "../employers/employer.model.js";
 import { applicationService } from "../applications/application.service.js";
-import { jobService } from "../jobs/job.service.js";
+import { jobService, toLocationSlug } from "../jobs/job.service.js";
 import {
   listEmployerJobsQuerySchema,
   publicJobsQuerySchema,
@@ -22,6 +22,7 @@ import {
   lookingAtQuestionCopy,
   nationalPhone,
   parentCity,
+  placeCityAliases,
   PUBLIC_JOB_FETCH_LIMIT,
   resolveTurnUnderstanding,
   selectVerifiedJobsForReply,
@@ -521,7 +522,8 @@ async function buildReply(
     case "PROFILE_MATCH":
     case "PROFILE_JOBS": {
       if (!asSeeker || !seeker) return reply({ situation: "denied", reason: "seeker_required" });
-      const location = seeker.preferredJobLocation || seeker.city || "";
+      const location =
+        understanding.location || seeker.preferredJobLocation || seeker.city || "";
       return searchJobs(
         {
           ...understanding,
@@ -613,12 +615,7 @@ async function searchJobs(
 ): Promise<BotTurn> {
   const lookup = toPublicJobsLookup(understanding);
   const role = lookup.search || "ANY";
-  const primary = await loadJobs(
-    lookup.search,
-    lookup.city,
-    jobSeekerId,
-    understanding.language,
-  );
+  const primary = await loadJobs(lookup.search, lookup.city, jobSeekerId);
   if (primary.jobs.length > 0 || !understanding.location) {
     logWhatsAppJobs({
       intent: understanding.intent,
@@ -627,6 +624,8 @@ async function searchJobs(
       dbMatches: primary.dbMatches,
       jobsReturned: primary.jobs.length,
       jobsForAI: primary.jobs.length,
+      path: primary.jobs.length > 0 ? "primary" : "empty",
+      cities: primary.jobs.map((job) => job.cityName),
     });
     return say("", primary.jobs, meta, {
       situation: "jobs",
@@ -641,7 +640,7 @@ async function searchJobs(
 
   const widerCity = parentCity(understanding.location);
   const wider = widerCity
-    ? await loadJobs(lookup.search, widerCity, jobSeekerId, understanding.language)
+    ? await loadJobs(lookup.search, widerCity, jobSeekerId)
     : { jobs: [], total: 0, dbMatches: 0, hasMore: false };
   logWhatsAppJobs({
     intent: understanding.intent,
@@ -650,6 +649,8 @@ async function searchJobs(
     dbMatches: wider.dbMatches,
     jobsReturned: wider.jobs.length,
     jobsForAI: wider.jobs.length,
+    path: wider.jobs.length > 0 ? "parent_city" : "empty",
+    cities: wider.jobs.map((job) => job.cityName),
   });
   return say("", wider.jobs, meta, {
     situation: "jobs",
@@ -685,7 +686,7 @@ async function coverageReply(
     openSearch: !understanding.category,
   });
   const [jobs, applications] = await Promise.all([
-    loadJobs(lookup.search, lookup.city, jobSeekerId, understanding.language),
+    loadJobs(lookup.search, lookup.city, jobSeekerId),
     applicationService.listForSeeker({
       jobSeekerId,
       limit: 10,
@@ -712,28 +713,47 @@ function logWhatsAppJobs(input: {
   dbMatches: number;
   jobsReturned: number;
   jobsForAI: number;
+  path?: "primary" | "parent_city" | "empty";
+  cities?: string[];
 }): void {
+  const cities = [...new Set(input.cities ?? [])].join("|") || "-";
   console.info(
-    `[WA-JOBS] intent=${input.intent} location=${input.location || "-"} role=${input.role} dbMatches=${input.dbMatches} jobsReturned=${input.jobsReturned} jobsForAI=${input.jobsForAI}`,
+    `[WA-JOBS] intent=${input.intent} location=${input.location || "-"} role=${input.role} dbMatches=${input.dbMatches} jobsReturned=${input.jobsReturned} jobsForAI=${input.jobsForAI} path=${input.path ?? "-"} cities=${cities}`,
   );
 }
 
+/**
+ * Uses the website's public job search. Titles stay in the posted language:
+ * role verification and reply localization match source titles, and translated
+ * titles (e.g. Telugu spellings from the translation worker) would be dropped.
+ */
 async function loadJobs(
   search: string,
   city: string,
   jobSeekerId?: string,
-  language?: string,
 ): Promise<{ jobs: PublicJobFact[]; total: number; dbMatches: number; hasMore: boolean }> {
+  const cityAliases = placeCityAliases(city);
   const query = publicJobsQuerySchema.parse({
     search,
-    city,
+    city: cityAliases.join(","),
     limit: PUBLIC_JOB_FETCH_LIMIT,
     page: 1,
     sort: "latest",
-    language: language ?? "",
   });
   const result = await jobService.listPublicActiveJobs(query, jobSeekerId);
-  const selected = selectVerifiedJobsForReply(result.jobs, search, result.pagination.total);
+  const citySlugs = new Set(cityAliases.map(toLocationSlug));
+  const inCity =
+    citySlugs.size > 0
+      ? result.jobs.filter(
+          (job) =>
+            citySlugs.has(toLocationSlug(job.city)) || citySlugs.has(toLocationSlug(job.cityName)),
+        )
+      : result.jobs;
+  const selected = selectVerifiedJobsForReply(
+    inCity,
+    search,
+    result.pagination.total - (result.jobs.length - inCity.length),
+  );
   const jobs = selected.jobs.map((job) => ({
     jobTitle: job.jobTitle,
     companyName: job.companyName,

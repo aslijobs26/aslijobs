@@ -100,6 +100,17 @@ function daysFromNow(days: number): Date {
   return date;
 }
 
+/** Shared by the At Risk KPI count and the at_risk list tab. */
+function atRiskJobsMatch(): Record<string, unknown> {
+  return {
+    listingValidUntil: {
+      $ne: null,
+      $gte: new Date(),
+      $lte: daysFromNow(7),
+    },
+  };
+}
+
 function daysAgo(days: number): Date {
   const date = new Date();
   date.setUTCDate(date.getUTCDate() - days);
@@ -210,6 +221,12 @@ function buildListFilter(
       break;
     case "rejected":
       andClauses.push({ status: "rejected" });
+      break;
+    case "at_risk":
+      andClauses.push(atRiskJobsMatch());
+      break;
+    case "filled_closed":
+      andClauses.push({ status: { $in: ["closed", "expired"] } });
       break;
     default:
       break;
@@ -401,13 +418,7 @@ async function loadKpisAndCounts(): Promise<{
     JobModel.countDocuments({
       listingPaymentStatus: { $in: PENDING_PAYMENT_STATUSES },
     }),
-    JobModel.countDocuments({
-      listingValidUntil: {
-        $ne: null,
-        $gte: new Date(),
-        $lte: daysFromNow(7),
-      },
-    }),
+    JobModel.countDocuments(atRiskJobsMatch()),
     JobModel.countDocuments({
       status: "active",
       applications: { $lte: 5 },

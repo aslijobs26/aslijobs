@@ -204,7 +204,19 @@ export interface OperationsCandidatesListParams {
   analyticsPreset: OperationsCandidateDatePreset;
   analyticsFrom: string;
   analyticsTo: string;
+  /** Overview KPI card drill-down, scoped by the overview analytics range. */
+  kpi?: OperationsCandidateOverviewKpi;
+  kpiPreset?: OperationsCandidatesAnalyticsPreset;
+  kpiDateFrom?: string;
+  kpiDateTo?: string;
 }
+
+export type OperationsCandidateOverviewKpi =
+  | "total"
+  | "new"
+  | "complete"
+  | "verified"
+  | "active";
 
 export interface OperationsCandidatesExportParams {
   overviewTab?: string;

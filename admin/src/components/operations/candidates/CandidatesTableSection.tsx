@@ -22,6 +22,8 @@ interface CandidatesTableSectionProps {
   errorMessage?: string;
   onRetry?: () => void;
   toolbar?: ReactNode;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
 function TableMessage({
@@ -79,13 +81,13 @@ export function CandidatesTableSection({
   errorMessage,
   onRetry,
   toolbar,
+  emptyTitle = "No jobseekers found",
+  emptyDescription = "Try adjusting your search or tab filters.",
 }: CandidatesTableSectionProps) {
   const emptyMessage = (
     <div className="space-y-1">
-      <p className="text-sm font-medium text-foreground xl:text-xs">No jobseekers found</p>
-      <p className="text-xs text-muted xl:text-[11px]">
-        Try adjusting your search or tab filters.
-      </p>
+      <p className="text-sm font-medium text-foreground xl:text-xs">{emptyTitle}</p>
+      <p className="text-xs text-muted xl:text-[11px]">{emptyDescription}</p>
     </div>
   );
 

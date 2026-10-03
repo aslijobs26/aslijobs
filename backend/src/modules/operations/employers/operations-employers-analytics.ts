@@ -313,6 +313,86 @@ export function resolveEmployersAnalyticsDateRange(input: {
   };
 }
 
+export const EMPLOYER_OVERVIEW_KPIS = [
+  "total",
+  "new",
+  "verified",
+  "active",
+  "hiring",
+] as const;
+
+export type EmployerOverviewKpi = (typeof EMPLOYER_OVERVIEW_KPIS)[number];
+
+export interface EmployerOverviewKpiWindow {
+  isOverall: boolean;
+  from: Date;
+  to: Date;
+  last30From: Date;
+  last30To: Date;
+}
+
+export function resolveEmployerOverviewKpiWindow(
+  range: Pick<OperationsEmployersAnalyticsRange, "preset" | "from" | "to">,
+  now: Date,
+): EmployerOverviewKpiWindow {
+  const last30From = startOfLocalDay(now);
+  last30From.setDate(last30From.getDate() - 29);
+  return {
+    isOverall: range.preset === "all",
+    from: new Date(range.from),
+    to: new Date(range.to),
+    last30From,
+    last30To: endOfLocalDay(now),
+  };
+}
+
+async function employerIdsWithJobs(
+  jobFilter: Record<string, unknown>,
+): Promise<unknown[]> {
+  const ids = await JobModel.distinct("employerId", jobFilter);
+  return ids.filter(Boolean);
+}
+
+/**
+ * Employer filter behind each overview KPI card. Used for both the card count and
+ * the drill-down list so the two always agree.
+ */
+export async function buildEmployerOverviewKpiFilter(
+  kpi: EmployerOverviewKpi,
+  window: EmployerOverviewKpiWindow,
+): Promise<Record<string, unknown>> {
+  const periodFilter = window.isOverall
+    ? {}
+    : createdAtRangeFilter(window.from, window.to);
+
+  switch (kpi) {
+    case "total":
+      return window.isOverall ? {} : { createdAt: { $lte: window.to } };
+    case "new":
+      return window.isOverall
+        ? createdAtRangeFilter(window.last30From, window.last30To)
+        : periodFilter;
+    case "verified":
+      return { ...periodFilter, ...VERIFIED_EMPLOYER_FILTER };
+    case "active":
+      return {
+        _id: {
+          $in: await employerIdsWithJobs(
+            window.isOverall
+              ? createdAtRangeFilter(window.last30From, window.last30To)
+              : periodFilter,
+          ),
+        },
+      };
+    case "hiring":
+      return {
+        _id: {
+          $in: await employerIdsWithJobs({ status: "active", ...periodFilter }),
+        },
+      };
+  }
+}
+
 function buildSeries(
   from: Date,
   to: Date,
@@ -430,11 +510,23 @@ export async function getOperationsEmployersAnalytics(
   const previousCohortFilter = isOverall
     ? { _id: { $exists: false } }
     : createdAtRangeFilter(previousFrom, previousTo);
-  /** Employers that existed by the end of the selected / previous period. */
-  const networkAsOfFilter = isOverall ? {} : { createdAt: { $lte: to } };
+  /** Employers that existed by the end of the previous period. */
   const previousNetworkAsOfFilter = isOverall
     ? { _id: { $exists: false } }
     : { createdAt: { $lte: previousTo } };
+
+  const kpiWindow = resolveEmployerOverviewKpiWindow(resolved, now);
+  const [
+    totalKpiFilter,
+    newKpiFilter,
+    verifiedKpiFilter,
+    activeKpiFilter,
+    hiringKpiFilter,
+  ] = await Promise.all(
+    EMPLOYER_OVERVIEW_KPIS.map((kpi) =>
+      buildEmployerOverviewKpiFilter(kpi, kpiWindow),
+    ),
+  );
 
   const [
     // Network size KPIs (as-of end of period)
@@ -445,9 +537,9 @@ export async function getOperationsEmployersAnalytics(
     previousNewRegistrations,
     verifiedEmployers,
     previousVerifiedEmployers,
-    employersWithJobsInRange,
+    activeEmployers,
     previousEmployersWithJobs,
-    hiringEmployerIds,
+    employersHiring,
     previousHiringIds,
     registrationBuckets,
     employersWithDocuments,
@@ -463,13 +555,9 @@ export async function getOperationsEmployersAnalytics(
     tabActiveCount,
     tabInactiveCount,
   ] = await Promise.all([
-    EmployerModel.countDocuments(networkAsOfFilter),
+    EmployerModel.countDocuments(totalKpiFilter),
     EmployerModel.countDocuments(previousNetworkAsOfFilter),
-    EmployerModel.countDocuments(
-      isOverall
-        ? createdAtRangeFilter(last30Start, endOfLocalDay(now))
-        : cohortFilter,
-    ),
+    EmployerModel.countDocuments(newKpiFilter),
     EmployerModel.countDocuments(
       isOverall
         ? createdAtRangeFilter(
@@ -478,35 +566,19 @@ export async function getOperationsEmployersAnalytics(
           )
         : previousCohortFilter,
     ),
-    EmployerModel.countDocuments({
-      ...cohortFilter,
-      ...VERIFIED_EMPLOYER_FILTER,
-    }),
+    EmployerModel.countDocuments(verifiedKpiFilter),
     EmployerModel.countDocuments({
       ...previousCohortFilter,
       ...VERIFIED_EMPLOYER_FILTER,
     }),
-    JobModel.distinct(
-      "employerId",
-      isOverall
-        ? createdAtRangeFilter(last30Start, endOfLocalDay(now))
-        : createdAtRangeFilter(from, to),
-    ),
+    EmployerModel.countDocuments(activeKpiFilter),
     JobModel.distinct(
       "employerId",
       isOverall
         ? { _id: { $exists: false } }
         : createdAtRangeFilter(previousFrom, previousTo),
     ),
-    JobModel.distinct(
-      "employerId",
-      isOverall
-        ? { status: "active" }
-        : {
-            status: "active",
-            ...createdAtRangeFilter(from, to),
-          },
-    ),
+    EmployerModel.countDocuments(hiringKpiFilter),
     JobModel.distinct(
       "employerId",
       isOverall
@@ -612,9 +684,7 @@ export async function getOperationsEmployersAnalytics(
     EmployerModel.countDocuments(ACTIVE_STATUS_FILTER),
     EmployerModel.countDocuments(INACTIVE_STATUS_FILTER),
   ]);
-  const activeEmployers = employersWithJobsInRange.filter(Boolean).length;
   const previousActiveEmployers = previousEmployersWithJobs.filter(Boolean).length;
-  const employersHiring = hiringEmployerIds.filter(Boolean).length;
   const previousHiring = previousHiringIds.filter(Boolean).length;
   const documentsUploaded = employersWithDocuments[0]?.count ?? 0;
   // Funnel / account type / location use the full cohort (all employers when Overall).

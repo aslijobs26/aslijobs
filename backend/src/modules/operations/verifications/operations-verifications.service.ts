@@ -26,7 +26,9 @@ import {
   PENDING_VERIFICATION_FILTER,
   SLA_TARGET_DAYS,
   VERIFIED_EMPLOYER_FILTER,
+  buildVerificationOverviewKpiFilter,
   getOperationsVerificationsAnalytics,
+  resolveVerificationsAnalyticsDateRange,
 } from "./operations-verifications-analytics.js";
 import {
   resolveEmployerIndustryLabel,
@@ -714,7 +716,24 @@ export const operationsVerificationsService = {
     access: OperationsResolvedAccess,
   ): Promise<OperationsVerificationsListResult> {
     const now = new Date();
-    const filter = buildListFilter(query, now);
+    const baseFilter = buildListFilter(query, now);
+    const filter = query.kpi
+      ? {
+          $and: [
+            baseFilter,
+            await buildVerificationOverviewKpiFilter(
+              query.kpi,
+              resolveVerificationsAnalyticsDateRange({
+                preset: query.kpiPreset,
+                dateFrom: query.kpiDateFrom,
+                dateTo: query.kpiDateTo,
+                now,
+              }),
+              now,
+            ),
+          ],
+        }
+      : baseFilter;
     const sort = resolveSort(query);
     const skip = (query.page - 1) * query.limit;
 
@@ -1101,6 +1120,10 @@ export const operationsVerificationsService = {
         analyticsPreset: "all",
         analyticsFrom: "",
         analyticsTo: "",
+        kpi: "",
+        kpiPreset: "all",
+        kpiDateFrom: "",
+        kpiDateTo: "",
       },
       access,
       query.format === "csv" ? "csv" : "xlsx",

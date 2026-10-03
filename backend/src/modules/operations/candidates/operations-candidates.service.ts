@@ -29,6 +29,11 @@ import type {
   ListOperationsCandidatesQuery,
 } from "./operations-candidates.validation.js";
 import {
+  buildCandidateOverviewKpiFilter,
+  resolveCandidateOverviewKpiWindow,
+  resolveCandidatesAnalyticsDateRange,
+} from "./operations-candidates-analytics.js";
+import {
   buildOperationsCandidatesExportFile,
   type OperationsCandidatesExportFormat,
   type OperationsCandidatesExportFileResult,
@@ -1605,7 +1610,26 @@ export const operationsCandidatesService = {
     const searchMatchedSeekerIds = query.search.trim()
       ? await findSeekerIdsMatchingApplicationSearch(query.search)
       : [];
-    const seekerMatch = buildSeekerMatch(query, searchMatchedSeekerIds);
+    const baseSeekerMatch = buildSeekerMatch(query, searchMatchedSeekerIds);
+    const seekerMatch = query.kpi
+      ? {
+          $and: [
+            baseSeekerMatch,
+            await buildCandidateOverviewKpiFilter(
+              query.kpi,
+              resolveCandidateOverviewKpiWindow(
+                resolveCandidatesAnalyticsDateRange({
+                  preset: query.kpiPreset,
+                  dateFrom: query.kpiDateFrom,
+                  dateTo: query.kpiDateTo,
+                  now,
+                }),
+                now,
+              ),
+            ),
+          ],
+        }
+      : baseSeekerMatch;
     const mustHaveApp = requiresApplicationRow(query);
 
     const sortStage: Record<string, 1 | -1> =

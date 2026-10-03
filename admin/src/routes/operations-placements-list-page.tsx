@@ -287,9 +287,11 @@ export function OperationsPlacementsListPage() {
             <PlacementsTableSection
               items={listData?.items ?? []}
               totalItems={listData?.pagination.total ?? 0}
-              tabCounts={analyticsQuery.data?.tabs ?? EMPTY_TAB_COUNTS}
-              activeTab={activeTab}
-              onTabChange={handleTabChange}
+              statusTabs={{
+                counts: analyticsQuery.data?.tabs ?? EMPTY_TAB_COUNTS,
+                activeTab,
+                onTabChange: handleTabChange,
+              }}
               search={filters.search}
               onSearchChange={(search) => handleFiltersChange({ search })}
               isLoading={listQuery.isFetching && !listData}

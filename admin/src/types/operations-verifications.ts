@@ -222,7 +222,19 @@ export interface OperationsVerificationsListParams {
   sort?: OperationsVerificationListSort;
   sortDirection?: "asc" | "desc";
   employerType?: string;
+  /** Overview KPI card drill-down, scoped by the overview analytics range. */
+  kpi?: OperationsVerificationOverviewKpi;
+  kpiPreset?: VerificationsAnalyticsPreset;
+  kpiDateFrom?: string;
+  kpiDateTo?: string;
 }
+
+export type OperationsVerificationOverviewKpi =
+  | "total"
+  | "pending"
+  | "verified"
+  | "needs_attention"
+  | "rejected";
 
 export interface OperationsVerificationsExportParams {
   search?: string;

@@ -14,6 +14,7 @@ import { VerificationsByIndustry } from "../components/operations/verifications/
 import { VerificationsByLocation } from "../components/operations/verifications/overview/VerificationsByLocation";
 import { VerificationsDocumentsBreakdown } from "../components/operations/verifications/overview/VerificationsDocumentsBreakdown";
 import { VerificationsOverviewHeader } from "../components/operations/verifications/overview/VerificationsOverviewHeader";
+import { VerificationsKpiDrilldown } from "../components/operations/verifications/overview/VerificationsKpiDrilldown";
 import { VerificationsOverviewKpiStrip } from "../components/operations/verifications/overview/VerificationsOverviewKpiStrip";
 import { VerificationsOverviewTabs } from "../components/operations/verifications/overview/VerificationsOverviewTabs";
 import { VerificationsQuickActions } from "../components/operations/verifications/overview/VerificationsQuickActions";
@@ -22,6 +23,8 @@ import { VerificationsStatusDonut } from "../components/operations/verifications
 import { VerificationsTrendChart } from "../components/operations/verifications/overview/VerificationsTrendChart";
 import { VerificationsPageSkeleton } from "../components/operations/verifications/VerificationsPageSkeleton";
 import { VerificationsTableSection } from "../components/operations/verifications/VerificationsTableSection";
+import { VERIFICATION_OVERVIEW_KPI_VIEWS } from "../constants/operations-verifications-overview";
+import { useOperationsKpiView } from "../hooks/use-operations-kpi-view";
 import {
   useExportOperationsVerifications,
   useOperationsVerificationsAnalytics,
@@ -126,6 +129,9 @@ function queryErrorMessage(error: unknown, fallback: string): string {
 
 export function OperationsVerificationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [activeKpi, handleKpiSelect] = useOperationsKpiView(
+    VERIFICATION_OVERVIEW_KPI_VIEWS,
+  );
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [filters, setFilters] = useState<VerificationsFiltersState>(() => ({
@@ -204,7 +210,9 @@ export function OperationsVerificationsPage() {
   );
 
   const analyticsQuery = useOperationsVerificationsAnalytics(analyticsFilters);
-  const listQuery = useOperationsVerificationsList(listQueryParams);
+  const listQuery = useOperationsVerificationsList(listQueryParams, {
+    enabled: activeKpi == null,
+  });
   const exportMutation = useExportOperationsVerifications();
 
   const filterOptions = listQuery.data?.filterOptions ?? EMPTY_FILTER_OPTIONS;
@@ -293,7 +301,7 @@ export function OperationsVerificationsPage() {
 
   const isInitialLoading =
     (analyticsQuery.isLoading && !analytics) ||
-    (listQuery.isLoading && !listData);
+    (listQuery.isLoading && !listData && !analytics);
 
   const listErrorMessage = listQuery.error
     ? queryErrorMessage(
@@ -360,81 +368,108 @@ export function OperationsVerificationsPage() {
             ) : null}
 
             {analytics ? (
-              <VerificationsOverviewKpiStrip kpis={analytics.kpis} />
+              <VerificationsOverviewKpiStrip
+                kpis={analytics.kpis}
+                selectedKpi={activeKpi}
+                onSelect={handleKpiSelect}
+              />
             ) : null}
 
-            <VerificationsOverviewTabs
-              activeTab={activeTab}
-              counts={analytics?.tabs ?? EMPTY_TAB_COUNTS}
-              onChange={handleTabChange}
-            />
+            {activeKpi ? (
+              <VerificationsKpiDrilldown
+                key={activeKpi}
+                kpi={activeKpi}
+                cardCount={
+                  analytics?.kpis[VERIFICATION_OVERVIEW_KPI_VIEWS[activeKpi].valueKey]
+                }
+                cardCaption={
+                  analytics?.kpis[VERIFICATION_OVERVIEW_KPI_VIEWS[activeKpi].captionKey]
+                }
+                analyticsFilters={analyticsFilters}
+                onBack={() => handleKpiSelect(null)}
+                getErrorMessage={(error) =>
+                  queryErrorMessage(
+                    error,
+                    "Failed to load employer verifications. Please try again.",
+                  )
+                }
+              />
+            ) : (
+              <>
+                <VerificationsOverviewTabs
+                  activeTab={activeTab}
+                  counts={analytics?.tabs ?? EMPTY_TAB_COUNTS}
+                  onChange={handleTabChange}
+                />
 
-            {showOverviewAnalytics && analytics ? (
-              <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
-                <VerificationsTrendChart
-                  data={analytics.trend}
-                  rangeLabel={analytics.range.label}
-                  isOverall={analyticsFilters.preset === "all"}
-                />
-                <VerificationsStatusDonut items={analytics.byStatus} />
-                <VerificationsDocumentsBreakdown
-                  items={analytics.documentsBreakdown}
-                />
-                <VerificationsByIndustry items={analytics.byIndustry} />
-                <VerificationsByLocation
-                  items={analytics.byLocation.states}
-                  isLoading={analyticsQuery.isFetching && !analytics}
-                  isError={analyticsQuery.isError}
-                  onRetry={() => void analyticsQuery.refetch()}
-                />
-                <VerificationsSlaCard sla={analytics.sla} />
-              </div>
-            ) : null}
-
-            <OperationsOverviewSplit
-              rail={
-                <>
-                  <VerificationsQuickActions
-                    onExport={handleExport}
-                    isExporting={exportMutation.isPending}
-                  />
-                  <VerificationsAskAsliCard />
-                </>
-              }
-            >
-              <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
-                <VerificationsTableSection
-                  items={listData?.items ?? []}
-                  totalItems={listData?.pagination.total ?? 0}
-                  isLoading={listQuery.isFetching && !listData}
-                  isError={listQuery.isError}
-                  errorMessage={listErrorMessage}
-                  onRetry={() => void listQuery.refetch()}
-                  toolbar={
-                    <VerificationsFiltersBar
-                      filters={filters}
-                      filterOptions={filterOptions}
-                      statusOverride={tabListFilters.status}
-                      onChange={handleFiltersChange}
-                      onClear={handleClearFilters}
+                {showOverviewAnalytics && analytics ? (
+                  <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    <VerificationsTrendChart
+                      data={analytics.trend}
+                      rangeLabel={analytics.range.label}
+                      isOverall={analyticsFilters.preset === "all"}
                     />
-                  }
-                />
-
-                {listData?.pagination ? (
-                  <div className="border-t border-border-subtle p-3 xl:p-2.5">
-                    <JobsPaginationBar
-                      pagination={listData.pagination}
-                      onPageChange={setPage}
-                      onLimitChange={(newLimit: number) => {
-                        setLimit(newLimit);
-                        setPage(1);
-                      }}
+                    <VerificationsStatusDonut items={analytics.byStatus} />
+                    <VerificationsDocumentsBreakdown
+                      items={analytics.documentsBreakdown}
                     />
+                    <VerificationsByIndustry items={analytics.byIndustry} />
+                    <VerificationsByLocation
+                      items={analytics.byLocation.states}
+                      isLoading={analyticsQuery.isFetching && !analytics}
+                      isError={analyticsQuery.isError}
+                      onRetry={() => void analyticsQuery.refetch()}
+                    />
+                    <VerificationsSlaCard sla={analytics.sla} />
                   </div>
                 ) : null}
-              </div>
-            </OperationsOverviewSplit>
+
+                <OperationsOverviewSplit
+                  rail={
+                    <>
+                      <VerificationsQuickActions
+                        onExport={handleExport}
+                        isExporting={exportMutation.isPending}
+                      />
+                      <VerificationsAskAsliCard />
+                    </>
+                  }
+                >
+                  <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
+                    <VerificationsTableSection
+                      items={listData?.items ?? []}
+                      totalItems={listData?.pagination.total ?? 0}
+                      isLoading={listQuery.isFetching && !listData}
+                      isError={listQuery.isError}
+                      errorMessage={listErrorMessage}
+                      onRetry={() => void listQuery.refetch()}
+                      toolbar={
+                        <VerificationsFiltersBar
+                          filters={filters}
+                          filterOptions={filterOptions}
+                          statusOverride={tabListFilters.status}
+                          onChange={handleFiltersChange}
+                          onClear={handleClearFilters}
+                        />
+                      }
+                    />
+
+                    {listData?.pagination ? (
+                      <div className="border-t border-border-subtle p-3 xl:p-2.5">
+                        <JobsPaginationBar
+                          pagination={listData.pagination}
+                          onPageChange={setPage}
+                          onLimitChange={(newLimit: number) => {
+                            setLimit(newLimit);
+                            setPage(1);
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </OperationsOverviewSplit>
+              </>
+            )}
 
             {exportMutation.isError ? (
               <p className="text-xs text-danger" role="alert">

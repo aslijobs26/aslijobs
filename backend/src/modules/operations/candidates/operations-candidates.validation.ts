@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { JOB_SEEKER_GENDERS } from "../../../constants/job-seeker.constants.js";
 import { APPLICATION_STATUSES } from "../../applications/application.constants.js";
+import {
+  CANDIDATE_OVERVIEW_KPIS,
+  CANDIDATES_ANALYTICS_PRESETS,
+} from "./operations-candidates-analytics.js";
 
 const operationsCandidateGenderQuerySchema = z
   .union([z.enum(JOB_SEEKER_GENDERS), z.literal("")])
@@ -86,6 +90,14 @@ export const listOperationsCandidatesQuerySchema = z
       .enum(["newest", "oldest", "updated"])
       .optional()
       .default("newest"),
+    /** Overview KPI card drill-down; scoped by the overview analytics range. */
+    kpi: z
+      .enum(["", ...CANDIDATE_OVERVIEW_KPIS])
+      .optional()
+      .default(""),
+    kpiPreset: z.enum(CANDIDATES_ANALYTICS_PRESETS).optional().default("all"),
+    kpiDateFrom: z.string().trim().max(32).optional().default(""),
+    kpiDateTo: z.string().trim().max(32).optional().default(""),
   })
   .superRefine((value, ctx) => {
     if (value.datePreset === "custom" && !value.dateFrom && !value.dateTo) {

@@ -633,12 +633,12 @@ async function countUnderReview(
   return rows[0]?.count ?? 0;
 }
 
-async function countNeedsAttention(
+async function findNeedsAttentionEmployerIds(
   now: Date,
   extraMatch: Record<string, unknown> = {},
-): Promise<number> {
+): Promise<unknown[]> {
   const slaCutoff = new Date(now.getTime() - SLA_TARGET_MS);
-  const rows = await EmployerModel.aggregate<{ count: number }>([
+  const rows = await EmployerModel.aggregate<{ _id: unknown }>([
     {
       $match: {
         $and: [
@@ -661,9 +661,61 @@ async function countNeedsAttention(
         ],
       },
     },
-    { $count: "count" },
+    { $project: { _id: 1 } },
   ]);
-  return rows[0]?.count ?? 0;
+  return rows.map((row) => row._id);
+}
+
+async function countNeedsAttention(
+  now: Date,
+  extraMatch: Record<string, unknown> = {},
+): Promise<number> {
+  return (await findNeedsAttentionEmployerIds(now, extraMatch)).length;
+}
+
+export const VERIFICATION_OVERVIEW_KPIS = [
+  "total",
+  "pending",
+  "verified",
+  "needs_attention",
+  "rejected",
+] as const;
+
+export type VerificationOverviewKpi =
+  (typeof VERIFICATION_OVERVIEW_KPIS)[number];
+
+/**
+ * Employer filter behind each overview KPI card. Used for both the card count
+ * and the drill-down list so the two always agree.
+ */
+export async function buildVerificationOverviewKpiFilter(
+  kpi: VerificationOverviewKpi,
+  range: Pick<OperationsVerificationsAnalyticsRange, "preset" | "from" | "to">,
+  now: Date,
+): Promise<Record<string, unknown>> {
+  const cohortFilter =
+    range.preset === "all"
+      ? {}
+      : activityStartRangeFilter(new Date(range.from), new Date(range.to));
+  const withCohort = (filter: Record<string, unknown>) =>
+    Object.keys(cohortFilter).length > 0
+      ? { $and: [cohortFilter, filter] }
+      : filter;
+
+  switch (kpi) {
+    case "total":
+      return cohortFilter;
+    case "pending":
+      return withCohort(PENDING_VERIFICATION_FILTER);
+    case "verified":
+      return withCohort(VERIFIED_EMPLOYER_FILTER);
+    case "rejected":
+      return withCohort(REJECTED_FILTER);
+    case "needs_attention":
+      return {
+        _id: { $in: await findNeedsAttentionEmployerIds(now, cohortFilter) },
+      };
+  }
 }
 
 async function countSlaBreaches(
@@ -911,6 +963,18 @@ export async function getOperationsVerificationsAnalytics(
     : activityStartRangeFilter(previousFrom, previousTo);
 
   const [
+    totalKpiFilter,
+    pendingKpiFilter,
+    verifiedKpiFilter,
+    needsAttentionKpiFilter,
+    rejectedKpiFilter,
+  ] = await Promise.all(
+    VERIFICATION_OVERVIEW_KPIS.map((kpi) =>
+      buildVerificationOverviewKpiFilter(kpi, resolved, now),
+    ),
+  );
+
+  const [
     totalVerifications,
     previousTotal,
     pendingReview,
@@ -936,39 +1000,27 @@ export async function getOperationsVerificationsAnalytics(
     verifiedSeriesRows,
     rejectedSeriesRows,
   ] = await Promise.all([
-    EmployerModel.countDocuments(cohortFilter),
+    EmployerModel.countDocuments(totalKpiFilter),
     EmployerModel.countDocuments(previousCohortFilter),
-    EmployerModel.countDocuments({
-      $and: [cohortFilter, PENDING_VERIFICATION_FILTER].filter(
-        (part) => Object.keys(part).length > 0,
-      ),
-    }),
+    EmployerModel.countDocuments(pendingKpiFilter),
     EmployerModel.countDocuments({
       $and: [previousCohortFilter, PENDING_VERIFICATION_FILTER].filter(
         (part) => Object.keys(part).length > 0,
       ),
     }),
-    EmployerModel.countDocuments({
-      $and: [cohortFilter, VERIFIED_EMPLOYER_FILTER].filter(
-        (part) => Object.keys(part).length > 0,
-      ),
-    }),
+    EmployerModel.countDocuments(verifiedKpiFilter),
     EmployerModel.countDocuments({
       $and: [previousCohortFilter, VERIFIED_EMPLOYER_FILTER].filter(
         (part) => Object.keys(part).length > 0,
       ),
     }),
-    EmployerModel.countDocuments({
-      $and: [cohortFilter, REJECTED_FILTER].filter(
-        (part) => Object.keys(part).length > 0,
-      ),
-    }),
+    EmployerModel.countDocuments(rejectedKpiFilter),
     EmployerModel.countDocuments({
       $and: [previousCohortFilter, REJECTED_FILTER].filter(
         (part) => Object.keys(part).length > 0,
       ),
     }),
-    countNeedsAttention(now, cohortFilter),
+    EmployerModel.countDocuments(needsAttentionKpiFilter),
     countNeedsAttention(now, previousCohortFilter),
     // Tabs + status mix: all-time operational badges (independent of analytics range)
     EmployerModel.countDocuments({}),

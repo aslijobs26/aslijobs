@@ -21,7 +21,9 @@ export type OperationsJobTab =
   | "draft"
   | "expired"
   | "closed"
-  | "rejected";
+  | "rejected"
+  | "at_risk"
+  | "filled_closed";
 
 export type OperationsJobStatusAction =
   | "publish"

@@ -214,6 +214,7 @@ export function OperationsJobsPage() {
         };
 
   const [tab, setTab] = useState<OperationsJobTab>("all");
+  const [showKpiJobs, setShowKpiJobs] = useState(false);
   const [filters, setFilters] = useState<JobsTableFiltersState>(DEFAULT_FILTERS);
   const [closeTarget, setCloseTarget] = useState<OperationsJobListItem | null>(
     null,
@@ -284,6 +285,16 @@ export function OperationsJobsPage() {
     if (nextTab !== "all") {
       setFilters((current) => ({ ...current, status: "" }));
     }
+  };
+
+  const handleKpiSelect = (kpiTab: OperationsJobTab) => {
+    if (showKpiJobs && tab === kpiTab) {
+      setShowKpiJobs(false);
+      return;
+    }
+    setShowKpiJobs(true);
+    setTab(kpiTab);
+    setFilters((current) => ({ ...current, status: "" }));
   };
 
   const handleStatusAction = (
@@ -548,8 +559,12 @@ export function OperationsJobsPage() {
               onExport={() => exportAnalyticsCsv(analyticsData)}
             />
 
-            <JobsKpiStrip kpis={analyticsData.kpis} />
-            <JobsOverviewAnalytics data={analyticsData} />
+            <JobsKpiStrip
+              kpis={analyticsData.kpis}
+              selectedTab={showKpiJobs ? tab : null}
+              onSelect={handleKpiSelect}
+            />
+            {showKpiJobs ? null : <JobsOverviewAnalytics data={analyticsData} />}
 
             <OperationsOverviewSplit
               rail={
@@ -557,7 +572,7 @@ export function OperationsJobsPage() {
                   <JobsQuickActions
                     onExport={() => exportAnalyticsCsv(analyticsData)}
                     onReviewPending={() => handleTabChange("pending_approval")}
-                    onCheckAtRisk={() => handleTabChange("live")}
+                    onCheckAtRisk={() => handleTabChange("at_risk")}
                   />
                   <JobsAskAsliCard />
                 </>
@@ -566,6 +581,7 @@ export function OperationsJobsPage() {
               <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
                 <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4 xl:px-3 xl:py-1.5">
                   <div className="flex min-w-0 flex-col gap-2.5 xl:gap-1.5">
+                    <div className="flex min-w-0 items-center justify-between gap-2">
                     <h2 className="text-sm font-semibold text-foreground xl:text-[11px]">
                       Recent Job Postings{" "}
                       <span className="font-semibold tabular-nums text-muted xl:text-[10px]">
@@ -578,6 +594,16 @@ export function OperationsJobsPage() {
                         )
                       </span>
                     </h2>
+                    {showKpiJobs ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowKpiJobs(false)}
+                        className="inline-flex h-8 shrink-0 items-center rounded-md border border-border bg-surface px-2.5 text-[11px] font-semibold text-primary hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:h-7 xl:text-[10px]"
+                      >
+                        Show analytics
+                      </button>
+                    ) : null}
+                    </div>
                     <div
                       className="flex min-w-0 items-center gap-1.5 overflow-x-auto overflow-y-clip overscroll-x-contain scrollbar-hidden"
                       role="tablist"
@@ -597,7 +623,7 @@ export function OperationsJobsPage() {
                               analyticsData.overviewTabs?.pending_approval ?? 0,
                           },
                           {
-                            id: "live" as const,
+                            id: "at_risk" as const,
                             label: "At Risk",
                             count: analyticsData.overviewTabs?.at_risk ?? 0,
                           },

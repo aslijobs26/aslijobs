@@ -15,6 +15,7 @@ import { EmployersByAccountType } from "../components/operations/employers/overv
 import { EmployersByLocation } from "../components/operations/employers/overview/EmployersByLocation";
 import { EmployersOnboardingFunnel } from "../components/operations/employers/overview/EmployersOnboardingFunnel";
 import { EmployersOverviewHeader } from "../components/operations/employers/overview/EmployersOverviewHeader";
+import { EmployersKpiDrilldown } from "../components/operations/employers/overview/EmployersKpiDrilldown";
 import { EmployersOverviewKpiStrip } from "../components/operations/employers/overview/EmployersOverviewKpiStrip";
 import { EmployersOverviewTabs } from "../components/operations/employers/overview/EmployersOverviewTabs";
 import { EmployersQuickActions } from "../components/operations/employers/overview/EmployersQuickActions";
@@ -23,6 +24,7 @@ import { TopHiringLocations } from "../components/operations/employers/overview/
 import { JobsPaginationBar } from "../components/operations/jobs/JobsPaginationBar";
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
+import { EMPLOYER_OVERVIEW_KPI_VIEWS } from "../constants/operations-employers-overview";
 import {
   useExportOperationsEmployersCsv,
   useOperationsEmployers,
@@ -30,6 +32,7 @@ import {
   useUpdateOperationsEmployerStatus,
   useUpdateOperationsEmployerVerification,
 } from "../hooks/use-operations-employers";
+import { useOperationsKpiView } from "../hooks/use-operations-kpi-view";
 import { useOperationsPermissions } from "../hooks/use-operations-permissions";
 import type {
   OperationsEmployerDatePreset,
@@ -138,6 +141,9 @@ export function OperationsEmployersPage() {
       dateTo: searchParams.get("dateTo") ?? "",
     });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [activeKpi, handleKpiSelect] = useOperationsKpiView(
+    EMPLOYER_OVERVIEW_KPI_VIEWS,
+  );
 
   const [selectedEmployer, setSelectedEmployer] =
     useState<OperationsEmployerListItem | null>(null);
@@ -219,7 +225,9 @@ export function OperationsEmployersPage() {
   );
 
   const analyticsQuery = useOperationsEmployersAnalytics(analyticsFilters);
-  const employersQuery = useOperationsEmployers(listQueryParams);
+  const employersQuery = useOperationsEmployers(listQueryParams, {
+    enabled: activeKpi == null,
+  });
   const exportMutation = useExportOperationsEmployersCsv();
   const verifyMutation = useUpdateOperationsEmployerVerification(
     selectedEmployer?.id,
@@ -407,7 +415,7 @@ export function OperationsEmployersPage() {
   const listData = employersQuery.data;
   const isInitialLoading =
     (analyticsQuery.isLoading && !analytics) ||
-    (employersQuery.isLoading && !listData);
+    (employersQuery.isLoading && !listData && !analytics);
 
   const listErrorMessage = employersQuery.error
     ? queryErrorMessage(
@@ -475,94 +483,124 @@ export function OperationsEmployersPage() {
             ) : null}
 
             {analytics ? (
-              <>
-                <EmployersOverviewKpiStrip kpis={analytics.kpis} />
-
-                <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
-                  <EmployersRegistrationTrendChart
-                    data={analytics.registrationTrend}
-                    isOverall={analyticsFilters.preset === "all"}
-                  />
-                  <EmployersOnboardingFunnel
-                    stages={analytics.onboardingFunnel}
-                    isLoading={analyticsQuery.isFetching && !analytics}
-                    isError={analyticsQuery.isError}
-                    onRetry={() => void analyticsQuery.refetch()}
-                  />
-                  <TopHiringLocations
-                    items={analytics.topHiringLocations}
-                    isLoading={analyticsQuery.isFetching && !analytics}
-                    isError={analyticsQuery.isError}
-                    onRetry={() => void analyticsQuery.refetch()}
-                  />
-                  <EmployersByLocation
-                    items={analytics.byLocation}
-                    isLoading={analyticsQuery.isFetching && !analytics}
-                    isError={analyticsQuery.isError}
-                    onRetry={() => void analyticsQuery.refetch()}
-                  />
-                  <EmployerTypeDonut
-                    items={analytics.employerType}
-                    total={analytics.employerTypeTotal}
-                  />
-                  <EmployersByAccountType items={analytics.byAccountType} />
-                </div>
-              </>
+              <EmployersOverviewKpiStrip
+                kpis={analytics.kpis}
+                selectedKpi={activeKpi}
+                onSelect={handleKpiSelect}
+              />
             ) : null}
 
-            <OperationsOverviewSplit
-              rail={
-                <>
-                  <EmployersQuickActions
-                    onExport={handleExport}
-                    isExporting={exportMutation.isPending}
-                  />
-                  <EmployersAskAsliCard />
-                </>
-              }
-            >
-              <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
-                <EmployersTableSection
-                  employers={listData?.employers ?? []}
-                  totalEmployers={listData?.pagination.total ?? 0}
-                  isLoading={employersQuery.isFetching && !listData}
-                  isError={employersQuery.isError}
-                  errorMessage={listErrorMessage}
-                  onRetry={() => void employersQuery.refetch()}
-                  onVerify={handleOpenVerify}
-                  onReject={handleOpenReject}
-                  onToggleStatus={handleOpenToggleStatus}
-                  toolbar={
-                    <div className="flex min-w-0 flex-col gap-2.5 xl:gap-2">
-                      <EmployersOverviewTabs
-                        activeTab={activeTab}
-                        counts={analytics?.tabs ?? EMPTY_TABS}
-                        onChange={handleTabChange}
-                      />
-                      <EmployersTableFilters
-                        filters={tableFilters}
-                        filterOptions={filterOptions}
-                        onChange={handleTableFiltersChange}
-                        onClear={handleClearTableFilters}
-                      />
-                    </div>
-                  }
-                />
-
-                {listData?.pagination ? (
-                  <div className="border-t border-border-subtle p-3 xl:p-2.5">
-                    <JobsPaginationBar
-                      pagination={listData.pagination}
-                      onPageChange={setPage}
-                      onLimitChange={(newLimit: number) => {
-                        setLimit(newLimit);
-                        setPage(1);
-                      }}
+            {activeKpi ? (
+              <EmployersKpiDrilldown
+                key={activeKpi}
+                kpi={activeKpi}
+                cardCount={
+                  analytics?.kpis[EMPLOYER_OVERVIEW_KPI_VIEWS[activeKpi].valueKey]
+                }
+                cardCaption={
+                  analytics?.kpis[EMPLOYER_OVERVIEW_KPI_VIEWS[activeKpi].captionKey]
+                }
+                analyticsFilters={analyticsFilters}
+                onBack={() => handleKpiSelect(null)}
+                getErrorMessage={(error) =>
+                  queryErrorMessage(
+                    error,
+                    "Failed to load employers. Please try again.",
+                  )
+                }
+                onVerify={handleOpenVerify}
+                onReject={handleOpenReject}
+                onToggleStatus={handleOpenToggleStatus}
+              />
+            ) : (
+              <>
+                {analytics ? (
+                  <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    <EmployersRegistrationTrendChart
+                      data={analytics.registrationTrend}
+                      isOverall={analyticsFilters.preset === "all"}
                     />
+                    <EmployersOnboardingFunnel
+                      stages={analytics.onboardingFunnel}
+                      isLoading={analyticsQuery.isFetching && !analytics}
+                      isError={analyticsQuery.isError}
+                      onRetry={() => void analyticsQuery.refetch()}
+                    />
+                    <TopHiringLocations
+                      items={analytics.topHiringLocations}
+                      isLoading={analyticsQuery.isFetching && !analytics}
+                      isError={analyticsQuery.isError}
+                      onRetry={() => void analyticsQuery.refetch()}
+                    />
+                    <EmployersByLocation
+                      items={analytics.byLocation}
+                      isLoading={analyticsQuery.isFetching && !analytics}
+                      isError={analyticsQuery.isError}
+                      onRetry={() => void analyticsQuery.refetch()}
+                    />
+                    <EmployerTypeDonut
+                      items={analytics.employerType}
+                      total={analytics.employerTypeTotal}
+                    />
+                    <EmployersByAccountType items={analytics.byAccountType} />
                   </div>
                 ) : null}
-              </div>
-            </OperationsOverviewSplit>
+
+                <OperationsOverviewSplit
+                  rail={
+                    <>
+                      <EmployersQuickActions
+                        onExport={handleExport}
+                        isExporting={exportMutation.isPending}
+                      />
+                      <EmployersAskAsliCard />
+                    </>
+                  }
+                >
+                  <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow xl:rounded-lg">
+                    <EmployersTableSection
+                      employers={listData?.employers ?? []}
+                      totalEmployers={listData?.pagination.total ?? 0}
+                      isLoading={employersQuery.isFetching && !listData}
+                      isError={employersQuery.isError}
+                      errorMessage={listErrorMessage}
+                      onRetry={() => void employersQuery.refetch()}
+                      onVerify={handleOpenVerify}
+                      onReject={handleOpenReject}
+                      onToggleStatus={handleOpenToggleStatus}
+                      toolbar={
+                        <div className="flex min-w-0 flex-col gap-2.5 xl:gap-2">
+                          <EmployersOverviewTabs
+                            activeTab={activeTab}
+                            counts={analytics?.tabs ?? EMPTY_TABS}
+                            onChange={handleTabChange}
+                          />
+                          <EmployersTableFilters
+                            filters={tableFilters}
+                            filterOptions={filterOptions}
+                            onChange={handleTableFiltersChange}
+                            onClear={handleClearTableFilters}
+                          />
+                        </div>
+                      }
+                    />
+
+                    {listData?.pagination ? (
+                      <div className="border-t border-border-subtle p-3 xl:p-2.5">
+                        <JobsPaginationBar
+                          pagination={listData.pagination}
+                          onPageChange={setPage}
+                          onLimitChange={(newLimit: number) => {
+                            setLimit(newLimit);
+                            setPage(1);
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </OperationsOverviewSplit>
+              </>
+            )}
 
             {exportMutation.isError ? (
               <p className="text-xs text-danger" role="alert">

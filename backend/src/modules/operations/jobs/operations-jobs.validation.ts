@@ -19,6 +19,8 @@ export const OPERATIONS_JOB_TABS = [
   "expired",
   "closed",
   "rejected",
+  "at_risk",
+  "filled_closed",
 ] as const;
 
 export const listOperationsJobsQuerySchema = z.object({

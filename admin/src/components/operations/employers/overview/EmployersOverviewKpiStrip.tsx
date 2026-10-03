@@ -8,22 +8,23 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import type { OperationsEmployersOverviewKpis } from "../../../../types/operations-employers";
+import { EMPLOYER_OVERVIEW_KPI_VIEWS } from "../../../../constants/operations-employers-overview";
+import type {
+  OperationsEmployerOverviewKpi,
+  OperationsEmployersOverviewKpis,
+} from "../../../../types/operations-employers";
 import { cn } from "../../../../utils/cn";
 
 interface EmployersOverviewKpiStripProps {
   kpis: OperationsEmployersOverviewKpis;
+  /** Card whose employers are shown below; null while the analytics overview is shown. */
+  selectedKpi?: OperationsEmployerOverviewKpi | null;
+  /** When provided, cards become toggle buttons that open the matching employer list. */
+  onSelect?: (kpi: OperationsEmployerOverviewKpi) => void;
 }
 
 const KPI_CARDS: {
-  valueKey: keyof Pick<
-    OperationsEmployersOverviewKpis,
-    | "totalEmployers"
-    | "newRegistrations"
-    | "verifiedEmployers"
-    | "activeEmployers"
-    | "employersHiring"
-  >;
+  kpi: OperationsEmployerOverviewKpi;
   trendKey: keyof Pick<
     OperationsEmployersOverviewKpis,
     | "totalEmployersTrendPercent"
@@ -32,25 +33,14 @@ const KPI_CARDS: {
     | "activeEmployersTrendPercent"
     | "employersHiringTrendPercent"
   >;
-  captionKey: keyof Pick<
-    OperationsEmployersOverviewKpis,
-    | "totalEmployersCaption"
-    | "newRegistrationsCaption"
-    | "verifiedEmployersCaption"
-    | "activeEmployersCaption"
-    | "employersHiringCaption"
-  >;
-  label: string;
   icon: LucideIcon;
   iconWrap: string;
   iconColor: string;
   cardClassName: string;
 }[] = [
   {
-    valueKey: "totalEmployers",
+    kpi: "total",
     trendKey: "totalEmployersTrendPercent",
-    captionKey: "totalEmployersCaption",
-    label: "Total Employers",
     icon: Users,
     iconWrap: "bg-primary/20",
     iconColor: "text-primary",
@@ -58,10 +48,8 @@ const KPI_CARDS: {
       "border-primary/20 bg-gradient-to-br from-primary/10 to-white dark:from-primary/15 dark:to-surface",
   },
   {
-    valueKey: "newRegistrations",
+    kpi: "new",
     trendKey: "newRegistrationsTrendPercent",
-    captionKey: "newRegistrationsCaption",
-    label: "New Registrations",
     icon: UserPlus,
     iconWrap: "bg-sky-500/20",
     iconColor: "text-sky-600",
@@ -69,10 +57,8 @@ const KPI_CARDS: {
       "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white dark:border-sky-500/25 dark:from-sky-500/10 dark:to-surface",
   },
   {
-    valueKey: "verifiedEmployers",
+    kpi: "verified",
     trendKey: "verifiedEmployersTrendPercent",
-    captionKey: "verifiedEmployersCaption",
-    label: "Verified Employers",
     icon: CheckCircle2,
     iconWrap: "bg-success/20",
     iconColor: "text-success",
@@ -80,10 +66,8 @@ const KPI_CARDS: {
       "border-success/20 bg-gradient-to-br from-success/10 to-white dark:from-success/15 dark:to-surface",
   },
   {
-    valueKey: "activeEmployers",
+    kpi: "active",
     trendKey: "activeEmployersTrendPercent",
-    captionKey: "activeEmployersCaption",
-    label: "Active Employers",
     icon: Building2,
     iconWrap: "bg-warning/20",
     iconColor: "text-warning",
@@ -91,10 +75,8 @@ const KPI_CARDS: {
       "border-warning/25 bg-gradient-to-br from-warning/10 to-white dark:from-warning/15 dark:to-surface",
   },
   {
-    valueKey: "employersHiring",
+    kpi: "hiring",
     trendKey: "employersHiringTrendPercent",
-    captionKey: "employersHiringCaption",
-    label: "Employers Hiring",
     icon: BriefcaseBusiness,
     iconWrap: "bg-violet-500/20",
     iconColor: "text-violet-600",
@@ -109,6 +91,8 @@ function formatCount(value: number): string {
 
 export function EmployersOverviewKpiStrip({
   kpis,
+  selectedKpi = null,
+  onSelect,
 }: EmployersOverviewKpiStripProps) {
   return (
     <section
@@ -117,25 +101,29 @@ export function EmployersOverviewKpiStrip({
     >
       {KPI_CARDS.map((card) => {
         const Icon = card.icon;
+        const view = EMPLOYER_OVERVIEW_KPI_VIEWS[card.kpi];
+        const label = view.label;
         const trend = kpis[card.trendKey];
         const isUp = trend != null && trend >= 0;
         const TrendIcon = isUp ? TrendingUp : TrendingDown;
+        const selected = selectedKpi === card.kpi;
+        const cardClassName = cn(
+          "ops-brand-border-glow flex min-w-0 flex-col justify-between rounded-xl border p-3.5 text-left shadow-sm max-lg:p-3 max-sm:p-2.5 max-lg:last:col-span-2 lg:last:col-span-1",
+          card.cardClassName,
+          onSelect &&
+            "cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          selected && "ring-2 ring-primary/50",
+        );
 
-        return (
-          <article
-            key={card.valueKey}
-            className={cn(
-              "ops-brand-border-glow flex min-w-0 flex-col justify-between rounded-xl border p-3.5 shadow-sm max-lg:p-3 max-sm:p-2.5 max-lg:last:col-span-2 lg:last:col-span-1",
-              card.cardClassName,
-            )}
-          >
+        const content = (
+          <>
             <div className="flex items-start justify-between gap-2 max-sm:gap-1.5">
               <div className="min-w-0">
                 <p className="text-[11px] font-medium text-muted max-sm:text-[10px]">
-                  {card.label}
+                  {label}
                 </p>
                 <p className="mt-1.5 text-2xl font-bold leading-none tracking-tight tabular-nums text-foreground max-lg:text-xl max-sm:mt-1 max-sm:text-lg">
-                  {formatCount(kpis[card.valueKey])}
+                  {formatCount(kpis[view.valueKey])}
                 </p>
               </div>
               <span
@@ -162,9 +150,26 @@ export function EmployersOverviewKpiStrip({
                 </span>
               ) : null}
               <span className="truncate font-medium text-muted">
-                {kpis[card.captionKey]}
+                {kpis[view.captionKey]}
               </span>
             </div>
+          </>
+        );
+
+        return onSelect ? (
+          <button
+            key={card.kpi}
+            type="button"
+            aria-pressed={selected}
+            aria-label={`${label}: ${formatCount(kpis[view.valueKey])}. ${selected ? "Back to overview analytics" : "Show these employers"}`}
+            onClick={() => onSelect(card.kpi)}
+            className={cardClassName}
+          >
+            {content}
+          </button>
+        ) : (
+          <article key={card.kpi} className={cardClassName}>
+            {content}
           </article>
         );
       })}

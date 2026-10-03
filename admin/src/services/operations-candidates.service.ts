@@ -53,6 +53,14 @@ export async function fetchOperationsCandidates(
         page: params.page,
         limit: params.limit,
         ...buildCandidatesFilterParams(params),
+        ...(params.kpi
+          ? {
+              kpi: params.kpi,
+              kpiPreset: params.kpiPreset || undefined,
+              kpiDateFrom: params.kpiDateFrom || undefined,
+              kpiDateTo: params.kpiDateTo || undefined,
+            }
+          : {}),
       },
     },
   );
