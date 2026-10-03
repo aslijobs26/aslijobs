@@ -493,3 +493,270 @@ export const JOB_SEEKER_GUIDE_CONTENT: JobSeekerContentPageData = {
     actions: JOB_SEEKER_CTA_ACTIONS,
   },
 };
+
+export const INTERVIEW_TIPS_CONTENT: JobSeekerContentPageData = {
+  slug: "interview-tips",
+  title: "Interview Tips",
+  metaDescription:
+    "Simple interview tips to help job seekers prepare well, attend interviews with confidence, and get selected.",
+  intro: [
+    "A little preparation can help you feel confident and make a good impression at your interview. Use these simple tips before, during, and after your interview.",
+  ],
+  sections: [
+    {
+      id: "prepare-before-the-interview",
+      title: "Prepare Before the Interview",
+      variant: "steps",
+      paragraphs: [
+        "Read the job details again, including the job role, salary, work location, and timings. Think about how your skills and experience match the job.",
+      ],
+    },
+    {
+      id: "documents-to-carry",
+      title: "Documents to Carry",
+      variant: "steps",
+      paragraphs: [
+        "Keep your documents ready the day before so you do not rush on the interview day.",
+      ],
+      bullets: [
+        "ID proof such as Aadhaar card",
+        "Resume or profile details",
+        "Experience or salary certificates, if available",
+        "Educational certificates, if required",
+        "Passport-size photos",
+      ],
+    },
+    {
+      id: "on-the-interview-day",
+      title: "On the Interview Day",
+      variant: "steps",
+      paragraphs: [
+        "Plan your travel and reach the interview location 10 to 15 minutes early. Wear clean, neat clothes and keep your phone on silent.",
+      ],
+      bullets: [
+        "Reach on time",
+        "Dress neatly",
+        "Greet politely",
+        "Keep your phone on silent",
+      ],
+    },
+    {
+      id: "answer-with-confidence",
+      title: "Answer With Confidence",
+      variant: "steps",
+      paragraphs: [
+        "Listen carefully, answer honestly, and speak clearly. Be ready for common questions like these.",
+      ],
+      bullets: [
+        "Tell me about yourself.",
+        "What work have you done before?",
+        "When can you join?",
+        "What salary do you expect?",
+      ],
+    },
+    {
+      id: "after-the-interview",
+      title: "After the Interview",
+      variant: "steps",
+      paragraphs: [
+        "Thank the interviewer before you leave. Interview results and next steps are shared on WhatsApp, so keep checking your messages and reply on time.",
+      ],
+    },
+    {
+      id: "stay-safe",
+      title: "Stay Safe",
+      variant: "safety",
+      paragraphs: [
+        "Genuine employers do not ask for money to schedule an interview or confirm a job. If anyone asks you to pay, do not pay and report it to AsliJobs support immediately.",
+      ],
+      bullets: [
+        "Do not pay for interviews or job confirmation.",
+        "Attend interviews only at the address shared in the job details.",
+        "Report suspicious requests to AsliJobs support.",
+      ],
+    },
+  ],
+  cta: {
+    title: "Get Interview Updates on WhatsApp",
+    paragraphs: [
+      "Apply for suitable jobs and receive interview details directly on WhatsApp.",
+    ],
+    tagline: "Prepare well. Attend on time. Get selected.",
+    badge: "WhatsApp",
+    actions: JOB_SEEKER_CTA_ACTIONS,
+  },
+};
+
+export const SALARY_GUIDE_CONTENT: JobSeekerContentPageData = {
+  slug: "salary-guide",
+  title: "Salary Guide",
+  metaDescription:
+    "Understand salary details in job offers, including in-hand salary, deductions, extra pay, and payment schedules, before you accept a job.",
+  intro: [
+    "Salary is one of the most important parts of any job. This guide helps you understand the salary details in a job alert or offer so you can make the right decision.",
+  ],
+  sections: [
+    {
+      id: "check-the-salary-in-job-details",
+      title: "Check the Salary in Job Details",
+      variant: "steps",
+      paragraphs: [
+        "Every job on AsliJobs shows the salary offered by the employer. Read it carefully along with the job role, work timings, and location before you apply.",
+      ],
+    },
+    {
+      id: "in-hand-salary-and-deductions",
+      title: "In-Hand Salary and Deductions",
+      variant: "steps",
+      paragraphs: [
+        "In-hand salary is the amount you receive after deductions. Ask the employer whether the salary shown is in-hand or before deductions such as PF or ESI.",
+      ],
+      bullets: [
+        "In-hand (take-home) salary",
+        "PF (Provident Fund)",
+        "ESI (Employee State Insurance)",
+        "Other deductions, if any",
+      ],
+    },
+    {
+      id: "extra-pay-and-benefits",
+      title: "Extra Pay and Benefits",
+      variant: "steps",
+      paragraphs: [
+        "Some jobs offer extra pay or benefits along with the salary. Ask clearly about what is included.",
+      ],
+      bullets: [
+        "Overtime pay",
+        "Incentives",
+        "Food or accommodation",
+        "Travel allowance",
+        "Weekly off and paid leave",
+      ],
+    },
+    {
+      id: "salary-payment-schedule",
+      title: "Salary Payment Schedule",
+      variant: "steps",
+      paragraphs: [
+        "Confirm when and how the salary will be paid, such as monthly, weekly, or daily, and whether it is paid by bank transfer or cash. Keep a record of your salary payments.",
+      ],
+    },
+    {
+      id: "what-affects-your-salary",
+      title: "What Affects Your Salary",
+      variant: "steps",
+      paragraphs: [
+        "Salary can differ based on these factors. Improving your skills and keeping your profile updated can help you find better-paying jobs.",
+      ],
+      bullets: [
+        "Experience",
+        "Skills",
+        "Job category",
+        "City and location",
+        "Shift and work timings",
+      ],
+    },
+    {
+      id: "salary-safety",
+      title: "Salary Safety",
+      variant: "safety",
+      paragraphs: [
+        "Never pay money to get a job or a higher salary. Be careful of offers that promise a very high salary for little work, and report them to AsliJobs support.",
+      ],
+      bullets: [
+        "Never pay money to get a job.",
+        "Be careful of unrealistic salary promises.",
+        "Report suspicious offers to AsliJobs support.",
+      ],
+    },
+  ],
+  cta: {
+    title: "Find Jobs With Clear Salary Details",
+    paragraphs: [
+      "Receive job alerts with salary, location, and timings directly on WhatsApp.",
+    ],
+    tagline: "Know your salary. Choose the right job.",
+    badge: "WhatsApp",
+    actions: JOB_SEEKER_CTA_ACTIONS,
+  },
+};
+
+export const CAREER_ADVICE_CONTENT: JobSeekerContentPageData = {
+  slug: "career-advice",
+  title: "Career Advice",
+  metaDescription:
+    "Practical career advice to help job seekers grow their skills, find better jobs, and build a stable career.",
+  intro: [
+    "Every job is a step in your career. These practical tips can help you grow your skills, find better opportunities, and build a stable future.",
+  ],
+  sections: [
+    {
+      id: "keep-your-profile-updated",
+      title: "Keep Your Profile Updated",
+      variant: "steps",
+      paragraphs: [
+        "Update your skills, experience, preferred location, and expected salary whenever they change. An updated profile helps AsliJobs send you better job matches.",
+      ],
+    },
+    {
+      id: "learn-new-skills",
+      title: "Learn New Skills",
+      variant: "steps",
+      paragraphs: [
+        "New skills can open better jobs and a higher salary. Learn from experienced co-workers, join short training courses, and get certificates where possible.",
+      ],
+      bullets: [
+        "Driving licence for driver jobs",
+        "Basic computer and mobile skills",
+        "Workplace safety training",
+        "Trade skills such as electrical or plumbing work",
+        "Customer service and communication",
+      ],
+    },
+    {
+      id: "choose-the-right-job",
+      title: "Choose the Right Job",
+      variant: "steps",
+      paragraphs: [
+        "Look beyond salary. Consider these points before you accept a job.",
+      ],
+      bullets: [
+        "Work location and travel time",
+        "Shift timings",
+        "Job security",
+        "Growth opportunities",
+      ],
+    },
+    {
+      id: "grow-in-your-current-job",
+      title: "Grow in Your Current Job",
+      variant: "steps",
+      paragraphs: [
+        "Be punctual, reliable, and honest at work. Good attendance and a positive attitude help you earn trust, responsibility, and promotions.",
+      ],
+      bullets: [
+        "Be on time",
+        "Learn from your supervisor",
+        "Take responsibility",
+        "Keep a record of your work experience",
+      ],
+    },
+    {
+      id: "plan-your-next-step",
+      title: "Plan Your Next Step",
+      variant: "steps",
+      paragraphs: [
+        "Set a clear goal, such as becoming a supervisor, senior technician, or team leader. Collect experience letters and references to support your next job application.",
+      ],
+    },
+  ],
+  cta: {
+    title: "Take the Next Step in Your Career",
+    paragraphs: [
+      "Find jobs that match your skills and goals, and receive alerts directly on WhatsApp.",
+    ],
+    tagline: "Learn. Grow. Find better jobs.",
+    badge: "WhatsApp",
+    actions: JOB_SEEKER_CTA_ACTIONS,
+  },
+};

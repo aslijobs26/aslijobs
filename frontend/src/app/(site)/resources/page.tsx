@@ -12,6 +12,15 @@ export const metadata: Metadata = {
   description: english.resourcesDescription,
 };
 
+const RESOURCE_REDIRECTS: Readonly<Record<string, string>> = {
+  faqs: ROUTES.FAQS,
+  "help-center": ROUTES.HELP_CENTER,
+  "resume-builder": ROUTES.JOB_SEEKER_MY_RESUME,
+  "interview-tips": ROUTES.INTERVIEW_TIPS,
+  "salary-guide": ROUTES.SALARY_GUIDE,
+  "career-advice": ROUTES.CAREER_ADVICE,
+};
+
 type ResourcesPageProps = {
   searchParams: Promise<{
     resource?: string;
@@ -23,13 +32,13 @@ export default async function ResourcesPage({
   searchParams,
 }: ResourcesPageProps) {
   const params = await searchParams;
+  const resourceRedirect =
+    params.resource && Object.hasOwn(RESOURCE_REDIRECTS, params.resource)
+      ? RESOURCE_REDIRECTS[params.resource]
+      : undefined;
 
-  if (params.resource === "faqs") {
-    redirect(ROUTES.FAQS);
-  }
-
-  if (params.resource === "help-center") {
-    redirect(ROUTES.HELP_CENTER);
+  if (resourceRedirect) {
+    redirect(resourceRedirect);
   }
 
   if (params.page === "sitemap") {

@@ -1,14 +1,5 @@
 import type { HeroFeatureId, HeroFeatureMessage } from "@/types/hero";
 
-export const HERO_LANGUAGES = [
-  "English",
-  "తెలుగు",
-  "हिंदी",
-  "தமிழ்",
-  "ಕನ್ನಡ",
-  "മലയാളം",
-] as const;
-
 export const HERO_HEADING = {
   line1: "Find Jobs Easy.",
   line2: "On WhatsApp.",

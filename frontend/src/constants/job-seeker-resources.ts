@@ -19,7 +19,7 @@ export const JOB_SEEKER_RESOURCES: JobSeekerResource[] = [
     icon: "resume",
     surfaceVariant: "resume",
     iconVariant: "glow",
-    href: `${ROUTES.RESOURCES}?resource=resume-builder`,
+    href: ROUTES.JOB_SEEKER_MY_RESUME,
   },
   {
     id: "interview-tips",
@@ -28,7 +28,7 @@ export const JOB_SEEKER_RESOURCES: JobSeekerResource[] = [
     icon: "interview",
     surfaceVariant: "interview",
     iconVariant: "surface",
-    href: `${ROUTES.RESOURCES}?resource=interview-tips`,
+    href: ROUTES.INTERVIEW_TIPS,
   },
   {
     id: "salary-guide",
@@ -37,7 +37,7 @@ export const JOB_SEEKER_RESOURCES: JobSeekerResource[] = [
     icon: "salary",
     surfaceVariant: "salary",
     iconVariant: "primary",
-    href: `${ROUTES.RESOURCES}?resource=salary-guide`,
+    href: ROUTES.SALARY_GUIDE,
   },
   {
     id: "career-advice",
@@ -46,6 +46,6 @@ export const JOB_SEEKER_RESOURCES: JobSeekerResource[] = [
     icon: "career",
     surfaceVariant: "career",
     iconVariant: "glow",
-    href: `${ROUTES.RESOURCES}?resource=career-advice`,
+    href: ROUTES.CAREER_ADVICE,
   },
 ];

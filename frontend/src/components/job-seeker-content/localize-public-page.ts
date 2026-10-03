@@ -6,9 +6,12 @@ import {
 import {
   BROWSE_BY_CITY_CONTENT,
   BROWSE_BY_STATE_CONTENT,
+  CAREER_ADVICE_CONTENT,
   FIND_JOBS_CONTENT,
+  INTERVIEW_TIPS_CONTENT,
   JOB_CATEGORIES_CONTENT,
   JOB_SEEKER_GUIDE_CONTENT,
+  SALARY_GUIDE_CONTENT,
 } from "@/constants/job-seeker-content";
 import { publicPagesBundle } from "@/i18n/bundles/public-pages";
 import { numberedCopy, toCamelCaseId } from "@/i18n/localize-copy";
@@ -25,6 +28,9 @@ export const PUBLIC_PAGE_KEYS = [
   "browseByState",
   "jobCategories",
   "jobSeekerGuide",
+  "interviewTips",
+  "salaryGuide",
+  "careerAdvice",
   "employerLogin",
   "pricingPlans",
   "employerGuide",
@@ -38,6 +44,9 @@ const PAGE_SOURCES: Record<PublicPageKey, PublicContentPageData> = {
   browseByState: BROWSE_BY_STATE_CONTENT,
   jobCategories: JOB_CATEGORIES_CONTENT,
   jobSeekerGuide: JOB_SEEKER_GUIDE_CONTENT,
+  interviewTips: INTERVIEW_TIPS_CONTENT,
+  salaryGuide: SALARY_GUIDE_CONTENT,
+  careerAdvice: CAREER_ADVICE_CONTENT,
   employerLogin: EMPLOYER_LOGIN_CONTENT,
   pricingPlans: PRICING_PLANS_CONTENT,
   employerGuide: EMPLOYER_GUIDE_CONTENT,

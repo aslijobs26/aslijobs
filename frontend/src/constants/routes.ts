@@ -61,6 +61,9 @@ export const ROUTES = {
   BROWSE_BY_STATE: "/browse-by-state",
   JOB_CATEGORIES: "/job-categories",
   JOB_SEEKER_GUIDE: "/job-seeker-guide",
+  INTERVIEW_TIPS: "/interview-tips",
+  SALARY_GUIDE: "/salary-guide",
+  CAREER_ADVICE: "/career-advice",
   /** Informational content pages for employers (footer links). */
   EMPLOYER_POST_A_JOB: "/post-a-job",
   EMPLOYER_LOGIN_INFO: "/employer-login-info",
