@@ -15,6 +15,8 @@ const whatsAppSessionSchema = new Schema(
     },
     pendingLocation: { type: String, default: "" },
     pendingCategory: { type: String, default: "" },
+    pendingOpenSearch: { type: Boolean, default: false },
+    pendingIntent: { type: String, default: "" },
     lastLocation: { type: String, default: "" },
     lastCategory: { type: String, default: "" },
     conversationState: {

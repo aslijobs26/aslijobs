@@ -105,6 +105,7 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
       console.info(
         `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} cache=hit durationMs=0`,
       );
+      console.info(`[WHATSAPP-BOT] TRANSLATION_CACHE_HIT source=${source} target=${target}`);
       return { text: hit, translated: true, skipped: false, failed: false, durationMs: 0 };
     }
   }
@@ -151,6 +152,7 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
     console.info(
       `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} ok=yes cache=${input.cache ? "store" : "no"} durationMs=${Date.now() - started}`,
     );
+    console.info(`[WHATSAPP-BOT] TRANSLATION_CREATED source=${source} target=${target} cached=${Boolean(input.cache)}`);
     return { text: translated, translated: true, skipped: false, failed: false, durationMs: Date.now() - started };
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "TimeoutError";

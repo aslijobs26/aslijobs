@@ -177,6 +177,11 @@ const REQUEST_WORDS = [
   "हैं",
   "चाहिए",
   "दिखाओ",
+  "வேண்டும்",
+  "இருக்கா",
+  "ಬೇಕು",
+  "വേണം",
+  "undo",
 ];
 
 const TE_PLACE: Record<string, string> = {
@@ -623,8 +628,15 @@ export function validateCurrentMessageIntent(
   return understanding;
 }
 
+export type PendingSearchContext = {
+  location: string;
+  category: string;
+  openSearch?: boolean;
+  intent?: string;
+};
+
 export function mergePending(
-  previous: { location: string; category: string } | null,
+  previous: PendingSearchContext | null,
   next: BotUnderstanding,
   text = "",
 ): BotUnderstanding {
@@ -664,20 +676,22 @@ export function mergePending(
   // "jobs in Chennai" is a broad search; "Chennai lo unnaya?" only changes the city.
   const broadAsk =
     next.openSearch && Boolean(next.location) && !next.category && (!text || mentionsJobWord(text));
-  const category = broadAsk ? "" : next.category || previous.category;
+  const keepOpenSearch =
+    Boolean(previous.openSearch) && !next.category && Boolean(location);
+  const category = broadAsk || keepOpenSearch ? "" : next.category || previous.category;
   return {
     ...next,
     location,
     category,
     jobQuery: category,
-    openSearch: next.openSearch && !category,
+    openSearch: (next.openSearch && !category) || keepOpenSearch,
   };
 }
 
 export function resolveTurnUnderstanding(
   text: string,
   raw: BotUnderstanding,
-  previous: { location: string; category: string } | null,
+  previous: PendingSearchContext | null,
 ): BotUnderstanding {
   return applyCurrentMessageSearchRules(
     text,
@@ -784,25 +798,37 @@ export function renderJobSearchReply(input: {
   total?: number;
   frontendOrigin?: string;
   includeApplyLinks?: boolean;
+  accountType?: AccountKind;
+  seekerRegisterUrl?: string;
 }): string {
   const place = labelPlace(input.location, input.language);
   const role = labelRole(input.jobTitle, input.language);
   const count = input.total ?? input.jobs.length;
+  const unknown = input.accountType === "none";
+  const registerUrl = input.seekerRegisterUrl ?? "";
 
   if (count === 0) {
+    const emptyCore =
+      input.language === "te"
+        ? `ప్రస్తుతం ${place || "ఈ ప్రాంతం"}లో ${input.jobTitle ? role : ""} జాబ్స్ కనిపించలేదు.`.replace(/\s+/g, " ")
+        : input.language === "hi"
+          ? `अभी ${place || "इस जगह"} में ${role || "नौकरी"} नहीं मिली.`
+          : input.language === "ta" || input.language === "kn" || input.language === "ml"
+            ? regionalLead(input.language, "empty", place, role, "")
+            : `Sorry, I could not find ${role || "jobs"}${place ? ` in ${place}` : ""} right now.`;
+    if (unknown) {
+      return `${emptyCore}\n\n${unknownApplyFooter(input.language, registerUrl, "after_empty")}`;
+    }
     if (input.language === "te") {
-      return `ప్రస్తుతం ${place || "ఈ ప్రాంతం"}లో ${input.jobTitle ? role : ""} జాబ్స్ కనిపించలేదు. వేరే ప్రాంతం లేదా వేరే జాబ్ కావాలంటే చెప్పండి.`.replace(
-        /\s+/g,
-        " ",
-      );
+      return `${emptyCore} వేరే ప్రాంతం లేదా వేరే జాబ్ కావాలంటే చెప్పండి.`;
     }
     if (input.language === "hi") {
-      return `अभी ${place || "इस जगह"} में ${role || "नौकरी"} नहीं मिली। किसी दूसरी जगह या दूसरी नौकरी के लिए बताइए।`;
+      return `${emptyCore} किसी दूसरी जगह या दूसरी नौकरी के लिए बताइए.`;
     }
-    if (input.language === "ta" || input.language === "kn" || input.language === "ml") {
-      return regionalLead(input.language, "empty", place, role, "");
+    if (input.language === "en") {
+      return `${emptyCore} Tell me another location or job type to search.`;
     }
-    return `I could not find ${role || "jobs"}${place ? ` in ${place}` : ""}. Tell me another location or job type to search.`;
+    return emptyCore;
   }
 
   const lines = input.jobs.slice(0, JOBS_FOR_AI_LIMIT).map((job, index) => {
@@ -817,12 +843,14 @@ export function renderJobSearchReply(input: {
     const apply = applyUrl ? `\n👉 Apply Now: ${applyUrl}` : "";
     return `${index + 1}. ${title}${company}${where ? `\n📍 ${where}` : ""}${salary}${apply}`;
   });
+  const withFooter = (body: string) =>
+    unknown ? `${body}\n\n${unknownApplyFooter(input.language, registerUrl, "after_jobs")}` : body;
 
   if (input.language === "te") {
     const lead = input.widenedTo
       ? `${place}లో ${role} జాబ్స్ కనిపించలేదు. ${labelPlace(input.widenedTo, "te")}లో ఇవి ఉన్నాయి:`
       : `అవును 👍 ${place ? `${place}లో ` : ""}${count} ${role} ఉద్యోగాలు దొరికాయి.`;
-    return `${lead}\n\n${lines.join("\n\n")}\n\nమీకు కావాల్సిన జాబ్‌పై మరిన్ని వివరాలు కావాలంటే చెప్పండి.`;
+    return withFooter(`${lead}\n\n${lines.join("\n\n")}`);
   }
   if (input.language === "hi") {
     const lead = input.widenedTo
@@ -832,13 +860,13 @@ export function renderJobSearchReply(input: {
       count > input.jobs.length
         ? `\n\nकुल ${count} नौकरियां हैं. पहली ${input.jobs.length} दिखा रहे हैं.`
         : "";
-    return `${lead}\n\n${lines.join("\n\n")}${more}`;
+    return withFooter(`${lead}\n\n${lines.join("\n\n")}${more}`);
   }
   if (input.language === "ta" || input.language === "kn" || input.language === "ml") {
     const lead = input.widenedTo
       ? regionalLead(input.language, "widen", place, role, labelPlace(input.widenedTo, input.language))
       : regionalLead(input.language, "found", place, role, String(count));
-    return `${lead}\n\n${lines.join("\n\n")}\n\n${regionalLead(input.language, "more", "", "", "")}`;
+    return withFooter(`${lead}\n\n${lines.join("\n\n")}`);
   }
   const lead = input.widenedTo
     ? `No ${role || "jobs"} in ${place}. These are in ${input.widenedTo}:`
@@ -847,7 +875,7 @@ export function renderJobSearchReply(input: {
     count > input.jobs.length
       ? `\n\nThere are ${count} matching jobs. Showing the first ${input.jobs.length}.`
       : "";
-  return `${lead}\n\n${lines.join("\n\n")}${more}`;
+  return withFooter(`${lead}\n\n${lines.join("\n\n")}${more}`);
 }
 
 export function clarifyJobTitle(language: BotLanguage): string {
@@ -864,16 +892,87 @@ export function clarifyJobTitle(language: BotLanguage): string {
 }
 
 export function askLocationCopy(language: BotLanguage): string {
-  if (language === "te") return "ఏ ప్రాంతంలో జాబ్ కావాలో చెప్పండి. ఉదాహరణ: హైదరాబాద్.";
-  if (language === "hi") return "किस जगह नौकरी चाहिए? उदाहरण: हैदराबाद.";
-  if (language === "ta") return "எந்த ஊரில் வேலை வேண்டும்? உதாரணம்: ஹைதராபாத்.";
-  if (language === "kn") return "ಯಾವ ಊರಲ್ಲಿ ಕೆಲಸ ಬೇಕು? ಉದಾಹರಣೆ: ಹೈದರಾಬಾದ್.";
-  if (language === "ml") return "ഏത് സ്ഥലത്ത് ജോലി വേണം? ഉദാഹരണം: ഹൈദരാബാദ്.";
-  return "Sure 👍 Which location are you looking for?";
+  if (language === "te") {
+    return "సరే 👍 మీరు ఏ ప్రాంతంలో జాబ్ కావాలి? ఉదాహరణ: Hyderabad, Chennai, Bangalore.";
+  }
+  if (language === "hi") {
+    return "ज़रूर 👍 किस जगह नौकरी चाहिए? उदाहरण: Hyderabad, Chennai, Bangalore.";
+  }
+  if (language === "ta") {
+    return "சரி 👍 எந்த ஊரில் வேலை வேண்டும்? உதாரணம்: Hyderabad, Chennai, Bangalore.";
+  }
+  if (language === "kn") {
+    return "ಸರಿ 👍 ಯಾವ ಊರಲ್ಲಿ ಕೆಲಸ ಬೇಕು? ಉದಾಹರಣೆ: Hyderabad, Chennai, Bangalore.";
+  }
+  if (language === "ml") {
+    return "ശരി 👍 ഏത് സ്ഥലത്ത് ജോലി വേണം? ഉദാഹരണം: Hyderabad, Chennai, Bangalore.";
+  }
+  return "Sure 👍 Which location are you looking for?\nExample: Hyderabad, Chennai, Bangalore.";
 }
 
-export function howToApplyCopy(_language: BotLanguage): string {
+export function howToApplyCopy(
+  language: BotLanguage,
+  account: AccountKind = "seeker",
+  registerUrl = "",
+): string {
+  if (account === "none" && registerUrl) {
+    return unknownApplyFooter(language, registerUrl, "apply_only");
+  }
+  if (language === "te") {
+    return "Apply చేయడానికి AsliJobs లో login అయి job open చేసి Apply నొక్కండి.";
+  }
+  if (language === "hi") {
+    return "आवेदन करने के लिए AsliJobs पर लॉग इन करें, नौकरी खोलें, और Apply दबाएं.";
+  }
   return "To apply, log in to AsliJobs, open the job, and tap Apply.";
+}
+
+export function unknownApplyFooter(
+  language: BotLanguage,
+  url: string,
+  mode: "after_jobs" | "after_empty" | "apply_only" = "after_jobs",
+): string {
+  const link = url.trim();
+  if (language === "te") {
+    if (mode === "after_empty") {
+      return `మీరు:\n1. వేరే role try చేయవచ్చు\n2. వేరే location try చేయవచ్చు\n3. Job Seeker account create చేసుకుని latest jobs search చేయవచ్చు${link ? `\n\n👉 Job Seeker account:\n${link}` : ""}`;
+    }
+    if (mode === "apply_only") {
+      return `ఈ jobs కి apply చేయాలంటే ముందుగా Job Seeker account create చేసుకోండి.${link ? `\n\n👉 ${link}` : ""}`;
+    }
+    return `ఈ jobs కి apply చేయాలంటే ముందుగా Job Seeker account create చేసుకోండి:${link ? `\n👉 ${link}` : ""}\n\nRegistration complete చేసాక WhatsApp లో మళ్లీ message చేయండి.`;
+  }
+  if (language === "hi") {
+    if (mode === "after_empty") {
+      return `आप:\n1. कोई और role देख सकते हैं\n2. कोई और जगह देख सकते हैं\n3. Job Seeker खाता बनाकर नई नौकरियां खोज सकते हैं${link ? `\n\n👉 Job Seeker account:\n${link}` : ""}`;
+    }
+    if (mode === "apply_only") {
+      return `आवेदन के लिए पहले Job Seeker खाता बनाएं.${link ? `\n\n👉 ${link}` : ""}`;
+    }
+    return `इन नौकरियों पर आवेदन करने के लिए Job Seeker खाता बनाएं:${link ? `\n👉 ${link}` : ""}`;
+  }
+  if (language === "ta") {
+    return mode === "after_empty"
+      ? `வேறு வேலை அல்லது ஊரை முயற்சிக்கலாம்.${link ? `\n👉 ${link}` : ""}`
+      : `விண்ணப்பிக்க Job Seeker கணக்கு உருவாக்குங்கள்.${link ? `\n👉 ${link}` : ""}`;
+  }
+  if (language === "kn") {
+    return mode === "after_empty"
+      ? `ಬೇರೆ ಕೆಲಸ ಅಥವಾ ಊರು ಪ್ರಯತ್ನಿಸಿ.${link ? `\n👉 ${link}` : ""}`
+      : `ಅರ್ಜಿ ಸಲ್ಲಿಸಲು Job Seeker ಖಾತೆ ತೆರೆಯಿರಿ.${link ? `\n👉 ${link}` : ""}`;
+  }
+  if (language === "ml") {
+    return mode === "after_empty"
+      ? `മറ്റൊരു ജോലി അല്ലെങ്കിൽ സ്ഥലം ശ്രമിക്കാം.${link ? `\n👉 ${link}` : ""}`
+      : `അപേക്ഷിക്കാൻ Job Seeker അക്കൗണ്ട് ഉണ്ടാക്കൂ.${link ? `\n👉 ${link}` : ""}`;
+  }
+  if (mode === "after_empty") {
+    return `You can:\n1. Try another role\n2. Try another location\n3. Create a Job Seeker account to search the latest jobs${link ? `\n\n👉 Job Seeker registration:\n${link}` : ""}`;
+  }
+  if (mode === "apply_only") {
+    return `To apply, please create a Job Seeker account first.${link ? `\n\n👉 ${link}` : ""}`;
+  }
+  return `To apply for these jobs, please create a Job Seeker account:${link ? `\n👉 ${link}` : ""}\n\nAfter registration, message us again on WhatsApp.`;
 }
 
 export function profileCopy(input: {
@@ -910,7 +1009,15 @@ export function buildDeterministicReply(
     return capabilityCopy(language, (facts.accountType as AccountKind) || "seeker");
   }
   if (situation === "how_to_apply") {
-    return howToApplyCopy(language);
+    const registration =
+      facts.registration && typeof facts.registration === "object"
+        ? (facts.registration as { seekerRegisterUrl?: string })
+        : {};
+    return howToApplyCopy(
+      language,
+      (facts.accountType as AccountKind) || "seeker",
+      registration.seekerRegisterUrl || "",
+    );
   }
   if (situation === "choose_account") {
     return greetingCopy({ language, account: "both", name: "" });
@@ -992,7 +1099,13 @@ export function buildDeterministicReply(
       widenedTo: facts.widenedTo ? String(facts.widenedTo) : undefined,
       total: typeof facts.total === "number" ? facts.total : undefined,
       frontendOrigin: String(facts.applyOrigin ?? ""),
-      includeApplyLinks: String(facts.accountType ?? "") !== "employer",
+      includeApplyLinks:
+        String(facts.accountType ?? "") !== "employer" && String(facts.accountType ?? "") !== "none",
+      accountType: (facts.accountType as AccountKind) || undefined,
+      seekerRegisterUrl:
+        facts.registration && typeof facts.registration === "object"
+          ? String((facts.registration as { seekerRegisterUrl?: string }).seekerRegisterUrl ?? "")
+          : "",
     });
   }
   if (situation === "count" || situation === "status" || situation === "list") {
@@ -1178,6 +1291,31 @@ export function menuUnderstanding(
     confidence: 0.99,
     focus: "",
   };
+}
+
+export type UnknownUserAction =
+  | "greeting"
+  | "employer_register"
+  | "seeker_register"
+  | "how_to_apply"
+  | "public_jobs"
+  | "out_of_scope"
+  | "clarify";
+
+/** Account status and intent stay separate. Unknown users may search public jobs. */
+export function unknownUserAction(
+  understanding: Pick<BotUnderstanding, "intent" | "scope">,
+): UnknownUserAction {
+  const { intent, scope } = understanding;
+  if (intent === "GREETING" || intent === "HELP") return "greeting";
+  if (intent === "POST_JOB" || scope === "OWN_EMPLOYER_DATA") return "employer_register";
+  if (intent === "HOW_TO_APPLY") return "how_to_apply";
+  if (scope === "OWN_DATA") return "seeker_register";
+  if (intent === "JOB_SEARCH" || intent === "JOB_COUNT" || intent === "JOB_DETAILS") {
+    return "public_jobs";
+  }
+  if (intent === "UNRELATED") return "out_of_scope";
+  return "clarify";
 }
 
 export function shouldUseLlmFallback(local: BotUnderstanding, text: string): boolean {

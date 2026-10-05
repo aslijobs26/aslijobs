@@ -34,6 +34,7 @@ import {
   shouldUseLlmFallback,
   toPublicJobsLookup,
   understandLocally,
+  unknownUserAction,
   voiceUnclearCopy,
   type AccountKind,
   type BotUnderstanding,
@@ -162,6 +163,10 @@ function describeTurn(
   };
 }
 
+function logWhatsAppBot(event: string, details = ""): void {
+  console.info(`[WHATSAPP-BOT] ${event}${details ? ` ${details}` : ""}`);
+}
+
 export async function handleConversationalMessage(input: {
   from: string;
   text?: string;
@@ -192,6 +197,10 @@ export async function handleConversationalMessage(input: {
     ]);
     timing.account_lookup = Date.now() - lookupStarted;
     timing.session_lookup = timing.account_lookup;
+    logWhatsAppBot(
+      "ACCOUNT_RESOLVED",
+      `accountType=${accountLabel(identity.linked)} seeker=${identity.seekerId ? "yes" : "no"} employer=${identity.employerId ? "yes" : "no"}`,
+    );
 
     let text = input.text?.trim() ?? "";
     let languageHint = input.languageHint;
@@ -250,6 +259,11 @@ export async function handleConversationalMessage(input: {
       await whatsAppService.sendTextMessage(input.from, reply);
       timing.whatsapp_send = Date.now() - sendStarted;
       const plan = whatsappAiCallPlan({ protocol: true, voice: input.messageType === "audio", needsTranslation: false });
+      logWhatsAppBot("LANGUAGE_DETECTED", `language=${language} source=current_message`);
+      logWhatsAppBot("LOCAL_INTENT", `intent=${protocol.toUpperCase()} confidence=1 source=protocol`);
+      logWhatsAppBot("LLM_SKIPPED", "reason=protocol_template");
+      logWhatsAppBot("TEMPLATE_USED", `situation=${protocol}`);
+      logWhatsAppBot("REPLY_SENT", `language=${language} protocol=${protocol}`);
       console.info(
         `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${protocol.toUpperCase()} language=${language} understandingMode=PROTOCOL llmUsed=false llmCalls=0 dbService=none responseType=template latency=${Date.now() - started}`,
       );
@@ -288,10 +302,21 @@ export async function handleConversationalMessage(input: {
       if (!shouldUseLlmFallback(local, text)) {
         understood = { understanding: local, source: "local" };
         timing.sarvam_understand = 0;
+        logWhatsAppBot("LANGUAGE_DETECTED", `language=${local.language} source=local`);
+        logWhatsAppBot(
+          "LOCAL_INTENT",
+          `intent=${local.intent} confidence=${local.confidence} location=${local.location || "-"} role=${local.category || "-"}`,
+        );
+        logWhatsAppBot("LLM_SKIPPED", "reason=confident_local");
         console.info(`[WhatsApp] language_detection: ${Math.round(localMs)}ms`);
         console.info(`[WhatsApp] intent_detection: ${Math.round(localMs)}ms source=local`);
       } else {
         const languageForAck = detectLanguage(text, session?.language, hint);
+        logWhatsAppBot(
+          "LLM_FALLBACK",
+          `reason=ambiguous_or_low_confidence localIntent=${local.intent} confidence=${local.confidence} language=${languageForAck}`,
+        );
+        const llmStarted = performance.now();
         const [remote] = await Promise.all([
           understandMessage(text, session?.language, hint, prior),
           whatsAppService
@@ -310,6 +335,15 @@ export async function handleConversationalMessage(input: {
           source: remote.source,
         };
         timing.sarvam_understand = performance.now() - understandStarted;
+        logWhatsAppBot(
+          "LLM_FALLBACK",
+          `result=${understood.understanding.intent} language=${understood.understanding.language} source=${understood.source} latencyMs=${Math.round(performance.now() - llmStarted)} success=${understood.source === "sarvam"}`,
+        );
+        logWhatsAppBot("LANGUAGE_DETECTED", `language=${understood.understanding.language} source=${understood.source}`);
+        logWhatsAppBot(
+          "LOCAL_INTENT",
+          `intent=${understood.understanding.intent} confidence=${understood.understanding.confidence} location=${understood.understanding.location || "-"} role=${understood.understanding.category || "-"}`,
+        );
         console.info(`[WhatsApp] language_detection: ${Math.round(localMs)}ms`);
         console.info(
           `[WhatsApp] intent_detection: ${Math.round(timing.sarvam_understand)}ms source=${understood.source}`,
@@ -323,6 +357,8 @@ export async function handleConversationalMessage(input: {
         ? {
             location: session.pendingLocation || session.lastLocation || "",
             category: session.pendingCategory || session.lastCategory || "",
+            openSearch: Boolean(session.pendingOpenSearch),
+            intent: session.pendingIntent || "",
           }
         : null,
     );
@@ -355,6 +391,8 @@ export async function handleConversationalMessage(input: {
         activeRole: turn.activeRole,
         pendingLocation: waitingForRole ? merged.location : "",
         pendingCategory: waitingForLocation ? merged.category : "",
+        pendingOpenSearch: waitingForLocation && merged.openSearch,
+        pendingIntent: waitingForLocation || waitingForRole ? merged.intent : "",
         lastLocation:
           merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT" || merged.intent === "JOB_DETAILS"
             ? merged.location || session?.lastLocation || ""
@@ -403,6 +441,9 @@ export async function handleConversationalMessage(input: {
     ]);
     const translateMs = performance.now() - localizeStarted;
     const replyText = localized.text;
+    if (localized.skipped) {
+      logWhatsAppBot("TEMPLATE_USED", `situation=${String(turn.facts.situation ?? "-")} language=${merged.language}`);
+    }
     const plan = whatsappAiCallPlan({
       protocol: false,
       voice: input.messageType === "audio",
@@ -473,6 +514,10 @@ export async function handleConversationalMessage(input: {
     const sendStarted = Date.now();
     await whatsAppService.sendTextMessage(input.from, replyText);
     timing.whatsapp_send = Date.now() - sendStarted;
+    logWhatsAppBot(
+      "REPLY_SENT",
+      `language=${merged.language} intent=${merged.intent} situation=${String(turn.facts.situation ?? "-")} llm=${understood.source === "sarvam"}`,
+    );
     const totalMs = Date.now() - started;
     console.info(`[WhatsApp] job_search: ${timing.db_query}ms`);
     console.info(`[WhatsApp] LLM: ${Math.round(timing.sarvam_understand)}ms`);
@@ -574,25 +619,29 @@ async function buildReply(
     return reply({ situation: "choose_account", accountType: "both" });
   }
   if (linked === "none") {
-    if (understanding.intent === "GREETING" || understanding.intent === "HELP") {
+    const action = unknownUserAction(understanding);
+    logWhatsAppBot(
+      "UNKNOWN_USER",
+      `action=${action} intent=${understanding.intent} location=${understanding.location || "-"} role=${understanding.category || "-"}`,
+    );
+    if (action === "greeting") {
       return reply({ situation: "greeting", accountType: "none", name: "" });
     }
-    if (understanding.intent === "POST_JOB" || understanding.scope === "OWN_EMPLOYER_DATA") {
+    if (action === "employer_register") {
       return reply({ situation: "new_user", reason: "employer_account_required" });
     }
-    if (
-      understanding.intent === "JOB_SEARCH" ||
-      understanding.intent === "JOB_COUNT" ||
-      understanding.intent === "JOB_DETAILS" ||
-      understanding.intent === "HOW_TO_APPLY" ||
-      understanding.scope === "OWN_DATA"
-    ) {
+    if (action === "seeker_register") {
       return reply({ situation: "new_user", reason: "job_seeker_account_required" });
     }
-    if (understanding.intent === "UNRELATED") {
+    if (action === "how_to_apply") {
+      return reply({ situation: "how_to_apply", accountType: "none" });
+    }
+    if (action === "out_of_scope") {
       return reply({ situation: "out_of_scope", accountType: "none" });
     }
-    return reply({ situation: "clarify", missing: "purpose" });
+    if (action === "clarify") {
+      return reply({ situation: "clarify", missing: "purpose" });
+    }
   }
 
   switch (understanding.intent) {
@@ -729,16 +778,13 @@ async function buildReply(
     case "JOB_SEARCH":
     default: {
       if (understanding.intent === "UNKNOWN") {
-        return reply({ situation: "clarify", missing: "intent" });
-      }
-      if (!understanding.location && !understanding.category) {
-        return reply({ situation: "clarify", missing: "location_and_role" });
-      }
-      if (!understanding.category && !understanding.openSearch) {
-        return reply({ situation: "clarify", missing: "role" });
+        return reply({ situation: "clarify", missing: linked === "none" ? "purpose" : "intent" });
       }
       if (!understanding.location) {
         return reply({ situation: "clarify", missing: "location" });
+      }
+      if (!understanding.category && !understanding.openSearch) {
+        return reply({ situation: "clarify", missing: "role" });
       }
       return searchJobs(
         understanding,
@@ -758,6 +804,10 @@ async function searchJobs(
 ): Promise<BotTurn> {
   const lookup = toPublicJobsLookup(understanding);
   const role = lookup.search || "ANY";
+  logWhatsAppBot(
+    "JOB_SEARCH",
+    `accountType=${meta.accountType} location=${lookup.city || "-"} role=${role} language=${language || "-"}`,
+  );
   const primary = await loadJobs(lookup.search, lookup.city, jobSeekerId, language);
   if (primary.jobs.length > 0 || !understanding.location) {
     logWhatsAppJobs({
@@ -770,7 +820,10 @@ async function searchJobs(
       path: primary.jobs.length > 0 ? "primary" : "empty",
       cities: primary.jobs.map((job) => job.cityName),
     });
-    return say("", primary.jobs, meta, {
+    console.info(
+      `[WHATSAPP-BOT] ${primary.jobs.length > 0 ? "JOB_RESULTS" : "JOB_SEARCH_EMPTY"} accountType=${meta.accountType} location=${lookup.city || "-"} role=${role} count=${primary.jobs.length}`,
+    );
+    return say("", primary.jobs, meta, publicJobReplyFacts(meta, {
       situation: "jobs",
       location: understanding.location,
       role: understanding.category,
@@ -778,7 +831,7 @@ async function searchJobs(
       total: primary.total,
       more: primary.hasMore,
       jobs: primary.jobs.map(publicJobFact),
-    });
+    }));
   }
 
   const widerCity = parentCity(understanding.location);
@@ -795,7 +848,10 @@ async function searchJobs(
     path: wider.jobs.length > 0 ? "parent_city" : "empty",
     cities: wider.jobs.map((job) => job.cityName),
   });
-  return say("", wider.jobs, meta, {
+  console.info(
+    `[WHATSAPP-BOT] ${wider.jobs.length > 0 ? "JOB_RESULTS" : "JOB_SEARCH_EMPTY"} accountType=${meta.accountType} location=${wider.jobs.length > 0 ? widerCity : lookup.city || "-"} role=${role} count=${wider.jobs.length} path=${wider.jobs.length > 0 ? "parent_city" : "empty"}`,
+  );
+  return say("", wider.jobs, meta, publicJobReplyFacts(meta, {
     situation: "jobs",
     location: understanding.location,
     role: understanding.category,
@@ -804,7 +860,18 @@ async function searchJobs(
     more: wider.hasMore,
     widenedTo: wider.jobs.length > 0 ? widerCity : "",
     jobs: wider.jobs.map(publicJobFact),
-  });
+  }));
+}
+
+function publicJobReplyFacts(
+  meta: { accountType: AccountKind },
+  facts: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    ...facts,
+    accountType: meta.accountType,
+    ...(meta.accountType === "none" ? { registration: siteUrls() } : {}),
+  };
 }
 
 function publicJobFact(job: PublicJobFact) {
