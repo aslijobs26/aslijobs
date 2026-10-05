@@ -1,12 +1,20 @@
 import {
   Briefcase,
   CalendarDays,
+  Check,
+  ChevronRight,
+  Copy,
+  Eye,
+  FileText,
   MapPin,
   Phone,
+  Truck,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useState, type KeyboardEvent, type MouseEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { operationsCandidateDetailPath } from "../../../constants/operations-routes";
 import type { OperationsCandidateListItem } from "../../../types/operations-candidates";
+import { cn } from "../../../utils/cn";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import { CandidatesRowActions } from "./CandidatesRowActions";
 import { OperationsCandidateAvatar } from "./OperationsCandidateAvatar";
@@ -20,28 +28,46 @@ interface CandidatesMobileCardProps {
   application: OperationsCandidateListItem;
 }
 
-function MetaTile({
+function InfoColumn({
   icon: Icon,
+  iconWrapClassName,
+  iconClassName,
   label,
   value,
 }: {
   icon: typeof Phone;
+  iconWrapClassName: string;
+  iconClassName: string;
   label: string;
   value: string;
 }) {
   return (
-    <div className="min-w-0 rounded-lg bg-hero-bg/70 px-2 py-1.5">
-      <div className="flex items-center gap-1">
-        <span className="inline-flex size-4 shrink-0 items-center justify-center rounded bg-surface text-primary shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border-subtle)_85%,transparent)]">
-          <Icon className="size-2.5" strokeWidth={2} aria-hidden="true" />
+    <div className="flex min-w-0 flex-1 flex-col justify-center border-r border-border-subtle px-1.5 py-2.5 last:border-r-0">
+      <div className="flex min-w-0 items-start gap-1">
+        <span
+          className={cn(
+            "inline-flex size-5 shrink-0 items-center justify-center rounded-md",
+            iconWrapClassName,
+          )}
+        >
+          <Icon
+            className={cn("size-2.5", iconClassName)}
+            strokeWidth={2}
+            aria-hidden="true"
+          />
         </span>
-        <p className="truncate text-[8px] font-semibold uppercase tracking-[0.05em] text-muted">
-          {label}
-        </p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[7px] font-medium leading-tight text-muted">
+            {label}
+          </p>
+          <p
+            className="mt-0.5 line-clamp-2 text-[8px] font-semibold leading-snug text-foreground"
+            title={value}
+          >
+            {value}
+          </p>
+        </div>
       </div>
-      <p className="mt-1 truncate text-[10px] font-semibold leading-snug text-foreground">
-        {value}
-      </p>
     </div>
   );
 }
@@ -53,9 +79,10 @@ function MetaTile({
 export function CandidatesMobileCard({
   application,
 }: CandidatesMobileCardProps) {
+  const navigate = useNavigate();
+  const [copiedId, setCopiedId] = useState(false);
   const registered = formatCandidateDateTime(application.registeredAt);
-  const roles = (application.preferredRoles ?? []).slice(0, 2);
-  const remaining = (application.preferredRoles ?? []).length - roles.length;
+  const primaryRole = (application.preferredRoles ?? [])[0];
   const profilePath = operationsCandidateDetailPath(
     application.jobSeekerId || application.id,
   );
@@ -63,108 +90,185 @@ export function CandidatesMobileCard({
     application.displayId ||
     formatCandidateDisplayId(application.jobSeekerId || application.id);
   const applicationCount = application.applicationCount ?? 0;
+  const isProfileComplete = application.profileStatus === "complete";
+  const candidateName = application.candidateName ?? "Candidate";
+
+  const openDetail = () => {
+    navigate(profilePath);
+  };
+
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openDetail();
+    }
+  };
+
+  const stopCardNavigation = (event: MouseEvent) => {
+    event.stopPropagation();
+  };
+
+  const handleCopyId = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(displayId);
+      setCopiedId(true);
+      window.setTimeout(() => setCopiedId(false), 1500);
+    } catch {
+      setCopiedId(false);
+    }
+  };
 
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_12px_rgba(15,23,42,0.03)]">
-      {/* Quiet brand accent — identity without a heavy header band */}
-      <span
-        className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-primary/55"
-        aria-hidden="true"
-      />
-
-      <div className="pl-3.5 pr-2.5 pt-3">
+    <article
+      role="link"
+      tabIndex={0}
+      aria-label={`Open profile for ${candidateName}`}
+      onClick={openDetail}
+      onKeyDown={handleCardKeyDown}
+      className="cursor-pointer overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow transition-colors hover:border-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+    >
+      {/* Header */}
+      <div className="border-b border-border-subtle px-3.5 py-3">
         <div className="flex items-start gap-2.5">
-          <Link
-            to={profilePath}
-            className="group flex min-w-0 flex-1 items-start gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
-          >
+          <div className="relative shrink-0">
             <OperationsCandidateAvatar
-              name={application.candidateName ?? "Candidate"}
+              name={candidateName}
               jobSeekerId={application.jobSeekerId || application.id}
               photoUrl={application.profilePhotoUrl}
-              className="inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary ring-2 ring-surface shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-border-subtle)_90%,transparent)]"
+              className="inline-flex size-11 items-center justify-center overflow-hidden rounded-full bg-primary-light text-sm font-semibold text-primary ring-2 ring-surface"
+              textClassName="text-sm font-semibold"
             />
-            <span className="min-w-0 flex-1 pt-0.5">
-              <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <span className="truncate text-[13px] font-semibold tracking-tight text-foreground group-hover:text-primary">
-                  {application.candidateName ?? "Candidate"}
-                </span>
-                {application.isNewRegistration ? (
-                  <OperationsBadge
-                    variant="high"
-                    className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wider"
+            <span
+              className={cn(
+                "absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-surface",
+                isProfileComplete ? "bg-success" : "bg-muted",
+              )}
+              aria-hidden="true"
+            />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-1">
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <p className="truncate text-[15px] font-semibold leading-tight text-foreground">
+                    {candidateName}
+                  </p>
+                  {application.isNewRegistration ? (
+                    <OperationsBadge
+                      variant="high"
+                      className="px-1.5 py-0 text-[9px] font-bold uppercase tracking-wider"
+                    >
+                      <span aria-label="New registration">New</span>
+                    </OperationsBadge>
+                  ) : null}
+                </div>
+                <div className="mt-0.5 flex min-w-0 items-center gap-0.5">
+                  <p className="truncate font-mono text-[10px] font-medium text-muted">
+                    {displayId}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(event) => void handleCopyId(event)}
+                    aria-label={
+                      copiedId ? "Candidate ID copied" : "Copy candidate ID"
+                    }
+                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                   >
-                    <span aria-label="New registration">New</span>
-                  </OperationsBadge>
+                    <Copy className="size-3" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+
+              <div
+                onClick={stopCardNavigation}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
+                <CandidatesRowActions application={application} />
+              </div>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <OperationsBadge
+                variant={profileStatusBadgeVariant(application.profileStatus)}
+                className="gap-0.5 px-1.5 py-0 text-[9px] font-semibold"
+              >
+                {isProfileComplete ? (
+                  <Check className="size-2.5 shrink-0" aria-hidden="true" />
                 ) : null}
+                {application.profileStatusLabel || "Incomplete"}
+              </OperationsBadge>
+              <span className="inline-flex items-center gap-1 rounded-full bg-hero-bg px-1.5 py-0.5 text-[10px] font-medium text-muted">
+                <FileText
+                  className="size-3 shrink-0 text-muted"
+                  aria-hidden="true"
+                />
+                <span className="tabular-nums text-foreground">
+                  {applicationCount}
+                </span>
+                {applicationCount === 1 ? "application" : "applications"}
               </span>
-              <span className="mt-0.5 block truncate font-mono text-[9px] font-medium tracking-wide text-muted">
-                {displayId}
-              </span>
-            </span>
-          </Link>
-
-          <CandidatesRowActions application={application} />
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <OperationsBadge
-            variant={profileStatusBadgeVariant(application.profileStatus)}
-            className="px-1.5 py-0 text-[9px]"
-          >
-            {application.profileStatusLabel || "Incomplete"}
-          </OperationsBadge>
-          <span className="inline-flex items-center gap-1 rounded-full bg-hero-bg px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted">
-            <span className="font-semibold text-foreground">
-              {applicationCount}
-            </span>
-            {applicationCount === 1 ? "application" : "applications"}
-          </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="mx-3.5 mt-3 border-t border-border-subtle/80" />
-
-      <div className="grid grid-cols-2 gap-1.5 px-3 py-2.5">
-        <MetaTile
+      {/* Info grid */}
+      <div className="flex min-w-0 border-b border-border-subtle">
+        <InfoColumn
           icon={Phone}
+          iconWrapClassName="bg-success/15"
+          iconClassName="text-success"
           label="Contact"
           value={application.candidatePhone || "—"}
         />
-        <MetaTile
+        <InfoColumn
           icon={MapPin}
+          iconWrapClassName="bg-primary-light"
+          iconClassName="text-primary"
           label="Location"
           value={application.candidateLocation || "—"}
         />
-        <MetaTile
+        <InfoColumn
           icon={Briefcase}
+          iconWrapClassName="bg-warning/15"
+          iconClassName="text-warning"
           label="Experience"
           value={application.candidateExperienceLabel || "Not specified"}
         />
-        <MetaTile
+        <InfoColumn
           icon={CalendarDays}
+          iconWrapClassName="bg-[color-mix(in_srgb,var(--color-primary)_12%,transparent)]"
+          iconClassName="text-primary-hover"
           label="Registered"
           value={registered.date}
         />
       </div>
 
-      {roles.length > 0 ? (
-        <div className="flex flex-wrap gap-1 border-t border-border-subtle/80 bg-hero-bg/40 px-3 py-2">
-          {roles.map((role) => (
-            <span
-              key={role}
-              className="inline-flex max-w-full truncate rounded-full border border-border-subtle bg-surface px-1.5 py-0.5 text-[9px] font-medium text-foreground"
-            >
-              {role}
-            </span>
-          ))}
-          {remaining > 0 ? (
-            <span className="inline-flex rounded-full border border-border-subtle bg-surface px-1.5 py-0.5 text-[9px] font-semibold text-muted">
-              +{remaining}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-1.5 px-3.5 py-2">
+        {primaryRole ? (
+          <span className="inline-flex max-w-[45%] shrink-0 items-center gap-0.5 truncate rounded-full bg-primary-light px-1.5 py-0.5 text-[8px] font-medium text-primary">
+            <Truck className="size-2.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{primaryRole}</span>
+          </span>
+        ) : (
+          <span className="shrink-0 text-[8px] text-muted">No preferred role</span>
+        )}
+
+        <Link
+          to={profilePath}
+          onClick={stopCardNavigation}
+          className="inline-flex h-6 shrink-0 items-center justify-center gap-0.5 rounded-md bg-primary px-2 text-[8px] font-semibold text-white transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-surface"
+        >
+          <Eye className="size-2.5 shrink-0" aria-hidden="true" />
+          <span>
+            Applications ({applicationCount.toLocaleString("en-IN")})
+          </span>
+          <ChevronRight className="size-2.5 shrink-0" aria-hidden="true" />
+        </Link>
+      </div>
     </article>
   );
 }

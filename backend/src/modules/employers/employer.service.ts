@@ -11,6 +11,16 @@ import { AppError } from "../../middleware/error.middleware.js";
 import { jwtService } from "../auth/jwt.service.js";
 import { otpService } from "../otp/otp.service.js";
 import {
+  assertPhoneExclusiveToAccount,
+  commitPhoneAccount,
+  releasePhoneReservation,
+  reservePhoneAccount,
+} from "../accounts/phone-account.service.js";
+import {
+  isMongoDuplicateKeyError,
+  phoneAlreadyRegisteredError,
+} from "../accounts/phone-account.policy.js";
+import {
   buildNewRegistrationAwarenessPayload,
   formatEmployerRegistrationDisplayId,
   resolveEmployerRegistrationDisplayName,
@@ -397,11 +407,14 @@ async function assertNoCompletedDuplicateEmail(
 
 export class EmployerService {
   async registerEmployer(input: RegisterEmployerInput) {
-    await assertNoCompletedDuplicateWhatsapp(input.whatsappNumber);
+    const reservation = await reservePhoneAccount({
+      whatsappNumber: input.whatsappNumber,
+      intendedKind: "employer",
+    });
     await assertNoCompletedDuplicateEmail(input.emailAddress);
 
     const existing = await EmployerModel.findOne({
-      whatsappNumber: input.whatsappNumber,
+      whatsappNumber: reservation.normalizedPhone,
       registrationStatus: { $ne: "completed" },
     }).select("+otpHash +otpExpiresAt +otpAttempts +lastOtpSentAt");
 
@@ -421,7 +434,7 @@ export class EmployerService {
         employer.firstName = input.firstName;
         employer.lastName = input.lastName;
         employer.emailAddress = input.emailAddress ?? "";
-        employer.whatsappNumber = input.whatsappNumber;
+        employer.whatsappNumber = reservation.normalizedPhone;
         employer.isWhatsappVerified = false;
         employer.isProfileComplete = false;
         employer.registrationStatus = registrationStatus;
@@ -437,13 +450,20 @@ export class EmployerService {
           firstName: input.firstName,
           lastName: input.lastName,
           emailAddress: input.emailAddress ?? "",
-          whatsappNumber: input.whatsappNumber,
+          whatsappNumber: reservation.normalizedPhone,
           isWhatsappVerified: false,
           isProfileComplete: false,
           registrationStatus,
         });
       }
+
+      await commitPhoneAccount({
+        normalizedPhone: reservation.normalizedPhone,
+        lockToken: reservation.lockToken,
+        accountId: employer._id.toString(),
+      });
     } catch (error) {
+      await releasePhoneReservation(reservation);
       if (error instanceof AppError) {
         throw error;
       }
@@ -464,16 +484,8 @@ export class EmployerService {
         );
       }
 
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        error.code === 11000
-      ) {
-        throw new AppError(
-          "Duplicate WhatsApp Number",
-          HTTP_STATUS.CONFLICT,
-        );
+      if (isMongoDuplicateKeyError(error)) {
+        throw phoneAlreadyRegisteredError("employer");
       }
 
       console.error("Employer registration persistence failed:", error);
@@ -482,7 +494,7 @@ export class EmployerService {
 
     const delivery = await otpService.issueAndDeliver(
       employer,
-      input.whatsappNumber,
+      reservation.normalizedPhone,
       { purpose: "registration" },
     );
 
@@ -551,6 +563,12 @@ export class EmployerService {
     }
 
     otpService.logVerificationSuccess();
+
+    await assertPhoneExclusiveToAccount({
+      whatsappNumber: employer.whatsappNumber,
+      intendedKind: "employer",
+      accountId: employer._id.toString(),
+    });
 
     employer.isWhatsappVerified = true;
     employer.otpHash = null;
@@ -644,6 +662,11 @@ export class EmployerService {
       }
     }
 
+    await assertPhoneExclusiveToAccount({
+      whatsappNumber: employer.whatsappNumber,
+      intendedKind: "employer",
+      accountId: employer._id.toString(),
+    });
     await assertNoCompletedDuplicateWhatsapp(
       employer.whatsappNumber,
       employer._id,
@@ -811,6 +834,12 @@ export class EmployerService {
         HTTP_STATUS.BAD_REQUEST,
       );
     }
+
+    await assertPhoneExclusiveToAccount({
+      whatsappNumber: employer.whatsappNumber,
+      intendedKind: "employer",
+      accountId: employer._id.toString(),
+    });
 
     const employerCode = toEmployerStorageCode(employer._id);
     const extension = resolveFileExtension(file);

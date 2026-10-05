@@ -16,6 +16,8 @@ export const BOT_INTENTS = [
   "EMPLOYER_JOBS",
   "EMPLOYER_JOB_STATUS",
   "EMPLOYER_APPLICATION_COUNT",
+  "POST_JOB",
+  "ACCOUNT_STATUS",
   "HELP",
   "CLARIFY",
   "UNRELATED",
@@ -125,6 +127,15 @@ const ROLES: Array<{ canonical: string; forms: string[] }> = [
   { canonical: "Plumber", forms: ["plumber", "ప్లంబర్", "प्लंबर"] },
   { canonical: "Cook", forms: ["cook", "వంటవాడు", "रसोइया"] },
   { canonical: "Sales", forms: ["sales", "సేల్స్", "सेल्स"] },
+  { canonical: "Helper", forms: ["helper", "హెల్పర్", "हेल्पर"] },
+  { canonical: "Mason", forms: ["mason", "మేసన్", "मेसन", "రాయి పని"] },
+  { canonical: "Housekeeping", forms: ["housekeeping", "హౌస్ కీపింగ్", "हाउसकीपिंग"] },
+  { canonical: "Warehouse", forms: ["warehouse", "వేర్‌హౌస్", "वेयरहाउस"] },
+  { canonical: "Painter", forms: ["painter", "పెయింటర్", "पेंटर"] },
+  { canonical: "Welder", forms: ["welder", "వెల్డర్", "वेल्डर"] },
+  { canonical: "Mechanic", forms: ["mechanic", "మెకానిక్", "मैकेनिक"] },
+  { canonical: "Cleaner", forms: ["cleaner", "క్లీనర్", "क्लीनर"] },
+  { canonical: "Labour", forms: ["labour", "labor", "లేబర్", "मजदूर", "కూలీ"] },
 ];
 
 const JOB_WORDS = [
@@ -216,6 +227,7 @@ export function detectLanguage(
   text: string,
   previous?: BotLanguage | null,
   hint?: BotLanguage | null,
+  inheritPrevious = false,
 ): BotLanguage {
   if (TAMIL_SCRIPT.test(text) || ROMAN_TAMIL.test(text)) return "ta";
   if (KANNADA_SCRIPT.test(text) || ROMAN_KANNADA.test(text)) return "kn";
@@ -223,10 +235,19 @@ export function detectLanguage(
   if (TELUGU_SCRIPT.test(text) || ROMAN_TELUGU.test(text)) return "te";
   if (HINDI_SCRIPT.test(text) || ROMAN_HINDI.test(text)) return "hi";
   const trimmed = text.trim();
-  const clearEnglish = /\b(i want|i need|hello|please|are there|show me)\b/i.test(trimmed);
+  const clearEnglish = /\b(i want|i need|hello|please|are there|show me|find jobs?|post a job|how many)\b/i.test(
+    trimmed,
+  );
   if (clearEnglish) return "en";
   if (hint && hint !== "en") return hint;
-  if (previous && previous !== "en" && trimmed.length > 0 && trimmed.length < 40) {
+  if (inheritPrevious && previous) return previous;
+  if (
+    previous &&
+    previous !== "en" &&
+    trimmed.length > 0 &&
+    trimmed.length < 12 &&
+    !/[A-Za-z]{4,}/.test(trimmed)
+  ) {
     return previous;
   }
   return "en";
@@ -244,7 +265,7 @@ export function detectProtocolTurn(text: string): ProtocolTurn | null {
   const trimmed = text.trim();
   if (!trimmed || trimmed.length > 24) return null;
   if (
-    /^(hi|hello|hey|hy|హాయ్|హలో|నమస్తే|नमस्ते|हाय|வணக்கம்|ನಮಸ್ಕಾರ|നമസ്കാരം)!?$/i.test(
+    /^(hi|hello|hey|hy|హాయ్|హాయి|హలో|నమస్తే|नमस्ते|हाय|हेलो|வணக்கம்|ನಮಸ್ಕಾರ|നമസ്കാരം)[!.,]?$/i.test(
       trimmed,
     )
   ) {
@@ -304,7 +325,9 @@ function scopeForIntent(intent: BotIntent): BotScope {
   if (
     intent === "EMPLOYER_JOBS" ||
     intent === "EMPLOYER_JOB_STATUS" ||
-    intent === "EMPLOYER_APPLICATION_COUNT"
+    intent === "EMPLOYER_APPLICATION_COUNT" ||
+    intent === "POST_JOB" ||
+    intent === "ACCOUNT_STATUS"
   ) {
     return "OWN_EMPLOYER_DATA";
   }
@@ -330,7 +353,7 @@ export function understandLocally(
   previous?: BotLanguage | null,
   hint?: BotLanguage | null,
 ): BotUnderstanding {
-  const language = detectLanguage(text, previous, hint);
+  const language = detectLanguage(text, previous, hint, isFollowUpFragment(text));
   const folded = text.toLowerCase();
   const location = extractPlace(text);
   const category = extractRole(text);
@@ -344,6 +367,7 @@ export function understandLocally(
   const howToApply = /how (do|to|can) i apply|apply cheyya|apply kaise|apply ela/i.test(folded);
   const applications = ownApply;
   const myPosted = looksLikeOwnPostedJobsQuestion(text);
+  const hireIntent = chooseAccountRole(text) === "employer" || looksLikePostJobRequest(text);
   const employer =
     myPosted ||
     (/(applications?|applied|applicants|వచ్చాయి|vachayi)/i.test(text) &&
@@ -385,6 +409,8 @@ export function understandLocally(
       : /ఎన్ని|how many|applications?|applied|వచ్చాయి|vachayi|\benni\b/i.test(text)
         ? "EMPLOYER_APPLICATION_COUNT"
         : "EMPLOYER_JOBS";
+  } else if (hireIntent) {
+    intent = /verif|account|profile complete/i.test(folded) ? "ACCOUNT_STATUS" : "POST_JOB";
   } else if (howToApply) intent = "HOW_TO_APPLY";
   else if (applications) {
     intent = /status|స్టేటస్|స్టేజ్|स्थिति|நிலை/i.test(text)
@@ -554,6 +580,8 @@ function isPrivateIntent(intent: BotIntent): boolean {
     intent === "EMPLOYER_JOBS" ||
     intent === "EMPLOYER_JOB_STATUS" ||
     intent === "EMPLOYER_APPLICATION_COUNT" ||
+    intent === "POST_JOB" ||
+    intent === "ACCOUNT_STATUS" ||
     intent === "MY_APPLICATIONS" ||
     intent === "APPLICATION_COUNT" ||
     intent === "APPLICATION_STATUS" ||
@@ -601,7 +629,7 @@ export function mergePending(
   text = "",
 ): BotUnderstanding {
   if (!previous) return next;
-  if (isPrivateIntent(next.intent) || next.intent === "GREETING" || next.intent === "HELP" || next.intent === "UNRELATED" || next.intent === "HOW_TO_APPLY" || next.intent === "CLARIFY") {
+  if (isPrivateIntent(next.intent) || next.intent === "GREETING" || next.intent === "HELP" || next.intent === "UNRELATED" || next.intent === "HOW_TO_APPLY" || next.intent === "CLARIFY" || next.intent === "POST_JOB" || next.intent === "ACCOUNT_STATUS") {
     return {
       ...next,
       location: next.location,
@@ -915,7 +943,27 @@ export function buildDeterministicReply(
     const missing = String(facts.missing ?? "");
     if (missing === "location") return askLocationCopy(language);
     if (missing === "which_account_data") return clarifyAmbiguousCopy(language);
+    if (missing === "purpose") return purposeClarifyCopy(language);
     return clarifyJobTitle(language);
+  }
+  if (situation === "post_job") {
+    return postJobGuideCopy({
+      language,
+      verification: String(facts.verification ?? "pending"),
+      name: String(facts.name ?? ""),
+      role: String(facts.role ?? ""),
+      location: String(facts.location ?? ""),
+      postJobUrl: String(facts.postJobUrl ?? ""),
+      profileUrl: String(facts.profileUrl ?? ""),
+    });
+  }
+  if (situation === "account_status") {
+    return employerVerificationCopy({
+      language,
+      verification: String(facts.verification ?? "pending"),
+      name: String(facts.name ?? ""),
+      profileUrl: String(facts.profileUrl ?? ""),
+    });
   }
   if (situation === "profile") {
     return profileCopy({
@@ -1049,13 +1097,172 @@ export type AccountKind = "seeker" | "employer" | "both" | "none";
 
 export function chooseAccountRole(text: string): "seeker" | "employer" | null {
   const trimmed = text.trim();
-  const employer = /\b(employer|hiring|hire)\b|నియమించ|भर्ती|ஆள் எடுக்க|ನೇಮಕ|നിയമിക്ക/i.test(trimmed);
-  const seeker = /\b(job seeker|looking for a job|need a job|find a job)\b|ఉద్యోగం కావాలి|नौकरी चाहिए|வேலை வேண்டும்|ಕೆಲಸ ಬೇಕು|ജോലി വേണം/i.test(
-    trimmed,
-  );
+  const employer = looksLikePostJobRequest(trimmed) ||
+    /\b(employer|hiring|hire|recruit|workers?|staff needed|need staff)\b|నియమించ|మనిషి కావాలి|వర్కర్స్ కావాలి|भर्ती|कर्मचारी चाहिए|मुझे कर्मचारी|ஆள் எடுக்க|வேலை போஸ்ட்|ನೇಮಕ|ನೌಕರ ಬೇಕು|നിയമിക്ക|തൊഴിലാളി/i.test(
+      trimmed,
+    );
+  const seeker =
+    /\b(job seeker|looking for (a )?job|looking for work|need (a )?job|find (a )?job|want (a )?job|want work|need work)\b|ఉద్యోగం కావాలి|జాబ్ కావాలి|పని కావాలి|नौकरी चाहिए|काम चाहिए|जॉब चाहिए|வேலை வேண்டும்|ಕೆಲಸ ಬೇಕು|ജോലി വേണം|job kavali|jobs kavali|naaku job|naku job|pani kavali/i.test(
+      trimmed,
+    );
   if (employer && !seeker) return "employer";
   if (seeker && !employer) return "seeker";
+  if (employer && seeker) {
+    return /post|hire|hiring|recruit|workers|कर्मचारी|నియమించ/i.test(trimmed)
+      ? "employer"
+      : "seeker";
+  }
   return null;
+}
+
+export function looksLikePostJobRequest(text: string): boolean {
+  return /want to post|\bpost(?:ing)?\b.{0,40}\bjobs?\b|\bjobs?\s*post|post cheyy|పోస్ట్ చేయ|नौकरी पोस्ट|जॉब पोस्ट|வேலை போஸ்ட்|ಜಾಬ್ ಪೋಸ್ಟ್|ജോലി പോസ്റ്റ്/i.test(
+    text,
+  );
+}
+
+export type ConversationState = "" | "NEW_USER_INTENT" | "SEEKER_MENU" | "EMPLOYER_MENU";
+
+export function conversationStateForAccount(account: AccountKind): ConversationState {
+  if (account === "employer") return "EMPLOYER_MENU";
+  if (account === "seeker") return "SEEKER_MENU";
+  return "NEW_USER_INTENT";
+}
+
+export function detectMenuSelection(
+  text: string,
+  state: ConversationState | string | null | undefined,
+): BotIntent | null {
+  if (!state) return null;
+  const trimmed = text.trim();
+  const digitMatch = trimmed.match(/^([1-5])[).:]?$/) || trimmed.match(/^([1-5])️⃣$/);
+  const digit = digitMatch?.[1] ?? "";
+
+  if (state === "NEW_USER_INTENT") {
+    if (digit === "1" || /find a job|looking for a job|🔎/i.test(trimmed)) return "JOB_SEARCH";
+    if (digit === "2" || /post a job|want to hire|📢/i.test(trimmed)) return "POST_JOB";
+    return null;
+  }
+  if (state === "SEEKER_MENU") {
+    if (digit === "1" || /find jobs?|🔎/i.test(trimmed)) return "JOB_SEARCH";
+    if (digit === "2" || /applications?|📋/i.test(trimmed)) return "MY_APPLICATIONS";
+    if (digit === "3" || /profile|👤/i.test(trimmed)) return "MY_SKILLS";
+    if (digit === "4" || /something else|help|💬/i.test(trimmed)) return "HELP";
+    return null;
+  }
+  if (state === "EMPLOYER_MENU") {
+    if (digit === "1" || /post a job|post job/i.test(trimmed)) return "POST_JOB";
+    if (digit === "2" || /check (your )?jobs|my jobs/i.test(trimmed)) return "EMPLOYER_JOBS";
+    if (digit === "3" || /applications?/i.test(trimmed)) return "EMPLOYER_APPLICATION_COUNT";
+    if (digit === "4" || /account|verification/i.test(trimmed)) return "ACCOUNT_STATUS";
+    if (digit === "5" || /other|help/i.test(trimmed)) return "HELP";
+    return null;
+  }
+  return null;
+}
+
+export function menuUnderstanding(
+  intent: BotIntent,
+  language: BotLanguage,
+): BotUnderstanding {
+  const scope = scopeForIntent(intent);
+  return {
+    intent,
+    language,
+    location: "",
+    category: "",
+    jobQuery: "",
+    openSearch: intent === "JOB_SEARCH",
+    scope,
+    requiresAuth: scope === "OWN_DATA" || scope === "OWN_EMPLOYER_DATA",
+    confidence: 0.99,
+    focus: "",
+  };
+}
+
+export function shouldUseLlmFallback(local: BotUnderstanding, text: string): boolean {
+  if (detectProtocolTurn(text)) return false;
+  if (chooseAccountRole(text)) return false;
+  if (isConfidentLocalUnderstanding(local)) return false;
+  const trimmed = text.trim();
+  if (trimmed.length < 12) return false;
+  return local.intent === "UNKNOWN" || local.confidence < 0.9;
+}
+
+export function applyAccountAwareIntent(
+  understanding: BotUnderstanding,
+  account: AccountKind,
+): BotUnderstanding {
+  if (account === "employer") {
+    if (
+      understanding.intent === "MY_APPLICATIONS" ||
+      understanding.intent === "APPLICATION_COUNT" ||
+      understanding.intent === "APPLICATION_STATUS"
+    ) {
+      return {
+        ...understanding,
+        intent: "EMPLOYER_APPLICATION_COUNT",
+        location: "",
+        category: "",
+        jobQuery: "",
+        openSearch: false,
+        scope: "OWN_EMPLOYER_DATA",
+        requiresAuth: true,
+      };
+    }
+    if (understanding.intent === "MY_SKILLS" || understanding.intent === "PROFILE_JOBS") {
+      return { ...understanding, intent: "ACCOUNT_STATUS", scope: "OWN_EMPLOYER_DATA", requiresAuth: true };
+    }
+  }
+  if (account === "seeker") {
+    if (
+      understanding.intent === "EMPLOYER_JOBS" ||
+      understanding.intent === "EMPLOYER_JOB_STATUS" ||
+      understanding.intent === "EMPLOYER_APPLICATION_COUNT" ||
+      understanding.intent === "POST_JOB"
+    ) {
+      return {
+        ...understanding,
+        intent: understanding.intent === "POST_JOB" ? "HELP" : "MY_APPLICATIONS",
+        location: "",
+        category: "",
+        jobQuery: "",
+        openSearch: false,
+        scope: understanding.intent === "POST_JOB" ? "NONE" : "OWN_DATA",
+        requiresAuth: understanding.intent !== "POST_JOB",
+      };
+    }
+  }
+  return understanding;
+}
+
+export function applyRoleHints(
+  text: string,
+  understanding: BotUnderstanding,
+  account: AccountKind,
+): BotUnderstanding {
+  const role = chooseAccountRole(text);
+  if (!role) return understanding;
+  if (account === "none" && role === "seeker") {
+    return {
+      ...understanding,
+      intent: "JOB_SEARCH",
+      confidence: Math.max(understanding.confidence, 0.95),
+      openSearch: !understanding.category,
+      scope: "PUBLIC_JOBS",
+      requiresAuth: false,
+    };
+  }
+  if ((account === "none" || account === "employer") && role === "employer") {
+    return {
+      ...understanding,
+      intent: "POST_JOB",
+      confidence: Math.max(understanding.confidence, 0.95),
+      scope: "OWN_EMPLOYER_DATA",
+      requiresAuth: true,
+    };
+  }
+  return understanding;
 }
 
 export function capabilityCopy(language: BotLanguage, account: AccountKind = "seeker"): string {
@@ -1128,17 +1335,26 @@ export function greetingCopy(input: {
   }
   if (input.account === "none") {
     if (input.language === "te") {
-      return "హాయ్ 👋 AsliJobs కి స్వాగతం. ఇక్కడ ఉద్యోగాలు వెతకొచ్చు, employers కార్మికులను నియమించుకోవచ్చు. మీరు ఉద్యోగం వెతుకుతున్నారా, లేక నియమించాలనుకుంటున్నారా?";
+      return "హాయ్ 👋 AsliJobs కి స్వాగతం!\n\nమీకు ఏం కావాలి?\n\n🔎 ఉద్యోగం కావాలా?\n📢 జాబ్ పోస్ట్ చేయాలా / మనిషిని నియమించాలా?\n\nమీరు కావాల్సింది టైప్ చేయండి లేదా వాయిస్ పంపండి.";
     }
     if (input.language === "hi") {
-      return "नमस्ते 👋 AsliJobs में आपका स्वागत है. यहाँ नौकरी मिल सकती है और employer भर्ती कर सकते हैं. आप नौकरी ढूंढ रहे हैं या भर्ती करना चाहते हैं?";
+      return "नमस्ते 👋 AsliJobs में आपका स्वागत है!\n\nआप क्या चाहते हैं?\n\n🔎 नौकरी ढूंढनी है?\n📢 नौकरी पोस्ट करनी है / भर्ती करनी है?\n\nबताइए या वॉइस भेजिए.";
     }
-    return "Hi 👋 Welcome to AsliJobs. People find jobs here, and employers hire workers. Are you looking for a job, or do you want to hire?";
+    if (input.language === "ta") {
+      return "வணக்கம் 👋 AsliJobs-க்கு வரவேற்கிறோம்!\n\n🔎 வேலை தேடவா?\n📢 வேலை போஸ்ட் செய்யவா?";
+    }
+    if (input.language === "kn") {
+      return "ನಮಸ್ಕಾರ 👋 AsliJobs ಗೆ ಸ್ವಾಗತ!\n\n🔎 ಕೆಲಸ ಹುಡುಕಬೇಕೇ?\n📢 ಜಾಬ್ ಪೋಸ್ಟ್ ಮಾಡಬೇಕೇ?";
+    }
+    if (input.language === "ml") {
+      return "ഹായ് 👋 AsliJobs-ലേക്ക് സ്വാഗതം!\n\n🔎 ജോലി തേടണോ?\n📢 ജോലി പോസ്റ്റ് ചെയ്യണോ?";
+    }
+    return "Hi 👋 Welcome to AsliJobs!\n\nWhat are you looking for?\n\n🔎 I want to find a job\n📢 I want to post a job\n\nYou can also simply tell me what you need.";
   }
   if (input.account === "employer") {
     const who = name ? ` ${name}` : "";
     if (input.language === "te") {
-      return `హాయ్${who} 👋 AsliJobs కి తిరిగి స్వాగతం.\n\nమీరు పోస్ట్ చేసిన ఉద్యోగాలు, వాటి స్థితి, మరియు వచ్చిన దరఖాస్తులు చూడొచ్చు. ఏమి తెలుసుకోవాలి?`;
+      return `హాయ్${who} 👋\nAsliJobs కి తిరిగి స్వాగతం!\n\n1️⃣ కొత్త ఉద్యోగం పోస్ట్ చేయాలా?\n2️⃣ మీ posted jobs చూడాలా?\n3️⃣ అప్లికేషన్స్ చూడాలా?\n4️⃣ అకౌంట్ / వెరిఫికేషన్\n5️⃣ ఇంకేదైనా`;
     }
     if (input.language === "hi") {
       return `नमस्ते${who} 👋 AsliJobs में वापस स्वागत है.\n\nआप अपनी पोस्ट की गई नौकरियां, उनकी स्थिति, और आए आवेदन देख सकते हैं. क्या जानना है?`;
@@ -1152,14 +1368,14 @@ export function greetingCopy(input: {
     if (input.language === "ml") {
       return `ഹായ്${who} 👋 AsliJobs-ലേക്ക് വീണ്ടും സ്വാഗതം.\n\nനിങ്ങൾ പോസ്റ്റ് ചെയ്ത ജോലികൾ, നില, വന്ന അപേക്ഷകൾ എന്നിവ കാണാം.`;
     }
-    return `Hi${who} 👋 Welcome back to AsliJobs.\n\nYou can view your posted jobs, their status, and the applications they received. What would you like to know?`;
+    return `Hi${who} 👋\nWelcome back to AsliJobs!\n\nHow can I help you today?\n\n1️⃣ Post a Job\n2️⃣ Check your posted jobs\n3️⃣ Check Applications\n4️⃣ Account / Verification\n5️⃣ Other\n\nYou can also simply type or send a voice message describing what you need.`;
   }
   const who = name ? ` ${name}` : "";
   if (input.language === "te") {
-    return `హాయ్${who} 👋 AsliJobs కి తిరిగి స్వాగతం.\n\nఉద్యోగాలు వెతకొచ్చు, మీ దరఖాస్తులు మరియు వాటి స్థితి చూడొచ్చు, మీ ప్రొఫైల్‌కు సరిపోయే ఉద్యోగాలు అడగొచ్చు. ఏ ఉద్యోగం కావాలి?`;
+    return `హాయ్${who} 👋\nAsliJobs కి తిరిగి స్వాగతం!\n\n🔎 జాబ్స్ వెతకండి\n📋 అప్లికేషన్స్ చూడండి\n👤 ప్రొఫైల్\n💬 ఇంకేదైనా`;
   }
   if (input.language === "hi") {
-    return `नमस्ते${who} 👋 AsliJobs में वापस स्वागत है.\n\nनौकरी खोज, आपके आवेदन और उनकी स्थिति, और प्रोफाइल के अनुसार नौकरियां पूछ सकते हैं. कौन सी नौकरी चाहिए?`;
+    return `नमस्ते${who} 👋\nAsliJobs में वापस स्वागत है!\n\n🔎 नौकरियां खोजें\n📋 आवेदन देखें\n👤 प्रोफ़ाइल\n💬 कुछ और`;
   }
   if (input.language === "ta") {
     return `வணக்கம்${who} 👋 AsliJobs-க்கு மீண்டும் வரவேற்கிறோம்.\n\nவேலை தேடலாம், உங்கள் விண்ணப்பங்களையும் நிலையையும் பார்க்கலாம். எந்த வேலை வேண்டும்?`;
@@ -1170,7 +1386,7 @@ export function greetingCopy(input: {
   if (input.language === "ml") {
     return `ഹായ്${who} 👋 AsliJobs-ലേക്ക് വീണ്ടും സ്വാഗതം.\n\nജോലി തിരയാം, അപേക്ഷകളും നിലയും കാണാം. ഏത് ജോലി വേണം?`;
   }
-  return `Hi${who} 👋 Welcome back to AsliJobs.\n\nYou can find jobs, check your applications and their status, and ask for jobs that match your profile. What kind of job are you looking for?`;
+  return `Hi${who} 👋\nWelcome back to AsliJobs!\n\nWhat are you looking for today?\n\n🔎 Find Jobs\n📋 Check Applications\n👤 Profile\n💬 Something else\n\nYou can type your question or send a voice message.`;
 }
 
 export function registrationCopy(input: {
@@ -1178,14 +1394,122 @@ export function registrationCopy(input: {
   role: "seeker" | "employer";
   url: string;
 }): string {
+  const url = input.url.trim();
   if (input.role === "employer") {
-    if (input.language === "te") return `Employer ఖాతా ఇక్కడ రిజిస్టర్ చేయండి: ${input.url}`;
-    if (input.language === "hi") return `Employer खाता यहाँ रजिस्टर करें: ${input.url}`;
-    return `Register your employer account here: ${input.url}`;
+    if (input.language === "te") {
+      return `సరే 👍 జాబ్ పోస్ట్ చేయడానికి ముందు AsliJobs లో Employer account create చేసుకోండి.\n\n👉 Register as Employer:\n${url}\n\nAccount create చేసాక WhatsApp లో మళ్లీ message చేయండి.`;
+    }
+    if (input.language === "hi") {
+      return `ज़रूर 👍 नौकरी पोस्ट करने से पहले AsliJobs पर Employer खाता बनाएं.\n\n👉 Register as Employer:\n${url}`;
+    }
+    if (input.language === "ta") {
+      return `சரி 👍 வேலை போஸ்ட் செய்ய Employer கணக்கு உருவாக்குங்கள்.\n\n👉 Register as Employer:\n${url}`;
+    }
+    if (input.language === "kn") {
+      return `ಸರಿ 👍 ಜಾಬ್ ಪೋಸ್ಟ್ ಮಾಡಲು Employer ಖಾತೆ ತೆರೆಯಿರಿ.\n\n👉 Register as Employer:\n${url}`;
+    }
+    if (input.language === "ml") {
+      return `ശരി 👍 ജോലി പോസ്റ്റ് ചെയ്യാൻ Employer അക്കൗണ്ട് ഉണ്ടാക്കൂ.\n\n👉 Register as Employer:\n${url}`;
+    }
+    return `Sure 👍 You can post your requirement on AsliJobs.\n\nCreate your Employer account here:\n${url}\n\nAfter registration, you can post jobs and receive applications.`;
   }
-  if (input.language === "te") return `ఉద్యోగం కోసం ఇక్కడ రిజిస్టర్ చేయండి: ${input.url}`;
-  if (input.language === "hi") return `नौकरी के लिए यहाँ रजिस्टर करें: ${input.url}`;
-  return `Register as a job seeker here: ${input.url}`;
+  if (input.language === "te") {
+    return `సరే 👍 జాబ్స్ సెర్చ్ చేయడానికి ముందు AsliJobs లో Job Seeker account create చేసుకోండి.\n\n👉 Register as Job Seeker:\n${url}\n\nRegistration complete అయ్యాక WhatsApp లో మళ్లీ message చేయండి.`;
+  }
+  if (input.language === "hi") {
+    return `ज़रूर 👍 नौकरी खोजने से पहले AsliJobs पर Job Seeker खाता बनाएं.\n\n👉 Register as Job Seeker:\n${url}`;
+  }
+  if (input.language === "ta") {
+    return `சரி 👍 வேலை தேட Job Seeker கணக்கு உருவாக்குங்கள்.\n\n👉 Register as Job Seeker:\n${url}`;
+  }
+  if (input.language === "kn") {
+    return `ಸರಿ 👍 ಉದ್ಯೋಗ ಹುಡುಕಲು Job Seeker ಖಾತೆ ತೆರೆಯಿರಿ.\n\n👉 Register as Job Seeker:\n${url}`;
+  }
+  if (input.language === "ml") {
+    return `ശരി 👍 ജോലി തേടാൻ Job Seeker അക്കൗണ്ട് ഉണ്ടാക്കൂ.\n\n👉 Register as Job Seeker:\n${url}`;
+  }
+  return `Great! 👍 You're looking for a job.\n\nCreate your free Job Seeker account on AsliJobs to find and apply for jobs:\n${url}\n\nAfter registering, you can search and apply for jobs directly.`;
+}
+
+export function purposeClarifyCopy(language: BotLanguage): string {
+  if (language === "te") {
+    return "నేను ఉద్యోగం వెతకడంలో లేదా జాబ్ పోస్ట్ చేయడంలో సహాయం చేయగలను. మీకు ఏది కావాలి?";
+  }
+  if (language === "hi") {
+    return "मैं नौकरी खोजने या नौकरी पोस्ट करने में मदद कर सकता हूँ. आपको क्या चाहिए?";
+  }
+  if (language === "ta") return "வேலை தேடலாம் அல்லது வேலை போஸ்ட் செய்யலாம். எது வேண்டும்?";
+  if (language === "kn") return "ಉದ್ಯೋಗ ಹುಡುಕಬಹುದು ಅಥವಾ ಜಾಬ್ ಪೋಸ್ಟ್ ಮಾಡಬಹುದು. ಯಾವುದು ಬೇಕು?";
+  if (language === "ml") return "ജോലി തേടാം അല്ലെങ്കിൽ ജോലി പോസ്റ്റ് ചെയ്യാം. ഏതാണ് വേണ്ടത്?";
+  return "I can help with either finding a job or posting a job. Which one do you need?";
+}
+
+export function employerVerificationCopy(input: {
+  language: BotLanguage;
+  verification: string;
+  name: string;
+  profileUrl: string;
+}): string {
+  const who = input.name.trim() ? ` ${input.name.trim()}` : "";
+  const url = input.profileUrl.trim();
+  if (input.verification === "verified") {
+    if (input.language === "te") return "మీ employer account verify అయింది. జాబ్స్ పోస్ట్ చేయవచ్చు.";
+    if (input.language === "hi") return "आपका employer खाता वेरिफाइड है. नौकरियां पोस्ट कर सकते हैं.";
+    return `Your employer account is verified${who}. You can post jobs.`;
+  }
+  if (input.verification === "rejected") {
+    if (input.language === "te") {
+      return `మీ account verification approve కాలేదు. ప్రొఫైల్ అప్డేట్ చేసి మళ్లీ సమర్పించండి.${url ? `\n👉 ${url}` : ""}`;
+    }
+    if (input.language === "hi") {
+      return `आपका वेरिफिकेशन स्वीकृत नहीं हुआ. प्रोफ़ाइल अपडेट करें.${url ? `\n👉 ${url}` : ""}`;
+    }
+    return `Your account verification was not approved. Please update your profile and resubmit.${url ? `\n👉 ${url}` : ""}`;
+  }
+  if (input.language === "te") {
+    return "మీ account ప్రస్తుతం review లో ఉంది. Operations verify చేసిన తర్వాత మీరు జాబ్స్ పోస్ట్ చేయవచ్చు.";
+  }
+  if (input.language === "hi") {
+    return "आपका खाता अभी समीक्षा में है. वेरिफाई होने के बाद नौकरी पोस्ट कर सकते हैं.";
+  }
+  return "Your account is currently under review. Once Operations verifies your account, you can post jobs.";
+}
+
+export function postJobGuideCopy(input: {
+  language: BotLanguage;
+  verification: string;
+  name: string;
+  role: string;
+  location: string;
+  postJobUrl: string;
+  profileUrl: string;
+}): string {
+  if (input.verification !== "verified") {
+    return employerVerificationCopy({
+      language: input.language,
+      verification: input.verification,
+      name: input.name,
+      profileUrl: input.profileUrl,
+    });
+  }
+  const url = input.postJobUrl.trim();
+  const role = input.role.trim();
+  const location = input.location.trim();
+  const mentioned = [role, location].filter(Boolean).join(" — ");
+  const detail = mentioned
+    ? input.language === "te"
+      ? `\n\nమీరు చెప్పింది: ${mentioned}.`
+      : input.language === "hi"
+        ? `\n\nआपने बताया: ${mentioned}.`
+        : `\n\nYou mentioned: ${mentioned}.`
+    : "";
+  if (input.language === "te") {
+    return `సరే 👍 జాబ్ పోస్ట్ చేయడానికి ఈ లింక్ ఓపెన్ చేయండి:\n👉 ${url}${detail}`;
+  }
+  if (input.language === "hi") {
+    return `ज़रूर 👍 नौकरी पोस्ट करने के लिए यह लिंक खोलें:\n👉 ${url}${detail}`;
+  }
+  return `Sure 👍 Open this link to post a job:\n👉 ${url}${detail}`;
 }
 
 export function fallbackCopy(language: BotLanguage): string {

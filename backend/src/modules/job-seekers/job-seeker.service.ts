@@ -10,6 +10,13 @@ import {
   formatCandidateRegistrationDisplayId,
 } from "../operations/registration-awareness/operations-registration-awareness.service.js";
 import { scheduleCandidateRegisteredAwareness } from "../operations/registration-awareness/operations-registration-emit.js";
+import {
+  assertPhoneExclusiveToAccount,
+  commitPhoneAccount,
+  releasePhoneReservation,
+  reservePhoneAccount,
+} from "../accounts/phone-account.service.js";
+import { phoneAlreadyRegisteredError } from "../accounts/phone-account.policy.js";
 import { otpService } from "../otp/otp.service.js";
 import { resumeService } from "../resumes/resume.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
@@ -158,10 +165,13 @@ async function assertNoCompletedDuplicateWhatsapp(
 
 export class JobSeekerService {
   async registerJobSeeker(input: RegisterJobSeekerInput) {
-    await assertNoCompletedDuplicateWhatsapp(input.whatsappNumber);
+    const reservation = await reservePhoneAccount({
+      whatsappNumber: input.whatsappNumber,
+      intendedKind: "job_seeker",
+    });
 
     const existing = await JobSeekerModel.findOne({
-      whatsappNumber: input.whatsappNumber,
+      whatsappNumber: reservation.normalizedPhone,
       registrationStatus: "PENDING",
     }).select("+otpHash +otpExpiresAt +otpAttempts +lastOtpSentAt");
 
@@ -170,19 +180,27 @@ export class JobSeekerService {
     try {
       if (jobSeeker) {
         jobSeeker.fullName = input.fullName;
-        jobSeeker.whatsappNumber = input.whatsappNumber;
+        jobSeeker.whatsappNumber = reservation.normalizedPhone;
         jobSeeker.isWhatsappVerified = false;
         jobSeeker.registrationStatus = "PENDING";
         await jobSeeker.save();
       } else {
         jobSeeker = await JobSeekerModel.create({
           fullName: input.fullName,
-          whatsappNumber: input.whatsappNumber,
+          whatsappNumber: reservation.normalizedPhone,
           isWhatsappVerified: false,
           registrationStatus: "PENDING",
         });
       }
+
+      await commitPhoneAccount({
+        normalizedPhone: reservation.normalizedPhone,
+        lockToken: reservation.lockToken,
+        accountId: jobSeeker._id.toString(),
+      });
     } catch (error) {
+      await releasePhoneReservation(reservation);
+
       if (error instanceof AppError) {
         throw error;
       }
@@ -193,10 +211,7 @@ export class JobSeekerService {
         "code" in error &&
         error.code === 11000
       ) {
-        throw new AppError(
-          "This WhatsApp number is already registered",
-          HTTP_STATUS.CONFLICT,
-        );
+        throw phoneAlreadyRegisteredError("job_seeker");
       }
 
       console.error("Job seeker registration persistence failed:", error);
@@ -205,7 +220,7 @@ export class JobSeekerService {
 
     const delivery = await otpService.issueAndDeliver(
       jobSeeker,
-      input.whatsappNumber,
+      reservation.normalizedPhone,
       {
         purpose: "registration",
         accountName: input.fullName,
@@ -291,6 +306,12 @@ export class JobSeekerService {
     }
 
     otpService.logVerificationSuccess();
+
+    await assertPhoneExclusiveToAccount({
+      whatsappNumber: jobSeeker.whatsappNumber,
+      intendedKind: "job_seeker",
+      accountId: jobSeeker._id.toString(),
+    });
 
     jobSeeker.isWhatsappVerified = true;
     jobSeeker.otpHash = null;
@@ -415,6 +436,11 @@ export class JobSeekerService {
       );
     }
 
+    await assertPhoneExclusiveToAccount({
+      whatsappNumber: jobSeeker.whatsappNumber,
+      intendedKind: "job_seeker",
+      accountId: jobSeeker._id.toString(),
+    });
     await assertNoCompletedDuplicateWhatsapp(
       jobSeeker.whatsappNumber,
       jobSeeker._id,

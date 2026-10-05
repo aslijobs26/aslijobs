@@ -5,6 +5,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import type {
   OperationsCandidateApplicationItem,
   OperationsCandidateDetail,
@@ -41,20 +42,29 @@ function OverviewKpi({
   iconColor: string;
 }) {
   return (
-    <article className="rounded-lg border border-border-subtle bg-surface px-3 py-3 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
+    <article className="rounded-lg border border-border-subtle bg-surface px-2.5 py-2 shadow-sm max-sm:px-2 max-sm:py-1.5 sm:px-3 sm:py-3">
+      <div className="flex items-start justify-between gap-1.5 sm:gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] text-muted">{label}</p>
-          <p className="mt-1 text-lg font-bold text-foreground">{value}</p>
-          <p className="mt-1 text-[10px] text-muted">{caption}</p>
+          <p className="truncate text-[9px] text-muted max-sm:text-[8px] sm:text-[10px]">
+            {label}
+          </p>
+          <p className="mt-0.5 truncate text-[13px] font-bold leading-snug text-foreground max-sm:text-[12px] sm:mt-1 sm:text-lg">
+            {value}
+          </p>
+          <p className="mt-0.5 truncate text-[9px] text-muted max-sm:text-[8px] sm:mt-1 sm:text-[10px]">
+            {caption}
+          </p>
         </div>
         <span
           className={cn(
-            "inline-flex size-9 shrink-0 items-center justify-center rounded-md",
+            "inline-flex size-7 shrink-0 items-center justify-center rounded-md max-sm:size-6 sm:size-9",
             iconWrap,
           )}
         >
-          <Icon className={cn("size-4", iconColor)} aria-hidden="true" />
+          <Icon
+            className={cn("size-3.5 max-sm:size-3 sm:size-4", iconColor)}
+            aria-hidden="true"
+          />
         </span>
       </div>
     </article>
@@ -63,14 +73,16 @@ function OverviewKpi({
 
 function ChipList({ values }: { values: string[] }) {
   if (!values.length) {
-    return <p className="text-xs text-muted">—</p>;
+    return (
+      <p className="text-[11px] text-muted max-sm:text-[10px] sm:text-xs">—</p>
+    );
   }
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-1 max-sm:gap-1 sm:gap-1.5">
       {values.map((value) => (
         <span
           key={value}
-          className="inline-flex rounded-md bg-primary-light/70 px-2 py-0.5 text-[11px] font-medium text-primary"
+          className="inline-flex max-w-full truncate rounded-md bg-primary-light/70 px-1.5 py-0.5 text-[10px] font-medium text-primary max-sm:text-[9px] sm:px-2 sm:text-[11px]"
         >
           {value}
         </span>
@@ -81,12 +93,38 @@ function ChipList({ values }: { values: string[] }) {
 
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+    <div className="min-w-0 space-y-1 max-sm:space-y-0.5">
+      <p className="text-[9px] font-semibold uppercase tracking-wide text-muted max-sm:text-[8px] sm:text-[10px]">
         {label}
       </p>
-      <p className="mt-1 text-xs font-medium text-foreground">{value || "—"}</p>
+      <p className="break-words text-[11px] font-medium leading-snug text-foreground max-sm:text-[10px] sm:text-xs">
+        {value || "—"}
+      </p>
     </div>
+  );
+}
+
+function SectionCard({
+  title,
+  children,
+  className,
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        "rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4",
+        className,
+      )}
+    >
+      <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
+        {title}
+      </h3>
+      {children}
+    </section>
   );
 }
 
@@ -132,8 +170,8 @@ export function CandidateProfileOverview({
     : "";
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+    <div className="flex flex-col gap-2.5 max-sm:gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 gap-1.5 max-sm:gap-1.5 sm:gap-2 lg:grid-cols-4">
         <OverviewKpi
           label="Experience"
           value={detail.candidateExperienceLabel || "Not specified"}
@@ -155,7 +193,7 @@ export function CandidateProfileOverview({
           iconColor="text-chart-accent-alt"
         />
         <OverviewKpi
-          label="Shortlisted applications"
+          label="Shortlisted"
           value={String(detail.shortlistedCount ?? 0)}
           caption="Application status count"
           icon={Star}
@@ -163,7 +201,7 @@ export function CandidateProfileOverview({
           iconColor="text-warning"
         />
         <OverviewKpi
-          label="Registration status"
+          label="Registration"
           value={detail.profileStatusLabel || "Incomplete"}
           caption={
             detail.profileStatus === "complete"
@@ -176,23 +214,21 @@ export function CandidateProfileOverview({
         />
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:col-span-2">
-          <h3 className="text-sm font-semibold text-foreground">
-            About Candidate
-          </h3>
-          <p className="mt-2 text-xs leading-relaxed text-muted">
+      <div className="grid gap-2.5 max-sm:gap-2 sm:gap-3 lg:grid-cols-3">
+        <SectionCard title="About Candidate" className="lg:col-span-2">
+          <p className="mt-2 text-[11px] leading-relaxed text-muted max-sm:mt-1.5 max-sm:text-[10px] sm:text-xs">
             {detail.professionalSummary ||
               detail.candidateHeadline ||
               "No summary available for this candidate."}
           </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3.5 border-t border-border-subtle/80 pt-3.5 max-sm:mt-3 max-sm:gap-x-3 max-sm:gap-y-3 max-sm:pt-3 sm:mt-4 sm:gap-x-4 sm:gap-y-3.5 sm:pt-4">
             <DetailField
               label="Date of Birth"
               value={
                 detail.dateOfBirth
-                  ? formatCandidateDateTimeFull(detail.dateOfBirth).split(",")[0] ??
-                    "—"
+                  ? formatCandidateDateTimeFull(detail.dateOfBirth).split(
+                      ",",
+                    )[0] ?? "—"
                   : "—"
               }
             />
@@ -220,48 +256,49 @@ export function CandidateProfileOverview({
             />
             <DetailField label="Preferred Work Mode" value={detail.workMode} />
           </div>
-        </section>
+        </SectionCard>
 
-        <div className="flex flex-col gap-3">
-          <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-foreground">Skills</h3>
-            <div className="mt-3">
+        <div className="flex flex-col gap-2.5 max-sm:gap-2 sm:gap-3">
+          <SectionCard title="Skills">
+            <div className="mt-2 sm:mt-3">
               <ChipList values={detail.skills} />
             </div>
-          </section>
-          <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-foreground">Education</h3>
+          </SectionCard>
+          <SectionCard title="Education">
             {detail.education ? (
-              <div className="mt-3">
-                <p className="text-xs font-semibold text-foreground">
+              <div className="mt-2 sm:mt-3">
+                <p className="text-[11px] font-semibold text-foreground max-sm:text-[10px] sm:text-xs">
                   {educationTitle || "Education"}
                 </p>
-                <p className="mt-1 text-[11px] text-muted">
+                <p className="mt-0.5 text-[10px] text-muted max-sm:text-[9px] sm:mt-1 sm:text-[11px]">
                   {educationMeta || "—"}
                 </p>
               </div>
             ) : (
-              <p className="mt-3 text-xs text-muted">No education details.</p>
+              <p className="mt-2 text-[11px] text-muted max-sm:text-[10px] sm:mt-3 sm:text-xs">
+                No education details.
+              </p>
             )}
-          </section>
+          </SectionCard>
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:col-span-2">
-          <h3 className="text-sm font-semibold text-foreground">
-            Job Preferences / Interests
-          </h3>
-          <div className="mt-3 space-y-3">
+      <div className="grid gap-2.5 max-sm:gap-2 sm:gap-3 lg:grid-cols-3">
+        <SectionCard
+          title="Job Preferences / Interests"
+          className="lg:col-span-2"
+        >
+          <div className="mt-2 space-y-3 max-sm:mt-1.5 max-sm:space-y-2.5 sm:mt-3 sm:space-y-3.5">
             <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+              <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wide text-muted max-sm:mb-1 max-sm:text-[8px] sm:text-[10px]">
                 Positions interested in
               </p>
               <ChipList values={detail.preferredRoles} />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+
+            <div className="grid grid-cols-2 gap-x-3 gap-y-3 border-t border-border-subtle/80 pt-3 max-sm:gap-x-3 max-sm:gap-y-3 max-sm:pt-2.5 sm:gap-x-4 sm:gap-y-3.5 sm:pt-4">
+              <div className="min-w-0">
+                <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wide text-muted max-sm:mb-1 max-sm:text-[8px] sm:text-[10px]">
                   Preferred Locations
                 </p>
                 <ChipList values={detail.preferredLocations} />
@@ -276,13 +313,10 @@ export function CandidateProfileOverview({
               <DetailField label="Preferred Work Type" value={detail.jobType} />
             </div>
           </div>
-        </section>
+        </SectionCard>
 
-        <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-foreground">
-            Expected Details
-          </h3>
-          <div className="mt-3 space-y-3">
+        <SectionCard title="Expected Details">
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-border-subtle/80 pt-3 max-sm:mt-1.5 max-sm:gap-x-3 max-sm:gap-y-3 max-sm:pt-2.5 sm:mt-3 sm:grid-cols-1 sm:gap-3 sm:border-0 sm:pt-0">
             <DetailField
               label="Expected Salary"
               value={formatSalary(
@@ -290,29 +324,30 @@ export function CandidateProfileOverview({
                 detail.expectedSalaryPeriod,
               )}
             />
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+            <div className="min-w-0 space-y-1 max-sm:space-y-0.5">
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-muted max-sm:text-[8px] sm:text-[10px]">
                 Registration Status
               </p>
-              <div className="mt-1.5">
+              <div className="sm:mt-0.5">
                 <OperationsBadge
                   variant={profileStatusBadgeVariant(detail.profileStatus)}
+                  className="px-1.5 py-0 text-[9px] max-sm:text-[8px] sm:text-[11px] sm:px-2 sm:py-0.5"
                 >
                   {detail.profileStatusLabel}
                 </OperationsBadge>
               </div>
-              <p className="mt-1.5 text-[10px] text-muted">
+              <p className="text-[9px] leading-snug text-muted max-sm:text-[8px] sm:mt-1 sm:text-[10px]">
                 Completeness score: {detail.profileCompletionPercent ?? 0}%
                 (field fill)
               </p>
             </div>
           </div>
-        </section>
+        </SectionCard>
       </div>
 
       <section className="rounded-xl border border-border-subtle bg-surface shadow-sm">
-        <div className="border-b border-border-subtle px-4 py-3">
-          <h3 className="text-sm font-semibold text-foreground">
+        <div className="border-b border-border-subtle px-3 py-2 max-sm:px-2.5 max-sm:py-1.5 sm:px-4 sm:py-3">
+          <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
             All Applications ({applicationsTotal.toLocaleString("en-IN")})
           </h3>
         </div>
@@ -322,11 +357,11 @@ export function CandidateProfileOverview({
           isError={false}
         />
         {applicationsTotal > applications.length ? (
-          <div className="border-t border-border-subtle px-4 py-3 text-center">
+          <div className="border-t border-border-subtle px-3 py-2 text-center max-sm:px-2.5 max-sm:py-1.5 sm:px-4 sm:py-3">
             <button
               type="button"
               onClick={onViewAllApplications}
-              className="text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="text-[11px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:text-[10px] sm:text-xs"
             >
               View all applications →
             </button>

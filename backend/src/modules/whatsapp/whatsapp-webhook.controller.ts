@@ -3,16 +3,6 @@ import { env } from "../../config/env.js";
 import { claimWhatsAppEvent } from "./whatsapp-processed-event.model.js";
 import { verifyWhatsAppSignature } from "./whatsapp-signature.js";
 import { enqueueWhatsAppInbound } from "./whatsapp-inbound.queue.js";
-import { WhatsAppService } from "./whatsapp.service.js";
-import {
-  nationalPhone,
-  voiceUnclearCopy,
-  type BotLanguage,
-} from "./whatsapp-bot.logic.js";
-import { WhatsAppSessionModel } from "./whatsapp-session.model.js";
-import { transcribeWhatsAppAudio } from "./sarvam.client.js";
-
-const whatsAppService = new WhatsAppService();
 
 type IncomingMessage = {
   id?: string;
@@ -104,7 +94,21 @@ async function processWebhook(body: {
         }
 
         const parsedAt = performance.now();
-        const extracted = await extractText(message);
+        if (message.type === "audio" && message.audio?.id) {
+          console.info(
+            `[WhatsApp] message_parsed: ${Math.round(performance.now() - parsedAt)}ms type=audio`,
+          );
+          await enqueueWhatsAppInbound({
+            from,
+            messageId,
+            messageType: "audio",
+            mediaId: message.audio.id,
+            mimeType: message.audio.mime_type,
+          });
+          continue;
+        }
+
+        const extracted = extractText(message);
         if (!extracted?.text) continue;
         console.info(
           `[WhatsApp] message_parsed: ${Math.round(performance.now() - parsedAt)}ms type=${message.type ?? "unknown"}`,
@@ -125,9 +129,9 @@ async function processWebhook(body: {
   }
 }
 
-async function extractText(
+function extractText(
   message: IncomingMessage,
-): Promise<{ text: string; languageHint: string } | null> {
+): { text: string; languageHint: string } | null {
   if (message.type === "text") {
     const text = message.text?.body?.trim() || "";
     return text ? { text, languageHint: "" } : null;
@@ -142,35 +146,6 @@ async function extractText(
       message.interactive?.list_reply?.title?.trim() ||
       "";
     return text ? { text, languageHint: "" } : null;
-  }
-  if (message.type === "audio" && message.audio?.id) {
-    try {
-      const media = await whatsAppService.downloadMedia(message.audio.id);
-      const speech = await transcribeWhatsAppAudio({
-        buffer: media.buffer,
-        mimeType: message.audio.mime_type || media.mimeType,
-      });
-      console.info("[WhatsAppWebhook] voice transcript ready");
-      return speech.transcript
-        ? { text: speech.transcript, languageHint: speech.languageHint }
-        : null;
-    } catch (error) {
-      console.error(
-        `[WhatsAppWebhook] voice failed reason=${
-          error instanceof Error ? error.name : "unknown"
-        }`,
-      );
-      const phone = nationalPhone(message.from ?? "");
-      const session = phone
-        ? await WhatsAppSessionModel.findOne({ phone }).select("language").lean()
-        : null;
-      const language = (session?.language ?? "en") as BotLanguage;
-      await whatsAppService.sendTextMessage(
-        message.from ?? "",
-        voiceUnclearCopy(language),
-      );
-      return null;
-    }
   }
   return null;
 }

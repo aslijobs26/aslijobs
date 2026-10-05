@@ -38,7 +38,11 @@ export const AUTH_VALIDATION_MESSAGES = {
   COMPANY_LOGO_REQUIRED: "Company logo is required.",
 
   DUPLICATE_WHATSAPP:
-    "An account with this WhatsApp number already exists.",
+    "An account already exists with this mobile number. Please log in to your existing account instead.",
+  PHONE_ALREADY_JOB_SEEKER:
+    "This mobile number is already registered with a Job Seeker account. Please log in to continue.",
+  PHONE_ALREADY_EMPLOYER:
+    "This mobile number is already registered with an Employer account. Please log in to continue.",
   DUPLICATE_EMAIL: "An account with this email already exists.",
 
   NETWORK_ERROR:
@@ -67,6 +71,12 @@ export const BACKEND_AUTH_MESSAGE_MAP: Record<string, string> = {
   "Duplicate WhatsApp Number": AUTH_VALIDATION_MESSAGES.DUPLICATE_WHATSAPP,
   "This WhatsApp number is already registered":
     AUTH_VALIDATION_MESSAGES.DUPLICATE_WHATSAPP,
+  "An account already exists with this mobile number. Please log in to your existing account instead.":
+    AUTH_VALIDATION_MESSAGES.DUPLICATE_WHATSAPP,
+  "This mobile number is already registered with a Job Seeker account. Please log in to continue.":
+    AUTH_VALIDATION_MESSAGES.PHONE_ALREADY_JOB_SEEKER,
+  "This mobile number is already registered with an Employer account. Please log in to continue.":
+    AUTH_VALIDATION_MESSAGES.PHONE_ALREADY_EMPLOYER,
   "Duplicate Email": AUTH_VALIDATION_MESSAGES.DUPLICATE_EMAIL,
   "Invalid OTP": AUTH_VALIDATION_MESSAGES.OTP_INVALID,
   "OTP Expired": AUTH_VALIDATION_MESSAGES.OTP_EXPIRED,
@@ -83,6 +93,8 @@ export const BACKEND_AUTH_MESSAGE_MAP: Record<string, string> = {
  */
 export const AUTH_MESSAGE_FIELD_BINDINGS: Record<string, string> = {
   [AUTH_VALIDATION_MESSAGES.DUPLICATE_WHATSAPP]: "whatsappNumber",
+  [AUTH_VALIDATION_MESSAGES.PHONE_ALREADY_JOB_SEEKER]: "whatsappNumber",
+  [AUTH_VALIDATION_MESSAGES.PHONE_ALREADY_EMPLOYER]: "whatsappNumber",
   [AUTH_VALIDATION_MESSAGES.DUPLICATE_EMAIL]: "emailAddress",
   [AUTH_VALIDATION_MESSAGES.LOGIN_NOT_REGISTERED]: "whatsappNumber",
   [AUTH_VALIDATION_MESSAGES.COMPLETE_REGISTRATION]: "whatsappNumber",

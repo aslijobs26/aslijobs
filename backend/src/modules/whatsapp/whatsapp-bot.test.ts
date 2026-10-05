@@ -3,28 +3,36 @@ import { createHmac } from "node:crypto";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
 import {
+  applyAccountAwareIntent,
   applyCurrentMessageSearchRules,
+  applyRoleHints,
   buildDeterministicReply,
   buildPublicJobApplyUrl,
   chooseAccountRole,
   clarifyJobTitle,
+  conversationStateForAccount,
   detectLanguage,
+  detectMenuSelection,
   detectProtocolTurn,
   greetingCopy,
   isCacheableSituation,
   isConfidentLocalUnderstanding,
   JOBS_FOR_AI_LIMIT,
   looksLikeStalePublicJobReply,
+  menuUnderstanding,
   properNounsFromFacts,
   PUBLIC_JOB_FETCH_LIMIT,
+  purposeClarifyCopy,
   registrationCopy,
   mergePending,
   nationalPhone,
   parseUnderstanding,
+  postJobGuideCopy,
   protocolReply,
   renderJobSearchReply,
   resolveTurnUnderstanding,
   selectVerifiedJobsForReply,
+  shouldUseLlmFallback,
   toPublicJobsLookup,
   matchesRequestedRole,
   parentCity,
@@ -333,12 +341,15 @@ describe("whatsapp bot", () => {
     const unknown = greetingCopy({ language: "en", account: "none", name: "" });
     const both = greetingCopy({ language: "te", account: "both", name: "" });
     assert.match(seeker, /Chandu/);
+    assert.match(seeker, /Find Jobs/i);
     assert.match(seeker, /applications/i);
     assert.doesNotMatch(seeker, /posted jobs/i);
     assert.match(employer, /Harshad/);
+    assert.match(employer, /Post a Job/i);
     assert.match(employer, /posted jobs/i);
     assert.doesNotMatch(employer, /match your profile/i);
-    assert.match(unknown, /looking for a job/i);
+    assert.match(unknown, /find a job/i);
+    assert.match(unknown, /post a job/i);
     assert.match(both, /ఒకటి కంటే ఎక్కువ/);
     assert.equal(chooseAccountRole("Hi"), null);
     assert.equal(chooseAccountRole("I need a job"), "seeker");
@@ -1190,7 +1201,7 @@ describe("whatsapp fast path", () => {
 
   it("keeps the model call only for uncertain messages", () => {
     const service = readFileSync(new URL("./whatsapp-bot.service.ts", import.meta.url), "utf8");
-    assert.match(service, /isConfidentLocalUnderstanding/);
+    assert.match(service, /shouldUseLlmFallback/);
     assert.match(service, /understandMessage/);
     const plan = whatsappAiCallPlan({
       protocol: false,
@@ -1288,6 +1299,146 @@ describe("whatsapp job search — requested city is the source of truth", () => 
     assert.equal(parentCity("Bhimavaram"), "");
     assert.equal(parentCity("Coimbatore"), "");
     assert.equal(parentCity("Madhapur"), "Hyderabad");
+  });
+
+  it("identifies hire vs job-seeker intent without an LLM", () => {
+    assert.equal(chooseAccountRole("Naaku job kavali"), "seeker");
+    assert.equal(chooseAccountRole("मुझे नौकरी चाहिए"), "seeker");
+    assert.equal(chooseAccountRole("வேலை வேண்டும்"), "seeker");
+    assert.equal(chooseAccountRole("I want to post a job"), "employer");
+    assert.equal(chooseAccountRole("Job post cheyyali"), "employer");
+    assert.equal(chooseAccountRole("Workers kavali"), "employer");
+    assert.equal(chooseAccountRole("मुझे कर्मचारी चाहिए"), "employer");
+  });
+
+  it("resolves post-job language locally with role and city", () => {
+    const understood = understandLocally("I want to post electrician job in Hyderabad");
+    assert.equal(understood.intent, "POST_JOB");
+    assert.equal(understood.category, "Electrician");
+    assert.equal(understood.location, "Hyderabad");
+    assert.equal(understood.scope, "OWN_EMPLOYER_DATA");
+    assert.equal(isConfidentLocalUnderstanding(understood), true);
+    assert.equal(shouldUseLlmFallback(understood, "I want to post electrician job in Hyderabad"), false);
+  });
+
+  it("skips Chat LLM for greetings, thanks, and known job queries", () => {
+    assert.equal(shouldUseLlmFallback(understandLocally("Hi"), "Hi"), false);
+    assert.equal(shouldUseLlmFallback(understandLocally("Thanks"), "Thanks"), false);
+    const search = understandLocally("Hyderabad lo electrician jobs unnaya?");
+    assert.equal(search.intent, "JOB_SEARCH");
+    assert.equal(shouldUseLlmFallback(search, "Hyderabad lo electrician jobs unnaya?"), false);
+  });
+
+  it("maps employer application questions onto the employer, not a public search", () => {
+    const local = understandLocally("How many applications did I get?");
+    const mapped = applyAccountAwareIntent(local, "employer");
+    assert.equal(mapped.intent, "EMPLOYER_APPLICATION_COUNT");
+    assert.equal(mapped.location, "");
+    const previous = { location: "Hyderabad", category: "Electrician" };
+    const resolved = resolveTurnUnderstanding(
+      "How many applications did I get?",
+      mapped,
+      previous,
+    );
+    assert.equal(resolved.intent, "EMPLOYER_APPLICATION_COUNT");
+    assert.equal(resolved.location, "");
+  });
+
+  it("reuses a previous role only for a short place follow-up", () => {
+    const follow = resolveTurnUnderstanding(
+      "Hyderabad lo?",
+      understandLocally("Hyderabad lo?"),
+      { location: "", category: "Electrician" },
+    );
+    assert.equal(follow.intent, "JOB_SEARCH");
+    assert.equal(follow.location, "Hyderabad");
+    assert.equal(follow.category, "Electrician");
+  });
+
+  it("answers English after Telugu instead of keeping the previous language", () => {
+    assert.equal(detectLanguage("I need a job", "te"), "en");
+    assert.equal(detectLanguage("నాకు జాబ్ కావాలి", "en"), "te");
+    assert.equal(detectLanguage("मुझे नौकरी चाहिए", "en"), "hi");
+  });
+
+  it("routes numbered menus from conversation state", () => {
+    assert.equal(detectMenuSelection("1", "NEW_USER_INTENT"), "JOB_SEARCH");
+    assert.equal(detectMenuSelection("2", "NEW_USER_INTENT"), "POST_JOB");
+    assert.equal(detectMenuSelection("1", "EMPLOYER_MENU"), "POST_JOB");
+    assert.equal(detectMenuSelection("3", "EMPLOYER_MENU"), "EMPLOYER_APPLICATION_COUNT");
+    assert.equal(detectMenuSelection("2", "SEEKER_MENU"), "MY_APPLICATIONS");
+    assert.equal(detectMenuSelection("1", ""), null);
+    assert.equal(conversationStateForAccount("employer"), "EMPLOYER_MENU");
+    assert.equal(menuUnderstanding("POST_JOB", "en").requiresAuth, true);
+  });
+
+  it("builds registration, verification, and purpose replies from templates", () => {
+    const pending = postJobGuideCopy({
+      language: "en",
+      verification: "pending",
+      name: "Rishika Constructions",
+      role: "Electrician",
+      location: "Hyderabad",
+      postJobUrl: "https://aslijobs.com/post-job",
+      profileUrl: "https://aslijobs.com/employer/company-profile",
+    });
+    assert.match(pending, /under review/i);
+    assert.doesNotMatch(pending, /post-job/);
+    const verified = postJobGuideCopy({
+      language: "en",
+      verification: "verified",
+      name: "Rishika Constructions",
+      role: "Electrician",
+      location: "Hyderabad",
+      postJobUrl: "https://aslijobs.com/post-job",
+      profileUrl: "https://aslijobs.com/employer/company-profile",
+    });
+    assert.match(verified, /post-job/);
+    assert.match(verified, /Electrician/);
+    assert.match(purposeClarifyCopy("en"), /finding a job or posting a job/i);
+    const seekerReg = buildDeterministicReply("en", {
+      situation: "new_user",
+      reason: "job_seeker_account_required",
+      registration: { seekerRegisterUrl: "https://aslijobs.com/job-seeker/register" },
+    }) ?? "";
+    assert.match(seekerReg, /job-seeker\/register/);
+    const employerReg = buildDeterministicReply("te", {
+      situation: "new_user",
+      reason: "employer_account_required",
+      registration: { employerRegisterUrl: "https://aslijobs.com/employer/register" },
+    }) ?? "";
+    assert.match(employerReg, /employer\/register/);
+  });
+
+  it("does not let a previous Hyderabad search leak into an application-count turn", () => {
+    const current = applyAccountAwareIntent(
+      understandLocally("Nenu post chesina jobs ki enni applications vachayi?"),
+      "employer",
+    );
+    const merged = resolveTurnUnderstanding(
+      "Nenu post chesina jobs ki enni applications vachayi?",
+      current,
+      { location: "Hyderabad", category: "Driver" },
+    );
+    assert.equal(merged.intent, "EMPLOYER_APPLICATION_COUNT");
+    assert.equal(merged.location, "");
+    const reply = buildDeterministicReply("en", {
+      situation: "EMPLOYER_APPLICATION_COUNT",
+      totalApplications: 4,
+      jobs: [{ jobTitle: "Delivery Boy", applications: 4 }],
+    }) ?? "";
+    assert.match(reply, /4/);
+    assert.doesNotMatch(reply, /Hyderabad lo \d+ jobs/i);
+  });
+
+  it("applies seeker registration hints for mixed Telugu-English job intent", () => {
+    const hinted = applyRoleHints(
+      "naaku job kavali",
+      understandLocally("naaku job kavali"),
+      "none",
+    );
+    assert.equal(hinted.intent, "JOB_SEARCH");
+    assert.equal(chooseAccountRole("naaku job kavali"), "seeker");
   });
 
   it("renders the Chennai jobs that exist and a Chennai-only empty reply otherwise", () => {

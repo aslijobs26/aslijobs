@@ -30,7 +30,7 @@ function detectPreviewKind(fileName: string, mimeType?: string): PreviewKind {
 }
 
 const actionButtonClassName =
-  "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60";
+  "inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 max-sm:h-7 max-sm:gap-0.5 max-sm:px-2 max-sm:text-[10px] sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs";
 
 export function CandidateDocumentsPanel({
   detail,
@@ -250,44 +250,58 @@ export function CandidateDocumentsPanel({
     <OperationsCanKey
       permissionKey="candidates.profile.documents.view"
       fallback={
-        <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-foreground">Documents</h3>
-          <p className="mt-4 text-xs text-muted">
+        <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4">
+          <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
+            Documents
+          </h3>
+          <p className="mt-3 text-[11px] text-muted max-sm:mt-2.5 max-sm:text-[10px] sm:mt-4 sm:text-xs">
             You do not have permission to view candidate documents.
           </p>
         </section>
       }
     >
-      <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-        <h3 className="text-sm font-semibold text-foreground">Documents</h3>
+      <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4">
+        <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
+          Documents
+        </h3>
 
         {!hasResume ? (
-          <div className="mt-4 rounded-lg border border-dashed border-border-subtle px-4 py-10 text-center">
-            <p className="text-sm font-medium text-foreground">No documents</p>
-            <p className="mt-1 text-xs text-muted">
+          <div className="mt-3 rounded-lg border border-dashed border-border-subtle px-3 py-8 text-center max-sm:mt-2.5 max-sm:px-2.5 max-sm:py-6 sm:mt-4 sm:px-4 sm:py-10">
+            <p className="text-[13px] font-medium text-foreground max-sm:text-[12px] sm:text-sm">
+              No documents
+            </p>
+            <p className="mt-1 text-[11px] text-muted max-sm:text-[10px] sm:text-xs">
               This candidate has not uploaded a resume file.
             </p>
           </div>
         ) : (
-          <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border-subtle bg-hero-bg/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="inline-flex size-10 items-center justify-center rounded-lg bg-primary-light text-primary">
-                <FileText className="size-5" aria-hidden="true" />
+          <div className="mt-3 flex flex-col gap-2.5 rounded-lg border border-border-subtle bg-hero-bg/40 px-3 py-2.5 max-sm:mt-2.5 max-sm:gap-2 max-sm:px-2.5 max-sm:py-2 sm:mt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4 sm:py-3">
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary max-sm:size-7 sm:size-10">
+                <FileText
+                  className="size-4 max-sm:size-3.5 sm:size-5"
+                  aria-hidden="true"
+                />
               </span>
               <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-foreground">
+                <p className="truncate text-[11px] font-semibold text-foreground max-sm:text-[10px] sm:text-xs">
                   {fileName}
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted">Resume document</p>
+                <p className="mt-0.5 text-[10px] text-muted max-sm:text-[9px] sm:text-[11px]">
+                  Resume document
+                </p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={openPreview}
                 className={actionButtonClassName}
               >
-                <Eye className="size-3.5" aria-hidden="true" />
+                <Eye
+                  className="size-3 max-sm:size-2.5 sm:size-3.5"
+                  aria-hidden="true"
+                />
                 Preview
               </button>
               <button
@@ -296,7 +310,10 @@ export function CandidateDocumentsPanel({
                 disabled={isDownloading}
                 className={actionButtonClassName}
               >
-                <Download className="size-3.5" aria-hidden="true" />
+                <Download
+                  className="size-3 max-sm:size-2.5 sm:size-3.5"
+                  aria-hidden="true"
+                />
                 {isDownloading ? "Downloading…" : "Download"}
               </button>
             </div>
@@ -304,7 +321,10 @@ export function CandidateDocumentsPanel({
         )}
 
         {actionError ? (
-          <p className="mt-2 text-[11px] text-danger" role="alert">
+          <p
+            className="mt-2 text-[10px] text-danger max-sm:text-[9px] sm:text-[11px]"
+            role="alert"
+          >
             {actionError}
           </p>
         ) : null}

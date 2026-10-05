@@ -6,15 +6,21 @@ import {
 } from "./job-content-language.js";
 import {
   buildJobContentTranslations,
+  extractJobNumericLiterals,
   hashJobField,
   hasMatchingHtmlStructure,
   isTranslationRetryCoolingDown,
   needsJobContentTranslation,
+  normalizeInternationalNumerals,
+  protectJobNumericLiterals,
   resolveJobContent,
   resolvePublicJobTranslationView,
+  restoreJobNumericLiterals,
   shouldSkipFailedTranslationRetry,
+  translateJobField,
   translateJobHtmlField,
   translateRequestedJobLanguage,
+  translationPreservesSourceNumbers,
   withTranslationInFlight,
   type JobContentTranslations,
 } from "./job-content-translation.js";
@@ -62,6 +68,70 @@ describe("job content language", () => {
     assert.equal(detectJobContentLanguage("വൈദ്യുതി"), "ml");
     assert.equal(parseJobContentLanguage("telugu"), "te");
     assert.equal(parseJobContentLanguage("nope"), null);
+  });
+});
+
+describe("job numeric literal protection", () => {
+  it("extracts salary amounts and plain numbers from job copy", () => {
+    const literals = extractJobNumericLiterals(
+      "Salary ₹18,000 /month for 2 openings. Range ₹15,000-₹20,000. Shift 09:30.",
+    );
+    assert.ok(literals.includes("₹18,000"));
+    assert.ok(
+      literals.includes("₹15,000-₹20,000") ||
+        (literals.includes("₹15,000") && literals.includes("₹20,000")),
+    );
+    assert.ok(literals.includes("2"));
+    assert.ok(literals.includes("09:30"));
+  });
+
+  it("masks numbers before Sarvam and restores them afterwards", async () => {
+    const calls = { count: 0, bodies: [] as string[] };
+    const sourceText =
+      "Plumber needed. Salary ₹18,000 per month. Openings: 1.";
+    const result = await translateJobField({
+      text: sourceText,
+      sourceLanguage: "en",
+      targetLanguage: "te",
+      fetchImpl: mockTranslate(calls),
+    });
+    assert.equal(result.failed, false);
+    assert.ok(calls.bodies[0]?.includes("__AJ"));
+    assert.ok(!calls.bodies[0]?.includes("₹18,000"));
+    assert.match(result.text, /₹18,000/);
+    assert.match(result.text, /\b1\b/);
+  });
+
+  it("normalizes Indic digits back to international numerals", () => {
+    assert.equal(normalizeInternationalNumerals("జీతం ౧౮,౦౦౦"), "జీతం 18,000");
+    assert.equal(normalizeInternationalNumerals("वेतन १८,०००"), "वेतन 18,000");
+  });
+
+  it("marks translations that lost salary numbers as unusable", () => {
+    assert.equal(
+      translationPreservesSourceNumbers(
+        "Salary ₹18,000",
+        "జీతం ₹18,000",
+      ),
+      true,
+    );
+    assert.equal(
+      translationPreservesSourceNumbers(
+        "Salary ₹18,000",
+        "జీతం పద్దెనిమిది వేలు",
+      ),
+      false,
+    );
+  });
+
+  it("restores protected tokens after a mangled provider response", () => {
+    const protectedText = protectJobNumericLiterals("Pay ₹18,000 now");
+    assert.ok(protectedText.tokens.includes("₹18,000"));
+    const restored = restoreJobNumericLiterals(
+      `Pay ${protectedText.text.includes("__AJ0__") ? "__AJ0__" : protectedText.text} now`,
+      protectedText.tokens,
+    );
+    assert.match(restored, /₹18,000/);
   });
 });
 

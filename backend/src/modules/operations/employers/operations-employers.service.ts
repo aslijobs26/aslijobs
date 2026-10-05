@@ -7,6 +7,12 @@ import { AppError } from "../../../middleware/error.middleware.js";
 import { buildListPagination } from "../../../utils/pagination.js";
 import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-image.js";
 import { EmployerModel } from "../../employers/employer.model.js";
+import {
+  commitPhoneAccount,
+  releasePhoneReservation,
+  reservePhoneAccount,
+} from "../../accounts/phone-account.service.js";
+import { phoneAlreadyRegisteredError, isMongoDuplicateKeyError } from "../../accounts/phone-account.policy.js";
 import { EmployerDocumentModel } from "../../employers/employer-document.model.js";
 import { JobModel } from "../../jobs/job.model.js";
 import { ApplicationModel } from "../../applications/application.model.js";
@@ -1496,41 +1502,49 @@ export const operationsEmployersService = {
     }
 
     const accountType = input.accountType ?? "company";
-    const existing = await EmployerModel.findOne({
+    const reservation = await reservePhoneAccount({
       whatsappNumber,
-      accountType,
-    }).lean();
-    if (existing) {
-      throw new AppError(
-        "An employer with this WhatsApp number already exists.",
-        HTTP_STATUS.CONFLICT,
-      );
-    }
-
-    const created = await EmployerModel.create({
-      accountType,
-      companyName: text(input.companyName),
-      firstName: text(input.firstName) || "Ops",
-      lastName: text(input.lastName) || "Created",
-      whatsappNumber,
-      emailAddress: text(input.emailAddress),
-      industry: text(input.industry),
-      city: text(input.city),
-      state: text(input.state),
-      minimumEmployees:
-        typeof input.minimumEmployees === "number"
-          ? input.minimumEmployees
-          : null,
-      maximumEmployees:
-        typeof input.maximumEmployees === "number"
-          ? input.maximumEmployees
-          : null,
-      registrationStatus: "completed",
-      isProfileComplete: true,
-      isWhatsappVerified: false,
-      status: "active",
-      verificationStatus: "pending",
+      intendedKind: "employer",
     });
+
+    let created;
+    try {
+      created = await EmployerModel.create({
+        accountType,
+        companyName: text(input.companyName),
+        firstName: text(input.firstName) || "Ops",
+        lastName: text(input.lastName) || "Created",
+        whatsappNumber: reservation.normalizedPhone,
+        emailAddress: text(input.emailAddress),
+        industry: text(input.industry),
+        city: text(input.city),
+        state: text(input.state),
+        minimumEmployees:
+          typeof input.minimumEmployees === "number"
+            ? input.minimumEmployees
+            : null,
+        maximumEmployees:
+          typeof input.maximumEmployees === "number"
+            ? input.maximumEmployees
+            : null,
+        registrationStatus: "completed",
+        isProfileComplete: true,
+        isWhatsappVerified: false,
+        status: "active",
+        verificationStatus: "pending",
+      });
+      await commitPhoneAccount({
+        normalizedPhone: reservation.normalizedPhone,
+        lockToken: reservation.lockToken,
+        accountId: String(created._id),
+      });
+    } catch (error) {
+      await releasePhoneReservation(reservation);
+      if (isMongoDuplicateKeyError(error)) {
+        throw phoneAlreadyRegisteredError("employer");
+      }
+      throw error;
+    }
 
     return this.getEmployerById(String(created._id));
   },

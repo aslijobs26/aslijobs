@@ -17,6 +17,11 @@ const whatsAppSessionSchema = new Schema(
     pendingCategory: { type: String, default: "" },
     lastLocation: { type: String, default: "" },
     lastCategory: { type: String, default: "" },
+    conversationState: {
+      type: String,
+      enum: ["", "NEW_USER_INTENT", "SEEKER_MENU", "EMPLOYER_MENU"],
+      default: "",
+    },
     lastJobs: {
       type: [
         {

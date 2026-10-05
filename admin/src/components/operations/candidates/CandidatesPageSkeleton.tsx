@@ -121,29 +121,36 @@ function TableRowSkeleton() {
 
 function MobileCardSkeleton() {
   return (
-    <li className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-      <div className="border-b border-border-subtle/80 bg-hero-bg/35 px-3 py-2.5">
-        <div className="flex items-start gap-2">
-          <div className="flex min-w-0 flex-1 items-start gap-2.5">
-            <SkeletonBone className="size-10 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <SkeletonBone className="h-4 w-36 max-w-full" />
-              <SkeletonBone className="h-2.5 w-20" />
+    <li className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+      <div className="space-y-2.5 border-b border-border-subtle px-3 py-2.5">
+        <div className="flex items-start gap-2.5">
+          <SkeletonBone className="size-11 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <SkeletonBone className="h-4 w-32 max-w-full" />
+            <SkeletonBone className="h-2.5 w-24" />
+            <div className="flex gap-1.5">
+              <SkeletonBone className="h-5 w-16 rounded-full" />
+              <SkeletonBone className="h-5 w-24 rounded-full" />
             </div>
           </div>
-          <SkeletonBone className="size-8 shrink-0 rounded-lg" />
+          <SkeletonBone className="size-8 shrink-0 rounded-full" />
         </div>
       </div>
-      <div className="space-y-3 px-3 py-3">
-        <SkeletonBone className="h-5 w-20 rounded-full" />
-        <div className="grid grid-cols-2 gap-1.5">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="rounded-lg bg-hero-bg/60 px-2 py-2">
-              <SkeletonBone className="h-2 w-12" />
-              <SkeletonBone className="mt-2 h-3 w-16" />
-            </div>
-          ))}
-        </div>
+      <div className="flex border-b border-border-subtle">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={index}
+            className="flex min-w-0 flex-1 flex-col gap-1 border-r border-border-subtle px-1.5 py-2.5 last:border-r-0"
+          >
+            <SkeletonBone className="size-6 rounded-md" />
+            <SkeletonBone className="h-2 w-10" />
+            <SkeletonBone className="h-2.5 w-full max-w-[4rem]" />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between gap-1.5 px-3 py-1.5">
+        <SkeletonBone className="h-4 w-16 rounded-full" />
+        <SkeletonBone className="h-6 w-28 rounded-md" />
       </div>
     </li>
   );

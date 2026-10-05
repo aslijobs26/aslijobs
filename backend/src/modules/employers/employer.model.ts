@@ -210,7 +210,7 @@ const employerSchema = new Schema(
       type: String,
       required: true,
       trim: true,
-      index: true,
+      unique: true,
     },
     isWhatsappVerified: {
       type: Boolean,
@@ -352,7 +352,6 @@ const employerSchema = new Schema(
   },
 );
 
-employerSchema.index({ whatsappNumber: 1, accountType: 1 });
 employerSchema.index({ createdAt: -1 });
 employerSchema.index({ verifiedAt: -1 });
 employerSchema.index({ rejectedAt: -1 });

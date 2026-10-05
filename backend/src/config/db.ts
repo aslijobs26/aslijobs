@@ -68,6 +68,14 @@ export async function connectDB(): Promise<void> {
     // Log database name only (never URI/credentials).
     console.log(`MongoDB connected successfully: ${databaseName}`);
 
+    void import("../modules/accounts/phone-account-audit.js")
+      .then(({ auditPhoneAccountUniqueness }) => auditPhoneAccountUniqueness())
+      .catch((auditError: unknown) => {
+        const auditMessage =
+          auditError instanceof Error ? auditError.message : String(auditError);
+        console.error("Phone account audit failed:", auditMessage);
+      });
+
     // Keep job_views indexes aligned after schema evolution (drops obsolete uniques).
     try {
       const { JobViewModel } = await import("../modules/jobs/job-view.model.js");

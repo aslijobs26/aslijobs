@@ -13,7 +13,7 @@ export const SARVAM_CHAT_MODEL = "sarvam-105b";
 const UNDERSTAND_TIMEOUT_MS = 8_000;
 
 export const UNDERSTAND_SYSTEM =
-  "AsliJobs classifier. JSON only. Fields: intent,language,location,category,openSearch,confidence. intent=GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_SKILLS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|UNRELATED|UNKNOWN. language=en|hi|te|ta|kn|ml from THIS message only. Posted/my jobs + applications = EMPLOYER_APPLICATION_COUNT. Public job hunt = JOB_SEARCH. Ignore prev unless THIS message is only a role or place follow-up. Do not answer, authorize, or invent jobs.";
+  "AsliJobs classifier. JSON only. Fields: intent,language,location,category,openSearch,confidence. intent=GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_SKILLS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|POST_JOB|ACCOUNT_STATUS|UNRELATED|UNKNOWN. language=en|hi|te|ta|kn|ml from THIS message only. Hire/post job=POST_JOB. Posted/my jobs + applications = EMPLOYER_APPLICATION_COUNT. Public job hunt = JOB_SEARCH. Ignore prev unless THIS message is only a role or place follow-up. Do not answer, authorize, or invent jobs.";
 
 type SarvamUsage = {
   prompt_tokens?: number;
@@ -54,6 +54,7 @@ function logSarvam(input: {
 export async function transcribeWhatsAppAudio(input: {
   buffer: Buffer;
   mimeType: string;
+  languageHint?: string;
 }): Promise<{ transcript: string; languageHint: string }> {
   if (!env.SARVAM_API_KEY.trim()) {
     throw new Error("Sarvam is not configured");
@@ -122,8 +123,19 @@ export async function transcribeWhatsAppAudio(input: {
   throw new Error(`Sarvam speech-to-text failed status=${lastStatus}`);
 }
 
+function toSttLanguageCode(hint?: string): string {
+  const code = hint?.trim().toLowerCase() ?? "";
+  if (code.startsWith("te")) return "te-IN";
+  if (code.startsWith("hi")) return "hi-IN";
+  if (code.startsWith("ta")) return "ta-IN";
+  if (code.startsWith("kn")) return "kn-IN";
+  if (code.startsWith("ml")) return "ml-IN";
+  if (code.startsWith("en")) return "en-IN";
+  return "unknown";
+}
+
 function buildAudioForm(
-  input: { buffer: Buffer; mimeType: string },
+  input: { buffer: Buffer; mimeType: string; languageHint?: string },
   attempt: { model: string; mode: string },
 ): FormData {
   const mime = (input.mimeType.split(";")[0] ?? "audio/ogg").trim() || "audio/ogg";
@@ -141,7 +153,7 @@ function buildAudioForm(
     `voice.${extension}`,
   );
   form.append("model", attempt.model);
-  form.append("language_code", "unknown");
+  form.append("language_code", toSttLanguageCode(input.languageHint));
   if (attempt.mode) {
     form.append("mode", attempt.mode);
   }

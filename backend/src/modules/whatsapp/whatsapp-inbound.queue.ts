@@ -7,10 +7,12 @@ const QUEUE_NAME = "whatsapp-inbound";
 
 export type WhatsAppInboundJob = {
   from: string;
-  text: string;
+  text?: string;
   languageHint?: string;
   messageId?: string;
   messageType?: string;
+  mediaId?: string;
+  mimeType?: string;
 };
 
 let queue: Queue | null = null;

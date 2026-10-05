@@ -48,6 +48,7 @@ import { establishJobSeekerClientSession } from "@/utils/job-seeker-session";
 import { consumeJobSeekerRegistrationResume } from "@/utils/job-seeker-registration-resume";
 import { normalizeApiError } from "@/utils/normalize-api-error";
 import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
@@ -714,6 +715,24 @@ export function JobSeekerRegisterForm() {
                 id={whatsappErrorId}
                 message={translateMessage(fieldErrors.whatsappNumber)}
               />
+              {fieldErrors.whatsappNumber ===
+                AUTH_VALIDATION_MESSAGES.PHONE_ALREADY_JOB_SEEKER ||
+              fieldErrors.whatsappNumber ===
+                AUTH_VALIDATION_MESSAGES.PHONE_ALREADY_EMPLOYER ||
+              fieldErrors.whatsappNumber ===
+                AUTH_VALIDATION_MESSAGES.DUPLICATE_WHATSAPP ? (
+                <Link
+                  href={
+                    fieldErrors.whatsappNumber ===
+                    AUTH_VALIDATION_MESSAGES.PHONE_ALREADY_EMPLOYER
+                      ? ROUTES.EMPLOYER_LOGIN
+                      : ROUTES.JOB_SEEKER_LOGIN
+                  }
+                  className="mt-1 inline-flex text-sm font-semibold text-primary underline-offset-2 hover:underline"
+                >
+                  Log in
+                </Link>
+              ) : null}
             </div>
           </>
         ) : null}

@@ -3,6 +3,7 @@
 import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
+import { ROUTES } from "@/constants/routes";
 import {
   EMPLOYER_REGISTER_ACCOUNT_TYPE_OPTIONS,
   EMPLOYER_REGISTER_DEFAULT_ACCOUNT_TYPE,
@@ -37,6 +38,7 @@ import { establishEmployerClientSession } from "@/utils/employer-session";
 import { normalizeApiError } from "@/utils/normalize-api-error";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { EmployerRegisterDocumentVerification } from "./EmployerRegisterDocumentVerification";
 import { EmployerRegisterOtpSection } from "./EmployerRegisterOtpSection";
 import {
@@ -667,6 +669,24 @@ export function EmployerRegisterForm({
             id="whatsappNumber-error"
             message={translateMessage(fieldErrors.whatsappNumber)}
           />
+          {fieldErrors.whatsappNumber ===
+            AUTH_VALIDATION_MESSAGES.PHONE_ALREADY_JOB_SEEKER ||
+          fieldErrors.whatsappNumber ===
+            AUTH_VALIDATION_MESSAGES.PHONE_ALREADY_EMPLOYER ||
+          fieldErrors.whatsappNumber ===
+            AUTH_VALIDATION_MESSAGES.DUPLICATE_WHATSAPP ? (
+            <Link
+              href={
+                fieldErrors.whatsappNumber ===
+                AUTH_VALIDATION_MESSAGES.PHONE_ALREADY_JOB_SEEKER
+                  ? ROUTES.JOB_SEEKER_LOGIN
+                  : ROUTES.EMPLOYER_LOGIN
+              }
+              className="mt-1 inline-flex text-sm font-semibold text-primary underline-offset-2 hover:underline"
+            >
+              Log in
+            </Link>
+          ) : null}
           {canSendOtp ? (
             <button
               type="button"

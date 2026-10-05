@@ -5,7 +5,11 @@ import {
   JOB_CONTENT_LANGUAGES,
   type JobContentLanguage,
 } from "./job-content-language.js";
-import { translateText } from "../whatsapp/sarvam-translate.client.js";
+import {
+  protectProperNouns,
+  restoreProperNouns,
+  translateText,
+} from "../whatsapp/sarvam-translate.client.js";
 
 export const JOB_TRANSLATABLE_FIELDS = [
   "jobTitle",
@@ -43,6 +47,153 @@ const CHUNK = 900;
 export const TRANSLATION_RETRY_COOLDOWN_MS = 10 * 60_000;
 
 const inFlightTranslations = new Map<string, Promise<unknown>>();
+
+/**
+ * Currency amounts, comma-grouped numbers, percentages, and plain digits must
+ * stay international (ASCII) through Sarvam — never become Indic numerals or
+ * word forms.
+ */
+const JOB_NUMERIC_LITERAL_PATTERN =
+  /₹\s*\d{1,3}(?:,\d{2,3})*(?:\.\d+)?(?:\s*[-–—]\s*₹?\s*\d{1,3}(?:,\d{2,3})*(?:\.\d+)?)?|(?:Rs\.?|INR)\s*\d{1,3}(?:,\d{2,3})*(?:\.\d+)?|\b\d{1,3}(?:,\d{2,3})+(?:\.\d+)?\b|\b\d+(?:\.\d+)?%|\b\d{1,2}:\d{2}(?::\d{2})?\b|\b\d+(?:\.\d+)?\b/gi;
+
+const INDIC_DIGIT_MAP: Record<string, string> = {
+  "٠": "0",
+  "١": "1",
+  "٢": "2",
+  "٣": "3",
+  "٤": "4",
+  "٥": "5",
+  "٦": "6",
+  "٧": "7",
+  "٨": "8",
+  "٩": "9",
+  "۰": "0",
+  "۱": "1",
+  "۲": "2",
+  "۳": "3",
+  "۴": "4",
+  "۵": "5",
+  "۶": "6",
+  "۷": "7",
+  "۸": "8",
+  "۹": "9",
+  "०": "0",
+  "१": "1",
+  "२": "2",
+  "३": "3",
+  "४": "4",
+  "५": "5",
+  "६": "6",
+  "७": "7",
+  "८": "8",
+  "९": "9",
+  "০": "0",
+  "১": "1",
+  "২": "2",
+  "৩": "3",
+  "৪": "4",
+  "৫": "5",
+  "৬": "6",
+  "৭": "7",
+  "৮": "8",
+  "৯": "9",
+  "੦": "0",
+  "੧": "1",
+  "੨": "2",
+  "੩": "3",
+  "੪": "4",
+  "੫": "5",
+  "੬": "6",
+  "੭": "7",
+  "੮": "8",
+  "੯": "9",
+  "૦": "0",
+  "૧": "1",
+  "૨": "2",
+  "૩": "3",
+  "૪": "4",
+  "૫": "5",
+  "૬": "6",
+  "૭": "7",
+  "૮": "8",
+  "૯": "9",
+  "୦": "0",
+  "୧": "1",
+  "୨": "2",
+  "୩": "3",
+  "୪": "4",
+  "୫": "5",
+  "୬": "6",
+  "୭": "7",
+  "୮": "8",
+  "୯": "9",
+  "௦": "0",
+  "௧": "1",
+  "௨": "2",
+  "௩": "3",
+  "௪": "4",
+  "௫": "5",
+  "௬": "6",
+  "௭": "7",
+  "௮": "8",
+  "௯": "9",
+  "౦": "0",
+  "౧": "1",
+  "౨": "2",
+  "౩": "3",
+  "౪": "4",
+  "౫": "5",
+  "౬": "6",
+  "౭": "7",
+  "౮": "8",
+  "౯": "9",
+  "೦": "0",
+  "೧": "1",
+  "೨": "2",
+  "೩": "3",
+  "೪": "4",
+  "೫": "5",
+  "೬": "6",
+  "೭": "7",
+  "೮": "8",
+  "೯": "9",
+  "൦": "0",
+  "൧": "1",
+  "൨": "2",
+  "൩": "3",
+  "൪": "4",
+  "൫": "5",
+  "൬": "6",
+  "൭": "7",
+  "൮": "8",
+  "൯": "9",
+};
+
+export function extractJobNumericLiterals(text: string): string[] {
+  const matches = text.match(JOB_NUMERIC_LITERAL_PATTERN) ?? [];
+  return [...new Set(matches.map((match) => match.trim()).filter(Boolean))];
+}
+
+export function normalizeInternationalNumerals(text: string): string {
+  return text.replace(
+    /[٠-٩۰-۹०-९০-৯੦-੯૦-૯୦-୯௦-௯౦-౯೦-೯൦-൯]/g,
+    (digit) => INDIC_DIGIT_MAP[digit] ?? digit,
+  );
+}
+
+export function protectJobNumericLiterals(text: string): {
+  text: string;
+  tokens: string[];
+} {
+  return protectProperNouns(text, extractJobNumericLiterals(text));
+}
+
+export function restoreJobNumericLiterals(
+  text: string,
+  tokens: readonly string[],
+): string {
+  return normalizeInternationalNumerals(restoreProperNouns(text, tokens));
+}
 
 export function translationInFlightKey(
   jobMongoId: string,
@@ -132,8 +283,9 @@ export async function translateJobField(input: {
   }
   const translated: string[] = [];
   for (const chunk of chunks) {
+    const protectedChunk = protectJobNumericLiterals(chunk);
     const result = await translateText({
-      text: chunk,
+      text: protectedChunk.text,
       sourceLanguage: input.sourceLanguage,
       targetLanguage: input.targetLanguage,
       cache: false,
@@ -142,7 +294,9 @@ export async function translateJobField(input: {
     if (result.failed || !result.translated) {
       return { text: input.text, failed: true, calls: translated.length + 1 };
     }
-    translated.push(result.text);
+    translated.push(
+      restoreJobNumericLiterals(result.text, protectedChunk.tokens),
+    );
   }
   return { text: translated.join("\n"), failed: false, calls: chunks.length };
 }
@@ -387,9 +541,11 @@ export function resolveJobContent<T extends SourceFields & {
       ? (stored[field]?.trim() ?? "")
       : source[field];
   return {
-    jobTitle: usable("jobTitle"),
-    description: usable("description"),
-    interviewInstructions: usable("interviewInstructions"),
+    jobTitle: normalizeInternationalNumerals(usable("jobTitle")),
+    description: normalizeInternationalNumerals(usable("description")),
+    interviewInstructions: normalizeInternationalNumerals(
+      usable("interviewInstructions"),
+    ),
   };
 }
 
@@ -397,6 +553,8 @@ export function resolveJobContent<T extends SourceFields & {
  * A stored translation is shown only when it was produced from the current
  * source text (hash match) and kept the source HTML structure. Stale entries
  * (e.g. after an approved live edit) fall back to the original text.
+ * Translations that lost salary/number literals are also treated as unusable
+ * so they regenerate with numeric protection.
  */
 function isUsableFieldTranslation(
   sourceValue: string,
@@ -404,11 +562,26 @@ function isUsableFieldTranslation(
   field: JobTranslatableField,
 ): boolean {
   const translated = stored?.[field]?.trim() ?? "";
-  return (
-    Boolean(translated) &&
-    stored?.[`${field}Hash`] === hashJobField(sourceValue) &&
-    hasMatchingHtmlStructure(sourceValue, translated)
-  );
+  if (
+    !translated ||
+    stored?.[`${field}Hash`] !== hashJobField(sourceValue) ||
+    !hasMatchingHtmlStructure(sourceValue, translated)
+  ) {
+    return false;
+  }
+  return translationPreservesSourceNumbers(sourceValue, translated);
+}
+
+export function translationPreservesSourceNumbers(
+  source: string,
+  translated: string,
+): boolean {
+  const literals = extractJobNumericLiterals(source);
+  if (literals.length === 0) {
+    return true;
+  }
+  const normalized = normalizeInternationalNumerals(translated);
+  return literals.every((literal) => normalized.includes(literal));
 }
 
 type TranslatableJob = {

@@ -154,7 +154,7 @@ export function CandidatesRowActions({
         aria-haspopup="menu"
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          "inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors xl:size-7",
+          "inline-flex size-8 items-center justify-center rounded-full border border-border-subtle bg-surface text-muted transition-colors sm:rounded-lg sm:border-0 sm:bg-transparent xl:size-7",
           "hover:bg-hero-bg hover:text-foreground",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
           open && "bg-hero-bg text-foreground",

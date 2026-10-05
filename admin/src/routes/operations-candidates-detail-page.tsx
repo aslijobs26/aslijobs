@@ -26,20 +26,23 @@ import { isOperationsSessionTransientError } from "../utils/operations-session-e
 
 function DetailSkeleton() {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-3" aria-busy="true">
-      <div className="h-40 animate-pulse rounded-xl border border-border-subtle bg-surface" />
-      <div className="h-10 animate-pulse rounded-lg border border-border-subtle bg-surface" />
-      <div className="grid gap-3 lg:grid-cols-4">
+    <div
+      className="flex w-full min-w-0 flex-col gap-2.5 max-sm:gap-2 sm:gap-3"
+      aria-busy="true"
+    >
+      <div className="h-36 animate-pulse rounded-xl border border-border-subtle bg-surface max-sm:h-32 sm:h-40" />
+      <div className="h-9 animate-pulse rounded-lg border border-border-subtle bg-surface max-sm:h-8 sm:h-10" />
+      <div className="grid grid-cols-2 gap-1.5 sm:gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
-            className="h-24 animate-pulse rounded-xl border border-border-subtle bg-surface"
+            className="h-16 animate-pulse rounded-xl border border-border-subtle bg-surface max-sm:h-14 sm:h-24"
           />
         ))}
       </div>
-      <div className="grid gap-3 lg:grid-cols-3">
-        <div className="h-64 animate-pulse rounded-xl border border-border-subtle bg-surface lg:col-span-2" />
-        <div className="h-64 animate-pulse rounded-xl border border-border-subtle bg-surface" />
+      <div className="grid gap-2.5 sm:gap-3 lg:grid-cols-3">
+        <div className="h-48 animate-pulse rounded-xl border border-border-subtle bg-surface max-sm:h-40 sm:h-64 lg:col-span-2" />
+        <div className="h-48 animate-pulse rounded-xl border border-border-subtle bg-surface max-sm:h-40 sm:h-64" />
       </div>
     </div>
   );
@@ -129,13 +132,17 @@ export function OperationsCandidatesDetailPage() {
       title="Candidate Profile"
       subtitle="Candidates > Candidate Profile"
     >
-      <div className="mb-3 flex justify-end">
+      <div className="mb-2.5 flex justify-end max-sm:mb-2 sm:mb-3">
         <Link
           to={OPERATIONS_ROUTES.CANDIDATES}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:h-7 max-sm:gap-1 max-sm:px-2 max-sm:text-[10px] sm:h-9 sm:px-3 sm:text-xs"
         >
-          <ArrowLeft className="size-3.5" aria-hidden="true" />
-          Back to Candidates
+          <ArrowLeft
+            className="size-3 max-sm:size-2.5 sm:size-3.5"
+            aria-hidden="true"
+          />
+          <span className="max-sm:hidden">Back to Candidates</span>
+          <span className="sm:hidden">Back</span>
         </Link>
       </div>
 
@@ -144,12 +151,14 @@ export function OperationsCandidatesDetailPage() {
       ) : null}
 
       {detailQuery.isError && !detail && !detailQuery.isFetching ? (
-        <div className="rounded-xl border border-border-subtle bg-surface px-4 py-16 text-center shadow-sm">
-          <p className="text-sm font-medium text-danger">{errorMessage}</p>
+        <div className="rounded-xl border border-border-subtle bg-surface px-3 py-12 text-center shadow-sm max-sm:px-2.5 max-sm:py-10 sm:px-4 sm:py-16">
+          <p className="text-[13px] font-medium text-danger max-sm:text-[12px] sm:text-sm">
+            {errorMessage}
+          </p>
           <button
             type="button"
             onClick={() => void detailQuery.refetch()}
-            className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="mt-2.5 inline-flex h-8 items-center rounded-lg bg-primary-light px-2.5 text-[11px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:mt-2 max-sm:h-7 max-sm:text-[10px] sm:mt-3 sm:h-9 sm:px-3 sm:text-xs"
           >
             Retry
           </button>
@@ -157,11 +166,11 @@ export function OperationsCandidatesDetailPage() {
       ) : null}
 
       {detail ? (
-        <div className="flex w-full min-w-0 flex-col gap-3">
+        <div className="flex w-full min-w-0 flex-col gap-2.5 max-sm:gap-2 sm:gap-3">
           <CandidateProfileHeader detail={detail} />
 
-          <div className="rounded-xl border border-border-subtle bg-surface shadow-sm">
-            <div className="px-2 sm:px-3">
+          <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+            <div className="px-1.5 max-sm:px-1 sm:px-3">
               <CandidateProfileTabs
                 activeTab={activeTab}
                 applicationsCount={
@@ -171,7 +180,7 @@ export function OperationsCandidatesDetailPage() {
               />
             </div>
 
-            <div className="p-3 sm:p-4">
+            <div className="p-2.5 max-sm:p-2 sm:p-4">
               {activeTab === "overview" ? (
                 <CandidateProfileOverview
                   detail={detail}
@@ -191,15 +200,15 @@ export function OperationsCandidatesDetailPage() {
                 <OperationsCanKey
                   permissionKey="candidates.profile.applications.view"
                   fallback={
-                    <p className="rounded-xl border border-border-subtle bg-surface px-4 py-10 text-center text-xs text-muted">
+                    <p className="rounded-xl border border-border-subtle bg-surface px-3 py-8 text-center text-[11px] text-muted max-sm:px-2.5 max-sm:py-6 max-sm:text-[10px] sm:px-4 sm:py-10 sm:text-xs">
                       You do not have permission to view candidate applications.
                     </p>
                   }
                 >
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2.5 max-sm:gap-2 sm:gap-3">
                     <section className="rounded-xl border border-border-subtle bg-surface shadow-sm">
-                      <div className="border-b border-border-subtle px-4 py-3">
-                        <h3 className="text-sm font-semibold text-foreground">
+                      <div className="border-b border-border-subtle px-3 py-2 max-sm:px-2.5 max-sm:py-1.5 sm:px-4 sm:py-3">
+                        <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
                           All Applications (
                           {(
                             applicationsPagination.total ||
