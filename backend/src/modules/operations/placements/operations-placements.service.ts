@@ -482,14 +482,14 @@ function buildListPipeline(
   const sortDirection: 1 | -1 = query.order === "asc" ? 1 : -1;
   const sortStage: Record<string, 1 | -1> =
     query.sort === "offerDate"
-      ? { "offer.offerDate": sortDirection, updatedAt: -1 }
+      ? { "offer.offerDate": sortDirection, updatedAt: -1, _id: -1 }
       : query.sort === "joiningDate"
-        ? { "offer.joiningDate": sortDirection, updatedAt: -1 }
+        ? { "offer.joiningDate": sortDirection, updatedAt: -1, _id: -1 }
         : query.sort === "candidateName"
-          ? { "seeker.fullName": sortDirection, updatedAt: -1 }
+          ? { "seeker.fullName": sortDirection, updatedAt: -1, _id: -1 }
           : query.sort === "company"
-            ? { "job.companyName": sortDirection, updatedAt: -1 }
-            : { placementCohortAt: sortDirection, updatedAt: -1 };
+            ? { "job.companyName": sortDirection, updatedAt: -1, _id: -1 }
+            : { placementCohortAt: sortDirection, updatedAt: -1, _id: -1 };
 
   pipeline.push({ $sort: sortStage });
   pipeline.push({

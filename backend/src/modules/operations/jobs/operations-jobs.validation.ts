@@ -90,6 +90,19 @@ export type OperationsJobPublicIdParams = z.infer<
   typeof operationsJobPublicIdParamsSchema
 >;
 
+export const operationsJobContentTranslationQuerySchema = z.object({
+  language: z
+    .string()
+    .trim()
+    .min(2)
+    .max(20)
+    .transform((value) => value.toLowerCase()),
+});
+
+export type OperationsJobContentTranslationQuery = z.infer<
+  typeof operationsJobContentTranslationQuerySchema
+>;
+
 export const listOperationsJobApplicationsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

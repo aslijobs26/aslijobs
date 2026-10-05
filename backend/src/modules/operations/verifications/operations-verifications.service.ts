@@ -521,12 +521,18 @@ function resolveSort(
     case "status":
       return { verificationStatus: direction, _id: direction };
     case "sla":
-      return { verificationSubmittedAt: direction, createdAt: direction, _id: direction };
     case "submittedAt":
     default:
-      return { verificationSubmittedAt: direction, createdAt: direction, _id: direction };
+      return { submittedSortAt: direction, _id: direction };
   }
 }
+
+/** Same date the list shows as "Submitted": submission date, else registration date. */
+const SUBMITTED_SORT_AT_STAGE: mongoose.PipelineStage = {
+  $addFields: {
+    submittedSortAt: { $ifNull: ["$verificationSubmittedAt", "$createdAt"] },
+  },
+};
 
 function mapToListItem(input: {
   doc: Record<string, unknown> & {
@@ -738,11 +744,15 @@ export const operationsVerificationsService = {
     const skip = (query.page - 1) * query.limit;
 
     const [docs, total, filterOptions] = await Promise.all([
-      EmployerModel.find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(query.limit)
-        .lean(),
+      EmployerModel.aggregate<
+        Record<string, unknown> & { _id: mongoose.Types.ObjectId }
+      >([
+        { $match: EmployerModel.find(filter).cast() },
+        SUBMITTED_SORT_AT_STAGE,
+        { $sort: sort },
+        { $skip: skip },
+        { $limit: query.limit },
+      ]),
       EmployerModel.countDocuments(filter),
       loadVerificationFilterOptions(),
     ]);

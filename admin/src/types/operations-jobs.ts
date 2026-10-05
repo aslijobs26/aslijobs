@@ -272,6 +272,8 @@ export interface OperationsJobDetail {
   companySize: string;
   jobTitle: string;
   jobType: string;
+  /** Language the employer wrote. Original fields are never overwritten. */
+  contentLanguage: "en" | "hi" | "te" | "ta" | "kn" | "ml";
   contractPeriodFrom: string;
   contractPeriodTo: string;
   partTimeSchedule: string;
@@ -394,3 +396,21 @@ export interface OperationsJobApplicationsParams {
   status?: string;
   search?: string;
 }
+
+export type OperationsJobContentTranslationStatus =
+  | "none"
+  | "completed"
+  | "failed";
+
+export interface OperationsJobContentTranslationResult {
+  language: "en" | "hi" | "te" | "ta" | "kn" | "ml";
+  sourceLanguage: "en" | "hi" | "te" | "ta" | "kn" | "ml";
+  translationStatus: OperationsJobContentTranslationStatus;
+  isTranslated: boolean;
+  content: {
+    jobTitle: string;
+    description: string;
+    interviewInstructions: string;
+  };
+}
+

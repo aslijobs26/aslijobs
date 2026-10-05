@@ -1635,13 +1635,13 @@ export const operationsCandidatesService = {
     const sortStage: Record<string, 1 | -1> =
       query.sort === "oldest"
         ? mustHaveApp
-          ? { "app.appliedAt": 1 }
-          : { createdAt: 1 }
+          ? { "app.appliedAt": 1, _id: 1 }
+          : { createdAt: 1, _id: 1 }
         : query.sort === "updated"
-          ? { updatedAt: -1 }
+          ? { updatedAt: -1, _id: -1 }
           : mustHaveApp
-            ? { "app.appliedAt": -1 }
-            : { createdAt: -1 };
+            ? { "app.appliedAt": -1, _id: -1 }
+            : { createdAt: -1, _id: -1 };
 
     const pipeline: mongoose.PipelineStage[] = [
       { $match: seekerMatch },

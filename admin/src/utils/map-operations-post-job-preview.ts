@@ -72,6 +72,7 @@ export function mapWizardDataToPreviewDetail(
     companySize: jobInformation.companySize.trim(),
     jobTitle: jobInformation.jobTitle.trim() || "Untitled job",
     jobType: jobInformation.jobType,
+    contentLanguage: "en",
     contractPeriodFrom: jobInformation.contractPeriodFrom,
     contractPeriodTo: jobInformation.contractPeriodTo,
     partTimeSchedule: jobInformation.partTimeSchedule,

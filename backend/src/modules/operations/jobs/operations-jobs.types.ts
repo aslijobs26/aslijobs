@@ -306,6 +306,25 @@ export type OperationsJobDetail = {
   employer: OperationsJobEmployerSummary;
   analytics: OperationsJobAnalytics;
   activity: OperationsJobActivityItem[];
+  /** Language the employer wrote. Original fields are never overwritten. */
+  contentLanguage: "en" | "hi" | "te" | "ta" | "kn" | "ml";
+};
+
+export type OperationsJobContentTranslationStatus =
+  | "none"
+  | "completed"
+  | "failed";
+
+export type OperationsJobContentTranslationResult = {
+  language: "en" | "hi" | "te" | "ta" | "kn" | "ml";
+  sourceLanguage: "en" | "hi" | "te" | "ta" | "kn" | "ml";
+  translationStatus: OperationsJobContentTranslationStatus;
+  isTranslated: boolean;
+  content: {
+    jobTitle: string;
+    description: string;
+    interviewInstructions: string;
+  };
 };
 
 export type OperationsJobApplicationItem = {

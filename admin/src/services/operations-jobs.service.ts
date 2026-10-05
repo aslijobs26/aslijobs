@@ -2,6 +2,7 @@ import { apiClient } from "./api-client";
 import type {
   OperationsJobApplicationsParams,
   OperationsJobApplicationsResult,
+  OperationsJobContentTranslationResult,
   OperationsJobDetail,
   OperationsJobStatusAction,
   OperationsJobsAnalyticsParams,
@@ -64,6 +65,21 @@ export async function fetchOperationsJobDetail(
   const response = await apiClient.get<{ data: OperationsJobDetail }>(
     `${OPERATIONS_JOBS_BASE}/${encodeURIComponent(jobId)}`,
   );
+
+  return response.data.data;
+}
+
+export async function fetchOperationsJobContentTranslation(
+  jobId: string,
+  language: string,
+): Promise<OperationsJobContentTranslationResult> {
+  const response = await apiClient.get<{
+    data: OperationsJobContentTranslationResult;
+  }>(`${OPERATIONS_JOBS_BASE}/${encodeURIComponent(jobId)}/content-translation`, {
+    params: { language },
+    // First-time Sarvam generation can exceed the default API timeout.
+    timeout: 60_000,
+  });
 
   return response.data.data;
 }

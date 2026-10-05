@@ -12,6 +12,7 @@ import {
   listOperationsJobApplicationsQuerySchema,
   listOperationsJobsQuerySchema,
   operationsJobPublicIdParamsSchema,
+  operationsJobContentTranslationQuerySchema,
   operationsJobsAnalyticsQuerySchema,
   publishOperationsJobBodySchema,
   saveOperationsJobDraftBodySchema,
@@ -48,6 +49,14 @@ operationsJobsRouter.get(
   requireOperationsPermission("jobs", "read"),
   validate(operationsJobPublicIdParamsSchema, "params"),
   asyncHandler(operationsJobsController.getByJobId),
+);
+
+operationsJobsRouter.get(
+  "/:jobId/content-translation",
+  requireOperationsPermission("jobs", "read"),
+  validate(operationsJobPublicIdParamsSchema, "params"),
+  validate(operationsJobContentTranslationQuerySchema, "query"),
+  asyncHandler(operationsJobsController.getContentTranslation),
 );
 
 operationsJobsRouter.get(

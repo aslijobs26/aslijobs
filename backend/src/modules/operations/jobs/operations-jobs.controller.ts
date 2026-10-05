@@ -10,6 +10,7 @@ import type {
   ListOperationsJobApplicationsQuery,
   ListOperationsJobsQuery,
   OperationsJobPublicIdParams,
+  OperationsJobContentTranslationQuery,
   OperationsJobsAnalyticsQueryInput,
   PublishOperationsJobBody,
   SaveOperationsJobDraftBody,
@@ -50,6 +51,20 @@ export const operationsJobsController = {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations job details fetched successfully.",
+      data: result,
+    });
+  },
+
+  async getContentTranslation(req: Request, res: Response): Promise<void> {
+    const { jobId } = req.params as OperationsJobPublicIdParams;
+    const { language } = req.query as unknown as OperationsJobContentTranslationQuery;
+    const result = await operationsJobsService.getJobContentTranslation(
+      jobId,
+      language,
+    );
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Operations job content translation fetched successfully.",
       data: result,
     });
   },

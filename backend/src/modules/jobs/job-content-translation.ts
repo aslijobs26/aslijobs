@@ -647,6 +647,8 @@ export async function translateJobContentOnDemand(input: {
   language: JobContentLanguage | null;
   fetchImpl?: typeof fetch;
   forceRetry?: boolean;
+  /** Operations preview may translate drafts; public detail never should. */
+  allowDraft?: boolean;
 }): Promise<{
   content: SourceFields;
   event: JobTranslationLogEvent;
@@ -663,11 +665,12 @@ export async function translateJobContentOnDemand(input: {
     };
   }
   const source = readSource(job);
-  if (!input.language || job.status === "draft") {
+  const isDraftBlocked = job.status === "draft" && !input.allowDraft;
+  if (!input.language || isDraftBlocked) {
     logJobTranslation("TRANSLATION_SKIPPED", {
       jobId: input.publicJobId,
       language: input.language ?? "",
-      reason: job.status === "draft" ? "draft" : "no_language",
+      reason: isDraftBlocked ? "draft" : "no_language",
     });
     return { content: source, event: "TRANSLATION_SKIPPED", translateCalls: 0 };
   }

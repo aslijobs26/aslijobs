@@ -25,7 +25,17 @@ import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-i
 import { EmployerModel } from "../../employers/employer.model.js";
 import { JobModel, type JobDocument } from "../../jobs/job.model.js";
 import { scheduleJobTranslationRefresh } from "../../jobs/job-translation.queue.js";
-import { queueJobContentTranslation } from "../../jobs/job-content-translation.js";
+import {
+  detectJobContentLanguage,
+  parseJobContentLanguage,
+  type JobContentLanguage,
+} from "../../jobs/job-content-language.js";
+import {
+  queueJobContentTranslation,
+  translateJobContentOnDemand,
+} from "../../jobs/job-content-translation.js";
+import { jobTranslationSourceHash } from "../../jobs/job-translation.policy.js";
+import { writeCachedJobTranslation } from "../../jobs/job-translation.cache.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import {
   applyApprovedCreateInputToJob,
@@ -50,6 +60,7 @@ import type {
   OperationsJobAnalytics,
   OperationsJobApplicationItem,
   OperationsJobApplicationsResult,
+  OperationsJobContentTranslationResult,
   OperationsJobDetail,
   OperationsJobEmployerSummary,
   OperationsJobListItem,
@@ -289,18 +300,44 @@ function buildListFilter(
   return andClauses.length === 1 ? andClauses[0]! : { $and: andClauses };
 }
 
+/** Same date the list shows as "Posted": published date, else creation date. */
+const LISTED_AT_STAGE: mongoose.PipelineStage = {
+  $addFields: { listedAt: { $ifNull: ["$publishedAt", "$createdAt"] } },
+};
+
 function buildSort(
   sort: ListOperationsJobsQuery["sort"],
 ): Record<string, 1 | -1> {
   switch (sort) {
     case "oldest":
-      return { publishedAt: 1, createdAt: 1 };
+      return { listedAt: 1, _id: 1 };
     case "applications_desc":
-      return { applications: -1, publishedAt: -1 };
+      return { applications: -1, listedAt: -1, _id: -1 };
     case "latest":
     default:
-      return { publishedAt: -1, createdAt: -1 };
+      return { listedAt: -1, _id: -1 };
   }
+}
+
+/** One page of jobs ordered by a computed sort key, returned as hydrated documents. */
+async function findJobsPage(
+  filter: Record<string, unknown>,
+  sort: Record<string, 1 | -1>,
+  skip: number,
+  limit: number,
+) {
+  const rows = await JobModel.aggregate<{ _id: mongoose.Types.ObjectId }>([
+    { $match: JobModel.find(filter).cast() },
+    LISTED_AT_STAGE,
+    { $sort: sort },
+    { $skip: skip },
+    { $limit: limit },
+    { $project: { _id: 1 } },
+  ]);
+  const ids = rows.map((row) => row._id);
+  const docs = await JobModel.find({ _id: { $in: ids } });
+  const byId = new Map(docs.map((doc) => [doc._id.toString(), doc]));
+  return ids.flatMap((id) => byId.get(id.toString()) ?? []);
 }
 
 async function loadApplicationsTodayByJobIds(
@@ -1125,6 +1162,21 @@ function buildActivity(job: JobDocument): OperationsJobActivityItem[] {
   );
 }
 
+function resolveStoredContentLanguage(job: {
+  contentLanguage?: string | null;
+  jobTitle?: string | null;
+  description?: string | null;
+  interviewInstructions?: string | null;
+}): JobContentLanguage {
+  const stored = parseJobContentLanguage(job.contentLanguage);
+  if (stored) {
+    return stored;
+  }
+  return detectJobContentLanguage(
+    `${job.jobTitle ?? ""}\n${job.description ?? ""}\n${job.interviewInstructions ?? ""}`,
+  );
+}
+
 function toDetail(
   job: JobDocument,
   employer: OperationsEmployerListProjection | null,
@@ -1180,6 +1232,7 @@ function toDetail(
     companySize: job.companySize?.trim() || "",
     jobTitle: job.jobTitle?.trim() || "Untitled job",
     jobType: job.jobType || "",
+    contentLanguage: resolveStoredContentLanguage(job),
     contractPeriodFrom: job.contractPeriodFrom || "",
     contractPeriodTo: job.contractPeriodTo || "",
     partTimeSchedule: job.partTimeSchedule || "",
@@ -1368,7 +1421,7 @@ export const operationsJobsService = {
     const skip = (query.page - 1) * query.limit;
 
     const [jobs, total, summary, filterOptions] = await Promise.all([
-      JobModel.find(filter).sort(sort).skip(skip).limit(query.limit),
+      findJobsPage(filter, sort, skip, query.limit),
       JobModel.countDocuments(filter),
       loadKpisAndCounts(),
       loadFilterOptions(),
@@ -1484,6 +1537,82 @@ export const operationsJobsService = {
       statusCounts.hired || job.hired || 0,
       reviewedByLabel,
     );
+  },
+
+  async getJobContentTranslation(
+    publicJobId: string,
+    languageRaw: string,
+  ): Promise<OperationsJobContentTranslationResult> {
+    const language = parseJobContentLanguage(languageRaw);
+    if (!language) {
+      throw new AppError("Unsupported language.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const job = await findJobByPublicId(publicJobId);
+    const sourceLanguage = resolveStoredContentLanguage(job);
+    const source = {
+      jobTitle: job.jobTitle?.trim() || "",
+      description: job.description || "",
+      interviewInstructions: job.interviewInstructions || "",
+    };
+
+    if (language === sourceLanguage) {
+      return {
+        language,
+        sourceLanguage,
+        translationStatus: "none",
+        isTranslated: false,
+        content: source,
+      };
+    }
+
+    const result = await translateJobContentOnDemand({
+      jobMongoId: job._id.toString(),
+      publicJobId: job.jobId,
+      language,
+      allowDraft: true,
+    });
+
+    if (
+      result.event === "TRANSLATION_CREATED" ||
+      result.event === "CACHE_HIT"
+    ) {
+      await writeCachedJobTranslation(job._id.toString(), language, {
+        sourceHash: jobTranslationSourceHash(source),
+        jobTitle: result.content.jobTitle,
+        description: result.content.description,
+        interviewInstructions: result.content.interviewInstructions,
+      });
+    }
+
+    if (result.event === "TRANSLATION_FAILED") {
+      return {
+        language,
+        sourceLanguage,
+        translationStatus: "failed",
+        isTranslated: false,
+        content: source,
+      };
+    }
+
+    if (result.event === "TRANSLATION_SKIPPED") {
+      const isSameOrEmpty = language === sourceLanguage || !source.jobTitle.trim();
+      return {
+        language,
+        sourceLanguage,
+        translationStatus: isSameOrEmpty ? "none" : "failed",
+        isTranslated: false,
+        content: source,
+      };
+    }
+
+    return {
+      language,
+      sourceLanguage,
+      translationStatus: "completed",
+      isTranslated: true,
+      content: result.content,
+    };
   },
 
   async listJobApplications(

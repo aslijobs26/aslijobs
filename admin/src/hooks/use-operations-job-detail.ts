@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchOperationsJobApplications,
+  fetchOperationsJobContentTranslation,
   fetchOperationsJobDetail,
   updateOperationsJobStatus,
 } from "../services/operations-jobs.service";
@@ -8,6 +9,7 @@ import type {
   OperationsJobApplicationsParams,
   OperationsJobStatusAction,
 } from "../types/operations-jobs";
+import type { OperationsJobPreviewLanguageCode } from "../constants/operations-job-preview-languages";
 import { OPERATIONS_JOBS_QUERY_KEY } from "./use-operations-jobs";
 
 export const OPERATIONS_JOB_DETAIL_QUERY_KEY = [
@@ -16,12 +18,39 @@ export const OPERATIONS_JOB_DETAIL_QUERY_KEY = [
   "detail",
 ] as const;
 
+export const OPERATIONS_JOB_CONTENT_TRANSLATION_QUERY_KEY = [
+  "operations",
+  "jobs",
+  "content-translation",
+] as const;
+
 export function useOperationsJobDetail(jobId: string | undefined) {
   return useQuery({
     queryKey: [...OPERATIONS_JOB_DETAIL_QUERY_KEY, jobId],
     queryFn: () => fetchOperationsJobDetail(jobId!),
     enabled: Boolean(jobId),
     staleTime: 30_000,
+    retry: false,
+  });
+}
+
+export function useOperationsJobContentTranslation(
+  jobId: string | undefined,
+  language: OperationsJobPreviewLanguageCode,
+  sourceLanguage: OperationsJobPreviewLanguageCode,
+  enabled: boolean,
+) {
+  const needsRemoteFetch = language !== sourceLanguage;
+
+  return useQuery({
+    queryKey: [
+      ...OPERATIONS_JOB_CONTENT_TRANSLATION_QUERY_KEY,
+      jobId,
+      language,
+    ],
+    queryFn: () => fetchOperationsJobContentTranslation(jobId!, language),
+    enabled: Boolean(jobId) && enabled && needsRemoteFetch,
+    staleTime: 5 * 60_000,
     retry: false,
   });
 }
@@ -49,6 +78,9 @@ export function useUpdateOperationsJobStatus(jobId: string | undefined) {
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: [...OPERATIONS_JOB_DETAIL_QUERY_KEY, jobId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...OPERATIONS_JOB_CONTENT_TRANSLATION_QUERY_KEY, jobId],
         }),
         queryClient.invalidateQueries({ queryKey: OPERATIONS_JOBS_QUERY_KEY }),
       ]);

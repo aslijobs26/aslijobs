@@ -17,9 +17,19 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-import { OPERATIONS_POST_JOB_LANGUAGE_OPTIONS } from "../../../../constants/operations-post-job";
+import type { OperationsJobPreviewLanguageCode } from "../../../../constants/operations-job-preview-languages";
 import type { OperationsJobDetail } from "../../../../types/operations-jobs";
-import { perkLabel } from "../../../../utils/map-operations-post-job-preview";
+import {
+  localizeJobPreviewEducation,
+  localizeJobPreviewExperience,
+  localizeJobPreviewGender,
+  localizeJobPreviewJobType,
+  localizeJobPreviewPerk,
+  localizeJobPreviewSalary,
+  localizeJobPreviewSpokenLanguage,
+  localizeJobPreviewWorkMode,
+  translateJobPreview,
+} from "../../../../i18n/job-preview-i18n";
 import { cn } from "../../../../utils/cn";
 import { EmployerLogo } from "../../../ui/EmployerLogo";
 import { JobDescriptionContent } from "../../../ui/JobDescriptionContent";
@@ -34,11 +44,12 @@ import {
   looksLikeJobDescriptionHtml,
 } from "../../../../utils/job-description-html";
 
-
 interface JobListingPreviewArticleProps {
   job: OperationsJobDetail;
   className?: string;
   emptyDescriptionMessage?: string;
+  /** Preview UI language for static labels/enums. Defaults to English. */
+  language?: OperationsJobPreviewLanguageCode;
 }
 
 function MetaField({
@@ -93,26 +104,12 @@ function SectionHeading({ children }: { children: ReactNode }) {
   );
 }
 
-function languageLabel(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  return (
-    OPERATIONS_POST_JOB_LANGUAGE_OPTIONS.find(
-      (option) => option.value === trimmed,
-    )?.label ?? trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
-  );
-}
-
 function cleanDescriptionParagraphs(description: string): string[] {
   return descriptionParagraphs(description).filter((paragraph) => {
     const withoutMarkdown = paragraph.replace(/^#{1,6}\s*/, "").trim();
     if (!withoutMarkdown) {
       return false;
     }
-    // Drop redundant heading lines that duplicate the section title.
     return !/^job\s+description\s*:?\s*$/i.test(withoutMarkdown);
   });
 }
@@ -121,9 +118,14 @@ export function JobListingPreviewArticle({
   job,
   className,
   emptyDescriptionMessage = "No description provided.",
+  language = "en",
 }: JobListingPreviewArticleProps) {
   const [bookmarked, setBookmarked] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+  const t = (
+    key: Parameters<typeof translateJobPreview>[1],
+    vars?: Record<string, string | number>,
+  ) => translateJobPreview(language, key, vars);
 
   const paragraphs = cleanDescriptionParagraphs(job.description);
   const descriptionIsHtml = looksLikeJobDescriptionHtml(job.description);
@@ -131,21 +133,45 @@ export function JobListingPreviewArticle({
     ? Boolean(getJobDescriptionPlainText(job.description))
     : paragraphs.length > 0;
 
-  const salaryDisplay = job.salaryLabel.trim();
+  const salaryDisplay = localizeJobPreviewSalary(language, job);
   const locationDisplay = job.locationLabel.trim();
-  const employmentType = job.jobTypeLabel.trim();
-  const experience = job.experienceLabel.trim();
-  const qualification = job.educationLabel.trim();
+  const employmentType = localizeJobPreviewJobType(
+    language,
+    job.jobType,
+    job.jobTypeLabel,
+  );
+  const experience = localizeJobPreviewExperience(
+    language,
+    job.experience,
+    job.experienceLabel,
+  );
+  const qualification =
+    job.education.length > 0
+      ? job.education
+          .map((value) => localizeJobPreviewEducation(language, value))
+          .filter(Boolean)
+          .join(", ")
+      : job.educationLabel.trim();
   const openingsDisplay =
     job.vacancies && job.vacancies > 0 ? String(job.vacancies) : "";
-  const workMode = job.workModeLabel.trim();
-  const genderDisplay = job.genderLabel.trim() || "Any";
+  const workMode = localizeJobPreviewWorkMode(
+    language,
+    job.workMode,
+    job.workModeLabel,
+  );
+  const genderDisplay =
+    job.gender.length > 0
+      ? job.gender
+          .map((value) => localizeJobPreviewGender(language, value))
+          .filter(Boolean)
+          .join(", ") || t("any")
+      : localizeJobPreviewGender(language, "any", job.genderLabel || t("any"));
   const languageChips = job.languages
-    .map(languageLabel)
+    .map((value) => localizeJobPreviewSpokenLanguage(language, value))
     .map((value) => value.trim())
     .filter(Boolean);
   const benefitChips = job.perks
-    .map(perkLabel)
+    .map((value) => localizeJobPreviewPerk(language, value))
     .map((value) => value.trim())
     .filter(Boolean);
 
@@ -168,7 +194,7 @@ export function JobListingPreviewArticle({
   const companyName =
     job.employer.companyName.trim() ||
     job.companyName.trim() ||
-    "Employer not assigned";
+    t("employerNotAssigned");
 
   const handleShare = async () => {
     const title = job.jobTitle.trim() || "Job";
@@ -180,7 +206,7 @@ export function JobListingPreviewArticle({
       }
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
-        setShareFeedback("Copied");
+        setShareFeedback(t("linkCopied"));
         window.setTimeout(() => setShareFeedback(null), 1500);
       }
     } catch {
@@ -215,7 +241,7 @@ export function JobListingPreviewArticle({
                   strokeWidth={2.25}
                   aria-hidden="true"
                 />
-                Verified
+                {t("verified")}
               </span>
             </div>
 
@@ -228,7 +254,7 @@ export function JobListingPreviewArticle({
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
-                Posted {postedAt}
+                {t("posted", { time: postedAt })}
               </p>
             ) : null}
           </div>
@@ -237,7 +263,7 @@ export function JobListingPreviewArticle({
             <button
               type="button"
               onClick={() => void handleShare()}
-              aria-label="Share job"
+              aria-label={t("shareJob")}
               className="inline-flex size-8 items-center justify-center rounded-full border border-border-subtle bg-surface text-muted transition-colors hover:border-primary/25 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
               <Share2 className="size-3.5" strokeWidth={2} aria-hidden="true" />
@@ -245,7 +271,7 @@ export function JobListingPreviewArticle({
             <button
               type="button"
               onClick={() => setBookmarked((current) => !current)}
-              aria-label={bookmarked ? "Remove bookmark" : "Save job"}
+              aria-label={bookmarked ? t("removeBookmark") : t("saveJob")}
               aria-pressed={bookmarked}
               className={cn(
                 "inline-flex size-8 items-center justify-center rounded-full border bg-surface transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
@@ -272,49 +298,49 @@ export function JobListingPreviewArticle({
 
         <div
           className="mt-4 border-t border-border-subtle pt-4"
-          aria-label="Job information"
+          aria-label={t("jobInformation")}
         >
           <div className="grid grid-cols-2 gap-x-4 gap-y-3.5 md:grid-cols-3">
             {salaryDisplay ? (
-              <MetaField label="Salary" icon={Wallet}>
+              <MetaField label={t("salary")} icon={Wallet}>
                 {salaryDisplay}
               </MetaField>
             ) : null}
             {locationDisplay ? (
-              <MetaField label="Location" icon={MapPin}>
+              <MetaField label={t("location")} icon={MapPin}>
                 {locationDisplay}
               </MetaField>
             ) : null}
             {employmentType ? (
-              <MetaField label="Employment Type" icon={Briefcase}>
+              <MetaField label={t("employmentType")} icon={Briefcase}>
                 {employmentType}
               </MetaField>
             ) : null}
             {experience ? (
-              <MetaField label="Experience" icon={User}>
+              <MetaField label={t("experience")} icon={User}>
                 {experience}
               </MetaField>
             ) : null}
             {qualification ? (
-              <MetaField label="Qualification" icon={GraduationCap}>
+              <MetaField label={t("qualification")} icon={GraduationCap}>
                 {qualification}
               </MetaField>
             ) : null}
             {openingsDisplay ? (
-              <MetaField label="Openings" icon={Users}>
+              <MetaField label={t("openings")} icon={Users}>
                 {openingsDisplay}
               </MetaField>
             ) : null}
             {workMode ? (
-              <MetaField label="Work Mode" icon={Building2}>
+              <MetaField label={t("workMode")} icon={Building2}>
                 {workMode}
               </MetaField>
             ) : null}
-            <MetaField label="Gender Preference" icon={VenusAndMars}>
+            <MetaField label={t("genderPreference")} icon={VenusAndMars}>
               {genderDisplay}
             </MetaField>
             {languageChips.length > 0 ? (
-              <MetaField label="Languages" icon={Globe2}>
+              <MetaField label={t("languages")} icon={Globe2}>
                 <ChipList values={languageChips} />
               </MetaField>
             ) : null}
@@ -322,7 +348,7 @@ export function JobListingPreviewArticle({
 
           {benefitChips.length > 0 ? (
             <div className="mt-3.5">
-              <MetaField label="Benefits" icon={Gift}>
+              <MetaField label={t("benefits")} icon={Gift}>
                 <ChipList values={benefitChips} />
               </MetaField>
             </div>
@@ -332,7 +358,7 @@ export function JobListingPreviewArticle({
 
       <div className="divide-y divide-border-subtle bg-[color-mix(in_srgb,var(--color-primary)_5%,white)] px-4 sm:px-6 dark:bg-[color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]">
         <section className="py-4">
-          <SectionHeading>Job Description</SectionHeading>
+          <SectionHeading>{t("jobDescription")}</SectionHeading>
           {job.jobTitle.trim() ? (
             <p className="mt-1.5 text-xs font-semibold text-foreground">
               {job.jobTitle.trim()}
@@ -362,12 +388,12 @@ export function JobListingPreviewArticle({
 
         {hasAddress ? (
           <section className="py-4">
-            <SectionHeading>Address</SectionHeading>
+            <SectionHeading>{t("address")}</SectionHeading>
             <div className="mt-2 space-y-0.5 text-xs leading-relaxed break-words text-muted sm:text-[13px] sm:leading-[1.65]">
               {job.address.trim() ? <p>{job.address.trim()}</p> : null}
               {locationDisplay ? <p>{locationDisplay}</p> : null}
               {job.landmark.trim() ? (
-                <p>Landmark: {job.landmark.trim()}</p>
+                <p>{t("landmark", { value: job.landmark.trim() })}</p>
               ) : null}
             </div>
           </section>
@@ -375,22 +401,22 @@ export function JobListingPreviewArticle({
 
         {hasWalkIn ? (
           <section className="py-4">
-            <SectionHeading>Walk-in Details</SectionHeading>
+            <SectionHeading>{t("walkInDetails")}</SectionHeading>
             <div className="mt-2 space-y-2.5 text-xs leading-relaxed break-words text-muted sm:text-[13px] sm:leading-[1.65]">
               <div>
                 <p className="text-[10px] font-medium tracking-[0.04em] text-muted uppercase">
-                  Interview Address
+                  {t("interviewAddress")}
                 </p>
                 <p className="mt-0.5">
                   {job.interviewAddress.trim() ||
                     locationDisplay ||
-                    "Address shared by recruiter"}
+                    t("addressShared")}
                 </p>
               </div>
               {walkInDate ? (
                 <div>
                   <p className="text-[10px] font-medium tracking-[0.04em] text-muted uppercase">
-                    Date
+                    {t("date")}
                   </p>
                   <p className="mt-0.5">{walkInDate}</p>
                 </div>
@@ -398,9 +424,19 @@ export function JobListingPreviewArticle({
               {walkInTime ? (
                 <div>
                   <p className="text-[10px] font-medium tracking-[0.04em] text-muted uppercase">
-                    Time
+                    {t("time")}
                   </p>
                   <p className="mt-0.5">{walkInTime}</p>
+                </div>
+              ) : null}
+              {job.interviewInstructions.trim() ? (
+                <div>
+                  <p className="text-[10px] font-medium tracking-[0.04em] text-muted uppercase">
+                    {t("otherInstructions")}
+                  </p>
+                  <p className="mt-0.5 whitespace-pre-wrap">
+                    {job.interviewInstructions.trim()}
+                  </p>
                 </div>
               ) : null}
             </div>
@@ -409,7 +445,7 @@ export function JobListingPreviewArticle({
 
         {hasRecruiter ? (
           <section className="py-4">
-            <SectionHeading>Recruiter</SectionHeading>
+            <SectionHeading>{t("recruiter")}</SectionHeading>
             <div className="mt-2 space-y-0.5 text-xs leading-relaxed break-words sm:text-[13px] sm:leading-[1.65]">
               {job.contactPersonName.trim() ? (
                 <p className="font-semibold text-foreground">
@@ -418,7 +454,7 @@ export function JobListingPreviewArticle({
               ) : null}
               {job.contactMobile.trim() ? (
                 <p className="text-muted">
-                  WhatsApp: {job.contactMobile.trim()}
+                  {t("whatsapp", { value: job.contactMobile.trim() })}
                 </p>
               ) : null}
               {job.contactEmail.trim() ? (
