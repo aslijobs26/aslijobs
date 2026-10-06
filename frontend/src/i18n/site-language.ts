@@ -8,7 +8,25 @@ import {
   type SiteLanguageCode,
   type SiteLanguageOption,
 } from "../constants/site-language";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+
+let hasHydratedSiteLanguage = false;
+const siteLanguageReadyListeners = new Set<() => void>();
+
+function subscribeSiteLanguageReady(onStoreChange: () => void): () => void {
+  siteLanguageReadyListeners.add(onStoreChange);
+  return () => {
+    siteLanguageReadyListeners.delete(onStoreChange);
+  };
+}
+
+function markSiteLanguageHydrated(): void {
+  if (hasHydratedSiteLanguage) {
+    return;
+  }
+  hasHydratedSiteLanguage = true;
+  siteLanguageReadyListeners.forEach((listener) => listener());
+}
 
 export function readSiteLanguage(): SiteLanguageOption {
   if (typeof window === "undefined") return SITE_DEFAULT_LANGUAGE;
@@ -28,6 +46,7 @@ export function readSiteLanguage(): SiteLanguageOption {
 }
 
 export function writeSiteLanguage(option: SiteLanguageOption): void {
+  markSiteLanguageHydrated();
   try {
     window.localStorage.setItem(SITE_LANGUAGE_STORAGE_KEY, option.value);
   } catch {
@@ -38,7 +57,26 @@ export function writeSiteLanguage(option: SiteLanguageOption): void {
 }
 
 export function getSiteLanguageCode(): SiteLanguageCode {
+  if (typeof window === "undefined" || !hasHydratedSiteLanguage) {
+    return SITE_DEFAULT_LANGUAGE.code;
+  }
   return readSiteLanguage().code;
+}
+
+export function getSiteLanguageClientSnapshot(): SiteLanguageOption {
+  return readSiteLanguage();
+}
+
+export function getSiteLanguageServerSnapshot(): SiteLanguageOption {
+  return SITE_DEFAULT_LANGUAGE;
+}
+
+export function getSiteLanguageReadyClientSnapshot(): boolean {
+  return true;
+}
+
+export function getSiteLanguageReadyServerSnapshot(): boolean {
+  return false;
 }
 
 export function useSiteLanguage(): SiteLanguageOption {
@@ -51,6 +89,7 @@ export function useSiteLanguage(): SiteLanguageOption {
       document.documentElement.lang = next.code;
     };
     sync();
+    markSiteLanguageHydrated();
     window.addEventListener(SITE_LANGUAGE_CHANGE_EVENT, sync);
     window.addEventListener("storage", sync);
     return () => {
@@ -60,4 +99,16 @@ export function useSiteLanguage(): SiteLanguageOption {
   }, []);
 
   return language;
+}
+
+/**
+ * False during SSR and the first client render so Find Jobs can wait for the
+ * persisted language instead of requesting `language=en` and aborting it.
+ */
+export function useIsSiteLanguageReady(): boolean {
+  return useSyncExternalStore(
+    subscribeSiteLanguageReady,
+    () => hasHydratedSiteLanguage,
+    getSiteLanguageReadyServerSnapshot,
+  );
 }

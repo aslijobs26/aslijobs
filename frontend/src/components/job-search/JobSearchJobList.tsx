@@ -10,6 +10,7 @@ type JobSearchJobListProps = {
   bookmarkedIds: Set<string>;
   isLoading: boolean;
   isError: boolean;
+  isFetching?: boolean;
   emptyMessage?: string;
   onSelect: (jobId: string) => void;
   onToggleBookmark: (jobId: string) => void;
@@ -23,6 +24,7 @@ export function JobSearchJobList({
   bookmarkedIds,
   isLoading,
   isError,
+  isFetching = false,
   emptyMessage,
   onSelect,
   onToggleBookmark,
@@ -73,7 +75,7 @@ export function JobSearchJobList({
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-3" aria-busy={isFetching}>
       {jobs.map((job) => (
         <li key={job.jobId}>
           <JobSearchJobCard

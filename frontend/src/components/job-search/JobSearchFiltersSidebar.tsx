@@ -156,12 +156,19 @@ function FilterCheckboxRow({
         checked={checked}
         onChange={onChange}
         className="job-search-filter-checkbox"
+        suppressHydrationWarning
       />
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+      <span
+        className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
+        suppressHydrationWarning
+      >
         {label}
       </span>
       {count !== undefined ? (
-        <span className="shrink-0 text-sm tabular-nums text-muted">
+        <span
+          className="shrink-0 text-sm tabular-nums text-muted"
+          suppressHydrationWarning
+        >
           ({count.toLocaleString("en-IN")})
         </span>
       ) : null}

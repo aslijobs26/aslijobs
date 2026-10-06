@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { SITE_DEFAULT_LANGUAGE } from "../constants/site-language";
-import { readSiteLanguage, writeSiteLanguage } from "./site-language";
+import {
+  SITE_DEFAULT_LANGUAGE,
+  normalizeSiteLanguageCode,
+} from "../constants/site-language";
+import {
+  getSiteLanguageClientSnapshot,
+  getSiteLanguageReadyClientSnapshot,
+  getSiteLanguageReadyServerSnapshot,
+  getSiteLanguageServerSnapshot,
+  readSiteLanguage,
+  writeSiteLanguage,
+} from "./site-language";
 
 type MemoryStorage = {
   getItem: (key: string) => string | null;
@@ -50,5 +60,24 @@ describe("site language persistence", () => {
     assert.equal(readSiteLanguage().code, "hi");
     assert.equal(documentElement.lang, "hi");
     assert.equal(readSiteLanguage().value, "hindi");
+  });
+
+  it("normalizes language aliases to query codes", () => {
+    assert.equal(normalizeSiteLanguageCode("telugu"), "te");
+    assert.equal(normalizeSiteLanguageCode("TE"), "te");
+    assert.equal(normalizeSiteLanguageCode("hi"), "hi");
+    assert.equal(normalizeSiteLanguageCode("english"), "en");
+    assert.equal(normalizeSiteLanguageCode("malayalam"), "ml");
+    assert.equal(normalizeSiteLanguageCode("unknown"), "en");
+  });
+
+  it("does not read the saved language for render-time labels until hydrated", () => {
+    installBrowser("te-IN");
+    writeSiteLanguage({ value: "telugu", code: "te", label: "తెలుగు" });
+    assert.equal(readSiteLanguage().code, "te");
+    assert.equal(getSiteLanguageServerSnapshot().code, "en");
+    assert.equal(getSiteLanguageReadyServerSnapshot(), false);
+    assert.equal(getSiteLanguageClientSnapshot().code, "te");
+    assert.equal(getSiteLanguageReadyClientSnapshot(), true);
   });
 });

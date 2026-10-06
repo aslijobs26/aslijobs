@@ -1,8 +1,7 @@
 "use client";
 
 import { JOB_SEARCH_SORT_OPTIONS } from "@/constants/job-search";
-import { useTranslate } from "@/i18n/translate";
-import { formatJobSearchSort } from "@/utils/job-search-format";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type { PublicJobSort } from "@/services/public-jobs.service";
 import { cn } from "@/utils/cn";
 import { ArrowUpDown, Check, ChevronDown } from "lucide-react";
@@ -10,13 +9,22 @@ import { useEffect, useId, useRef, useState } from "react";
 
 type JobSearchResultsHeaderProps = {
   total: number;
+  countStatus: "loading" | "success" | "error";
   locationLabel: string;
   sort: PublicJobSort;
   onSortChange: (sort: PublicJobSort) => void;
 };
 
+const SORT_LABEL_KEYS: Record<PublicJobSort, MessageKey> = {
+  relevant: "jobs.sortRelevant",
+  latest: "jobs.sortLatest",
+  salary_desc: "jobs.sortSalaryDesc",
+  salary_asc: "jobs.sortSalaryAsc",
+};
+
 export function JobSearchResultsHeader({
   total,
+  countStatus,
   locationLabel,
   sort,
   onSortChange,
@@ -26,12 +34,18 @@ export function JobSearchResultsHeader({
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const t = useTranslate();
-  const selectedLabel = formatJobSearchSort(sort);
+  const selectedLabel = t(SORT_LABEL_KEYS[sort]);
 
   const formattedTotal = total.toLocaleString("en-IN");
-  const title = locationLabel
+  const successTitle = locationLabel
     ? t("jobs.jobsFoundIn", { count: formattedTotal, location: locationLabel })
     : t("jobs.jobsFound", { count: formattedTotal });
+  const title =
+    countStatus === "success"
+      ? successTitle
+      : countStatus === "loading"
+        ? t("common.loading")
+        : "";
 
   useEffect(() => {
     if (!isOpen) {
@@ -60,7 +74,9 @@ export function JobSearchResultsHeader({
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h2 className="text-sm font-bold text-foreground sm:text-lg">{title}</h2>
+      <h2 className="text-sm font-bold text-foreground sm:text-lg" suppressHydrationWarning>
+        {title || "\u00a0"}
+      </h2>
 
       <div
         ref={rootRef}
@@ -87,6 +103,7 @@ export function JobSearchResultsHeader({
             aria-labelledby={labelId}
             aria-label={t("jobs.sortBy", { label: selectedLabel })}
             onClick={() => setIsOpen((current) => !current)}
+            suppressHydrationWarning
             className={cn(
               "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2 text-left text-sm font-semibold shadow-sm",
               "outline-none transition-[border-color,background-color,box-shadow]",
@@ -97,7 +114,12 @@ export function JobSearchResultsHeader({
                 : "border-border text-foreground",
             )}
           >
-            <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
+      <span
+        className="min-w-0 flex-1 truncate"
+        suppressHydrationWarning
+      >
+        {selectedLabel}
+      </span>
             <ChevronDown
               className={cn(
                 "size-4 shrink-0 text-muted transition-transform",
@@ -135,7 +157,9 @@ export function JobSearchResultsHeader({
                           : "font-medium text-foreground hover:bg-primary-light/50",
                       )}
                     >
-                      <span className="truncate">{formatJobSearchSort(option.value)}</span>
+                      <span className="truncate">
+                        {t(SORT_LABEL_KEYS[option.value])}
+                      </span>
                       {isSelected ? (
                         <Check
                           className="size-4 shrink-0 text-primary"

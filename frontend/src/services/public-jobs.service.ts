@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/api-client";
+import { normalizeAbortedRequestError } from "@/utils/query-error";
 
 type ApiSuccess<T> = {
   success: true;
@@ -111,11 +112,15 @@ export async function fetchPublicActiveJobs(
   params: FetchPublicJobsParams = {},
   options?: { signal?: AbortSignal },
 ) {
-  const response = await apiClient.get<ApiSuccess<PublicJobsResponse>>(
-    "/jobs/public",
-    { params, signal: options?.signal },
-  );
-  return response.data.data;
+  try {
+    const response = await apiClient.get<ApiSuccess<PublicJobsResponse>>(
+      "/jobs/public",
+      { params, signal: options?.signal },
+    );
+    return response.data.data;
+  } catch (error) {
+    throw normalizeAbortedRequestError(error, options?.signal);
+  }
 }
 
 /** Only Active jobs are returned. Non-active public IDs yield 404. */
@@ -123,14 +128,18 @@ export async function fetchPublicActiveJobByPublicId(
   publicJobId: string,
   options?: { signal?: AbortSignal; language?: string },
 ) {
-  const response = await apiClient.get<ApiSuccess<{ job: PublicJobDetail }>>(
-    `/jobs/public/${encodeURIComponent(publicJobId)}`,
-    {
-      signal: options?.signal,
-      params: options?.language ? { language: options.language } : undefined,
-    },
-  );
-  return response.data.data;
+  try {
+    const response = await apiClient.get<ApiSuccess<{ job: PublicJobDetail }>>(
+      `/jobs/public/${encodeURIComponent(publicJobId)}`,
+      {
+        signal: options?.signal,
+        params: options?.language ? { language: options.language } : undefined,
+      },
+    );
+    return response.data.data;
+  } catch (error) {
+    throw normalizeAbortedRequestError(error, options?.signal);
+  }
 }
 
 /** Poll a few times while a background translation is still pending. */
@@ -150,11 +159,15 @@ export async function fetchSimilarPublicJobs(
   params: { limit?: number; language?: string } = {},
   options?: { signal?: AbortSignal },
 ) {
-  const response = await apiClient.get<
-    ApiSuccess<{ jobs: PublicJobListItem[] }>
-  >(`/jobs/public/${encodeURIComponent(publicJobId)}/similar`, {
-    params,
-    signal: options?.signal,
-  });
-  return response.data.data;
+  try {
+    const response = await apiClient.get<
+      ApiSuccess<{ jobs: PublicJobListItem[] }>
+    >(`/jobs/public/${encodeURIComponent(publicJobId)}/similar`, {
+      params,
+      signal: options?.signal,
+    });
+    return response.data.data;
+  } catch (error) {
+    throw normalizeAbortedRequestError(error, options?.signal);
+  }
 }

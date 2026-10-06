@@ -10,7 +10,7 @@ import { JobSearchResultsHeader } from "@/components/job-search/JobSearchResults
 import { JobSearchWhatsAppBanner } from "@/components/job-search/JobSearchWhatsAppBanner";
 import { JOB_SEARCH_RETURN_KEY } from "@/components/jobs/PublicJobDetailPage";
 import { ROUTES } from "@/constants/routes";
-import { useSiteLanguage } from "@/i18n/site-language";
+import { useIsSiteLanguageReady, useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import {
   fetchPublicActiveJobByPublicId,
@@ -31,6 +31,12 @@ import {
   jobSearchStateToSearchParams,
   parseJobSearchUrlState,
 } from "@/utils/job-search-url";
+import {
+  buildPublicJobsListParams,
+  resolvePublicJobsCountView,
+  resolvePublicJobsListView,
+  shouldEnablePublicJobsQuery,
+} from "@/utils/public-jobs-query-state";
 import { showAppToast } from "@/utils/share-job";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -76,6 +82,7 @@ export function JobSearchPageContent() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const siteLanguage = useSiteLanguage();
+  const isLanguageReady = useIsSiteLanguageReady();
   const t = useTranslate();
   const isSplitView = useSyncExternalStore(
     subscribeToSplitViewMedia,
@@ -158,18 +165,21 @@ export function JobSearchPageContent() {
   }, []);
 
   const listParams = useMemo(
-    () => ({
-      ...buildFetchPublicJobsParams(urlState),
-      language: siteLanguage.code,
-    }),
+    () =>
+      buildPublicJobsListParams(
+        buildFetchPublicJobsParams(urlState),
+        siteLanguage.code,
+      ),
     [siteLanguage.code, urlState],
   );
 
   const seekerAuthKey = getJobSeekerAccessToken() ? "seeker" : "anon";
+  const isJobsQueryEnabled = shouldEnablePublicJobsQuery(isLanguageReady);
 
   const jobsQuery = useQuery({
     queryKey: ["public-jobs", seekerAuthKey, seekerAuthEpoch, listParams],
     queryFn: ({ signal }) => fetchPublicActiveJobs(listParams, { signal }),
+    enabled: isJobsQueryEnabled,
     placeholderData: (previous) => previous,
     staleTime: 30_000,
   });
@@ -184,11 +194,28 @@ export function JobSearchPageContent() {
   );
   const pagination = jobsQuery.data?.pagination;
   const cityFacets = jobsQuery.data?.facets?.cities ?? [];
+  const hasJobsQueryData = jobsQuery.data !== undefined;
+  const jobsListView = resolvePublicJobsListView({
+    isLanguageReady,
+    isError: jobsQuery.isError,
+    error: jobsQuery.error,
+    jobCount: jobs.length,
+    hasQueryData: hasJobsQueryData,
+  });
+  const jobsCountView = resolvePublicJobsCountView({
+    isLanguageReady,
+    isError: jobsQuery.isError,
+    error: jobsQuery.error,
+    total: pagination?.total,
+    hasQueryData: hasJobsQueryData,
+  });
+  const isJobsListLoading = jobsListView === "loading";
+  const isJobsListError = jobsListView === "error";
 
   const selectedJobId = urlState.job;
 
   useEffect(() => {
-    if (!isSplitView || jobsQuery.isLoading || jobsQuery.isError) {
+    if (!isSplitView || isJobsListLoading || isJobsListError) {
       return;
     }
 
@@ -216,8 +243,8 @@ export function JobSearchPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isSplitView,
-    jobsQuery.isError,
-    jobsQuery.isLoading,
+    isJobsListError,
+    isJobsListLoading,
     selectedJobId,
     searchParams,
     jobIdsKey,
@@ -233,7 +260,7 @@ export function JobSearchPageContent() {
         signal,
         language: siteLanguage.code,
       }),
-    enabled: Boolean(detailJobId) && isSplitView,
+    enabled: Boolean(detailJobId) && isSplitView && isLanguageReady,
     retry: false,
     refetchInterval: (query) =>
       publicJobDetailRefetchInterval(
@@ -348,7 +375,7 @@ export function JobSearchPageContent() {
 
   const isLocationLoading =
     Boolean(urlState.state) &&
-    (jobsQuery.isLoading ||
+    (isJobsListLoading ||
       (jobsQuery.isFetching && Boolean(jobsQuery.isPlaceholderData)));
 
   return (
@@ -392,7 +419,8 @@ export function JobSearchPageContent() {
         <div className="min-w-0">
           <div className="space-y-4">
             <JobSearchResultsHeader
-              total={pagination?.total ?? 0}
+              total={jobsCountView.type === "success" ? jobsCountView.total : 0}
+              countStatus={jobsCountView.type}
               locationLabel={headerLocationLabel}
               sort={urlState.sort}
               onSortChange={(sort) =>
@@ -408,8 +436,9 @@ export function JobSearchPageContent() {
                   jobs={jobs}
                   selectedJobId={detailJobId}
                   bookmarkedIds={bookmarkedIds}
-                  isLoading={jobsQuery.isLoading}
-                  isError={jobsQuery.isError}
+                  isLoading={isJobsListLoading}
+                  isError={isJobsListError}
+                  isFetching={jobsQuery.isFetching && hasJobsQueryData}
                   emptyMessage={
                     urlState.minSalary !== undefined ||
                     urlState.maxSalary !== undefined

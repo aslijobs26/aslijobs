@@ -21,8 +21,21 @@ export const SITE_LANGUAGE_STORAGE_KEY = "aslijobs_site_language";
 export const SITE_LANGUAGE_CHANGE_EVENT = "aslijobs-site-language-change";
 
 export function siteLanguageFromValue(value: string | null | undefined): SiteLanguageOption {
+  if (value == null || value.trim() === "") {
+    return SITE_DEFAULT_LANGUAGE;
+  }
+
+  const normalized = value.trim().toLowerCase();
   return (
-    SITE_LANGUAGE_OPTIONS.find((option) => option.value === value || option.code === value) ??
-    SITE_DEFAULT_LANGUAGE
+    SITE_LANGUAGE_OPTIONS.find(
+      (option) => option.value === normalized || option.code === normalized,
+    ) ?? SITE_DEFAULT_LANGUAGE
   );
+}
+
+/** Query keys and API params must use `te`, never aliases such as `telugu`. */
+export function normalizeSiteLanguageCode(
+  value: string | null | undefined,
+): SiteLanguageCode {
+  return siteLanguageFromValue(value).code;
 }
