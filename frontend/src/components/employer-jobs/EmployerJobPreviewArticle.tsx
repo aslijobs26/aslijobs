@@ -2,6 +2,7 @@
 
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
+import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { cn } from "@/utils/cn";
@@ -99,8 +100,6 @@ function SectionHeading({ children }: { children: ReactNode }) {
   );
 }
 
-const LOCATION_NOT_SPECIFIED = "Location not specified";
-
 function formatMissingValue(
   value: string | null | undefined,
   notSpecifiedLabel: string,
@@ -121,6 +120,7 @@ export function EmployerJobPreviewArticle({
   onRetry,
 }: EmployerJobPreviewArticleProps) {
   const t = useTranslate();
+  const language = useSiteLanguage().code;
   const [bookmarked, setBookmarked] = useState(false);
 
   if (isLoading) {
@@ -160,39 +160,43 @@ export function EmployerJobPreviewArticle({
   }
 
   const notSpecified = t("employer.common.notSpecified");
-  const salary = formatJobSearchSalary(job);
-  const rawLocation = formatJobSearchLocation(
-    job.cityName,
-    job.stateName,
-    job.city,
-    job.state,
-  );
-  const hasLocation = Boolean(rawLocation) && rawLocation !== LOCATION_NOT_SPECIFIED;
-  const location = hasLocation ? rawLocation : notSpecified;
-  const employmentType = formatJobSearchJobType(job.jobType);
-  const experience = formatJobSearchExperience(job.experience);
+  const hasLocation = Boolean(job.cityName || job.stateName || job.city || job.state);
+  const location = hasLocation
+    ? formatJobSearchLocation(
+        job.cityName,
+        job.stateName,
+        job.city,
+        job.state,
+        language,
+      )
+    : notSpecified;
+  const salary = formatJobSearchSalary(job, language);
+  const employmentType = formatJobSearchJobType(job.jobType, language);
+  const experience = formatJobSearchExperience(job.experience, language);
   const education =
     job.education.length > 0
-      ? job.education.map(formatJobSearchEducation).join(", ")
+      ? job.education.map((value) => formatJobSearchEducation(value, language)).join(", ")
       : notSpecified;
   const openings = job.vacancies > 0 ? String(job.vacancies) : notSpecified;
-  const workMode = formatJobSearchWorkMode(job.workMode);
+  const workMode = formatJobSearchWorkMode(job.workMode, language);
   const genderLabel =
     job.gender.length > 0
-      ? job.gender.map(formatJobSearchGender).join(", ")
+      ? job.gender.map((value) => formatJobSearchGender(value, language)).join(", ")
       : t("jobs.any");
   const languageChips = job.languages
-    .map(formatJobSearchLanguage)
+    .map((value) => formatJobSearchLanguage(value, language))
     .filter(Boolean);
-  const perkChips = job.perks.map(formatJobSearchPerk).filter(Boolean);
-  const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt);
+  const perkChips = job.perks.map((value) => formatJobSearchPerk(value, language)).filter(Boolean);
+  const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt, language);
   const walkInDate = formatJobSearchWalkInDateRange(
     job.walkInStartDate,
     job.walkInEndDate,
+    language,
   );
   const walkInTime = formatJobSearchWalkInTimeRange(
     job.walkInStartTime,
     job.walkInEndTime,
+    language,
   );
   const descriptionText = job.description?.trim() ?? "";
   const hasDescription = !isJobDescriptionEmpty(descriptionText);

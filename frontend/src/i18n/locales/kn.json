@@ -143,6 +143,7 @@
     "langKannada": "ಕನ್ನಡ",
     "langMalayalam": "ಮಲಯಾಳಂ",
     "location": "ಸ್ಥಳ",
+    "locationNotSpecified": "ಸ್ಥಳ ನಿರ್ದಿಷ್ಟಪಡಿಸಿಲ್ಲ",
     "salaryRange": "ವೇತನ ಶ್ರೇಣಿ",
     "jobType": "ಉದ್ಯೋಗ ಪ್ರಕಾರ",
     "experience": "ಅನುಭವ",

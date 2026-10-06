@@ -87,6 +87,8 @@ export type TranslateTextResult = {
   skipped: boolean;
   failed: boolean;
   durationMs: number;
+  httpStatus?: number;
+  errorCode?: string;
 };
 
 export async function translateText(input: TranslateTextInput): Promise<TranslateTextResult> {
@@ -112,7 +114,14 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
 
   if (!input.fetchImpl && !env.SARVAM_API_KEY.trim()) {
     console.error("[Sarvam] SARVAM_UNAVAILABLE stage=translate reason=missing_key");
-    return { text: input.text, translated: false, skipped: false, failed: true, durationMs: Date.now() - started };
+    return {
+      text: input.text,
+      translated: false,
+      skipped: false,
+      failed: true,
+      durationMs: Date.now() - started,
+      errorCode: "missing_key",
+    };
   }
 
   try {
@@ -133,18 +142,59 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
         numerals_format: "international",
       }),
     });
+    const bodyText = await response.text();
     if (!response.ok) {
-      console.error(`[Sarvam] SARVAM_TRANSLATE_FAILED status=${response.status}`);
-      console.info(
-        `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} ok=no durationMs=${Date.now() - started}`,
+      let code = "http_error";
+      try {
+        const parsed = JSON.parse(bodyText) as { error?: { code?: string } };
+        if (parsed?.error?.code) {
+          code = parsed.error.code;
+        }
+      } catch {
+        // Sarvam error payloads are JSON; ignore malformed bodies.
+      }
+      console.error(
+        `[Sarvam] SARVAM_TRANSLATE_FAILED status=${response.status} code=${code}`,
       );
-      return { text: input.text, translated: false, skipped: false, failed: true, durationMs: Date.now() - started };
+      console.info(
+        `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} ok=no status=${response.status} code=${code} durationMs=${Date.now() - started}`,
+      );
+      return {
+        text: input.text,
+        translated: false,
+        skipped: false,
+        failed: true,
+        durationMs: Date.now() - started,
+        httpStatus: response.status,
+        errorCode: code,
+      };
     }
-    const body = (await response.json()) as { translated_text?: string };
+    let body: { translated_text?: string };
+    try {
+      body = JSON.parse(bodyText) as { translated_text?: string };
+    } catch {
+      console.error("[Sarvam] SARVAM_TRANSLATE_FAILED reason=invalid_json");
+      return {
+        text: input.text,
+        translated: false,
+        skipped: false,
+        failed: true,
+        durationMs: Date.now() - started,
+        httpStatus: response.status,
+        errorCode: "invalid_json",
+      };
+    }
     const translated = body.translated_text?.trim();
     if (!translated) {
       console.error("[Sarvam] SARVAM_TRANSLATE_FAILED reason=empty");
-      return { text: input.text, translated: false, skipped: false, failed: true, durationMs: Date.now() - started };
+      return {
+        text: input.text,
+        translated: false,
+        skipped: false,
+        failed: true,
+        durationMs: Date.now() - started,
+        errorCode: "empty",
+      };
     }
     if (input.cache) {
       staticTranslationCache.set(key, translated);
@@ -162,7 +212,14 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
     console.info(
       `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} ok=no durationMs=${Date.now() - started}`,
     );
-    return { text: input.text, translated: false, skipped: false, failed: true, durationMs: Date.now() - started };
+    return {
+      text: input.text,
+      translated: false,
+      skipped: false,
+      failed: true,
+      durationMs: Date.now() - started,
+      errorCode: timedOut ? "timeout" : "network_error",
+    };
   }
 }
 

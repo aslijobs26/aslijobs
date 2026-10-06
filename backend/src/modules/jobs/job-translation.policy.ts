@@ -1,4 +1,4 @@
-import { hashJobField } from "./job-content-translation.js";
+import { hashJobSource } from "./job-content-translation.js";
 import {
   JOB_CONTENT_LANGUAGES,
   parseJobContentLanguage,
@@ -23,9 +23,7 @@ export function jobTranslationSourceHash(source: {
   description: string;
   interviewInstructions: string;
 }): string {
-  return hashJobField(
-    `${source.jobTitle}\n${source.description}\n${source.interviewInstructions}`,
-  );
+  return hashJobSource(source);
 }
 
 export function jobTranslationTaskKey(
@@ -94,6 +92,16 @@ type ExistingTranslationTask = {
  * Pending and processing tasks are never duplicated.
  * A failed task can be queued again only after its cooldown.
  */
+export function shouldResetStoredTranslationTask(
+  status: JobTranslationTaskStatus | string,
+  needsTranslation: boolean,
+): boolean {
+  if (!needsTranslation) {
+    return false;
+  }
+  return status === "failed" || status === "completed";
+}
+
 export function canEnqueueJobTranslation(
   existing: ExistingTranslationTask | null,
   now = Date.now(),

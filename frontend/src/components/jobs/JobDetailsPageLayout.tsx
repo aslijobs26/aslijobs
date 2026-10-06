@@ -3,6 +3,7 @@
 import { JobDetailsCenterPanel } from "@/components/jobs/JobDetailsCenterPanel";
 import { JobDetailsLeftRail } from "@/components/jobs/JobDetailsLeftRail";
 import { JobDetailsRightRail } from "@/components/jobs/JobDetailsRightRail";
+import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { ArrowLeft } from "lucide-react";
 
@@ -25,6 +26,7 @@ export function JobDetailsPageLayout({
   onToggleBookmark,
   onRetry,
 }: JobDetailsPageLayoutProps) {
+  const t = useTranslate();
   const similarJobsSource = job
     ? {
         jobId: job.jobId,
@@ -44,7 +46,7 @@ export function JobDetailsPageLayout({
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
-            Back to Jobs
+            {t("jobs.backToJobs")}
           </button>
         </div>
 

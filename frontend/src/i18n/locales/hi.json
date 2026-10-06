@@ -143,6 +143,7 @@
     "langKannada": "कन्नड़",
     "langMalayalam": "मलयालम",
     "location": "स्थान",
+    "locationNotSpecified": "स्थान निर्दिष्ट नहीं है",
     "salaryRange": "वेतन सीमा",
     "jobType": "नौकरी का प्रकार",
     "experience": "अनुभव",

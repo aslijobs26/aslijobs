@@ -2,6 +2,8 @@
 
 import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import type { SiteLanguageCode } from "@/constants/site-language";
+import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import { protectedApply } from "@/utils/job-apply-auth";
 import { cn } from "@/utils/cn";
@@ -46,11 +48,12 @@ type CardTag = {
 function buildCardTags(
   job: PublicJobListItem,
   freshersLabel: string,
+  language: SiteLanguageCode,
 ): CardTag[] {
   const tags: CardTag[] = [];
 
   for (const education of job.education) {
-    const label = formatJobSearchEducation(education);
+    const label = formatJobSearchEducation(education, language);
     if (!label) continue;
     tags.push({
       id: `education-${education}`,
@@ -76,7 +79,7 @@ function buildCardTags(
   }
 
   for (const perk of job.perks.slice(0, 1)) {
-    const label = formatJobSearchPerk(perk);
+    const label = formatJobSearchPerk(perk, language);
     if (!label) continue;
 
     const icon =
@@ -110,6 +113,7 @@ export function JobSearchJobCard({
   onToggleBookmark,
 }: JobSearchJobCardProps) {
   const t = useTranslate();
+  const language = useSiteLanguage().code;
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
   const isApplied = appliedLocally || job.isApplied === true;
@@ -119,14 +123,14 @@ export function JobSearchJobCard({
     job.city,
     job.state,
   );
-  const salary = formatJobSearchSalary(job)
+  const salary = formatJobSearchSalary(job, language)
     .replaceAll("₹", "")
     .replace(" /month", "/mo")
     .replace(" /year", "/yr");
-  const experience = formatJobSearchExperience(job.experience);
-  const jobType = formatJobSearchJobType(job.jobType);
-  const tags = buildCardTags(job, t("jobs.freshersCanApply"));
-  const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt);
+  const experience = formatJobSearchExperience(job.experience, language);
+  const jobType = formatJobSearchJobType(job.jobType, language);
+  const tags = buildCardTags(job, t("jobs.freshersCanApply"), language);
+  const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt, language);
 
   const handleViewDetailsClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();

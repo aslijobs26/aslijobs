@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { afterEach, describe, it, mock } from "node:test";
 import {
   detectCanonicalSourceLanguage,
   detectJobContentLanguage,
@@ -10,8 +10,11 @@ import {
   buildJobContentTranslations,
   extractJobNumericLiterals,
   hashJobField,
+  hashJobSource,
   hasMatchingHtmlStructure,
   isTranslationRetryCoolingDown,
+  isUsableFieldTranslation,
+  languageNeedsTranslation,
   needsJobContentTranslation,
   normalizeInternationalNumerals,
   protectJobNumericLiterals,
@@ -20,6 +23,7 @@ import {
   resolvePublicJobTranslationView,
   restoreJobNumericLiterals,
   shouldSkipFailedTranslationRetry,
+  translateJobContentOnDemand,
   translateJobField,
   translateJobHtmlField,
   translateRequestedJobLanguage,
@@ -27,6 +31,8 @@ import {
   withTranslationInFlight,
   type JobContentTranslations,
 } from "./job-content-translation.js";
+import { JobModel } from "./job.model.js";
+import { jobTranslationSourceHash } from "./job-translation.policy.js";
 
 function mockTranslate(calls: { count: number; bodies: string[] }): typeof fetch {
   return (async (_url, init) => {
@@ -490,6 +496,34 @@ describe("job content translation", () => {
     assert.equal(result.contentTranslations.te?.status, "failed");
   });
 
+  it("stores current source hashes on provider failure so the public API can cooldown", async () => {
+    const fetchImpl = (async () =>
+      new Response(
+        JSON.stringify({
+          error: { message: "No credits available.", code: "insufficient_quota_error" },
+        }),
+        { status: 402 },
+      )) as typeof fetch;
+    const result = await translateRequestedJobLanguage({
+      source,
+      language: "te",
+      fetchImpl,
+    });
+    const stored = result.contentTranslations.te;
+    assert.equal(result.event, "TRANSLATION_FAILED");
+    assert.equal(stored?.jobTitleHash, hashJobField(source.jobTitle));
+    assert.equal(stored?.descriptionHash, hashJobField(source.description));
+    assert.equal(stored?.interviewInstructionsHash, hashJobField(source.interviewInstructions));
+    assert.equal(shouldSkipFailedTranslationRetry(stored, source), true);
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: result.contentTranslations },
+      "te",
+    );
+    assert.equal(view.translationStatus, "failed");
+    assert.equal(view.shouldEnqueue, false);
+    assert.equal(view.content.jobTitle, source.jobTitle);
+  });
+
   it("applies retry cooldown after a failed translation of the same source", async () => {
     const failed: JobContentTranslations = {
       te: {
@@ -558,7 +592,10 @@ describe("job content translation", () => {
 
   it("treats a recent failure timestamp as cooling down", () => {
     assert.equal(isTranslationRetryCoolingDown(new Date().toISOString()), true);
-    assert.equal(isTranslationRetryCoolingDown(new Date(Date.now() - 11 * 60_000).toISOString()), false);
+    assert.equal(
+      isTranslationRetryCoolingDown(new Date(Date.now() - 31_000).toISOString()),
+      false,
+    );
     assert.equal(isTranslationRetryCoolingDown(null), false);
   });
 });
@@ -603,6 +640,31 @@ describe("public job translation view", () => {
     assert.equal(view.content.jobTitle, "tr:Electrician");
   });
 
+  it("does not treat a completed Telugu cache as a Tamil translation", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "డ్రైవర్",
+        description: "తెలుగు వివరణ",
+        interviewInstructions: "తెలుగు సూచన",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(source.description),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+        status: "completed",
+      },
+    };
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "ta",
+    );
+    assert.equal(view.translationStatus, "pending");
+    assert.equal(view.shouldEnqueue, true);
+    assert.equal(view.isTranslated, false);
+    assert.equal(view.content.jobTitle, source.jobTitle);
+    assert.equal(view.content.description, source.description);
+    assert.equal(languageNeedsTranslation({ ...source, contentTranslations: stored }, "ta"), true);
+    assert.equal(languageNeedsTranslation({ ...source, contentTranslations: stored }, "te"), false);
+  });
+
   it("does not enqueue again while a failed translation is cooling down", () => {
     const stored: JobContentTranslations = {
       te: {
@@ -623,6 +685,79 @@ describe("public job translation view", () => {
     assert.equal(view.translationStatus, "failed");
     assert.equal(view.shouldEnqueue, false);
     assert.equal(view.content.jobTitle, source.jobTitle);
+  });
+
+  it("retries a failed translation after the short throttle instead of blocking for ten minutes", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "",
+        description: "",
+        interviewInstructions: "",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(source.description),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+        lastAttemptAt: new Date(Date.now() - 31_000).toISOString(),
+        status: "failed",
+      },
+    };
+    assert.equal(shouldSkipFailedTranslationRetry(stored.te, source), false);
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "te",
+    );
+    assert.equal(view.translationStatus, "pending");
+    assert.equal(view.shouldEnqueue, true);
+    assert.equal(view.content.jobTitle, source.jobTitle);
+    assert.equal(view.isTranslated, false);
+  });
+
+  it("never treats a failed empty row as a ready cache hit", () => {
+    const stored: JobContentTranslations = {
+      ta: {
+        jobTitle: "",
+        description: "",
+        interviewInstructions: "",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(source.description),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+        lastAttemptAt: new Date(Date.now() - 31_000).toISOString(),
+        status: "failed",
+      },
+    };
+    assert.equal(
+      isUsableFieldTranslation(source.jobTitle, stored.ta, "jobTitle"),
+      false,
+    );
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "ta",
+    );
+    assert.notEqual(view.translationStatus, "ready");
+    assert.equal(view.shouldEnqueue, true);
+  });
+
+  it("does not treat an identical English title as a usable Tamil translation", () => {
+    const stored: JobContentTranslations = {
+      ta: {
+        jobTitle: source.jobTitle,
+        description: source.description,
+        interviewInstructions: source.interviewInstructions,
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(source.description),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+        status: "completed",
+      },
+    };
+    assert.equal(
+      isUsableFieldTranslation(source.jobTitle, stored.ta, "jobTitle"),
+      false,
+    );
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "ta",
+    );
+    assert.equal(view.translationStatus, "pending");
+    assert.equal(view.shouldEnqueue, true);
   });
 
   it("hides a stale translation and queues a fresh one", () => {
@@ -860,5 +995,304 @@ describe("list vs detail translation triggers", () => {
     const detail = resolvePublicJobTranslationView(source, "hi");
     assert.equal(listed.jobTitle, source.jobTitle);
     assert.equal(detail.shouldEnqueue, true);
+  });
+});
+
+describe("translation cache contract", () => {
+  it("uses the same aggregate source hash for the queue task and the resolver", () => {
+    const sourceHash = hashJobSource(source);
+    assert.equal(sourceHash, jobTranslationSourceHash(source));
+    assert.notEqual(sourceHash, hashJobField(source.jobTitle));
+  });
+
+  it("does not treat an English clone as a Telugu cache hit", async () => {
+    const clone: JobContentTranslations = {
+      te: {
+        jobTitle: source.jobTitle,
+        description: source.description,
+        interviewInstructions: source.interviewInstructions,
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(source.description),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+        status: "completed",
+      },
+    };
+    assert.equal(
+      isUsableFieldTranslation(source.description, clone.te, "description"),
+      false,
+    );
+    assert.equal(
+      languageNeedsTranslation({ ...source, contentTranslations: clone }, "te"),
+      true,
+    );
+    const calls = { count: 0, bodies: [] as string[] };
+    const result = await translateRequestedJobLanguage({
+      source,
+      existing: clone,
+      language: "te",
+      fetchImpl: mockTranslate(calls),
+    });
+    assert.equal(result.event, "TRANSLATION_CREATED");
+    assert.ok(result.translateCalls > 0);
+    assert.ok(calls.count > 0);
+    assert.notEqual(result.content.description, source.description);
+  });
+
+  it("retranslates a number-stripped description and keeps a valid title", async () => {
+    const sourceWithPay = {
+      ...source,
+      description: "Pay ₹18,000 each month for an experienced electrician.",
+    };
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "ఎలక్ట్రీషియన్",
+        description: "ప్రతి నెల అనుభవం ఉన్న ఎలక్ట్రీషియన్‌కు జీతం.",
+        interviewInstructions: "tr:Bring ID proof.",
+        jobTitleHash: hashJobField(sourceWithPay.jobTitle),
+        descriptionHash: hashJobField(sourceWithPay.description),
+        interviewInstructionsHash: hashJobField(sourceWithPay.interviewInstructions),
+        status: "completed",
+      },
+    };
+    assert.equal(
+      isUsableFieldTranslation(sourceWithPay.jobTitle, stored.te, "jobTitle"),
+      true,
+    );
+    assert.equal(
+      isUsableFieldTranslation(sourceWithPay.description, stored.te, "description"),
+      false,
+    );
+    const calls = { count: 0, bodies: [] as string[] };
+    const result = await translateRequestedJobLanguage({
+      source: sourceWithPay,
+      existing: stored,
+      language: "te",
+      fetchImpl: mockTranslate(calls),
+    });
+    assert.equal(calls.count, 1);
+    assert.equal(result.content.jobTitle, "ఎలక్ట్రీషియన్");
+    assert.match(result.content.description, /₹18,000/);
+  });
+
+  it("100 concurrent in-flight Telugu translations share one run", async () => {
+    let runs = 0;
+    const work = async () => {
+      runs += 1;
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      return "te";
+    };
+    const results = await Promise.all(
+      Array.from({ length: 100 }, () => withTranslationInFlight("job-100:te", work)),
+    );
+    assert.equal(runs, 1);
+    assert.equal(results.length, 100);
+    assert.ok(results.every((result) => result === "te"));
+  });
+
+  it("1,000 later Telugu readers reuse the Mongo translation with zero Sarvam calls", async () => {
+    const calls = { count: 0, bodies: [] as string[] };
+    const first = await translateRequestedJobLanguage({
+      source,
+      language: "te",
+      fetchImpl: mockTranslate(calls),
+    });
+    assert.equal(first.event, "TRANSLATION_CREATED");
+    const createdCalls = calls.count;
+    for (let index = 0; index < 1_000; index += 1) {
+      const repeated = await translateRequestedJobLanguage({
+        source,
+        existing: first.contentTranslations,
+        language: "te",
+        fetchImpl: mockTranslate(calls),
+      });
+      assert.equal(repeated.event, "CACHE_HIT");
+      assert.equal(repeated.translateCalls, 0);
+    }
+    assert.equal(calls.count, createdCalls);
+  });
+});
+
+describe("on-demand Mongo persistence", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  it("worker path calls Sarvam, persists Telugu, and later requests are cache hits", async () => {
+    const mongoId = "507f1f77bcf86cd799439011";
+    const store: {
+      _id: string;
+      jobTitle: string;
+      description: string;
+      interviewInstructions: string;
+      contentLanguage: string;
+      contentTranslations: JobContentTranslations;
+      status: string;
+    } = {
+      _id: mongoId,
+      ...source,
+      contentLanguage: "en",
+      contentTranslations: {},
+      status: "active",
+    };
+    mock.method(JobModel, "findById", () => ({
+      select: async () => store,
+    }));
+    mock.method(
+      JobModel,
+      "updateOne",
+      async (_filter: unknown, update: { $set?: Record<string, unknown> }) => {
+        for (const [key, value] of Object.entries(update.$set ?? {})) {
+          if (key.startsWith("contentTranslations.")) {
+            const language = key.slice(
+              "contentTranslations.".length,
+            ) as keyof JobContentTranslations;
+            store.contentTranslations[language] = value as JobContentTranslations["te"];
+          } else if (key === "contentLanguage") {
+            store.contentLanguage = String(value);
+          }
+        }
+      },
+    );
+
+    const calls = { count: 0, bodies: [] as string[] };
+    const first = await translateJobContentOnDemand({
+      jobMongoId: mongoId,
+      publicJobId: "AJ-2026-000014",
+      language: "te",
+      fetchImpl: mockTranslate(calls),
+    });
+    assert.equal(first.event, "TRANSLATION_CREATED");
+    assert.ok(first.translateCalls > 0);
+    assert.equal(calls.count, 3);
+    assert.equal(store.contentLanguage, "en");
+    assert.ok(store.contentTranslations.te);
+    assert.notEqual(store.contentTranslations.te?.description, source.description);
+    assert.equal(store.jobTitle, source.jobTitle);
+    assert.equal(first.stillNeedsTranslation, false);
+
+    const secondCalls = { count: 0, bodies: [] as string[] };
+    const second = await translateJobContentOnDemand({
+      jobMongoId: mongoId,
+      publicJobId: "AJ-2026-000014",
+      language: "te",
+      fetchImpl: mockTranslate(secondCalls),
+    });
+    assert.equal(second.event, "CACHE_HIT");
+    assert.equal(second.translateCalls, 0);
+    assert.equal(secondCalls.count, 0);
+    assert.equal(second.content.description, store.contentTranslations.te?.description);
+  });
+
+  it("does not overwrite canonical English fields when Hindi is requested", async () => {
+    const mongoId = "507f1f77bcf86cd799439012";
+    const store = {
+      _id: mongoId,
+      ...source,
+      contentLanguage: "en",
+      contentTranslations: {} as JobContentTranslations,
+      status: "active",
+    };
+    mock.method(JobModel, "findById", () => ({
+      select: async () => store,
+    }));
+    mock.method(
+      JobModel,
+      "updateOne",
+      async (_filter: unknown, update: { $set?: Record<string, unknown> }) => {
+        for (const [key, value] of Object.entries(update.$set ?? {})) {
+          if (key.startsWith("contentTranslations.")) {
+            const language = key.slice(
+              "contentTranslations.".length,
+            ) as keyof JobContentTranslations;
+            store.contentTranslations[language] = value as JobContentTranslations["hi"];
+          }
+        }
+      },
+    );
+    const calls = { count: 0, bodies: [] as string[] };
+    const hindi = await translateJobContentOnDemand({
+      jobMongoId: mongoId,
+      publicJobId: "AJ-2026-000004",
+      language: "hi",
+      fetchImpl: mockTranslate(calls),
+    });
+    assert.equal(hindi.event, "TRANSLATION_CREATED");
+    assert.equal(store.jobTitle, "Electrician");
+    assert.equal(store.contentTranslations.te, undefined);
+    assert.ok(store.contentTranslations.hi);
+    assert.notEqual(store.contentTranslations.hi?.jobTitle, store.jobTitle);
+  });
+
+  it("replaces stale empty hashes when Sarvam returns 402 so overlay can cooldown", async () => {
+    const mongoId = "507f1f77bcf86cd799439013";
+    const emptyHash = hashJobField("");
+    const store: {
+      _id: string;
+      jobTitle: string;
+      description: string;
+      interviewInstructions: string;
+      contentLanguage: string;
+      contentTranslations: JobContentTranslations;
+      status: string;
+    } = {
+      _id: mongoId,
+      ...source,
+      contentLanguage: "en",
+      contentTranslations: {
+        te: {
+          jobTitle: "",
+          description: "",
+          interviewInstructions: "",
+          jobTitleHash: emptyHash,
+          descriptionHash: emptyHash,
+          interviewInstructionsHash: emptyHash,
+          lastAttemptAt: "2026-01-01T00:00:00.000Z",
+          status: "failed",
+        },
+      },
+      status: "active",
+    };
+    mock.method(JobModel, "findById", () => ({
+      select: async () => store,
+    }));
+    mock.method(
+      JobModel,
+      "updateOne",
+      async (_filter: unknown, update: { $set?: Record<string, unknown> }) => {
+        for (const [key, value] of Object.entries(update.$set ?? {})) {
+          if (key.startsWith("contentTranslations.")) {
+            const language = key.slice(
+              "contentTranslations.".length,
+            ) as keyof JobContentTranslations;
+            store.contentTranslations[language] = value as JobContentTranslations["te"];
+          }
+        }
+      },
+    );
+    const fetchImpl = (async () =>
+      new Response(
+        JSON.stringify({
+          error: { message: "No credits available.", code: "insufficient_quota_error" },
+        }),
+        { status: 402 },
+      )) as typeof fetch;
+    const result = await translateJobContentOnDemand({
+      jobMongoId: mongoId,
+      publicJobId: "AJ-2026-000072",
+      language: "te",
+      forceRetry: true,
+      fetchImpl,
+    });
+    assert.equal(result.event, "TRANSLATION_FAILED");
+    assert.equal(store.contentTranslations.te?.jobTitleHash, hashJobField(source.jobTitle));
+    assert.equal(store.contentTranslations.te?.status, "failed");
+    assert.equal(store.jobTitle, source.jobTitle);
+    assert.equal(
+      resolvePublicJobTranslationView(
+        { ...source, contentTranslations: store.contentTranslations },
+        "te",
+      ).translationStatus,
+      "failed",
+    );
   });
 });

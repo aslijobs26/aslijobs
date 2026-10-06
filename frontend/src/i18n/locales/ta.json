@@ -143,6 +143,7 @@
     "langKannada": "கன்னடம்",
     "langMalayalam": "மலையாளம்",
     "location": "இடம்",
+    "locationNotSpecified": "இடம் குறிப்பிடப்படவில்லை",
     "salaryRange": "சம்பள வரம்பு",
     "jobType": "வேலை வகை",
     "experience": "அனுபவம்",

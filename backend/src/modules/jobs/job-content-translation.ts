@@ -1,14 +1,15 @@
 import { createHash } from "node:crypto";
 import { JobModel } from "./job.model.js";
 import {
-  detectJobContentLanguage,
   JOB_CONTENT_LANGUAGES,
+  parseJobContentLanguage,
   resolveJobSourceLanguage,
   type JobContentLanguage,
 } from "./job-content-language.js";
 import {
   protectProperNouns,
   restoreProperNouns,
+  toSarvamLanguageCode,
   translateText,
 } from "../whatsapp/sarvam-translate.client.js";
 
@@ -26,7 +27,10 @@ export type JobTranslationLogEvent =
   | "CACHE_HIT"
   | "CACHE_MISS"
   | "TRANSLATION_QUEUED"
+  | "TRANSLATION_ENQUEUED"
+  | "TRANSLATION_STARTED"
   | "TRANSLATION_CREATED"
+  | "TRANSLATION_PERSISTED"
   | "TRANSLATION_SKIPPED"
   | "TRANSLATION_SKIPPED_SOURCE_LANGUAGE"
   | "TRANSLATION_FAILED";
@@ -47,7 +51,8 @@ export type JobContentTranslations = Partial<
 >;
 
 const CHUNK = 900;
-export const TRANSLATION_RETRY_COOLDOWN_MS = 10 * 60_000;
+/** Storm protection between user-triggered retries after a failed attempt. */
+export const TRANSLATION_RETRY_COOLDOWN_MS = 30_000;
 
 const inFlightTranslations = new Map<string, Promise<unknown>>();
 
@@ -246,15 +251,48 @@ function logJobTranslation(
     sourceHash?: string;
     reason?: string;
     calls?: number;
+    attempt?: number;
+    durationMs?: number;
   },
 ): void {
   console.info(
-    `[JOB-TRANSLATE] event=${event} jobId=${details.jobId ?? "-"} language=${details.language ?? "-"} field=${details.field ?? "job"} sourceHash=${details.sourceHash ?? "-"} reason=${details.reason ?? "-"} calls=${details.calls ?? 0}`,
+    `[JOB-TRANSLATE] event=${event} jobId=${details.jobId ?? "-"} language=${details.language ?? "-"} field=${details.field ?? "job"} sourceHash=${details.sourceHash ?? "-"} reason=${details.reason ?? "-"} calls=${details.calls ?? 0} attempt=${details.attempt ?? 0} durationMs=${details.durationMs ?? 0}`,
+  );
+}
+
+function logSarvamJobTranslate(
+  event: "SARVAM_REQUEST_STARTED" | "SARVAM_REQUEST_SUCCEEDED" | "SARVAM_REQUEST_FAILED",
+  details: {
+    jobId?: string;
+    language?: string;
+    field?: string;
+    sourceHash?: string;
+    success?: boolean;
+    durationMs?: number;
+    reason?: string;
+  },
+): void {
+  const target = details.language
+    ? toSarvamLanguageCode(details.language as JobContentLanguage)
+    : "-";
+  console.info(
+    `[SARVAM-JOB-TRANSLATE] event=${event} jobId=${details.jobId ?? "-"} language=${details.language ?? "-"} target=${target} field=${details.field ?? "-"} sourceHash=${details.sourceHash ?? "-"} requestStarted=${event === "SARVAM_REQUEST_STARTED"} responseReceived=${event !== "SARVAM_REQUEST_STARTED"} success=${details.success ?? event === "SARVAM_REQUEST_SUCCEEDED"} reason=${details.reason ?? "-"} durationMs=${details.durationMs ?? 0}`,
   );
 }
 
 export function hashJobField(value: string): string {
   return createHash("sha256").update(value.trim()).digest("hex");
+}
+
+/** Aggregate source version used by the queue task key and cache resolver. */
+export function hashJobSource(source: {
+  jobTitle: string;
+  description: string;
+  interviewInstructions: string;
+}): string {
+  return hashJobField(
+    `${source.jobTitle}\n${source.description}\n${source.interviewInstructions}`,
+  );
 }
 
 export function splitForTranslation(text: string): string[] {
@@ -279,6 +317,7 @@ export async function translateJobField(input: {
   sourceLanguage: JobContentLanguage;
   targetLanguage: JobContentLanguage;
   fetchImpl?: typeof fetch;
+  log?: { jobId?: string; field?: string; sourceHash?: string };
 }): Promise<{ text: string; failed: boolean; calls: number }> {
   const chunks = splitForTranslation(input.text);
   if (chunks.length === 0 || input.sourceLanguage === input.targetLanguage) {
@@ -287,6 +326,13 @@ export async function translateJobField(input: {
   const translated: string[] = [];
   for (const chunk of chunks) {
     const protectedChunk = protectJobNumericLiterals(chunk);
+    logSarvamJobTranslate("SARVAM_REQUEST_STARTED", {
+      jobId: input.log?.jobId,
+      language: input.targetLanguage,
+      field: input.log?.field,
+      sourceHash: input.log?.sourceHash,
+    });
+    const started = Date.now();
     const result = await translateText({
       text: protectedChunk.text,
       sourceLanguage: input.sourceLanguage,
@@ -294,6 +340,22 @@ export async function translateJobField(input: {
       cache: false,
       fetchImpl: input.fetchImpl,
     });
+    logSarvamJobTranslate(
+      result.failed || !result.translated
+        ? "SARVAM_REQUEST_FAILED"
+        : "SARVAM_REQUEST_SUCCEEDED",
+      {
+        jobId: input.log?.jobId,
+        language: input.targetLanguage,
+        field: input.log?.field,
+        sourceHash: input.log?.sourceHash,
+        success: !result.failed && result.translated,
+        durationMs: Date.now() - started,
+        reason: result.errorCode
+          ?? (result.httpStatus ? `http_${result.httpStatus}` : undefined)
+          ?? (result.failed || !result.translated ? "provider_failed" : undefined),
+      },
+    );
     if (result.failed || !result.translated) {
       return { text: input.text, failed: true, calls: translated.length + 1 };
     }
@@ -338,6 +400,7 @@ export async function translateJobHtmlField(input: {
   sourceLanguage: JobContentLanguage;
   targetLanguage: JobContentLanguage;
   fetchImpl?: typeof fetch;
+  log?: { jobId?: string; field?: string; sourceHash?: string };
 }): Promise<{ text: string; failed: boolean; calls: number }> {
   const tokens = input.html.split(HTML_TAG_SPLIT_PATTERN);
   const textIndexes = tokens.flatMap((token, index) =>
@@ -354,6 +417,7 @@ export async function translateJobHtmlField(input: {
       sourceLanguage: input.sourceLanguage,
       targetLanguage: input.targetLanguage,
       fetchImpl: input.fetchImpl,
+      log: input.log,
     });
 
   let calls = 0;
@@ -420,6 +484,8 @@ export async function buildJobContentTranslations(input: {
   source: SourceFields;
   existing?: JobContentTranslations | null;
   languages?: readonly JobContentLanguage[];
+  contentLanguage?: string | null;
+  publicJobId?: string;
   fetchImpl?: typeof fetch;
 }): Promise<{
   contentLanguage: JobContentLanguage;
@@ -436,15 +502,19 @@ export async function buildJobContentTranslations(input: {
       translateCalls: 0,
     };
   }
-  const contentLanguage = detectJobContentLanguage(sample);
+  const sourceLanguage = resolveJobSourceLanguage({
+    ...input.source,
+    contentLanguage: input.contentLanguage,
+  });
+  const sourceVersionHash = hashJobSource(input.source);
   const next: JobContentTranslations = { ...(input.existing ?? {}) };
-  next[contentLanguage] = entryFromSource(input.source);
+  next[sourceLanguage] = entryFromSource(input.source);
   const targets = (input.languages ?? []).filter(
-    (language) => language !== contentLanguage,
+    (language) => language !== sourceLanguage,
   );
   if (targets.length === 0) {
     return {
-      contentLanguage,
+      contentLanguage: sourceLanguage,
       contentTranslations: next,
       translationStatus: "none",
       translateCalls: 0,
@@ -475,30 +545,37 @@ export async function buildJobContentTranslations(input: {
           translated[hashKey] = hash;
           continue;
         }
-        if (
-          previous &&
-          previous[hashKey] === hash &&
-          previous[field].trim() &&
-          hasMatchingHtmlStructure(value, previous[field])
-        ) {
+        if (isUsableFieldTranslation(value, previous, field)) {
           continue;
         }
+        const log = {
+          jobId: input.publicJobId,
+          field,
+          sourceHash: sourceVersionHash,
+        };
         const result = looksLikeHtmlContent(value)
           ? await translateJobHtmlField({
               html: value,
-              sourceLanguage: contentLanguage,
+              sourceLanguage,
               targetLanguage: target,
               fetchImpl: input.fetchImpl,
+              log,
             })
           : await translateJobField({
               text: value,
-              sourceLanguage: contentLanguage,
+              sourceLanguage,
               targetLanguage: target,
               fetchImpl: input.fetchImpl,
+              log,
             });
         calls += result.calls;
-        if (result.failed || !result.text.trim()) {
+        if (
+          result.failed ||
+          !result.text.trim() ||
+          !translatedTextIsPersistable(value, result.text)
+        ) {
           targetFailed = true;
+          translated[hashKey] = hash;
           continue;
         }
         translated[field] = result.text;
@@ -523,7 +600,12 @@ export async function buildJobContentTranslations(input: {
         ? "failed"
         : "partial";
 
-  return { contentLanguage, contentTranslations: next, translationStatus, translateCalls: calls };
+  return {
+    contentLanguage: sourceLanguage,
+    contentTranslations: next,
+    translationStatus,
+    translateCalls: calls,
+  };
 }
 
 export function resolveJobContent<T extends SourceFields & {
@@ -553,10 +635,9 @@ export function resolveJobContent<T extends SourceFields & {
  * A stored translation is shown only when it was produced from the current
  * source text (hash match) and kept the source HTML structure. Stale entries
  * (e.g. after an approved live edit) fall back to the original text.
- * Translations that lost salary/number literals are also treated as unusable
- * so they regenerate with numeric protection.
+ * Failed/empty rows and English clones are never treated as translations.
  */
-function isUsableFieldTranslation(
+export function isUsableFieldTranslation(
   sourceValue: string,
   stored: JobFieldTranslation | undefined,
   field: JobTranslatableField,
@@ -565,11 +646,42 @@ function isUsableFieldTranslation(
   if (
     !translated ||
     stored?.[`${field}Hash`] !== hashJobField(sourceValue) ||
-    !hasMatchingHtmlStructure(sourceValue, translated)
+    !hasMatchingHtmlStructure(sourceValue, translated) ||
+    isUntranslatedSourceClone(sourceValue, translated)
   ) {
     return false;
   }
   return translationPreservesSourceNumbers(sourceValue, translated);
+}
+
+function isUntranslatedSourceClone(sourceValue: string, translated: string): boolean {
+  const source = sourceValue.trim();
+  const next = translated.trim();
+  return Boolean(source) && source === next;
+}
+
+function translatedTextIsPersistable(sourceValue: string, translated: string): boolean {
+  if (!translated.trim()) {
+    return false;
+  }
+  if (!hasMatchingHtmlStructure(sourceValue, translated)) {
+    return false;
+  }
+  if (!translationPreservesSourceNumbers(sourceValue, translated)) {
+    return false;
+  }
+  return !isUntranslatedSourceClone(sourceValue, translated);
+}
+
+export function hasUsableTranslatedField(
+  source: SourceFields,
+  stored: JobFieldTranslation | undefined,
+): boolean {
+  return JOB_TRANSLATABLE_FIELDS.some(
+    (field) =>
+      Boolean(source[field].trim()) &&
+      isUsableFieldTranslation(source[field], stored, field),
+  );
 }
 
 export function translationPreservesSourceNumbers(
@@ -685,11 +797,13 @@ export async function translateRequestedJobLanguage(input: {
     };
   }
 
+  const sourceVersionHash = hashJobSource(input.source);
+
   if (!languageNeedsTranslation(job, input.language)) {
     logJobTranslation("CACHE_HIT", {
       jobId: input.publicJobId,
       language: input.language,
-      sourceHash: hashJobField(input.source.jobTitle),
+      sourceHash: sourceVersionHash,
     });
     return {
       content: resolveJobContent(job, input.language),
@@ -706,7 +820,7 @@ export async function translateRequestedJobLanguage(input: {
       jobId: input.publicJobId,
       language: input.language,
       reason: "retry_cooldown",
-      sourceHash: hashJobField(input.source.jobTitle),
+      sourceHash: sourceVersionHash,
     });
     return {
       content: resolveJobContent(job, input.language),
@@ -720,31 +834,77 @@ export async function translateRequestedJobLanguage(input: {
   logJobTranslation("CACHE_MISS", {
     jobId: input.publicJobId,
     language: input.language,
-    sourceHash: hashJobField(input.source.jobTitle),
+    sourceHash: sourceVersionHash,
+  });
+  logJobTranslation("TRANSLATION_STARTED", {
+    jobId: input.publicJobId,
+    language: input.language,
+    sourceHash: sourceVersionHash,
   });
 
   const built = await buildJobContentTranslations({
     source: input.source,
     existing: input.existing,
     languages: [input.language],
+    contentLanguage: input.contentLanguage ?? sourceLanguage,
+    publicJobId: input.publicJobId,
     fetchImpl: input.fetchImpl,
   });
-  const event: JobTranslationLogEvent =
-    built.translationStatus === "failed" ? "TRANSLATION_FAILED" : "TRANSLATION_CREATED";
-  logJobTranslation(event, {
-    jobId: input.publicJobId,
-    language: input.language,
-    sourceHash: hashJobField(input.source.jobTitle),
-    calls: built.translateCalls,
-    reason: built.translationStatus,
-  });
+  const requested = built.contentTranslations[input.language];
+  const usableAny = hasUsableTranslatedField(input.source, requested);
+  const stillNeeds = languageNeedsTranslation(
+    {
+      ...input.source,
+      contentLanguage: sourceLanguage,
+      contentTranslations: built.contentTranslations,
+    },
+    input.language,
+  );
+
+  if (!usableAny || built.translationStatus === "failed") {
+    logJobTranslation("TRANSLATION_FAILED", {
+      jobId: input.publicJobId,
+      language: input.language,
+      sourceHash: sourceVersionHash,
+      calls: built.translateCalls,
+      reason: built.translationStatus,
+    });
+    return {
+      content: resolveJobContent(
+        { ...input.source, contentTranslations: built.contentTranslations },
+        input.language,
+      ),
+      event: "TRANSLATION_FAILED",
+      translateCalls: built.translateCalls,
+      contentTranslations: built.contentTranslations,
+      contentLanguage: built.contentLanguage,
+    };
+  }
+
+  if (!stillNeeds && built.translateCalls === 0) {
+    logJobTranslation("CACHE_HIT", {
+      jobId: input.publicJobId,
+      language: input.language,
+      sourceHash: sourceVersionHash,
+    });
+    return {
+      content: resolveJobContent(
+        { ...input.source, contentTranslations: built.contentTranslations },
+        input.language,
+      ),
+      event: "CACHE_HIT",
+      translateCalls: 0,
+      contentTranslations: built.contentTranslations,
+      contentLanguage: built.contentLanguage,
+    };
+  }
 
   return {
     content: resolveJobContent(
       { ...input.source, contentTranslations: built.contentTranslations },
       input.language,
     ),
-    event,
+    event: "TRANSLATION_CREATED",
     translateCalls: built.translateCalls,
     contentTranslations: built.contentTranslations,
     contentLanguage: built.contentLanguage,
@@ -854,17 +1014,19 @@ export async function translateJobContentOnDemand(input: {
   source: SourceFields;
   event: JobTranslationLogEvent;
   translateCalls: number;
+  stillNeedsTranslation: boolean;
 }> {
+  const empty = { jobTitle: "", description: "", interviewInstructions: "" };
   const job = await JobModel.findById(input.jobMongoId).select(
     "jobTitle description interviewInstructions contentLanguage contentTranslations status",
   );
   if (!job) {
-    const empty = { jobTitle: "", description: "", interviewInstructions: "" };
     return {
       content: empty,
       source: empty,
       event: "TRANSLATION_SKIPPED",
       translateCalls: 0,
+      stillNeedsTranslation: false,
     };
   }
   const source = readSource(job);
@@ -875,7 +1037,13 @@ export async function translateJobContentOnDemand(input: {
       language: input.language ?? "",
       reason: isDraftBlocked ? "draft" : "no_language",
     });
-    return { content: source, source, event: "TRANSLATION_SKIPPED", translateCalls: 0 };
+    return {
+      content: source,
+      source,
+      event: "TRANSLATION_SKIPPED",
+      translateCalls: 0,
+      stillNeedsTranslation: false,
+    };
   }
 
   return withTranslationInFlight(
@@ -890,6 +1058,7 @@ export async function translateJobContentOnDemand(input: {
         null) as JobContentTranslations | null;
       const storedSourceLanguage =
         fresh?.contentLanguage ?? job.contentLanguage ?? null;
+      const sourceVersionHash = hashJobSource(latestSource);
       const result = await translateRequestedJobLanguage({
         source: latestSource,
         existing,
@@ -899,59 +1068,99 @@ export async function translateJobContentOnDemand(input: {
         fetchImpl: input.fetchImpl,
         forceRetry: input.forceRetry,
       });
+      const canonicalLanguage =
+        parseJobContentLanguage(storedSourceLanguage) ?? result.contentLanguage;
+      const persistSets: Record<string, unknown> = {};
+      if (!parseJobContentLanguage(storedSourceLanguage)) {
+        persistSets.contentLanguage = result.contentLanguage;
+      }
+
       if (result.event === "TRANSLATION_CREATED") {
         const requested = result.contentTranslations[input.language!];
-        const requestedFieldsUsable = Boolean(
-          requested &&
-            (requested.jobTitle?.trim() ||
-              requested.description?.trim() ||
-              requested.interviewInstructions?.trim()),
-        );
-        await JobModel.updateOne(
-          { _id: job._id },
-          {
-            $set: {
-              contentLanguage: result.contentLanguage,
-              ...(requestedFieldsUsable
-                ? { [`contentTranslations.${input.language}`]: requested }
-                : {}),
-            },
-          },
-        );
+        if (hasUsableTranslatedField(latestSource, requested)) {
+          persistSets[`contentTranslations.${input.language}`] = requested;
+          await JobModel.updateOne({ _id: job._id }, { $set: persistSets });
+          logJobTranslation("TRANSLATION_PERSISTED", {
+            jobId: input.publicJobId,
+            language: input.language ?? undefined,
+            sourceHash: sourceVersionHash,
+            calls: result.translateCalls,
+          });
+          logJobTranslation("TRANSLATION_CREATED", {
+            jobId: input.publicJobId,
+            language: input.language ?? undefined,
+            sourceHash: sourceVersionHash,
+            calls: result.translateCalls,
+            reason: "mongo",
+          });
+        } else {
+          persistSets[`contentTranslations.${input.language}`] = {
+            ...(requested ?? {}),
+            lastAttemptAt: new Date().toISOString(),
+            status: "failed",
+          };
+          await JobModel.updateOne({ _id: job._id }, { $set: persistSets });
+          logJobTranslation("TRANSLATION_FAILED", {
+            jobId: input.publicJobId,
+            language: input.language ?? undefined,
+            sourceHash: sourceVersionHash,
+            calls: result.translateCalls,
+            reason: "nothing_persistable",
+          });
+          return {
+            content: result.content,
+            source: latestSource,
+            event: "TRANSLATION_FAILED" as const,
+            translateCalls: result.translateCalls,
+            stillNeedsTranslation: true,
+          };
+        }
       } else if (result.event === "TRANSLATION_FAILED") {
         const previous = existing?.[input.language!];
         const failed = result.contentTranslations[input.language!];
-        await JobModel.updateOne(
-          { _id: job._id },
-          {
-            $set: {
-              contentLanguage: result.contentLanguage,
-              [`contentTranslations.${input.language}`]: {
-                jobTitle: previous?.jobTitle || failed?.jobTitle || "",
-                description: previous?.description || failed?.description || "",
-                interviewInstructions:
-                  previous?.interviewInstructions ||
-                  failed?.interviewInstructions ||
-                  "",
-                jobTitleHash: previous?.jobTitleHash || failed?.jobTitleHash || "",
-                descriptionHash:
-                  previous?.descriptionHash || failed?.descriptionHash || "",
-                interviewInstructionsHash:
-                  previous?.interviewInstructionsHash ||
-                  failed?.interviewInstructionsHash ||
-                  "",
-                lastAttemptAt: new Date().toISOString(),
-                status: "failed",
-              },
-            },
-          },
-        );
+        persistSets[`contentTranslations.${input.language}`] = {
+          jobTitle: previous?.jobTitle || failed?.jobTitle || "",
+          description: previous?.description || failed?.description || "",
+          interviewInstructions:
+            previous?.interviewInstructions ||
+            failed?.interviewInstructions ||
+            "",
+          jobTitleHash: failed?.jobTitleHash || previous?.jobTitleHash || "",
+          descriptionHash:
+            failed?.descriptionHash || previous?.descriptionHash || "",
+          interviewInstructionsHash:
+            failed?.interviewInstructionsHash ||
+            previous?.interviewInstructionsHash ||
+            "",
+          lastAttemptAt: new Date().toISOString(),
+          status: "failed",
+        };
+        await JobModel.updateOne({ _id: job._id }, { $set: persistSets });
       }
+
+      const persistedTranslations: JobContentTranslations = {
+        ...existing,
+        ...result.contentTranslations,
+      };
+      if (persistSets[`contentTranslations.${input.language}`]) {
+        persistedTranslations[input.language!] = persistSets[
+          `contentTranslations.${input.language}`
+        ] as JobFieldTranslation;
+      }
+
       return {
         content: result.content,
         source: latestSource,
         event: result.event,
         translateCalls: result.translateCalls,
+        stillNeedsTranslation: languageNeedsTranslation(
+          {
+            ...latestSource,
+            contentLanguage: canonicalLanguage,
+            contentTranslations: persistedTranslations,
+          },
+          input.language!,
+        ),
       };
     },
   );
@@ -977,25 +1186,29 @@ export async function persistJobContentTranslation(
     return { translateCalls: 0, translationStatus: "none" };
   }
   const job = await JobModel.findById(jobMongoId).select(
-    "jobTitle description interviewInstructions contentTranslations",
+    "jobTitle description interviewInstructions contentLanguage contentTranslations",
   );
   if (!job) return null;
   const built = await buildJobContentTranslations({
     source: readSource(job),
     existing: (job.contentTranslations ?? null) as JobContentTranslations | null,
     languages,
+    contentLanguage: job.contentLanguage,
     fetchImpl,
   });
-  const sets: Record<string, unknown> = {
-    contentLanguage: built.contentLanguage,
-    translationStatus: built.translationStatus,
-  };
-  for (const language of [built.contentLanguage, ...languages]) {
-    if (built.contentTranslations[language]) {
-      sets[`contentTranslations.${language}`] = built.contentTranslations[language];
+  const sets: Record<string, unknown> = {};
+  if (!parseJobContentLanguage(job.contentLanguage)) {
+    sets.contentLanguage = built.contentLanguage;
+  }
+  for (const language of languages) {
+    const entry = built.contentTranslations[language];
+    if (entry && language !== built.contentLanguage) {
+      sets[`contentTranslations.${language}`] = entry;
     }
   }
-  await JobModel.updateOne({ _id: job._id }, { $set: sets });
+  if (Object.keys(sets).length > 0) {
+    await JobModel.updateOne({ _id: job._id }, { $set: sets });
+  }
   return {
     translateCalls: built.translateCalls,
     translationStatus: built.translationStatus,

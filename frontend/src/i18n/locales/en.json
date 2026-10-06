@@ -152,6 +152,7 @@
     "langKannada": "Kannada",
     "langMalayalam": "Malayalam",
     "location": "Location",
+    "locationNotSpecified": "Location not specified",
     "salaryRange": "Salary Range",
     "jobType": "Job Type",
     "experience": "Experience",

@@ -33,6 +33,7 @@ describe("static i18n catalogs", () => {
     assert.notEqual(translate("ml", "jobs.applyNow"), translate("en", "jobs.applyNow"));
     assert.equal(translate("te", "navbar.jobSeeker"), "ఉద్యోగార్థి");
     assert.equal(translate("hi", "jobs.fullTime"), "पूर्णकालिक");
+    assert.notEqual(translate("te", "jobs.locationNotSpecified"), "Location not specified");
     assert.equal(translate("ta", "jobs.office"), "அலுவலகம்");
     assert.equal(translate("kn", "footer.contactUs"), "ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ");
     assert.equal(translate("te", "footer.employers"), "యజమానుల కోసం");

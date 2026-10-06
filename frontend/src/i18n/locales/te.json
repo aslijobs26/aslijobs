@@ -143,6 +143,7 @@
     "langKannada": "కన్నడ",
     "langMalayalam": "మలయాళం",
     "location": "ప్రాంతం",
+    "locationNotSpecified": "ప్రాంతం పేర్కొనబడలేదు",
     "salaryRange": "జీత పరిధి",
     "jobType": "ఉద్యోగ రకం",
     "experience": "అనుభవం",

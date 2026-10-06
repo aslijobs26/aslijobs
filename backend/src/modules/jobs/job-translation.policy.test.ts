@@ -8,6 +8,7 @@ import {
   jobTranslationQueueJobId,
   parseConfiguredJobLanguages,
   releaseTranslationEnqueueSlot,
+  shouldResetStoredTranslationTask,
   translationRetryDelayMs,
 } from "./job-translation.policy.js";
 
@@ -64,5 +65,13 @@ describe("job translation queue policy", () => {
     );
     assert.equal(isDuplicateKeyError({ code: 11000 }), true);
     assert.equal(isDuplicateKeyError(new Error("no")), false);
+  });
+
+  it("resets completed tasks only when Mongo still needs that language", () => {
+    assert.equal(shouldResetStoredTranslationTask("completed", true), true);
+    assert.equal(shouldResetStoredTranslationTask("completed", false), false);
+    assert.equal(shouldResetStoredTranslationTask("failed", true), true);
+    assert.equal(shouldResetStoredTranslationTask("pending", true), false);
+    assert.equal(shouldResetStoredTranslationTask("processing", true), false);
   });
 });

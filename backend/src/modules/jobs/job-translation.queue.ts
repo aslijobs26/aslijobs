@@ -23,6 +23,7 @@ import {
   parseConfiguredJobLanguages,
   releaseTranslationEnqueueSlot,
   safeTranslationErrorMessage,
+  shouldResetStoredTranslationTask,
   translationRetryDelayMs,
 } from "./job-translation.policy.js";
 import {
@@ -44,7 +45,7 @@ type TranslationSource = {
   contentTranslations?: JobContentTranslations | null;
 };
 
-const STALE_LOCK_MS = 30 * 60_000;
+const STALE_LOCK_MS = 5 * 60_000;
 const DRAIN_INTERVAL_MS = 3_000;
 
 let queue: Queue | null = null;
@@ -165,7 +166,10 @@ async function enqueueJobLanguageTranslation(
 
   const translations = (job.contentTranslations ?? null) as JobContentTranslations | null;
   if (
-    !languageNeedsTranslation({ ...source, contentTranslations: translations }, language) ||
+    !languageNeedsTranslation(
+      { ...source, contentLanguage: job.contentLanguage, contentTranslations: translations },
+      language,
+    ) ||
     shouldSkipFailedTranslationRetry(translations?.[language], source)
   ) {
     return "skipped";
@@ -184,15 +188,22 @@ async function enqueueJobLanguageTranslation(
       sourceHash,
     }).select("status attempts nextAttemptAt");
 
-    if (
+    if (existing?.status === "pending" || existing?.status === "processing") {
+      return "skipped";
+    }
+
+    const needsReset = Boolean(
       existing &&
-      existing.status !== "completed" &&
-      !canEnqueueJobTranslation({
-        status: existing.status,
-        attempts: existing.attempts,
-        nextAttemptAt: existing.nextAttemptAt,
-      })
-    ) {
+        shouldResetStoredTranslationTask(existing.status, true),
+    );
+    if (existing?.status === "failed" && !canEnqueueJobTranslation({
+      status: existing.status,
+      attempts: existing.attempts,
+      nextAttemptAt: existing.nextAttemptAt,
+    })) {
+      return "skipped";
+    }
+    if (existing && !needsReset && existing.status !== "failed") {
       return "skipped";
     }
 
@@ -237,7 +248,7 @@ async function enqueueJobLanguageTranslation(
 
     await pushQueueJob(taskId, jobMongoId, language, sourceHash, 0);
     console.info(
-      `[JOB-TRANSLATE] event=TRANSLATION_QUEUED jobId=${job.jobId} language=${language} sourceHash=${sourceHash}`,
+      `[JOB-TRANSLATE] event=TRANSLATION_ENQUEUED jobId=${job.jobId} language=${language} sourceHash=${sourceHash} field=job calls=0`,
     );
     return "queued";
   } finally {
@@ -339,7 +350,10 @@ async function retryOrFail(
   );
 }
 
-export async function processJobTranslationTask(taskId: string): Promise<void> {
+export async function processJobTranslationTask(
+  taskId: string,
+  fetchImpl?: typeof fetch,
+): Promise<void> {
   if (!mongoose.Types.ObjectId.isValid(taskId)) {
     return;
   }
@@ -366,9 +380,15 @@ export async function processJobTranslationTask(taskId: string): Promise<void> {
       publicJobId: claimed.publicJobId,
       language,
       forceRetry: true,
+      fetchImpl,
     });
-    if (result.event === "TRANSLATION_FAILED") {
-      await retryOrFail(claimed, "translation_provider_failed");
+    if (result.event === "TRANSLATION_FAILED" || result.stillNeedsTranslation) {
+      await retryOrFail(
+        claimed,
+        result.event === "TRANSLATION_FAILED"
+          ? "translation_provider_failed"
+          : "translation_incomplete",
+      );
       return;
     }
     await JobTranslationTaskModel.updateOne(
@@ -464,6 +484,14 @@ export function startJobTranslationRuntime(): () => Promise<void> {
       void drainOnce();
     }, DRAIN_INTERVAL_MS);
     drainTimer.unref();
+    void JobTranslationTaskModel.updateMany(
+      { status: "processing" },
+      { $set: { status: "pending", lockedAt: null, nextAttemptAt: new Date() } },
+    ).catch((error: unknown) => {
+      logTranslationFailure({
+        error: `orphan_processing_reset ${safeTranslationErrorMessage(error)}`,
+      });
+    });
   }
   if (env.REDIS_URL.trim() && !worker) {
     workerConnection = bullConnection();
@@ -532,6 +560,11 @@ export async function serveJobDetailTranslation(input: {
   }
 
   const view = resolvePublicJobTranslationView(jobForView, input.language);
+  if (view.translationStatus === "ready" && view.isTranslated && input.language) {
+    console.info(
+      `[JOB-TRANSLATE] event=CACHE_HIT jobId=${input.jobMongoId} language=${input.language} sourceHash=${jobTranslationSourceHash(source)} field=job calls=0`,
+    );
+  }
   if (view.shouldEnqueue && input.language) {
     scheduleJobLanguageTranslation(input.jobMongoId, input.language);
   }

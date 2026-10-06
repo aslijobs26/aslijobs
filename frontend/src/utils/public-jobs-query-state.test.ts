@@ -273,6 +273,23 @@ describe("Find Jobs public query lifecycle", () => {
     assert.doesNotMatch(pageSource, /sarvam/i);
     assert.match(pageSource, /enabled: isJobsQueryEnabled/);
     assert.match(pageSource, /placeholderData: \(previous\) => previous/);
+    assert.match(pageSource, /queryKey: \["public-job".*siteLanguage.code/);
+    assert.match(pageSource, /publicJobDetailRefetchInterval/);
+    assert.match(serviceSource, /translationStatus === "pending"/);
+    assert.match(serviceSource, /translationStatus === "failed"/);
+    assert.match(serviceSource, /PUBLIC_JOB_PENDING_REFETCH_LIMIT/);
+  });
+
+  it("polls pending translations long enough for HTML jobs and retries failed ones briefly", async () => {
+    const { publicJobDetailRefetchInterval } = await import(
+      "../services/public-jobs.service"
+    );
+    assert.equal(publicJobDetailRefetchInterval("pending", 1), 8_000);
+    assert.equal(publicJobDetailRefetchInterval("pending", 15), 8_000);
+    assert.equal(publicJobDetailRefetchInterval("pending", 16), false);
+    assert.equal(publicJobDetailRefetchInterval("failed", 1), 30_000);
+    assert.equal(publicJobDetailRefetchInterval("failed", 5), false);
+    assert.equal(publicJobDetailRefetchInterval("ready", 1), false);
   });
 
   it("renders filter checkboxes without a window branch that can desync SSR", () => {

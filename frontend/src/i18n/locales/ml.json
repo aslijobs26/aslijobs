@@ -143,6 +143,7 @@
     "langKannada": "കന്നഡ",
     "langMalayalam": "മലയാളം",
     "location": "സ്ഥലം",
+    "locationNotSpecified": "സ്ഥലം വ്യക്തമാക്കിയിട്ടില്ല",
     "salaryRange": "ശമ്പള പരിധി",
     "jobType": "ജോലി തരം",
     "experience": "പരിചയം",

@@ -142,15 +142,28 @@ export async function fetchPublicActiveJobByPublicId(
   }
 }
 
-/** Poll a few times while a background translation is still pending. */
+/** Poll while a background translation is genuinely in progress. HTML jobs can take >40s. */
+export const PUBLIC_JOB_PENDING_REFETCH_LIMIT = 16;
+export const PUBLIC_JOB_PENDING_REFETCH_MS = 8_000;
+/** After an honest failed response, retry a few times so recovery does not need a 10-minute wait. */
+export const PUBLIC_JOB_FAILED_REFETCH_LIMIT = 5;
+export const PUBLIC_JOB_FAILED_REFETCH_MS = 30_000;
+
 export function publicJobDetailRefetchInterval(
   translationStatus: PublicJobDetail["translationStatus"],
   dataUpdateCount: number,
 ): number | false {
-  if (translationStatus !== "pending" || dataUpdateCount >= 5) {
-    return false;
+  if (translationStatus === "pending") {
+    return dataUpdateCount >= PUBLIC_JOB_PENDING_REFETCH_LIMIT
+      ? false
+      : PUBLIC_JOB_PENDING_REFETCH_MS;
   }
-  return 8_000;
+  if (translationStatus === "failed") {
+    return dataUpdateCount >= PUBLIC_JOB_FAILED_REFETCH_LIMIT
+      ? false
+      : PUBLIC_JOB_FAILED_REFETCH_MS;
+  }
+  return false;
 }
 
 /** Related active jobs ranked for the given public job. Excludes the source job. */

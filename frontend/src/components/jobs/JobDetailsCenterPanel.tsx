@@ -1,5 +1,6 @@
 "use client";
 
+import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
@@ -134,6 +135,7 @@ export function JobDetailsCenterPanel({
   previewMode = false,
 }: JobDetailsCenterPanelProps) {
   const t = useTranslate();
+  const language = useSiteLanguage().code;
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
@@ -180,37 +182,40 @@ export function JobDetailsCenterPanel({
     );
   }
 
-  const salary = formatJobSearchSalary(job);
+  const salary = formatJobSearchSalary(job, language);
   const location = formatJobSearchLocation(
     job.cityName,
     job.stateName,
     job.city,
     job.state,
+    language,
   );
-  const employmentType = formatJobSearchJobType(job.jobType);
-  const experience = formatJobSearchExperience(job.experience);
+  const employmentType = formatJobSearchJobType(job.jobType, language);
+  const experience = formatJobSearchExperience(job.experience, language);
   const education =
     job.education.length > 0
-      ? job.education.map(formatJobSearchEducation).join(", ")
+      ? job.education.map((value) => formatJobSearchEducation(value, language)).join(", ")
       : "";
   const openings = job.vacancies ? String(job.vacancies) : "";
-  const workMode = formatJobSearchWorkMode(job.workMode);
+  const workMode = formatJobSearchWorkMode(job.workMode, language);
   const genderLabel =
     job.gender.length > 0
-      ? job.gender.map(formatJobSearchGender).join(", ")
+      ? job.gender.map((value) => formatJobSearchGender(value, language)).join(", ")
       : t("jobs.any");
   const languageChips = job.languages
-    .map(formatJobSearchLanguage)
+    .map((value) => formatJobSearchLanguage(value, language))
     .filter(Boolean);
-  const perkChips = job.perks.map(formatJobSearchPerk).filter(Boolean);
-  const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt);
+  const perkChips = job.perks.map((value) => formatJobSearchPerk(value, language)).filter(Boolean);
+  const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt, language);
   const walkInDate = formatJobSearchWalkInDateRange(
     job.walkInStartDate,
     job.walkInEndDate,
+    language,
   );
   const walkInTime = formatJobSearchWalkInTimeRange(
     job.walkInStartTime,
     job.walkInEndTime,
+    language,
   );
   const hasAddress = Boolean(job.address || location || job.landmark);
   const hasWalkIn = job.walkInEnabled;

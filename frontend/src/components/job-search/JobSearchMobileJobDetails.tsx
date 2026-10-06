@@ -4,6 +4,7 @@ import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkel
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
+import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { getJobDescriptionPlainTextLength } from "@/utils/job-description-html";
@@ -128,6 +129,7 @@ export function JobSearchMobileJobDetails({
   onRetry,
 }: JobSearchMobileJobDetailsProps) {
   const t = useTranslate();
+  const language = useSiteLanguage().code;
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
@@ -176,32 +178,35 @@ export function JobSearchMobileJobDetails({
     job.stateName,
     job.city,
     job.state,
+    language,
   );
-  const salary = formatJobSearchSalary(job);
-  const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt);
-  const employmentType = formatJobSearchJobType(job.jobType);
-  const experience = formatJobSearchExperience(job.experience);
+  const salary = formatJobSearchSalary(job, language);
+  const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt, language);
+  const employmentType = formatJobSearchJobType(job.jobType, language);
+  const experience = formatJobSearchExperience(job.experience, language);
   const education =
     job.education.length > 0
-      ? job.education.map(formatJobSearchEducation).filter(Boolean).join(", ")
+      ? job.education.map((value) => formatJobSearchEducation(value, language)).filter(Boolean).join(", ")
       : "";
-  const workMode = formatJobSearchWorkMode(job.workMode);
+  const workMode = formatJobSearchWorkMode(job.workMode, language);
   const genderLabel =
     job.gender.length > 0
-      ? job.gender.map(formatJobSearchGender).filter(Boolean).join(", ")
+      ? job.gender.map((value) => formatJobSearchGender(value, language)).filter(Boolean).join(", ")
       : "";
   const languageChips = job.languages
-    .map(formatJobSearchLanguage)
+    .map((value) => formatJobSearchLanguage(value, language))
     .filter(Boolean);
-  const perkChips = job.perks.map(formatJobSearchPerk).filter(Boolean);
+  const perkChips = job.perks.map((value) => formatJobSearchPerk(value, language)).filter(Boolean);
   const openings = job.vacancies > 0 ? String(job.vacancies) : "";
   const walkInDate = formatJobSearchWalkInDateRange(
     job.walkInStartDate,
     job.walkInEndDate,
+    language,
   );
   const walkInTime = formatJobSearchWalkInTimeRange(
     job.walkInStartTime,
     job.walkInEndTime,
+    language,
   );
 
   const descriptionNeedsCollapse =

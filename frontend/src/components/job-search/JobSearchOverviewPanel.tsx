@@ -5,6 +5,7 @@ import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkel
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
+import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import {
@@ -221,6 +222,7 @@ export function JobSearchOverviewPanel({
   onRetry,
 }: JobSearchOverviewPanelProps) {
   const t = useTranslate();
+  const language = useSiteLanguage().code;
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
@@ -357,25 +359,36 @@ export function JobSearchOverviewPanel({
     job.stateName,
     job.city,
     job.state,
+    language,
   );
-  const salary = formatJobSearchSalary(job);
-  const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt);
+  const salary = formatJobSearchSalary(job, language);
+  const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt, language);
   const genderLabel =
     job.gender.length > 0
-      ? job.gender.map(formatJobSearchGender).join(", ")
+      ? job.gender.map((value) => formatJobSearchGender(value, language)).join(", ")
       : t("jobs.any");
   const languageChips = job.languages
-    .map(formatJobSearchLanguage)
+    .map((value) => formatJobSearchLanguage(value, language))
     .filter(Boolean);
   const education =
     job.education.length > 0
-      ? job.education.map(formatJobSearchEducation).join(", ")
+      ? job.education.map((value) => formatJobSearchEducation(value, language)).join(", ")
       : "";
-  const perkChips = job.perks.map(formatJobSearchPerk).filter(Boolean);
-  const employmentType = formatJobSearchJobType(job.jobType);
-  const experience = formatJobSearchExperience(job.experience);
-  const workMode = formatJobSearchWorkMode(job.workMode);
+  const perkChips = job.perks.map((value) => formatJobSearchPerk(value, language)).filter(Boolean);
+  const employmentType = formatJobSearchJobType(job.jobType, language);
+  const experience = formatJobSearchExperience(job.experience, language);
+  const workMode = formatJobSearchWorkMode(job.workMode, language);
   const openings = job.vacancies ? String(job.vacancies) : "";
+  const walkInDate = formatJobSearchWalkInDateRange(
+    job.walkInStartDate,
+    job.walkInEndDate,
+    language,
+  );
+  const walkInTime = formatJobSearchWalkInTimeRange(
+    job.walkInStartTime,
+    job.walkInEndTime,
+    language,
+  );
 
   const handleShare = () => {
     void shareOrCopyText({
@@ -667,34 +680,22 @@ export function JobSearchOverviewPanel({
                     </DetailPlainText>
                   </div>
                 </div>
-                {formatJobSearchWalkInDateRange(
-                  job.walkInStartDate,
-                  job.walkInEndDate,
-                ) ? (
+                {walkInDate ? (
                   <div>
                     <DetailFieldLabel>{t("jobs.date")}</DetailFieldLabel>
                     <div className="mt-1.5">
                       <DetailPlainText>
-                        {formatJobSearchWalkInDateRange(
-                          job.walkInStartDate,
-                          job.walkInEndDate,
-                        )}
+                        {walkInDate}
                       </DetailPlainText>
                     </div>
                   </div>
                 ) : null}
-                {formatJobSearchWalkInTimeRange(
-                  job.walkInStartTime,
-                  job.walkInEndTime,
-                ) ? (
+                {walkInTime ? (
                   <div>
                     <DetailFieldLabel>{t("jobs.time")}</DetailFieldLabel>
                     <div className="mt-1.5">
                       <DetailPlainText>
-                        {formatJobSearchWalkInTimeRange(
-                          job.walkInStartTime,
-                          job.walkInEndTime,
-                        )}
+                        {walkInTime}
                       </DetailPlainText>
                     </div>
                   </div>
