@@ -192,6 +192,21 @@
     "salaryLowToHigh": "ವೇತನ ಕಡಿಮೆಯಿಂದ ಹೆಚ್ಚು",
     "reset": "ಮರುಹೊಂದಿಸಿ",
     "done": "ಮುಗಿದಿದೆ",
-    "applyFilters": "ಫಿಲ್ಟರ್‌ಗಳನ್ನು ಅನ್ವಯಿಸಿ"
+    "applyFilters": "ಫಿಲ್ಟರ್‌ಗಳನ್ನು ಅನ್ವಯಿಸಿ",
+    "verified": "ಪರಿಶೀಲಿತ",
+    "postedPrefix": "ಪೋಸ್ಟ್ ಆಗಿದೆ {time}",
+    "backToJobs": "ಉದ್ಯೋಗಗಳಿಗೆ ಹಿಂತಿರುಗಿ",
+    "jobUnavailable": "ಉದ್ಯೋಗ ಲಭ್ಯವಿಲ್ಲ",
+    "landmark": "ಹೆಗ್ಗುರುತು: {value}",
+    "noDescription": "ವಿವರಣೆ ನೀಡಲಾಗಿಲ್ಲ.",
+    "whatsappLabel": "ವಾಟ್ಸಾಪ್: {number}",
+    "shareJobAction": "ಉದ್ಯೋಗ ಹಂಚಿಕೊಳ್ಳಿ",
+    "selectJobToView": "ವಿವರಗಳನ್ನು ನೋಡಲು ಉದ್ಯೋಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+    "noJobsSalaryRange": "ಆಯ್ದ ವೇತನ ವ್ಯಾಪ್ತಿಗೆ ಉದ್ಯೋಗಗಳು ಸಿಗಲಿಲ್ಲ.",
+    "similarJobs": "ಸಮಾನ ಉದ್ಯೋಗಗಳು",
+    "loadingSimilarJobs": "ಸಮಾನ ಉದ್ಯೋಗಗಳು ಲೋಡ್ ಆಗುತ್ತಿವೆ…",
+    "noSimilarJobs": "ಸಮಾನ ಉದ್ಯೋಗಗಳು ಲಭ್ಯವಿಲ್ಲ.",
+    "viewAll": "ಎಲ್ಲಾ ನೋಡಿ",
+    "jobSummary": "ಉದ್ಯೋಗ ಸಾರಾಂಶ"
   }
 }

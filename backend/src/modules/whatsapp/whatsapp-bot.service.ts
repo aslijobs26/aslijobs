@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { env } from "../../config/env.js";
 import { applicationService } from "../applications/application.service.js";
+import { JobModel } from "../jobs/job.model.js";
+import { parseJobContentLanguage } from "../jobs/job-content-language.js";
+import { resolveJobContent } from "../jobs/job-content-translation.js";
 import { jobService, toLocationSlug } from "../jobs/job.service.js";
 import {
   listEmployerJobsQuerySchema,
@@ -692,7 +695,13 @@ async function buildReply(
     }
     case "APPLIED_COVERAGE": {
       if (!asSeeker || !seeker) return reply({ situation: "denied", reason: "seeker_required" });
-      return coverageReply(understanding, seeker._id.toString(), seeker.city || "", meta);
+      return coverageReply(
+        understanding,
+        seeker._id.toString(),
+        seeker.city || "",
+        meta,
+        understanding.language,
+      );
     }
     case "MY_APPLICATIONS":
     case "APPLICATION_COUNT":
@@ -889,6 +898,7 @@ async function coverageReply(
   jobSeekerId: string,
   profileCity: string,
   meta: { accountType: AccountKind; activeRole: "" | "seeker" | "employer" },
+  language?: string,
 ): Promise<BotTurn> {
   const lookup = toPublicJobsLookup({
     category: understanding.category,
@@ -896,7 +906,7 @@ async function coverageReply(
     openSearch: !understanding.category,
   });
   const [jobs, applications] = await Promise.all([
-    loadJobs(lookup.search, lookup.city, jobSeekerId),
+    loadJobs(lookup.search, lookup.city, jobSeekerId, language),
     applicationService.listForSeeker({
       jobSeekerId,
       limit: 10,
@@ -933,15 +943,14 @@ function logWhatsAppJobs(input: {
 }
 
 /**
- * Uses the website's public job search. Titles stay in the posted language:
- * role verification and reply localization match source titles, and translated
- * titles (e.g. Telugu spellings from the translation worker) would be dropped.
+ * Matches roles on canonical source titles (list API without language), then
+ * overlays a stored Mongo translation for display. Never enqueues translation.
  */
 async function loadJobs(
   search: string,
   city: string,
   jobSeekerId?: string,
-  _language?: string,
+  language?: string,
 ): Promise<{ jobs: PublicJobFact[]; total: number; dbMatches: number; hasMore: boolean }> {
   const cityAliases = placeCityAliases(city);
   const query = publicJobsQuerySchema.parse({
@@ -965,18 +974,59 @@ async function loadJobs(
     search,
     result.pagination.total - (result.jobs.length - inCity.length),
   );
-  const jobs = selected.jobs.map((job) => ({
-    jobTitle: job.jobTitle,
-    companyName: job.companyName,
-    cityName: job.cityName,
-    stateName: job.stateName,
-    jobId: job.jobId,
-    salaryLabel: formatSalaryLabel(job),
-  }));
+  const jobs = await overlayStoredWhatsAppJobTitles(
+    selected.jobs.map((job) => ({
+      jobTitle: job.jobTitle,
+      companyName: job.companyName,
+      cityName: job.cityName,
+      stateName: job.stateName,
+      jobId: job.jobId,
+      salaryLabel: formatSalaryLabel(job),
+    })),
+    language,
+  );
   return {
     total: selected.total,
     dbMatches: result.pagination.total,
     hasMore: selected.hasMore,
     jobs,
   };
+}
+
+async function overlayStoredWhatsAppJobTitles(
+  jobs: PublicJobFact[],
+  language?: string,
+): Promise<PublicJobFact[]> {
+  const requested = parseJobContentLanguage(language);
+  if (!requested || jobs.length === 0) {
+    return jobs;
+  }
+  const docs = await JobModel.find({ jobId: { $in: jobs.map((job) => job.jobId) } })
+    .select("jobId jobTitle description interviewInstructions contentLanguage contentTranslations")
+    .lean();
+  const byId = new Map(docs.map((doc) => [String(doc.jobId), doc]));
+  return jobs.map((job) => {
+    const stored = byId.get(job.jobId);
+    if (!stored) {
+      return job;
+    }
+    const localized = resolveJobContent(
+      {
+        jobTitle: String(stored.jobTitle ?? job.jobTitle),
+        description: typeof stored.description === "string" ? stored.description : "",
+        interviewInstructions:
+          typeof stored.interviewInstructions === "string" ? stored.interviewInstructions : "",
+        contentLanguage: stored.contentLanguage ?? null,
+        contentTranslations:
+          stored.contentTranslations && typeof stored.contentTranslations === "object"
+            ? (stored.contentTranslations as never)
+            : null,
+      },
+      requested,
+    );
+    return {
+      ...job,
+      jobTitle: localized.jobTitle || job.jobTitle,
+    };
+  });
 }

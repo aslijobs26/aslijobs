@@ -61,8 +61,12 @@ export type PublicJobDetail = PublicJobListItem & {
   contactPersonName: string | null;
   /** Requested site language, when one was sent. */
   language?: string | null;
-  /** completed when this response is in the requested language. */
-  translationStatus?: "pending" | "completed" | "failed" | "none";
+  /** Canonical employer/Operations source language. */
+  sourceLanguage?: "en" | "hi" | "te" | "ta" | "kn" | "ml";
+  /** Language of the canonical source fields. */
+  contentLanguage?: string | null;
+  /** ready when this response is in the requested language. */
+  translationStatus?: "ready" | "pending" | "fallback" | "failed";
   /** False while the original text is shown because translation is not ready. */
   isTranslated?: boolean;
 };

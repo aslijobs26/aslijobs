@@ -4,6 +4,7 @@ import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkel
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
+import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { getJobDescriptionPlainTextLength } from "@/utils/job-description-html";
 import {
@@ -126,6 +127,7 @@ export function JobSearchMobileJobDetails({
   onToggleBookmark,
   onRetry,
 }: JobSearchMobileJobDetailsProps) {
+  const t = useTranslate();
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
@@ -148,13 +150,13 @@ export function JobSearchMobileJobDetails({
           className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           <ArrowLeft className="size-3.5" aria-hidden="true" />
-          Back to jobs
+          {t("jobs.backToJobs")}
         </button>
         <h1 className="mt-3 text-base font-bold text-foreground">
-          Job unavailable
+          {t("jobs.jobUnavailable")}
         </h1>
         <p className="mt-2 text-xs text-muted">
-          Unable to load this job. It may have been closed or removed.
+          {t("jobs.unableToLoadClosed")}
         </p>
         {onRetry ? (
           <button
@@ -162,7 +164,7 @@ export function JobSearchMobileJobDetails({
             onClick={onRetry}
             className="mt-4 inline-flex h-10 items-center rounded-xl bg-primary px-4 text-[13px] font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            Try again
+            {t("jobs.tryAgain")}
           </button>
         ) : null}
       </div>
@@ -210,7 +212,7 @@ export function JobSearchMobileJobDetails({
       title: job.jobTitle,
       text: `${job.jobTitle} at ${job.companyName}`,
       url: buildAbsolutePublicJobUrl(job.jobId),
-      successMessage: "Job link copied",
+      successMessage: t("jobs.linkCopied"),
     });
   };
 
@@ -244,48 +246,48 @@ export function JobSearchMobileJobDetails({
 
   const summaryItems: { label: string; content: ReactNode }[] = [
     {
-      label: "Salary",
+      label: t("jobs.salary"),
       content: salary ? <SummaryValue>{salary}</SummaryValue> : null,
     },
     {
-      label: "Location",
+      label: t("jobs.location"),
       content: location ? <SummaryValue>{location}</SummaryValue> : null,
     },
     {
-      label: "Employment Type",
+      label: t("jobs.employmentType"),
       content: employmentType ? (
         <SummaryValue>{employmentType}</SummaryValue>
       ) : null,
     },
     {
-      label: "Experience",
+      label: t("jobs.experience"),
       content: experience ? <SummaryValue>{experience}</SummaryValue> : null,
     },
     {
-      label: "Qualification",
+      label: t("jobs.qualification"),
       content: education ? <SummaryValue>{education}</SummaryValue> : null,
     },
     {
-      label: "Openings",
+      label: t("jobs.openings"),
       content: openings ? <SummaryValue>{openings}</SummaryValue> : null,
     },
     {
-      label: "Work Mode",
+      label: t("jobs.workMode"),
       content: workMode ? <SummaryValue>{workMode}</SummaryValue> : null,
     },
     {
-      label: "Gender",
+      label: t("jobs.gender"),
       content: genderLabel ? <SummaryValue>{genderLabel}</SummaryValue> : null,
     },
     {
-      label: "Languages",
+      label: t("jobs.languages"),
       content:
         languageChips.length > 0 ? (
           <OutlinePills values={languageChips} />
         ) : null,
     },
     {
-      label: "Benefits",
+      label: t("jobs.benefits"),
       content:
         perkChips.length > 0 ? <OutlinePills values={perkChips} /> : null,
     },
@@ -301,13 +303,13 @@ export function JobSearchMobileJobDetails({
             className="inline-flex min-h-9 items-center gap-1.5 text-[13px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
             <ArrowLeft className="size-3.5" strokeWidth={2.25} aria-hidden="true" />
-            Back to jobs
+            {t("jobs.backToJobs")}
           </button>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleShare}
-              aria-label="Share job"
+              aria-label={t("jobs.shareJob")}
               className="inline-flex size-10 items-center justify-center rounded-[10px] border border-[#E5E7EB] bg-white text-[#4B5563] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
               <Share2 className="size-4" strokeWidth={1.75} aria-hidden="true" />
@@ -315,7 +317,7 @@ export function JobSearchMobileJobDetails({
             <button
               type="button"
               onClick={onToggleBookmark}
-              aria-label={bookmarked ? "Remove bookmark" : "Save job"}
+              aria-label={bookmarked ? t("jobs.removeBookmark") : t("jobs.saveJob")}
               aria-pressed={bookmarked}
               className={cn(
                 "inline-flex size-10 items-center justify-center rounded-[10px] border bg-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
@@ -343,8 +345,8 @@ export function JobSearchMobileJobDetails({
             </h1>
             <span
               className="inline-flex size-6 items-center justify-center rounded-full border border-primary/20 bg-[#EAF8F3] text-primary"
-              title="Verified"
-              aria-label="Verified"
+              title={t("jobs.verified")}
+              aria-label={t("jobs.verified")}
             >
               <ShieldCheck
                 className="size-3.5"
@@ -364,7 +366,7 @@ export function JobSearchMobileJobDetails({
                 strokeWidth={1.75}
                 aria-hidden="true"
               />
-              Posted {posted}
+              {t("jobs.postedPrefix", { time: posted })}
             </p>
           ) : null}
         </header>
@@ -372,7 +374,7 @@ export function JobSearchMobileJobDetails({
         {summaryItems.length > 0 ? (
           <section
             className="mt-5 rounded-2xl border border-[#E8ECF0] bg-white px-4"
-            aria-label="Job summary"
+            aria-label={t("jobs.jobSummary")}
           >
             <div className="grid grid-cols-2 gap-x-4">
               {summaryItems.map((item) => (
@@ -387,9 +389,9 @@ export function JobSearchMobileJobDetails({
           </section>
         ) : null}
 
-        <ContentSection title="Job Description">
+        <ContentSection title={t("jobs.jobDescription")}>
           <p className="text-[13px] font-semibold text-[#1F2937]">
-            {job.jobTitle} Job Description
+            {job.jobTitle}
           </p>
 
           {job.description?.trim() ? (
@@ -417,7 +419,7 @@ export function JobSearchMobileJobDetails({
                   onClick={() => setDescriptionExpanded((current) => !current)}
                   className="relative z-10 mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 >
-                  {descriptionExpanded ? "View less" : "View more"}
+                  {descriptionExpanded ? t("jobs.showLessText") : t("jobs.showMoreText")}
                   <ChevronDown
                     className={cn(
                       "size-3.5 transition-transform",
@@ -431,38 +433,40 @@ export function JobSearchMobileJobDetails({
             </div>
           ) : (
             <p className="mt-2 text-[13px] text-[#9CA3AF]">
-              No description provided.
+              {t("jobs.noDescription")}
             </p>
           )}
         </ContentSection>
 
         {job.address || location || job.landmark ? (
-          <ContentSection title="Address">
+          <ContentSection title={t("jobs.address")}>
             <div className="space-y-1 text-[13px] leading-[1.65] text-[#374151]">
               {job.address ? <p>{job.address}</p> : null}
               {location ? <p>{location}</p> : null}
-              {job.landmark ? <p>Landmark: {job.landmark}</p> : null}
+              {job.landmark ? (
+                <p>{t("jobs.landmark", { value: job.landmark })}</p>
+              ) : null}
             </div>
           </ContentSection>
         ) : null}
 
         {job.walkInEnabled ? (
-          <ContentSection title="Walk-in Details">
+          <ContentSection title={t("jobs.walkInDetails")}>
             <div className="space-y-3">
               <div>
                 <p className="text-[10px] font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
-                  Interview Address
+                  {t("jobs.interviewAddress")}
                 </p>
                 <p className="mt-1 text-[13px] leading-snug font-semibold text-[#4B5563]">
                   {job.interviewAddress ||
                     location ||
-                    "Address shared by recruiter"}
+                    t("jobs.addressShared")}
                 </p>
               </div>
               {walkInDate ? (
                 <div>
                   <p className="text-[10px] font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
-                    Date
+                    {t("jobs.date")}
                   </p>
                   <p className="mt-1 text-[13px] leading-snug font-semibold text-[#4B5563]">
                     {walkInDate}
@@ -472,7 +476,7 @@ export function JobSearchMobileJobDetails({
               {walkInTime ? (
                 <div>
                   <p className="text-[10px] font-medium tracking-[0.05em] text-[#9CA3AF] uppercase">
-                    Time
+                    {t("jobs.time")}
                   </p>
                   <p className="mt-1 text-[13px] leading-snug font-semibold text-[#4B5563]">
                     {walkInTime}
@@ -484,7 +488,7 @@ export function JobSearchMobileJobDetails({
         ) : null}
 
         {job.interviewInstructions?.trim() ? (
-          <ContentSection title="Other Instructions">
+          <ContentSection title={t("jobs.otherInstructions")}>
             <p className="whitespace-pre-wrap text-[13px] leading-[1.65] text-[#374151]">
               {job.interviewInstructions.trim()}
             </p>
@@ -492,7 +496,7 @@ export function JobSearchMobileJobDetails({
         ) : null}
 
         {job.contactPersonName || job.applyWhatsAppNumber ? (
-          <ContentSection title="Recruiter">
+          <ContentSection title={t("jobs.recruiter")}>
             <div className="space-y-1 text-[13px] leading-[1.65] text-[#374151]">
               {job.contactPersonName ? (
                 <p className="font-semibold text-[#4B5563]">
@@ -500,7 +504,9 @@ export function JobSearchMobileJobDetails({
                 </p>
               ) : null}
               {job.applyWhatsAppNumber ? (
-                <p>WhatsApp: {job.applyWhatsAppNumber}</p>
+                <p>
+                  {t("jobs.whatsappLabel", { number: job.applyWhatsAppNumber })}
+                </p>
               ) : null}
             </div>
           </ContentSection>

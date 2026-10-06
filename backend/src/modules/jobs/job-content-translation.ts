@@ -3,6 +3,7 @@ import { JobModel } from "./job.model.js";
 import {
   detectJobContentLanguage,
   JOB_CONTENT_LANGUAGES,
+  resolveJobSourceLanguage,
   type JobContentLanguage,
 } from "./job-content-language.js";
 import {
@@ -24,8 +25,10 @@ export type JobTranslationStatus = "completed" | "failed" | "partial";
 export type JobTranslationLogEvent =
   | "CACHE_HIT"
   | "CACHE_MISS"
+  | "TRANSLATION_QUEUED"
   | "TRANSLATION_CREATED"
   | "TRANSLATION_SKIPPED"
+  | "TRANSLATION_SKIPPED_SOURCE_LANGUAGE"
   | "TRANSLATION_FAILED";
 
 export type JobFieldTranslation = {
@@ -494,11 +497,8 @@ export async function buildJobContentTranslations(input: {
               fetchImpl: input.fetchImpl,
             });
         calls += result.calls;
-        if (result.failed) {
+        if (result.failed || !result.text.trim()) {
           targetFailed = true;
-          if (!hasMatchingHtmlStructure(value, translated[field])) {
-            translated[field] = "";
-          }
           continue;
         }
         translated[field] = result.text;
@@ -527,14 +527,14 @@ export async function buildJobContentTranslations(input: {
 }
 
 export function resolveJobContent<T extends SourceFields & {
-  contentLanguage?: string;
+  contentLanguage?: string | null;
   contentTranslations?: JobContentTranslations | null;
 }>(job: T, language: JobContentLanguage | null): SourceFields {
-  if (!language) {
-    return readSource(job);
+  const source = readSource(job);
+  if (!language || language === resolveJobSourceLanguage({ ...job, ...source })) {
+    return source;
   }
   const stored = job.contentTranslations?.[language];
-  const source = readSource(job);
   if (!stored) return source;
   const usable = (field: JobTranslatableField): string =>
     isUsableFieldTranslation(source[field], stored, field)
@@ -588,6 +588,7 @@ type TranslatableJob = {
   jobTitle?: string;
   description?: string;
   interviewInstructions?: string;
+  contentLanguage?: string | null;
   contentTranslations?: JobContentTranslations | null;
 };
 
@@ -605,7 +606,7 @@ export function needsJobContentTranslation(
   if (!sample.trim()) {
     return false;
   }
-  const sourceLanguage = detectJobContentLanguage(sample);
+  const sourceLanguage = resolveJobSourceLanguage(job);
   const targets = (languages ?? JOB_CONTENT_LANGUAGES).filter(
     (language) => language !== sourceLanguage,
   );
@@ -646,6 +647,7 @@ export async function translateRequestedJobLanguage(input: {
   source: SourceFields;
   existing?: JobContentTranslations | null;
   language: JobContentLanguage;
+  contentLanguage?: string | null;
   publicJobId?: string;
   fetchImpl?: typeof fetch;
   /** Worker retries bypass the public request cooldown. */
@@ -657,19 +659,26 @@ export async function translateRequestedJobLanguage(input: {
   contentTranslations: JobContentTranslations;
   contentLanguage: JobContentLanguage;
 }> {
-  const job = { ...input.source, contentTranslations: input.existing };
-  const sample = `${input.source.jobTitle}\n${input.source.description}\n${input.source.interviewInstructions}`;
-  const sourceLanguage = detectJobContentLanguage(sample);
+  const job = {
+    ...input.source,
+    contentTranslations: input.existing,
+    contentLanguage: input.contentLanguage,
+  };
+  const sourceLanguage = resolveJobSourceLanguage(job);
 
-  if (!sample.trim() || input.language === sourceLanguage) {
-    logJobTranslation("TRANSLATION_SKIPPED", {
-      jobId: input.publicJobId,
-      language: input.language,
-      reason: input.language === sourceLanguage ? "same_language" : "empty",
-    });
+  if (!`${input.source.jobTitle}\n${input.source.description}\n${input.source.interviewInstructions}`.trim() || input.language === sourceLanguage) {
+    const skippedSource = input.language === sourceLanguage;
+    logJobTranslation(
+      skippedSource ? "TRANSLATION_SKIPPED_SOURCE_LANGUAGE" : "TRANSLATION_SKIPPED",
+      {
+        jobId: input.publicJobId,
+        language: input.language,
+        reason: skippedSource ? "same_language" : "empty",
+      },
+    );
     return {
       content: input.source,
-      event: "TRANSLATION_SKIPPED",
+      event: skippedSource ? "TRANSLATION_SKIPPED_SOURCE_LANGUAGE" : "TRANSLATION_SKIPPED",
       translateCalls: 0,
       contentTranslations: input.existing ?? {},
       contentLanguage: sourceLanguage,
@@ -746,11 +755,12 @@ export async function translateRequestedJobLanguage(input: {
  * Single Sarvam boundary for job content. List pages must not call this in a loop.
  * Detail pages call it once for the requested language.
  */
-export type PublicJobTranslationStatus = "pending" | "completed" | "failed" | "none";
+export type PublicJobTranslationStatus = "ready" | "pending" | "fallback" | "failed";
 
 /**
  * Decides what a job-detail request may return without calling a translation
- * provider. Missing translations stay on the original text and can be queued.
+ * provider. Usable per-field translations are returned immediately. Missing
+ * or stale fields stay on the original text and can be queued for one language.
  */
 export function resolvePublicJobTranslationView(
   job: TranslatableJob,
@@ -758,38 +768,44 @@ export function resolvePublicJobTranslationView(
 ): {
   content: SourceFields;
   language: JobContentLanguage | null;
+  sourceLanguage: JobContentLanguage;
   translationStatus: PublicJobTranslationStatus;
   isTranslated: boolean;
   shouldEnqueue: boolean;
 } {
   const source = readSource(job);
+  const sourceLanguage = resolveJobSourceLanguage({ ...job, ...source });
   if (!language) {
     return {
       content: source,
       language: null,
-      translationStatus: "none",
+      sourceLanguage,
+      translationStatus: "fallback",
       isTranslated: false,
       shouldEnqueue: false,
     };
   }
 
-  const sample = `${source.jobTitle}\n${source.description}\n${source.interviewInstructions}`;
-  const sourceLanguage = detectJobContentLanguage(sample);
-  if (!sample.trim() || language === sourceLanguage) {
+  if (!`${source.jobTitle}\n${source.description}\n${source.interviewInstructions}`.trim() || language === sourceLanguage) {
     return {
       content: source,
       language,
-      translationStatus: "none",
+      sourceLanguage,
+      translationStatus: "ready",
       isTranslated: false,
       shouldEnqueue: false,
     };
   }
 
+  const content = resolveJobContent({ ...job, ...source }, language);
+  const isTranslated = hasUsableTranslatedContent(content, source);
+
   if (!languageNeedsTranslation(job, language)) {
     return {
-      content: resolveJobContent({ ...job, ...source }, language),
+      content,
       language,
-      translationStatus: "completed",
+      sourceLanguage,
+      translationStatus: "ready",
       isTranslated: true,
       shouldEnqueue: false,
     };
@@ -797,21 +813,32 @@ export function resolvePublicJobTranslationView(
 
   if (shouldSkipFailedTranslationRetry(job.contentTranslations?.[language], source)) {
     return {
-      content: source,
+      content,
       language,
+      sourceLanguage,
       translationStatus: "failed",
-      isTranslated: false,
+      isTranslated,
       shouldEnqueue: false,
     };
   }
 
   return {
-    content: source,
+    content,
     language,
+    sourceLanguage,
     translationStatus: "pending",
-    isTranslated: false,
+    isTranslated,
     shouldEnqueue: true,
   };
+}
+
+function hasUsableTranslatedContent(
+  resolved: SourceFields,
+  source: SourceFields,
+): boolean {
+  return JOB_TRANSLATABLE_FIELDS.some(
+    (field) => Boolean(resolved[field].trim()) && resolved[field] !== source[field],
+  );
 }
 
 export async function translateJobContentOnDemand(input: {
@@ -824,15 +851,18 @@ export async function translateJobContentOnDemand(input: {
   allowDraft?: boolean;
 }): Promise<{
   content: SourceFields;
+  source: SourceFields;
   event: JobTranslationLogEvent;
   translateCalls: number;
 }> {
   const job = await JobModel.findById(input.jobMongoId).select(
-    "jobTitle description interviewInstructions contentTranslations status",
+    "jobTitle description interviewInstructions contentLanguage contentTranslations status",
   );
   if (!job) {
+    const empty = { jobTitle: "", description: "", interviewInstructions: "" };
     return {
-      content: { jobTitle: "", description: "", interviewInstructions: "" },
+      content: empty,
+      source: empty,
       event: "TRANSLATION_SKIPPED",
       translateCalls: 0,
     };
@@ -845,43 +875,81 @@ export async function translateJobContentOnDemand(input: {
       language: input.language ?? "",
       reason: isDraftBlocked ? "draft" : "no_language",
     });
-    return { content: source, event: "TRANSLATION_SKIPPED", translateCalls: 0 };
+    return { content: source, source, event: "TRANSLATION_SKIPPED", translateCalls: 0 };
   }
 
   return withTranslationInFlight(
     translationInFlightKey(input.jobMongoId, input.language),
     async () => {
       const fresh = await JobModel.findById(input.jobMongoId).select(
-        "jobTitle description interviewInstructions contentTranslations",
+        "jobTitle description interviewInstructions contentLanguage contentTranslations",
       );
       const latestSource = fresh ? readSource(fresh) : source;
       const existing = (fresh?.contentTranslations ??
         job.contentTranslations ??
         null) as JobContentTranslations | null;
+      const storedSourceLanguage =
+        fresh?.contentLanguage ?? job.contentLanguage ?? null;
       const result = await translateRequestedJobLanguage({
         source: latestSource,
         existing,
         language: input.language!,
+        contentLanguage: storedSourceLanguage,
         publicJobId: input.publicJobId,
         fetchImpl: input.fetchImpl,
         forceRetry: input.forceRetry,
       });
-      if (result.event === "TRANSLATION_CREATED" || result.event === "TRANSLATION_FAILED") {
+      if (result.event === "TRANSLATION_CREATED") {
+        const requested = result.contentTranslations[input.language!];
+        const requestedFieldsUsable = Boolean(
+          requested &&
+            (requested.jobTitle?.trim() ||
+              requested.description?.trim() ||
+              requested.interviewInstructions?.trim()),
+        );
         await JobModel.updateOne(
           { _id: job._id },
           {
             $set: {
               contentLanguage: result.contentLanguage,
-              [`contentTranslations.${result.contentLanguage}`]:
-                result.contentTranslations[result.contentLanguage],
-              [`contentTranslations.${input.language}`]:
-                result.contentTranslations[input.language!],
+              ...(requestedFieldsUsable
+                ? { [`contentTranslations.${input.language}`]: requested }
+                : {}),
+            },
+          },
+        );
+      } else if (result.event === "TRANSLATION_FAILED") {
+        const previous = existing?.[input.language!];
+        const failed = result.contentTranslations[input.language!];
+        await JobModel.updateOne(
+          { _id: job._id },
+          {
+            $set: {
+              contentLanguage: result.contentLanguage,
+              [`contentTranslations.${input.language}`]: {
+                jobTitle: previous?.jobTitle || failed?.jobTitle || "",
+                description: previous?.description || failed?.description || "",
+                interviewInstructions:
+                  previous?.interviewInstructions ||
+                  failed?.interviewInstructions ||
+                  "",
+                jobTitleHash: previous?.jobTitleHash || failed?.jobTitleHash || "",
+                descriptionHash:
+                  previous?.descriptionHash || failed?.descriptionHash || "",
+                interviewInstructionsHash:
+                  previous?.interviewInstructionsHash ||
+                  failed?.interviewInstructionsHash ||
+                  "",
+                lastAttemptAt: new Date().toISOString(),
+                status: "failed",
+              },
             },
           },
         );
       }
       return {
         content: result.content,
+        source: latestSource,
         event: result.event,
         translateCalls: result.translateCalls,
       };
@@ -890,23 +958,14 @@ export async function translateJobContentOnDemand(input: {
 }
 
 /**
- * Queues background translation for configured languages.
- * Never translates inside the caller’s request.
+ * Publish/submit must not enqueue translations. Source language is persisted
+ * at save time; languages are generated only on an explicit detail request.
  */
 export function queueJobContentTranslation(jobMongoId: string): void {
-  void import("./job-translation.queue.js")
-    .then((queue) => {
-      queue.scheduleJobContentTranslations(jobMongoId);
-    })
-    .catch((error: unknown) => {
-      console.error("[JOB-TRANSLATE] event=TRANSLATION_FAILED", {
-        jobId: jobMongoId,
-        language: "-",
-        attempt: 0,
-        error: error instanceof Error ? error.message : "enqueue_failed",
-        timestamp: new Date().toISOString(),
-      });
-    });
+  logJobTranslation("TRANSLATION_SKIPPED", {
+    jobId: jobMongoId,
+    reason: "no_eager_translation",
+  });
 }
 
 export async function persistJobContentTranslation(

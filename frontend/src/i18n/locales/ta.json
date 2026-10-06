@@ -192,6 +192,21 @@
     "salaryLowToHigh": "சம்பளம் குறைவு முதல் அதிகம்",
     "reset": "மீட்டமை",
     "done": "முடிந்தது",
-    "applyFilters": "வடிகட்டிகளைப் பயன்படுத்து"
+    "applyFilters": "வடிகட்டிகளைப் பயன்படுத்து",
+    "verified": "சரிபார்க்கப்பட்டது",
+    "postedPrefix": "பதிவிடப்பட்டது {time}",
+    "backToJobs": "வேலைகளுக்குத் திரும்பு",
+    "jobUnavailable": "வேலை கிடைக்கவில்லை",
+    "landmark": "அடையாளம்: {value}",
+    "noDescription": "விவரம் வழங்கப்படவில்லை.",
+    "whatsappLabel": "வாட்ஸ்அப்: {number}",
+    "shareJobAction": "வேலையைப் பகிரவும்",
+    "selectJobToView": "விவரங்களைப் பார்க்க ஒரு வேலையைத் தேர்ந்தெடுக்கவும்.",
+    "noJobsSalaryRange": "தேர்ந்தெடுத்த சம்பள வரம்பில் வேலைகள் இல்லை.",
+    "similarJobs": "ஒத்த வேலைகள்",
+    "loadingSimilarJobs": "ஒத்த வேலைகள் ஏற்றப்படுகின்றன…",
+    "noSimilarJobs": "ஒத்த வேலைகள் இல்லை.",
+    "viewAll": "அனைத்தையும் காண்க",
+    "jobSummary": "வேலை சுருக்கம்"
   }
 }

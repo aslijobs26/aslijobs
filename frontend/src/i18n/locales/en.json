@@ -201,6 +201,21 @@
     "salaryLowToHigh": "Salary Low to High",
     "reset": "Reset",
     "done": "Done",
-    "applyFilters": "Apply Filters"
+    "applyFilters": "Apply Filters",
+    "verified": "Verified",
+    "postedPrefix": "Posted {time}",
+    "backToJobs": "Back to jobs",
+    "jobUnavailable": "Job unavailable",
+    "landmark": "Landmark: {value}",
+    "noDescription": "No description provided.",
+    "whatsappLabel": "WhatsApp: {number}",
+    "shareJobAction": "Share Job",
+    "selectJobToView": "Select a job to view details.",
+    "noJobsSalaryRange": "No jobs found for the selected salary range.",
+    "similarJobs": "Similar Jobs",
+    "loadingSimilarJobs": "Loading similar jobs…",
+    "noSimilarJobs": "No similar jobs available.",
+    "viewAll": "View all",
+    "jobSummary": "Job summary"
   }
 }

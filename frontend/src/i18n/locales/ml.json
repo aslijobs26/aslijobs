@@ -192,6 +192,21 @@
     "salaryLowToHigh": "ശമ്പളം കുറവ് മുതൽ കൂടുതൽ",
     "reset": "റീസെറ്റ്",
     "done": "പൂർത്തിയായി",
-    "applyFilters": "ഫിൽട്ടറുകൾ പ്രയോഗിക്കുക"
+    "applyFilters": "ഫിൽട്ടറുകൾ പ്രയോഗിക്കുക",
+    "verified": "സ്ഥിരീകരിച്ചത്",
+    "postedPrefix": "പോസ്റ്റ് ചെയ്തത് {time}",
+    "backToJobs": "ജോലികളിലേക്ക് മടങ്ങുക",
+    "jobUnavailable": "ജോലി ലഭ്യമല്ല",
+    "landmark": "ലാൻഡ്‌മാർക്ക്: {value}",
+    "noDescription": "വിവരണം നൽകിയിട്ടില്ല.",
+    "whatsappLabel": "വാട്ട്‌സ്ആപ്പ്: {number}",
+    "shareJobAction": "ജോലി പങ്കിടുക",
+    "selectJobToView": "വിശദാംശങ്ങൾ കാണാൻ ഒരു ജോലി തിരഞ്ഞെടുക്കുക.",
+    "noJobsSalaryRange": "തിരഞ്ഞെടുത്ത ശമ്പള പരിധിയിൽ ജോലികളില്ല.",
+    "similarJobs": "സമാന ജോലികൾ",
+    "loadingSimilarJobs": "സമാന ജോലികൾ ലോഡ് ചെയ്യുന്നു…",
+    "noSimilarJobs": "സമാന ജോലികൾ ലഭ്യമല്ല.",
+    "viewAll": "എല്ലാം കാണുക",
+    "jobSummary": "ജോലി സംഗ്രഹം"
   }
 }

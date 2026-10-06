@@ -3,7 +3,7 @@
 import { useTranslate } from "@/i18n/translate";
 
 type JobTranslationPendingNoteProps = {
-  translationStatus?: "pending" | "completed" | "failed" | "none";
+  translationStatus?: "ready" | "pending" | "fallback" | "failed" | "completed" | "none";
 };
 
 export function JobTranslationPendingNote({

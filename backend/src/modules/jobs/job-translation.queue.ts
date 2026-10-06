@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { env } from "../../config/env.js";
-import { detectJobContentLanguage, type JobContentLanguage } from "./job-content-language.js";
+import { resolveJobSourceLanguage, type JobContentLanguage } from "./job-content-language.js";
 import { JobModel } from "./job.model.js";
 import { JobTranslationTaskModel } from "./job-translation-task.model.js";
 import {
@@ -40,6 +40,7 @@ type TranslationSource = {
   jobTitle: string;
   description: string;
   interviewInstructions: string;
+  contentLanguage?: string | null;
   contentTranslations?: JobContentTranslations | null;
 };
 
@@ -137,7 +138,7 @@ async function enqueueJobLanguageTranslation(
     return "skipped";
   }
   const job = await JobModel.findById(jobMongoId).select(
-    "jobId status jobTitle description interviewInstructions contentTranslations",
+    "jobId status jobTitle description interviewInstructions contentLanguage contentTranslations",
   );
   if (!job || job.status === "draft") {
     return "skipped";
@@ -149,7 +150,16 @@ async function enqueueJobLanguageTranslation(
     interviewInstructions: job.interviewInstructions?.trim() ?? "",
   };
   const sample = `${source.jobTitle}\n${source.description}\n${source.interviewInstructions}`;
-  if (!sample.trim() || detectJobContentLanguage(sample) === language) {
+  const sourceLanguage = resolveJobSourceLanguage({
+    ...source,
+    contentLanguage: job.contentLanguage,
+  });
+  if (!sample.trim() || language === sourceLanguage) {
+    if (language === sourceLanguage) {
+      console.info(
+        `[JOB-TRANSLATE] event=TRANSLATION_SKIPPED_SOURCE_LANGUAGE jobId=${job.jobId} language=${language}`,
+      );
+    }
     return "skipped";
   }
 
@@ -226,6 +236,9 @@ async function enqueueJobLanguageTranslation(
     }
 
     await pushQueueJob(taskId, jobMongoId, language, sourceHash, 0);
+    console.info(
+      `[JOB-TRANSLATE] event=TRANSLATION_QUEUED jobId=${job.jobId} language=${language} sourceHash=${sourceHash}`,
+    );
     return "queued";
   } finally {
     releaseTranslationEnqueueSlot(slotKey);
@@ -244,13 +257,9 @@ export async function enqueueConfiguredJobTranslations(jobMongoId: string): Prom
   return queued;
 }
 
-export function scheduleJobContentTranslations(jobMongoId: string): void {
-  void enqueueConfiguredJobTranslations(jobMongoId).catch((error: unknown) => {
-    logTranslationFailure({
-      jobId: jobMongoId,
-      error: safeTranslationErrorMessage(error),
-    });
-  });
+export function scheduleJobContentTranslations(_jobMongoId: string): void {
+  // Eager all-language enqueue is disabled. Use scheduleJobLanguageTranslation
+  // from a detail request, or the manual backfill script.
 }
 
 export function scheduleJobLanguageTranslation(
@@ -267,10 +276,7 @@ export function scheduleJobLanguageTranslation(
 }
 
 export function scheduleJobTranslationRefresh(jobMongoId: string): void {
-  void (async () => {
-    await invalidateJobTranslationCache(jobMongoId);
-    await enqueueConfiguredJobTranslations(jobMongoId);
-  })().catch((error: unknown) => {
+  void invalidateJobTranslationCache(jobMongoId).catch((error: unknown) => {
     logTranslationFailure({
       jobId: jobMongoId,
       error: safeTranslationErrorMessage(error),
@@ -369,7 +375,14 @@ export async function processJobTranslationTask(taskId: string): Promise<void> {
       { _id: claimed._id },
       { $set: { status: "completed", lastError: "", lockedAt: null } },
     );
-    if (result.event === "TRANSLATION_CREATED" || result.event === "CACHE_HIT") {
+    const translatedAwayFromSource =
+      result.content.jobTitle !== result.source.jobTitle ||
+      result.content.description !== result.source.description ||
+      result.content.interviewInstructions !== result.source.interviewInstructions;
+    if (
+      (result.event === "TRANSLATION_CREATED" && translatedAwayFromSource) ||
+      result.event === "CACHE_HIT"
+    ) {
       await writeCachedJobTranslation(String(claimed.jobMongoId), language, {
         sourceHash: claimed.sourceHash,
         jobTitle: result.content.jobTitle,
@@ -486,6 +499,7 @@ export async function serveJobDetailTranslation(input: {
 }): Promise<{
   content: TranslationSource;
   language: JobContentLanguage | null;
+  sourceLanguage: JobContentLanguage;
   translationStatus: PublicJobTranslationStatus;
   isTranslated: boolean;
 }> {
@@ -495,7 +509,8 @@ export async function serveJobDetailTranslation(input: {
     interviewInstructions: input.job.interviewInstructions?.trim() ?? "",
   };
   let jobForView: TranslationSource = { ...input.job, ...source };
-  if (input.language) {
+  const sourceLanguage = resolveJobSourceLanguage(jobForView);
+  if (input.language && input.language !== sourceLanguage) {
     const cached = await readCachedJobTranslation(input.jobMongoId, input.language);
     if (cachedTranslationMatchesSource(cached, source)) {
       jobForView = {
@@ -523,6 +538,7 @@ export async function serveJobDetailTranslation(input: {
   return {
     content: view.content,
     language: view.language,
+    sourceLanguage: view.sourceLanguage,
     translationStatus: view.translationStatus,
     isTranslated: view.isTranslated,
   };

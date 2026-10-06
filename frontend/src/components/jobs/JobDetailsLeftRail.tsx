@@ -8,6 +8,7 @@ import {
 } from "@/constants/job-details-page";
 import { ROUTES } from "@/constants/routes";
 import { useSiteLanguage } from "@/i18n/site-language";
+import { useTranslate } from "@/i18n/translate";
 import {
   fetchSimilarPublicJobs,
   type PublicJobListItem,
@@ -140,6 +141,7 @@ function buildSimilarJobsViewAllHref(source: SimilarJobsSource): string {
 }
 
 function SimilarJobsRailCard({ source }: { source: SimilarJobsSource | null }) {
+  const t = useTranslate();
   const siteLanguage = useSiteLanguage();
   const similarQuery = useQuery({
     queryKey: ["public-job-similar", source?.jobId, siteLanguage.code],
@@ -163,14 +165,15 @@ function SimilarJobsRailCard({ source }: { source: SimilarJobsSource | null }) {
 
   return (
     <RailCard
-      title="Similar Jobs"
+      title={t("jobs.similarJobs")}
       actionHref={showViewAll ? viewAllHref : undefined}
+      actionLabel={t("jobs.viewAll")}
     >
       {similarQuery.isPending || !source ? (
-        <p className="py-2 text-[12px] text-muted">Loading similar jobs…</p>
+        <p className="py-2 text-[12px] text-muted">{t("jobs.loadingSimilarJobs")}</p>
       ) : similarQuery.isError || railJobs.length === 0 ? (
         <p className="py-2 text-[12px] text-muted">
-          No similar jobs available.
+          {t("jobs.noSimilarJobs")}
         </p>
       ) : (
         <ul className="divide-y divide-border-subtle">

@@ -24,18 +24,12 @@ import type {
 import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-image.js";
 import { EmployerModel } from "../../employers/employer.model.js";
 import { JobModel, type JobDocument } from "../../jobs/job.model.js";
-import { scheduleJobTranslationRefresh } from "../../jobs/job-translation.queue.js";
+import { scheduleJobTranslationRefresh, serveJobDetailTranslation } from "../../jobs/job-translation.queue.js";
 import {
-  detectJobContentLanguage,
   parseJobContentLanguage,
+  resolveJobSourceLanguage,
   type JobContentLanguage,
 } from "../../jobs/job-content-language.js";
-import {
-  queueJobContentTranslation,
-  translateJobContentOnDemand,
-} from "../../jobs/job-content-translation.js";
-import { jobTranslationSourceHash } from "../../jobs/job-translation.policy.js";
-import { writeCachedJobTranslation } from "../../jobs/job-translation.cache.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import {
   applyApprovedCreateInputToJob,
@@ -1168,13 +1162,7 @@ function resolveStoredContentLanguage(job: {
   description?: string | null;
   interviewInstructions?: string | null;
 }): JobContentLanguage {
-  const stored = parseJobContentLanguage(job.contentLanguage);
-  if (stored) {
-    return stored;
-  }
-  return detectJobContentLanguage(
-    `${job.jobTitle ?? ""}\n${job.description ?? ""}\n${job.interviewInstructions ?? ""}`,
-  );
+  return resolveJobSourceLanguage(job);
 }
 
 function toDetail(
@@ -1560,58 +1548,34 @@ export const operationsJobsService = {
       return {
         language,
         sourceLanguage,
-        translationStatus: "none",
+        translationStatus: "ready",
         isTranslated: false,
         content: source,
       };
     }
 
-    const result = await translateJobContentOnDemand({
+    const result = await serveJobDetailTranslation({
       jobMongoId: job._id.toString(),
-      publicJobId: job.jobId,
       language,
-      allowDraft: true,
+      job: {
+        jobTitle: source.jobTitle,
+        description: source.description,
+        interviewInstructions: source.interviewInstructions,
+        contentLanguage: job.contentLanguage ?? null,
+        contentTranslations: (job.contentTranslations ?? null) as never,
+      },
     });
-
-    if (
-      result.event === "TRANSLATION_CREATED" ||
-      result.event === "CACHE_HIT"
-    ) {
-      await writeCachedJobTranslation(job._id.toString(), language, {
-        sourceHash: jobTranslationSourceHash(source),
-        jobTitle: result.content.jobTitle,
-        description: result.content.description,
-        interviewInstructions: result.content.interviewInstructions,
-      });
-    }
-
-    if (result.event === "TRANSLATION_FAILED") {
-      return {
-        language,
-        sourceLanguage,
-        translationStatus: "failed",
-        isTranslated: false,
-        content: source,
-      };
-    }
-
-    if (result.event === "TRANSLATION_SKIPPED") {
-      const isSameOrEmpty = language === sourceLanguage || !source.jobTitle.trim();
-      return {
-        language,
-        sourceLanguage,
-        translationStatus: isSameOrEmpty ? "none" : "failed",
-        isTranslated: false,
-        content: source,
-      };
-    }
 
     return {
       language,
       sourceLanguage,
-      translationStatus: "completed",
-      isTranslated: true,
-      content: result.content,
+      translationStatus: result.translationStatus,
+      isTranslated: result.isTranslated,
+      content: {
+        jobTitle: result.content.jobTitle,
+        description: result.content.description,
+        interviewInstructions: result.content.interviewInstructions,
+      },
     };
   },
 
@@ -1966,8 +1930,6 @@ export const operationsJobsService = {
       );
     }
 
-    queueJobContentTranslation(job._id.toString());
-
     const actor = await OperationsTeamUserModel.findById(operationsUserId)
       .select("fullName")
       .lean();
@@ -2128,6 +2090,7 @@ export const operationsJobsService = {
           walkInStartTime: freshJob.walkInStartTime,
           walkInEndTime: freshJob.walkInEndTime,
           interviewInstructions: freshJob.interviewInstructions,
+          contentLanguage: resolveJobSourceLanguage(freshJob),
           contactPersonName: freshJob.contactPersonName,
           contactEmail: freshJob.contactEmail,
           contactMobile: freshJob.contactMobile,

@@ -3,7 +3,9 @@
 import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
 import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkeletons";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
+import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import {
   formatJobSearchEducation,
@@ -218,6 +220,7 @@ export function JobSearchOverviewPanel({
   onToggleBookmark,
   onRetry,
 }: JobSearchOverviewPanelProps) {
+  const t = useTranslate();
   const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
@@ -329,12 +332,12 @@ export function JobSearchOverviewPanel({
             className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
-            Back to jobs
+            {t("jobs.backToJobs")}
           </button>
         ) : null}
-        <h2 className="text-lg font-bold text-foreground">Job unavailable</h2>
+        <h2 className="text-lg font-bold text-foreground">{t("jobs.jobUnavailable")}</h2>
         <p className="mt-2 text-sm text-muted">
-          Unable to load this job. It may have been closed or removed.
+          {t("jobs.unableToLoadClosed")}
         </p>
         {onRetry ? (
           <button
@@ -342,7 +345,7 @@ export function JobSearchOverviewPanel({
             onClick={onRetry}
             className="mt-4 inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            Try again
+            {t("jobs.tryAgain")}
           </button>
         ) : null}
       </div>
@@ -360,7 +363,7 @@ export function JobSearchOverviewPanel({
   const genderLabel =
     job.gender.length > 0
       ? job.gender.map(formatJobSearchGender).join(", ")
-      : "Any";
+      : t("jobs.any");
   const languageChips = job.languages
     .map(formatJobSearchLanguage)
     .filter(Boolean);
@@ -379,7 +382,7 @@ export function JobSearchOverviewPanel({
       title: job.jobTitle,
       text: `${job.jobTitle} at ${job.companyName}`,
       url: buildAbsolutePublicJobUrl(job.jobId),
-      successMessage: "Job link copied",
+      successMessage: t("jobs.linkCopied"),
     });
   };
 
@@ -433,7 +436,7 @@ export function JobSearchOverviewPanel({
             )}
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
-            Back to jobs
+            {t("jobs.backToJobs")}
           </button>
         ) : null}
 
@@ -467,7 +470,7 @@ export function JobSearchOverviewPanel({
                 style={{ backgroundColor: ICON_SURFACE }}
               >
                 <ShieldCheck className="size-3.5" strokeWidth={2.25} aria-hidden="true" />
-                Verified
+                {t("jobs.verified")}
               </span>
             </div>
             <p
@@ -495,15 +498,16 @@ export function JobSearchOverviewPanel({
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
-                Posted {posted}
+                {t("jobs.postedPrefix", { time: posted })}
               </p>
             ) : null}
+            <JobTranslationPendingNote translationStatus={job.translationStatus} />
           </div>
           <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
             <button
               type="button"
               onClick={handleShare}
-              aria-label="Share job"
+              aria-label={t("jobs.shareJob")}
               className="inline-flex size-8 items-center justify-center rounded-[10px] border border-[#E5E7EB] text-[#9CA3AF] transition-colors hover:border-[#D1D5DB] hover:text-[#6B7280] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/30"
             >
               <Share2 className="size-3.5" strokeWidth={2} aria-hidden="true" />
@@ -511,7 +515,7 @@ export function JobSearchOverviewPanel({
             <button
               type="button"
               onClick={onToggleBookmark}
-              aria-label={bookmarked ? "Remove bookmark" : "Save job"}
+              aria-label={bookmarked ? t("jobs.removeBookmark") : t("jobs.saveJob")}
               aria-pressed={bookmarked}
               className={cn(
                 "inline-flex size-8 items-center justify-center rounded-[10px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/30",
@@ -536,55 +540,55 @@ export function JobSearchOverviewPanel({
         >
           <div
             className="border-t border-[#EEF1F4] pt-3"
-            aria-label="Job information"
+            aria-label={t("jobs.jobInformation")}
           >
             <div className="grid grid-cols-2 gap-x-3 gap-y-3.5 xl:grid-cols-3 xl:gap-x-4 xl:gap-y-4">
               {salary ? (
-                <OverviewField label="Salary" icon={Wallet}>
+                <OverviewField label={t("jobs.salary")} icon={Wallet}>
                   <OverviewValue>{salary}</OverviewValue>
                 </OverviewField>
               ) : null}
               {location ? (
-                <OverviewField label="Location" icon={MapPin}>
+                <OverviewField label={t("jobs.location")} icon={MapPin}>
                   <OverviewValue>{location}</OverviewValue>
                 </OverviewField>
               ) : null}
               {employmentType ? (
-                <OverviewField label="Employment Type" icon={Briefcase}>
+                <OverviewField label={t("jobs.employmentType")} icon={Briefcase}>
                   <OverviewValue>{employmentType}</OverviewValue>
                 </OverviewField>
               ) : null}
               {experience ? (
-                <OverviewField label="Experience" icon={User}>
+                <OverviewField label={t("jobs.experience")} icon={User}>
                   <OverviewValue>{experience}</OverviewValue>
                 </OverviewField>
               ) : null}
               {education ? (
-                <OverviewField label="Qualification" icon={GraduationCap}>
+                <OverviewField label={t("jobs.qualification")} icon={GraduationCap}>
                   <OverviewValue>{education}</OverviewValue>
                 </OverviewField>
               ) : null}
               {openings ? (
-                <OverviewField label="Openings" icon={Users}>
+                <OverviewField label={t("jobs.openings")} icon={Users}>
                   <OverviewValue>{openings}</OverviewValue>
                 </OverviewField>
               ) : null}
               {workMode ? (
-                <OverviewField label="Work Mode" icon={Building2}>
+                <OverviewField label={t("jobs.workMode")} icon={Building2}>
                   <OverviewValue>{workMode}</OverviewValue>
                 </OverviewField>
               ) : null}
-              <OverviewField label="Gender Preference" icon={VenusAndMars}>
+              <OverviewField label={t("jobs.genderPreference")} icon={VenusAndMars}>
                 <OverviewValue>{genderLabel}</OverviewValue>
               </OverviewField>
               {languageChips.length > 0 ? (
-                <OverviewField label="Languages" icon={Globe2}>
+                <OverviewField label={t("jobs.languages")} icon={Globe2}>
                   <OverviewChips values={languageChips} />
                 </OverviewField>
               ) : null}
               {perkChips.length > 0 ? (
                 <OverviewField
-                  label="Benefits"
+                  label={t("jobs.benefits")}
                   icon={Gift}
                   className="col-span-2 xl:col-span-3"
                 >
@@ -614,7 +618,7 @@ export function JobSearchOverviewPanel({
       >
         <div className="divide-y divide-[#EEEEEE]">
           <section className="pb-5">
-            <DetailSectionHeading>Job Description</DetailSectionHeading>
+            <DetailSectionHeading>{t("jobs.jobDescription")}</DetailSectionHeading>
             <p className="mt-2 text-[16px] leading-snug font-semibold text-[#1F2937]">
               {job.jobTitle}
             </p>
@@ -627,21 +631,23 @@ export function JobSearchOverviewPanel({
               </div>
             ) : (
               <p className="mt-3 text-[15px] leading-[1.7] text-[#9CA3AF]">
-                No description provided.
+                {t("jobs.noDescription")}
               </p>
             )}
           </section>
 
           {job.address || location || job.landmark ? (
             <section className="py-5">
-              <DetailSectionHeading>Address</DetailSectionHeading>
+              <DetailSectionHeading>{t("jobs.address")}</DetailSectionHeading>
               <div className="mt-3 space-y-1">
                 {job.address ? (
                   <DetailPlainText>{job.address}</DetailPlainText>
                 ) : null}
                 {location ? <DetailPlainText>{location}</DetailPlainText> : null}
                 {job.landmark ? (
-                  <DetailPlainText>Landmark: {job.landmark}</DetailPlainText>
+                  <DetailPlainText>
+                    {t("jobs.landmark", { value: job.landmark })}
+                  </DetailPlainText>
                 ) : null}
               </div>
             </section>
@@ -649,15 +655,15 @@ export function JobSearchOverviewPanel({
 
           {job.walkInEnabled ? (
             <section className="py-5">
-              <DetailSectionHeading>Walk-in Details</DetailSectionHeading>
+              <DetailSectionHeading>{t("jobs.walkInDetails")}</DetailSectionHeading>
               <div className="mt-4 space-y-4">
                 <div>
-                  <DetailFieldLabel>Interview Address</DetailFieldLabel>
+                  <DetailFieldLabel>{t("jobs.interviewAddress")}</DetailFieldLabel>
                   <div className="mt-1.5">
                     <DetailPlainText>
                       {job.interviewAddress ||
                         location ||
-                        "Address shared by recruiter"}
+                        t("jobs.addressShared")}
                     </DetailPlainText>
                   </div>
                 </div>
@@ -666,7 +672,7 @@ export function JobSearchOverviewPanel({
                   job.walkInEndDate,
                 ) ? (
                   <div>
-                    <DetailFieldLabel>Date</DetailFieldLabel>
+                    <DetailFieldLabel>{t("jobs.date")}</DetailFieldLabel>
                     <div className="mt-1.5">
                       <DetailPlainText>
                         {formatJobSearchWalkInDateRange(
@@ -682,7 +688,7 @@ export function JobSearchOverviewPanel({
                   job.walkInEndTime,
                 ) ? (
                   <div>
-                    <DetailFieldLabel>Time</DetailFieldLabel>
+                    <DetailFieldLabel>{t("jobs.time")}</DetailFieldLabel>
                     <div className="mt-1.5">
                       <DetailPlainText>
                         {formatJobSearchWalkInTimeRange(
@@ -699,7 +705,7 @@ export function JobSearchOverviewPanel({
 
           {job.interviewInstructions?.trim() ? (
             <section className="py-5">
-              <DetailSectionHeading>Other Instructions</DetailSectionHeading>
+              <DetailSectionHeading>{t("jobs.otherInstructions")}</DetailSectionHeading>
               <div className="mt-3">
                 <DetailMultilineText text={job.interviewInstructions} />
               </div>
@@ -708,14 +714,14 @@ export function JobSearchOverviewPanel({
 
           {job.contactPersonName || job.applyWhatsAppNumber ? (
             <section className="py-5">
-              <DetailSectionHeading>Recruiter</DetailSectionHeading>
+              <DetailSectionHeading>{t("jobs.recruiter")}</DetailSectionHeading>
               <div className="mt-3 space-y-1">
                 {job.contactPersonName ? (
                   <DetailPlainText>{job.contactPersonName}</DetailPlainText>
                 ) : null}
                 {job.applyWhatsAppNumber ? (
                   <DetailPlainText>
-                    WhatsApp: {job.applyWhatsAppNumber}
+                    {t("jobs.whatsappLabel", { number: job.applyWhatsAppNumber })}
                   </DetailPlainText>
                 ) : null}
               </div>
@@ -740,7 +746,7 @@ export function JobSearchOverviewPanel({
             className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm font-bold text-foreground transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
             <Share2 className="size-4" aria-hidden="true" />
-            Share Job
+            {t("jobs.shareJobAction")}
           </button>
           <button
             type="button"
@@ -758,7 +764,7 @@ export function JobSearchOverviewPanel({
               fill={bookmarked ? "currentColor" : "none"}
               aria-hidden="true"
             />
-            {bookmarked ? "Saved" : "Save Job"}
+            {bookmarked ? t("jobs.saved") : t("jobs.saveJobAction")}
           </button>
         </div>
       </div>

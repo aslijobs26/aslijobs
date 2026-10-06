@@ -42,3 +42,30 @@ export function parseJobContentLanguage(
   if (!value) return null;
   return SITE_LANGUAGE_ALIASES[value.trim().toLowerCase()] ?? null;
 }
+
+export function detectCanonicalSourceLanguage(fields: {
+  jobTitle?: string | null;
+  description?: string | null;
+  interviewInstructions?: string | null;
+}): JobContentLanguage {
+  return detectJobContentLanguage(
+    `${fields.jobTitle ?? ""}\n${fields.description ?? ""}\n${fields.interviewInstructions ?? ""}`,
+  );
+}
+
+/**
+ * Prefer Indic script in the canonical text over a stale default `en`.
+ * Stored `contentLanguage` is used when the source is Latin (English or romanized).
+ */
+export function resolveJobSourceLanguage(job: {
+  contentLanguage?: string | null;
+  jobTitle?: string | null;
+  description?: string | null;
+  interviewInstructions?: string | null;
+}): JobContentLanguage {
+  const detected = detectCanonicalSourceLanguage(job);
+  if (detected !== "en") {
+    return detected;
+  }
+  return parseJobContentLanguage(job.contentLanguage) ?? "en";
+}

@@ -94,6 +94,8 @@ describe("static i18n catalogs", () => {
       for (const code of ["en", "te", "hi", "ta", "kn", "ml"] as const) {
         translate(code, "jobs.applyNow");
         translate(code, "jobs.fullTime");
+        translate(code, "jobs.jobDescription");
+        translate(code, "jobs.verified");
         translate(code, "footer.rights");
         translate(code, "footer.employers");
         translate(code, "footer.faqs");
@@ -112,5 +114,17 @@ describe("static i18n catalogs", () => {
     assert.equal(translate("en", "jobs.minutesAgo", { count: 4 }), "4m ago");
     assert.match(translate("hi", "jobs.jobsFound", { count: 3 }), /3/);
     assert.doesNotMatch(translate("te", "jobs.hoursAgo", { count: 2 }), /\{count\}/);
+  });
+
+  it("localizes Find Jobs static labels independently of job body copy", () => {
+    assert.equal(translate("en", "jobs.jobDescription"), "Job Description");
+    assert.equal(translate("en", "jobs.employmentType"), "Employment Type");
+    assert.notEqual(translate("te", "jobs.jobDescription"), "Job Description");
+    assert.notEqual(translate("te", "jobs.salary"), translate("en", "jobs.salary"));
+    assert.notEqual(translate("hi", "jobs.verified"), translate("en", "jobs.verified"));
+    assert.notEqual(translate("ta", "jobs.backToJobs"), translate("en", "jobs.backToJobs"));
+    assert.notEqual(translate("kn", "jobs.shareJobAction"), translate("en", "jobs.shareJobAction"));
+    assert.notEqual(translate("ml", "jobs.similarJobs"), translate("en", "jobs.similarJobs"));
+    assert.match(translate("te", "jobs.postedPrefix", { time: "5 రోజుల క్రితం" }), /5 రోజుల క్రితం/);
   });
 });

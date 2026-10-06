@@ -398,8 +398,9 @@ export interface OperationsJobApplicationsParams {
 }
 
 export type OperationsJobContentTranslationStatus =
-  | "none"
-  | "completed"
+  | "ready"
+  | "pending"
+  | "fallback"
   | "failed";
 
 export interface OperationsJobContentTranslationResult {

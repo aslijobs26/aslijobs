@@ -290,7 +290,7 @@ export function JobDetailsCenterPanel({
                   strokeWidth={2.25}
                   aria-hidden="true"
                 />
-                Verified
+                {t("jobs.verified")}
               </span>
             </div>
             <p className="mt-1 text-sm font-medium text-muted">
@@ -304,7 +304,7 @@ export function JobDetailsCenterPanel({
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
-                Posted {posted}
+                {t("jobs.postedPrefix", { time: posted })}
               </p>
             ) : null}
           </div>
@@ -437,7 +437,7 @@ export function JobDetailsCenterPanel({
             </>
           ) : (
             <p className="mt-3 text-[15px] leading-[1.75] text-muted">
-              No description provided.
+              {t("jobs.noDescription")}
             </p>
           )}        </section>
 
@@ -457,7 +457,9 @@ export function JobDetailsCenterPanel({
                   <div className="mt-3 space-y-1 text-[15px] leading-[1.7] text-muted">
                     {job.address ? <p>{job.address}</p> : null}
                     {location ? <p>{location}</p> : null}
-                    {job.landmark ? <p>Landmark: {job.landmark}</p> : null}
+                    {job.landmark ? (
+                      <p>{t("jobs.landmark", { value: job.landmark })}</p>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
@@ -532,7 +534,7 @@ export function JobDetailsCenterPanel({
               <span className="font-semibold text-foreground">{t("jobs.recruiter")}:</span>{" "}
               {job.contactPersonName || "—"}
               {job.applyWhatsAppNumber
-                ? `  ·  WhatsApp: ${job.applyWhatsAppNumber}`
+                ? `  ·  ${t("jobs.whatsappLabel", { number: job.applyWhatsAppNumber })}`
                 : null}
             </p>
           </section>
@@ -562,7 +564,7 @@ export function JobDetailsCenterPanel({
               className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
               <Share2 className="size-4" aria-hidden="true" />
-              Share Job
+              {t("jobs.shareJobAction")}
             </button>
             <button
               type="button"

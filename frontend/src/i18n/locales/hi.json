@@ -192,6 +192,21 @@
     "salaryLowToHigh": "वेतन कम से अधिक",
     "reset": "रीसेट",
     "done": "हो गया",
-    "applyFilters": "फ़िल्टर लगाएँ"
+    "applyFilters": "फ़िल्टर लगाएँ",
+    "verified": "वेरिफाइड",
+    "postedPrefix": "पोस्ट किया गया {time}",
+    "backToJobs": "नौकरियों पर वापस जाएँ",
+    "jobUnavailable": "नौकरी उपलब्ध नहीं है",
+    "landmark": "लैंडमार्क: {value}",
+    "noDescription": "विवरण उपलब्ध नहीं है।",
+    "whatsappLabel": "व्हाट्सएप: {number}",
+    "shareJobAction": "नौकरी शेयर करें",
+    "selectJobToView": "विवरण देखने के लिए नौकरी चुनें।",
+    "noJobsSalaryRange": "चयनित वेतन सीमा के लिए नौकरियाँ नहीं मिलीं।",
+    "similarJobs": "समान नौकरियाँ",
+    "loadingSimilarJobs": "समान नौकरियाँ लोड हो रही हैं…",
+    "noSimilarJobs": "समान नौकरियाँ उपलब्ध नहीं हैं।",
+    "viewAll": "सभी देखें",
+    "jobSummary": "नौकरी सारांश"
   }
 }

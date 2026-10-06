@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  detectCanonicalSourceLanguage,
   detectJobContentLanguage,
   parseJobContentLanguage,
+  resolveJobSourceLanguage,
 } from "./job-content-language.js";
 import {
   buildJobContentTranslations,
@@ -13,6 +15,7 @@ import {
   needsJobContentTranslation,
   normalizeInternationalNumerals,
   protectJobNumericLiterals,
+  queueJobContentTranslation,
   resolveJobContent,
   resolvePublicJobTranslationView,
   restoreJobNumericLiterals,
@@ -68,6 +71,38 @@ describe("job content language", () => {
     assert.equal(detectJobContentLanguage("വൈദ്യുതി"), "ml");
     assert.equal(parseJobContentLanguage("telugu"), "te");
     assert.equal(parseJobContentLanguage("nope"), null);
+  });
+
+  it("normalizes site codes and language-name aliases", () => {
+    const aliases: Array<[string, "en" | "hi" | "te" | "ta" | "kn" | "ml"]> = [
+      ["en", "en"],
+      ["english", "en"],
+      ["EN", "en"],
+      ["hi", "hi"],
+      ["hindi", "hi"],
+      ["te", "te"],
+      ["telugu", "te"],
+      ["ta", "ta"],
+      ["tamil", "ta"],
+      ["kn", "kn"],
+      ["kannada", "kn"],
+      ["ml", "ml"],
+      ["malayalam", "ml"],
+    ];
+    for (const [alias, expected] of aliases) {
+      assert.equal(parseJobContentLanguage(alias), expected);
+    }
+  });
+
+  it("stores Telugu as the canonical source language for Telugu job copy", () => {
+    const telugu = {
+      jobTitle: "ప్లంబర్",
+      description: "హైదరాబాద్‌లో ప్లంబర్ అవసరం",
+      interviewInstructions: "ఐడి తీసుకురండి",
+    };
+    assert.equal(detectCanonicalSourceLanguage(telugu), "te");
+    assert.equal(resolveJobSourceLanguage({ ...telugu, contentLanguage: "en" }), "te");
+    assert.equal(resolveJobSourceLanguage({ ...source, contentLanguage: "en" }), "en");
   });
 });
 
@@ -436,7 +471,7 @@ describe("job content translation", () => {
       language: "en",
       fetchImpl: mockTranslate(calls),
     });
-    assert.equal(result.event, "TRANSLATION_SKIPPED");
+    assert.equal(result.event, "TRANSLATION_SKIPPED_SOURCE_LANGUAGE");
     assert.equal(result.translateCalls, 0);
     assert.equal(calls.count, 0);
   });
@@ -531,7 +566,8 @@ describe("job content translation", () => {
 describe("public job translation view", () => {
   it("returns English immediately and does not enqueue", () => {
     const view = resolvePublicJobTranslationView(source, "en");
-    assert.equal(view.translationStatus, "none");
+    assert.equal(view.translationStatus, "ready");
+    assert.equal(view.sourceLanguage, "en");
     assert.equal(view.shouldEnqueue, false);
     assert.equal(view.isTranslated, false);
     assert.equal(view.content.jobTitle, source.jobTitle);
@@ -561,7 +597,7 @@ describe("public job translation view", () => {
       { ...source, contentTranslations: stored },
       "te",
     );
-    assert.equal(view.translationStatus, "completed");
+    assert.equal(view.translationStatus, "ready");
     assert.equal(view.isTranslated, true);
     assert.equal(view.shouldEnqueue, false);
     assert.equal(view.content.jobTitle, "tr:Electrician");
@@ -609,5 +645,220 @@ describe("public job translation view", () => {
     assert.equal(view.shouldEnqueue, true);
     assert.equal(view.content.jobTitle, source.jobTitle);
     assert.equal(view.content.description, source.description);
+  });
+
+  it("keeps a current Telugu title when only the description is missing", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "ప్లంబర్",
+        description: "",
+        interviewInstructions: "",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(""),
+        interviewInstructionsHash: hashJobField(""),
+        status: "completed",
+      },
+    };
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "te",
+    );
+    assert.equal(view.translationStatus, "pending");
+    assert.equal(view.shouldEnqueue, true);
+    assert.equal(view.isTranslated, true);
+    assert.equal(view.content.jobTitle, "ప్లంబర్");
+    assert.equal(view.content.description, source.description);
+    assert.equal(view.content.interviewInstructions, source.interviewInstructions);
+  });
+
+  it("keeps a current title when a description translation is stale", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "ప్లంబర్",
+        description: "పాత వివరణ",
+        interviewInstructions: "సూచన",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField("Old description"),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+        status: "completed",
+      },
+    };
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "te",
+    );
+    assert.equal(view.translationStatus, "pending");
+    assert.equal(view.shouldEnqueue, true);
+    assert.equal(view.content.jobTitle, "ప్లంబర్");
+    assert.equal(view.content.description, source.description);
+    assert.equal(view.content.interviewInstructions, "సూచన");
+  });
+
+  it("list and detail resolvers stay aligned for a partial Telugu cache", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "ప్లంబర్",
+        description: "",
+        interviewInstructions: "",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: "",
+        interviewInstructionsHash: "",
+        status: "completed",
+      },
+    };
+    const job = { ...source, contentTranslations: stored };
+    const listed = resolveJobContent(job, "te");
+    const detail = resolvePublicJobTranslationView(job, "te");
+    assert.equal(detail.content.jobTitle, listed.jobTitle);
+    assert.equal(detail.content.description, listed.description);
+  });
+
+  it("returns original content for Hindi Tamil Kannada and Malayalam until stored", () => {
+    for (const language of ["hi", "ta", "kn", "ml"] as const) {
+      const view = resolvePublicJobTranslationView(source, language);
+      assert.equal(view.translationStatus, "pending");
+      assert.equal(view.shouldEnqueue, true);
+      assert.equal(view.isTranslated, false);
+      assert.equal(view.content.jobTitle, source.jobTitle);
+    }
+  });
+
+  it("failed cooldown still returns any usable field translation", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "ప్లంబర్",
+        description: "",
+        interviewInstructions: "",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(source.description),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+        lastAttemptAt: new Date().toISOString(),
+        status: "failed",
+      },
+    };
+    const view = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "te",
+    );
+    assert.equal(view.translationStatus, "failed");
+    assert.equal(view.shouldEnqueue, false);
+    assert.equal(view.content.jobTitle, "ప్లంబర్");
+    assert.equal(view.content.description, source.description);
+  });
+});
+
+describe("public job translation cost", () => {
+  it("English detail and list-style resolve never call Sarvam", async () => {
+    const calls = { count: 0, bodies: [] as string[] };
+    const english = await translateRequestedJobLanguage({
+      source,
+      language: "en",
+      fetchImpl: mockTranslate(calls),
+    });
+    assert.equal(english.translateCalls, 0);
+    const listed = resolveJobContent(source, "te");
+    assert.equal(listed.jobTitle, source.jobTitle);
+    assert.equal(calls.count, 0);
+  });
+
+  it("a Telugu cache miss translates only Telugu", async () => {
+    const calls = { count: 0, bodies: [] as string[] };
+    const result = await translateRequestedJobLanguage({
+      source,
+      language: "te",
+      fetchImpl: mockTranslate(calls),
+    });
+    assert.equal(result.translateCalls, 3);
+    assert.equal(result.contentTranslations.hi, undefined);
+    assert.equal(result.contentTranslations.ta, undefined);
+    assert.equal(result.contentTranslations.kn, undefined);
+    assert.equal(result.contentTranslations.ml, undefined);
+    assert.ok(result.contentTranslations.te);
+  });
+
+  it("does not translate a Telugu job into Telugu", async () => {
+    const telugu = {
+      jobTitle: "ప్లంబర్",
+      description: "హైదరాబాద్‌లో ప్లంబర్ అవసరం",
+      interviewInstructions: "ఐడి తీసుకురండి",
+    };
+    const calls = { count: 0, bodies: [] as string[] };
+    const result = await translateRequestedJobLanguage({
+      source: telugu,
+      language: "te",
+      fetchImpl: mockTranslate(calls),
+    });
+    assert.equal(result.event, "TRANSLATION_SKIPPED_SOURCE_LANGUAGE");
+    assert.equal(result.translateCalls, 0);
+    assert.equal(calls.count, 0);
+    const view = resolvePublicJobTranslationView(telugu, "te");
+    assert.equal(view.translationStatus, "ready");
+    assert.equal(view.shouldEnqueue, false);
+    assert.equal(view.content.jobTitle, telugu.jobTitle);
+  });
+
+  it("keeps an existing Telugu translation when Sarvam returns empty text", async () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "ప్లంబర్",
+        description: "వివరణ",
+        interviewInstructions: "సూచన",
+        jobTitleHash: hashJobField("Old title"),
+        descriptionHash: hashJobField("Old description"),
+        interviewInstructionsHash: hashJobField("Old instructions"),
+        status: "completed",
+      },
+    };
+    const emptyFetch = (async () =>
+      new Response(JSON.stringify({ translated_text: "   " }), {
+        status: 200,
+      })) as typeof fetch;
+    const result = await translateRequestedJobLanguage({
+      source,
+      existing: stored,
+      language: "te",
+      fetchImpl: emptyFetch,
+    });
+    assert.equal(result.contentTranslations.te?.jobTitle, "ప్లంబర్");
+    assert.equal(result.contentTranslations.te?.description, "వివరణ");
+    assert.notEqual(result.contentTranslations.te?.status, "completed");
+  });
+
+  it("does not enqueue translations from publish-time queueJobContentTranslation", () => {
+    queueJobContentTranslation("507f1f77bcf86cd799439011");
+  });
+});
+
+describe("list vs detail translation triggers", () => {
+  it("list resolve uses stored Telugu without enqueue metadata", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "ప్లంబర్",
+        description: "వివరణ",
+        interviewInstructions: "సూచన",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(source.description),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+        status: "completed",
+      },
+    };
+    const listed = resolveJobContent(
+      { ...source, contentTranslations: stored },
+      "te",
+    );
+    const detail = resolvePublicJobTranslationView(
+      { ...source, contentTranslations: stored },
+      "te",
+    );
+    assert.equal(listed.jobTitle, "ప్లంబర్");
+    assert.equal(detail.shouldEnqueue, false);
+    assert.equal(detail.translationStatus, "ready");
+  });
+
+  it("list resolve of a missing language stays on the original and does not imply enqueue", () => {
+    const listed = resolveJobContent(source, "hi");
+    const detail = resolvePublicJobTranslationView(source, "hi");
+    assert.equal(listed.jobTitle, source.jobTitle);
+    assert.equal(detail.shouldEnqueue, true);
   });
 });

@@ -311,8 +311,9 @@ export type OperationsJobDetail = {
 };
 
 export type OperationsJobContentTranslationStatus =
-  | "none"
-  | "completed"
+  | "ready"
+  | "pending"
+  | "fallback"
   | "failed";
 
 export type OperationsJobContentTranslationResult = {

@@ -12,9 +12,8 @@ import { EmployerModel } from "../employers/employer.model.js";
 import { ApplicationModel } from "../applications/application.model.js";
 import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
-import { parseJobContentLanguage } from "./job-content-language.js";
+import { detectCanonicalSourceLanguage, parseJobContentLanguage } from "./job-content-language.js";
 import {
-  queueJobContentTranslation,
   resolveJobContent,
 } from "./job-content-translation.js";
 import { serveJobDetailTranslation } from "./job-translation.queue.js";
@@ -333,6 +332,11 @@ function denormalizeDraftFields(snapshot: DraftWizardSnapshot) {
     contactPersonName: candidateAndInterview.contactName.trim(),
     contactEmail: candidateAndInterview.contactEmail.trim(),
     contactMobile: candidateAndInterview.contactMobile.trim(),
+    contentLanguage: detectCanonicalSourceLanguage({
+      jobTitle: jobInformation.jobTitle.trim(),
+      description: jobInformation.jobDescription.trim(),
+      interviewInstructions: candidateAndInterview.otherInstructions.trim(),
+    }),
   };
 }
 
@@ -388,6 +392,11 @@ function applyCreateInputToJob(job: JobDocument, input: CreateJobInput) {
   job.contactPersonName = input.contactPersonName;
   job.contactEmail = input.contactEmail;
   job.contactMobile = input.contactMobile;
+  job.contentLanguage = detectCanonicalSourceLanguage({
+    jobTitle: input.jobTitle,
+    description: input.description,
+    interviewInstructions: input.interviewInstructions,
+  });
 }
 
 /** Serializable payload stored while a live-job edit awaits Operations review. */
@@ -1152,6 +1161,8 @@ function toPublicJobListItem(
       description: typeof job.description === "string" ? job.description : "",
       interviewInstructions:
         typeof job.interviewInstructions === "string" ? job.interviewInstructions : "",
+      contentLanguage:
+        typeof job.contentLanguage === "string" ? job.contentLanguage : null,
       contentTranslations:
         job.contentTranslations && typeof job.contentTranslations === "object"
           ? (job.contentTranslations as never)
@@ -1400,6 +1411,11 @@ export class JobService {
       contactEmail: input.contactEmail,
       contactMobile: input.contactMobile,
       status,
+      contentLanguage: detectCanonicalSourceLanguage({
+        jobTitle: input.jobTitle,
+        description: input.description,
+        interviewInstructions: input.interviewInstructions,
+      }),
       listingPaymentStatus: isDraft ? "pending" : "paid",
       listingPackageLabel: "",
       listingValidUntil: null,
@@ -1425,7 +1441,6 @@ export class JobService {
     });
 
     if (!isDraft) {
-      queueJobContentTranslation(job._id.toString());
       scheduleJobPendingOpsNotification({
         publicJobId: job.jobId,
         jobMongoId: job._id.toString(),
@@ -2238,6 +2253,9 @@ export class JobService {
     }
 
     const requestedLanguage = parseJobContentLanguage(options?.language);
+    console.info(
+      `[PUBLIC_JOB_DETAIL] jobId=${job.jobId} language=${requestedLanguage ?? "none"}`,
+    );
     const translation = await serveJobDetailTranslation({
       jobMongoId: job._id.toString(),
       language: requestedLanguage,
@@ -2245,6 +2263,7 @@ export class JobService {
         jobTitle: job.jobTitle ?? "",
         description: job.description ?? "",
         interviewInstructions: job.interviewInstructions ?? "",
+        contentLanguage: job.contentLanguage ?? null,
         contentTranslations: (job.contentTranslations ?? null) as never,
       },
     });
@@ -2297,6 +2316,11 @@ export class JobService {
         interviewInstructions: localizedContent.interviewInstructions,
         contactPersonName: job.contactPersonName?.trim() || null,
         language: translation.language,
+        sourceLanguage: translation.sourceLanguage,
+        contentLanguage:
+          translation.translationStatus === "ready" && translation.isTranslated
+            ? translation.language
+            : translation.sourceLanguage,
         translationStatus: translation.translationStatus,
         isTranslated: translation.isTranslated,
       },
@@ -2537,6 +2561,7 @@ export class JobService {
           employerId: 1,
           companyId: 1,
           creationSource: 1,
+          contentLanguage: 1,
           ...(contentLanguage
             ? { [`contentTranslations.${contentLanguage}`]: 1 }
             : {}),
@@ -2869,7 +2894,6 @@ export class JobService {
     job.publishedAt = now;
     job.lastStatusChangedAt = now;
     await job.save();
-    queueJobContentTranslation(job._id.toString());
 
     scheduleJobModerationAudit({
       actorUserId: operationsUserId,

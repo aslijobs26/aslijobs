@@ -52,6 +52,13 @@ export function useOperationsJobContentTranslation(
     enabled: Boolean(jobId) && enabled && needsRemoteFetch,
     staleTime: 5 * 60_000,
     retry: false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.translationStatus;
+      if (status !== "pending" || query.state.dataUpdateCount >= 5) {
+        return false;
+      }
+      return 8_000;
+    },
   });
 }
 

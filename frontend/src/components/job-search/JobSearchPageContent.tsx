@@ -11,6 +11,7 @@ import { JobSearchWhatsAppBanner } from "@/components/job-search/JobSearchWhatsA
 import { JOB_SEARCH_RETURN_KEY } from "@/components/jobs/PublicJobDetailPage";
 import { ROUTES } from "@/constants/routes";
 import { useSiteLanguage } from "@/i18n/site-language";
+import { useTranslate } from "@/i18n/translate";
 import {
   fetchPublicActiveJobByPublicId,
   fetchPublicActiveJobs,
@@ -37,7 +38,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -76,6 +76,7 @@ export function JobSearchPageContent() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const siteLanguage = useSiteLanguage();
+  const t = useTranslate();
   const isSplitView = useSyncExternalStore(
     subscribeToSplitViewMedia,
     getSplitViewSnapshot,
@@ -412,7 +413,7 @@ export function JobSearchPageContent() {
                   emptyMessage={
                     urlState.minSalary !== undefined ||
                     urlState.maxSalary !== undefined
-                      ? "No jobs found for the selected salary range."
+                      ? t("jobs.noJobsSalaryRange")
                       : undefined
                   }
                   onSelect={handleSelectJob}
@@ -452,7 +453,7 @@ export function JobSearchPageContent() {
                       />
                     ) : (
                       <div className="rounded-2xl border border-border-subtle bg-surface p-6 text-sm text-muted">
-                        Select a job to view details.
+                        {t("jobs.selectJobToView")}
                       </div>
                     )}
                   </div>

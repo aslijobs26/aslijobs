@@ -43,7 +43,10 @@ type CardTag = {
   icon: ReactNode;
 };
 
-function buildCardTags(job: PublicJobListItem): CardTag[] {
+function buildCardTags(
+  job: PublicJobListItem,
+  freshersLabel: string,
+): CardTag[] {
   const tags: CardTag[] = [];
 
   for (const education of job.education) {
@@ -65,7 +68,7 @@ function buildCardTags(job: PublicJobListItem): CardTag[] {
   if (job.experience === "fresher") {
     tags.push({
       id: "fresher-apply",
-      label: "Freshers can apply",
+      label: freshersLabel,
       icon: (
         <User className="size-3 shrink-0" strokeWidth={2} aria-hidden="true" />
       ),
@@ -122,7 +125,7 @@ export function JobSearchJobCard({
     .replace(" /year", "/yr");
   const experience = formatJobSearchExperience(job.experience);
   const jobType = formatJobSearchJobType(job.jobType);
-  const tags = buildCardTags(job);
+  const tags = buildCardTags(job, t("jobs.freshersCanApply"));
   const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt);
 
   const handleViewDetailsClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -241,7 +244,7 @@ export function JobSearchJobCard({
                     strokeWidth={2}
                     aria-hidden="true"
                   />
-                  Verified
+                  {t("jobs.verified")}
                 </span>
               </div>
               <p className="mt-1 text-xs leading-snug font-normal text-[#6B7280] sm:text-[13px]">
@@ -258,7 +261,7 @@ export function JobSearchJobCard({
               <button
                 type="button"
                 onClick={handleBookmarkClick}
-                aria-label={bookmarked ? "Remove bookmark" : "Save job"}
+                aria-label={bookmarked ? t("jobs.removeBookmark") : t("jobs.saveJob")}
                 aria-pressed={bookmarked}
                 className={cn(
                   "inline-flex size-8 items-center justify-center rounded-[10px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/30",
