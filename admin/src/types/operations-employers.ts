@@ -319,18 +319,35 @@ export interface OperationsEmployersAnalyticsResult {
   };
 }
 
-export interface CreateOperationsEmployerInput {
+export interface RegisterOperationsEmployerInput {
+  accountType: "company" | "consultancy" | "individual";
   companyName: string;
+  establishmentName?: string;
   firstName: string;
   lastName: string;
-  whatsappNumber: string;
   emailAddress?: string;
-  industry?: string;
-  accountType?: "company" | "consultancy" | "individual";
-  city?: string;
-  state?: string;
-  minimumEmployees?: number | null;
-  maximumEmployees?: number | null;
+  whatsappNumber: string;
+}
+
+export interface CompleteOperationsEmployerInput {
+  accountType: "company" | "consultancy" | "individual";
+  companyName: string;
+  establishmentName: string;
+  industry: string;
+  businessCategory: string;
+  minimumEmployees: number | null;
+  maximumEmployees: number | null;
+  companyAddress: string;
+  pincode: string;
+  city: string;
+  state: string;
+}
+
+export interface OperationsEmployerOtpDelivery {
+  employerId: string;
+  otpExpiresAt: string;
+  expiresIn: number;
+  resendAvailableIn: number;
 }
 
 export interface OperationsEmployersExportParams {

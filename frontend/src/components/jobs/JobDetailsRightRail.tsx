@@ -75,7 +75,7 @@ export function JobDetailsRightRail() {
 
   return (
     <aside className="flex flex-col gap-3.5" aria-label="AsliJobs highlights">
-      <section className="relative overflow-hidden rounded-xl bg-[#F4F9F6] shadow-[0_6px_16px_rgba(18,140,126,0.12)]">
+      <section className="@container relative hidden overflow-hidden rounded-xl bg-[#F4F9F6] shadow-[0_6px_16px_rgba(18,140,126,0.12)] lg:block">
         <Image
           src={whatsappPromoImage}
           alt=""
@@ -83,12 +83,12 @@ export function JobDetailsRightRail() {
           sizes="(min-width: 1280px) 270px, (min-width: 1024px) 250px, 100vw"
           priority={false}
         />
-        <div className="pointer-events-none absolute inset-0 p-3.5 pr-[42%] sm:p-4 sm:pr-[40%]">
-          <h2 className="text-[13px] leading-snug font-bold tracking-tight sm:text-[14px]">
+        <div className="pointer-events-none absolute inset-0 p-[5.2%] pr-[42%]">
+          <h2 className="text-[length:clamp(13px,4.9cqi,18px)] leading-snug font-bold tracking-tight">
             <span className="block text-[#2F6B4F]">Get Jobs Instantly</span>
             <span className="block text-[#1A1A1A]">on WhatsApp</span>
           </h2>
-          <p className="mt-1.5 max-w-[11rem] text-[10px] leading-relaxed text-[#5B6B66] sm:text-[11px]">
+          <p className="mt-[0.45em] max-w-[18em] text-[length:clamp(10px,3.7cqi,13px)] leading-relaxed text-[#5B6B66]">
             Receive instant job alerts directly on WhatsApp.
           </p>
         </div>
@@ -96,7 +96,7 @@ export function JobDetailsRightRail() {
           href={WHATSAPP_JOIN_URL}
           target={whatsappExternal ? "_blank" : undefined}
           rel={whatsappExternal ? "noopener noreferrer" : undefined}
-          className="absolute bottom-[12%] left-[2%] z-10 flex h-[21%] w-[49%] items-center justify-center pl-[10%] pr-1 text-[7.5px] font-semibold leading-none tracking-tight text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/40 sm:text-[8px]"
+          className="absolute bottom-[12%] left-[2%] z-10 flex h-[21%] w-[49%] items-center justify-center pl-[11%] pr-[3%] text-[length:clamp(10px,3.2cqi,18px)] font-semibold leading-none tracking-tight whitespace-nowrap text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/40"
           aria-label="Join WhatsApp"
         >
           Join WhatsApp

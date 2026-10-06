@@ -7,12 +7,7 @@ import { AppError } from "../../../middleware/error.middleware.js";
 import { buildListPagination } from "../../../utils/pagination.js";
 import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-image.js";
 import { EmployerModel } from "../../employers/employer.model.js";
-import {
-  commitPhoneAccount,
-  releasePhoneReservation,
-  reservePhoneAccount,
-} from "../../accounts/phone-account.service.js";
-import { phoneAlreadyRegisteredError, isMongoDuplicateKeyError } from "../../accounts/phone-account.policy.js";
+import { employerService } from "../../employers/employer.service.js";
 import { EmployerDocumentModel } from "../../employers/employer-document.model.js";
 import { JobModel } from "../../jobs/job.model.js";
 import { ApplicationModel } from "../../applications/application.model.js";
@@ -1483,70 +1478,42 @@ export const operationsEmployersService = {
     return getOperationsEmployersAnalytics(query);
   },
 
-  async createEmployer(input: {
+  async registerEmployer(input: {
+    accountType: "company" | "consultancy" | "individual";
     companyName: string;
+    establishmentName?: string;
     firstName: string;
     lastName: string;
-    whatsappNumber: string;
     emailAddress?: string;
-    industry?: string;
-    accountType?: "company" | "consultancy" | "individual";
-    city?: string;
-    state?: string;
-    minimumEmployees?: number | null;
-    maximumEmployees?: number | null;
+    whatsappNumber: string;
+  }) {
+    return employerService.registerEmployer(input);
+  },
+
+  async resendEmployerOtp(employerId: string) {
+    return employerService.resendOtp(employerId);
+  },
+
+  async verifyEmployerOtp(employerId: string, otp: string) {
+    return employerService.verifyEmployerOtp({ employerId, otp });
+  },
+
+  async completeEmployer(input: {
+    employerId: string;
+    accountType: "company" | "consultancy" | "individual";
+    companyName: string;
+    establishmentName: string;
+    industry: string;
+    businessCategory: string;
+    minimumEmployees: number | null;
+    maximumEmployees: number | null;
+    companyAddress: string;
+    pincode: string;
+    city: string;
+    state: string;
   }): Promise<OperationsEmployerDetail> {
-    const whatsappNumber = text(input.whatsappNumber).replace(/\s+/g, "");
-    if (!whatsappNumber) {
-      throw new AppError("WhatsApp number is required.", HTTP_STATUS.BAD_REQUEST);
-    }
-
-    const accountType = input.accountType ?? "company";
-    const reservation = await reservePhoneAccount({
-      whatsappNumber,
-      intendedKind: "employer",
-    });
-
-    let created;
-    try {
-      created = await EmployerModel.create({
-        accountType,
-        companyName: text(input.companyName),
-        firstName: text(input.firstName) || "Ops",
-        lastName: text(input.lastName) || "Created",
-        whatsappNumber: reservation.normalizedPhone,
-        emailAddress: text(input.emailAddress),
-        industry: text(input.industry),
-        city: text(input.city),
-        state: text(input.state),
-        minimumEmployees:
-          typeof input.minimumEmployees === "number"
-            ? input.minimumEmployees
-            : null,
-        maximumEmployees:
-          typeof input.maximumEmployees === "number"
-            ? input.maximumEmployees
-            : null,
-        registrationStatus: "completed",
-        isProfileComplete: true,
-        isWhatsappVerified: false,
-        status: "active",
-        verificationStatus: "pending",
-      });
-      await commitPhoneAccount({
-        normalizedPhone: reservation.normalizedPhone,
-        lockToken: reservation.lockToken,
-        accountId: String(created._id),
-      });
-    } catch (error) {
-      await releasePhoneReservation(reservation);
-      if (isMongoDuplicateKeyError(error)) {
-        throw phoneAlreadyRegisteredError("employer");
-      }
-      throw error;
-    }
-
-    return this.getEmployerById(String(created._id));
+    await employerService.completeOperationsEmployerProfile(input);
+    return this.getEmployerById(input.employerId);
   },
 
   async exportEmployers(

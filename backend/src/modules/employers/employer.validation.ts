@@ -8,10 +8,13 @@ import {
   isBusinessEmployerAccountType,
 } from "../../constants/employer.constants.js";
 
+export const EMPLOYER_WHATSAPP_INVALID_MESSAGE =
+  "Enter a valid WhatsApp number.";
+
 const whatsappNumberSchema = z
   .string()
   .trim()
-  .regex(/^\d{10}$/, "WhatsApp number must be exactly 10 digits");
+  .regex(/^[6-9]\d{9}$/, EMPLOYER_WHATSAPP_INVALID_MESSAGE);
 
 const emptyToUndefined = (value: unknown) =>
   value === "" || value === undefined || value === null ? undefined : value;
@@ -138,6 +141,197 @@ export const completeIndividualIdentitySchema = z.object({
   }),
 });
 
+const nullableNonNegativeInt = z.preprocess((value) => {
+  if (value === "" || value === undefined || value === null) {
+    return null;
+  }
+
+  return value;
+}, z.coerce.number().int().min(0).nullable());
+
+export type OperationsCompleteEmployerProfileFields = {
+  accountType: (typeof EMPLOYER_ACCOUNT_TYPES)[number];
+  companyName: string;
+  establishmentName: string;
+  industry: string;
+  businessCategory: string;
+  minimumEmployees: number | null;
+  maximumEmployees: number | null;
+  companyAddress: string;
+  pincode: string;
+  city: string;
+  state: string;
+};
+
+/**
+ * Drops category-only values so a Company → Consultancy → Individual switch
+ * cannot persist hidden fields.
+ */
+export function isolateOperationsEmployerProfileFields(
+  accountType: (typeof EMPLOYER_ACCOUNT_TYPES)[number],
+  input: Omit<OperationsCompleteEmployerProfileFields, "accountType">,
+): OperationsCompleteEmployerProfileFields {
+  if (accountType === "individual") {
+    return {
+      accountType,
+      companyName: "",
+      establishmentName: input.establishmentName.trim(),
+      industry: "",
+      businessCategory: "",
+      minimumEmployees: null,
+      maximumEmployees: null,
+      companyAddress: "",
+      pincode: "",
+      city: "",
+      state: "",
+    };
+  }
+
+  if (accountType === "consultancy") {
+    return {
+      accountType,
+      companyName: input.companyName.trim(),
+      establishmentName: "",
+      industry: "",
+      businessCategory: "",
+      minimumEmployees: null,
+      maximumEmployees: null,
+      companyAddress: input.companyAddress.trim(),
+      pincode: input.pincode.trim(),
+      city: input.city.trim(),
+      state: input.state.trim(),
+    };
+  }
+
+  return {
+    accountType,
+    companyName: input.companyName.trim(),
+    establishmentName: "",
+    industry: input.industry.trim(),
+    businessCategory: input.businessCategory.trim(),
+    minimumEmployees:
+      typeof input.minimumEmployees === "number" ? input.minimumEmployees : null,
+    maximumEmployees:
+      typeof input.maximumEmployees === "number" ? input.maximumEmployees : null,
+    companyAddress: input.companyAddress.trim(),
+    pincode: input.pincode.trim(),
+    city: input.city.trim(),
+    state: input.state.trim(),
+  };
+}
+
+export const operationsCompleteEmployerProfileSchema = z
+  .object({
+    accountType: z.enum(EMPLOYER_ACCOUNT_TYPES),
+    companyName: z.string().trim().default(""),
+    establishmentName: z.string().trim().default(""),
+    industry: z.string().trim().optional().default(""),
+    businessCategory: z.string().trim().optional().default(""),
+    minimumEmployees: nullableNonNegativeInt,
+    maximumEmployees: nullableNonNegativeInt,
+    companyAddress: z.string().trim().default(""),
+    pincode: z.string().trim().default(""),
+    city: z.string().trim().default(""),
+    state: z.string().trim().default(""),
+  })
+  .superRefine((data, ctx) => {
+    if (data.accountType === "individual") {
+      if (!data.establishmentName.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["establishmentName"],
+          message: "Establishment Name is required",
+        });
+      }
+      return;
+    }
+
+    if (!data.companyName.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["companyName"],
+        message:
+          data.accountType === "consultancy"
+            ? "Consultancy Name is required"
+            : "Company / Business Name is required",
+      });
+    }
+
+    if (!data.companyAddress.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["companyAddress"],
+        message: "Company address is required",
+      });
+    }
+
+    if (!data.pincode.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pincode"],
+        message: "Pincode is required",
+      });
+    }
+
+    if (!data.city.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["city"],
+        message: "City is required",
+      });
+    }
+
+    if (!data.state.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["state"],
+        message: "State is required",
+      });
+    }
+
+    if (data.accountType !== "company") {
+      return;
+    }
+
+    if (!data.industry.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["industry"],
+        message: "Industry is required",
+      });
+    }
+
+    if (!data.businessCategory.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["businessCategory"],
+        message: "Business category is required",
+      });
+    }
+
+    if (
+      typeof data.minimumEmployees !== "number" ||
+      typeof data.maximumEmployees !== "number"
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["minimumEmployees"],
+        message: "Company strength is required",
+      });
+      return;
+    }
+
+    if (data.maximumEmployees < data.minimumEmployees) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["maximumEmployees"],
+        message:
+          "Maximum employees must be greater than or equal to minimum employees",
+      });
+    }
+  })
+  .transform((data) => isolateOperationsEmployerProfileFields(data.accountType, data));
+
 export const updateEmployerProfileSchema = z
   .object({
     companyName: optionalNonEmptyString,
@@ -220,6 +414,9 @@ export type CompleteCompanyProfileSchema = z.infer<
 >;
 export type CompleteIndividualIdentitySchema = z.infer<
   typeof completeIndividualIdentitySchema
+>;
+export type OperationsCompleteEmployerProfileSchema = z.infer<
+  typeof operationsCompleteEmployerProfileSchema
 >;
 export type UpdateEmployerProfileSchema = z.infer<
   typeof updateEmployerProfileSchema

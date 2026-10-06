@@ -14,13 +14,15 @@ import { operationsRegistrationAwarenessService } from "../registration-awarenes
 import { resolveDocumentFileHeaders } from "../documents/document-preview-headers.js";
 import { operationsEmployersService } from "./operations-employers.service.js";
 import type {
-  CreateOperationsEmployerBody,
   EmployersAnalyticsQuery,
   ExportOperationsEmployersQuery,
   ListOperationsEmployerJobsQuery,
   ListOperationsEmployersQuery,
+  OperationsCompleteEmployerBody,
   OperationsEmployerDocumentParams,
   OperationsEmployerIdParams,
+  OperationsRegisterEmployerBody,
+  OperationsVerifyEmployerOtpBody,
   UpdateOperationsEmployerStatusBody,
   UpdateOperationsEmployerVerificationBody,
 } from "./operations-employers.validation.js";
@@ -98,7 +100,7 @@ export const operationsEmployersController = {
     res.status(HTTP_STATUS.OK).send(file.buffer);
   },
 
-  async create(req: Request, res: Response): Promise<void> {
+  async register(req: Request, res: Response): Promise<void> {
     const access = requireAccess(req);
     assertFineOrCoarsePermission(
       access,
@@ -106,8 +108,67 @@ export const operationsEmployersController = {
       "employers",
       "create",
     );
-    const body = req.body as CreateOperationsEmployerBody;
-    const result = await operationsEmployersService.createEmployer(body);
+    const body = req.body as OperationsRegisterEmployerBody;
+    const result = await operationsEmployersService.registerEmployer(body);
+
+    sendSuccess(res, HTTP_STATUS.CREATED, {
+      message: "OTP sent to WhatsApp.",
+      data: result,
+    });
+  },
+
+  async resendOtp(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertFineOrCoarsePermission(
+      access,
+      "employers.list.create",
+      "employers",
+      "create",
+    );
+    const { employerId } = req.params as OperationsEmployerIdParams;
+    const result = await operationsEmployersService.resendEmployerOtp(employerId);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "OTP sent to WhatsApp.",
+      data: result,
+    });
+  },
+
+  async verifyOtp(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertFineOrCoarsePermission(
+      access,
+      "employers.list.create",
+      "employers",
+      "create",
+    );
+    const { employerId } = req.params as OperationsEmployerIdParams;
+    const body = req.body as OperationsVerifyEmployerOtpBody;
+    const result = await operationsEmployersService.verifyEmployerOtp(
+      employerId,
+      body.otp,
+    );
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "WhatsApp number verified successfully",
+      data: result,
+    });
+  },
+
+  async complete(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertFineOrCoarsePermission(
+      access,
+      "employers.list.create",
+      "employers",
+      "create",
+    );
+    const { employerId } = req.params as OperationsEmployerIdParams;
+    const body = req.body as OperationsCompleteEmployerBody;
+    const result = await operationsEmployersService.completeEmployer({
+      employerId,
+      ...body,
+    });
 
     sendSuccess(res, HTTP_STATUS.CREATED, {
       message: "Employer created successfully.",

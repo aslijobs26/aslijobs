@@ -102,6 +102,11 @@ export class OtpService {
       throw new AppError(
         `Please wait ${remainingSeconds} seconds before requesting another OTP.`,
         HTTP_STATUS.TOO_MANY_REQUESTS,
+        {
+          fieldErrors: {
+            otp: `Please wait ${remainingSeconds} seconds before requesting another OTP.`,
+          },
+        },
       );
     }
   }
@@ -178,6 +183,11 @@ export class OtpService {
       throw new AppError(
         "Maximum OTP attempts exceeded. Please request a new OTP.",
         HTTP_STATUS.TOO_MANY_REQUESTS,
+        {
+          fieldErrors: {
+            otp: "Maximum OTP attempts exceeded. Please request a new OTP.",
+          },
+        },
       );
     }
   }
@@ -187,6 +197,11 @@ export class OtpService {
       throw new AppError(
         "OTP has expired. Please request a new OTP.",
         HTTP_STATUS.BAD_REQUEST,
+        {
+          fieldErrors: {
+            otp: "OTP has expired. Please request a new OTP.",
+          },
+        },
       );
     }
   }

@@ -8,14 +8,16 @@ import type {
   OperationsEmployersSearchResult,
 } from "../types/operations-post-job";
 import type {
-  CreateOperationsEmployerInput,
+  CompleteOperationsEmployerInput,
   OperationsEmployerDetail,
   OperationsEmployerJobsResult,
+  OperationsEmployerOtpDelivery,
   OperationsEmployersAnalyticsParams,
   OperationsEmployersAnalyticsResult,
   OperationsEmployersExportParams,
   OperationsEmployersListParams,
   OperationsEmployersListResult,
+  RegisterOperationsEmployerInput,
   UpdateOperationsEmployerStatusInput,
   UpdateOperationsEmployerVerificationInput,
 } from "../types/operations-employers";
@@ -183,11 +185,43 @@ export async function fetchOperationsEmployersAnalytics(
   return response.data.data;
 }
 
-export async function createOperationsEmployer(
-  payload: CreateOperationsEmployerInput,
+export async function registerOperationsEmployer(
+  payload: RegisterOperationsEmployerInput,
+): Promise<OperationsEmployerOtpDelivery> {
+  const response = await apiClient.post<{ data: OperationsEmployerOtpDelivery }>(
+    `${OPERATIONS_EMPLOYERS_BASE}/register`,
+    payload,
+  );
+
+  return response.data.data;
+}
+
+export async function resendOperationsEmployerOtp(
+  employerId: string,
+): Promise<OperationsEmployerOtpDelivery> {
+  const response = await apiClient.post<{ data: OperationsEmployerOtpDelivery }>(
+    `${OPERATIONS_EMPLOYERS_BASE}/${encodeURIComponent(employerId)}/otp/resend`,
+  );
+
+  return response.data.data;
+}
+
+export async function verifyOperationsEmployerOtp(
+  employerId: string,
+  otp: string,
+): Promise<void> {
+  await apiClient.post(
+    `${OPERATIONS_EMPLOYERS_BASE}/${encodeURIComponent(employerId)}/otp/verify`,
+    { otp },
+  );
+}
+
+export async function completeOperationsEmployer(
+  employerId: string,
+  payload: CompleteOperationsEmployerInput,
 ): Promise<OperationsEmployerDetail> {
   const response = await apiClient.post<{ data: OperationsEmployerDetail }>(
-    OPERATIONS_EMPLOYERS_BASE,
+    `${OPERATIONS_EMPLOYERS_BASE}/${encodeURIComponent(employerId)}/complete`,
     payload,
   );
 

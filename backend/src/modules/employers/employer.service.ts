@@ -33,11 +33,13 @@ import { EmployerModel } from "./employer.model.js";
 import type {
   CompleteCompanyProfileInput,
   CompleteIndividualIdentityInput,
+  CompleteOperationsEmployerProfileInput,
   EmployerAccountType,
   RegisterEmployerInput,
   UpdateEmployerProfileInput,
   VerifyEmployerOtpInput,
 } from "./employer.types.js";
+import { isolateOperationsEmployerProfileFields } from "./employer.validation.js";
 
 type EmployerImageAsset = {
   url?: string;
@@ -377,7 +379,11 @@ async function assertNoCompletedDuplicateWhatsapp(
 
   const existing = await EmployerModel.findOne(query).select("_id");
   if (existing) {
-    throw new AppError("Duplicate WhatsApp Number", HTTP_STATUS.CONFLICT);
+    throw new AppError("Duplicate WhatsApp Number", HTTP_STATUS.CONFLICT, {
+      fieldErrors: {
+        whatsappNumber: "An employer with this WhatsApp number already exists.",
+      },
+    });
   }
 }
 
@@ -401,7 +407,11 @@ async function assertNoCompletedDuplicateEmail(
 
   const existing = await EmployerModel.findOne(query).select("_id");
   if (existing) {
-    throw new AppError("Duplicate Email", HTTP_STATUS.CONFLICT);
+    throw new AppError("Duplicate Email", HTTP_STATUS.CONFLICT, {
+      fieldErrors: {
+        emailAddress: "An employer with this email already exists.",
+      },
+    });
   }
 }
 
@@ -559,7 +569,9 @@ export class EmployerService {
       employer.otpAttempts = (employer.otpAttempts ?? 0) + 1;
       await employer.save();
       otpService.logVerificationFailure("INVALID_OTP");
-      throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST);
+      throw new AppError("Invalid OTP", HTTP_STATUS.BAD_REQUEST, {
+        fieldErrors: { otp: "Invalid OTP" },
+      });
     }
 
     otpService.logVerificationSuccess();
@@ -944,6 +956,89 @@ export class EmployerService {
       ...session,
       nextStep: "dashboard" as const,
     };
+  }
+
+  /**
+   * Operations follow-up completion after the same register + WhatsApp OTP
+   * path as public registration. Documents remain optional here because
+   * Operations KYC is a separate verification workflow.
+   */
+  async completeOperationsEmployerProfile(
+    input: CompleteOperationsEmployerProfileInput,
+  ) {
+    const employer = await findEmployerOrThrow(input.employerId);
+    const isolated = isolateOperationsEmployerProfileFields(
+      employer.accountType as EmployerAccountType,
+      input,
+    );
+
+    if (input.accountType !== employer.accountType) {
+      throw new AppError(
+        "Employer category does not match the WhatsApp-verified registration. Send OTP again after changing category.",
+        HTTP_STATUS.BAD_REQUEST,
+        { fieldErrors: { accountType: "Category changed. Send OTP again." } },
+      );
+    }
+
+    if (!employer.isWhatsappVerified) {
+      throw new AppError(
+        "WhatsApp number must be verified before creating the employer.",
+        HTTP_STATUS.BAD_REQUEST,
+        { fieldErrors: { otp: "Verify the WhatsApp OTP first." } },
+      );
+    }
+
+    if (
+      employer.registrationStatus !== "otp_verified" &&
+      employer.registrationStatus !== "document_uploaded"
+    ) {
+      throw new AppError(
+        "Complete WhatsApp OTP verification before creating the employer.",
+        HTTP_STATUS.BAD_REQUEST,
+        { fieldErrors: { otp: "Verify the WhatsApp OTP first." } },
+      );
+    }
+
+    await assertPhoneExclusiveToAccount({
+      whatsappNumber: employer.whatsappNumber,
+      intendedKind: "employer",
+      accountId: employer._id.toString(),
+    });
+    await assertNoCompletedDuplicateWhatsapp(
+      employer.whatsappNumber,
+      employer._id,
+    );
+    await assertNoCompletedDuplicateEmail(employer.emailAddress, employer._id);
+
+    employer.companyName = isolated.companyName;
+    employer.establishmentName = isolated.establishmentName;
+    employer.industry = isolated.industry;
+    employer.businessCategory = isolated.businessCategory;
+    employer.minimumEmployees = isolated.minimumEmployees;
+    employer.maximumEmployees = isolated.maximumEmployees;
+    employer.companyAddress = isolated.companyAddress;
+    employer.pincode = isolated.pincode;
+    employer.city = isolated.city;
+    employer.state = isolated.state;
+    employer.isProfileComplete = true;
+    employer.registrationStatus = "completed";
+    employer.verificationStatus = "pending";
+    employer.status = "active";
+    if (!employer.operationsRegistrationAwareness?.registeredAt) {
+      employer.operationsRegistrationAwareness =
+        buildNewRegistrationAwarenessPayload(new Date());
+    }
+    await employer.save();
+
+    scheduleEmployerRegisteredAwareness({
+      employerId: employer._id.toString(),
+      displayName: resolveEmployerRegistrationDisplayName(employer),
+      displayId: formatEmployerRegistrationDisplayId(employer._id.toString()),
+      registeredAt:
+        employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
+    });
+
+    return toPublicEmployer(employer);
   }
 
   async updateEmployerProfile(

@@ -5,20 +5,24 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
-  createOperationsEmployer,
+  completeOperationsEmployer,
   exportOperationsEmployersCsv,
   fetchOperationsEmployerDetail,
   fetchOperationsEmployerJobs,
   fetchOperationsEmployers,
   fetchOperationsEmployersAnalytics,
+  registerOperationsEmployer,
+  resendOperationsEmployerOtp,
   updateOperationsEmployerStatus,
   updateOperationsEmployerVerification,
+  verifyOperationsEmployerOtp,
 } from "../services/operations-employers.service";
 import type {
-  CreateOperationsEmployerInput,
+  CompleteOperationsEmployerInput,
   OperationsEmployersAnalyticsParams,
   OperationsEmployersExportParams,
   OperationsEmployersListParams,
+  RegisterOperationsEmployerInput,
   UpdateOperationsEmployerStatusInput,
   UpdateOperationsEmployerVerificationInput,
 } from "../types/operations-employers";
@@ -115,18 +119,43 @@ export function useOperationsEmployerJobs(
   });
 }
 
-export function useCreateOperationsEmployer() {
+export function useRegisterOperationsEmployer() {
+  return useMutation({
+    mutationFn: (payload: RegisterOperationsEmployerInput) =>
+      registerOperationsEmployer(payload),
+  });
+}
+
+export function useResendOperationsEmployerOtp() {
+  return useMutation({
+    mutationFn: (employerId: string) => resendOperationsEmployerOtp(employerId),
+  });
+}
+
+export function useVerifyOperationsEmployerOtp() {
+  return useMutation({
+    mutationFn: (input: { employerId: string; otp: string }) =>
+      verifyOperationsEmployerOtp(input.employerId, input.otp),
+  });
+}
+
+export function useCompleteOperationsEmployer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: CreateOperationsEmployerInput) =>
-      createOperationsEmployer(payload),
+    mutationFn: (input: {
+      employerId: string;
+      payload: CompleteOperationsEmployerInput;
+    }) => completeOperationsEmployer(input.employerId, input.payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: OPERATIONS_EMPLOYERS_QUERY_KEY,
       });
       void queryClient.invalidateQueries({
         queryKey: OPERATIONS_EMPLOYERS_ANALYTICS_QUERY_KEY,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: OPERATIONS_REGISTRATION_AWARENESS_QUERY_KEY,
       });
     },
   });

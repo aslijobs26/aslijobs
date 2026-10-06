@@ -27,6 +27,8 @@ interface OperationsFilterSelectProps {
   hideSearch?: boolean;
   className?: string;
   triggerClassName?: string;
+  /** Hide the built-in sr-only label when a visible <label htmlFor> is provided. */
+  hideSrOnlyLabel?: boolean;
   /**
    * On viewports below `sm` (640px), open options as a bottom sheet
    * that slides up from the bottom. Desktop/tablet keep the dropdown.
@@ -89,6 +91,7 @@ export function OperationsFilterSelect({
   options,
   onChange,
   hideSearch = false,
+  hideSrOnlyLabel = false,
   className,
   triggerClassName,
   mobileSheet = false,
@@ -382,9 +385,11 @@ export function OperationsFilterSelect({
 
   return (
     <div ref={rootRef} className={cn("relative min-w-0", className)}>
+      {hideSrOnlyLabel ? null : (
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
+      )}
       <button
         ref={triggerRef}
         id={id}

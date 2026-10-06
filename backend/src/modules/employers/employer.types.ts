@@ -57,6 +57,21 @@ export type CompleteIndividualIdentityInput = {
   documentType: EmployerIdentityDocumentType;
 };
 
+export type CompleteOperationsEmployerProfileInput = {
+  employerId: string;
+  accountType: EmployerAccountType;
+  companyName: string;
+  establishmentName: string;
+  industry: string;
+  businessCategory: string;
+  minimumEmployees: number | null;
+  maximumEmployees: number | null;
+  companyAddress: string;
+  pincode: string;
+  city: string;
+  state: string;
+};
+
 export type UpdateEmployerProfileInput = {
   employerId: string;
   companyName?: string;

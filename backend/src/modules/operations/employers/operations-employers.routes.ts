@@ -8,13 +8,15 @@ import { validate } from "../../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../../utils/async-handler.js";
 import { operationsEmployersController } from "./operations-employers.controller.js";
 import {
-  createOperationsEmployerBodySchema,
   employersAnalyticsQuerySchema,
   exportOperationsEmployersQuerySchema,
   listOperationsEmployerJobsQuerySchema,
   listOperationsEmployersQuerySchema,
+  operationsCompleteEmployerBodySchema,
   operationsEmployerDocumentParamsSchema,
   operationsEmployerIdParamsSchema,
+  operationsRegisterEmployerBodySchema,
+  operationsVerifyEmployerOtpBodySchema,
   updateOperationsEmployerStatusBodySchema,
   updateOperationsEmployerVerificationBodySchema,
 } from "./operations-employers.validation.js";
@@ -45,10 +47,33 @@ operationsEmployersRouter.get(
 );
 
 operationsEmployersRouter.post(
-  "/",
+  "/register",
   requireOperationsPermission("employers", "create"),
-  validate(createOperationsEmployerBodySchema, "body"),
-  asyncHandler(operationsEmployersController.create),
+  validate(operationsRegisterEmployerBodySchema, "body"),
+  asyncHandler(operationsEmployersController.register),
+);
+
+operationsEmployersRouter.post(
+  "/:employerId/otp/resend",
+  requireOperationsPermission("employers", "create"),
+  validate(operationsEmployerIdParamsSchema, "params"),
+  asyncHandler(operationsEmployersController.resendOtp),
+);
+
+operationsEmployersRouter.post(
+  "/:employerId/otp/verify",
+  requireOperationsPermission("employers", "create"),
+  validate(operationsEmployerIdParamsSchema, "params"),
+  validate(operationsVerifyEmployerOtpBodySchema, "body"),
+  asyncHandler(operationsEmployersController.verifyOtp),
+);
+
+operationsEmployersRouter.post(
+  "/:employerId/complete",
+  requireOperationsPermission("employers", "create"),
+  validate(operationsEmployerIdParamsSchema, "params"),
+  validate(operationsCompleteEmployerBodySchema, "body"),
+  asyncHandler(operationsEmployersController.complete),
 );
 
 operationsEmployersRouter.get(
