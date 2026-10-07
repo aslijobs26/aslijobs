@@ -55,7 +55,13 @@ const CHUNK = 900;
 export const TRANSLATION_RETRY_COOLDOWN_MS = 30_000;
 /** One extra whole-batch mapping retry. Never per-segment fallback. */
 export const HTML_BATCH_MAPPING_RETRIES = 1;
-export const HTML_SEGMENT_END = "__AJ_END__";
+/**
+ * Word-free delimiter. mayura:v1 treats `__AJ_END__` as English "END" and
+ * strips or translates it; `__AJQ__` survived a live en→kn probe.
+ */
+export const HTML_SEGMENT_DELIMITER = "__AJQ__";
+const HTML_DELIMITER_JOIN = `\n${HTML_SEGMENT_DELIMITER}\n`;
+const HTML_DELIMITER_SPLIT = /_{0,2}AJQ_{0,2}/;
 
 const HARD_PROVIDER_ERROR_CODES = new Set([
   "missing_key",
@@ -472,12 +478,8 @@ export function hasMatchingHtmlStructure(source: string, translated: string): bo
   return htmlTagSignature(source) === htmlTagSignature(translated);
 }
 
-export function htmlSegmentStart(index: number): string {
-  return `__AJ_SEG_${String(index + 1).padStart(4, "0")}__`;
-}
-
-export function wrapHtmlSegment(index: number, text: string): string {
-  return `${htmlSegmentStart(index)}${text}${HTML_SEGMENT_END}`;
+export function joinHtmlSegmentBatch(segments: readonly string[]): string {
+  return segments.join(HTML_DELIMITER_JOIN);
 }
 
 export function packHtmlSegmentBatches(
@@ -488,12 +490,14 @@ export function packHtmlSegmentBatches(
   let current: number[] = [];
   let currentLen = 0;
   segments.forEach((segment, index) => {
-    const markedLen = wrapHtmlSegment(index, segment).length;
-    const extra = current.length > 0 ? 1 + markedLen : markedLen;
+    const extra =
+      current.length > 0
+        ? HTML_DELIMITER_JOIN.length + segment.length
+        : segment.length;
     if (current.length > 0 && currentLen + extra > chunkLimit) {
       batches.push(current);
       current = [index];
-      currentLen = markedLen;
+      currentLen = segment.length;
       return;
     }
     current.push(index);
@@ -509,32 +513,20 @@ export function parseHtmlSegmentTranslations(
   translated: string,
   expectedIndexes: readonly number[],
 ): Map<number, string> | null {
-  const pattern = /__AJ_SEG_(\d{4})__([\s\S]*?)__AJ_END__/g;
-  const found = new Map<number, string>();
-  let match = pattern.exec(translated);
-  while (match) {
-    const index = Number.parseInt(match[1] ?? "", 10) - 1;
-    const value = (match[2] ?? "").replace(/\s+/g, " ").trim();
-    if (!Number.isInteger(index) || index < 0 || found.has(index) || !value) {
-      return null;
-    }
-    found.set(index, value);
-    match = pattern.exec(translated);
-  }
-  if (found.size !== expectedIndexes.length) {
+  const parts = translated
+    .split(HTML_DELIMITER_SPLIT)
+    .map((part) => part.replace(/\s+/g, " ").trim());
+  if (parts.length !== expectedIndexes.length || !parts.every(Boolean)) {
     return null;
   }
-  for (const index of expectedIndexes) {
-    if (!found.has(index)) {
-      return null;
-    }
-  }
-  return found;
+  return new Map(
+    expectedIndexes.map((index, offset) => [index, parts[offset] ?? ""]),
+  );
 }
 
 /**
  * Translates only the text between tags and copies every tag verbatim.
- * Text nodes are sent in CHUNK-sized batches with stable segment markers.
+ * Text nodes are sent in CHUNK-sized batches separated by __AJQ__.
  * Mapping failure retries the same batch once; it never falls back per node.
  */
 export async function translateJobHtmlField(input: {
@@ -559,9 +551,9 @@ export async function translateJobHtmlField(input: {
 
   for (const [batchOffset, batchIndexes] of batches.entries()) {
     const batch = batchOffset + 1;
-    const payload = batchIndexes
-      .map((index) => wrapHtmlSegment(index, segments[index] ?? ""))
-      .join("\n");
+    const payload = joinHtmlSegmentBatch(
+      batchIndexes.map((index) => segments[index] ?? ""),
+    );
     let mapped: Map<number, string> | null = null;
     let lastFailure: JobFieldTranslateResult | null = null;
 

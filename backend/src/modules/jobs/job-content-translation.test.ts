@@ -19,6 +19,8 @@ import {
   languageNeedsTranslation,
   needsJobContentTranslation,
   normalizeInternationalNumerals,
+  HTML_SEGMENT_DELIMITER,
+  joinHtmlSegmentBatch,
   packHtmlSegmentBatches,
   parseHtmlSegmentTranslations,
   protectJobNumericLiterals,
@@ -33,7 +35,6 @@ import {
   translateRequestedJobLanguage,
   translationPreservesSourceNumbers,
   withTranslationInFlight,
-  wrapHtmlSegment,
   type JobContentTranslations,
 } from "./job-content-translation.js";
 import { JobModel } from "./job.model.js";
@@ -50,11 +51,11 @@ function mockTranslate(calls: { count: number; bodies: string[] }): typeof fetch
   }) as typeof fetch;
 }
 
-function translateMarkedHtmlInput(input: string): string {
-  return input.replace(
-    /__AJ_SEG_(\d{4})__([\s\S]*?)__AJ_END__/g,
-    (_match, id: string, text: string) => `__AJ_SEG_${id}__tr:${text}__AJ_END__`,
-  );
+function translateDelimitedHtmlInput(input: string): string {
+  return input
+    .split(/_{0,2}AJQ_{0,2}/)
+    .map((part) => `tr:${part.replace(/\s+/g, " ").trim()}`)
+    .join(`\n${HTML_SEGMENT_DELIMITER}\n`);
 }
 
 function mockHtmlTranslate(calls: { count: number; bodies: string[] }): typeof fetch {
@@ -63,8 +64,8 @@ function mockHtmlTranslate(calls: { count: number; bodies: string[] }): typeof f
     const body = JSON.parse(String(init?.body ?? "{}")) as { input?: string };
     const input = body.input ?? "";
     calls.bodies.push(input);
-    const translated = /__AJ_SEG_\d{4}__/.test(input)
-      ? translateMarkedHtmlInput(input)
+    const translated = /AJQ/.test(input)
+      ? translateDelimitedHtmlInput(input)
       : `tr:${input}`;
     return new Response(JSON.stringify({ translated_text: translated }), {
       status: 200,
@@ -426,27 +427,29 @@ describe("job content translation", () => {
     );
   });
 
-  it("maps marked HTML segments back in source order", () => {
+  it("maps delimited HTML segments back in source order", () => {
     const mapped = parseHtmlSegmentTranslations(
-      `${wrapHtmlSegment(0, "tr:First")} ${wrapHtmlSegment(1, "tr:Second")}`,
+      `tr:First ${HTML_SEGMENT_DELIMITER} tr:Second`,
       [0, 1],
     );
     assert.equal(mapped?.get(0), "tr:First");
     assert.equal(mapped?.get(1), "tr:Second");
-    assert.equal(parseHtmlSegmentTranslations("no markers", [0, 1]), null);
+    assert.equal(parseHtmlSegmentTranslations("no delimiter", [0, 1]), null);
   });
 
-  it("packs 31 short HTML text nodes into two Sarvam batches", () => {
+  it("packs 31 short HTML text nodes into one or two Sarvam batches, never 31", () => {
     const html = buildSegmentedHtml(31);
     const segments = [...html.matchAll(/<p>([^<]+)<\/p>/g)].map((match) => match[1]);
     assert.equal(segments.length, 31);
     const batches = packHtmlSegmentBatches(segments);
-    assert.equal(batches.length, 2);
-    assert.equal(batches[0].length + batches[1].length, 31);
+    assert.ok(batches.length >= 1 && batches.length <= 2);
+    assert.equal(batches.reduce((sum, batch) => sum + batch.length, 0), 31);
   });
 
-  it("translates a 31-segment HTML job in 4 Sarvam calls, never 35", async () => {
+  it("translates a 31-segment HTML job without per-segment fallback", async () => {
     const html = buildSegmentedHtml(31);
+    const segments = [...html.matchAll(/<p>([^<]+)<\/p>/g)].map((match) => match[1] ?? "");
+    const expectedDescriptionCalls = packHtmlSegmentBatches(segments).length;
     const calls = { count: 0, bodies: [] as string[] };
     const built = await buildJobContentTranslations({
       source: {
@@ -460,10 +463,10 @@ describe("job content translation", () => {
     });
     const telugu = built.contentTranslations.te?.description ?? "";
     assert.equal(built.fieldCalls.jobTitle, 1);
-    assert.equal(built.fieldCalls.description, 2);
+    assert.equal(built.fieldCalls.description, expectedDescriptionCalls);
     assert.equal(built.fieldCalls.interviewInstructions, 1);
-    assert.equal(built.translateCalls, 4);
-    assert.equal(calls.count, 4);
+    assert.equal(built.translateCalls, 1 + expectedDescriptionCalls + 1);
+    assert.ok(built.translateCalls < 31);
     assert.ok(calls.bodies.every((body) => !body.includes("<p>")));
     assert.ok(hasMatchingHtmlStructure(html, telugu));
     for (let index = 1; index <= 31; index += 1) {
@@ -471,6 +474,58 @@ describe("job content translation", () => {
     }
     assert.match(telugu, /<p>tr:Text segment 01<\/p>/);
     assert.match(telugu, /<p>tr:Text segment 31<\/p>/);
+  });
+
+  it("translates the AJ-2026-000017 broadband HTML to Kannada without per-segment calls", async () => {
+    const html =
+      "<p><strong>Field and Broadband Engineers</strong></p><ul><li><p><strong>Installation and Setup:</strong> Handle on-site broadband setup, WiFi router configurations, and local loop connection deliveries.</p></li><li><p><strong>Service Assurance:</strong> Deliver data and PRI links, execute link migrations, and perform preventive maintenance on local hardware and fiber nodes. </p></li></ul><p></p>";
+    const source = {
+      jobTitle: "Engineer",
+      description: html,
+      interviewInstructions: "Mandatory: Bike and two-wheeler licenses",
+    };
+    const calls = { count: 0, bodies: [] as string[] };
+    const built = await buildJobContentTranslations({
+      source,
+      languages: ["kn"],
+      publicJobId: "AJ-2026-000017",
+      fetchImpl: mockHtmlTranslate(calls),
+    });
+    const kannada = built.contentTranslations.kn;
+    assert.equal(built.translationStatus, "complete");
+    assert.equal(kannada?.status, "completed");
+    assert.equal(built.fieldCalls.jobTitle, 1);
+    assert.equal(built.fieldCalls.description, 1);
+    assert.equal(built.fieldCalls.interviewInstructions, 1);
+    assert.equal(built.translateCalls, 3);
+    assert.ok(calls.bodies.every((body) => !body.includes("<")));
+    assert.ok(calls.bodies.some((body) => body.includes(HTML_SEGMENT_DELIMITER)));
+    assert.ok(kannada?.description);
+    assert.notEqual(kannada?.description, html);
+    assert.ok(hasMatchingHtmlStructure(html, kannada?.description ?? ""));
+    assert.match(kannada?.description ?? "", /<p><strong>tr:Field and Broadband Engineers<\/strong><\/p>/);
+    assert.match(kannada?.description ?? "", /<strong>tr:Installation and Setup:<\/strong>/);
+    assert.match(kannada?.description ?? "", /<strong>tr:Service Assurance:<\/strong>/);
+    assert.equal(languageNeedsTranslation({ ...source, contentTranslations: built.contentTranslations }, "kn"), false);
+  });
+
+  it("maps this job HTML when Sarvam keeps __AJQ__ but collapses newlines", () => {
+    const mapped = parseHtmlSegmentTranslations(
+      "kn-one __AJQ__ kn-two __AJQ__ kn-three __AJQ__ kn-four __AJQ__ kn-five",
+      [0, 1, 2, 3, 4],
+    );
+    assert.equal(mapped?.get(0), "kn-one");
+    assert.equal(mapped?.get(4), "kn-five");
+  });
+
+  it("does not treat live __AJ_END__ corruption as a successful SEG mapping", () => {
+    const liveSarvamMutation =
+      "__AJ_SEG_0001__kn-one__AJ_END__ kn-two AJ_END__ __AJ_SEG_0003__ kn-three.AJ_END__";
+    assert.equal(parseHtmlSegmentTranslations(liveSarvamMutation, [0, 1, 2]), null);
+    assert.equal(
+      parseHtmlSegmentTranslations(joinHtmlSegmentBatch(["kn-one", "kn-two", "kn-three"]), [0, 1, 2])?.get(1),
+      "kn-two",
+    );
   });
 
   it("keeps HTML numbers after marked batch translation", async () => {
