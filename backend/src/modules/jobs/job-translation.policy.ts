@@ -90,7 +90,9 @@ type ExistingTranslationTask = {
 /**
  * One task per job + language + source text.
  * Pending and processing tasks are never duplicated.
- * A failed task can be queued again only after its cooldown.
+ * Failed tasks are exhausted for this sourceHash; only a source edit
+ * (new hash → new task) starts a fresh cycle.
+ * Completed tasks may be reset when Mongo still needs that language.
  */
 export function shouldResetStoredTranslationTask(
   status: JobTranslationTaskStatus | string,
@@ -99,12 +101,13 @@ export function shouldResetStoredTranslationTask(
   if (!needsTranslation) {
     return false;
   }
-  return status === "failed" || status === "completed";
+  return status === "completed";
 }
 
 export function canEnqueueJobTranslation(
   existing: ExistingTranslationTask | null,
   now = Date.now(),
+  maxAttempts = 3,
 ): boolean {
   if (!existing) {
     return true;
@@ -117,6 +120,9 @@ export function canEnqueueJobTranslation(
     return false;
   }
   if (existing.status !== "failed") {
+    return false;
+  }
+  if (existing.attempts >= maxAttempts) {
     return false;
   }
   if (!existing.nextAttemptAt) {

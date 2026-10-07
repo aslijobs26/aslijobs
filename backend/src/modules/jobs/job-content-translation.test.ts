@@ -12,11 +12,15 @@ import {
   hashJobField,
   hashJobSource,
   hasMatchingHtmlStructure,
+  HTML_BATCH_MAPPING_RETRIES,
+  isHardSarvamProviderFailure,
   isTranslationRetryCoolingDown,
   isUsableFieldTranslation,
   languageNeedsTranslation,
   needsJobContentTranslation,
   normalizeInternationalNumerals,
+  packHtmlSegmentBatches,
+  parseHtmlSegmentTranslations,
   protectJobNumericLiterals,
   queueJobContentTranslation,
   resolveJobContent,
@@ -29,6 +33,7 @@ import {
   translateRequestedJobLanguage,
   translationPreservesSourceNumbers,
   withTranslationInFlight,
+  wrapHtmlSegment,
   type JobContentTranslations,
 } from "./job-content-translation.js";
 import { JobModel } from "./job.model.js";
@@ -45,20 +50,33 @@ function mockTranslate(calls: { count: number; bodies: string[] }): typeof fetch
   }) as typeof fetch;
 }
 
-function mockLineTranslate(calls: { count: number; bodies: string[] }): typeof fetch {
+function translateMarkedHtmlInput(input: string): string {
+  return input.replace(
+    /__AJ_SEG_(\d{4})__([\s\S]*?)__AJ_END__/g,
+    (_match, id: string, text: string) => `__AJ_SEG_${id}__tr:${text}__AJ_END__`,
+  );
+}
+
+function mockHtmlTranslate(calls: { count: number; bodies: string[] }): typeof fetch {
   return (async (_url, init) => {
     calls.count += 1;
     const body = JSON.parse(String(init?.body ?? "{}")) as { input?: string };
     const input = body.input ?? "";
     calls.bodies.push(input);
-    const translated = input
-      .split("\n")
-      .map((line) => `tr:${line}`)
-      .join("\n");
+    const translated = /__AJ_SEG_\d{4}__/.test(input)
+      ? translateMarkedHtmlInput(input)
+      : `tr:${input}`;
     return new Response(JSON.stringify({ translated_text: translated }), {
       status: 200,
     });
   }) as typeof fetch;
+}
+
+function buildSegmentedHtml(count: number): string {
+  return Array.from({ length: count }, (_, index) => {
+    const label = `Text segment ${String(index + 1).padStart(2, "0")}`;
+    return `<p>${label}</p>`;
+  }).join("");
 }
 
 const source = {
@@ -331,7 +349,7 @@ describe("job content translation", () => {
     const built = await buildJobContentTranslations({
       source: { ...source, description: html },
       languages: ["te"],
-      fetchImpl: mockLineTranslate(calls),
+      fetchImpl: mockHtmlTranslate(calls),
     });
     const telugu = built.contentTranslations.te?.description ?? "";
     assert.equal(
@@ -342,15 +360,14 @@ describe("job content translation", () => {
     assert.ok(hasMatchingHtmlStructure(html, telugu));
   });
 
-  it("falls back to per-segment translation when batch lines do not line up", async () => {
+  it("retries a whole HTML batch once when segment markers cannot be mapped", async () => {
     const html = "<p>First line.</p><p>Second line.</p>";
     let callCount = 0;
-    const fetchImpl = (async (_url, init) => {
+    const fetchImpl = (async () => {
       callCount += 1;
-      const body = JSON.parse(String(init?.body ?? "{}")) as { input?: string };
-      const input = body.input ?? "";
-      const translated = input.includes("\n") ? "merged-into-one-line" : `tr:${input}`;
-      return new Response(JSON.stringify({ translated_text: translated }), { status: 200 });
+      return new Response(JSON.stringify({ translated_text: "merged-into-one-line" }), {
+        status: 200,
+      });
     }) as typeof fetch;
     const result = await translateJobHtmlField({
       html,
@@ -358,9 +375,10 @@ describe("job content translation", () => {
       targetLanguage: "te",
       fetchImpl,
     });
-    assert.equal(result.failed, false);
-    assert.equal(result.text, "<p>tr:First line.</p><p>tr:Second line.</p>");
-    assert.equal(callCount, 3);
+    assert.equal(result.failed, true);
+    assert.equal(result.text, html);
+    assert.equal(callCount, HTML_BATCH_MAPPING_RETRIES + 1);
+    assert.equal(result.errorCode, "html_segment_mapping_failed");
   });
 
   it("ignores stored HTML translations whose tag structure is broken", async () => {
@@ -393,7 +411,7 @@ describe("job content translation", () => {
       source: { ...source, description: html },
       existing,
       languages: ["te"],
-      fetchImpl: mockLineTranslate({ count: 0, bodies: [] }),
+      fetchImpl: mockHtmlTranslate({ count: 0, bodies: [] }),
     });
     assert.equal(
       rebuilt.contentTranslations.te?.description,
@@ -406,6 +424,94 @@ describe("job content translation", () => {
       ),
       false,
     );
+  });
+
+  it("maps marked HTML segments back in source order", () => {
+    const mapped = parseHtmlSegmentTranslations(
+      `${wrapHtmlSegment(0, "tr:First")} ${wrapHtmlSegment(1, "tr:Second")}`,
+      [0, 1],
+    );
+    assert.equal(mapped?.get(0), "tr:First");
+    assert.equal(mapped?.get(1), "tr:Second");
+    assert.equal(parseHtmlSegmentTranslations("no markers", [0, 1]), null);
+  });
+
+  it("packs 31 short HTML text nodes into two Sarvam batches", () => {
+    const html = buildSegmentedHtml(31);
+    const segments = [...html.matchAll(/<p>([^<]+)<\/p>/g)].map((match) => match[1]);
+    assert.equal(segments.length, 31);
+    const batches = packHtmlSegmentBatches(segments);
+    assert.equal(batches.length, 2);
+    assert.equal(batches[0].length + batches[1].length, 31);
+  });
+
+  it("translates a 31-segment HTML job in 4 Sarvam calls, never 35", async () => {
+    const html = buildSegmentedHtml(31);
+    const calls = { count: 0, bodies: [] as string[] };
+    const built = await buildJobContentTranslations({
+      source: {
+        jobTitle: "Plumber",
+        description: html,
+        interviewInstructions: "Bring ID proof.",
+      },
+      languages: ["te"],
+      publicJobId: "AJ-2026-000072",
+      fetchImpl: mockHtmlTranslate(calls),
+    });
+    const telugu = built.contentTranslations.te?.description ?? "";
+    assert.equal(built.fieldCalls.jobTitle, 1);
+    assert.equal(built.fieldCalls.description, 2);
+    assert.equal(built.fieldCalls.interviewInstructions, 1);
+    assert.equal(built.translateCalls, 4);
+    assert.equal(calls.count, 4);
+    assert.ok(calls.bodies.every((body) => !body.includes("<p>")));
+    assert.ok(hasMatchingHtmlStructure(html, telugu));
+    for (let index = 1; index <= 31; index += 1) {
+      assert.match(telugu, new RegExp(`tr:Text segment ${String(index).padStart(2, "0")}`));
+    }
+    assert.match(telugu, /<p>tr:Text segment 01<\/p>/);
+    assert.match(telugu, /<p>tr:Text segment 31<\/p>/);
+  });
+
+  it("keeps HTML numbers after marked batch translation", async () => {
+    const html = "<p>Salary ₹18,000 for 2 years. Openings: 1.</p>";
+    const result = await translateJobHtmlField({
+      html,
+      sourceLanguage: "en",
+      targetLanguage: "te",
+      fetchImpl: mockHtmlTranslate({ count: 0, bodies: [] }),
+    });
+    assert.equal(result.failed, false);
+    assert.match(result.text, /₹18,000/);
+    assert.match(result.text, /\b2\b/);
+    assert.match(result.text, /\b1\b/);
+    assert.ok(hasMatchingHtmlStructure(html, result.text));
+    assert.equal(translationPreservesSourceNumbers(html, result.text), true);
+  });
+
+  it("stops remaining fields after a hard 402 on the title", async () => {
+    const calls = { count: 0, bodies: [] as string[] };
+    const fetchImpl = (async (_url, init) => {
+      calls.count += 1;
+      calls.bodies.push(JSON.parse(String(init?.body ?? "{}")).input ?? "");
+      return new Response(
+        JSON.stringify({
+          error: { message: "No credits available.", code: "insufficient_quota_error" },
+        }),
+        { status: 402 },
+      );
+    }) as typeof fetch;
+    const built = await buildJobContentTranslations({
+      source,
+      languages: ["te"],
+      fetchImpl,
+    });
+    assert.equal(isHardSarvamProviderFailure({ httpStatus: 402, errorCode: "insufficient_quota_error" }), true);
+    assert.equal(calls.count, 1);
+    assert.equal(built.fieldCalls.jobTitle, 1);
+    assert.equal(built.fieldCalls.description, 0);
+    assert.equal(built.fieldCalls.interviewInstructions, 0);
+    assert.equal(built.translationStatus, "failed");
   });
 
   it("falls back to the original for jobs that have no translations", () => {

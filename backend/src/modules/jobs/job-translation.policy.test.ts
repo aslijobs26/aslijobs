@@ -43,6 +43,14 @@ describe("job translation queue policy", () => {
         attempts: 3,
         nextAttemptAt: new Date(Date.now() - 1_000),
       }),
+      false,
+    );
+    assert.equal(
+      canEnqueueJobTranslation({
+        status: "failed",
+        attempts: 1,
+        nextAttemptAt: new Date(Date.now() - 1_000),
+      }),
       true,
     );
   });
@@ -70,7 +78,7 @@ describe("job translation queue policy", () => {
   it("resets completed tasks only when Mongo still needs that language", () => {
     assert.equal(shouldResetStoredTranslationTask("completed", true), true);
     assert.equal(shouldResetStoredTranslationTask("completed", false), false);
-    assert.equal(shouldResetStoredTranslationTask("failed", true), true);
+    assert.equal(shouldResetStoredTranslationTask("failed", true), false);
     assert.equal(shouldResetStoredTranslationTask("pending", true), false);
     assert.equal(shouldResetStoredTranslationTask("processing", true), false);
   });

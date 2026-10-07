@@ -53,6 +53,47 @@ export type JobContentTranslations = Partial<
 const CHUNK = 900;
 /** Storm protection between user-triggered retries after a failed attempt. */
 export const TRANSLATION_RETRY_COOLDOWN_MS = 30_000;
+/** One extra whole-batch mapping retry. Never per-segment fallback. */
+export const HTML_BATCH_MAPPING_RETRIES = 1;
+export const HTML_SEGMENT_END = "__AJ_END__";
+
+const HARD_PROVIDER_ERROR_CODES = new Set([
+  "missing_key",
+  "insufficient_quota_error",
+]);
+
+export type JobFieldTranslateResult = {
+  text: string;
+  failed: boolean;
+  calls: number;
+  httpStatus?: number;
+  errorCode?: string;
+  hardFailure?: boolean;
+};
+
+export type JobTranslationFieldCalls = Record<JobTranslatableField, number>;
+
+function emptyFieldCalls(): JobTranslationFieldCalls {
+  return {
+    jobTitle: 0,
+    description: 0,
+    interviewInstructions: 0,
+  };
+}
+
+export function isHardSarvamProviderFailure(result: {
+  httpStatus?: number;
+  errorCode?: string;
+}): boolean {
+  if (result.errorCode && HARD_PROVIDER_ERROR_CODES.has(result.errorCode)) {
+    return true;
+  }
+  return (
+    result.httpStatus === 401
+    || result.httpStatus === 402
+    || result.httpStatus === 403
+  );
+}
 
 const inFlightTranslations = new Map<string, Promise<unknown>>();
 
@@ -270,13 +311,32 @@ function logSarvamJobTranslate(
     success?: boolean;
     durationMs?: number;
     reason?: string;
+    batch?: number;
+    batchCount?: number;
+    attempt?: number;
   },
 ): void {
   const target = details.language
     ? toSarvamLanguageCode(details.language as JobContentLanguage)
     : "-";
+  const batch =
+    details.batch && details.batchCount
+      ? `${details.batch}/${details.batchCount}`
+      : "-";
   console.info(
-    `[SARVAM-JOB-TRANSLATE] event=${event} jobId=${details.jobId ?? "-"} language=${details.language ?? "-"} target=${target} field=${details.field ?? "-"} sourceHash=${details.sourceHash ?? "-"} requestStarted=${event === "SARVAM_REQUEST_STARTED"} responseReceived=${event !== "SARVAM_REQUEST_STARTED"} success=${details.success ?? event === "SARVAM_REQUEST_SUCCEEDED"} reason=${details.reason ?? "-"} durationMs=${details.durationMs ?? 0}`,
+    `[SARVAM-JOB-TRANSLATE] event=${event} jobId=${details.jobId ?? "-"} language=${details.language ?? "-"} target=${target} field=${details.field ?? "-"} batch=${batch} attempt=${details.attempt ?? 1} sourceHash=${details.sourceHash ?? "-"} requestStarted=${event === "SARVAM_REQUEST_STARTED"} responseReceived=${event !== "SARVAM_REQUEST_STARTED"} success=${details.success ?? event === "SARVAM_REQUEST_SUCCEEDED"} reason=${details.reason ?? "-"} durationMs=${details.durationMs ?? 0}`,
+  );
+}
+
+function logJobTranslationSummary(details: {
+  jobId?: string;
+  language?: string;
+  sarvamCalls: number;
+  fieldCalls: JobTranslationFieldCalls;
+  status: string;
+}): void {
+  console.info(
+    `[JOB-TRANSLATE-SUMMARY] job=${details.jobId ?? "-"} language=${details.language ?? "-"} sarvamCalls=${details.sarvamCalls} titleCalls=${details.fieldCalls.jobTitle} descriptionCalls=${details.fieldCalls.description} interviewCalls=${details.fieldCalls.interviewInstructions} status=${details.status}`,
   );
 }
 
@@ -318,19 +378,23 @@ export async function translateJobField(input: {
   targetLanguage: JobContentLanguage;
   fetchImpl?: typeof fetch;
   log?: { jobId?: string; field?: string; sourceHash?: string };
-}): Promise<{ text: string; failed: boolean; calls: number }> {
+}): Promise<JobFieldTranslateResult> {
   const chunks = splitForTranslation(input.text);
   if (chunks.length === 0 || input.sourceLanguage === input.targetLanguage) {
     return { text: input.text, failed: false, calls: 0 };
   }
   const translated: string[] = [];
-  for (const chunk of chunks) {
+  for (const [index, chunk] of chunks.entries()) {
     const protectedChunk = protectJobNumericLiterals(chunk);
+    const batch = index + 1;
     logSarvamJobTranslate("SARVAM_REQUEST_STARTED", {
       jobId: input.log?.jobId,
       language: input.targetLanguage,
       field: input.log?.field,
       sourceHash: input.log?.sourceHash,
+      batch,
+      batchCount: chunks.length,
+      attempt: 1,
     });
     const started = Date.now();
     const result = await translateText({
@@ -339,6 +403,14 @@ export async function translateJobField(input: {
       targetLanguage: input.targetLanguage,
       cache: false,
       fetchImpl: input.fetchImpl,
+      jobLog: {
+        jobId: input.log?.jobId,
+        language: input.targetLanguage,
+        field: input.log?.field,
+        batch,
+        batchCount: chunks.length,
+        attempt: 1,
+      },
     });
     logSarvamJobTranslate(
       result.failed || !result.translated
@@ -354,10 +426,20 @@ export async function translateJobField(input: {
         reason: result.errorCode
           ?? (result.httpStatus ? `http_${result.httpStatus}` : undefined)
           ?? (result.failed || !result.translated ? "provider_failed" : undefined),
+        batch,
+        batchCount: chunks.length,
+        attempt: 1,
       },
     );
     if (result.failed || !result.translated) {
-      return { text: input.text, failed: true, calls: translated.length + 1 };
+      return {
+        text: input.text,
+        failed: true,
+        calls: translated.length + 1,
+        httpStatus: result.httpStatus,
+        errorCode: result.errorCode,
+        hardFailure: isHardSarvamProviderFailure(result),
+      };
     }
     translated.push(
       restoreJobNumericLiterals(result.text, protectedChunk.tokens),
@@ -390,10 +472,70 @@ export function hasMatchingHtmlStructure(source: string, translated: string): bo
   return htmlTagSignature(source) === htmlTagSignature(translated);
 }
 
+export function htmlSegmentStart(index: number): string {
+  return `__AJ_SEG_${String(index + 1).padStart(4, "0")}__`;
+}
+
+export function wrapHtmlSegment(index: number, text: string): string {
+  return `${htmlSegmentStart(index)}${text}${HTML_SEGMENT_END}`;
+}
+
+export function packHtmlSegmentBatches(
+  segments: readonly string[],
+  chunkLimit = CHUNK,
+): number[][] {
+  const batches: number[][] = [];
+  let current: number[] = [];
+  let currentLen = 0;
+  segments.forEach((segment, index) => {
+    const markedLen = wrapHtmlSegment(index, segment).length;
+    const extra = current.length > 0 ? 1 + markedLen : markedLen;
+    if (current.length > 0 && currentLen + extra > chunkLimit) {
+      batches.push(current);
+      current = [index];
+      currentLen = markedLen;
+      return;
+    }
+    current.push(index);
+    currentLen += extra;
+  });
+  if (current.length > 0) {
+    batches.push(current);
+  }
+  return batches;
+}
+
+export function parseHtmlSegmentTranslations(
+  translated: string,
+  expectedIndexes: readonly number[],
+): Map<number, string> | null {
+  const pattern = /__AJ_SEG_(\d{4})__([\s\S]*?)__AJ_END__/g;
+  const found = new Map<number, string>();
+  let match = pattern.exec(translated);
+  while (match) {
+    const index = Number.parseInt(match[1] ?? "", 10) - 1;
+    const value = (match[2] ?? "").replace(/\s+/g, " ").trim();
+    if (!Number.isInteger(index) || index < 0 || found.has(index) || !value) {
+      return null;
+    }
+    found.set(index, value);
+    match = pattern.exec(translated);
+  }
+  if (found.size !== expectedIndexes.length) {
+    return null;
+  }
+  for (const index of expectedIndexes) {
+    if (!found.has(index)) {
+      return null;
+    }
+  }
+  return found;
+}
+
 /**
  * Translates only the text between tags and copies every tag verbatim.
- * Segments are sent as one newline-joined batch; if the provider does not
- * return one line per segment, each segment is translated individually.
+ * Text nodes are sent in CHUNK-sized batches with stable segment markers.
+ * Mapping failure retries the same batch once; it never falls back per node.
  */
 export async function translateJobHtmlField(input: {
   html: string;
@@ -401,7 +543,7 @@ export async function translateJobHtmlField(input: {
   targetLanguage: JobContentLanguage;
   fetchImpl?: typeof fetch;
   log?: { jobId?: string; field?: string; sourceHash?: string };
-}): Promise<{ text: string; failed: boolean; calls: number }> {
+}): Promise<JobFieldTranslateResult> {
   const tokens = input.html.split(HTML_TAG_SPLIT_PATTERN);
   const textIndexes = tokens.flatMap((token, index) =>
     !token.startsWith("<") && token.trim() ? [index] : [],
@@ -411,46 +553,118 @@ export async function translateJobHtmlField(input: {
   }
 
   const segments = textIndexes.map((index) => tokens[index].replace(/\s+/g, " ").trim());
-  const translate = (text: string) =>
-    translateJobField({
-      text,
-      sourceLanguage: input.sourceLanguage,
-      targetLanguage: input.targetLanguage,
-      fetchImpl: input.fetchImpl,
-      log: input.log,
-    });
-
+  const batches = packHtmlSegmentBatches(segments);
+  const translatedByIndex = new Map<number, string>();
   let calls = 0;
-  let translatedSegments: string[] | null = null;
 
-  const batch = await translate(segments.join("\n"));
-  calls += batch.calls;
-  if (batch.failed) {
-    return { text: input.html, failed: true, calls };
-  }
-  const lines = batch.text.split("\n").map((line) => line.trim());
-  if (lines.length === segments.length && lines.every(Boolean)) {
-    translatedSegments = lines;
-  } else {
-    translatedSegments = [];
-    for (const segment of segments) {
-      const result = await translate(segment);
-      calls += result.calls;
-      if (result.failed) {
-        return { text: input.html, failed: true, calls };
+  for (const [batchOffset, batchIndexes] of batches.entries()) {
+    const batch = batchOffset + 1;
+    const payload = batchIndexes
+      .map((index) => wrapHtmlSegment(index, segments[index] ?? ""))
+      .join("\n");
+    let mapped: Map<number, string> | null = null;
+    let lastFailure: JobFieldTranslateResult | null = null;
+
+    for (let attempt = 1; attempt <= HTML_BATCH_MAPPING_RETRIES + 1; attempt += 1) {
+      const protectedChunk = protectJobNumericLiterals(payload);
+      logSarvamJobTranslate("SARVAM_REQUEST_STARTED", {
+        jobId: input.log?.jobId,
+        language: input.targetLanguage,
+        field: input.log?.field,
+        sourceHash: input.log?.sourceHash,
+        batch,
+        batchCount: batches.length,
+        attempt,
+      });
+      const started = Date.now();
+      const result = await translateText({
+        text: protectedChunk.text,
+        sourceLanguage: input.sourceLanguage,
+        targetLanguage: input.targetLanguage,
+        cache: false,
+        fetchImpl: input.fetchImpl,
+        jobLog: {
+          jobId: input.log?.jobId,
+          language: input.targetLanguage,
+          field: input.log?.field,
+          batch,
+          batchCount: batches.length,
+          attempt,
+        },
+      });
+      calls += 1;
+      logSarvamJobTranslate(
+        result.failed || !result.translated
+          ? "SARVAM_REQUEST_FAILED"
+          : "SARVAM_REQUEST_SUCCEEDED",
+        {
+          jobId: input.log?.jobId,
+          language: input.targetLanguage,
+          field: input.log?.field,
+          sourceHash: input.log?.sourceHash,
+          success: !result.failed && result.translated,
+          durationMs: Date.now() - started,
+          reason: result.errorCode
+            ?? (result.httpStatus ? `http_${result.httpStatus}` : undefined)
+            ?? (result.failed || !result.translated ? "provider_failed" : undefined),
+          batch,
+          batchCount: batches.length,
+          attempt,
+        },
+      );
+      if (result.failed || !result.translated) {
+        return {
+          text: input.html,
+          failed: true,
+          calls,
+          httpStatus: result.httpStatus,
+          errorCode: result.errorCode,
+          hardFailure: isHardSarvamProviderFailure(result),
+        };
       }
-      translatedSegments.push(result.text.replace(/\s+/g, " ").trim());
+      const restored = restoreJobNumericLiterals(result.text, protectedChunk.tokens);
+      mapped = parseHtmlSegmentTranslations(restored, batchIndexes);
+      if (mapped) {
+        break;
+      }
+      lastFailure = {
+        text: input.html,
+        failed: true,
+        calls,
+        errorCode: "html_segment_mapping_failed",
+      };
     }
+
+    if (!mapped) {
+      return lastFailure ?? { text: input.html, failed: true, calls, errorCode: "html_segment_mapping_failed" };
+    }
+    mapped.forEach((value, index) => {
+      translatedByIndex.set(index, value);
+    });
   }
 
   textIndexes.forEach((tokenIndex, segmentIndex) => {
     const original = tokens[tokenIndex];
+    const translated = translatedByIndex.get(segmentIndex);
+    if (!translated) {
+      return;
+    }
     const leading = original.match(/^\s*/)?.[0] ?? "";
     const trailing = original.match(/\s*$/)?.[0] ?? "";
-    tokens[tokenIndex] = `${leading}${translatedSegments[segmentIndex]}${trailing}`;
+    tokens[tokenIndex] = `${leading}${translated}${trailing}`;
   });
 
-  return { text: tokens.join(""), failed: false, calls };
+  const reconstructed = tokens.join("");
+  if (!hasMatchingHtmlStructure(input.html, reconstructed)) {
+    return {
+      text: input.html,
+      failed: true,
+      calls,
+      errorCode: "html_structure_mismatch",
+    };
+  }
+
+  return { text: reconstructed, failed: false, calls };
 }
 
 type SourceFields = Record<JobTranslatableField, string>;
@@ -480,6 +694,22 @@ function entryFromSource(source: SourceFields): JobFieldTranslation {
   };
 }
 
+function stampRemainingSourceHashes(
+  translated: JobFieldTranslation,
+  source: SourceFields,
+  previous: JobFieldTranslation | undefined,
+): void {
+  for (const field of JOB_TRANSLATABLE_FIELDS) {
+    if (
+      isUsableFieldTranslation(source[field], translated, field)
+      || isUsableFieldTranslation(source[field], previous, field)
+    ) {
+      continue;
+    }
+    translated[`${field}Hash`] = hashJobField(source[field]);
+  }
+}
+
 export async function buildJobContentTranslations(input: {
   source: SourceFields;
   existing?: JobContentTranslations | null;
@@ -492,7 +722,9 @@ export async function buildJobContentTranslations(input: {
   contentTranslations: JobContentTranslations;
   translationStatus: "complete" | "partial" | "failed" | "none";
   translateCalls: number;
+  fieldCalls: JobTranslationFieldCalls;
 }> {
+  const emptyCalls = emptyFieldCalls();
   const sample = `${input.source.jobTitle}\n${input.source.description}\n${input.source.interviewInstructions}`;
   if (!sample.trim()) {
     return {
@@ -500,6 +732,7 @@ export async function buildJobContentTranslations(input: {
       contentTranslations: {},
       translationStatus: "none",
       translateCalls: 0,
+      fieldCalls: emptyCalls,
     };
   }
   const sourceLanguage = resolveJobSourceLanguage({
@@ -518,10 +751,12 @@ export async function buildJobContentTranslations(input: {
       contentTranslations: next,
       translationStatus: "none",
       translateCalls: 0,
+      fieldCalls: emptyCalls,
     };
   }
 
   let calls = 0;
+  const fieldCalls = emptyFieldCalls();
   let failedTargets = 0;
 
   await Promise.all(
@@ -569,6 +804,7 @@ export async function buildJobContentTranslations(input: {
               log,
             });
         calls += result.calls;
+        fieldCalls[field] += result.calls;
         if (
           result.failed ||
           !result.text.trim() ||
@@ -576,6 +812,10 @@ export async function buildJobContentTranslations(input: {
         ) {
           targetFailed = true;
           translated[hashKey] = hash;
+          if (result.hardFailure) {
+            stampRemainingSourceHashes(translated, input.source, previous);
+            break;
+          }
           continue;
         }
         translated[field] = result.text;
@@ -605,6 +845,7 @@ export async function buildJobContentTranslations(input: {
     contentTranslations: next,
     translationStatus,
     translateCalls: calls,
+    fieldCalls,
   };
 }
 
@@ -869,6 +1110,13 @@ export async function translateRequestedJobLanguage(input: {
       calls: built.translateCalls,
       reason: built.translationStatus,
     });
+    logJobTranslationSummary({
+      jobId: input.publicJobId,
+      language: input.language,
+      sarvamCalls: built.translateCalls,
+      fieldCalls: built.fieldCalls,
+      status: "failed",
+    });
     return {
       content: resolveJobContent(
         { ...input.source, contentTranslations: built.contentTranslations },
@@ -887,6 +1135,13 @@ export async function translateRequestedJobLanguage(input: {
       language: input.language,
       sourceHash: sourceVersionHash,
     });
+    logJobTranslationSummary({
+      jobId: input.publicJobId,
+      language: input.language,
+      sarvamCalls: 0,
+      fieldCalls: built.fieldCalls,
+      status: "cache_hit",
+    });
     return {
       content: resolveJobContent(
         { ...input.source, contentTranslations: built.contentTranslations },
@@ -899,6 +1154,13 @@ export async function translateRequestedJobLanguage(input: {
     };
   }
 
+  logJobTranslationSummary({
+    jobId: input.publicJobId,
+    language: input.language,
+    sarvamCalls: built.translateCalls,
+    fieldCalls: built.fieldCalls,
+    status: "success",
+  });
   return {
     content: resolveJobContent(
       { ...input.source, contentTranslations: built.contentTranslations },

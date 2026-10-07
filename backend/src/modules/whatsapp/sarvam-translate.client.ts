@@ -72,6 +72,15 @@ export function restoreProperNouns(text: string, tokens: readonly string[]): str
   return next;
 }
 
+export type TranslateJobHttpLog = {
+  jobId?: string;
+  language?: string;
+  field?: string;
+  batch?: number;
+  batchCount?: number;
+  attempt?: number;
+};
+
 export type TranslateTextInput = {
   text: string;
   sourceLanguage: BotLanguage;
@@ -79,6 +88,8 @@ export type TranslateTextInput = {
   /** Cache only static, non-personalized copy. Never cache job/application rows. */
   cache?: boolean;
   fetchImpl?: typeof fetch;
+  /** Job-translation usage audit. Never include source text or API keys. */
+  jobLog?: TranslateJobHttpLog;
 };
 
 export type TranslateTextResult = {
@@ -90,6 +101,24 @@ export type TranslateTextResult = {
   httpStatus?: number;
   errorCode?: string;
 };
+
+function logJobTranslateHttp(input: {
+  jobLog?: TranslateJobHttpLog;
+  ok: boolean;
+  durationMs: number;
+  httpStatus?: number;
+  errorCode?: string;
+}): void {
+  const log = input.jobLog;
+  if (!log) {
+    return;
+  }
+  const batch =
+    log.batch && log.batchCount ? `${log.batch}/${log.batchCount}` : "-";
+  console.info(
+    `[JOB-TRANSLATE] event=SARVAM_HTTP type=job job=${log.jobId ?? "-"} language=${log.language ?? "-"} field=${log.field ?? "-"} batch=${batch} attempt=${log.attempt ?? 1} status=${input.ok ? "success" : "failure"} durationMs=${input.durationMs} httpStatus=${input.httpStatus ?? "-"} errorCode=${input.errorCode ?? "-"}`,
+  );
+}
 
 export async function translateText(input: TranslateTextInput): Promise<TranslateTextResult> {
   const started = Date.now();
@@ -114,12 +143,19 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
 
   if (!input.fetchImpl && !env.SARVAM_API_KEY.trim()) {
     console.error("[Sarvam] SARVAM_UNAVAILABLE stage=translate reason=missing_key");
+    const durationMs = Date.now() - started;
+    logJobTranslateHttp({
+      jobLog: input.jobLog,
+      ok: false,
+      durationMs,
+      errorCode: "missing_key",
+    });
     return {
       text: input.text,
       translated: false,
       skipped: false,
       failed: true,
-      durationMs: Date.now() - started,
+      durationMs,
       errorCode: "missing_key",
     };
   }
@@ -156,15 +192,23 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
       console.error(
         `[Sarvam] SARVAM_TRANSLATE_FAILED status=${response.status} code=${code}`,
       );
+      const durationMs = Date.now() - started;
       console.info(
-        `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} ok=no status=${response.status} code=${code} durationMs=${Date.now() - started}`,
+        `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} ok=no status=${response.status} code=${code} durationMs=${durationMs}`,
       );
+      logJobTranslateHttp({
+        jobLog: input.jobLog,
+        ok: false,
+        durationMs,
+        httpStatus: response.status,
+        errorCode: code,
+      });
       return {
         text: input.text,
         translated: false,
         skipped: false,
         failed: true,
-        durationMs: Date.now() - started,
+        durationMs,
         httpStatus: response.status,
         errorCode: code,
       };
@@ -174,12 +218,20 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
       body = JSON.parse(bodyText) as { translated_text?: string };
     } catch {
       console.error("[Sarvam] SARVAM_TRANSLATE_FAILED reason=invalid_json");
+      const durationMs = Date.now() - started;
+      logJobTranslateHttp({
+        jobLog: input.jobLog,
+        ok: false,
+        durationMs,
+        httpStatus: response.status,
+        errorCode: "invalid_json",
+      });
       return {
         text: input.text,
         translated: false,
         skipped: false,
         failed: true,
-        durationMs: Date.now() - started,
+        durationMs,
         httpStatus: response.status,
         errorCode: "invalid_json",
       };
@@ -187,38 +239,61 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
     const translated = body.translated_text?.trim();
     if (!translated) {
       console.error("[Sarvam] SARVAM_TRANSLATE_FAILED reason=empty");
+      const durationMs = Date.now() - started;
+      logJobTranslateHttp({
+        jobLog: input.jobLog,
+        ok: false,
+        durationMs,
+        httpStatus: response.status,
+        errorCode: "empty",
+      });
       return {
         text: input.text,
         translated: false,
         skipped: false,
         failed: true,
-        durationMs: Date.now() - started,
+        durationMs,
         errorCode: "empty",
       };
     }
     if (input.cache) {
       staticTranslationCache.set(key, translated);
     }
+    const durationMs = Date.now() - started;
     console.info(
-      `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} ok=yes cache=${input.cache ? "store" : "no"} durationMs=${Date.now() - started}`,
+      `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} ok=yes cache=${input.cache ? "store" : "no"} durationMs=${durationMs}`,
     );
     console.info(`[WHATSAPP-BOT] TRANSLATION_CREATED source=${source} target=${target} cached=${Boolean(input.cache)}`);
-    return { text: translated, translated: true, skipped: false, failed: false, durationMs: Date.now() - started };
+    logJobTranslateHttp({
+      jobLog: input.jobLog,
+      ok: true,
+      durationMs,
+      httpStatus: response.status,
+    });
+    return { text: translated, translated: true, skipped: false, failed: false, durationMs };
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "TimeoutError";
+    const durationMs = Date.now() - started;
+    const errorCode = timedOut ? "timeout" : "network_error";
     console.error(
       `[Sarvam] SARVAM_TRANSLATE_FAILED reason=${timedOut ? "timeout" : error instanceof Error ? error.name : "unknown"}`,
     );
     console.info(
-      `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} ok=no durationMs=${Date.now() - started}`,
+      `[WA-AI-COST] stage=TRANSLATE provider=sarvam-translation source=${source} target=${target} ok=no durationMs=${durationMs}`,
     );
+    logJobTranslateHttp({
+      jobLog: input.jobLog,
+      ok: false,
+      durationMs,
+      errorCode,
+    });
     return {
       text: input.text,
       translated: false,
       skipped: false,
       failed: true,
-      durationMs: Date.now() - started,
-      errorCode: timedOut ? "timeout" : "network_error",
+      durationMs,
+      errorCode,
     };
   }
 }

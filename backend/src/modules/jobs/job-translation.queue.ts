@@ -13,7 +13,6 @@ import {
   writeCachedJobTranslation,
 } from "./job-translation.cache.js";
 import {
-  canEnqueueJobTranslation,
   claimTranslationEnqueueSlot,
   isDuplicateKeyError,
   jobTranslationQueueJobId,
@@ -192,18 +191,15 @@ async function enqueueJobLanguageTranslation(
       return "skipped";
     }
 
+    if (existing?.status === "failed") {
+      return "skipped";
+    }
+
     const needsReset = Boolean(
       existing &&
         shouldResetStoredTranslationTask(existing.status, true),
     );
-    if (existing?.status === "failed" && !canEnqueueJobTranslation({
-      status: existing.status,
-      attempts: existing.attempts,
-      nextAttemptAt: existing.nextAttemptAt,
-    })) {
-      return "skipped";
-    }
-    if (existing && !needsReset && existing.status !== "failed") {
+    if (existing && !needsReset) {
       return "skipped";
     }
 
