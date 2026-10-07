@@ -2,6 +2,7 @@
 
 import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkeletons";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import { JobRecruiterContactDetails } from "@/components/jobs/JobRecruiterContactDetails";
 import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { useSiteLanguage } from "@/i18n/site-language";
@@ -23,6 +24,7 @@ import {
   formatJobSearchWorkMode,
 } from "@/utils/job-search-format";
 import { protectedApply } from "@/utils/job-apply-auth";
+import { getPublicJobRecruiterDetails } from "@/utils/public-job-recruiter";
 import {
   buildAbsolutePublicJobUrl,
   shareOrCopyText,
@@ -211,6 +213,7 @@ export function JobSearchMobileJobDetails({
 
   const descriptionNeedsCollapse =
     getJobDescriptionPlainTextLength(job.description ?? "") > 380;
+  const recruiter = getPublicJobRecruiterDetails(job);
 
   const handleShare = () => {
     void shareOrCopyText({
@@ -500,20 +503,17 @@ export function JobSearchMobileJobDetails({
           </ContentSection>
         ) : null}
 
-        {job.contactPersonName || job.applyWhatsAppNumber ? (
+        {recruiter.hasDetails ? (
           <ContentSection title={t("jobs.recruiter")}>
-            <div className="space-y-1 text-[13px] leading-[1.65] text-[#374151]">
-              {job.contactPersonName ? (
-                <p className="font-semibold text-[#4B5563]">
-                  {job.contactPersonName}
-                </p>
-              ) : null}
-              {job.applyWhatsAppNumber ? (
-                <p>
-                  {t("jobs.whatsappLabel", { number: job.applyWhatsAppNumber })}
-                </p>
-              ) : null}
-            </div>
+            <JobRecruiterContactDetails
+              name={recruiter.name}
+              whatsapp={recruiter.whatsapp}
+              email={recruiter.email}
+              whatsappLabel={t("jobs.whatsappLabel", {
+                number: recruiter.whatsapp,
+              })}
+              className="mt-0"
+            />
           </ContentSection>
         ) : null}
 

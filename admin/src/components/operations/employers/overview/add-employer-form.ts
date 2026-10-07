@@ -135,6 +135,10 @@ export function isolateAddEmployerForm(
 
   if (accountType === "individual") {
     next.establishmentName = form.establishmentName;
+    next.companyAddress = form.companyAddress;
+    next.pincode = form.pincode;
+    next.city = form.city;
+    next.state = form.state;
     return next;
   }
 
@@ -183,6 +187,18 @@ export function validateAddEmployerForm(
   if (form.accountType === "individual") {
     if (!form.establishmentName.trim()) {
       errors.establishmentName = "Establishment Name is required.";
+    }
+    if (!form.companyAddress.trim()) {
+      errors.companyAddress = "Address is required.";
+    }
+    if (!form.pincode.trim()) {
+      errors.pincode = "Pincode is required.";
+    }
+    if (!form.city.trim()) {
+      errors.city = "City is required.";
+    }
+    if (!form.state.trim()) {
+      errors.state = "State is required.";
     }
     return errors;
   }
@@ -241,4 +257,47 @@ export function parseOptionalInt(value: string): number | null {
   }
   const parsed = Number.parseInt(trimmed, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+export const ADD_EMPLOYER_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+export const ADD_EMPLOYER_IMAGE_ACCEPT =
+  ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp";
+export const ADD_EMPLOYER_IMAGE_HINT = "PNG, JPG, JPEG or WEBP (max 5MB)";
+
+const ADD_EMPLOYER_IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp"]);
+
+export type AddEmployerImagePreview = {
+  name: string;
+  sizeBytes: number;
+  file: File;
+  previewUrl: string;
+};
+
+export function addEmployerImageFieldId(
+  accountType: OperationsEmployerAccountType,
+): "profilePhoto" | "companyLogo" {
+  return accountType === "individual" ? "profilePhoto" : "companyLogo";
+}
+
+export function addEmployerImageFieldLabel(
+  accountType: OperationsEmployerAccountType,
+): string {
+  if (accountType === "individual") {
+    return "Profile photo";
+  }
+  return "Company profile photo";
+}
+
+export function validateAddEmployerImageFile(file: File): string | null {
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (
+    !ADD_EMPLOYER_IMAGE_EXTENSIONS.has(extension) ||
+    !file.type.startsWith("image/")
+  ) {
+    return "Use a PNG, JPG, JPEG, or WEBP image.";
+  }
+  if (file.size > ADD_EMPLOYER_IMAGE_MAX_BYTES) {
+    return "Image must be 5MB or smaller.";
+  }
+  return null;
 }

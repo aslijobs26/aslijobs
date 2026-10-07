@@ -120,7 +120,10 @@ describe("isolateOperationsEmployerProfileFields", () => {
     assert.equal(isolated.businessCategory, "");
     assert.equal(isolated.minimumEmployees, null);
     assert.equal(isolated.maximumEmployees, null);
-    assert.equal(isolated.companyAddress, "");
+    assert.equal(isolated.companyAddress, "1 Main St");
+    assert.equal(isolated.city, "Hyderabad");
+    assert.equal(isolated.state, "Telangana");
+    assert.equal(isolated.pincode, "500081");
     assert.equal(isolated.establishmentName, "Hidden Shop");
   });
 
@@ -194,20 +197,32 @@ describe("operationsCompleteEmployerProfileSchema", () => {
     assert.equal(result.success, false);
   });
 
-  it("does not require company address for Individual", () => {
+  it("requires location fields for Individual and keeps them", () => {
+    const missing = operationsCompleteEmployerProfileSchema.safeParse({
+      accountType: "individual",
+      establishmentName: "Asha Kirana",
+      companyName: "stale",
+      industry: "retail-stores",
+    });
+    assert.equal(missing.success, false);
+
     const result = operationsCompleteEmployerProfileSchema.safeParse({
       accountType: "individual",
       establishmentName: "Asha Kirana",
       companyName: "stale",
       industry: "retail-stores",
-      companyAddress: "stale address",
+      companyAddress: "1 Main St",
+      pincode: "500081",
+      city: "Hyderabad",
+      state: "Telangana",
     });
     assert.equal(result.success, true);
     if (!result.success) {
       return;
     }
     assert.equal(result.data.companyName, "");
-    assert.equal(result.data.companyAddress, "");
+    assert.equal(result.data.companyAddress, "1 Main St");
+    assert.equal(result.data.city, "Hyderabad");
     assert.equal(result.data.establishmentName, "Asha Kirana");
   });
 });

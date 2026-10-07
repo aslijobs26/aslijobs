@@ -79,12 +79,16 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 apiClient.interceptors.request.use((config) => {
+  const headers = AxiosHeaders.from(config.headers);
+  if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    headers.delete("Content-Type");
+  }
+
   const token = getOperationsAccessToken();
   if (token) {
-    const headers = AxiosHeaders.from(config.headers);
     headers.set("Authorization", `Bearer ${token}`);
-    config.headers = headers;
   }
+  config.headers = headers;
 
   // Role preview is UI-only. Block mutating Operations API calls so Super Admin
   // cannot accidentally execute real actions while simulating another role.

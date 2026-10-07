@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  addEmployerImageFieldId,
+  addEmployerImageFieldLabel,
   isolateAddEmployerForm,
   validateAddEmployerForm,
+  validateAddEmployerImageFile,
   type AddEmployerFormState,
 } from "./add-employer-form.ts";
 
@@ -31,6 +34,9 @@ describe("isolateAddEmployerForm", () => {
     assert.equal(isolated.companyName, "");
     assert.equal(isolated.industry, "");
     assert.equal(isolated.firstName, "Asha");
+    assert.equal(isolated.city, "Hyderabad");
+    assert.equal(isolated.state, "Telangana");
+    assert.equal(isolated.companyAddress, "1 Main");
   });
 
   it("drops industry and employee range when switching to Consultancy", () => {
@@ -91,5 +97,56 @@ describe("validateAddEmployerForm", () => {
     });
     assert.equal(errors.industry, undefined);
     assert.equal(errors.companyName, undefined);
+  });
+
+  it("requires location fields for Individual", () => {
+    const errors = validateAddEmployerForm({
+      ...filledCompany,
+      accountType: "individual",
+      companyName: "",
+      industry: "",
+      businessCategory: "",
+      minimumEmployees: "",
+      maximumEmployees: "",
+      companyAddress: "",
+      pincode: "",
+      city: "",
+      state: "",
+    });
+    assert.equal(errors.companyAddress, "Address is required.");
+    assert.equal(errors.pincode, "Pincode is required.");
+    assert.equal(errors.city, "City is required.");
+    assert.equal(errors.state, "State is required.");
+    assert.equal(errors.industry, undefined);
+  });
+});
+
+describe("add employer image field", () => {
+  it("uses profile photo for Individual and company photo for business categories", () => {
+    assert.equal(addEmployerImageFieldId("individual"), "profilePhoto");
+    assert.equal(addEmployerImageFieldId("company"), "companyLogo");
+    assert.equal(addEmployerImageFieldId("consultancy"), "companyLogo");
+    assert.equal(addEmployerImageFieldLabel("individual"), "Profile photo");
+    assert.equal(
+      addEmployerImageFieldLabel("company"),
+      "Company profile photo",
+    );
+    assert.equal(
+      addEmployerImageFieldLabel("consultancy"),
+      "Company profile photo",
+    );
+  });
+
+  it("rejects non-image files", () => {
+    const file = new File(["x"], "id.pdf", { type: "application/pdf" });
+    assert.equal(
+      validateAddEmployerImageFile(file),
+      "Use a PNG, JPG, JPEG, or WEBP image.",
+    );
+  });
+
+  it("accepts a PNG image under 5MB", () => {
+    const file = new File(["logo"], "logo.png", { type: "image/png" });
+    assert.equal(validateAddEmployerImageFile(file), null);
   });
 });

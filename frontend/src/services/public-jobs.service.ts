@@ -60,6 +60,8 @@ export type PublicJobDetail = PublicJobListItem & {
   walkInEndTime: string;
   interviewInstructions: string;
   contactPersonName: string | null;
+  contactEmail: string | null;
+  contactMobile: string | null;
   /** Requested site language, when one was sent. */
   language?: string | null;
   /** Canonical employer/Operations source language. */

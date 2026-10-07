@@ -139,6 +139,10 @@ export const completeIndividualIdentitySchema = z.object({
   documentType: z.enum(EMPLOYER_IDENTITY_DOCUMENT_TYPES, {
     message: "Select a valid identity document",
   }),
+  companyAddress: z.string().trim().min(1, "Address is required"),
+  pincode: z.string().trim().min(1, "Pincode is required"),
+  city: z.string().trim().min(1, "City is required"),
+  state: z.string().trim().min(1, "State is required"),
 });
 
 const nullableNonNegativeInt = z.preprocess((value) => {
@@ -180,10 +184,10 @@ export function isolateOperationsEmployerProfileFields(
       businessCategory: "",
       minimumEmployees: null,
       maximumEmployees: null,
-      companyAddress: "",
-      pincode: "",
-      city: "",
-      state: "",
+      companyAddress: input.companyAddress.trim(),
+      pincode: input.pincode.trim(),
+      city: input.city.trim(),
+      state: input.state.trim(),
     };
   }
 
@@ -241,6 +245,34 @@ export const operationsCompleteEmployerProfileSchema = z
           code: "custom",
           path: ["establishmentName"],
           message: "Establishment Name is required",
+        });
+      }
+      if (!data.companyAddress.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["companyAddress"],
+          message: "Address is required",
+        });
+      }
+      if (!data.pincode.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["pincode"],
+          message: "Pincode is required",
+        });
+      }
+      if (!data.city.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["city"],
+          message: "City is required",
+        });
+      }
+      if (!data.state.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["state"],
+          message: "State is required",
         });
       }
       return;

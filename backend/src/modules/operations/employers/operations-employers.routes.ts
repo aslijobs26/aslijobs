@@ -4,6 +4,10 @@ import {
   requireOperationsPermission,
   requireOperationsPermissionKey,
 } from "../../../middleware/operations-auth.middleware.js";
+import {
+  employerOperationsCompleteUpload,
+  optionalMultipart,
+} from "../../../middleware/employer-document-upload.middleware.js";
 import { validate } from "../../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../../utils/async-handler.js";
 import { operationsEmployersController } from "./operations-employers.controller.js";
@@ -72,6 +76,7 @@ operationsEmployersRouter.post(
   "/:employerId/complete",
   requireOperationsPermission("employers", "create"),
   validate(operationsEmployerIdParamsSchema, "params"),
+  optionalMultipart(employerOperationsCompleteUpload),
   validate(operationsCompleteEmployerBodySchema, "body"),
   asyncHandler(operationsEmployersController.complete),
 );

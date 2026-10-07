@@ -44,8 +44,8 @@ export const listOperationsWorkQuerySchema = z.object({
   sort: z
     .enum(["dueAt", "priority", "createdAt", "updatedAt"])
     .optional()
-    .default("dueAt"),
-  order: z.enum(["asc", "desc"]).optional().default("asc"),
+    .default("createdAt"),
+  order: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
 export type ListOperationsWorkQuery = z.infer<

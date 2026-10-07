@@ -33,6 +33,7 @@ import { EmployerModel } from "./employer.model.js";
 import type {
   CompleteCompanyProfileInput,
   CompleteIndividualIdentityInput,
+  CompleteOperationsEmployerProfileFiles,
   CompleteOperationsEmployerProfileInput,
   EmployerAccountType,
   RegisterEmployerInput,
@@ -909,6 +910,10 @@ export class EmployerService {
       if (profilePhotoAsset) {
         employer.profilePhoto = profilePhotoAsset;
       }
+      employer.companyAddress = input.companyAddress.trim();
+      employer.pincode = input.pincode.trim();
+      employer.city = input.city.trim();
+      employer.state = input.state.trim();
       employer.registrationStatus = "completed";
       employer.isProfileComplete = true;
       employer.verificationStatus = "pending";
@@ -965,6 +970,7 @@ export class EmployerService {
    */
   async completeOperationsEmployerProfile(
     input: CompleteOperationsEmployerProfileInput,
+    files: CompleteOperationsEmployerProfileFiles = {},
   ) {
     const employer = await findEmployerOrThrow(input.employerId);
     const isolated = isolateOperationsEmployerProfileFields(
@@ -1020,6 +1026,47 @@ export class EmployerService {
     employer.pincode = isolated.pincode;
     employer.city = isolated.city;
     employer.state = isolated.state;
+
+    const accountType = employer.accountType as EmployerAccountType;
+    if (files.companyLogo) {
+      if (!isBusinessEmployerAccountType(accountType)) {
+        throw new AppError(
+          "Company profile photo is only available for Company and Consultancy accounts.",
+          HTTP_STATUS.BAD_REQUEST,
+          { fieldErrors: { companyLogo: "Not available for Individual accounts." } },
+        );
+      }
+      employer.companyLogo = await uploadEmployerImageAsset({
+        file: files.companyLogo,
+        folder: "employer-logos",
+        fileBaseName:
+          accountType === "consultancy" ? "consultancy-logo" : "company-logo",
+        label:
+          accountType === "consultancy"
+            ? "Consultancy logo"
+            : "Company profile photo",
+      });
+      employer.markModified("companyLogo");
+    }
+
+    if (files.profilePhoto) {
+      if (accountType !== "individual") {
+        throw new AppError(
+          "Profile photo is only available for Individual accounts.",
+          HTTP_STATUS.BAD_REQUEST,
+          { fieldErrors: { profilePhoto: "Use company profile photo for this category." } },
+        );
+      }
+      const employerCode = toEmployerStorageCode(employer._id);
+      employer.profilePhoto = await uploadEmployerImageAsset({
+        file: files.profilePhoto,
+        folder: `employer-profile-photos/${employerCode}`,
+        fileBaseName: "profile-photo",
+        label: "Profile photo",
+      });
+      employer.markModified("profilePhoto");
+    }
+
     employer.isProfileComplete = true;
     employer.registrationStatus = "completed";
     employer.verificationStatus = "pending";

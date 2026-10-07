@@ -147,10 +147,10 @@ export function OperationsMyWorkPage() {
     ) {
       return value;
     }
-    return "dueAt";
+    return "createdAt";
   });
   const [order, setOrder] = useState<"asc" | "desc">(() =>
-    searchParams.get("order") === "desc" ? "desc" : "asc",
+    searchParams.get("order") === "asc" ? "asc" : "desc",
   );
 
   useEffect(() => {
@@ -223,10 +223,10 @@ export function OperationsMyWorkPage() {
     if (!nextSearch) params.delete("search");
     else params.set("search", nextSearch);
 
-    if (nextSort === "dueAt") params.delete("sort");
+    if (nextSort === "createdAt") params.delete("sort");
     else params.set("sort", nextSort);
 
-    if (nextOrder === "asc") params.delete("order");
+    if (nextOrder === "desc") params.delete("order");
     else params.set("order", nextOrder);
 
     setSearchParams(params, { replace: true });

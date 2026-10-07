@@ -1,4 +1,9 @@
 import { Check, Loader2, X } from "lucide-react";
+import { OperationsAlertDialog } from "../../../ui/OperationsAlertDialog";
+import {
+  firstOperationsErrorMessage,
+  getOperationsApiErrorMessage,
+} from "../../../../utils/operations-api-errors";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -131,24 +136,6 @@ function SelectField({
   );
 }
 
-function getApiErrorMessage(error: unknown, fallback: string): string {
-  if (
-    error &&
-    typeof error === "object" &&
-    "response" in error &&
-    error.response &&
-    typeof error.response === "object" &&
-    "data" in error.response &&
-    error.response.data &&
-    typeof error.response.data === "object" &&
-    "message" in error.response.data &&
-    typeof error.response.data.message === "string"
-  ) {
-    return error.response.data.message;
-  }
-  return fallback;
-}
-
 export function OperationsPostJobWizardAligned() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -167,7 +154,13 @@ export function OperationsPostJobWizardAligned() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(!editJobId);
+
+  const reportError = (message: string) => {
+    setActionError(message);
+    setAlertMessage(message);
+  };
 
   const isSubmitting =
     createDraftMutation.isPending ||
@@ -272,6 +265,12 @@ export function OperationsPostJobWizardAligned() {
           setActiveStep(step as OperationsPostJobActiveStep);
           setErrors(stepErrors);
         }
+        setAlertMessage(
+          firstOperationsErrorMessage(
+            stepErrors,
+            "Complete the required fields before continuing.",
+          ),
+        );
         return;
       }
     }
@@ -284,6 +283,12 @@ export function OperationsPostJobWizardAligned() {
     const stepErrors = validateOperationsAlignedPostJobStep(activeStep, formData);
     setErrors(stepErrors);
     if (Object.keys(stepErrors).length > 0) {
+      setAlertMessage(
+        firstOperationsErrorMessage(
+          stepErrors,
+          "Complete the required fields on this step.",
+        ),
+      );
       return;
     }
     setActionError(null);
@@ -292,7 +297,7 @@ export function OperationsPostJobWizardAligned() {
 
   async function persistDraft(completedStep: OperationsPostJobActiveStep) {
     if (!hasMeaningfulOperationsPostJobContent(formData)) {
-      setActionError("Add at least one job field before saving a draft.");
+      reportError("Add at least one job field before saving a draft.");
       return null;
     }
     const payload = mapWizardDataToOperationsDraftPayload(formData, completedStep, selectedEmployer?.id ?? null);
@@ -317,8 +322,8 @@ export function OperationsPostJobWizardAligned() {
         );
       }
     } catch (error) {
-      setActionError(
-        getApiErrorMessage(
+      reportError(
+        getOperationsApiErrorMessage(
           error,
           isEditingNonDraft ? "Unable to update job." : "Unable to save draft.",
         ),
@@ -338,11 +343,16 @@ export function OperationsPostJobWizardAligned() {
       if (firstInvalidStep) {
         setActiveStep(firstInvalidStep);
       }
-      setActionError("Complete all required fields before saving changes.");
+      reportError(
+        firstOperationsErrorMessage(
+          allErrors,
+          "Complete all required fields before saving changes.",
+        ),
+      );
       return;
     }
     if (!selectedEmployer?.id && !detailQuery.data?.employerAssigned) {
-      setActionError("Assign an employer before saving this job.");
+      reportError("Assign an employer before saving this job.");
       return;
     }
 
@@ -370,7 +380,7 @@ export function OperationsPostJobWizardAligned() {
       setStatusMessage("Job updated successfully.");
       navigate(operationsJobDetailPath(savedJobId));
     } catch (error) {
-      setActionError(getApiErrorMessage(error, "Unable to update job."));
+      reportError(getOperationsApiErrorMessage(error, "Unable to update job."));
     }
   }
 
@@ -388,11 +398,16 @@ export function OperationsPostJobWizardAligned() {
     const allErrors = validateOperationsAlignedPostJobForPublish(formData);
     setErrors(allErrors);
     if (!selectedEmployer?.id) {
-      setActionError("Assign an employer before publishing this job.");
+      reportError("Assign an employer before publishing this job.");
       return;
     }
     if (Object.keys(allErrors).length > 0) {
-      setActionError("Complete all required fields before publishing.");
+      reportError(
+        firstOperationsErrorMessage(
+          allErrors,
+          "Complete all required fields before publishing.",
+        ),
+      );
       return;
     }
     try {
@@ -403,14 +418,17 @@ export function OperationsPostJobWizardAligned() {
       } else {
         await persistDraft(3);
       }
-      if (!jobId) throw new Error("Draft job id is missing.");
+      if (!jobId) {
+        reportError("Unable to publish job.");
+        return;
+      }
       if (selectedEmployer.id && detailQuery.data?.employer.id !== selectedEmployer.id) {
         await assignEmployerMutation.mutateAsync({ jobId, employerId: selectedEmployer.id });
       }
       await publishMutation.mutateAsync({ jobId, payload: mapWizardDataToPublishPayload(formData) });
       navigate(operationsJobDetailPath(jobId));
     } catch (error) {
-      setActionError(getApiErrorMessage(error, "Unable to publish job."));
+      reportError(getOperationsApiErrorMessage(error, "Unable to publish job."));
     }
   }
 
@@ -426,7 +444,7 @@ export function OperationsPostJobWizardAligned() {
     return (
       <div className="rounded-xl border border-border-subtle bg-surface px-4 py-16 text-center shadow-sm">
         <p className="text-sm font-medium text-danger">
-          {getApiErrorMessage(detailQuery.error, "Unable to load this job for editing.")}
+          {getOperationsApiErrorMessage(detailQuery.error, "Unable to load this job for editing.")}
         </p>
         <button
           type="button"
@@ -962,6 +980,12 @@ export function OperationsPostJobWizardAligned() {
           </div>
         </div>
       ) : null}
+
+      <OperationsAlertDialog
+        open={Boolean(alertMessage)}
+        message={alertMessage ?? ""}
+        onClose={() => setAlertMessage(null)}
+      />
     </div>
   );
 }

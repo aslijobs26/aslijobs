@@ -2253,9 +2253,6 @@ export class JobService {
     }
 
     const requestedLanguage = parseJobContentLanguage(options?.language);
-    console.info(
-      `[PUBLIC_JOB_DETAIL] jobId=${job.jobId} language=${requestedLanguage ?? "none"}`,
-    );
     const translation = await serveJobDetailTranslation({
       jobMongoId: job._id.toString(),
       language: requestedLanguage,
@@ -2315,6 +2312,8 @@ export class JobService {
         walkInEndTime: job.walkInEndTime,
         interviewInstructions: localizedContent.interviewInstructions,
         contactPersonName: job.contactPersonName?.trim() || null,
+        contactEmail: job.contactEmail?.trim() || null,
+        contactMobile: job.contactMobile?.trim() || null,
         language: translation.language,
         sourceLanguage: translation.sourceLanguage,
         contentLanguage:

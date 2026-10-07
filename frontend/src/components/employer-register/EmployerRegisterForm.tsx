@@ -40,6 +40,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { EmployerRegisterDocumentVerification } from "./EmployerRegisterDocumentVerification";
+import { EmployerRegisterLocationFields } from "./EmployerRegisterLocationFields";
 import { EmployerRegisterOtpSection } from "./EmployerRegisterOtpSection";
 import {
   AUTH_VALIDATION_COPY,
@@ -329,6 +330,23 @@ export function EmployerRegisterForm({
     if (isIndividualAccount) {
       const identityErrors: AuthFieldErrors = {};
 
+      if (!formData.companyAddress.trim()) {
+        identityErrors.companyAddress =
+          AUTH_VALIDATION_MESSAGES.ADDRESS_REQUIRED;
+      }
+
+      if (!formData.state.trim()) {
+        identityErrors.state = AUTH_VALIDATION_MESSAGES.STATE_REQUIRED;
+      }
+
+      if (!formData.city.trim()) {
+        identityErrors.city = AUTH_VALIDATION_MESSAGES.CITY_REQUIRED;
+      }
+
+      if (!formData.pincode.trim()) {
+        identityErrors.pincode = AUTH_VALIDATION_MESSAGES.PINCODE_REQUIRED;
+      }
+
       if (!documentType) {
         identityErrors.documentType =
           AUTH_VALIDATION_MESSAGES.DOCUMENT_TYPE_REQUIRED;
@@ -356,6 +374,10 @@ export function EmployerRegisterForm({
           documentType: documentType!,
           documentFile: documentPreview!.file,
           profilePhotoFile: profilePhotoPreview?.file,
+          companyAddress: formData.companyAddress.trim(),
+          pincode: formData.pincode.trim(),
+          city: formData.city.trim(),
+          state: formData.state.trim(),
         });
         await establishEmployerClientSession(queryClient, {
           accessToken: session.accessToken,
@@ -697,6 +719,53 @@ export function EmployerRegisterForm({
             </button>
           ) : null}
         </div>
+
+        {isIndividualAccount ? (
+          <EmployerRegisterLocationFields
+            idPrefix="individual-register"
+            addressCopy="individual"
+            values={{
+              companyAddress: formData.companyAddress,
+              state: formData.state,
+              city: formData.city,
+              pincode: formData.pincode,
+            }}
+            fieldErrors={fieldErrors}
+            onAddressChange={(value) => updateField("companyAddress", value)}
+            onStateChange={(value) => {
+              setFormData((current) => ({
+                ...current,
+                state: value,
+                city: "",
+              }));
+              clearField("state");
+              clearField("city");
+            }}
+            onStateSelect={(suggestion) => {
+              setFormData((current) => ({
+                ...current,
+                state: suggestion.state,
+                city: "",
+              }));
+              clearField("state");
+              clearField("city");
+            }}
+            onCityChange={(value) => updateField("city", value)}
+            onCitySelect={(suggestion) => updateField("city", suggestion.city)}
+            onLocationPatch={(next) => {
+              setFormData((current) => ({ ...current, ...next }));
+              if (next.pincode !== undefined) {
+                clearField("pincode");
+              }
+              if (next.city) {
+                clearField("city");
+              }
+              if (next.state) {
+                clearField("state");
+              }
+            }}
+          />
+        ) : null}
 
         {isOtpVisible || isWhatsappVerified ? (
           <EmployerRegisterOtpSection

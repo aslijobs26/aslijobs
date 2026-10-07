@@ -87,6 +87,10 @@ export class EmployerController {
       {
         employerId,
         documentType: body.documentType,
+        companyAddress: body.companyAddress,
+        pincode: body.pincode,
+        city: body.city,
+        state: body.state,
       },
       {
         document: getUploadedFile(req.files, "document"),

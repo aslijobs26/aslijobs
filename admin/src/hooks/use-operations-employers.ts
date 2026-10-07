@@ -146,7 +146,13 @@ export function useCompleteOperationsEmployer() {
     mutationFn: (input: {
       employerId: string;
       payload: CompleteOperationsEmployerInput;
-    }) => completeOperationsEmployer(input.employerId, input.payload),
+      imageFile?: File | null;
+    }) =>
+      completeOperationsEmployer(
+        input.employerId,
+        input.payload,
+        input.imageFile,
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: OPERATIONS_EMPLOYERS_QUERY_KEY,

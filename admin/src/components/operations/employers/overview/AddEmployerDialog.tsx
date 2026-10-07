@@ -11,12 +11,19 @@ import {
   getOperationsEmployerBusinessCategoryOptions,
   OPERATIONS_EMPLOYER_INDUSTRY_OPTIONS,
 } from "../../../../constants/operations-employer-industries";
+import { OperationsPostJobPlaceAutocomplete } from "../../jobs/post/OperationsPostJobPlaceAutocomplete";
+import type { PlaceSuggestion } from "../../../../types/place-suggestion";
+import { OperationsAlertDialog } from "../../../ui/OperationsAlertDialog";
 import {
+  firstOperationsErrorMessage,
   getOperationsApiErrorMessage,
   getOperationsApiFieldErrors,
 } from "../../../../utils/operations-api-errors";
+import { AddEmployerImageField } from "./AddEmployerImageField";
 import { AddEmployerOtpSection } from "./AddEmployerOtpSection";
 import {
+  addEmployerImageFieldId,
+  addEmployerImageFieldLabel,
   EMPTY_ADD_EMPLOYER_FORM,
   isolateAddEmployerForm,
   OPERATIONS_EMPLOYER_ACCOUNT_TYPE_OPTIONS,
@@ -24,6 +31,7 @@ import {
   parseOptionalInt,
   validateAddEmployerForm,
   type AddEmployerFormState,
+  type AddEmployerImagePreview,
   type OperationsEmployerAccountType,
 } from "./add-employer-form";
 
@@ -36,6 +44,32 @@ const EMPTY_OTP = Array.from({ length: OPERATIONS_EMPLOYER_OTP_LENGTH }, () => "
 
 const inputClassName =
   "w-full rounded-lg border border-border-subtle bg-hero-bg/40 px-2.5 py-2 text-xs text-foreground outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
+
+function RequiredMark() {
+  return (
+    <span className="text-danger" aria-hidden="true">
+      {" "}
+      *
+    </span>
+  );
+}
+
+function FieldLabel({
+  htmlFor,
+  label,
+  required = false,
+}: {
+  htmlFor?: string;
+  label: string;
+  required?: boolean;
+}) {
+  return (
+    <label htmlFor={htmlFor} className="mb-1 block text-[11px] font-semibold text-muted">
+      {label}
+      {required ? <RequiredMark /> : null}
+    </label>
+  );
+}
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) {
@@ -56,8 +90,11 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
   const completeMutation = useCompleteOperationsEmployer();
 
   const [form, setForm] = useState<AddEmployerFormState>(EMPTY_ADD_EMPLOYER_FORM);
+  const [imagePreview, setImagePreview] =
+    useState<AddEmployerImagePreview | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [employerId, setEmployerId] = useState<string | null>(null);
   const [otpDigits, setOtpDigits] = useState<string[]>(EMPTY_OTP);
   const [otpSent, setOtpSent] = useState(false);
@@ -69,8 +106,10 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
       return;
     }
     setForm(EMPTY_ADD_EMPLOYER_FORM);
+    setImagePreview(null);
     setFieldErrors({});
     setFormError(null);
+    setAlertMessage(null);
     setEmployerId(null);
     setOtpDigits(EMPTY_OTP);
     setOtpSent(false);
@@ -108,7 +147,9 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
       ...getOperationsApiFieldErrors(error),
     };
     setFieldErrors(next);
-    setFormError(getOperationsApiErrorMessage(error));
+    const message = getOperationsApiErrorMessage(error);
+    setFormError(message);
+    setAlertMessage(message);
     const first = Object.keys(next)[0];
     if (first) {
       window.requestAnimationFrame(() => {
@@ -117,19 +158,26 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
     }
   };
 
+  const clearFieldErrors = (...keys: Array<keyof AddEmployerFormState>) => {
+    setFieldErrors((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const key of keys) {
+        if (key in next) {
+          delete next[key];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  };
+
   const updateField = <K extends keyof AddEmployerFormState>(
     key: K,
     value: AddEmployerFormState[K],
   ) => {
     setForm((prev) => ({ ...prev, [key]: value }));
-    setFieldErrors((prev) => {
-      if (!(key in prev)) {
-        return prev;
-      }
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
+    clearFieldErrors(key);
     if (key === "whatsappNumber" && (otpSent || otpVerified)) {
       setOtpSent(false);
       setOtpVerified(false);
@@ -142,6 +190,7 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
     setForm((prev) => isolateAddEmployerForm(value, { ...prev, accountType: value }));
     setFieldErrors({});
     setFormError(null);
+    setAlertMessage(null);
     setOtpSent(false);
     setOtpVerified(false);
     setEmployerId(null);
@@ -157,6 +206,12 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setFormError(null);
+      setAlertMessage(
+        firstOperationsErrorMessage(
+          errors,
+          "Please correct the highlighted fields.",
+        ),
+      );
       const first = Object.keys(errors)[0];
       if (first) {
         document.getElementById(first)?.focus();
@@ -209,7 +264,9 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
     }
     const otp = otpDigits.join("");
     if (otp.length !== OPERATIONS_EMPLOYER_OTP_LENGTH) {
-      setFieldErrors((prev) => ({ ...prev, otp: "Enter the 6-digit OTP." }));
+      const message = "Enter the 6-digit OTP.";
+      setFieldErrors((prev) => ({ ...prev, otp: message }));
+      setAlertMessage(message);
       return;
     }
     try {
@@ -231,6 +288,12 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
     const errors = validateAddEmployerForm(form);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      setAlertMessage(
+        firstOperationsErrorMessage(
+          errors,
+          "Please correct the highlighted fields.",
+        ),
+      );
       const first = Object.keys(errors)[0];
       if (first) {
         document.getElementById(first)?.focus();
@@ -238,7 +301,9 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
       return;
     }
     if (!otpVerified || !employerId || !form.accountType) {
-      setFormError("Verify the WhatsApp OTP before creating the employer.");
+      const message = "Verify the WhatsApp OTP before creating the employer.";
+      setFormError(message);
+      setAlertMessage(message);
       return;
     }
 
@@ -262,12 +327,12 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
             form.accountType === "company"
               ? parseOptionalInt(form.maximumEmployees)
               : null,
-          companyAddress:
-            form.accountType === "individual" ? "" : form.companyAddress.trim(),
-          pincode: form.accountType === "individual" ? "" : form.pincode.trim(),
-          city: form.accountType === "individual" ? "" : form.city.trim(),
-          state: form.accountType === "individual" ? "" : form.state.trim(),
+          companyAddress: form.companyAddress.trim(),
+          pincode: form.pincode.trim(),
+          city: form.city.trim(),
+          state: form.state.trim(),
         },
+        imageFile: imagePreview?.file ?? null,
       });
       onClose();
     } catch (error) {
@@ -276,6 +341,7 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
   };
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4 backdrop-blur-xs"
       role="dialog"
@@ -306,7 +372,8 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
         <form onSubmit={handleSubmit} className="mt-4 space-y-3" noValidate>
           <fieldset>
             <legend className="mb-1.5 block text-[11px] font-semibold text-muted">
-              Employer Category *
+              Employer Category
+              <RequiredMark />
             </legend>
             <div className="grid grid-cols-3 gap-1.5">
               {OPERATIONS_EMPLOYER_ACCOUNT_TYPE_OPTIONS.map((option) => {
@@ -458,17 +525,61 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
                 </>
               ) : null}
 
-              {accountType !== "individual" ? (
+              {accountType ? (
                 <>
                   <LabeledInput
                     id="companyAddress"
-                    label="Company Address"
+                    label={
+                      accountType === "individual"
+                        ? "Address"
+                        : "Company Address"
+                    }
                     required
                     value={form.companyAddress}
                     error={fieldErrors.companyAddress}
                     onChange={(value) => updateField("companyAddress", value)}
                   />
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <LabeledPlaceField
+                      id="state"
+                      label="State"
+                      required
+                      mode="state"
+                      value={form.state}
+                      error={fieldErrors.state}
+                      placeholder="Search state"
+                      onChange={(value) => {
+                        setForm((prev) => ({ ...prev, state: value, city: "" }));
+                        clearFieldErrors("state", "city");
+                      }}
+                      onSelect={(suggestion) => {
+                        setForm((prev) => ({
+                          ...prev,
+                          state: suggestion.state,
+                          city: "",
+                        }));
+                        clearFieldErrors("state", "city");
+                      }}
+                    />
+                    <LabeledPlaceField
+                      id="city"
+                      label="City"
+                      required
+                      mode="city"
+                      value={form.city}
+                      selectedState={form.state}
+                      disabled={!form.state.trim()}
+                      error={fieldErrors.city}
+                      placeholder={
+                        form.state.trim()
+                          ? "Search city"
+                          : "Select a state first"
+                      }
+                      onChange={(value) => updateField("city", value)}
+                      onSelect={(suggestion) =>
+                        updateField("city", suggestion.city)
+                      }
+                    />
                     <LabeledInput
                       id="pincode"
                       label="Pincode"
@@ -477,25 +588,34 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
                       error={fieldErrors.pincode}
                       onChange={(value) => updateField("pincode", value)}
                     />
-                    <LabeledInput
-                      id="city"
-                      label="City"
-                      required
-                      value={form.city}
-                      error={fieldErrors.city}
-                      onChange={(value) => updateField("city", value)}
-                    />
-                    <LabeledInput
-                      id="state"
-                      label="State"
-                      required
-                      value={form.state}
-                      error={fieldErrors.state}
-                      onChange={(value) => updateField("state", value)}
-                    />
                   </div>
                 </>
               ) : null}
+
+              <AddEmployerImageField
+                id={addEmployerImageFieldId(accountType)}
+                label={addEmployerImageFieldLabel(accountType)}
+                preview={imagePreview}
+                error={
+                  fieldErrors[addEmployerImageFieldId(accountType)] ??
+                  fieldErrors.companyLogo ??
+                  fieldErrors.profilePhoto
+                }
+                onPreviewChange={(preview) => {
+                  setImagePreview(preview);
+                  setFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.companyLogo;
+                    delete next.profilePhoto;
+                    return next;
+                  });
+                }}
+                onInvalidFile={(message) => {
+                  const fieldId = addEmployerImageFieldId(accountType);
+                  setFieldErrors((prev) => ({ ...prev, [fieldId]: message }));
+                  setAlertMessage(message);
+                }}
+              />
 
               {otpSent ? (
                 <AddEmployerOtpSection
@@ -548,6 +668,63 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
         </form>
       </div>
     </div>
+    <OperationsAlertDialog
+      open={Boolean(alertMessage)}
+      message={alertMessage ?? ""}
+      onClose={() => setAlertMessage(null)}
+    />
+    </>
+  );
+}
+
+function LabeledPlaceField({
+  id,
+  label,
+  mode,
+  value,
+  onChange,
+  onSelect,
+  error,
+  required,
+  placeholder,
+  selectedState,
+  disabled = false,
+}: {
+  id: string;
+  label: string;
+  mode: "state" | "city";
+  value: string;
+  onChange: (value: string) => void;
+  onSelect: (suggestion: PlaceSuggestion) => void;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
+  selectedState?: string;
+  disabled?: boolean;
+}) {
+  const errorId = `${id}-error`;
+  return (
+    <div>
+      <FieldLabel htmlFor={id} label={label} required={required} />
+      <OperationsPostJobPlaceAutocomplete
+        id={id}
+        name={id}
+        mode={mode}
+        value={value}
+        selectedState={selectedState}
+        disabled={disabled}
+        placeholder={placeholder}
+        hasError={Boolean(error)}
+        portal
+        inputClassName={inputClassName}
+        aria-invalid={Boolean(error)}
+        aria-required={required}
+        aria-describedby={error ? errorId : undefined}
+        onChange={onChange}
+        onSelect={onSelect}
+      />
+      <FieldError id={errorId} message={error} />
+    </div>
   );
 }
 
@@ -579,10 +756,7 @@ function LabeledInput({
   const errorId = `${id}-error`;
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-[11px] font-semibold text-muted">
-        {label}
-        {required ? " *" : ""}
-      </label>
+      <FieldLabel htmlFor={id} label={label} required={required} />
       <input
         id={id}
         name={id}
@@ -623,10 +797,7 @@ function LabeledSelect({
   const errorId = `${id}-error`;
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-[11px] font-semibold text-muted">
-        {label}
-        {required ? " *" : ""}
-      </label>
+      <FieldLabel htmlFor={id} label={label} required={required} />
       <OperationsFilterSelect
         id={id}
         label={label}

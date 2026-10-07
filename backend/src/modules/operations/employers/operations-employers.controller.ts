@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
+import { getUploadedFile } from "../../../middleware/employer-document-upload.middleware.js";
 import { sendSuccess } from "../../../utils/api-response.js";
 import {
   assertFineOrCoarsePermission,
@@ -165,10 +166,16 @@ export const operationsEmployersController = {
     );
     const { employerId } = req.params as OperationsEmployerIdParams;
     const body = req.body as OperationsCompleteEmployerBody;
-    const result = await operationsEmployersService.completeEmployer({
-      employerId,
-      ...body,
-    });
+    const result = await operationsEmployersService.completeEmployer(
+      {
+        employerId,
+        ...body,
+      },
+      {
+        companyLogo: getUploadedFile(req.files, "companyLogo"),
+        profilePhoto: getUploadedFile(req.files, "profilePhoto"),
+      },
+    );
 
     sendSuccess(res, HTTP_STATUS.CREATED, {
       message: "Employer created successfully.",

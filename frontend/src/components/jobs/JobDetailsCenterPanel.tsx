@@ -4,9 +4,11 @@ import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import { JobRecruiterContactDetails } from "@/components/jobs/JobRecruiterContactDetails";
 import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { protectedApply } from "@/utils/job-apply-auth";
+import { getPublicJobRecruiterDetails } from "@/utils/public-job-recruiter";
 import {
   formatJobSearchEducation,
   formatJobSearchExperience,
@@ -225,6 +227,7 @@ export function JobDetailsCenterPanel({
   const descriptionText = job.description?.trim() ?? "";
   const hasDescription = !isJobDescriptionEmpty(descriptionText);
   const visibleDescription = descriptionText;
+  const recruiter = getPublicJobRecruiterDetails(job);
 
   const handleShare = () => {
     if (previewMode) {
@@ -533,15 +536,17 @@ export function JobDetailsCenterPanel({
           </section>
         ) : null}
 
-        {job.contactPersonName || job.applyWhatsAppNumber ? (
+        {recruiter.hasDetails ? (
           <section className="py-6">
-            <p className="text-[15px] leading-[1.7] text-muted">
-              <span className="font-semibold text-foreground">{t("jobs.recruiter")}:</span>{" "}
-              {job.contactPersonName || "—"}
-              {job.applyWhatsAppNumber
-                ? `  ·  ${t("jobs.whatsappLabel", { number: job.applyWhatsAppNumber })}`
-                : null}
-            </p>
+            <SectionHeading>{t("jobs.recruiter")}</SectionHeading>
+            <JobRecruiterContactDetails
+              name={recruiter.name}
+              whatsapp={recruiter.whatsapp}
+              email={recruiter.email}
+              whatsappLabel={t("jobs.whatsappLabel", {
+                number: recruiter.whatsapp,
+              })}
+            />
           </section>
         ) : null}
       </div>

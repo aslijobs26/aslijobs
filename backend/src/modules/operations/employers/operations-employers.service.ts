@@ -8,6 +8,7 @@ import { buildListPagination } from "../../../utils/pagination.js";
 import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-image.js";
 import { EmployerModel } from "../../employers/employer.model.js";
 import { employerService } from "../../employers/employer.service.js";
+import type { CompleteOperationsEmployerProfileFiles } from "../../employers/employer.types.js";
 import { EmployerDocumentModel } from "../../employers/employer-document.model.js";
 import { JobModel } from "../../jobs/job.model.js";
 import { ApplicationModel } from "../../applications/application.model.js";
@@ -1498,21 +1499,24 @@ export const operationsEmployersService = {
     return employerService.verifyEmployerOtp({ employerId, otp });
   },
 
-  async completeEmployer(input: {
-    employerId: string;
-    accountType: "company" | "consultancy" | "individual";
-    companyName: string;
-    establishmentName: string;
-    industry: string;
-    businessCategory: string;
-    minimumEmployees: number | null;
-    maximumEmployees: number | null;
-    companyAddress: string;
-    pincode: string;
-    city: string;
-    state: string;
-  }): Promise<OperationsEmployerDetail> {
-    await employerService.completeOperationsEmployerProfile(input);
+  async completeEmployer(
+    input: {
+      employerId: string;
+      accountType: "company" | "consultancy" | "individual";
+      companyName: string;
+      establishmentName: string;
+      industry: string;
+      businessCategory: string;
+      minimumEmployees: number | null;
+      maximumEmployees: number | null;
+      companyAddress: string;
+      pincode: string;
+      city: string;
+      state: string;
+    },
+    files: CompleteOperationsEmployerProfileFiles = {},
+  ): Promise<OperationsEmployerDetail> {
+    await employerService.completeOperationsEmployerProfile(input, files);
     return this.getEmployerById(input.employerId);
   },
 

@@ -1,3 +1,4 @@
+import type { NextFunction, Request, Response } from "express";
 import multer from "multer";
 import {
   EMPLOYER_COMPANY_MEDIA_MAX_COUNT,
@@ -51,6 +52,25 @@ export const employerProfileUpdateUpload = employerUploadBase.fields([
   { name: "profilePhoto", maxCount: 1 },
   { name: "companyMedia", maxCount: EMPLOYER_COMPANY_MEDIA_MAX_COUNT },
 ]);
+
+export const employerOperationsCompleteUpload = employerUploadBase.fields([
+  { name: "companyLogo", maxCount: 1 },
+  { name: "profilePhoto", maxCount: 1 },
+]);
+
+/** Keep JSON complete-employer requests working when no photo is attached. */
+export function optionalMultipart(
+  upload: (req: Request, res: Response, next: NextFunction) => void,
+) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const contentType = String(req.headers["content-type"] ?? "").toLowerCase();
+    if (contentType.includes("multipart/form-data")) {
+      upload(req, res, next);
+      return;
+    }
+    next();
+  };
+}
 
 export function getUploadedFile(
   files: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] } | undefined,

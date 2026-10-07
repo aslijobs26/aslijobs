@@ -27,6 +27,7 @@ export const AUTH_VALIDATION_MESSAGES = {
   FILE_SIZE_INVALID: "File size must be less than 5 MB.",
 
   COMPANY_ADDRESS_REQUIRED: "Company address is required.",
+  ADDRESS_REQUIRED: "Address is required.",
   PINCODE_REQUIRED: "Pincode is required.",
   CITY_REQUIRED: "City is required.",
   STATE_REQUIRED: "State is required.",
@@ -85,6 +86,9 @@ export const BACKEND_AUTH_MESSAGE_MAP: Record<string, string> = {
     AUTH_VALIDATION_MESSAGES.ACCOUNT_SUSPENDED,
   "Your account is currently inactive. Please contact support.":
     AUTH_VALIDATION_MESSAGES.ACCOUNT_INACTIVE,
+  "Address is required": AUTH_VALIDATION_MESSAGES.ADDRESS_REQUIRED,
+  "Company address is required":
+    AUTH_VALIDATION_MESSAGES.COMPANY_ADDRESS_REQUIRED,
 };
 
 /**

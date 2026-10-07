@@ -219,12 +219,46 @@ export async function verifyOperationsEmployerOtp(
 export async function completeOperationsEmployer(
   employerId: string,
   payload: CompleteOperationsEmployerInput,
+  imageFile?: File | null,
 ): Promise<OperationsEmployerDetail> {
-  const response = await apiClient.post<{ data: OperationsEmployerDetail }>(
-    `${OPERATIONS_EMPLOYERS_BASE}/${encodeURIComponent(employerId)}/complete`,
-    payload,
-  );
+  const url = `${OPERATIONS_EMPLOYERS_BASE}/${encodeURIComponent(employerId)}/complete`;
 
+  if (!imageFile) {
+    const response = await apiClient.post<{ data: OperationsEmployerDetail }>(
+      url,
+      payload,
+    );
+    return response.data.data;
+  }
+
+  const body = new FormData();
+  body.append("accountType", payload.accountType);
+  body.append("companyName", payload.companyName);
+  body.append("establishmentName", payload.establishmentName);
+  body.append("industry", payload.industry);
+  body.append("businessCategory", payload.businessCategory);
+  body.append(
+    "minimumEmployees",
+    payload.minimumEmployees == null ? "" : String(payload.minimumEmployees),
+  );
+  body.append(
+    "maximumEmployees",
+    payload.maximumEmployees == null ? "" : String(payload.maximumEmployees),
+  );
+  body.append("companyAddress", payload.companyAddress);
+  body.append("pincode", payload.pincode);
+  body.append("city", payload.city);
+  body.append("state", payload.state);
+  if (payload.accountType === "individual") {
+    body.append("profilePhoto", imageFile);
+  } else {
+    body.append("companyLogo", imageFile);
+  }
+
+  const response = await apiClient.post<{ data: OperationsEmployerDetail }>(
+    url,
+    body,
+  );
   return response.data.data;
 }
 

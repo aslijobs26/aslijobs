@@ -110,12 +110,12 @@ const DUE_OPTIONS = [
 ] as const;
 
 const SORT_OPTIONS = [
+  { value: "createdAt:desc", label: "Newest" },
+  { value: "updatedAt:desc", label: "Recently updated" },
   { value: "dueAt:asc", label: "Due date ↑" },
   { value: "dueAt:desc", label: "Due date ↓" },
   { value: "priority:asc", label: "Priority ↑" },
   { value: "priority:desc", label: "Priority ↓" },
-  { value: "createdAt:desc", label: "Newest" },
-  { value: "updatedAt:desc", label: "Recently updated" },
 ] as const;
 
 const thClassName =

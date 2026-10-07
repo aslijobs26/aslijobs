@@ -6,7 +6,7 @@
   "scripts": {
     "generate:district-maps": "node scripts/generate-india-district-maps.mjs",
     "dev": "vite",
-    "test": "node --experimental-strip-types --test src/utils/document-preview.test.ts src/utils/pdf-preview-layout.test.ts src/components/operations/employers/employers-format.test.ts src/components/operations/employers/overview/add-employer-form.test.ts",
+    "test": "node --experimental-strip-types --test src/utils/document-preview.test.ts src/utils/pdf-preview-layout.test.ts src/utils/operations-api-errors.test.ts src/components/operations/employers/employers-format.test.ts src/components/operations/employers/overview/add-employer-form.test.ts",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
     "lint": "oxlint",

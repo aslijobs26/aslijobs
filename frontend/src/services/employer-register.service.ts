@@ -203,10 +203,18 @@ export async function completeEmployerIndividualIdentity(input: {
   documentType: EmployerRegisterDocumentType;
   documentFile: File;
   profilePhotoFile?: File;
+  companyAddress: string;
+  pincode: string;
+  city: string;
+  state: string;
 }) {
   const body = new FormData();
   body.append("documentType", input.documentType);
   body.append("document", input.documentFile);
+  body.append("companyAddress", input.companyAddress);
+  body.append("pincode", input.pincode);
+  body.append("city", input.city);
+  body.append("state", input.state);
 
   if (input.profilePhotoFile) {
     body.append("profilePhoto", input.profilePhotoFile);

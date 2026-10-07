@@ -3,11 +3,13 @@
 import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
 import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkeletons";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
+import { JobRecruiterContactDetails } from "@/components/jobs/JobRecruiterContactDetails";
 import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
+import { getPublicJobRecruiterDetails } from "@/utils/public-job-recruiter";
 import {
   formatJobSearchEducation,
   formatJobSearchExperience,
@@ -389,6 +391,7 @@ export function JobSearchOverviewPanel({
     job.walkInEndTime,
     language,
   );
+  const recruiter = getPublicJobRecruiterDetails(job);
 
   const handleShare = () => {
     void shareOrCopyText({
@@ -713,19 +716,17 @@ export function JobSearchOverviewPanel({
             </section>
           ) : null}
 
-          {job.contactPersonName || job.applyWhatsAppNumber ? (
+          {recruiter.hasDetails ? (
             <section className="py-5">
               <DetailSectionHeading>{t("jobs.recruiter")}</DetailSectionHeading>
-              <div className="mt-3 space-y-1">
-                {job.contactPersonName ? (
-                  <DetailPlainText>{job.contactPersonName}</DetailPlainText>
-                ) : null}
-                {job.applyWhatsAppNumber ? (
-                  <DetailPlainText>
-                    {t("jobs.whatsappLabel", { number: job.applyWhatsAppNumber })}
-                  </DetailPlainText>
-                ) : null}
-              </div>
+              <JobRecruiterContactDetails
+                name={recruiter.name}
+                whatsapp={recruiter.whatsapp}
+                email={recruiter.email}
+                whatsappLabel={t("jobs.whatsappLabel", {
+                  number: recruiter.whatsapp,
+                })}
+              />
             </section>
           ) : null}
         </div>

@@ -10,8 +10,6 @@ import {
   EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES,
   EMPLOYER_REGISTER_INDUSTRY_OPTIONS,
   EMPLOYER_REGISTER_INITIAL_COMPANY_PROFILE_DATA,
-  EMPLOYER_REGISTER_PINCODE_LOCATION_MAP,
-  EMPLOYER_REGISTER_PINCODE_OPTIONS,
   getEmployerRegisterBusinessCategoryOptions,
 } from "@/constants/employer-register";
 import { useTranslate } from "@/i18n/translate";
@@ -42,7 +40,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { EmployerImageUploadField } from "./EmployerImageUploadField";
-import { EmployerRegisterPlaceAutocomplete } from "./EmployerRegisterPlaceAutocomplete";
+import { EmployerRegisterLocationFields } from "./EmployerRegisterLocationFields";
 import { EmployerRegisterSearchableSelect } from "./EmployerRegisterSearchableSelect";
 import { BUSINESS_DOCUMENT_LABEL_KEYS } from "./employer-register-document-labels";
 import { useAuthMessageTranslator } from "./useAuthMessageTranslator";
@@ -151,24 +149,6 @@ export function EmployerRegisterCompanyProfileForm({
       next = clearFieldError(next, "businessCategory");
       return next;
     });
-  };
-
-  const handlePincodeChange = (pincode: string) => {
-    const location = EMPLOYER_REGISTER_PINCODE_LOCATION_MAP[pincode];
-
-    setFormData((current) => ({
-      ...current,
-      pincode,
-      city: location?.city ?? current.city,
-      state: location?.state ?? current.state,
-    }));
-    clearField("pincode");
-    if (location?.city) {
-      clearField("city");
-    }
-    if (location?.state) {
-      clearField("state");
-    }
   };
 
   const applySelectedFile = (file: File | undefined) => {
@@ -341,138 +321,50 @@ export function EmployerRegisterCompanyProfileForm({
   };
 
   const addressStateCityPincode = (
-    <>
-      <div className="employer-register-form-stack">
-        <RequiredFieldLabel
-          htmlFor="company-profile-address"
-          required
-          className="employer-register-form-label"
-        >
-          {t("auth.employerRegister.companyAddress")}
-        </RequiredFieldLabel>
-        <textarea
-          id="company-profile-address"
-          name="companyAddress"
-          value={formData.companyAddress}
-          onChange={(event) =>
-            updateField("companyAddress", event.target.value)
-          }
-          placeholder="#6-250, Kavuri Hills, Madhapur, Hyderabad, Telangana"
-          rows={3}
-          className="employer-register-form-textarea"
-          aria-required="true"
-          aria-invalid={Boolean(fieldErrors.companyAddress)}
-          aria-describedby={
-            fieldErrors.companyAddress ? "companyAddress-error" : undefined
-          }
-        />
-        <FieldError
-          id="companyAddress-error"
-          message={translateMessage(fieldErrors.companyAddress)}
-        />
-      </div>
-
-      <div className="employer-register-form-row employer-register-form-row--three">
-        <div className="employer-register-form-stack">
-          <RequiredFieldLabel
-            htmlFor="company-profile-state"
-            required
-            className="employer-register-form-label"
-          >
-            {t("auth.employerRegister.state")}
-          </RequiredFieldLabel>
-          <EmployerRegisterPlaceAutocomplete
-            id="company-profile-state"
-            name="state"
-            mode="state"
-            value={formData.state}
-            placeholder={
-              isConsultancy
-                ? t("auth.employerRegister.selectState")
-                : t("auth.employerRegister.searchState")
-            }
-            aria-required
-            aria-invalid={Boolean(fieldErrors.state)}
-            aria-describedby={
-              fieldErrors.state ? "state-error" : undefined
-            }
-            onChange={(value) => {
-              setFormData((current) => ({
-                ...current,
-                state: value,
-                city: "",
-              }));
-              clearField("state");
-              clearField("city");
-            }}
-            onSelect={(suggestion) => {
-              setFormData((current) => ({
-                ...current,
-                state: suggestion.state,
-                city: "",
-              }));
-              clearField("state");
-              clearField("city");
-            }}
-          />
-          <FieldError
-            id="state-error"
-            message={translateMessage(fieldErrors.state)}
-          />
-        </div>
-
-        <div className="employer-register-form-stack">
-          <RequiredFieldLabel
-            htmlFor="company-profile-city"
-            required
-            className="employer-register-form-label"
-          >
-            {t("auth.employerRegister.city")}
-          </RequiredFieldLabel>
-          <EmployerRegisterPlaceAutocomplete
-            id="company-profile-city"
-            name="city"
-            mode="city"
-            value={formData.city}
-            selectedState={formData.state}
-            disabled={!formData.state.trim()}
-            placeholder={
-              formData.state.trim()
-                ? isConsultancy
-                  ? t("auth.employerRegister.selectCity")
-                  : t("auth.employerRegister.searchCity")
-                : t("auth.employerRegister.selectStateFirst")
-            }
-            aria-required
-            aria-invalid={Boolean(fieldErrors.city)}
-            aria-describedby={fieldErrors.city ? "city-error" : undefined}
-            onChange={(value) => updateField("city", value)}
-            onSelect={(suggestion) => {
-              updateField("city", suggestion.city);
-            }}
-          />
-          <FieldError
-            id="city-error"
-            message={translateMessage(fieldErrors.city)}
-          />
-        </div>
-
-        <EmployerRegisterSearchableSelect
-          id="company-profile-pincode"
-          name="pincode"
-          label={t("auth.employerRegister.pincode")}
-          required
-          allowCustom
-          initialVisibleCount={5}
-          value={formData.pincode}
-          placeholder={t("auth.employerRegister.selectPincode")}
-          options={EMPLOYER_REGISTER_PINCODE_OPTIONS}
-          onChange={handlePincodeChange}
-          error={fieldErrors.pincode}
-          errorId="pincode-error"
-        />
-      </div>
-    </>
+    <EmployerRegisterLocationFields
+      idPrefix="company-profile"
+      values={{
+        companyAddress: formData.companyAddress,
+        state: formData.state,
+        city: formData.city,
+        pincode: formData.pincode,
+      }}
+      fieldErrors={fieldErrors}
+      useSelectPlaceholders={isConsultancy}
+      onAddressChange={(value) => updateField("companyAddress", value)}
+      onStateChange={(value) => {
+        setFormData((current) => ({
+          ...current,
+          state: value,
+          city: "",
+        }));
+        clearField("state");
+        clearField("city");
+      }}
+      onStateSelect={(suggestion) => {
+        setFormData((current) => ({
+          ...current,
+          state: suggestion.state,
+          city: "",
+        }));
+        clearField("state");
+        clearField("city");
+      }}
+      onCityChange={(value) => updateField("city", value)}
+      onCitySelect={(suggestion) => updateField("city", suggestion.city)}
+      onLocationPatch={(next) => {
+        setFormData((current) => ({ ...current, ...next }));
+        if (next.pincode !== undefined) {
+          clearField("pincode");
+        }
+        if (next.city) {
+          clearField("city");
+        }
+        if (next.state) {
+          clearField("state");
+        }
+      }}
+    />
   );
 
   return (

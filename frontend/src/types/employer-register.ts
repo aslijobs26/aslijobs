@@ -46,6 +46,10 @@ export type EmployerRegisterFormData = {
   lastName: string;
   whatsappNumber: string;
   emailAddress: string;
+  companyAddress: string;
+  pincode: string;
+  city: string;
+  state: string;
 };
 
 export type EmployerRegisterCompanyProfileData = {

@@ -96,7 +96,11 @@ export function mapEmployerJobDetailToPublicPreview(
     walkInEndTime: job.walkInEndTime,
     interviewInstructions: job.interviewInstructions,
     contactPersonName: access.canViewContact
-      ? job.contactPersonName || null
+      ? job.contactPersonName.trim() || null
+      : null,
+    contactEmail: access.canViewContact ? job.contactEmail.trim() || null : null,
+    contactMobile: access.canViewContact
+      ? job.contactMobile.trim() || null
       : null,
   };
 }

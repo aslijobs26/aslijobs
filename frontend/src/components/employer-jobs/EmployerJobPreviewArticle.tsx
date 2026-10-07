@@ -1,7 +1,8 @@
 "use client";
 
-import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
+import { JobRecruiterContactDetails } from "@/components/jobs/JobRecruiterContactDetails";
 import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
+import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
@@ -21,6 +22,7 @@ import {
   formatJobSearchWorkMode,
 } from "@/utils/job-search-format";
 import { isJobDescriptionEmpty } from "@/utils/job-description-html";
+import { getPublicJobRecruiterDetails } from "@/utils/public-job-recruiter";
 import {
   Bookmark,
   Briefcase,
@@ -204,9 +206,7 @@ export function EmployerJobPreviewArticle({
     job.address?.trim() || hasLocation || job.landmark?.trim(),
   );
   const showWalkIn = job.walkInEnabled;
-  const recruiterName =
-    job.contactPersonName?.trim() || job.companyName.trim() || "—";
-  const recruiterWhatsApp = job.applyWhatsAppNumber?.trim() || null;
+  const recruiter = getPublicJobRecruiterDetails(job);
   const logoUrl = companyLogoUrl?.trim() || job.companyLogoUrl?.trim() || null;
 
   return (
@@ -403,19 +403,19 @@ export function EmployerJobPreviewArticle({
           </section>
         ) : null}
 
-        <section className="py-6">
-          <SectionHeading>{t("jobs.recruiter")}</SectionHeading>
-          <div className="mt-3 space-y-1 text-[15px] leading-[1.7] break-words text-muted">
-            <p className="font-medium text-foreground">{recruiterName}</p>
-            {recruiterWhatsApp ? (
-              <p>
-                {t("employer.common.whatsappValue", {
-                  number: recruiterWhatsApp,
-                })}
-              </p>
-            ) : null}
-          </div>
-        </section>
+        {recruiter.hasDetails ? (
+          <section className="py-6">
+            <SectionHeading>{t("jobs.recruiter")}</SectionHeading>
+            <JobRecruiterContactDetails
+              name={recruiter.name}
+              whatsapp={recruiter.whatsapp}
+              email={recruiter.email}
+              whatsappLabel={t("jobs.whatsappLabel", {
+                number: recruiter.whatsapp,
+              })}
+            />
+          </section>
+        ) : null}
       </div>
     </article>
   );

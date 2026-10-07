@@ -55,6 +55,10 @@ export type CompleteCompanyProfileInput = {
 export type CompleteIndividualIdentityInput = {
   employerId: string;
   documentType: EmployerIdentityDocumentType;
+  companyAddress: string;
+  pincode: string;
+  city: string;
+  state: string;
 };
 
 export type CompleteOperationsEmployerProfileInput = {
@@ -70,6 +74,11 @@ export type CompleteOperationsEmployerProfileInput = {
   pincode: string;
   city: string;
   state: string;
+};
+
+export type CompleteOperationsEmployerProfileFiles = {
+  companyLogo?: Express.Multer.File;
+  profilePhoto?: Express.Multer.File;
 };
 
 export type UpdateEmployerProfileInput = {

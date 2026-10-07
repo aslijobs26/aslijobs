@@ -20,9 +20,9 @@ describe("operations work list validation", () => {
     );
   });
 
-  it("defaults sort to dueAt asc", () => {
+  it("defaults sort to createdAt desc", () => {
     const parsed = listOperationsWorkQuerySchema.parse({});
-    assert.equal(parsed.sort, "dueAt");
-    assert.equal(parsed.order, "asc");
+    assert.equal(parsed.sort, "createdAt");
+    assert.equal(parsed.order, "desc");
   });
 });

@@ -640,6 +640,10 @@ export const EMPLOYER_REGISTER_INITIAL_FORM_DATA: EmployerRegisterFormData = {
   lastName: "",
   whatsappNumber: "",
   emailAddress: "",
+  companyAddress: "",
+  pincode: "",
+  city: "",
+  state: "",
 };
 
 export const EMPLOYER_REGISTER_INITIAL_COMPANY_PROFILE_DATA: EmployerRegisterCompanyProfileData =

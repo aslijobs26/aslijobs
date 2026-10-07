@@ -1,10 +1,8 @@
 "use client";
 
 import indiaPromoImage from "@/assets/job-details-india-promo.png";
-import whatsappPromoImage from "@/assets/job-details-whatsapp-promo.png";
 import { ProfileStrengthCircle } from "@/components/job-seeker-profile/ProfileStrengthCircle";
 import { EmployerPostJobLink } from "@/components/post-job/EmployerPostJobLink";
-import { WHATSAPP_JOIN_URL } from "@/constants/cta";
 import {
   JOB_DETAILS_SAFETY_TIPS,
   JOB_DETAILS_WHY_POINTS,
@@ -37,7 +35,6 @@ const WHY_ICONS: Record<string, LucideIcon> = {
 };
 
 export function JobDetailsRightRail() {
-  const whatsappExternal = WHATSAPP_JOIN_URL.startsWith("http");
   const profileQuery = useJobSeekerProfile();
   const resumeQuery = useQuery({
     queryKey: JOB_SEEKER_RESUME_QUERY_KEY,
@@ -75,34 +72,6 @@ export function JobDetailsRightRail() {
 
   return (
     <aside className="flex flex-col gap-3.5" aria-label="AsliJobs highlights">
-      <section className="@container relative hidden overflow-hidden rounded-xl bg-[#F4F9F6] shadow-[0_6px_16px_rgba(18,140,126,0.12)] lg:block">
-        <Image
-          src={whatsappPromoImage}
-          alt=""
-          className="h-auto w-full"
-          sizes="(min-width: 1280px) 270px, (min-width: 1024px) 250px, 100vw"
-          priority={false}
-        />
-        <div className="pointer-events-none absolute inset-0 p-[5.2%] pr-[42%]">
-          <h2 className="text-[length:clamp(13px,4.9cqi,18px)] leading-snug font-bold tracking-tight">
-            <span className="block text-[#2F6B4F]">Get Jobs Instantly</span>
-            <span className="block text-[#1A1A1A]">on WhatsApp</span>
-          </h2>
-          <p className="mt-[0.45em] max-w-[18em] text-[length:clamp(10px,3.7cqi,13px)] leading-relaxed text-[#5B6B66]">
-            Receive instant job alerts directly on WhatsApp.
-          </p>
-        </div>
-        <Link
-          href={WHATSAPP_JOIN_URL}
-          target={whatsappExternal ? "_blank" : undefined}
-          rel={whatsappExternal ? "noopener noreferrer" : undefined}
-          className="absolute bottom-[12%] left-[2%] z-10 flex h-[21%] w-[49%] items-center justify-center pl-[11%] pr-[3%] text-[length:clamp(10px,3.2cqi,18px)] font-semibold leading-none tracking-tight whitespace-nowrap text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/40"
-          aria-label="Join WhatsApp"
-        >
-          Join WhatsApp
-        </Link>
-      </section>
-
       <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-[0_1px_4px_rgba(26,43,60,0.04)]">
         <div className="flex items-center gap-3">
           <ProfileStrengthCircle percentage={strength.percent} size={48} />

@@ -1,10 +1,13 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 
 import {
   searchIndiaCities,
@@ -29,6 +32,12 @@ export interface OperationsPostJobPlaceAutocompleteProps {
   disabled?: boolean;
   placeholder?: string;
   hasError?: boolean;
+  name?: string;
+  inputClassName?: string;
+  portal?: boolean;
+  "aria-invalid"?: boolean;
+  "aria-required"?: boolean;
+  "aria-describedby"?: string;
 }
 
 type DropdownStatus = "idle" | "loading" | "ready" | "empty" | "error";
@@ -61,9 +70,17 @@ export function OperationsPostJobPlaceAutocomplete({
   disabled = false,
   placeholder,
   hasError = false,
+  name,
+  inputClassName,
+  portal = false,
+  "aria-invalid": ariaInvalid,
+  "aria-required": ariaRequired,
+  "aria-describedby": ariaDescribedBy,
 }: OperationsPostJobPlaceAutocompleteProps) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const committedValueRef = useRef(value.trim());
   const isTypingRef = useRef(false);
@@ -71,6 +88,7 @@ export function OperationsPostJobPlaceAutocomplete({
   const [status, setStatus] = useState<DropdownStatus>("idle");
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [portalStyle, setPortalStyle] = useState<CSSProperties>({});
 
   const copy = COPY[mode];
 
@@ -166,7 +184,10 @@ export function OperationsPostJobPlaceAutocomplete({
 
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (rootRef.current?.contains(target)) {
+      if (
+        rootRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) {
         return;
       }
       setIsOpen(false);
@@ -242,15 +263,111 @@ export function OperationsPostJobPlaceAutocomplete({
       status === "empty" ||
       status === "error");
 
+  useLayoutEffect(() => {
+    if (!portal || !showDropdown) {
+      return;
+    }
+
+    const updatePosition = () => {
+      const input = inputRef.current;
+      if (!input) {
+        return;
+      }
+
+      const rect = input.getBoundingClientRect();
+      const gap = 4;
+      const spaceBelow = window.innerHeight - rect.bottom - gap;
+      const openAbove = spaceBelow < 160 && rect.top > spaceBelow;
+
+      setPortalStyle(
+        openAbove
+          ? {
+              bottom: window.innerHeight - rect.top + gap,
+              left: rect.left,
+              width: rect.width,
+            }
+          : {
+              top: rect.bottom + gap,
+              left: rect.left,
+              width: rect.width,
+            },
+      );
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [portal, showDropdown, suggestions.length, status]);
+
+  const dropdown = showDropdown ? (
+    <div
+      ref={panelRef}
+      id={listboxId}
+      role="listbox"
+      aria-label={copy.listLabel}
+      style={portal ? portalStyle : undefined}
+      className={cn(
+        "max-h-48 overflow-y-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-lg",
+        portal
+          ? "fixed z-[1000]"
+          : "absolute left-0 right-0 z-30 mt-1",
+      )}
+    >
+      {status === "loading" ? (
+        <p className="px-3 py-2 text-xs text-muted">{copy.loading}</p>
+      ) : null}
+
+      {status === "empty" ? (
+        <p className="px-3 py-2 text-xs text-muted">{copy.empty}</p>
+      ) : null}
+
+      {status === "error" ? (
+        <p className="px-3 py-2 text-xs text-muted">{copy.error}</p>
+      ) : null}
+
+      {status === "ready"
+        ? suggestions.map((suggestion, index) => (
+            <button
+              key={suggestion.id}
+              id={`${listboxId}-option-${index}`}
+              type="button"
+              role="option"
+              aria-selected={highlightedIndex === index}
+              className={cn(
+                "flex w-full px-3 py-2 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                highlightedIndex === index
+                  ? "bg-primary-light font-semibold text-primary"
+                  : "text-foreground hover:bg-primary-light",
+              )}
+              onMouseEnter={() => setHighlightedIndex(index)}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => selectSuggestion(suggestion)}
+            >
+              <span className="min-w-0 truncate">{suggestion.label}</span>
+            </button>
+          ))
+        : null}
+    </div>
+  ) : null;
+
   return (
     <div ref={rootRef} className="relative w-full min-w-0">
       <input
+        ref={inputRef}
         id={id}
+        name={name}
         type="text"
         role="combobox"
         aria-expanded={showDropdown}
         aria-controls={listboxId}
         aria-autocomplete="list"
+        aria-invalid={ariaInvalid}
+        aria-required={ariaRequired}
+        aria-describedby={ariaDescribedBy}
         aria-activedescendant={
           highlightedIndex >= 0
             ? `${listboxId}-option-${highlightedIndex}`
@@ -281,56 +398,16 @@ export function OperationsPostJobPlaceAutocomplete({
         placeholder={placeholder}
         autoComplete="off"
         className={cn(
-          operationsFieldInputClassName,
+          inputClassName ?? operationsFieldInputClassName,
           hasError &&
             "border-danger hover:border-danger focus-visible:border-danger focus-visible:ring-danger/30",
           disabled && "cursor-not-allowed opacity-60",
         )}
       />
 
-      {showDropdown ? (
-        <div
-          id={listboxId}
-          role="listbox"
-          aria-label={copy.listLabel}
-          className="absolute left-0 right-0 z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
-        >
-          {status === "loading" ? (
-            <p className="px-3 py-2 text-xs text-muted">{copy.loading}</p>
-          ) : null}
-
-          {status === "empty" ? (
-            <p className="px-3 py-2 text-xs text-muted">{copy.empty}</p>
-          ) : null}
-
-          {status === "error" ? (
-            <p className="px-3 py-2 text-xs text-muted">{copy.error}</p>
-          ) : null}
-
-          {status === "ready"
-            ? suggestions.map((suggestion, index) => (
-                <button
-                  key={suggestion.id}
-                  id={`${listboxId}-option-${index}`}
-                  type="button"
-                  role="option"
-                  aria-selected={highlightedIndex === index}
-                  className={cn(
-                    "flex w-full px-3 py-2 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                    highlightedIndex === index
-                      ? "bg-primary-light font-semibold text-primary"
-                      : "text-foreground hover:bg-primary-light",
-                  )}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => selectSuggestion(suggestion)}
-                >
-                  <span className="min-w-0 truncate">{suggestion.label}</span>
-                </button>
-              ))
-            : null}
-        </div>
-      ) : null}
+      {portal && dropdown && typeof document !== "undefined"
+        ? createPortal(dropdown, document.body)
+        : dropdown}
     </div>
   );
 }
