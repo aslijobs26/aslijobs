@@ -35,6 +35,15 @@ const en = {
       heading: "Employer Login",
       subtitle: "Login using your WhatsApp number.",
     },
+    inAppBrowser: {
+      title: "Open AsliJobs in your browser",
+      body: "WhatsApp's in-app browser cannot receive the login OTP sent to WhatsApp. Continue in Chrome or Safari so you can switch apps, copy the code, and finish signing in.",
+      openInBrowser: "Open in Browser",
+      continueInChrome: "Continue in Chrome",
+      fallback:
+        "If nothing happens, tap ⋮ in WhatsApp and select Open in browser.",
+      fallbackIos: "On iPhone, tap ••• and choose Open in Safari.",
+    },
     panel: {
       homeAria: "AsliJobs home",
       seekerHeadlineTop: "Your Next Job",
@@ -376,6 +385,15 @@ const hi: AuthMessages = {
       heading: "नियोक्ता लॉगिन",
       subtitle: "अपने WhatsApp नंबर से लॉगिन करें।",
     },
+    inAppBrowser: {
+      title: "AsliJobs को ब्राउज़र में खोलें",
+      body: "WhatsApp के इन-ऐप ब्राउज़र में WhatsApp पर भेजा गया लॉगिन OTP नहीं मिल पाता। Chrome या Safari में जारी रखें, ताकि आप ऐप बदलकर कोड ले सकें और लॉगिन पूरा कर सकें।",
+      openInBrowser: "ब्राउज़र में खोलें",
+      continueInChrome: "Chrome में जारी रखें",
+      fallback:
+        "अगर कुछ न हो, तो WhatsApp में ⋮ पर टैप करें और Open in browser चुनें।",
+      fallbackIos: "iPhone पर ••• टैप करें और Open in Safari चुनें।",
+    },
     panel: {
       homeAria: "AsliJobs होम",
       seekerHeadlineTop: "आपकी अगली नौकरी",
@@ -711,6 +729,15 @@ const te: AuthMessages = {
     employerLogin: {
       heading: "యజమాని లాగిన్",
       subtitle: "మీ WhatsApp నంబర్‌తో లాగిన్ అవ్వండి.",
+    },
+    inAppBrowser: {
+      title: "AsliJobsను బ్రౌజర్‌లో తెరవండి",
+      body: "WhatsApp ఇన్-యాప్ బ్రౌజర్‌లో WhatsAppకు పంపిన లాగిన్ OTP రాదు. Chrome లేదా Safariలో కొనసాగించండి, యాప్ మార్చి కోడ్ తీసుకుని లాగిన్ పూర్తి చేయండి.",
+      openInBrowser: "బ్రౌజర్‌లో తెరవండి",
+      continueInChrome: "Chromeలో కొనసాగించండి",
+      fallback:
+        "ఏమీ జరగకపోతే, WhatsAppలో ⋮ నొక్కి Open in browser ఎంచుకోండి.",
+      fallbackIos: "iPhoneలో ••• నొక్కి Open in Safari ఎంచుకోండి.",
     },
     panel: {
       homeAria: "AsliJobs హోమ్",
@@ -1051,6 +1078,15 @@ const ta: AuthMessages = {
     employerLogin: {
       heading: "முதலாளி உள்நுழைவு",
       subtitle: "உங்கள் WhatsApp எண்ணைப் பயன்படுத்தி உள்நுழையவும்.",
+    },
+    inAppBrowser: {
+      title: "AsliJobs-ஐ உலாவியில் திறக்கவும்",
+      body: "WhatsApp இன்-ஆப் உலாவியில் WhatsApp-க்கு அனுப்பப்படும் உள்நுழைவு OTP கிடைக்காது. Chrome அல்லது Safari-ல் தொடருங்கள், ஆப்பை மாற்றி குறியீட்டை எடுத்து உள்நுழைவை முடிக்கவும்.",
+      openInBrowser: "உலாவியில் திற",
+      continueInChrome: "Chrome-ல் தொடரவும்",
+      fallback:
+        "எதுவும் நடக்கவில்லை என்றால், WhatsApp-ல் ⋮ தட்டி Open in browser தேர்வு செய்யவும்.",
+      fallbackIos: "iPhone-ல் ••• தட்டி Open in Safari தேர்வு செய்யவும்.",
     },
     panel: {
       homeAria: "AsliJobs முகப்பு",
@@ -1393,6 +1429,15 @@ const kn: AuthMessages = {
       heading: "ಉದ್ಯೋಗದಾತ ಲಾಗಿನ್",
       subtitle: "ನಿಮ್ಮ WhatsApp ಸಂಖ್ಯೆಯನ್ನು ಬಳಸಿ ಲಾಗಿನ್ ಆಗಿ.",
     },
+    inAppBrowser: {
+      title: "AsliJobs ಅನ್ನು ಬ್ರೌಸರ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ",
+      body: "WhatsApp ಇನ್-ಆ್ಯಪ್ ಬ್ರೌಸರ್‌ನಲ್ಲಿ WhatsAppಗೆ ಕಳುಹಿಸಿದ ಲಾಗಿನ್ OTP ಸಿಗುವುದಿಲ್ಲ. Chrome ಅಥವಾ Safariನಲ್ಲಿ ಮುಂದುವರಿಯಿರಿ, ಆ್ಯಪ್ ಬದಲಾಯಿಸಿ ಕೋಡ್ ತೆಗೆದುಕೊಂಡು ಲಾಗಿನ್ ಪೂರ್ಣಗೊಳಿಸಿ.",
+      openInBrowser: "ಬ್ರೌಸರ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ",
+      continueInChrome: "Chromeನಲ್ಲಿ ಮುಂದುವರಿಯಿರಿ",
+      fallback:
+        "ಏನೂ ಆಗದಿದ್ದರೆ, WhatsAppನಲ್ಲಿ ⋮ ಟ್ಯಾಪ್ ಮಾಡಿ Open in browser ಆಯ್ಕೆಮಾಡಿ.",
+      fallbackIos: "iPhoneನಲ್ಲಿ ••• ಟ್ಯಾಪ್ ಮಾಡಿ Open in Safari ಆಯ್ಕೆಮಾಡಿ.",
+    },
     panel: {
       homeAria: "AsliJobs ಮುಖಪುಟ",
       seekerHeadlineTop: "ನಿಮ್ಮ ಮುಂದಿನ ಉದ್ಯೋಗ",
@@ -1733,6 +1778,15 @@ const ml: AuthMessages = {
     employerLogin: {
       heading: "തൊഴിലുടമ ലോഗിൻ",
       subtitle: "നിങ്ങളുടെ WhatsApp നമ്പർ ഉപയോഗിച്ച് ലോഗിൻ ചെയ്യുക.",
+    },
+    inAppBrowser: {
+      title: "AsliJobs ബ്രൗസറിൽ തുറക്കുക",
+      body: "WhatsApp ഇൻ-ആപ്പ് ബ്രൗസറിൽ WhatsApp-ലേക്ക് അയയ്ക്കുന്ന ലോഗിൻ OTP ലഭിക്കില്ല. Chrome അല്ലെങ്കിൽ Safari-ൽ തുടരുക, ആപ്പ് മാറി കോഡ് എടുത്ത് ലോഗിൻ പൂർത്തിയാക്കുക.",
+      openInBrowser: "ബ്രൗസറിൽ തുറക്കുക",
+      continueInChrome: "Chrome-ൽ തുടരുക",
+      fallback:
+        "ഒന്നും സംഭവിച്ചില്ലെങ്കിൽ, WhatsApp-ൽ ⋮ ടാപ്പ് ചെയ്ത് Open in browser തിരഞ്ഞെടുക്കുക.",
+      fallbackIos: "iPhone-ൽ ••• ടാപ്പ് ചെയ്ത് Open in Safari തിരഞ്ഞെടുക്കുക.",
     },
     panel: {
       homeAria: "AsliJobs ഹോം",

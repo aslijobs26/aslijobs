@@ -33,7 +33,7 @@ interface EmployerDetailHeaderProps {
 }
 
 const actionBtnBase =
-  "inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 sm:h-9 sm:w-auto sm:px-3 sm:text-xs lg:h-9";
+  "inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 sm:h-9 sm:px-3 sm:text-xs xl:h-9 xl:w-auto";
 
 export function EmployerDetailHeader({
   employer,
@@ -48,8 +48,8 @@ export function EmployerDetailHeader({
 
   return (
     <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm ops-brand-border-glow max-sm:rounded-lg max-sm:p-2 sm:p-4 lg:p-5">
-      <div className="flex flex-col gap-3 max-sm:gap-2.5 sm:gap-3.5 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
-        <div className="flex min-w-0 items-start gap-2 max-sm:gap-2 sm:gap-3 lg:gap-3.5">
+      <div className="flex flex-col gap-3 max-sm:gap-2.5 sm:gap-3.5 xl:flex-row xl:items-start xl:justify-between xl:gap-4">
+        <div className="flex min-w-0 w-full flex-1 items-start gap-2 max-sm:gap-2 sm:gap-3 lg:gap-3.5">
           <Link
             to={OPERATIONS_ROUTES.EMPLOYERS}
             aria-label="Back to Employers"
@@ -120,7 +120,7 @@ export function EmployerDetailHeader({
           </div>
         </div>
 
-        <div className="grid w-full grid-cols-2 gap-1.5 max-sm:gap-1.5 min-[420px]:grid-cols-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2 lg:shrink-0">
+        <div className="grid w-full grid-cols-2 gap-1.5 sm:gap-2 md:grid-cols-4 xl:flex xl:w-auto xl:shrink-0 xl:flex-wrap xl:items-center xl:justify-end">
           <OperationsCan module="jobs" action="create">
             <button
               type="button"

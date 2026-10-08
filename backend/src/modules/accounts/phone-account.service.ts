@@ -6,8 +6,10 @@ import {
   isMongoDuplicateKeyError,
   normalizeRegisteredWhatsappNumber,
   phoneAlreadyRegisteredError,
+  resolvePhoneIdentityReservation,
   resolvePhoneRegistrationDecision,
   type PhoneAccountKind,
+  type PhoneIdentityLinkedAccount,
 } from "./phone-account.policy.js";
 
 const LOCK_MS = 2 * 60 * 1000;
@@ -49,6 +51,67 @@ async function loadOwners(normalizedPhone: string) {
   };
 }
 
+function phoneMatchesNormalized(
+  storedPhone: string | undefined,
+  normalizedPhone: string,
+): boolean {
+  if (!storedPhone) {
+    return false;
+  }
+  if (storedPhone === normalizedPhone) {
+    return true;
+  }
+  try {
+    return normalizeRegisteredWhatsappNumber(storedPhone) === normalizedPhone;
+  } catch {
+    return false;
+  }
+}
+
+async function loadIdentityLinkedAccount(input: {
+  accountKind: PhoneAccountKind;
+  accountId: { toString(): string } | null;
+  normalizedPhone: string;
+}): Promise<PhoneIdentityLinkedAccount | null> {
+  if (!input.accountId) {
+    return null;
+  }
+
+  if (input.accountKind === "employer") {
+    const employer = await EmployerModel.findById(input.accountId)
+      .select("whatsappNumber registrationStatus")
+      .lean();
+    if (!employer) {
+      return null;
+    }
+    return {
+      id: employer._id.toString(),
+      kind: "employer",
+      ownsThisPhone: phoneMatchesNormalized(
+        employer.whatsappNumber,
+        input.normalizedPhone,
+      ),
+      registrationComplete: employer.registrationStatus === "completed",
+    };
+  }
+
+  const jobSeeker = await JobSeekerModel.findById(input.accountId)
+    .select("whatsappNumber registrationStatus")
+    .lean();
+  if (!jobSeeker) {
+    return null;
+  }
+  return {
+    id: jobSeeker._id.toString(),
+    kind: "job_seeker",
+    ownsThisPhone: phoneMatchesNormalized(
+      jobSeeker.whatsappNumber,
+      input.normalizedPhone,
+    ),
+    registrationComplete: jobSeeker.registrationStatus === "COMPLETED",
+  };
+}
+
 export async function reservePhoneAccount(input: {
   whatsappNumber: string;
   intendedKind: PhoneAccountKind;
@@ -85,40 +148,47 @@ export async function reservePhoneAccount(input: {
   }
 
   const existing = await PhoneAccountIdentityModel.findOne({ normalizedPhone });
-  if (!existing || existing.accountKind !== input.intendedKind) {
-    throw phoneAlreadyRegisteredError(
-      existing?.accountKind === "job_seeker" || existing?.accountKind === "employer"
-        ? existing.accountKind
-        : input.intendedKind === "job_seeker"
-          ? "employer"
-          : "job_seeker",
-    );
+  if (!existing) {
+    throw phoneAlreadyRegisteredError(input.intendedKind);
   }
 
-  if (
-    existing.accountId &&
-    (!resumeAccountId || existing.accountId.toString() !== resumeAccountId)
-  ) {
-    throw phoneAlreadyRegisteredError(existing.accountKind);
+  const linkedAccount = await loadIdentityLinkedAccount({
+    accountKind: existing.accountKind,
+    accountId: existing.accountId ?? null,
+    normalizedPhone,
+  });
+  const identityDecision = resolvePhoneIdentityReservation({
+    intendedKind: input.intendedKind,
+    liveResumeAccountId: resumeAccountId,
+    linkedAccount,
+  });
+
+  if (identityDecision.action === "reject") {
+    throw phoneAlreadyRegisteredError(identityDecision.existingKind);
   }
+
+  const nextResumeAccountId =
+    identityDecision.action === "resume"
+      ? identityDecision.resumeAccountId
+      : null;
 
   const now = new Date();
   const locked = await PhoneAccountIdentityModel.findOneAndUpdate(
     {
       normalizedPhone,
-      accountKind: input.intendedKind,
       $or: [
         { lockToken: null },
         { lockExpiresAt: null },
         { lockExpiresAt: { $lt: now } },
-        ...(resumeAccountId ? [{ accountId: resumeAccountId }] : []),
+        ...(nextResumeAccountId ? [{ accountId: nextResumeAccountId }] : []),
       ],
     },
     {
       $set: {
+        accountKind: input.intendedKind,
         lockToken,
         lockExpiresAt,
-        ...(resumeAccountId ? { accountId: resumeAccountId } : {}),
+        accountId: nextResumeAccountId,
       },
     },
     { new: true },
@@ -126,6 +196,12 @@ export async function reservePhoneAccount(input: {
 
   if (!locked) {
     throw phoneAlreadyRegisteredError(input.intendedKind);
+  }
+
+  if (identityDecision.action === "reclaim" && existing.accountId) {
+    console.info(
+      `[phone-account] reclaimed stale identity kind=${existing.accountKind} phone=****${normalizedPhone.slice(-4)}`,
+    );
   }
 
   return { normalizedPhone, lockToken };

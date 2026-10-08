@@ -8,12 +8,17 @@ import {
 import { assertFieldsEditable } from "../rbac/field-access.guards.js";
 import { sanitizeCompanyProfileDto } from "../rbac/field-access.response.js";
 import { sendSuccess } from "../../utils/api-response.js";
+import { resolveDocumentFileHeaders } from "../operations/documents/document-preview-headers.js";
+import { employerDocumentsService } from "./employer-documents.service.js";
 import { employerService } from "./employer.service.js";
 import type {
   CompleteCompanyProfileSchema,
   CompleteIndividualIdentitySchema,
+  EmployerDocumentIdParams,
+  ReuploadEmployerDocumentSchema,
   RegisterEmployerSchema,
   UpdateEmployerProfileSchema,
+  UploadEmployerDocumentSchema,
   VerifyEmployerOtpSchema,
 } from "./employer.validation.js";
 
@@ -153,6 +158,83 @@ export class EmployerController {
         ? "Verification is already pending review."
         : "Verification resubmitted for Operations review.",
       data: result,
+    });
+  };
+
+  listDocuments = async (req: Request, res: Response): Promise<void> => {
+    const employerId = req.employerId;
+    if (!employerId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const documents = await employerDocumentsService.list(employerId);
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Verification documents fetched successfully.",
+      data: { documents },
+    });
+  };
+
+  downloadDocument = async (req: Request, res: Response): Promise<void> => {
+    const employerId = req.employerId;
+    if (!employerId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const { documentId } = req.params as EmployerDocumentIdParams;
+    const file = await employerDocumentsService.open(employerId, documentId);
+    const headers = resolveDocumentFileHeaders({
+      mimeType: file.mimeType,
+      fileName: file.fileName,
+      disposition: "inline",
+    });
+    res.setHeader("Content-Type", headers.contentType);
+    res.setHeader("Content-Disposition", headers.contentDisposition);
+    if (file.contentLength != null) {
+      res.setHeader("Content-Length", String(file.contentLength));
+    }
+    res.status(HTTP_STATUS.OK);
+    file.stream.pipe(res);
+  };
+
+  uploadDocument = async (req: Request, res: Response): Promise<void> => {
+    const employerId = req.employerId;
+    if (!employerId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const body = req.body as UploadEmployerDocumentSchema;
+    const document = await employerDocumentsService.upload(
+      employerId,
+      body.documentType,
+      getUploadedFile(req.files, "document") ??
+        (req.file as Express.Multer.File | undefined),
+    );
+
+    sendSuccess(res, HTTP_STATUS.CREATED, {
+      message: "Verification document uploaded successfully.",
+      data: { document },
+    });
+  };
+
+  reuploadDocument = async (req: Request, res: Response): Promise<void> => {
+    const employerId = req.employerId;
+    if (!employerId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const { documentId } = req.params as EmployerDocumentIdParams;
+    const body = req.body as ReuploadEmployerDocumentSchema;
+    const document = await employerDocumentsService.reupload(
+      employerId,
+      documentId,
+      body.documentType,
+      getUploadedFile(req.files, "document") ??
+        (req.file as Express.Multer.File | undefined),
+    );
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Verification document replaced successfully.",
+      data: { document },
     });
   };
 }

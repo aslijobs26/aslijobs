@@ -14,7 +14,8 @@ export type OperationsNotificationType =
   | OperationsRegistrationNotificationType
   | "job.pending_approval"
   | "job.resubmitted"
-  | "job.live_revision_submitted";
+  | "job.live_revision_submitted"
+  | "employer.verification_resubmitted";
 
 export type OperationsNavBadgeKey =
   | "newEmployers"

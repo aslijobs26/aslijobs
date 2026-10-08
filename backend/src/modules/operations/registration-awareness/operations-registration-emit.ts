@@ -197,6 +197,86 @@ export function scheduleEmployerRegisteredAwareness(
   });
 }
 
+export type EmitEmployerVerificationResubmittedInput = {
+  employerId: string;
+  displayName: string;
+  submittedAt: Date;
+};
+
+function employerVerificationResubmittedKey(
+  employerId: string,
+  submittedAt: Date,
+): string {
+  return `employer.verification_resubmitted:${employerId}:${submittedAt.toISOString()}`;
+}
+
+/**
+ * Internal Team inbox item when a rejected employer sends details again.
+ * The submission timestamp keeps a later review cycle distinct from the last one.
+ */
+export async function emitEmployerVerificationResubmittedNotification(
+  input: EmitEmployerVerificationResubmittedInput,
+): Promise<void> {
+  const submittedAt = input.submittedAt;
+  const displayName = input.displayName.trim() || "Employer";
+  const employerId = input.employerId.trim();
+  const idempotencyKey = employerVerificationResubmittedKey(
+    employerId,
+    submittedAt,
+  );
+  const actionPath = `/operations/verifications/${encodeURIComponent(employerId)}`;
+
+  try {
+    await OperationsNotificationModel.updateOne(
+      { idempotencyKey },
+      {
+        $setOnInsert: {
+          idempotencyKey,
+          type: "employer.verification_resubmitted",
+          title: "Employer resubmitted for verification",
+          body: `${displayName} updated their details and submitted them again for review.`,
+          entityType: "employer",
+          entityId: employerId,
+          actionPath,
+          actorName: "Employer",
+          metadata: {
+            displayName,
+            submittedAt: submittedAt.toISOString(),
+            kind: "resubmitted",
+          },
+          reads: [],
+          createdAt: submittedAt,
+        },
+      },
+      { upsert: true },
+    );
+  } catch (error) {
+    console.error(
+      "[operations-registration-awareness] employer resubmit notification failed",
+      {
+        eventType: "employer.verification_resubmitted",
+        entityId: employerId,
+        errorCategory: error instanceof Error ? error.name : "unknown",
+      },
+    );
+  }
+}
+
+export function scheduleEmployerVerificationResubmittedNotification(
+  input: EmitEmployerVerificationResubmittedInput,
+): void {
+  void emitEmployerVerificationResubmittedNotification(input).catch((error) => {
+    console.error(
+      "[operations-registration-awareness] employer resubmit emit rejected",
+      {
+        eventType: "employer.verification_resubmitted",
+        entityId: input.employerId,
+        errorCategory: error instanceof Error ? error.name : "unknown",
+      },
+    );
+  });
+}
+
 export function scheduleCandidateRegisteredAwareness(
   input: EmitCandidateRegisteredInput,
 ): void {

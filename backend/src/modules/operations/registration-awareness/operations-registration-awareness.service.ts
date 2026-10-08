@@ -470,6 +470,13 @@ export const operationsRegistrationAwarenessService = {
         continue;
       }
       if (
+        doc.type === "employer.verification_resubmitted" &&
+        !canRead("verifications") &&
+        !canRead("employers")
+      ) {
+        continue;
+      }
+      if (
         (doc.type === "job.pending_approval" ||
           doc.type === "job.resubmitted" ||
           doc.type === "job.live_revision_submitted") &&

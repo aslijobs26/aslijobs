@@ -7,7 +7,6 @@ import { useAuthMessageTranslator } from "@/components/employer-register/useAuth
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import { EMPLOYER_LOGIN_OTP_LENGTH } from "@/constants/employer-login";
 import { isValidEmployerWhatsappNumber } from "@/constants/employer-register";
-import { ROUTES } from "@/constants/routes";
 import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
 import { useTranslate } from "@/i18n/translate";
 import {
@@ -23,8 +22,12 @@ import {
 } from "@/utils/auth-field-errors";
 import { establishEmployerClientSession } from "@/utils/employer-session";
 import { normalizeApiError } from "@/utils/normalize-api-error";
+import {
+  EMPLOYER_LOGIN_RETURN_URL_QUERY,
+  resolveEmployerPostLoginPath,
+} from "@/utils/safe-return-url";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 const EMPTY_OTP_DIGITS = Array.from(
@@ -43,6 +46,7 @@ export function EmployerLoginForm() {
   const t = useTranslate();
   const translateMessage = useAuthMessageTranslator();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [isOtpVisible, setIsOtpVisible] = useState(false);
@@ -208,7 +212,11 @@ export function EmployerLoginForm() {
         refreshToken: session.refreshToken,
         employer: session.employer,
       });
-      router.replace(ROUTES.EMPLOYER_DASHBOARD);
+      router.replace(
+        resolveEmployerPostLoginPath(
+          searchParams.get(EMPLOYER_LOGIN_RETURN_URL_QUERY),
+        ),
+      );
     } catch (error) {
       applyApiError(error, AUTH_VALIDATION_MESSAGES.OTP_INVALID);
     } finally {

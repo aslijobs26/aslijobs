@@ -5,6 +5,7 @@ import {
   normalizeRegisteredWhatsappNumber,
   phoneAlreadyRegisteredError,
   phoneAlreadyRegisteredMessage,
+  resolvePhoneIdentityReservation,
   resolvePhoneRegistrationDecision,
 } from "./phone-account.policy.js";
 
@@ -102,6 +103,83 @@ describe("resolvePhoneRegistrationDecision", () => {
       action: "allow",
       resumeAccountId: "seeker-pending",
     });
+  });
+});
+
+describe("resolvePhoneIdentityReservation", () => {
+  it("reclaims an identity whose employer document no longer exists", () => {
+    assert.deepEqual(
+      resolvePhoneIdentityReservation({
+        intendedKind: "employer",
+        liveResumeAccountId: null,
+        linkedAccount: null,
+      }),
+      { action: "reclaim" },
+    );
+  });
+
+  it("reclaims an identity that points at an account that no longer owns the phone", () => {
+    assert.deepEqual(
+      resolvePhoneIdentityReservation({
+        intendedKind: "employer",
+        liveResumeAccountId: null,
+        linkedAccount: {
+          id: "old-employer",
+          kind: "employer",
+          ownsThisPhone: false,
+          registrationComplete: true,
+        },
+      }),
+      { action: "reclaim" },
+    );
+  });
+
+  it("resumes an incomplete employer that still owns the phone", () => {
+    assert.deepEqual(
+      resolvePhoneIdentityReservation({
+        intendedKind: "employer",
+        liveResumeAccountId: null,
+        linkedAccount: {
+          id: "pending-employer",
+          kind: "employer",
+          ownsThisPhone: true,
+          registrationComplete: false,
+        },
+      }),
+      { action: "resume", resumeAccountId: "pending-employer" },
+    );
+  });
+
+  it("rejects a completed employer that still owns the phone", () => {
+    assert.deepEqual(
+      resolvePhoneIdentityReservation({
+        intendedKind: "employer",
+        liveResumeAccountId: null,
+        linkedAccount: {
+          id: "live-employer",
+          kind: "employer",
+          ownsThisPhone: true,
+          registrationComplete: true,
+        },
+      }),
+      { action: "reject", existingKind: "employer" },
+    );
+  });
+
+  it("rejects a live job seeker identity when registering an employer", () => {
+    assert.deepEqual(
+      resolvePhoneIdentityReservation({
+        intendedKind: "employer",
+        liveResumeAccountId: null,
+        linkedAccount: {
+          id: "seeker-1",
+          kind: "job_seeker",
+          ownsThisPhone: true,
+          registrationComplete: true,
+        },
+      }),
+      { action: "reject", existingKind: "job_seeker" },
+    );
   });
 });
 

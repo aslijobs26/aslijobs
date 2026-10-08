@@ -400,8 +400,8 @@ export function EmployerDocumentsPanel({
               aria-modal="true"
               aria-labelledby={titleId}
             >
-              <div className="flex h-[92vh] max-h-[92vh] min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-2xl">
-                <div className="flex items-center justify-between gap-2 border-b border-border-subtle p-3 sm:px-4">
+              <div className="flex h-[min(92dvh,920px)] max-h-[92dvh] min-h-0 w-full max-w-[min(72rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-2xl sm:max-w-[min(72rem,calc(100vw-2rem))]">
+                <div className="flex flex-col gap-2 border-b border-border-subtle p-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
                   <div className="min-w-0 flex-1">
                     <h3
                       id={titleId}
@@ -499,11 +499,11 @@ export function EmployerDocumentsPanel({
                     previewDoc.originalName,
                     previewDoc.mimeType,
                   ) === "image" ? (
-                    <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-2 sm:p-4">
+                    <div className="relative min-h-0 w-full flex-1 overflow-hidden">
                       <img
                         src={previewUrl}
                         alt={previewDoc.originalName}
-                        className="max-h-full max-w-full rounded-lg object-contain shadow-md"
+                        className="absolute inset-0 h-full w-full object-contain p-2 sm:p-4"
                       />
                     </div>
                   ) : null}

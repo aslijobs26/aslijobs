@@ -8,11 +8,21 @@ import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { jwtService } from "../auth/jwt.service.js";
 import { otpService } from "../otp/otp.service.js";
+import { PhoneAccountIdentityModel } from "../accounts/phone-account-identity.model.js";
+import { normalizeRegisteredWhatsappNumber } from "../accounts/phone-account.policy.js";
 import { EmployerModel } from "./employer.model.js";
+import {
+  employerWhatsappLookupValues,
+  maskEmployerLoginPhone,
+} from "./employer-login.lookup.js";
+import { isEmployerEligibleForLogin } from "./employer-login.policy.js";
 import type {
   EmployerLoginSendOtpInput,
   EmployerLoginVerifyOtpInput,
 } from "./employer-login.types.js";
+
+const LOGIN_OTP_SELECT =
+  "+otpHash +otpExpiresAt +otpAttempts +lastOtpSentAt +refreshTokenHash +refreshTokenExpiresAt";
 
 function toLoginEmployer(employer: {
   _id: mongoose.Types.ObjectId;
@@ -209,24 +219,51 @@ function buildEmployerDisplayName(employer: {
   return `${employer.firstName} ${employer.lastName}`.trim();
 }
 
-async function findLoginEligibleEmployer(whatsappNumber: string) {
-  const candidates = await EmployerModel.find({ whatsappNumber })
-    .select(
-      "+otpHash +otpExpiresAt +otpAttempts +lastOtpSentAt +refreshTokenHash +refreshTokenExpiresAt",
-    )
+async function loadEmployerLoginCandidates(whatsappNumber: string) {
+  const normalized = normalizeRegisteredWhatsappNumber(whatsappNumber);
+  const lookupValues = employerWhatsappLookupValues(normalized);
+
+  const byNumber = await EmployerModel.find({
+    whatsappNumber: { $in: lookupValues },
+  })
+    .select(LOGIN_OTP_SELECT)
     .sort({ updatedAt: -1 })
     .limit(20);
 
+  if (byNumber.length > 0) {
+    return byNumber;
+  }
+
+  const identity = await PhoneAccountIdentityModel.findOne({
+    normalizedPhone: normalized,
+    accountKind: "employer",
+  })
+    .select("accountId")
+    .lean();
+
+  if (!identity?.accountId) {
+    return [];
+  }
+
+  const byIdentity = await EmployerModel.findById(identity.accountId).select(
+    LOGIN_OTP_SELECT,
+  );
+
+  return byIdentity ? [byIdentity] : [];
+}
+
+async function findLoginEligibleEmployer(whatsappNumber: string) {
+  const candidates = await loadEmployerLoginCandidates(whatsappNumber);
+
   if (candidates.length === 0) {
+    console.info("[employer-login] no employer found", {
+      phone: maskEmployerLoginPhone(whatsappNumber),
+    });
     throw new AppError("Employer not registered.", HTTP_STATUS.NOT_FOUND);
   }
 
-  const loginEligible = candidates.filter(
-    (employer) =>
-      employer.status !== "suspended" &&
-      employer.status !== "inactive" &&
-      employer.isWhatsappVerified &&
-      employer.registrationStatus === "completed",
+  const loginEligible = candidates.filter((employer) =>
+    isEmployerEligibleForLogin(employer),
   );
 
   if (loginEligible.length === 0) {

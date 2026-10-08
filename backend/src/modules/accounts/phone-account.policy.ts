@@ -89,6 +89,44 @@ export function resolvePhoneRegistrationDecision(input: {
   };
 }
 
+export type PhoneIdentityLinkedAccount = {
+  id: string;
+  kind: PhoneAccountKind;
+  ownsThisPhone: boolean;
+  registrationComplete: boolean;
+};
+
+export type PhoneIdentityReservationDecision =
+  | { action: "resume"; resumeAccountId: string }
+  | { action: "reclaim" }
+  | { action: "reject"; existingKind: PhoneAccountKind };
+
+/**
+ * Identity rows can outlive deleted employer/seeker documents.
+ * Only a live owner of this phone may block a new reservation.
+ */
+export function resolvePhoneIdentityReservation(input: {
+  intendedKind: PhoneAccountKind;
+  liveResumeAccountId: string | null;
+  linkedAccount: PhoneIdentityLinkedAccount | null;
+}): PhoneIdentityReservationDecision {
+  const linked =
+    input.linkedAccount?.ownsThisPhone === true ? input.linkedAccount : null;
+
+  if (linked) {
+    if (linked.kind !== input.intendedKind || linked.registrationComplete) {
+      return { action: "reject", existingKind: linked.kind };
+    }
+    return { action: "resume", resumeAccountId: linked.id };
+  }
+
+  if (input.liveResumeAccountId) {
+    return { action: "resume", resumeAccountId: input.liveResumeAccountId };
+  }
+
+  return { action: "reclaim" };
+}
+
 export function isMongoDuplicateKeyError(error: unknown): boolean {
   return (
     typeof error === "object" &&

@@ -36,6 +36,17 @@ export function getSafeReturnUrl(
   return decoded;
 }
 
+/**
+ * Post-login destination for employer OTP login.
+ * Invalid or external candidates fall back to the existing dashboard home.
+ */
+export function resolveEmployerPostLoginPath(
+  candidate: string | null | undefined,
+  fallbackPath: string = ROUTES.EMPLOYER_DASHBOARD,
+): string {
+  return getSafeReturnUrl(candidate) ?? fallbackPath;
+}
+
 export function buildEmployerLoginHref(returnUrl?: string): string {
   const safeReturnUrl = getSafeReturnUrl(returnUrl);
 

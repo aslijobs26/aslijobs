@@ -125,6 +125,17 @@ const envSchema = z.object({
    */
   JOB_VIEW_COOLDOWN_MINUTES: z.coerce.number().int().min(1).default(30),
   /**
+   * Minutes to wait after employer OTP verification before sending a
+   * WhatsApp profile-completion reminder. Read from env so local testing
+   * can use 1 without changing code. Production should set 30.
+   */
+  EMPLOYER_PROFILE_COMPLETION_REMINDER_DELAY_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 60)
+    .default(30),
+  /**
    * Inbox retention for unread notifications (days from createdAt).
    * Expired rows are hidden from inbox/unread APIs; conversation history is preserved.
    */

@@ -1,5 +1,3 @@
-import { createReadStream, existsSync } from "node:fs";
-import path from "node:path";
 import type { Readable } from "node:stream";
 import mongoose from "mongoose";
 import { HTTP_STATUS } from "../../../constants/http-status.js";
@@ -9,10 +7,13 @@ import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-i
 import { EmployerModel } from "../../employers/employer.model.js";
 import { employerService } from "../../employers/employer.service.js";
 import type { CompleteOperationsEmployerProfileFiles } from "../../employers/employer.types.js";
+import { openEmployerDocumentFile } from "../../employers/employer-document.file.js";
 import { EmployerDocumentModel } from "../../employers/employer-document.model.js";
 import { JobModel } from "../../jobs/job.model.js";
 import { ApplicationModel } from "../../applications/application.model.js";
 import { notificationService } from "../../notifications/notification.service.js";
+import { employerAccountApprovedWhatsApp } from "../../whatsapp/notifications/employer-account-approved.notification.js";
+import { employerAccountRejectedWhatsApp } from "../../whatsapp/notifications/employer-account-rejected.notification.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
 import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
 import type {
@@ -1255,11 +1256,42 @@ export const operationsEmployersService = {
     }
 
     if (target === "verified") {
+      employerAccountApprovedWhatsApp.schedule({
+        employerId,
+        whatsappNumber: text(updated.whatsappNumber),
+        companyName: text(updated.companyName),
+        establishmentName: text(updated.establishmentName),
+        firstName: text(updated.firstName),
+        lastName: text(updated.lastName),
+      });
       await EmployerDocumentModel.updateMany(
         { employerId: employerObjectId, verificationStatus: "pending" },
         { $set: { verificationStatus: "approved" } },
       );
     } else if (target === "rejected") {
+      const rejectedAtValue = updated.rejectedAt;
+      const rejectedAt =
+        rejectedAtValue instanceof Date
+          ? rejectedAtValue
+          : new Date(
+              typeof rejectedAtValue === "string" && rejectedAtValue
+                ? rejectedAtValue
+                : Date.now(),
+            );
+      const reviewCycle = String(
+        Number.isFinite(rejectedAt.getTime())
+          ? rejectedAt.getTime()
+          : Date.now(),
+      );
+      employerAccountRejectedWhatsApp.schedule({
+        employerId,
+        whatsappNumber: text(updated.whatsappNumber),
+        companyName: text(updated.companyName),
+        establishmentName: text(updated.establishmentName),
+        firstName: text(updated.firstName),
+        lastName: text(updated.lastName),
+        reviewCycle,
+      });
       await EmployerDocumentModel.updateMany(
         { employerId: employerObjectId, verificationStatus: "pending" },
         { $set: { verificationStatus: "rejected" } },
@@ -1344,96 +1376,7 @@ export const operationsEmployersService = {
     fileName: string;
     contentLength?: number;
   }> {
-    if (
-      !mongoose.Types.ObjectId.isValid(employerId) ||
-      !mongoose.Types.ObjectId.isValid(documentId)
-    ) {
-      throw new AppError("Document not found.", HTTP_STATUS.NOT_FOUND);
-    }
-
-    const employerObjectId = new mongoose.Types.ObjectId(employerId);
-    const documentObjectId = new mongoose.Types.ObjectId(documentId);
-
-    const document = await EmployerDocumentModel.findOne({
-      _id: documentObjectId,
-      employerId: employerObjectId,
-    }).lean();
-
-    if (!document) {
-      throw new AppError("Document not found.", HTTP_STATUS.NOT_FOUND);
-    }
-
-    const fileName = text(document.originalName) || "document";
-    const mimeType = text(document.mimeType) || "application/octet-stream";
-    const storagePath = text(document.storagePath);
-    const remoteUrl = text(document.url);
-
-    if (storagePath) {
-      const absolutePath = path.isAbsolute(storagePath)
-        ? storagePath
-        : path.resolve(process.cwd(), storagePath);
-      if (existsSync(absolutePath)) {
-        return {
-          stream: createReadStream(absolutePath),
-          mimeType,
-          fileName,
-          contentLength:
-            typeof document.fileSize === "number" ? document.fileSize : undefined,
-        };
-      }
-    }
-
-    if (remoteUrl) {
-      const absoluteUrl = remoteUrl.startsWith("http")
-        ? remoteUrl
-        : remoteUrl.startsWith("/")
-          ? remoteUrl
-          : `/${remoteUrl}`;
-
-      if (!absoluteUrl.startsWith("http")) {
-        const localPath = path.resolve(
-          process.cwd(),
-          absoluteUrl.replace(/^\//, ""),
-        );
-        if (!existsSync(localPath)) {
-          throw new AppError("Document file not found.", HTTP_STATUS.NOT_FOUND);
-        }
-        return {
-          stream: createReadStream(localPath),
-          mimeType,
-          fileName,
-        };
-      }
-
-      const response = await fetch(absoluteUrl);
-      if (!response.ok || !response.body) {
-        throw new AppError(
-          "Unable to load document file.",
-          HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        );
-      }
-
-      const { Readable: NodeReadable } = await import("node:stream");
-      const stream = NodeReadable.fromWeb(
-        response.body as import("stream/web").ReadableStream,
-      );
-      const contentLengthHeader = response.headers.get("content-length");
-      const contentLength = contentLengthHeader
-        ? Number(contentLengthHeader)
-        : undefined;
-
-      return {
-        stream,
-        mimeType: response.headers.get("content-type") || mimeType,
-        fileName,
-        contentLength:
-          contentLength != null && Number.isFinite(contentLength)
-            ? contentLength
-            : undefined,
-      };
-    }
-
-    throw new AppError("Document file not found.", HTTP_STATUS.NOT_FOUND);
+    return openEmployerDocumentFile({ employerId, documentId });
   },
 
   async updateStatus(

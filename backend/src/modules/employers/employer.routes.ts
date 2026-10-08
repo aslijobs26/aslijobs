@@ -3,6 +3,7 @@ import { requireEmployerAuth } from "../../middleware/auth.middleware.js";
 import { requirePermission } from "../../middleware/permission.middleware.js";
 import {
   employerCompanyProfileUpload,
+  employerDocumentUpload,
   employerIndividualIdentityUpload,
   employerProfileUpdateUpload,
 } from "../../middleware/employer-document-upload.middleware.js";
@@ -23,9 +24,12 @@ import {
 import {
   completeCompanyProfileSchema,
   completeIndividualIdentitySchema,
+  employerDocumentIdParamsSchema,
   employerIdParamsSchema,
   registerEmployerSchema,
+  reuploadEmployerDocumentSchema,
   updateEmployerProfileSchema,
+  uploadEmployerDocumentSchema,
   verifyEmployerOtpSchema,
 } from "./employer.validation.js";
 
@@ -71,6 +75,38 @@ employerRouter.post(
   "/me/verification/resubmit",
   asyncHandler(requireEmployerAuth),
   asyncHandler(employerController.resubmitVerification),
+);
+
+employerRouter.get(
+  "/me/documents",
+  asyncHandler(requireEmployerAuth),
+  asyncHandler(employerController.listDocuments),
+);
+
+employerRouter.get(
+  "/me/documents/:documentId",
+  asyncHandler(requireEmployerAuth),
+  validate(employerDocumentIdParamsSchema, "params"),
+  asyncHandler(employerController.downloadDocument),
+);
+
+employerRouter.post(
+  "/me/documents",
+  asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("company_profile", "update")),
+  employerDocumentUpload,
+  validate(uploadEmployerDocumentSchema, "body"),
+  asyncHandler(employerController.uploadDocument),
+);
+
+employerRouter.post(
+  "/me/documents/:documentId/reupload",
+  asyncHandler(requireEmployerAuth),
+  asyncHandler(requirePermission("company_profile", "update")),
+  validate(employerDocumentIdParamsSchema, "params"),
+  employerDocumentUpload,
+  validate(reuploadEmployerDocumentSchema, "body"),
+  asyncHandler(employerController.reuploadDocument),
 );
 
 employerRouter.post(

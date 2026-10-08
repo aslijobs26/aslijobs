@@ -44,6 +44,7 @@ export const OPERATIONS_NOTIFICATION_TYPES = [
   ...OPERATIONS_REGISTRATION_NOTIFICATION_TYPES,
   "job.pending_approval",
   "job.resubmitted",
+  "employer.verification_resubmitted",
   "job.live_revision_submitted",
   "work.assigned",
   "work.reassigned",

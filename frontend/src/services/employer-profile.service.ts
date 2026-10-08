@@ -79,6 +79,83 @@ export async function fetchEmployerProfile() {
   return employer;
 }
 
+export type EmployerVerificationDocument = {
+  id: string;
+  documentType: string;
+  documentTypeLabel: string;
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+  verificationStatus: "pending" | "approved" | "rejected" | string;
+  uploadedAt: string;
+};
+
+export const employerDocumentsQueryKey = [
+  "employer",
+  "me",
+  "documents",
+] as const;
+
+export async function fetchEmployerDocuments(): Promise<
+  EmployerVerificationDocument[]
+> {
+  const response = await apiClient.get<
+    ApiSuccess<{ documents: EmployerVerificationDocument[] }>
+  >("/employers/me/documents");
+  return response.data.data.documents;
+}
+
+export async function downloadEmployerDocument(
+  documentId: string,
+): Promise<{ blob: Blob; fileName: string }> {
+  const response = await apiClient.get<Blob>(
+    `/employers/me/documents/${documentId}`,
+    { responseType: "blob" },
+  );
+  const disposition = response.headers["content-disposition"];
+  let fileName = "document";
+  if (typeof disposition === "string") {
+    const matched = /filename="?([^"]+)"?/i.exec(disposition);
+    if (matched?.[1]) {
+      fileName = matched[1];
+    }
+  }
+  return { blob: response.data, fileName };
+}
+
+export async function uploadEmployerDocument(input: {
+  documentType: string;
+  file: File;
+}): Promise<EmployerVerificationDocument> {
+  const body = new FormData();
+  body.append("documentType", input.documentType);
+  body.append("document", input.file);
+  const response = await apiClient.post<
+    ApiSuccess<{ document: EmployerVerificationDocument }>
+  >("/employers/me/documents", body, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data.data.document;
+}
+
+export async function reuploadEmployerDocument(input: {
+  documentId: string;
+  documentType?: string;
+  file: File;
+}): Promise<EmployerVerificationDocument> {
+  const body = new FormData();
+  if (input.documentType) {
+    body.append("documentType", input.documentType);
+  }
+  body.append("document", input.file);
+  const response = await apiClient.post<
+    ApiSuccess<{ document: EmployerVerificationDocument }>
+  >(`/employers/me/documents/${input.documentId}/reupload`, body, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data.data.document;
+}
+
 export async function resubmitEmployerVerification(): Promise<{
   employer: EmployerProfilePublic;
   alreadyPending: boolean;

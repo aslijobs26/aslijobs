@@ -453,3 +453,28 @@ export type OperationsCompleteEmployerProfileSchema = z.infer<
 export type UpdateEmployerProfileSchema = z.infer<
   typeof updateEmployerProfileSchema
 >;
+
+export const employerDocumentIdParamsSchema = z.object({
+  documentId: z
+    .string()
+    .trim()
+    .regex(/^[a-fA-F0-9]{24}$/, "Invalid document id"),
+});
+
+export const uploadEmployerDocumentSchema = z.object({
+  documentType: z.string().trim().min(1, "Select a document type"),
+});
+
+export const reuploadEmployerDocumentSchema = z.object({
+  documentType: z.string().trim().optional(),
+});
+
+export type EmployerDocumentIdParams = z.infer<
+  typeof employerDocumentIdParamsSchema
+>;
+export type UploadEmployerDocumentSchema = z.infer<
+  typeof uploadEmployerDocumentSchema
+>;
+export type ReuploadEmployerDocumentSchema = z.infer<
+  typeof reuploadEmployerDocumentSchema
+>;

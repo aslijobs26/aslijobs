@@ -5,6 +5,8 @@ import { env } from "./config/env.js";
 import { startNotificationRetentionScheduler } from "./modules/notifications/notification.retention.js";
 import { startJobTranslationRuntime } from "./modules/jobs/job-translation.queue.js";
 import { startWhatsAppInboundRuntime } from "./modules/whatsapp/whatsapp-inbound.queue.js";
+import { startEmployerProfileCompletionReminderRuntime } from "./modules/whatsapp/notifications/employer-profile-completion-reminder.queue.js";
+import { startWhatsAppNotificationRuntime } from "./modules/whatsapp/notifications/whatsapp-notification.queue.js";
 import { clearAllRbacCaches } from "./modules/rbac/rbac-context.cache.js";
 import { logEmailConfigurationStatus } from "./modules/team/team-invitation-email.service.js";
 import mongoose from "mongoose";
@@ -15,6 +17,8 @@ let stopNotificationRetention: (() => void) | null = null;
 let stopWorkReconcile: (() => void) | null = null;
 let stopJobTranslation: (() => Promise<void>) | null = null;
 let stopWhatsAppInbound: (() => Promise<void>) | null = null;
+let stopWhatsAppNotifications: (() => Promise<void>) | null = null;
+let stopEmployerProfileReminders: (() => Promise<void>) | null = null;
 
 async function shutdown(signal: string): Promise<void> {
   if (isShuttingDown) {
@@ -41,6 +45,14 @@ async function shutdown(signal: string): Promise<void> {
     if (stopWhatsAppInbound) {
       await stopWhatsAppInbound();
       stopWhatsAppInbound = null;
+    }
+    if (stopWhatsAppNotifications) {
+      await stopWhatsAppNotifications();
+      stopWhatsAppNotifications = null;
+    }
+    if (stopEmployerProfileReminders) {
+      await stopEmployerProfileReminders();
+      stopEmployerProfileReminders = null;
     }
     if (httpServer) {
       await new Promise<void>((resolve, reject) => {
@@ -91,6 +103,8 @@ async function startServer(): Promise<void> {
   stopWorkReconcile = startOperationsWorkReconcileScheduler();
   stopJobTranslation = startJobTranslationRuntime();
   stopWhatsAppInbound = startWhatsAppInboundRuntime();
+  stopWhatsAppNotifications = startWhatsAppNotificationRuntime();
+  stopEmployerProfileReminders = startEmployerProfileCompletionReminderRuntime();
 
   httpServer = app.listen(env.PORT, () => {
     console.log(`AsliJobs API running on port ${env.PORT}`);

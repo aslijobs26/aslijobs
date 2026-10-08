@@ -1,6 +1,7 @@
 "use client";
 
 import { EmployerCompanyMediaModal } from "@/components/employer-profile/EmployerCompanyMediaModal";
+import { EmployerProfileDocumentsSection } from "@/components/employer-profile/EmployerProfileDocumentsSection";
 import { EmployerProfileCompletionCircle } from "@/components/employer-profile/EmployerProfileCompletionCircle";
 import {
   EmployerProfileEditModal,
@@ -694,6 +695,11 @@ export function EmployerProfilePageContent() {
               ) : null}
               </div>
           </section>
+
+          <EmployerProfileDocumentsSection
+            accountType={profile.accountType}
+            canUpdate={canUpdateProfile}
+          />
 
           <section
             id="profile-section-about"

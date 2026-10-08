@@ -25,7 +25,12 @@ import {
   formatEmployerRegistrationDisplayId,
   resolveEmployerRegistrationDisplayName,
 } from "../operations/registration-awareness/operations-registration-awareness.service.js";
-import { scheduleEmployerRegisteredAwareness } from "../operations/registration-awareness/operations-registration-emit.js";
+import {
+  scheduleEmployerRegisteredAwareness,
+  scheduleEmployerVerificationResubmittedNotification,
+} from "../operations/registration-awareness/operations-registration-emit.js";
+import * as employerProfileCompletionReminderQueue from "../whatsapp/notifications/employer-profile-completion-reminder.queue.js";
+import { scheduleWhatsAppNotification } from "../whatsapp/notifications/whatsapp-notification.service.js";
 import { scheduleEmployerVerificationWork } from "../operations/work/operations-work-emit.js";
 import { storageService } from "../storage/storage.service.js";
 import { EmployerDocumentModel } from "./employer-document.model.js";
@@ -41,6 +46,7 @@ import type {
   VerifyEmployerOtpInput,
 } from "./employer.types.js";
 import { isolateOperationsEmployerProfileFields } from "./employer.validation.js";
+import { employerResubmitFieldErrors } from "./employer-verification-resubmit.policy.js";
 
 type EmployerImageAsset = {
   url?: string;
@@ -52,6 +58,23 @@ type EmployerImageAsset = {
   fileSize?: number;
   updatedAt?: Date | string | null;
 };
+
+function scheduleEmployerAccountCreatedWhatsApp(employer: {
+  _id: mongoose.Types.ObjectId;
+  whatsappNumber: string;
+  companyName?: string | null;
+  establishmentName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}): void {
+  scheduleWhatsAppNotification({
+    event: "EMPLOYER_ACCOUNT_CREATED",
+    entityId: employer._id.toString(),
+    phoneNumber: employer.whatsappNumber,
+    employerName: resolveEmployerRegistrationDisplayName(employer),
+    preferredLanguage: "en",
+  });
+}
 
 function toPublicImageUpdatedAt(
   value: Date | string | null | undefined,
@@ -133,6 +156,8 @@ function toPublicEmployer(employer: {
   isProfileComplete: boolean;
   companyProfileVisited?: boolean;
   registrationStatus: string;
+  verificationStatus?: string;
+  verificationRemarks?: string;
   documentIds?: mongoose.Types.ObjectId[];
   createdAt?: Date;
   updatedAt?: Date;
@@ -188,6 +213,8 @@ function toPublicEmployer(employer: {
     isProfileComplete: employer.isProfileComplete,
     companyProfileVisited: employer.companyProfileVisited ?? false,
     registrationStatus: employer.registrationStatus,
+    verificationStatus: employer.verificationStatus ?? "pending",
+    verificationRemarks: employer.verificationRemarks ?? "",
     documentIds: (employer.documentIds ?? []).map((id) => id.toString()),
     createdAt: employer.createdAt,
     updatedAt: employer.updatedAt,
@@ -592,6 +619,10 @@ export class EmployerService {
 
     await employer.save();
 
+    employerProfileCompletionReminderQueue.armEmployerProfileCompletionReminder(
+      employer._id.toString(),
+    );
+
     return {
       employer: toPublicEmployer(employer),
       nextStep:
@@ -782,6 +813,7 @@ export class EmployerService {
       registeredAt:
         employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
     });
+    scheduleEmployerAccountCreatedWhatsApp(employer);
 
     scheduleEmployerVerificationWork({
       employerId: employer._id.toString(),
@@ -939,6 +971,7 @@ export class EmployerService {
       registeredAt:
         employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
     });
+    scheduleEmployerAccountCreatedWhatsApp(employer);
 
     scheduleEmployerVerificationWork({
       employerId: employer._id.toString(),
@@ -1084,6 +1117,7 @@ export class EmployerService {
       registeredAt:
         employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
     });
+    scheduleEmployerAccountCreatedWhatsApp(employer);
 
     return toPublicEmployer(employer);
   }
@@ -1359,6 +1393,18 @@ export class EmployerService {
       );
     }
 
+    const documentCount = await EmployerDocumentModel.countDocuments({
+      employerId: employer._id,
+    });
+    const fieldErrors = employerResubmitFieldErrors(employer, documentCount);
+    if (Object.keys(fieldErrors).length > 0) {
+      throw new AppError(
+        "Complete the required profile details before resubmitting.",
+        HTTP_STATUS.UNPROCESSABLE_ENTITY,
+        { fieldErrors },
+      );
+    }
+
     const previousRemarks = String(employer.verificationRemarks ?? "").trim();
     employer.verificationStatus = "pending";
     employer.verificationSubmittedAt = new Date();
@@ -1397,15 +1443,19 @@ export class EmployerService {
       console.error("Employer verification resubmit audit failed:", error);
     }
 
+    const submittedAt = employer.verificationSubmittedAt ?? new Date();
+    const displayName = resolveEmployerRegistrationDisplayName(employer);
     scheduleEmployerVerificationWork({
       employerId: employer._id.toString(),
-      companyName:
-        employer.companyName?.trim() ||
-        employer.establishmentName?.trim() ||
-        "Employer",
+      companyName: displayName,
       locationLabel: [employer.city, employer.state].filter(Boolean).join(", "),
-      submittedAt: employer.verificationSubmittedAt ?? new Date(),
+      submittedAt,
       kind: "resubmitted",
+    });
+    scheduleEmployerVerificationResubmittedNotification({
+      employerId: employer._id.toString(),
+      displayName,
+      submittedAt,
     });
 
     return { employer: toPublicEmployer(employer), alreadyPending: false };

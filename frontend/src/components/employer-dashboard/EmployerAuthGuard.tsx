@@ -1,6 +1,7 @@
 "use client";
 
 import { EmployerWorkspaceShellSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
+import { InAppBrowserHandoff } from "@/components/in-app-browser/InAppBrowserHandoff";
 import { ROUTES } from "@/constants/routes";
 import {
   employerProfileQueryOptions,
@@ -11,6 +12,10 @@ import { isUnauthorizedAuthError } from "@/utils/auth-errors";
 import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import { getJobSeekerAccessToken } from "@/utils/job-seeker-auth-storage";
 import { clearEmployerClientSession } from "@/utils/employer-session";
+import {
+  detectInAppBrowser,
+  type InAppBrowserPlatform,
+} from "@/utils/in-app-browser";
 import { buildEmployerLoginHref } from "@/utils/safe-return-url";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -20,7 +25,11 @@ type EmployerAuthGuardProps = {
   children: ReactNode;
 };
 
-type AuthStatus = "checking" | "authenticated" | "transient_error";
+type AuthStatus =
+  | "checking"
+  | "authenticated"
+  | "transient_error"
+  | "in_app_handoff";
 
 /**
  * Workspace gate: verifies a token exists and that the shared employer profile
@@ -33,6 +42,8 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
   const t = useTranslate();
   const [status, setStatus] = useState<AuthStatus>("checking");
   const [retryToken, setRetryToken] = useState(0);
+  const [inAppPlatform, setInAppPlatform] =
+    useState<InAppBrowserPlatform>("other");
 
   const routerRef = useRef(router);
   const queryClientRef = useRef(queryClient);
@@ -44,6 +55,15 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
 
     const redirectUnauthenticated = async () => {
       await clearEmployerClientSession(queryClientRef.current);
+      const inApp = detectInAppBrowser(navigator.userAgent);
+      if (inApp.isInApp) {
+        if (!cancelled) {
+          setInAppPlatform(inApp.platform);
+          setStatus("in_app_handoff");
+        }
+        return;
+      }
+
       const returnUrl = `${window.location.pathname}${window.location.search}`;
       routerRef.current.replace(
         buildEmployerLoginHref(returnUrl || ROUTES.POST_JOB),
@@ -107,6 +127,10 @@ export function EmployerAuthGuard({ children }: EmployerAuthGuardProps) {
       window.removeEventListener("pageshow", handlePageShow);
     };
   }, [retryToken]);
+
+  if (status === "in_app_handoff") {
+    return <InAppBrowserHandoff platform={inAppPlatform} />;
+  }
 
   if (status === "transient_error") {
     return (
