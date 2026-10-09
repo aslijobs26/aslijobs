@@ -84,6 +84,16 @@ export const operationsJobsController = {
     });
   },
 
+  async remove(req: Request, res: Response): Promise<void> {
+    const { jobId } = req.params as OperationsJobPublicIdParams;
+    const result = await operationsJobsService.deleteJob(jobId);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Job deleted successfully.",
+      data: result,
+    });
+  },
+
   async updateStatus(req: Request, res: Response): Promise<void> {
     const { jobId } = req.params as OperationsJobPublicIdParams;
     const body = req.body as UpdateOperationsJobStatusBody;

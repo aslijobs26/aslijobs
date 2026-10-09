@@ -53,6 +53,15 @@ export async function ensureOperationsRbacSeed(): Promise<void> {
         canAssignRoles: false,
         revision: 1,
       });
+      continue;
+    }
+
+    const present = new Set(existing.grants.map((grant) => grant.key));
+    const missing = grants.filter((grant) => !present.has(grant.key));
+    if (missing.length > 0) {
+      existing.grants.push(...missing);
+      existing.revision = (existing.revision ?? 1) + 1;
+      await existing.save();
     }
   }
 

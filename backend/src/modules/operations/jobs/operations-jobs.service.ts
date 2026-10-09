@@ -23,7 +23,10 @@ import type {
 } from "../../applications/application.types.js";
 import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-image.js";
 import { EmployerModel } from "../../employers/employer.model.js";
+import { cascadeDeleteOwnedJobs } from "../../jobs/job-cascade-delete.js";
 import { JobModel, type JobDocument } from "../../jobs/job.model.js";
+import { JobTranslationTaskModel } from "../../jobs/job-translation-task.model.js";
+import { JobPostIncompleteReminderModel } from "../../whatsapp/notifications/job-post-incomplete-reminder.model.js";
 import { scheduleJobTranslationRefresh, serveJobDetailTranslation } from "../../jobs/job-translation.queue.js";
 import {
   parseJobContentLanguage,
@@ -1722,6 +1725,44 @@ export const operationsJobsService = {
       applications,
       pagination: buildListPagination(query.page, query.limit, total),
     };
+  },
+
+  async deleteJob(publicJobId: string): Promise<{ jobId: string }> {
+    const job = await findJobByPublicId(publicJobId);
+    const publicId = String(job.jobId).trim().toUpperCase();
+    const ownerRaw = job.employerId ?? job.companyId;
+    const ownerId = ownerRaw ? String(ownerRaw) : "";
+
+    if (ownerId && mongoose.Types.ObjectId.isValid(ownerId)) {
+      if (!job.employerId) {
+        await JobModel.updateOne(
+          { _id: job._id },
+          { $set: { employerId: new mongoose.Types.ObjectId(ownerId) } },
+        );
+      }
+      const deleted = await cascadeDeleteOwnedJobs({
+        employerId: ownerId,
+        jobObjectIds: [job._id],
+      });
+      if (!deleted.deletedJobIds.includes(job._id.toString())) {
+        throw new AppError("Job not found.", HTTP_STATUS.NOT_FOUND);
+      }
+    } else {
+      await ApplicationModel.deleteMany({ jobId: job._id });
+      const removed = await JobModel.deleteOne({ _id: job._id });
+      if ((removed.deletedCount ?? 0) === 0) {
+        throw new AppError("Job not found.", HTTP_STATUS.NOT_FOUND);
+      }
+    }
+
+    await Promise.all([
+      JobTranslationTaskModel.deleteMany({ jobMongoId: job._id }),
+      JobPostIncompleteReminderModel.deleteMany({
+        jobMongoId: job._id.toString(),
+      }),
+    ]);
+
+    return { jobId: publicId };
   },
 
   async updateJobStatus(

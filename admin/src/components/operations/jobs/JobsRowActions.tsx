@@ -1,4 +1,4 @@
-import { Copy, Eye, MoreVertical, Pause, Play, Power, XCircle } from "lucide-react";
+import { Copy, Eye, MoreVertical, Pause, Play, Power, Trash2, XCircle } from "lucide-react";
 import {
   useEffect,
   useLayoutEffect,
@@ -39,6 +39,14 @@ const MENU_GAP_PX = 6;
 const MENU_ITEM_HEIGHT_PX = 36;
 const MENU_SEPARATOR_HEIGHT_PX = 9;
 const MENU_VERTICAL_PADDING_PX = 8;
+
+let openJobsActionMenuId: string | null = null;
+const jobsActionMenuListeners = new Set<(menuId: string | null) => void>();
+
+function setOpenJobsActionMenu(menuId: string | null): void {
+  openJobsActionMenuId = menuId;
+  jobsActionMenuListeners.forEach((listener) => listener(menuId));
+}
 
 function jobStatusMenuActions(
   status: OperationsJobStatus,
@@ -103,16 +111,19 @@ function jobStatusMenuActions(
 function estimateMenuHeight(
   statusActionCount: number,
   includeStatusActions: boolean,
+  includeDelete: boolean,
 ): number {
   const baseItems = 2;
   const statusItems =
     includeStatusActions && statusActionCount > 0 ? statusActionCount : 0;
   const separator =
-    includeStatusActions && statusActionCount > 0 ? MENU_SEPARATOR_HEIGHT_PX : 0;
+    (includeStatusActions && statusActionCount > 0 ? MENU_SEPARATOR_HEIGHT_PX : 0) +
+    (includeDelete ? MENU_SEPARATOR_HEIGHT_PX : 0);
+  const deleteItems = includeDelete ? 1 : 0;
 
   return (
     MENU_VERTICAL_PADDING_PX +
-    (baseItems + statusItems) * MENU_ITEM_HEIGHT_PX +
+    (baseItems + statusItems + deleteItems) * MENU_ITEM_HEIGHT_PX +
     separator
   );
 }
@@ -124,21 +135,24 @@ interface JobsRowActionsProps {
     job: OperationsJobListItem,
     action: OperationsJobStatusAction,
   ) => void;
+  onDelete?: (job: OperationsJobListItem) => void;
 }
 
 export function JobsRowActions({
   job,
   pendingStatusJobId,
   onStatusAction,
+  onDelete,
 }: JobsRowActionsProps) {
   const navigate = useNavigate();
+  const { can, canKey } = useOperationsPermissions();
+  const canDelete = can("jobs", "delete") && Boolean(onDelete);
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { canKey } = useOperationsPermissions();
   const statusActions = jobStatusMenuActions(
     job.status,
     Boolean(job.isLiveChangeReview),
@@ -152,6 +166,7 @@ export function JobsRowActions({
   const menuHeightEstimate = estimateMenuHeight(
     statusActions.length,
     includeStatusActions,
+    canDelete,
   );
 
   useLayoutEffect(() => {
@@ -193,6 +208,18 @@ export function JobsRowActions({
   }, [open, menuHeightEstimate]);
 
   useEffect(() => {
+    const handleOtherMenu = (menuId: string | null) => {
+      if (menuId !== job.jobId) {
+        setOpen(false);
+      }
+    };
+    jobsActionMenuListeners.add(handleOtherMenu);
+    return () => {
+      jobsActionMenuListeners.delete(handleOtherMenu);
+    };
+  }, [job.jobId]);
+
+  useEffect(() => {
     if (!open) {
       return;
     }
@@ -206,11 +233,17 @@ export function JobsRowActions({
         return;
       }
       setOpen(false);
+      if (openJobsActionMenuId === job.jobId) {
+        setOpenJobsActionMenu(null);
+      }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
+        if (openJobsActionMenuId === job.jobId) {
+          setOpenJobsActionMenu(null);
+        }
       }
     };
 
@@ -220,7 +253,7 @@ export function JobsRowActions({
       document.removeEventListener("mousedown", handlePointer);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [open]);
+  }, [open, job.jobId]);
 
   const handleCopy = async () => {
     try {
@@ -241,6 +274,11 @@ export function JobsRowActions({
   const handleStatusAction = (action: OperationsJobStatusAction) => {
     setOpen(false);
     onStatusAction?.(job, action);
+  };
+
+  const handleDelete = () => {
+    setOpen(false);
+    onDelete?.(job);
   };
 
   const menu = open ? (
@@ -315,6 +353,25 @@ export function JobsRowActions({
           })}
         </>
       ) : null}
+      {canDelete ? (
+        <>
+          <div
+            className="my-1 border-t border-border-subtle"
+            role="separator"
+            aria-hidden="true"
+          />
+          <button
+            type="button"
+            role="menuitem"
+            disabled={isUpdating}
+            onClick={handleDelete}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Trash2 className="size-3.5 shrink-0" aria-hidden="true" />
+            {isUpdating ? "Deleting…" : "Delete"}
+          </button>
+        </>
+      ) : null}
     </div>
   ) : null;
 
@@ -327,7 +384,13 @@ export function JobsRowActions({
         aria-expanded={open}
         aria-haspopup="menu"
         disabled={isUpdating}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          setOpen((current) => {
+            const next = !current;
+            setOpenJobsActionMenu(next ? job.jobId : null);
+            return next;
+          });
+        }}
         className={cn(
           "inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors",
           "hover:bg-hero-bg hover:text-foreground",

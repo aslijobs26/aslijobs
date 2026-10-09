@@ -91,6 +91,13 @@ operationsJobsRouter.put(
   asyncHandler(operationsJobsController.publishDraft),
 );
 
+operationsJobsRouter.delete(
+  "/:jobId",
+  requireOperationsPermission("jobs", "delete"),
+  validate(operationsJobPublicIdParamsSchema, "params"),
+  asyncHandler(operationsJobsController.remove),
+);
+
 operationsJobsRouter.patch(
   "/:jobId/status",
   requireOperationsJobWriteAccess,

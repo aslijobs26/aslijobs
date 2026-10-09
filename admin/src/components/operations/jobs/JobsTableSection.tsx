@@ -21,6 +21,7 @@ interface JobsTableSectionProps {
     job: OperationsJobListItem,
     action: OperationsJobStatusAction,
   ) => void;
+  onDelete?: (job: OperationsJobListItem) => void;
 }
 
 function formatJobType(jobType: string): string {
@@ -131,6 +132,7 @@ export function JobsTableSection({
   onRetry,
   pendingStatusJobId,
   onStatusAction,
+  onDelete,
 }: JobsTableSectionProps) {
   const emptyState = (
     <div className="mx-auto flex max-w-xs flex-col items-center gap-2 text-center">
@@ -188,6 +190,7 @@ export function JobsTableSection({
                   job={job}
                   pendingStatusJobId={pendingStatusJobId}
                   onStatusAction={onStatusAction}
+                  onDelete={onDelete}
                   formatJobType={formatJobType}
                   formatPostedDate={formatPostedDate}
                   statusBadgeVariant={statusBadgeVariant}
@@ -242,6 +245,7 @@ export function JobsTableSection({
                       job={job}
                       pendingStatusJobId={pendingStatusJobId}
                       onStatusAction={onStatusAction}
+                      onDelete={onDelete}
                     />
                   </div>
 
@@ -478,6 +482,7 @@ export function JobsTableSection({
                         job={job}
                         pendingStatusJobId={pendingStatusJobId}
                         onStatusAction={onStatusAction}
+                        onDelete={onDelete}
                       />
                     </td>
                   </tr>

@@ -103,6 +103,12 @@ export async function fetchOperationsJobApplications(
   return response.data.data;
 }
 
+export async function deleteOperationsJob(jobId: string): Promise<void> {
+  await apiClient.delete(
+    `${OPERATIONS_JOBS_BASE}/${encodeURIComponent(jobId)}`,
+  );
+}
+
 export async function updateOperationsJobStatus(
   jobId: string,
   action: OperationsJobStatusAction,

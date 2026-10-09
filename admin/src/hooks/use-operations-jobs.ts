@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  deleteOperationsJob,
   fetchOperationsJobs,
   fetchOperationsJobsAnalytics,
   updateOperationsJobStatus,
@@ -62,6 +63,25 @@ export function useOperationsJobsAnalytics(
     retry: shouldRetryJobsQuery,
     retryDelay: jobsRetryDelay,
     enabled: options?.enabled ?? true,
+  });
+}
+
+export function useDeleteOperationsJobMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (jobId: string) => deleteOperationsJob(jobId),
+    onSuccess: async (_data, jobId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: OPERATIONS_JOBS_QUERY_KEY }),
+        queryClient.invalidateQueries({
+          queryKey: OPERATIONS_JOBS_ANALYTICS_QUERY_KEY,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...OPERATIONS_JOB_DETAIL_QUERY_KEY, jobId],
+        }),
+      ]);
+    },
   });
 }
 

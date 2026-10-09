@@ -15,6 +15,7 @@ interface JobsMobileJobCardProps {
     job: OperationsJobListItem,
     action: OperationsJobStatusAction,
   ) => void;
+  onDelete?: (job: OperationsJobListItem) => void;
   formatJobType: (jobType: string) => string;
   formatPostedDate: (iso: string | null) => { date: string; time: string };
   statusBadgeVariant: (
@@ -29,6 +30,7 @@ export function JobsMobileJobCard({
   job,
   pendingStatusJobId,
   onStatusAction,
+  onDelete,
   formatJobType,
   formatPostedDate,
   statusBadgeVariant,
@@ -68,6 +70,7 @@ export function JobsMobileJobCard({
             job={job}
             pendingStatusJobId={pendingStatusJobId}
             onStatusAction={onStatusAction}
+            onDelete={onDelete}
           />
         </div>
       </div>

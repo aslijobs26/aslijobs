@@ -363,6 +363,14 @@ function jobCatalog(): OperationsPermissionDefinition[] {
         mapsToAction: "update",
       }),
     ),
+    define({
+      module: "jobs",
+      page: "detail",
+      section: "actions",
+      action: "delete",
+      label: "Jobs · Delete",
+      mapsToAction: "delete",
+    }),
   ];
 }
 
@@ -1019,3 +1027,5 @@ export const JOB_STATUS_ACTION_PERMISSION_KEYS = {
   publish: "jobs.detail.actions.publish",
   expire: "jobs.detail.actions.expire",
 } as const;
+
+export const JOB_DELETE_PERMISSION_KEY = "jobs.detail.actions.delete" as const;

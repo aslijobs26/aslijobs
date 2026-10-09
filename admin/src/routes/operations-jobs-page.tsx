@@ -23,6 +23,7 @@ import { JobsTableSection } from "../components/operations/jobs/JobsTableSection
 import { OperationsLayout } from "../components/operations/layout/OperationsLayout";
 import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
 import {
+  useDeleteOperationsJobMutation,
   useOperationsJobs,
   useOperationsJobsAnalytics,
   useUpdateOperationsJobStatusMutation,
@@ -253,6 +254,7 @@ export function OperationsJobsPage() {
     enabled: true,
   });
   const statusMutation = useUpdateOperationsJobStatusMutation();
+  const deleteMutation = useDeleteOperationsJobMutation();
   const data = jobsQuery.data;
   const analyticsData = analyticsQuery.data;
   const kpis = analyticsData?.kpis;
@@ -295,6 +297,32 @@ export function OperationsJobsPage() {
     setShowKpiJobs(true);
     setTab(kpiTab);
     setFilters((current) => ({ ...current, status: "" }));
+  };
+
+  const handleDeleteJob = (job: OperationsJobListItem) => {
+    if (deleteMutation.isPending || statusMutation.isPending) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${job.jobTitle} (${job.jobId})? This permanently removes the job from the database.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    deleteMutation.mutate(job.jobId, {
+      onError: (error) => {
+        if (isAxiosError(error)) {
+          const message = error.response?.data?.message;
+          if (typeof message === "string" && message.trim()) {
+            window.alert(message.trim());
+            return;
+          }
+        }
+        window.alert("Failed to delete job.");
+      },
+    });
   };
 
   const handleStatusAction = (
@@ -684,9 +712,12 @@ export function OperationsJobsPage() {
                   pendingStatusJobId={
                     statusMutation.isPending
                       ? statusMutation.variables?.jobId
-                      : null
+                      : deleteMutation.isPending
+                        ? deleteMutation.variables
+                        : null
                   }
                   onStatusAction={handleStatusAction}
+                  onDelete={handleDeleteJob}
                 />
               </div>
             </OperationsOverviewSplit>
