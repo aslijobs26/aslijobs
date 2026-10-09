@@ -512,11 +512,38 @@ export const publicJobsQuerySchema = z.object({
   language: z.string().trim().optional().default(""),
 });
 
+const LEADING_LITERAL_TEMPLATE_SLOT = /^(?:\{\{1\}\})+/;
+
+/**
+ * The stored job_post_incomplete_ button still prepends a literal {{1}} to the
+ * draft Mongo id. Strip only that prefix, then require a 24-hex id.
+ */
+export function normalizeEmployerJobRouteId(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  let id = value.trim();
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const decoded = decodeURIComponent(id);
+      if (decoded === id) {
+        break;
+      }
+      id = decoded.trim();
+    } catch {
+      break;
+    }
+  }
+
+  return id.replace(LEADING_LITERAL_TEMPLATE_SLOT, "").trim();
+}
+
 export const jobIdParamsSchema = z.object({
-  jobId: z
-    .string()
-    .trim()
-    .regex(/^[a-fA-F0-9]{24}$/, "Invalid job id"),
+  jobId: z.preprocess(
+    normalizeEmployerJobRouteId,
+    z.string().trim().regex(/^[a-fA-F0-9]{24}$/, "Invalid job id"),
+  ),
 });
 
 export const publicJobIdParamsSchema = z.object({

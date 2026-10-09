@@ -1,5 +1,8 @@
 import { ROUTES } from "@/constants/routes";
-import { resolveAccountApprovalPostJobDestination } from "@/utils/post-job-route";
+import {
+  resolveAccountApprovalPostJobDestination,
+  resolveIncompleteDraftEditPath,
+} from "@/utils/post-job-route";
 
 export const EMPLOYER_LOGIN_RETURN_URL_QUERY = "returnUrl";
 
@@ -52,7 +55,9 @@ export function resolveEmployerPostLoginPath(
   }
 
   return (
-    resolveAccountApprovalPostJobDestination(safe, employerId) ?? safe
+    resolveAccountApprovalPostJobDestination(safe, employerId) ??
+    resolveIncompleteDraftEditPath(safe, employerId) ??
+    safe
   );
 }
 

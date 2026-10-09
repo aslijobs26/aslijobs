@@ -4,10 +4,11 @@ const MONGO_OBJECT_ID = /^[a-f0-9]{24}$/i;
 const LITERAL_TEMPLATE_SLOT = /^\{\{1\}\}/;
 
 /**
- * Meta's aslijobs_account_approved button base is
+ * Approved aslijobs_account_approved and job_post_incomplete_ buttons both use
  * `https://www.aslijobs.com/post-job/%7B%7B1%7D%7D{{1}}`.
- * The encoded `{{1}}` is literal text. The real variable is appended after it,
- * so the opened path is `/post-job/{{1}}{employerId}`.
+ * The encoded `{{1}}` is literal text. The real variable is appended after it.
+ * Account approval appends the employer id. Complete Job Details appends the
+ * draft Mongo id, which is the same id as the dashboard editor.
  */
 export function extractPostJobRouteId(
   routeId: string | null | undefined,
@@ -64,7 +65,35 @@ export function resolvePostJobDraftId(
   if (!route || isEmployerAccountPostJobLink(route, employerId)) {
     return undefined;
   }
-  return route;
+
+  const extracted = extractPostJobRouteId(route);
+  return extracted || route;
+}
+
+/**
+ * Login and the editor should open `/post-job/{mongoId}` for Complete Job
+ * Details. The signed-in employer's own approval button is not a draft.
+ */
+export function resolveIncompleteDraftEditPath(
+  path: string | null | undefined,
+  employerId: string | null | undefined,
+): string | null {
+  const routeId = postJobRouteIdFromPath(path);
+  if (!routeId || isEmployerAccountPostJobLink(routeId, employerId)) {
+    return null;
+  }
+
+  const draftId = resolvePostJobDraftId(routeId, employerId);
+  if (!draftId || !MONGO_OBJECT_ID.test(draftId)) {
+    return null;
+  }
+
+  const canonical = ROUTES.postJobEdit(draftId);
+  const pathname = path?.split("?")[0]?.split("#")[0] ?? "";
+  if (pathname === canonical) {
+    return null;
+  }
+  return canonical;
 }
 
 /**

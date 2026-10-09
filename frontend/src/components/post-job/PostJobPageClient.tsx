@@ -31,6 +31,13 @@ function PostJobAccessGate({ draftJobId }: PostJobPageClientProps) {
     draftJobId,
     employer?.id,
   );
+  const jobDraftId = employer
+    ? resolvePostJobDraftId(draftJobId, employer.id)
+    : undefined;
+  const canonicalDraftPath =
+    jobDraftId && /^[a-f0-9]{24}$/i.test(jobDraftId)
+      ? ROUTES.postJobEdit(jobDraftId)
+      : null;
 
   useEffect(() => {
     if (!opensNewJobForm) {
@@ -39,6 +46,13 @@ function PostJobAccessGate({ draftJobId }: PostJobPageClientProps) {
     router.replace(ROUTES.POST_JOB);
   }, [opensNewJobForm, router]);
 
+  useEffect(() => {
+    if (!canonicalDraftPath || draftJobId?.trim() === jobDraftId) {
+      return;
+    }
+    router.replace(canonicalDraftPath);
+  }, [canonicalDraftPath, draftJobId, jobDraftId, router]);
+
   if (!employer || opensNewJobForm) {
     return <EmployerWorkspaceShellSkeleton />;
   }
@@ -46,8 +60,6 @@ function PostJobAccessGate({ draftJobId }: PostJobPageClientProps) {
   const isUnderReview =
     resolveEmployerJobPostingAccess(employer.verificationStatus) ===
     "under_review";
-  const jobDraftId = resolvePostJobDraftId(draftJobId, employer.id);
-
   return (
     <main className="flex min-h-dvh flex-col bg-hero-bg">
       <PostJobHeader />

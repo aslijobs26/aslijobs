@@ -96,7 +96,7 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     },
   },
   JOB_POST_INCOMPLETE: {
-    templateName: "job_post_incomplete",
+    templateName: "job_post_incomplete_",
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",

@@ -28,6 +28,7 @@ import {
   buildWhatsAppNotificationBodyParameters,
   buildWhatsAppNotificationUrlButtonParameters,
   getWhatsAppNotificationTemplate,
+  composeApprovedJobPostIncompleteButtonUrl,
   jobPostIncompleteEditUrl,
   resolveWhatsAppNotificationLanguage,
 } from "./whatsapp-notification.policy.js";
@@ -126,10 +127,11 @@ describe("incomplete job draft reminder", () => {
     mock.restoreAll();
   });
 
-  it("reads a 30 minute delay and leaves the profile reminder at 30 minutes", () => {
-    assert.equal(env.JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES, 30);
+  it("reads a 1 minute testing delay and leaves the profile reminder at 30 minutes", () => {
+    assert.equal(env.JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES, 1);
+    assert.equal(jobPostIncompleteReminderDelayMs(1), 60_000);
+    assert.equal(getJobPostIncompleteReminderDelayMs(), 60_000);
     assert.equal(jobPostIncompleteReminderDelayMs(30), 1_800_000);
-    assert.equal(getJobPostIncompleteReminderDelayMs(), 1_800_000);
     assert.equal(env.EMPLOYER_PROFILE_COMPLETION_REMINDER_DELAY_MINUTES, 30);
     assert.equal(getEmployerProfileCompletionReminderDelayMs(), 1_800_000);
   });
@@ -155,7 +157,7 @@ describe("incomplete job draft reminder", () => {
     );
   });
 
-  it("schedules an incomplete draft for 30 minutes and refreshes the generation on edit", async () => {
+  it("schedules an incomplete draft for 1 minute and refreshes the generation on edit", async () => {
     const delayed: Array<{ generation: number; previousGeneration: number | null }> = [];
     const now = new Date("2026-10-09T05:00:00.000Z");
     let dueAt = new Date(0);
@@ -198,7 +200,7 @@ describe("incomplete job draft reminder", () => {
 
     assert.equal(first, "scheduled");
     assert.equal(second, "rescheduled");
-    assert.equal(dueAt.getTime() - now.getTime(), 1_800_000);
+    assert.equal(dueAt.getTime() - now.getTime(), 60_000);
     assert.deepEqual(
       delayed.map((item) => item.generation),
       [1, 2],
@@ -206,7 +208,7 @@ describe("incomplete job draft reminder", () => {
     assert.equal(delayed[1]?.previousGeneration, 1);
   });
 
-  it("dispatches job_post_incomplete to the employer when the draft is still incomplete", async () => {
+  it("dispatches job_post_incomplete_ to the employer when the draft is still incomplete", async () => {
     const queued: Array<{
       phoneNumber: string;
       employerName: string;
@@ -239,30 +241,50 @@ describe("incomplete job draft reminder", () => {
     assert.equal(queued[0]?.idempotencyScope, "g1");
     assert.equal(
       getWhatsAppNotificationTemplate("JOB_POST_INCOMPLETE")?.templateName,
-      "job_post_incomplete",
+      "job_post_incomplete_",
     );
     assert.equal(resolveWhatsAppNotificationLanguage("JOB_POST_INCOMPLETE", "hi"), "en");
-    assert.deepEqual(
-      buildWhatsAppNotificationBodyParameters("JOB_POST_INCOMPLETE", {
+    const bodyParameters = buildWhatsAppNotificationBodyParameters(
+      "JOB_POST_INCOMPLETE",
+      {
         event: "JOB_POST_INCOMPLETE",
         entityId: jobMongoId,
         phoneNumber: employerPhone,
         employerName: "Acme Pvt Ltd",
-      }),
-      ["Acme Pvt Ltd"],
+      },
     );
-    assert.deepEqual(
-      buildWhatsAppNotificationUrlButtonParameters("JOB_POST_INCOMPLETE", {
+    const urlButtonParameters = buildWhatsAppNotificationUrlButtonParameters(
+      "JOB_POST_INCOMPLETE",
+      {
         event: "JOB_POST_INCOMPLETE",
         entityId: jobMongoId,
         phoneNumber: employerPhone,
-      }),
-      [jobMongoId],
+      },
     );
+    assert.deepEqual(bodyParameters, ["Acme Pvt Ltd"]);
+    assert.equal(bodyParameters.length, 1);
+    assert.deepEqual(urlButtonParameters, [jobMongoId]);
+    assert.equal(urlButtonParameters.length, 1);
+    const correctedUrl = jobPostIncompleteEditUrl(jobMongoId);
     assert.equal(
-      jobPostIncompleteEditUrl(jobMongoId),
+      correctedUrl,
       `https://www.aslijobs.com/post-job/${jobMongoId}`,
     );
+    assert.equal(correctedUrl.includes("{{"), false);
+    assert.equal(correctedUrl.includes("%7B"), false);
+    const openedUrl = composeApprovedJobPostIncompleteButtonUrl(jobMongoId);
+    assert.equal(
+      openedUrl,
+      `https://www.aslijobs.com/post-job/%7B%7B1%7D%7D${jobMongoId}`,
+    );
+    const decodedUrl = decodeURIComponent(openedUrl);
+    assert.equal(
+      decodedUrl,
+      `https://www.aslijobs.com/post-job/{{1}}${jobMongoId}`,
+    );
+    assert.deepEqual(decodedUrl.match(/[a-f0-9]{24}/gi), [jobMongoId]);
+    assert.equal(openedUrl.includes(employerId), false);
+    assert.equal(openedUrl.includes("AJ-2026-000010"), false);
   });
 
   it("skips submitted, published, deleted, complete, and employerless jobs", async () => {
@@ -393,7 +415,7 @@ describe("incomplete job draft reminder", () => {
     assert.equal(alreadySent, "skipped");
     assert.equal(sent, 0);
     assert.equal(nextCycle, "queued");
-    assert.equal(deliveredJobs[0]?.templateName, "job_post_incomplete");
+    assert.equal(deliveredJobs[0]?.templateName, "job_post_incomplete_");
     assert.equal(deliveredJobs[0]?.languageCode, "en");
     assert.equal(deliveredJobs[0]?.phoneNumber, employerPhone);
     assert.deepEqual(deliveredJobs[0]?.bodyParameters, ["Acme Pvt Ltd"]);

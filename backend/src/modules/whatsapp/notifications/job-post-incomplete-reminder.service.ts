@@ -17,6 +17,7 @@ import {
   refreshJobPostIncompleteReminderRecord,
   type JobPostIncompleteReminderRecord,
 } from "./job-post-incomplete-reminder.model.js";
+import { getWhatsAppNotificationTemplate } from "./whatsapp-notification.policy.js";
 import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js";
 import type { WhatsAppNotificationEnqueueResult } from "./whatsapp-notification.types.js";
 
@@ -313,7 +314,9 @@ export async function processJobPostIncompleteReminder(
       publicJobId: reminder.publicJobId,
       employerId,
       generation,
-      template: "job_post_incomplete",
+      template:
+        getWhatsAppNotificationTemplate("JOB_POST_INCOMPLETE")?.templateName ??
+        "",
       language: "en",
       result,
     });

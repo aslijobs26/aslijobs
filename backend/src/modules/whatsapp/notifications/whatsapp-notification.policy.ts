@@ -122,16 +122,36 @@ export const JOB_POST_APPROVED_VIEW_URL =
 export const JOB_POST_APPROVED_VIEW_PATH = "/employer/jobs";
 
 /**
- * job_post_incomplete Complete Job Details button.
- * Meta stores the /post-job/ base and the parameter is the draft's Mongo id,
- * which is the existing /post-job/:jobId editor route.
+ * job_post_incomplete_ Complete Job Details button.
+ * The only dynamic parameter is the draft Mongo _id.
+ * The corrected Meta button base is https://www.aslijobs.com/post-job/{{1}}.
+ * The template currently stored in Meta is still
+ * https://www.aslijobs.com/post-job/%7B%7B1%7D%7D{{1}}, which leaves a literal
+ * {{1}} in front of the job id until that button is edited and re-approved.
  */
 export const JOB_POST_INCOMPLETE_EDIT_URL_PREFIX =
   "https://www.aslijobs.com/post-job/";
 
 export const JOB_POST_INCOMPLETE_EDIT_PATH = "/post-job/";
 
+export const JOB_POST_INCOMPLETE_APPROVED_BUTTON_URL =
+  "https://www.aslijobs.com/post-job/%7B%7B1%7D%7D{{1}}";
+
 export function jobPostIncompleteEditUrl(jobMongoId: string): string {
   const id = jobMongoId.trim();
   return id ? `${JOB_POST_INCOMPLETE_EDIT_URL_PREFIX}${id}` : "";
+}
+
+/**
+ * URL the currently stored Meta button opens. This is not the corrected URL.
+ * Meta still has a literal encoded {{1}} before the dynamic job id.
+ */
+export function composeApprovedJobPostIncompleteButtonUrl(
+  jobMongoId: string,
+): string {
+  const id = jobMongoId.trim();
+  if (!/^[a-f0-9]{24}$/i.test(id)) {
+    return "";
+  }
+  return JOB_POST_INCOMPLETE_APPROVED_BUTTON_URL.replace(/\{\{1\}\}$/, id);
 }

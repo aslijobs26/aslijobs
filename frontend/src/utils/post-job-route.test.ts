@@ -1,10 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { POST_JOB_INITIAL_WIZARD_DATA } from "../constants/post-job";
 import { ROUTES } from "../constants/routes";
-import { resolveEmployerPostLoginPath } from "./safe-return-url";
+import type { EmployerJobDetail } from "../types/employer-jobs";
+import { mapJobDetailToWizardState } from "./post-job-draft";
+import {
+  buildEmployerLoginHref,
+  resolveEmployerPostLoginPath,
+} from "./safe-return-url";
 import {
   isEmployerAccountPostJobLink,
   resolveAccountApprovalPostJobDestination,
+  resolveIncompleteDraftEditPath,
   resolvePostJobDraftId,
 } from "./post-job-route";
 
@@ -61,17 +68,97 @@ describe("post job route from the account-approval WhatsApp button", () => {
 
   it("does not send another employer's approval button to this employer's form", () => {
     const otherEmployerId = "64f0000000000000000000bb";
+    const destination = resolveEmployerPostLoginPath(
+      `/post-job/{{1}}${otherEmployerId}`,
+      ROUTES.EMPLOYER_DASHBOARD,
+      employerId,
+    );
+    assert.notEqual(destination, ROUTES.POST_JOB);
+    assert.equal(destination, `/post-job/${otherEmployerId}`);
+    assert.equal(resolvePostJobDraftId(jobId, employerId), jobId);
+  });
+});
+
+describe("post job route from the incomplete-draft WhatsApp button", () => {
+  const approvedButtonPath = `/post-job/%7B%7B1%7D%7D${jobId}`;
+  const openedPath = `/post-job/{{1}}${jobId}`;
+
+  it("resolves Complete Job Details to the saved draft Mongo id", () => {
+    assert.equal(resolvePostJobDraftId(`{{1}}${jobId}`, employerId), jobId);
+    assert.equal(
+      resolvePostJobDraftId(`%7B%7B1%7D%7D${jobId}`, employerId),
+      jobId,
+    );
+    assert.equal(
+      resolveIncompleteDraftEditPath(approvedButtonPath, employerId),
+      `/post-job/${jobId}`,
+    );
+    assert.equal(
+      resolveIncompleteDraftEditPath(openedPath, employerId),
+      `/post-job/${jobId}`,
+    );
+    assert.equal(isEmployerAccountPostJobLink(openedPath, employerId), false);
+  });
+
+  it("keeps a normal dashboard draft link unchanged", () => {
+    assert.equal(resolvePostJobDraftId(jobId, employerId), jobId);
+    assert.equal(
+      resolveIncompleteDraftEditPath(`/post-job/${jobId}`, employerId),
+      null,
+    );
     assert.equal(
       resolveEmployerPostLoginPath(
-        `/post-job/{{1}}${otherEmployerId}`,
+        `/post-job/${jobId}`,
         ROUTES.EMPLOYER_DASHBOARD,
         employerId,
       ),
-      `/post-job/{{1}}${otherEmployerId}`,
+      `/post-job/${jobId}`,
+    );
+  });
+
+  it("preserves the draft editor through login", () => {
+    const loginHref = buildEmployerLoginHref(openedPath);
+    const returnUrl = new URL(loginHref, "http://localhost").searchParams.get(
+      "returnUrl",
     );
     assert.equal(
-      resolvePostJobDraftId(jobId, employerId),
-      jobId,
+      resolveEmployerPostLoginPath(
+        returnUrl,
+        ROUTES.EMPLOYER_DASHBOARD,
+        employerId,
+      ),
+      `/post-job/${jobId}`,
     );
+  });
+
+  it("does not open a new job for a malformed Complete Job Details id", () => {
+    const malformed = "/post-job/{{1}}not-a-job";
+    assert.equal(
+      resolveEmployerPostLoginPath(
+        malformed,
+        ROUTES.EMPLOYER_DASHBOARD,
+        employerId,
+      ),
+      malformed,
+    );
+    assert.equal(resolvePostJobDraftId("{{1}}not-a-job", employerId), "not-a-job");
+    assert.notEqual(resolvePostJobDraftId("{{1}}not-a-job", employerId), undefined);
+  });
+
+  it("loads the saved draft fields for an unpublished job", () => {
+    const snapshot = structuredClone(POST_JOB_INITIAL_WIZARD_DATA);
+    snapshot.jobInformation.jobTitle = "Driver";
+    snapshot.jobInformation.companyDetails = "Acme Pvt Ltd";
+    const restored = mapJobDetailToWizardState({
+      id: jobId,
+      status: "draft",
+      completedStep: 2,
+      wizardSnapshot: snapshot,
+      pendingLiveRevision: null,
+    } as EmployerJobDetail);
+
+    assert.equal(restored.activeStep, 2);
+    assert.equal(restored.formData.jobInformation.jobTitle, "Driver");
+    assert.equal(restored.formData.jobInformation.companyDetails, "Acme Pvt Ltd");
   });
 });
