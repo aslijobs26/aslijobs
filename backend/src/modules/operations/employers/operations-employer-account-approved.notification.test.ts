@@ -76,7 +76,7 @@ describe("Internal Team employer approval WhatsApp", () => {
     mock.restoreAll();
   });
 
-  it("triggers employer_account_approved only after approval is stored", async () => {
+  it("triggers aslijobs_account_approved only after approval is stored", async () => {
     stubApprovalSideEffects();
     const scheduled: unknown[] = [];
     mock.method(
@@ -218,7 +218,7 @@ describe("Internal Team employer approval WhatsApp", () => {
     await flushApprovalSideEffects();
   });
 
-  it("does not send employer_account_approved when Internal Team rejects", async () => {
+  it("does not send aslijobs_account_approved when Internal Team rejects", async () => {
     stubApprovalSideEffects();
     const scheduled: unknown[] = [];
     const rejected: unknown[] = [];

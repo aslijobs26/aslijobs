@@ -68,7 +68,7 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     },
   },
   EMPLOYER_ACCOUNT_APPROVED: {
-    templateName: "employer_account_approved",
+    templateName: "aslijobs_account_approved",
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",

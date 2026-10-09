@@ -718,6 +718,27 @@ export function EmployerRegisterForm({
               {t("auth.common.sendOtp")}
             </button>
           ) : null}
+          {isOtpVisible || isWhatsappVerified ? (
+            <EmployerRegisterOtpSection
+              otpDigits={otpDigits}
+              isVerified={isWhatsappVerified}
+              isSubmitting={isSubmitting}
+              resendSecondsLeft={secondsLeft}
+              otpError={fieldErrors.otp}
+              onOtpChange={(next) => {
+                setOtpDigits(next);
+                clearField("otp");
+              }}
+              onVerify={() => {
+                void handleVerifyOtp();
+              }}
+              onResend={() => {
+                if (!isCoolingDown) {
+                  void requestOtp();
+                }
+              }}
+            />
+          ) : null}
         </div>
 
         {isIndividualAccount ? (
@@ -762,28 +783,6 @@ export function EmployerRegisterForm({
               }
               if (next.state) {
                 clearField("state");
-              }
-            }}
-          />
-        ) : null}
-
-        {isOtpVisible || isWhatsappVerified ? (
-          <EmployerRegisterOtpSection
-            otpDigits={otpDigits}
-            isVerified={isWhatsappVerified}
-            isSubmitting={isSubmitting}
-            resendSecondsLeft={secondsLeft}
-            otpError={fieldErrors.otp}
-            onOtpChange={(next) => {
-              setOtpDigits(next);
-              clearField("otp");
-            }}
-            onVerify={() => {
-              void handleVerifyOtp();
-            }}
-            onResend={() => {
-              if (!isCoolingDown) {
-                void requestOtp();
               }
             }}
           />

@@ -79,7 +79,7 @@ export function buildWhatsAppNotificationBodyParameters(
 
 /**
  * URL button suffixes for templates whose CTA is a dynamic website button.
- * employer_account_approved opens https://www.aslijobs.com/post-job/{{employerId}}.
+ * aslijobs_account_approved opens https://www.aslijobs.com/post-job/{{employerId}}.
  * Meta already stores the base URL, so the parameter is only the employer id.
  */
 export function buildWhatsAppNotificationUrlButtonParameters(

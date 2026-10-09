@@ -71,7 +71,7 @@ function logEmployerApprovalDeliveryFailure(
   }
   console.error("[WhatsAppNotification] Employer approval notification failed", {
     employerId: job.entityId,
-    template: "employer_account_approved",
+    template: "aslijobs_account_approved",
   });
 }
 

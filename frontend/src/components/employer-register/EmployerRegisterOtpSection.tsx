@@ -37,7 +37,7 @@ export function EmployerRegisterOtpSection({
   if (isVerified) {
     return (
       <div
-        className="employer-register-otp-success"
+        className="employer-register-otp-success mt-3"
         role="status"
         aria-live="polite"
       >
@@ -52,7 +52,7 @@ export function EmployerRegisterOtpSection({
   }
 
   return (
-    <div className="employer-register-otp-section">
+    <div className="employer-register-otp-section mt-3">
       <div className="employer-register-form-stack">
         <h2 className="employer-register-otp-heading">
           {t("auth.common.otpHeading")}

@@ -18,7 +18,7 @@ export type EmployerAccountApprovedWhatsAppInput = {
 };
 
 /**
- * Sends employer_account_approved only after Internal Team approval is stored.
+ * Sends aslijobs_account_approved only after Internal Team approval is stored.
  * Never throws: WhatsApp failure must not roll back the approval.
  */
 export const employerAccountApprovedWhatsApp = {
@@ -71,7 +71,7 @@ export const employerAccountApprovedWhatsApp = {
             "[WhatsAppNotification] Employer approval notification queued",
             {
               employerId,
-              template: "employer_account_approved",
+              template: "aslijobs_account_approved",
               language: "en",
             },
           );

@@ -73,7 +73,7 @@ describe("enqueueWhatsAppNotification", () => {
       urlButtonParameters: string[];
       idempotencyKey: string;
     };
-    assert.equal(job.templateName, "employer_account_approved");
+    assert.equal(job.templateName, "aslijobs_account_approved");
     assert.equal(job.languageCode, "en");
     assert.deepEqual(job.bodyParameters, ["Acme Pvt Ltd"]);
     assert.deepEqual(job.urlButtonParameters, ["6ac746ac72aed3c70a82de5b"]);

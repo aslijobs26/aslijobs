@@ -49,7 +49,7 @@ describe("WhatsAppService template and existing senders", () => {
     assert.match(String(captured.url), /graph\.facebook\.com\/.+\/messages$/);
   });
 
-  it("sendTemplateMessage posts employer_account_approved with name and post-job id", async () => {
+  it("sendTemplateMessage posts aslijobs_account_approved with name and post-job id", async () => {
     const captured: { body?: Record<string, unknown> } = {};
     mock.method(globalThis, "fetch", async (_url: string | URL, init?: RequestInit) => {
       captured.body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
@@ -61,7 +61,7 @@ describe("WhatsAppService template and existing senders", () => {
     const employerId = "6ac746ac72aed3c70a82de5b";
     await new WhatsAppService().sendTemplateMessage(
       "9876543210",
-      "employer_account_approved",
+      "aslijobs_account_approved",
       "en",
       ["Acme Pvt Ltd"],
       [employerId],
@@ -77,7 +77,7 @@ describe("WhatsAppService template and existing senders", () => {
         parameters: Array<{ type: string; text: string }>;
       }>;
     };
-    assert.equal(template.name, "employer_account_approved");
+    assert.equal(template.name, "aslijobs_account_approved");
     assert.equal(template.language.code, "en");
     assert.equal(template.components[0]?.type, "body");
     assert.equal(template.components[0]?.parameters[0]?.text, "Acme Pvt Ltd");

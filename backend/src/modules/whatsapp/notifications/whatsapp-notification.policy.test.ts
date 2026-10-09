@@ -77,9 +77,9 @@ describe("WhatsApp notification template mapping", () => {
     assert.equal(WHATSAPP_NOTIFICATION_MAX_ATTEMPTS, 3);
   });
 
-  it("maps EMPLOYER_ACCOUNT_APPROVED to employer_account_approved in English", () => {
+  it("maps EMPLOYER_ACCOUNT_APPROVED to aslijobs_account_approved in English", () => {
     const config = getWhatsAppNotificationTemplate("EMPLOYER_ACCOUNT_APPROVED");
-    assert.equal(config?.templateName, "employer_account_approved");
+    assert.equal(config?.templateName, "aslijobs_account_approved");
     assert.equal(config?.approvedLanguages.en, "en");
     assert.equal(
       resolveWhatsAppNotificationLanguage("EMPLOYER_ACCOUNT_APPROVED", "te"),
