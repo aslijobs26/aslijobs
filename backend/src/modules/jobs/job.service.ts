@@ -34,6 +34,13 @@ import { scheduleJobModerationAudit } from "../operations/jobs/operations-job-au
 import { OPERATIONS_JOB_AUDIT_ACTIONS } from "../operations/jobs/operations-job-moderation.constants.js";
 import { scheduleJobPendingOpsNotification } from "../operations/jobs/operations-job-moderation-emit.js";
 import {
+  jobPostApprovalCycle,
+  jobPostApprovedWhatsApp,
+  jobPostSubmissionCycle,
+  jobPostSubmittedWhatsApp,
+} from "../whatsapp/notifications/job-post-whatsapp.notification.js";
+import { jobPostIncompleteReminder } from "../whatsapp/notifications/job-post-incomplete-reminder.service.js";
+import {
   cascadeDeleteOwnedJobs,
   ensureEmployerJobRelationsConsistent,
   purgeOrphanJobRelationsForEmployer,
@@ -57,6 +64,17 @@ import type {
 } from "./job.validation.js";
 
 const UNTITLED_DRAFT_TITLE = "Untitled draft";
+
+function armIncompleteDraftReminder(jobMongoId: string): void {
+  try {
+    jobPostIncompleteReminder.schedule(jobMongoId);
+  } catch (error) {
+    console.error("[JobPostIncompleteReminder] schedule rejected", {
+      jobMongoId,
+      errorCategory: error instanceof Error ? error.name : "unknown",
+    });
+  }
+}
 
 async function getAppliedJobMongoIdSet(
   jobSeekerId: string | undefined,
@@ -1441,6 +1459,11 @@ export class JobService {
     });
 
     if (!isDraft) {
+      jobPostSubmittedWhatsApp.schedule({
+        employerId: employer._id.toString(),
+        publicJobId: job.jobId,
+        cycle: jobPostSubmissionCycle(0),
+      });
       scheduleJobPendingOpsNotification({
         publicJobId: job.jobId,
         jobMongoId: job._id.toString(),
@@ -1771,6 +1794,13 @@ export class JobService {
     if (action === "publish" && nextStatus === "pending_approval") {
       const kind =
         previousStatus === "rejected" ? "resubmitted" : "submitted";
+      jobPostSubmittedWhatsApp.schedule({
+        employerId,
+        publicJobId: updatedJob.jobId,
+        cycle: jobPostSubmissionCycle(
+          Array.isArray(job.reviewHistory) ? job.reviewHistory.length : 0,
+        ),
+      });
       scheduleJobPendingOpsNotification({
         publicJobId: updatedJob.jobId,
         jobMongoId: updatedJob._id.toString(),
@@ -2028,6 +2058,8 @@ export class JobService {
       creationSource: "employer",
     });
 
+    armIncompleteDraftReminder(job._id.toString());
+
     return {
       job: toJobPublic(job),
     };
@@ -2053,6 +2085,8 @@ export class JobService {
     job.lastEditedAt = new Date();
     job.wizardSnapshot = input.wizardSnapshot;
     await job.save();
+
+    armIncompleteDraftReminder(job._id.toString());
 
     return {
       job: toJobPublic(job),
@@ -2120,6 +2154,13 @@ export class JobService {
     job.reviewNotificationSentAt = null;
     await job.save();
 
+    jobPostSubmittedWhatsApp.schedule({
+      employerId,
+      publicJobId: job.jobId,
+      cycle: jobPostSubmissionCycle(
+        Array.isArray(job.reviewHistory) ? job.reviewHistory.length : 0,
+      ),
+    });
     scheduleJobPendingOpsNotification({
       publicJobId: job.jobId,
       jobMongoId: job._id.toString(),
@@ -2755,6 +2796,8 @@ export class JobService {
       createdByOperationsUserId: new mongoose.Types.ObjectId(operationsUserId),
     });
 
+    armIncompleteDraftReminder(job._id.toString());
+
     return {
       job: toJobPublic(job),
     };
@@ -2810,6 +2853,8 @@ export class JobService {
 
     await job.save();
 
+    armIncompleteDraftReminder(job._id.toString());
+
     return {
       job: toJobPublic(job),
     };
@@ -2854,6 +2899,8 @@ export class JobService {
     job.lastEditedAt = new Date();
     await job.save();
 
+    armIncompleteDraftReminder(job._id.toString());
+
     return {
       job: toJobPublic(job),
     };
@@ -2894,6 +2941,11 @@ export class JobService {
     job.lastStatusChangedAt = now;
     await job.save();
 
+    jobPostApprovedWhatsApp.schedule({
+      employerId: job.employerId.toString(),
+      publicJobId: job.jobId,
+      cycle: jobPostApprovalCycle(now),
+    });
     scheduleJobModerationAudit({
       actorUserId: operationsUserId,
       actorName: "Operations",

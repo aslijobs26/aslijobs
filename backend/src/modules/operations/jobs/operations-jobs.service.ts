@@ -46,6 +46,10 @@ import {
 } from "../../jobs/job-review-history.js";
 import { createJobSchema } from "../../jobs/job.validation.js";
 import { notificationService } from "../../notifications/notification.service.js";
+import {
+  jobPostApprovalCycle,
+  jobPostApprovedWhatsApp,
+} from "../../whatsapp/notifications/job-post-whatsapp.notification.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
 import { scheduleJobModerationAudit } from "./operations-job-audit.js";
 import { OPERATIONS_JOB_AUDIT_ACTIONS } from "./operations-job-moderation.constants.js";
@@ -1838,6 +1842,18 @@ export const operationsJobsService = {
       });
     }
 
+    if (action === "publish" && previousStatus === "draft" && nextStatus === "active") {
+      const employerId =
+        (job.employerId && String(job.employerId)) ||
+        (job.companyId && String(job.companyId)) ||
+        "";
+      jobPostApprovedWhatsApp.schedule({
+        employerId,
+        publicJobId: job.jobId,
+        cycle: jobPostApprovalCycle(now),
+      });
+    }
+
     return this.getJobDetail(job.jobId);
   },
 
@@ -1946,6 +1962,12 @@ export const operationsJobsService = {
       previousStatus: "pending_approval",
       nextStatus: "active",
       metadata: { reviewKind: historyKind },
+    });
+
+    jobPostApprovedWhatsApp.schedule({
+      employerId,
+      publicJobId: job.jobId,
+      cycle: jobPostApprovalCycle(now),
     });
 
     try {

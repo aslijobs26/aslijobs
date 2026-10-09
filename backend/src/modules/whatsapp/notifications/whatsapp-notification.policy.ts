@@ -66,7 +66,10 @@ export function buildWhatsAppNotificationBodyParameters(
     event === "EMPLOYER_ACCOUNT_CREATED" ||
     event === "EMPLOYER_PROFILE_COMPLETION_REQUIRED" ||
     event === "EMPLOYER_ACCOUNT_APPROVED" ||
-    event === "EMPLOYER_ACCOUNT_REJECTED"
+    event === "EMPLOYER_ACCOUNT_REJECTED" ||
+    event === "JOB_POST_SUBMITTED" ||
+    event === "JOB_POST_APPROVED" ||
+    event === "JOB_POST_INCOMPLETE"
   ) {
     const employerName = payload.employerName?.trim() || "Employer";
     return [employerName];
@@ -83,11 +86,11 @@ export function buildWhatsAppNotificationUrlButtonParameters(
   event: WhatsAppNotificationEvent,
   payload: WhatsAppNotificationPayload,
 ): string[] {
-  if (event !== "EMPLOYER_ACCOUNT_APPROVED") {
-    return [];
+  if (event === "EMPLOYER_ACCOUNT_APPROVED" || event === "JOB_POST_INCOMPLETE") {
+    const id = payload.entityId.trim();
+    return id ? [id] : [];
   }
-  const employerId = payload.entityId.trim();
-  return employerId ? [employerId] : [];
+  return [];
 }
 
 export const EMPLOYER_ACCOUNT_APPROVED_POST_JOB_URL_PREFIX =
@@ -108,3 +111,27 @@ export const EMPLOYER_ACCOUNT_REJECTED_RESUBMIT_URL =
 
 export const EMPLOYER_ACCOUNT_REJECTED_RESUBMIT_PATH =
   "/employer/company-profile";
+
+/**
+ * job_post_submitted has no button. job_post_approved uses a static
+ * View Job Post button, so the API must not send a URL suffix.
+ */
+export const JOB_POST_APPROVED_VIEW_URL =
+  "https://www.aslijobs.com/employer/jobs";
+
+export const JOB_POST_APPROVED_VIEW_PATH = "/employer/jobs";
+
+/**
+ * job_post_incomplete Complete Job Details button.
+ * Meta stores the /post-job/ base and the parameter is the draft's Mongo id,
+ * which is the existing /post-job/:jobId editor route.
+ */
+export const JOB_POST_INCOMPLETE_EDIT_URL_PREFIX =
+  "https://www.aslijobs.com/post-job/";
+
+export const JOB_POST_INCOMPLETE_EDIT_PATH = "/post-job/";
+
+export function jobPostIncompleteEditUrl(jobMongoId: string): string {
+  const id = jobMongoId.trim();
+  return id ? `${JOB_POST_INCOMPLETE_EDIT_URL_PREFIX}${id}` : "";
+}

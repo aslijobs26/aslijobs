@@ -105,14 +105,11 @@ describe("Internal Team employer approval WhatsApp", () => {
 
     assert.equal(result.verificationStatus, "verified");
     assert.equal(scheduled.length, 1);
-    assert.deepEqual(scheduled[0], {
-      employerId,
-      whatsappNumber: "9876543210",
-      companyName: "Acme Pvt Ltd",
-      establishmentName: "",
-      firstName: "Asha",
-      lastName: "Rao",
-    });
+    const approval = scheduled[0] as EmployerAccountApprovedWhatsAppInput;
+    assert.equal(approval.employerId, employerId);
+    assert.equal(approval.whatsappNumber, "9876543210");
+    assert.equal(approval.companyName, "Acme Pvt Ltd");
+    assert.match(approval.reviewCycle, /^\d+$/);
     await flushApprovalSideEffects();
   });
 
@@ -275,6 +272,7 @@ describe("Internal Team employer approval WhatsApp", () => {
       establishmentName: "Shop",
       firstName: "Asha",
       lastName: "Rao",
+      reviewCycle: "1000",
     });
     employerAccountApprovedWhatsApp.schedule({
       employerId,
@@ -283,6 +281,7 @@ describe("Internal Team employer approval WhatsApp", () => {
       establishmentName: "Rao Traders",
       firstName: "Asha",
       lastName: "Rao",
+      reviewCycle: "1000",
     });
     employerAccountApprovedWhatsApp.schedule({
       employerId,
@@ -291,6 +290,7 @@ describe("Internal Team employer approval WhatsApp", () => {
       establishmentName: "",
       firstName: "Asha",
       lastName: "Rao",
+      reviewCycle: "2000",
     });
     employerAccountApprovedWhatsApp.schedule({
       employerId,
@@ -299,6 +299,7 @@ describe("Internal Team employer approval WhatsApp", () => {
       establishmentName: "",
       firstName: "",
       lastName: "",
+      reviewCycle: "2000",
     });
 
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -310,6 +311,8 @@ describe("Internal Team employer approval WhatsApp", () => {
     assert.equal(enqueued[0]?.event, "EMPLOYER_ACCOUNT_APPROVED");
     assert.equal(enqueued[0]?.entityId, employerId);
     assert.equal(enqueued[0]?.preferredLanguage, "en");
+    assert.equal(enqueued[0]?.idempotencyScope, "1000");
+    assert.equal(enqueued[2]?.idempotencyScope, "2000");
   });
 
   it("does not queue a second WhatsApp job for the same approval", async () => {
@@ -342,6 +345,7 @@ describe("Internal Team employer approval WhatsApp", () => {
       employerId,
       whatsappNumber: "9876543210",
       companyName: "Acme Pvt Ltd",
+      reviewCycle: "1000",
     };
     employerAccountApprovedWhatsApp.schedule(input);
     employerAccountApprovedWhatsApp.schedule(input);

@@ -87,6 +87,25 @@ function logEmployerRejectionDeliveryFailure(
   });
 }
 
+function logJobPostIncompleteDelivery(
+  job: WhatsAppNotificationQueueJob,
+  outcome: "accepted" | "failed",
+): void {
+  if (job.event !== "JOB_POST_INCOMPLETE") {
+    return;
+  }
+  const details = {
+    jobMongoId: job.entityId,
+    template: job.templateName,
+    language: job.languageCode,
+  };
+  if (outcome === "accepted") {
+    console.info("[JobPostIncompleteReminder] accepted by Meta", details);
+    return;
+  }
+  console.error("[JobPostIncompleteReminder] delivery failed", details);
+}
+
 function isDuplicateJobError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : "";
   return /already exists|duplicate|jobid/i.test(message);
@@ -124,6 +143,7 @@ export async function deliverWhatsAppNotificationJob(
     messageId: result.messageId || "-",
     timestamp: new Date().toISOString(),
   });
+  logJobPostIncompleteDelivery(job, "accepted");
 }
 
 export async function enqueueWhatsAppNotificationJob(
@@ -147,6 +167,7 @@ export async function enqueueWhatsAppNotificationJob(
       );
       logEmployerApprovalDeliveryFailure(job);
       logEmployerRejectionDeliveryFailure(job);
+      logJobPostIncompleteDelivery(job, "failed");
     });
     return;
   }
@@ -189,6 +210,7 @@ export async function enqueueWhatsAppNotificationJob(
       );
       logEmployerApprovalDeliveryFailure(job);
       logEmployerRejectionDeliveryFailure(job);
+      logJobPostIncompleteDelivery(job, "failed");
     });
   }
 }
@@ -230,6 +252,7 @@ export function startWhatsAppNotificationRuntime(): () => Promise<void> {
         );
         logEmployerApprovalDeliveryFailure(data);
         logEmployerRejectionDeliveryFailure(data);
+        logJobPostIncompleteDelivery(data, "failed");
       }
     }
   });

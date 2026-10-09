@@ -4,6 +4,9 @@ export const WHATSAPP_NOTIFICATION_EVENTS = [
   "EMPLOYER_PROFILE_COMPLETION_REMINDER",
   "EMPLOYER_ACCOUNT_APPROVED",
   "EMPLOYER_ACCOUNT_REJECTED",
+  "JOB_POST_SUBMITTED",
+  "JOB_POST_APPROVED",
+  "JOB_POST_INCOMPLETE",
   "JOB_APPROVED",
   "JOB_REJECTED",
   "APPLICATION_RECEIVED",
@@ -73,6 +76,27 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
   },
   EMPLOYER_ACCOUNT_REJECTED: {
     templateName: "employer_account_rejected",
+    defaultLanguage: "en",
+    approvedLanguages: {
+      en: "en",
+    },
+  },
+  JOB_POST_SUBMITTED: {
+    templateName: "job_post_submitted",
+    defaultLanguage: "en",
+    approvedLanguages: {
+      en: "en",
+    },
+  },
+  JOB_POST_APPROVED: {
+    templateName: "job_post_approved",
+    defaultLanguage: "en",
+    approvedLanguages: {
+      en: "en",
+    },
+  },
+  JOB_POST_INCOMPLETE: {
+    templateName: "job_post_incomplete",
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",

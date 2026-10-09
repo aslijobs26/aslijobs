@@ -19,5 +19,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES
+        value: "30"
       # Set remaining secrets in the Render dashboard (never commit URIs/secrets):
       # MONGO_URI, JWT_*, WHATSAPP_*, FRONTEND_URL, ADMIN_URL, etc.

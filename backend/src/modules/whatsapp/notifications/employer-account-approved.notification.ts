@@ -9,6 +9,12 @@ export type EmployerAccountApprovedWhatsAppInput = {
   establishmentName?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  /**
+   * Changes on each saved approval (`verifiedAt` millis). A later approval
+   * after rejection and resubmission can notify again. The same approval keeps
+   * this value, so a repeat does not send another message.
+   */
+  reviewCycle: string;
 };
 
 /**
@@ -21,7 +27,8 @@ export const employerAccountApprovedWhatsApp = {
   schedule(input: EmployerAccountApprovedWhatsAppInput): void {
     const employerId = input.employerId.trim();
     const phoneNumber = input.whatsappNumber?.trim() ?? "";
-    if (!employerId || !phoneNumber) {
+    const reviewCycle = input.reviewCycle.trim();
+    if (!employerId || !phoneNumber || !reviewCycle) {
       console.info(
         "[WhatsAppNotification] Employer approval notification skipped - no WhatsApp number",
         { employerId },
@@ -44,6 +51,7 @@ export const employerAccountApprovedWhatsApp = {
         phoneNumber,
         employerName,
         preferredLanguage: "en",
+        idempotencyScope: reviewCycle,
       });
     } catch (error) {
       console.error(

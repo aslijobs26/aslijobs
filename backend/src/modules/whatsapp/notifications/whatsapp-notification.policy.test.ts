@@ -7,6 +7,8 @@ import {
   EMPLOYER_ACCOUNT_REJECTED_RESUBMIT_PATH,
   EMPLOYER_ACCOUNT_REJECTED_RESUBMIT_URL,
   employerAccountApprovedPostJobUrl,
+  JOB_POST_APPROVED_VIEW_PATH,
+  JOB_POST_APPROVED_VIEW_URL,
   getWhatsAppNotificationTemplate,
   resolveWhatsAppNotificationLanguage,
   whatsAppNotificationIdempotencyKey,
@@ -158,5 +160,51 @@ describe("WhatsApp notification template mapping", () => {
         "2000",
       ),
     );
+  });
+
+  it("maps job_post_submitted and job_post_approved without inventing a URL button", () => {
+    const submitted = getWhatsAppNotificationTemplate("JOB_POST_SUBMITTED");
+    const approved = getWhatsAppNotificationTemplate("JOB_POST_APPROVED");
+    assert.equal(submitted?.templateName, "job_post_submitted");
+    assert.equal(approved?.templateName, "job_post_approved");
+    assert.equal(submitted?.approvedLanguages.en, "en");
+    assert.equal(approved?.approvedLanguages.en, "en");
+    assert.equal(resolveWhatsAppNotificationLanguage("JOB_POST_SUBMITTED", "te"), "en");
+    assert.deepEqual(
+      buildWhatsAppNotificationBodyParameters("JOB_POST_SUBMITTED", {
+        event: "JOB_POST_SUBMITTED",
+        entityId: "AJ-2026-000007",
+        phoneNumber: "9876543210",
+        employerName: "Acme Pvt Ltd",
+      }),
+      ["Acme Pvt Ltd"],
+    );
+    assert.deepEqual(
+      buildWhatsAppNotificationBodyParameters("JOB_POST_APPROVED", {
+        event: "JOB_POST_APPROVED",
+        entityId: "AJ-2026-000007",
+        phoneNumber: "9876543210",
+        employerName: "Acme Pvt Ltd",
+      }),
+      ["Acme Pvt Ltd"],
+    );
+    assert.deepEqual(
+      buildWhatsAppNotificationUrlButtonParameters("JOB_POST_SUBMITTED", {
+        event: "JOB_POST_SUBMITTED",
+        entityId: "AJ-2026-000007",
+        phoneNumber: "9876543210",
+      }),
+      [],
+    );
+    assert.deepEqual(
+      buildWhatsAppNotificationUrlButtonParameters("JOB_POST_APPROVED", {
+        event: "JOB_POST_APPROVED",
+        entityId: "AJ-2026-000007",
+        phoneNumber: "9876543210",
+      }),
+      [],
+    );
+    assert.equal(JOB_POST_APPROVED_VIEW_URL, "https://www.aslijobs.com/employer/jobs");
+    assert.equal(JOB_POST_APPROVED_VIEW_PATH, "/employer/jobs");
   });
 });

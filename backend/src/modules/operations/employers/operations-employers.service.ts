@@ -1256,6 +1256,11 @@ export const operationsEmployersService = {
     }
 
     if (target === "verified") {
+      const verifiedAtValue = updated.verifiedAt;
+      const verifiedAt =
+        verifiedAtValue instanceof Date
+          ? verifiedAtValue
+          : now;
       employerAccountApprovedWhatsApp.schedule({
         employerId,
         whatsappNumber: text(updated.whatsappNumber),
@@ -1263,6 +1268,7 @@ export const operationsEmployersService = {
         establishmentName: text(updated.establishmentName),
         firstName: text(updated.firstName),
         lastName: text(updated.lastName),
+        reviewCycle: String(verifiedAt.getTime()),
       });
       await EmployerDocumentModel.updateMany(
         { employerId: employerObjectId, verificationStatus: "pending" },

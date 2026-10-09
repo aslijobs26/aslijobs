@@ -136,6 +136,16 @@ const envSchema = z.object({
     .max(24 * 60)
     .default(30),
   /**
+   * Minutes after the latest incomplete job draft save before sending
+   * job_post_incomplete. Production and local default are 30.
+   */
+  JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 60)
+    .default(30),
+  /**
    * Inbox retention for unread notifications (days from createdAt).
    * Expired rows are hidden from inbox/unread APIs; conversation history is preserved.
    */
