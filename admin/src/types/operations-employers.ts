@@ -341,6 +341,7 @@ export interface CompleteOperationsEmployerInput {
   pincode: string;
   city: string;
   state: string;
+  documentType: string;
 }
 
 export interface OperationsEmployerOtpDelivery {

@@ -33,12 +33,8 @@ export function employerResubmitFieldErrors(
   if (employer.isWhatsappVerified !== true) {
     errors.whatsappNumber = "Verify your WhatsApp number before resubmitting.";
   }
-  if (
-    employer.isProfileComplete !== true ||
-    text(employer.registrationStatus) !== "completed"
-  ) {
-    errors.profile = "Complete your profile before resubmitting.";
-  }
+  // Completion flags can stay stale after a document-only rejection.
+  // Required facts below are the gate; a successful resubmit refreshes the flags.
   if (documentCount < 1) {
     errors.document = "Upload the required verification document.";
   }

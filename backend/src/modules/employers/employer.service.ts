@@ -45,6 +45,7 @@ import type {
   UpdateEmployerProfileInput,
   VerifyEmployerOtpInput,
 } from "./employer.types.js";
+import { assertEmployerDocumentTypeForAccount } from "./employer-document.policy.js";
 import { isolateOperationsEmployerProfileFields } from "./employer.validation.js";
 import { employerResubmitFieldErrors } from "./employer-verification-resubmit.policy.js";
 
@@ -998,8 +999,8 @@ export class EmployerService {
 
   /**
    * Operations follow-up completion after the same register + WhatsApp OTP
-   * path as public registration. Documents remain optional here because
-   * Operations KYC is a separate verification workflow.
+   * path as public registration. The verification document uses the same
+   * type list and storage record as the public registration upload.
    */
   async completeOperationsEmployerProfile(
     input: CompleteOperationsEmployerProfileInput,
@@ -1061,6 +1062,18 @@ export class EmployerService {
     employer.state = isolated.state;
 
     const accountType = employer.accountType as EmployerAccountType;
+    const documentFile = files.document;
+    if (!documentFile) {
+      throw new AppError(
+        isBusinessEmployerAccountType(accountType)
+          ? "Business verification document is required"
+          : "Identity document is required",
+        HTTP_STATUS.BAD_REQUEST,
+        { fieldErrors: { documentFile: "Upload the verification document." } },
+      );
+    }
+    assertEmployerDocumentTypeForAccount(accountType, input.documentType);
+
     if (files.companyLogo) {
       if (!isBusinessEmployerAccountType(accountType)) {
         throw new AppError(
@@ -1100,9 +1113,51 @@ export class EmployerService {
       employer.markModified("profilePhoto");
     }
 
+    const employerCode = toEmployerStorageCode(employer._id);
+    const extension = resolveFileExtension(documentFile);
+    const originalName = isBusinessEmployerAccountType(accountType)
+      ? documentFile.originalname
+      : `${input.documentType}${extension || path.extname(documentFile.originalname)}`;
+    let storedFile;
+    try {
+      storedFile = await storageService.upload({
+        buffer: documentFile.buffer,
+        originalName,
+        mimeType: documentFile.mimetype,
+        folder: isBusinessEmployerAccountType(accountType)
+          ? "employer-documents"
+          : `individual-documents/${employerCode}`,
+        fileBaseName: input.documentType,
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError("Upload failed", HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+
+    const document = await EmployerDocumentModel.create({
+      employerId: employer._id,
+      documentType: input.documentType,
+      originalName: storedFile.originalName,
+      storedName: storedFile.storedName,
+      storageProvider: storedFile.storageProvider,
+      storagePath: storedFile.storagePath,
+      publicId: storedFile.publicId ?? "",
+      url: storedFile.url ?? "",
+      folder: storedFile.folder ?? "",
+      bucketName: storedFile.bucketName ?? "",
+      mimeType: storedFile.mimeType,
+      fileSize: storedFile.fileSize,
+      verificationStatus: "pending",
+      uploadedAt: new Date(),
+    });
+
+    employer.documentIds = [...(employer.documentIds ?? []), document._id];
     employer.isProfileComplete = true;
     employer.registrationStatus = "completed";
     employer.verificationStatus = "pending";
+    employer.verificationSubmittedAt = new Date();
     employer.status = "active";
     if (!employer.operationsRegistrationAwareness?.registeredAt) {
       employer.operationsRegistrationAwareness =
@@ -1118,6 +1173,13 @@ export class EmployerService {
         employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
     });
     scheduleEmployerAccountCreatedWhatsApp(employer);
+    scheduleEmployerVerificationWork({
+      employerId: employer._id.toString(),
+      companyName: resolveEmployerRegistrationDisplayName(employer),
+      locationLabel: [employer.city, employer.state].filter(Boolean).join(", "),
+      submittedAt: employer.verificationSubmittedAt ?? new Date(),
+      kind: "submitted",
+    });
 
     return toPublicEmployer(employer);
   }
@@ -1406,6 +1468,8 @@ export class EmployerService {
     }
 
     const previousRemarks = String(employer.verificationRemarks ?? "").trim();
+    employer.isProfileComplete = true;
+    employer.registrationStatus = "completed";
     employer.verificationStatus = "pending";
     employer.verificationSubmittedAt = new Date();
     // Keep remarks so Operations can see the prior rejection reason.

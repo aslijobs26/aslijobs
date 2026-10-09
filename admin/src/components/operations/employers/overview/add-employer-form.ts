@@ -89,6 +89,7 @@ export type AddEmployerFormState = {
   pincode: string;
   city: string;
   state: string;
+  documentType: string;
 };
 
 export const EMPTY_ADD_EMPLOYER_FORM: AddEmployerFormState = {
@@ -108,6 +109,7 @@ export const EMPTY_ADD_EMPLOYER_FORM: AddEmployerFormState = {
   pincode: "",
   city: "",
   state: "",
+  documentType: "",
 };
 
 export function isolateAddEmployerForm(
@@ -286,6 +288,74 @@ export function addEmployerImageFieldLabel(
     return "Profile photo";
   }
   return "Company profile photo";
+}
+
+export const OPERATIONS_EMPLOYER_IDENTITY_DOCUMENT_OPTIONS = [
+  { value: "aadhaar", label: "Aadhaar Card" },
+  { value: "pan", label: "PAN Card" },
+  { value: "driving-licence", label: "Driving Licence" },
+  { value: "voter-id", label: "Voter ID" },
+] as const;
+
+export const OPERATIONS_EMPLOYER_BUSINESS_DOCUMENT_OPTIONS = [
+  { value: "gst-certificate", label: "GST Certificate" },
+  { value: "certificate-of-incorporation", label: "Certificate of Incorporation" },
+  { value: "llp-registration-certificate", label: "LLP Registration Certificate" },
+  { value: "msme-udyam-registration", label: "MSME / Udyam Registration" },
+  { value: "shop-establishment-license", label: "Shop & Establishment License" },
+  { value: "trade-license", label: "Trade License" },
+  { value: "pan-card-business", label: "PAN Card (Business)" },
+  { value: "trust-society-registration", label: "Trust / Society Registration" },
+  { value: "partnership-deed", label: "Partnership Deed" },
+  { value: "fssai-license", label: "FSSAI License" },
+  { value: "other-government-registration", label: "Other Government Registration" },
+] as const;
+
+export function operationsEmployerDocumentOptions(
+  accountType: OperationsEmployerAccountType,
+): ReadonlyArray<{ value: string; label: string }> {
+  return accountType === "individual"
+    ? OPERATIONS_EMPLOYER_IDENTITY_DOCUMENT_OPTIONS
+    : OPERATIONS_EMPLOYER_BUSINESS_DOCUMENT_OPTIONS;
+}
+
+export function operationsEmployerDocumentSectionLabel(
+  accountType: OperationsEmployerAccountType,
+): string {
+  return accountType === "individual"
+    ? "Document Verification"
+    : "Company/Business Verification";
+}
+
+export const ADD_EMPLOYER_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024;
+export const ADD_EMPLOYER_DOCUMENT_ACCEPT =
+  ".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp";
+export const ADD_EMPLOYER_DOCUMENT_HINT =
+  "Drag and drop your document here. Max size 5 MB. Formats: png, jpg, pdf";
+
+const ADD_EMPLOYER_DOCUMENT_EXTENSIONS = new Set([
+  "pdf",
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+]);
+
+export type AddEmployerDocumentPreview = {
+  name: string;
+  sizeBytes: number;
+  file: File;
+};
+
+export function validateAddEmployerDocumentFile(file: File): string | null {
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!ADD_EMPLOYER_DOCUMENT_EXTENSIONS.has(extension)) {
+    return "Use a PNG, JPG, PDF, or WEBP file.";
+  }
+  if (file.size > ADD_EMPLOYER_DOCUMENT_MAX_BYTES) {
+    return "Document must be 5MB or smaller.";
+  }
+  return null;
 }
 
 export function validateAddEmployerImageFile(file: File): string | null {

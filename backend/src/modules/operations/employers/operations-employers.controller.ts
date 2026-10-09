@@ -174,6 +174,7 @@ export const operationsEmployersController = {
       {
         companyLogo: getUploadedFile(req.files, "companyLogo"),
         profilePhoto: getUploadedFile(req.files, "profilePhoto"),
+        document: getUploadedFile(req.files, "document"),
       },
     );
 

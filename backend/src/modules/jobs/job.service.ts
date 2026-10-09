@@ -14,6 +14,7 @@ import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
 import { detectCanonicalSourceLanguage, parseJobContentLanguage } from "./job-content-language.js";
 import {
+  resolveDisplayedContentLanguage,
   resolveJobContent,
 } from "./job-content-translation.js";
 import { serveJobDetailTranslation } from "./job-translation.queue.js";
@@ -2357,10 +2358,12 @@ export class JobService {
         contactMobile: job.contactMobile?.trim() || null,
         language: translation.language,
         sourceLanguage: translation.sourceLanguage,
-        contentLanguage:
-          translation.translationStatus === "ready" && translation.isTranslated
-            ? translation.language
-            : translation.sourceLanguage,
+        contentLanguage: resolveDisplayedContentLanguage(
+          translation.translationStatus,
+          translation.isTranslated,
+          translation.language,
+          translation.sourceLanguage,
+        ),
         translationStatus: translation.translationStatus,
         isTranslated: translation.isTranslated,
       },

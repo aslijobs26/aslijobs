@@ -147,12 +147,12 @@ export function useCompleteOperationsEmployer() {
       employerId: string;
       payload: CompleteOperationsEmployerInput;
       imageFile?: File | null;
+      documentFile: File;
     }) =>
-      completeOperationsEmployer(
-        input.employerId,
-        input.payload,
-        input.imageFile,
-      ),
+      completeOperationsEmployer(input.employerId, input.payload, {
+        imageFile: input.imageFile,
+        documentFile: input.documentFile,
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: OPERATIONS_EMPLOYERS_QUERY_KEY,

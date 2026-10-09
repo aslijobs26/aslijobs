@@ -1462,6 +1462,7 @@ export const operationsEmployersService = {
       pincode: string;
       city: string;
       state: string;
+      documentType: string;
     },
     files: CompleteOperationsEmployerProfileFiles = {},
   ): Promise<OperationsEmployerDetail> {

@@ -25,6 +25,7 @@ import {
   parseHtmlSegmentTranslations,
   protectJobNumericLiterals,
   queueJobContentTranslation,
+  resolveDisplayedContentLanguage,
   resolveJobContent,
   resolvePublicJobTranslationView,
   restoreJobNumericLiterals,
@@ -382,6 +383,87 @@ describe("job content translation", () => {
     assert.equal(result.errorCode, "html_segment_mapping_failed");
   });
 
+  it("keeps a Telugu title when HTML description mapping fails and retries only that field", async () => {
+    const html = "<p>First line.</p><p>Second line.</p>";
+    const htmlSource = { ...source, description: html };
+    let failHtml = true;
+    const calls = { count: 0, bodies: [] as string[] };
+    const fetchImpl = (async (_url, init) => {
+      calls.count += 1;
+      const body = JSON.parse(String(init?.body ?? "{}")) as { input?: string };
+      const input = body.input ?? "";
+      calls.bodies.push(input);
+      if (failHtml && /AJQ/.test(input)) {
+        return new Response(JSON.stringify({ translated_text: "merged-into-one-line" }), {
+          status: 200,
+        });
+      }
+      const translated = /AJQ/.test(input)
+        ? translateDelimitedHtmlInput(input)
+        : `tr:${input}`;
+      return new Response(JSON.stringify({ translated_text: translated }), { status: 200 });
+    }) as typeof fetch;
+
+    const failed = await translateRequestedJobLanguage({
+      source: htmlSource,
+      language: "te",
+      fetchImpl,
+    });
+    assert.equal(failed.event, "TRANSLATION_FAILED");
+    assert.match(failed.contentTranslations.te?.jobTitle ?? "", /^tr:/);
+    assert.equal(failed.contentTranslations.te?.description ?? "", "");
+    assert.equal(failed.contentTranslations.te?.descriptionHash, "");
+    assert.equal(failed.contentTranslations.te?.status, "partial");
+    assert.equal(failed.content.description, html);
+    const partialView = resolvePublicJobTranslationView(
+      { ...htmlSource, contentTranslations: failed.contentTranslations },
+      "te",
+    );
+    assert.equal(partialView.translationStatus, "pending");
+    assert.equal(partialView.isTranslated, false);
+    assert.equal(partialView.content.jobTitle, failed.contentTranslations.te?.jobTitle);
+    assert.equal(partialView.content.description, html);
+    assert.equal(
+      resolveDisplayedContentLanguage(
+        partialView.translationStatus,
+        partialView.isTranslated,
+        partialView.language,
+        partialView.sourceLanguage,
+      ),
+      "en",
+    );
+
+    const callsAfterFailure = calls.count;
+    failHtml = false;
+    const recovered = await translateRequestedJobLanguage({
+      source: htmlSource,
+      existing: failed.contentTranslations,
+      language: "te",
+      forceRetry: true,
+      fetchImpl,
+    });
+    assert.equal(recovered.event, "TRANSLATION_CREATED");
+    assert.equal(recovered.contentTranslations.te?.jobTitle, failed.contentTranslations.te?.jobTitle);
+    assert.ok(calls.bodies.slice(callsAfterFailure).every((body) => /AJQ/.test(body)));
+    assert.ok((recovered.contentTranslations.te?.description ?? "").startsWith("<p>tr:"));
+    const readyView = resolvePublicJobTranslationView(
+      { ...htmlSource, contentTranslations: recovered.contentTranslations },
+      "te",
+    );
+    assert.equal(readyView.translationStatus, "ready");
+    assert.equal(readyView.isTranslated, true);
+    assert.equal(readyView.shouldEnqueue, false);
+    assert.equal(
+      resolveDisplayedContentLanguage(
+        readyView.translationStatus,
+        readyView.isTranslated,
+        readyView.language,
+        readyView.sourceLanguage,
+      ),
+      "te",
+    );
+  });
+
   it("ignores stored HTML translations whose tag structure is broken", async () => {
     const html = "<p>Intro.</p><ul><li><p>Point.</p></li></ul>";
     const broken = `tr:Intro.tr:Point.${"<br>".repeat(50)}</p></li></ul>`;
@@ -657,7 +739,7 @@ describe("job content translation", () => {
     assert.equal(result.contentTranslations.te?.status, "failed");
   });
 
-  it("stores current source hashes on provider failure so the public API can cooldown", async () => {
+  it("cools down a provider failure without marking field hashes current", async () => {
     const fetchImpl = (async () =>
       new Response(
         JSON.stringify({
@@ -672,9 +754,9 @@ describe("job content translation", () => {
     });
     const stored = result.contentTranslations.te;
     assert.equal(result.event, "TRANSLATION_FAILED");
-    assert.equal(stored?.jobTitleHash, hashJobField(source.jobTitle));
-    assert.equal(stored?.descriptionHash, hashJobField(source.description));
-    assert.equal(stored?.interviewInstructionsHash, hashJobField(source.interviewInstructions));
+    assert.equal(stored?.jobTitleHash, "");
+    assert.equal(stored?.descriptionHash, "");
+    assert.equal(stored?.interviewInstructionsHash, "");
     assert.equal(shouldSkipFailedTranslationRetry(stored, source), true);
     const view = resolvePublicJobTranslationView(
       { ...source, contentTranslations: result.contentTranslations },
@@ -961,7 +1043,16 @@ describe("public job translation view", () => {
     );
     assert.equal(view.translationStatus, "pending");
     assert.equal(view.shouldEnqueue, true);
-    assert.equal(view.isTranslated, true);
+    assert.equal(view.isTranslated, false);
+    assert.equal(
+      resolveDisplayedContentLanguage(
+        view.translationStatus,
+        view.isTranslated,
+        view.language,
+        view.sourceLanguage,
+      ),
+      "en",
+    );
     assert.equal(view.content.jobTitle, "ప్లంబర్");
     assert.equal(view.content.description, source.description);
     assert.equal(view.content.interviewInstructions, source.interviewInstructions);
@@ -1384,7 +1475,7 @@ describe("on-demand Mongo persistence", () => {
     assert.notEqual(store.contentTranslations.hi?.jobTitle, store.jobTitle);
   });
 
-  it("replaces stale empty hashes when Sarvam returns 402 so overlay can cooldown", async () => {
+  it("does not stamp the current source hash when Sarvam returns 402", async () => {
     const mongoId = "507f1f77bcf86cd799439013";
     const emptyHash = hashJobField("");
     const store: {
@@ -1445,7 +1536,8 @@ describe("on-demand Mongo persistence", () => {
       fetchImpl,
     });
     assert.equal(result.event, "TRANSLATION_FAILED");
-    assert.equal(store.contentTranslations.te?.jobTitleHash, hashJobField(source.jobTitle));
+    assert.equal(store.contentTranslations.te?.jobTitleHash, "");
+    assert.equal(store.contentTranslations.te?.descriptionHash, "");
     assert.equal(store.contentTranslations.te?.status, "failed");
     assert.equal(store.jobTitle, source.jobTitle);
     assert.equal(

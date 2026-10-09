@@ -74,11 +74,13 @@ export type CompleteOperationsEmployerProfileInput = {
   pincode: string;
   city: string;
   state: string;
+  documentType: string;
 };
 
 export type CompleteOperationsEmployerProfileFiles = {
   companyLogo?: Express.Multer.File;
   profilePhoto?: Express.Multer.File;
+  document?: Express.Multer.File;
 };
 
 export type UpdateEmployerProfileInput = {

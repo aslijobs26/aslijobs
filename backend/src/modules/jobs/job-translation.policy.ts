@@ -90,8 +90,8 @@ type ExistingTranslationTask = {
 /**
  * One task per job + language + source text.
  * Pending and processing tasks are never duplicated.
- * Failed tasks are exhausted for this sourceHash; only a source edit
- * (new hash → new task) starts a fresh cycle.
+ * A failed task is retried after backoff while attempts remain.
+ * Exhausted tasks stay failed until the source text changes.
  * Completed tasks may be reset when Mongo still needs that language.
  */
 export function shouldResetStoredTranslationTask(

@@ -628,6 +628,17 @@ export async function translateJobHtmlField(input: {
     }
 
     if (!mapped) {
+      logSarvamJobTranslate("SARVAM_REQUEST_FAILED", {
+        jobId: input.log?.jobId,
+        language: input.targetLanguage,
+        field: input.log?.field,
+        sourceHash: input.log?.sourceHash,
+        success: false,
+        reason: "html_segment_mapping_failed",
+        batch,
+        batchCount: batches.length,
+        attempt: HTML_BATCH_MAPPING_RETRIES + 1,
+      });
       return lastFailure ?? { text: input.html, failed: true, calls, errorCode: "html_segment_mapping_failed" };
     }
     mapped.forEach((value, index) => {
@@ -648,6 +659,17 @@ export async function translateJobHtmlField(input: {
 
   const reconstructed = tokens.join("");
   if (!hasMatchingHtmlStructure(input.html, reconstructed)) {
+    logSarvamJobTranslate("SARVAM_REQUEST_FAILED", {
+      jobId: input.log?.jobId,
+      language: input.targetLanguage,
+      field: input.log?.field,
+      sourceHash: input.log?.sourceHash,
+      success: false,
+      reason: "html_structure_mismatch",
+      batch: batches.length,
+      batchCount: batches.length,
+      attempt: 1,
+    });
     return {
       text: input.html,
       failed: true,
@@ -686,7 +708,23 @@ function entryFromSource(source: SourceFields): JobFieldTranslation {
   };
 }
 
-function stampRemainingSourceHashes(
+function blankTargetTranslation(): JobFieldTranslation {
+  return {
+    jobTitle: "",
+    description: "",
+    interviewInstructions: "",
+    jobTitleHash: "",
+    descriptionHash: "",
+    interviewInstructionsHash: "",
+  };
+}
+
+/**
+ * A failed field must not keep the current source hash. An empty hash means
+ * "not translated", so a later retry can run without a source edit, while a
+ * real stored hash that no longer matches still means the source was edited.
+ */
+function clearUnusableFieldHashes(
   translated: JobFieldTranslation,
   source: SourceFields,
   previous: JobFieldTranslation | undefined,
@@ -698,7 +736,7 @@ function stampRemainingSourceHashes(
     ) {
       continue;
     }
-    translated[`${field}Hash`] = hashJobField(source[field]);
+    translated[`${field}Hash`] = "";
   }
 }
 
@@ -756,11 +794,7 @@ export async function buildJobContentTranslations(input: {
       const previous = next[target];
       const translated: JobFieldTranslation = previous
         ? { ...previous }
-        : entryFromSource({
-            jobTitle: "",
-            description: "",
-            interviewInstructions: "",
-          });
+        : blankTargetTranslation();
       let targetFailed = false;
       let translatedAny = false;
       for (const field of JOB_TRANSLATABLE_FIELDS) {
@@ -803,9 +837,9 @@ export async function buildJobContentTranslations(input: {
           !translatedTextIsPersistable(value, result.text)
         ) {
           targetFailed = true;
-          translated[hashKey] = hash;
+          translated[hashKey] = "";
           if (result.hardFailure) {
-            stampRemainingSourceHashes(translated, input.source, previous);
+            clearUnusableFieldHashes(translated, input.source, previous);
             break;
           }
           continue;
@@ -980,7 +1014,8 @@ export function shouldSkipFailedTranslationRetry(
   }
   const staleBecauseEdited = JOB_TRANSLATABLE_FIELDS.some((field) => {
     const value = source[field];
-    return Boolean(value) && stored[`${field}Hash`] !== hashJobField(value);
+    const storedHash = stored[`${field}Hash`];
+    return Boolean(value) && Boolean(storedHash) && storedHash !== hashJobField(value);
   });
   if (staleBecauseEdited) {
     return false;
@@ -1212,15 +1247,16 @@ export function resolvePublicJobTranslationView(
   }
 
   const content = resolveJobContent({ ...job, ...source }, language);
-  const isTranslated = hasUsableTranslatedContent(content, source);
+  const needsTranslation = languageNeedsTranslation(job, language);
+  const isTranslated = !needsTranslation && hasUsableTranslatedContent(content, source);
 
-  if (!languageNeedsTranslation(job, language)) {
+  if (!needsTranslation) {
     return {
       content,
       language,
       sourceLanguage,
       translationStatus: "ready",
-      isTranslated: true,
+      isTranslated,
       shouldEnqueue: false,
     };
   }
@@ -1244,6 +1280,22 @@ export function resolvePublicJobTranslationView(
     isTranslated,
     shouldEnqueue: true,
   };
+}
+
+/**
+ * `contentLanguage` is the requested language only when every required field
+ * is a usable translation. Partial and failed responses stay on the source language.
+ */
+export function resolveDisplayedContentLanguage(
+  translationStatus: PublicJobTranslationStatus,
+  isTranslated: boolean,
+  language: JobContentLanguage | null,
+  sourceLanguage: JobContentLanguage,
+): JobContentLanguage {
+  if (translationStatus === "ready" && isTranslated && language) {
+    return language;
+  }
+  return sourceLanguage;
 }
 
 function hasUsableTranslatedContent(
@@ -1370,26 +1422,16 @@ export async function translateJobContentOnDemand(input: {
           };
         }
       } else if (result.event === "TRANSLATION_FAILED") {
-        const previous = existing?.[input.language!];
         const failed = result.contentTranslations[input.language!];
-        persistSets[`contentTranslations.${input.language}`] = {
-          jobTitle: previous?.jobTitle || failed?.jobTitle || "",
-          description: previous?.description || failed?.description || "",
-          interviewInstructions:
-            previous?.interviewInstructions ||
-            failed?.interviewInstructions ||
-            "",
-          jobTitleHash: failed?.jobTitleHash || previous?.jobTitleHash || "",
-          descriptionHash:
-            failed?.descriptionHash || previous?.descriptionHash || "",
-          interviewInstructionsHash:
-            failed?.interviewInstructionsHash ||
-            previous?.interviewInstructionsHash ||
-            "",
-          lastAttemptAt: new Date().toISOString(),
-          status: "failed",
-        };
-        await JobModel.updateOne({ _id: job._id }, { $set: persistSets });
+        if (failed) {
+          persistSets[`contentTranslations.${input.language}`] = {
+            ...failed,
+            lastAttemptAt: new Date().toISOString(),
+          };
+        }
+        if (Object.keys(persistSets).length > 0) {
+          await JobModel.updateOne({ _id: job._id }, { $set: persistSets });
+        }
       }
 
       const persistedTranslations: JobContentTranslations = {

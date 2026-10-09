@@ -276,6 +276,56 @@ describe("employer rejection and resubmission", () => {
     );
   });
 
+  it("resubmits a rejected employer whose profile details and document exist even when completion flags are stale", async () => {
+    const saved: string[] = [];
+    const employer = {
+      _id: new mongoose.Types.ObjectId(employerId),
+      verificationStatus: "rejected",
+      verificationRemarks: "Documents are not clear",
+      isProfileComplete: false,
+      registrationStatus: "profile_incomplete",
+      isWhatsappVerified: true,
+      accountType: "company",
+      companyName: "Acme Pvt Ltd",
+      establishmentName: "",
+      firstName: "Asha",
+      lastName: "Rao",
+      industry: "it",
+      businessCategory: "software",
+      companyAddress: "1 Road",
+      pincode: "500001",
+      city: "Hyderabad",
+      state: "Telangana",
+      whatsappNumber: "9876543210",
+      cityLabel: "",
+      async save() {
+        saved.push(
+          `${this.verificationStatus}:${this.registrationStatus}:${this.isProfileComplete}`,
+        );
+        return this;
+      },
+    };
+    mock.method(EmployerModel, "findById", async () => employer);
+    mock.method(EmployerDocumentModel, "countDocuments", async () => 1);
+    mock.method(EmployerDocumentModel, "updateMany", async () => ({
+      acknowledged: true,
+    }));
+    mock.method(OperationsAuditLogModel, "create", async () => ({}));
+    mock.method(
+      OperationsNotificationModel,
+      "updateOne",
+      async () => ({ acknowledged: true }),
+    );
+
+    const result = await employerService.resubmitVerification(employerId);
+
+    assert.equal(result.alreadyPending, false);
+    assert.equal(result.employer.verificationStatus, "pending");
+    assert.equal(employer.isProfileComplete, true);
+    assert.equal(employer.registrationStatus, "completed");
+    assert.deepEqual(saved, ["pending:completed:true"]);
+  });
+
   it("does not resubmit when required details are still missing", async () => {
     const employer = {
       _id: new mongoose.Types.ObjectId(employerId),

@@ -13,6 +13,7 @@ import {
   writeCachedJobTranslation,
 } from "./job-translation.cache.js";
 import {
+  canEnqueueJobTranslation,
   claimTranslationEnqueueSlot,
   isDuplicateKeyError,
   jobTranslationQueueJobId,
@@ -133,7 +134,7 @@ async function pushQueueJob(
 async function enqueueJobLanguageTranslation(
   jobMongoId: string,
   language: JobContentLanguage,
-): Promise<"queued" | "skipped"> {
+): Promise<"queued" | "skipped" | "exhausted"> {
   if (!mongoose.Types.ObjectId.isValid(jobMongoId)) {
     return "skipped";
   }
@@ -192,7 +193,35 @@ async function enqueueJobLanguageTranslation(
     }
 
     if (existing?.status === "failed") {
-      return "skipped";
+      if (!canEnqueueJobTranslation(existing, Date.now(), env.JOB_TRANSLATION_MAX_ATTEMPTS)) {
+        return "exhausted";
+      }
+      const reset = await JobTranslationTaskModel.findOneAndUpdate(
+        { _id: existing._id, status: "failed" },
+        {
+          $set: {
+            status: "pending",
+            lastError: "",
+            lockedAt: null,
+            nextAttemptAt: new Date(),
+          },
+        },
+        { new: true },
+      );
+      if (!reset) {
+        return "skipped";
+      }
+      await pushQueueJob(
+        reset._id.toString(),
+        jobMongoId,
+        language,
+        sourceHash,
+        reset.attempts,
+      );
+      console.info(
+        `[JOB-TRANSLATE] event=TRANSLATION_ENQUEUED jobId=${job.jobId} language=${language} sourceHash=${sourceHash} field=job calls=0`,
+      );
+      return "queued";
     }
 
     const needsReset = Boolean(
@@ -537,7 +566,7 @@ export async function serveJobDetailTranslation(input: {
   if (input.language && input.language !== sourceLanguage) {
     const cached = await readCachedJobTranslation(input.jobMongoId, input.language);
     if (cachedTranslationMatchesSource(cached, source)) {
-      jobForView = {
+      const overlaid = {
         ...jobForView,
         contentTranslations: {
           ...(input.job.contentTranslations ?? {}),
@@ -548,27 +577,51 @@ export async function serveJobDetailTranslation(input: {
             jobTitleHash: hashJobField(source.jobTitle),
             descriptionHash: hashJobField(source.description),
             interviewInstructionsHash: hashJobField(source.interviewInstructions),
-            status: "completed",
+            status: "completed" as const,
           },
         },
       };
+      if (!languageNeedsTranslation(overlaid, input.language)) {
+        jobForView = overlaid;
+      }
     }
   }
 
   const view = resolvePublicJobTranslationView(jobForView, input.language);
+  let translationStatus = view.translationStatus;
   if (view.translationStatus === "ready" && view.isTranslated && input.language) {
     console.info(
       `[JOB-TRANSLATE] event=CACHE_HIT jobId=${input.jobMongoId} language=${input.language} sourceHash=${jobTranslationSourceHash(source)} field=job calls=0`,
     );
   }
   if (view.shouldEnqueue && input.language) {
-    scheduleJobLanguageTranslation(input.jobMongoId, input.language);
+    const sourceHash = jobTranslationSourceHash(source);
+    const existing = mongoose.Types.ObjectId.isValid(input.jobMongoId)
+      ? await JobTranslationTaskModel.findOne({
+          jobMongoId: input.jobMongoId,
+          language: input.language,
+          sourceHash,
+        }).select("status attempts nextAttemptAt")
+      : null;
+    const retriesExhausted = Boolean(
+      existing
+      && existing.status === "failed"
+      && !canEnqueueJobTranslation(existing, Date.now(), env.JOB_TRANSLATION_MAX_ATTEMPTS),
+    );
+    if (retriesExhausted) {
+      translationStatus = "failed";
+      console.info(
+        `[JOB-TRANSLATE] event=TRANSLATION_EXHAUSTED jobId=${input.jobMongoId} language=${input.language} sourceHash=${sourceHash} field=job calls=${existing?.attempts ?? 0}`,
+      );
+    } else {
+      scheduleJobLanguageTranslation(input.jobMongoId, input.language);
+    }
   }
   return {
     content: view.content,
     language: view.language,
     sourceLanguage: view.sourceLanguage,
-    translationStatus: view.translationStatus,
+    translationStatus,
     isTranslated: view.isTranslated,
   };
 }

@@ -153,6 +153,7 @@ describe("operationsCompleteEmployerProfileSchema", () => {
       pincode: "500081",
       city: "Hyderabad",
       state: "Telangana",
+      documentType: "gst-certificate",
     });
     assert.equal(result.success, false);
     if (result.success) {
@@ -175,6 +176,7 @@ describe("operationsCompleteEmployerProfileSchema", () => {
       pincode: "500081",
       city: "Hyderabad",
       state: "Telangana",
+      documentType: "trade-license",
     });
     assert.equal(result.success, true);
     if (!result.success) {
@@ -215,14 +217,44 @@ describe("operationsCompleteEmployerProfileSchema", () => {
       pincode: "500081",
       city: "Hyderabad",
       state: "Telangana",
+      documentType: "aadhaar",
     });
     assert.equal(result.success, true);
     if (!result.success) {
       return;
     }
+    assert.equal(result.data.documentType, "aadhaar");
     assert.equal(result.data.companyName, "");
     assert.equal(result.data.companyAddress, "1 Main St");
     assert.equal(result.data.city, "Hyderabad");
     assert.equal(result.data.establishmentName, "Asha Kirana");
+  });
+
+  it("rejects a business document for Individual and an identity document for Company", () => {
+    const individual = operationsCompleteEmployerProfileSchema.safeParse({
+      accountType: "individual",
+      establishmentName: "Asha Kirana",
+      companyAddress: "1 Main St",
+      pincode: "500081",
+      city: "Hyderabad",
+      state: "Telangana",
+      documentType: "gst-certificate",
+    });
+    assert.equal(individual.success, false);
+
+    const company = operationsCompleteEmployerProfileSchema.safeParse({
+      accountType: "company",
+      companyName: "Acme",
+      industry: "retail-stores",
+      businessCategory: "kirana-stores",
+      minimumEmployees: 1,
+      maximumEmployees: 10,
+      companyAddress: "1 Main St",
+      pincode: "500081",
+      city: "Hyderabad",
+      state: "Telangana",
+      documentType: "aadhaar",
+    });
+    assert.equal(company.success, false);
   });
 });

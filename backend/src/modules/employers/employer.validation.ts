@@ -237,8 +237,25 @@ export const operationsCompleteEmployerProfileSchema = z
     pincode: z.string().trim().default(""),
     city: z.string().trim().default(""),
     state: z.string().trim().default(""),
+    documentType: z.string().trim().default(""),
   })
   .superRefine((data, ctx) => {
+    const allowedDocumentTypes = isBusinessEmployerAccountType(data.accountType)
+      ? EMPLOYER_BUSINESS_DOCUMENT_TYPES
+      : EMPLOYER_IDENTITY_DOCUMENT_TYPES;
+    if (
+      !data.documentType ||
+      !(allowedDocumentTypes as readonly string[]).includes(data.documentType)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["documentType"],
+        message: isBusinessEmployerAccountType(data.accountType)
+          ? "Select a valid business verification document"
+          : "Select a valid identity document",
+      });
+    }
+
     if (data.accountType === "individual") {
       if (!data.establishmentName.trim()) {
         ctx.addIssue({
@@ -362,7 +379,10 @@ export const operationsCompleteEmployerProfileSchema = z
       });
     }
   })
-  .transform((data) => isolateOperationsEmployerProfileFields(data.accountType, data));
+  .transform((data) => ({
+    ...isolateOperationsEmployerProfileFields(data.accountType, data),
+    documentType: data.documentType,
+  }));
 
 export const updateEmployerProfileSchema = z
   .object({

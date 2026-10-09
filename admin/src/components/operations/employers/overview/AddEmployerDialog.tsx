@@ -19,6 +19,7 @@ import {
   getOperationsApiErrorMessage,
   getOperationsApiFieldErrors,
 } from "../../../../utils/operations-api-errors";
+import { AddEmployerDocumentField } from "./AddEmployerDocumentField";
 import { AddEmployerImageField } from "./AddEmployerImageField";
 import { AddEmployerOtpSection } from "./AddEmployerOtpSection";
 import {
@@ -28,8 +29,12 @@ import {
   isolateAddEmployerForm,
   OPERATIONS_EMPLOYER_ACCOUNT_TYPE_OPTIONS,
   OPERATIONS_EMPLOYER_OTP_LENGTH,
+  operationsEmployerDocumentOptions,
+  operationsEmployerDocumentSectionLabel,
   parseOptionalInt,
+  validateAddEmployerDocumentFile,
   validateAddEmployerForm,
+  type AddEmployerDocumentPreview,
   type AddEmployerFormState,
   type AddEmployerImagePreview,
   type OperationsEmployerAccountType,
@@ -92,6 +97,8 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
   const [form, setForm] = useState<AddEmployerFormState>(EMPTY_ADD_EMPLOYER_FORM);
   const [imagePreview, setImagePreview] =
     useState<AddEmployerImagePreview | null>(null);
+  const [documentPreview, setDocumentPreview] =
+    useState<AddEmployerDocumentPreview | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
@@ -107,6 +114,7 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
     }
     setForm(EMPTY_ADD_EMPLOYER_FORM);
     setImagePreview(null);
+    setDocumentPreview(null);
     setFieldErrors({});
     setFormError(null);
     setAlertMessage(null);
@@ -188,6 +196,7 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
 
   const handleCategoryChange = (value: OperationsEmployerAccountType) => {
     setForm((prev) => isolateAddEmployerForm(value, { ...prev, accountType: value }));
+    setDocumentPreview(null);
     setFieldErrors({});
     setFormError(null);
     setAlertMessage(null);
@@ -307,12 +316,45 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
       return;
     }
 
+    const documentOptions = operationsEmployerDocumentOptions(form.accountType);
+    const documentErrors: Record<string, string> = {};
+    if (
+      !form.documentType ||
+      !documentOptions.some((option) => option.value === form.documentType)
+    ) {
+      documentErrors.documentType = "Select a document type.";
+    }
+    if (!documentPreview?.file) {
+      documentErrors.documentFile = "Upload the verification document.";
+    } else {
+      const fileError = validateAddEmployerDocumentFile(documentPreview.file);
+      if (fileError) {
+        documentErrors.documentFile = fileError;
+      }
+    }
+    if (Object.keys(documentErrors).length > 0) {
+      setFieldErrors((prev) => ({ ...prev, ...documentErrors }));
+      setAlertMessage(
+        firstOperationsErrorMessage(
+          documentErrors,
+          "Please correct the highlighted fields.",
+        ),
+      );
+      const first = Object.keys(documentErrors)[0];
+      if (first) {
+        document.getElementById(first)?.focus();
+      }
+      return;
+    }
+
     try {
       setFormError(null);
       await completeMutation.mutateAsync({
         employerId,
+        documentFile: documentPreview!.file,
         payload: {
           accountType: form.accountType,
+          documentType: form.documentType,
           companyName: form.accountType === "individual" ? "" : form.companyName.trim(),
           establishmentName:
             form.accountType === "individual" ? form.establishmentName.trim() : "",
@@ -355,8 +397,8 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
               Add Employer
             </h3>
             <p className="mt-0.5 text-xs text-muted">
-              Create an employer with the same category fields and WhatsApp OTP
-              as public registration.
+              Create an employer with the same category fields, verification
+              document, and WhatsApp OTP as public registration.
             </p>
           </div>
           <button
@@ -591,6 +633,51 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
                   </div>
                 </>
               ) : null}
+
+              <fieldset className="space-y-2 rounded-lg border border-border-subtle p-3">
+                <legend className="px-1 text-[11px] font-semibold text-muted">
+                  {operationsEmployerDocumentSectionLabel(accountType)}
+                  <RequiredMark />
+                </legend>
+                <LabeledSelect
+                  id="documentType"
+                  label="Select Document"
+                  required
+                  value={form.documentType}
+                  options={[...operationsEmployerDocumentOptions(accountType)]}
+                  error={fieldErrors.documentType}
+                  onChange={(value) => {
+                    updateField("documentType", value);
+                    setDocumentPreview(null);
+                    setFieldErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.documentFile;
+                      return next;
+                    });
+                  }}
+                />
+                {form.documentType ? (
+                  <AddEmployerDocumentField
+                    preview={documentPreview}
+                    error={fieldErrors.documentFile}
+                    onPreviewChange={(preview) => {
+                      setDocumentPreview(preview);
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.documentFile;
+                        return next;
+                      });
+                    }}
+                    onInvalidFile={(message) => {
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        documentFile: message,
+                      }));
+                      setAlertMessage(message);
+                    }}
+                  />
+                ) : null}
+              </fieldset>
 
               <AddEmployerImageField
                 id={addEmployerImageFieldId(accountType)}

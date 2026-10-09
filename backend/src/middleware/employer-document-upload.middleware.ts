@@ -56,6 +56,7 @@ export const employerProfileUpdateUpload = employerUploadBase.fields([
 export const employerOperationsCompleteUpload = employerUploadBase.fields([
   { name: "companyLogo", maxCount: 1 },
   { name: "profilePhoto", maxCount: 1 },
+  { name: "document", maxCount: 1 },
 ]);
 
 /** Keep JSON complete-employer requests working when no photo is attached. */

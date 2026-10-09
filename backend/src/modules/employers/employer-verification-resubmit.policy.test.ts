@@ -32,8 +32,22 @@ describe("employer resubmission rules", () => {
       0,
     );
     assert.ok(errors.companyName);
-    assert.ok(errors.profile);
+    assert.equal(errors.profile, undefined);
     assert.ok(errors.document);
+  });
+
+  it("accepts profile details and a document when completion flags are stale", () => {
+    assert.deepEqual(
+      employerResubmitFieldErrors(
+        {
+          ...readyCompany,
+          isProfileComplete: false,
+          registrationStatus: "profile_incomplete",
+        },
+        1,
+      ),
+      {},
+    );
   });
 
   it("does not move a rejected employer to review just because a document was replaced", () => {

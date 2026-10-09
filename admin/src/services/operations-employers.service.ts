@@ -219,18 +219,12 @@ export async function verifyOperationsEmployerOtp(
 export async function completeOperationsEmployer(
   employerId: string,
   payload: CompleteOperationsEmployerInput,
-  imageFile?: File | null,
+  files: {
+    imageFile?: File | null;
+    documentFile: File;
+  },
 ): Promise<OperationsEmployerDetail> {
   const url = `${OPERATIONS_EMPLOYERS_BASE}/${encodeURIComponent(employerId)}/complete`;
-
-  if (!imageFile) {
-    const response = await apiClient.post<{ data: OperationsEmployerDetail }>(
-      url,
-      payload,
-    );
-    return response.data.data;
-  }
-
   const body = new FormData();
   body.append("accountType", payload.accountType);
   body.append("companyName", payload.companyName);
@@ -249,10 +243,14 @@ export async function completeOperationsEmployer(
   body.append("pincode", payload.pincode);
   body.append("city", payload.city);
   body.append("state", payload.state);
-  if (payload.accountType === "individual") {
-    body.append("profilePhoto", imageFile);
-  } else {
-    body.append("companyLogo", imageFile);
+  body.append("documentType", payload.documentType);
+  body.append("document", files.documentFile);
+  if (files.imageFile) {
+    if (payload.accountType === "individual") {
+      body.append("profilePhoto", files.imageFile);
+    } else {
+      body.append("companyLogo", files.imageFile);
+    }
   }
 
   const response = await apiClient.post<{ data: OperationsEmployerDetail }>(
