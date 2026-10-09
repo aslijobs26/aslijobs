@@ -8,8 +8,12 @@ import { PostJobHeader } from "@/components/post-job/PostJobHeader";
 import { ROUTES } from "@/constants/routes";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import { resolveEmployerJobPostingAccess } from "@/utils/employer-job-posting-access";
+import {
+  isEmployerAccountPostJobLink,
+  resolvePostJobDraftId,
+} from "@/utils/post-job-route";
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 type PostJobPageClientProps = {
   draftJobId?: string;
@@ -23,6 +27,18 @@ function PostJobAccessGate({ draftJobId }: PostJobPageClientProps) {
     router.replace(ROUTES.EMPLOYER_DASHBOARD);
   }, [router]);
 
+  const opensNewJobForm = isEmployerAccountPostJobLink(
+    draftJobId,
+    employer?.id,
+  );
+
+  useEffect(() => {
+    if (!opensNewJobForm) {
+      return;
+    }
+    window.history.replaceState(null, "", ROUTES.POST_JOB);
+  }, [opensNewJobForm]);
+
   if (!employer) {
     return <EmployerWorkspaceShellSkeleton />;
   }
@@ -30,6 +46,7 @@ function PostJobAccessGate({ draftJobId }: PostJobPageClientProps) {
   const isUnderReview =
     resolveEmployerJobPostingAccess(employer.verificationStatus) ===
     "under_review";
+  const jobDraftId = resolvePostJobDraftId(draftJobId, employer.id);
 
   return (
     <main className="flex min-h-dvh flex-col bg-hero-bg">
@@ -37,7 +54,7 @@ function PostJobAccessGate({ draftJobId }: PostJobPageClientProps) {
       {isUnderReview ? (
         <EmployerVerificationUnderReviewModal onClose={leaveToDashboard} />
       ) : (
-        <PostJobContent draftJobId={draftJobId} />
+        <PostJobContent draftJobId={jobDraftId} />
       )}
     </main>
   );

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --port 3000",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/utils/in-app-browser.test.ts src/utils/safe-return-url.test.ts src/utils/employer-rejection-resubmit.test.ts",
+    "test": "tsx --test src/utils/in-app-browser.test.ts src/utils/safe-return-url.test.ts src/utils/employer-rejection-resubmit.test.ts src/utils/post-job-route.test.ts",
     "lint": "eslint",
     "postinstall": "node scripts/patch-next-streaming-metadata.mjs"
   },
