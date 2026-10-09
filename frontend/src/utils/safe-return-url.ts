@@ -1,4 +1,5 @@
 import { ROUTES } from "@/constants/routes";
+import { resolveAccountApprovalPostJobDestination } from "@/utils/post-job-route";
 
 export const EMPLOYER_LOGIN_RETURN_URL_QUERY = "returnUrl";
 
@@ -43,8 +44,16 @@ export function getSafeReturnUrl(
 export function resolveEmployerPostLoginPath(
   candidate: string | null | undefined,
   fallbackPath: string = ROUTES.EMPLOYER_DASHBOARD,
+  employerId?: string | null,
 ): string {
-  return getSafeReturnUrl(candidate) ?? fallbackPath;
+  const safe = getSafeReturnUrl(candidate);
+  if (!safe) {
+    return fallbackPath;
+  }
+
+  return (
+    resolveAccountApprovalPostJobDestination(safe, employerId) ?? safe
+  );
 }
 
 export function buildEmployerLoginHref(returnUrl?: string): string {

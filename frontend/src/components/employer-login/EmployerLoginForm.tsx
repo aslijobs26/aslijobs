@@ -5,6 +5,7 @@ import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { EmployerRegisterOtpInput } from "@/components/employer-register/EmployerRegisterOtpInput";
 import { useAuthMessageTranslator } from "@/components/employer-register/useAuthMessageTranslator";
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
+import { ROUTES } from "@/constants/routes";
 import { EMPLOYER_LOGIN_OTP_LENGTH } from "@/constants/employer-login";
 import { isValidEmployerWhatsappNumber } from "@/constants/employer-register";
 import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
@@ -215,6 +216,8 @@ export function EmployerLoginForm() {
       router.replace(
         resolveEmployerPostLoginPath(
           searchParams.get(EMPLOYER_LOGIN_RETURN_URL_QUERY),
+          ROUTES.EMPLOYER_DASHBOARD,
+          session.employer.id,
         ),
       );
     } catch (error) {

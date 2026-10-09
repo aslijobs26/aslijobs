@@ -36,10 +36,10 @@ function PostJobAccessGate({ draftJobId }: PostJobPageClientProps) {
     if (!opensNewJobForm) {
       return;
     }
-    window.history.replaceState(null, "", ROUTES.POST_JOB);
-  }, [opensNewJobForm]);
+    router.replace(ROUTES.POST_JOB);
+  }, [opensNewJobForm, router]);
 
-  if (!employer) {
+  if (!employer || opensNewJobForm) {
     return <EmployerWorkspaceShellSkeleton />;
   }
 
