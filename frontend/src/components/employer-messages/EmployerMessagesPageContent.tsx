@@ -138,6 +138,18 @@ function isEmployerAlignedNotification(type: NotificationType): boolean {
   }
 }
 
+function isRejectionNotification(type: NotificationType): boolean {
+  switch (type) {
+    case "application_rejected":
+    case "job_rejected":
+    case "job_live_changes_rejected":
+    case "employer_verification_rejected":
+      return true;
+    default:
+      return false;
+  }
+}
+
 function notificationBadgeLabel(type: NotificationType): string {
   switch (type) {
     case "application_received":
@@ -375,6 +387,7 @@ function MessageBubble({
   const employerSide = isOutgoingTimelineItem(message);
   const Icon = notificationIcon(message.type);
   const badge = notificationBadgeLabel(message.type);
+  const rejection = isRejectionNotification(message.type);
 
   return (
     <li
@@ -396,17 +409,35 @@ function MessageBubble({
       >
         <div className="mb-0.5 flex flex-wrap items-center gap-1 sm:gap-1.5">
           <Icon
-            className="size-3 shrink-0 text-primary sm:size-3.5"
+            className={cn(
+              "size-3 shrink-0 sm:size-3.5",
+              rejection ? "text-pin-state" : "text-primary",
+            )}
             aria-hidden="true"
           />
-          <h3 className="text-xs font-semibold leading-[1.2] tracking-[0.01em] text-foreground sm:text-[0.8125rem]">
+          <h3
+            className={cn(
+              "text-xs font-semibold leading-[1.2] tracking-[0.01em] sm:text-[0.8125rem]",
+              rejection ? "text-pin-state" : "text-foreground",
+            )}
+          >
             {message.title}
           </h3>
-          <span className="inline-flex shrink-0 items-center rounded px-1 py-px text-[0.5625rem] font-medium leading-4 text-primary sm:px-1.5 sm:text-[0.625rem]">
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center rounded px-1 py-px text-[0.5625rem] font-medium leading-4 sm:px-1.5 sm:text-[0.625rem]",
+              rejection ? "text-pin-state" : "text-primary",
+            )}
+          >
             {badge}
           </span>
         </div>
-        <p className="whitespace-pre-wrap text-xs leading-[1.35] text-foreground [overflow-wrap:anywhere] sm:text-[0.875rem]">
+        <p
+          className={cn(
+            "whitespace-pre-wrap text-xs leading-[1.35] [overflow-wrap:anywhere] sm:text-[0.875rem]",
+            rejection ? "text-pin-state" : "text-foreground",
+          )}
+        >
           {message.body}
           <span
             className="float-right clear-both ml-2.5 mt-1 inline-flex h-[14px] items-center gap-[3px] text-[0.625rem] leading-none text-muted sm:ml-3 sm:h-[15px] sm:text-[0.6875rem]"
@@ -1626,7 +1657,16 @@ export function EmployerMessagesPageContent() {
                             {statusLabel(conversation.applicationStatus)}
                           </span>
                           <span className="mt-0.5 flex items-center justify-between gap-2">
-                            <span className="truncate text-[11px] font-normal text-foreground/80 sm:text-xs lg:text-[0.6875rem]">
+                            <span
+                              className={cn(
+                                "truncate text-[11px] font-normal sm:text-xs lg:text-[0.6875rem]",
+                                isRejectionNotification(
+                                  conversation.latestNotification.type,
+                                )
+                                  ? "text-pin-state"
+                                  : "text-foreground/80",
+                              )}
+                            >
                               {conversation.latestNotification.title}
                             </span>
                             {conversation.unreadCount > 0 ? (

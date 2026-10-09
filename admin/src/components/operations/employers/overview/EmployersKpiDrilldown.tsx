@@ -35,6 +35,7 @@ interface EmployersKpiDrilldownProps {
   onVerify: (employer: OperationsEmployerListItem) => void;
   onReject: (employer: OperationsEmployerListItem) => void;
   onToggleStatus: (employer: OperationsEmployerListItem) => void;
+  onDelete: (employer: OperationsEmployerListItem) => void;
 }
 
 export function EmployersKpiDrilldown({
@@ -47,6 +48,7 @@ export function EmployersKpiDrilldown({
   onVerify,
   onReject,
   onToggleStatus,
+  onDelete,
 }: EmployersKpiDrilldownProps) {
   const view = EMPLOYER_OVERVIEW_KPI_VIEWS[kpi];
   const [page, setPage] = useState(1);
@@ -116,6 +118,7 @@ export function EmployersKpiDrilldown({
         onVerify={onVerify}
         onReject={onReject}
         onToggleStatus={onToggleStatus}
+        onDelete={onDelete}
         emptyTitle={view.emptyMessage}
         emptyDescription={
           hasFilters

@@ -26,6 +26,7 @@ import { OperationsLayout } from "../components/operations/layout/OperationsLayo
 import { OperationsOverviewSplit } from "../components/operations/layout/OperationsOverviewSplit";
 import { EMPLOYER_OVERVIEW_KPI_VIEWS } from "../constants/operations-employers-overview";
 import {
+  useDeleteOperationsEmployerMutation,
   useExportOperationsEmployersCsv,
   useOperationsEmployers,
   useOperationsEmployersAnalytics,
@@ -229,6 +230,7 @@ export function OperationsEmployersPage() {
     enabled: activeKpi == null,
   });
   const exportMutation = useExportOperationsEmployersCsv();
+  const deleteMutation = useDeleteOperationsEmployerMutation();
   const verifyMutation = useUpdateOperationsEmployerVerification(
     selectedEmployer?.id,
   );
@@ -342,6 +344,38 @@ export function OperationsEmployersPage() {
   const handleExport = () => {
     void exportMutation.mutateAsync(exportParams).catch(() => {
       // surfaced via mutation error state below if needed
+    });
+  };
+
+  const handleDeleteEmployer = (employer: OperationsEmployerListItem) => {
+    if (deleteMutation.isPending) {
+      return;
+    }
+
+    const name = employer.displayName.trim() || employer.displayId;
+    const confirmed = window.confirm(
+      `Delete ${name}? This permanently removes the employer account from the database.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    deleteMutation.mutate(employer.id, {
+      onSuccess: () => {
+        if (selectedEmployer?.id === employer.id) {
+          handleCloseModal();
+        }
+      },
+      onError: (error) => {
+        if (isAxiosError(error)) {
+          const message = error.response?.data?.message;
+          if (typeof message === "string" && message.trim()) {
+            window.alert(message.trim());
+            return;
+          }
+        }
+        window.alert("Failed to delete employer account.");
+      },
     });
   };
 
@@ -511,6 +545,7 @@ export function OperationsEmployersPage() {
                 onVerify={handleOpenVerify}
                 onReject={handleOpenReject}
                 onToggleStatus={handleOpenToggleStatus}
+                onDelete={handleDeleteEmployer}
               />
             ) : (
               <>
@@ -568,6 +603,7 @@ export function OperationsEmployersPage() {
                       onVerify={handleOpenVerify}
                       onReject={handleOpenReject}
                       onToggleStatus={handleOpenToggleStatus}
+                      onDelete={handleDeleteEmployer}
                       toolbar={
                         <div className="flex min-w-0 flex-col gap-2.5 xl:gap-2">
                           <EmployersOverviewTabs

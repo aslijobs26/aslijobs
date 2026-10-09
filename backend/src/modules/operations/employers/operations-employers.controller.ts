@@ -277,6 +277,29 @@ export const operationsEmployersController = {
     file.stream.pipe(res);
   },
 
+  async remove(req: Request, res: Response): Promise<void> {
+    assertOperationsPermissionKey(
+      requireAccess(req),
+      "employers.profile.actions.delete",
+    );
+
+    const operationsUserId = req.operationsUserId;
+    if (!operationsUserId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const { employerId } = req.params as OperationsEmployerIdParams;
+    const result = await operationsEmployersService.deleteEmployer(
+      employerId,
+      operationsUserId,
+    );
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Employer account deleted successfully.",
+      data: result,
+    });
+  },
+
   async updateStatus(req: Request, res: Response): Promise<void> {
     const body = req.body as UpdateOperationsEmployerStatusBody;
     const key =

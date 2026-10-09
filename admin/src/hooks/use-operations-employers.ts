@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import {
   completeOperationsEmployer,
+  deleteOperationsEmployer,
   exportOperationsEmployersCsv,
   fetchOperationsEmployerDetail,
   fetchOperationsEmployerJobs,
@@ -27,6 +28,7 @@ import type {
   UpdateOperationsEmployerVerificationInput,
 } from "../types/operations-employers";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
+import { OPERATIONS_JOBS_QUERY_KEY } from "./use-operations-jobs";
 import { OPERATIONS_REGISTRATION_AWARENESS_QUERY_KEY } from "./use-operations-registration-awareness";
 import { OPERATIONS_VERIFICATIONS_QUERY_KEY } from "./use-operations-verifications";
 
@@ -171,6 +173,34 @@ export function useExportOperationsEmployersCsv() {
   return useMutation({
     mutationFn: (params: OperationsEmployersExportParams) =>
       exportOperationsEmployersCsv(params),
+  });
+}
+
+export function useDeleteOperationsEmployerMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (employerId: string) => deleteOperationsEmployer(employerId),
+    onSuccess: async (_data, employerId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: OPERATIONS_EMPLOYERS_QUERY_KEY,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: OPERATIONS_EMPLOYERS_ANALYTICS_QUERY_KEY,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: OPERATIONS_VERIFICATIONS_QUERY_KEY,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: OPERATIONS_REGISTRATION_AWARENESS_QUERY_KEY,
+        }),
+        queryClient.invalidateQueries({ queryKey: OPERATIONS_JOBS_QUERY_KEY }),
+        queryClient.invalidateQueries({
+          queryKey: [...OPERATIONS_EMPLOYERS_QUERY_KEY, "detail", employerId],
+        }),
+      ]);
+    },
   });
 }
 

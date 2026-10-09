@@ -128,11 +128,13 @@ function employerCatalog(): OperationsPermissionDefinition[] {
   const profileActions: Array<{
     action: string;
     label: string;
+    mapsToAction?: OperationsPermissionAction;
   }> = [
     { action: "verify", label: "Verify" },
     { action: "reject", label: "Reject" },
     { action: "suspend", label: "Suspend" },
     { action: "activate", label: "Activate" },
+    { action: "delete", label: "Delete", mapsToAction: "delete" },
   ];
 
   return [
@@ -196,7 +198,7 @@ function employerCatalog(): OperationsPermissionDefinition[] {
         section: "actions",
         action: item.action,
         label: `Employers · ${item.label}`,
-        mapsToAction: "update",
+        mapsToAction: item.mapsToAction ?? "update",
       }),
     ),
   ];
@@ -1029,3 +1031,6 @@ export const JOB_STATUS_ACTION_PERMISSION_KEYS = {
 } as const;
 
 export const JOB_DELETE_PERMISSION_KEY = "jobs.detail.actions.delete" as const;
+
+export const EMPLOYER_DELETE_PERMISSION_KEY =
+  "employers.profile.actions.delete" as const;

@@ -96,6 +96,14 @@ export async function updateOperationsEmployerVerification(
   return response.data.data;
 }
 
+export async function deleteOperationsEmployer(
+  employerId: string,
+): Promise<void> {
+  await apiClient.delete(
+    `${OPERATIONS_EMPLOYERS_BASE}/${encodeURIComponent(employerId)}`,
+  );
+}
+
 export async function updateOperationsEmployerStatus(
   employerId: string,
   payload: UpdateOperationsEmployerStatusInput,

@@ -28,6 +28,7 @@ interface EmployersTableSectionProps {
   onVerify?: (employer: OperationsEmployerListItem) => void;
   onReject?: (employer: OperationsEmployerListItem) => void;
   onToggleStatus?: (employer: OperationsEmployerListItem) => void;
+  onDelete?: (employer: OperationsEmployerListItem) => void;
   toolbar?: ReactNode;
   emptyTitle?: string;
   emptyDescription?: string;
@@ -65,6 +66,7 @@ export function EmployersTableSection({
   onVerify,
   onReject,
   onToggleStatus,
+  onDelete,
   toolbar,
   emptyTitle = "No employers found",
   emptyDescription = "Try adjusting your search or tab filters.",
@@ -133,6 +135,7 @@ export function EmployersTableSection({
               onVerify={onVerify}
               onReject={onReject}
               onToggleStatus={onToggleStatus}
+              onDelete={onDelete}
             />
           ))}
       </ul>
@@ -301,6 +304,7 @@ export function EmployersTableSection({
                         onVerify={onVerify}
                         onReject={onReject}
                         onToggleStatus={onToggleStatus}
+                        onDelete={onDelete}
                       />
                     </td>
                   </tr>

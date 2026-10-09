@@ -111,6 +111,13 @@ operationsEmployersRouter.patch(
   asyncHandler(operationsEmployersController.updateVerification),
 );
 
+operationsEmployersRouter.delete(
+  "/:employerId",
+  requireOperationsPermission("employers", "delete"),
+  validate(operationsEmployerIdParamsSchema, "params"),
+  asyncHandler(operationsEmployersController.remove),
+);
+
 operationsEmployersRouter.patch(
   "/:employerId/status",
   requireOperationsPermission("employers", "update"),

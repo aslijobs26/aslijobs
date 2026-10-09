@@ -7,6 +7,7 @@ import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-i
 import { EmployerModel } from "../../employers/employer.model.js";
 import { employerService } from "../../employers/employer.service.js";
 import type { CompleteOperationsEmployerProfileFiles } from "../../employers/employer.types.js";
+import { deleteOperationsEmployerAccount } from "./operations-employer-delete.js";
 import { openEmployerDocumentFile } from "../../employers/employer-document.file.js";
 import { EmployerDocumentModel } from "../../employers/employer-document.model.js";
 import { JobModel } from "../../jobs/job.model.js";
@@ -1468,6 +1469,30 @@ export const operationsEmployersService = {
   ): Promise<OperationsEmployerDetail> {
     await employerService.completeOperationsEmployerProfile(input, files);
     return this.getEmployerById(input.employerId);
+  },
+
+  async deleteEmployer(
+    employerId: string,
+    operationsUserId: string,
+  ): Promise<{ employerId: string }> {
+    const deleted = await deleteOperationsEmployerAccount(employerId);
+    const opsUserObjectId = new mongoose.Types.ObjectId(operationsUserId);
+    const actor = await OperationsTeamUserModel.findById(opsUserObjectId)
+      .select("fullName")
+      .lean();
+
+    await recordOperationsAuditEvent({
+      actorUserId: opsUserObjectId,
+      actorName: text(actor?.fullName) || "Operations",
+      action: "employer.account_deleted",
+      targetType: "employer",
+      targetId: deleted.employerId,
+      targetLabel: deleted.displayName,
+      previousState: { exists: true },
+      nextState: { exists: false },
+    });
+
+    return { employerId: deleted.employerId };
   },
 
   async exportEmployers(

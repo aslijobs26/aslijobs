@@ -7,6 +7,7 @@ import {
   MoreVertical,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import {
   useEffect,
@@ -32,10 +33,11 @@ interface EmployersRowActionsProps {
   onVerify?: (employer: OperationsEmployerListItem) => void;
   onReject?: (employer: OperationsEmployerListItem) => void;
   onToggleStatus?: (employer: OperationsEmployerListItem) => void;
+  onDelete?: (employer: OperationsEmployerListItem) => void;
 }
 
 const MENU_WIDTH_PX = 200;
-const MENU_ESTIMATED_HEIGHT_PX = 230;
+const MENU_ESTIMATED_HEIGHT_PX = 280;
 const DROPDOWN_GAP_PX = 4;
 
 export function EmployersRowActions({
@@ -43,6 +45,7 @@ export function EmployersRowActions({
   onVerify,
   onReject,
   onToggleStatus,
+  onDelete,
 }: EmployersRowActionsProps) {
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -253,6 +256,24 @@ export function EmployersRowActions({
           <Copy className="size-3.5 shrink-0" aria-hidden="true" />
           {copiedText === "phone" ? "Copied Phone!" : "Copy Phone"}
         </button>
+      ) : null}
+
+      {onDelete ? (
+        <OperationsCanKey permissionKey="employers.profile.actions.delete">
+          <div className="my-1 border-t border-border-subtle" />
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              onDelete(employer);
+            }}
+            role="menuitem"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-danger transition-colors hover:bg-danger/10"
+          >
+            <Trash2 className="size-3.5 shrink-0" aria-hidden="true" />
+            Delete
+          </button>
+        </OperationsCanKey>
       ) : null}
     </div>
   ) : null;

@@ -26,6 +26,7 @@ interface EmployersMobileCardProps {
   onVerify?: (employer: OperationsEmployerListItem) => void;
   onReject?: (employer: OperationsEmployerListItem) => void;
   onToggleStatus?: (employer: OperationsEmployerListItem) => void;
+  onDelete?: (employer: OperationsEmployerListItem) => void;
 }
 
 function AccountStatusDot({
@@ -124,6 +125,7 @@ export function EmployersMobileCard({
   onVerify,
   onReject,
   onToggleStatus,
+  onDelete,
 }: EmployersMobileCardProps) {
   const logoUrl = resolveMediaUrl(employer.logoUrl);
   const profilePath = operationsEmployerDetailPath(employer.id);
@@ -188,6 +190,7 @@ export function EmployersMobileCard({
               onVerify={onVerify}
               onReject={onReject}
               onToggleStatus={onToggleStatus}
+              onDelete={onDelete}
             />
           </div>
         </div>
