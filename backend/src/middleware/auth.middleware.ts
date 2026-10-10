@@ -95,3 +95,47 @@ export async function requireEmployerAuth(
     );
   }
 }
+
+/**
+ * Attaches an employer workspace id when a valid employer or team token is
+ * present. Anonymous and job-seeker requests continue without it.
+ */
+export async function optionalWorkspaceAuth(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (req.employerId || req.jobSeekerId) {
+      next();
+      return;
+    }
+
+    const token = extractBearerToken(req);
+    if (!token) {
+      next();
+      return;
+    }
+
+    const payload = jwtService.verifyWorkspaceAccessToken(token);
+    const employerId =
+      payload.role === "employer" ? payload.sub : payload.employerId;
+    if (!employerId || !mongooseIdLooksValid(employerId)) {
+      next();
+      return;
+    }
+
+    const employer = await EmployerModel.findById(employerId).select("_id");
+    if (employer) {
+      req.employerId = employer._id.toString();
+    }
+  } catch {
+    // Ignore invalid or non-workspace tokens on public routes.
+  }
+
+  next();
+}
+
+function mongooseIdLooksValid(value: string): boolean {
+  return /^[a-f\d]{24}$/i.test(value);
+}

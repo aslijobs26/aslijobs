@@ -301,6 +301,7 @@ export class JobController {
       visitorType: visitor.visitorType,
       visitorId: visitor.visitorId,
       language: typeof req.query.language === "string" ? req.query.language : "",
+      revealRecruiterContact: Boolean(req.jobSeekerId || req.employerId),
     });
 
     if (visitor.shouldSetGuestCookie) {
@@ -320,6 +321,9 @@ export class JobController {
       publicJobId,
       query,
       req.jobSeekerId,
+      {
+        revealRecruiterContact: Boolean(req.jobSeekerId || req.employerId),
+      },
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {
@@ -333,6 +337,9 @@ export class JobController {
     const result = await jobService.listPublicActiveJobs(
       query,
       req.jobSeekerId,
+      {
+        revealRecruiterContact: Boolean(req.jobSeekerId || req.employerId),
+      },
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {

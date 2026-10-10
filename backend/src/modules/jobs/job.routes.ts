@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { requireEmployerAuth } from "../../middleware/auth.middleware.js";
+import {
+  optionalWorkspaceAuth,
+  requireEmployerAuth,
+} from "../../middleware/auth.middleware.js";
 import { requirePermission } from "../../middleware/permission.middleware.js";
 import { optionalJobSeekerAuth } from "../../middleware/job-seeker-auth.middleware.js";
 import { validate } from "../../middleware/validate.middleware.js";
@@ -24,6 +27,7 @@ const jobRouter = Router();
 jobRouter.get(
   "/public",
   asyncHandler(optionalJobSeekerAuth),
+  asyncHandler(optionalWorkspaceAuth),
   validate(publicJobsQuerySchema, "query"),
   asyncHandler(jobController.listPublic),
 );
@@ -31,6 +35,7 @@ jobRouter.get(
 jobRouter.get(
   "/public/:publicJobId/similar",
   asyncHandler(optionalJobSeekerAuth),
+  asyncHandler(optionalWorkspaceAuth),
   validate(publicJobIdParamsSchema, "params"),
   validate(similarPublicJobsQuerySchema, "query"),
   asyncHandler(jobController.listSimilarPublic),
@@ -39,6 +44,7 @@ jobRouter.get(
 jobRouter.get(
   "/public/:publicJobId",
   asyncHandler(optionalJobSeekerAuth),
+  asyncHandler(optionalWorkspaceAuth),
   validate(publicJobIdParamsSchema, "params"),
   asyncHandler(jobController.getPublicByPublicId),
 );

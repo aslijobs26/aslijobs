@@ -117,8 +117,9 @@ function resolveAuthRealm(
     requestUrl.includes("/saved-jobs") ||
     isPublicJobsRequest;
 
-  // Public jobs use optional job-seeker auth only — never attach an employer
-  // Bearer token (that forces CORS preflight and is the wrong principal).
+  // Public jobs prefer a job-seeker token. An employer token is attached
+  // only when no job-seeker session exists, so signed-in employers can see
+  // recruiter contact that stays masked for guests.
   if (isPublicJobsRequest) {
     return "job-seeker";
   }
@@ -217,7 +218,8 @@ apiClient.interceptors.request.use((config) => {
     const accessToken =
       realm === "job-seeker"
         ? getJobSeekerAccessToken() ||
-          (requestUrl.includes("/notifications")
+          (requestUrl.includes("/notifications") ||
+          requestUrl.includes("/jobs/public")
             ? getEmployerAccessToken()
             : null)
         : getEmployerAccessToken();

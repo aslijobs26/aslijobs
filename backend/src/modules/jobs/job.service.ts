@@ -41,6 +41,7 @@ import {
   jobPostSubmittedWhatsApp,
 } from "../whatsapp/notifications/job-post-whatsapp.notification.js";
 import { jobPostIncompleteReminder } from "../whatsapp/notifications/job-post-incomplete-reminder.service.js";
+import { presentPublicRecruiterContact } from "./public-job-recruiter-contact.js";
 import {
   cascadeDeleteOwnedJobs,
   ensureEmployerJobRelationsConsistent,
@@ -1172,7 +1173,12 @@ async function loadEmployerPosterImageMap(
 
 function toPublicJobListItem(
   job: JobDocument | Record<string, unknown>,
-  options?: { isApplied?: boolean; companyLogoUrl?: string; language?: string | null },
+  options?: {
+    isApplied?: boolean;
+    companyLogoUrl?: string;
+    language?: string | null;
+    revealRecruiterContact?: boolean;
+  },
 ) {
   const localized = resolveJobContent(
     {
@@ -1228,9 +1234,17 @@ function toPublicJobListItem(
     publishedAt: toIsoDateString(
       publishedAtValue as Date | string | null | undefined,
     ),
-    applyWhatsAppNumber: toPublicApplyWhatsAppNumber(
-      job.contactMobile as string | null | undefined,
-    ),
+    applyWhatsAppNumber: presentPublicRecruiterContact(
+      {
+        contactPersonName: null,
+        contactEmail: null,
+        contactMobile: null,
+        applyWhatsAppNumber: toPublicApplyWhatsAppNumber(
+          job.contactMobile as string | null | undefined,
+        ),
+      },
+      options?.revealRecruiterContact === true,
+    ).applyWhatsAppNumber,
     createdAt:
       toIsoDateString(createdAtValue as Date | string | null | undefined) ??
       new Date(0).toISOString(),
@@ -2266,6 +2280,7 @@ export class JobService {
       visitorType?: "guest" | "jobSeeker";
       visitorId?: string;
       language?: string | null;
+      revealRecruiterContact?: boolean;
     },
   ) {
     const job = await JobModel.findOne({
@@ -2308,6 +2323,8 @@ export class JobService {
     });
 
     const jobSeekerId = options?.jobSeekerId;
+    const revealRecruiterContact =
+      options?.revealRecruiterContact ?? Boolean(jobSeekerId);
     let views = job.views ?? 0;
 
     if (options?.visitorId && options.visitorType) {
@@ -2329,12 +2346,23 @@ export class JobService {
     const posterImageMap = await loadEmployerPosterImageMap([job]);
     const localizedContent = translation.content;
 
+    const recruiterContact = presentPublicRecruiterContact(
+      {
+        contactPersonName: job.contactPersonName?.trim() || null,
+        contactEmail: job.contactEmail?.trim() || null,
+        contactMobile: job.contactMobile?.trim() || null,
+        applyWhatsAppNumber: null,
+      },
+      revealRecruiterContact,
+    );
+
     return {
       job: {
         ...toPublicJobListItem(job, {
           isApplied: appliedIds.has(job._id.toString()),
           companyLogoUrl: posterImageMap.get(getJobEmployerId(job)) ?? "",
           language: options?.language,
+          revealRecruiterContact,
         }),
         jobTitle: localizedContent.jobTitle,
         // Detail views render the full description; the list payload is truncated.
@@ -2353,9 +2381,9 @@ export class JobService {
         walkInStartTime: job.walkInStartTime,
         walkInEndTime: job.walkInEndTime,
         interviewInstructions: localizedContent.interviewInstructions,
-        contactPersonName: job.contactPersonName?.trim() || null,
-        contactEmail: job.contactEmail?.trim() || null,
-        contactMobile: job.contactMobile?.trim() || null,
+        contactPersonName: recruiterContact.contactPersonName,
+        contactEmail: recruiterContact.contactEmail,
+        contactMobile: recruiterContact.contactMobile,
         language: translation.language,
         sourceLanguage: translation.sourceLanguage,
         contentLanguage: resolveDisplayedContentLanguage(
@@ -2374,6 +2402,7 @@ export class JobService {
     publicJobId: string,
     query: SimilarPublicJobsQuery,
     jobSeekerId?: string,
+    options?: { revealRecruiterContact?: boolean },
   ) {
     const sourceJob = await JobModel.findOne({
       jobId: publicJobId.toUpperCase(),
@@ -2504,6 +2533,8 @@ export class JobService {
         companyLogoUrl:
           posterImageMap.get(getJobEmployerId(entry.candidate)) ?? "",
         language: query.language,
+        revealRecruiterContact:
+          options?.revealRecruiterContact ?? Boolean(jobSeekerId),
       }),
     );
 
@@ -2515,6 +2546,7 @@ export class JobService {
   async listPublicActiveJobs(
     query: PublicJobsQuery,
     jobSeekerId?: string,
+    options?: { revealRecruiterContact?: boolean },
   ) {
     const filter = buildPublicJobsFilter(query);
     const skip = (query.page - 1) * query.limit;
@@ -2646,6 +2678,8 @@ export class JobService {
         isApplied: appliedIds.has(String(job._id)),
         companyLogoUrl: posterImageMap.get(getJobEmployerId(job)) ?? "",
         language: query.language,
+        revealRecruiterContact:
+          options?.revealRecruiterContact ?? Boolean(jobSeekerId),
       }),
     );
 

@@ -47,6 +47,8 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { getPublicJobsViewerKey } from "@/utils/auth-realm";
+import { EMPLOYER_AUTH_CHANGE_EVENT } from "@/utils/employer-auth-storage";
 import {
   getJobSeekerAccessToken,
   JOB_SEEKER_AUTH_CHANGE_EVENT,
@@ -101,9 +103,11 @@ export function JobSearchPageContent() {
   useEffect(() => {
     const bump = () => setSeekerAuthEpoch((value) => value + 1);
     window.addEventListener(JOB_SEEKER_AUTH_CHANGE_EVENT, bump);
+    window.addEventListener(EMPLOYER_AUTH_CHANGE_EVENT, bump);
     window.addEventListener("storage", bump);
     return () => {
       window.removeEventListener(JOB_SEEKER_AUTH_CHANGE_EVENT, bump);
+      window.removeEventListener(EMPLOYER_AUTH_CHANGE_EVENT, bump);
       window.removeEventListener("storage", bump);
     };
   }, []);
@@ -173,7 +177,7 @@ export function JobSearchPageContent() {
     [siteLanguage.code, urlState],
   );
 
-  const seekerAuthKey = getJobSeekerAccessToken() ? "seeker" : "anon";
+  const seekerAuthKey = getPublicJobsViewerKey();
   const isJobsQueryEnabled = shouldEnablePublicJobsQuery(isLanguageReady);
 
   const jobsQuery = useQuery({

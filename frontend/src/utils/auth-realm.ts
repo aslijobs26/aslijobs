@@ -38,3 +38,14 @@ export function isEmployerAuthActive(): boolean {
 export function isJobSeekerAuthActive(): boolean {
   return getActiveAuthRealm() === "job-seeker";
 }
+
+/** Cache key for public job queries so login refetches unmasked recruiter contact. */
+export function getPublicJobsViewerKey(): "seeker" | "employer" | "anon" {
+  if (getJobSeekerAccessToken()?.trim()) {
+    return "seeker";
+  }
+  if (getEmployerAccessToken()?.trim()) {
+    return "employer";
+  }
+  return "anon";
+}
