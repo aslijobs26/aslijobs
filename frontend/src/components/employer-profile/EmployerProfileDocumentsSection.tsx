@@ -3,12 +3,10 @@
 import { EmployerProfileDialog } from "@/components/employer-profile/EmployerProfileDialog";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import {
-  EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS,
   EMPLOYER_REGISTER_DOCUMENT_ACCEPT,
   EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES,
-  EMPLOYER_REGISTER_DOCUMENT_TYPE_OPTIONS,
   EMPLOYER_REGISTER_DOCUMENT_UPLOAD_HINT,
-  isBusinessEmployerAccountType,
+  employerRegisterDocumentOptionsForAccount,
 } from "@/constants/employer-register";
 import { employerProfileQueryKey } from "@/services/employer-login.service";
 import {
@@ -129,10 +127,7 @@ export function EmployerProfileDocumentsSection({
   const queryClient = useQueryClient();
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isBusiness = isBusinessEmployerAccountType(accountType);
-  const documentOptions = isBusiness
-    ? EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS
-    : EMPLOYER_REGISTER_DOCUMENT_TYPE_OPTIONS;
+  const documentOptions = employerRegisterDocumentOptionsForAccount(accountType);
 
   const [editor, setEditor] = useState<{
     mode: DocumentEditorMode;
@@ -208,8 +203,13 @@ export function EmployerProfileDocumentsSection({
   }
 
   function openReupload(doc: EmployerVerificationDocument) {
+    const allowed = employerRegisterDocumentOptionsForAccount(accountType);
     setEditor({ mode: "reupload", document: doc });
-    setDocumentType(doc.documentType);
+    setDocumentType(
+      allowed.some((option) => option.value === doc.documentType)
+        ? doc.documentType
+        : "",
+    );
     setSelectedFile(null);
     setFormError(null);
   }
@@ -291,7 +291,8 @@ export function EmployerProfileDocumentsSection({
     setPreview(null);
   }
 
-  const title = isBusiness
+  const isBusinessAccount = accountType !== "individual";
+  const title = isBusinessAccount
     ? "Verification Documents"
     : "Identity Documents";
 
@@ -317,8 +318,8 @@ export function EmployerProfileDocumentsSection({
 
       <div className="p-4">
         <p className="text-xs leading-5 text-muted">
-          {isBusiness
-            ? "Documents uploaded during company registration are stored here. Reupload if Operations asked for a clearer copy."
+          {isBusinessAccount
+            ? "Documents uploaded during registration are stored here. Reupload if Operations asked for a clearer copy."
             : "Identity documents uploaded during registration are stored here. Reupload if Operations asked for a clearer copy."}
         </p>
 

@@ -176,7 +176,7 @@ export const EMPLOYER_REGISTER_DOCUMENT_TYPE_OPTIONS: ReadonlyArray<{
   { value: "voter-id", label: "Voter ID" },
 ] as const;
 
-export const EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS: ReadonlyArray<{
+export const EMPLOYER_REGISTER_COMPANY_DOCUMENT_OPTIONS: ReadonlyArray<{
   value: EmployerRegisterBusinessDocumentType;
   label: string;
 }> = [
@@ -210,6 +210,43 @@ export const EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS: ReadonlyArray<{
     label: "Other Government Registration",
   },
 ] as const;
+
+/** Same documents the consultancy registration step collects. */
+export const EMPLOYER_REGISTER_CONSULTANCY_DOCUMENT_OPTIONS: ReadonlyArray<{
+  value: EmployerRegisterBusinessDocumentType;
+  label: string;
+}> = [
+  { value: "gst-certificate", label: "GST Certificate" },
+  {
+    value: "msme-udyam-registration",
+    label: "MSME / Udyam Registration",
+  },
+  {
+    value: "shop-establishment-license",
+    label: "Shop & Establishment License",
+  },
+  { value: "trade-license", label: "Trade License" },
+  { value: "pan-card-business", label: "PAN Card (Business)" },
+  {
+    value: "other-government-registration",
+    label: "Other Government Registration",
+  },
+] as const;
+
+export const EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS =
+  EMPLOYER_REGISTER_COMPANY_DOCUMENT_OPTIONS;
+
+export function employerRegisterDocumentOptionsForAccount(
+  accountType: EmployerRegisterAccountType,
+): ReadonlyArray<{ value: string; label: string }> {
+  if (accountType === "individual") {
+    return EMPLOYER_REGISTER_DOCUMENT_TYPE_OPTIONS;
+  }
+  if (accountType === "consultancy") {
+    return EMPLOYER_REGISTER_CONSULTANCY_DOCUMENT_OPTIONS;
+  }
+  return EMPLOYER_REGISTER_COMPANY_DOCUMENT_OPTIONS;
+}
 
 export const EMPLOYER_REGISTER_INDUSTRY_OPTIONS: readonly EmployerRegisterSelectOption[] =
   [

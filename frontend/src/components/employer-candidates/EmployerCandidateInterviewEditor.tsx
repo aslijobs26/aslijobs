@@ -5,8 +5,17 @@ import {
   type EmployerApplicationDetail,
 } from "@/types/employer-applications";
 import type { ApplicationInterview } from "@/types/job-seeker-applications";
+import {
+  computeAnchoredDropdownPosition,
+  readSafeAreaInsets,
+  readVisibleViewportSize,
+  type AnchoredDropdownPosition,
+} from "@/utils/anchored-dropdown-position";
 import { cn } from "@/utils/cn";
-import { useEffect, useState } from "react";
+import { PostJobDatePicker } from "@/components/post-job/PostJobDatePicker";
+import { Check, ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export const EMPLOYER_INTERVIEW_INSTRUCTIONS_MAX_LENGTH = 1000;
 
@@ -60,6 +69,272 @@ const HOUR_OPTIONS = Array.from({ length: 12 }, (_, index) =>
 const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, index) =>
   String(index).padStart(2, "0"),
 );
+
+const INTERVIEW_OPTION_MENU_EVENT = "aslijobs:interview-option-menu";
+
+const INTERVIEW_MODE_OPTIONS: {
+  value: ApplicationInterview["mode"];
+  label: string;
+}[] = [
+  { value: "", label: "Select" },
+  { value: "online", label: "Online" },
+  { value: "offline", label: "Offline" },
+  { value: "phone", label: "Phone" },
+];
+
+type InterviewOption<T extends string> = {
+  value: T;
+  label: string;
+};
+
+function InterviewOptionSelect<T extends string>({
+  id,
+  label,
+  value,
+  options,
+  disabled,
+  invalid,
+  triggerClassName,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: T;
+  options: readonly InterviewOption<T>[];
+  disabled: boolean;
+  invalid: boolean;
+  triggerClassName?: string;
+  onChange: (value: T) => void;
+}) {
+  const listboxId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const didScrollSelectionRef = useRef(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState<AnchoredDropdownPosition | null>(
+    null,
+  );
+  const selected =
+    options.find((option) => option.value === value) ?? options[0]!;
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const list = listRef.current;
+    if (!trigger || !list) {
+      return;
+    }
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const viewport = readVisibleViewportSize();
+    const next = computeAnchoredDropdownPosition({
+      anchorRect: triggerRect,
+      contentWidth: triggerRect.width,
+      contentHeight: list.scrollHeight,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
+      insets: readSafeAreaInsets(),
+      gap: 6,
+    });
+    setPosition({ ...next, left: triggerRect.left });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      didScrollSelectionRef.current = false;
+      return;
+    }
+    updatePosition();
+  }, [isOpen, updatePosition]);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !position || didScrollSelectionRef.current) {
+      return;
+    }
+    const list = listRef.current;
+    const selectedOption = list?.querySelector<HTMLElement>(
+      "[aria-selected='true']",
+    );
+    if (!list || !selectedOption) {
+      return;
+    }
+    const optionTop = selectedOption.offsetTop;
+    const optionHeight = selectedOption.offsetHeight;
+    list.scrollTop = Math.max(
+      0,
+      optionTop - list.clientHeight / 2 + optionHeight / 2,
+    );
+    didScrollSelectionRef.current = true;
+  }, [isOpen, position]);
+
+  useEffect(() => {
+    const handleOtherMenu = (event: Event) => {
+      const openedId = (event as CustomEvent<string>).detail;
+      if (openedId !== listboxId) {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener(INTERVIEW_OPTION_MENU_EVENT, handleOtherMenu);
+    return () => {
+      window.removeEventListener(INTERVIEW_OPTION_MENU_EVENT, handleOtherMenu);
+    };
+  }, [listboxId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        !rootRef.current?.contains(target) &&
+        !listRef.current?.contains(target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      setIsOpen(false);
+      triggerRef.current?.focus();
+    };
+
+    const handleViewportChange = () => updatePosition();
+    const handleScroll = (event: Event) => {
+      if (event.target !== listRef.current) {
+        updatePosition();
+      }
+    };
+    const visualViewport = window.visualViewport;
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleScroll, true);
+    visualViewport?.addEventListener("resize", handleViewportChange);
+    visualViewport?.addEventListener("scroll", handleViewportChange);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleScroll, true);
+      visualViewport?.removeEventListener("resize", handleViewportChange);
+      visualViewport?.removeEventListener("scroll", handleViewportChange);
+    };
+  }, [isOpen, updatePosition]);
+
+  const triggerWidth = triggerRef.current?.getBoundingClientRect().width;
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        ref={triggerRef}
+        id={id}
+        type="button"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={listboxId}
+        aria-invalid={invalid || undefined}
+        onClick={() => {
+          if (disabled) {
+            return;
+          }
+          if (!isOpen) {
+            window.dispatchEvent(
+              new CustomEvent(INTERVIEW_OPTION_MENU_EVENT, {
+                detail: listboxId,
+              }),
+            );
+          }
+          setIsOpen((current) => !current);
+        }}
+        className={cn(
+          "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60",
+          triggerClassName,
+          isOpen
+            ? "border-primary ring-2 ring-primary/30"
+            : "border-border-subtle",
+          value ? "font-medium text-foreground" : "text-muted",
+        )}
+      >
+        <span className="min-w-0 flex-1 truncate">{selected.label}</span>
+        <ChevronDown
+          className={cn(
+            "size-4 shrink-0 text-muted transition-transform",
+            isOpen && "rotate-180 text-primary",
+          )}
+          strokeWidth={2}
+          aria-hidden="true"
+        />
+      </button>
+
+      {isOpen
+        ? createPortal(
+            <ul
+              ref={listRef}
+              id={listboxId}
+              role="listbox"
+              aria-label={label}
+              style={
+                position
+                  ? {
+                      top: position.top,
+                      left: position.left,
+                      width: triggerWidth,
+                      maxHeight: position.maxHeight,
+                    }
+                  : { top: 0, left: 0, visibility: "hidden" }
+              }
+              className="fixed z-[70] overflow-y-auto overscroll-contain rounded-lg border border-border-subtle bg-surface py-1.5 shadow-[0_10px_28px_rgba(26,43,60,0.14)] scrollbar-hidden"
+            >
+              {options.map((option) => {
+                const isSelected = option.value === value;
+                return (
+                  <li key={option.label} role="presentation">
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => {
+                        onChange(option.value);
+                        setIsOpen(false);
+                        triggerRef.current?.focus();
+                      }}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
+                        isSelected
+                          ? "bg-primary-light font-semibold text-primary"
+                          : "font-medium text-foreground hover:bg-primary-light/50",
+                      )}
+                    >
+                      <span className="truncate">{option.label}</span>
+                      {isSelected ? (
+                        <Check
+                          className="size-4 shrink-0 text-primary"
+                          strokeWidth={2.5}
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
 
 function parseTwelveHourTime(time: string): TwelveHourTimeParts {
   const match = /^(\d{1,2}):(\d{2})/.exec(time.trim());
@@ -206,7 +481,7 @@ function validateInterview(draft: ApplicationInterview): FieldErrors {
   }
 
   if (draft.mode === "offline" && !draft.venue.trim()) {
-    errors.venue = "Venue is required for offline interviews.";
+    errors.venue = "Location is required.";
   }
 
   if (draft.mode === "phone" && !draft.interviewerPhone.trim()) {
@@ -218,13 +493,11 @@ function validateInterview(draft: ApplicationInterview): FieldErrors {
 
 function normalizePayload(draft: ApplicationInterview): ApplicationInterview {
   const next = normalizeInterview(draft);
-  if (next.mode === "online") {
+  if (next.mode !== "offline") {
     next.venue = "";
-  } else if (next.mode === "offline") {
+  }
+  if (next.mode === "offline" || next.mode === "phone") {
     next.meetingLink = "";
-  } else if (next.mode === "phone") {
-    next.meetingLink = "";
-    next.venue = "";
   }
   return next;
 }
@@ -297,8 +570,19 @@ export function EmployerCandidateInterviewEditor({
 
   const inputClassName =
     "mt-1 w-full min-w-0 rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60";
-  const timeSelectClassName =
-    "w-full min-w-0 rounded-lg border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60";
+  const timeParts = parseTwelveHourTime(draft.time);
+  const hourOptions: InterviewOption<string>[] = [
+    { value: "", label: "Hour" },
+    ...HOUR_OPTIONS.map((hour) => ({ value: hour, label: hour })),
+  ];
+  const minuteOptions: InterviewOption<string>[] = [
+    { value: "", label: "Min" },
+    ...MINUTE_OPTIONS.map((minute) => ({ value: minute, label: minute })),
+  ];
+  const periodOptions: InterviewOption<TimePeriod>[] = [
+    { value: "AM", label: "AM" },
+    { value: "PM", label: "PM" },
+  ];
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -329,14 +613,17 @@ export function EmployerCandidateInterviewEditor({
           >
             Interview date
           </label>
-          <input
+          <PostJobDatePicker
             id={`interview-date-${application.id}`}
-            type="date"
-            min={todayDateString()}
             value={draft.date}
+            placeholder="dd/mm/yyyy"
+            minDate={todayDateString()}
+            popoverWidth={280}
             disabled={isLocked || isSaving}
-            onChange={(event) => updateField("date", event.target.value)}
-            className={inputClassName}
+            aria-label="Interview date"
+            aria-invalid={Boolean(fieldErrors.date)}
+            triggerClassName="mt-1 h-auto rounded-lg border-border-subtle px-3 py-2 text-sm focus-visible:ring-primary/30"
+            onChange={(value) => updateField("date", value)}
           />
           {fieldErrors.date ? (
             <p className="mt-1 text-xs font-medium text-red-600">
@@ -364,30 +651,25 @@ export function EmployerCandidateInterviewEditor({
               >
                 Hour
               </label>
-              <select
+              <InterviewOptionSelect
                 id={`interview-time-hour-${application.id}`}
-                value={parseTwelveHourTime(draft.time).hour}
+                label="Hour"
+                value={timeParts.hour}
+                options={hourOptions}
                 disabled={isLocked || isSaving}
-                onChange={(event) => {
-                  const current = parseTwelveHourTime(draft.time);
+                invalid={Boolean(fieldErrors.time)}
+                triggerClassName="px-2"
+                onChange={(hour) => {
                   updateField(
                     "time",
                     toTwentyFourHourTime(
-                      event.target.value,
-                      current.minute || "00",
-                      current.period,
+                      hour,
+                      timeParts.minute || "00",
+                      timeParts.period,
                     ),
                   );
                 }}
-                className={timeSelectClassName}
-              >
-                <option value="">Hour</option>
-                {HOUR_OPTIONS.map((hour) => (
-                  <option key={hour} value={hour}>
-                    {hour}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="min-w-0">
               <label
@@ -396,33 +678,28 @@ export function EmployerCandidateInterviewEditor({
               >
                 Minute
               </label>
-              <select
+              <InterviewOptionSelect
                 id={`interview-time-minute-${application.id}`}
-                value={parseTwelveHourTime(draft.time).minute}
+                label="Minute"
+                value={timeParts.minute}
+                options={minuteOptions}
                 disabled={isLocked || isSaving}
-                onChange={(event) => {
-                  const current = parseTwelveHourTime(draft.time);
-                  if (!current.hour) {
+                invalid={Boolean(fieldErrors.time)}
+                triggerClassName="px-2"
+                onChange={(minute) => {
+                  if (!timeParts.hour) {
                     return;
                   }
                   updateField(
                     "time",
                     toTwentyFourHourTime(
-                      current.hour,
-                      event.target.value,
-                      current.period,
+                      timeParts.hour,
+                      minute,
+                      timeParts.period,
                     ),
                   );
                 }}
-                className={timeSelectClassName}
-              >
-                <option value="">Min</option>
-                {MINUTE_OPTIONS.map((minute) => (
-                  <option key={minute} value={minute}>
-                    {minute}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="min-w-0">
               <label
@@ -431,29 +708,28 @@ export function EmployerCandidateInterviewEditor({
               >
                 AM or PM
               </label>
-              <select
+              <InterviewOptionSelect
                 id={`interview-time-period-${application.id}`}
-                value={parseTwelveHourTime(draft.time).period}
+                label="AM or PM"
+                value={timeParts.period}
+                options={periodOptions}
                 disabled={isLocked || isSaving}
-                onChange={(event) => {
-                  const current = parseTwelveHourTime(draft.time);
-                  if (!current.hour) {
+                invalid={Boolean(fieldErrors.time)}
+                triggerClassName="px-2"
+                onChange={(period) => {
+                  if (!timeParts.hour) {
                     return;
                   }
                   updateField(
                     "time",
                     toTwentyFourHourTime(
-                      current.hour,
-                      current.minute || "00",
-                      event.target.value as TimePeriod,
+                      timeParts.hour,
+                      timeParts.minute || "00",
+                      period,
                     ),
                   );
                 }}
-                className={timeSelectClassName}
-              >
-                <option value="AM">AM</option>
-                <option value="PM">PM</option>
-              </select>
+              />
             </div>
           </div>
           {fieldErrors.time ? (
@@ -471,29 +747,54 @@ export function EmployerCandidateInterviewEditor({
         >
           Interview mode
         </label>
-        <select
+        <InterviewOptionSelect
           id={`interview-mode-${application.id}`}
+          label="Interview mode"
           value={draft.mode}
+          options={INTERVIEW_MODE_OPTIONS}
           disabled={isLocked || isSaving}
-          onChange={(event) =>
-            updateField(
-              "mode",
-              event.target.value as ApplicationInterview["mode"],
-            )
-          }
-          className={inputClassName}
-        >
-          <option value="">Select</option>
-          <option value="online">Online</option>
-          <option value="offline">Offline</option>
-          <option value="phone">Phone</option>
-        </select>
+          invalid={Boolean(fieldErrors.mode)}
+          triggerClassName="mt-1"
+          onChange={(mode) => {
+            setDraft((current) => ({
+              ...current,
+              mode,
+              venue: mode === "offline" ? current.venue : "",
+            }));
+          }}
+        />
         {fieldErrors.mode ? (
           <p className="mt-1 text-xs font-medium text-red-600">
             {fieldErrors.mode}
           </p>
         ) : null}
       </div>
+
+      {draft.mode === "offline" ? (
+        <div className="min-w-0">
+          <label
+            htmlFor={`interview-location-${application.id}`}
+            className="block text-xs font-medium text-muted"
+          >
+            Location
+          </label>
+          <input
+            id={`interview-location-${application.id}`}
+            type="text"
+            maxLength={200}
+            placeholder="Area, city"
+            value={draft.venue}
+            disabled={isLocked || isSaving}
+            onChange={(event) => updateField("venue", event.target.value)}
+            className={inputClassName}
+          />
+          {fieldErrors.venue ? (
+            <p className="mt-1 text-xs font-medium text-red-600">
+              {fieldErrors.venue}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {draft.mode === "online" ? (
         <div>
@@ -516,30 +817,6 @@ export function EmployerCandidateInterviewEditor({
           {fieldErrors.meetingLink ? (
             <p className="mt-1 text-xs font-medium text-red-600">
               {fieldErrors.meetingLink}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {draft.mode === "offline" ? (
-        <div>
-          <label
-            htmlFor={`interview-venue-${application.id}`}
-            className="block text-xs font-medium text-muted"
-          >
-            Venue
-          </label>
-          <input
-            id={`interview-venue-${application.id}`}
-            type="text"
-            value={draft.venue}
-            disabled={isLocked || isSaving}
-            onChange={(event) => updateField("venue", event.target.value)}
-            className={inputClassName}
-          />
-          {fieldErrors.venue ? (
-            <p className="mt-1 text-xs font-medium text-red-600">
-              {fieldErrors.venue}
             </p>
           ) : null}
         </div>

@@ -4,8 +4,9 @@ const MONGO_OBJECT_ID = /^[a-f0-9]{24}$/i;
 const LITERAL_TEMPLATE_SLOT = /^\{\{1\}\}/;
 
 /**
- * Approved aslijobs_account_approved and job_post_incomplete_ buttons both use
+ * Older aslijobs_account_approved and job_post_incomplete_ buttons use
  * `https://www.aslijobs.com/post-job/%7B%7B1%7D%7D{{1}}`.
+ * job_post_rejected_v1 uses `https://www.aslijobs.com/post-job/{{1}}`.
  * The encoded `{{1}}` is literal text. The real variable is appended after it.
  * Account approval appends the employer id. Complete Job Details appends the
  * draft Mongo id, which is the same id as the dashboard editor.

@@ -10,7 +10,7 @@ import { openEmployerDocumentFile } from "./employer-document.file.js";
 import { formatEmployerDocumentTypeLabel } from "./employer-document.labels.js";
 import { EmployerDocumentModel } from "./employer-document.model.js";
 import { assertEmployerDocumentTypeForAccount } from "./employer-document.policy.js";
-import { documentUploadLeavesEmployerRejected } from "./employer-verification-resubmit.policy.js";
+import { shouldQueueVerificationOnDocumentUpload } from "./employer-verification-resubmit.policy.js";
 import { EmployerModel } from "./employer.model.js";
 import type { EmployerAccountType } from "./employer.types.js";
 
@@ -120,8 +120,9 @@ async function queueVerificationReview(employer: {
   state?: string | null;
   verificationStatus?: string | null;
   verificationSubmittedAt?: Date | null;
+  registrationStatus?: string | null;
 }): Promise<void> {
-  if (documentUploadLeavesEmployerRejected(employer.verificationStatus)) {
+  if (!shouldQueueVerificationOnDocumentUpload(employer)) {
     return;
   }
 

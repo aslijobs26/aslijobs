@@ -5,6 +5,16 @@ export type WhatsAppNotificationPayload = {
   entityId: string;
   phoneNumber: string;
   employerName?: string;
+  /** Job title for job_application_submitted {{1}}. */
+  jobTitle?: string;
+  /** Company name for job_application_submitted {{2}}. */
+  companyName?: string;
+  /** Interview date for interview schedule templates {{3}}. */
+  interviewDate?: string;
+  /** Interview time for interview schedule templates {{4}}. */
+  interviewTime?: string;
+  /** Offline venue for interview_scheduled_offline {{5}}. */
+  interviewVenue?: string;
   preferredLanguage?: string | null;
   /**
    * Dynamic URL-button suffixes. Meta stores the base URL on the template;

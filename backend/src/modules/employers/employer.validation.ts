@@ -5,6 +5,7 @@ import {
   EMPLOYER_IDENTITY_DOCUMENT_TYPES,
   OTP_CODE_PATTERN,
   OTP_LENGTH,
+  documentTypesForEmployerAccount,
   isBusinessEmployerAccountType,
 } from "../../constants/employer.constants.js";
 
@@ -240,9 +241,9 @@ export const operationsCompleteEmployerProfileSchema = z
     documentType: z.string().trim().default(""),
   })
   .superRefine((data, ctx) => {
-    const allowedDocumentTypes = isBusinessEmployerAccountType(data.accountType)
-      ? EMPLOYER_BUSINESS_DOCUMENT_TYPES
-      : EMPLOYER_IDENTITY_DOCUMENT_TYPES;
+    const allowedDocumentTypes = documentTypesForEmployerAccount(
+      data.accountType,
+    );
     if (
       !data.documentType ||
       !(allowedDocumentTypes as readonly string[]).includes(data.documentType)

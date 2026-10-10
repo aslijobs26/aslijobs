@@ -60,22 +60,34 @@ type EmployerImageAsset = {
   updatedAt?: Date | string | null;
 };
 
-function scheduleEmployerAccountCreatedWhatsApp(employer: {
-  _id: mongoose.Types.ObjectId;
-  whatsappNumber: string;
-  companyName?: string | null;
-  establishmentName?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-}): void {
-  scheduleWhatsAppNotification({
-    event: "EMPLOYER_ACCOUNT_CREATED",
-    entityId: employer._id.toString(),
-    phoneNumber: employer.whatsappNumber,
-    employerName: resolveEmployerRegistrationDisplayName(employer),
-    preferredLanguage: "en",
-  });
-}
+export const employerAccountCreatedWhatsApp = {
+  schedule(employer: {
+    _id: mongoose.Types.ObjectId;
+    whatsappNumber: string;
+    companyName?: string | null;
+    establishmentName?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  }): void {
+    try {
+      scheduleWhatsAppNotification({
+        event: "EMPLOYER_ACCOUNT_CREATED",
+        entityId: employer._id.toString(),
+        phoneNumber: employer.whatsappNumber,
+        employerName: resolveEmployerRegistrationDisplayName(employer),
+        preferredLanguage: "en",
+      });
+    } catch (error) {
+      console.error(
+        "[WhatsAppNotification] employer account created schedule failed",
+        {
+          entityId: employer._id.toString(),
+          errorCategory: error instanceof Error ? error.name : "unknown",
+        },
+      );
+    }
+  },
+};
 
 function toPublicImageUpdatedAt(
   value: Date | string | null | undefined,
@@ -658,6 +670,11 @@ export class EmployerService {
       );
     }
 
+    assertEmployerDocumentTypeForAccount(
+      employer.accountType as EmployerAccountType,
+      input.verificationDocument,
+    );
+
     if (!employer.isWhatsappVerified) {
       throw new AppError(
         "WhatsApp number must be verified before completing business profile",
@@ -814,7 +831,7 @@ export class EmployerService {
       registeredAt:
         employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
     });
-    scheduleEmployerAccountCreatedWhatsApp(employer);
+    employerAccountCreatedWhatsApp.schedule(employer);
 
     scheduleEmployerVerificationWork({
       employerId: employer._id.toString(),
@@ -972,7 +989,7 @@ export class EmployerService {
       registeredAt:
         employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
     });
-    scheduleEmployerAccountCreatedWhatsApp(employer);
+    employerAccountCreatedWhatsApp.schedule(employer);
 
     scheduleEmployerVerificationWork({
       employerId: employer._id.toString(),
@@ -1172,7 +1189,7 @@ export class EmployerService {
       registeredAt:
         employer.operationsRegistrationAwareness?.registeredAt ?? new Date(),
     });
-    scheduleEmployerAccountCreatedWhatsApp(employer);
+    employerAccountCreatedWhatsApp.schedule(employer);
     scheduleEmployerVerificationWork({
       employerId: employer._id.toString(),
       companyName: resolveEmployerRegistrationDisplayName(employer),
@@ -1428,6 +1445,96 @@ export class EmployerService {
     return {
       employer: toPublicEmployer(employer),
     };
+  }
+
+  /**
+   * First-time verification submission from the profile page.
+   * Rejected employers stay on resubmitVerification and do not get
+   * employer_account_created again.
+   */
+  async submitVerification(employerId: string) {
+    if (!mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const employer = await EmployerModel.findById(employerId);
+    if (!employer) {
+      throw new AppError("Employer not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const current = String(employer.verificationStatus ?? "pending").toLowerCase();
+    if (current === "verified") {
+      throw new AppError(
+        "This account is already verified.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+    if (current === "rejected") {
+      throw new AppError(
+        "Rejected accounts must resubmit verification.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    const alreadySubmitted =
+      employer.registrationStatus === "completed" &&
+      current === "pending" &&
+      employer.verificationSubmittedAt != null;
+    if (alreadySubmitted) {
+      return { employer: toPublicEmployer(employer), alreadySubmitted: true };
+    }
+
+    const documentCount = await EmployerDocumentModel.countDocuments({
+      employerId: employer._id,
+    });
+    const fieldErrors = employerResubmitFieldErrors(employer, documentCount);
+    if (Object.keys(fieldErrors).length > 0) {
+      throw new AppError(
+        "Complete the required profile details and upload a verification document before submitting.",
+        HTTP_STATUS.UNPROCESSABLE_ENTITY,
+        { fieldErrors },
+      );
+    }
+
+    if (!employer.operationsRegistrationAwareness?.registeredAt) {
+      employer.operationsRegistrationAwareness =
+        buildNewRegistrationAwarenessPayload(new Date());
+    }
+    employer.isProfileComplete = true;
+    employer.registrationStatus = "completed";
+    employer.verificationStatus = "pending";
+    employer.verificationSubmittedAt = new Date();
+    await employer.save();
+
+    const submittedAt = employer.verificationSubmittedAt ?? new Date();
+    const displayName = resolveEmployerRegistrationDisplayName(employer);
+    scheduleEmployerRegisteredAwareness({
+      employerId: employer._id.toString(),
+      displayName,
+      displayId: formatEmployerRegistrationDisplayId(employer._id.toString()),
+      registeredAt:
+        employer.operationsRegistrationAwareness?.registeredAt ?? submittedAt,
+    });
+    scheduleEmployerVerificationWork({
+      employerId: employer._id.toString(),
+      companyName: displayName,
+      locationLabel: [employer.city, employer.state].filter(Boolean).join(", "),
+      submittedAt,
+      kind: "submitted",
+    });
+    try {
+      employerAccountCreatedWhatsApp.schedule(employer);
+    } catch (error) {
+      console.error(
+        "[WhatsAppNotification] employer account created was not sent",
+        {
+          entityId: employer._id.toString(),
+          errorCategory: error instanceof Error ? error.name : "unknown",
+        },
+      );
+    }
+
+    return { employer: toPublicEmployer(employer), alreadySubmitted: false };
   }
 
   /**

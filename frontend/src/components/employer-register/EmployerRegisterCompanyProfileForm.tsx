@@ -4,7 +4,7 @@ import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import {
-  EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS,
+  employerRegisterDocumentOptionsForAccount,
   EMPLOYER_REGISTER_COMPANY_STRENGTH_OPTIONS,
   EMPLOYER_REGISTER_DOCUMENT_ACCEPT,
   EMPLOYER_REGISTER_DOCUMENT_MAX_SIZE_BYTES,
@@ -107,12 +107,16 @@ export function EmployerRegisterCompanyProfileForm({
     formData.industry,
   );
 
-  const businessDocumentOptions = EMPLOYER_REGISTER_BUSINESS_DOCUMENT_OPTIONS.map(
-    (option) => ({
-      value: option.value,
-      label: t(BUSINESS_DOCUMENT_LABEL_KEYS[option.value]),
-    }),
-  );
+  const businessDocumentOptions = employerRegisterDocumentOptionsForAccount(
+    accountType,
+  ).map((option) => ({
+    value: option.value,
+    label: t(
+      BUSINESS_DOCUMENT_LABEL_KEYS[
+        option.value as keyof typeof BUSINESS_DOCUMENT_LABEL_KEYS
+      ],
+    ),
+  }));
   const uploadPrimary = t("auth.employerRegister.documentUploadPrimary");
   const uploadHint = t("auth.employerRegister.documentUploadHint");
 

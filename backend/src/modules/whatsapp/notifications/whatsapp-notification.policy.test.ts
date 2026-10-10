@@ -10,6 +10,7 @@ import {
   JOB_POST_APPROVED_VIEW_PATH,
   JOB_POST_APPROVED_VIEW_URL,
   getWhatsAppNotificationTemplate,
+  jobPostRejectedEditUrl,
   resolveWhatsAppNotificationLanguage,
   whatsAppNotificationIdempotencyKey,
   whatsAppNotificationQueueJobId,
@@ -206,5 +207,35 @@ describe("WhatsApp notification template mapping", () => {
     );
     assert.equal(JOB_POST_APPROVED_VIEW_URL, "https://www.aslijobs.com/employer/jobs");
     assert.equal(JOB_POST_APPROVED_VIEW_PATH, "/employer/jobs");
+  });
+
+  it("maps job_post_rejected to a static body and one job-id button", () => {
+    const jobMongoId = "6ac9ce44c00e6c85f34aa4ab";
+    const config = getWhatsAppNotificationTemplate("JOB_POST_REJECTED");
+    assert.equal(config?.templateName, "job_post_rejected_v1");
+    assert.equal(config?.approvedLanguages.en, "en");
+    assert.equal(resolveWhatsAppNotificationLanguage("JOB_POST_REJECTED", "hi"), "en");
+    assert.deepEqual(
+      buildWhatsAppNotificationBodyParameters("JOB_POST_REJECTED", {
+        event: "JOB_POST_REJECTED",
+        entityId: jobMongoId,
+        phoneNumber: "9876543210",
+        employerName: "Acme Pvt Ltd",
+      }),
+      [],
+    );
+    assert.deepEqual(
+      buildWhatsAppNotificationUrlButtonParameters("JOB_POST_REJECTED", {
+        event: "JOB_POST_REJECTED",
+        entityId: jobMongoId,
+        phoneNumber: "9876543210",
+      }),
+      [jobMongoId],
+    );
+    assert.equal(
+      jobPostRejectedEditUrl(jobMongoId),
+      `https://www.aslijobs.com/post-job/${jobMongoId}`,
+    );
+    assert.equal(jobPostRejectedEditUrl("AJ-2026-000078"), "");
   });
 });

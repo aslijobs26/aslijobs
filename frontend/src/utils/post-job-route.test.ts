@@ -162,3 +162,30 @@ describe("post job route from the incomplete-draft WhatsApp button", () => {
     assert.equal(restored.formData.jobInformation.companyDetails, "Acme Pvt Ltd");
   });
 });
+
+describe("post job route from the job-rejected WhatsApp button", () => {
+  const rejectedJobId = "6ac9ce44c00e6c85f34aa4ab";
+
+  it("opens the rejected job editor and ignores another employer's id", () => {
+    const openedPath = `/post-job/{{1}}${rejectedJobId}`;
+    const routeId = `{{1}}${rejectedJobId}`;
+    assert.equal(
+      resolveIncompleteDraftEditPath(openedPath, employerId),
+      `/post-job/${rejectedJobId}`,
+    );
+    assert.equal(resolvePostJobDraftId(routeId, employerId), rejectedJobId);
+    assert.equal(isEmployerAccountPostJobLink(routeId, employerId), false);
+    assert.equal(
+      isEmployerAccountPostJobLink(rejectedJobId, employerId),
+      false,
+    );
+    assert.equal(
+      resolveEmployerPostLoginPath(
+        openedPath,
+        ROUTES.EMPLOYER_DASHBOARD,
+        employerId,
+      ),
+      `/post-job/${rejectedJobId}`,
+    );
+  });
+});

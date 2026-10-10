@@ -21,6 +21,37 @@ describe("employer document types", () => {
     );
   });
 
+  it("keeps incorporation certificates on company accounts", () => {
+    assert.ok(
+      allowedEmployerDocumentTypes("company").includes(
+        "certificate-of-incorporation",
+      ),
+    );
+  });
+
+  it("allows consultancy registration documents and rejects company-only certificates", () => {
+    assert.ok(
+      allowedEmployerDocumentTypes("consultancy").includes("gst-certificate"),
+    );
+    assert.doesNotThrow(() =>
+      assertEmployerDocumentTypeForAccount("consultancy", "pan-card-business"),
+    );
+    assert.equal(
+      allowedEmployerDocumentTypes("consultancy").includes(
+        "certificate-of-incorporation",
+      ),
+      false,
+    );
+    assert.throws(
+      () =>
+        assertEmployerDocumentTypeForAccount(
+          "consultancy",
+          "certificate-of-incorporation",
+        ),
+      /business verification document/,
+    );
+  });
+
   it("allows identity cards for individual accounts", () => {
     assert.doesNotThrow(() =>
       assertEmployerDocumentTypeForAccount("individual", "aadhaar"),

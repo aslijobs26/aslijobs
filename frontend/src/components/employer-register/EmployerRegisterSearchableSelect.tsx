@@ -4,9 +4,16 @@ import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { useTranslate } from "@/i18n/translate";
 import type { EmployerRegisterSelectOption } from "@/types/employer-register";
+import {
+  computeAnchoredDropdownPosition,
+  readSafeAreaInsets,
+  readVisibleViewportSize,
+  type AnchoredDropdownPosition,
+} from "@/utils/anchored-dropdown-position";
 import { cn } from "@/utils/cn";
 import { Check, ChevronDown, Plus, Search } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -15,6 +22,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import { useAuthMessageTranslator } from "./useAuthMessageTranslator";
 
 type EmployerRegisterSearchableSelectProps = {
@@ -53,10 +61,6 @@ type EmployerRegisterSearchableSelectProps = {
   initialVisibleCount?: number;
 };
 
-type DropdownPlacement = "down" | "up";
-
-const DROPDOWN_PANEL_ESTIMATED_HEIGHT_PX = 280;
-
 function normalizeOptionKey(value: string) {
   return value.trim().toLowerCase();
 }
@@ -90,9 +94,13 @@ export function EmployerRegisterSearchableSelect({
   const resolvedCountLabel = countLabel ?? t("auth.select.items");
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [placement, setPlacement] = useState<DropdownPlacement>("down");
+  const [position, setPosition] = useState<AnchoredDropdownPosition | null>(
+    null,
+  );
   const [customOptions, setCustomOptions] = useState<
     EmployerRegisterSelectOption[]
   >([]);
@@ -209,30 +217,47 @@ export function EmployerRegisterSearchableSelect({
     setQuery("");
   };
 
-  useLayoutEffect(() => {
-    if (!isOpen || !rootRef.current) {
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const panel = panelRef.current;
+    if (!trigger || !panel) {
       return;
     }
 
-    const updatePlacement = () => {
-      if (!rootRef.current) {
-        return;
-      }
+    const list = panel.querySelector("ul");
+    const appliedMaxHeight =
+      list instanceof HTMLElement ? list.style.maxHeight : "";
+    if (list instanceof HTMLElement) {
+      list.style.maxHeight = "none";
+    }
+    const contentHeight = panel.scrollHeight;
+    if (list instanceof HTMLElement) {
+      list.style.maxHeight = appliedMaxHeight;
+    }
 
-      const rect = rootRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      const shouldOpenUp =
-        spaceBelow < DROPDOWN_PANEL_ESTIMATED_HEIGHT_PX &&
-        spaceAbove > spaceBelow;
+    const triggerRect = trigger.getBoundingClientRect();
+    const viewport = readVisibleViewportSize();
+    setPosition(
+      computeAnchoredDropdownPosition({
+        anchorRect: triggerRect,
+        contentWidth: triggerRect.width,
+        contentHeight,
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+        insets: readSafeAreaInsets(),
+        gap: 6,
+      }),
+    );
+  }, []);
 
-      setPlacement(shouldOpenUp ? "up" : "down");
-    };
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPosition(null);
+      return;
+    }
 
-    updatePlacement();
-    window.addEventListener("resize", updatePlacement);
-    return () => window.removeEventListener("resize", updatePlacement);
-  }, [isOpen, filteredOptions.length, canAddCustom]);
+    updatePosition();
+  }, [isOpen, filteredOptions.length, canAddCustom, hideSearch, updatePosition]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -240,26 +265,51 @@ export function EmployerRegisterSearchableSelect({
     }
 
     const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        !rootRef.current?.contains(target) &&
+        !panelRef.current?.contains(target)
+      ) {
         setIsOpen(false);
         setQuery("");
       }
     };
 
     const handleEscape = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-        setQuery("");
+      if (event.key !== "Escape") {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      setIsOpen(false);
+      setQuery("");
+      triggerRef.current?.focus();
+    };
+
+    const handleViewportChange = () => updatePosition();
+    const handleScroll = (event: Event) => {
+      if (event.target !== panelRef.current && !panelRef.current?.contains(event.target as Node)) {
+        updatePosition();
       }
     };
+    const visualViewport = window.visualViewport;
 
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleScroll, true);
+    visualViewport?.addEventListener("resize", handleViewportChange);
+    visualViewport?.addEventListener("scroll", handleViewportChange);
+
     return () => {
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleScroll, true);
+      visualViewport?.removeEventListener("resize", handleViewportChange);
+      visualViewport?.removeEventListener("scroll", handleViewportChange);
     };
-  }, [isOpen]);
+  }, [isOpen, updatePosition]);
 
   const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (disabled) {
@@ -306,6 +356,7 @@ export function EmployerRegisterSearchableSelect({
         )}
       >
         <button
+          ref={triggerRef}
           id={id}
           type="button"
           name={name}
@@ -350,14 +401,25 @@ export function EmployerRegisterSearchableSelect({
           />
         </button>
 
-        {isOpen ? (
+        {isOpen
+          ? createPortal(
           <div
+            ref={panelRef}
             className={cn(
               "employer-register-searchable-select-panel",
-              placement === "up" &&
-                "employer-register-searchable-select-panel--up",
+              "employer-register-searchable-select-panel--anchored",
               panelClassName,
             )}
+            style={
+              position
+                ? {
+                    top: position.top,
+                    left: position.left,
+                    width: triggerRef.current?.getBoundingClientRect().width,
+                    maxHeight: position.maxHeight,
+                  }
+                : { top: 0, left: 0, visibility: "hidden" }
+            }
           >
             {hideSearch ? null : (
               <div className="employer-register-searchable-select-search">
@@ -473,8 +535,10 @@ export function EmployerRegisterSearchableSelect({
                 })
               )}
             </ul>
-          </div>
-        ) : null}
+          </div>,
+          document.body,
+        )
+          : null}
       </div>
       <FieldError id={resolvedErrorId} message={translateMessage(error)} />
     </div>

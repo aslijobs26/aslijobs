@@ -66,6 +66,9 @@ type PostJobDatePickerProps = {
   "aria-invalid"?: boolean;
   "aria-required"?: boolean;
   "aria-describedby"?: string;
+  triggerClassName?: string;
+  /** Fixed calendar width. Defaults to the trigger width, or the compact width. */
+  popoverWidth?: number;
 };
 
 type CalendarPosition = {
@@ -141,11 +144,15 @@ function getYearPageYears(startYear: number) {
   return Array.from({ length: YEAR_PAGE_SIZE }, (_, index) => startYear + index);
 }
 
-function getPopoverWidth(triggerWidth: number, compact = false) {
+function getPopoverWidth(
+  triggerWidth: number,
+  compact = false,
+  explicitWidth?: number,
+) {
   const maxAvailableWidth = window.innerWidth - VIEWPORT_PADDING_PX * 2;
-  const preferredWidth = compact
-    ? COMPACT_POPOVER_WIDTH_PX
-    : triggerWidth;
+  const preferredWidth =
+    explicitWidth ??
+    (compact ? COMPACT_POPOVER_WIDTH_PX : triggerWidth);
 
   return Math.min(preferredWidth, maxAvailableWidth);
 }
@@ -194,6 +201,8 @@ export function PostJobDatePicker({
   "aria-invalid": ariaInvalid = false,
   "aria-required": ariaRequired = false,
   "aria-describedby": ariaDescribedBy,
+  triggerClassName,
+  popoverWidth: explicitPopoverWidth,
 }: PostJobDatePickerProps) {
   const t = useTranslate();
   const listboxId = useId();
@@ -234,7 +243,11 @@ export function PostJobDatePicker({
     }
 
     const triggerRect = triggerRef.current.getBoundingClientRect();
-    const popoverWidth = getPopoverWidth(triggerRect.width, compact);
+    const popoverWidth = getPopoverWidth(
+      triggerRect.width,
+      compact,
+      explicitPopoverWidth,
+    );
 
     setPosition(
       getCalendarPosition(
@@ -243,7 +256,7 @@ export function PostJobDatePicker({
         popoverWidth,
       ),
     );
-  }, [compact]);
+  }, [compact, explicitPopoverWidth]);
 
   useEffect(() => {
     setMounted(true);
@@ -287,15 +300,20 @@ export function PostJobDatePicker({
     };
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (panelView !== "days") {
-          setPanelView("days");
-          return;
-        }
-
-        setIsOpen(false);
-        triggerRef.current?.focus();
+      if (event.key !== "Escape") {
+        return;
       }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (panelView !== "days") {
+        setPanelView("days");
+        return;
+      }
+
+      setIsOpen(false);
+      triggerRef.current?.focus();
     };
 
     document.addEventListener("mousedown", handlePointerDown);
@@ -335,7 +353,11 @@ export function PostJobDatePicker({
       setPosition({
         top: triggerRect.bottom + 4,
         left: triggerRect.left,
-        width: getPopoverWidth(triggerRect.width, compact),
+        width: getPopoverWidth(
+          triggerRect.width,
+          compact,
+          explicitPopoverWidth,
+        ),
       });
     }
 
@@ -513,7 +535,7 @@ export function PostJobDatePicker({
               maxWidth: position.width || undefined,
             }}
             className={cn(
-              "fixed z-50 box-border min-w-0 overflow-hidden rounded-md border border-border-subtle bg-surface shadow-sm",
+              "fixed z-[70] box-border min-w-0 overflow-hidden rounded-md border border-border-subtle bg-surface shadow-sm",
               compact ? "p-1.5" : "p-2",
             )}
           >
@@ -802,6 +824,7 @@ export function PostJobDatePicker({
           postJobDateFieldShellClassName,
           compact ? "h-10 px-2.5 text-xs" : null,
           "pointer-events-auto w-full cursor-pointer text-left transition-colors hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+          triggerClassName,
           disabled &&
             "cursor-not-allowed opacity-60 hover:border-border focus-visible:ring-0",
         )}

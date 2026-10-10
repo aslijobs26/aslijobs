@@ -409,10 +409,7 @@ function MessageBubble({
       >
         <div className="mb-0.5 flex flex-wrap items-center gap-1 sm:gap-1.5">
           <Icon
-            className={cn(
-              "size-3 shrink-0 sm:size-3.5",
-              rejection ? "text-pin-state" : "text-primary",
-            )}
+            className="size-3 shrink-0 text-primary sm:size-3.5"
             aria-hidden="true"
           />
           <h3
@@ -423,21 +420,11 @@ function MessageBubble({
           >
             {message.title}
           </h3>
-          <span
-            className={cn(
-              "inline-flex shrink-0 items-center rounded px-1 py-px text-[0.5625rem] font-medium leading-4 sm:px-1.5 sm:text-[0.625rem]",
-              rejection ? "text-pin-state" : "text-primary",
-            )}
-          >
+          <span className="inline-flex shrink-0 items-center rounded px-1 py-px text-[0.5625rem] font-medium leading-4 text-primary sm:px-1.5 sm:text-[0.625rem]">
             {badge}
           </span>
         </div>
-        <p
-          className={cn(
-            "whitespace-pre-wrap text-xs leading-[1.35] [overflow-wrap:anywhere] sm:text-[0.875rem]",
-            rejection ? "text-pin-state" : "text-foreground",
-          )}
-        >
+        <p className="whitespace-pre-wrap text-xs leading-[1.35] [overflow-wrap:anywhere] text-foreground sm:text-[0.875rem]">
           {message.body}
           <span
             className="float-right clear-both ml-2.5 mt-1 inline-flex h-[14px] items-center gap-[3px] text-[0.625rem] leading-none text-muted sm:ml-3 sm:h-[15px] sm:text-[0.6875rem]"

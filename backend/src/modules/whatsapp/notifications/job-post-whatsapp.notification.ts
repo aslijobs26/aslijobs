@@ -34,6 +34,10 @@ export function jobPostApprovalCycle(approvedAt: Date): string {
   return `approval:${approvedAt.toISOString()}`;
 }
 
+export function jobPostRejectionCycle(rejectedAt: Date): string {
+  return `rejection:${rejectedAt.toISOString()}`;
+}
+
 async function loadEmployerForJobWhatsApp(
   employerId: string,
 ): Promise<EmployerWhatsAppSnapshot | null> {
@@ -111,5 +115,67 @@ export const jobPostApprovedWhatsApp = {
   enqueue: enqueueWhatsAppNotification,
   schedule(input: JobPostWhatsAppInput): void {
     scheduleJobPostWhatsApp(this, "JOB_POST_APPROVED", "job_post_approved", input);
+  },
+};
+
+const JOB_MONGO_ID = /^[a-f0-9]{24}$/i;
+
+export type JobPostRejectedWhatsAppInput = {
+  employerId: string;
+  jobMongoId: string;
+  publicJobId: string;
+  rejectedAt: Date;
+};
+
+export const jobPostRejectedWhatsApp = {
+  enqueue: enqueueWhatsAppNotification,
+  schedule(input: JobPostRejectedWhatsAppInput): void {
+    const employerId = input.employerId.trim();
+    const jobMongoId = input.jobMongoId.trim();
+    const publicJobId = input.publicJobId.trim();
+    const cycle = jobPostRejectionCycle(input.rejectedAt);
+    if (!employerId || !JOB_MONGO_ID.test(jobMongoId) || !publicJobId) {
+      console.info(
+        "[WhatsAppNotification] job_post_rejected skipped - missing employer or job",
+        { template: "job_post_rejected_v1", employerId, jobMongoId, publicJobId },
+      );
+      return;
+    }
+
+    void (async () => {
+      const employer = await loadEmployerForJobWhatsApp(employerId);
+      const phoneNumber = employer?.whatsappNumber?.trim() ?? "";
+      if (!phoneNumber) {
+        console.info(
+          "[WhatsAppNotification] job_post_rejected skipped - no employer WhatsApp number",
+          { template: "job_post_rejected_v1", employerId, jobMongoId, publicJobId },
+        );
+        return;
+      }
+
+      const result = await this.enqueue({
+        event: "JOB_POST_REJECTED",
+        entityId: jobMongoId,
+        phoneNumber,
+        employerName: resolveEmployerRegistrationDisplayName(employer ?? {}),
+        preferredLanguage: "en",
+        idempotencyScope: cycle,
+      });
+      console.info("[WhatsAppNotification] job_post_rejected_v1 outcome", {
+        template: "job_post_rejected_v1",
+        outcome: result,
+        jobMongoId,
+        publicJobId,
+        language: "en",
+      });
+    })().catch((error: unknown) => {
+      console.error("[WhatsAppNotification] job_post_rejected_v1 failed", {
+        template: "job_post_rejected_v1",
+        jobMongoId,
+        publicJobId,
+        employerId,
+        errorCategory: error instanceof Error ? error.name : "unknown",
+      });
+    });
   },
 };

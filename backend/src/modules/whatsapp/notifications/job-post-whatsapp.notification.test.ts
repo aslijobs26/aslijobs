@@ -16,10 +16,18 @@ import { notificationService } from "../../notifications/notification.service.js
 import {
   jobPostApprovalCycle,
   jobPostApprovedWhatsApp,
+  jobPostRejectionCycle,
+  jobPostRejectedWhatsApp,
   jobPostSubmissionCycle,
   jobPostSubmittedWhatsApp,
   type JobPostWhatsAppInput,
 } from "./job-post-whatsapp.notification.js";
+import {
+  buildWhatsAppNotificationBodyParameters,
+  buildWhatsAppNotificationUrlButtonParameters,
+  getWhatsAppNotificationTemplate,
+  jobPostRejectedEditUrl,
+} from "./whatsapp-notification.policy.js";
 import type { WhatsAppNotificationPayload } from "./whatsapp-notification.types.js";
 import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js";
 
@@ -446,8 +454,12 @@ describe("job submission flows", () => {
     mock.method(operationsJobsService, "getJobDetail", async () => ({
       jobId: job.jobId,
     }));
+    let rejected = 0;
     mock.method(jobPostApprovedWhatsApp, "schedule", (input: JobPostWhatsAppInput) => {
       approved.push(input.employerId);
+    });
+    mock.method(jobPostRejectedWhatsApp, "schedule", () => {
+      rejected += 1;
     });
     stubSideEffects();
 
@@ -456,6 +468,7 @@ describe("job submission flows", () => {
       operationsUserId,
     );
     assert.deepEqual(approved, [employerId]);
+    assert.equal(rejected, 0);
   });
 });
 
@@ -818,6 +831,275 @@ describe("job approval WhatsApp notification", () => {
     );
     assert.equal(result.status, "active");
     assert.equal(approved, 0);
+  });
+});
+
+describe("job rejection WhatsApp notification", () => {
+  const jobMongoId = "6ac9ce44c00e6c85f34aa4ab";
+  const publicJobId = "AJ-2026-000078";
+  const rejectedAt = new Date("2026-10-10T06:00:00.000Z");
+
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  function pendingJob() {
+    return {
+      _id: new mongoose.Types.ObjectId(jobMongoId),
+      jobId: publicJobId,
+      status: "pending_approval" as const,
+      creationSource: "employer",
+      employerId: new mongoose.Types.ObjectId(employerId),
+      companyId: new mongoose.Types.ObjectId(employerId),
+      jobTitle: "Cleaner",
+      reviewDecision: "",
+      liveChangeReviewStatus: "",
+    };
+  }
+
+  function mockEmployer(phone: string) {
+    mock.method(EmployerModel, "findById", () => ({
+      select() {
+        return this;
+      },
+      async lean() {
+        return {
+          whatsappNumber: phone,
+          companyName: "Acme Pvt Ltd",
+          establishmentName: "",
+          firstName: "Asha",
+          lastName: "Rao",
+        };
+      },
+    }));
+  }
+
+  it("sends job_post_rejected to the employer with the job id once", async () => {
+    const queued: Array<{
+      templateName: string;
+      languageCode: string;
+      phoneNumber: string;
+      bodyParameters: string[];
+      urlButtonParameters?: string[];
+      idempotencyKey: string;
+      entityId: string;
+    }> = [];
+    mockEmployer(employerPhone);
+    mock.method(jobPostRejectedWhatsApp, "enqueue", async (payload: WhatsAppNotificationPayload) => {
+      assert.notEqual(payload.phoneNumber, operationsPhone);
+      return enqueueWhatsAppNotification(payload, {
+        claim: async () => "claimed",
+        enqueueJob: async (job) => {
+          queued.push(job);
+        },
+      });
+    });
+
+    jobPostRejectedWhatsApp.schedule({
+      employerId,
+      jobMongoId,
+      publicJobId,
+      rejectedAt,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    assert.equal(queued.length, 1);
+    assert.equal(queued[0]?.templateName, "job_post_rejected_v1");
+    assert.equal(queued[0]?.languageCode, "en");
+    assert.equal(queued[0]?.phoneNumber, employerPhone);
+    assert.deepEqual(queued[0]?.bodyParameters, []);
+    assert.deepEqual(queued[0]?.urlButtonParameters, [jobMongoId]);
+    assert.equal(queued[0]?.entityId, jobMongoId);
+    const editUrl = jobPostRejectedEditUrl(jobMongoId);
+    assert.equal(editUrl, `https://www.aslijobs.com/post-job/${jobMongoId}`);
+    assert.equal(editUrl.split(jobMongoId).length - 1, 1);
+    assert.equal(editUrl.includes("{{"), false);
+    assert.equal(editUrl.includes("%7B"), false);
+    assert.equal(
+      queued[0]?.idempotencyKey,
+      `JOB_POST_REJECTED:${jobMongoId}:${jobPostRejectionCycle(rejectedAt)}`,
+    );
+    assert.deepEqual(
+      buildWhatsAppNotificationBodyParameters("JOB_POST_REJECTED", {
+        event: "JOB_POST_REJECTED",
+        entityId: jobMongoId,
+        phoneNumber: employerPhone,
+        employerName: "Acme Pvt Ltd",
+      }),
+      [],
+    );
+    assert.deepEqual(
+      buildWhatsAppNotificationUrlButtonParameters("JOB_POST_REJECTED", {
+        event: "JOB_POST_REJECTED",
+        entityId: jobMongoId,
+        phoneNumber: employerPhone,
+      }),
+      [jobMongoId],
+    );
+  });
+
+  it("does not send job_post_rejected when rejection is not saved", async () => {
+    let queued = 0;
+    mock.method(jobPostRejectedWhatsApp, "schedule", () => {
+      queued += 1;
+    });
+
+    await assert.rejects(() =>
+      operationsJobsService.rejectJobWithEmployerNotification(
+        { ...pendingJob(), status: "active" } as never,
+        operationsUserId,
+        "Missing details",
+      ),
+    );
+    await assert.rejects(() =>
+      operationsJobsService.rejectJobWithEmployerNotification(
+        pendingJob() as never,
+        operationsUserId,
+        "   ",
+      ),
+    );
+    mock.method(JobModel, "updateOne", async () => ({ matchedCount: 0 }));
+    await assert.rejects(() =>
+      operationsJobsService.rejectJobWithEmployerNotification(
+        pendingJob() as never,
+        operationsUserId,
+        "Missing details",
+      ),
+    );
+    assert.equal(queued, 0);
+  });
+
+  it("keeps the job rejected when WhatsApp delivery fails", async () => {
+    mockEmployer(employerPhone);
+    mock.method(JobModel, "updateOne", async () => ({ matchedCount: 1 }));
+    mock.method(OperationsTeamUserModel, "findById", () => ({
+      select() {
+        return this;
+      },
+      async lean() {
+        return { fullName: "Operations Admin" };
+      },
+    }));
+    mock.method(notificationService, "notifyEmployerJobRejected", async () => ({
+      created: true,
+      alreadySent: false,
+    }));
+    mock.method(operationsJobsService, "getJobDetail", async () => ({
+      jobId: publicJobId,
+      status: "rejected",
+    }));
+    mock.method(jobPostRejectedWhatsApp, "enqueue", async () => {
+      throw new Error("meta unavailable");
+    });
+    stubSideEffects();
+
+    const result = await operationsJobsService.rejectJobWithEmployerNotification(
+      pendingJob() as never,
+      operationsUserId,
+      "Properly add the job",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(result.status, "rejected");
+  });
+
+  it("does not send a second job_post_rejected message for the same rejection", async () => {
+    let queued = 0;
+    const payload = {
+      event: "JOB_POST_REJECTED" as const,
+      entityId: jobMongoId,
+      phoneNumber: employerPhone,
+      preferredLanguage: "en" as const,
+      idempotencyScope: jobPostRejectionCycle(rejectedAt),
+    };
+    assert.equal(
+      await enqueueWhatsAppNotification(payload, {
+        claim: async () => "duplicate",
+        enqueueJob: async () => {
+          queued += 1;
+        },
+      }),
+      "skipped_duplicate",
+    );
+    assert.equal(
+      await enqueueWhatsAppNotification(payload, {
+        claim: async () => "duplicate",
+        enqueueJob: async () => {
+          queued += 1;
+        },
+      }),
+      "skipped_duplicate",
+    );
+    assert.equal(queued, 0);
+  });
+
+  it("does not send job_post_rejected when the employer has no WhatsApp number", async () => {
+    let queued = 0;
+    mockEmployer("");
+    mock.method(jobPostRejectedWhatsApp, "enqueue", async () => {
+      queued += 1;
+      return "queued" as const;
+    });
+
+    jobPostRejectedWhatsApp.schedule({
+      employerId,
+      jobMongoId,
+      publicJobId,
+      rejectedAt,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(queued, 0);
+  });
+
+  it("does not send job_post_rejected for a live-change rejection", async () => {
+    let queued = 0;
+    mock.method(jobPostRejectedWhatsApp, "schedule", () => {
+      queued += 1;
+    });
+    mock.method(JobModel, "updateOne", async () => ({ matchedCount: 1 }));
+    mock.method(OperationsTeamUserModel, "findById", () => ({
+      select() {
+        return this;
+      },
+      async lean() {
+        return { fullName: "Operations Admin" };
+      },
+    }));
+    mock.method(notificationService, "notifyEmployerLiveJobChangesRejected", async () => ({
+      created: true,
+      alreadySent: false,
+    }));
+    mock.method(operationsJobsService, "getJobDetail", async () => ({
+      jobId: publicJobId,
+      status: "active",
+    }));
+    stubSideEffects();
+
+    const result = await operationsJobsService.rejectJobWithEmployerNotification(
+      {
+        ...pendingJob(),
+        status: "active",
+        liveChangeReviewStatus: "pending_approval",
+      } as never,
+      operationsUserId,
+      "Update the salary",
+    );
+    assert.equal(result.status, "active");
+    assert.equal(queued, 0);
+  });
+
+  it("still maps approval and incomplete reminders to their own templates", () => {
+    assert.equal(
+      getWhatsAppNotificationTemplate("JOB_POST_APPROVED")?.templateName,
+      "job_post_approved",
+    );
+    assert.equal(
+      getWhatsAppNotificationTemplate("JOB_POST_INCOMPLETE")?.templateName,
+      "job_post_incomplete_",
+    );
+    assert.equal(
+      getWhatsAppNotificationTemplate("JOB_POST_REJECTED")?.templateName,
+      "job_post_rejected_v1",
+    );
   });
 });
 

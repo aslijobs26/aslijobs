@@ -156,6 +156,22 @@ export async function reuploadEmployerDocument(input: {
   return response.data.data.document;
 }
 
+export async function submitEmployerVerification(): Promise<{
+  employer: EmployerProfilePublic;
+  alreadySubmitted: boolean;
+}> {
+  const response = await apiClient.post<
+    ApiSuccess<{
+      employer: EmployerProfilePublic;
+      alreadySubmitted?: boolean;
+    }>
+  >("/employers/me/verification/submit");
+  return {
+    employer: response.data.data.employer,
+    alreadySubmitted: Boolean(response.data.data.alreadySubmitted),
+  };
+}
+
 export async function resubmitEmployerVerification(): Promise<{
   employer: EmployerProfilePublic;
   alreadyPending: boolean;

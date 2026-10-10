@@ -18,6 +18,7 @@ import {
 } from "../accounts/phone-account.service.js";
 import { phoneAlreadyRegisteredError } from "../accounts/phone-account.policy.js";
 import { otpService } from "../otp/otp.service.js";
+import { jobseekerAccountCreatedWhatsApp } from "../whatsapp/notifications/jobseeker-account-created.notification.js";
 import { resumeService } from "../resumes/resume.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
 import { assertJobSeekerAccountActive } from "./job-seeker-account-status.js";
@@ -473,6 +474,11 @@ export class JobSeekerService {
     jobSeeker.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt;
     jobSeeker.lastLoginAt = new Date();
     await jobSeeker.save();
+
+    jobseekerAccountCreatedWhatsApp.schedule({
+      jobSeekerId: jobSeeker._id.toString(),
+      phoneNumber: jobSeeker.whatsappNumber,
+    });
 
     scheduleCandidateRegisteredAwareness({
       candidateId: jobSeeker._id.toString(),

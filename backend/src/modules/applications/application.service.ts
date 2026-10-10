@@ -16,6 +16,11 @@ import { assertJobSeekerAccountActive } from "../job-seekers/job-seeker-account-
 import { generateResumePdfFromJson } from "../resumes/pdf/index.js";
 import { resumeService } from "../resumes/resume.service.js";
 import { uploadedResumeService } from "../resumes/uploaded-resume.service.js";
+import { interviewCancelledWhatsApp } from "../whatsapp/notifications/interview-cancelled.notification.js";
+import { interviewRescheduledWhatsApp } from "../whatsapp/notifications/interview-rescheduled.notification.js";
+import { interviewScheduledOfflineWhatsApp } from "../whatsapp/notifications/interview-scheduled-offline.notification.js";
+import { interviewScheduledOnlineWhatsApp } from "../whatsapp/notifications/interview-scheduled-online.notification.js";
+import { jobApplicationSubmittedWhatsApp } from "../whatsapp/notifications/job-application-submitted.notification.js";
 import type { ResumeJson } from "../resumes/resume.types.js";
 import {
   APPLICATION_DEFAULT_STATUS,
@@ -601,13 +606,12 @@ function normalizeInterviewForMode(
     interviewerPhone: text(interview.interviewerPhone),
   };
 
-  if (next.mode === "online") {
+  if (next.mode !== "offline") {
     next.venue = "";
-  } else if (next.mode === "offline") {
+  }
+
+  if (next.mode === "offline" || next.mode === "phone") {
     next.meetingLink = "";
-  } else if (next.mode === "phone") {
-    next.meetingLink = "";
-    next.venue = "";
   }
 
   return next;
@@ -880,7 +884,7 @@ export class ApplicationService {
     const employer =
       employerLookupId && mongoose.Types.ObjectId.isValid(employerLookupId)
         ? await EmployerModel.findById(employerLookupId)
-            .select("verificationStatus")
+            .select("verificationStatus companyName establishmentName")
             .lean()
         : null;
 
@@ -997,6 +1001,15 @@ export class ApplicationService {
       }
       throw error;
     }
+
+    jobApplicationSubmittedWhatsApp.schedule({
+      applicationId: application._id.toString(),
+      phoneNumber: jobSeeker?.whatsappNumber ?? "",
+      jobTitle: job.jobTitle ?? "",
+      companyName: job.companyName ?? "",
+      employerCompanyName: employer?.companyName ?? "",
+      employerEstablishmentName: employer?.establishmentName ?? "",
+    });
 
     await JobModel.updateOne({ _id: job._id }, { $inc: { applications: 1 } });
 
@@ -2650,6 +2663,47 @@ export class ApplicationService {
 
     await application.save();
 
+    if (action === "scheduled" && nextInterview.mode === "online") {
+      interviewScheduledOnlineWhatsApp.schedule({
+        applicationId: application._id.toString(),
+        jobId: String(application.jobId),
+        employerId: String(application.employerId),
+        jobSeekerId: String(application.jobSeekerId),
+        interviewDate: nextInterview.date,
+        interviewTime: nextInterview.time,
+      });
+    }
+
+    if (action === "scheduled" && nextInterview.mode === "offline") {
+      interviewScheduledOfflineWhatsApp.schedule({
+        applicationId: application._id.toString(),
+        jobId: String(application.jobId),
+        employerId: String(application.employerId),
+        jobSeekerId: String(application.jobSeekerId),
+        interviewDate: nextInterview.date,
+        interviewTime: nextInterview.time,
+        interviewVenue: nextInterview.venue,
+      });
+    }
+
+    if (
+      action === "updated" &&
+      previousInterview.mode === "offline" &&
+      nextInterview.mode === "offline" &&
+      (previousInterview.date !== nextInterview.date ||
+        previousInterview.time !== nextInterview.time)
+    ) {
+      interviewRescheduledWhatsApp.schedule({
+        applicationId: application._id.toString(),
+        jobId: String(application.jobId),
+        employerId: String(application.employerId),
+        jobSeekerId: String(application.jobSeekerId),
+        interviewDate: nextInterview.date,
+        interviewTime: nextInterview.time,
+        interviewVenue: nextInterview.venue,
+      });
+    }
+
     if (action === "scheduled") {
       await this.emitForApplication(
         APPLICATION_EVENT_NAMES.INTERVIEW_SCHEDULED,
@@ -2717,6 +2771,9 @@ export class ApplicationService {
 
     const now = new Date();
     const actorName = text(input.cancelledByName) || "Employer";
+    // Captured before save so the WhatsApp message keeps this interview's date and time.
+    const cancelledInterviewDate = interview.date;
+    const cancelledInterviewTime = interview.time;
 
     application.interview = toInterviewDocument({
       ...interview,
@@ -2739,6 +2796,15 @@ export class ApplicationService {
     });
 
     await application.save();
+
+    interviewCancelledWhatsApp.schedule({
+      applicationId: application._id.toString(),
+      jobId: String(application.jobId),
+      employerId: String(application.employerId),
+      jobSeekerId: String(application.jobSeekerId),
+      interviewDate: cancelledInterviewDate,
+      interviewTime: cancelledInterviewTime,
+    });
 
     await this.emitForApplication(
       APPLICATION_EVENT_NAMES.INTERVIEW_CANCELLED,

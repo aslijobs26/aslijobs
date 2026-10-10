@@ -263,7 +263,12 @@ export const updateApplicationInterviewSchema = z
       message: "Select an interview mode",
     }),
     meetingLink: z.string().trim().optional().default(""),
-    venue: z.string().trim().optional().default(""),
+    venue: z
+      .string()
+      .trim()
+      .max(200, "Location is too long")
+      .optional()
+      .default(""),
     instructions: z
       .string()
       .trim()
@@ -296,6 +301,14 @@ export const updateApplicationInterviewSchema = z
       });
     }
 
+    if (value.mode === "offline" && !value.venue.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["venue"],
+        message: "Location is required",
+      });
+    }
+
     if (value.mode === "online") {
       const linkResult = httpsUrlSchema.safeParse(value.meetingLink);
       if (!linkResult.success) {
@@ -307,14 +320,6 @@ export const updateApplicationInterviewSchema = z
             "Meeting link is required for online interviews",
         });
       }
-    }
-
-    if (value.mode === "offline" && !value.venue.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["venue"],
-        message: "Venue is required for offline interviews",
-      });
     }
 
     if (value.mode === "phone" && !value.interviewerPhone.trim()) {

@@ -9,8 +9,9 @@ describe("resolveEmployerJobPostingAccess", () => {
     assert.equal(resolveEmployerJobPostingAccess(" Verified "), "allowed");
   });
 
-  it("keeps the existing flow for rejected employers", () => {
-    assert.equal(resolveEmployerJobPostingAccess("rejected"), "allowed");
+  it("blocks rejected and unverified employers from opening Post Job", () => {
+    assert.equal(resolveEmployerJobPostingAccess("rejected"), "under_review");
+    assert.equal(resolveEmployerJobPostingAccess("pending"), "under_review");
   });
 
   it("blocks pending, missing, and unknown statuses", () => {

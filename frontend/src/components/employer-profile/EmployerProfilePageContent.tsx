@@ -23,7 +23,10 @@ import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import { useCan } from "@/providers/employer-permission-provider";
 import { employerProfileQueryKey } from "@/services/employer-login.service";
 import {
+  employerDocumentsQueryKey,
+  fetchEmployerDocuments,
   resubmitEmployerVerification,
+  submitEmployerVerification,
   updateEmployerProfile,
   type EmployerProfilePublic,
   type UpdateEmployerProfileInput,
@@ -32,6 +35,10 @@ import { fetchEmployerJobStats } from "@/services/employer-jobs.service";
 import type { EmployerImageAssetPublic } from "@/services/employer-register.service";
 import { cn } from "@/utils/cn";
 import { calculateEmployerProfileCompletion } from "@/utils/employer-profile-completion";
+import {
+  canOfferVerificationSubmit,
+  employerVerificationSubmitErrors,
+} from "@/utils/employer-verification-submit";
 import { resolveEmployerPosterImageUrl } from "@/utils/employer-poster-image";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { showAppToast } from "@/utils/share-job";
@@ -265,6 +272,84 @@ function EmptyCopy({ children }: { children: ReactNode }) {
   );
 }
 
+function VerificationSubmitSection({
+  errors,
+  checkingDocuments,
+  pending,
+  onSubmit,
+}: {
+  errors: string[];
+  checkingDocuments: boolean;
+  pending: boolean;
+  onSubmit: () => void;
+}) {
+  const blocked = checkingDocuments || errors.length > 0 || pending;
+
+  return (
+    <section
+      className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+      aria-label="Submit for verification"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-sm font-bold text-foreground">
+            Submit for verification
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            Save your profile details and upload the required document, then
+            send them to Operations for review.
+          </p>
+          {checkingDocuments ? (
+            <p className="mt-2 text-sm text-muted">Checking documents…</p>
+          ) : errors.length > 0 ? (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
+              {errors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-foreground">
+              Required details and documents are ready.
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          disabled={blocked}
+          onClick={onSubmit}
+          className="inline-flex min-h-11 shrink-0 items-center justify-center self-end rounded-lg bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 sm:self-center"
+        >
+          {pending ? "Submitting…" : "Submit for Verification"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function SubmitVerificationAgainButton({
+  pending,
+  onSubmit,
+  className,
+}: {
+  pending: boolean;
+  onSubmit: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={onSubmit}
+      className={cn(
+        "inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60",
+        className,
+      )}
+    >
+      {pending ? "Submitting…" : "Submit Again"}
+    </button>
+  );
+}
+
 export function EmployerProfilePageContent() {
   const queryClient = useQueryClient();
   const { can, canField } = useCan();
@@ -319,6 +404,37 @@ export function EmployerProfilePageContent() {
           : "Could not resubmit verification. Please try again.";
       showAppToast(message, "error");
     },
+  });
+
+  const submitVerificationAgain = () => {
+    void resubmitVerificationMutation.mutateAsync();
+  };
+
+  const submitForVerificationMutation = useMutation({
+    mutationFn: submitEmployerVerification,
+    onSuccess: (result) => {
+      queryClient.setQueryData(employerProfileQueryKey, result.employer);
+      showAppToast(
+        result.alreadySubmitted
+          ? "Verification is already pending Operations review."
+          : "Profile submitted for verification.",
+        "success",
+      );
+    },
+    onError: (error: unknown) => {
+      showAppToast(
+        getErrorMessage(error) === "Unable to update the profile."
+          ? "Could not submit verification. Please try again."
+          : getErrorMessage(error),
+        "error",
+      );
+    },
+  });
+
+  const documentsQuery = useQuery({
+    queryKey: employerDocumentsQueryKey,
+    queryFn: fetchEmployerDocuments,
+    enabled: Boolean(profileQuery.data),
   });
 
   const profile = profileQuery.data;
@@ -546,25 +662,24 @@ export function EmployerProfilePageContent() {
 
       {isVerificationRejected ? (
         <section
-          className="mt-4 rounded-xl border border-red-200 bg-red-50/80 p-4 shadow-sm"
+          className="mt-4 flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50/80 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
           aria-live="polite"
         >
-          <p className="text-sm font-semibold text-foreground">
-            Account verification was rejected
-          </p>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
-            {profile.verificationRemarks?.trim() ||
-              "Please update your company details if needed, then submit again for Operations review."}
-          </p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              Account verification was rejected
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              {profile.verificationRemarks?.trim() ||
+                "Please update your company details if needed, then submit again for Operations review."}
+            </p>
+          </div>
           <button
             type="button"
-            disabled={resubmitVerificationMutation.isPending}
-            onClick={() => void resubmitVerificationMutation.mutateAsync()}
-            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+            onClick={() => openEditor("company")}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center self-end rounded-lg bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:self-center"
           >
-            {resubmitVerificationMutation.isPending
-              ? "Submitting…"
-              : "Submit Again"}
+            Complete Profile
           </button>
         </section>
       ) : isVerificationPending ? (
@@ -700,6 +815,24 @@ export function EmployerProfilePageContent() {
             accountType={profile.accountType}
             canUpdate={canUpdateProfile}
           />
+
+          {canUpdateProfile && canOfferVerificationSubmit(profile) ? (
+            <VerificationSubmitSection
+              errors={
+                documentsQuery.isError
+                  ? ["Verification documents could not be checked. Refresh and try again."]
+                  : employerVerificationSubmitErrors(
+                      profile,
+                      documentsQuery.data?.length ?? 0,
+                    )
+              }
+              checkingDocuments={documentsQuery.isLoading}
+              pending={submitForVerificationMutation.isPending}
+              onSubmit={() => {
+                void submitForVerificationMutation.mutateAsync();
+              }}
+            />
+          ) : null}
 
           <section
             id="profile-section-about"
@@ -1157,6 +1290,24 @@ export function EmployerProfilePageContent() {
           </section>
         </aside>
             </div>
+
+      {isVerificationRejected ? (
+        <section
+          className="mt-4 rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:mt-5"
+          aria-label="Resubmit verification"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm leading-relaxed text-muted">
+              Update your details and documents, then submit again for review.
+            </p>
+            <SubmitVerificationAgainButton
+              pending={resubmitVerificationMutation.isPending}
+              onSubmit={submitVerificationAgain}
+              className="w-full sm:w-auto"
+            />
+          </div>
+        </section>
+      ) : null}
 
       {editSection ? (
         <EmployerProfileEditModal

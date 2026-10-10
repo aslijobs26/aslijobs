@@ -52,6 +52,7 @@ import { notificationService } from "../../notifications/notification.service.js
 import {
   jobPostApprovalCycle,
   jobPostApprovedWhatsApp,
+  jobPostRejectedWhatsApp,
 } from "../../whatsapp/notifications/job-post-whatsapp.notification.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
 import { scheduleJobModerationAudit } from "./operations-job-audit.js";
@@ -2324,6 +2325,13 @@ export const operationsJobsService = {
       nextStatus: "rejected",
       reason: trimmedReason,
       metadata: { reviewKind: historyKind },
+    });
+
+    jobPostRejectedWhatsApp.schedule({
+      employerId,
+      jobMongoId: job._id.toString(),
+      publicJobId: job.jobId,
+      rejectedAt: now,
     });
 
     try {

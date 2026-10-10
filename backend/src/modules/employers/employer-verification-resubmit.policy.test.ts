@@ -4,6 +4,7 @@ import { PENDING_VERIFICATION_FILTER } from "../operations/verifications/operati
 import {
   documentUploadLeavesEmployerRejected,
   employerResubmitFieldErrors,
+  shouldQueueVerificationOnDocumentUpload,
   type EmployerResubmitSnapshot,
 } from "./employer-verification-resubmit.policy.js";
 
@@ -54,6 +55,30 @@ describe("employer resubmission rules", () => {
     assert.equal(documentUploadLeavesEmployerRejected("rejected"), true);
     assert.equal(documentUploadLeavesEmployerRejected("pending"), false);
     assert.equal(documentUploadLeavesEmployerRejected("verified"), false);
+  });
+
+  it("does not treat a document upload as verification submission before the profile is submitted", () => {
+    assert.equal(
+      shouldQueueVerificationOnDocumentUpload({
+        verificationStatus: "pending",
+        registrationStatus: "otp_verified",
+      }),
+      false,
+    );
+    assert.equal(
+      shouldQueueVerificationOnDocumentUpload({
+        verificationStatus: "rejected",
+        registrationStatus: "completed",
+      }),
+      false,
+    );
+    assert.equal(
+      shouldQueueVerificationOnDocumentUpload({
+        verificationStatus: "pending",
+        registrationStatus: "completed",
+      }),
+      true,
+    );
   });
 
   it("matches resubmitted pending employers to the existing verification queue", () => {

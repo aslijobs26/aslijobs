@@ -74,6 +74,50 @@ export function buildWhatsAppNotificationBodyParameters(
     const employerName = payload.employerName?.trim() || "Employer";
     return [employerName];
   }
+  if (event === "JOB_APPLICATION_SUBMITTED") {
+    const jobTitle = payload.jobTitle?.trim() ?? "";
+    const companyName = payload.companyName?.trim() ?? "";
+    if (!jobTitle || !companyName) {
+      return [];
+    }
+    return [jobTitle, companyName];
+  }
+  if (event === "INTERVIEW_SCHEDULED_ONLINE" || event === "INTERVIEW_CANCELLED") {
+    const jobTitle = payload.jobTitle?.trim() ?? "";
+    const companyName = payload.companyName?.trim() ?? "";
+    const interviewDate = payload.interviewDate?.trim() ?? "";
+    const interviewTime = payload.interviewTime?.trim() ?? "";
+    if (!jobTitle || !companyName || !interviewDate || !interviewTime) {
+      return [];
+    }
+    return [jobTitle, companyName, interviewDate, interviewTime];
+  }
+  if (
+    event === "INTERVIEW_SCHEDULED_OFFLINE" ||
+    event === "INTERVIEW_RESCHEDULED"
+  ) {
+    const jobTitle = payload.jobTitle?.trim() ?? "";
+    const companyName = payload.companyName?.trim() ?? "";
+    const interviewDate = payload.interviewDate?.trim() ?? "";
+    const interviewTime = payload.interviewTime?.trim() ?? "";
+    const interviewVenue = payload.interviewVenue?.trim() ?? "";
+    if (
+      !jobTitle ||
+      !companyName ||
+      !interviewDate ||
+      !interviewTime ||
+      !interviewVenue
+    ) {
+      return [];
+    }
+    return [
+      jobTitle,
+      companyName,
+      interviewDate,
+      interviewTime,
+      interviewVenue,
+    ];
+  }
   return [];
 }
 
@@ -86,8 +130,17 @@ export function buildWhatsAppNotificationUrlButtonParameters(
   event: WhatsAppNotificationEvent,
   payload: WhatsAppNotificationPayload,
 ): string[] {
-  if (event === "EMPLOYER_ACCOUNT_APPROVED" || event === "JOB_POST_INCOMPLETE") {
+  // Interview schedule and cancellation templates are body-only.
+  // Meta has no URL button on those templates.
+  if (
+    event === "EMPLOYER_ACCOUNT_APPROVED" ||
+    event === "JOB_POST_INCOMPLETE" ||
+    event === "JOB_POST_REJECTED"
+  ) {
     const id = payload.entityId.trim();
+    if (event === "JOB_POST_REJECTED" && !/^[a-f0-9]{24}$/i.test(id)) {
+      return [];
+    }
     return id ? [id] : [];
   }
   return [];
@@ -120,6 +173,25 @@ export const JOB_POST_APPROVED_VIEW_URL =
   "https://www.aslijobs.com/employer/jobs";
 
 export const JOB_POST_APPROVED_VIEW_PATH = "/employer/jobs";
+
+/**
+ * job_post_rejected_v1 body has no variables. Edit Job Post is one dynamic
+ * URL button. Meta stores https://www.aslijobs.com/post-job/{{1}}, so the
+ * API parameter is only the rejected job's Mongo _id. The editor route is
+ * /post-job/:jobId.
+ */
+export const JOB_POST_REJECTED_EDIT_URL_PREFIX =
+  "https://www.aslijobs.com/post-job/";
+
+export const JOB_POST_REJECTED_EDIT_PATH = "/post-job/";
+
+export function jobPostRejectedEditUrl(jobMongoId: string): string {
+  const id = jobMongoId.trim();
+  if (!/^[a-f0-9]{24}$/i.test(id)) {
+    return "";
+  }
+  return `${JOB_POST_REJECTED_EDIT_URL_PREFIX}${id}`;
+}
 
 /**
  * job_post_incomplete_ Complete Job Details button.

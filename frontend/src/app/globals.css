@@ -1633,6 +1633,28 @@ html:is(:lang(hi), :lang(te), :lang(ta), :lang(kn), :lang(ml)) .discovery-sectio
     bottom: calc(100% + 0.375rem);
   }
 
+  .employer-register-searchable-select-panel--anchored {
+    position: fixed;
+    z-index: 110;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    display: flex;
+    flex-direction: column;
+    width: auto;
+    border-radius: 0.5rem;
+    border-color: var(--color-border-subtle);
+  }
+
+  .employer-register-searchable-select-panel--anchored
+    .employer-register-searchable-select-options {
+    max-height: none;
+    min-height: 0;
+    flex: 1 1 auto;
+    scrollbar-width: thin;
+  }
+
   .employer-register-searchable-select-search {
     display: flex;
     align-items: center;

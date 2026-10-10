@@ -85,3 +85,18 @@ export function documentUploadLeavesEmployerRejected(
 ): boolean {
   return String(verificationStatus ?? "").toLowerCase() === "rejected";
 }
+
+/**
+ * Uploading or replacing a document stores the file only.
+ * Operations review starts when registration is already submitted, or when
+ * the employer explicitly submits or resubmits verification.
+ */
+export function shouldQueueVerificationOnDocumentUpload(input: {
+  verificationStatus?: string | null;
+  registrationStatus?: string | null;
+}): boolean {
+  if (documentUploadLeavesEmployerRejected(input.verificationStatus)) {
+    return false;
+  }
+  return String(input.registrationStatus ?? "").toLowerCase() === "completed";
+}

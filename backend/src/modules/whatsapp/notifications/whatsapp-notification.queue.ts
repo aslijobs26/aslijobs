@@ -87,6 +87,179 @@ function logEmployerRejectionDeliveryFailure(
   });
 }
 
+function logInterviewScheduledOnlineDelivery(
+  job: WhatsAppNotificationQueueJob,
+  outcome: "accepted" | "failed",
+): void {
+  if (job.event !== "INTERVIEW_SCHEDULED_ONLINE") {
+    return;
+  }
+  const details = {
+    applicationId: job.entityId,
+    template: job.templateName,
+    language: job.languageCode,
+    outcome,
+  };
+  if (outcome === "accepted") {
+    console.info(
+      "[WhatsAppNotification] interview_scheduled_online accepted",
+      details,
+    );
+    return;
+  }
+  console.error(
+    "[WhatsAppNotification] interview_scheduled_online delivery failed",
+    details,
+  );
+}
+
+function logInterviewScheduledOfflineDelivery(
+  job: WhatsAppNotificationQueueJob,
+  outcome: "accepted" | "failed",
+): void {
+  if (job.event !== "INTERVIEW_SCHEDULED_OFFLINE") {
+    return;
+  }
+  const details = {
+    applicationId: job.entityId,
+    template: job.templateName,
+    language: job.languageCode,
+    outcome,
+  };
+  if (outcome === "accepted") {
+    console.info(
+      "[WhatsAppNotification] interview_scheduled_offline accepted",
+      details,
+    );
+    return;
+  }
+  console.error(
+    "[WhatsAppNotification] interview_scheduled_offline delivery failed",
+    details,
+  );
+}
+
+function logInterviewCancelledDelivery(
+  job: WhatsAppNotificationQueueJob,
+  outcome: "accepted" | "failed",
+): void {
+  if (job.event !== "INTERVIEW_CANCELLED") {
+    return;
+  }
+  const details = {
+    applicationId: job.entityId,
+    template: job.templateName,
+    language: job.languageCode,
+    outcome,
+  };
+  if (outcome === "accepted") {
+    console.info("[WhatsAppNotification] interview_cancelled accepted", details);
+    return;
+  }
+  console.error(
+    "[WhatsAppNotification] interview_cancelled delivery failed",
+    details,
+  );
+}
+
+function logInterviewRescheduledDelivery(
+  job: WhatsAppNotificationQueueJob,
+  outcome: "accepted" | "failed",
+): void {
+  if (job.event !== "INTERVIEW_RESCHEDULED") {
+    return;
+  }
+  const details = {
+    applicationId: job.entityId,
+    template: job.templateName,
+    language: job.languageCode,
+    outcome,
+  };
+  if (outcome === "accepted") {
+    console.info(
+      "[WhatsAppNotification] interview_rescheduled accepted",
+      details,
+    );
+    return;
+  }
+  console.error(
+    "[WhatsAppNotification] interview_rescheduled delivery failed",
+    details,
+  );
+}
+
+function logJobApplicationSubmittedDelivery(
+  job: WhatsAppNotificationQueueJob,
+  outcome: "accepted" | "failed",
+): void {
+  if (job.event !== "JOB_APPLICATION_SUBMITTED") {
+    return;
+  }
+  const details = {
+    applicationId: job.entityId,
+    template: job.templateName,
+    language: job.languageCode,
+    outcome,
+  };
+  if (outcome === "accepted") {
+    console.info(
+      "[WhatsAppNotification] job_application_submitted accepted",
+      details,
+    );
+    return;
+  }
+  console.error(
+    "[WhatsAppNotification] job_application_submitted delivery failed",
+    details,
+  );
+}
+
+function logJobseekerAccountCreatedDelivery(
+  job: WhatsAppNotificationQueueJob,
+  outcome: "accepted" | "failed",
+): void {
+  if (job.event !== "JOBSEEKER_ACCOUNT_CREATED") {
+    return;
+  }
+  const details = {
+    jobSeekerId: job.entityId,
+    template: job.templateName,
+    language: job.languageCode,
+    outcome,
+  };
+  if (outcome === "accepted") {
+    console.info(
+      "[WhatsAppNotification] jobseeker_account_created accepted",
+      details,
+    );
+    return;
+  }
+  console.error(
+    "[WhatsAppNotification] jobseeker_account_created delivery failed",
+    details,
+  );
+}
+
+function logJobPostRejectedDelivery(
+  job: WhatsAppNotificationQueueJob,
+  outcome: "accepted" | "failed",
+): void {
+  if (job.event !== "JOB_POST_REJECTED") {
+    return;
+  }
+  const details = {
+    jobMongoId: job.entityId,
+    template: job.templateName,
+    language: job.languageCode,
+    outcome,
+  };
+  if (outcome === "accepted") {
+    console.info("[WhatsAppNotification] job_post_rejected_v1 accepted", details);
+    return;
+  }
+  console.error("[WhatsAppNotification] job_post_rejected_v1 delivery failed", details);
+}
+
 function logJobPostIncompleteDelivery(
   job: WhatsAppNotificationQueueJob,
   outcome: "accepted" | "failed",
@@ -144,6 +317,13 @@ export async function deliverWhatsAppNotificationJob(
     timestamp: new Date().toISOString(),
   });
   logJobPostIncompleteDelivery(job, "accepted");
+  logJobPostRejectedDelivery(job, "accepted");
+  logJobseekerAccountCreatedDelivery(job, "accepted");
+  logJobApplicationSubmittedDelivery(job, "accepted");
+  logInterviewScheduledOnlineDelivery(job, "accepted");
+  logInterviewScheduledOfflineDelivery(job, "accepted");
+  logInterviewCancelledDelivery(job, "accepted");
+  logInterviewRescheduledDelivery(job, "accepted");
 }
 
 export async function enqueueWhatsAppNotificationJob(
@@ -168,6 +348,13 @@ export async function enqueueWhatsAppNotificationJob(
       logEmployerApprovalDeliveryFailure(job);
       logEmployerRejectionDeliveryFailure(job);
       logJobPostIncompleteDelivery(job, "failed");
+      logJobPostRejectedDelivery(job, "failed");
+      logJobseekerAccountCreatedDelivery(job, "failed");
+      logJobApplicationSubmittedDelivery(job, "failed");
+      logInterviewScheduledOnlineDelivery(job, "failed");
+      logInterviewScheduledOfflineDelivery(job, "failed");
+      logInterviewCancelledDelivery(job, "failed");
+      logInterviewRescheduledDelivery(job, "failed");
     });
     return;
   }
@@ -211,6 +398,13 @@ export async function enqueueWhatsAppNotificationJob(
       logEmployerApprovalDeliveryFailure(job);
       logEmployerRejectionDeliveryFailure(job);
       logJobPostIncompleteDelivery(job, "failed");
+      logJobPostRejectedDelivery(job, "failed");
+      logJobseekerAccountCreatedDelivery(job, "failed");
+      logJobApplicationSubmittedDelivery(job, "failed");
+      logInterviewScheduledOnlineDelivery(job, "failed");
+      logInterviewScheduledOfflineDelivery(job, "failed");
+      logInterviewCancelledDelivery(job, "failed");
+      logInterviewRescheduledDelivery(job, "failed");
     });
   }
 }
@@ -253,6 +447,13 @@ export function startWhatsAppNotificationRuntime(): () => Promise<void> {
         logEmployerApprovalDeliveryFailure(data);
         logEmployerRejectionDeliveryFailure(data);
         logJobPostIncompleteDelivery(data, "failed");
+        logJobPostRejectedDelivery(data, "failed");
+        logJobseekerAccountCreatedDelivery(data, "failed");
+        logJobApplicationSubmittedDelivery(data, "failed");
+        logInterviewScheduledOnlineDelivery(data, "failed");
+        logInterviewScheduledOfflineDelivery(data, "failed");
+        logInterviewCancelledDelivery(data, "failed");
+        logInterviewRescheduledDelivery(data, "failed");
       }
     }
   });

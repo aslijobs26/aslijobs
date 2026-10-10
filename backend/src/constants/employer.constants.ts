@@ -64,7 +64,7 @@ export const EMPLOYER_IDENTITY_DOCUMENT_TYPES = [
   "voter-id",
 ] as const;
 
-export const EMPLOYER_BUSINESS_DOCUMENT_TYPES = [
+export const EMPLOYER_COMPANY_DOCUMENT_TYPES = [
   "gst-certificate",
   "certificate-of-incorporation",
   "llp-registration-certificate",
@@ -77,6 +77,32 @@ export const EMPLOYER_BUSINESS_DOCUMENT_TYPES = [
   "fssai-license",
   "other-government-registration",
 ] as const;
+
+/** Documents a consultancy submits during registration. */
+export const EMPLOYER_CONSULTANCY_DOCUMENT_TYPES = [
+  "gst-certificate",
+  "msme-udyam-registration",
+  "shop-establishment-license",
+  "trade-license",
+  "pan-card-business",
+  "other-government-registration",
+] as const;
+
+export const EMPLOYER_BUSINESS_DOCUMENT_TYPES = [
+  ...EMPLOYER_COMPANY_DOCUMENT_TYPES,
+] as const;
+
+export function documentTypesForEmployerAccount(
+  accountType: (typeof EMPLOYER_ACCOUNT_TYPES)[number],
+): readonly string[] {
+  if (accountType === "individual") {
+    return EMPLOYER_IDENTITY_DOCUMENT_TYPES;
+  }
+  if (accountType === "consultancy") {
+    return EMPLOYER_CONSULTANCY_DOCUMENT_TYPES;
+  }
+  return EMPLOYER_COMPANY_DOCUMENT_TYPES;
+}
 
 export const EMPLOYER_DOCUMENT_TYPES = [
   ...EMPLOYER_IDENTITY_DOCUMENT_TYPES,

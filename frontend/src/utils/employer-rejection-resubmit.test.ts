@@ -70,7 +70,12 @@ describe("rejected employer profile wiring", () => {
     );
     assert.match(profile, /verificationStatus === "rejected"/);
     assert.match(profile, /Account verification was rejected/);
-    assert.match(profile, /Submit Again/);
+    assert.equal((profile.match(/Submit Again/g) ?? []).length, 1);
+    assert.equal((profile.match(/submitVerificationAgain/g) ?? []).length, 2);
+    assert.match(profile, /Complete Profile/);
+    assert.match(profile, /onClick=\{\(\) => openEditor\("company"\)\}/);
+    assert.match(profile, /profile-section-company/);
+    assert.match(profile, /Resubmit verification/);
     assert.match(profile, /resubmitEmployerVerification/);
     assert.match(profile, /EmployerVerificationReviewBanner/);
     assert.equal(profile.includes("verificationStatus = \"pending\""), false);
