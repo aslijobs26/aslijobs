@@ -26,6 +26,7 @@ import {
 
 interface CandidatesMobileCardProps {
   application: OperationsCandidateListItem;
+  onDelete?: (application: OperationsCandidateListItem) => void;
 }
 
 function InfoColumn({
@@ -78,6 +79,7 @@ function InfoColumn({
  */
 export function CandidatesMobileCard({
   application,
+  onDelete,
 }: CandidatesMobileCardProps) {
   const navigate = useNavigate();
   const [copiedId, setCopiedId] = useState(false);
@@ -185,7 +187,10 @@ export function CandidatesMobileCard({
                 onClick={stopCardNavigation}
                 onKeyDown={(event) => event.stopPropagation()}
               >
-                <CandidatesRowActions application={application} />
+                <CandidatesRowActions
+                  application={application}
+                  onDelete={onDelete}
+                />
               </div>
             </div>
 

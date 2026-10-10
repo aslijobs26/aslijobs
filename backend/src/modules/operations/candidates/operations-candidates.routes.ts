@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   requireOperationsAuth,
   requireFineOrCoarsePermission,
+  requireOperationsPermission,
   requireOperationsPermissionKey,
 } from "../../../middleware/operations-auth.middleware.js";
 import { validate } from "../../../middleware/validate.middleware.js";
@@ -97,6 +98,13 @@ operationsCandidatesRouter.get(
   ),
   validate(operationsCandidateSeekerIdParamsSchema, "params"),
   asyncHandler(operationsCandidatesController.getBySeekerId),
+);
+
+operationsCandidatesRouter.delete(
+  "/seekers/:jobSeekerId",
+  requireOperationsPermission("candidates", "delete"),
+  validate(operationsCandidateSeekerIdParamsSchema, "params"),
+  asyncHandler(operationsCandidatesController.remove),
 );
 
 operationsCandidatesRouter.get(

@@ -19,6 +19,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Production code also forces this to 30 minutes. A short dashboard
+      # value cannot send job_post_incomplete_ early.
       - key: JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES
         value: "30"
       # Set remaining secrets in the Render dashboard (never commit URIs/secrets):

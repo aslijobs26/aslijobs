@@ -1,4 +1,4 @@
-import { Copy, MoreVertical } from "lucide-react";
+import { Copy, MoreVertical, Trash2 } from "lucide-react";
 import {
   useEffect,
   useLayoutEffect,
@@ -11,17 +11,20 @@ import { useNavigate } from "react-router-dom";
 import { operationsCandidateDetailPath } from "../../../constants/operations-routes";
 import type { OperationsCandidateListItem } from "../../../types/operations-candidates";
 import { cn } from "../../../utils/cn";
+import { OperationsCanKey } from "../auth/OperationsCanKey";
 import { formatCandidateDisplayId } from "./candidates-format";
 
 interface CandidatesRowActionsProps {
   application: OperationsCandidateListItem;
+  onDelete?: (application: OperationsCandidateListItem) => void;
 }
 
 const MENU_GAP_PX = 6;
-const MENU_ESTIMATED_HEIGHT_PX = 80;
+const MENU_ESTIMATED_HEIGHT_PX = 132;
 
 export function CandidatesRowActions({
   application,
+  onDelete,
 }: CandidatesRowActionsProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -141,6 +144,23 @@ export function CandidatesRowActions({
         <Copy className="size-3.5 shrink-0" aria-hidden="true" />
         {copied ? "Copied" : "Copy Candidate ID"}
       </button>
+      {onDelete ? (
+        <OperationsCanKey permissionKey="candidates.profile.actions.delete">
+          <div className="my-1 border-t border-border-subtle" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onDelete(application);
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-danger transition-colors hover:bg-danger/10"
+          >
+            <Trash2 className="size-3.5 shrink-0" aria-hidden="true" />
+            Delete
+          </button>
+        </OperationsCanKey>
+      ) : null}
     </div>
   ) : null;
 

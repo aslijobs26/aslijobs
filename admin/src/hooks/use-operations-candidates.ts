@@ -1,11 +1,21 @@
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  deleteOperationsCandidate,
   exportOperationsCandidates,
   fetchOperationsCandidateApplications,
   fetchOperationsCandidateDetail,
   fetchOperationsCandidates,
   fetchOperationsCandidatesAnalytics,
 } from "../services/operations-candidates.service";
+import { OPERATIONS_JOBS_QUERY_KEY } from "./use-operations-jobs";
+import { OPERATIONS_PLACEMENTS_QUERY_KEY } from "./use-operations-placements";
+import { OPERATIONS_REGISTRATION_AWARENESS_QUERY_KEY } from "./use-operations-registration-awareness";
+import { OPERATIONS_WORK_QUERY_KEY } from "./use-operations-work";
 import type {
   OperationsCandidatesAnalyticsParams,
   OperationsCandidatesExportParams,
@@ -67,6 +77,32 @@ export function useOperationsCandidatesAnalytics(
     retryDelay: candidatesRetryDelay,
     placeholderData: keepPreviousData,
     enabled: options?.enabled ?? true,
+  });
+}
+
+export function useDeleteOperationsCandidateMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (jobSeekerId: string) => deleteOperationsCandidate(jobSeekerId),
+    onSuccess: async (_data, jobSeekerId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: OPERATIONS_CANDIDATES_QUERY_KEY,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...OPERATIONS_CANDIDATES_QUERY_KEY, "detail", jobSeekerId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: OPERATIONS_REGISTRATION_AWARENESS_QUERY_KEY,
+        }),
+        queryClient.invalidateQueries({ queryKey: OPERATIONS_JOBS_QUERY_KEY }),
+        queryClient.invalidateQueries({
+          queryKey: OPERATIONS_PLACEMENTS_QUERY_KEY,
+        }),
+        queryClient.invalidateQueries({ queryKey: OPERATIONS_WORK_QUERY_KEY }),
+      ]);
+    },
   });
 }
 

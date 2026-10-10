@@ -139,6 +139,14 @@ export async function fetchOperationsCandidateResumeBlob(
   };
 }
 
+export async function deleteOperationsCandidate(
+  jobSeekerId: string,
+): Promise<void> {
+  await apiClient.delete(
+    `${OPERATIONS_CANDIDATES_BASE}/seekers/${encodeURIComponent(jobSeekerId)}`,
+  );
+}
+
 export async function fetchOperationsCandidateDetail(
   jobSeekerId: string,
 ): Promise<OperationsCandidateDetail> {

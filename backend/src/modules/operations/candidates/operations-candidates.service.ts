@@ -22,6 +22,9 @@ import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-i
 import { EmployerModel } from "../../employers/employer.model.js";
 import { JobModel } from "../../jobs/job.model.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
+import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
+import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
+import { deleteOperationsJobSeekerAccount } from "./operations-candidate-delete.js";
 import { calculateProfileCompleteness } from "../../resumes/utils/profile-completeness.js";
 import type { Readable } from "node:stream";
 import type {
@@ -2099,5 +2102,29 @@ export const operationsCandidatesService = {
       mimeType: photo?.mimeType || "image/jpeg",
       originalName: photo?.originalName || "profile-photo",
     });
+  },
+
+  async deleteJobSeeker(
+    jobSeekerId: string,
+    operationsUserId: string,
+  ): Promise<{ jobSeekerId: string }> {
+    const deleted = await deleteOperationsJobSeekerAccount(jobSeekerId);
+    const opsUserObjectId = new mongoose.Types.ObjectId(operationsUserId);
+    const actor = await OperationsTeamUserModel.findById(opsUserObjectId)
+      .select("fullName")
+      .lean();
+
+    await recordOperationsAuditEvent({
+      actorUserId: opsUserObjectId,
+      actorName: text(actor?.fullName) || "Operations",
+      action: "candidate.account_deleted",
+      targetType: "candidate",
+      targetId: deleted.jobSeekerId,
+      targetLabel: deleted.displayName,
+      previousState: { exists: true },
+      nextState: { exists: false },
+    });
+
+    return { jobSeekerId: deleted.jobSeekerId };
   },
 };

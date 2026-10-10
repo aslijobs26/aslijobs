@@ -136,17 +136,16 @@ const envSchema = z.object({
     .max(24 * 60)
     .default(30),
   /**
-   * Minutes after the latest incomplete job draft save before sending
-   * job_post_incomplete. Temporary testing default is 1 minute.
-   * Restore this default to 30 after testing. Production stays at 30
-   * while Render sets JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES.
+   * Local-only minutes after the latest incomplete job draft save before
+   * sending job_post_incomplete_. Production ignores this value and always
+   * waits 30 minutes. Keep a short value here only for local testing.
    */
   JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES: z.coerce
     .number()
     .int()
     .min(1)
     .max(24 * 60)
-    .default(1),
+    .default(30),
   /**
    * Inbox retention for unread notifications (days from createdAt).
    * Expired rows are hidden from inbox/unread APIs; conversation history is preserved.

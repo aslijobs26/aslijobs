@@ -6,6 +6,7 @@ import {
   isJobDraftIncomplete,
   jobPostIncompleteReminderDelayMs,
   persistedEmployerId,
+  resolveJobPostIncompleteReminderDelayMinutes,
   type PersistedJobDraftSnapshot,
 } from "./job-post-incomplete-reminder.policy.js";
 import {
@@ -88,9 +89,16 @@ const defaultDeps: JobPostIncompleteReminderDeps = {
   now: () => new Date(),
 };
 
+export function getJobPostIncompleteReminderDelayMinutes(): number {
+  return resolveJobPostIncompleteReminderDelayMinutes(
+    env.JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES,
+    env.NODE_ENV,
+  );
+}
+
 export function getJobPostIncompleteReminderDelayMs(): number {
   return jobPostIncompleteReminderDelayMs(
-    env.JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES,
+    getJobPostIncompleteReminderDelayMinutes(),
   );
 }
 
@@ -153,7 +161,7 @@ export async function armJobPostIncompleteReminder(
       publicJobId,
       employerId,
       generation: refreshed.generation,
-      delayMinutes: env.JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES,
+      delayMinutes: getJobPostIncompleteReminderDelayMinutes(),
       delayMs: getJobPostIncompleteReminderDelayMs(),
       dueAt: dueAt.toISOString(),
     },
@@ -221,6 +229,15 @@ export async function processJobPostIncompleteReminder(
       publicJobId: reminder.publicJobId,
       generation,
       status: reminder.status,
+    });
+    return "skipped";
+  }
+  if (reminder.dueAt.getTime() - deps.now().getTime() > 1_000) {
+    console.info("[JobPostIncompleteReminder] not due yet", {
+      jobMongoId,
+      publicJobId: reminder.publicJobId,
+      generation,
+      dueAt: reminder.dueAt.toISOString(),
     });
     return "skipped";
   }

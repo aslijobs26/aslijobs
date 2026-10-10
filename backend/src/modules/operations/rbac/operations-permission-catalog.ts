@@ -280,6 +280,15 @@ function candidateCatalog(): OperationsPermissionDefinition[] {
       mapsToAction: "read",
       sensitive: true,
     }),
+    define({
+      module: "candidates",
+      page: "profile",
+      section: "actions",
+      action: "delete",
+      label: "Candidates · Delete",
+      mapsToAction: "delete",
+      sensitive: true,
+    }),
   ];
 }
 
@@ -1015,6 +1024,9 @@ export const CANDIDATE_DOCUMENTS_PERMISSION_KEY =
 
 export const CANDIDATE_EXPORT_PERMISSION_KEY =
   "candidates.list.export" as const;
+
+export const CANDIDATE_DELETE_PERMISSION_KEY =
+  "candidates.profile.actions.delete" as const;
 
 export const JOBS_LIST_EXPORT_KEY = "jobs.list.export" as const;
 export const JOBS_POST_CREATE_KEY = "jobs.post.create" as const;

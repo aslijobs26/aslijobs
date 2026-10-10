@@ -11,6 +11,7 @@ import {
   sanitizeCandidateListItem,
 } from "../rbac/operations-field-sanitize.js";
 import {
+  CANDIDATE_DELETE_PERMISSION_KEY,
   CANDIDATE_DOCUMENTS_PERMISSION_KEY,
   CANDIDATE_EXPORT_PERMISSION_KEY,
   CANDIDATE_LIST_FILTER_PERMISSION_KEY,
@@ -238,6 +239,29 @@ export const operationsCandidatesController = {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations candidate applications fetched successfully.",
+      data: result,
+    });
+  },
+
+  async remove(req: Request, res: Response): Promise<void> {
+    assertOperationsPermissionKey(
+      requireAccess(req),
+      CANDIDATE_DELETE_PERMISSION_KEY,
+    );
+
+    const operationsUserId = req.operationsUserId;
+    if (!operationsUserId) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+
+    const { jobSeekerId } = req.params as OperationsCandidateSeekerIdParams;
+    const result = await operationsCandidatesService.deleteJobSeeker(
+      jobSeekerId,
+      operationsUserId,
+    );
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Job seeker account deleted successfully.",
       data: result,
     });
   },

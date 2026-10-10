@@ -6,6 +6,7 @@ import {
 } from "../../../../constants/operations-candidates-overview";
 import { useOperationsCandidates } from "../../../../hooks/use-operations-candidates";
 import type {
+  OperationsCandidateListItem,
   OperationsCandidateOverviewKpi,
   OperationsCandidatesAnalyticsParams,
   OperationsCandidatesListParams,
@@ -25,6 +26,7 @@ interface CandidatesKpiDrilldownProps {
   cardCaption?: string;
   analyticsFilters: OperationsCandidatesAnalyticsParams;
   onBack: () => void;
+  onDelete?: (application: OperationsCandidateListItem) => void;
   getErrorMessage: (error: unknown) => string;
 }
 
@@ -34,6 +36,7 @@ export function CandidatesKpiDrilldown({
   cardCaption,
   analyticsFilters,
   onBack,
+  onDelete,
   getErrorMessage,
 }: CandidatesKpiDrilldownProps) {
   const view = CANDIDATE_OVERVIEW_KPI_VIEWS[kpi];
@@ -111,6 +114,7 @@ export function CandidatesKpiDrilldown({
             : undefined
         }
         onRetry={() => void candidatesQuery.refetch()}
+        onDelete={onDelete}
         emptyTitle={view.emptyMessage}
         emptyDescription={
           hasFilters

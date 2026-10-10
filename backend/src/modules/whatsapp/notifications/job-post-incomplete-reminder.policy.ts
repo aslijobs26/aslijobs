@@ -2,6 +2,9 @@ import { createJobSchema } from "../../jobs/job.validation.js";
 
 const MINUTES_TO_MS = 60_000;
 
+/** Production wait after the employer leaves an incomplete job draft. */
+export const JOB_POST_INCOMPLETE_PRODUCTION_DELAY_MINUTES = 30;
+
 export type PersistedJobDraftSnapshot = {
   status?: string | null;
   employerId?: { toString(): string } | string | null;
@@ -51,8 +54,25 @@ export type PersistedJobDraftSnapshot = {
 };
 
 /**
- * Converts the configured delay minutes into milliseconds.
- * The duration lives in JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES, not here.
+ * Production always waits 30 minutes. A short local testing value must not
+ * leak into production when the platform variable is missing or still set
+ * to a testing delay.
+ */
+export function resolveJobPostIncompleteReminderDelayMinutes(
+  configuredMinutes: number,
+  nodeEnv: string,
+): number {
+  if (nodeEnv === "production") {
+    return JOB_POST_INCOMPLETE_PRODUCTION_DELAY_MINUTES;
+  }
+  const minutes = Number.isFinite(configuredMinutes)
+    ? Math.trunc(configuredMinutes)
+    : JOB_POST_INCOMPLETE_PRODUCTION_DELAY_MINUTES;
+  return Math.min(24 * 60, Math.max(1, minutes));
+}
+
+/**
+ * Converts reminder delay minutes into milliseconds.
  */
 export function jobPostIncompleteReminderDelayMs(delayMinutes: number): number {
   const minutes = Number.isFinite(delayMinutes)

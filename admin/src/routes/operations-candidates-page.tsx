@@ -28,12 +28,14 @@ import {
   EMPTY_CANDIDATES_FILTER_OPTIONS,
 } from "../constants/operations-candidates-overview";
 import {
+  useDeleteOperationsCandidateMutation,
   useExportOperationsCandidates,
   useOperationsCandidates,
   useOperationsCandidatesAnalytics,
 } from "../hooks/use-operations-candidates";
 import { useOperationsKpiView } from "../hooks/use-operations-kpi-view";
 import type {
+  OperationsCandidateListItem,
   OperationsCandidatesAnalyticsParams,
   OperationsCandidatesAnalyticsPreset,
   OperationsCandidatesExportParams,
@@ -209,6 +211,7 @@ export function OperationsCandidatesPage() {
     enabled: activeKpi == null,
   });
   const exportMutation = useExportOperationsCandidates();
+  const deleteMutation = useDeleteOperationsCandidateMutation();
   const analytics = analyticsQuery.data;
   const listData = candidatesQuery.data;
   const isInitialLoading =
@@ -256,6 +259,27 @@ export function OperationsCandidatesPage() {
 
   const handleExport = () => {
     void exportMutation.mutateAsync(exportParams).catch(() => undefined);
+  };
+
+  const handleDeleteCandidate = (candidate: OperationsCandidateListItem) => {
+    if (deleteMutation.isPending) {
+      return;
+    }
+
+    const jobSeekerId = candidate.jobSeekerId || candidate.id;
+    const name = candidate.candidateName?.trim() || candidate.displayId || "this job seeker";
+    const confirmed = window.confirm(
+      `Delete ${name}? This permanently removes the job seeker account from the database.`,
+    );
+    if (!confirmed || !jobSeekerId) {
+      return;
+    }
+
+    deleteMutation.mutate(jobSeekerId, {
+      onError: (error) => {
+        window.alert(errorMessage(error, "Failed to delete job seeker account."));
+      },
+    });
   };
 
   const listError = candidatesQuery.error
@@ -368,6 +392,7 @@ export function OperationsCandidatesPage() {
                 }
                 analyticsFilters={analyticsFilters}
                 onBack={() => handleKpiSelect(null)}
+                onDelete={handleDeleteCandidate}
                 getErrorMessage={(error) =>
                   errorMessage(error, "Failed to load jobseekers.")
                 }
@@ -413,6 +438,7 @@ export function OperationsCandidatesPage() {
                       isError={candidatesQuery.isError}
                       errorMessage={listError}
                       onRetry={() => void candidatesQuery.refetch()}
+                      onDelete={handleDeleteCandidate}
                       toolbar={
                         <div className="flex min-w-0 flex-col gap-2.5 max-sm:gap-2 xl:gap-1.5">
                           <CandidatesOverviewTabs

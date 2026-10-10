@@ -2,6 +2,7 @@ import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { env } from "../../../config/env.js";
 import {
+  getJobPostIncompleteReminderDelayMinutes,
   getJobPostIncompleteReminderDelayMs,
   processDueJobPostIncompleteReminders,
   processJobPostIncompleteReminder,
@@ -173,7 +174,7 @@ export function startJobPostIncompleteReminderRuntime(): () => Promise<void> {
   }
 
   console.info("[JobPostIncompleteReminder] runtime started", {
-    delayMinutes: env.JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES,
+    delayMinutes: getJobPostIncompleteReminderDelayMinutes(),
     delayMs: getJobPostIncompleteReminderDelayMs(),
     redisConfigured: Boolean(env.REDIS_URL.trim()),
     nodeEnv: env.NODE_ENV,

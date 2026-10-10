@@ -21,6 +21,7 @@ interface CandidatesTableSectionProps {
   isError: boolean;
   errorMessage?: string;
   onRetry?: () => void;
+  onDelete?: (application: OperationsCandidateListItem) => void;
   toolbar?: ReactNode;
   emptyTitle?: string;
   emptyDescription?: string;
@@ -80,6 +81,7 @@ export function CandidatesTableSection({
   isError,
   errorMessage,
   onRetry,
+  onDelete,
   toolbar,
   emptyTitle = "No jobseekers found",
   emptyDescription = "Try adjusting your search or tab filters.",
@@ -137,7 +139,10 @@ export function CandidatesTableSection({
         {!isLoading && !isError
           ? applications.map((application) => (
               <li key={application.id}>
-                <CandidatesMobileCard application={application} />
+                <CandidatesMobileCard
+                  application={application}
+                  onDelete={onDelete}
+                />
               </li>
             ))
           : null}
@@ -224,7 +229,10 @@ export function CandidatesTableSection({
                       <span className="text-[11px] font-semibold tabular-nums text-foreground">
                         {application.applicationCount ?? 0} apps
                       </span>
-                      <CandidatesRowActions application={application} />
+                      <CandidatesRowActions
+                        application={application}
+                        onDelete={onDelete}
+                      />
                     </div>
                   </div>
                 </li>
@@ -355,7 +363,10 @@ export function CandidatesTableSection({
                       </td>
                       <td className="px-3 py-3 text-right last:pr-4 sm:px-3.5 xl:px-2.5 xl:py-2 xl:last:pr-3">
                         <div className="inline-flex justify-end">
-                          <CandidatesRowActions application={application} />
+                          <CandidatesRowActions
+                            application={application}
+                            onDelete={onDelete}
+                          />
                         </div>
                       </td>
                     </tr>

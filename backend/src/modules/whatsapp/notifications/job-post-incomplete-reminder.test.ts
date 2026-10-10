@@ -21,6 +21,7 @@ import {
 import {
   isJobDraftIncomplete,
   jobPostIncompleteReminderDelayMs,
+  resolveJobPostIncompleteReminderDelayMinutes,
   type PersistedJobDraftSnapshot,
 } from "./job-post-incomplete-reminder.policy.js";
 import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js";
@@ -110,7 +111,7 @@ function reminderDeps(
       publicJobId: "AJ-2026-000010",
       employerId,
       generation: 1,
-      dueAt: new Date(),
+      dueAt: new Date("2026-10-09T05:00:00.000Z"),
       status: "scheduled",
     }),
     claim: async () => true,
@@ -134,6 +135,19 @@ describe("incomplete job draft reminder", () => {
     assert.equal(jobPostIncompleteReminderDelayMs(30), 1_800_000);
     assert.equal(env.EMPLOYER_PROFILE_COMPLETION_REMINDER_DELAY_MINUTES, 30);
     assert.equal(getEmployerProfileCompletionReminderDelayMs(), 1_800_000);
+  });
+
+  it("waits 30 minutes in production even when the configured delay is 1 or 2 minutes", () => {
+    assert.equal(resolveJobPostIncompleteReminderDelayMinutes(1, "production"), 30);
+    assert.equal(resolveJobPostIncompleteReminderDelayMinutes(2, "production"), 30);
+    assert.equal(
+      jobPostIncompleteReminderDelayMs(
+        resolveJobPostIncompleteReminderDelayMinutes(2, "production"),
+      ),
+      1_800_000,
+    );
+    assert.equal(resolveJobPostIncompleteReminderDelayMinutes(1, "development"), 1);
+    assert.equal(resolveJobPostIncompleteReminderDelayMinutes(2, "test"), 2);
   });
 
   it("treats a draft that fails publish validation as incomplete", () => {
@@ -206,6 +220,32 @@ describe("incomplete job draft reminder", () => {
       [1, 2],
     );
     assert.equal(delayed[1]?.previousGeneration, 1);
+  });
+
+  it("does not send job_post_incomplete_ before the saved due time", async () => {
+    let enqueued = false;
+    const result = await processJobPostIncompleteReminder(
+      jobMongoId,
+      1,
+      reminderDeps({
+        now: () => new Date("2026-10-09T05:02:00.000Z"),
+        findReminder: async () => ({
+          jobMongoId,
+          publicJobId: "AJ-2026-000010",
+          employerId,
+          generation: 1,
+          dueAt: new Date("2026-10-09T05:30:00.000Z"),
+          status: "scheduled",
+        }),
+        enqueueNotification: async () => {
+          enqueued = true;
+          return "queued";
+        },
+      }),
+    );
+
+    assert.equal(result, "skipped");
+    assert.equal(enqueued, false);
   });
 
   it("dispatches job_post_incomplete_ to the employer when the draft is still incomplete", async () => {
@@ -339,7 +379,7 @@ describe("incomplete job draft reminder", () => {
           publicJobId: "AJ-2026-000010",
           employerId,
           generation: 2,
-          dueAt: new Date(),
+          dueAt: new Date("2026-10-09T05:00:00.000Z"),
           status: "scheduled",
         }),
         enqueueNotification: async () => {
@@ -357,7 +397,7 @@ describe("incomplete job draft reminder", () => {
           publicJobId: "AJ-2026-000010",
           employerId,
           generation: 2,
-          dueAt: new Date(),
+          dueAt: new Date("2026-10-09T05:00:00.000Z"),
           status: "scheduled",
         }),
         claim: async () => false,
@@ -376,7 +416,7 @@ describe("incomplete job draft reminder", () => {
           publicJobId: "AJ-2026-000010",
           employerId,
           generation: 2,
-          dueAt: new Date(),
+          dueAt: new Date("2026-10-09T05:00:00.000Z"),
           status: "sent",
         }),
         enqueueNotification: async () => {
