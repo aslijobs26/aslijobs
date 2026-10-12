@@ -20,7 +20,6 @@ import { cn } from "@/utils/cn";
 import {
   buildProfileTags,
   computeProfileCompletion,
-  computeProfileStrength,
   formatCurrentLocation,
   formatRelativeUpdatedAt,
   formatWhatsappNumber,
@@ -28,12 +27,17 @@ import {
   parseProfileTab,
   type JobSeekerProfileTab,
 } from "@/utils/job-seeker-profile";
+import {
+  clearPendingJobApply,
+  readPendingJobApply,
+  subscribePendingJobApply,
+} from "@/utils/pending-job-apply";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgeCheck, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { getApiErrorMessage } from "./get-api-error-message";
 import {
   JobSeekerProfileEditModals,
@@ -60,6 +64,12 @@ export function JobSeekerProfileDashboard() {
   const profileQuery = useJobSeekerProfile();
   const [activeModal, setActiveModal] =
     useState<JobSeekerProfileEditModalState>(null);
+  const pendingApply = useSyncExternalStore(
+    subscribePendingJobApply,
+    readPendingJobApply,
+    () => null,
+  );
+  const openedSectionRef = useRef<string | null>(null);
 
   const activeTab = parseProfileTab(searchParams.get("tab"));
 
@@ -134,16 +144,43 @@ export function JobSeekerProfileDashboard() {
     [pathname, router, searchParams],
   );
 
+  const openProfileSection = useCallback(
+    (sectionId: string) => {
+      if (sectionId === "education") {
+        setTab("education");
+        setActiveModal({ type: "education" });
+        return;
+      }
+      if (sectionId === "experience") {
+        setTab("experience");
+        setActiveModal({ type: "experience", mode: "create", index: 0 });
+        return;
+      }
+      if (sectionId === "personal") {
+        setActiveModal({ type: "personal" });
+        return;
+      }
+      setTab("preferences");
+      setActiveModal({ type: "preferences" });
+    },
+    [setTab],
+  );
+
+  const sectionParam = searchParams.get("section");
+
+  useEffect(() => {
+    if (!profileQuery.data || !sectionParam) {
+      return;
+    }
+    if (openedSectionRef.current === sectionParam) {
+      return;
+    }
+    openedSectionRef.current = sectionParam;
+    openProfileSection(sectionParam);
+  }, [openProfileSection, profileQuery.data, sectionParam]);
+
   const jobSeeker = profileQuery.data;
   const resume = resumeQuery.data;
-
-  const strength = useMemo(
-    () =>
-      jobSeeker
-        ? computeProfileStrength(jobSeeker, resume)
-        : { percent: 0, message: "", breakdown: {} as never },
-    [jobSeeker, resume],
-  );
 
   const completion = useMemo(
     () =>
@@ -239,12 +276,62 @@ export function JobSeekerProfileDashboard() {
   const fullName = jobSeeker.fullName?.trim() || t("seeker.common.jobSeeker");
   const locationLabel = formatCurrentLocation(jobSeeker);
   const updatedLabel = formatRelativeUpdatedAt(jobSeeker.updatedAt);
-  const strengthMessage = translateStrengthMessage(strength.message, t);
+  const strengthMessage = translateStrengthMessage(
+    completion.percent >= 100
+      ? "Excellent profile!"
+      : completion.percent >= 70
+        ? "Great! Keep going"
+        : completion.percent >= 40
+          ? "Looking good"
+          : completion.percent > 0
+            ? "Keep building"
+            : "Let's get started",
+    t,
+  );
 
   const phoneLabel = formatWhatsappNumber(jobSeeker.whatsappNumber);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+      {pendingApply ? (
+        <div className="mb-4 rounded-2xl border border-border-subtle bg-primary-light/40 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-foreground sm:text-base">
+                {completion.percent >= 100
+                  ? t("seeker.applyProfileGate.continueTitle")
+                  : t("seeker.applyProfileGate.title")}
+              </h2>
+              <p className="mt-1 break-words text-sm text-muted">
+                {completion.percent >= 100
+                  ? t("seeker.applyProfileGate.continueBody", {
+                      jobTitle: pendingApply.jobTitle,
+                    })
+                  : t("seeker.applyProfileGate.body")}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {completion.percent >= 100 ? (
+                <Link
+                  href={pendingApply.returnUrl}
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                >
+                  {t("seeker.applyProfileGate.continueAction")}
+                </Link>
+              ) : null}
+              <button
+                type="button"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                onClick={() => {
+                  clearPendingJobApply();
+                }}
+              >
+                {t("seeker.applyProfileGate.dismiss")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <header className="overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
         <div className="border-b border-border-subtle bg-primary-light/35 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -368,20 +455,20 @@ export function JobSeekerProfileDashboard() {
 
             <div className="flex w-full shrink-0 items-center gap-2.5 rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:w-auto sm:min-w-[14rem] sm:gap-3 sm:p-3.5">
               <ProfileStrengthCircle
-                percentage={strength.percent}
+                percentage={completion.percent}
                 size={58}
                 variant="soft"
                 className="sm:hidden"
               />
               <ProfileStrengthCircle
-                percentage={strength.percent}
+                percentage={completion.percent}
                 size={64}
                 className="hidden sm:inline-flex"
               />
               <div className="min-w-0">
                 <p className="break-words text-xs font-bold text-foreground sm:text-sm">
                   {t("seeker.profile.strengthPercent", {
-                    percent: strength.percent,
+                    percent: completion.percent,
                   })}
                 </p>
                 <p className="mt-0.5 break-words text-[11px] leading-snug text-muted sm:text-xs">
@@ -470,12 +557,13 @@ export function JobSeekerProfileDashboard() {
 
         <div className="min-w-0">
           <JobSeekerProfileSidebar
-            strengthPercent={strength.percent}
+            strengthPercent={completion.percent}
             strengthMessage={strengthMessage}
             checklist={completion.checklist}
             completionPercent={completion.percent}
             onOpenPersonal={() => setActiveModal({ type: "personal" })}
             onOpenPreferences={() => setActiveModal({ type: "preferences" })}
+            onOpenSection={openProfileSection}
             onSelectTab={setTab}
           />
         </div>

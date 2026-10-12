@@ -90,6 +90,20 @@ export class OtpService {
     };
   }
 
+  /**
+   * The cooldown only applies while an OTP is still waiting to be entered.
+   * After a successful verify the code is cleared, so login can send a new one.
+   */
+  shouldEnforceResendCooldown(record: OtpPersistable): boolean {
+    if (!record.otpHash) {
+      return false;
+    }
+    if (!record.otpExpiresAt || record.otpExpiresAt.getTime() <= Date.now()) {
+      return false;
+    }
+    return true;
+  }
+
   assertResendAllowed(lastOtpSentAt: Date | null | undefined): void {
     if (!lastOtpSentAt) {
       return;
@@ -141,7 +155,9 @@ export class OtpService {
       accountName?: string;
     },
   ): Promise<OtpDeliveryMeta> {
-    this.assertResendAllowed(record.lastOtpSentAt);
+    if (this.shouldEnforceResendCooldown(record)) {
+      this.assertResendAllowed(record.lastOtpSentAt);
+    }
 
     const generated = await this.createOtp();
     const previous = {

@@ -26,6 +26,7 @@ type JobSeekerProfileSidebarProps = {
   checklist: ProfileChecklistItem[];
   onOpenPersonal: () => void;
   onOpenPreferences: () => void;
+  onOpenSection: (sectionId: string) => void;
   onSelectTab: (tab: JobSeekerProfileTab) => void;
   completionPercent: number;
 };
@@ -36,6 +37,7 @@ export function JobSeekerProfileSidebar({
   checklist,
   onOpenPersonal,
   onOpenPreferences,
+  onOpenSection,
   onSelectTab,
   completionPercent,
 }: JobSeekerProfileSidebarProps) {
@@ -165,10 +167,12 @@ export function JobSeekerProfileSidebar({
         </div>
         <ul className="mt-4 space-y-2">
           {checklist.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center justify-between gap-2 rounded-xl border border-border-subtle bg-hero-bg/60 px-3 py-2 text-xs sm:py-2.5 sm:text-sm"
-            >
+            <li key={item.id}>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-2 rounded-xl border border-border-subtle bg-hero-bg/60 px-3 py-2 text-left text-xs hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:py-2.5 sm:text-sm"
+                onClick={() => onOpenSection(item.id)}
+              >
               <span className="inline-flex min-w-0 items-center gap-2">
                 <span
                   className={cn(
@@ -197,6 +201,7 @@ export function JobSeekerProfileSidebar({
                   ? t("seeker.profileSidebar.done")
                   : t("seeker.profileSidebar.pending")}
               </span>
+              </button>
             </li>
           ))}
         </ul>

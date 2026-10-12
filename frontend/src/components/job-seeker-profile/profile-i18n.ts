@@ -18,14 +18,12 @@ export const PROFILE_TAB_LABEL_KEYS: Record<JobSeekerProfileTab, MessageKey> = {
 };
 
 const CHECKLIST_LABEL_KEYS: Record<string, MessageKey> = {
-  photo: "seeker.profileChecklist.photo",
-  mobile: "seeker.profileChecklist.mobile",
+  personal: "seeker.profileChecklist.personal",
+  preferences: "seeker.profileChecklist.preferences",
   education: "seeker.profileChecklist.education",
   experience: "seeker.profileChecklist.experience",
-  skills: "seeker.profileChecklist.skills",
-  resume: "seeker.profileChecklist.resume",
   languages: "seeker.profileChecklist.languages",
-  preferences: "seeker.profileChecklist.preferences",
+  availability: "seeker.profileChecklist.availability",
 };
 
 /** Keyed by the English messages produced by `computeProfileStrength`. */

@@ -1,5 +1,6 @@
 import { ROUTES } from "@/constants/routes";
 import { applyToJob } from "@/services/job-seeker-apply.service";
+import { fetchAuthenticatedJobSeeker } from "@/services/job-seeker-login.service";
 import { fetchMyResumeBundle } from "@/services/job-seeker-resume.service";
 import type { ApplicationResumeSource } from "@/types/job-seeker-resume";
 import {
@@ -15,6 +16,14 @@ import {
   clearJobSeekerAuthSession,
   getJobSeekerAccessToken,
 } from "@/utils/job-seeker-auth-storage";
+import { storePendingJobApply } from "@/utils/pending-job-apply";
+import {
+  isProfileReadyToApply,
+  listIncompleteApplySections,
+  readProfileIncompleteError,
+  type ProfileApplyGap,
+} from "@/utils/profile-apply-gate";
+import { openProfileCompletionDialog } from "@/utils/profile-completion-dialog";
 import { buildJobSeekerLoginHref } from "@/utils/safe-return-url";
 import { showAppToast } from "@/utils/share-job";
 
@@ -149,6 +158,7 @@ export type ProtectedApplyInput = {
 export type ProtectedApplyResult =
   | { status: "redirected_to_login" }
   | { status: "blocked_employer" }
+  | { status: "profile_incomplete" }
   | { status: "cancelled" }
   | { status: "error"; message: string }
   | {
@@ -182,7 +192,31 @@ export async function protectedApply(
     return { status: "redirected_to_login" };
   }
 
+  const blockForProfile = (missing: ProfileApplyGap[]) => {
+    storePendingJobApply({
+      jobId: input.jobId,
+      jobTitle: input.jobTitle,
+      companyName: input.companyName,
+      returnUrl: buildApplyReturnUrl(input.jobId),
+    });
+    openProfileCompletionDialog({
+      jobId: input.jobId,
+      jobTitle: input.jobTitle,
+      missingSections: missing,
+      onClose: () => undefined,
+      onCompleteProfile: () => {
+        window.location.assign(ROUTES.JOB_SEEKER_PROFILE);
+      },
+    });
+  };
+
   try {
+    const profile = await fetchAuthenticatedJobSeeker();
+    if (!isProfileReadyToApply(profile.jobSeeker)) {
+      blockForProfile(listIncompleteApplySections(profile.jobSeeker));
+      return { status: "profile_incomplete" };
+    }
+
     const bundle = await fetchMyResumeBundle();
     const resumeSource = await resolveApplyResumeSource({
       jobTitle: input.jobTitle,
@@ -219,6 +253,11 @@ export async function protectedApply(
       jobId,
     };
   } catch (error) {
+    const missing = readProfileIncompleteError(error);
+    if (missing) {
+      blockForProfile(missing);
+      return { status: "profile_incomplete" };
+    }
     const message = getApplyErrorMessage(error);
     showAppToast(message, "error", 3500);
     return { status: "error", message };

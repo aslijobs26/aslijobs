@@ -22,6 +22,10 @@ import { jobseekerAccountCreatedWhatsApp } from "../whatsapp/notifications/jobse
 import { resumeService } from "../resumes/resume.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
 import { assertJobSeekerAccountActive } from "./job-seeker-account-status.js";
+import {
+  canLoginVerifiedJobSeeker,
+  evaluateJobSeekerProfileCompletion,
+} from "./job-seeker-profile-completion.js";
 import { toPublicJobSeeker } from "./job-seeker.serializer.js";
 import { openPrivateFileStream } from "../storage/private-file.service.js";
 import type {
@@ -117,6 +121,60 @@ async function deleteJobSeekerImageAsset(asset?: {
   }
 }
 
+async function finalizeJobSeekerAccountIfReady(jobSeeker: {
+  _id: mongoose.Types.ObjectId;
+  fullName?: string | null;
+  whatsappNumber: string;
+  registrationStatus?: string | null;
+  accountStatus?: string | null;
+  isWhatsappVerified?: boolean | null;
+  dateOfBirth?: Date | null;
+  gender?: string | null;
+  jobRole?: string | null;
+  jobType?: string | null;
+  workMode?: string | null;
+  preferredJobLocation?: string | null;
+  expectedSalary?: number | null;
+  education?: { level?: string | null } | null;
+  experienceType?: string | null;
+  experiences?: Array<{ companyName?: string | null; jobRole?: string | null }> | null;
+  languages?: string[] | null;
+  availabilityStatus?: string | null;
+  operationsRegistrationAwareness?: {
+    registeredAt?: Date | null;
+  } | null;
+  save: () => Promise<unknown>;
+}): Promise<void> {
+  if (jobSeeker.registrationStatus === "COMPLETED") {
+    return;
+  }
+  if (!evaluateJobSeekerProfileCompletion(jobSeeker).isComplete) {
+    return;
+  }
+
+  jobSeeker.registrationStatus = "COMPLETED";
+  if (!jobSeeker.accountStatus) {
+    jobSeeker.accountStatus = "active";
+  }
+  if (!jobSeeker.operationsRegistrationAwareness?.registeredAt) {
+    jobSeeker.operationsRegistrationAwareness =
+      buildNewRegistrationAwarenessPayload(new Date());
+  }
+  await jobSeeker.save();
+
+  jobseekerAccountCreatedWhatsApp.schedule({
+    jobSeekerId: jobSeeker._id.toString(),
+    phoneNumber: jobSeeker.whatsappNumber,
+  });
+  scheduleCandidateRegisteredAwareness({
+    candidateId: jobSeeker._id.toString(),
+    displayName: jobSeeker.fullName?.trim() || "Candidate",
+    displayId: formatCandidateRegistrationDisplayId(jobSeeker._id.toString()),
+    registeredAt:
+      jobSeeker.operationsRegistrationAwareness?.registeredAt ?? new Date(),
+  });
+}
+
 async function refreshResumeAfterProfileChange(jobSeekerId: string) {
   try {
     await resumeService.markOutdated(jobSeekerId, "profile_updated");
@@ -179,6 +237,13 @@ export class JobSeekerService {
     let jobSeeker = existing;
 
     try {
+      if (jobSeeker && canLoginVerifiedJobSeeker(jobSeeker)) {
+        throw new AppError(
+          "This WhatsApp number is already registered. Please log in.",
+          HTTP_STATUS.CONFLICT,
+        );
+      }
+
       if (jobSeeker) {
         jobSeeker.fullName = input.fullName;
         jobSeeker.whatsappNumber = reservation.normalizedPhone;
@@ -503,6 +568,11 @@ export class JobSeekerService {
     };
   }
 
+  async ensureRegistrationFinalized(jobSeekerId: string): Promise<void> {
+    const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
+    await finalizeJobSeekerAccountIfReady(jobSeeker);
+  }
+
   async updateAuthenticatedProfile(
     jobSeekerId: string,
     input: UpdateJobSeekerProfileInput,
@@ -510,12 +580,9 @@ export class JobSeekerService {
     const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
     assertJobSeekerAccountActive(jobSeeker.accountStatus);
 
-    if (
-      !jobSeeker.isWhatsappVerified ||
-      jobSeeker.registrationStatus !== "COMPLETED"
-    ) {
+    if (!canLoginVerifiedJobSeeker(jobSeeker)) {
       throw new AppError(
-        "Complete your registration before updating your profile",
+        "Verify your WhatsApp number before updating your profile",
         HTTP_STATUS.BAD_REQUEST,
       );
     }
@@ -600,6 +667,7 @@ export class JobSeekerService {
     }
 
     await jobSeeker.save();
+    await finalizeJobSeekerAccountIfReady(jobSeeker);
     await refreshResumeAfterProfileChange(jobSeeker._id.toString());
 
     return {
@@ -618,12 +686,9 @@ export class JobSeekerService {
     const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
     assertJobSeekerAccountActive(jobSeeker.accountStatus);
 
-    if (
-      !jobSeeker.isWhatsappVerified ||
-      jobSeeker.registrationStatus !== "COMPLETED"
-    ) {
+    if (!canLoginVerifiedJobSeeker(jobSeeker)) {
       throw new AppError(
-        "Complete your registration before uploading a photo",
+        "Verify your WhatsApp number before uploading a photo",
         HTTP_STATUS.BAD_REQUEST,
       );
     }
@@ -656,12 +721,9 @@ export class JobSeekerService {
     const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
     assertJobSeekerAccountActive(jobSeeker.accountStatus);
 
-    if (
-      !jobSeeker.isWhatsappVerified ||
-      jobSeeker.registrationStatus !== "COMPLETED"
-    ) {
+    if (!canLoginVerifiedJobSeeker(jobSeeker)) {
       throw new AppError(
-        "Complete your registration before updating your photo",
+        "Verify your WhatsApp number before updating your photo",
         HTTP_STATUS.BAD_REQUEST,
       );
     }

@@ -12,6 +12,8 @@ import { JobModel } from "../jobs/job.model.js";
 import { ensureEmployerJobRelationsConsistent } from "../jobs/job-cascade-delete.js";
 import { isJobPubliclyEligible } from "../jobs/public-job-eligibility.js";
 import { JobSeekerModel } from "../job-seekers/job-seeker.model.js";
+import { assertJobSeekerProfileAllowsApply } from "../job-seekers/job-seeker-profile-completion.js";
+import { jobSeekerService } from "../job-seekers/job-seeker.service.js";
 import { assertJobSeekerAccountActive } from "../job-seekers/job-seeker-account-status.js";
 import { generateResumePdfFromJson } from "../resumes/pdf/index.js";
 import { resumeService } from "../resumes/resume.service.js";
@@ -857,13 +859,9 @@ export class ApplicationService {
     }
 
     const seeker = await JobSeekerModel.findById(input.jobSeekerId)
-      .select("registrationStatus isWhatsappVerified accountStatus")
+      .select("isWhatsappVerified accountStatus")
       .lean();
-    if (
-      !seeker ||
-      seeker.registrationStatus !== "COMPLETED" ||
-      !seeker.isWhatsappVerified
-    ) {
+    if (!seeker || !seeker.isWhatsappVerified) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
     assertJobSeekerAccountActive(seeker.accountStatus);
@@ -909,6 +907,17 @@ export class ApplicationService {
         HTTP_STATUS.CONFLICT,
       );
     }
+
+    const profileForApply = await JobSeekerModel.findById(input.jobSeekerId)
+      .select(
+        "fullName isWhatsappVerified dateOfBirth gender jobRole jobType workMode preferredJobLocation expectedSalary education experienceType experiences languages availabilityStatus",
+      )
+      .lean();
+    if (!profileForApply) {
+      throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+    }
+    assertJobSeekerProfileAllowsApply(profileForApply);
+    await jobSeekerService.ensureRegistrationFinalized(input.jobSeekerId);
 
     const resume = await resumeService.ensureReadyResumeForApply(
       input.jobSeekerId,

@@ -1,5 +1,6 @@
 "use client";
 
+import { ProfileCompletionDialogHost } from "@/components/job-seeker-profile/ProfileCompletionDialogHost";
 import { ApplyResumeChooserHost } from "@/components/job-seeker-resume/ApplyResumeChooserHost";
 import { shouldRetryQuery } from "@/utils/query-error";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -33,6 +34,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
     <QueryClientProvider client={queryClient}>
       {children}
       <ApplyResumeChooserHost />
+      <ProfileCompletionDialogHost />
     </QueryClientProvider>
   );
 }

@@ -6,6 +6,7 @@ import { jwtService } from "../auth/jwt.service.js";
 import { otpService } from "../otp/otp.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
 import { assertJobSeekerAccountActive } from "./job-seeker-account-status.js";
+import { canLoginVerifiedJobSeeker } from "./job-seeker-profile-completion.js";
 import { toPublicJobSeeker } from "./job-seeker.serializer.js";
 import type {
   JobSeekerLoginSendOtpInput,
@@ -43,11 +44,8 @@ async function findJobSeekerForLoginOtp(whatsappNumber: string) {
   return jobSeeker as unknown as JobSeekerOtpRecord;
 }
 
-function isRegistrationComplete(jobSeeker: JobSeekerOtpRecord): boolean {
-  return (
-    jobSeeker.isWhatsappVerified === true &&
-    jobSeeker.registrationStatus === "COMPLETED"
-  );
+function canLogin(jobSeeker: JobSeekerOtpRecord): boolean {
+  return canLoginVerifiedJobSeeker(jobSeeker);
 }
 
 async function issueAndPersistLoginOtp(jobSeeker: JobSeekerOtpRecord) {
@@ -68,17 +66,12 @@ async function issueAndPersistLoginOtp(jobSeeker: JobSeekerOtpRecord) {
 }
 
 /**
- * Incomplete registrations cannot use login OTP (no full session yet).
- * Re-send a registration OTP so the user can finish signup instead of a
- * dead-end "Complete your registration first" with no WhatsApp message.
+ * A number that has not passed OTP yet stays on the registration OTP path.
+ * A verified account can log in even when profile sections are still empty.
  */
 async function issueAndPersistRegistrationResumeOtp(
   jobSeeker: JobSeekerOtpRecord,
 ) {
-  jobSeeker.isWhatsappVerified = false;
-  jobSeeker.registrationStatus = "PENDING";
-  await jobSeeker.save();
-
   const delivery = await otpService.issueAndDeliver(
     jobSeeker,
     jobSeeker.whatsappNumber,
@@ -98,7 +91,7 @@ async function issueAndPersistRegistrationResumeOtp(
 async function issueLoginOrResumeOtp(whatsappNumber: string) {
   const jobSeeker = await findJobSeekerForLoginOtp(whatsappNumber);
 
-  if (isRegistrationComplete(jobSeeker)) {
+  if (canLogin(jobSeeker)) {
     return issueAndPersistLoginOtp(jobSeeker);
   }
 
@@ -108,7 +101,7 @@ async function issueLoginOrResumeOtp(whatsappNumber: string) {
 async function findLoginEligibleJobSeeker(whatsappNumber: string) {
   const jobSeeker = await findJobSeekerForLoginOtp(whatsappNumber);
 
-  if (!isRegistrationComplete(jobSeeker)) {
+  if (!canLogin(jobSeeker)) {
     throw new AppError(
       "Complete your registration first.",
       HTTP_STATUS.CONFLICT,

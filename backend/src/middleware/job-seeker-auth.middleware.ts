@@ -57,10 +57,7 @@ export async function requireJobSeekerAuth(
 
     assertJobSeekerAccountActive(jobSeeker.accountStatus);
 
-    if (
-      !jobSeeker.isWhatsappVerified ||
-      jobSeeker.registrationStatus !== "COMPLETED"
-    ) {
+    if (!jobSeeker.isWhatsappVerified) {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
@@ -79,7 +76,7 @@ export async function requireJobSeekerAuth(
 /**
  * Attaches job seeker identity when a valid seeker token is present.
  * Does not fail for anonymous or non-seeker requests.
- * Skips blocked/suspended and incomplete accounts (treated as anonymous).
+ * Skips blocked/suspended accounts and unverified registrations.
  */
 export async function optionalJobSeekerAuth(
   req: Request,
@@ -100,7 +97,6 @@ export async function optionalJobSeekerAuth(
 
     if (
       jobSeeker &&
-      jobSeeker.registrationStatus === "COMPLETED" &&
       jobSeeker.isWhatsappVerified &&
       isJobSeekerAccountActive(jobSeeker.accountStatus)
     ) {

@@ -62,7 +62,10 @@ function applyApiFailure(error: unknown): {
     AUTH_VALIDATION_MESSAGES.OTP_REQUIRED,
   ]);
 
-  if (normalized.status === 429) {
+  const isShortWait =
+    normalized.status === 429 &&
+    /please wait \d+ seconds before requesting another otp/i.test(message);
+  if (normalized.status === 429 && !isShortWait) {
     message = AUTH_VALIDATION_MESSAGES.OTP_TOO_MANY;
   }
 

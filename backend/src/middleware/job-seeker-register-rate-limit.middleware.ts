@@ -5,6 +5,8 @@ import { HTTP_STATUS } from "../constants/http-status.js";
 export const jobSeekerRegisterSendOtpRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  // Repeated clicks while a code is already active must not use up the quota.
+  skipFailedRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

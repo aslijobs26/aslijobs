@@ -305,68 +305,64 @@ export function buildProfileTags(jobSeeker: JobSeekerPublic): string[] {
 
 export function buildProfileChecklist(
   jobSeeker: JobSeekerPublic,
-  resume: PublicResume | null | undefined,
+  resume?: PublicResume | null,
 ): ProfileChecklistItem[] {
-  const skills = resolveSkills(jobSeeker, resume);
-  const hasResume =
-    Boolean(resume) &&
-    (resume?.status === "READY" ||
-      Boolean(resume?.pdfUrl) ||
-      (resume?.resumeJson &&
-        "sections" in resume.resumeJson &&
-        Boolean(resume.resumeJson.sections)));
+  void resume;
+  return buildRequiredProfileChecklist(jobSeeker);
+}
+
+function buildRequiredProfileChecklist(
+  jobSeeker: JobSeekerPublic,
+): ProfileChecklistItem[] {
+  const hasExperience =
+    jobSeeker.experienceType === "fresher" ||
+    (jobSeeker.experienceType === "experienced" &&
+      (jobSeeker.experiences ?? []).some(
+        (entry) => hasText(entry.companyName) && hasText(entry.jobRole),
+      ));
 
   return [
     {
-      id: "photo",
-      label: "Add Profile Photo",
-      completed: Boolean(jobSeeker.profilePhoto?.url),
+      id: "personal",
+      label: "Add personal details",
+      completed: Boolean(
+        hasText(jobSeeker.fullName) &&
+          jobSeeker.isWhatsappVerified &&
+          hasText(jobSeeker.dateOfBirth) &&
+          jobSeeker.gender,
+      ),
     },
     {
-      id: "mobile",
-      label: "Verify Mobile Number",
-      completed: jobSeeker.isWhatsappVerified,
+      id: "preferences",
+      label: "Set career preferences",
+      completed: Boolean(
+        hasText(jobSeeker.jobRole) &&
+          jobSeeker.jobType &&
+          jobSeeker.workMode &&
+          hasText(jobSeeker.preferredJobLocation) &&
+          typeof jobSeeker.expectedSalary === "number" &&
+          jobSeeker.expectedSalary > 0,
+      ),
     },
     {
       id: "education",
-      label: "Add Education",
+      label: "Add education",
       completed: Boolean(jobSeeker.education?.level),
     },
     {
       id: "experience",
-      label: "Add Work Experience",
-      completed:
-        jobSeeker.experienceType === "fresher" ||
-        (Array.isArray(jobSeeker.experiences) &&
-          jobSeeker.experiences.length > 0),
-    },
-    {
-      id: "skills",
-      label: "Add Skills",
-      completed: skills.length > 0,
-    },
-    {
-      id: "resume",
-      label: "Add Resume",
-      completed: Boolean(hasResume),
+      label: "Add work experience",
+      completed: hasExperience,
     },
     {
       id: "languages",
-      label: "Add Languages",
-      completed:
-        Array.isArray(jobSeeker.languages) && jobSeeker.languages.length > 0,
+      label: "Add languages",
+      completed: (jobSeeker.languages ?? []).some((language) => hasText(language)),
     },
     {
-      id: "preferences",
-      label: "Set Career Preferences",
-      completed: Boolean(
-        hasText(jobSeeker.jobRole) &&
-          hasText(jobSeeker.preferredJobLocation) &&
-          jobSeeker.jobType &&
-          jobSeeker.workMode &&
-          typeof jobSeeker.expectedSalary === "number" &&
-          jobSeeker.expectedSalary > 0,
-      ),
+      id: "availability",
+      label: "Set availability",
+      completed: Boolean(jobSeeker.availabilityStatus),
     },
   ];
 }

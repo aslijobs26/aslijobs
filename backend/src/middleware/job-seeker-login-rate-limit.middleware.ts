@@ -4,6 +4,8 @@ import { HTTP_STATUS } from "../constants/http-status.js";
 export const jobSeekerLoginSendOtpRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  // Cooldown and validation failures must not lock out a later login OTP.
+  skipFailedRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
