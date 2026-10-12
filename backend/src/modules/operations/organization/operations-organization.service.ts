@@ -196,17 +196,21 @@ function toPublicUnit(
 }
 
 class OperationsOrganizationService {
+  private seeded = false;
   private seedPromise: Promise<void> | null = null;
 
   async ensureSeeded(actorUserId?: string): Promise<void> {
+    if (this.seeded) return;
     if (!this.seedPromise) {
       this.seedPromise = (async () => {
         await this.seedHierarchyIfEmpty(actorUserId);
         // Hierarchy may already exist from an older seed that omitted states
         // (e.g. Telangana). Fill gaps without wiping user data.
         await this.reconcileMissingSeededStates(actorUserId);
-      })().finally(() => {
+        this.seeded = true;
+      })().catch((error: unknown) => {
         this.seedPromise = null;
+        throw error;
       });
     }
     await this.seedPromise;
@@ -328,7 +332,9 @@ class OperationsOrganizationService {
     const india = await OperationsOrgUnitModel.findOne({
       slug: ORG_INDIA_SLUG,
       type: "country",
-    });
+    })
+      .select("_id name ancestorIds")
+      .lean();
     if (!india) return;
 
     const globalId =
@@ -338,14 +344,39 @@ class OperationsOrganizationService {
         ? new mongoose.Types.ObjectId(actorUserId)
         : null;
 
+    const existing = (await OperationsOrgUnitModel.find({
+      type: { $in: ["region", "state"] },
+    })
+      .select("name slug type status parentId ancestorIds depth isSystemSeeded")
+      .lean()) as Array<{
+      _id: mongoose.Types.ObjectId;
+      name: string;
+      slug: string;
+      type: "region" | "state";
+      status: string;
+      parentId?: mongoose.Types.ObjectId | null;
+      ancestorIds?: mongoose.Types.ObjectId[];
+      depth: number;
+      isSystemSeeded?: boolean;
+    }>;
+
+    const regionBySlug = new Map(
+      existing
+        .filter((unit) => unit.type === "region")
+        .map((unit) => [unit.slug, unit] as const),
+    );
+    const stateByKey = new Map<string, (typeof existing)[number]>();
+    for (const unit of existing) {
+      if (unit.type !== "state") continue;
+      stateByKey.set(unit.slug, unit);
+      stateByKey.set(unit.name, unit);
+    }
+
     const regionDocs = new Map<string, mongoose.Types.ObjectId>();
     for (const region of INDIA_REGION_SEED) {
-      let regionDoc = await OperationsOrgUnitModel.findOne({
-        slug: region.slug,
-        type: "region",
-      });
+      const regionDoc = regionBySlug.get(region.slug);
       if (!regionDoc) {
-        regionDoc = await OperationsOrgUnitModel.create({
+        const createdRegion = await OperationsOrgUnitModel.create({
           name: region.name,
           slug: region.slug,
           type: "region",
@@ -358,12 +389,21 @@ class OperationsOrganizationService {
           createdBy: actor,
           updatedBy: actor,
         });
-      } else if (regionDoc.status === "archived") {
-        regionDoc.status = "active";
-        regionDoc.archivedAt = null;
-        regionDoc.archivedBy = null;
-        regionDoc.updatedBy = actor;
-        await regionDoc.save();
+        regionDocs.set(region.slug, createdRegion._id);
+        continue;
+      }
+      if (regionDoc.status === "archived") {
+        await OperationsOrgUnitModel.updateOne(
+          { _id: regionDoc._id },
+          {
+            $set: {
+              status: "active",
+              archivedAt: null,
+              archivedBy: null,
+              updatedBy: actor,
+            },
+          },
+        );
       }
       regionDocs.set(region.slug, regionDoc._id);
     }
@@ -381,10 +421,7 @@ class OperationsOrganizationService {
 
       for (const stateName of region.states) {
         const slug = slugifyOperationsName(stateName);
-        let stateDoc = await OperationsOrgUnitModel.findOne({
-          type: "state",
-          $or: [{ slug }, { name: stateName }],
-        });
+        const stateDoc = stateByKey.get(slug) ?? stateByKey.get(stateName);
 
         if (!stateDoc) {
           await OperationsOrgUnitModel.create({
@@ -404,28 +441,26 @@ class OperationsOrganizationService {
           continue;
         }
 
-        let changed = false;
+        const $set: Record<string, unknown> = {};
         if (stateDoc.status === "archived" && stateDoc.isSystemSeeded) {
-          stateDoc.status = "active";
-          stateDoc.archivedAt = null;
-          stateDoc.archivedBy = null;
+          $set.status = "active";
+          $set.archivedAt = null;
+          $set.archivedBy = null;
           restored += 1;
-          changed = true;
         }
 
         const parentMismatch =
           !stateDoc.parentId || String(stateDoc.parentId) !== String(regionId);
         if (parentMismatch && stateDoc.isSystemSeeded) {
-          stateDoc.parentId = regionId;
-          stateDoc.ancestorIds = ancestorIds;
-          stateDoc.depth = ancestorIds.length;
+          $set.parentId = regionId;
+          $set.ancestorIds = ancestorIds;
+          $set.depth = ancestorIds.length;
           reparented += 1;
-          changed = true;
         }
 
-        if (changed) {
-          stateDoc.updatedBy = actor;
-          await stateDoc.save();
+        if (Object.keys($set).length > 0) {
+          $set.updatedBy = actor;
+          await OperationsOrgUnitModel.updateOne({ _id: stateDoc._id }, { $set });
         }
       }
     }
@@ -598,6 +633,7 @@ class OperationsOrganizationService {
 
     const allUnits = (await OperationsOrgUnitModel.find({
       status: "active",
+      $or: [{ _id: unit._id }, { ancestorIds: unit._id }],
     })
       .select("_id parentId")
       .lean()) as Array<{
@@ -634,61 +670,109 @@ class OperationsOrganizationService {
     const unit = await this.getUnit(unitId, access);
     const unitObjectId = new mongoose.Types.ObjectId(unitId);
 
-    const descendantIds = (
-      await OperationsOrgUnitModel.find({
+    const peopleMatchBase =
+      unit.type === "global"
+        ? { status: "active" as const }
+        : null;
+
+    const [descendantIds, ancestorRows] = await Promise.all([
+      OperationsOrgUnitModel.find({
         status: "active",
         $or: [{ _id: unitObjectId }, { ancestorIds: unitObjectId }],
       })
         .select("_id type name latitude longitude parentId ancestorIds")
-        .lean()
-    ) as Array<{
-      _id: mongoose.Types.ObjectId;
-      type: OperationsOrgUnitType;
-      name: string;
-      latitude?: number | null;
-      longitude?: number | null;
-      parentId?: mongoose.Types.ObjectId | null;
-      ancestorIds?: mongoose.Types.ObjectId[];
-    }>;
+        .lean() as Promise<
+        Array<{
+          _id: mongoose.Types.ObjectId;
+          type: OperationsOrgUnitType;
+          name: string;
+          latitude?: number | null;
+          longitude?: number | null;
+          parentId?: mongoose.Types.ObjectId | null;
+          ancestorIds?: mongoose.Types.ObjectId[];
+        }>
+      >,
+      OperationsOrgUnitModel.find({
+        _id: { $in: unit.ancestorIds },
+      })
+        .select("_id name type")
+        .lean() as Promise<
+        Array<{
+          _id: mongoose.Types.ObjectId;
+          name: string;
+          type: string;
+        }>
+      >,
+    ]);
 
     const scopeIds = descendantIds.map((row) => row._id);
     const scopeIdStrings = new Set(scopeIds.map((id) => String(id)));
-    const peopleMatch =
-      unit.type === "global"
-        ? { status: "active" as const }
-        : { status: "active" as const, orgUnitId: { $in: scopeIds } };
+    const cityCount = descendantIds.filter((row) => row.type === "city").length;
+    const peopleMatch = peopleMatchBase ?? {
+      status: "active" as const,
+      orgUnitId: { $in: scopeIds },
+    };
 
-    const [peopleByDept, cityCount, scopedTeams, peopleTotal] =
-      await Promise.all([
-        OperationsTeamUserModel.aggregate<{
+    const [peopleFacetRows, scopedTeams] = await Promise.all([
+      OperationsTeamUserModel.aggregate<{
+        byDepartment: Array<{
           _id: mongoose.Types.ObjectId | null;
           count: number;
-        }>([
-          { $match: peopleMatch },
-          { $group: { _id: "$departmentId", count: { $sum: 1 } } },
-        ]),
-        OperationsOrgUnitModel.countDocuments({
-          status: "active",
-          type: "city",
-          $or: [{ _id: unitObjectId }, { ancestorIds: unitObjectId }],
-        }),
-        listActiveTeamsInOrgUnits(scopeIds, 80),
-        OperationsTeamUserModel.countDocuments(peopleMatch),
-      ]);
+        }>;
+        byOrgUnit: Array<{
+          _id: mongoose.Types.ObjectId | null;
+          count: number;
+        }>;
+        total: Array<{ count: number }>;
+      }>([
+        { $match: peopleMatch },
+        {
+          $facet: {
+            byDepartment: [{ $group: { _id: "$departmentId", count: { $sum: 1 } } }],
+            byOrgUnit: [{ $group: { _id: "$orgUnitId", count: { $sum: 1 } } }],
+            total: [{ $count: "count" }],
+          },
+        },
+      ]),
+      listActiveTeamsInOrgUnits(scopeIds, 80),
+    ]);
+    const peopleFacet = peopleFacetRows[0] ?? {
+      byDepartment: [],
+      byOrgUnit: [],
+      total: [],
+    };
+    const peopleByDept = peopleFacet.byDepartment;
+    const peopleTotal = peopleFacet.total[0]?.count ?? 0;
+    const directPeople = new Map(
+      peopleFacet.byOrgUnit
+        .filter((row) => row._id)
+        .map((row) => [String(row._id), row.count] as const),
+    );
 
     const scopedDepartmentIds = [
       ...new Set(scopedTeams.map((team) => team.departmentId).filter(Boolean)),
     ];
-    const departments =
+    const [departments, roles] = await Promise.all([
       scopedDepartmentIds.length === 0
-        ? []
-        : await OperationsDepartmentModel.find({
+        ? Promise.resolve([])
+        : OperationsDepartmentModel.find({
             _id: { $in: scopedDepartmentIds },
             status: "active",
           })
             .select("_id name status")
             .sort({ name: 1 })
-            .lean();
+            .lean(),
+      scopedDepartmentIds.length === 0
+        ? Promise.resolve([])
+        : OperationsRoleModel.find({
+            status: "active",
+            departmentId: { $in: scopedDepartmentIds },
+          })
+            .select("name departmentId")
+            .sort({ name: 1 })
+            .limit(50)
+            .lean(),
+    ]);
 
     const deptNameById = new Map(
       departments.map((dept) => [String(dept._id), dept.name]),
@@ -730,17 +814,6 @@ class OperationsOrganizationService {
       status: dept.status,
     }));
 
-    const roles =
-      scopedDepartmentIds.length === 0
-        ? []
-        : await OperationsRoleModel.find({
-            status: "active",
-            departmentId: { $in: scopedDepartmentIds },
-          })
-            .select("name departmentId")
-            .sort({ name: 1 })
-            .limit(50)
-            .lean();
     const roleMemberCounts =
       roles.length === 0
         ? []
@@ -786,27 +859,13 @@ class OperationsOrganizationService {
         id: String(row._id),
         name: row.name,
         type: row.type,
-        peopleCount: 0,
+        peopleCount: directPeople.get(String(row._id)) ?? 0,
         latitude: row.latitude ?? null,
         longitude: row.longitude ?? null,
       }));
 
-    const directPeople = await countPeopleByOrgUnit();
-    for (const point of mapPoints) {
-      point.peopleCount = directPeople.get(point.id) ?? 0;
-    }
-
-    const ancestors = (await OperationsOrgUnitModel.find({
-      _id: { $in: unit.ancestorIds },
-    })
-      .select("_id name type")
-      .lean()) as Array<{
-      _id: mongoose.Types.ObjectId;
-      name: string;
-      type: string;
-    }>;
     const ancestorById = new Map(
-      ancestors.map((row) => [String(row._id), row]),
+      ancestorRows.map((row) => [String(row._id), row]),
     );
     const breadcrumbs = [
       ...unit.ancestorIds

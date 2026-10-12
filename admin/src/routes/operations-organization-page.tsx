@@ -28,10 +28,7 @@ import {
   type OperationsOrgUnitType,
   type UpdateOperationsOrgUnitInput,
 } from "../types/operations-organization";
-import {
-  prefetchIndiaStateDistrictMaps,
-  SOUTH_INDIA_DISTRICT_PREFETCH_LABELS,
-} from "../utils/india-state-districts";
+import { prefetchIndiaStateDistrictMaps } from "../utils/india-state-districts";
 
 type DialogState =
   | { mode: "create" }
@@ -92,84 +89,63 @@ export function OperationsOrganizationPage() {
     [setSearchParams],
   );
 
-  // Warm district maps so state clicks render from cache immediately.
   useEffect(() => {
-    prefetchIndiaStateDistrictMaps([...SOUTH_INDIA_DISTRICT_PREFETCH_LABELS]);
-  }, []);
+    if (!selectedNode || selectedNode.type !== "state") return;
+    const label = resolveIndiaStateLabel(selectedNode.name) ?? selectedNode.name;
+    prefetchIndiaStateDistrictMaps([label]);
+  }, [selectedNode]);
 
   useEffect(() => {
-    if (roots.length === 0) return;
-    const labels = flattenOrgTree(roots)
-      .filter((node) => node.type === "state")
-      .map((node) => resolveIndiaStateLabel(node.name) ?? node.name);
-    prefetchIndiaStateDistrictMaps(labels);
-  }, [roots]);
-
-  useEffect(() => {
-    if (scopeInitialized) return;
+    if (scopeInitialized && unitInitialized) return;
     if (treeQuery.isPending) return;
     if (roots.length === 0) {
       setScopeInitialized(true);
-      return;
-    }
-
-    const southIndia = flattenOrgTree(roots).find(
-      (node) =>
-        node.type === "region" &&
-        node.name.trim().toLowerCase() === "south india",
-    );
-    if (southIndia) {
-      setScopeId(southIndia.id);
-    }
-    setScopeInitialized(true);
-  }, [roots, scopeInitialized, treeQuery.isPending]);
-
-  // After South India scope is applied, default-select Telangana (not the region root).
-  useEffect(() => {
-    if (unitInitialized) return;
-    if (!scopeInitialized) return;
-    if (treeQuery.isPending || treeQuery.isFetching) return;
-    if (roots.length === 0) {
       setUnitInitialized(true);
       return;
     }
 
     const flat = flattenOrgTree(roots);
-    const telangana = flat.find(
-      (node) =>
-        node.type === "state" &&
-        node.name.trim().toLowerCase() === "telangana",
-    );
-    const existing = selectedUnitId
-      ? findOrgNodeById(roots, selectedUnitId)
-      : null;
-
-  // Keep an explicit unit from the URL, including country/region/global.
-    if (existing) {
-      setUnitInitialized(true);
-      return;
-    }
-
-    const preferred =
-      telangana ??
-      flat.find(
+    if (!scopeInitialized) {
+      const southIndia = flat.find(
         (node) =>
           node.type === "region" &&
           node.name.trim().toLowerCase() === "south india",
-      ) ??
-      flat.find((node) => node.type === "global") ??
-      roots[0];
-
-    if (preferred && preferred.id !== selectedUnitId) {
-      setUnitParam(preferred.id);
+      );
+      if (southIndia) {
+        setScopeId(southIndia.id);
+      }
+      setScopeInitialized(true);
     }
-    setUnitInitialized(true);
+
+    if (!unitInitialized) {
+      const existing = selectedUnitId
+        ? findOrgNodeById(roots, selectedUnitId)
+        : null;
+      if (!existing) {
+        const preferred =
+          flat.find(
+            (node) =>
+              node.type === "state" &&
+              node.name.trim().toLowerCase() === "telangana",
+          ) ??
+          flat.find(
+            (node) =>
+              node.type === "region" &&
+              node.name.trim().toLowerCase() === "south india",
+          ) ??
+          flat.find((node) => node.type === "global") ??
+          roots[0];
+        if (preferred && preferred.id !== selectedUnitId) {
+          setUnitParam(preferred.id);
+        }
+      }
+      setUnitInitialized(true);
+    }
   }, [
     roots,
     scopeInitialized,
     selectedUnitId,
     setUnitParam,
-    treeQuery.isFetching,
     treeQuery.isPending,
     unitInitialized,
   ]);

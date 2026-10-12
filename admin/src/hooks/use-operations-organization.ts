@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   createOperationsOrgSubUnit,
   createOperationsOrgUnit,
@@ -35,6 +40,7 @@ export function useOperationsOrgTree(params?: {
     queryFn: () => fetchOperationsOrgTree(queryParams),
     enabled,
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
     retry: shouldRetryOperationsQuery,
     retryDelay: operationsQueryRetryDelay,
   });

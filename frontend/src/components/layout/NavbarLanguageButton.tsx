@@ -163,10 +163,7 @@ export function NavbarLanguageButton({ className }: { className?: string }) {
           strokeWidth={2}
           aria-hidden="true"
         />
-        <span className="whitespace-nowrap sm:hidden">Language</span>
-        <span className="hidden whitespace-nowrap sm:inline">
-          {selectedLanguage.label}
-        </span>
+        <span className="whitespace-nowrap">{selectedLanguage.label}</span>
         <ChevronDown
           className={cn(
             "size-3.5 shrink-0 text-muted transition-transform",
