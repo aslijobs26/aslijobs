@@ -10,6 +10,7 @@ import {
   WHATSAPP_NOTIFICATION_WORKER_CONCURRENCY,
 } from "./whatsapp-notification.constants.js";
 import { markEmployerProfileCompletionReminderStatus } from "./employer-profile-completion-reminder.model.js";
+import { markJobSeekerProfileCompletionReminderStatus } from "./jobseeker-profile-completion-reminder.model.js";
 import {
   markWhatsAppNotificationDispatchFailed,
   markWhatsAppNotificationDispatchSent,
@@ -53,6 +54,14 @@ function markProfileReminderFailedOnDeliveryError(
   job: WhatsAppNotificationQueueJob,
   lastError: string,
 ): void {
+  if (job.event === "JOBSEEKER_PROFILE_COMPLETION") {
+    void markJobSeekerProfileCompletionReminderStatus({
+      jobSeekerId: job.entityId,
+      status: "failed",
+      lastError,
+    });
+    return;
+  }
   if (job.event !== "EMPLOYER_PROFILE_COMPLETION_REQUIRED") {
     return;
   }

@@ -19,6 +19,8 @@ import {
 import { phoneAlreadyRegisteredError } from "../accounts/phone-account.policy.js";
 import { otpService } from "../otp/otp.service.js";
 import { jobseekerAccountCreatedWhatsApp } from "../whatsapp/notifications/jobseeker-account-created.notification.js";
+import { armJobSeekerProfileCompletionReminder } from "../whatsapp/notifications/jobseeker-profile-completion-reminder.queue.js";
+import { cancelJobSeekerProfileCompletionReminder } from "../whatsapp/notifications/jobseeker-profile-completion-reminder.service.js";
 import { resumeService } from "../resumes/resume.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
 import { assertJobSeekerAccountActive } from "./job-seeker-account-status.js";
@@ -166,6 +168,7 @@ async function finalizeJobSeekerAccountIfReady(jobSeeker: {
     jobSeekerId: jobSeeker._id.toString(),
     phoneNumber: jobSeeker.whatsappNumber,
   });
+  cancelJobSeekerProfileCompletionReminder(jobSeeker._id.toString());
   scheduleCandidateRegisteredAwareness({
     candidateId: jobSeeker._id.toString(),
     displayName: jobSeeker.fullName?.trim() || "Candidate",
@@ -386,6 +389,10 @@ export class JobSeekerService {
     jobSeeker.registrationStatus = "PENDING";
     await jobSeeker.save();
 
+    if (!evaluateJobSeekerProfileCompletion(jobSeeker).isComplete) {
+      armJobSeekerProfileCompletionReminder(jobSeeker._id.toString());
+    }
+
     const continuation =
       jwtService.issueJobSeekerRegistrationContinuationToken({
         jobSeekerId: jobSeeker._id.toString(),
@@ -544,6 +551,7 @@ export class JobSeekerService {
       jobSeekerId: jobSeeker._id.toString(),
       phoneNumber: jobSeeker.whatsappNumber,
     });
+    cancelJobSeekerProfileCompletionReminder(jobSeeker._id.toString());
 
     scheduleCandidateRegisteredAwareness({
       candidateId: jobSeeker._id.toString(),

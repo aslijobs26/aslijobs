@@ -62,6 +62,9 @@ export function buildWhatsAppNotificationBodyParameters(
   event: WhatsAppNotificationEvent,
   payload: WhatsAppNotificationPayload,
 ): string[] {
+  if (event === "JOBSEEKER_PROFILE_COMPLETION") {
+    return [];
+  }
   if (
     event === "EMPLOYER_ACCOUNT_CREATED" ||
     event === "EMPLOYER_PROFILE_COMPLETION_REQUIRED" ||
@@ -132,6 +135,9 @@ export function buildWhatsAppNotificationUrlButtonParameters(
 ): string[] {
   // Interview schedule and cancellation templates are body-only.
   // Meta has no URL button on those templates.
+  if (event === "JOBSEEKER_PROFILE_COMPLETION") {
+    return [];
+  }
   if (
     event === "EMPLOYER_ACCOUNT_APPROVED" ||
     event === "JOB_POST_INCOMPLETE" ||
@@ -145,6 +151,16 @@ export function buildWhatsAppNotificationUrlButtonParameters(
   }
   return [];
 }
+
+/**
+ * Static Complete Your Profile button on the approved
+ * jobseeker_profile_completion template. Meta stores the full URL and the
+ * button has no {{1}}, so the send must omit button parameters.
+ * The approved URL does not open the live profile page until it is corrected
+ * in Meta.
+ */
+export const JOBSEEKER_PROFILE_COMPLETION_BUTTON_URL =
+  "https://invalid.invalid/www.aslijobs.com/job-seeker/profile";
 
 export const EMPLOYER_ACCOUNT_APPROVED_POST_JOB_URL_PREFIX =
   "https://www.aslijobs.com/post-job/";

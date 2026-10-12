@@ -6,6 +6,7 @@ import { startNotificationRetentionScheduler } from "./modules/notifications/not
 import { startJobTranslationRuntime } from "./modules/jobs/job-translation.queue.js";
 import { startWhatsAppInboundRuntime } from "./modules/whatsapp/whatsapp-inbound.queue.js";
 import { startEmployerProfileCompletionReminderRuntime } from "./modules/whatsapp/notifications/employer-profile-completion-reminder.queue.js";
+import { startJobSeekerProfileCompletionReminderRuntime } from "./modules/whatsapp/notifications/jobseeker-profile-completion-reminder.queue.js";
 import { startJobPostIncompleteReminderRuntime } from "./modules/whatsapp/notifications/job-post-incomplete-reminder.queue.js";
 import { startWhatsAppNotificationRuntime } from "./modules/whatsapp/notifications/whatsapp-notification.queue.js";
 import { clearAllRbacCaches } from "./modules/rbac/rbac-context.cache.js";
@@ -20,6 +21,7 @@ let stopJobTranslation: (() => Promise<void>) | null = null;
 let stopWhatsAppInbound: (() => Promise<void>) | null = null;
 let stopWhatsAppNotifications: (() => Promise<void>) | null = null;
 let stopEmployerProfileReminders: (() => Promise<void>) | null = null;
+let stopJobSeekerProfileReminders: (() => Promise<void>) | null = null;
 let stopJobPostIncompleteReminders: (() => Promise<void>) | null = null;
 
 async function shutdown(signal: string): Promise<void> {
@@ -55,6 +57,10 @@ async function shutdown(signal: string): Promise<void> {
     if (stopEmployerProfileReminders) {
       await stopEmployerProfileReminders();
       stopEmployerProfileReminders = null;
+    }
+    if (stopJobSeekerProfileReminders) {
+      await stopJobSeekerProfileReminders();
+      stopJobSeekerProfileReminders = null;
     }
     if (stopJobPostIncompleteReminders) {
       await stopJobPostIncompleteReminders();
@@ -111,6 +117,7 @@ async function startServer(): Promise<void> {
   stopWhatsAppInbound = startWhatsAppInboundRuntime();
   stopWhatsAppNotifications = startWhatsAppNotificationRuntime();
   stopEmployerProfileReminders = startEmployerProfileCompletionReminderRuntime();
+  stopJobSeekerProfileReminders = startJobSeekerProfileCompletionReminderRuntime();
   stopJobPostIncompleteReminders = startJobPostIncompleteReminderRuntime();
 
   httpServer = app.listen(env.PORT, () => {

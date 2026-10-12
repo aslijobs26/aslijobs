@@ -136,6 +136,17 @@ const envSchema = z.object({
     .max(24 * 60)
     .default(30),
   /**
+   * Minutes after a verified job seeker still has an incomplete profile
+   * before sending jobseeker_profile_completion. The reminder reads this
+   * value. 30 waits 30 minutes.
+   */
+  JOBSEEKER_PROFILE_COMPLETION_REMINDER_DELAY_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 60)
+    .default(30),
+  /**
    * Local-only minutes after the latest incomplete job draft save before
    * sending job_post_incomplete_. Production ignores this value and always
    * waits 30 minutes. Keep a short value here only for local testing.

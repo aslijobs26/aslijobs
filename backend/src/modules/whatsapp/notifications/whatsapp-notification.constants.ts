@@ -1,6 +1,7 @@
 export const WHATSAPP_NOTIFICATION_EVENTS = [
   "EMPLOYER_ACCOUNT_CREATED",
   "JOBSEEKER_ACCOUNT_CREATED",
+  "JOBSEEKER_PROFILE_COMPLETION",
   "EMPLOYER_PROFILE_COMPLETION_REQUIRED",
   "EMPLOYER_PROFILE_COMPLETION_REMINDER",
   "EMPLOYER_ACCOUNT_APPROVED",
@@ -70,6 +71,18 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     // Graph-confirmed APPROVED Utility. Stored name is lowercase.
     // Language en. Body has no variables and there is no button.
     templateName: "jobseeker_account_created",
+    defaultLanguage: "en",
+    approvedLanguages: {
+      en: "en",
+    },
+  },
+  JOBSEEKER_PROFILE_COMPLETION: {
+    // Graph-confirmed APPROVED Utility, language en.
+    // Body has no variables. Complete Your Profile is a static URL button,
+    // so the API must not send body or button parameters.
+    // The approved button URL is currently
+    // https://invalid.invalid/www.aslijobs.com/job-seeker/profile.
+    templateName: "jobseeker_profile_completion",
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",
