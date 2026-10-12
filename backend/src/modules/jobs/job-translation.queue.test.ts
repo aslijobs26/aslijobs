@@ -103,7 +103,7 @@ describe("job translation worker persistence", () => {
     assert.equal(store.contentTranslations.te?.jobTitle, "tr:Driver");
   });
 
-  it("returns failed instead of pending when the task for this source is exhausted", async () => {
+  it("queues another attempt when an exhausted task still has an untranslated description", async () => {
     const mongoId = new mongoose.Types.ObjectId();
     let jobLoads = 0;
     mock.method(JobModel, "findById", () => {
@@ -140,14 +140,15 @@ describe("job translation worker persistence", () => {
         },
       },
     });
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    assert.equal(served.translationStatus, "failed");
+    assert.equal(served.translationStatus, "pending");
     assert.equal(served.isTranslated, false);
     assert.equal(served.language, "te");
     assert.equal(served.sourceLanguage, "en");
     assert.equal(served.content.jobTitle, "టెలిసేల్స్");
     assert.equal(served.content.description, source.description);
-    assert.equal(jobLoads, 0);
+    assert.equal(jobLoads, 1);
   });
 
   it("requeues an eligible failed task without resetting its attempt count", async () => {

@@ -193,7 +193,7 @@ async function enqueueJobLanguageTranslation(
     }
 
     if (existing?.status === "failed") {
-      if (!canEnqueueJobTranslation(existing, Date.now(), env.JOB_TRANSLATION_MAX_ATTEMPTS)) {
+      if (!canEnqueueJobTranslation(existing, Date.now())) {
         return "exhausted";
       }
       const reset = await JobTranslationTaskModel.findOneAndUpdate(
@@ -204,6 +204,9 @@ async function enqueueJobLanguageTranslation(
             lastError: "",
             lockedAt: null,
             nextAttemptAt: new Date(),
+            ...(existing.attempts >= env.JOB_TRANSLATION_MAX_ATTEMPTS
+              ? { attempts: 0 }
+              : {}),
           },
         },
         { new: true },
@@ -606,7 +609,7 @@ export async function serveJobDetailTranslation(input: {
     const retriesExhausted = Boolean(
       existing
       && existing.status === "failed"
-      && !canEnqueueJobTranslation(existing, Date.now(), env.JOB_TRANSLATION_MAX_ATTEMPTS),
+      && !canEnqueueJobTranslation(existing, Date.now()),
     );
     if (retriesExhausted) {
       translationStatus = "failed";

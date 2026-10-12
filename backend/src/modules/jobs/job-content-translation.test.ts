@@ -39,7 +39,11 @@ import {
   type JobContentTranslations,
 } from "./job-content-translation.js";
 import { JobModel } from "./job.model.js";
-import { jobTranslationSourceHash } from "./job-translation.policy.js";
+import {
+  claimTranslationEnqueueSlot,
+  jobTranslationSourceHash,
+  releaseTranslationEnqueueSlot,
+} from "./job-translation.policy.js";
 
 function mockTranslate(calls: { count: number; bodies: string[] }): typeof fetch {
   return (async (_url, init) => {
@@ -187,12 +191,25 @@ describe("job numeric literal protection", () => {
 
   it("restores protected tokens after a mangled provider response", () => {
     const protectedText = protectJobNumericLiterals("Pay ₹18,000 now");
-    assert.ok(protectedText.tokens.includes("₹18,000"));
+    assert.deepEqual(protectedText.tokens, ["₹18,000"]);
+    assert.match(protectedText.text, /__AJZ0__/);
+    assert.equal(protectedText.text.includes("__AJ0__"), false);
     const restored = restoreJobNumericLiterals(
-      `Pay ${protectedText.text.includes("__AJ0__") ? "__AJ0__" : protectedText.text} now`,
+      protectedText.text.replace("__AJZ0__", "__AJZ0__"),
       protectedText.tokens,
     );
     assert.match(restored, /₹18,000/);
+  });
+
+  it("protects a single digit before Sarvam can rewrite it as a word", () => {
+    const protectedText = protectJobNumericLiterals("Experience: Fresher to 2 Years");
+    assert.deepEqual(protectedText.tokens, ["2"]);
+    assert.equal(protectedText.text.includes(" 2 "), false);
+    assert.match(protectedText.text, /__AJZ0__/);
+    assert.match(
+      restoreJobNumericLiterals("அனுபவம்: __AJZ0__ ஆண்டுகள்", protectedText.tokens),
+      /2/,
+    );
   });
 });
 
@@ -362,12 +379,15 @@ describe("job content translation", () => {
     assert.ok(hasMatchingHtmlStructure(html, telugu));
   });
 
-  it("retries a whole HTML batch once when segment markers cannot be mapped", async () => {
+  it("translates each HTML text node when the batch marker cannot be mapped", async () => {
     const html = "<p>First line.</p><p>Second line.</p>";
     let callCount = 0;
-    const fetchImpl = (async () => {
+    const fetchImpl = (async (_url, init) => {
       callCount += 1;
-      return new Response(JSON.stringify({ translated_text: "merged-into-one-line" }), {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { input?: string };
+      const input = body.input ?? "";
+      const translated = /AJQ/.test(input) ? "merged-into-one-line" : `tr:${input}`;
+      return new Response(JSON.stringify({ translated_text: translated }), {
         status: 200,
       });
     }) as typeof fetch;
@@ -377,91 +397,58 @@ describe("job content translation", () => {
       targetLanguage: "te",
       fetchImpl,
     });
-    assert.equal(result.failed, true);
-    assert.equal(result.text, html);
-    assert.equal(callCount, HTML_BATCH_MAPPING_RETRIES + 1);
-    assert.equal(result.errorCode, "html_segment_mapping_failed");
+    assert.equal(result.failed, false);
+    assert.equal(result.text, "<p>tr:First line.</p><p>tr:Second line.</p>");
+    assert.equal(callCount, HTML_BATCH_MAPPING_RETRIES + 1 + 2);
+    assert.ok(hasMatchingHtmlStructure(html, result.text));
   });
 
-  it("keeps a Telugu title when HTML description mapping fails and retries only that field", async () => {
-    const html = "<p>First line.</p><p>Second line.</p>";
+  it("translates an HTML job description when Sarvam drops the batch marker", async () => {
+    const html = "<p><strong>Responsibilities:</strong> Make outbound calls.</p><ul><li>Follow up with leads.</li></ul>";
     const htmlSource = { ...source, description: html };
-    let failHtml = true;
     const calls = { count: 0, bodies: [] as string[] };
     const fetchImpl = (async (_url, init) => {
       calls.count += 1;
       const body = JSON.parse(String(init?.body ?? "{}")) as { input?: string };
       const input = body.input ?? "";
       calls.bodies.push(input);
-      if (failHtml && /AJQ/.test(input)) {
-        return new Response(JSON.stringify({ translated_text: "merged-into-one-line" }), {
-          status: 200,
-        });
-      }
       const translated = /AJQ/.test(input)
-        ? translateDelimitedHtmlInput(input)
+        ? "merged-into-one-line"
         : `tr:${input}`;
       return new Response(JSON.stringify({ translated_text: translated }), { status: 200 });
     }) as typeof fetch;
 
-    const failed = await translateRequestedJobLanguage({
+    const translated = await translateRequestedJobLanguage({
       source: htmlSource,
-      language: "te",
+      language: "ta",
       fetchImpl,
     });
-    assert.equal(failed.event, "TRANSLATION_FAILED");
-    assert.match(failed.contentTranslations.te?.jobTitle ?? "", /^tr:/);
-    assert.equal(failed.contentTranslations.te?.description ?? "", "");
-    assert.equal(failed.contentTranslations.te?.descriptionHash, "");
-    assert.equal(failed.contentTranslations.te?.status, "partial");
-    assert.equal(failed.content.description, html);
-    const partialView = resolvePublicJobTranslationView(
-      { ...htmlSource, contentTranslations: failed.contentTranslations },
-      "te",
-    );
-    assert.equal(partialView.translationStatus, "pending");
-    assert.equal(partialView.isTranslated, false);
-    assert.equal(partialView.content.jobTitle, failed.contentTranslations.te?.jobTitle);
-    assert.equal(partialView.content.description, html);
-    assert.equal(
-      resolveDisplayedContentLanguage(
-        partialView.translationStatus,
-        partialView.isTranslated,
-        partialView.language,
-        partialView.sourceLanguage,
-      ),
-      "en",
-    );
-
-    const callsAfterFailure = calls.count;
-    failHtml = false;
-    const recovered = await translateRequestedJobLanguage({
-      source: htmlSource,
-      existing: failed.contentTranslations,
-      language: "te",
-      forceRetry: true,
-      fetchImpl,
-    });
-    assert.equal(recovered.event, "TRANSLATION_CREATED");
-    assert.equal(recovered.contentTranslations.te?.jobTitle, failed.contentTranslations.te?.jobTitle);
-    assert.ok(calls.bodies.slice(callsAfterFailure).every((body) => /AJQ/.test(body)));
-    assert.ok((recovered.contentTranslations.te?.description ?? "").startsWith("<p>tr:"));
+    assert.equal(translated.event, "TRANSLATION_CREATED");
+    assert.match(translated.contentTranslations.ta?.jobTitle ?? "", /^tr:/);
+    assert.match(translated.content.description, /<p><strong>tr:Responsibilities:<\/strong> tr:Make outbound calls\.<\/p>/);
+    assert.match(translated.content.description, /<li>tr:Follow up with leads\.<\/li>/);
+    assert.ok(hasMatchingHtmlStructure(html, translated.content.description));
+    assert.equal(translated.contentTranslations.ta?.status, "completed");
     const readyView = resolvePublicJobTranslationView(
-      { ...htmlSource, contentTranslations: recovered.contentTranslations },
-      "te",
+      { ...htmlSource, contentTranslations: translated.contentTranslations },
+      "ta",
     );
     assert.equal(readyView.translationStatus, "ready");
     assert.equal(readyView.isTranslated, true);
     assert.equal(readyView.shouldEnqueue, false);
-    assert.equal(
-      resolveDisplayedContentLanguage(
-        readyView.translationStatus,
-        readyView.isTranslated,
-        readyView.language,
-        readyView.sourceLanguage,
-      ),
-      "te",
-    );
+    assert.equal(readyView.content.description, translated.content.description);
+    assert.notEqual(readyView.content.description, html);
+
+    const callsAfterSuccess = calls.count;
+    const repeated = await translateRequestedJobLanguage({
+      source: htmlSource,
+      existing: translated.contentTranslations,
+      language: "ta",
+      fetchImpl,
+    });
+    assert.equal(repeated.event, "CACHE_HIT");
+    assert.equal(repeated.translateCalls, 0);
+    assert.equal(calls.count, callsAfterSuccess);
   });
 
   it("ignores stored HTML translations whose tag structure is broken", async () => {
@@ -1547,5 +1534,257 @@ describe("on-demand Mongo persistence", () => {
       ).translationStatus,
       "failed",
     );
+  });
+});
+
+/**
+ * Automated tests mock Sarvam. To check a real response, from backend/ with
+ * SARVAM_API_KEY set in the local environment (never print the key):
+ * POST https://api.sarvam.ai/translate
+ * { input, source_language_code: "en-IN", target_language_code: "ta-IN",
+ *   model: "mayura:v1", mode: "formal", numerals_format: "international" }
+ * HTTP 200 is not success. translated_text must be in the target script and
+ * still contain the source numbers after placeholder restore.
+ * Live check on 2026-10-12: "Fresher to 2 Years" came back in Tamil without
+ * the digit 2. __AJ0__ and __AJN0__ were dropped in that sentence. __AJZ0__
+ * was preserved, so the digit can be restored before the description is saved.
+ */
+describe("job description translation regressions", () => {
+  const html =
+    "<h2>Job Description</h2><p>Experience: Fresher to 2 Years</p><ul><li>Make outbound calls.</li><li>Follow up with leads.</li></ul>";
+
+  function tamilKeepingTokens(input: string): string {
+    return input
+      .split(/(__AJZ\d+__|__AJQ__)/)
+      .map((part, index) =>
+        index % 2 === 1 ? part : part.replace(/[A-Za-z]+/g, "தமிழ்"),
+      )
+      .join("");
+  }
+
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  it("saves an HTML description that is actually in the requested language", async () => {
+    const calls = { count: 0, bodies: [] as string[] };
+    const fetchImpl = (async (_url, init) => {
+      calls.count += 1;
+      const body = JSON.parse(String(init?.body ?? "{}")) as { input?: string };
+      const input = body.input ?? "";
+      calls.bodies.push(input);
+      return new Response(
+        JSON.stringify({ translated_text: tamilKeepingTokens(input) }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+    const job = {
+      ...source,
+      description: html,
+    };
+    const built = await buildJobContentTranslations({
+      source: job,
+      languages: ["ta"],
+      publicJobId: "AJ-DIAG",
+      fetchImpl,
+    });
+    const description = built.contentTranslations.ta?.description ?? "";
+    assert.equal(built.translationStatus, "complete");
+    assert.match(description, /தமிழ்/);
+    assert.match(description, /\b2\b/);
+    assert.match(description, /<h2>/);
+    assert.match(description, /<ul>/);
+    assert.match(description, /<li>/);
+    assert.equal((description.match(/<li>/g) ?? []).length, 2);
+    assert.ok(hasMatchingHtmlStructure(html, description));
+    assert.equal(translationPreservesSourceNumbers(html, description), true);
+    assert.equal(isUsableFieldTranslation(html, built.contentTranslations.ta, "description"), true);
+    assert.equal(description.includes("Fresher"), false);
+    assert.ok(calls.bodies.some((body) => body.includes("__AJZ")));
+    assert.ok(calls.bodies.every((body) => !body.includes(" 2 ")));
+  });
+
+  it("rejects a batch when markers are missing or a segment is empty", () => {
+    assert.equal(parseHtmlSegmentTranslations("only one block", [0, 1, 2]), null);
+    assert.equal(
+      parseHtmlSegmentTranslations("one\n__AJQ__\n\n__AJQ__\nthree", [0, 1, 2]),
+      null,
+    );
+  });
+
+  it("keeps the original HTML when a batch is partial and a block request fails", async () => {
+    const fetchImpl = (async (_url, init) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { input?: string };
+      if ((body.input ?? "").includes("AJQ")) {
+        return new Response(JSON.stringify({ translated_text: "தமிழ் மட்டும்" }), {
+          status: 200,
+        });
+      }
+      return new Response(JSON.stringify({ error: { code: "http_error" } }), {
+        status: 500,
+      });
+    }) as typeof fetch;
+    const result = await translateJobHtmlField({
+      html,
+      sourceLanguage: "en",
+      targetLanguage: "ta",
+      fetchImpl,
+    });
+    assert.equal(result.failed, true);
+    assert.equal(result.errorCode, "html_segment_partial");
+    assert.equal(result.text, html);
+  });
+
+  it("keeps the original description when Sarvam times out", async () => {
+    const fetchImpl = (async () => {
+      throw Object.assign(new Error("The operation was aborted due to timeout"), {
+        name: "TimeoutError",
+      });
+    }) as typeof fetch;
+    const result = await translateRequestedJobLanguage({
+      source: { ...source, description: html },
+      language: "ta",
+      fetchImpl,
+    });
+    assert.equal(result.event, "TRANSLATION_FAILED");
+    assert.equal(result.content.description, html);
+    assert.equal(result.contentTranslations.ta?.descriptionHash, "");
+    assert.notEqual(result.contentTranslations.ta?.status, "completed");
+  });
+
+  it("persists a Tamil description and leaves the English source unchanged", async () => {
+    const mongoId = "507f1f77bcf86cd799439012";
+    const job = { ...source, description: html };
+    const store: {
+      _id: string;
+      jobTitle: string;
+      description: string;
+      interviewInstructions: string;
+      contentLanguage: string;
+      contentTranslations: JobContentTranslations;
+      status: string;
+    } = {
+      _id: mongoId,
+      ...job,
+      contentLanguage: "en",
+      contentTranslations: {},
+      status: "active",
+    };
+    mock.method(JobModel, "findById", () => ({
+      select: async () => store,
+    }));
+    mock.method(
+      JobModel,
+      "updateOne",
+      async (_filter: unknown, update: { $set?: Record<string, unknown> }) => {
+        assert.equal(update.$set?.description, undefined);
+        assert.equal(update.$set?.jobTitle, undefined);
+        for (const [key, value] of Object.entries(update.$set ?? {})) {
+          if (key.startsWith("contentTranslations.")) {
+            const language = key.slice(
+              "contentTranslations.".length,
+            ) as keyof JobContentTranslations;
+            store.contentTranslations[language] = value as JobContentTranslations["ta"];
+          }
+        }
+      },
+    );
+    const fetchImpl = (async (_url, init) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { input?: string };
+      return new Response(
+        JSON.stringify({ translated_text: tamilKeepingTokens(body.input ?? "") }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+    const saved = await translateJobContentOnDemand({
+      jobMongoId: mongoId,
+      publicJobId: "AJ-DIAG",
+      language: "ta",
+      forceRetry: true,
+      fetchImpl,
+    });
+    assert.equal(saved.event, "TRANSLATION_CREATED");
+    assert.equal(store.description, html);
+    assert.match(store.contentTranslations.ta?.description ?? "", /தமிழ்/);
+    assert.match(store.contentTranslations.ta?.description ?? "", /\b2\b/);
+    assert.equal(saved.stillNeedsTranslation, false);
+  });
+
+  it("does not store a word-form response that dropped the source number", async () => {
+    const mongoId = "507f1f77bcf86cd799439013";
+    const job = { ...source, description: html };
+    const store = {
+      _id: mongoId,
+      ...job,
+      contentLanguage: "en",
+      contentTranslations: {} as JobContentTranslations,
+      status: "active",
+    };
+    mock.method(JobModel, "findById", () => ({
+      select: async () => store,
+    }));
+    mock.method(
+      JobModel,
+      "updateOne",
+      async (_filter: unknown, update: { $set?: Record<string, unknown> }) => {
+        for (const [key, value] of Object.entries(update.$set ?? {})) {
+          if (key.startsWith("contentTranslations.")) {
+            const language = key.slice(
+              "contentTranslations.".length,
+            ) as keyof JobContentTranslations;
+            store.contentTranslations[language] = value as JobContentTranslations["ta"];
+          }
+        }
+      },
+    );
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ translated_text: "அனுபவம் இரண்டு ஆண்டுகள்" }), {
+        status: 200,
+      })) as typeof fetch;
+    const saved = await translateJobContentOnDemand({
+      jobMongoId: mongoId,
+      publicJobId: "AJ-DIAG",
+      language: "ta",
+      forceRetry: true,
+      fetchImpl,
+    });
+    assert.equal(saved.event, "TRANSLATION_FAILED");
+    assert.equal(store.description, html);
+    assert.equal(saved.content.description, html);
+    assert.equal(store.contentTranslations.ta?.descriptionHash, "");
+    assert.notEqual(store.contentTranslations.ta?.status, "completed");
+  });
+
+  it("allows another attempt after the failure cooldown", () => {
+    const stored: JobContentTranslations = {
+      ta: {
+        jobTitle: "",
+        description: "",
+        interviewInstructions: "",
+        jobTitleHash: "",
+        descriptionHash: "",
+        interviewInstructionsHash: "",
+        lastAttemptAt: new Date(Date.now() - 31_000).toISOString(),
+        status: "failed",
+      },
+    };
+    const view = resolvePublicJobTranslationView(
+      { ...source, description: html, contentTranslations: stored },
+      "ta",
+    );
+    assert.equal(shouldSkipFailedTranslationRetry(stored.ta, { ...source, description: html }), false);
+    assert.equal(view.shouldEnqueue, true);
+    assert.equal(view.content.description, html);
+    assert.equal(view.translationStatus, "pending");
+  });
+
+  it("does not enqueue a second task while the first claim is still held", () => {
+    const key = "job-description-regression:ta";
+    releaseTranslationEnqueueSlot(key);
+    assert.equal(claimTranslationEnqueueSlot(key), true);
+    assert.equal(claimTranslationEnqueueSlot(key), false);
+    releaseTranslationEnqueueSlot(key);
+    assert.equal(claimTranslationEnqueueSlot(key), true);
+    releaseTranslationEnqueueSlot(key);
   });
 });

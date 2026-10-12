@@ -43,7 +43,7 @@ describe("job translation queue policy", () => {
         attempts: 3,
         nextAttemptAt: new Date(Date.now() - 1_000),
       }),
-      false,
+      true,
     );
     assert.equal(
       canEnqueueJobTranslation({

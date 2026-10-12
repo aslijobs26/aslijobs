@@ -91,7 +91,8 @@ type ExistingTranslationTask = {
  * One task per job + language + source text.
  * Pending and processing tasks are never duplicated.
  * A failed task is retried after backoff while attempts remain.
- * Exhausted tasks stay failed until the source text changes.
+ * An exhausted task can run again after its cooldown when the description
+ * is still untranslated. Pending work is not duplicated.
  * Completed tasks may be reset when Mongo still needs that language.
  */
 export function shouldResetStoredTranslationTask(
@@ -107,7 +108,6 @@ export function shouldResetStoredTranslationTask(
 export function canEnqueueJobTranslation(
   existing: ExistingTranslationTask | null,
   now = Date.now(),
-  maxAttempts = 3,
 ): boolean {
   if (!existing) {
     return true;
@@ -120,9 +120,6 @@ export function canEnqueueJobTranslation(
     return false;
   }
   if (existing.status !== "failed") {
-    return false;
-  }
-  if (existing.attempts >= maxAttempts) {
     return false;
   }
   if (!existing.nextAttemptAt) {
