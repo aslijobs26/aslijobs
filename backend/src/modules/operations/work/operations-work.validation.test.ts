@@ -24,5 +24,12 @@ describe("operations work list validation", () => {
     const parsed = listOperationsWorkQuerySchema.parse({});
     assert.equal(parsed.sort, "createdAt");
     assert.equal(parsed.order, "desc");
+    assert.equal(parsed.openOnly, false);
+  });
+
+  it("accepts openOnly for the home attention list", () => {
+    const parsed = listOperationsWorkQuerySchema.parse({ openOnly: "true" });
+    assert.equal(parsed.openOnly, true);
+    assert.equal(listOperationsWorkQuerySchema.parse({ openOnly: "false" }).openOnly, false);
   });
 });

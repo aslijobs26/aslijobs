@@ -8,7 +8,10 @@ import {
   employerAvatarInitials,
   formatEmployerDateTime,
 } from "../employers/employers-format";
-import { verificationOperationalStatusBadgeVariant } from "./verifications-format";
+import {
+  verificationIndustryOrAccountLabel,
+  verificationOperationalStatusBadgeVariant,
+} from "./verifications-format";
 
 interface VerificationsMobileCardProps {
   item: OperationsVerificationListItem;
@@ -53,7 +56,7 @@ export function VerificationsMobileCard({
               {companyName}
             </p>
             <p className="mt-0.5 truncate text-[11px] text-muted">
-              {item.industry?.trim() || "—"}
+              {verificationIndustryOrAccountLabel(item)}
             </p>
           </div>
         </Link>

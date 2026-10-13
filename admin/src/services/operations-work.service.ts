@@ -27,6 +27,7 @@ function listParams(params: OperationsWorkListParams) {
     search: params.search || undefined,
     sort: params.sort,
     order: params.order,
+    openOnly: params.openOnly ? true : undefined,
   };
 }
 

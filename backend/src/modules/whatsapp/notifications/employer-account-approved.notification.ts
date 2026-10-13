@@ -1,14 +1,12 @@
-import { resolveEmployerRegistrationDisplayName } from "../../operations/registration-awareness/operations-registration-awareness.service.js";
+import { employerAccountTypeLabel } from "../../../constants/employer.constants.js";
 import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js";
 import type { WhatsAppNotificationEnqueueResult } from "./whatsapp-notification.types.js";
 
 export type EmployerAccountApprovedWhatsAppInput = {
   employerId: string;
   whatsappNumber?: string | null;
-  companyName?: string | null;
-  establishmentName?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
+  /** Saved employer.accountType: company, consultancy, or individual. */
+  accountType?: string | null;
   /**
    * Changes on each saved approval (`verifiedAt` millis). A later approval
    * after rejection and resubmission can notify again. The same approval keeps
@@ -36,12 +34,13 @@ export const employerAccountApprovedWhatsApp = {
       return;
     }
 
-    const employerName = resolveEmployerRegistrationDisplayName({
-      companyName: input.companyName,
-      establishmentName: input.establishmentName,
-      firstName: input.firstName,
-      lastName: input.lastName,
-    });
+    if (!employerAccountTypeLabel(input.accountType)) {
+      console.info(
+        "[WhatsAppNotification] Employer approval notification skipped - missing profile type",
+        { employerId },
+      );
+      return;
+    }
 
     let pending: Promise<WhatsAppNotificationEnqueueResult>;
     try {
@@ -49,7 +48,7 @@ export const employerAccountApprovedWhatsApp = {
         event: "EMPLOYER_ACCOUNT_APPROVED",
         entityId: employerId,
         phoneNumber,
-        employerName,
+        employerProfileType: input.accountType?.trim(),
         preferredLanguage: "en",
         idempotencyScope: reviewCycle,
       });

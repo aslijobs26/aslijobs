@@ -97,6 +97,10 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     },
   },
   EMPLOYER_ACCOUNT_APPROVED: {
+    // Graph template aslijobs_account_approved, language en.
+    // Body {{1}} is the employer profile type (Company, Consultancy, or
+    // Individual), not the employer or company name. Post Job is a dynamic
+    // URL button whose suffix is the employer id.
     templateName: "aslijobs_account_approved",
     defaultLanguage: "en",
     approvedLanguages: {

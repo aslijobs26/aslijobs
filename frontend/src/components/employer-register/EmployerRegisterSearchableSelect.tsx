@@ -59,7 +59,52 @@ type EmployerRegisterSearchableSelectProps = {
    * Search results reveal the remaining matches.
    */
   initialVisibleCount?: number;
+  /**
+   * Keep this many option rows visible and scroll the rest inside the list.
+   */
+  visibleOptionRows?: number;
 };
+
+function capOptionsListHeight(list: HTMLElement, visibleCount: number) {
+  const items = [...list.children].filter(
+    (child): child is HTMLElement => child instanceof HTMLElement,
+  );
+
+  for (const item of items) {
+    item.style.minHeight = "";
+  }
+
+  if (items.length <= visibleCount) {
+    list.style.maxHeight = "";
+    list.style.paddingBottom = "";
+    list.style.marginBottom = "";
+    return;
+  }
+
+  list.style.maxHeight = "none";
+  list.style.paddingBottom = "";
+  list.style.marginBottom = "";
+
+  let tallestRow = 0;
+  for (const item of items) {
+    tallestRow = Math.max(tallestRow, item.getBoundingClientRect().height);
+  }
+
+  for (const item of items) {
+    item.style.minHeight = `${tallestRow}px`;
+  }
+
+  const style = getComputedStyle(list);
+  const paddingTop = Number.parseFloat(style.paddingTop) || 0;
+  const paddingBottom = Number.parseFloat(style.paddingBottom) || 0;
+  const border =
+    (Number.parseFloat(style.borderTopWidth) || 0) +
+    (Number.parseFloat(style.borderBottomWidth) || 0);
+
+  list.style.paddingBottom = "0px";
+  list.style.marginBottom = `${paddingBottom}px`;
+  list.style.maxHeight = `${Math.ceil(tallestRow * visibleCount + paddingTop + border)}px`;
+}
 
 function normalizeOptionKey(value: string) {
   return value.trim().toLowerCase();
@@ -84,6 +129,7 @@ export function EmployerRegisterSearchableSelect({
   searchPlaceholder,
   allowCustom = false,
   initialVisibleCount,
+  visibleOptionRows,
   triggerClassName,
   optionClassName,
   panelClassName,
@@ -224,18 +270,16 @@ export function EmployerRegisterSearchableSelect({
       return;
     }
 
+    const triggerRect = trigger.getBoundingClientRect();
+    panel.style.width = `${triggerRect.width}px`;
+
     const list = panel.querySelector("ul");
-    const appliedMaxHeight =
-      list instanceof HTMLElement ? list.style.maxHeight : "";
-    if (list instanceof HTMLElement) {
-      list.style.maxHeight = "none";
+    if (list instanceof HTMLElement && visibleOptionRows != null && visibleOptionRows > 0) {
+      capOptionsListHeight(list, visibleOptionRows);
+    } else if (list instanceof HTMLElement) {
+      list.style.maxHeight = "";
     }
     const contentHeight = panel.scrollHeight;
-    if (list instanceof HTMLElement) {
-      list.style.maxHeight = appliedMaxHeight;
-    }
-
-    const triggerRect = trigger.getBoundingClientRect();
     const viewport = readVisibleViewportSize();
     setPosition(
       computeAnchoredDropdownPosition({
@@ -248,7 +292,7 @@ export function EmployerRegisterSearchableSelect({
         gap: 6,
       }),
     );
-  }, []);
+  }, [visibleOptionRows]);
 
   useLayoutEffect(() => {
     if (!isOpen) {

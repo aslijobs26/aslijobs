@@ -99,6 +99,7 @@ export interface OperationsWorkListParams {
   search: string;
   sort?: "dueAt" | "priority" | "createdAt" | "updatedAt";
   order?: "asc" | "desc";
+  openOnly?: boolean;
 }
 
 export interface OperationsWorkListResult {

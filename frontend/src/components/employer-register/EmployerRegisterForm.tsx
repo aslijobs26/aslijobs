@@ -34,6 +34,7 @@ import {
   type AuthFieldErrors,
 } from "@/utils/auth-field-errors";
 import { cn } from "@/utils/cn";
+import { individualRegistrationDocumentErrors } from "@/utils/employer-individual-registration";
 import { establishEmployerClientSession } from "@/utils/employer-session";
 import { normalizeApiError } from "@/utils/normalize-api-error";
 import { useQueryClient } from "@tanstack/react-query";
@@ -267,6 +268,16 @@ export function EmployerRegisterForm({
       errors.emailAddress = AUTH_VALIDATION_MESSAGES.EMAIL_INVALID;
     }
 
+    if (isIndividualAccount) {
+      Object.assign(
+        errors,
+        individualRegistrationDocumentErrors({
+          documentType,
+          hasDocumentFile: Boolean(documentPreview?.file),
+        }),
+      );
+    }
+
     return errors;
   };
 
@@ -347,15 +358,13 @@ export function EmployerRegisterForm({
         identityErrors.pincode = AUTH_VALIDATION_MESSAGES.PINCODE_REQUIRED;
       }
 
-      if (!documentType) {
-        identityErrors.documentType =
-          AUTH_VALIDATION_MESSAGES.DOCUMENT_TYPE_REQUIRED;
-      }
-
-      if (!documentPreview?.file) {
-        identityErrors.documentFile =
-          AUTH_VALIDATION_MESSAGES.DOCUMENT_REQUIRED;
-      }
+      Object.assign(
+        identityErrors,
+        individualRegistrationDocumentErrors({
+          documentType,
+          hasDocumentFile: Boolean(documentPreview?.file),
+        }),
+      );
 
       if (Object.keys(identityErrors).length > 0) {
         setFieldErrors(identityErrors);

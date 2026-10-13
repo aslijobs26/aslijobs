@@ -10,7 +10,10 @@ import {
   formatEmployerDateTime,
 } from "../employers/employers-format";
 import { VerificationsMobileCard } from "./VerificationsMobileCard";
-import { verificationOperationalStatusBadgeVariant } from "./verifications-format";
+import {
+  verificationIndustryOrAccountLabel,
+  verificationOperationalStatusBadgeVariant,
+} from "./verifications-format";
 
 interface VerificationsTableSectionProps {
   items: OperationsVerificationListItem[];
@@ -217,7 +220,7 @@ export function VerificationsTableSection({
 
                     <td className="max-w-[9rem] px-3 py-3 text-foreground sm:px-3.5 xl:max-w-[7.5rem] xl:px-2.5 xl:py-2">
                       <span className="block truncate xl:text-[11px]">
-                        {item.industry?.trim() || "—"}
+                        {verificationIndustryOrAccountLabel(item)}
                       </span>
                     </td>
 

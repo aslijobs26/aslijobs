@@ -5,6 +5,11 @@ export type WhatsAppNotificationPayload = {
   entityId: string;
   phoneNumber: string;
   employerName?: string;
+  /**
+   * Saved employer `accountType` for aslijobs_account_approved body {{1}}.
+   * Mapped to Company, Consultancy, or Individual. A name must not be sent here.
+   */
+  employerProfileType?: string;
   /** Job title for job_application_submitted {{1}}. */
   jobTitle?: string;
   /** Company name for job_application_submitted {{2}}. */

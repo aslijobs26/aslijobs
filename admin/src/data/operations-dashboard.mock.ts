@@ -1,8 +1,5 @@
 import { OPERATIONS_ROUTES } from "../constants/operations-routes";
-import { getHomeAttentionSlice } from "./operations-attention.mock";
 import type { OperationsDashboardData } from "../types/operations-dashboard";
-
-const homeAttention = getHomeAttentionSlice();
 
 export const OPERATIONS_DASHBOARD_MOCK: OperationsDashboardData = {
   platformPulse: [
@@ -57,9 +54,19 @@ export const OPERATIONS_DASHBOARD_MOCK: OperationsDashboardData = {
       iconTone: "red",
     },
   ],
-  attentionTotal: homeAttention.attentionTotal,
-  attentionTabs: homeAttention.attentionTabs,
-  attentionItems: homeAttention.attentionItems,
+  attentionTotal: 0,
+  attentionTabs: [
+    { id: "urgent", label: "Urgent", count: 0 },
+    { id: "sla_risk", label: "SLA Risk", count: 0 },
+    { id: "high_priority", label: "High Priority", count: 0 },
+    { id: "unassigned", label: "Unassigned", count: 0 },
+  ],
+  attentionItems: [],
+  attentionStatus: {
+    canRead: false,
+    isLoading: false,
+    isError: false,
+  },
   operationsHealth: [
     {
       id: "health-jobseekers",

@@ -1,3 +1,4 @@
+import { employerAccountTypeLabel } from "../../../constants/employer.constants.js";
 import { parseJobContentLanguage } from "../../jobs/job-content-language.js";
 import {
   WHATSAPP_NOTIFICATION_EVENTS,
@@ -65,10 +66,13 @@ export function buildWhatsAppNotificationBodyParameters(
   if (event === "JOBSEEKER_PROFILE_COMPLETION") {
     return [];
   }
+  if (event === "EMPLOYER_ACCOUNT_APPROVED") {
+    const profileType = employerAccountTypeLabel(payload.employerProfileType);
+    return profileType ? [profileType] : [];
+  }
   if (
     event === "EMPLOYER_ACCOUNT_CREATED" ||
     event === "EMPLOYER_PROFILE_COMPLETION_REQUIRED" ||
-    event === "EMPLOYER_ACCOUNT_APPROVED" ||
     event === "EMPLOYER_ACCOUNT_REJECTED" ||
     event === "JOB_POST_SUBMITTED" ||
     event === "JOB_POST_APPROVED" ||

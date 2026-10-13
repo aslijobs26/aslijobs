@@ -46,6 +46,14 @@ export const listOperationsWorkQuerySchema = z.object({
     .optional()
     .default("createdAt"),
   order: z.enum(["asc", "desc"]).optional().default("desc"),
+  /** Home attention widget: only queued, assigned, in progress, and waiting. */
+  openOnly: z
+    .preprocess(
+      (value) => value === true || value === "true" || value === "1",
+      z.boolean(),
+    )
+    .optional()
+    .default(false),
 });
 
 export type ListOperationsWorkQuery = z.infer<

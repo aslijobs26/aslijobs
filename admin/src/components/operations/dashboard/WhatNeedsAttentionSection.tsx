@@ -26,6 +26,8 @@ interface WhatNeedsAttentionSectionProps {
   total: number;
   tabs: AttentionTabMeta[];
   items: AttentionWorkItem[];
+  isLoading?: boolean;
+  errorMessage?: string | null;
 }
 
 const PRIORITY_CLASSES: Record<AttentionWorkItem["priority"], string> = {
@@ -48,6 +50,8 @@ export function WhatNeedsAttentionSection({
   total,
   tabs,
   items,
+  isLoading = false,
+  errorMessage = null,
 }: WhatNeedsAttentionSectionProps) {
   const [activeTab, setActiveTab] = useState<AttentionTabId>(
     tabs[0]?.id ?? "urgent",
@@ -109,7 +113,15 @@ export function WhatNeedsAttentionSection({
       </div>
 
       <ul className="max-h-[15rem] divide-y divide-border-subtle overflow-y-auto overscroll-contain scrollbar-hidden sm:max-h-[18.75rem]">
-        {filteredItems.length === 0 ? (
+        {isLoading ? (
+          <li className="px-3 py-8 text-center text-[12px] text-muted sm:px-3.5">
+            Loading attention items…
+          </li>
+        ) : errorMessage ? (
+          <li className="px-3 py-8 text-center text-[12px] text-danger sm:px-3.5">
+            {errorMessage}
+          </li>
+        ) : filteredItems.length === 0 ? (
           <li className="px-3 py-8 text-center text-[12px] text-muted sm:px-3.5">
             No items in this queue right now.
           </li>

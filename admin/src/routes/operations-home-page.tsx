@@ -54,11 +54,17 @@ export function OperationsHomePage() {
           }
         >
           <div className="flex min-w-0 flex-col gap-3.5">
-            {data.attentionItems.length > 0 ? (
+            {data.attentionStatus.canRead ? (
               <WhatNeedsAttentionSection
-                total={data.attentionItems.length}
+                total={data.attentionTotal}
                 tabs={data.attentionTabs}
                 items={data.attentionItems}
+                isLoading={data.attentionStatus.isLoading}
+                errorMessage={
+                  data.attentionStatus.isError
+                    ? "Unable to load attention items."
+                    : null
+                }
               />
             ) : null}
             <NewRegistrationsSection />

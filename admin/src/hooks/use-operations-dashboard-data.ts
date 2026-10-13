@@ -10,6 +10,11 @@ import { useOperationsCandidates } from "./use-operations-candidates";
 import { useOperationsEmployers } from "./use-operations-employers";
 import { useOperationsJobs } from "./use-operations-jobs";
 import { useOperationsTeamMembers } from "./use-operations-team";
+import { useOperationsWorkList } from "./use-operations-work";
+import {
+  homeAttentionTabs,
+  toHomeAttentionItems,
+} from "../utils/operations-home-attention";
 import type {
   OperationsDashboardData,
   PlatformPulseMetric,
@@ -83,6 +88,23 @@ export function useOperationsDashboardData(): OperationsDashboardData {
   const canReadEmployers = can("employers", "read");
   const canReadJobs = can("jobs", "read");
   const canReadTeam = can("team", "read");
+  const canReadWork = can("my_work", "read") || can("work_queue", "read");
+
+  const workQuery = useOperationsWorkList(
+    {
+      page: 1,
+      limit: 100,
+      tab: "all",
+      type: "",
+      priority: "",
+      due: "all",
+      search: "",
+      sort: "dueAt",
+      order: "asc",
+      openOnly: true,
+    },
+    { enabled: canReadWork },
+  );
 
   const candidatesQuery = useOperationsCandidates(
     {
@@ -235,8 +257,20 @@ export function useOperationsDashboardData(): OperationsDashboardData {
       }));
     }
 
+    const attentionItems = canReadWork
+      ? toHomeAttentionItems(workQuery.data?.items ?? [])
+      : [];
+
     return {
       ...base,
+      attentionTotal: attentionItems.length,
+      attentionTabs: homeAttentionTabs(attentionItems),
+      attentionItems,
+      attentionStatus: {
+        canRead: canReadWork,
+        isLoading: canReadWork && workQuery.isLoading,
+        isError: canReadWork && workQuery.isError,
+      },
       platformPulse: platformPulse.filter((metric) => canReadPath(metric.href)),
       operationsHealth: base.operationsHealth.filter((item) =>
         canReadPath(item.href),
@@ -246,9 +280,6 @@ export function useOperationsDashboardData(): OperationsDashboardData {
         canAccessDashboardQuickAction(action, can, canKey, canReadPath),
       ),
       insights: base.insights.filter((insight) => canReadPath(insight.href)),
-      attentionItems: base.attentionItems.filter((item) =>
-        canReadPath(item.actionHref),
-      ),
       teamWorkload,
       teamWorkloadStatus: {
         isLoading: canReadTeam && teamQuery.isLoading,
@@ -275,5 +306,9 @@ export function useOperationsDashboardData(): OperationsDashboardData {
     teamQuery.data,
     teamQuery.isLoading,
     teamQuery.isError,
+    canReadWork,
+    workQuery.data,
+    workQuery.isLoading,
+    workQuery.isError,
   ]);
 }

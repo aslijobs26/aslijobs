@@ -91,9 +91,49 @@ describe("WhatsApp notification template mapping", () => {
         event: "EMPLOYER_ACCOUNT_APPROVED",
         entityId: "6ac746ac72aed3c70a82de5b",
         phoneNumber: "9876543210",
-        employerName: "Acme Pvt Ltd",
+        employerName: "ABC Technologies",
+        employerProfileType: "company",
       }),
-      ["Acme Pvt Ltd"],
+      ["Company"],
+    );
+    assert.deepEqual(
+      buildWhatsAppNotificationBodyParameters("EMPLOYER_ACCOUNT_APPROVED", {
+        event: "EMPLOYER_ACCOUNT_APPROVED",
+        entityId: "6ac746ac72aed3c70a82de5b",
+        phoneNumber: "9876543210",
+        employerName: "ABC Technologies",
+        employerProfileType: "consultancy",
+      }),
+      ["Consultancy"],
+    );
+    assert.deepEqual(
+      buildWhatsAppNotificationBodyParameters("EMPLOYER_ACCOUNT_APPROVED", {
+        event: "EMPLOYER_ACCOUNT_APPROVED",
+        entityId: "6ac746ac72aed3c70a82de5b",
+        phoneNumber: "9876543210",
+        employerName: "ABC Technologies",
+        employerProfileType: "individual",
+      }),
+      ["Individual"],
+    );
+    assert.deepEqual(
+      buildWhatsAppNotificationBodyParameters("EMPLOYER_ACCOUNT_APPROVED", {
+        event: "EMPLOYER_ACCOUNT_APPROVED",
+        entityId: "6ac746ac72aed3c70a82de5b",
+        phoneNumber: "9876543210",
+        employerName: "ABC Technologies",
+        employerProfileType: "ABC Technologies",
+      }),
+      [],
+    );
+    assert.deepEqual(
+      buildWhatsAppNotificationBodyParameters("EMPLOYER_ACCOUNT_APPROVED", {
+        event: "EMPLOYER_ACCOUNT_APPROVED",
+        entityId: "6ac746ac72aed3c70a82de5b",
+        phoneNumber: "9876543210",
+        employerName: "ABC Technologies",
+      }),
+      [],
     );
     assert.deepEqual(
       buildWhatsAppNotificationUrlButtonParameters("EMPLOYER_ACCOUNT_APPROVED", {

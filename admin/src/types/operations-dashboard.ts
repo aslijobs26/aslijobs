@@ -78,11 +78,18 @@ export interface TeamWorkloadStatus {
   isEmpty: boolean;
 }
 
+export interface AttentionSectionStatus {
+  isLoading: boolean;
+  isError: boolean;
+  canRead: boolean;
+}
+
 export interface OperationsDashboardData {
   platformPulse: PlatformPulseMetric[];
   attentionTotal: number;
   attentionTabs: AttentionTabMeta[];
   attentionItems: AttentionWorkItem[];
+  attentionStatus: AttentionSectionStatus;
   operationsHealth: OperationsHealthItem[];
   teamWorkload: TeamWorkloadMember[];
   teamWorkloadStatus: TeamWorkloadStatus;

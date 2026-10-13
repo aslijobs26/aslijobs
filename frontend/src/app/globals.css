@@ -1651,8 +1651,17 @@ html:is(:lang(hi), :lang(te), :lang(ta), :lang(kn), :lang(ml)) .discovery-sectio
     .employer-register-searchable-select-options {
     max-height: none;
     min-height: 0;
-    flex: 1 1 auto;
-    scrollbar-width: thin;
+    flex: 0 1 auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+
+  .employer-register-searchable-select-panel--anchored
+    .employer-register-searchable-select-options::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   .employer-register-searchable-select-search {
@@ -2116,35 +2125,49 @@ body:has(.employer-register-page) {
 @media (width < 768px) {
   html:has(.employer-register-page),
   body:has(.employer-register-page) {
-    min-height: 100dvh;
+    min-height: 100vh;
+    min-height: 100svh;
   }
 
   .employer-register-page {
     display: flex;
-    min-height: 100dvh;
+    min-height: 100vh;
+    min-height: 100svh;
     flex-direction: column;
   }
 
   .employer-register-page .employer-register-layout {
     display: flex;
-    min-height: 100dvh;
+    /* A definite height lets the brand panel shrink so the form stays
+       inside the visible screen. svh matches iPhone and Android toolbars. */
+    height: 100vh;
+    height: 100svh;
+    min-height: 0;
+    max-height: none;
     flex: 1 1 auto;
     flex-direction: column;
+    overflow: visible;
   }
 
   .employer-register-page .employer-register-panel {
-    flex: 1 0 auto;
-    min-height: auto;
+    flex: 1 1 auto;
+    min-height: 0;
     height: auto;
     overflow: hidden;
   }
 
   .employer-register-page .employer-register-panel-content {
     flex: 1 1 auto;
-    min-height: auto;
+    min-height: 0;
     height: auto;
-    padding-top: 2.75rem;
-    padding-bottom: 2rem;
+    overflow: hidden;
+    padding-top: 2.5rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .employer-register-page .employer-register-panel-body {
+    min-height: 0;
+    overflow: hidden;
   }
 
   .employer-register-page .employer-register-logo-link {
@@ -2165,8 +2188,9 @@ body:has(.employer-register-page) {
   }
 
   .employer-register-page .auth-brand-art--seeker {
-    width: min(100%, 48vh);
-    margin-bottom: calc(-0.08 * min(100%, 48vh));
+    width: min(100%, 34svh);
+    max-height: 100%;
+    margin-bottom: calc(-0.08 * min(100%, 34svh));
   }
 
   .employer-register-page .employer-register-scale-group .auth-brand-art--employer {
@@ -2211,14 +2235,19 @@ body:has(.employer-register-page) {
     position: relative;
     z-index: 2;
     flex: 0 0 auto;
-    margin-top: -1.5rem;
+    margin-top: 0;
+    padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
     background-color: transparent;
   }
 
   .employer-register-page .employer-register-form-container {
     position: relative;
-    width: min(24.5rem, calc(100% - 2rem));
+    width: min(
+      24.5rem,
+      calc(100% - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
+    );
+    max-width: 100%;
     margin-inline: auto;
     padding-top: 0.85rem;
     padding-right: 1.1rem;

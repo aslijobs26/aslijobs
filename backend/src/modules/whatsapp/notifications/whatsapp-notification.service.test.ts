@@ -54,7 +54,8 @@ describe("enqueueWhatsAppNotification", () => {
         event: "EMPLOYER_ACCOUNT_APPROVED",
         entityId: "6ac746ac72aed3c70a82de5b",
         phoneNumber: payload.phoneNumber,
-        employerName: "Acme Pvt Ltd",
+        employerName: "ABC Technologies",
+        employerProfileType: "company",
         preferredLanguage: "hi",
       },
       {
@@ -75,12 +76,63 @@ describe("enqueueWhatsAppNotification", () => {
     };
     assert.equal(job.templateName, "aslijobs_account_approved");
     assert.equal(job.languageCode, "en");
-    assert.deepEqual(job.bodyParameters, ["Acme Pvt Ltd"]);
+    assert.deepEqual(job.bodyParameters, ["Company"]);
+    assert.equal(job.bodyParameters.includes("ABC Technologies"), false);
     assert.deepEqual(job.urlButtonParameters, ["6ac746ac72aed3c70a82de5b"]);
     assert.equal(
       job.idempotencyKey,
       "EMPLOYER_ACCOUNT_APPROVED:6ac746ac72aed3c70a82de5b",
     );
+  });
+
+  it("maps every saved profile type and skips a missing or named value", async () => {
+    const cases = [
+      { employerProfileType: "consultancy", expected: ["Consultancy"] },
+      { employerProfileType: "individual", expected: ["Individual"] },
+    ] as const;
+
+    for (const item of cases) {
+      const queued: Array<{ bodyParameters: string[] }> = [];
+      const result = await enqueueWhatsAppNotification(
+        {
+          event: "EMPLOYER_ACCOUNT_APPROVED",
+          entityId: "6ac746ac72aed3c70a82de5b",
+          phoneNumber: payload.phoneNumber,
+          employerName: "ABC Technologies",
+          employerProfileType: item.employerProfileType,
+        },
+        {
+          claim: async () => "claimed",
+          enqueueJob: async (job) => {
+            queued.push(job);
+          },
+        },
+      );
+      assert.equal(result, "queued");
+      assert.deepEqual(queued[0]?.bodyParameters, item.expected);
+    }
+
+    let claims = 0;
+    const skipped = await enqueueWhatsAppNotification(
+      {
+        event: "EMPLOYER_ACCOUNT_APPROVED",
+        entityId: "6ac746ac72aed3c70a82de5b",
+        phoneNumber: payload.phoneNumber,
+        employerName: "ABC Technologies",
+        employerProfileType: "ABC Technologies",
+      },
+      {
+        claim: async () => {
+          claims += 1;
+          return "claimed";
+        },
+        enqueueJob: async () => {
+          throw new Error("must not queue");
+        },
+      },
+    );
+    assert.equal(skipped, "skipped_unconfigured");
+    assert.equal(claims, 0);
   });
 
   it("queues EMPLOYER_PROFILE_COMPLETION_REQUIRED with the approved Meta template", async () => {

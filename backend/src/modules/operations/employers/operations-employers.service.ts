@@ -1265,10 +1265,7 @@ export const operationsEmployersService = {
       employerAccountApprovedWhatsApp.schedule({
         employerId,
         whatsappNumber: text(updated.whatsappNumber),
-        companyName: text(updated.companyName),
-        establishmentName: text(updated.establishmentName),
-        firstName: text(updated.firstName),
-        lastName: text(updated.lastName),
+        accountType: text(updated.accountType),
         reviewCycle: String(verifiedAt.getTime()),
       });
       await EmployerDocumentModel.updateMany(

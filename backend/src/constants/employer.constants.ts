@@ -28,6 +28,28 @@ export const EMPLOYER_ACCOUNT_TYPES = [
   "individual",
 ] as const;
 
+/** Display labels for the saved employer profile type (`accountType`). */
+export const EMPLOYER_ACCOUNT_TYPE_LABELS: Record<
+  (typeof EMPLOYER_ACCOUNT_TYPES)[number],
+  string
+> = {
+  company: "Company",
+  consultancy: "Consultancy",
+  individual: "Individual",
+};
+
+export function employerAccountTypeLabel(
+  accountType: string | null | undefined,
+): string | null {
+  const key = accountType?.trim().toLowerCase() ?? "";
+  if (!(EMPLOYER_ACCOUNT_TYPES as readonly string[]).includes(key)) {
+    return null;
+  }
+  return EMPLOYER_ACCOUNT_TYPE_LABELS[
+    key as (typeof EMPLOYER_ACCOUNT_TYPES)[number]
+  ];
+}
+
 export function isBusinessEmployerAccountType(
   accountType: (typeof EMPLOYER_ACCOUNT_TYPES)[number],
 ): accountType is "company" | "consultancy" {

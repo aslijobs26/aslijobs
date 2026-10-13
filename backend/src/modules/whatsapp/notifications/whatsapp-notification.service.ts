@@ -54,6 +54,16 @@ export async function enqueueWhatsAppNotification(
     payload.event,
     payload,
   );
+  if (
+    payload.event === "EMPLOYER_ACCOUNT_APPROVED" &&
+    bodyParameters.length === 0
+  ) {
+    console.info(
+      "[WhatsAppNotification] Employer approval notification skipped - missing profile type",
+      { employerId: payload.entityId.trim() },
+    );
+    return "skipped_unconfigured";
+  }
   const urlButtonParameters = buildWhatsAppNotificationUrlButtonParameters(
     payload.event,
     payload,

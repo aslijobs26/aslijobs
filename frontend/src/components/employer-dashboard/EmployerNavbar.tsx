@@ -1,7 +1,6 @@
 "use client";
 
 import { EmployerProfileMenu } from "@/components/employer-dashboard/EmployerProfileMenu";
-import { NavbarLanguageButton } from "@/components/layout/NavbarLanguageButton";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { EmployerPostJobLink } from "@/components/post-job/EmployerPostJobLink";
 import { Can } from "@/components/rbac/Can";
@@ -45,8 +44,6 @@ export function EmployerNavbar({
         </Can>
 
         <NotificationBell viewAllHref={ROUTES.EMPLOYER_NOTIFICATIONS} />
-
-        <NavbarLanguageButton className="hidden sm:block" />
 
         <EmployerProfileMenu />
       </div>

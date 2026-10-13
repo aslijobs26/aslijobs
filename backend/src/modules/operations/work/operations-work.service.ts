@@ -618,6 +618,11 @@ class OperationsWorkService {
     if (query.priority) {
       andClauses.push({ priority: query.priority });
     }
+    if (query.openOnly) {
+      andClauses.push({
+        status: { $in: ["queued", "assigned", "in_progress", "waiting"] },
+      });
+    }
     if (query.search.trim()) {
       const q = query.search.trim();
       andClauses.push({

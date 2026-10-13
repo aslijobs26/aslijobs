@@ -8,6 +8,8 @@ import {
   type SiteLanguageCode,
   type SiteLanguageOption,
 } from "../constants/site-language";
+import { resolveInterfaceSiteLanguage } from "./employer-interface-language";
+import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 let hasHydratedSiteLanguage = false;
@@ -60,7 +62,10 @@ export function getSiteLanguageCode(): SiteLanguageCode {
   if (typeof window === "undefined" || !hasHydratedSiteLanguage) {
     return SITE_DEFAULT_LANGUAGE.code;
   }
-  return readSiteLanguage().code;
+  return resolveInterfaceSiteLanguage(
+    window.location?.pathname ?? "/",
+    readSiteLanguage(),
+  ).code;
 }
 
 export function getSiteLanguageClientSnapshot(): SiteLanguageOption {
@@ -80,11 +85,12 @@ export function getSiteLanguageReadyServerSnapshot(): boolean {
 }
 
 export function useSiteLanguage(): SiteLanguageOption {
+  const pathname = usePathname() || "/";
   const [language, setLanguage] = useState<SiteLanguageOption>(SITE_DEFAULT_LANGUAGE);
 
   useEffect(() => {
     const sync = () => {
-      const next = readSiteLanguage();
+      const next = resolveInterfaceSiteLanguage(pathname, readSiteLanguage());
       setLanguage(next);
       document.documentElement.lang = next.code;
     };
@@ -96,7 +102,7 @@ export function useSiteLanguage(): SiteLanguageOption {
       window.removeEventListener(SITE_LANGUAGE_CHANGE_EVENT, sync);
       window.removeEventListener("storage", sync);
     };
-  }, []);
+  }, [pathname]);
 
   return language;
 }

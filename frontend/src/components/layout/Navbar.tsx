@@ -7,6 +7,12 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useTranslate } from "@/i18n/translate";
 import { ROUTES } from "@/constants/routes";
 import {
+  computeAnchoredDropdownPosition,
+  readSafeAreaInsets,
+  readVisibleViewportSize,
+  type AnchoredDropdownPosition,
+} from "@/utils/anchored-dropdown-position";
+import {
   EMPLOYER_ACCESS_TOKEN_STORAGE_KEY,
   EMPLOYER_AUTH_CHANGE_EVENT,
 } from "@/utils/employer-auth-storage";
@@ -21,7 +27,8 @@ import {
 import { BriefcaseBusiness, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Container } from "./Container";
 import { NavbarLanguageButton } from "./NavbarLanguageButton";
 
@@ -154,17 +161,58 @@ export function Navbar() {
 
 function NavbarMobileRegisterMenu() {
   const t = useTranslate();
+  const jobSeekerLabel = t("navbar.jobSeeker");
+  const employersLabel = t("navbar.employers");
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState<AnchoredDropdownPosition | null>(
+    null,
+  );
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!trigger || !menu) {
+      return;
+    }
+
+    const viewport = readVisibleViewportSize();
+    setPosition(
+      computeAnchoredDropdownPosition({
+        anchorRect: trigger.getBoundingClientRect(),
+        contentWidth: menu.scrollWidth,
+        contentHeight: menu.scrollHeight,
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+        insets: readSafeAreaInsets(),
+        gap: 4,
+      }),
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPosition(null);
+      return;
+    }
+
+    updatePosition();
+  }, [isOpen, updatePosition, jobSeekerLabel, employersLabel]);
 
   useEffect(() => {
     if (!isOpen) {
       return;
     }
 
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (
+        !rootRef.current?.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -172,26 +220,44 @@ function NavbarMobileRegisterMenu() {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsOpen(false);
+        triggerRef.current?.focus();
       }
     };
 
-    document.addEventListener("mousedown", handlePointerDown);
+    const handleViewportChange = () => updatePosition();
+    const handleScroll = (event: Event) => {
+      if (event.target !== menuRef.current) {
+        updatePosition();
+      }
+    };
+    const visualViewport = window.visualViewport;
+
+    document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleScroll, true);
+    visualViewport?.addEventListener("resize", handleViewportChange);
+    visualViewport?.addEventListener("scroll", handleViewportChange);
 
     return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleScroll, true);
+      visualViewport?.removeEventListener("resize", handleViewportChange);
+      visualViewport?.removeEventListener("scroll", handleViewportChange);
     };
-  }, [isOpen]);
+  }, [isOpen, updatePosition]);
 
   const itemClassName =
-    "flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30";
+    "flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30";
 
   return (
     <div ref={rootRef} className="relative hidden mobile:block">
       <button
+        ref={triggerRef}
         type="button"
-        className="inline-flex size-8 min-h-8 items-center justify-center rounded-md border border-border-subtle text-nav transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        className="inline-flex size-11 items-center justify-center rounded-md border border-border-subtle text-nav transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         aria-label={t("navbar.registerMenuAria")}
         aria-haspopup="menu"
         aria-expanded={isOpen}
@@ -201,33 +267,51 @@ function NavbarMobileRegisterMenu() {
         <UserRound className="size-4" strokeWidth={2} aria-hidden="true" />
       </button>
 
-      {isOpen ? (
-        <div
-          id={menuId}
-          role="menu"
-          aria-label={t("navbar.registerMenuAria")}
-          className="absolute top-full right-0 z-50 mt-1 min-w-[9.25rem] origin-top-right overflow-hidden rounded-md border border-border-subtle bg-surface py-0.5 shadow-md"
-        >
-          <Link
-            href={ROUTES.JOB_SEEKER_REGISTER}
-            role="menuitem"
-            className={itemClassName}
-            onClick={() => setIsOpen(false)}
-          >
-            <UserRound className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-            {t("navbar.jobSeeker")}
-          </Link>
-          <Link
-            href={ROUTES.EMPLOYER_REGISTER}
-            role="menuitem"
-            className={itemClassName}
-            onClick={() => setIsOpen(false)}
-          >
-            <BriefcaseBusiness className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-            {t("navbar.employers")}
-          </Link>
-        </div>
-      ) : null}
+      {/* Portaled so the sticky header and page overflow clip cannot cut the menu off on iOS or Android. */}
+      {isOpen
+        ? createPortal(
+            <div
+              ref={menuRef}
+              id={menuId}
+              role="menu"
+              aria-label={t("navbar.registerMenuAria")}
+              style={
+                position
+                  ? {
+                      top: position.top,
+                      left: position.left,
+                      maxHeight: position.maxHeight,
+                      maxWidth: position.maxWidth,
+                    }
+                  : { top: 0, left: 0, visibility: "hidden" }
+              }
+              className="fixed z-[55] min-w-[9.25rem] overflow-x-hidden overflow-y-auto overscroll-contain rounded-md border border-border-subtle bg-surface py-0.5 shadow-md"
+            >
+              <Link
+                href={ROUTES.JOB_SEEKER_REGISTER}
+                role="menuitem"
+                className={itemClassName}
+                onClick={() => setIsOpen(false)}
+              >
+                <UserRound className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                <span className="min-w-0 break-words">{jobSeekerLabel}</span>
+              </Link>
+              <Link
+                href={ROUTES.EMPLOYER_REGISTER}
+                role="menuitem"
+                className={itemClassName}
+                onClick={() => setIsOpen(false)}
+              >
+                <BriefcaseBusiness
+                  className="size-4 shrink-0 text-primary"
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 break-words">{employersLabel}</span>
+              </Link>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

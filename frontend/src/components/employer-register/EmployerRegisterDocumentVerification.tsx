@@ -160,7 +160,10 @@ export function EmployerRegisterDocumentVerification({
           id="employer-register-document-verification-title"
           className="employer-register-form-label"
         >
-          {t("auth.employerRegister.documentVerificationTitle")}
+          {t("auth.employerRegister.documentVerificationTitle")}{" "}
+          <span className="text-red-600" aria-hidden="true">
+            *
+          </span>
         </h2>
         <p className="employer-register-document-subtitle break-words">
           {t("auth.employerRegister.documentVerificationSubtitle")}
@@ -172,6 +175,7 @@ export function EmployerRegisterDocumentVerification({
         className="employer-register-document-type-options"
         role="radiogroup"
         aria-label={t("auth.employerRegister.governmentIdAria")}
+        aria-required="true"
         aria-invalid={Boolean(documentTypeError) || undefined}
         aria-describedby={documentTypeError ? "documentType-error" : undefined}
       >
@@ -212,8 +216,7 @@ export function EmployerRegisterDocumentVerification({
         message={translateMessage(documentTypeError)}
       />
 
-      {documentType ? (
-        <div className="employer-register-form-stack">
+      <div className="employer-register-form-stack">
           {documentPreview ? (
             <div className="employer-register-document-preview">
               <span
@@ -297,7 +300,6 @@ export function EmployerRegisterDocumentVerification({
             {t("auth.employerRegister.documentHelper")}
           </p>
         </div>
-      ) : null}
 
       <EmployerImageUploadField
         label={t("auth.employerRegister.uploadProfilePhoto")}

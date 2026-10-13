@@ -26,12 +26,19 @@ import {
   mergeFieldErrors,
   type AuthFieldErrors,
 } from "@/utils/auth-field-errors";
+import {
+  EMPLOYER_REGISTER_OTHER_INDUSTRY_VALUE,
+  employerOtherIndustryFieldErrors,
+  isEmployerOtherIndustry,
+  resolveEmployerRegistrationIndustry,
+} from "@/utils/employer-other-industry";
 import { establishEmployerClientSession } from "@/utils/employer-session";
 import { normalizeApiError } from "@/utils/normalize-api-error";
 import { CloudUpload, FileText, ShieldCheck, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useId,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -102,6 +109,19 @@ export function EmployerRegisterCompanyProfileForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
+  const [customIndustry, setCustomIndustry] = useState("");
+  const isOtherIndustry = isEmployerOtherIndustry(formData.industry);
+
+  const industryOptions = useMemo(
+    () => [
+      ...EMPLOYER_REGISTER_INDUSTRY_OPTIONS,
+      {
+        value: EMPLOYER_REGISTER_OTHER_INDUSTRY_VALUE,
+        label: t("auth.employerRegister.industryOther"),
+      },
+    ],
+    [t],
+  );
 
   const businessCategoryOptions = getEmployerRegisterBusinessCategoryOptions(
     formData.industry,
@@ -143,6 +163,7 @@ export function EmployerRegisterCompanyProfileForm({
   };
 
   const handleIndustryChange = (industry: string) => {
+    setCustomIndustry("");
     setFormData((current) => ({
       ...current,
       industry,
@@ -151,8 +172,15 @@ export function EmployerRegisterCompanyProfileForm({
     setFieldErrors((current) => {
       let next = clearFieldError(current, "industry");
       next = clearFieldError(next, "businessCategory");
+      next = clearFieldError(next, "customIndustry");
       return next;
     });
+
+    if (isEmployerOtherIndustry(industry)) {
+      requestAnimationFrame(() => {
+        document.getElementById("company-profile-custom-industry")?.focus();
+      });
+    }
   };
 
   const applySelectedFile = (file: File | undefined) => {
@@ -233,7 +261,16 @@ export function EmployerRegisterCompanyProfileForm({
         errors.industry = AUTH_VALIDATION_MESSAGES.INDUSTRY_REQUIRED;
       }
 
-      if (!formData.businessCategory.trim()) {
+      Object.assign(
+        errors,
+        employerOtherIndustryFieldErrors({
+          industry: formData.industry,
+          customIndustry,
+          businessCategory: formData.businessCategory,
+        }),
+      );
+
+      if (!isOtherIndustry && !formData.businessCategory.trim()) {
         errors.businessCategory =
           AUTH_VALIDATION_MESSAGES.BUSINESS_CATEGORY_REQUIRED;
       }
@@ -282,7 +319,14 @@ export function EmployerRegisterCompanyProfileForm({
     try {
       const session = await completeEmployerCompanyProfile({
         employerId,
-        profile: formData,
+        profile: {
+          ...formData,
+          industry: resolveEmployerRegistrationIndustry({
+            industry: formData.industry,
+            customIndustry,
+          }),
+          businessCategory: formData.businessCategory.trim(),
+        },
         documentType:
           formData.verificationDocument as EmployerRegisterBusinessDocumentType,
         documentFile: documentPreview!.file,
@@ -414,31 +458,107 @@ export function EmployerRegisterCompanyProfileForm({
         ) : (
           <>
             <div className="employer-register-form-row employer-register-form-row--three">
-              <EmployerRegisterSearchableSelect
-                id="company-profile-industry"
-                name="industry"
-                label={t("auth.employerRegister.industry")}
-                required
-                value={formData.industry}
-                placeholder={t("auth.employerRegister.selectIndustry")}
-                options={EMPLOYER_REGISTER_INDUSTRY_OPTIONS}
-                onChange={handleIndustryChange}
-                error={fieldErrors.industry}
-                errorId="industry-error"
-              />
-              <EmployerRegisterSearchableSelect
-                id="company-profile-business-category"
-                name="businessCategory"
-                label={t("auth.employerRegister.businessCategory")}
-                required
-                disabled={!formData.industry}
-                value={formData.businessCategory}
-                placeholder={t("auth.employerRegister.selectBusinessCategory")}
-                options={businessCategoryOptions}
-                onChange={(value) => updateField("businessCategory", value)}
-                error={fieldErrors.businessCategory}
-                errorId="businessCategory-error"
-              />
+              <div className="employer-register-form-stack">
+                <EmployerRegisterSearchableSelect
+                  id="company-profile-industry"
+                  name="industry"
+                  label={t("auth.employerRegister.industry")}
+                  required
+                  value={formData.industry}
+                  placeholder={t("auth.employerRegister.selectIndustry")}
+                  options={industryOptions}
+                  visibleOptionRows={5}
+                  onChange={handleIndustryChange}
+                  error={fieldErrors.industry}
+                  errorId="industry-error"
+                />
+                {isOtherIndustry ? (
+                  <>
+                    <RequiredFieldLabel
+                      htmlFor="company-profile-custom-industry"
+                      required
+                      className="employer-register-form-label"
+                    >
+                      {t("auth.employerRegister.enterIndustry")}
+                    </RequiredFieldLabel>
+                    <input
+                      id="company-profile-custom-industry"
+                      name="customIndustry"
+                      type="text"
+                      value={customIndustry}
+                      onChange={(event) => {
+                        setCustomIndustry(event.target.value);
+                        clearField("customIndustry");
+                      }}
+                      placeholder={t("auth.employerRegister.enterIndustry")}
+                      autoComplete="off"
+                      maxLength={120}
+                      className="employer-register-form-input"
+                      aria-required="true"
+                      aria-invalid={Boolean(fieldErrors.customIndustry)}
+                      aria-describedby={
+                        fieldErrors.customIndustry
+                          ? "customIndustry-error"
+                          : undefined
+                      }
+                    />
+                    <FieldError
+                      id="customIndustry-error"
+                      message={translateMessage(fieldErrors.customIndustry)}
+                    />
+                  </>
+                ) : null}
+              </div>
+              {isOtherIndustry ? (
+                <div className="employer-register-form-stack">
+                  <RequiredFieldLabel
+                    htmlFor="company-profile-business-category"
+                    required
+                    className="employer-register-form-label"
+                  >
+                    {t("auth.employerRegister.businessCategory")}
+                  </RequiredFieldLabel>
+                  <input
+                    id="company-profile-business-category"
+                    name="businessCategory"
+                    type="text"
+                    value={formData.businessCategory}
+                    onChange={(event) =>
+                      updateField("businessCategory", event.target.value)
+                    }
+                    placeholder={t("auth.employerRegister.enterBusinessCategory")}
+                    autoComplete="off"
+                    maxLength={120}
+                    className="employer-register-form-input"
+                    aria-required="true"
+                    aria-invalid={Boolean(fieldErrors.businessCategory)}
+                    aria-describedby={
+                      fieldErrors.businessCategory
+                        ? "businessCategory-error"
+                        : undefined
+                    }
+                  />
+                  <FieldError
+                    id="businessCategory-error"
+                    message={translateMessage(fieldErrors.businessCategory)}
+                  />
+                </div>
+              ) : (
+                <EmployerRegisterSearchableSelect
+                  id="company-profile-business-category"
+                  name="businessCategory"
+                  label={t("auth.employerRegister.businessCategory")}
+                  required
+                  disabled={!formData.industry}
+                  value={formData.businessCategory}
+                  placeholder={t("auth.employerRegister.selectBusinessCategory")}
+                  options={businessCategoryOptions}
+                  visibleOptionRows={5}
+                  onChange={(value) => updateField("businessCategory", value)}
+                  error={fieldErrors.businessCategory}
+                  errorId="businessCategory-error"
+                />
+              )}
               <EmployerRegisterSearchableSelect
                 id="company-profile-strength"
                 name="companyStrength"
