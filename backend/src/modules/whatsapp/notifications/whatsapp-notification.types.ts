@@ -21,6 +21,8 @@ export type WhatsAppNotificationPayload = {
   /** Offline venue for interview_scheduled_offline {{5}}. */
   interviewVenue?: string;
   preferredLanguage?: string | null;
+  /** Ties one registration request to enqueue, send, and failure logs. */
+  correlationId?: string;
   /**
    * Dynamic URL-button suffixes. Meta stores the base URL on the template;
    * each value replaces that button's {{1}} in order.
@@ -44,6 +46,7 @@ export type WhatsAppNotificationQueueJob = {
   urlButtonParameters?: string[];
   idempotencyScope?: string;
   idempotencyKey: string;
+  correlationId?: string;
 };
 
 export type WhatsAppNotificationEnqueueResult =

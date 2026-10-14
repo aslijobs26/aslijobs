@@ -33,6 +33,32 @@ export type WhatsAppTemplateSendResult = {
 };
 
 /**
+ * Graph rejection details safe to persist and log.
+ * Meta's message text is omitted because it can contain the recipient.
+ */
+export class WhatsAppTemplateDeliveryError extends Error {
+  readonly status: number;
+  readonly metaCode: number | null;
+  readonly metaType: string;
+
+  constructor(input: {
+    status: number;
+    metaCode?: number;
+    metaType?: string;
+  }) {
+    const code =
+      typeof input.metaCode === "number" ? String(input.metaCode) : "none";
+    super(
+      `WhatsApp template delivery failed status=${input.status} code=${code}`,
+    );
+    this.name = "WhatsAppTemplateDeliveryError";
+    this.status = input.status;
+    this.metaCode = typeof input.metaCode === "number" ? input.metaCode : null;
+    this.metaType = input.metaType?.trim() ?? "";
+  }
+}
+
+/**
  * WhatsApp Cloud API adapter.
  * OTP and bot session replies keep dedicated methods.
  * Event notifications use sendTemplateMessage().
@@ -345,18 +371,12 @@ export class WhatsAppService {
   ): Promise<never> {
     let errorCode: number | undefined;
     let errorType = "";
-    let errorMessage = "";
     let fbtraceId = "";
 
     try {
       const body = (await response.json()) as MetaErrorBody;
       errorCode = body.error?.code;
       errorType = body.error?.type?.trim() ?? "";
-      errorMessage = (
-        body.error?.error_user_msg ||
-        body.error?.message ||
-        ""
-      ).trim();
       fbtraceId = body.error?.fbtrace_id?.trim() ?? "";
     } catch {
       // Ignore unreadable Meta error payloads.
@@ -366,11 +386,14 @@ export class WhatsAppService {
       `[WhatsAppService] template delivery failed name=${templateName} language=${language} status=${response.status}` +
         `${typeof errorCode === "number" ? ` code=${errorCode}` : ""}` +
         `${errorType ? ` type=${errorType}` : ""}` +
-        `${fbtraceId ? ` fbtrace=${fbtraceId}` : ""}` +
-        `${errorMessage ? ` message=${errorMessage}` : ""}`,
+        `${fbtraceId ? ` fbtrace=${fbtraceId}` : ""}`,
     );
 
-    throw new Error("WhatsApp template delivery failed");
+    throw new WhatsAppTemplateDeliveryError({
+      status: response.status,
+      ...(typeof errorCode === "number" ? { metaCode: errorCode } : {}),
+      ...(errorType ? { metaType: errorType } : {}),
+    });
   }
 
   private async handleMetaFailure(response: Response): Promise<never> {

@@ -126,6 +126,7 @@ describe("jobseeker account created WhatsApp", () => {
       urlButtonParameters?: string[];
       idempotencyKey: string;
       entityId: string;
+      correlationId?: string;
     }> = [];
     mock.method(JobSeekerModel, "findById", () => queryResult(seeker));
     stubCompletionSideEffects();
@@ -154,6 +155,8 @@ describe("jobseeker account created WhatsApp", () => {
     assert.equal(queued.length, 1);
     assert.equal(queued[0]?.templateName, "jobseeker_account_created");
     assert.equal(queued[0]?.languageCode, "en");
+    assert.equal(typeof queued[0]?.correlationId, "string");
+    assert.equal((queued[0]?.correlationId ?? "").length > 0, true);
     assert.equal(queued[0]?.phoneNumber, seekerPhone);
     assert.equal(toWhatsAppCloudRecipient(seekerPhone), `91${seekerPhone}`);
     assert.deepEqual(queued[0]?.bodyParameters, []);
@@ -339,5 +342,74 @@ describe("jobseeker account created WhatsApp", () => {
     assert.equal(invalid.registrationStatus, "PENDING");
     await new Promise((resolve) => setTimeout(resolve, 20));
     assert.equal(queued, 0);
+  });
+
+  it("routes Telugu to the Telugu template and Hindi to English", async () => {
+    const queued: Array<{ templateName: string; languageCode: string }> = [];
+    const enqueue = (language: string) =>
+      enqueueWhatsAppNotification(
+        {
+          event: "JOBSEEKER_ACCOUNT_CREATED",
+          entityId: jobSeekerId,
+          phoneNumber: seekerPhone,
+          preferredLanguage: language,
+        },
+        {
+          claim: async () => "claimed",
+          enqueueJob: async (job) => {
+            queued.push({
+              templateName: job.templateName,
+              languageCode: job.languageCode,
+            });
+          },
+        },
+      );
+
+    assert.equal(await enqueue("te"), "queued");
+    assert.equal(await enqueue("en"), "queued");
+    assert.equal(await enqueue("hi"), "queued");
+    assert.deepEqual(
+      queued.map((job) => [job.templateName, job.languageCode]),
+      [
+        ["jobseeker_account_created_te", "te"],
+        ["jobseeker_account_created", "en"],
+        ["jobseeker_account_created", "en"],
+      ],
+    );
+  });
+
+  it("does not send a second message when the dispatch was already claimed", async () => {
+    let sends = 0;
+    await enqueueWhatsAppNotification(
+      {
+        event: "JOBSEEKER_ACCOUNT_CREATED",
+        entityId: jobSeekerId,
+        phoneNumber: seekerPhone,
+        preferredLanguage: "en",
+      },
+      {
+        claim: async () => "claimed",
+        enqueueJob: async () => {
+          sends += 1;
+        },
+      },
+    );
+    const retry = await enqueueWhatsAppNotification(
+      {
+        event: "JOBSEEKER_ACCOUNT_CREATED",
+        entityId: jobSeekerId,
+        phoneNumber: seekerPhone,
+        preferredLanguage: "te",
+      },
+      {
+        claim: async () => "duplicate",
+        enqueueJob: async () => {
+          sends += 1;
+        },
+      },
+    );
+
+    assert.equal(retry, "skipped_duplicate");
+    assert.equal(sends, 1);
   });
 });

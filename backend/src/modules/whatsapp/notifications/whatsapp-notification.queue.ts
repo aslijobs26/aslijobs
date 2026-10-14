@@ -234,6 +234,7 @@ function logJobseekerAccountCreatedDelivery(
     jobSeekerId: job.entityId,
     template: job.templateName,
     language: job.languageCode,
+    correlationId: job.correlationId || "-",
     outcome,
   };
   if (outcome === "accepted") {
@@ -321,8 +322,10 @@ export async function deliverWhatsAppNotificationJob(
     event: job.event,
     templateName: job.templateName,
     language: job.languageCode,
+    correlationId: job.correlationId || "-",
     recipient: maskWhatsAppRecipient(job.phoneNumber),
     messageId: result.messageId || "-",
+    messageStatus: result.messageStatus || "-",
     timestamp: new Date().toISOString(),
   });
   logJobPostIncompleteDelivery(job, "accepted");
@@ -340,6 +343,13 @@ export async function enqueueWhatsAppNotificationJob(
 ): Promise<void> {
   const activeQueue = getQueue();
   if (!activeQueue) {
+    console.info("[WhatsAppNotification] inline delivery started", {
+      event: job.event,
+      entityId: job.entityId,
+      template: job.templateName,
+      language: job.languageCode,
+      correlationId: job.correlationId || "-",
+    });
     void deliverWhatsAppNotificationJob(job).catch((error) => {
       console.error("[WhatsAppNotification] inline delivery failed", {
         event: job.event,
@@ -369,6 +379,13 @@ export async function enqueueWhatsAppNotificationJob(
   }
 
   try {
+    console.info("[WhatsAppNotification] queue job created", {
+      event: job.event,
+      entityId: job.entityId,
+      template: job.templateName,
+      language: job.languageCode,
+      correlationId: job.correlationId || "-",
+    });
     await activeQueue.add(WHATSAPP_NOTIFICATION_JOB_NAME, job, {
       jobId: whatsAppNotificationQueueJobId(
         job.event,

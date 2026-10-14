@@ -65,6 +65,27 @@ export function receiveWhatsAppWebhook(req: Request, res: Response): void {
   });
 }
 
+function logDeliveryStatuses(statuses: unknown[]): void {
+  for (const item of statuses) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+    const status = item as {
+      id?: string;
+      status?: string;
+      errors?: Array<{ code?: number }>;
+    };
+    const errorCode = status.errors?.find(
+      (error) => typeof error.code === "number",
+    )?.code;
+    console.info("[WhatsAppWebhook] delivery status", {
+      messageId: status.id?.trim() || "-",
+      status: status.status?.trim() || "unknown",
+      ...(typeof errorCode === "number" ? { errorCode } : {}),
+    });
+  }
+}
+
 async function processWebhook(body: {
   entry?: Array<{
     changes?: Array<{
@@ -77,7 +98,7 @@ async function processWebhook(body: {
       const value = change.value;
       if (!value?.messages?.length) {
         if (value?.statuses?.length) {
-          console.info("[WhatsAppWebhook] status event acknowledged");
+          logDeliveryStatuses(value.statuses);
         }
         continue;
       }

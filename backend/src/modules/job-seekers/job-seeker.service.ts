@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { HTTP_STATUS } from "../../constants/http-status.js";
@@ -490,6 +491,7 @@ export class JobSeekerService {
   async completeRegistration(
     jobSeekerId: string,
     input: Omit<CompleteJobSeekerRegistrationInput, "jobSeekerId">,
+    options?: { correlationId?: string },
   ) {
     const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
 
@@ -565,9 +567,15 @@ export class JobSeekerService {
     });
     await jobSeeker.save();
 
+    const correlationId = options?.correlationId?.trim() || randomUUID();
+    console.info("[JobSeekerRegistration] completed", {
+      jobSeekerId: jobSeeker._id.toString(),
+      correlationId,
+    });
     jobseekerAccountCreatedWhatsApp.schedule({
       jobSeekerId: jobSeeker._id.toString(),
       phoneNumber: jobSeeker.whatsappNumber,
+      correlationId,
     });
     cancelJobSeekerProfileCompletionReminder(jobSeeker._id.toString());
 

@@ -87,6 +87,7 @@ export class JobSeekerController {
     const result = await jobSeekerService.completeRegistration(
       jobSeekerId,
       completion,
+      { correlationId: req.requestId },
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {

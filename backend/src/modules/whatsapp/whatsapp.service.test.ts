@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it, mock } from "node:test";
 import { env } from "../../config/env.js";
-import { WhatsAppService, maskWhatsAppRecipient } from "./whatsapp.service.js";
+import {
+  WhatsAppService,
+  WhatsAppTemplateDeliveryError,
+  maskWhatsAppRecipient,
+} from "./whatsapp.service.js";
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -165,6 +169,37 @@ describe("WhatsAppService template and existing senders", () => {
     await new WhatsAppService().sendTextMessage("9876543210", "Hello from bot");
     assert.equal(captured.type, "text");
     assert.equal((captured.text as { body: string }).body, "Hello from bot");
+  });
+
+  it("keeps Graph failure status and code without the recipient", async () => {
+    mock.method(globalThis, "fetch", async () =>
+      jsonResponse(400, {
+        error: {
+          message: "Recipient 919876543210 is not valid",
+          type: "OAuthException",
+          code: 132001,
+        },
+      }),
+    );
+
+    await assert.rejects(
+      () =>
+        new WhatsAppService().sendTemplateMessage(
+          "9876543210",
+          "jobseeker_account_created",
+          "en",
+        ),
+      (error: unknown) => {
+        assert.equal(error instanceof WhatsAppTemplateDeliveryError, true);
+        const deliveryError = error as WhatsAppTemplateDeliveryError;
+        assert.equal(deliveryError.status, 400);
+        assert.equal(deliveryError.metaCode, 132001);
+        assert.equal(deliveryError.message.includes("919876543210"), false);
+        assert.equal(deliveryError.message.includes("Recipient"), false);
+        assert.match(deliveryError.message, /status=400 code=132001/);
+        return true;
+      },
+    );
   });
 });
 

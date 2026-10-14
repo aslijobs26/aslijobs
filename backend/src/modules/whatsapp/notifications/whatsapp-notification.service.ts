@@ -110,6 +110,9 @@ export async function enqueueWhatsAppNotification(
       ? { idempotencyScope: payload.idempotencyScope.trim() }
       : {}),
     idempotencyKey,
+    ...(payload.correlationId?.trim()
+      ? { correlationId: payload.correlationId.trim() }
+      : {}),
   });
 
   return "queued";
