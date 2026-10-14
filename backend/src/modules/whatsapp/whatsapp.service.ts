@@ -46,9 +46,27 @@ const RETRYABLE_META_CODES = new Set([
 ]);
 
 /**
+ * 132001 is "template name does not exist in the translation".
+ * Retrying it cannot create the template and can duplicate other sends.
+ */
+const PERMANENT_META_CODES = new Set([
+  100, 190, 131026, 131047, 131051, 132000, 132001, 132005, 132007, 132012,
+  132015,
+]);
+
+export function sanitizeWhatsAppErrorDetail(value: string): string {
+  return value
+    .replace(/Bearer\s+\S+/gi, "Bearer ****")
+    .replace(/\d{8,}/g, "****")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 180);
+}
+
+/**
  * Timeouts and dropped connections are ambiguous: Meta may already have
  * accepted the message. Rate limits and 5xx responses can be retried.
- * Template, recipient, auth, and payload errors are permanent.
+ * Template, recipient, auth, and payload errors, including 132001, are permanent.
  */
 export function classifyWhatsAppTemplateFailure(input: {
   status: number;
@@ -58,6 +76,12 @@ export function classifyWhatsAppTemplateFailure(input: {
 }): WhatsAppTemplateFailureClass {
   if (input.timedOut || input.network) {
     return "ambiguous";
+  }
+  if (
+    typeof input.metaCode === "number" &&
+    PERMANENT_META_CODES.has(input.metaCode)
+  ) {
+    return "permanent";
   }
   if (input.status === 429 || input.status >= 500) {
     return "retryable";
@@ -76,15 +100,19 @@ export class WhatsAppTemplateDeliveryError extends Error {
   readonly metaCode: number | null;
   readonly metaType: string;
   readonly failureClass: WhatsAppTemplateFailureClass;
+  /** Sanitized Meta detail. Phone numbers and tokens are removed. */
+  readonly detail: string;
 
   constructor(input: {
     status: number;
     metaCode?: number;
     metaType?: string;
+    detail?: string;
     failureClass?: WhatsAppTemplateFailureClass;
   }) {
     const code =
       typeof input.metaCode === "number" ? String(input.metaCode) : "none";
+    const detail = sanitizeWhatsAppErrorDetail(input.detail ?? "");
     super(
       `WhatsApp template delivery failed status=${input.status} code=${code}`,
     );
@@ -92,6 +120,7 @@ export class WhatsAppTemplateDeliveryError extends Error {
     this.status = input.status;
     this.metaCode = typeof input.metaCode === "number" ? input.metaCode : null;
     this.metaType = input.metaType?.trim() ?? "";
+    this.detail = detail;
     this.failureClass =
       input.failureClass ??
       classifyWhatsAppTemplateFailure({
@@ -224,9 +253,11 @@ export class WhatsAppService {
     languageCode: string,
     bodyParameters: readonly string[] = [],
     urlButtonParameters: readonly string[] = [],
+    context: { correlationId?: string } = {},
   ): Promise<WhatsAppTemplateSendResult> {
     const name = templateName.trim();
     const language = languageCode.trim();
+    const correlationId = context.correlationId?.trim() || "-";
     if (!this.hasCloudCredentials || !name || !language) {
       console.error(
         "[WhatsAppService] template delivery skipped: credentials or template are not configured",
@@ -275,7 +306,7 @@ export class WhatsAppService {
     };
 
     console.info(
-      `[WhatsAppService] template request name=${name} language=${language} to=${maskWhatsAppRecipient(recipient)}`,
+      `[WhatsAppService] template request name=${name} language=${language} correlationId=${correlationId} to=${maskWhatsAppRecipient(recipient)}`,
     );
 
     let response: Response;
@@ -294,7 +325,7 @@ export class WhatsAppService {
         error instanceof Error &&
         (error.name === "TimeoutError" || error.name === "AbortError");
       console.error(
-        `[WhatsAppService] template delivery failed name=${name} language=${language} reason=${
+        `[WhatsAppService] template delivery failed name=${name} language=${language} correlationId=${correlationId} reason=${
           isTimeout ? "timeout" : "network error"
         }`,
       );
@@ -305,7 +336,7 @@ export class WhatsAppService {
     }
 
     if (!response.ok) {
-      await this.handleTemplateFailure(response, name, language);
+      await this.handleTemplateFailure(response, name, language, correlationId);
     }
 
     let messageId = "";
@@ -319,7 +350,7 @@ export class WhatsAppService {
     }
 
     console.info(
-      `[WhatsAppService] template delivery successful name=${name} language=${language} to=${maskWhatsAppRecipient(recipient)}${
+      `[WhatsAppService] template accepted name=${name} language=${language} correlationId=${correlationId} to=${maskWhatsAppRecipient(recipient)}${
         messageId ? ` messageId=${messageId}` : ""
       }${messageStatus ? ` status=${messageStatus}` : ""}`,
     );
@@ -417,24 +448,33 @@ export class WhatsAppService {
     response: Response,
     templateName: string,
     language: string,
+    correlationId: string,
   ): Promise<never> {
     let errorCode: number | undefined;
     let errorType = "";
     let fbtraceId = "";
+    let detail = "";
 
     try {
       const body = (await response.json()) as MetaErrorBody;
       errorCode = body.error?.code;
       errorType = body.error?.type?.trim() ?? "";
       fbtraceId = body.error?.fbtrace_id?.trim() ?? "";
+      detail = sanitizeWhatsAppErrorDetail(
+        body.error?.error_user_title ||
+          body.error?.error_user_msg ||
+          body.error?.message ||
+          "",
+      );
     } catch {
       // Ignore unreadable Meta error payloads.
     }
 
     console.error(
-      `[WhatsAppService] template delivery failed name=${templateName} language=${language} status=${response.status}` +
+      `[WhatsAppService] template delivery failed name=${templateName} language=${language} correlationId=${correlationId} status=${response.status}` +
         `${typeof errorCode === "number" ? ` code=${errorCode}` : ""}` +
         `${errorType ? ` type=${errorType}` : ""}` +
+        `${detail ? ` detail=${detail}` : ""}` +
         `${fbtraceId ? ` fbtrace=${fbtraceId}` : ""}`,
     );
 
@@ -442,6 +482,7 @@ export class WhatsAppService {
       status: response.status,
       ...(typeof errorCode === "number" ? { metaCode: errorCode } : {}),
       ...(errorType ? { metaType: errorType } : {}),
+      ...(detail ? { detail } : {}),
       failureClass: classifyWhatsAppTemplateFailure({
         status: response.status,
         metaCode: typeof errorCode === "number" ? errorCode : null,

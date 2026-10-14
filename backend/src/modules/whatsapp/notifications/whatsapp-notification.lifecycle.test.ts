@@ -98,7 +98,11 @@ describe("WhatsApp notification lifecycle", () => {
       "retryable",
     );
     assert.equal(
-      classifyWhatsAppTemplateFailure({ status: 400, metaCode: 132001 }),
+      classifyWhatsAppTemplateFailure({ status: 404, metaCode: 132001 }),
+      "permanent",
+    );
+    assert.equal(
+      classifyWhatsAppTemplateFailure({ status: 500, metaCode: 132001 }),
       "permanent",
     );
     assert.equal(classifyWhatsAppTemplateFailure({ status: 500 }), "retryable");

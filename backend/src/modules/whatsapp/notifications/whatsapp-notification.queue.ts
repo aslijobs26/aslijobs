@@ -330,10 +330,15 @@ export async function deliverWhatsAppNotificationJob(
       job.languageCode,
       job.bodyParameters,
       job.urlButtonParameters ?? [],
+      { correlationId: job.correlationId },
     );
   } catch (error) {
     const safeMessage =
-      error instanceof Error ? error.message : "delivery_failed";
+      error instanceof WhatsAppTemplateDeliveryError
+        ? [error.message, error.detail].filter(Boolean).join(" ").slice(0, 300)
+        : error instanceof Error
+          ? error.message
+          : "delivery_failed";
     if (isAmbiguousDeliveryError(error)) {
       await markWhatsAppNotificationDispatchAmbiguous({
         idempotencyKey: job.idempotencyKey,

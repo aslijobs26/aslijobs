@@ -298,8 +298,15 @@ describe("deliverWhatsAppNotificationJob", () => {
     );
   });
 
-  it("does not retry a permanent template error", async () => {
-    const updates: Array<{ status?: string; failureClass?: string }> = [];
+  it("does not retry Meta error 132001 or mark it delivered", async () => {
+    const updates: Array<{
+      status?: string;
+      failureClass?: string;
+      lastError?: string;
+      lastMetaCode?: string;
+      messageId?: string;
+    }> = [];
+    let sends = 0;
     mock.method(WhatsAppNotificationDispatchModel, "findOne", () => ({
       select: () => ({
         lean: async () => null,
@@ -310,31 +317,46 @@ describe("deliverWhatsAppNotificationJob", () => {
       "updateOne",
       async (
         _filter: unknown,
-        update: { $set?: { status?: string; failureClass?: string } },
+        update: {
+          $set?: {
+            status?: string;
+            failureClass?: string;
+            lastError?: string;
+            lastMetaCode?: string;
+            messageId?: string;
+          };
+        },
       ) => {
         updates.push(update.$set ?? {});
         return { acknowledged: true };
       },
     );
     mock.method(WhatsAppService.prototype, "sendTemplateMessage", async () => {
+      sends += 1;
       throw new WhatsAppTemplateDeliveryError({
-        status: 400,
+        status: 404,
         metaCode: 132001,
-        failureClass: "permanent",
+        detail: "Template name does not exist in the translation",
       });
     });
 
     await notificationQueue.deliverWhatsAppNotificationJob({
-      event: "EMPLOYER_ACCOUNT_CREATED",
+      event: "JOBSEEKER_ACCOUNT_CREATED",
       entityId: payload.entityId,
       phoneNumber: payload.phoneNumber,
-      templateName: "employer_account_created",
-      languageCode: "en",
-      bodyParameters: ["Test Employer"],
-      idempotencyKey: `EMPLOYER_ACCOUNT_CREATED:${payload.entityId}`,
+      templateName: "jobseeker_account_created_te",
+      languageCode: "te",
+      bodyParameters: [],
+      idempotencyKey: `JOBSEEKER_ACCOUNT_CREATED:${payload.entityId}`,
+      correlationId: "corr-132001",
     });
 
+    assert.equal(sends, 1);
     assert.equal(updates.at(-1)?.status, "failed");
     assert.equal(updates.at(-1)?.failureClass, "permanent");
+    assert.equal(updates.at(-1)?.lastMetaCode, "132001");
+    assert.match(updates.at(-1)?.lastError ?? "", /does not exist/);
+    assert.notEqual(updates.at(-1)?.status, "delivered");
+    assert.equal(updates.at(-1)?.messageId, undefined);
   });
 });

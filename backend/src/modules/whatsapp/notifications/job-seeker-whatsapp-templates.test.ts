@@ -71,6 +71,14 @@ describe("job seeker WhatsApp template language routing", () => {
         templateName,
         languageCode: "te",
       });
+      assert.notEqual(
+        resolveWhatsAppNotificationDelivery(event, "te")?.languageCode,
+        "te_IN",
+      );
+      assert.notEqual(
+        resolveWhatsAppNotificationDelivery(event, "te")?.languageCode,
+        "te-IN",
+      );
     }
   });
 
