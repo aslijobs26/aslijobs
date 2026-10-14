@@ -1034,7 +1034,7 @@ describe("whatsapp job seeker apply links", () => {
       ],
     });
     assert.match(reply, /Electrician/);
-    assert.match(reply, /👉 Apply Now: https:\/\/aslijobs\.com\/jobs\/AJ-ELEC-9K2/);
+    assert.match(reply, /👉 Apply Now: https:\/\/aslijobs\.com\/jobs\/AJ-ELEC-9K2\?lang=en/);
     assert.equal(reply.includes("/jobs/AJ-CARP"), false);
   });
 
@@ -1109,8 +1109,24 @@ describe("whatsapp job seeker apply links", () => {
     };
     const reply = buildDeterministicReply("en", facts) ?? "";
     assert.match(reply, /Chandu Organization/);
-    assert.match(reply, /👉 Apply Now: https:\/\/aslijobs\.com\/jobs\/AJ-ELEC-2/);
+    assert.match(reply, /👉 Apply Now: https:\/\/aslijobs\.com\/jobs\/AJ-ELEC-2\?lang=en/);
     assert.equal(buildPublicJobApplyUrl("AJ-ELEC-2", APPLY_ORIGIN), "https://aslijobs.com/jobs/AJ-ELEC-2");
+    assert.equal(
+      buildPublicJobApplyUrl("AJ-ELEC-2", APPLY_ORIGIN, "te"),
+      "https://aslijobs.com/jobs/AJ-ELEC-2?lang=te",
+    );
+  });
+
+  it("adds lang to job-seeker register URLs and leaves employer URLs unchanged", () => {
+    const service = readFileSync(
+      new URL("./whatsapp-bot.service.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(service, /seekerRegisterUrl: appendSiteLanguageQuery/);
+    assert.match(
+      service,
+      /employerRegisterUrl: `\$\{origin\}\/employer\/register`/,
+    );
   });
 
   it("does not invent Apply Now URLs from empty or unsafe job IDs", () => {
@@ -1178,7 +1194,12 @@ describe("whatsapp job seeker apply links", () => {
         jobs,
       });
       assert.match(reply, /Harshad Shaik Construction/);
-      assert.match(reply, /👉 Apply Now: https:\/\/aslijobs\.com\/jobs\/AJ-CARP-1/);
+      assert.match(
+        reply,
+        new RegExp(
+          `👉 Apply Now: https://aslijobs.com/jobs/AJ-CARP-1\\?lang=${language}`,
+        ),
+      );
     }
   });
 });
@@ -1370,6 +1391,14 @@ describe("whatsapp job search — requested city is the source of truth", () => 
     assert.equal(detectLanguage("I need a job", "te"), "en");
     assert.equal(detectLanguage("నాకు జాబ్ కావాలి", "en"), "te");
     assert.equal(detectLanguage("मुझे नौकरी चाहिए", "en"), "hi");
+  });
+
+  it("does not switch a saved language on yes, ok, hi, or a phone number", () => {
+    assert.equal(detectLanguage("Yes", "te"), "te");
+    assert.equal(detectLanguage("OK", "te"), "te");
+    assert.equal(detectLanguage("Hi", "te"), "te");
+    assert.equal(detectLanguage("9876543210", "hi"), "hi");
+    assert.equal(detectLanguage("Yes", "en"), "en");
   });
 
   it("routes numbered menus from conversation state", () => {

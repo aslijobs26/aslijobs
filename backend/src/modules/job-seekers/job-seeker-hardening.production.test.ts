@@ -135,6 +135,21 @@ describe("Jobseeker hardening — public serializer privacy", () => {
     );
     assert.equal(publicSeeker.accountStatus, "active");
   });
+
+  it("exposes preferredLanguage from whatsappLanguage without using spoken skills", () => {
+    const publicSeeker = toPublicJobSeeker({
+      _id: new mongoose.Types.ObjectId(),
+      fullName: "Test Seeker",
+      whatsappNumber: "9876543210",
+      isWhatsappVerified: true,
+      registrationStatus: "COMPLETED",
+      languages: ["telugu", "english"],
+      whatsappLanguage: "te",
+    });
+
+    assert.equal(publicSeeker.preferredLanguage, "te");
+    assert.deepEqual(publicSeeker.languages, ["telugu", "english"]);
+  });
 });
 
 describe("Jobseeker hardening — sensitive static uploads", () => {

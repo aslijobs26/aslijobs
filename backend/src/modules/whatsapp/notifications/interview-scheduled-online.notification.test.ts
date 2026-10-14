@@ -306,6 +306,29 @@ describe("interview_scheduled_online scheduling", () => {
     );
   });
 
+  it("uses the stored Telugu preference for a later interview notification", async () => {
+    const { queued } = installSchedulingMocks({
+      seeker: {
+        whatsappNumber: seekerPhone,
+        whatsappLanguage: "te",
+        availabilityStatus: "available",
+        preferredJobLocation: "Hyderabad",
+      },
+    });
+
+    await applicationService.updateInterviewForEmployer({
+      employerId,
+      applicationId,
+      interview: interview(),
+      updatedByName: "Ram",
+    });
+    await wait();
+
+    assert.equal(queued.length, 1);
+    assert.equal(queued[0]?.preferredLanguage, "te");
+    assert.equal(queued[0]?.event, "INTERVIEW_SCHEDULED_ONLINE");
+  });
+
   it("uses the employer company name when the job company is blank", async () => {
     const queued: WhatsAppNotificationPayload[] = [];
     mock.method(JobModel, "findById", () =>

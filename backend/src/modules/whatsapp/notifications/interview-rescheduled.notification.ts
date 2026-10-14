@@ -8,6 +8,7 @@ import {
   formatInterviewScheduledTime,
 } from "./interview-scheduled-online.notification.js";
 import { resolveApplicationCompanyName } from "./job-application-submitted.notification.js";
+import { resolveJobSeekerNotificationLanguage } from "../job-seeker-whatsapp-language.js";
 import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js";
 
 const TEMPLATE_NAME = "interview_rescheduled";
@@ -109,7 +110,9 @@ export const interviewRescheduledWhatsApp = {
       EmployerModel.findById(input.employerId)
         .select("companyName establishmentName")
         .lean(),
-      JobSeekerModel.findById(input.jobSeekerId).select("whatsappNumber").lean(),
+      JobSeekerModel.findById(input.jobSeekerId)
+        .select("whatsappNumber whatsappLanguage")
+        .lean(),
     ]);
 
     const jobTitle = job?.jobTitle?.trim() ?? "";
@@ -143,6 +146,11 @@ export const interviewRescheduledWhatsApp = {
       return;
     }
 
+    const preferredLanguage = await resolveJobSeekerNotificationLanguage({
+      phoneNumber,
+      storedLanguage: jobSeeker?.whatsappLanguage,
+      jobSeekerId: input.jobSeekerId,
+    });
     const result = await this.enqueue({
       event: "INTERVIEW_RESCHEDULED",
       entityId: input.applicationId,
@@ -153,14 +161,14 @@ export const interviewRescheduledWhatsApp = {
       interviewTime: input.interviewTime,
       interviewVenue: input.interviewVenue,
       idempotencyScope: input.idempotencyScope,
-      preferredLanguage: "en",
+      preferredLanguage,
     });
 
     console.info("[WhatsAppNotification] interview_rescheduled outcome", {
       template: TEMPLATE_NAME,
       outcome: result,
       applicationId: input.applicationId,
-      language: "en",
+      language: preferredLanguage,
     });
   },
 };

@@ -30,6 +30,7 @@ type JobSeekerLike = {
   experienceType?: string | null;
   experiences?: unknown[];
   languages?: string[];
+  whatsappLanguage?: string | null;
   availabilityStatus?: string | null;
   professionalSummary?: string | null;
   skills?: string[];
@@ -88,6 +89,7 @@ export function toPublicJobSeeker(jobSeeker: JobSeekerLike) {
     experienceType: jobSeeker.experienceType ?? null,
     experiences: jobSeeker.experiences ?? [],
     languages: jobSeeker.languages ?? [],
+    preferredLanguage: jobSeeker.whatsappLanguage?.trim() || "",
     availabilityStatus: jobSeeker.availabilityStatus ?? null,
     professionalSummary: jobSeeker.professionalSummary ?? "",
     skills: Array.isArray(jobSeeker.skills)

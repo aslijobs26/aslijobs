@@ -82,8 +82,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen overflow-x-clip bg-white font-sans antialiased">
         <GoogleTagManagerNoscript />
-        <SiteLanguageSync />
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <SiteLanguageSync />
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );

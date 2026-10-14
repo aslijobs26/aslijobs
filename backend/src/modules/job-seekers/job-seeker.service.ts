@@ -18,6 +18,7 @@ import {
 } from "../accounts/phone-account.service.js";
 import { phoneAlreadyRegisteredError } from "../accounts/phone-account.policy.js";
 import { otpService } from "../otp/otp.service.js";
+import { copyWhatsAppSessionLanguageToJobSeeker } from "../whatsapp/job-seeker-whatsapp-language.js";
 import { jobseekerAccountCreatedWhatsApp } from "../whatsapp/notifications/jobseeker-account-created.notification.js";
 import { armJobSeekerProfileCompletionReminder } from "../whatsapp/notifications/jobseeker-profile-completion-reminder.queue.js";
 import { cancelJobSeekerProfileCompletionReminder } from "../whatsapp/notifications/jobseeker-profile-completion-reminder.service.js";
@@ -142,6 +143,7 @@ async function finalizeJobSeekerAccountIfReady(jobSeeker: {
   experiences?: Array<{ companyName?: string | null; jobRole?: string | null }> | null;
   languages?: string[] | null;
   availabilityStatus?: string | null;
+  whatsappLanguage?: string | null;
   operationsRegistrationAwareness?: {
     registeredAt?: Date | null;
   } | null;
@@ -162,6 +164,10 @@ async function finalizeJobSeekerAccountIfReady(jobSeeker: {
     jobSeeker.operationsRegistrationAwareness =
       buildNewRegistrationAwarenessPayload(new Date());
   }
+  jobSeeker.whatsappLanguage = await copyWhatsAppSessionLanguageToJobSeeker({
+    phoneNumber: jobSeeker.whatsappNumber,
+    storedLanguage: jobSeeker.whatsappLanguage,
+  });
   await jobSeeker.save();
 
   jobseekerAccountCreatedWhatsApp.schedule({
@@ -247,11 +253,18 @@ export class JobSeekerService {
         );
       }
 
+      const whatsappLanguage = await copyWhatsAppSessionLanguageToJobSeeker({
+        phoneNumber: reservation.normalizedPhone,
+        storedLanguage: jobSeeker?.whatsappLanguage,
+        explicitLanguage: input.preferredLanguage,
+      });
+
       if (jobSeeker) {
         jobSeeker.fullName = input.fullName;
         jobSeeker.whatsappNumber = reservation.normalizedPhone;
         jobSeeker.isWhatsappVerified = false;
         jobSeeker.registrationStatus = "PENDING";
+        jobSeeker.whatsappLanguage = whatsappLanguage;
         await jobSeeker.save();
       } else {
         jobSeeker = await JobSeekerModel.create({
@@ -259,6 +272,7 @@ export class JobSeekerService {
           whatsappNumber: reservation.normalizedPhone,
           isWhatsappVerified: false,
           registrationStatus: "PENDING",
+          whatsappLanguage,
         });
       }
 
@@ -545,6 +559,10 @@ export class JobSeekerService {
     jobSeeker.refreshTokenHash = refreshTokenHash;
     jobSeeker.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt;
     jobSeeker.lastLoginAt = new Date();
+    jobSeeker.whatsappLanguage = await copyWhatsAppSessionLanguageToJobSeeker({
+      phoneNumber: jobSeeker.whatsappNumber,
+      storedLanguage: jobSeeker.whatsappLanguage,
+    });
     await jobSeeker.save();
 
     jobseekerAccountCreatedWhatsApp.schedule({
@@ -656,6 +674,9 @@ export class JobSeekerService {
     }
     if (input.profileVisibility !== undefined) {
       jobSeeker.profileVisibility = input.profileVisibility;
+    }
+    if (input.preferredLanguage !== undefined) {
+      jobSeeker.whatsappLanguage = input.preferredLanguage;
     }
 
     if (

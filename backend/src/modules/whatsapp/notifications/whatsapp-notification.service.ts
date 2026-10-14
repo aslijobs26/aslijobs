@@ -2,7 +2,7 @@ import { maskWhatsAppRecipient } from "../whatsapp.service.js";
 import {
   getWhatsAppNotificationTemplate,
   isWhatsAppNotificationEvent,
-  resolveWhatsAppNotificationLanguage,
+  resolveWhatsAppNotificationDelivery,
   buildWhatsAppNotificationBodyParameters,
   buildWhatsAppNotificationUrlButtonParameters,
   whatsAppNotificationIdempotencyKey,
@@ -46,10 +46,18 @@ export async function enqueueWhatsAppNotification(
     return "skipped_unconfigured";
   }
 
-  const languageCode = resolveWhatsAppNotificationLanguage(
+  const delivery = resolveWhatsAppNotificationDelivery(
     payload.event,
     payload.preferredLanguage,
   );
+  if (!delivery) {
+    console.info(
+      `[WhatsAppNotification] skipped unconfigured event=${payload.event} language=${payload.preferredLanguage ?? "en"}`,
+    );
+    return "skipped_unconfigured";
+  }
+
+  const { templateName, languageCode } = delivery;
   const bodyParameters = buildWhatsAppNotificationBodyParameters(
     payload.event,
     payload,
@@ -78,7 +86,7 @@ export async function enqueueWhatsAppNotification(
     idempotencyKey,
     event: payload.event,
     entityId: payload.entityId.trim(),
-    templateName: template.templateName,
+    templateName,
     language: languageCode,
     recipientMasked: maskWhatsAppRecipient(payload.phoneNumber),
   });
@@ -94,7 +102,7 @@ export async function enqueueWhatsAppNotification(
     event: payload.event,
     entityId: payload.entityId.trim(),
     phoneNumber: payload.phoneNumber,
-    templateName: template.templateName,
+    templateName,
     languageCode,
     bodyParameters,
     ...(urlButtonParameters.length > 0 ? { urlButtonParameters } : {}),

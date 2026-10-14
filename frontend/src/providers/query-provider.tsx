@@ -1,5 +1,6 @@
 "use client";
 
+import { JobSeekerAccountLanguageSync } from "@/components/i18n/JobSeekerAccountLanguageSync";
 import { ProfileCompletionDialogHost } from "@/components/job-seeker-profile/ProfileCompletionDialogHost";
 import { ApplyResumeChooserHost } from "@/components/job-seeker-resume/ApplyResumeChooserHost";
 import { shouldRetryQuery } from "@/utils/query-error";
@@ -33,6 +34,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
+      <JobSeekerAccountLanguageSync />
       <ApplyResumeChooserHost />
       <ProfileCompletionDialogHost />
     </QueryClientProvider>

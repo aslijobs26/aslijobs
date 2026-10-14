@@ -4,6 +4,7 @@ import { JobModel } from "../../jobs/job.model.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import { toWhatsAppCloudRecipient } from "../../../utils/whatsapp-phone.js";
 import { resolveApplicationCompanyName } from "./job-application-submitted.notification.js";
+import { resolveJobSeekerNotificationLanguage } from "../job-seeker-whatsapp-language.js";
 import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js";
 
 const TEMPLATE_NAME = "interview_scheduled_online";
@@ -140,7 +141,9 @@ export const interviewScheduledOnlineWhatsApp = {
       EmployerModel.findById(input.employerId)
         .select("companyName establishmentName")
         .lean(),
-      JobSeekerModel.findById(input.jobSeekerId).select("whatsappNumber").lean(),
+      JobSeekerModel.findById(input.jobSeekerId)
+        .select("whatsappNumber whatsappLanguage")
+        .lean(),
     ]);
 
     const jobTitle = job?.jobTitle?.trim() ?? "";
@@ -174,6 +177,11 @@ export const interviewScheduledOnlineWhatsApp = {
       return;
     }
 
+    const preferredLanguage = await resolveJobSeekerNotificationLanguage({
+      phoneNumber,
+      storedLanguage: jobSeeker?.whatsappLanguage,
+      jobSeekerId: input.jobSeekerId,
+    });
     const result = await this.enqueue({
       event: "INTERVIEW_SCHEDULED_ONLINE",
       entityId: input.applicationId,
@@ -182,14 +190,14 @@ export const interviewScheduledOnlineWhatsApp = {
       companyName,
       interviewDate: input.interviewDate,
       interviewTime: input.interviewTime,
-      preferredLanguage: "en",
+      preferredLanguage,
     });
 
     console.info("[WhatsAppNotification] interview_scheduled_online outcome", {
       template: TEMPLATE_NAME,
       outcome: result,
       applicationId: input.applicationId,
-      language: "en",
+      language: preferredLanguage,
     });
   },
 };

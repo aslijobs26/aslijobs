@@ -168,6 +168,15 @@ const jobSeekerSchema = new Schema(
       ],
       default: [],
     },
+    /**
+     * WhatsApp bot + notification language. Empty means unknown.
+     * Do not reuse `languages`, which is spoken-skill data.
+     */
+    whatsappLanguage: {
+      type: String,
+      enum: ["", "en", "hi", "te", "ta", "kn", "ml"],
+      default: "",
+    },
     availabilityStatus: {
       type: String,
       enum: JOB_SEEKER_AVAILABILITY_STATUSES,

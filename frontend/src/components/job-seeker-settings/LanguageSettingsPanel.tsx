@@ -1,47 +1,32 @@
 "use client";
 
 import { SettingsSection } from "@/components/job-seeker-settings/SettingsSection";
-import {
-  SITE_DEFAULT_LANGUAGE,
-  SITE_LANGUAGE_OPTIONS,
-} from "@/constants/site-language";
+import { SITE_LANGUAGE_OPTIONS } from "@/constants/site-language";
+import { useSiteLanguage, writeSiteLanguage } from "@/i18n/site-language";
 import { cn } from "@/utils/cn";
 import { showAppToast } from "@/utils/share-job";
 import { Check } from "lucide-react";
-import { useState } from "react";
-
-const LANGUAGE_STORAGE_KEY = "aslijobs.job-seeker.settings.language";
-
-function readStoredLanguage(): string {
-  if (typeof window === "undefined") {
-    return SITE_DEFAULT_LANGUAGE.value;
-  }
-  return (
-    window.localStorage.getItem(LANGUAGE_STORAGE_KEY)?.trim() ||
-    SITE_DEFAULT_LANGUAGE.value
-  );
-}
 
 export function LanguageSettingsPanel() {
-  const [selected, setSelected] = useState(readStoredLanguage);
+  const selected = useSiteLanguage();
 
   const handleSelect = (value: string) => {
-    setSelected(value);
-    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, value);
-    const label =
-      SITE_LANGUAGE_OPTIONS.find((option) => option.value === value)?.label ??
-      value;
-    showAppToast(`Language preference saved: ${label}`, "success");
+    const option = SITE_LANGUAGE_OPTIONS.find((item) => item.value === value);
+    if (!option) {
+      return;
+    }
+    writeSiteLanguage(option);
+    showAppToast(`Language preference saved: ${option.label}`, "success");
   };
 
   return (
     <SettingsSection
       title="Language"
-      description="Choose your preferred language for the job seeker workspace."
+      description="Choose your preferred language for the job seeker website and WhatsApp notifications."
     >
       <ul className="divide-y divide-border-subtle rounded-2xl border border-border-subtle bg-surface">
         {SITE_LANGUAGE_OPTIONS.map((option) => {
-          const isActive = option.value === selected;
+          const isActive = option.value === selected.value;
           return (
             <li key={option.value}>
               <button
@@ -70,7 +55,7 @@ export function LanguageSettingsPanel() {
       </ul>
       <p className="mt-3 text-[11px] text-muted sm:text-xs">
         Full interface translation for every language is rolling out. Your
-        preference is saved for this browser.
+        preference is saved to this browser and your account.
       </p>
     </SettingsSection>
   );

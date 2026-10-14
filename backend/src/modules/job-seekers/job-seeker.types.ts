@@ -36,6 +36,7 @@ export type JobSeekerLanguage = (typeof JOB_SEEKER_LANGUAGES)[number];
 export type RegisterJobSeekerInput = {
   fullName: string;
   whatsappNumber: string;
+  preferredLanguage?: string;
 };
 
 export type VerifyJobSeekerOtpInput = {

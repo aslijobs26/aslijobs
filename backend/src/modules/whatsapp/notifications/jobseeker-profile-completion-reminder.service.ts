@@ -1,6 +1,7 @@
 import { env } from "../../../config/env.js";
 import { toWhatsAppCloudRecipient } from "../../../utils/whatsapp-phone.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
+import { resolveJobSeekerNotificationLanguage } from "../job-seeker-whatsapp-language.js";
 import { evaluateJobSeekerProfileCompletion } from "../../job-seekers/job-seeker-profile-completion.js";
 import {
   claimJobSeekerProfileCompletionReminder,
@@ -41,7 +42,7 @@ export type ProcessJobSeekerProfileCompletionReminderDeps = {
     event: "JOBSEEKER_PROFILE_COMPLETION";
     entityId: string;
     phoneNumber: string;
-    preferredLanguage: "en";
+    preferredLanguage: string;
   }) => Promise<WhatsAppNotificationEnqueueResult>;
   markStatus: typeof markJobSeekerProfileCompletionReminderStatus;
   now: () => Date;
@@ -67,7 +68,7 @@ async function loadJobSeekerForReminder(
 ): Promise<JobSeekerProfileCompletionReminderSnapshot | null> {
   return JobSeekerModel.findById(jobSeekerId)
     .select(
-      "fullName isWhatsappVerified whatsappNumber dateOfBirth gender jobRole jobType workMode preferredJobLocation expectedSalary education experienceType experiences languages availabilityStatus registrationStatus accountStatus",
+      "fullName isWhatsappVerified whatsappNumber whatsappLanguage dateOfBirth gender jobRole jobType workMode preferredJobLocation expectedSalary education experienceType experiences languages availabilityStatus registrationStatus accountStatus",
     )
     .lean();
 }
@@ -179,11 +180,16 @@ export async function processJobSeekerProfileCompletionReminder(
       return "skipped";
     }
 
+    const preferredLanguage = await resolveJobSeekerNotificationLanguage({
+      phoneNumber,
+      storedLanguage: seeker?.whatsappLanguage,
+      jobSeekerId,
+    });
     const result = await deps.enqueueNotification({
       event: "JOBSEEKER_PROFILE_COMPLETION",
       entityId: jobSeekerId,
       phoneNumber,
-      preferredLanguage: "en",
+      preferredLanguage,
     });
 
     if (result === "skipped_duplicate") {

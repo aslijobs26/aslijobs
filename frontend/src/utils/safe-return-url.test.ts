@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { ROUTES } from "../constants/routes";
 import {
   buildEmployerLoginHref,
+  buildJobSeekerLoginHref,
   getSafeReturnUrl,
   resolveEmployerPostLoginPath,
 } from "./safe-return-url";
@@ -33,6 +34,21 @@ describe("getSafeReturnUrl", () => {
     assert.equal(getSafeReturnUrl(null), null);
     assert.equal(getSafeReturnUrl(""), null);
     assert.equal(getSafeReturnUrl("employer/company-profile"), null);
+  });
+
+  it("preserves lang and other query parameters on relative return URLs", () => {
+    assert.equal(
+      getSafeReturnUrl("/jobs/AJ-1?lang=te"),
+      "/jobs/AJ-1?lang=te",
+    );
+    assert.equal(
+      getSafeReturnUrl("/jobs/AJ-1?tab=overview&lang=en"),
+      "/jobs/AJ-1?tab=overview&lang=en",
+    );
+    assert.equal(
+      buildJobSeekerLoginHref("/jobs/AJ-1?lang=te"),
+      "/job-seeker/login?returnUrl=%2Fjobs%2FAJ-1%3Flang%3Dte",
+    );
   });
 });
 
@@ -124,5 +140,21 @@ describe("employer login wiring", () => {
     );
 
     assert.match(source, /buildEmployerLoginHref\(returnUrl/);
+  });
+
+  it("keeps the current search string, including lang, on job-seeker auth redirects", () => {
+    const source = readFileSync(
+      fileURLToPath(
+        new URL(
+          "../components/job-seeker/JobSeekerAuthGuard.tsx",
+          import.meta.url,
+        ),
+      ),
+      "utf8",
+    );
+    assert.match(
+      source,
+      /window\.location\.pathname\}\$\{window\.location\.search/,
+    );
   });
 });

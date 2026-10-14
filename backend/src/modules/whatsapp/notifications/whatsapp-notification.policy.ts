@@ -42,20 +42,82 @@ export function whatsAppNotificationQueueJobId(
     : `wa-notify-${event}-${entityId.trim()}`;
 }
 
+export type WhatsAppNotificationDelivery = {
+  templateName: string;
+  languageCode: string;
+};
+
+/**
+ * Picks the approved Meta template name and language together.
+ * Telugu job-seeker events use a distinct `_te` name. Hindi and unknown
+ * languages fall back to the existing English template. Never send an
+ * English template name with language `te`.
+ */
+export function resolveWhatsAppNotificationDelivery(
+  event: WhatsAppNotificationEvent,
+  preferredLanguage?: string | null,
+): WhatsAppNotificationDelivery | null {
+  const config = getWhatsAppNotificationTemplate(event);
+  if (!config) {
+    return null;
+  }
+
+  const siteLanguage = parseJobContentLanguage(preferredLanguage);
+  const localizedName =
+    siteLanguage &&
+    config.approvedLanguages[siteLanguage] &&
+    config.localizedTemplateNames?.[siteLanguage]?.trim()
+      ? config.localizedTemplateNames[siteLanguage].trim()
+      : "";
+
+  if (localizedName && siteLanguage) {
+    return {
+      templateName: localizedName,
+      languageCode: config.approvedLanguages[siteLanguage] ?? siteLanguage,
+    };
+  }
+
+  if (
+    siteLanguage &&
+    siteLanguage !== "en" &&
+    !config.localizedTemplateNames?.[siteLanguage]
+  ) {
+    console.info(
+      `[WhatsAppNotification] no approved ${siteLanguage} template for event=${event}; falling back to English`,
+    );
+  }
+
+  const englishName = config.templateName.trim();
+  if (!englishName) {
+    return null;
+  }
+
+  return {
+    templateName: englishName,
+    languageCode:
+      config.approvedLanguages[config.defaultLanguage] ??
+      config.approvedLanguages.en ??
+      "en",
+  };
+}
+
 export function resolveWhatsAppNotificationLanguage(
   event: WhatsAppNotificationEvent,
   preferredLanguage?: string | null,
 ): string {
-  const config = getWhatsAppNotificationTemplate(event);
-  if (!config) {
-    return "en";
-  }
-
-  const siteLanguage = parseJobContentLanguage(preferredLanguage) ?? "en";
   return (
-    config.approvedLanguages[siteLanguage] ??
-    config.approvedLanguages[config.defaultLanguage] ??
-    "en"
+    resolveWhatsAppNotificationDelivery(event, preferredLanguage)
+      ?.languageCode ?? "en"
+  );
+}
+
+export function resolveWhatsAppNotificationTemplateName(
+  event: WhatsAppNotificationEvent,
+  preferredLanguage?: string | null,
+): string {
+  return (
+    resolveWhatsAppNotificationDelivery(event, preferredLanguage)
+      ?.templateName ?? ""
   );
 }
 
@@ -89,7 +151,11 @@ export function buildWhatsAppNotificationBodyParameters(
     }
     return [jobTitle, companyName];
   }
-  if (event === "INTERVIEW_SCHEDULED_ONLINE" || event === "INTERVIEW_CANCELLED") {
+  if (
+    event === "INTERVIEW_SCHEDULED_ONLINE" ||
+    event === "INTERVIEW_SCHEDULED_PHONE" ||
+    event === "INTERVIEW_CANCELLED"
+  ) {
     const jobTitle = payload.jobTitle?.trim() ?? "";
     const companyName = payload.companyName?.trim() ?? "";
     const interviewDate = payload.interviewDate?.trim() ?? "";

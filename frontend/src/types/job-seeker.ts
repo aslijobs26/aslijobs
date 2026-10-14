@@ -110,6 +110,7 @@ export type JobSeekerPublic = {
   experienceType?: JobSeekerExperienceType | null;
   experiences?: JobSeekerExperienceEntry[];
   languages?: JobSeekerLanguage[];
+  preferredLanguage?: string;
   availabilityStatus?: JobSeekerAvailabilityStatus | null;
   professionalSummary?: string;
   skills?: string[];
@@ -140,6 +141,7 @@ export type UpdateJobSeekerProfileInput = {
   experienceType?: JobSeekerExperienceType;
   experiences?: JobSeekerExperienceEntry[];
   languages?: JobSeekerLanguage[];
+  preferredLanguage?: string;
   availabilityStatus?: JobSeekerAvailabilityStatus | null;
   professionalSummary?: string;
   skills?: string[];

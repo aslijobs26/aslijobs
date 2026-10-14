@@ -10,6 +10,8 @@ import {
   publicJobsQuerySchema,
 } from "../jobs/job.validation.js";
 import { resolveWhatsAppLinkedAccount } from "../accounts/phone-account.service.js";
+import { persistJobSeekerWhatsAppLanguage } from "./job-seeker-whatsapp-language.js";
+import { appendSiteLanguageQuery } from "../../utils/site-language-url.js";
 import { WhatsAppSessionModel } from "./whatsapp-session.model.js";
 import { WhatsAppService } from "./whatsapp.service.js";
 import { transcribeWhatsAppAudio, understandMessage } from "./sarvam.client.js";
@@ -124,7 +126,7 @@ async function lookupAccount(phone: string): Promise<LinkedAccount> {
   return value;
 }
 
-function siteUrls(): {
+function siteUrls(language?: string): {
   seekerRegisterUrl: string;
   employerRegisterUrl: string;
   postJobUrl: string;
@@ -132,7 +134,10 @@ function siteUrls(): {
 } {
   const origin = env.FRONTEND_URL.replace(/\/+$/, "");
   return {
-    seekerRegisterUrl: `${origin}/job-seeker/register`,
+    seekerRegisterUrl: appendSiteLanguageQuery(
+      `${origin}/job-seeker/register`,
+      language,
+    ),
     employerRegisterUrl: `${origin}/employer/register`,
     postJobUrl: `${origin}/post-job`,
     employerProfileUrl: `${origin}/employer/company-profile`,
@@ -258,6 +263,11 @@ export async function handleConversationalMessage(input: {
         { phone, language, conversationState, lastInteractionAt: new Date() },
         { upsert: true },
       );
+      void persistJobSeekerWhatsAppLanguage({
+        phone,
+        language,
+        jobSeekerId: identity.seekerId,
+      });
       const sendStarted = Date.now();
       await whatsAppService.sendTextMessage(input.from, reply);
       timing.whatsapp_send = Date.now() - sendStarted;
@@ -429,6 +439,11 @@ export async function handleConversationalMessage(input: {
       },
       { upsert: true },
     );
+    void persistJobSeekerWhatsAppLanguage({
+      phone,
+      language: merged.language,
+      jobSeekerId: identity.seekerId,
+    });
     const localizeStarted = performance.now();
     const [localized] = await Promise.all([
       localizeDeterministicReply({
@@ -605,7 +620,9 @@ async function buildReply(
       "",
       shownJobs,
       meta,
-      linked === "none" ? { ...facts, registration: siteUrls() } : facts,
+      linked === "none"
+        ? { ...facts, registration: siteUrls(understanding.language) }
+        : facts,
     );
   const asSeeker = accountType === "seeker";
   const asEmployer = accountType === "employer";
@@ -840,7 +857,7 @@ async function searchJobs(
       total: primary.total,
       more: primary.hasMore,
       jobs: primary.jobs.map(publicJobFact),
-    }));
+    }, language));
   }
 
   const widerCity = parentCity(understanding.location);
@@ -869,17 +886,18 @@ async function searchJobs(
     more: wider.hasMore,
     widenedTo: wider.jobs.length > 0 ? widerCity : "",
     jobs: wider.jobs.map(publicJobFact),
-  }));
+  }, language));
 }
 
 function publicJobReplyFacts(
   meta: { accountType: AccountKind },
   facts: Record<string, unknown>,
+  language?: string,
 ): Record<string, unknown> {
   return {
     ...facts,
     accountType: meta.accountType,
-    ...(meta.accountType === "none" ? { registration: siteUrls() } : {}),
+    ...(meta.accountType === "none" ? { registration: siteUrls(language) } : {}),
   };
 }
 

@@ -14,6 +14,7 @@ import {
   OTP_CODE_PATTERN,
   OTP_LENGTH,
 } from "../../constants/employer.constants.js";
+import { parseJobContentLanguage } from "../jobs/job-content-language.js";
 
 const whatsappNumberSchema = z
   .string()
@@ -166,9 +167,29 @@ const experienceEntrySchema = z.object({
   location: z.string().trim().min(1, "Location is required"),
 });
 
+const preferredLanguageSchema = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value, ctx) => {
+    if (!value) {
+      return undefined;
+    }
+    const parsed = parseJobContentLanguage(value);
+    if (!parsed) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Select a valid language",
+      });
+      return z.NEVER;
+    }
+    return parsed;
+  });
+
 export const registerJobSeekerSchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required"),
   whatsappNumber: whatsappNumberSchema,
+  preferredLanguage: preferredLanguageSchema,
 });
 
 export const verifyJobSeekerOtpSchema = z.object({
@@ -346,6 +367,7 @@ export const updateJobSeekerProfileSchema = z
         message: "Select a valid visibility option",
       })
       .optional(),
+    preferredLanguage: preferredLanguageSchema,
   })
   .superRefine((value, ctx) => {
     if (!value.experiences) {

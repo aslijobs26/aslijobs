@@ -50,6 +50,18 @@ function seeker() {
     accountStatus: "active",
     fullName: "Asha Rao",
     whatsappNumber: seekerPhone,
+    dateOfBirth: new Date("1995-01-01T00:00:00.000Z"),
+    gender: "female",
+    jobRole: "Electrician",
+    jobType: "full-time",
+    workMode: "on-site",
+    preferredJobLocation: "Hyderabad",
+    expectedSalary: 15000,
+    education: { level: "below_10th" },
+    experienceType: "fresher",
+    experiences: [],
+    languages: ["english"],
+    availabilityStatus: "immediate",
     city: "Hyderabad",
     state: "Telangana",
   };
@@ -171,8 +183,12 @@ describe("job application submitted WhatsApp", () => {
       "job_application_submitted",
     );
     assert.equal(
-      resolveWhatsAppNotificationLanguage("JOB_APPLICATION_SUBMITTED", "te"),
+      resolveWhatsAppNotificationLanguage("JOB_APPLICATION_SUBMITTED", "hi"),
       "en",
+    );
+    assert.equal(
+      resolveWhatsAppNotificationLanguage("JOB_APPLICATION_SUBMITTED", "te"),
+      "te",
     );
     assert.deepEqual(
       buildWhatsAppNotificationBodyParameters("JOB_APPLICATION_SUBMITTED", {

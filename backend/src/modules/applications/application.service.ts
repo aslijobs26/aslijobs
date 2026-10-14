@@ -22,6 +22,7 @@ import { interviewCancelledWhatsApp } from "../whatsapp/notifications/interview-
 import { interviewRescheduledWhatsApp } from "../whatsapp/notifications/interview-rescheduled.notification.js";
 import { interviewScheduledOfflineWhatsApp } from "../whatsapp/notifications/interview-scheduled-offline.notification.js";
 import { interviewScheduledOnlineWhatsApp } from "../whatsapp/notifications/interview-scheduled-online.notification.js";
+import { interviewScheduledPhoneWhatsApp } from "../whatsapp/notifications/interview-scheduled-phone.notification.js";
 import { jobApplicationSubmittedWhatsApp } from "../whatsapp/notifications/job-application-submitted.notification.js";
 import type { ResumeJson } from "../resumes/resume.types.js";
 import {
@@ -2692,6 +2693,17 @@ export class ApplicationService {
         interviewDate: nextInterview.date,
         interviewTime: nextInterview.time,
         interviewVenue: nextInterview.venue,
+      });
+    }
+
+    if (action === "scheduled" && nextInterview.mode === "phone") {
+      interviewScheduledPhoneWhatsApp.schedule({
+        applicationId: application._id.toString(),
+        jobId: String(application.jobId),
+        employerId: String(application.employerId),
+        jobSeekerId: String(application.jobSeekerId),
+        interviewDate: nextInterview.date,
+        interviewTime: nextInterview.time,
       });
     }
 

@@ -79,10 +79,15 @@ function registrationAuthHeaders(continuationToken: string) {
 export async function registerJobSeekerAccount(
   fullName: string,
   whatsappNumber: string,
+  preferredLanguage?: string,
 ) {
   const response = await apiClient.post<ApiSuccess<RegisterStartResponse>>(
     "/jobseekers/register",
-    { fullName, whatsappNumber },
+    {
+      fullName,
+      whatsappNumber,
+      ...(preferredLanguage ? { preferredLanguage } : {}),
+    },
   );
 
   const payload = response.data;

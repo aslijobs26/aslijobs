@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { appendSiteLanguageQuery } from "../../utils/site-language-url.js";
 
 export const BOT_INTENTS = [
   "GREETING",
@@ -60,11 +61,18 @@ export function sanitizePublicJobId(jobId: string): string {
   return id;
 }
 
-export function buildPublicJobApplyUrl(jobId: string, frontendOrigin: string): string {
+export function buildPublicJobApplyUrl(
+  jobId: string,
+  frontendOrigin: string,
+  language?: string | null,
+): string {
   const id = sanitizePublicJobId(jobId);
   const origin = frontendOrigin.trim().replace(/\/+$/, "");
   if (!id || !origin) return "";
-  return `${origin}/jobs/${encodeURIComponent(id)}`;
+  const url = `${origin}/jobs/${encodeURIComponent(id)}`;
+  return language
+    ? appendSiteLanguageQuery(url, language)
+    : url;
 }
 
 const TELUGU_SCRIPT = /[\u0C00-\u0C7F]/;
@@ -228,6 +236,23 @@ export function languageFromHint(hint: string | null | undefined): BotLanguage |
   return null;
 }
 
+/** Short acks, names-as-digits, and yes/no must not flip a saved language. */
+export function isAmbiguousLanguageSignal(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return true;
+  }
+  if (
+    /^(yes|no|yeah|yep|y|n|ok|okay|k|hmm|oh|hi|hello|hey)[.!?]*$/i.test(trimmed)
+  ) {
+    return true;
+  }
+  if (/^\+?\d[\d\s-]{5,}$/.test(trimmed)) {
+    return true;
+  }
+  return false;
+}
+
 export function detectLanguage(
   text: string,
   previous?: BotLanguage | null,
@@ -240,6 +265,9 @@ export function detectLanguage(
   if (TELUGU_SCRIPT.test(text) || ROMAN_TELUGU.test(text)) return "te";
   if (HINDI_SCRIPT.test(text) || ROMAN_HINDI.test(text)) return "hi";
   const trimmed = text.trim();
+  if (previous && isAmbiguousLanguageSignal(trimmed)) {
+    return previous;
+  }
   const clearEnglish = /\b(i want|i need|hello|please|are there|show me|find jobs?|post a job|how many)\b/i.test(
     trimmed,
   );
@@ -839,7 +867,11 @@ export function renderJobSearchReply(input: {
     const applyUrl =
       input.includeApplyLinks === false
         ? ""
-        : buildPublicJobApplyUrl(job.jobId, input.frontendOrigin ?? "");
+        : buildPublicJobApplyUrl(
+            job.jobId,
+            input.frontendOrigin ?? "",
+            input.language,
+          );
     const apply = applyUrl ? `\n👉 Apply Now: ${applyUrl}` : "";
     return `${index + 1}. ${title}${company}${where ? `\n📍 ${where}` : ""}${salary}${apply}`;
   });

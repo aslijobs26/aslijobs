@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { toWhatsAppCloudRecipient } from "../../../utils/whatsapp-phone.js";
+import { resolveJobSeekerNotificationLanguage } from "../job-seeker-whatsapp-language.js";
 import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js";
 
 const TEMPLATE_NAME = "job_application_submitted";
@@ -74,28 +75,30 @@ export const jobApplicationSubmittedWhatsApp = {
       return;
     }
 
-    void this.enqueue({
-      event: "JOB_APPLICATION_SUBMITTED",
-      entityId: applicationId,
-      phoneNumber,
-      jobTitle,
-      companyName,
-      preferredLanguage: "en",
-    })
-      .then((result) => {
-        console.info("[WhatsAppNotification] job_application_submitted outcome", {
-          template: TEMPLATE_NAME,
-          outcome: result,
-          applicationId,
-          language: "en",
-        });
-      })
-      .catch((error: unknown) => {
-        console.error("[WhatsAppNotification] job_application_submitted failed", {
-          template: TEMPLATE_NAME,
-          applicationId,
-          errorCategory: error instanceof Error ? error.name : "unknown",
-        });
+    void (async () => {
+      const preferredLanguage = await resolveJobSeekerNotificationLanguage({
+        phoneNumber,
       });
+      const result = await this.enqueue({
+        event: "JOB_APPLICATION_SUBMITTED",
+        entityId: applicationId,
+        phoneNumber,
+        jobTitle,
+        companyName,
+        preferredLanguage,
+      });
+      console.info("[WhatsAppNotification] job_application_submitted outcome", {
+        template: TEMPLATE_NAME,
+        outcome: result,
+        applicationId,
+        language: preferredLanguage,
+      });
+    })().catch((error: unknown) => {
+      console.error("[WhatsAppNotification] job_application_submitted failed", {
+        template: TEMPLATE_NAME,
+        applicationId,
+        errorCategory: error instanceof Error ? error.name : "unknown",
+      });
+    });
   },
 };

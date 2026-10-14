@@ -19,6 +19,7 @@ import {
 } from "@/constants/job-seeker-register";
 import { ROUTES } from "@/constants/routes";
 import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
+import { readExplicitSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import {
   completeJobSeekerRegistration,
@@ -450,6 +451,7 @@ export function JobSeekerRegisterForm() {
       const result = await registerJobSeekerAccount(
         fullName.trim(),
         whatsappNumber,
+        readExplicitSiteLanguage()?.code,
       );
 
       if (!result?.jobSeekerId) {

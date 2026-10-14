@@ -15,6 +15,7 @@ export const WHATSAPP_NOTIFICATION_EVENTS = [
   "JOB_APPLICATION_SUBMITTED",
   "APPLICATION_RECEIVED",
   "INTERVIEW_SCHEDULED",
+  "INTERVIEW_SCHEDULED_PHONE",
   "INTERVIEW_SCHEDULED_ONLINE",
   "INTERVIEW_SCHEDULED_OFFLINE",
   "INTERVIEW_RESCHEDULED",
@@ -38,6 +39,7 @@ export type WhatsAppNotificationSiteLanguage =
   (typeof WHATSAPP_NOTIFICATION_SITE_LANGUAGES)[number];
 
 export type WhatsAppNotificationTemplateConfig = {
+  /** English Meta template name. Never rename existing English templates. */
   templateName: string;
   defaultLanguage: WhatsAppNotificationSiteLanguage;
   /**
@@ -45,6 +47,13 @@ export type WhatsAppNotificationTemplateConfig = {
    * Only languages with an approved Meta template are listed.
    */
   approvedLanguages: Partial<
+    Record<WhatsAppNotificationSiteLanguage, string>
+  >;
+  /**
+   * Site language -> distinct approved Meta template name.
+   * Telugu job-seeker templates use a `_te` suffix, not the English name.
+   */
+  localizedTemplateNames?: Partial<
     Record<WhatsAppNotificationSiteLanguage, string>
   >;
 };
@@ -70,10 +79,15 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
   JOBSEEKER_ACCOUNT_CREATED: {
     // Graph-confirmed APPROVED Utility. Stored name is lowercase.
     // Language en. Body has no variables and there is no button.
+    // Telugu uses a separate approved name, not this English name with language te.
     templateName: "jobseeker_account_created",
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",
+      te: "te",
+    },
+    localizedTemplateNames: {
+      te: "jobseeker_account_created_te",
     },
   },
   JOBSEEKER_PROFILE_COMPLETION: {
@@ -86,6 +100,10 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",
+      te: "te",
+    },
+    localizedTemplateNames: {
+      te: "jobseeker_profile_completion_te",
     },
   },
   EMPLOYER_PROFILE_COMPLETION_REQUIRED: {
@@ -144,6 +162,25 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",
+      te: "te",
+    },
+    localizedTemplateNames: {
+      te: "job_application_submitted_te",
+    },
+  },
+  INTERVIEW_SCHEDULED_PHONE: {
+    // Approved Utility. English name interview_scheduled_phone, language en.
+    // Body matches interview_scheduled_online: {{1}} job title, {{2}} company,
+    // {{3}} date, {{4}} time. Interview type is static. No URL button.
+    // Telugu uses a separate approved name, not this English name with language te.
+    templateName: "interview_scheduled_phone",
+    defaultLanguage: "en",
+    approvedLanguages: {
+      en: "en",
+      te: "te",
+    },
+    localizedTemplateNames: {
+      te: "interview_scheduled_phone_te",
     },
   },
   INTERVIEW_SCHEDULED_ONLINE: {
@@ -154,6 +191,10 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",
+      te: "te",
+    },
+    localizedTemplateNames: {
+      te: "interview_scheduled_online_te",
     },
   },
   INTERVIEW_SCHEDULED_OFFLINE: {
@@ -164,6 +205,10 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",
+      te: "te",
+    },
+    localizedTemplateNames: {
+      te: "interview_scheduled_offline_te",
     },
   },
   INTERVIEW_RESCHEDULED: {
@@ -174,6 +219,10 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",
+      te: "te",
+    },
+    localizedTemplateNames: {
+      te: "interview_rescheduled_te",
     },
   },
   INTERVIEW_CANCELLED: {
@@ -184,6 +233,10 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",
+      te: "te",
+    },
+    localizedTemplateNames: {
+      te: "interview_cancelled_te",
     },
   },
   JOB_POST_INCOMPLETE: {

@@ -57,7 +57,8 @@ const PUBLIC_LANGUAGES = [
 
 function installBrowser(language: string, pathname: string) {
   const values = new Map<string, string>();
-  const location = { pathname };
+  const session = new Map<string, string>();
+  const location = { pathname, search: "" };
   Object.assign(globalThis, {
     window: {
       localStorage: {
@@ -67,6 +68,15 @@ function installBrowser(language: string, pathname: string) {
         },
         removeItem: (key: string) => {
           values.delete(key);
+        },
+      },
+      sessionStorage: {
+        getItem: (key: string) => session.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          session.set(key, value);
+        },
+        removeItem: (key: string) => {
+          session.delete(key);
         },
       },
       navigator: { language },
@@ -156,7 +166,17 @@ describe("employer dashboard language isolation", () => {
       join(here, "../components/layout/Navbar.tsx"),
       "utf8",
     );
+    const registerContent = readFileSync(
+      join(here, "../components/job-seeker-register/JobSeekerRegisterContent.tsx"),
+      "utf8",
+    );
+    const loginContent = readFileSync(
+      join(here, "../components/job-seeker-login/JobSeekerLoginContent.tsx"),
+      "utf8",
+    );
     assert.equal(employerNavbar.includes("NavbarLanguageButton"), false);
     assert.equal(publicNavbar.includes("NavbarLanguageButton"), true);
+    assert.equal(registerContent.includes("NavbarLanguageButton"), true);
+    assert.equal(loginContent.includes("NavbarLanguageButton"), true);
   });
 });

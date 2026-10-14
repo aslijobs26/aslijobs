@@ -7,6 +7,7 @@ const DUE_TOLERANCE_MS = 1_000;
 export type JobSeekerProfileCompletionReminderSnapshot =
   JobSeekerProfileCompletionSource & {
     whatsappNumber?: string | null;
+    whatsappLanguage?: string | null;
     accountStatus?: string | null;
     registrationStatus?: string | null;
   };
