@@ -1,6 +1,5 @@
 "use client";
 
-import { NavbarLanguageButton } from "@/components/layout/NavbarLanguageButton";
 import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
 import Link from "next/link";
@@ -22,9 +21,6 @@ export function JobSeekerRegisterContent({
 
       <section className="employer-register-form-section">
         <div className="employer-register-form-container">
-          <div className="mb-4 flex justify-end">
-            <NavbarLanguageButton />
-          </div>
           <p className="employer-register-login-prompt break-words">
             {t("auth.common.haveAccountPrompt")}{" "}
             <Link

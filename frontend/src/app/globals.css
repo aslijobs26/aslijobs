@@ -1069,6 +1069,10 @@ html:is(:lang(hi), :lang(te), :lang(ta), :lang(kn), :lang(ml)) .discovery-sectio
     text-align: center;
     white-space: nowrap;
     color: #111;
+
+    @media (width < 768px) {
+      white-space: normal;
+    }
   }
 
   .employer-register-form-label {
@@ -1826,15 +1830,11 @@ html:is(:lang(hi), :lang(te), :lang(ta), :lang(kn), :lang(ml)) .discovery-sectio
       right: auto;
       left: auto;
       z-index: auto;
-      display: flex;
+      display: block;
       width: 100%;
       max-width: 100%;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      align-items: baseline;
-      gap: 0 0.25rem;
       margin: 0 0 0.5rem;
-      padding-right: 0.15rem;
+      padding-right: 0;
       font-size: 0.6875rem;
       line-height: 1.35;
       white-space: normal;
@@ -2116,143 +2116,279 @@ body:has(.employer-register-page) {
   }
 }
 
+.auth-form-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  margin-bottom: 0.35rem;
+}
+
+@media (width >= 768px) {
+  .auth-form-card-header {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 21;
+    margin-bottom: 0;
+    align-items: flex-end;
+  }
+
+  .job-seeker-register-page .auth-form-card-header .employer-register-login-prompt {
+    position: static;
+    top: auto;
+    right: auto;
+    max-width: 16rem;
+  }
+}
+
 /*
  * Mobile auth (job seeker + employer, login + register):
- * one solid sheet tucked over the testimonial, docked to the bottom of
- * the viewport. Translucent glass is avoided so the card does not pick
- * up a purple “header” strip from the brand panel.
+ * compact brand header with the white form sheet tucked over it.
  */
 @media (width < 768px) {
   html:has(.employer-register-page),
   body:has(.employer-register-page) {
-    min-height: 100vh;
-    min-height: 100svh;
+    min-height: auto;
   }
 
   .employer-register-page {
-    display: flex;
-    min-height: 100vh;
-    min-height: 100svh;
-    flex-direction: column;
+    display: block;
+    min-height: 0;
+    height: auto;
+    overflow-x: clip;
   }
 
   .employer-register-page .employer-register-layout {
     display: flex;
-    /* A definite height lets the brand panel shrink so the form stays
-       inside the visible screen. svh matches iPhone and Android toolbars. */
-    height: 100vh;
-    height: 100svh;
+    height: auto;
     min-height: 0;
     max-height: none;
-    flex: 1 1 auto;
+    flex: none;
     flex-direction: column;
     overflow: visible;
   }
 
   .employer-register-page .employer-register-panel {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 0 0 auto;
+    width: 100%;
     height: auto;
+    max-height: none;
+    min-height: 0;
     overflow: hidden;
   }
 
   .employer-register-page .employer-register-panel-content {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
     height: auto;
     overflow: hidden;
-    padding-top: 2.5rem;
-    padding-bottom: 0.75rem;
+    padding-top: 2rem;
+    padding-bottom: 0;
   }
 
   .employer-register-page .employer-register-panel-body {
+    position: relative;
     min-height: 0;
-    overflow: hidden;
+    height: auto;
+    overflow: visible;
+    padding-top: 2.35rem;
+    justify-content: flex-start;
+    gap: 0.35rem;
   }
 
   .employer-register-page .employer-register-logo-link {
-    top: 0.35rem;
+    top: 0.3rem;
+  }
+
+  .employer-register-page .auth-brand-headline {
+    position: relative;
+    z-index: 2;
+    max-width: 100%;
+    font-size: clamp(1.45rem, 7cqi, 1.85rem);
+    margin-bottom: 0.15rem;
   }
 
   .employer-register-page .employer-register-scale-group {
-    flex: 1 1 auto;
+    position: relative;
+    flex: 0 0 auto;
     min-height: 0;
     justify-content: flex-end;
     margin-bottom: 0;
     overflow: visible;
   }
 
-  .employer-register-page .auth-brand-headline {
-    font-size: clamp(1.75rem, 8cqi, 2.125rem);
-    margin-bottom: 0.25rem;
+  .employer-register-page.job-seeker-register-page .employer-register-panel {
+    overflow: visible;
   }
 
-  .employer-register-page .auth-brand-art--seeker {
-    width: min(100%, 34svh);
-    max-height: 100%;
-    margin-bottom: calc(-0.08 * min(100%, 34svh));
+  .employer-register-page.job-seeker-register-page .employer-register-panel-content {
+    overflow: visible;
+    padding-bottom: 0.2rem;
+  }
+
+  .employer-register-page.job-seeker-register-page .auth-brand-headline {
+    max-width: 100%;
+    width: 100%;
+    padding-right: 0;
+    font-size: clamp(1.55rem, 7.4cqi, 2rem);
+    line-height: 1.35;
+    margin-bottom: 0.75rem;
+    white-space: normal;
+  }
+
+  .employer-register-page.job-seeker-register-page .employer-register-scale-group {
+    position: relative;
+    top: auto;
+    right: auto;
+    z-index: 1;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .employer-register-page.job-seeker-register-page .auth-brand-art--seeker {
+    width: min(100%, 22rem);
+    margin-inline: auto;
+    margin-bottom: -1.85rem;
+  }
+
+  .employer-register-page.job-seeker-register-page .employer-register-bottom {
+    position: relative;
+    z-index: 3;
+    margin-top: 0;
+  }
+
+  .employer-register-page.job-seeker-register-page .employer-register-testimonial-card {
+    gap: 0.55rem;
+    padding: 0.75rem 0.9rem;
+  }
+
+  .employer-register-page.job-seeker-register-page .employer-register-testimonial-quote {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+  }
+
+  .employer-register-page.job-seeker-register-page .employer-register-testimonial-dots {
+    padding-top: 0.4rem;
+  }
+
+  .employer-register-page:not(.job-seeker-register-page) .employer-register-panel {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .employer-register-page:not(.job-seeker-register-page) .employer-register-panel-content {
+    overflow: visible;
+    padding-bottom: 0.2rem;
+  }
+
+  .employer-register-page:not(.job-seeker-register-page) .auth-brand-headline {
+    display: block;
+    max-width: 100%;
+    font-size: clamp(1.55rem, 7.4cqi, 2rem);
+    line-height: 1.35;
+    margin-bottom: 0.15rem;
+  }
+
+  .employer-register-page:not(.job-seeker-register-page) .employer-register-scale-group {
+    position: relative;
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    justify-content: flex-end;
+    overflow: visible;
+  }
+
+  .employer-register-page:not(.job-seeker-register-page) .employer-register-bottom {
+    display: flex;
+    position: relative;
+    z-index: 3;
+    margin-top: 0;
+  }
+
+  .employer-register-page:not(.job-seeker-register-page)
+    .employer-register-testimonial-card {
+    gap: 0.55rem;
+    padding: 0.75rem 0.9rem;
+  }
+
+  .employer-register-page:not(.job-seeker-register-page)
+    .employer-register-testimonial-quote {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+  }
+
+  .employer-register-page:not(.job-seeker-register-page)
+    .employer-register-testimonial-dots {
+    padding-top: 0.4rem;
   }
 
   .employer-register-page .employer-register-scale-group .auth-brand-art--employer {
     width: 100%;
-    max-width: 100%;
-    margin-bottom: -1.15rem;
+    max-width: 22.75rem;
+    margin-bottom: -1.65rem;
     overflow: visible;
   }
 
   .employer-register-page .auth-role-chip {
-    font-size: 0.5625rem;
-    line-height: 1.25;
-    max-width: 6.75rem;
-    padding: 0.35em 0.55em;
-    white-space: normal;
+    font-size: 0.625rem;
+    line-height: 1;
+    max-width: none;
+    padding: 0.4em 0.55em;
+    white-space: nowrap;
     animation: none;
   }
 
-  /* Same arc as desktop, with a little extra gap between cards on mobile. */
   .employer-register-page .auth-role-chip--plumber {
-    top: 7%;
-    left: 61%;
+    top: 4%;
+    left: auto;
+    right: 22%;
   }
 
   .employer-register-page .auth-role-chip--driver {
-    top: 26%;
-    left: 76%;
-    right: auto;
+    top: 28%;
+    left: auto;
+    right: 6%;
   }
 
   .employer-register-page .auth-role-chip--guard {
-    top: 45%;
-    left: 67%;
+    top: 53%;
+    left: auto;
+    right: 12%;
   }
 
   .employer-register-page .auth-role-chip--maid {
-    top: 64%;
-    left: 52%;
+    top: 73%;
+    left: auto;
+    right: 22%;
   }
 
   .employer-register-page .employer-register-form-section {
     position: relative;
-    z-index: 2;
+    z-index: 25;
     flex: 0 0 auto;
-    margin-top: 0;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
+    margin-top: 0.45rem;
+    padding-top: 0;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
     background-color: transparent;
+  }
+
+  .employer-register-page.job-seeker-register-page .employer-register-form-section {
+    margin-top: -1.15rem;
   }
 
   .employer-register-page .employer-register-form-container {
     position: relative;
-    width: min(
-      24.5rem,
-      calc(100% - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
-    );
-    max-width: 100%;
+    z-index: 25;
+    width: calc(100% - 1.25rem);
+    max-width: 24.5rem;
     margin-inline: auto;
-    padding-top: 0.85rem;
-    padding-right: 1.1rem;
+    padding-top: 0.75rem;
+    padding-right: 1.05rem;
     padding-bottom: 1.15rem;
-    padding-left: 1.1rem;
+    padding-left: 1.05rem;
     overflow: visible;
     border: 1px solid rgb(226 232 240 / 95%);
     border-radius: 1.25rem;
@@ -2260,27 +2396,58 @@ body:has(.employer-register-page) {
     box-shadow: 0 14px 36px rgb(15 23 42 / 12%);
   }
 
-  .employer-register-page .employer-register-form-container > .employer-register-login-prompt {
+  .employer-register-page .auth-form-card-header {
     position: static;
-    z-index: auto;
-    inset: auto;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .employer-register-page .auth-form-card-header > :first-child {
+    order: 2;
+    flex: 0 0 auto;
+  }
+
+  .employer-register-page .auth-form-card-header .employer-register-login-prompt {
+    order: 1;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    text-align: right;
+  }
+
+  .employer-register-page .auth-form-card-header [aria-haspopup="listbox"] {
+    display: none;
+  }
+
+  .employer-register-page .employer-register-login-prompt {
+    position: static;
     top: auto;
     right: auto;
     left: auto;
-    display: flex;
+    z-index: auto;
+    display: block;
     width: 100%;
     max-width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    align-items: baseline;
-    gap: 0 0.25rem;
-    margin: 0 0 0.5rem;
-    padding-right: 0.15rem;
+    margin: 0;
+    padding: 0;
     font-size: 0.6875rem;
-    line-height: 1.35;
+    line-height: 1.4;
     text-align: right;
     white-space: normal;
     overflow-wrap: break-word;
+  }
+
+  .employer-register-page .auth-form-card-header .employer-register-login-prompt {
+    margin: 0;
+  }
+
+  .employer-register-page .employer-register-form-container > .employer-register-login-prompt {
+    margin-bottom: 0.45rem;
   }
 
   .employer-register-page .employer-register-account-type-options {
@@ -2304,8 +2471,8 @@ body:has(.employer-register-page) {
   }
 
   .employer-register-page .employer-register-form-fields {
-    margin-top: 1.15rem;
-    gap: 0.9rem;
+    margin-top: 1.05rem;
+    gap: 0.85rem;
   }
 
   .employer-register-page .employer-register-form-label {
@@ -2322,6 +2489,20 @@ body:has(.employer-register-page) {
   .employer-register-page .employer-register-form-submit {
     height: 2.625rem;
     font-size: 0.875rem;
+  }
+
+  .employer-register-page .employer-register-testimonial-card {
+    gap: 0.5rem;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .employer-register-page .employer-register-testimonial-quote {
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+
+  .employer-register-page .employer-register-testimonial-dots {
+    padding-top: 0.4rem;
   }
 }
 
