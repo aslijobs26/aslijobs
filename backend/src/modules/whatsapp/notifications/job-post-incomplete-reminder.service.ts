@@ -23,7 +23,7 @@ import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js"
 import type { WhatsAppNotificationEnqueueResult } from "./whatsapp-notification.types.js";
 
 export type JobPostIncompleteReminderProcessResult =
-  | "sent"
+  | "queued"
   | "skipped"
   | "failed";
 
@@ -223,7 +223,12 @@ export async function processJobPostIncompleteReminder(
     });
     return "skipped";
   }
-  if (reminder.status === "sent" || reminder.status.startsWith("skipped_")) {
+  if (
+    reminder.status === "queued" ||
+    reminder.status === "accepted" ||
+    reminder.status === "sent" ||
+    reminder.status.startsWith("skipped_")
+  ) {
     console.info("[JobPostIncompleteReminder] duplicate reminder skipped", {
       jobMongoId,
       publicJobId: reminder.publicJobId,
@@ -324,7 +329,7 @@ export async function processJobPostIncompleteReminder(
     await deps.markStatus({
       jobMongoId,
       generation,
-      status: "sent",
+      status: "queued",
     });
     console.info("[JobPostIncompleteReminder] dispatched", {
       jobMongoId,
@@ -337,7 +342,7 @@ export async function processJobPostIncompleteReminder(
       language: "en",
       result,
     });
-    return "sent";
+    return "queued";
   } catch (error) {
     console.error("[JobPostIncompleteReminder] delivery failed", {
       jobMongoId,

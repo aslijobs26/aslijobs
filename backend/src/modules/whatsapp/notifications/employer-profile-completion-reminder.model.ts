@@ -3,6 +3,8 @@ import { Schema, model } from "mongoose";
 export const EMPLOYER_PROFILE_COMPLETION_REMINDER_STATUSES = [
   "scheduled",
   "processing",
+  "queued",
+  "accepted",
   "sent",
   "skipped_complete",
   "failed",
@@ -100,7 +102,10 @@ export async function findDueEmployerProfileCompletionReminderIds(
 
 export async function markEmployerProfileCompletionReminderStatus(input: {
   employerId: string;
-  status: Exclude<EmployerProfileCompletionReminderStatus, "scheduled">;
+  status: Exclude<
+    EmployerProfileCompletionReminderStatus,
+    "scheduled" | "processing"
+  >;
   lastError?: string;
 }): Promise<void> {
   await EmployerProfileCompletionReminderModel.updateOne(

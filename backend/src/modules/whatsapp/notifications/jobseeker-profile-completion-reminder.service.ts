@@ -21,7 +21,7 @@ import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js"
 import type { WhatsAppNotificationEnqueueResult } from "./whatsapp-notification.types.js";
 
 export type JobSeekerProfileCompletionReminderProcessResult =
-  | "sent"
+  | "queued"
   | "skipped"
   | "failed";
 
@@ -131,6 +131,8 @@ export async function processJobSeekerProfileCompletionReminder(
     return "skipped";
   }
   if (
+    reminder.status === "queued" ||
+    reminder.status === "accepted" ||
     reminder.status === "sent" ||
     reminder.status === "skipped_complete" ||
     reminder.status === "skipped_ineligible"
@@ -193,7 +195,7 @@ export async function processJobSeekerProfileCompletionReminder(
     });
 
     if (result === "skipped_duplicate") {
-      await deps.markStatus({ jobSeekerId, status: "sent" });
+      await deps.markStatus({ jobSeekerId, status: "queued" });
       return "skipped";
     }
 
@@ -206,14 +208,14 @@ export async function processJobSeekerProfileCompletionReminder(
       return "failed";
     }
 
-    await deps.markStatus({ jobSeekerId, status: "sent" });
+    await deps.markStatus({ jobSeekerId, status: "queued" });
     console.info("[JobSeekerProfileReminder] dispatched", {
       jobSeekerId,
       template: "jobseeker_profile_completion",
-      language: "en",
+      language: preferredLanguage,
       result,
     });
-    return "sent";
+    return "queued";
   } catch (error) {
     const lastError = error instanceof Error ? error.message : "reminder_failed";
     console.error("[JobSeekerProfileReminder] delivery failed", {

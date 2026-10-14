@@ -3,6 +3,8 @@ import { Schema, model } from "mongoose";
 export const JOB_POST_INCOMPLETE_REMINDER_STATUSES = [
   "scheduled",
   "processing",
+  "queued",
+  "accepted",
   "sent",
   "skipped_complete",
   "skipped_ineligible",

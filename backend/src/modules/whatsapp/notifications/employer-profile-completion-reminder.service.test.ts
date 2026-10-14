@@ -57,9 +57,9 @@ describe("processEmployerProfileCompletionReminder", () => {
       deps,
     );
 
-    assert.equal(result, "sent");
+    assert.equal(result, "queued");
     assert.equal(enqueued.length, 1);
-    assert.deepEqual(statuses, ["sent"]);
+    assert.deepEqual(statuses, ["queued"]);
     const job = enqueued[0] as { event: string; phoneNumber: string };
     assert.equal(job.event, "EMPLOYER_PROFILE_COMPLETION_REQUIRED");
     assert.equal(job.phoneNumber, "9876543210");
@@ -120,7 +120,7 @@ describe("processEmployerProfileCompletionReminder", () => {
 
     assert.equal(result, "skipped");
     assert.equal(enqueued.length, 1);
-    assert.deepEqual(statuses, ["sent"]);
+    assert.deepEqual(statuses, ["queued"]);
   });
 
   it("does not throw when WhatsApp notification delivery fails", async () => {
@@ -185,7 +185,7 @@ describe("Company Profile OTP reminder flow", () => {
       employerId,
       deps,
     );
-    assert.equal(result, "sent");
+    assert.equal(result, "queued");
     const job = enqueued[0] as { event: string; employerName: string };
     assert.equal(job.event, "EMPLOYER_PROFILE_COMPLETION_REQUIRED");
     assert.equal(job.employerName, "Veeresh");

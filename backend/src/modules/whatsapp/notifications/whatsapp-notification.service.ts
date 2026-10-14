@@ -89,6 +89,9 @@ export async function enqueueWhatsAppNotification(
     templateName,
     language: languageCode,
     recipientMasked: maskWhatsAppRecipient(payload.phoneNumber),
+    ...(payload.correlationId?.trim()
+      ? { correlationId: payload.correlationId.trim() }
+      : {}),
   });
 
   if (claim === "duplicate") {

@@ -20,6 +20,7 @@ import {
   buildWhatsAppNotificationUrlButtonParameters,
   getWhatsAppNotificationTemplate,
   JOBSEEKER_PROFILE_COMPLETION_BUTTON_URL,
+  JOBSEEKER_PROFILE_COMPLETION_REQUIRED_BUTTON_URL,
   resolveWhatsAppNotificationLanguage,
   whatsAppNotificationIdempotencyKey,
 } from "./whatsapp-notification.policy.js";
@@ -197,11 +198,11 @@ describe("jobseeker profile completion reminder", () => {
       entityId: string;
     };
 
-    assert.equal(result, "sent");
+    assert.equal(result, "queued");
     assert.equal(job.event, "JOBSEEKER_PROFILE_COMPLETION");
     assert.equal(job.entityId, jobSeekerId);
     assert.equal(job.phoneNumber, verifiedPhone);
-    assert.deepEqual(statuses, ["sent"]);
+    assert.deepEqual(statuses, ["queued"]);
     assert.equal(
       getWhatsAppNotificationTemplate("JOBSEEKER_PROFILE_COMPLETION")
         ?.templateName,
@@ -233,6 +234,14 @@ describe("jobseeker profile completion reminder", () => {
     assert.equal(
       JOBSEEKER_PROFILE_COMPLETION_BUTTON_URL.includes("{{"),
       false,
+    );
+    assert.equal(
+      JOBSEEKER_PROFILE_COMPLETION_REQUIRED_BUTTON_URL,
+      "https://www.aslijobs.com/job-seeker/profile",
+    );
+    assert.equal(
+      JOBSEEKER_PROFILE_COMPLETION_REQUIRED_BUTTON_URL.endsWith("/job-seeker/profile"),
+      true,
     );
     assert.equal(
       whatsAppNotificationIdempotencyKey(
@@ -318,7 +327,7 @@ describe("jobseeker profile completion reminder", () => {
       duplicate.deps,
     );
     assert.equal(duplicateResult, "skipped");
-    assert.deepEqual(duplicate.statuses, ["sent"]);
+    assert.deepEqual(duplicate.statuses, ["queued"]);
 
     const claimed = createDeps({
       now,

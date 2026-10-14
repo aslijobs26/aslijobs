@@ -274,7 +274,7 @@ describe("incomplete job draft reminder", () => {
       }),
     );
 
-    assert.equal(result, "sent");
+    assert.equal(result, "queued");
     assert.equal(queued[0]?.phoneNumber, employerPhone);
     assert.equal(queued[0]?.employerName, "Acme Pvt Ltd");
     assert.equal(queued[0]?.entityId, jobMongoId);

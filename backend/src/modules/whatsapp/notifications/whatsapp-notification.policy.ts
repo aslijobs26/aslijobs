@@ -227,10 +227,15 @@ export function buildWhatsAppNotificationUrlButtonParameters(
  * jobseeker_profile_completion template. Meta stores the full URL and the
  * button has no {{1}}, so the send must omit button parameters.
  * The approved URL does not open the live profile page until it is corrected
- * in Meta.
+ * in Meta Business Manager. The send stays parameter-free because the button
+ * is static. Code cannot rewrite a URL stored on the approved template.
  */
 export const JOBSEEKER_PROFILE_COMPLETION_BUTTON_URL =
   "https://invalid.invalid/www.aslijobs.com/job-seeker/profile";
+
+/** Destination Meta must store on both English and Telugu static buttons. */
+export const JOBSEEKER_PROFILE_COMPLETION_REQUIRED_BUTTON_URL =
+  "https://www.aslijobs.com/job-seeker/profile";
 
 export const EMPLOYER_ACCOUNT_APPROVED_POST_JOB_URL_PREFIX =
   "https://www.aslijobs.com/post-job/";

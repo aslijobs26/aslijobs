@@ -383,7 +383,7 @@ describe("interview_rescheduled scheduling", () => {
     assert.equal(rescheduled[1]?.interviewVenue, "West yard");
   });
 
-  it("does not queue online, phone, venue-only, or cancellation updates", async () => {
+  it("queues online and phone reschedules and skips venue-only or cancellation updates", async () => {
     const online = installSchedulingMocks({
       application: applicationDocument({
         interview: interview({
@@ -406,7 +406,8 @@ describe("interview_rescheduled scheduling", () => {
       updatedByName: "Ram",
     });
     await wait();
-    assert.equal(online.rescheduled.length, 0);
+    assert.equal(online.rescheduled.length, 1);
+    assert.equal(online.rescheduled[0]?.interviewVenue, "Online");
     assert.equal(online.scheduledOnline.length, 0);
 
     mock.restoreAll();
@@ -432,7 +433,8 @@ describe("interview_rescheduled scheduling", () => {
       updatedByName: "Ram",
     });
     await wait();
-    assert.equal(phone.rescheduled.length, 0);
+    assert.equal(phone.rescheduled.length, 1);
+    assert.equal(phone.rescheduled[0]?.interviewVenue, "Phone");
 
     mock.restoreAll();
     const venueOnly = installSchedulingMocks();
@@ -730,6 +732,9 @@ describe("interview_rescheduled delivery", () => {
       select: () => ({
         lean: async () => null,
       }),
+    }));
+    mock.method(WhatsAppNotificationDispatchModel, "updateOne", async () => ({
+      acknowledged: true,
     }));
     mock.method(WhatsAppService.prototype, "sendTemplateMessage", async () => {
       throw new Error("WhatsApp template delivery failed");

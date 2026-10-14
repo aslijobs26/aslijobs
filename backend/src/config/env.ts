@@ -263,6 +263,21 @@ if (parsed.data.NODE_ENV === "production") {
   }
   // Render (and similar hosts) use ephemeral disks — local uploads vanish on
   // redeploy and do not work across multiple instances.
+  if (!parsed.data.REDIS_URL.trim()) {
+    console.error(
+      "Production warning: REDIS_URL is empty. WhatsApp notifications send inline and are not durable across restarts.",
+    );
+  }
+  if (!parsed.data.WHATSAPP_VERIFY_TOKEN.trim()) {
+    console.error(
+      "Production warning: WHATSAPP_VERIFY_TOKEN is empty. Meta cannot verify the webhook.",
+    );
+  }
+  if (!parsed.data.META_APP_SECRET.trim()) {
+    console.error(
+      "Production warning: META_APP_SECRET is empty. Webhook signatures cannot be verified.",
+    );
+  }
   if (parsed.data.STORAGE_PROVIDER !== "cloudinary") {
     console.error(
       "Production refused to start: STORAGE_PROVIDER must be cloudinary.",

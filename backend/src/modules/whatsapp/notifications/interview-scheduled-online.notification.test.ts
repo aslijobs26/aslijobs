@@ -755,6 +755,9 @@ describe("interview_scheduled_online delivery", () => {
         lean: async () => null,
       }),
     }));
+    mock.method(WhatsAppNotificationDispatchModel, "updateOne", async () => ({
+      acknowledged: true,
+    }));
     mock.method(WhatsAppService.prototype, "sendTemplateMessage", async () => {
       throw new Error("WhatsApp template delivery failed");
     });

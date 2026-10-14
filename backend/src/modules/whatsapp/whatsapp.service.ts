@@ -36,15 +36,52 @@ export type WhatsAppTemplateSendResult = {
  * Graph rejection details safe to persist and log.
  * Meta's message text is omitted because it can contain the recipient.
  */
+export type WhatsAppTemplateFailureClass =
+  | "permanent"
+  | "retryable"
+  | "ambiguous";
+
+const RETRYABLE_META_CODES = new Set([
+  1, 2, 4, 17, 32, 341, 613, 80007, 130429, 131056,
+]);
+
+/**
+ * Timeouts and dropped connections are ambiguous: Meta may already have
+ * accepted the message. Rate limits and 5xx responses can be retried.
+ * Template, recipient, auth, and payload errors are permanent.
+ */
+export function classifyWhatsAppTemplateFailure(input: {
+  status: number;
+  metaCode?: number | null;
+  timedOut?: boolean;
+  network?: boolean;
+}): WhatsAppTemplateFailureClass {
+  if (input.timedOut || input.network) {
+    return "ambiguous";
+  }
+  if (input.status === 429 || input.status >= 500) {
+    return "retryable";
+  }
+  if (
+    typeof input.metaCode === "number" &&
+    RETRYABLE_META_CODES.has(input.metaCode)
+  ) {
+    return "retryable";
+  }
+  return "permanent";
+}
+
 export class WhatsAppTemplateDeliveryError extends Error {
   readonly status: number;
   readonly metaCode: number | null;
   readonly metaType: string;
+  readonly failureClass: WhatsAppTemplateFailureClass;
 
   constructor(input: {
     status: number;
     metaCode?: number;
     metaType?: string;
+    failureClass?: WhatsAppTemplateFailureClass;
   }) {
     const code =
       typeof input.metaCode === "number" ? String(input.metaCode) : "none";
@@ -55,6 +92,12 @@ export class WhatsAppTemplateDeliveryError extends Error {
     this.status = input.status;
     this.metaCode = typeof input.metaCode === "number" ? input.metaCode : null;
     this.metaType = input.metaType?.trim() ?? "";
+    this.failureClass =
+      input.failureClass ??
+      classifyWhatsAppTemplateFailure({
+        status: input.status,
+        metaCode: this.metaCode,
+      });
   }
 }
 
@@ -188,7 +231,10 @@ export class WhatsAppService {
       console.error(
         "[WhatsAppService] template delivery skipped: credentials or template are not configured",
       );
-      throw new Error("WhatsApp template delivery is not configured");
+      throw new WhatsAppTemplateDeliveryError({
+        status: 0,
+        failureClass: "permanent",
+      });
     }
 
     const recipient = toWhatsAppCloudRecipient(phoneNumber);
@@ -252,7 +298,10 @@ export class WhatsAppService {
           isTimeout ? "timeout" : "network error"
         }`,
       );
-      throw new Error("WhatsApp template delivery failed");
+      throw new WhatsAppTemplateDeliveryError({
+        status: 0,
+        failureClass: "ambiguous",
+      });
     }
 
     if (!response.ok) {
@@ -393,6 +442,10 @@ export class WhatsAppService {
       status: response.status,
       ...(typeof errorCode === "number" ? { metaCode: errorCode } : {}),
       ...(errorType ? { metaType: errorType } : {}),
+      failureClass: classifyWhatsAppTemplateFailure({
+        status: response.status,
+        metaCode: typeof errorCode === "number" ? errorCode : null,
+      }),
     });
   }
 

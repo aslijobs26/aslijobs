@@ -16,7 +16,7 @@ import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js"
 import type { WhatsAppNotificationEnqueueResult } from "./whatsapp-notification.types.js";
 
 export type EmployerProfileCompletionReminderProcessResult =
-  | "sent"
+  | "queued"
   | "skipped"
   | "failed";
 
@@ -126,7 +126,7 @@ export async function processEmployerProfileCompletionReminder(
     if (result === "skipped_duplicate") {
       await deps.markStatus({
         employerId,
-        status: "sent",
+        status: "queued",
       });
       return "skipped";
     }
@@ -142,9 +142,9 @@ export async function processEmployerProfileCompletionReminder(
 
     await deps.markStatus({
       employerId,
-      status: "sent",
+      status: "queued",
     });
-    return "sent";
+    return "queued";
   } catch (error) {
     const lastError = error instanceof Error ? error.message : "reminder_failed";
     console.error("[EmployerProfileReminder] delivery failed", {

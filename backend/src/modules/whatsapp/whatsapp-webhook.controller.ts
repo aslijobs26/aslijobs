@@ -3,6 +3,11 @@ import { env } from "../../config/env.js";
 import { claimWhatsAppEvent } from "./whatsapp-processed-event.model.js";
 import { verifyWhatsAppSignature } from "./whatsapp-signature.js";
 import { enqueueWhatsAppInbound } from "./whatsapp-inbound.queue.js";
+import {
+  applyWhatsAppNotificationDeliveryStatus,
+  WhatsAppNotificationDispatchModel,
+} from "./notifications/whatsapp-notification.model.js";
+import { syncReminderWithDispatchStatus } from "./notifications/whatsapp-notification.reminder-sync.js";
 
 type IncomingMessage = {
   id?: string;
@@ -65,7 +70,7 @@ export function receiveWhatsAppWebhook(req: Request, res: Response): void {
   });
 }
 
-function logDeliveryStatuses(statuses: unknown[]): void {
+async function persistDeliveryStatuses(statuses: unknown[]): Promise<void> {
   for (const item of statuses) {
     if (!item || typeof item !== "object") {
       continue;
@@ -73,15 +78,65 @@ function logDeliveryStatuses(statuses: unknown[]): void {
     const status = item as {
       id?: string;
       status?: string;
+      timestamp?: string;
       errors?: Array<{ code?: number }>;
     };
+    const messageId = status.id?.trim() || "";
+    const deliveryStatus = status.status?.trim() || "unknown";
     const errorCode = status.errors?.find(
       (error) => typeof error.code === "number",
     )?.code;
+    const timestampSeconds = Number(status.timestamp);
+    const timestamp = Number.isFinite(timestampSeconds)
+      ? new Date(timestampSeconds * 1000)
+      : null;
     console.info("[WhatsAppWebhook] delivery status", {
-      messageId: status.id?.trim() || "-",
-      status: status.status?.trim() || "unknown",
+      messageId: messageId || "-",
+      status: deliveryStatus,
       ...(typeof errorCode === "number" ? { errorCode } : {}),
+    });
+    if (!messageId) {
+      continue;
+    }
+    const result = await applyWhatsAppNotificationDeliveryStatus({
+      messageId,
+      status: deliveryStatus,
+      timestamp,
+      ...(typeof errorCode === "number" ? { errorCode: String(errorCode) } : {}),
+    });
+    if (result !== "updated") {
+      continue;
+    }
+    const row = await WhatsAppNotificationDispatchModel.findOne({ messageId })
+      .select("event entityId status")
+      .lean();
+    if (!row) {
+      continue;
+    }
+    const reminderStatus =
+      row.status === "failed"
+        ? "failed"
+        : row.status === "sent" ||
+            row.status === "delivered" ||
+            row.status === "read"
+          ? "sent"
+          : null;
+    if (!reminderStatus) {
+      continue;
+    }
+    await syncReminderWithDispatchStatus({
+      event: row.event,
+      entityId: row.entityId,
+      status: reminderStatus,
+      lastError:
+        reminderStatus === "failed" && typeof errorCode === "number"
+          ? `webhook_failed code=${errorCode}`
+          : "",
+    });
+    console.info("[WhatsAppWebhook] delivery persisted", {
+      messageId,
+      event: row.event,
+      status: row.status,
     });
   }
 }
@@ -98,7 +153,7 @@ async function processWebhook(body: {
       const value = change.value;
       if (!value?.messages?.length) {
         if (value?.statuses?.length) {
-          logDeliveryStatuses(value.statuses);
+          await persistDeliveryStatuses(value.statuses);
         }
         continue;
       }

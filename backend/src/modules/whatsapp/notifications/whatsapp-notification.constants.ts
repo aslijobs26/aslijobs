@@ -94,7 +94,9 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     // Graph-confirmed APPROVED Utility, language en.
     // Body has no variables. Complete Your Profile is a static URL button,
     // so the API must not send body or button parameters.
-    // The approved button URL is currently
+    // Static URL button. Do not send button parameters.
+    // Meta must be changed to https://www.aslijobs.com/job-seeker/profile.
+    // The stored button is still
     // https://invalid.invalid/www.aslijobs.com/job-seeker/profile.
     templateName: "jobseeker_profile_completion",
     defaultLanguage: "en",

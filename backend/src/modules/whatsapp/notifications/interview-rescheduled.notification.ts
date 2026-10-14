@@ -27,8 +27,30 @@ export type InterviewRescheduledWhatsAppInput = {
 };
 
 /**
- * One notification per saved offline date and time. A later change to a
- * different slot gets a new key. Repeating the same slot does not.
+ * interview_rescheduled requires a venue parameter. Phone and online interviews
+ * do not store a physical venue, so the approved template receives the mode
+ * label instead of an empty value.
+ */
+export function interviewRescheduleVenueParameter(
+  mode: string,
+  venue: string,
+): string {
+  const physicalVenue = venue.trim();
+  if (physicalVenue) {
+    return physicalVenue;
+  }
+  if (mode === "online") {
+    return "Online";
+  }
+  if (mode === "phone") {
+    return "Phone";
+  }
+  return "";
+}
+
+/**
+ * One notification per saved date and time. A later change to a different
+ * slot gets a new key. Repeating the same slot does not.
  */
 export function interviewRescheduledIdempotencyScope(
   interviewDate: string,

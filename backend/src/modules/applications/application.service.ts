@@ -19,7 +19,10 @@ import { generateResumePdfFromJson } from "../resumes/pdf/index.js";
 import { resumeService } from "../resumes/resume.service.js";
 import { uploadedResumeService } from "../resumes/uploaded-resume.service.js";
 import { interviewCancelledWhatsApp } from "../whatsapp/notifications/interview-cancelled.notification.js";
-import { interviewRescheduledWhatsApp } from "../whatsapp/notifications/interview-rescheduled.notification.js";
+import {
+  interviewRescheduleVenueParameter,
+  interviewRescheduledWhatsApp,
+} from "../whatsapp/notifications/interview-rescheduled.notification.js";
 import { interviewScheduledOfflineWhatsApp } from "../whatsapp/notifications/interview-scheduled-offline.notification.js";
 import { interviewScheduledOnlineWhatsApp } from "../whatsapp/notifications/interview-scheduled-online.notification.js";
 import { interviewScheduledPhoneWhatsApp } from "../whatsapp/notifications/interview-scheduled-phone.notification.js";
@@ -2707,22 +2710,26 @@ export class ApplicationService {
       });
     }
 
-    if (
-      action === "updated" &&
-      previousInterview.mode === "offline" &&
-      nextInterview.mode === "offline" &&
-      (previousInterview.date !== nextInterview.date ||
-        previousInterview.time !== nextInterview.time)
-    ) {
-      interviewRescheduledWhatsApp.schedule({
-        applicationId: application._id.toString(),
-        jobId: String(application.jobId),
-        employerId: String(application.employerId),
-        jobSeekerId: String(application.jobSeekerId),
-        interviewDate: nextInterview.date,
-        interviewTime: nextInterview.time,
-        interviewVenue: nextInterview.venue,
-      });
+    const interviewSlotChanged =
+      previousInterview.date !== nextInterview.date ||
+      previousInterview.time !== nextInterview.time;
+    const interviewModeChanged = previousInterview.mode !== nextInterview.mode;
+    if (action === "updated" && (interviewSlotChanged || interviewModeChanged)) {
+      const interviewVenue = interviewRescheduleVenueParameter(
+        nextInterview.mode,
+        nextInterview.venue,
+      );
+      if (interviewVenue) {
+        interviewRescheduledWhatsApp.schedule({
+          applicationId: application._id.toString(),
+          jobId: String(application.jobId),
+          employerId: String(application.employerId),
+          jobSeekerId: String(application.jobSeekerId),
+          interviewDate: nextInterview.date,
+          interviewTime: nextInterview.time,
+          interviewVenue,
+        });
+      }
     }
 
     if (action === "scheduled") {

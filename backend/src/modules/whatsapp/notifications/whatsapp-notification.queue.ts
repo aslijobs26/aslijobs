@@ -1,7 +1,11 @@
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { env } from "../../../config/env.js";
-import { maskWhatsAppRecipient, WhatsAppService } from "../whatsapp.service.js";
+import {
+  maskWhatsAppRecipient,
+  WhatsAppService,
+  WhatsAppTemplateDeliveryError,
+} from "../whatsapp.service.js";
 import {
   WHATSAPP_NOTIFICATION_BACKOFF_MS,
   WHATSAPP_NOTIFICATION_JOB_NAME,
@@ -9,13 +13,14 @@ import {
   WHATSAPP_NOTIFICATION_QUEUE_NAME,
   WHATSAPP_NOTIFICATION_WORKER_CONCURRENCY,
 } from "./whatsapp-notification.constants.js";
-import { markEmployerProfileCompletionReminderStatus } from "./employer-profile-completion-reminder.model.js";
-import { markJobSeekerProfileCompletionReminderStatus } from "./jobseeker-profile-completion-reminder.model.js";
 import {
+  markWhatsAppNotificationDispatchAccepted,
+  markWhatsAppNotificationDispatchAmbiguous,
   markWhatsAppNotificationDispatchFailed,
-  markWhatsAppNotificationDispatchSent,
-  wasWhatsAppNotificationDispatchSent,
+  markWhatsAppNotificationDispatchProcessing,
+  wasWhatsAppNotificationDispatchHandedOff,
 } from "./whatsapp-notification.model.js";
+import { syncReminderFromQueueJob } from "./whatsapp-notification.reminder-sync.js";
 import { whatsAppNotificationQueueJobId } from "./whatsapp-notification.policy.js";
 import type { WhatsAppNotificationQueueJob } from "./whatsapp-notification.types.js";
 
@@ -54,22 +59,21 @@ function markProfileReminderFailedOnDeliveryError(
   job: WhatsAppNotificationQueueJob,
   lastError: string,
 ): void {
-  if (job.event === "JOBSEEKER_PROFILE_COMPLETION") {
-    void markJobSeekerProfileCompletionReminderStatus({
-      jobSeekerId: job.entityId,
-      status: "failed",
-      lastError,
-    });
-    return;
-  }
-  if (job.event !== "EMPLOYER_PROFILE_COMPLETION_REQUIRED") {
-    return;
-  }
-  void markEmployerProfileCompletionReminderStatus({
-    employerId: job.entityId,
-    status: "failed",
-    lastError,
-  });
+  syncReminderFromQueueJob(job, "failed", lastError);
+}
+
+function isRetryableDeliveryError(error: unknown): boolean {
+  return (
+    error instanceof WhatsAppTemplateDeliveryError &&
+    error.failureClass === "retryable"
+  );
+}
+
+function isAmbiguousDeliveryError(error: unknown): boolean {
+  return (
+    error instanceof WhatsAppTemplateDeliveryError &&
+    error.failureClass === "ambiguous"
+  );
 }
 
 function logEmployerApprovalDeliveryFailure(
@@ -296,29 +300,87 @@ function isDuplicateJobError(error: unknown): boolean {
 
 export async function deliverWhatsAppNotificationJob(
   job: WhatsAppNotificationQueueJob,
+  context: { mode: "inline" | "queue"; attempt: number } = {
+    mode: "queue",
+    attempt: 1,
+  },
 ): Promise<void> {
-  if (await wasWhatsAppNotificationDispatchSent(job.idempotencyKey)) {
-    console.info("[WhatsAppNotification] already sent, skipping retry", {
+  if (await wasWhatsAppNotificationDispatchHandedOff(job.idempotencyKey)) {
+    console.info("[WhatsAppNotification] already accepted, skipping retry", {
       event: job.event,
       entityId: job.entityId,
+      template: job.templateName,
+      correlationId: job.correlationId || "-",
+      mode: context.mode,
+      attempt: context.attempt,
     });
     return;
   }
 
-  const result = await whatsAppService.sendTemplateMessage(
-    job.phoneNumber,
-    job.templateName,
-    job.languageCode,
-    job.bodyParameters,
-    job.urlButtonParameters ?? [],
-  );
+  await markWhatsAppNotificationDispatchProcessing({
+    idempotencyKey: job.idempotencyKey,
+    attempt: context.attempt,
+  });
 
-  await markWhatsAppNotificationDispatchSent({
+  let result: { messageId: string; messageStatus: string };
+  try {
+    result = await whatsAppService.sendTemplateMessage(
+      job.phoneNumber,
+      job.templateName,
+      job.languageCode,
+      job.bodyParameters,
+      job.urlButtonParameters ?? [],
+    );
+  } catch (error) {
+    const safeMessage =
+      error instanceof Error ? error.message : "delivery_failed";
+    if (isAmbiguousDeliveryError(error)) {
+      await markWhatsAppNotificationDispatchAmbiguous({
+        idempotencyKey: job.idempotencyKey,
+        lastError: safeMessage,
+      });
+      console.error("[WhatsAppNotification] ambiguous Meta response", {
+        event: job.event,
+        template: job.templateName,
+        language: job.languageCode,
+        correlationId: job.correlationId || "-",
+        mode: context.mode,
+        attempt: context.attempt,
+        failureClass: "ambiguous",
+      });
+      return;
+    }
+    if (!isRetryableDeliveryError(error) && error instanceof WhatsAppTemplateDeliveryError) {
+      await markWhatsAppNotificationDispatchFailed({
+        idempotencyKey: job.idempotencyKey,
+        lastError: safeMessage,
+        failureClass: "permanent",
+        metaCode:
+          error.metaCode === null ? "" : String(error.metaCode),
+      });
+      syncReminderFromQueueJob(job, "failed", safeMessage);
+      console.error("[WhatsAppNotification] permanent template failure", {
+        event: job.event,
+        template: job.templateName,
+        language: job.languageCode,
+        correlationId: job.correlationId || "-",
+        mode: context.mode,
+        attempt: context.attempt,
+        status: error.status,
+        metaCode: error.metaCode,
+      });
+      return;
+    }
+    throw error;
+  }
+
+  await markWhatsAppNotificationDispatchAccepted({
     idempotencyKey: job.idempotencyKey,
     messageId: result.messageId,
   });
+  syncReminderFromQueueJob(job, "accepted");
 
-  console.info("[WhatsAppNotification] delivered", {
+  console.info("[WhatsAppNotification] accepted by Meta", {
     event: job.event,
     templateName: job.templateName,
     language: job.languageCode,
@@ -326,6 +388,8 @@ export async function deliverWhatsAppNotificationJob(
     recipient: maskWhatsAppRecipient(job.phoneNumber),
     messageId: result.messageId || "-",
     messageStatus: result.messageStatus || "-",
+    mode: context.mode,
+    attempt: context.attempt,
     timestamp: new Date().toISOString(),
   });
   logJobPostIncompleteDelivery(job, "accepted");
@@ -336,6 +400,67 @@ export async function deliverWhatsAppNotificationJob(
   logInterviewScheduledOfflineDelivery(job, "accepted");
   logInterviewCancelledDelivery(job, "accepted");
   logInterviewRescheduledDelivery(job, "accepted");
+}
+
+function waitForRetry(attempt: number): Promise<void> {
+  if (env.NODE_ENV === "test") {
+    return Promise.resolve();
+  }
+  const delayMs = WHATSAPP_NOTIFICATION_BACKOFF_MS * 2 ** (attempt - 1);
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
+
+/**
+ * Inline mode runs in the API process. It retries only retryable errors,
+ * up to the same attempt limit as BullMQ, and loses the job if the process exits.
+ */
+async function deliverInlineWithBoundedRetries(
+  job: WhatsAppNotificationQueueJob,
+): Promise<void> {
+  for (let attempt = 1; attempt <= WHATSAPP_NOTIFICATION_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      await deliverWhatsAppNotificationJob(job, { mode: "inline", attempt });
+      return;
+    } catch (error) {
+      const lastError = error instanceof Error ? error.message : "delivery_failed";
+      const canRetry =
+        attempt < WHATSAPP_NOTIFICATION_MAX_ATTEMPTS &&
+        (isRetryableDeliveryError(error) ||
+          !(error instanceof WhatsAppTemplateDeliveryError));
+      console.error("[WhatsAppNotification] inline delivery failed", {
+        event: job.event,
+        entityId: job.entityId,
+        template: job.templateName,
+        language: job.languageCode,
+        correlationId: job.correlationId || "-",
+        mode: "inline",
+        attempt,
+        errorCategory: error instanceof Error ? error.name : "unknown",
+      });
+      if (!canRetry) {
+        await markWhatsAppNotificationDispatchFailed({
+          idempotencyKey: job.idempotencyKey,
+          lastError,
+          failureClass: "retryable",
+        });
+        markProfileReminderFailedOnDeliveryError(job, lastError);
+        logEmployerApprovalDeliveryFailure(job);
+        logEmployerRejectionDeliveryFailure(job);
+        logJobPostIncompleteDelivery(job, "failed");
+        logJobPostRejectedDelivery(job, "failed");
+        logJobseekerAccountCreatedDelivery(job, "failed");
+        logJobApplicationSubmittedDelivery(job, "failed");
+        logInterviewScheduledOnlineDelivery(job, "failed");
+        logInterviewScheduledOfflineDelivery(job, "failed");
+        logInterviewCancelledDelivery(job, "failed");
+        logInterviewRescheduledDelivery(job, "failed");
+        return;
+      }
+      await waitForRetry(attempt);
+    }
+  }
 }
 
 export async function enqueueWhatsAppNotificationJob(
@@ -349,32 +474,9 @@ export async function enqueueWhatsAppNotificationJob(
       template: job.templateName,
       language: job.languageCode,
       correlationId: job.correlationId || "-",
+      mode: "inline",
     });
-    void deliverWhatsAppNotificationJob(job).catch((error) => {
-      console.error("[WhatsAppNotification] inline delivery failed", {
-        event: job.event,
-        entityId: job.entityId,
-        errorCategory: error instanceof Error ? error.name : "unknown",
-      });
-      void markWhatsAppNotificationDispatchFailed({
-        idempotencyKey: job.idempotencyKey,
-        lastError: error instanceof Error ? error.message : "delivery_failed",
-      });
-      markProfileReminderFailedOnDeliveryError(
-        job,
-        error instanceof Error ? error.message : "delivery_failed",
-      );
-      logEmployerApprovalDeliveryFailure(job);
-      logEmployerRejectionDeliveryFailure(job);
-      logJobPostIncompleteDelivery(job, "failed");
-      logJobPostRejectedDelivery(job, "failed");
-      logJobseekerAccountCreatedDelivery(job, "failed");
-      logJobApplicationSubmittedDelivery(job, "failed");
-      logInterviewScheduledOnlineDelivery(job, "failed");
-      logInterviewScheduledOfflineDelivery(job, "failed");
-      logInterviewCancelledDelivery(job, "failed");
-      logInterviewRescheduledDelivery(job, "failed");
-    });
+    void deliverInlineWithBoundedRetries(job);
     return;
   }
 
@@ -410,42 +512,37 @@ export async function enqueueWhatsAppNotificationJob(
         error instanceof Error ? error.name : "unknown"
       }`,
     );
-    void deliverWhatsAppNotificationJob(job).catch((inlineError) => {
-      console.error("[WhatsAppNotification] inline delivery failed", {
-        event: job.event,
-        entityId: job.entityId,
-        errorCategory:
-          inlineError instanceof Error ? inlineError.name : "unknown",
-      });
-      markProfileReminderFailedOnDeliveryError(
-        job,
-        inlineError instanceof Error ? inlineError.message : "delivery_failed",
-      );
-      logEmployerApprovalDeliveryFailure(job);
-      logEmployerRejectionDeliveryFailure(job);
-      logJobPostIncompleteDelivery(job, "failed");
-      logJobPostRejectedDelivery(job, "failed");
-      logJobseekerAccountCreatedDelivery(job, "failed");
-      logJobApplicationSubmittedDelivery(job, "failed");
-      logInterviewScheduledOnlineDelivery(job, "failed");
-      logInterviewScheduledOfflineDelivery(job, "failed");
-      logInterviewCancelledDelivery(job, "failed");
-      logInterviewRescheduledDelivery(job, "failed");
-    });
+    void deliverInlineWithBoundedRetries(job);
   }
 }
 
 export function startWhatsAppNotificationRuntime(): () => Promise<void> {
-  if (env.NODE_ENV === "test" || !env.REDIS_URL.trim() || worker) {
+  if (env.NODE_ENV === "test") {
+    return async () => undefined;
+  }
+  if (!env.REDIS_URL.trim()) {
+    console.info(
+      "[WhatsAppNotification] REDIS_URL is empty. Notifications send inline in the API process. Inline retries are bounded and are lost if the process exits.",
+    );
+    return async () => undefined;
+  }
+  if (worker) {
     return async () => undefined;
   }
 
+  console.info(
+    "[WhatsAppNotification] worker started queue=whatsapp-notifications",
+  );
   workerConnection = openRedis();
   worker = new Worker(
     WHATSAPP_NOTIFICATION_QUEUE_NAME,
     async (bullJob) => {
       await deliverWhatsAppNotificationJob(
         bullJob.data as WhatsAppNotificationQueueJob,
+        {
+          mode: "queue",
+          attempt: (bullJob.attemptsMade ?? 0) + 1,
+        },
       );
     },
     {
@@ -464,6 +561,7 @@ export function startWhatsAppNotificationRuntime(): () => Promise<void> {
       void markWhatsAppNotificationDispatchFailed({
         idempotencyKey: data.idempotencyKey,
         lastError: error.message || error.name,
+        failureClass: isRetryableDeliveryError(error) ? "retryable" : "permanent",
       });
       if (data) {
         markProfileReminderFailedOnDeliveryError(

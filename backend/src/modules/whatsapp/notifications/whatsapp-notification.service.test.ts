@@ -6,7 +6,10 @@ import {
   enqueueWhatsAppNotification,
   scheduleWhatsAppNotification,
 } from "./whatsapp-notification.service.js";
-import { WhatsAppService } from "../whatsapp.service.js";
+import {
+  WhatsAppService,
+  WhatsAppTemplateDeliveryError,
+} from "../whatsapp.service.js";
 
 const payload = {
   event: "EMPLOYER_ACCOUNT_CREATED" as const,
@@ -202,12 +205,15 @@ describe("deliverWhatsAppNotificationJob", () => {
         lean: async () => null,
       }),
     }));
-    const marked: string[] = [];
+    const updates: Array<{ status?: string; messageId?: string }> = [];
     mock.method(
       WhatsAppNotificationDispatchModel,
       "updateOne",
-      async (filter: { idempotencyKey?: string }) => {
-        marked.push(filter.idempotencyKey ?? "");
+      async (
+        _filter: { idempotencyKey?: string },
+        update: { $set?: { status?: string; messageId?: string } },
+      ) => {
+        updates.push(update.$set ?? {});
         return { acknowledged: true };
       },
     );
@@ -222,9 +228,9 @@ describe("deliverWhatsAppNotificationJob", () => {
       idempotencyKey: `EMPLOYER_ACCOUNT_CREATED:${payload.entityId}`,
     });
 
-    assert.deepEqual(marked, [
-      `EMPLOYER_ACCOUNT_CREATED:${payload.entityId}`,
-    ]);
+    assert.equal(updates[0]?.status, "processing");
+    assert.equal(updates.at(-1)?.status, "accepted");
+    assert.equal(updates.at(-1)?.messageId, "wamid.job");
   });
 
   it("does not send again when the dispatch was already marked sent", async () => {
@@ -266,6 +272,9 @@ describe("deliverWhatsAppNotificationJob", () => {
         lean: async () => null,
       }),
     }));
+    mock.method(WhatsAppNotificationDispatchModel, "updateOne", async () => ({
+      acknowledged: true,
+    }));
     mock.method(
       WhatsAppService.prototype,
       "sendTemplateMessage",
@@ -287,5 +296,45 @@ describe("deliverWhatsAppNotificationJob", () => {
         }),
       /WhatsApp template delivery failed/,
     );
+  });
+
+  it("does not retry a permanent template error", async () => {
+    const updates: Array<{ status?: string; failureClass?: string }> = [];
+    mock.method(WhatsAppNotificationDispatchModel, "findOne", () => ({
+      select: () => ({
+        lean: async () => null,
+      }),
+    }));
+    mock.method(
+      WhatsAppNotificationDispatchModel,
+      "updateOne",
+      async (
+        _filter: unknown,
+        update: { $set?: { status?: string; failureClass?: string } },
+      ) => {
+        updates.push(update.$set ?? {});
+        return { acknowledged: true };
+      },
+    );
+    mock.method(WhatsAppService.prototype, "sendTemplateMessage", async () => {
+      throw new WhatsAppTemplateDeliveryError({
+        status: 400,
+        metaCode: 132001,
+        failureClass: "permanent",
+      });
+    });
+
+    await notificationQueue.deliverWhatsAppNotificationJob({
+      event: "EMPLOYER_ACCOUNT_CREATED",
+      entityId: payload.entityId,
+      phoneNumber: payload.phoneNumber,
+      templateName: "employer_account_created",
+      languageCode: "en",
+      bodyParameters: ["Test Employer"],
+      idempotencyKey: `EMPLOYER_ACCOUNT_CREATED:${payload.entityId}`,
+    });
+
+    assert.equal(updates.at(-1)?.status, "failed");
+    assert.equal(updates.at(-1)?.failureClass, "permanent");
   });
 });
