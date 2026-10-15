@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it, mock } from "node:test";
 import {
+  buildWhatsAppNotificationBodyParameters,
   getWhatsAppNotificationTemplate,
   resolveWhatsAppNotificationDelivery,
   resolveWhatsAppNotificationLanguage,
@@ -82,8 +83,75 @@ describe("job seeker WhatsApp template language routing", () => {
     }
   });
 
-  it("keeps existing English templates for English, Hindi, and unknown languages", () => {
-    for (const language of ["en", "hi", "ta", "unknown", "", undefined]) {
+  it("selects the Hindi template names and Meta language hi", () => {
+    const cases = [
+      ["JOBSEEKER_ACCOUNT_CREATED", "jobseeker_account_created_hi", []],
+      ["JOBSEEKER_PROFILE_COMPLETION", "jobseeker_profile_completion_hi", []],
+      ["JOB_APPLICATION_SUBMITTED", "job_application_submitted_hi", ["Welder", "Northwind Services"]],
+      [
+        "INTERVIEW_SCHEDULED_PHONE",
+        "interview_scheduled_phone_hi",
+        ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"],
+      ],
+      [
+        "INTERVIEW_SCHEDULED_ONLINE",
+        "interview_scheduled_online_hi",
+        ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"],
+      ],
+      [
+        "INTERVIEW_SCHEDULED_OFFLINE",
+        "interview_scheduled_offline_hi",
+        ["Welder", "Northwind Services", "30 December 2026", "11:00 AM", "North gate"],
+      ],
+      [
+        "INTERVIEW_RESCHEDULED",
+        "interview_rescheduled_hi",
+        ["Welder", "Northwind Services", "30 December 2026", "11:00 AM", "North gate"],
+      ],
+      [
+        "INTERVIEW_CANCELLED",
+        "interview_cancelled_hi",
+        ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"],
+      ],
+    ] as const;
+
+    for (const [event, templateName, bodyParameters] of cases) {
+      for (const language of ["hi", "hindi", "hi-IN", "hi_IN"]) {
+        assert.deepEqual(resolveWhatsAppNotificationDelivery(event, language), {
+          templateName,
+          languageCode: "hi",
+        });
+      }
+      assert.deepEqual(
+        buildWhatsAppNotificationBodyParameters(event, {
+          event,
+          entityId: applicationId,
+          phoneNumber: seekerPhone,
+          jobTitle: "Welder",
+          companyName: "Northwind Services",
+          interviewDate: "30 December 2026",
+          interviewTime: "11:00 AM",
+          interviewVenue: "North gate",
+        }),
+        [...bodyParameters],
+      );
+      assert.notEqual(
+        resolveWhatsAppNotificationDelivery(event, "hi")?.languageCode,
+        "hi-IN",
+      );
+      assert.notEqual(
+        resolveWhatsAppNotificationDelivery(event, "hi")?.templateName,
+        templateName.replace(/_hi$/, ""),
+      );
+      assert.notEqual(
+        resolveWhatsAppNotificationDelivery(event, "hi")?.templateName,
+        templateName.replace(/_hi$/, "_te"),
+      );
+    }
+  });
+
+  it("keeps existing English templates for English and unsupported languages", () => {
+    for (const language of ["en", "en-US", "ta", "unknown", "", undefined]) {
       assert.deepEqual(
         resolveWhatsAppNotificationDelivery("JOBSEEKER_ACCOUNT_CREATED", language),
         {
@@ -145,7 +213,7 @@ describe("job seeker WhatsApp template language routing", () => {
     );
   });
 
-  it("queues Telugu template names and English fallbacks without changing body variables", async () => {
+  it("queues Telugu, Hindi, and English template names without changing body variables", async () => {
     const queued: Array<{
       templateName: string;
       languageCode: string;
@@ -194,8 +262,12 @@ describe("job seeker WhatsApp template language routing", () => {
       },
     );
     assert.equal(hindi, "queued");
-    assert.equal(queued[0]?.templateName, "job_application_submitted");
-    assert.equal(queued[0]?.languageCode, "en");
+    assert.equal(queued[0]?.templateName, "job_application_submitted_hi");
+    assert.equal(queued[0]?.languageCode, "hi");
+    assert.deepEqual(queued[0]?.bodyParameters, [
+      "Welder",
+      "Northwind Services",
+    ]);
 
     queued.length = 0;
     const english = await enqueueWhatsAppNotification(
@@ -311,8 +383,97 @@ describe("job seeker WhatsApp template language routing", () => {
       },
     );
     assert.equal(hindi, "queued");
-    assert.equal(queued[0]?.templateName, "interview_scheduled_phone");
-    assert.equal(queued[0]?.languageCode, "en");
+    assert.equal(queued[0]?.templateName, "interview_scheduled_phone_hi");
+    assert.equal(queued[0]?.languageCode, "hi");
+    assert.deepEqual(queued[0]?.bodyParameters, [
+      "Welder",
+      "Northwind Services",
+      "30 December 2026",
+      "11:00 AM",
+    ]);
+  });
+
+  it("queues every Hindi job-seeker event with its own template and the shared body order", async () => {
+    const events = [
+      {
+        event: "JOBSEEKER_ACCOUNT_CREATED" as const,
+        templateName: "jobseeker_account_created_hi",
+        bodyParameters: [] as string[],
+      },
+      {
+        event: "JOBSEEKER_PROFILE_COMPLETION" as const,
+        templateName: "jobseeker_profile_completion_hi",
+        bodyParameters: [] as string[],
+      },
+      {
+        event: "JOB_APPLICATION_SUBMITTED" as const,
+        templateName: "job_application_submitted_hi",
+        bodyParameters: ["Welder", "Northwind Services"],
+      },
+      {
+        event: "INTERVIEW_SCHEDULED_ONLINE" as const,
+        templateName: "interview_scheduled_online_hi",
+        bodyParameters: ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"],
+      },
+      {
+        event: "INTERVIEW_SCHEDULED_OFFLINE" as const,
+        templateName: "interview_scheduled_offline_hi",
+        bodyParameters: [
+          "Welder",
+          "Northwind Services",
+          "30 December 2026",
+          "11:00 AM",
+          "North gate",
+        ],
+      },
+      {
+        event: "INTERVIEW_RESCHEDULED" as const,
+        templateName: "interview_rescheduled_hi",
+        bodyParameters: [
+          "Welder",
+          "Northwind Services",
+          "30 December 2026",
+          "11:00 AM",
+          "North gate",
+        ],
+      },
+      {
+        event: "INTERVIEW_CANCELLED" as const,
+        templateName: "interview_cancelled_hi",
+        bodyParameters: ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"],
+      },
+    ];
+
+    for (const item of events) {
+      const queued: Array<{
+        templateName: string;
+        languageCode: string;
+        bodyParameters: string[];
+      }> = [];
+      const result = await enqueueWhatsAppNotification(
+        {
+          event: item.event,
+          entityId: applicationId,
+          phoneNumber: seekerPhone,
+          jobTitle: "Welder",
+          companyName: "Northwind Services",
+          interviewDate: "30 December 2026",
+          interviewTime: "11:00 AM",
+          interviewVenue: "North gate",
+          preferredLanguage: "hi-IN",
+        },
+        {
+          claim: async () => "claimed",
+          enqueueJob: async (job) => {
+            queued.push(job);
+          },
+        },
+      );
+      assert.equal(result, "queued");
+      assert.equal(queued[0]?.templateName, item.templateName);
+      assert.equal(queued[0]?.languageCode, "hi");
+      assert.deepEqual(queued[0]?.bodyParameters, item.bodyParameters);
+    }
   });
 
   it("does not send a second message when the same event is retried", async () => {

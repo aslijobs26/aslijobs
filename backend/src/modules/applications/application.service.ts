@@ -966,7 +966,7 @@ export class ApplicationService {
 
     const resumeSnapshot = buildResumeSnapshot(resume);
     const jobSeeker = await JobSeekerModel.findById(input.jobSeekerId)
-      .select("fullName whatsappNumber city state")
+      .select("fullName whatsappNumber whatsappLanguage city state")
       .lean();
     alignResumeSnapshotWithJobSeeker(resumeSnapshot, jobSeeker);
     const appliedAt = new Date();
@@ -1017,7 +1017,9 @@ export class ApplicationService {
 
     jobApplicationSubmittedWhatsApp.schedule({
       applicationId: application._id.toString(),
+      jobSeekerId: input.jobSeekerId,
       phoneNumber: jobSeeker?.whatsappNumber ?? "",
+      storedLanguage: jobSeeker?.whatsappLanguage,
       jobTitle: job.jobTitle ?? "",
       companyName: job.companyName ?? "",
       employerCompanyName: employer?.companyName ?? "",

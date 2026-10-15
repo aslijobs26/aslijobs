@@ -5,6 +5,8 @@ import { JobSeekerActivityListSkeleton } from "@/components/job-seeker-dashboard
 import { ResumeStatusBadge } from "@/components/job-seeker-resume/ResumeStatusBadge";
 import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
+import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import type { JobSeekerPublic } from "@/types/job-seeker";
 import type { SeekerApplicationListItem } from "@/types/job-seeker-applications";
 import type { PublicResume } from "@/types/job-seeker-resume";
@@ -122,6 +124,7 @@ export function JobSeekerProfileTabPanels({
   onRegenerateResume,
 }: JobSeekerProfileTabPanelsProps) {
   const t = useTranslate();
+  const language = useSiteLanguage().code;
   const notSetLabel = t("seeker.common.notSet");
   const optionLabel = (value: string | null | undefined, label: string) =>
     value && label ? translateProfileOptionLabel(value, label, t) : "";
@@ -784,7 +787,7 @@ export function JobSeekerProfileTabPanels({
                       href={`${ROUTES.JOB_SEEKER_APPLIED_JOBS}?application=${application.id}`}
                       className="text-xs font-semibold text-foreground hover:text-primary sm:text-sm"
                     >
-                      {application.jobTitle}
+                      {transliterateJobTitle(application.jobTitle, language)}
                     </Link>
                     <p className="text-[11px] text-muted sm:text-xs">
                       {application.companyName}
@@ -816,7 +819,7 @@ export function JobSeekerProfileTabPanels({
                     href={`/jobs/${job.publicJobId}`}
                     className="text-xs font-semibold text-foreground hover:text-primary sm:text-sm"
                   >
-                    {job.jobTitle}
+                    {transliterateJobTitle(job.jobTitle, language)}
                   </Link>
                   <p className="text-[11px] text-muted sm:text-xs">
                     {job.companyName} · {job.location || job.cityName}

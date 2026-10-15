@@ -335,6 +335,80 @@ describe("Telugu template Cloud API payloads", () => {
   });
 });
 
+describe("Hindi template Cloud API payloads", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  const cases = [
+    { name: "jobseeker_account_created_hi", body: [] as string[] },
+    { name: "jobseeker_profile_completion_hi", body: [] as string[] },
+    { name: "job_application_submitted_hi", body: ["Welder", "Northwind"] },
+    {
+      name: "interview_scheduled_phone_hi",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM"],
+    },
+    {
+      name: "interview_scheduled_online_hi",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM"],
+    },
+    {
+      name: "interview_scheduled_offline_hi",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM", "North gate"],
+    },
+    {
+      name: "interview_rescheduled_hi",
+      body: ["Welder", "Northwind", "2 December 2026", "3:05 PM", "South gate"],
+    },
+    {
+      name: "interview_cancelled_hi",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM"],
+    },
+  ];
+
+  for (const item of cases) {
+    it(`posts ${item.name} with language hi and ${item.body.length} body parameters`, async () => {
+      const captured: { url?: string; body?: Record<string, unknown> } = {};
+      mock.method(globalThis, "fetch", async (url: string | URL, init?: RequestInit) => {
+        captured.url = String(url);
+        captured.body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+        return jsonResponse(200, {
+          messages: [{ id: "wamid.hi", message_status: "accepted" }],
+        });
+      });
+
+      const result = await new WhatsAppService().sendTemplateMessage(
+        "9876543210",
+        item.name,
+        "hi",
+        item.body,
+        [],
+        { correlationId: "corr-hi" },
+      );
+
+      const template = captured.body?.template as {
+        name: string;
+        language: { code: string };
+        components?: Array<{ parameters: Array<{ text: string }> }>;
+      };
+      assert.equal(result.messageId, "wamid.hi");
+      assert.equal(template.name, item.name);
+      assert.equal(template.language.code, "hi");
+      assert.notEqual(template.language.code, "hi-IN");
+      assert.notEqual(template.language.code, "hi_IN");
+      if (item.body.length === 0) {
+        assert.equal(template.components, undefined);
+      } else {
+        assert.deepEqual(
+          template.components?.[0]?.parameters.map((parameter) => parameter.text),
+          item.body,
+        );
+      }
+      assert.equal(JSON.stringify(captured.body).includes("header"), false);
+    });
+  }
+});
+
 describe("maskWhatsAppRecipient", () => {
   it("masks all but the last four digits", () => {
     assert.equal(maskWhatsAppRecipient("919876543210"), "****3210");

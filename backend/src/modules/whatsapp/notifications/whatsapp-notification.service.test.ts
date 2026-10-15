@@ -233,6 +233,49 @@ describe("deliverWhatsAppNotificationJob", () => {
     assert.equal(updates.at(-1)?.messageId, "wamid.job");
   });
 
+  it("forwards a Hindi template and language code without switching language", async () => {
+    const sent: Array<{ name: string; language: string; body: string[] }> = [];
+    mock.method(
+      WhatsAppService.prototype,
+      "sendTemplateMessage",
+      async (
+        _phone: string,
+        name: string,
+        language: string,
+        body: string[],
+      ) => {
+        sent.push({ name, language, body });
+        return { messageId: "wamid.hi", messageStatus: "accepted" };
+      },
+    );
+    mock.method(WhatsAppNotificationDispatchModel, "findOne", () => ({
+      select: () => ({
+        lean: async () => null,
+      }),
+    }));
+    mock.method(WhatsAppNotificationDispatchModel, "updateOne", async () => ({
+      acknowledged: true,
+    }));
+
+    await notificationQueue.deliverWhatsAppNotificationJob({
+      event: "JOB_APPLICATION_SUBMITTED",
+      entityId: payload.entityId,
+      phoneNumber: payload.phoneNumber,
+      templateName: "job_application_submitted_hi",
+      languageCode: "hi",
+      bodyParameters: ["Welder", "Northwind Services"],
+      idempotencyKey: `JOB_APPLICATION_SUBMITTED:${payload.entityId}`,
+    });
+
+    assert.deepEqual(sent, [
+      {
+        name: "job_application_submitted_hi",
+        language: "hi",
+        body: ["Welder", "Northwind Services"],
+      },
+    ]);
+  });
+
   it("does not send again when the dispatch was already marked sent", async () => {
     let sendCount = 0;
     mock.method(

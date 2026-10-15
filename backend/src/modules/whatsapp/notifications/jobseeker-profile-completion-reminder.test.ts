@@ -212,6 +212,14 @@ describe("jobseeker profile completion reminder", () => {
       resolveWhatsAppNotificationLanguage("JOBSEEKER_PROFILE_COMPLETION", "en"),
       "en",
     );
+    assert.equal(
+      resolveWhatsAppNotificationLanguage("JOBSEEKER_PROFILE_COMPLETION", "hi"),
+      "hi",
+    );
+    assert.equal(
+      resolveWhatsAppNotificationLanguage("JOBSEEKER_PROFILE_COMPLETION", "te"),
+      "te",
+    );
     assert.deepEqual(
       buildWhatsAppNotificationBodyParameters("JOBSEEKER_PROFILE_COMPLETION", {
         event: "JOBSEEKER_PROFILE_COMPLETION",

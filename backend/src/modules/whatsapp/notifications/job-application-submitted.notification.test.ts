@@ -24,6 +24,8 @@ const employerId = "64f0000000000000000000bb";
 const seekerPhone = "9876543210";
 const employerPhone = "9000000001";
 
+const seekerSelects: string[] = [];
+
 function queryResult<T>(value: T) {
   const promise = Promise.resolve(value);
   return {
@@ -42,7 +44,7 @@ function queryResult<T>(value: T) {
   };
 }
 
-function seeker() {
+function seeker(overrides: Record<string, unknown> = {}) {
   return {
     _id: new mongoose.Types.ObjectId(jobSeekerId),
     registrationStatus: "COMPLETED",
@@ -50,6 +52,7 @@ function seeker() {
     accountStatus: "active",
     fullName: "Asha Rao",
     whatsappNumber: seekerPhone,
+    whatsappLanguage: "",
     dateOfBirth: new Date("1995-01-01T00:00:00.000Z"),
     gender: "female",
     jobRole: "Electrician",
@@ -64,6 +67,7 @@ function seeker() {
     availabilityStatus: "immediate",
     city: "Hyderabad",
     state: "Telangana",
+    ...overrides,
   };
 }
 
@@ -92,8 +96,31 @@ function employerRecord(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function stubApply(job: ReturnType<typeof jobRecord>, employer = employerRecord()) {
-  mock.method(JobSeekerModel, "findById", () => queryResult(seeker()));
+function stubApply(
+  job: ReturnType<typeof jobRecord>,
+  employer = employerRecord(),
+  seekerOverrides: Record<string, unknown> = {},
+) {
+  seekerSelects.length = 0;
+  mock.method(JobSeekerModel, "findById", () => {
+    const record = seeker(seekerOverrides);
+    const promise = Promise.resolve(record);
+    return {
+      select(fields: string) {
+        seekerSelects.push(fields);
+        return this;
+      },
+      lean() {
+        return promise;
+      },
+      then(
+        onFulfilled: (value: typeof record) => unknown,
+        onRejected?: (reason: unknown) => unknown,
+      ) {
+        return promise.then(onFulfilled, onRejected);
+      },
+    };
+  });
   mock.method(JobModel, "findOne", async () => job);
   mock.method(EmployerModel, "findById", () => queryResult(employer));
   mock.method(ApplicationModel, "findOne", () => queryResult(null));
@@ -184,7 +211,7 @@ describe("job application submitted WhatsApp", () => {
     );
     assert.equal(
       resolveWhatsAppNotificationLanguage("JOB_APPLICATION_SUBMITTED", "hi"),
-      "en",
+      "hi",
     );
     assert.equal(
       resolveWhatsAppNotificationLanguage("JOB_APPLICATION_SUBMITTED", "te"),
@@ -318,6 +345,117 @@ describe("job application submitted WhatsApp", () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
     assert.equal(result.application.publicJobId, job.jobId);
+  });
+
+  async function applyAndQueue(seekerOverrides: Record<string, unknown> = {}) {
+    const job = jobRecord();
+    const queued: Array<{
+      templateName: string;
+      languageCode: string;
+      bodyParameters: string[];
+    }> = [];
+    const payloads: Array<{ preferredLanguage?: string | null }> = [];
+    stubApply(job, employerRecord(), seekerOverrides);
+    mock.method(
+      jobApplicationSubmittedWhatsApp,
+      "enqueue",
+      async (payload: WhatsAppNotificationPayload) => {
+        payloads.push(payload);
+        return enqueueWhatsAppNotification(payload, {
+          claim: async () => "claimed",
+          enqueueJob: async (item) => {
+            queued.push(item);
+          },
+        });
+      },
+    );
+    await applicationService.applyToJob({
+      jobSeekerId,
+      publicJobId: job.jobId,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    return { queued, payloads };
+  }
+
+  it("sends the Hindi application template from the saved Job Seeker preference", async () => {
+    const { queued, payloads } = await applyAndQueue({
+      whatsappLanguage: "hi",
+    });
+    assert.equal(
+      seekerSelects.some((fields) => fields.includes("whatsappLanguage")),
+      true,
+    );
+    assert.equal(payloads[0]?.preferredLanguage, "hi");
+    assert.equal(queued[0]?.templateName, "job_application_submitted_hi");
+    assert.equal(queued[0]?.languageCode, "hi");
+    assert.notEqual(queued[0]?.languageCode, "hi-IN");
+    assert.deepEqual(queued[0]?.bodyParameters, ["Electrician", "ABC Services"]);
+  });
+
+  it("sends the Telugu application template from the saved Job Seeker preference", async () => {
+    const { queued, payloads } = await applyAndQueue({
+      whatsappLanguage: "te",
+    });
+    assert.equal(payloads[0]?.preferredLanguage, "te");
+    assert.equal(queued[0]?.templateName, "job_application_submitted_te");
+    assert.equal(queued[0]?.languageCode, "te");
+    assert.notEqual(queued[0]?.languageCode, "te-IN");
+    assert.deepEqual(queued[0]?.bodyParameters, ["Electrician", "ABC Services"]);
+  });
+
+  it("sends the English application template for a saved English preference", async () => {
+    const { queued, payloads } = await applyAndQueue({
+      whatsappLanguage: "en",
+    });
+    assert.equal(payloads[0]?.preferredLanguage, "en");
+    assert.equal(queued[0]?.templateName, "job_application_submitted");
+    assert.equal(queued[0]?.languageCode, "en");
+  });
+
+  it("falls back to English when the saved preference is missing", async () => {
+    const { queued, payloads } = await applyAndQueue({
+      whatsappLanguage: "",
+    });
+    assert.equal(payloads[0]?.preferredLanguage, "en");
+    assert.equal(queued[0]?.templateName, "job_application_submitted");
+    assert.equal(queued[0]?.languageCode, "en");
+  });
+
+  it("keeps the saved website language when a WhatsApp session would disagree", async () => {
+    const hindiOverTelugu = await applyAndQueue({ whatsappLanguage: "hi" });
+    assert.equal(hindiOverTelugu.payloads[0]?.preferredLanguage, "hi");
+    assert.equal(
+      hindiOverTelugu.queued[0]?.templateName,
+      "job_application_submitted_hi",
+    );
+    assert.equal(hindiOverTelugu.queued[0]?.languageCode, "hi");
+
+    const teluguOverHindi = await applyAndQueue({ whatsappLanguage: "te" });
+    assert.equal(teluguOverHindi.payloads[0]?.preferredLanguage, "te");
+    assert.equal(
+      teluguOverHindi.queued[0]?.templateName,
+      "job_application_submitted_te",
+    );
+    assert.equal(teluguOverHindi.queued[0]?.languageCode, "te");
+  });
+
+  it("falls back to English for an unsupported saved language", async () => {
+    const { queued, payloads } = await applyAndQueue({
+      whatsappLanguage: "fr",
+    });
+    assert.equal(payloads[0]?.preferredLanguage, "en");
+    assert.equal(queued[0]?.templateName, "job_application_submitted");
+    assert.equal(queued[0]?.languageCode, "en");
+  });
+
+  it("normalizes website language aliases onto the approved Meta templates", async () => {
+    const hindi = await applyAndQueue({ whatsappLanguage: "hindi" });
+    assert.equal(hindi.queued[0]?.templateName, "job_application_submitted_hi");
+    assert.equal(hindi.queued[0]?.languageCode, "hi");
+
+    const telugu = await applyAndQueue({ whatsappLanguage: "telugu" });
+    assert.equal(telugu.queued[0]?.templateName, "job_application_submitted_te");
+    assert.equal(telugu.queued[0]?.languageCode, "te");
   });
 
   it("does not send a placeholder when the job and company names are missing", async () => {

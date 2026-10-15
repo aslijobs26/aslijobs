@@ -16,6 +16,7 @@ import {
   buildWhatsAppNotificationUrlButtonParameters,
   getWhatsAppNotificationTemplate,
   resolveWhatsAppNotificationLanguage,
+  resolveWhatsAppNotificationTemplateName,
 } from "./whatsapp-notification.policy.js";
 import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js";
 import type { WhatsAppNotificationPayload } from "./whatsapp-notification.types.js";
@@ -172,7 +173,11 @@ describe("jobseeker account created WhatsApp", () => {
     );
     assert.equal(
       resolveWhatsAppNotificationLanguage("JOBSEEKER_ACCOUNT_CREATED", "hi"),
-      "en",
+      "hi",
+    );
+    assert.equal(
+      resolveWhatsAppNotificationTemplateName("JOBSEEKER_ACCOUNT_CREATED", "hi"),
+      "jobseeker_account_created_hi",
     );
     assert.deepEqual(
       buildWhatsAppNotificationBodyParameters("JOBSEEKER_ACCOUNT_CREATED", {
@@ -344,7 +349,7 @@ describe("jobseeker account created WhatsApp", () => {
     assert.equal(queued, 0);
   });
 
-  it("routes Telugu to the Telugu template and Hindi to English", async () => {
+  it("routes Telugu and Hindi to their own templates", async () => {
     const queued: Array<{ templateName: string; languageCode: string }> = [];
     const enqueue = (language: string) =>
       enqueueWhatsAppNotification(
@@ -373,7 +378,7 @@ describe("jobseeker account created WhatsApp", () => {
       [
         ["jobseeker_account_created_te", "te"],
         ["jobseeker_account_created", "en"],
-        ["jobseeker_account_created", "en"],
+        ["jobseeker_account_created_hi", "hi"],
       ],
     );
   });

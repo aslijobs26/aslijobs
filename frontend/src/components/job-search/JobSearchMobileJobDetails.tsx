@@ -6,6 +6,7 @@ import { JobRecruiterContactDetails } from "@/components/jobs/JobRecruiterContac
 import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { getJobDescriptionPlainTextLength } from "@/utils/job-description-html";
@@ -199,6 +200,7 @@ export function JobSearchMobileJobDetails({
     .map((value) => formatJobSearchLanguage(value, language))
     .filter(Boolean);
   const perkChips = job.perks.map((value) => formatJobSearchPerk(value, language)).filter(Boolean);
+  const displayJobTitle = transliterateJobTitle(job.jobTitle, language);
   const openings = job.vacancies > 0 ? String(job.vacancies) : "";
   const walkInDate = formatJobSearchWalkInDateRange(
     job.walkInStartDate,
@@ -217,8 +219,8 @@ export function JobSearchMobileJobDetails({
 
   const handleShare = () => {
     void shareOrCopyText({
-      title: job.jobTitle,
-      text: `${job.jobTitle} at ${job.companyName}`,
+      title: displayJobTitle,
+      text: `${displayJobTitle} at ${job.companyName}`,
       url: buildAbsolutePublicJobUrl(job.jobId),
       successMessage: t("jobs.linkCopied"),
     });
@@ -349,7 +351,7 @@ export function JobSearchMobileJobDetails({
         <header>
           <div className="flex flex-wrap items-center gap-1.5">
             <h1 className="text-[20px] leading-[1.2] font-bold tracking-tight text-[#111827]">
-              {job.jobTitle}
+              {displayJobTitle}
             </h1>
             <span
               className="inline-flex size-6 items-center justify-center rounded-full border border-primary/20 bg-[#EAF8F3] text-primary"
@@ -399,7 +401,7 @@ export function JobSearchMobileJobDetails({
 
         <ContentSection title={t("jobs.jobDescription")}>
           <p className="text-[13px] font-semibold text-[#1F2937]">
-            {job.jobTitle}
+            {displayJobTitle}
           </p>
 
           {job.description?.trim() ? (

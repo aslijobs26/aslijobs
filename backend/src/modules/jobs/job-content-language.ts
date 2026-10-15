@@ -14,16 +14,26 @@ export type JobContentLanguage = (typeof JOB_CONTENT_LANGUAGES)[number];
 const SITE_LANGUAGE_ALIASES: Record<string, JobContentLanguage> = {
   en: "en",
   english: "en",
+  "en-us": "en",
+  en_us: "en",
+  "en-in": "en",
   hi: "hi",
   hindi: "hi",
+  "hi-in": "hi",
+  hi_in: "hi",
   te: "te",
   telugu: "te",
+  "te-in": "te",
+  te_in: "te",
   ta: "ta",
   tamil: "ta",
+  "ta-in": "ta",
   kn: "kn",
   kannada: "kn",
+  "kn-in": "kn",
   ml: "ml",
   malayalam: "ml",
+  "ml-in": "ml",
 };
 
 /** Script detection. Latin text stays English; romanized Indic is not guessed. */

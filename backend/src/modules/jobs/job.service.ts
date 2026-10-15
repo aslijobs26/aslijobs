@@ -14,6 +14,7 @@ import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
 import { detectCanonicalSourceLanguage, parseJobContentLanguage } from "./job-content-language.js";
 import {
+  presentPublicWebsiteJobContent,
   resolveDisplayedContentLanguage,
   resolveJobContent,
 } from "./job-content-translation.js";
@@ -1180,20 +1181,23 @@ function toPublicJobListItem(
     revealRecruiterContact?: boolean;
   },
 ) {
-  const localized = resolveJobContent(
-    {
-      jobTitle: String(job.jobTitle ?? ""),
-      description: typeof job.description === "string" ? job.description : "",
-      interviewInstructions:
-        typeof job.interviewInstructions === "string" ? job.interviewInstructions : "",
-      contentLanguage:
-        typeof job.contentLanguage === "string" ? job.contentLanguage : null,
-      contentTranslations:
-        job.contentTranslations && typeof job.contentTranslations === "object"
-          ? (job.contentTranslations as never)
-          : null,
-    },
-    parseJobContentLanguage(options?.language),
+  const localized = presentPublicWebsiteJobContent(
+    resolveJobContent(
+      {
+        jobTitle: String(job.jobTitle ?? ""),
+        description: typeof job.description === "string" ? job.description : "",
+        interviewInstructions:
+          typeof job.interviewInstructions === "string" ? job.interviewInstructions : "",
+        contentLanguage:
+          typeof job.contentLanguage === "string" ? job.contentLanguage : null,
+        contentTranslations:
+          job.contentTranslations && typeof job.contentTranslations === "object"
+            ? (job.contentTranslations as never)
+            : null,
+      },
+      parseJobContentLanguage(options?.language),
+    ),
+    String(job.jobTitle ?? ""),
   );
   const descriptionRaw = localized.description;
   // Listing cards do not render full HTML descriptions; keep payload small.
@@ -2344,7 +2348,10 @@ export class JobService {
       job._id.toString(),
     ]);
     const posterImageMap = await loadEmployerPosterImageMap([job]);
-    const localizedContent = translation.content;
+    const localizedContent = presentPublicWebsiteJobContent(
+      translation.content,
+      job.jobTitle ?? "",
+    );
 
     const recruiterContact = presentPublicRecruiterContact(
       {

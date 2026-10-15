@@ -2,6 +2,8 @@
 
 import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
+import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import type { SeekerApplicationListItem } from "@/types/job-seeker-applications";
 import {
   formatJobSearchJobType,
@@ -81,6 +83,7 @@ function CompanyLogo({
 
 export function AppliedJobCard({ application }: AppliedJobCardProps) {
   const t = useTranslate();
+  const displayJobTitle = transliterateJobTitle(application.jobTitle, useSiteLanguage().code);
   const href = ROUTES.jobSeekerApplicationDetail(application.id);
   const StatusIcon = applicationStatusIcon(application.status);
   const statusLabel = t(cardStatusLabelKey(application.status));
@@ -135,7 +138,7 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
 
             <div className="min-w-0 space-y-0.5">
               <h2 className="truncate text-sm font-bold leading-5 text-foreground">
-                {application.jobTitle}
+                {displayJobTitle}
               </h2>
               <p className="truncate text-[11px] leading-4 text-muted">
                 {companyLabel}
@@ -235,7 +238,7 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
 
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold leading-6 text-foreground">
-              {application.jobTitle}
+              {displayJobTitle}
             </h2>
             <p className="mt-1 truncate text-sm leading-5 text-muted">
               {companyLabel}

@@ -1,5 +1,7 @@
 "use client";
 
+import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import {
   closeApplyResumeChooser,
   registerApplyResumeChooser,
@@ -10,6 +12,7 @@ import { FileText, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function ApplyResumeChooserHost() {
+  const language = useSiteLanguage().code;
   const [request, setRequest] = useState<ApplyResumeChooserRequest | null>(
     null,
   );
@@ -52,7 +55,7 @@ export function ApplyResumeChooserHost() {
           id="apply-resume-chooser-title"
           className="text-lg font-bold text-foreground"
         >
-          Apply for {request.jobTitle}
+          Apply for {transliterateJobTitle(request.jobTitle, language)}
         </h2>
         <p className="mt-1 text-sm text-muted">
           Choose which resume to submit with this application.

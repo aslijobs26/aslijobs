@@ -8,6 +8,7 @@ import {
 } from "@/constants/job-details-page";
 import { ROUTES } from "@/constants/routes";
 import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import { useTranslate } from "@/i18n/translate";
 import {
   fetchSimilarPublicJobs,
@@ -71,6 +72,7 @@ function RailJobRow({
   job: JobDetailsRailJob;
   showSalary?: boolean;
 }) {
+  const displayTitle = transliterateJobTitle(job.title, useSiteLanguage().code);
   return (
     <Link
       href={job.href}
@@ -80,11 +82,11 @@ function RailJobRow({
         className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-light text-[10px] font-bold text-primary"
         aria-hidden="true"
       >
-        {job.title.slice(0, 1).toUpperCase()}
+        {displayTitle.slice(0, 1).toUpperCase()}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[13px] font-semibold text-foreground group-hover:text-primary">
-          {job.title}
+          {displayTitle}
         </span>
         <span className="mt-0.5 block truncate text-[11px] text-muted">
           {job.company}
@@ -193,6 +195,7 @@ type JobDetailsLeftRailProps = {
 };
 
 export function JobDetailsLeftRail({ job = null }: JobDetailsLeftRailProps) {
+  const language = useSiteLanguage().code;
   return (
     <aside className="flex flex-col gap-3.5" aria-label="Job discovery">
       <SimilarJobsRailCard source={job} />
@@ -225,7 +228,7 @@ export function JobDetailsLeftRail({ job = null }: JobDetailsLeftRailProps) {
                 href={`${ROUTES.FIND_JOBS}?search=${encodeURIComponent(term)}`}
                 className="inline-flex rounded-full border border-border-subtle bg-hero-bg px-2.5 py-1 text-[11px] font-medium text-muted transition-colors hover:border-primary/25 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               >
-                {term}
+                {transliterateJobTitle(term, language)}
               </Link>
             </li>
           ))}

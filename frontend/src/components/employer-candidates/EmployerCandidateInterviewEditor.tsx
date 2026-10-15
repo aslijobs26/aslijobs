@@ -87,6 +87,36 @@ type InterviewOption<T extends string> = {
   label: string;
 };
 
+function menuContentHeight(
+  list: HTMLUListElement,
+  visibleOptionCount: number | undefined,
+): number {
+  const fullHeight = list.scrollHeight;
+  if (!visibleOptionCount || visibleOptionCount < 1) {
+    return fullHeight;
+  }
+
+  const option = list.querySelector<HTMLElement>("[role='option']");
+  if (!option) {
+    return fullHeight;
+  }
+
+  const optionCount = list.querySelectorAll("[role='option']").length;
+  const visibleCount = Math.min(visibleOptionCount, optionCount);
+  if (visibleCount >= optionCount) {
+    return fullHeight;
+  }
+
+  const style = window.getComputedStyle(list);
+  const padding =
+    (parseFloat(style.paddingTop) || 0) +
+    (parseFloat(style.paddingBottom) || 0) +
+    (parseFloat(style.borderTopWidth) || 0) +
+    (parseFloat(style.borderBottomWidth) || 0);
+
+  return Math.ceil(option.getBoundingClientRect().height * visibleCount + padding);
+}
+
 function InterviewOptionSelect<T extends string>({
   id,
   label,
@@ -95,6 +125,7 @@ function InterviewOptionSelect<T extends string>({
   disabled,
   invalid,
   triggerClassName,
+  visibleOptionCount,
   onChange,
 }: {
   id: string;
@@ -104,6 +135,8 @@ function InterviewOptionSelect<T extends string>({
   disabled: boolean;
   invalid: boolean;
   triggerClassName?: string;
+  /** Caps the open list to this many rows. Extra options scroll without a scrollbar. */
+  visibleOptionCount?: number;
   onChange: (value: T) => void;
 }) {
   const listboxId = useId();
@@ -127,17 +160,22 @@ function InterviewOptionSelect<T extends string>({
 
     const triggerRect = trigger.getBoundingClientRect();
     const viewport = readVisibleViewportSize();
+    const contentHeight = menuContentHeight(list, visibleOptionCount);
     const next = computeAnchoredDropdownPosition({
       anchorRect: triggerRect,
       contentWidth: triggerRect.width,
-      contentHeight: list.scrollHeight,
+      contentHeight,
       viewportWidth: viewport.width,
       viewportHeight: viewport.height,
       insets: readSafeAreaInsets(),
       gap: 6,
     });
-    setPosition({ ...next, left: triggerRect.left });
-  }, []);
+    setPosition({
+      ...next,
+      left: triggerRect.left,
+      maxHeight: Math.min(next.maxHeight, contentHeight),
+    });
+  }, [visibleOptionCount]);
 
   useLayoutEffect(() => {
     if (!isOpen) {
@@ -294,7 +332,7 @@ function InterviewOptionSelect<T extends string>({
                     }
                   : { top: 0, left: 0, visibility: "hidden" }
               }
-              className="fixed z-[70] overflow-y-auto overscroll-contain rounded-lg border border-border-subtle bg-surface py-1.5 shadow-[0_10px_28px_rgba(26,43,60,0.14)] scrollbar-hidden"
+              className="fixed z-[70] overflow-y-auto overscroll-contain rounded-lg border border-border-subtle bg-surface py-1.5 shadow-[0_10px_28px_rgba(26,43,60,0.14)] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             >
               {options.map((option) => {
                 const isSelected = option.value === value;
@@ -656,6 +694,7 @@ export function EmployerCandidateInterviewEditor({
                 label="Hour"
                 value={timeParts.hour}
                 options={hourOptions}
+                visibleOptionCount={5}
                 disabled={isLocked || isSaving}
                 invalid={Boolean(fieldErrors.time)}
                 triggerClassName="px-2"
@@ -683,6 +722,7 @@ export function EmployerCandidateInterviewEditor({
                 label="Minute"
                 value={timeParts.minute}
                 options={minuteOptions}
+                visibleOptionCount={5}
                 disabled={isLocked || isSaving}
                 invalid={Boolean(fieldErrors.time)}
                 triggerClassName="px-2"

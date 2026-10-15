@@ -174,6 +174,7 @@ describe("interview_scheduled_phone WhatsApp", () => {
     assert.equal(template?.defaultLanguage, "en");
     assert.equal(template?.approvedLanguages.en, "en");
     assert.equal(template?.localizedTemplateNames?.te, "interview_scheduled_phone_te");
+    assert.equal(template?.localizedTemplateNames?.hi, "interview_scheduled_phone_hi");
     assert.deepEqual(
       resolveWhatsAppNotificationDelivery("INTERVIEW_SCHEDULED_PHONE", "en"),
       { templateName: "interview_scheduled_phone", languageCode: "en" },
@@ -184,7 +185,7 @@ describe("interview_scheduled_phone WhatsApp", () => {
     );
     assert.deepEqual(
       resolveWhatsAppNotificationDelivery("INTERVIEW_SCHEDULED_PHONE", "hi"),
-      { templateName: "interview_scheduled_phone", languageCode: "en" },
+      { templateName: "interview_scheduled_phone_hi", languageCode: "hi" },
     );
     assert.deepEqual(
       buildWhatsAppNotificationBodyParameters("INTERVIEW_SCHEDULED_PHONE", {

@@ -7,7 +7,10 @@ const TEMPLATE_NAME = "job_application_submitted";
 
 export type JobApplicationSubmittedWhatsAppInput = {
   applicationId: string;
+  jobSeekerId: string;
   phoneNumber: string;
+  /** Saved JobSeeker.whatsappLanguage from the authenticated apply record. */
+  storedLanguage?: string | null;
   jobTitle: string;
   companyName: string;
   employerCompanyName?: string | null;
@@ -31,6 +34,7 @@ export const jobApplicationSubmittedWhatsApp = {
   enqueue: enqueueWhatsAppNotification,
   schedule(input: JobApplicationSubmittedWhatsAppInput): void {
     const applicationId = input.applicationId.trim();
+    const jobSeekerId = input.jobSeekerId.trim();
     const phoneNumber = input.phoneNumber.trim();
     const jobTitle = input.jobTitle.trim();
     const companyName = resolveApplicationCompanyName({
@@ -78,6 +82,8 @@ export const jobApplicationSubmittedWhatsApp = {
     void (async () => {
       const preferredLanguage = await resolveJobSeekerNotificationLanguage({
         phoneNumber,
+        storedLanguage: input.storedLanguage,
+        jobSeekerId,
       });
       const result = await this.enqueue({
         event: "JOB_APPLICATION_SUBMITTED",

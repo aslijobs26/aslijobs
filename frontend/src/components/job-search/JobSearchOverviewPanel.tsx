@@ -7,6 +7,7 @@ import { JobRecruiterContactDetails } from "@/components/jobs/JobRecruiterContac
 import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { getPublicJobRecruiterDetails } from "@/utils/public-job-recruiter";
@@ -377,6 +378,7 @@ export function JobSearchOverviewPanel({
       ? job.education.map((value) => formatJobSearchEducation(value, language)).join(", ")
       : "";
   const perkChips = job.perks.map((value) => formatJobSearchPerk(value, language)).filter(Boolean);
+  const displayJobTitle = transliterateJobTitle(job.jobTitle, language);
   const employmentType = formatJobSearchJobType(job.jobType, language);
   const experience = formatJobSearchExperience(job.experience, language);
   const workMode = formatJobSearchWorkMode(job.workMode, language);
@@ -395,8 +397,8 @@ export function JobSearchOverviewPanel({
 
   const handleShare = () => {
     void shareOrCopyText({
-      title: job.jobTitle,
-      text: `${job.jobTitle} at ${job.companyName}`,
+      title: displayJobTitle,
+      text: `${displayJobTitle} at ${job.companyName}`,
       url: buildAbsolutePublicJobUrl(job.jobId),
       successMessage: t("jobs.linkCopied"),
     });
@@ -479,7 +481,7 @@ export function JobSearchOverviewPanel({
                     : "text-base sm:text-lg",
                 )}
               >
-                {job.jobTitle}
+                {displayJobTitle}
               </h2>
               <span
                 className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-primary"
@@ -636,7 +638,7 @@ export function JobSearchOverviewPanel({
           <section className="pb-5">
             <DetailSectionHeading>{t("jobs.jobDescription")}</DetailSectionHeading>
             <p className="mt-2 text-[16px] leading-snug font-semibold text-[#1F2937]">
-              {job.jobTitle}
+              {displayJobTitle}
             </p>
             {job.description?.trim() ? (
               <div className="mt-3">

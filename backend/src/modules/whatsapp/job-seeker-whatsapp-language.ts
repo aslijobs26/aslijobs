@@ -66,10 +66,14 @@ export function resolveJobSeekerAccountLanguage(input: {
 }
 
 /**
- * WhatsApp notification language.
- * 1. Stored account preference (website or prior bot detection)
- * 2. WhatsApp session
- * 3. English
+ * WhatsApp notification language for an identified Job Seeker.
+ * 1. Explicit storedLanguage from the triggering interaction, when parseable
+ * 2. Saved JobSeeker.whatsappLanguage for jobSeekerId (website or prior bot)
+ * 3. WhatsApp session language for that phone, only when 1 and 2 are absent
+ * 4. English
+ *
+ * A saved Hindi or Telugu preference is not overridden by a stale session.
+ * Unsupported values fall through; they are never sent to Meta as-is.
  */
 export async function resolveJobSeekerNotificationLanguage(input: {
   phoneNumber: string;

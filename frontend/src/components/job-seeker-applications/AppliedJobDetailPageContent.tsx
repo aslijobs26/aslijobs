@@ -6,6 +6,8 @@ import { getApiErrorMessage } from "@/components/job-seeker-profile/get-api-erro
 import { ResumePreview } from "@/components/job-seeker-resume/ResumePreview";
 import { ROUTES } from "@/constants/routes";
 import { useTranslate, type MessageKey } from "@/i18n/translate";
+import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import {
   fetchSeekerApplication,
   withdrawSeekerApplication,
@@ -64,6 +66,7 @@ export function AppliedJobDetailPageContent({
   applicationId,
 }: AppliedJobDetailPageContentProps) {
   const t = useTranslate();
+  const language = useSiteLanguage().code;
   const queryClient = useQueryClient();
 
   const detailQuery = useQuery({
@@ -121,6 +124,7 @@ export function AppliedJobDetailPageContent({
   }
 
   const application = detailQuery.data;
+  const displayJobTitle = transliterateJobTitle(application.jobTitle, language);
   const candidatePhone = readCandidatePhoneFromSnapshot(
     application.resumeSnapshot.resumeJson,
   );
@@ -152,7 +156,7 @@ export function AppliedJobDetailPageContent({
         <div className="flex flex-wrap items-start justify-between gap-2.5 sm:gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-              {application.jobTitle}
+              {displayJobTitle}
             </h1>
             <p className="mt-1 text-xs font-medium text-primary sm:text-sm">
               {application.companyName || t("seeker.common.company")}

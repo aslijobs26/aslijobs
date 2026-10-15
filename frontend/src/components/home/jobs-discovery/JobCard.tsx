@@ -6,6 +6,8 @@ import {
   translateSalaryPeriod,
 } from "@/components/home/home-i18n";
 import { useTranslate } from "@/i18n/translate";
+import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import type { PopularJob } from "@/types/jobs-discovery";
 import { cn } from "@/utils/cn";
 import { ChevronRight, MapPin } from "lucide-react";
@@ -18,6 +20,7 @@ type JobCardProps = {
 
 export function JobCard({ job }: JobCardProps) {
   const t = useTranslate();
+  const displayTitle = transliterateJobTitle(job.title, useSiteLanguage().code);
   const postedAt = translatePostedAt(job.postedAt, t);
 
   return (
@@ -68,7 +71,7 @@ export function JobCard({ job }: JobCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="truncate text-xs font-bold leading-tight text-foreground sm:whitespace-normal sm:text-base">
-              {job.title}
+              {displayTitle}
             </h3>
             <p className="mt-0.5 truncate text-[0.6875rem] font-semibold text-primary sm:mt-1 sm:text-sm">
               {job.companyName}

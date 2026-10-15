@@ -39,10 +39,11 @@ export type WhatsAppNotificationSiteLanguage =
   (typeof WHATSAPP_NOTIFICATION_SITE_LANGUAGES)[number];
 
 /**
- * Meta's template language list codes Telugu as `te`.
- * `te-IN` is a speech-API code and is not a WhatsApp template language.
+ * Meta's template language list codes Telugu as `te` and Hindi as `hi`.
+ * `te-IN` and `hi-IN` are speech-API codes and are not WhatsApp template languages.
  */
 export const WHATSAPP_TEMPLATE_LANGUAGE_TELUGU = "te";
+export const WHATSAPP_TEMPLATE_LANGUAGE_HINDI = "hi";
 
 export type WhatsAppNotificationTemplateConfig = {
   /** English Meta template name. Never rename existing English templates. */
@@ -57,7 +58,8 @@ export type WhatsAppNotificationTemplateConfig = {
   >;
   /**
    * Site language -> distinct approved Meta template name.
-   * Telugu job-seeker templates use a `_te` suffix, not the English name.
+   * Telugu job-seeker templates use a `_te` suffix and Hindi templates use `_hi`.
+   * Those are distinct Meta template names, not the English name with another language code.
    */
   localizedTemplateNames?: Partial<
     Record<WhatsAppNotificationSiteLanguage, string>
@@ -85,15 +87,19 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
   JOBSEEKER_ACCOUNT_CREATED: {
     // Graph-confirmed APPROVED Utility. Stored name is lowercase.
     // Language en. Body has no variables and there is no button.
-    // Telugu uses a separate approved name, not this English name with language te.
+    // Telugu and Hindi use separate template names, not this English name
+    // with language te or hi. Hindi names are the WhatsApp Manager names for
+    // this account. This registry does not re-query Graph for their status.
     templateName: "jobseeker_account_created",
     defaultLanguage: "en",
     approvedLanguages: {
       en: "en",
       te: WHATSAPP_TEMPLATE_LANGUAGE_TELUGU,
+      hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
     },
     localizedTemplateNames: {
       te: "jobseeker_account_created_te",
+      hi: "jobseeker_account_created_hi",
     },
   },
   JOBSEEKER_PROFILE_COMPLETION: {
@@ -109,9 +115,11 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     approvedLanguages: {
       en: "en",
       te: WHATSAPP_TEMPLATE_LANGUAGE_TELUGU,
+      hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
     },
     localizedTemplateNames: {
       te: "jobseeker_profile_completion_te",
+      hi: "jobseeker_profile_completion_hi",
     },
   },
   EMPLOYER_PROFILE_COMPLETION_REQUIRED: {
@@ -171,9 +179,11 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     approvedLanguages: {
       en: "en",
       te: WHATSAPP_TEMPLATE_LANGUAGE_TELUGU,
+      hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
     },
     localizedTemplateNames: {
       te: "job_application_submitted_te",
+      hi: "job_application_submitted_hi",
     },
   },
   INTERVIEW_SCHEDULED_PHONE: {
@@ -186,9 +196,11 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     approvedLanguages: {
       en: "en",
       te: WHATSAPP_TEMPLATE_LANGUAGE_TELUGU,
+      hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
     },
     localizedTemplateNames: {
       te: "interview_scheduled_phone_te",
+      hi: "interview_scheduled_phone_hi",
     },
   },
   INTERVIEW_SCHEDULED_ONLINE: {
@@ -200,9 +212,11 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     approvedLanguages: {
       en: "en",
       te: WHATSAPP_TEMPLATE_LANGUAGE_TELUGU,
+      hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
     },
     localizedTemplateNames: {
       te: "interview_scheduled_online_te",
+      hi: "interview_scheduled_online_hi",
     },
   },
   INTERVIEW_SCHEDULED_OFFLINE: {
@@ -214,9 +228,11 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     approvedLanguages: {
       en: "en",
       te: WHATSAPP_TEMPLATE_LANGUAGE_TELUGU,
+      hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
     },
     localizedTemplateNames: {
       te: "interview_scheduled_offline_te",
+      hi: "interview_scheduled_offline_hi",
     },
   },
   INTERVIEW_RESCHEDULED: {
@@ -228,9 +244,11 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     approvedLanguages: {
       en: "en",
       te: WHATSAPP_TEMPLATE_LANGUAGE_TELUGU,
+      hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
     },
     localizedTemplateNames: {
       te: "interview_rescheduled_te",
+      hi: "interview_rescheduled_hi",
     },
   },
   INTERVIEW_CANCELLED: {
@@ -242,9 +260,11 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
     approvedLanguages: {
       en: "en",
       te: WHATSAPP_TEMPLATE_LANGUAGE_TELUGU,
+      hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
     },
     localizedTemplateNames: {
       te: "interview_cancelled_te",
+      hi: "interview_cancelled_hi",
     },
   },
   JOB_POST_INCOMPLETE: {

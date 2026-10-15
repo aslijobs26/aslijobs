@@ -27,6 +27,7 @@ import {
   queueJobContentTranslation,
   resolveDisplayedContentLanguage,
   resolveJobContent,
+  presentPublicWebsiteJobContent,
   resolvePublicJobTranslationView,
   restoreJobNumericLiterals,
   shouldSkipFailedTranslationRetry,
@@ -107,7 +108,10 @@ describe("job content language", () => {
     const aliases: Array<[string, "en" | "hi" | "te" | "ta" | "kn" | "ml"]> = [
       ["en", "en"],
       ["english", "en"],
-      ["EN", "en"],
+      ["en-US", "en"],
+      ["hi-IN", "hi"],
+      ["te-IN", "te"],
+      ["te_IN", "te"],
       ["hi", "hi"],
       ["hindi", "hi"],
       ["te", "te"],
@@ -322,6 +326,28 @@ describe("job content translation", () => {
     assert.equal(viewed.jobTitle, "ఎలక్ట్రీషియన్");
     assert.equal(viewed.description, "అనుభవం");
     assert.equal(viewed.interviewInstructions, source.interviewInstructions);
+    assert.equal(source.jobTitle, "Electrician");
+  });
+
+  it("keeps the employer-written title on the public website while translating the description", () => {
+    const stored: JobContentTranslations = {
+      te: {
+        jobTitle: "వడ్రంగి",
+        description: "అనుభవం",
+        interviewInstructions: "సూచనలు",
+        jobTitleHash: hashJobField(source.jobTitle),
+        descriptionHash: hashJobField(source.description),
+        interviewInstructionsHash: hashJobField(source.interviewInstructions),
+      },
+    };
+    const translated = resolveJobContent(
+      { ...source, contentTranslations: stored },
+      "te",
+    );
+    const presented = presentPublicWebsiteJobContent(translated, source.jobTitle);
+    assert.equal(presented.jobTitle, source.jobTitle);
+    assert.equal(presented.description, "అనుభవం");
+    assert.equal(presented.interviewInstructions, "సూచనలు");
     assert.equal(source.jobTitle, "Electrician");
   });
 

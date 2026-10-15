@@ -49,9 +49,9 @@ export type WhatsAppNotificationDelivery = {
 
 /**
  * Picks the approved Meta template name and language together.
- * Telugu job-seeker events use a distinct `_te` name. Hindi and unknown
- * languages fall back to the existing English template. Never send an
- * English template name with language `te`.
+ * Telugu and Hindi job-seeker events use distinct `_te` and `_hi` names.
+ * Tamil, Kannada, Malayalam, and unknown languages fall back to the English
+ * template. Never send an English template name with language `te` or `hi`.
  */
 export function resolveWhatsAppNotificationDelivery(
   event: WhatsAppNotificationEvent,

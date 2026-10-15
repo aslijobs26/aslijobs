@@ -4,6 +4,7 @@ import { JobPosterAvatar } from "@/components/job-search/JobPosterAvatar";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import type { SiteLanguageCode } from "@/constants/site-language";
 import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import { useTranslate } from "@/i18n/translate";
 import { protectedApply } from "@/utils/job-apply-auth";
 import { cn } from "@/utils/cn";
@@ -114,6 +115,7 @@ export function JobSearchJobCard({
 }: JobSearchJobCardProps) {
   const t = useTranslate();
   const language = useSiteLanguage().code;
+  const displayJobTitle = transliterateJobTitle(job.jobTitle, language);
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
   const isApplied = appliedLocally || job.isApplied === true;
@@ -240,7 +242,7 @@ export function JobSearchJobCard({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <h3 className="text-sm leading-snug font-semibold text-[#1F2937] sm:text-[16px]">
-                  {job.jobTitle}
+                  {displayJobTitle}
                 </h3>
                 <span className="inline-flex items-center gap-1 text-[11px] leading-none font-medium text-[#0F8A4B] sm:text-[12px]">
                   <ShieldCheck

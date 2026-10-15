@@ -1,6 +1,7 @@
 "use client";
 
 import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
@@ -208,6 +209,7 @@ export function JobDetailsCenterPanel({
     .map((value) => formatJobSearchLanguage(value, language))
     .filter(Boolean);
   const perkChips = job.perks.map((value) => formatJobSearchPerk(value, language)).filter(Boolean);
+  const displayJobTitle = transliterateJobTitle(job.jobTitle, previewMode ? "en" : language);
   const posted = formatJobSearchRelativeTime(job.publishedAt ?? job.createdAt, language);
   const walkInDate = formatJobSearchWalkInDateRange(
     job.walkInStartDate,
@@ -234,8 +236,8 @@ export function JobDetailsCenterPanel({
       return;
     }
     void shareOrCopyText({
-      title: job.jobTitle,
-      text: `${job.jobTitle} at ${job.companyName}`,
+      title: displayJobTitle,
+      text: `${displayJobTitle} at ${job.companyName}`,
       url: buildAbsolutePublicJobUrl(job.jobId),
       successMessage: t("jobs.linkCopied"),
     });
@@ -290,7 +292,7 @@ export function JobDetailsCenterPanel({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl leading-tight font-bold tracking-tight text-foreground">
-                {job.jobTitle}
+                {displayJobTitle}
               </h1>
               <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-[11px] font-semibold text-primary">
                 <ShieldCheck

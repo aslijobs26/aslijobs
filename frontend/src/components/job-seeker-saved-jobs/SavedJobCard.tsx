@@ -2,6 +2,8 @@
 
 import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
+import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import type { SavedJobListItem } from "@/types/saved-jobs";
 import { formatJobSearchJobType } from "@/utils/job-search-format";
 import { protectedApply } from "@/utils/job-apply-auth";
@@ -87,6 +89,7 @@ export function SavedJobCard({
   isRemoving = false,
 }: SavedJobCardProps) {
   const t = useTranslate();
+  const displayJobTitle = transliterateJobTitle(job.jobTitle, useSiteLanguage().code);
   const menuId = useId();
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const desktopMenuRef = useRef<HTMLDivElement>(null);
@@ -141,9 +144,9 @@ export function SavedJobCard({
     try {
       if (navigator.share) {
         await navigator.share({
-          title: job.jobTitle,
+          title: displayJobTitle,
           text: t("seeker.savedCard.shareText", {
-            title: job.jobTitle,
+            title: displayJobTitle,
             company: job.companyName,
           }),
           url,
@@ -228,7 +231,7 @@ export function SavedJobCard({
                   href={href}
                   className="hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 >
-                  {job.jobTitle}
+                  {displayJobTitle}
                 </Link>
               </h2>
               {isApplied ? (
@@ -430,7 +433,7 @@ export function SavedJobCard({
                       href={href}
                       className="hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                     >
-                      {job.jobTitle}
+                      {displayJobTitle}
                     </Link>
                   </h2>
                   {job.isExpired ? (

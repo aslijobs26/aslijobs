@@ -209,7 +209,7 @@ export function JobSeekerRegisterPreferencesStep({
         >
           {t("auth.jobSeekerRegister.expectedSalaryLabel")}
         </RequiredFieldLabel>
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
+        <div className="flex w-full flex-col gap-2.5 sm:flex-row sm:items-end">
           <input
             id="job-seeker-register-expected-salary"
             name="expectedSalary"
@@ -224,7 +224,7 @@ export function JobSeekerRegisterPreferencesStep({
               })
             }
             placeholder={t("auth.jobSeekerRegister.expectedSalaryPlaceholder")}
-            className="employer-register-form-input min-w-0 flex-1"
+            className="employer-register-form-input w-full shrink-0 sm:min-w-0 sm:flex-1"
             aria-required="true"
             aria-invalid={Boolean(fieldErrors.expectedSalary) || undefined}
             aria-describedby={
@@ -232,7 +232,7 @@ export function JobSeekerRegisterPreferencesStep({
             }
             disabled={disabled}
           />
-          <div className="w-full sm:w-[11.5rem]">
+          <div className="w-full shrink-0 sm:w-[11.5rem]">
             <EmployerRegisterSearchableSelect
               id="job-seeker-register-salary-period"
               name="expectedSalaryPeriod"

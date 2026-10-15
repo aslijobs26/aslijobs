@@ -1037,6 +1037,22 @@ export function resolveJobContent<T extends SourceFields & {
 }
 
 /**
+ * Public website job titles stay in the employer-written source text.
+ * The site transliterates that title in the browser. Descriptions and
+ * interview instructions still use the stored translation. WhatsApp keeps
+ * using resolveJobContent, which can include a translated title.
+ */
+export function presentPublicWebsiteJobContent(
+  content: SourceFields,
+  sourceTitle: string,
+): SourceFields {
+  return {
+    ...content,
+    jobTitle: sourceTitle,
+  };
+}
+
+/**
  * A stored translation is shown only when it was produced from the current
  * source text (hash match) and kept the source HTML structure. Stale entries
  * (e.g. after an approved live edit) fall back to the original text.

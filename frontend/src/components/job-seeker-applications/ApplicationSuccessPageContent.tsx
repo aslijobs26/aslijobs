@@ -6,6 +6,8 @@ import { JobSeekerAuthGuard } from "@/components/job-seeker/JobSeekerAuthGuard";
 import { ROUTES } from "@/constants/routes";
 import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import { useTranslate } from "@/i18n/translate";
+import { useSiteLanguage } from "@/i18n/site-language";
+import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import { fetchSeekerApplication } from "@/services/job-seeker-applications.service";
 import { getApplicationSuccessWhatsAppContext } from "@/utils/application-success";
 import { cn } from "@/utils/cn";
@@ -33,6 +35,7 @@ function formatAppliedDate(value: string): string {
 
 function ApplicationSuccessBody() {
   const t = useTranslate();
+  const language = useSiteLanguage().code;
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId")?.trim() ?? "";
   const jobIdParam = searchParams.get("jobId")?.trim() ?? "";
@@ -155,7 +158,7 @@ function ApplicationSuccessBody() {
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold text-foreground">
-                {application.jobTitle}
+                {transliterateJobTitle(application.jobTitle, language)}
               </h2>
               <p className="text-sm text-muted">
                 {application.companyName || t("seeker.common.company")}
