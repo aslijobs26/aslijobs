@@ -46,6 +46,23 @@ const jobSeekerProfileCompletionReminderSchema = new Schema(
 
 jobSeekerProfileCompletionReminderSchema.index({ status: 1, dueAt: 1 });
 
+/** A processing reminder with no outcome can be reclaimed after this. */
+export const JOBSEEKER_PROFILE_COMPLETION_REMINDER_STALE_PROCESSING_MS =
+  15 * 60 * 1000;
+
+const SKIPPED_REMINDER_STATUSES = [
+  "skipped_complete",
+  "skipped_ineligible",
+] as const;
+
+export function isSkippedJobSeekerProfileCompletionReminderStatus(
+  status: string | null | undefined,
+): boolean {
+  return (
+    status === "skipped_complete" || status === "skipped_ineligible"
+  );
+}
+
 export const JobSeekerProfileCompletionReminderModel = model(
   "JobSeekerProfileCompletionReminder",
   jobSeekerProfileCompletionReminderSchema,
@@ -75,11 +92,18 @@ export async function scheduleJobSeekerProfileCompletionReminderRecord(input: {
 
 export async function claimJobSeekerProfileCompletionReminder(
   jobSeekerId: string,
+  now = new Date(),
 ): Promise<boolean> {
+  const staleBefore = new Date(
+    now.getTime() - JOBSEEKER_PROFILE_COMPLETION_REMINDER_STALE_PROCESSING_MS,
+  );
   const claimed = await JobSeekerProfileCompletionReminderModel.findOneAndUpdate(
     {
       jobSeekerId,
-      status: { $in: ["scheduled", "failed"] },
+      $or: [
+        { status: { $in: ["scheduled", "failed"] } },
+        { status: "processing", updatedAt: { $lte: staleBefore } },
+      ],
     },
     { $set: { status: "processing", lastError: "" } },
     { new: true },
@@ -108,9 +132,15 @@ export async function findDueJobSeekerProfileCompletionReminderIds(
   now: Date,
   limit = 50,
 ): Promise<string[]> {
+  const staleBefore = new Date(
+    now.getTime() - JOBSEEKER_PROFILE_COMPLETION_REMINDER_STALE_PROCESSING_MS,
+  );
   const rows = await JobSeekerProfileCompletionReminderModel.find({
-    status: { $in: ["scheduled", "failed"] },
     dueAt: { $lte: now },
+    $or: [
+      { status: { $in: ["scheduled", "failed"] } },
+      { status: "processing", updatedAt: { $lte: staleBefore } },
+    ],
   })
     .select("jobSeekerId")
     .limit(limit)
@@ -125,9 +155,12 @@ export async function markJobSeekerProfileCompletionReminderStatus(input: {
     "scheduled" | "processing"
   >;
   lastError?: string;
-}): Promise<void> {
-  await JobSeekerProfileCompletionReminderModel.updateOne(
-    { jobSeekerId: input.jobSeekerId },
+}): Promise<boolean> {
+  const result = await JobSeekerProfileCompletionReminderModel.updateOne(
+    {
+      jobSeekerId: input.jobSeekerId,
+      status: { $nin: SKIPPED_REMINDER_STATUSES },
+    },
     {
       $set: {
         status: input.status,
@@ -135,16 +168,18 @@ export async function markJobSeekerProfileCompletionReminderStatus(input: {
       },
     },
   );
+  return result.modifiedCount === 1;
 }
 
 export async function skipPendingJobSeekerProfileCompletionReminder(
   jobSeekerId: string,
-): Promise<void> {
-  await JobSeekerProfileCompletionReminderModel.updateOne(
+): Promise<boolean> {
+  const result = await JobSeekerProfileCompletionReminderModel.updateOne(
     {
       jobSeekerId,
-      status: { $in: ["scheduled", "failed"] },
+      status: { $in: ["scheduled", "failed", "processing", "queued"] },
     },
     { $set: { status: "skipped_complete", lastError: "" } },
   );
+  return result.modifiedCount === 1;
 }

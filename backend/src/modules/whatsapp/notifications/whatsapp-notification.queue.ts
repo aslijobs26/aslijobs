@@ -20,7 +20,10 @@ import {
   markWhatsAppNotificationDispatchProcessing,
   wasWhatsAppNotificationDispatchHandedOff,
 } from "./whatsapp-notification.model.js";
-import { syncReminderFromQueueJob } from "./whatsapp-notification.reminder-sync.js";
+import {
+  shouldAbortJobSeekerProfileCompletionDelivery,
+  syncReminderFromQueueJob,
+} from "./whatsapp-notification.reminder-sync.js";
 import { whatsAppNotificationQueueJobId } from "./whatsapp-notification.policy.js";
 import type { WhatsAppNotificationQueueJob } from "./whatsapp-notification.types.js";
 
@@ -313,6 +316,16 @@ export async function deliverWhatsAppNotificationJob(
       correlationId: job.correlationId || "-",
       mode: context.mode,
       attempt: context.attempt,
+    });
+    return;
+  }
+
+  if (await shouldAbortJobSeekerProfileCompletionDelivery(job)) {
+    console.info("[JobSeekerProfileReminder] skipped cancelled reminder", {
+      jobSeekerId: job.entityId,
+      template: job.templateName,
+      language: job.languageCode,
+      reason: "reminder_invalidated",
     });
     return;
   }

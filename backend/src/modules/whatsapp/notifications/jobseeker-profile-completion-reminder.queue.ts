@@ -70,11 +70,6 @@ export function armJobSeekerProfileCompletionReminder(jobSeekerId: string): void
       });
       return;
     }
-    console.info("[JobSeekerProfileReminder] scheduled", {
-      jobSeekerId,
-      delayMinutes: env.JOBSEEKER_PROFILE_COMPLETION_REMINDER_DELAY_MINUTES,
-      delayMs: getJobSeekerProfileCompletionReminderDelayMs(),
-    });
     await enqueueJobSeekerProfileCompletionReminderJob(jobSeekerId);
     if (!env.REDIS_URL.trim() && env.NODE_ENV !== "test") {
       const timer = setTimeout(() => {
@@ -165,10 +160,19 @@ export function startJobSeekerProfileCompletionReminderRuntime(): () => Promise<
         if (!jobSeekerId) {
           return;
         }
+        console.info("[JobSeekerProfileReminder] job started", {
+          jobSeekerId,
+          jobId: String(bullJob.id ?? "-"),
+          attempt: bullJob.attemptsMade + 1,
+        });
         const result = await processJobSeekerProfileCompletionReminder(jobSeekerId);
         if (result === "failed") {
           throw new Error("jobseeker_profile_completion_reminder_failed");
         }
+        console.info("[JobSeekerProfileReminder] job completed", {
+          jobSeekerId,
+          result,
+        });
       },
       {
         connection: workerConnection,

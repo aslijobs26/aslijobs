@@ -1,29 +1,47 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { afterEach, describe, it, mock } from "node:test";
+import mongoose from "mongoose";
 import { env } from "../../../config/env.js";
-import { JobSeekerProfileCompletionReminderModel } from "./jobseeker-profile-completion-reminder.model.js";
+import { evaluateJobSeekerProfileCompletion } from "../../job-seekers/job-seeker-profile-completion.js";
+import { WhatsAppService } from "../whatsapp.service.js";
+import {
+  claimJobSeekerProfileCompletionReminder,
+  findDueJobSeekerProfileCompletionReminderIds,
+  JOBSEEKER_PROFILE_COMPLETION_REMINDER_STALE_PROCESSING_MS,
+  JobSeekerProfileCompletionReminderModel,
+  markJobSeekerProfileCompletionReminderStatus,
+  skipPendingJobSeekerProfileCompletionReminder,
+} from "./jobseeker-profile-completion-reminder.model.js";
 import {
   isJobSeekerProfileCompletionReminderDue,
   jobSeekerProfileCompletionReminderDelayMs,
   shouldSendJobSeekerProfileCompletionReminder,
 } from "./jobseeker-profile-completion-reminder.policy.js";
 import {
+  cancelJobSeekerProfileCompletionReminder,
   enqueueJobSeekerProfileCompletionReminder,
   getJobSeekerProfileCompletionReminderDelayMs,
   processJobSeekerProfileCompletionReminder,
   type ProcessJobSeekerProfileCompletionReminderDeps,
 } from "./jobseeker-profile-completion-reminder.service.js";
 import { jobSeekerProfileCompletionReminderJobId } from "./jobseeker-profile-completion-reminder.queue.js";
+import { WhatsAppNotificationDispatchModel } from "./whatsapp-notification.model.js";
 import {
   buildWhatsAppNotificationBodyParameters,
   buildWhatsAppNotificationUrlButtonParameters,
   getWhatsAppNotificationTemplate,
   JOBSEEKER_PROFILE_COMPLETION_BUTTON_URL,
   JOBSEEKER_PROFILE_COMPLETION_REQUIRED_BUTTON_URL,
+  resolveWhatsAppNotificationDelivery,
   resolveWhatsAppNotificationLanguage,
   whatsAppNotificationIdempotencyKey,
 } from "./whatsapp-notification.policy.js";
+import * as notificationQueue from "./whatsapp-notification.queue.js";
+import {
+  shouldAbortJobSeekerProfileCompletionDelivery,
+  syncReminderWithDispatchStatus,
+} from "./whatsapp-notification.reminder-sync.js";
 import type { WhatsAppNotificationEnqueueResult } from "./whatsapp-notification.types.js";
 
 const jobSeekerId = "64f0000000000000000000a1";
@@ -56,8 +74,13 @@ const completeSeeker = {
 function createDeps(options: {
   dueAt?: Date;
   status?: string;
+  reminderAfterClaim?: { dueAt: Date; status: string } | null;
   claim?: boolean;
-  seeker?: typeof incompleteSeeker | typeof completeSeeker | null;
+  seeker?:
+    | (typeof incompleteSeeker & { whatsappLanguage?: string })
+    | typeof completeSeeker
+    | (typeof incompleteSeeker & Record<string, unknown>)
+    | null;
   enqueueResult?: WhatsAppNotificationEnqueueResult;
   enqueueError?: Error;
   now?: Date;
@@ -65,12 +88,18 @@ function createDeps(options: {
   const enqueued: unknown[] = [];
   const statuses: string[] = [];
   let claimed = false;
+  let reminderLoads = 0;
   const now = options.now ?? new Date("2026-10-12T06:00:00.000Z");
   const deps: ProcessJobSeekerProfileCompletionReminderDeps = {
-    loadReminder: async () =>
-      options.dueAt
+    loadReminder: async () => {
+      reminderLoads += 1;
+      if (reminderLoads > 1 && options.reminderAfterClaim !== undefined) {
+        return options.reminderAfterClaim;
+      }
+      return options.dueAt
         ? { dueAt: options.dueAt, status: options.status ?? "scheduled" }
-        : null,
+        : null;
+    },
     claim: async () => {
       claimed = true;
       return options.claim !== false;
@@ -95,6 +124,21 @@ function createDeps(options: {
     deps,
     now,
     wasClaimed: () => claimed,
+  };
+}
+
+function stubMongoReady(ready: boolean): () => void {
+  Object.defineProperty(mongoose.connection, "readyState", {
+    configurable: true,
+    enumerable: true,
+    get: () => (ready ? 1 : 0),
+  });
+  return () => {
+    Object.defineProperty(mongoose.connection, "readyState", {
+      configurable: true,
+      enumerable: true,
+      get: () => 0,
+    });
   };
 }
 
@@ -444,5 +488,390 @@ describe("jobseeker profile completion reminder", () => {
       }),
       ["Driver", "Ram Organization"],
     );
+  });
+
+  it("does not schedule a reminder when OTP verification finds a completed profile", () => {
+    const registration = readFileSync(
+      new URL("../../job-seekers/job-seeker.service.ts", import.meta.url),
+      "utf8",
+    );
+    const verifyStart = registration.indexOf("async verifyOtp");
+    const verifyEnd = registration.indexOf("async searchJobRoles");
+    const verifyBody = registration.slice(verifyStart, verifyEnd);
+    assert.ok(
+      verifyBody.includes(
+        "if (!evaluateJobSeekerProfileCompletion(jobSeeker).isComplete)",
+      ),
+    );
+    assert.ok(
+      verifyBody.includes("armJobSeekerProfileCompletionReminder"),
+    );
+  });
+
+  it("uses 30 minutes when the configured delay is not a finite number", () => {
+    assert.equal(jobSeekerProfileCompletionReminderDelayMs(Number.NaN), 1_800_000);
+    assert.equal(
+      jobSeekerProfileCompletionReminderDelayMs(Number.POSITIVE_INFINITY),
+      1_800_000,
+    );
+    assert.equal(jobSeekerProfileCompletionReminderDelayMs(45), 2_700_000);
+  });
+
+  it("does not send for a completed registration, blocked, or suspended account", () => {
+    assert.equal(
+      shouldSendJobSeekerProfileCompletionReminder({
+        ...incompleteSeeker,
+        registrationStatus: "COMPLETED",
+      }),
+      false,
+    );
+    assert.equal(
+      shouldSendJobSeekerProfileCompletionReminder({
+        ...incompleteSeeker,
+        accountStatus: "suspended",
+      }),
+      false,
+    );
+    assert.equal(
+      shouldSendJobSeekerProfileCompletionReminder({
+        ...completeSeeker,
+        registrationStatus: "COMPLETED",
+      }),
+      false,
+    );
+  });
+
+  it("treats each missing required profile section as incomplete", () => {
+    const gaps: Array<Record<string, unknown>> = [
+      { dateOfBirth: undefined, gender: "" },
+      { jobRole: "", jobType: "", workMode: "" },
+      { education: { level: "" } },
+      { experienceType: "experienced", experiences: [] as Array<{ companyName: string; jobRole: string }> },
+      { languages: [] as string[] },
+      { availabilityStatus: "" },
+    ];
+
+    for (const gap of gaps) {
+      const seeker = { ...completeSeeker, ...gap } as typeof completeSeeker;
+      assert.equal(evaluateJobSeekerProfileCompletion(seeker).isComplete, false);
+      assert.equal(shouldSendJobSeekerProfileCompletionReminder(seeker), true);
+    }
+
+    assert.equal(evaluateJobSeekerProfileCompletion(completeSeeker).isComplete, true);
+    assert.equal(shouldSendJobSeekerProfileCompletionReminder(completeSeeker), false);
+  });
+
+  it("selects Hindi, Telugu, and English profile-completion templates from saved language", async () => {
+    const now = new Date("2026-10-12T06:00:00.000Z");
+    const hindi = createDeps({
+      now,
+      dueAt: now,
+      seeker: { ...incompleteSeeker, whatsappLanguage: "hi" },
+    });
+    await processJobSeekerProfileCompletionReminder(jobSeekerId, hindi.deps);
+    const hindiJob = hindi.enqueued[0] as { preferredLanguage: string };
+    assert.equal(hindiJob.preferredLanguage, "hi");
+    assert.deepEqual(
+      resolveWhatsAppNotificationDelivery("JOBSEEKER_PROFILE_COMPLETION", "hi"),
+      {
+        templateName: "jobseeker_profile_completion_hi",
+        languageCode: "hi",
+      },
+    );
+
+    const telugu = createDeps({
+      now,
+      dueAt: now,
+      seeker: { ...incompleteSeeker, whatsappLanguage: "te" },
+    });
+    await processJobSeekerProfileCompletionReminder(jobSeekerId, telugu.deps);
+    const teluguJob = telugu.enqueued[0] as { preferredLanguage: string };
+    assert.equal(teluguJob.preferredLanguage, "te");
+    assert.deepEqual(
+      resolveWhatsAppNotificationDelivery("JOBSEEKER_PROFILE_COMPLETION", "te"),
+      {
+        templateName: "jobseeker_profile_completion_te",
+        languageCode: "te",
+      },
+    );
+
+    const english = createDeps({
+      now,
+      dueAt: now,
+      seeker: { ...incompleteSeeker, whatsappLanguage: "en" },
+    });
+    await processJobSeekerProfileCompletionReminder(jobSeekerId, english.deps);
+    const englishJob = english.enqueued[0] as { preferredLanguage: string };
+    assert.equal(englishJob.preferredLanguage, "en");
+    assert.deepEqual(
+      resolveWhatsAppNotificationDelivery("JOBSEEKER_PROFILE_COMPLETION", "en"),
+      {
+        templateName: "jobseeker_profile_completion",
+        languageCode: "en",
+      },
+    );
+    assert.equal(
+      getWhatsAppNotificationTemplate("JOBSEEKER_PROFILE_COMPLETION")
+        ?.localizedTemplateNames?.hi,
+      "jobseeker_profile_completion_hi",
+    );
+  });
+
+  it("invalidates processing and queued reminders when registration completes", async () => {
+    const filters: Array<{ status?: { $in?: string[] } }> = [];
+    mock.method(
+      JobSeekerProfileCompletionReminderModel,
+      "updateOne",
+      async (filter: { status?: { $in?: string[] } }) => {
+        filters.push(filter);
+        return { modifiedCount: 1 };
+      },
+    );
+
+    const cancelled = await skipPendingJobSeekerProfileCompletionReminder(
+      jobSeekerId,
+    );
+    assert.equal(cancelled, true);
+    assert.deepEqual(filters[0]?.status?.$in, [
+      "scheduled",
+      "failed",
+      "processing",
+      "queued",
+    ]);
+
+    cancelJobSeekerProfileCompletionReminder(jobSeekerId);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.ok(filters.length >= 2);
+  });
+
+  it("does not enqueue WhatsApp when cancellation races with the worker", async () => {
+    const now = new Date("2026-10-12T06:00:00.000Z");
+    const { deps, enqueued, statuses } = createDeps({
+      now,
+      dueAt: now,
+      status: "processing",
+      seeker: incompleteSeeker,
+      reminderAfterClaim: { dueAt: now, status: "skipped_complete" },
+    });
+
+    const result = await processJobSeekerProfileCompletionReminder(
+      jobSeekerId,
+      deps,
+    );
+
+    assert.equal(result, "skipped");
+    assert.equal(enqueued.length, 0);
+    assert.deepEqual(statuses, []);
+  });
+
+  it("does not overwrite a skipped reminder with a later failed sync", async () => {
+    let updated = false;
+    mock.method(
+      JobSeekerProfileCompletionReminderModel,
+      "findOne",
+      () => ({
+        select: () => ({
+          lean: async () => ({ status: "skipped_complete" }),
+        }),
+      }),
+    );
+    mock.method(
+      JobSeekerProfileCompletionReminderModel,
+      "updateOne",
+      async () => {
+        updated = true;
+        return { modifiedCount: 1 };
+      },
+    );
+
+    await syncReminderWithDispatchStatus({
+      event: "JOBSEEKER_PROFILE_COMPLETION",
+      entityId: jobSeekerId,
+      status: "failed",
+      lastError: "template_not_found",
+    });
+
+    assert.equal(updated, false);
+
+    const markFilters: Array<{ status?: { $nin?: string[] } }> = [];
+    mock.restoreAll();
+    mock.method(
+      JobSeekerProfileCompletionReminderModel,
+      "updateOne",
+      async (filter: { status?: { $nin?: string[] } }) => {
+        markFilters.push(filter);
+        return { modifiedCount: 0 };
+      },
+    );
+    const marked = await markJobSeekerProfileCompletionReminderStatus({
+      jobSeekerId,
+      status: "failed",
+      lastError: "template_not_found",
+    });
+    assert.equal(marked, false);
+    assert.deepEqual(markFilters[0]?.status?.$nin, [
+      "skipped_complete",
+      "skipped_ineligible",
+    ]);
+  });
+
+  it("reclaims a stale processing reminder and ignores a fresh one", async () => {
+    const now = new Date("2026-10-12T06:00:00.000Z");
+    const dueQueries: unknown[] = [];
+    mock.method(
+      JobSeekerProfileCompletionReminderModel,
+      "find",
+      (query: unknown) => {
+        dueQueries.push(query);
+        return {
+          select: () => ({
+            limit: () => ({
+              lean: async () => [{ jobSeekerId }],
+            }),
+          }),
+        };
+      },
+    );
+
+    const ids = await findDueJobSeekerProfileCompletionReminderIds(now);
+    assert.deepEqual(ids, [jobSeekerId]);
+    const query = dueQueries[0] as {
+      dueAt?: { $lte?: Date };
+      $or?: Array<{
+        status?: string | { $in?: string[] };
+        updatedAt?: { $lte?: Date };
+      }>;
+    };
+    assert.equal(query.dueAt?.$lte?.getTime(), now.getTime());
+    assert.deepEqual(query.$or?.[0]?.status, { $in: ["scheduled", "failed"] });
+    assert.equal(query.$or?.[1]?.status, "processing");
+    assert.equal(
+      query.$or?.[1]?.updatedAt?.$lte?.getTime(),
+      now.getTime() - JOBSEEKER_PROFILE_COMPLETION_REMINDER_STALE_PROCESSING_MS,
+    );
+
+    const claimFilters: unknown[] = [];
+    mock.method(
+      JobSeekerProfileCompletionReminderModel,
+      "findOneAndUpdate",
+      async (filter: unknown) => {
+        claimFilters.push(filter);
+        return { jobSeekerId };
+      },
+    );
+    const claimed = await claimJobSeekerProfileCompletionReminder(
+      jobSeekerId,
+      now,
+    );
+    assert.equal(claimed, true);
+    const claim = claimFilters[0] as {
+      $or?: Array<{ status?: string | { $in?: string[] } }>;
+    };
+    assert.deepEqual(claim.$or?.[0]?.status, { $in: ["scheduled", "failed"] });
+    assert.equal(claim.$or?.[1]?.status, "processing");
+  });
+
+  it("skips an invalid WhatsApp number without sending", async () => {
+    const now = new Date("2026-10-12T06:00:00.000Z");
+    const { deps, enqueued, statuses } = createDeps({
+      now,
+      dueAt: now,
+      seeker: { ...incompleteSeeker, whatsappNumber: "12" },
+    });
+    const result = await processJobSeekerProfileCompletionReminder(
+      jobSeekerId,
+      deps,
+    );
+    assert.equal(result, "skipped");
+    assert.equal(enqueued.length, 0);
+    assert.deepEqual(statuses, ["skipped_ineligible"]);
+  });
+
+  it("does not send when the WhatsApp number is unverified", async () => {
+    const now = new Date("2026-10-12T06:00:00.000Z");
+    const { deps, enqueued, statuses } = createDeps({
+      now,
+      dueAt: now,
+      seeker: { ...incompleteSeeker, isWhatsappVerified: false },
+    });
+    const result = await processJobSeekerProfileCompletionReminder(
+      jobSeekerId,
+      deps,
+    );
+    assert.equal(result, "skipped");
+    assert.equal(enqueued.length, 0);
+    assert.deepEqual(statuses, ["skipped_ineligible"]);
+  });
+
+  it("records template misconfiguration without throwing", async () => {
+    const now = new Date("2026-10-12T06:00:00.000Z");
+    const { deps, statuses } = createDeps({
+      now,
+      dueAt: now,
+      seeker: incompleteSeeker,
+      enqueueResult: "skipped_unconfigured",
+    });
+    const result = await processJobSeekerProfileCompletionReminder(
+      jobSeekerId,
+      deps,
+    );
+    assert.equal(result, "failed");
+    assert.deepEqual(statuses, ["failed"]);
+  });
+
+  it("recovers delayed reminders through sweep when Redis enqueue fails", () => {
+    const queueSource = readFileSync(
+      new URL("./jobseeker-profile-completion-reminder.queue.ts", import.meta.url),
+      "utf8",
+    );
+    assert.ok(queueSource.includes("queue_unavailable"));
+    assert.ok(queueSource.includes("duplicate queue job skipped"));
+    assert.ok(queueSource.includes("processDueJobSeekerProfileCompletionReminders"));
+    assert.ok(queueSource.includes("arm rejected"));
+  });
+
+  it("aborts WhatsApp delivery after the reminder was invalidated", async () => {
+    const restoreReady = stubMongoReady(true);
+    try {
+      const sent: string[] = [];
+      mock.method(
+        JobSeekerProfileCompletionReminderModel,
+        "findOne",
+        () => ({
+          select: () => ({
+            lean: async () => ({ status: "skipped_complete" }),
+          }),
+        }),
+      );
+      mock.method(
+        WhatsAppService.prototype,
+        "sendTemplateMessage",
+        async () => {
+          sent.push("sent");
+          return { messageId: "wamid.skip", messageStatus: "accepted" };
+        },
+      );
+      mock.method(WhatsAppNotificationDispatchModel, "findOne", () => ({
+        select: () => ({
+          lean: async () => null,
+        }),
+      }));
+
+      const job = {
+        event: "JOBSEEKER_PROFILE_COMPLETION" as const,
+        entityId: jobSeekerId,
+        phoneNumber: verifiedPhone,
+        templateName: "jobseeker_profile_completion",
+        languageCode: "en",
+        bodyParameters: [],
+        idempotencyKey: `JOBSEEKER_PROFILE_COMPLETION:${jobSeekerId}`,
+      };
+
+      assert.equal(await shouldAbortJobSeekerProfileCompletionDelivery(job), true);
+      await notificationQueue.deliverWhatsAppNotificationJob(job);
+      assert.deepEqual(sent, []);
+    } finally {
+      restoreReady();
+    }
   });
 });

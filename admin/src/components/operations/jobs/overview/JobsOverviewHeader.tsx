@@ -57,8 +57,8 @@ export function JobsOverviewHeader({
         <span className="font-semibold text-foreground">Jobs</span>
       </nav>
 
-      <div className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold tracking-tight text-foreground max-lg:text-lg max-sm:text-base">
             Jobs Overview
           </h1>
@@ -68,7 +68,7 @@ export function JobsOverviewHeader({
           </p>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex w-full min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-nowrap sm:items-end xl:w-auto xl:justify-end">
           <OperationsFilterSelect
             label="Date range"
             value={preset}
@@ -77,10 +77,10 @@ export function JobsOverviewHeader({
               onPresetChange(value as OperationsJobsAnalyticsPreset)
             }
             hideSearch
-            className="w-full min-w-0 sm:w-[10.5rem]"
+            className="w-full min-w-0 sm:w-[10.5rem] sm:shrink-0"
           />
           {preset === "custom" ? (
-            <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:w-[18rem]">
+            <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:w-[18rem] sm:shrink-0">
               <OperationsDatePicker
                 id={fromId}
                 value={dateFrom}
@@ -100,11 +100,11 @@ export function JobsOverviewHeader({
               />
             </div>
           ) : null}
-          <div className="flex min-w-0 flex-wrap items-center gap-2 max-sm:w-full">
+          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:shrink-0">
             <OperationsCanKey permissionKey="jobs.post.create">
               <Link
                 to={OPERATIONS_ROUTES.JOBS_POST}
-                className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
+                className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
               >
                 <Plus className="size-3.5" aria-hidden="true" />
                 Post a Job
@@ -114,7 +114,7 @@ export function JobsOverviewHeader({
               <button
                 type="button"
                 onClick={onExport}
-                className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
+                className="inline-flex h-8 min-h-8 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-w-[7.5rem] sm:flex-none"
               >
                 <Download className="size-3.5" aria-hidden="true" />
                 Export

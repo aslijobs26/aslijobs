@@ -3,10 +3,12 @@ import { toWhatsAppCloudRecipient } from "../../../utils/whatsapp-phone.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import { resolveJobSeekerNotificationLanguage } from "../job-seeker-whatsapp-language.js";
 import { evaluateJobSeekerProfileCompletion } from "../../job-seekers/job-seeker-profile-completion.js";
+import { resolveWhatsAppNotificationDelivery } from "./whatsapp-notification.policy.js";
 import {
   claimJobSeekerProfileCompletionReminder,
   findDueJobSeekerProfileCompletionReminderIds,
   findJobSeekerProfileCompletionReminder,
+  isSkippedJobSeekerProfileCompletionReminderStatus,
   markJobSeekerProfileCompletionReminderStatus,
   scheduleJobSeekerProfileCompletionReminderRecord,
   skipPendingJobSeekerProfileCompletionReminder,
@@ -44,7 +46,11 @@ export type ProcessJobSeekerProfileCompletionReminderDeps = {
     phoneNumber: string;
     preferredLanguage: string;
   }) => Promise<WhatsAppNotificationEnqueueResult>;
-  markStatus: typeof markJobSeekerProfileCompletionReminderStatus;
+  markStatus: (input: {
+    jobSeekerId: string;
+    status: "queued" | "accepted" | "sent" | "skipped_complete" | "skipped_ineligible" | "failed";
+    lastError?: string;
+  }) => Promise<unknown>;
   now: () => Date;
 };
 
@@ -81,11 +87,20 @@ async function loadJobSeekerForReminder(
 export async function enqueueJobSeekerProfileCompletionReminder(
   jobSeekerId: string,
 ): Promise<"scheduled" | "already_scheduled"> {
+  const id = jobSeekerId.trim();
   const dueAt = new Date(Date.now() + getJobSeekerProfileCompletionReminderDelayMs());
-  return scheduleJobSeekerProfileCompletionReminderRecord({
-    jobSeekerId: jobSeekerId.trim(),
+  const outcome = await scheduleJobSeekerProfileCompletionReminderRecord({
+    jobSeekerId: id,
     dueAt,
   });
+  if (outcome === "scheduled") {
+    console.info("[JobSeekerProfileReminder] scheduled", {
+      jobSeekerId: id,
+      dueAt: dueAt.toISOString(),
+      delayMinutes: env.JOBSEEKER_PROFILE_COMPLETION_REMINDER_DELAY_MINUTES,
+    });
+  }
+  return outcome;
 }
 
 export function scheduleJobSeekerProfileCompletionReminder(
@@ -110,12 +125,21 @@ export function cancelJobSeekerProfileCompletionReminder(
   if (!id) {
     return;
   }
-  void skipPendingJobSeekerProfileCompletionReminder(id).catch((error) => {
-    console.error("[JobSeekerProfileReminder] cancel rejected", {
-      jobSeekerId: id,
-      errorCategory: error instanceof Error ? error.name : "unknown",
+  void skipPendingJobSeekerProfileCompletionReminder(id)
+    .then((cancelled) => {
+      if (cancelled) {
+        console.info("[JobSeekerProfileReminder] cancelled", {
+          jobSeekerId: id,
+          reason: "registration_completed",
+        });
+      }
+    })
+    .catch((error) => {
+      console.error("[JobSeekerProfileReminder] cancel rejected", {
+        jobSeekerId: id,
+        errorCategory: error instanceof Error ? error.name : "unknown",
+      });
     });
-  });
 }
 
 /**
@@ -134,8 +158,7 @@ export async function processJobSeekerProfileCompletionReminder(
     reminder.status === "queued" ||
     reminder.status === "accepted" ||
     reminder.status === "sent" ||
-    reminder.status === "skipped_complete" ||
-    reminder.status === "skipped_ineligible"
+    isSkippedJobSeekerProfileCompletionReminderStatus(reminder.status)
   ) {
     return "skipped";
   }
@@ -179,6 +202,23 @@ export async function processJobSeekerProfileCompletionReminder(
         status: "skipped_ineligible",
         lastError: "invalid_whatsapp_number",
       });
+      console.info("[JobSeekerProfileReminder] skipped after recheck", {
+        jobSeekerId,
+        status: "skipped_ineligible",
+        reason: "invalid_whatsapp_number",
+      });
+      return "skipped";
+    }
+
+    const latest = await deps.loadReminder(jobSeekerId);
+    if (
+      !latest ||
+      isSkippedJobSeekerProfileCompletionReminderStatus(latest.status)
+    ) {
+      console.info("[JobSeekerProfileReminder] skipped after recheck", {
+        jobSeekerId,
+        status: latest?.status ?? "missing",
+      });
       return "skipped";
     }
 
@@ -187,6 +227,10 @@ export async function processJobSeekerProfileCompletionReminder(
       storedLanguage: seeker?.whatsappLanguage,
       jobSeekerId,
     });
+    const delivery = resolveWhatsAppNotificationDelivery(
+      "JOBSEEKER_PROFILE_COMPLETION",
+      preferredLanguage,
+    );
     const result = await deps.enqueueNotification({
       event: "JOBSEEKER_PROFILE_COMPLETION",
       entityId: jobSeekerId,
@@ -211,8 +255,8 @@ export async function processJobSeekerProfileCompletionReminder(
     await deps.markStatus({ jobSeekerId, status: "queued" });
     console.info("[JobSeekerProfileReminder] dispatched", {
       jobSeekerId,
-      template: "jobseeker_profile_completion",
-      language: preferredLanguage,
+      template: delivery?.templateName ?? "jobseeker_profile_completion",
+      language: delivery?.languageCode ?? preferredLanguage,
       result,
     });
     return "queued";

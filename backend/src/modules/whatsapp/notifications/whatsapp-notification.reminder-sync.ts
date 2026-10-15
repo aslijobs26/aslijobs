@@ -1,7 +1,12 @@
+import mongoose from "mongoose";
 import { markEmployerProfileCompletionReminderStatus } from "./employer-profile-completion-reminder.model.js";
 import { markJobPostIncompleteReminderStatus } from "./job-post-incomplete-reminder.model.js";
 import { JobPostIncompleteReminderModel } from "./job-post-incomplete-reminder.model.js";
-import { markJobSeekerProfileCompletionReminderStatus } from "./jobseeker-profile-completion-reminder.model.js";
+import {
+  isSkippedJobSeekerProfileCompletionReminderStatus,
+  JobSeekerProfileCompletionReminderModel,
+  markJobSeekerProfileCompletionReminderStatus,
+} from "./jobseeker-profile-completion-reminder.model.js";
 import type { WhatsAppNotificationQueueJob } from "./whatsapp-notification.types.js";
 
 type ReminderDeliveryStatus = "queued" | "accepted" | "sent" | "failed";
@@ -28,6 +33,35 @@ async function markJobPostReminder(
   });
 }
 
+/**
+ * Drops a WhatsApp send when registration completed (or the account became
+ * ineligible) after the reminder was already queued.
+ */
+export async function shouldAbortJobSeekerProfileCompletionDelivery(
+  job: WhatsAppNotificationQueueJob,
+): Promise<boolean> {
+  if (job.event !== "JOBSEEKER_PROFILE_COMPLETION") {
+    return false;
+  }
+  if (mongoose.connection.readyState !== 1) {
+    return false;
+  }
+  try {
+    const row = await JobSeekerProfileCompletionReminderModel.findOne({
+      jobSeekerId: job.entityId,
+    })
+      .select("status")
+      .lean();
+    return isSkippedJobSeekerProfileCompletionReminderStatus(row?.status);
+  } catch (error) {
+    console.error("[JobSeekerProfileReminder] eligibility lookup failed", {
+      jobSeekerId: job.entityId,
+      errorCategory: error instanceof Error ? error.name : "unknown",
+    });
+    return false;
+  }
+}
+
 export async function syncReminderWithDispatchStatus(input: {
   event: string;
   entityId: string;
@@ -36,6 +70,14 @@ export async function syncReminderWithDispatchStatus(input: {
 }): Promise<void> {
   const lastError = input.lastError ?? "";
   if (input.event === "JOBSEEKER_PROFILE_COMPLETION") {
+    const row = await JobSeekerProfileCompletionReminderModel.findOne({
+      jobSeekerId: input.entityId,
+    })
+      .select("status")
+      .lean();
+    if (isSkippedJobSeekerProfileCompletionReminderStatus(row?.status)) {
+      return;
+    }
     await markJobSeekerProfileCompletionReminderStatus({
       jobSeekerId: input.entityId,
       status: input.status,
