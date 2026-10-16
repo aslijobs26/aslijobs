@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { env } from "../../../config/env.js";
 import { toWhatsAppCloudRecipient } from "../../../utils/whatsapp-phone.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
@@ -19,6 +20,12 @@ import {
   shouldSendJobSeekerProfileCompletionReminder,
   type JobSeekerProfileCompletionReminderSnapshot,
 } from "./jobseeker-profile-completion-reminder.policy.js";
+import {
+  claimWhatsAppNotificationDispatch,
+  wasWhatsAppNotificationDispatchHandedOff,
+} from "./whatsapp-notification.model.js";
+import { whatsAppNotificationIdempotencyKey } from "./whatsapp-notification.policy.js";
+import { enqueueWhatsAppNotificationJobImmediate } from "./whatsapp-notification.queue.js";
 import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js";
 import type { WhatsAppNotificationEnqueueResult } from "./whatsapp-notification.types.js";
 
@@ -58,7 +65,11 @@ const defaultProcessDeps: ProcessJobSeekerProfileCompletionReminderDeps = {
   loadReminder: findJobSeekerProfileCompletionReminder,
   claim: claimJobSeekerProfileCompletionReminder,
   loadJobSeeker: loadJobSeekerForReminder,
-  enqueueNotification: enqueueWhatsAppNotification,
+  enqueueNotification: (payload) =>
+    enqueueWhatsAppNotification(payload, {
+      claim: claimWhatsAppNotificationDispatch,
+      enqueueJob: enqueueWhatsAppNotificationJobImmediate,
+    }),
   markStatus: markJobSeekerProfileCompletionReminderStatus,
   now: () => new Date(),
 };
@@ -155,12 +166,23 @@ export async function processJobSeekerProfileCompletionReminder(
     return "skipped";
   }
   if (
-    reminder.status === "queued" ||
     reminder.status === "accepted" ||
     reminder.status === "sent" ||
     isSkippedJobSeekerProfileCompletionReminderStatus(reminder.status)
   ) {
     return "skipped";
+  }
+  if (reminder.status === "queued" && mongoose.connection.readyState === 1) {
+    const handedOff = await wasWhatsAppNotificationDispatchHandedOff(
+      whatsAppNotificationIdempotencyKey(
+        "JOBSEEKER_PROFILE_COMPLETION",
+        jobSeekerId,
+      ),
+    );
+    if (handedOff) {
+      await deps.markStatus({ jobSeekerId, status: "accepted" });
+      return "skipped";
+    }
   }
   if (!isJobSeekerProfileCompletionReminderDue(reminder.dueAt, deps.now())) {
     console.info("[JobSeekerProfileReminder] not due yet", {

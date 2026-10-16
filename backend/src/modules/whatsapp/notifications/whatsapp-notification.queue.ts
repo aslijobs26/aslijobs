@@ -481,6 +481,24 @@ async function deliverInlineWithBoundedRetries(
   }
 }
 
+/**
+ * Sends in the current process. Used by the profile-completion reminder so
+ * due Mongo work does not depend on a second Redis worker to reach Meta.
+ */
+export async function enqueueWhatsAppNotificationJobImmediate(
+  job: WhatsAppNotificationQueueJob,
+): Promise<void> {
+  console.info("[WhatsAppNotification] inline delivery started", {
+    event: job.event,
+    entityId: job.entityId,
+    template: job.templateName,
+    language: job.languageCode,
+    correlationId: job.correlationId || "-",
+    mode: "inline",
+  });
+  await deliverInlineWithBoundedRetries(job);
+}
+
 export async function enqueueWhatsAppNotificationJob(
   job: WhatsAppNotificationQueueJob,
 ): Promise<void> {

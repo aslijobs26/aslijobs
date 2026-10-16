@@ -712,6 +712,8 @@ describe("jobseeker profile completion reminder", () => {
     assert.deepEqual(markFilters[0]?.status?.$nin, [
       "skipped_complete",
       "skipped_ineligible",
+      "accepted",
+      "sent",
     ]);
   });
 
@@ -743,7 +745,9 @@ describe("jobseeker profile completion reminder", () => {
       }>;
     };
     assert.equal(query.dueAt?.$lte?.getTime(), now.getTime());
-    assert.deepEqual(query.$or?.[0]?.status, { $in: ["scheduled", "failed"] });
+    assert.deepEqual(query.$or?.[0]?.status, {
+      $in: ["scheduled", "failed", "queued"],
+    });
     assert.equal(query.$or?.[1]?.status, "processing");
     assert.equal(
       query.$or?.[1]?.updatedAt?.$lte?.getTime(),
@@ -767,7 +771,9 @@ describe("jobseeker profile completion reminder", () => {
     const claim = claimFilters[0] as {
       $or?: Array<{ status?: string | { $in?: string[] } }>;
     };
-    assert.deepEqual(claim.$or?.[0]?.status, { $in: ["scheduled", "failed"] });
+    assert.deepEqual(claim.$or?.[0]?.status, {
+      $in: ["scheduled", "failed", "queued"],
+    });
     assert.equal(claim.$or?.[1]?.status, "processing");
   });
 
@@ -801,6 +807,25 @@ describe("jobseeker profile completion reminder", () => {
     assert.equal(result, "skipped");
     assert.equal(enqueued.length, 0);
     assert.deepEqual(statuses, ["skipped_ineligible"]);
+  });
+
+  it("retries a queued reminder that never reached Meta", async () => {
+    const now = new Date("2026-10-12T06:00:00.000Z");
+    const { deps, enqueued, statuses } = createDeps({
+      now,
+      dueAt: now,
+      status: "queued",
+      seeker: { ...incompleteSeeker, whatsappLanguage: "hi" },
+    });
+    const result = await processJobSeekerProfileCompletionReminder(
+      jobSeekerId,
+      deps,
+    );
+    const job = enqueued[0] as { preferredLanguage?: string };
+    assert.equal(result, "queued");
+    assert.equal(enqueued.length, 1);
+    assert.equal(job.preferredLanguage, "hi");
+    assert.deepEqual(statuses, ["queued"]);
   });
 
   it("records template misconfiguration without throwing", async () => {

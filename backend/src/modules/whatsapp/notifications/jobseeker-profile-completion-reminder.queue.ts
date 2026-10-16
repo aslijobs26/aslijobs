@@ -2,6 +2,10 @@ import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { env } from "../../../config/env.js";
 import {
+  findJobSeekerProfileCompletionReminder,
+  isSkippedJobSeekerProfileCompletionReminderStatus,
+} from "./jobseeker-profile-completion-reminder.model.js";
+import {
   enqueueJobSeekerProfileCompletionReminder,
   getJobSeekerProfileCompletionReminderDelayMs,
   processDueJobSeekerProfileCompletionReminders,
@@ -19,6 +23,7 @@ let worker: Worker | null = null;
 let workerConnection: Redis | null = null;
 let sweepTimer: ReturnType<typeof setInterval> | null = null;
 let sweepRunning = false;
+const localTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function reminderPollIntervalMs(): number {
   const delayMs = getJobSeekerProfileCompletionReminderDelayMs();
@@ -61,6 +66,22 @@ export function jobSeekerProfileCompletionReminderJobId(
   return `jobseeker-profile-reminder-${jobSeekerId.trim()}`;
 }
 
+function remainingReminderDelayMs(dueAt: Date, now = Date.now()): number {
+  return Math.max(0, dueAt.getTime() - now);
+}
+
+function startLocalBackupTimer(jobSeekerId: string, delayMs: number): void {
+  if (env.NODE_ENV === "test" || localTimers.has(jobSeekerId)) {
+    return;
+  }
+  const timer = setTimeout(() => {
+    localTimers.delete(jobSeekerId);
+    void processJobSeekerProfileCompletionReminder(jobSeekerId);
+  }, delayMs);
+  timer.unref?.();
+  localTimers.set(jobSeekerId, timer);
+}
+
 export function armJobSeekerProfileCompletionReminder(jobSeekerId: string): void {
   void (async () => {
     const result = await enqueueJobSeekerProfileCompletionReminder(jobSeekerId);
@@ -68,14 +89,19 @@ export function armJobSeekerProfileCompletionReminder(jobSeekerId: string): void
       console.info("[JobSeekerProfileReminder] already scheduled", {
         jobSeekerId,
       });
-      return;
     }
     await enqueueJobSeekerProfileCompletionReminderJob(jobSeekerId);
-    if (!env.REDIS_URL.trim() && env.NODE_ENV !== "test") {
-      const timer = setTimeout(() => {
-        void processJobSeekerProfileCompletionReminder(jobSeekerId);
-      }, getJobSeekerProfileCompletionReminderDelayMs());
-      timer.unref?.();
+    const reminder = await findJobSeekerProfileCompletionReminder(jobSeekerId);
+    if (
+      reminder &&
+      !isSkippedJobSeekerProfileCompletionReminderStatus(reminder.status) &&
+      reminder.status !== "accepted" &&
+      reminder.status !== "sent"
+    ) {
+      startLocalBackupTimer(
+        jobSeekerId,
+        remainingReminderDelayMs(reminder.dueAt),
+      );
     }
   })().catch((error) => {
     console.error("[JobSeekerProfileReminder] arm rejected", {
@@ -93,13 +119,23 @@ export async function enqueueJobSeekerProfileCompletionReminderJob(
     return;
   }
 
+  const reminder = await findJobSeekerProfileCompletionReminder(jobSeekerId);
+  if (
+    !reminder ||
+    isSkippedJobSeekerProfileCompletionReminderStatus(reminder.status) ||
+    reminder.status === "accepted" ||
+    reminder.status === "sent"
+  ) {
+    return;
+  }
+
   try {
     await activeQueue.add(
       JOB_NAME,
       { jobSeekerId: jobSeekerId.trim() },
       {
         jobId: jobSeekerProfileCompletionReminderJobId(jobSeekerId),
-        delay: getJobSeekerProfileCompletionReminderDelayMs(),
+        delay: remainingReminderDelayMs(reminder.dueAt),
         attempts: 3,
         backoff: {
           type: "exponential",
@@ -189,6 +225,7 @@ export function startJobSeekerProfileCompletionReminderRuntime(): () => Promise<
   if (sweepTimer) {
     clearInterval(sweepTimer);
   }
+  void safeSweepTick();
   sweepTimer = setInterval(() => {
     void safeSweepTick();
   }, reminderPollIntervalMs());
@@ -198,6 +235,10 @@ export function startJobSeekerProfileCompletionReminderRuntime(): () => Promise<
 }
 
 export async function stopJobSeekerProfileCompletionReminderRuntime(): Promise<void> {
+  for (const timer of localTimers.values()) {
+    clearTimeout(timer);
+  }
+  localTimers.clear();
   if (sweepTimer) {
     clearInterval(sweepTimer);
     sweepTimer = null;

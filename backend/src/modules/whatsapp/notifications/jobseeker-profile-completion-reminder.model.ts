@@ -101,8 +101,11 @@ export async function claimJobSeekerProfileCompletionReminder(
     {
       jobSeekerId,
       $or: [
-        { status: { $in: ["scheduled", "failed"] } },
-        { status: "processing", updatedAt: { $lte: staleBefore } },
+        { status: { $in: ["scheduled", "failed", "queued"] } },
+        {
+          status: "processing",
+          updatedAt: { $lte: staleBefore },
+        },
       ],
     },
     { $set: { status: "processing", lastError: "" } },
@@ -138,8 +141,11 @@ export async function findDueJobSeekerProfileCompletionReminderIds(
   const rows = await JobSeekerProfileCompletionReminderModel.find({
     dueAt: { $lte: now },
     $or: [
-      { status: { $in: ["scheduled", "failed"] } },
-      { status: "processing", updatedAt: { $lte: staleBefore } },
+      { status: { $in: ["scheduled", "failed", "queued"] } },
+      {
+        status: "processing",
+        updatedAt: { $lte: staleBefore },
+      },
     ],
   })
     .select("jobSeekerId")
@@ -159,7 +165,9 @@ export async function markJobSeekerProfileCompletionReminderStatus(input: {
   const result = await JobSeekerProfileCompletionReminderModel.updateOne(
     {
       jobSeekerId: input.jobSeekerId,
-      status: { $nin: SKIPPED_REMINDER_STATUSES },
+      status: {
+        $nin: [...SKIPPED_REMINDER_STATUSES, "accepted", "sent"],
+      },
     },
     {
       $set: {
