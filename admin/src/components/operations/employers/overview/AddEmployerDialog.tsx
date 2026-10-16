@@ -9,7 +9,9 @@ import {
 import { OperationsFilterSelect } from "../../jobs/OperationsFilterSelect";
 import {
   getOperationsEmployerBusinessCategoryOptions,
-  OPERATIONS_EMPLOYER_INDUSTRY_OPTIONS,
+  isOperationsEmployerOtherIndustry,
+  OPERATIONS_EMPLOYER_INDUSTRY_SELECT_OPTIONS,
+  resolveOperationsEmployerIndustry,
 } from "../../../../constants/operations-employer-industries";
 import { OperationsPostJobPlaceAutocomplete } from "../../jobs/post/OperationsPostJobPlaceAutocomplete";
 import type { PlaceSuggestion } from "../../../../types/place-suggestion";
@@ -26,8 +28,10 @@ import {
   addEmployerImageFieldId,
   addEmployerImageFieldLabel,
   EMPTY_ADD_EMPLOYER_FORM,
+  getCompanyStrengthRange,
   isolateAddEmployerForm,
   OPERATIONS_EMPLOYER_ACCOUNT_TYPE_OPTIONS,
+  OPERATIONS_EMPLOYER_COMPANY_STRENGTH_OPTIONS,
   OPERATIONS_EMPLOYER_OTP_LENGTH,
   operationsEmployerDocumentOptions,
   operationsEmployerDocumentSectionLabel,
@@ -145,6 +149,7 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
     resendMutation.isPending ||
     verifyMutation.isPending ||
     completeMutation.isPending;
+  const isOtherIndustry = isOperationsEmployerOtherIndustry(form.industry);
   const businessCategories = getOperationsEmployerBusinessCategoryOptions(
     form.industry,
   );
@@ -191,6 +196,21 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
       setOtpVerified(false);
       setEmployerId(null);
       setOtpDigits(EMPTY_OTP);
+    }
+  };
+
+  const handleIndustryChange = (value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      industry: value,
+      customIndustry: "",
+      businessCategory: "",
+    }));
+    clearFieldErrors("industry", "customIndustry", "businessCategory");
+    if (isOperationsEmployerOtherIndustry(value)) {
+      window.requestAnimationFrame(() => {
+        document.getElementById("customIndustry")?.focus();
+      });
     }
   };
 
@@ -358,16 +378,26 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
           companyName: form.accountType === "individual" ? "" : form.companyName.trim(),
           establishmentName:
             form.accountType === "individual" ? form.establishmentName.trim() : "",
-          industry: form.accountType === "company" ? form.industry : "",
+          industry:
+            form.accountType === "company"
+              ? resolveOperationsEmployerIndustry({
+                  industry: form.industry,
+                  customIndustry: form.customIndustry,
+                })
+              : "",
           businessCategory:
-            form.accountType === "company" ? form.businessCategory : "",
+            form.accountType === "company" ? form.businessCategory.trim() : "",
           minimumEmployees:
             form.accountType === "company"
-              ? parseOptionalInt(form.minimumEmployees)
+              ? (getCompanyStrengthRange(form.companyStrength)
+                  ?.minimumEmployees ??
+                parseOptionalInt(form.minimumEmployees))
               : null,
           maximumEmployees:
             form.accountType === "company"
-              ? parseOptionalInt(form.maximumEmployees)
+              ? (getCompanyStrengthRange(form.companyStrength)
+                  ?.maximumEmployees ??
+                parseOptionalInt(form.maximumEmployees))
               : null,
           companyAddress: form.companyAddress.trim(),
           pincode: form.pincode.trim(),
@@ -390,7 +420,7 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border-subtle bg-surface p-4 shadow-xl sm:p-5">
+      <div className="scrollbar-hidden max-h-[90vh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-xl border border-border-subtle bg-surface p-4 shadow-xl sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 id={titleId} className="text-sm font-bold text-foreground">
@@ -513,57 +543,98 @@ export function AddEmployerDialog({ open, onClose }: AddEmployerDialogProps) {
 
               {accountType === "company" ? (
                 <>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div
+                    className={
+                      isOtherIndustry
+                        ? "space-y-3"
+                        : "grid grid-cols-1 items-start gap-3 sm:grid-cols-2"
+                    }
+                  >
                     <LabeledSelect
                       id="industry"
                       label="Industry"
                       required
                       value={form.industry}
-                      options={[...OPERATIONS_EMPLOYER_INDUSTRY_OPTIONS]}
+                      options={[...OPERATIONS_EMPLOYER_INDUSTRY_SELECT_OPTIONS]}
                       error={fieldErrors.industry}
-                      onChange={(value) => {
-                        updateField("industry", value);
-                        updateField("businessCategory", "");
-                      }}
+                      onChange={handleIndustryChange}
                     />
-                    <LabeledSelect
-                      id="businessCategory"
-                      label="Business Category"
-                      required
-                      value={form.businessCategory}
-                      options={[...businessCategories]}
-                      error={fieldErrors.businessCategory}
-                      onChange={(value) => updateField("businessCategory", value)}
-                    />
+                    {isOtherIndustry ? (
+                      <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
+                        <LabeledInput
+                          id="customIndustry"
+                          label="Enter your industry"
+                          required
+                          maxLength={120}
+                          placeholder="Enter your industry"
+                          value={form.customIndustry}
+                          error={fieldErrors.customIndustry}
+                          onChange={(value) =>
+                            updateField("customIndustry", value)
+                          }
+                        />
+                        <LabeledInput
+                          id="businessCategory"
+                          label="Business Category"
+                          required
+                          maxLength={120}
+                          placeholder="Enter Business Category"
+                          value={form.businessCategory}
+                          error={fieldErrors.businessCategory}
+                          onChange={(value) =>
+                            updateField("businessCategory", value)
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <LabeledSelect
+                        id="businessCategory"
+                        label="Business Category"
+                        required
+                        value={form.businessCategory}
+                        options={[...businessCategories]}
+                        error={fieldErrors.businessCategory}
+                        onChange={(value) =>
+                          updateField("businessCategory", value)
+                        }
+                      />
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <LabeledInput
-                      id="minimumEmployees"
-                      label="Min Employees"
-                      required
-                      type="number"
-                      min={0}
-                      value={form.minimumEmployees}
-                      error={fieldErrors.minimumEmployees}
-                      onChange={(value) => {
-                        updateField("minimumEmployees", value);
-                        updateField("companyStrength", "");
-                      }}
-                    />
-                    <LabeledInput
-                      id="maximumEmployees"
-                      label="Max Employees"
-                      required
-                      type="number"
-                      min={0}
-                      value={form.maximumEmployees}
-                      error={fieldErrors.maximumEmployees}
-                      onChange={(value) => {
-                        updateField("maximumEmployees", value);
-                        updateField("companyStrength", "");
-                      }}
-                    />
-                  </div>
+                  <LabeledSelect
+                    id="companyStrength"
+                    label="Company Strength"
+                    required
+                    value={form.companyStrength}
+                    options={OPERATIONS_EMPLOYER_COMPANY_STRENGTH_OPTIONS.map(
+                      (option) => ({
+                        value: option.value,
+                        label: option.label,
+                      }),
+                    )}
+                    error={
+                      fieldErrors.companyStrength ??
+                      fieldErrors.minimumEmployees ??
+                      fieldErrors.maximumEmployees
+                    }
+                    onChange={(value) => {
+                      const range = getCompanyStrengthRange(value);
+                      setForm((prev) => ({
+                        ...prev,
+                        companyStrength: value,
+                        minimumEmployees: range
+                          ? String(range.minimumEmployees)
+                          : "",
+                        maximumEmployees: range
+                          ? String(range.maximumEmployees)
+                          : "",
+                      }));
+                      clearFieldErrors(
+                        "companyStrength",
+                        "minimumEmployees",
+                        "maximumEmployees",
+                      );
+                    }}
+                  />
                 </>
               ) : null}
 
@@ -842,7 +913,7 @@ function LabeledInput({
 }) {
   const errorId = `${id}-error`;
   return (
-    <div>
+    <div className="min-w-0">
       <FieldLabel htmlFor={id} label={label} required={required} />
       <input
         id={id}
@@ -883,7 +954,7 @@ function LabeledSelect({
 }) {
   const errorId = `${id}-error`;
   return (
-    <div>
+    <div className="min-w-0">
       <FieldLabel htmlFor={id} label={label} required={required} />
       <OperationsFilterSelect
         id={id}
@@ -892,6 +963,7 @@ function LabeledSelect({
         options={options}
         onChange={onChange}
         hideSrOnlyLabel
+        maxVisibleOptions={4}
       />
       <FieldError id={errorId} message={error} />
     </div>

@@ -18,8 +18,9 @@ const filledCompany: AddEmployerFormState = {
   emailAddress: "asha@example.com",
   whatsappNumber: "9876543210",
   industry: "retail-stores",
+  customIndustry: "",
   businessCategory: "kirana-stores",
-  companyStrength: "",
+  companyStrength: "11-50",
   minimumEmployees: "11",
   maximumEmployees: "50",
   companyAddress: "1 Main",
@@ -84,6 +85,29 @@ describe("validateAddEmployerForm", () => {
       errors.maximumEmployees,
       "Maximum employees must be greater than or equal to minimum employees",
     );
+  });
+
+  it("requires typed industry and category when Other is selected", () => {
+    const errors = validateAddEmployerForm({
+      ...filledCompany,
+      industry: "other",
+      customIndustry: "",
+      businessCategory: "",
+    });
+    assert.equal(errors.customIndustry, "Industry is required.");
+    assert.equal(errors.businessCategory, "Business category is required.");
+  });
+
+  it("accepts Other with a typed industry and business category", () => {
+    const errors = validateAddEmployerForm({
+      ...filledCompany,
+      industry: "other",
+      customIndustry: "Printing",
+      businessCategory: "Packaging",
+    });
+    assert.equal(errors.industry, undefined);
+    assert.equal(errors.customIndustry, undefined);
+    assert.equal(errors.businessCategory, undefined);
   });
 
   it("does not require industry for Consultancy", () => {

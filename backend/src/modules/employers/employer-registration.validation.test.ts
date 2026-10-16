@@ -257,4 +257,41 @@ describe("operationsCompleteEmployerProfileSchema", () => {
     });
     assert.equal(company.success, false);
   });
+
+  it("rejects the Other industry sentinel and accepts a typed industry name", () => {
+    const sentinel = operationsCompleteEmployerProfileSchema.safeParse({
+      accountType: "company",
+      companyName: "Acme",
+      industry: "other",
+      businessCategory: "Packaging",
+      minimumEmployees: 1,
+      maximumEmployees: 10,
+      companyAddress: "1 Main St",
+      pincode: "500081",
+      city: "Hyderabad",
+      state: "Telangana",
+      documentType: "gst-certificate",
+    });
+    assert.equal(sentinel.success, false);
+
+    const typed = operationsCompleteEmployerProfileSchema.safeParse({
+      accountType: "company",
+      companyName: "Acme",
+      industry: "Printing",
+      businessCategory: "Packaging",
+      minimumEmployees: 1,
+      maximumEmployees: 10,
+      companyAddress: "1 Main St",
+      pincode: "500081",
+      city: "Hyderabad",
+      state: "Telangana",
+      documentType: "gst-certificate",
+    });
+    assert.equal(typed.success, true);
+    if (!typed.success) {
+      return;
+    }
+    assert.equal(typed.data.industry, "Printing");
+    assert.equal(typed.data.businessCategory, "Packaging");
+  });
 });

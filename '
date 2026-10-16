@@ -1,0 +1,299 @@
+[33mcommit aa2d9e476acbf31281b8bbc67ca810c8c678fd1e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Fri Oct 16 12:26:52 2026 +0530
+
+    whatsapp changes
+
+[33mcommit 97f2ef8e435ddb3703a3e66371787e1d9940e3a4[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Fri Oct 16 11:44:22 2026 +0530
+
+    hindi template fix
+
+[33mcommit 642f85d6875e58b92b3a81ef9a9a3a9117b05bae[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Thu Oct 15 18:30:24 2026 +0530
+
+    remider template fix
+
+[33mcommit b9e85b86eff5d911fbcfad8ed42b6c1a5900a23a[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Thu Oct 15 17:07:52 2026 +0530
+
+    hiondi whatsapp templates
+
+[33mcommit e7ba174c7393965959e2ee9ce10ada12b71b43c1[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Oct 14 17:32:52 2026 +0530
+
+    whatsapp triggering messages fix
+
+[33mcommit 28c716aaae5f707cf1146ccf8f28d692fd38a524[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Oct 14 16:14:05 2026 +0530
+
+    whatsapp triggering messages
+
+[33mcommit 265ac021ae3986276e1df6bbc85e12100410edd9[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Oct 14 15:44:35 2026 +0530
+
+    notifications for whatsapp
+
+[33mcommit ac8245f38346653a1023fc8db248f116f542ed3a[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Oct 14 15:16:41 2026 +0530
+
+    mobile responsive
+
+[33mcommit d95cf86b4639bb9598efd67a56d879846845fdab[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Oct 14 13:58:25 2026 +0530
+
+    vercel error fix
+
+[33mcommit 185d5020094d2782329e2ae16187507673477953[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Oct 14 13:06:27 2026 +0530
+
+    telugu templates implementation
+
+[33mcommit 8a79aad673ec29f7bcc6740a0228a20d96fa6f99[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Tue Oct 13 16:08:46 2026 +0530
+
+    mobile responsive
+
+[33mcommit a352c149e5c28868d3c1780ee72fe3fab8f5a0e1[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Mon Oct 12 16:19:26 2026 +0530
+
+    changes in multi language
+
+[33mcommit 47a0f6a9f4f1b50cd3827b140801bf3dccbac95b[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Mon Oct 12 13:52:13 2026 +0530
+
+    translation
+
+[33mcommit 0dd1eb74610dae6b50c1bed731e16252829a5505[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Mon Oct 12 12:12:48 2026 +0530
+
+    jobseeker profile compleation template
+
+[33mcommit 5454252cf555b1d630ef712fb908ec2084bda1cf[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Mon Oct 12 11:26:12 2026 +0530
+
+    jobseeker profile section
+
+[33mcommit 27a33951dd84e1959e592593195d62c8a67ace24[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Sat Oct 10 18:55:43 2026 +0530
+
+    masking employer details
+
+[33mcommit 464166f03f5f75c16ffffe3f724f7bc763f3da11[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Sat Oct 10 18:08:12 2026 +0530
+
+     changes
+
+[33mcommit a704a750bc5228710eb1a1c2a94a54d7fb2c2bd8[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Sat Oct 10 16:58:14 2026 +0530
+
+    Jobseeker whatsapp Triggering Messages
+
+[33mcommit 3bdc465a5573dc73c67d1d35815c0e8cbc700ea9[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Fri Oct 9 18:57:00 2026 +0530
+
+    chnages
+
+[33mcommit 569fb6e3d571ff96c1f661b958a51ddbb4b340db[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Fri Oct 9 17:45:38 2026 +0530
+
+    production rejected account fix
+
+[33mcommit d9ad9516d8150298e7bddba3e31495ef9678e8c5[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Fri Oct 9 16:40:33 2026 +0530
+
+    job delete in admin
+
+[33mcommit cd5688d7cc46e9b3d09ac808fece3762ba3cc7f8[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Fri Oct 9 16:17:28 2026 +0530
+
+     post job template
+
+[33mcommit df8b688ff84476a658aaf7b99e97ffee51ae2f22[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Fri Oct 9 14:26:00 2026 +0530
+
+    post job
+
+[33mcommit d5a47c151d810e4486c5f9f4946882a21061342c[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Fri Oct 9 14:06:25 2026 +0530
+
+    post job template
+
+[33mcommit da76398a3f467eacd1a02343913cc8f74ccddf5d[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Fri Oct 9 13:14:21 2026 +0530
+
+    link change for whatsapp
+
+[33mcommit d3400627865ebecbd1fff72582719a50bb70c0f0[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Fri Oct 9 12:06:25 2026 +0530
+
+    whatsapp triggering messages
+
+[33mcommit b65e71df8e3f18ede46590e3be8dfe0dc143717c[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Thu Oct 8 19:09:49 2026 +0530
+
+    whatsapp template flow
+
+[33mcommit 4c730fc09a4fb536e39b91a4d1c868cfe22def2c[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Oct 7 15:53:29 2026 +0530
+
+    internal Changes whatsapp
+
+[33mcommit d84863f2fc3d1200597f60db20d6e1db1a6983b0[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Oct 7 11:03:12 2026 +0530
+
+    sarvam changes
+
+[33mcommit 23f103655b70f28cf501b3720805fd9369be7ddd[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Oct 7 10:42:23 2026 +0530
+
+    sarvam optimization
+
+[33mcommit 5cc609f48d893a75c9e3a6f223595c95594b6003[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Tue Oct 6 18:02:34 2026 +0530
+
+    changes for sarvam Api
+
+[33mcommit 388924c78b0db89c1fa9eff4e6006bfec08df502[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Tue Oct 6 15:27:48 2026 +0530
+
+    multi language
+
+[33mcommit 1dc24be7674d55f8237afbb39925f700afb4fdcd[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Tue Oct 6 12:48:59 2026 +0530
+
+    fix jobs display
+
+[33mcommit ffd5ddb41938a9fcd6114974780428db769140dd[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Tue Oct 6 12:14:57 2026 +0530
+
+    job translations
+
+[33mcommit dfa5e6d2fcd1acd8cb860e8815119aa36f29b1e7[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Mon Oct 5 18:56:02 2026 +0530
+
+    whatsapp bot inhance
+
+[33mcommit d05f6801106b8e03c8f8a04836c4731951a7e6d8[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Mon Oct 5 18:07:46 2026 +0530
+
+    whatsapp bot
+
+[33mcommit 9ff54c05079d23abd989de95cb02889dd4d16eed[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Mon Oct 5 12:00:39 2026 +0530
+
+    internal team multi langugae support
+
+[33mcommit faf84a02f834a4e42d9230fd6c3d7f4c780b7cd3[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Sat Oct 3 16:54:30 2026 +0530
+
+    feat: update frontend resources and self-host fonts
+
+[33mcommit 4dff6f028d0dc261de56d8bb885965f10f1f8aa0[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Sat Oct 3 15:32:03 2026 +0530
+
+    cards navigation
+
+[33mcommit 782cb2526bc0aca79b6816f3c0e141cb1c8cad07[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Sat Oct 3 12:17:24 2026 +0530
+
+    inhance whatsapp bot
+
+[33mcommit 4c66c9be40681b2c5f053fc14f43f685de667044[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Thu Oct 1 18:54:48 2026 +0530
+
+    changes
+
+[33mcommit 3a974d1370006f05521c712cd20e976a362b48fd[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Thu Oct 1 18:10:39 2026 +0530
+
+    multi language footer pages
+
+[33mcommit 45726d75575b0429b8ff11af2cea0fc39a23d2c3[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Thu Oct 1 11:47:33 2026 +0530
+
+    profile pic adjust
+
+[33mcommit 99b71bc56dd73d687812f9cb995f863c3a3be413[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Sep 30 18:31:47 2026 +0530
+
+    multi language fix
+
+[33mcommit dcbb0e4de17b0ceb987c6250c9acbdce2b14f72f[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Sep 30 10:23:54 2026 +0530
+
+    typeScript error fix
+
+[33mcommit 5dc8e0b772ae93175b0789a954bd8fd8e67c4ee4[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Wed Sep 30 10:16:14 2026 +0530
+
+    google analytics fix
+
+[33mcommit d7d7ce01e3329db1c6de966b435e52fbfc8935e6[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Tue Sep 29 13:07:20 2026 +0530
+
+    HOME UI FIX
+
+[33mcommit b6ec722a10d41f81479e8640ef0aad4ead074290[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Tue Sep 29 12:11:26 2026 +0530
+
+    pop up veification
+
+[33mcommit 9ce803fd585ab4bf4654cd8d8430a74469eff68a[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Tue Sep 29 11:26:57 2026 +0530
+
+    google analytics
+
+[33mcommit df530336b5687471264b95cb918f953404078106[m
+Author: AsliJobs <aslijobs26@gmail.com>
+Date:   Mon Sep 28 19:15:29 2026 +0530
+
+    chan

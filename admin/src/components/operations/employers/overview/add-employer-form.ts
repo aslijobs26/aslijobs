@@ -81,6 +81,7 @@ export type AddEmployerFormState = {
   emailAddress: string;
   whatsappNumber: string;
   industry: string;
+  customIndustry: string;
   businessCategory: string;
   companyStrength: string;
   minimumEmployees: string;
@@ -101,6 +102,7 @@ export const EMPTY_ADD_EMPLOYER_FORM: AddEmployerFormState = {
   emailAddress: "",
   whatsappNumber: "",
   industry: "",
+  customIndustry: "",
   businessCategory: "",
   companyStrength: "",
   minimumEmployees: "",
@@ -152,6 +154,7 @@ export function isolateAddEmployerForm(
 
   if (accountType === "company") {
     next.industry = form.industry;
+    next.customIndustry = form.customIndustry;
     next.businessCategory = form.businessCategory;
     next.companyStrength = form.companyStrength;
     next.minimumEmployees = form.minimumEmployees;
@@ -230,21 +233,34 @@ export function validateAddEmployerForm(
 
   if (!form.industry.trim()) {
     errors.industry = "Industry is required.";
-  }
-  if (!form.businessCategory.trim()) {
+  } else if (form.industry.trim().toLowerCase() === "other") {
+    if (!form.customIndustry.trim()) {
+      errors.customIndustry = "Industry is required.";
+    }
+    if (!form.businessCategory.trim()) {
+      errors.businessCategory = "Business category is required.";
+    }
+  } else if (!form.businessCategory.trim()) {
     errors.businessCategory = "Business category is required.";
   }
 
+  const strength = getCompanyStrengthRange(form.companyStrength);
   const min = form.minimumEmployees.trim()
     ? Number.parseInt(form.minimumEmployees, 10)
-    : NaN;
+    : strength?.minimumEmployees;
   const max = form.maximumEmployees.trim()
     ? Number.parseInt(form.maximumEmployees, 10)
-    : NaN;
+    : strength?.maximumEmployees;
 
-  if (!Number.isFinite(min) || !Number.isFinite(max)) {
-    errors.minimumEmployees = "Company strength is required.";
-  } else if (max < min) {
+  if (!strength && (!Number.isFinite(min) || !Number.isFinite(max))) {
+    errors.companyStrength = "Company strength is required.";
+  } else if (
+    typeof min === "number" &&
+    typeof max === "number" &&
+    Number.isFinite(min) &&
+    Number.isFinite(max) &&
+    max < min
+  ) {
     errors.maximumEmployees =
       "Maximum employees must be greater than or equal to minimum employees";
   }

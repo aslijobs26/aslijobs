@@ -54,6 +54,18 @@ export const OPERATIONS_EMPLOYER_INDUSTRY_OPTIONS: readonly OperationsEmployerSe
     },
   ] as const;
 
+/** Dropdown sentinel that opens a typed industry field, matching public registration. */
+export const OPERATIONS_EMPLOYER_OTHER_INDUSTRY_VALUE = "other";
+
+export const OPERATIONS_EMPLOYER_INDUSTRY_SELECT_OPTIONS: readonly OperationsEmployerSelectOption[] =
+  [
+    ...OPERATIONS_EMPLOYER_INDUSTRY_OPTIONS,
+    {
+      value: OPERATIONS_EMPLOYER_OTHER_INDUSTRY_VALUE,
+      label: "Other",
+    },
+  ];
+
 export const OPERATIONS_EMPLOYER_BUSINESS_CATEGORIES_BY_INDUSTRY: Readonly<
   Record<string, readonly OperationsEmployerSelectOption[]>
 > = {
@@ -373,10 +385,24 @@ export const OPERATIONS_EMPLOYER_BUSINESS_CATEGORIES_BY_INDUSTRY: Readonly<
   ],
 };
 
+export function isOperationsEmployerOtherIndustry(industry: string): boolean {
+  return industry === OPERATIONS_EMPLOYER_OTHER_INDUSTRY_VALUE;
+}
+
+export function resolveOperationsEmployerIndustry(input: {
+  industry: string;
+  customIndustry: string;
+}): string {
+  if (!isOperationsEmployerOtherIndustry(input.industry)) {
+    return input.industry.trim();
+  }
+  return input.customIndustry.trim();
+}
+
 export function getOperationsEmployerBusinessCategoryOptions(
   industry: string,
 ): readonly OperationsEmployerSelectOption[] {
-  if (!industry) {
+  if (!industry || isOperationsEmployerOtherIndustry(industry)) {
     return [];
   }
 

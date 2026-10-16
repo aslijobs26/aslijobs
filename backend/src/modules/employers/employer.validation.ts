@@ -343,7 +343,7 @@ export const operationsCompleteEmployerProfileSchema = z
       return;
     }
 
-    if (!data.industry.trim()) {
+    if (!data.industry.trim() || data.industry.trim().toLowerCase() === "other") {
       ctx.addIssue({
         code: "custom",
         path: ["industry"],

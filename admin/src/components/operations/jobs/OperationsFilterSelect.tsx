@@ -34,6 +34,11 @@ interface OperationsFilterSelectProps {
    * that slides up from the bottom. Desktop/tablet keep the dropdown.
    */
   mobileSheet?: boolean;
+  /**
+   * Cap the open list to this many visible rows; extra options scroll.
+   * Desktop filter menus keep the default taller panel when omitted.
+   */
+  maxVisibleOptions?: number;
 }
 
 type DropdownPlacement = "down" | "up";
@@ -41,7 +46,24 @@ type DropdownPlacement = "down" | "up";
 const DROPDOWN_GAP_PX = 6;
 const DROPDOWN_PANEL_ESTIMATED_HEIGHT_PX = 240;
 const DROPDOWN_PANEL_COMPACT_ROW_HEIGHT_PX = 32;
+const DROPDOWN_SHEET_ROW_HEIGHT_PX = 44;
+const DROPDOWN_LIST_PADDING_Y_PX = 8;
 const MOBILE_SHEET_MQ = "(max-width: 639px)";
+
+function listMaxHeightPx(
+  maxVisibleOptions: number | undefined,
+  useSheet: boolean,
+): number | undefined {
+  if (!maxVisibleOptions || maxVisibleOptions < 1) {
+    return undefined;
+  }
+
+  const rowHeight = useSheet
+    ? DROPDOWN_SHEET_ROW_HEIGHT_PX
+    : DROPDOWN_PANEL_COMPACT_ROW_HEIGHT_PX;
+
+  return DROPDOWN_LIST_PADDING_Y_PX + maxVisibleOptions * rowHeight;
+}
 
 const triggerBaseClassName =
   "ops-brand-border-glow flex h-8 w-full min-w-[7.5rem] cursor-pointer items-center justify-between gap-1.5 rounded-md border border-border-subtle bg-surface px-2.5 text-left text-[11px] font-medium text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
@@ -53,10 +75,18 @@ function normalizeOptionKey(value: string) {
 function estimatePanelHeight(
   hideSearch: boolean,
   optionCount: number,
+  maxVisibleOptions?: number,
 ): number {
+  const cappedListHeight = listMaxHeightPx(maxVisibleOptions, false);
+
+  if (cappedListHeight) {
+    return hideSearch ? cappedListHeight : cappedListHeight + 40;
+  }
+
   if (hideSearch) {
     return Math.min(
-      optionCount * DROPDOWN_PANEL_COMPACT_ROW_HEIGHT_PX + 12,
+      optionCount * DROPDOWN_PANEL_COMPACT_ROW_HEIGHT_PX +
+        DROPDOWN_LIST_PADDING_Y_PX,
       160,
     );
   }
@@ -95,6 +125,7 @@ export function OperationsFilterSelect({
   className,
   triggerClassName,
   mobileSheet = false,
+  maxVisibleOptions,
 }: OperationsFilterSelectProps) {
   const generatedId = useId();
   const id = idProp ?? generatedId;
@@ -154,7 +185,9 @@ export function OperationsFilterSelect({
   const panelHeightEstimate = estimatePanelHeight(
     hideSearch,
     filteredOptions.length || 1,
+    maxVisibleOptions,
   );
+  const optionsListMaxHeight = listMaxHeightPx(maxVisibleOptions, useSheet);
 
   useLayoutEffect(() => {
     if (!isOpen || !triggerRef.current || useSheet) {
@@ -261,9 +294,18 @@ export function OperationsFilterSelect({
       id={listboxId}
       role="listbox"
       aria-label={label}
+      style={
+        optionsListMaxHeight
+          ? { maxHeight: optionsListMaxHeight }
+          : undefined
+      }
       className={cn(
-        "m-0 list-none overflow-y-auto overscroll-contain p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-        useSheet ? "max-h-[min(20rem,50vh)]" : "max-h-[min(14rem,40vh)]",
+        "scrollbar-hidden m-0 list-none overflow-y-auto overscroll-contain p-1",
+        optionsListMaxHeight
+          ? undefined
+          : useSheet
+            ? "max-h-[min(20rem,50vh)]"
+            : "max-h-[min(14rem,40vh)]",
       )}
     >
       {filteredOptions.length === 0 ? (
@@ -283,7 +325,12 @@ export function OperationsFilterSelect({
                 type="button"
                 className={cn(
                   "flex w-full cursor-pointer items-center justify-between gap-2 rounded px-2.5 text-left text-foreground transition-colors hover:bg-primary-light hover:text-primary",
-                  useSheet ? "min-h-11 py-2.5 text-xs" : "py-1.5 text-[11px]",
+                  useSheet
+                    ? "min-h-11 py-2.5 text-xs"
+                    : cn(
+                        "py-1.5 text-[11px]",
+                        optionsListMaxHeight && "h-8 min-h-8",
+                      ),
                   isSelected && "bg-primary-light text-primary",
                 )}
                 onClick={() => selectOption(option.value)}

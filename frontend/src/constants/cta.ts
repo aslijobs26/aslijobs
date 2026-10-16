@@ -1,10 +1,16 @@
 import { ROUTES } from "./routes";
 
-export const WHATSAPP_JOIN_URL =
-  process.env.NEXT_PUBLIC_WHATSAPP_JOIN_URL ?? "#";
-
 /** Public-site contact deep link. Official wa.me URL, no pre-filled message. */
 export const WHATSAPP_CONTACT_URL = "https://wa.me/919248719057";
+
+const configuredWhatsAppJoinUrl =
+  process.env.NEXT_PUBLIC_WHATSAPP_JOIN_URL?.trim() ?? "";
+
+/** Opens the AsliJobs WhatsApp chat. Env override wins when it is a real URL. */
+export const WHATSAPP_JOIN_URL =
+  configuredWhatsAppJoinUrl.startsWith("http")
+    ? configuredWhatsAppJoinUrl
+    : WHATSAPP_CONTACT_URL;
 
 export const HERO_CTA_CARDS = [
   {
