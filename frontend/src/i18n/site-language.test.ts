@@ -183,7 +183,10 @@ describe("unified language wiring", () => {
       join(here, "../services/job-seeker-register.service.ts"),
       "utf8",
     );
-    assert.match(registerForm, /readExplicitSiteLanguage\(\)\?\.code/);
+    assert.match(
+      registerForm,
+      /readExplicitSiteLanguage\(\)\?\.code \?\? siteLanguage\.code/,
+    );
     assert.match(registerService, /preferredLanguage/);
   });
 

@@ -19,7 +19,7 @@ import {
 } from "@/constants/job-seeker-register";
 import { ROUTES } from "@/constants/routes";
 import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
-import { readExplicitSiteLanguage } from "@/i18n/site-language";
+import { readExplicitSiteLanguage, useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import {
   completeJobSeekerRegistration,
@@ -312,6 +312,7 @@ function validateEducationStep(params: {
 
 export function JobSeekerRegisterForm() {
   const t = useTranslate();
+  const siteLanguage = useSiteLanguage();
   const translateMessage = useAuthMessageTranslator();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -451,7 +452,7 @@ export function JobSeekerRegisterForm() {
       const result = await registerJobSeekerAccount(
         fullName.trim(),
         whatsappNumber,
-        readExplicitSiteLanguage()?.code,
+        readExplicitSiteLanguage()?.code ?? siteLanguage.code,
       );
 
       if (!result?.jobSeekerId) {
