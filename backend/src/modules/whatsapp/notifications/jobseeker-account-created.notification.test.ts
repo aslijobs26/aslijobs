@@ -373,12 +373,16 @@ describe("jobseeker account created WhatsApp", () => {
     assert.equal(await enqueue("te"), "queued");
     assert.equal(await enqueue("en"), "queued");
     assert.equal(await enqueue("hi"), "queued");
+    assert.equal(await enqueue("ta"), "queued");
+    assert.equal(await enqueue("kn"), "queued");
     assert.deepEqual(
       queued.map((job) => [job.templateName, job.languageCode]),
       [
         ["jobseeker_account_created_te", "te"],
         ["jobseeker_account_created", "en"],
         ["jobseeker_account_created_hi", "hi"],
+        ["jobseeker_account_created_ta", "ta"],
+        ["jobseeker_account_created_ka", "kn"],
       ],
     );
   });

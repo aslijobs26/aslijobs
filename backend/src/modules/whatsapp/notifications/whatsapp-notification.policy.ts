@@ -49,9 +49,10 @@ export type WhatsAppNotificationDelivery = {
 
 /**
  * Picks the approved Meta template name and language together.
- * Telugu and Hindi job-seeker events use distinct `_te` and `_hi` names.
- * Tamil, Kannada, Malayalam, and unknown languages fall back to the English
- * template. Never send an English template name with language `te` or `hi`.
+ * Telugu and Hindi use `_te` and `_hi`. Tamil uses `_ta` with language `ta`.
+ * Kannada uses `_ka` with language `kn`. A missing localized name falls back
+ * to the English template and language `en` together. Malayalam has no
+ * approved job-seeker templates and uses that English fallback.
  */
 export function resolveWhatsAppNotificationDelivery(
   event: WhatsAppNotificationEvent,
@@ -224,14 +225,11 @@ export function buildWhatsAppNotificationUrlButtonParameters(
 
 /**
  * Static Complete Your Profile button on the approved
- * jobseeker_profile_completion template. Meta stores the full URL and the
+ * jobseeker_profile_completion templates. Meta stores this full URL and the
  * button has no {{1}}, so the send must omit button parameters.
- * The approved URL does not open the live profile page until it is corrected
- * in Meta Business Manager. The send stays parameter-free because the button
- * is static. Code cannot rewrite a URL stored on the approved template.
  */
 export const JOBSEEKER_PROFILE_COMPLETION_BUTTON_URL =
-  "https://invalid.invalid/www.aslijobs.com/job-seeker/profile";
+  "https://www.aslijobs.com/job-seeker/profile";
 
 /** Destination Meta must store on both English and Telugu static buttons. */
 export const JOBSEEKER_PROFILE_COMPLETION_REQUIRED_BUTTON_URL =

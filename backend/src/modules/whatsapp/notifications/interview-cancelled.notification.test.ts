@@ -262,6 +262,29 @@ describe("interview_cancelled scheduling", () => {
     assert.equal(queued[0]?.urlButtonParameters, undefined);
   });
 
+  it("keeps Tamil and Kannada preferences on cancelled interview notifications", async () => {
+    for (const language of ["ta", "kn"] as const) {
+      mock.restoreAll();
+      const { queued } = installSchedulingMocks({
+        seeker: {
+          whatsappNumber: seekerPhone,
+          whatsappLanguage: language,
+          availabilityStatus: "available",
+          preferredJobLocation: "Hyderabad",
+        },
+      });
+      await applicationService.cancelInterviewForEmployer({
+        employerId,
+        applicationId,
+        reason: "Role filled",
+        cancelledByName: "Ram",
+      });
+      await wait();
+      assert.equal(queued[0]?.event, "INTERVIEW_CANCELLED");
+      assert.equal(queued[0]?.preferredLanguage, language);
+    }
+  });
+
   it("keeps the original date and time when save clears the interview fields", async () => {
     const { queued, application } = installSchedulingMocks({
       application: applicationDocument({}, { clearInterviewOnSave: true }),

@@ -615,6 +615,38 @@ describe("jobseeker profile completion reminder", () => {
         ?.localizedTemplateNames?.hi,
       "jobseeker_profile_completion_hi",
     );
+
+    const tamil = createDeps({
+      now,
+      dueAt: now,
+      seeker: { ...incompleteSeeker, whatsappLanguage: "ta" },
+    });
+    await processJobSeekerProfileCompletionReminder(jobSeekerId, tamil.deps);
+    const tamilJob = tamil.enqueued[0] as { preferredLanguage: string };
+    assert.equal(tamilJob.preferredLanguage, "ta");
+    assert.deepEqual(
+      resolveWhatsAppNotificationDelivery("JOBSEEKER_PROFILE_COMPLETION", "ta"),
+      {
+        templateName: "jobseeker_profile_completion_ta",
+        languageCode: "ta",
+      },
+    );
+
+    const kannada = createDeps({
+      now,
+      dueAt: now,
+      seeker: { ...incompleteSeeker, whatsappLanguage: "kn" },
+    });
+    await processJobSeekerProfileCompletionReminder(jobSeekerId, kannada.deps);
+    const kannadaJob = kannada.enqueued[0] as { preferredLanguage: string };
+    assert.equal(kannadaJob.preferredLanguage, "kn");
+    assert.deepEqual(
+      resolveWhatsAppNotificationDelivery("JOBSEEKER_PROFILE_COMPLETION", "kn"),
+      {
+        templateName: "jobseeker_profile_completion_ka",
+        languageCode: "kn",
+      },
+    );
   });
 
   it("invalidates processing and queued reminders when registration completes", async () => {

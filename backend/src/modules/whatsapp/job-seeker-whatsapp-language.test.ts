@@ -33,6 +33,13 @@ describe("job seeker WhatsApp language preference", () => {
     assert.equal(parseBotWhatsAppLanguage("hi-IN"), "hi");
     assert.equal(parseBotWhatsAppLanguage("te-IN"), "te");
     assert.equal(parseBotWhatsAppLanguage("en-US"), "en");
+    assert.equal(parseBotWhatsAppLanguage("ta"), "ta");
+    assert.equal(parseBotWhatsAppLanguage("Tamil"), "ta");
+    assert.equal(parseBotWhatsAppLanguage("ta_IN"), "ta");
+    assert.equal(parseBotWhatsAppLanguage("kn"), "kn");
+    assert.equal(parseBotWhatsAppLanguage("Kannada"), "kn");
+    assert.equal(parseBotWhatsAppLanguage("kn-IN"), "kn");
+    assert.equal(parseBotWhatsAppLanguage("ka"), null);
     assert.equal(parseBotWhatsAppLanguage(""), null);
     assert.equal(parseBotWhatsAppLanguage("fr"), null);
   });
@@ -144,6 +151,22 @@ describe("job seeker WhatsApp language preference", () => {
         jobSeekerId: "64f0000000000000000000aa",
       }),
       "te",
+    );
+    assert.equal(
+      await resolveJobSeekerNotificationLanguage({
+        phoneNumber: "9876543210",
+        storedLanguage: "ta",
+        jobSeekerId: "64f0000000000000000000aa",
+      }),
+      "ta",
+    );
+    assert.equal(
+      await resolveJobSeekerNotificationLanguage({
+        phoneNumber: "9876543210",
+        storedLanguage: "kn",
+        jobSeekerId: "64f0000000000000000000aa",
+      }),
+      "kn",
     );
     assert.equal(sessionLookups, 0);
   });

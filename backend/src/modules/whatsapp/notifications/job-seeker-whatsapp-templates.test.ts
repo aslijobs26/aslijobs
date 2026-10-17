@@ -151,7 +151,7 @@ describe("job seeker WhatsApp template language routing", () => {
   });
 
   it("keeps existing English templates for English and unsupported languages", () => {
-    for (const language of ["en", "en-US", "ta", "unknown", "", undefined]) {
+    for (const language of ["en", "en-US", "ml", "unknown", "", undefined]) {
       assert.deepEqual(
         resolveWhatsAppNotificationDelivery("JOBSEEKER_ACCOUNT_CREATED", language),
         {
@@ -198,6 +198,20 @@ describe("job seeker WhatsApp template language routing", () => {
     assert.equal(
       resolveWhatsAppNotificationTemplateName("EMPLOYER_ACCOUNT_APPROVED", "hi"),
       "aslijobs_account_approved",
+    );
+    assert.deepEqual(
+      resolveWhatsAppNotificationDelivery("EMPLOYER_ACCOUNT_CREATED", "ta"),
+      {
+        templateName: "employer_account_created",
+        languageCode: "en",
+      },
+    );
+    assert.deepEqual(
+      resolveWhatsAppNotificationDelivery("JOB_POST_SUBMITTED", "kn"),
+      {
+        templateName: "job_post_submitted",
+        languageCode: "en",
+      },
     );
   });
 
@@ -474,6 +488,117 @@ describe("job seeker WhatsApp template language routing", () => {
       assert.equal(queued[0]?.languageCode, "hi");
       assert.deepEqual(queued[0]?.bodyParameters, item.bodyParameters);
     }
+  });
+
+  it("queues Tamil and Kannada templates with the Graph language and body order", async () => {
+    const sharedBody = {
+      jobTitle: "Welder",
+      companyName: "Northwind Services",
+      interviewDate: "30 December 2026",
+      interviewTime: "11:00 AM",
+      interviewVenue: "North gate",
+    };
+    const tamil = [
+      ["JOBSEEKER_ACCOUNT_CREATED", "jobseeker_account_created_ta", "ta", []],
+      ["JOBSEEKER_PROFILE_COMPLETION", "jobseeker_profile_completion_ta", "ta", []],
+      ["JOB_APPLICATION_SUBMITTED", "job_application_submitted_ta", "ta", ["Welder", "Northwind Services"]],
+      ["INTERVIEW_SCHEDULED_PHONE", "interview_scheduled_phone_ta", "ta", ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"]],
+      ["INTERVIEW_SCHEDULED_ONLINE", "interview_scheduled_online_ta", "ta", ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"]],
+      ["INTERVIEW_SCHEDULED_OFFLINE", "interview_scheduled_offline_ta", "ta", ["Welder", "Northwind Services", "30 December 2026", "11:00 AM", "North gate"]],
+      ["INTERVIEW_RESCHEDULED", "interview_rescheduled_ta", "ta", ["Welder", "Northwind Services", "30 December 2026", "11:00 AM", "North gate"]],
+      ["INTERVIEW_CANCELLED", "interview_cancelled_ta", "ta", ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"]],
+    ] as const;
+    const kannada = [
+      ["JOBSEEKER_ACCOUNT_CREATED", "jobseeker_account_created_ka", "kn", []],
+      ["JOBSEEKER_PROFILE_COMPLETION", "jobseeker_profile_completion_ka", "kn", []],
+      ["JOB_APPLICATION_SUBMITTED", "job_application_submitted_ka", "kn", ["Welder", "Northwind Services"]],
+      ["INTERVIEW_SCHEDULED_PHONE", "interview_scheduled_phone_ka", "kn", ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"]],
+      ["INTERVIEW_SCHEDULED_ONLINE", "interview_scheduled_online_ka", "kn", ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"]],
+      ["INTERVIEW_SCHEDULED_OFFLINE", "interview_scheduled_offline_ka", "kn", ["Welder", "Northwind Services", "30 December 2026", "11:00 AM", "North gate"]],
+      ["INTERVIEW_RESCHEDULED", "interview_rescheduled_ka", "kn", ["Welder", "Northwind Services", "30 December 2026", "11:00 AM", "North gate"]],
+      ["INTERVIEW_CANCELLED", "interview_cancelled_ka", "kn", ["Welder", "Northwind Services", "30 December 2026", "11:00 AM"]],
+    ] as const;
+
+    for (const [language, cases] of [
+      ["ta", tamil],
+      ["tamil", tamil],
+      ["kn", kannada],
+      ["kannada", kannada],
+    ] as const) {
+      for (const [event, templateName, languageCode, bodyParameters] of cases) {
+        const queued: Array<{
+          templateName: string;
+          languageCode: string;
+          bodyParameters: string[];
+          urlButtonParameters?: string[];
+        }> = [];
+        const result = await enqueueWhatsAppNotification(
+          {
+            event,
+            entityId: applicationId,
+            phoneNumber: seekerPhone,
+            preferredLanguage: language,
+            ...sharedBody,
+          },
+          {
+            claim: async () => "claimed",
+            enqueueJob: async (job) => {
+              queued.push(job);
+            },
+          },
+        );
+        assert.equal(result, "queued");
+        assert.equal(queued[0]?.templateName, templateName);
+        assert.equal(queued[0]?.languageCode, languageCode);
+        assert.notEqual(queued[0]?.languageCode, "ta_IN");
+        assert.notEqual(queued[0]?.languageCode, "kn_IN");
+        assert.deepEqual(queued[0]?.bodyParameters, [...bodyParameters]);
+        assert.equal(queued[0]?.urlButtonParameters, undefined);
+      }
+    }
+
+    for (const venue of ["North gate", "Madhapur, Hyderabad"]) {
+      assert.deepEqual(
+        buildWhatsAppNotificationBodyParameters("INTERVIEW_SCHEDULED_OFFLINE", {
+          event: "INTERVIEW_SCHEDULED_OFFLINE",
+          entityId: applicationId,
+          phoneNumber: seekerPhone,
+          jobTitle: "Welder",
+          companyName: "Northwind Services",
+          interviewDate: "30 December 2026",
+          interviewTime: "11:00 AM",
+          interviewVenue: venue,
+          preferredLanguage: "ta",
+        }),
+        ["Welder", "Northwind Services", "30 December 2026", "11:00 AM", venue],
+      );
+      assert.deepEqual(
+        buildWhatsAppNotificationBodyParameters("INTERVIEW_SCHEDULED_OFFLINE", {
+          event: "INTERVIEW_SCHEDULED_OFFLINE",
+          entityId: applicationId,
+          phoneNumber: seekerPhone,
+          jobTitle: "Welder",
+          companyName: "Northwind Services",
+          interviewDate: "30 December 2026",
+          interviewTime: "11:00 AM",
+          interviewVenue: venue,
+          preferredLanguage: "kn",
+        }),
+        ["Welder", "Northwind Services", "30 December 2026", "11:00 AM", venue],
+      );
+    }
+    assert.equal(
+      resolveWhatsAppNotificationDelivery("JOBSEEKER_PROFILE_COMPLETION", "ta")
+        ?.languageCode,
+      "ta",
+    );
+    assert.deepEqual(
+      resolveWhatsAppNotificationDelivery("INTERVIEW_SCHEDULED_OFFLINE", "kn"),
+      {
+        templateName: "interview_scheduled_offline_ka",
+        languageCode: "kn",
+      },
+    );
   });
 
   it("does not send a second message when the same event is retried", async () => {

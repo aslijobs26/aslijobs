@@ -448,6 +448,39 @@ describe("job application submitted WhatsApp", () => {
     assert.equal(queued[0]?.languageCode, "en");
   });
 
+  it("sends the Tamil application template from the saved Job Seeker preference", async () => {
+    const { queued, payloads } = await applyAndQueue({
+      whatsappLanguage: "ta",
+    });
+    assert.equal(payloads[0]?.preferredLanguage, "ta");
+    assert.equal(queued[0]?.templateName, "job_application_submitted_ta");
+    assert.equal(queued[0]?.languageCode, "ta");
+    assert.deepEqual(queued[0]?.bodyParameters, ["Electrician", "ABC Services"]);
+  });
+
+  it("sends the Kannada application template from the saved Job Seeker preference", async () => {
+    const { queued, payloads } = await applyAndQueue({
+      whatsappLanguage: "kn",
+    });
+    assert.equal(payloads[0]?.preferredLanguage, "kn");
+    assert.equal(queued[0]?.templateName, "job_application_submitted_ka");
+    assert.equal(queued[0]?.languageCode, "kn");
+    assert.notEqual(queued[0]?.languageCode, "ka");
+    assert.deepEqual(queued[0]?.bodyParameters, ["Electrician", "ABC Services"]);
+  });
+
+  it("keeps a saved Kannada preference ahead of another language alias", async () => {
+    const kannada = await applyAndQueue({ whatsappLanguage: "kannada" });
+    assert.equal(kannada.payloads[0]?.preferredLanguage, "kn");
+    assert.equal(
+      kannada.queued[0]?.templateName,
+      "job_application_submitted_ka",
+    );
+    const tamil = await applyAndQueue({ whatsappLanguage: "tamil" });
+    assert.equal(tamil.payloads[0]?.preferredLanguage, "ta");
+    assert.equal(tamil.queued[0]?.templateName, "job_application_submitted_ta");
+  });
+
   it("normalizes website language aliases onto the approved Meta templates", async () => {
     const hindi = await applyAndQueue({ whatsappLanguage: "hindi" });
     assert.equal(hindi.queued[0]?.templateName, "job_application_submitted_hi");

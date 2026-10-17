@@ -337,6 +337,34 @@ describe("interview_rescheduled scheduling", () => {
     assert.equal(rescheduled[0]?.urlButtonParameters, undefined);
   });
 
+  it("keeps Tamil and Kannada preferences on rescheduled interview notifications", async () => {
+    for (const language of ["ta", "kn"] as const) {
+      mock.restoreAll();
+      const { rescheduled } = installSchedulingMocks({
+        seeker: {
+          whatsappNumber: seekerPhone,
+          whatsappLanguage: language,
+          availabilityStatus: "available",
+          preferredJobLocation: "Hyderabad",
+        },
+      });
+      await applicationService.updateInterviewForEmployer({
+        employerId,
+        applicationId,
+        interview: interview({
+          date: "2026-12-01",
+          time: "11:00",
+          venue: "South gate",
+        }),
+        updatedByName: "Ram",
+      });
+      await wait();
+      assert.equal(rescheduled[0]?.event, "INTERVIEW_RESCHEDULED");
+      assert.equal(rescheduled[0]?.preferredLanguage, language);
+      assert.equal(rescheduled[0]?.interviewVenue, "South gate");
+    }
+  });
+
   it("sends one notification for each distinct saved slot", async () => {
     const { rescheduled, application } = installSchedulingMocks();
 

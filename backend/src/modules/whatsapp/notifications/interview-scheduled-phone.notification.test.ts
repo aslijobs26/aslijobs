@@ -274,4 +274,21 @@ describe("interview_scheduled_phone WhatsApp", () => {
     assert.equal(phoneQueued[0]?.interviewDate, "30 December 2026");
     assert.equal(phoneQueued[0]?.interviewTime, "11:00 AM");
   });
+
+  it("queues Tamil and Kannada phone interviews from the saved preference", async () => {
+    for (const language of ["ta", "kn"] as const) {
+      mock.restoreAll();
+      const { phoneQueued, onlineQueued } = installPhoneMocks(language);
+      await applicationService.updateInterviewForEmployer({
+        employerId,
+        applicationId,
+        interview: phoneInterview(),
+        updatedByName: "Ram",
+      });
+      await wait();
+      assert.equal(onlineQueued.length, 0);
+      assert.equal(phoneQueued[0]?.event, "INTERVIEW_SCHEDULED_PHONE");
+      assert.equal(phoneQueued[0]?.preferredLanguage, language);
+    }
+  });
 });

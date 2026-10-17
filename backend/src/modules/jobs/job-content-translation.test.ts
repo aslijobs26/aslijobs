@@ -118,8 +118,10 @@ describe("job content language", () => {
       ["telugu", "te"],
       ["ta", "ta"],
       ["tamil", "ta"],
+      ["ta_IN", "ta"],
       ["kn", "kn"],
       ["kannada", "kn"],
+      ["kn-IN", "kn"],
       ["ml", "ml"],
       ["malayalam", "ml"],
     ];

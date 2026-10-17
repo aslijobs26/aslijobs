@@ -409,6 +409,81 @@ describe("Hindi template Cloud API payloads", () => {
   }
 });
 
+describe("Tamil and Kannada template Cloud API payloads", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  const cases = [
+    { name: "jobseeker_account_created_ta", language: "ta", body: [] as string[] },
+    { name: "jobseeker_profile_completion_ta", language: "ta", body: [] as string[] },
+    { name: "job_application_submitted_ka", language: "kn", body: ["Welder", "Northwind"] },
+    {
+      name: "interview_scheduled_phone_ta",
+      language: "ta",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM"],
+    },
+    {
+      name: "interview_scheduled_online_ka",
+      language: "kn",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM"],
+    },
+    {
+      name: "interview_scheduled_offline_ta",
+      language: "ta",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM", "North gate"],
+    },
+    {
+      name: "interview_rescheduled_ka",
+      language: "kn",
+      body: ["Welder", "Northwind", "2 December 2026", "3:05 PM", "South gate"],
+    },
+    {
+      name: "interview_cancelled_ta",
+      language: "ta",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM"],
+    },
+  ];
+
+  for (const item of cases) {
+    it(`posts ${item.name} with language ${item.language}`, async () => {
+      const captured: { body?: Record<string, unknown> } = {};
+      mock.method(globalThis, "fetch", async (_url: string | URL, init?: RequestInit) => {
+        captured.body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+        return jsonResponse(200, {
+          messages: [{ id: "wamid.locale", message_status: "accepted" }],
+        });
+      });
+
+      const result = await new WhatsAppService().sendTemplateMessage(
+        "9876543210",
+        item.name,
+        item.language,
+        item.body,
+        [],
+        { correlationId: "corr-locale" },
+      );
+      const template = captured.body?.template as {
+        name: string;
+        language: { code: string };
+        components?: Array<{ parameters: Array<{ text: string }> }>;
+      };
+      assert.equal(result.messageStatus, "accepted");
+      assert.notEqual(result.messageStatus, "delivered");
+      assert.equal(template.name, item.name);
+      assert.equal(template.language.code, item.language);
+      if (item.body.length === 0) {
+        assert.equal(template.components, undefined);
+      } else {
+        assert.deepEqual(
+          template.components?.[0]?.parameters.map((parameter) => parameter.text),
+          item.body,
+        );
+      }
+    });
+  }
+});
+
 describe("maskWhatsAppRecipient", () => {
   it("masks all but the last four digits", () => {
     assert.equal(maskWhatsAppRecipient("919876543210"), "****3210");

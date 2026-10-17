@@ -284,6 +284,30 @@ describe("interview_scheduled_offline scheduling", () => {
     assert.equal(offlineQueued[0]?.urlButtonParameters, undefined);
   });
 
+  it("keeps Tamil and Kannada preferences on offline interview notifications", async () => {
+    for (const language of ["ta", "kn"] as const) {
+      mock.restoreAll();
+      const { offlineQueued } = installSchedulingMocks({
+        seeker: {
+          whatsappNumber: seekerPhone,
+          whatsappLanguage: language,
+          availabilityStatus: "available",
+          preferredJobLocation: "Hyderabad",
+        },
+      });
+      await applicationService.updateInterviewForEmployer({
+        employerId,
+        applicationId,
+        interview: interview(),
+        updatedByName: "Ram",
+      });
+      await wait();
+      assert.equal(offlineQueued[0]?.event, "INTERVIEW_SCHEDULED_OFFLINE");
+      assert.equal(offlineQueued[0]?.preferredLanguage, language);
+      assert.equal(offlineQueued[0]?.interviewVenue, venue);
+    }
+  });
+
   it("uses the employer company name when the job company is blank", async () => {
     const queued: WhatsAppNotificationPayload[] = [];
     mock.method(JobModel, "findById", () =>
