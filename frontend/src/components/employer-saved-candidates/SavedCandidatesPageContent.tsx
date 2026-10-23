@@ -24,6 +24,12 @@ import {
 } from "@/components/employer-candidates/CandidatesDetailPanel";
 import { InterviewScheduleModal } from "@/components/employer-interviews/InterviewScheduleModal";
 import { ListPagination } from "@/components/shared/ListPagination";
+import {
+  EMPLOYER_CANDIDATE_DETAIL_DRAWER_WIDTH_CLASS,
+  EMPLOYER_CANDIDATE_DETAIL_PANEL_STICKY_SHELL_CLASS,
+  EMPLOYER_SAVED_CANDIDATES_LAYOUT_GRID_CLASS,
+  EMPLOYER_SAVED_CANDIDATES_LIST_STICKY_SHELL_CLASS,
+} from "@/constants/employer-candidate-detail-panel";
 import { SAVED_CANDIDATES_PAGE_SIZE } from "@/constants/saved-candidates";
 import { ROUTES } from "@/constants/routes";
 import { useCan } from "@/providers/employer-permission-provider";
@@ -506,7 +512,7 @@ export function SavedCandidatesPageContent() {
           </div>
         </div>
       ) : (
-        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className={EMPLOYER_SAVED_CANDIDATES_LAYOUT_GRID_CLASS}>
           <div className="min-w-0">
             {!listQuery.isLoading && items.length === 0 && hasActiveFilters ? (
               <div className="rounded-xl border border-border-subtle bg-surface px-6 py-10 text-center">
@@ -527,41 +533,68 @@ export function SavedCandidatesPageContent() {
                     actions={rowActions}
                   />
                 </div>
-                <div className="hidden lg:block">
-                  {showTableOnDesktop ? (
-                    <SavedCandidatesTable
-                      items={items}
-                      selectedApplicationId={selectedApplicationId}
-                      isLoading={listQuery.isLoading}
-                      actions={rowActions}
-                    />
-                  ) : (
-                    <SavedCandidatesCardGrid
-                      items={items}
-                      selectedApplicationId={selectedApplicationId}
-                      isLoading={listQuery.isLoading}
-                      actions={rowActions}
-                      variant="grid"
-                    />
-                  )}
+                <div className="hidden min-h-0 lg:block">
+                  <div className={EMPLOYER_SAVED_CANDIDATES_LIST_STICKY_SHELL_CLASS}>
+                    {showTableOnDesktop ? (
+                      <SavedCandidatesTable
+                        items={items}
+                        selectedApplicationId={selectedApplicationId}
+                        isLoading={listQuery.isLoading}
+                        actions={rowActions}
+                        page={pagination.page}
+                        limit={pagination.limit}
+                        total={pagination.total}
+                        totalPages={pagination.totalPages}
+                        onPageChange={(nextPage) => syncUrl({ page: nextPage })}
+                      />
+                    ) : (
+                      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface">
+                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-hidden">
+                          <SavedCandidatesCardGrid
+                            items={items}
+                            selectedApplicationId={selectedApplicationId}
+                            isLoading={listQuery.isLoading}
+                            actions={rowActions}
+                            variant="grid"
+                          />
+                        </div>
+                        <div className="shrink-0 border-t border-border-subtle px-3 py-3 sm:px-4">
+                          <ListPagination
+                            page={pagination.page}
+                            limit={pagination.limit}
+                            total={pagination.total}
+                            totalPages={pagination.totalPages}
+                            onPageChange={(nextPage) =>
+                              syncUrl({ page: nextPage })
+                            }
+                            isLoading={listQuery.isFetching}
+                            entityLabel="saved candidates"
+                            ariaLabel="Saved candidates pagination"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <ListPagination
-                  page={pagination.page}
-                  limit={pagination.limit}
-                  total={pagination.total}
-                  totalPages={pagination.totalPages}
-                  onPageChange={(nextPage) => syncUrl({ page: nextPage })}
-                  isLoading={listQuery.isFetching}
-                  entityLabel="saved candidates"
-                  ariaLabel="Saved candidates pagination"
-                />
+                <div className="lg:hidden">
+                  <ListPagination
+                    page={pagination.page}
+                    limit={pagination.limit}
+                    total={pagination.total}
+                    totalPages={pagination.totalPages}
+                    onPageChange={(nextPage) => syncUrl({ page: nextPage })}
+                    isLoading={listQuery.isFetching}
+                    entityLabel="saved candidates"
+                    ariaLabel="Saved candidates pagination"
+                  />
+                </div>
               </>
             )}
           </div>
 
-          <div className="hidden lg:block">
-            <div className="sticky top-20">
+          <div className="hidden min-h-0 lg:block">
+            <div className={EMPLOYER_CANDIDATE_DETAIL_PANEL_STICKY_SHELL_CLASS}>
               <CandidatesDetailPanel
                 applicationId={selectedApplicationId}
                 activeTab={activeTab}
@@ -589,7 +622,7 @@ export function SavedCandidatesPageContent() {
             aria-modal="true"
             aria-labelledby={drawerTitleId}
             tabIndex={-1}
-            className="absolute inset-x-0 bottom-0 flex h-[min(92dvh,100%)] max-h-[92dvh] min-h-0 flex-col overflow-hidden rounded-t-2xl bg-hero-bg p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg outline-none sm:inset-y-0 sm:right-0 sm:left-auto sm:h-dvh sm:max-h-none sm:w-[min(28rem,100%)] sm:rounded-none sm:p-4 sm:pb-4"
+            className={`absolute inset-x-0 bottom-0 flex h-[min(92dvh,100%)] max-h-[92dvh] min-h-0 flex-col overflow-hidden rounded-t-2xl bg-hero-bg p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg outline-none sm:inset-y-0 sm:right-0 sm:left-auto sm:h-dvh sm:max-h-none ${EMPLOYER_CANDIDATE_DETAIL_DRAWER_WIDTH_CLASS} sm:rounded-none sm:p-4 sm:pb-4`}
           >
             <span id={drawerTitleId} className="sr-only">
               Candidate details

@@ -16,6 +16,10 @@ import { getSavedCandidatesApiErrorMessage } from "@/components/employer-saved-c
 import { SaveCandidateModal } from "@/components/employer-saved-candidates/SaveCandidateModal";
 import { Can } from "@/components/rbac/Can";
 import {
+  EMPLOYER_CANDIDATE_DETAIL_DRAWER_WIDTH_CLASS,
+  EMPLOYER_CANDIDATES_LAYOUT_GRID_CLASS,
+} from "@/constants/employer-candidate-detail-panel";
+import {
   fetchEmployerApplication,
   fetchEmployerApplicationStats,
   fetchEmployerApplications,
@@ -473,7 +477,7 @@ export function EmployerCandidatesPageContent() {
       </div>
 
       <div
-        className="mt-4 grid min-h-0 flex-1 gap-4 lg:grid-cols-[15rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] xl:grid-cols-[16rem_minmax(0,1fr)_24rem]"
+        className={EMPLOYER_CANDIDATES_LAYOUT_GRID_CLASS}
       >
         <div className="hidden h-full min-h-0 lg:block">
           <CandidatesFilterPanel
@@ -513,42 +517,44 @@ export function EmployerCandidatesPageContent() {
           />
         </div>
 
-        <CandidatesListPanel
-          applications={applications}
-          pagination={pagination}
-          isLoading={listQuery.isLoading}
-          selectedId={selectedId}
-          sort={sort}
-          jobOptions={jobOptions}
-          publicJobId={publicJobId}
-          hasActiveSearch={Boolean(search)}
-          hasLocationFilter={Boolean(location)}
-          onClearSearch={() => {
-            setSearchDraft("");
-            syncUrl({ q: "", page: 1 });
-          }}
-          onClearLocation={() => {
-            setLocationDraft("");
-          }}
-          onSortChange={(value) => {
-            setSort(value);
-            syncUrl({ sort: value, page: 1 });
-          }}
-          onJobChange={(jobId) => {
-            syncUrl({ jobId: jobId || "", page: 1 });
-          }}
-          onSelect={(id) => selectCandidate(id)}
-          onPageChange={(nextPage) => {
-            setPage(nextPage);
-            syncUrl({ page: nextPage });
-          }}
-          onOpenResume={(id) =>
-            selectCandidate(id, { tab: "resume", openMobile: true })
-          }
-          savedByApplicationId={savedByApplicationId}
-          canSave={canSaveCandidates}
-          onToggleSave={handleToggleSave}
-        />
+        <div className="min-h-0 min-w-0 lg:h-full">
+          <CandidatesListPanel
+            applications={applications}
+            pagination={pagination}
+            isLoading={listQuery.isLoading}
+            selectedId={selectedId}
+            sort={sort}
+            jobOptions={jobOptions}
+            publicJobId={publicJobId}
+            hasActiveSearch={Boolean(search)}
+            hasLocationFilter={Boolean(location)}
+            onClearSearch={() => {
+              setSearchDraft("");
+              syncUrl({ q: "", page: 1 });
+            }}
+            onClearLocation={() => {
+              setLocationDraft("");
+            }}
+            onSortChange={(value) => {
+              setSort(value);
+              syncUrl({ sort: value, page: 1 });
+            }}
+            onJobChange={(jobId) => {
+              syncUrl({ jobId: jobId || "", page: 1 });
+            }}
+            onSelect={(id) => selectCandidate(id)}
+            onPageChange={(nextPage) => {
+              setPage(nextPage);
+              syncUrl({ page: nextPage });
+            }}
+            onOpenResume={(id) =>
+              selectCandidate(id, { tab: "resume", openMobile: true })
+            }
+            savedByApplicationId={savedByApplicationId}
+            canSave={canSaveCandidates}
+            onToggleSave={handleToggleSave}
+          />
+        </div>
 
         <div className="hidden h-full min-h-0 xl:block">
           <CandidatesDetailPanel
@@ -701,7 +707,7 @@ function MobileCandidateDetailDrawer({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="absolute inset-x-0 bottom-0 flex h-[min(92dvh,100%)] max-h-[92dvh] min-h-0 flex-col overflow-hidden rounded-t-2xl bg-hero-bg p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg outline-none sm:inset-y-0 sm:right-0 sm:left-auto sm:h-dvh sm:max-h-none sm:w-[min(28rem,100%)] sm:rounded-none sm:p-4 sm:pb-4"
+        className={`absolute inset-x-0 bottom-0 flex h-[min(92dvh,100%)] max-h-[92dvh] min-h-0 flex-col overflow-hidden rounded-t-2xl bg-hero-bg p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg outline-none sm:inset-y-0 sm:right-0 sm:left-auto sm:h-dvh sm:max-h-none ${EMPLOYER_CANDIDATE_DETAIL_DRAWER_WIDTH_CLASS} sm:rounded-none sm:p-4 sm:pb-4`}
       >
         <span id={titleId} className="sr-only">
           Candidate details

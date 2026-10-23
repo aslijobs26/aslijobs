@@ -463,7 +463,7 @@ export function CandidatesListPanel({
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain lg:scrollbar-hidden">
+      <div className="min-h-0 flex-1 basis-0 overflow-y-auto overscroll-y-contain scrollbar-hidden">
         {isLoading ? (
           <>
             <ul className="space-y-3 p-3 lg:hidden" aria-hidden="true">

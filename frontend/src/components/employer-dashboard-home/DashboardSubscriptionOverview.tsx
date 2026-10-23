@@ -30,7 +30,7 @@ function MetricCard({
 }) {
   return (
     <div
-      className={`flex h-full min-h-0 min-w-0 flex-col rounded-lg border border-border-subtle bg-surface p-2.5 shadow-sm sm:rounded-xl sm:p-3 lg:p-3.5 ${className}`}
+      className={`flex h-full min-h-0 min-w-0 flex-col rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-3.5 lg:p-4 ${className}`}
     >
       {children}
     </div>
@@ -47,12 +47,12 @@ function ProgressMeter({
   const t = useTranslate();
 
   return (
-    <div className="mt-auto w-full pt-2 sm:pt-2.5">
-      <p className="mb-1 text-center text-[0.5625rem] font-semibold text-primary sm:text-[0.625rem] lg:text-[0.6875rem]">
+    <div className="mt-auto w-full pt-2.5 sm:pt-3">
+      <p className="mb-1.5 text-center text-[0.6875rem] font-semibold text-primary sm:text-xs">
         {t("employer.subscription.percentUsed", { percent })}
       </p>
       <div
-        className="h-1 w-full overflow-hidden rounded-full bg-hero-bg sm:h-1.5"
+        className="h-1.5 w-full overflow-hidden rounded-full bg-hero-bg"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
@@ -96,40 +96,39 @@ export function DashboardSubscriptionOverview() {
         </p>
       </header>
 
-      <div className="-mx-0.5 overflow-x-auto px-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        <div className="grid min-w-[40rem] grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.35fr)_minmax(0,1.35fr)] items-stretch gap-1.5 sm:min-w-0 sm:gap-2 lg:gap-2.5 xl:gap-3">
+      <div className="grid grid-cols-2 items-stretch gap-2 sm:gap-2.5 lg:grid-cols-4 lg:gap-3">
         <MetricCard>
-          <p className="text-[0.5625rem] font-medium leading-tight text-muted sm:text-[0.625rem] lg:text-[0.6875rem]">
+          <p className="text-[0.6875rem] font-medium leading-tight text-muted sm:text-xs">
             {t("employer.subscription.currentPlan")}
           </p>
-          <div className="mt-1.5 flex min-w-0 flex-col items-start gap-1 sm:mt-2">
-            <p className="w-full truncate text-[0.6875rem] font-bold leading-tight text-foreground sm:text-xs lg:text-sm">
+          <div className="mt-2 flex min-w-0 flex-col items-start gap-1.5">
+            <p className="w-full truncate text-sm font-bold leading-tight text-foreground sm:text-[0.9375rem]">
               {data.planName}
             </p>
-            <span className="inline-flex items-center rounded-full bg-benefit-whatsapp-surface px-1.5 py-0.5 text-[0.5rem] font-semibold text-benefit-whatsapp-icon sm:px-2 sm:text-[0.5625rem] lg:text-[0.625rem]">
+            <span className="inline-flex items-center rounded-full bg-benefit-whatsapp-surface px-2 py-0.5 text-[0.625rem] font-semibold text-benefit-whatsapp-icon sm:text-[0.6875rem]">
               {t("employer.subscription.statusActive")}
             </span>
           </div>
-          <p className="mt-auto pt-2 text-[0.5625rem] leading-snug text-muted sm:text-[0.625rem] lg:text-[0.6875rem]">
+          <p className="mt-auto pt-2.5 text-[0.6875rem] leading-snug text-muted sm:text-xs">
             {t("employer.subscription.renewsOn", { date: data.renewsOn })}
           </p>
         </MetricCard>
 
         <MetricCard>
-          <p className="text-[0.5625rem] font-medium leading-tight text-muted sm:text-[0.625rem] lg:text-[0.6875rem]">
+          <p className="text-[0.6875rem] font-medium leading-tight text-muted sm:text-xs">
             {t("employer.subscription.jobPostsUsed")}
           </p>
-          <p className="mt-1.5 text-[0.6875rem] font-bold tabular-nums text-foreground sm:mt-2 sm:text-xs lg:text-sm">
+          <p className="mt-2 text-sm font-bold tabular-nums text-foreground sm:text-[0.9375rem]">
             {data.jobPostsUsed.used} / {data.jobPostsUsed.limit}
           </p>
           <ProgressMeter percent={jobPostsPercent} barClassName="bg-primary" />
         </MetricCard>
 
         <MetricCard>
-          <p className="text-[0.5625rem] font-medium leading-tight text-muted sm:text-[0.625rem] lg:text-[0.6875rem]">
+          <p className="text-[0.6875rem] font-medium leading-tight text-muted sm:text-xs">
             {t("employer.subscription.activeJobPosts")}
           </p>
-          <p className="mt-1.5 text-[0.6875rem] font-bold tabular-nums text-foreground sm:mt-2 sm:text-xs lg:text-sm">
+          <p className="mt-2 text-sm font-bold tabular-nums text-foreground sm:text-[0.9375rem]">
             {data.activeJobPosts.used} / {data.activeJobPosts.limit}
           </p>
           <ProgressMeter
@@ -139,35 +138,35 @@ export function DashboardSubscriptionOverview() {
         </MetricCard>
 
         <MetricCard>
-          <p className="text-[0.5625rem] font-medium leading-tight text-muted sm:text-[0.625rem] lg:text-[0.6875rem]">
+          <p className="text-[0.6875rem] font-medium leading-tight text-muted sm:text-xs">
             {t("employer.stats.applications")}
           </p>
-          <p className="mt-1.5 text-[0.6875rem] font-bold tabular-nums leading-snug text-foreground sm:mt-2 sm:text-xs lg:text-sm">
+          <p className="mt-2 text-sm font-bold tabular-nums leading-snug text-foreground sm:text-[0.9375rem]">
             {data.applications.used.toLocaleString("en-IN")} /{" "}
             {data.applications.isUnlimited
               ? t("employer.subscription.unlimited")
               : data.applications.limitLabel}
           </p>
           {data.applications.isUnlimited ? (
-            <span className="mt-auto inline-flex w-fit items-center rounded-full bg-benefit-whatsapp-surface px-1.5 py-0.5 text-[0.5rem] font-semibold text-benefit-whatsapp-icon sm:px-2 sm:text-[0.5625rem] lg:text-[0.625rem]">
+            <span className="mt-auto inline-flex w-fit items-center rounded-full bg-benefit-whatsapp-surface px-2 py-0.5 text-[0.625rem] font-semibold text-benefit-whatsapp-icon sm:text-[0.6875rem]">
               {t("employer.subscription.unlimited")}
             </span>
           ) : null}
         </MetricCard>
 
-        <MetricCard>
-          <p className="text-[0.6875rem] font-bold text-foreground sm:text-xs lg:text-sm">
+        <MetricCard className="col-span-2">
+          <p className="text-sm font-bold text-foreground sm:text-[0.9375rem]">
             {t("employer.subscription.benefitsTitle")}
           </p>
-          <ul className="mt-1.5 flex flex-1 flex-col gap-1 sm:mt-2 sm:gap-1.5">
+          <ul className="mt-2 flex flex-1 flex-col gap-1.5 sm:gap-2">
             {SUBSCRIPTION_BENEFIT_KEYS.map((benefitKey) => (
               <li
                 key={benefitKey}
-                className="flex items-start gap-1 text-[0.5625rem] leading-snug text-foreground sm:gap-1.5 sm:text-[0.625rem] lg:text-[0.6875rem]"
+                className="flex items-start gap-1.5 text-[0.6875rem] leading-snug text-foreground sm:text-xs"
               >
-                <span className="mt-0.5 inline-flex size-3 shrink-0 items-center justify-center rounded-full bg-benefit-whatsapp-surface text-benefit-whatsapp-icon sm:size-3.5 lg:size-4">
+                <span className="mt-0.5 inline-flex size-3.5 shrink-0 items-center justify-center rounded-full bg-benefit-whatsapp-surface text-benefit-whatsapp-icon sm:size-4">
                   <Check
-                    className="size-2 sm:size-2.5"
+                    className="size-2.5"
                     strokeWidth={3}
                     aria-hidden="true"
                   />
@@ -178,53 +177,52 @@ export function DashboardSubscriptionOverview() {
           </ul>
           <Link
             href={ROUTES.EMPLOYER_SUBSCRIPTION}
-            className="mt-2 inline-flex h-7 w-full items-center justify-center rounded-md bg-primary px-2 text-[0.625rem] font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-2.5 sm:h-8 sm:rounded-lg sm:text-xs lg:h-9 lg:text-sm"
+            className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:text-sm"
           >
             {t("employer.subscription.upgradePlan")}
           </Link>
         </MetricCard>
 
-        <MetricCard>
-          <p className="text-[0.6875rem] font-bold text-foreground sm:text-xs lg:text-sm">
+        <MetricCard className="col-span-2">
+          <p className="text-sm font-bold text-foreground sm:text-[0.9375rem]">
             {t("employer.subscription.billingTitle")}
           </p>
-          <dl className="mt-1.5 grid grid-cols-1 gap-1.5 sm:mt-2 sm:gap-2 lg:grid-cols-2">
+          <dl className="mt-2 grid grid-cols-2 gap-2 sm:gap-3">
             <div className="min-w-0">
-              <dt className="text-[0.5625rem] text-muted sm:text-[0.625rem] lg:text-xs">
+              <dt className="text-[0.6875rem] text-muted sm:text-xs">
                 {t("employer.subscription.nextBilling")}
               </dt>
-              <dd className="mt-0.5 truncate text-[0.6875rem] font-semibold text-foreground sm:text-xs lg:text-sm">
+              <dd className="mt-0.5 truncate text-sm font-semibold text-foreground sm:text-[0.9375rem]">
                 {data.nextBilling}
               </dd>
             </div>
             <div className="min-w-0">
-              <dt className="text-[0.5625rem] text-muted sm:text-[0.625rem] lg:text-xs">
+              <dt className="text-[0.6875rem] text-muted sm:text-xs">
                 {t("employer.subscription.amount")}
               </dt>
-              <dd className="mt-0.5 text-[0.6875rem] font-semibold tabular-nums text-foreground sm:text-xs lg:text-sm">
+              <dd className="mt-0.5 text-sm font-semibold tabular-nums text-foreground sm:text-[0.9375rem]">
                 {data.amount}
               </dd>
             </div>
           </dl>
 
-          <div className="mt-auto pt-2">
-            <p className="text-[0.5625rem] text-muted sm:text-[0.625rem] lg:text-xs">
+          <div className="mt-auto pt-3">
+            <p className="text-[0.6875rem] text-muted sm:text-xs">
               {t("employer.subscription.paymentMethod")}
             </p>
-            <div className="mt-1 flex flex-col gap-1.5 sm:mt-1.5 lg:flex-row lg:items-center lg:justify-between lg:gap-2">
-              <p className="min-w-0 truncate text-[0.6875rem] font-semibold tracking-wide text-foreground sm:text-xs lg:text-sm">
+            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+              <p className="min-w-0 truncate text-sm font-semibold tracking-wide text-foreground sm:text-[0.9375rem]">
                 {data.paymentMethodMasked}
               </p>
               <Link
                 href={ROUTES.EMPLOYER_SUBSCRIPTION}
-                className="inline-flex h-6 w-fit shrink-0 items-center rounded-md bg-primary-light px-2 text-[0.5625rem] font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-7 sm:px-2.5 sm:text-xs"
+                className="inline-flex h-8 shrink-0 items-center rounded-lg bg-primary-light px-2.5 text-[0.6875rem] font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-9 sm:px-3 sm:text-xs"
               >
                 {t("employer.subscription.manage")}
               </Link>
             </div>
           </div>
         </MetricCard>
-        </div>
       </div>
     </section>
   );

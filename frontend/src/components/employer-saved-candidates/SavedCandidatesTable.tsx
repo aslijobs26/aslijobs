@@ -22,6 +22,8 @@ import {
   Briefcase,
   Calendar,
   CalendarCheck,
+  ChevronLeft,
+  ChevronRight,
   MapPin,
   MoreHorizontal,
   Phone,
@@ -52,6 +54,11 @@ type SavedCandidatesTableProps = {
   selectedApplicationId: string | null;
   isLoading: boolean;
   actions: SavedCandidateRowActions;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 };
 
 function priorityBadgeClass(priority: SavedCandidatePriority): string {
@@ -347,7 +354,7 @@ function SavedCandidateTableRow({
         isSelected && "bg-primary-light/25",
       )}
     >
-      <td className="w-[18rem] min-w-[15rem] max-w-[20rem] px-3 py-3 align-middle sm:w-[20rem] sm:min-w-[17rem] sm:px-4">
+      <td className="min-w-0 max-w-[18rem] px-3 py-3 align-middle sm:max-w-[22rem] sm:px-4">
         <div className="flex w-full min-w-0 items-start gap-2.5 sm:gap-3">
           <span
             className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-bold text-surface sm:size-10 sm:text-xs"
@@ -451,7 +458,11 @@ function SavedCandidateTableRow({
               }}
             >
               {interviewScheduled ? (
-                <CalendarCheck className="size-4" aria-hidden="true" strokeWidth={2.25} />
+                <CalendarCheck
+                  className="size-4"
+                  aria-hidden="true"
+                  strokeWidth={2.25}
+                />
               ) : (
                 <Calendar className="size-4" aria-hidden="true" />
               )}
@@ -474,56 +485,118 @@ export function SavedCandidatesTable({
   selectedApplicationId,
   isLoading,
   actions,
+  page,
+  limit,
+  total,
+  totalPages,
+  onPageChange,
 }: SavedCandidatesTableProps) {
-  if (isLoading) {
-    return (
-      <div className="rounded-xl border border-border-subtle bg-surface p-6">
-        <div className="space-y-3" aria-hidden="true">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div
-              key={`saved-table-skel-${index}`}
-              className="h-14 animate-pulse rounded-lg bg-primary-light/30"
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const from = total === 0 ? 0 : (page - 1) * limit + 1;
+  const to = Math.min(page * limit, total);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
-      <div className="overflow-x-auto scrollbar-hidden">
-        <table className="w-full min-w-[52rem] border-collapse text-left">
-          <thead>
-            <tr className="border-b border-border-subtle bg-hero-bg/60 text-[11px] font-semibold uppercase tracking-wide text-muted sm:text-xs">
-              <th className="w-[18rem] min-w-[15rem] px-3 py-3 sm:w-[20rem] sm:min-w-[17rem] sm:px-4">
-                Candidate
-              </th>
-              <th className="hidden whitespace-nowrap px-3 py-3 xl:table-cell">
-                Job ID
-              </th>
-              <th className="min-w-[8rem] px-3 py-3">Job title</th>
-              <th className="hidden whitespace-nowrap px-3 py-3 lg:table-cell">
-                Saved on
-              </th>
-              <th className="hidden min-w-[7rem] px-3 py-3 md:table-cell">Tags</th>
-              <th className="whitespace-nowrap px-2 py-3 text-right sm:px-3">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <SavedCandidateTableRow
-                key={item.id}
-                item={item}
-                isSelected={selectedApplicationId === item.applicationId}
-                actions={actions}
+    <section className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface">
+      <div className="shrink-0 border-b border-border-subtle px-3 py-2 sm:px-4">
+        <p className="text-[11px] text-muted sm:text-xs">
+          {isLoading
+            ? "Loading shortlisted candidates…"
+            : `Showing ${from}–${to} of ${total}`}
+        </p>
+      </div>
+
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-auto overscroll-y-contain scrollbar-hidden"
+        onWheel={(event) => {
+          const target = event.currentTarget;
+          const canScrollY = target.scrollHeight > target.clientHeight + 1;
+          if (!canScrollY) {
+            window.scrollBy({ top: event.deltaY, left: 0 });
+            return;
+          }
+          const atTop = target.scrollTop <= 0 && event.deltaY < 0;
+          const atBottom =
+            target.scrollTop + target.clientHeight >=
+              target.scrollHeight - 1 && event.deltaY > 0;
+          if (atTop || atBottom) {
+            window.scrollBy({ top: event.deltaY, left: 0 });
+          }
+        }}
+      >
+        {isLoading ? (
+          <div className="space-y-3 p-4" aria-hidden="true">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={`saved-table-skel-${index}`}
+                className="h-14 animate-pulse rounded-lg bg-primary-light/30"
               />
             ))}
-          </tbody>
-        </table>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="px-4 py-12 text-center">
+            <p className="text-sm font-semibold text-foreground">
+              No shortlisted candidates found.
+            </p>
+            <p className="mt-1 text-sm text-muted">
+              No candidates match your filters.
+            </p>
+          </div>
+        ) : (
+          <table className="w-full min-w-[40rem] border-collapse text-left xl:min-w-0">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-border-subtle bg-hero-bg/95 text-[11px] font-semibold uppercase tracking-wide text-muted backdrop-blur-sm sm:text-xs">
+                <th className="min-w-0 px-3 py-3 sm:px-4">Candidate</th>
+                <th className="hidden whitespace-nowrap px-3 py-3 xl:table-cell">
+                  Job ID
+                </th>
+                <th className="min-w-0 px-3 py-3">Job title</th>
+                <th className="hidden whitespace-nowrap px-3 py-3 lg:table-cell">
+                  Saved on
+                </th>
+                <th className="hidden min-w-0 px-3 py-3 md:table-cell">Tags</th>
+                <th className="whitespace-nowrap px-2 py-3 text-right sm:px-3">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <SavedCandidateTableRow
+                  key={item.id}
+                  item={item}
+                  isSelected={selectedApplicationId === item.applicationId}
+                  actions={actions}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
-    </div>
+
+      <div className="flex shrink-0 flex-col gap-2 border-t border-border-subtle px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
+        <p className="text-xs text-muted">
+          Page {page} of {Math.max(1, totalPages)}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={page <= 1 || isLoading}
+            onClick={() => onPageChange(page - 1)}
+            className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            <ChevronLeft className="size-4" aria-hidden="true" />
+            Prev
+          </button>
+          <button
+            type="button"
+            disabled={page >= totalPages || isLoading}
+            onClick={() => onPageChange(page + 1)}
+            className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            Next
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }

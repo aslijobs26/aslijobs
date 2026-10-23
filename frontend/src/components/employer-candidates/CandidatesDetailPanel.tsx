@@ -14,6 +14,7 @@ import {
 } from "@/components/employer-candidates/candidates-ats-utils";
 import { EmployerCandidateInterviewEditor } from "@/components/employer-candidates/EmployerCandidateInterviewEditor";
 import { ResumePreview } from "@/components/job-seeker-resume/ResumePreview";
+import { EMPLOYER_CANDIDATE_DETAIL_PANEL_ASIDE_CLASS } from "@/constants/employer-candidate-detail-panel";
 import {
   downloadEmployerApplicationPdf,
   fetchEmployerApplication,
@@ -71,8 +72,7 @@ type CandidatesDetailPanelProps = {
   allowedTabs?: readonly CandidatesDetailTab[];
 };
 
-const PANEL_DESKTOP_CLASSES =
-  "flex h-full min-h-0 w-full flex-col overflow-hidden xl:w-[24rem]";
+const PANEL_DESKTOP_CLASSES = EMPLOYER_CANDIDATE_DETAIL_PANEL_ASIDE_CLASS;
 
 const TABS: { id: CandidatesDetailTab; label: string }[] = [
   { id: "profile", label: "Profile" },
