@@ -70,14 +70,12 @@ export function VerificationsMobileCard({
         </OperationsBadge>
       </div>
 
-      <div className="mt-2.5 space-y-1.5 text-xs">
-        <p className="flex items-center gap-1.5 text-muted">
+      <div className="mt-2.5 flex min-w-0 items-center gap-2 text-xs">
+        <p className="flex min-w-0 shrink-0 items-center gap-1 text-muted">
           <Building2 className="size-3.5 shrink-0" aria-hidden="true" />
-          <span className="truncate tabular-nums">
-            {item.documentsLabel || "—"}
-          </span>
+          <span className="tabular-nums">{item.documentsLabel || "—"}</span>
         </p>
-        <p className="flex items-center gap-1.5 text-muted">
+        <p className="flex min-w-0 flex-1 items-center gap-1 text-muted">
           <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">
             {item.location?.trim() && item.location.trim() !== "—"
@@ -85,14 +83,12 @@ export function VerificationsMobileCard({
               : "Not specified"}
           </span>
         </p>
-        {item.assignedToLabel?.trim() ? (
-          <p className="truncate text-[11px] text-muted">
-            Assigned:{" "}
-            <span className="font-medium text-foreground">
-              {item.assignedToLabel}
-            </span>
-          </p>
-        ) : null}
+        <p className="min-w-0 shrink-0 truncate text-[11px] text-muted">
+          Assigned:{" "}
+          <span className="font-medium text-foreground">
+            {item.assignedToLabel?.trim() || "—"}
+          </span>
+        </p>
       </div>
 
       <div className="mt-3 flex items-center justify-between border-t border-border-subtle pt-2.5 text-xs">

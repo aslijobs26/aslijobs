@@ -29,14 +29,22 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm ops-brand-border-glow max-sm:rounded-lg max-sm:p-2 sm:p-4 lg:p-5">
-      <div className="flex items-center gap-1.5 border-b border-border-subtle pb-2 max-sm:pb-1.5 sm:gap-2 sm:pb-3">
+    <div className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow max-sm:rounded-lg max-sm:p-3 sm:p-4 lg:p-5">
+      <div className="flex items-center gap-2 border-b border-border-subtle pb-2.5 max-sm:pb-2.5 sm:gap-2 sm:pb-3">
         <Icon className="size-3.5 text-primary sm:size-4" aria-hidden="true" />
         <h3 className="text-[10px] font-bold uppercase tracking-wider text-foreground sm:text-xs">
           {title}
         </h3>
       </div>
-      <div className="mt-2.5 sm:mt-4">{children}</div>
+      <div className="mt-3 max-sm:mt-3 sm:mt-4">{children}</div>
+    </div>
+  );
+}
+
+function InfoGrid({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-3 max-sm:gap-x-3 max-sm:gap-y-3 sm:grid-cols-1 sm:gap-0 sm:divide-y sm:divide-border-subtle">
+      {children}
     </div>
   );
 }
@@ -47,31 +55,40 @@ function InfoRow({
   isMono = false,
   isLink = false,
   href,
+  fullWidth = false,
 }: {
   label: string;
   value?: string | number | null;
   isMono?: boolean;
   isLink?: boolean;
   href?: string;
+  /** Span both columns on mobile (addresses, remarks, long links). */
+  fullWidth?: boolean;
 }) {
   const display = value != null && value !== "" ? String(value) : "—";
 
   return (
-    <div className="flex flex-col gap-0.5 py-1 max-sm:py-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-1.5">
-      <span className="text-[10px] font-medium text-muted sm:text-xs">{label}</span>
+    <div
+      className={`flex min-w-0 flex-col gap-1 py-0.5 max-sm:gap-1 max-sm:py-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-1.5 ${
+        fullWidth ? "col-span-2" : ""
+      }`}
+    >
+      <span className="text-[10px] font-medium leading-snug text-muted sm:text-xs">
+        {label}
+      </span>
       {isLink && href && display !== "—" ? (
         <a
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex max-w-full items-center gap-1 break-all text-[11px] font-semibold text-primary hover:underline sm:text-xs"
+          className="inline-flex max-w-full items-center gap-1 break-all text-[11px] font-semibold leading-snug text-primary hover:underline sm:text-xs"
         >
           <span className="truncate">{display}</span>
           <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
         </a>
       ) : (
         <span
-          className={`break-words text-[11px] font-semibold text-foreground sm:text-xs ${isMono ? "font-mono" : ""}`}
+          className={`break-words text-[11px] font-semibold leading-snug text-foreground sm:text-xs ${isMono ? "font-mono" : ""}`}
         >
           {display}
         </span>
@@ -192,9 +209,9 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
       {/* Account Type Specific Details & Contacts */}
       {isIndividual ? (
         /* 1. INDIVIDUAL EMPLOYER PROFILE */
-        <div className="grid gap-2.5 max-sm:gap-2 sm:gap-4 lg:grid-cols-2">
+        <div className="grid gap-3 max-sm:gap-3 sm:gap-4 lg:grid-cols-2">
           <SectionCard title="Individual & Account Details" icon={UserCheck}>
-            <div className="divide-y divide-border-subtle">
+            <InfoGrid>
               <InfoRow
                 label="Individual Name"
                 value={employer.contactPersonName || employer.displayName}
@@ -215,7 +232,11 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 <InfoRow label="Location" value={employer.location} />
               ) : null}
               {hasText(employer.companyAddress) ? (
-                <InfoRow label="Address" value={employer.companyAddress} />
+                <InfoRow
+                  label="Address"
+                  value={employer.companyAddress}
+                  fullWidth
+                />
               ) : null}
               {hasText(employer.pincode) ? (
                 <InfoRow label="Pincode" value={employer.pincode} isMono />
@@ -228,14 +249,18 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 label="Registered On"
                 value={formatEmployerRegisteredLabel(employer)}
               />
-            </div>
+            </InfoGrid>
           </SectionCard>
 
           <SectionCard title="Contact & Verification Status" icon={ShieldCheck}>
-            <div className="divide-y divide-border-subtle">
+            <InfoGrid>
               <InfoRow label="WhatsApp Phone" value={employer.phone} />
               {hasText(employer.email) ? (
-                <InfoRow label="Email Address" value={employer.email} />
+                <InfoRow
+                  label="Email Address"
+                  value={employer.email}
+                  fullWidth
+                />
               ) : null}
               {hasText(employer.alternatePhone) ? (
                 <InfoRow
@@ -258,6 +283,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 <InfoRow
                   label="Verification Remarks"
                   value={employer.verificationRemarks}
+                  fullWidth
                 />
               ) : null}
               <InfoRow label="Account Status" value={employer.statusLabel} />
@@ -265,16 +291,17 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 <InfoRow
                   label="Suspension Reason"
                   value={employer.suspensionReason}
+                  fullWidth
                 />
               ) : null}
-            </div>
+            </InfoGrid>
           </SectionCard>
         </div>
       ) : isConsultancy ? (
         /* 2. CONSULTANCY EMPLOYER PROFILE */
-        <div className="grid gap-2.5 max-sm:gap-2 sm:gap-4 lg:grid-cols-2">
+        <div className="grid gap-3 max-sm:gap-3 sm:gap-4 lg:grid-cols-2">
           <SectionCard title="Consultancy Details" icon={Building}>
-            <div className="divide-y divide-border-subtle">
+            <InfoGrid>
               <InfoRow
                 label="Consultancy Name"
                 value={employer.companyName || employer.displayName}
@@ -285,7 +312,11 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 value={employer.organizationType || "Consultancy"}
               />
               {hasText(employer.companyAddress) ? (
-                <InfoRow label="Address" value={employer.companyAddress} />
+                <InfoRow
+                  label="Address"
+                  value={employer.companyAddress}
+                  fullWidth
+                />
               ) : null}
               {hasText(employer.pincode) ? (
                 <InfoRow label="Pincode" value={employer.pincode} isMono />
@@ -298,6 +329,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                   label="Website"
                   value={employer.website}
                   isLink
+                  fullWidth
                   href={
                     employer.website.startsWith("http")
                       ? employer.website
@@ -326,11 +358,11 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 label="Registered On"
                 value={formatEmployerRegisteredLabel(employer)}
               />
-            </div>
+            </InfoGrid>
           </SectionCard>
 
           <SectionCard title="Contact & Verification Status" icon={User}>
-            <div className="divide-y divide-border-subtle">
+            <InfoGrid>
               {hasText(employer.contactPersonName) ? (
                 <InfoRow
                   label="Contact Person"
@@ -345,7 +377,11 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
               ) : null}
               <InfoRow label="WhatsApp Phone" value={employer.phone} />
               {hasText(employer.email) ? (
-                <InfoRow label="Email Address" value={employer.email} />
+                <InfoRow
+                  label="Email Address"
+                  value={employer.email}
+                  fullWidth
+                />
               ) : null}
               {hasText(employer.alternatePhone) ? (
                 <InfoRow
@@ -368,6 +404,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 <InfoRow
                   label="Verification Remarks"
                   value={employer.verificationRemarks}
+                  fullWidth
                 />
               ) : null}
               <InfoRow label="Account Status" value={employer.statusLabel} />
@@ -375,16 +412,17 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 <InfoRow
                   label="Suspension Reason"
                   value={employer.suspensionReason}
+                  fullWidth
                 />
               ) : null}
-            </div>
+            </InfoGrid>
           </SectionCard>
         </div>
       ) : (
         /* 3. COMPANY / BUSINESS EMPLOYER PROFILE */
-        <div className="grid gap-2.5 max-sm:gap-2 sm:gap-4 lg:grid-cols-2">
+        <div className="grid gap-3 max-sm:gap-3 sm:gap-4 lg:grid-cols-2">
           <SectionCard title="Company & Organization Details" icon={Building}>
-            <div className="divide-y divide-border-subtle">
+            <InfoGrid>
               <InfoRow
                 label="Company Name"
                 value={employer.companyName || employer.displayName}
@@ -407,7 +445,11 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 <InfoRow label="Company Size" value={companySizeDisplay} />
               ) : null}
               {hasText(employer.companyAddress) ? (
-                <InfoRow label="Address" value={employer.companyAddress} />
+                <InfoRow
+                  label="Address"
+                  value={employer.companyAddress}
+                  fullWidth
+                />
               ) : null}
               {hasText(employer.pincode) ? (
                 <InfoRow label="Pincode" value={employer.pincode} isMono />
@@ -424,6 +466,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                   label="Website"
                   value={employer.website}
                   isLink
+                  fullWidth
                   href={
                     employer.website.startsWith("http")
                       ? employer.website
@@ -452,11 +495,11 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 label="Registered On"
                 value={formatEmployerRegisteredLabel(employer)}
               />
-            </div>
+            </InfoGrid>
           </SectionCard>
 
           <SectionCard title="Contact & Verification Status" icon={User}>
-            <div className="divide-y divide-border-subtle">
+            <InfoGrid>
               {hasText(employer.contactPersonName) ? (
                 <InfoRow
                   label="Contact Person"
@@ -471,7 +514,11 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
               ) : null}
               <InfoRow label="WhatsApp Phone" value={employer.phone} />
               {hasText(employer.email) ? (
-                <InfoRow label="Email Address" value={employer.email} />
+                <InfoRow
+                  label="Email Address"
+                  value={employer.email}
+                  fullWidth
+                />
               ) : null}
               {hasText(employer.alternatePhone) ? (
                 <InfoRow
@@ -494,6 +541,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 <InfoRow
                   label="Verification Remarks"
                   value={employer.verificationRemarks}
+                  fullWidth
                 />
               ) : null}
               <InfoRow label="Account Status" value={employer.statusLabel} />
@@ -501,9 +549,10 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 <InfoRow
                   label="Suspension Reason"
                   value={employer.suspensionReason}
+                  fullWidth
                 />
               ) : null}
-            </div>
+            </InfoGrid>
           </SectionCard>
         </div>
       )}

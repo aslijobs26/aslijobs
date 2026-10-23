@@ -62,9 +62,9 @@ export function EmployerDetailTabs({
   onTabChange,
 }: EmployerDetailTabsProps) {
   return (
-    <div className="flex border-b border-border-subtle bg-surface px-2 shadow-xs max-sm:px-1.5 sm:px-3 lg:px-4">
+    <div className="flex border-b border-border-subtle bg-surface px-2.5 shadow-xs max-sm:px-2.5 sm:px-3 lg:px-4">
       <nav
-        className="-mb-px flex space-x-3 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-sm:space-x-2.5 sm:space-x-4 lg:space-x-6"
+        className="-mb-px flex gap-x-3 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-sm:gap-x-3.5 sm:gap-x-4 lg:gap-x-6"
         aria-label="Employer profile tabs"
       >
         {TABS.map((tab) => {
@@ -83,7 +83,7 @@ export function EmployerDetailTabs({
               type="button"
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "group inline-flex shrink-0 items-center gap-1.5 border-b-2 py-2 text-[11px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none sm:gap-2 sm:py-2.5 sm:text-xs lg:py-3",
+                "group inline-flex shrink-0 items-center gap-1.5 border-b-2 px-0.5 py-2.5 text-[11px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none max-sm:gap-1.5 max-sm:py-2.5 sm:gap-2 sm:py-2.5 sm:text-xs lg:py-3",
                 isActive
                   ? "border-primary text-primary"
                   : "border-transparent text-muted hover:border-border hover:text-foreground",
@@ -103,7 +103,7 @@ export function EmployerDetailTabs({
               {badgeCount != null ? (
                 <span
                   className={cn(
-                    "inline-flex items-center justify-center rounded-full px-1.5 py-0 text-[9px] font-bold tabular-nums sm:px-2 sm:py-0.5 sm:text-[10px]",
+                    "inline-flex min-w-4 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-bold tabular-nums max-sm:min-w-4 max-sm:px-1.5 sm:min-w-5 sm:px-2 sm:text-[10px]",
                     isActive
                       ? "bg-primary-light text-primary"
                       : "bg-hero-bg text-muted",

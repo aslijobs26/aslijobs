@@ -38,11 +38,13 @@ function InfoRow({
   emphasize?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-2.5 xl:py-2">
-      <dt className="shrink-0 text-[11px] text-muted">{label}</dt>
+    <div className="flex items-start justify-between gap-3 py-2 max-sm:gap-2.5 max-sm:py-2 sm:gap-4 sm:py-2.5 xl:py-2">
+      <dt className="shrink-0 text-[10px] text-muted max-sm:text-[10px] sm:text-[11px]">
+        {label}
+      </dt>
       <dd
         className={cn(
-          "min-w-0 break-words text-right text-xs text-foreground",
+          "min-w-0 break-words text-right text-[11px] text-foreground max-sm:text-[11px] sm:text-xs",
           emphasize ? "font-semibold" : "font-medium",
         )}
       >
@@ -62,13 +64,15 @@ function StatusInfoRow({
   status: OperationsJobDetail["status"];
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-2.5 xl:py-2">
-      <dt className="shrink-0 text-[11px] text-muted">{label}</dt>
+    <div className="flex items-center justify-between gap-3 py-2 max-sm:gap-2.5 max-sm:py-2 sm:gap-4 sm:py-2.5 xl:py-2">
+      <dt className="shrink-0 text-[10px] text-muted max-sm:text-[10px] sm:text-[11px]">
+        {label}
+      </dt>
       <dd>
         <OperationsBadge
           variant={jobDetailStatusTone(status)}
           className={cn(
-            "px-2 py-0.5 text-[10px] font-semibold",
+            "px-1.5 py-0 text-[9px] font-semibold sm:px-2 sm:py-0.5 sm:text-[10px]",
             status === "active" && "bg-success/10 text-success",
           )}
         >
@@ -91,22 +95,22 @@ function JobHighlightMetric({
   tone: string;
 }) {
   return (
-    <article className="flex h-full min-h-[6.75rem] min-w-0 items-center gap-3 rounded-xl border border-border-subtle bg-surface px-3 py-4 shadow-sm transition-[border-color,background-color] duration-200 hover:border-primary/15 hover:bg-hero-bg/40 sm:min-h-[7.25rem] sm:gap-3.5 sm:px-3.5 sm:py-4.5 lg:min-h-[7.5rem] xl:gap-4 xl:px-4 xl:py-5">
+    <article className="flex h-full min-h-[5.25rem] min-w-0 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-2.5 py-2.5 shadow-sm transition-[border-color,background-color] duration-200 hover:border-primary/15 hover:bg-hero-bg/40 max-sm:min-h-[5.25rem] max-sm:rounded-lg max-sm:px-2.5 max-sm:py-2.5 sm:min-h-[7.25rem] sm:gap-3.5 sm:rounded-xl sm:px-3.5 sm:py-4.5 lg:min-h-[7.5rem] xl:gap-4 xl:px-4 xl:py-5">
       <span
         className={cn(
-          "inline-flex size-10 shrink-0 items-center justify-center rounded-xl xl:size-11",
+          "inline-flex size-8 shrink-0 items-center justify-center rounded-lg max-sm:size-8 max-sm:rounded-lg sm:size-10 sm:rounded-xl xl:size-11",
           tone,
         )}
         aria-hidden="true"
       >
-        <Icon className="size-[18px] xl:size-5" />
+        <Icon className="size-3.5 max-sm:size-3.5 sm:size-[18px] xl:size-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-medium uppercase tracking-[0.04em] text-muted xl:text-[11px]">
+        <p className="text-[9px] font-medium uppercase tracking-[0.04em] text-muted max-sm:text-[9px] sm:text-[10px] xl:text-[11px]">
           {label}
         </p>
         <p
-          className="mt-1 text-xs font-semibold leading-snug text-foreground sm:text-[13px] xl:mt-1.5 xl:leading-tight"
+          className="mt-0.5 text-[11px] font-semibold leading-snug text-foreground max-sm:mt-0.5 max-sm:text-[11px] sm:mt-1 sm:text-[13px] xl:mt-1.5 xl:leading-tight"
           title={value || undefined}
         >
           {value || "—"}
@@ -128,19 +132,21 @@ function PerformanceMetric({
   tone: string;
 }) {
   return (
-    <article className="rounded-lg border border-border-subtle bg-surface p-3 text-center xl:p-2.5">
+    <article className="rounded-lg border border-border-subtle bg-surface p-2 text-center max-sm:p-2 sm:p-3 xl:p-2.5">
       <span
         className={cn(
-          "mx-auto inline-flex size-9 items-center justify-center rounded-lg",
+          "mx-auto inline-flex size-8 items-center justify-center rounded-lg max-sm:size-8 sm:size-9",
           tone,
         )}
       >
-        <Icon className="size-4" aria-hidden="true" />
+        <Icon className="size-3.5 sm:size-4" aria-hidden="true" />
       </span>
-      <p className="mt-2 text-lg font-bold leading-none tabular-nums text-foreground">
+      <p className="mt-1.5 text-base font-bold leading-none tabular-nums text-foreground max-sm:mt-1.5 max-sm:text-base sm:mt-2 sm:text-lg">
         {value}
       </p>
-      <p className="mt-1 text-[10px] leading-tight text-muted">{label}</p>
+      <p className="mt-0.5 text-[9px] leading-tight text-muted max-sm:text-[9px] sm:mt-1 sm:text-[10px]">
+        {label}
+      </p>
     </article>
   );
 }
@@ -157,9 +163,11 @@ function DescriptionSection({
   }
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-xs font-semibold text-foreground">{title}</h3>
-      <ul className="list-disc space-y-1.5 pl-4 text-xs leading-relaxed text-foreground">
+    <div className="space-y-1.5 max-sm:space-y-1.5 sm:space-y-2">
+      <h3 className="text-[11px] font-semibold text-foreground max-sm:text-[11px] sm:text-xs">
+        {title}
+      </h3>
+      <ul className="list-disc space-y-1 pl-4 text-[11px] leading-relaxed text-foreground max-sm:space-y-1 max-sm:text-[11px] sm:space-y-1.5 sm:text-xs">
         {items.map((item) => (
           <li key={item}>{item}</li>
         ))}
@@ -168,7 +176,7 @@ function DescriptionSection({
   );
 }
 
-const overviewCardBodyClassName = "p-2.5 sm:p-3 xl:p-2";
+const overviewCardBodyClassName = "p-2 max-sm:p-2 sm:p-3 xl:p-2";
 const pairedOverviewCardClassName = "h-full w-full min-w-0";
 const sideOverviewCardClassName = "h-auto w-full self-start";
 
@@ -202,8 +210,8 @@ export function JobOverviewPanel({
       parsedDescription.requirements.length > 0);
 
   return (
-    <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-12 xl:gap-2">
-      <div className="grid grid-cols-1 gap-2.5 lg:col-span-9 lg:grid-cols-9 lg:items-stretch xl:gap-2">
+    <div className="grid grid-cols-1 gap-2 max-sm:gap-2 sm:gap-2.5 lg:grid-cols-12 xl:gap-2">
+      <div className="grid grid-cols-1 gap-2 max-sm:gap-2 sm:gap-2.5 lg:col-span-9 lg:grid-cols-9 lg:items-stretch xl:gap-2">
         <OperationsCard
           title="Job Description"
           className={cn(
@@ -215,11 +223,11 @@ export function JobOverviewPanel({
           {descriptionIsHtml ? (
             <JobDescriptionContent
               html={job.description}
-              className="text-xs leading-relaxed text-foreground"
+              className="text-[11px] leading-relaxed text-foreground max-sm:text-[11px] sm:text-xs"
               emptyFallback="No description provided."
             />
           ) : hasStructuredDescription ? (
-            <div className="space-y-4 text-xs leading-relaxed text-foreground">
+            <div className="space-y-3 text-[11px] leading-relaxed text-foreground max-sm:space-y-3 max-sm:text-[11px] sm:space-y-4 sm:text-xs">
               {parsedDescription.intro.length > 0 ? (
                 <div className="space-y-2">
                   {parsedDescription.intro.map((paragraph) => (
@@ -237,7 +245,7 @@ export function JobOverviewPanel({
               />
             </div>
           ) : (
-            <p className="text-xs leading-relaxed text-foreground">
+            <p className="text-[11px] leading-relaxed text-foreground max-sm:text-[11px] sm:text-xs">
               {job.description.trim() || "No description provided."}
             </p>
           )}        </OperationsCard>
@@ -291,7 +299,7 @@ export function JobOverviewPanel({
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-2.5 lg:col-span-3 xl:gap-2">
+      <div className="flex min-w-0 flex-col gap-2 max-sm:gap-2 sm:gap-2.5 lg:col-span-3 xl:gap-2">
         <OperationsCard
           title="Job Status & Visibility"
           className={sideOverviewCardClassName}

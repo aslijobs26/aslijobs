@@ -529,66 +529,87 @@ export function MyWorkTableSection({
             const selectable = isItemSelectable
               ? isItemSelectable(item)
               : true;
+            const relatedLine = [
+              item.relatedLabel?.trim() || null,
+              item.relatedLocationLabel?.trim() || null,
+            ]
+              .filter(Boolean)
+              .join(" · ");
+
             return (
-              <li key={item.id} className="flex flex-col gap-2 px-3 py-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 items-start gap-2">
-                    {selectionEnabled ? (
-                      <input
-                        type="checkbox"
-                        checked={Boolean(selectedIds?.has(item.id))}
-                        disabled={!selectable}
-                        onChange={() => onToggleSelect?.(item)}
-                        aria-label={`Select ${item.displayId}`}
-                        className="mt-1 size-3.5 rounded border-border-subtle disabled:opacity-40"
-                      />
-                    ) : null}
-                    <div className="min-w-0">
+              <li key={item.id} className="flex items-start gap-2 px-2.5 py-2.5">
+                {selectionEnabled ? (
+                  <input
+                    type="checkbox"
+                    checked={Boolean(selectedIds?.has(item.id))}
+                    disabled={!selectable}
+                    onChange={() => onToggleSelect?.(item)}
+                    aria-label={`Select ${item.displayId}`}
+                    className="mt-1 size-3.5 shrink-0 rounded border-border-subtle disabled:opacity-40"
+                  />
+                ) : null}
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
                       <Link
                         to={operationsMyWorkDetailPath(item.id)}
-                        className="text-[13px] font-semibold text-foreground"
+                        className="block truncate text-[12px] font-semibold text-foreground"
                       >
                         {item.title}
                       </Link>
-                      <p className="text-[10px] text-muted">{item.displayId}</p>
+                      <p className="mt-0.5 truncate text-[10px] text-muted">
+                        {item.displayId}
+                        <span className="mx-1 text-border-subtle">·</span>
+                        {item.typeLabel}
+                        {item.capabilityMismatch ? (
+                          <>
+                            <span className="mx-1 text-border-subtle">·</span>
+                            <span className="font-medium text-warning">
+                              Capability mismatch
+                            </span>
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <OperationsBadge
+                        variant={priorityVariant(item.priority)}
+                        className="px-1.5 py-0 text-[9px]"
+                      >
+                        {item.priority}
+                      </OperationsBadge>
+                      <MyWorkRowActions
+                        item={item}
+                        busy={busyId === item.id}
+                        showSelectOption={showSelectMenuOption}
+                        onAction={(action) => onRowAction(item, action)}
+                      />
                     </div>
                   </div>
-                  <MyWorkRowActions
-                    item={item}
-                    busy={busyId === item.id}
-                    showSelectOption={showSelectMenuOption}
-                    onAction={(action) => onRowAction(item, action)}
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <OperationsBadge variant={priorityVariant(item.priority)}>
-                    {item.priority}
-                  </OperationsBadge>
-                  <OperationsBadge variant={statusVariant(item.status)}>
-                    {item.statusLabel}
-                  </OperationsBadge>
-                  {item.capabilityMismatch ? (
-                    <OperationsBadge variant="medium">
-                      Capability Mismatch
+
+                  <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
+                    <OperationsBadge
+                      variant={statusVariant(item.status)}
+                      className="shrink-0 px-1.5 py-0 text-[9px]"
+                    >
+                      {item.statusLabel}
                     </OperationsBadge>
-                  ) : null}
-                  <span className="text-[11px] text-muted">{item.typeLabel}</span>
+                    <span className="min-w-0 flex-1 truncate text-[10px] text-muted">
+                      {relatedLine || "—"}
+                    </span>
+                    <span
+                      className={cn(
+                        "shrink-0 text-[10px] font-semibold",
+                        dueInfo.tone === "danger" && "text-danger",
+                        dueInfo.tone === "warning" && "text-warning",
+                        dueInfo.tone === "neutral" && "text-muted",
+                      )}
+                    >
+                      {dueInfo.label}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-[11px] text-foreground">
-                  {item.relatedLabel || "—"}
-                  {item.relatedLocationLabel
-                    ? ` · ${item.relatedLocationLabel}`
-                    : ""}
-                </p>
-                <p
-                  className={cn(
-                    "text-[11px] font-medium",
-                    dueInfo.tone === "danger" && "text-danger",
-                    dueInfo.tone === "warning" && "text-warning",
-                  )}
-                >
-                  Due: {dueInfo.label}
-                </p>
               </li>
             );
           })

@@ -47,13 +47,13 @@ export function AsliInsightsSection({ insights }: AsliInsightsSectionProps) {
       action={
         <Link
           to={OPERATIONS_ROUTES.MY_WORK}
-          className="text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="text-[11px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-[12px]"
         >
           View all insights →
         </Link>
       }
     >
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-1.5 sm:gap-2.5 md:grid-cols-3">
         {insights.map((insight, index) => {
           const style = INSIGHT_STYLES[index % INSIGHT_STYLES.length];
           const Icon = style.Icon;
@@ -62,23 +62,23 @@ export function AsliInsightsSection({ insights }: AsliInsightsSectionProps) {
               key={insight.id}
               to={insight.href}
               className={cn(
-                "group flex flex-col rounded-xl border p-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                "group flex flex-col rounded-lg border p-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:rounded-xl sm:p-3.5",
                 style.wrap,
                 "hover:brightness-[0.99]",
               )}
             >
               <span
                 className={cn(
-                  "mb-2.5 inline-flex size-8 items-center justify-center rounded-lg",
+                  "mb-1.5 inline-flex size-7 items-center justify-center rounded-md sm:mb-2.5 sm:size-8 sm:rounded-lg",
                   style.iconWrap,
                 )}
               >
-                <Icon className="size-4" strokeWidth={2} aria-hidden="true" />
+                <Icon className="size-3.5 sm:size-4" strokeWidth={2} aria-hidden="true" />
               </span>
-              <p className="text-[12px] leading-relaxed text-foreground">
+              <p className="text-[11px] leading-relaxed text-foreground sm:text-[12px]">
                 {insight.message}
               </p>
-              <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+              <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-primary sm:mt-3 sm:text-[11px]">
                 {insight.actionLabel}
                 <ArrowRight
                   className="size-3 transition-transform group-hover:translate-x-0.5"

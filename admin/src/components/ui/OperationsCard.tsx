@@ -33,18 +33,20 @@ export function OperationsCard({
       )}
     >
       {(title || action || badge) && (
-        <header className="flex shrink-0 flex-wrap items-start justify-between gap-1.5 border-b border-border-subtle px-3 py-2 sm:px-3.5 sm:py-2.5">
+        <header className="flex shrink-0 flex-wrap items-start justify-between gap-1 border-b border-border-subtle px-2.5 py-1.5 max-sm:gap-1 sm:gap-1.5 sm:px-3.5 sm:py-2.5">
           <div className="min-w-0">
             {title && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <h2 className="text-[13px] font-semibold leading-tight text-foreground">
+              <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+                <h2 className="text-[12px] font-semibold leading-tight text-foreground sm:text-[13px]">
                   {title}
                 </h2>
                 {badge}
               </div>
             )}
             {subtitle && (
-              <p className="mt-0.5 text-[11px] leading-tight text-muted">{subtitle}</p>
+              <p className="mt-0.5 text-[10px] leading-tight text-muted sm:text-[11px]">
+                {subtitle}
+              </p>
             )}
           </div>
           {action}
@@ -53,7 +55,7 @@ export function OperationsCard({
       <div
         className={cn(
           "min-h-0 flex-1",
-          isFlushBody ? "p-0" : "p-2.5 sm:p-3",
+          isFlushBody ? "p-0" : "p-2 max-sm:p-2 sm:p-3",
           bodyClassName,
         )}
       >

@@ -43,12 +43,14 @@ function KpiTile({
   return (
     <Link
       to={href}
-      className="flex min-h-[3.5rem] flex-col justify-center rounded-lg border border-border-subtle bg-hero-bg/30 px-3 py-2.5 transition-colors hover:border-primary/20 hover:bg-primary-light/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+      className="flex min-h-[3rem] flex-col justify-center rounded-lg border border-border-subtle bg-hero-bg/30 px-2 py-2 transition-colors hover:border-primary/20 hover:bg-primary-light/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:min-h-[2.75rem] sm:min-h-[3.5rem] sm:px-3 sm:py-2.5"
     >
-      <span className="text-[20px] font-bold leading-none tabular-nums text-foreground">
+      <span className="text-[16px] font-bold leading-none tabular-nums text-foreground max-sm:text-[15px] sm:text-[20px]">
         {formatCount(value)}
       </span>
-      <span className="mt-1.5 text-[11px] font-medium text-muted">{label}</span>
+      <span className="mt-1 text-[10px] font-medium text-muted sm:mt-1.5 sm:text-[11px]">
+        {label}
+      </span>
     </Link>
   );
 }
@@ -179,7 +181,7 @@ export function NewRegistrationsSection() {
           <Building2 className="size-3" strokeWidth={2} aria-hidden="true" />
         </span>
       }
-      bodyClassName="p-2.5 sm:p-3"
+      bodyClassName="p-1.5 max-sm:p-1.5 sm:p-3"
       action={
         <Link
           to={
@@ -187,7 +189,7 @@ export function NewRegistrationsSection() {
               ? OPERATIONS_ROUTES.EMPLOYERS
               : OPERATIONS_ROUTES.CANDIDATES
           }
-          className="text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="text-[11px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-[12px]"
         >
           View all →
         </Link>
@@ -195,19 +197,19 @@ export function NewRegistrationsSection() {
     >
       {metricsQuery.isLoading ? (
         <div
-          className="space-y-3"
+          className="space-y-2 sm:space-y-3"
           aria-busy="true"
           aria-label="Loading new registrations"
         >
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
             {Array.from({ length: 4 }).map((_, index) => (
               <div
                 key={index}
-                className="h-14 animate-pulse rounded-lg bg-hero-bg"
+                className="h-12 animate-pulse rounded-lg bg-hero-bg sm:h-14"
               />
             ))}
           </div>
-          <div className="h-28 animate-pulse rounded-lg bg-hero-bg" />
+          <div className="h-24 animate-pulse rounded-lg bg-hero-bg sm:h-28" />
         </div>
       ) : null}
 
@@ -234,8 +236,8 @@ export function NewRegistrationsSection() {
       ) : null}
 
       {!metricsQuery.isLoading && !metricsQuery.isError && hasAnyMetrics ? (
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="flex flex-col gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
             {employersMetrics ? (
               <>
                 <KpiTile

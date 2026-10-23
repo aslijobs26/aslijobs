@@ -36,16 +36,16 @@ function NotificationRow({
         to={item.actionPath}
         onClick={() => onSelect(item)}
         className={cn(
-          "block px-3 py-2.5 transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
+          "block px-2.5 py-2 transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 max-sm:px-2.5 max-sm:py-2 sm:px-3 sm:py-2.5",
           !item.isRead && "bg-primary-light/25",
         )}
       >
         <span className="flex items-start justify-between gap-2">
           <span className="min-w-0">
-            <span className="block truncate text-[12px] font-semibold text-foreground">
+            <span className="block truncate text-[11px] font-semibold text-foreground max-sm:text-[11px] sm:text-[12px]">
               {item.title}
             </span>
-            <span className="mt-0.5 block line-clamp-2 text-[11px] text-muted">
+            <span className="mt-0.5 block line-clamp-2 text-[10px] text-muted max-sm:text-[10px] sm:text-[11px]">
               {item.body}
             </span>
           </span>
@@ -56,7 +56,7 @@ function NotificationRow({
             />
           ) : null}
         </span>
-        <span className="mt-1.5 block text-[10px] text-muted">
+        <span className="mt-1 block text-[9px] text-muted max-sm:mt-1 max-sm:text-[9px] sm:mt-1.5 sm:text-[10px]">
           {formatNotificationTime(item.createdAt)}
           {item.actorName ? ` · ${item.actorName}` : ""}
         </span>
@@ -155,29 +155,29 @@ export function OperationsNotificationsMenu({
           id={menuId}
           role="menu"
           aria-label="Notifications"
-          className="absolute right-0 top-[calc(100%+0.35rem)] z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-lg"
+          className="absolute right-0 top-[calc(100%+0.35rem)] z-50 w-[min(16.5rem,calc(100vw-2.5rem))] overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-lg max-sm:w-[min(16.5rem,calc(100vw-2.5rem))] sm:w-[min(22rem,calc(100vw-2rem))]"
         >
-          <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2.5">
-            <p className="text-[12px] font-semibold text-foreground">
+          <div className="flex items-center justify-between border-b border-border-subtle px-2.5 py-2 max-sm:px-2.5 max-sm:py-2 sm:px-3 sm:py-2.5">
+            <p className="text-[11px] font-semibold text-foreground max-sm:text-[11px] sm:text-[12px]">
               Notifications
             </p>
             {unreadCount > 0 ? (
-              <span className="text-[10px] font-semibold tabular-nums text-muted">
+              <span className="text-[9px] font-semibold tabular-nums text-muted max-sm:text-[9px] sm:text-[10px]">
                 {unreadCount} unread
               </span>
             ) : null}
           </div>
 
-          <div className="max-h-[22rem] overflow-y-auto overscroll-contain scrollbar-hidden">
+          <div className="max-h-[16rem] overflow-y-auto overscroll-contain scrollbar-hidden max-sm:max-h-[16rem] sm:max-h-[22rem]">
             {notificationsQuery.isLoading ? (
-              <p className="px-3 py-8 text-center text-xs text-muted">
+              <p className="px-2.5 py-6 text-center text-[11px] text-muted max-sm:px-2.5 max-sm:py-6 sm:px-3 sm:py-8 sm:text-xs">
                 Loading notifications…
               </p>
             ) : null}
 
             {notificationsQuery.isError ? (
-              <div className="space-y-2 px-3 py-8 text-center">
-                <p className="text-xs font-medium text-danger">
+              <div className="space-y-2 px-2.5 py-6 text-center max-sm:px-2.5 max-sm:py-6 sm:px-3 sm:py-8">
+                <p className="text-[11px] font-medium text-danger sm:text-xs">
                   Failed to load notifications.
                 </p>
                 <button
@@ -193,7 +193,7 @@ export function OperationsNotificationsMenu({
             {!notificationsQuery.isLoading &&
             !notificationsQuery.isError &&
             (notificationsQuery.data?.items.length ?? 0) === 0 ? (
-              <p className="px-3 py-8 text-center text-xs text-muted">
+              <p className="px-2.5 py-6 text-center text-[11px] text-muted max-sm:px-2.5 max-sm:py-6 sm:px-3 sm:py-8 sm:text-xs">
                 No notifications yet.
               </p>
             ) : null}

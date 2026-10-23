@@ -78,7 +78,7 @@ export function WhatNeedsAttentionSection({
       action={
         <Link
           to={OPERATIONS_ROUTES.WORK_QUEUE}
-          className="text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="text-[11px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-[12px]"
         >
           View all →
         </Link>
@@ -86,7 +86,7 @@ export function WhatNeedsAttentionSection({
       bodyClassName="flex min-h-0 flex-col overflow-hidden p-0 sm:p-0"
     >
       <div
-        className="flex shrink-0 gap-1 overflow-x-auto border-b border-border-subtle px-3 pt-1 scrollbar-hidden sm:px-3.5"
+        className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-border-subtle px-2 pt-0.5 scrollbar-hidden max-sm:px-2 sm:gap-1 sm:px-3.5 sm:pt-1"
         role="tablist"
         aria-label="Attention filters"
       >
@@ -100,7 +100,7 @@ export function WhatNeedsAttentionSection({
               aria-selected={selected}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "shrink-0 border-b-2 px-2.5 py-2.5 text-[12px] font-medium transition-colors",
+                "shrink-0 border-b-2 px-2 py-2 text-[11px] font-medium transition-colors sm:px-2.5 sm:py-2.5 sm:text-[12px]",
                 selected
                   ? "border-danger text-foreground"
                   : "border-transparent text-muted hover:text-foreground",
@@ -112,63 +112,100 @@ export function WhatNeedsAttentionSection({
         })}
       </div>
 
-      <ul className="max-h-[15rem] divide-y divide-border-subtle overflow-y-auto overscroll-contain scrollbar-hidden sm:max-h-[18.75rem]">
+      <ul className="max-h-[13.5rem] divide-y divide-border-subtle overflow-y-auto overscroll-contain scrollbar-hidden sm:max-h-[18.75rem]">
         {isLoading ? (
-          <li className="px-3 py-8 text-center text-[12px] text-muted sm:px-3.5">
+          <li className="px-2.5 py-6 text-center text-[11px] text-muted sm:px-3.5 sm:py-8 sm:text-[12px]">
             Loading attention items…
           </li>
         ) : errorMessage ? (
-          <li className="px-3 py-8 text-center text-[12px] text-danger sm:px-3.5">
+          <li className="px-2.5 py-6 text-center text-[11px] text-danger sm:px-3.5 sm:py-8 sm:text-[12px]">
             {errorMessage}
           </li>
         ) : filteredItems.length === 0 ? (
-          <li className="px-3 py-8 text-center text-[12px] text-muted sm:px-3.5">
+          <li className="px-2.5 py-6 text-center text-[11px] text-muted sm:px-3.5 sm:py-8 sm:text-[12px]">
             No items in this queue right now.
           </li>
         ) : (
           filteredItems.map((item) => {
             const TypeIcon = TYPE_ICON[item.workType] ?? FileCheck2;
             return (
-              <li
-                key={item.id}
-                className="flex min-h-[3.75rem] flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:px-3.5"
-              >
-                <div className="flex min-w-0 flex-1 items-start gap-2.5">
+              <li key={item.id}>
+                {/* Mobile: compact two-line row */}
+                <div className="flex items-center gap-2 px-2.5 py-2 sm:hidden">
                   <span
                     className={cn(
-                      "mt-0.5 inline-flex h-5 min-w-7 shrink-0 items-center justify-center rounded px-1 text-[10px] font-bold",
+                      "inline-flex h-4 min-w-6 shrink-0 items-center justify-center rounded px-1 text-[9px] font-bold",
                       PRIORITY_CLASSES[item.priority],
                     )}
                   >
                     {item.priority}
                   </span>
-                  <span className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-hero-bg text-muted">
-                    <TypeIcon className="size-3.5" strokeWidth={2} aria-hidden="true" />
-                  </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold text-foreground">
+                    <p className="truncate text-[12px] font-semibold text-foreground">
                       {item.title}
                     </p>
-                    <p className="mt-0.5 truncate text-[11px] text-muted">
-                      {item.subtitle}
-                    </p>
-                    <p className="mt-1 truncate text-[11px] text-muted sm:hidden">
-                      {item.relatedTo} · {item.locationLabel}
+                    <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px]">
+                      <span className="min-w-0 truncate text-muted">
+                        {item.relatedTo}
+                      </span>
+                      <span
+                        className={cn(
+                          "shrink-0 font-semibold",
+                          item.dueTone === "danger" && "text-danger",
+                          item.dueTone === "warning" && "text-warning",
+                          item.dueTone === "neutral" && "text-muted",
+                        )}
+                      >
+                        {item.dueLabel}
+                      </span>
                     </p>
                   </div>
+                  <Link
+                    to={item.actionHref}
+                    className="inline-flex h-7 shrink-0 items-center rounded-md px-2 text-[10px] font-semibold text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  >
+                    {item.actionLabel}
+                  </Link>
                 </div>
 
-                <div className="hidden min-w-[9.5rem] max-w-[11rem] sm:block">
-                  <p className="truncate text-[12px] font-medium text-foreground">
-                    {item.relatedTo}
-                  </p>
-                  <p className="mt-0.5 truncate text-[11px] text-muted">
-                    {item.locationLabel}
-                  </p>
-                </div>
+                {/* Tablet / desktop: full row */}
+                <div className="hidden min-h-[3.75rem] items-center gap-3 px-3.5 py-2.5 sm:flex">
+                  <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                    <span
+                      className={cn(
+                        "mt-0.5 inline-flex h-5 min-w-7 shrink-0 items-center justify-center rounded px-1 text-[10px] font-bold",
+                        PRIORITY_CLASSES[item.priority],
+                      )}
+                    >
+                      {item.priority}
+                    </span>
+                    <span className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-hero-bg text-muted">
+                      <TypeIcon
+                        className="size-3.5"
+                        strokeWidth={2}
+                        aria-hidden="true"
+                      />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-semibold text-foreground">
+                        {item.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-[11px] text-muted">
+                        {item.subtitle}
+                      </p>
+                    </div>
+                  </div>
 
-                <div className="flex items-center justify-between gap-2 sm:contents">
-                  <div className="whitespace-nowrap text-right sm:min-w-[4.5rem]">
+                  <div className="min-w-[9.5rem] max-w-[11rem]">
+                    <p className="truncate text-[12px] font-medium text-foreground">
+                      {item.relatedTo}
+                    </p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted">
+                      {item.locationLabel}
+                    </p>
+                  </div>
+
+                  <div className="min-w-[4.5rem] whitespace-nowrap text-right">
                     <p className="text-[11px] text-muted">{item.createdAgo}</p>
                     <p
                       className={cn(

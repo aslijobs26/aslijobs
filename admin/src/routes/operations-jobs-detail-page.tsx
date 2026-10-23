@@ -247,11 +247,11 @@ export function OperationsJobsDetailPage() {
       title="Job Details"
       subtitle={job ? `${job.jobTitle} · ${job.jobId}` : "View complete job information."}
     >
-      <div className="flex w-full min-w-0 flex-col gap-2.5">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      <div className="flex w-full min-w-0 flex-col gap-2 max-sm:gap-2 sm:gap-2.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] max-sm:text-[11px] sm:gap-x-2 sm:text-xs">
           <Link
             to={OPERATIONS_ROUTES.JOBS}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex shrink-0 items-center gap-1 rounded-md px-1 py-0.5 font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:gap-1 sm:gap-1.5 sm:px-1.5 sm:py-1"
           >
             <ArrowLeft className="size-3.5" aria-hidden="true" />
             Back to Jobs
@@ -348,8 +348,8 @@ export function OperationsJobsDetailPage() {
               onRejectJob={handleOpenRejectDialog}
             />
 
-            <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-              <div className="px-2.5 sm:px-3.5">
+            <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm max-sm:rounded-lg">
+              <div className="px-2 max-sm:px-2 sm:px-3.5">
                 <JobDetailTabs
                   activeTab={activeTab}
                   applicationsCount={applicationsTotal}
@@ -357,9 +357,9 @@ export function OperationsJobsDetailPage() {
                 />
               </div>
 
-              <div className="p-2.5 sm:p-3.5">
+              <div className="p-2 max-sm:p-2 sm:p-3.5">
                 {activeTab === "overview" ? (
-                  <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-2 max-sm:gap-2 sm:gap-2.5">
                     {job.isLiveChangeReview ||
                     (job.liveChangeReviewStatus === "rejected" &&
                       job.pendingLiveRevision) ? (

@@ -47,71 +47,103 @@ export function EmployerDetailHeader({
   const isSuspended = employer.status === "suspended";
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm ops-brand-border-glow max-sm:rounded-lg max-sm:p-2 sm:p-4 lg:p-5">
-      <div className="flex flex-col gap-3 max-sm:gap-2.5 sm:gap-3.5 xl:flex-row xl:items-start xl:justify-between xl:gap-4">
-        <div className="flex min-w-0 w-full flex-1 items-start gap-2 max-sm:gap-2 sm:gap-3 lg:gap-3.5">
+    <div className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow max-sm:rounded-lg max-sm:p-3 sm:p-4 lg:p-5">
+      <div className="flex flex-col gap-3.5 max-sm:gap-3 sm:gap-3.5 xl:flex-row xl:items-start xl:justify-between xl:gap-4">
+        <div className="flex min-w-0 w-full flex-1 items-start gap-2.5 max-sm:gap-2.5 sm:gap-3 lg:gap-3.5">
           <Link
             to={OPERATIONS_ROUTES.EMPLOYERS}
             aria-label="Back to Employers"
-            className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-muted transition-colors hover:bg-hero-bg/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:size-8 lg:size-9"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-muted transition-colors hover:bg-hero-bg/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:size-8 sm:size-8 lg:size-9"
           >
             <ArrowLeft className="size-3.5 sm:size-4" aria-hidden="true" />
           </Link>
 
-          <span className="inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary-light text-[11px] font-bold text-primary max-sm:size-9 max-sm:rounded-md sm:size-12 sm:rounded-xl sm:text-sm lg:size-16 lg:text-base">
-            {logoUrl ? (
-              <img src={logoUrl} alt="" className="size-full object-cover" />
-            ) : (
-              employerAvatarInitials(employer.displayName)
-            )}
+          <span className="relative shrink-0">
+            <span className="inline-flex size-10 items-center justify-center overflow-hidden rounded-lg bg-primary-light text-[11px] font-bold text-primary max-sm:size-10 max-sm:rounded-lg sm:size-12 sm:rounded-xl sm:text-sm lg:size-16 lg:text-base">
+              {logoUrl ? (
+                <img src={logoUrl} alt="" className="size-full object-cover" />
+              ) : (
+                employerAvatarInitials(employer.displayName)
+              )}
+            </span>
+            {isVerified ? (
+              <span
+                className="absolute -bottom-0.5 -right-0.5 inline-flex size-3.5 items-center justify-center rounded-full bg-success text-white ring-2 ring-surface sm:hidden"
+                aria-label="Verified"
+                title="Verified"
+              >
+                <ShieldCheck
+                  className="size-2.5"
+                  strokeWidth={2.5}
+                  aria-hidden="true"
+                />
+              </span>
+            ) : null}
           </span>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1 max-sm:gap-1 sm:gap-1.5 lg:gap-2">
-              <h1 className="break-words text-[13px] font-bold leading-snug text-foreground sm:text-base lg:text-xl">
+          <div className="min-w-0 flex-1 space-y-1.5 max-sm:space-y-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 max-sm:gap-x-1.5 max-sm:gap-y-1 sm:gap-1.5 lg:gap-2">
+              <h1 className="min-w-0 break-words text-[13px] font-bold leading-snug text-foreground sm:text-base lg:text-xl">
                 {employer.displayName}
               </h1>
-              <span className="font-mono text-[10px] font-semibold text-muted sm:text-[11px] lg:text-xs">
-                {employer.displayId}
-              </span>
               <OperationsBadge
                 variant={verificationStatusBadgeVariant(
                   employer.verificationStatus,
                 )}
-                className="px-1.5 py-0 text-[9px] sm:text-[10px]"
+                className="shrink-0 px-1.5 py-0 text-[9px] sm:text-[10px]"
               >
                 {employer.verificationStatusLabel}
               </OperationsBadge>
               <OperationsBadge
                 variant={employerStatusBadgeVariant(employer.status)}
-                className="px-1.5 py-0 text-[9px] sm:text-[10px]"
+                className="shrink-0 px-1.5 py-0 text-[9px] sm:text-[10px]"
               >
                 {employer.statusLabel}
               </OperationsBadge>
+              <span className="w-full font-mono text-[10px] font-semibold leading-snug text-muted max-sm:mt-0.5 sm:w-auto sm:text-[11px] lg:text-xs">
+                {employer.displayId}
+              </span>
             </div>
 
-            <div className="mt-1.5 flex flex-col gap-1 text-[11px] text-muted max-sm:mt-1 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1 sm:text-xs lg:gap-x-3.5 lg:gap-y-1.5">
-              {employer.phone ? (
-                <span className="flex min-w-0 items-center gap-1">
-                  <Phone className="size-3 shrink-0 sm:size-3.5" aria-hidden="true" />
-                  <span className="break-all">{employer.phone}</span>
+            <div className="flex flex-col gap-1.5 text-[11px] leading-snug text-muted max-sm:gap-1.5 sm:mt-0.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1 sm:text-xs lg:gap-x-3.5 lg:gap-y-1.5">
+              {employer.phone || employer.email ? (
+                <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:contents">
+                  {employer.phone ? (
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <Phone
+                        className="size-3 shrink-0 sm:size-3.5"
+                        aria-hidden="true"
+                      />
+                      <span className="break-all">{employer.phone}</span>
+                    </span>
+                  ) : null}
+                  {employer.phone && employer.email ? (
+                    <span
+                      className="shrink-0 px-0.5 text-border-subtle sm:hidden"
+                      aria-hidden="true"
+                    >
+                      |
+                    </span>
+                  ) : null}
+                  {employer.email ? (
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <Mail
+                        className="size-3 shrink-0 sm:size-3.5"
+                        aria-hidden="true"
+                      />
+                      <span className="break-all">{employer.email}</span>
+                    </span>
+                  ) : null}
                 </span>
               ) : null}
 
-              {employer.email ? (
-                <span className="flex min-w-0 items-center gap-1">
-                  <Mail className="size-3 shrink-0 sm:size-3.5" aria-hidden="true" />
-                  <span className="break-all">{employer.email}</span>
-                </span>
-              ) : null}
-
-              <span className="flex min-w-0 items-center gap-1">
+              <span className="flex min-w-0 items-center gap-1.5">
                 <Briefcase className="size-3 shrink-0 sm:size-3.5" aria-hidden="true" />
                 <span className="truncate">{employer.organizationType}</span>
               </span>
 
               {employer.location && employer.location !== "—" ? (
-                <span className="flex min-w-0 items-center gap-1">
+                <span className="flex min-w-0 items-center gap-1.5">
                   <MapPin className="size-3 shrink-0 sm:size-3.5" aria-hidden="true" />
                   <span className="truncate">{employer.location}</span>
                 </span>
@@ -120,7 +152,7 @@ export function EmployerDetailHeader({
           </div>
         </div>
 
-        <div className="grid w-full grid-cols-2 gap-1.5 sm:gap-2 md:grid-cols-4 xl:flex xl:w-auto xl:shrink-0 xl:flex-wrap xl:items-center xl:justify-end">
+        <div className="grid w-full grid-cols-2 gap-2 max-sm:gap-2 sm:gap-2 md:grid-cols-4 xl:flex xl:w-auto xl:shrink-0 xl:flex-wrap xl:items-center xl:justify-end">
           <OperationsCan module="jobs" action="create">
             <button
               type="button"
@@ -129,7 +161,7 @@ export function EmployerDetailHeader({
                   `${OPERATIONS_ROUTES.JOBS_POST}?employerId=${encodeURIComponent(employer.id)}`,
                 )
               }
-              className={`${actionBtnBase} border border-border-subtle bg-hero-bg/60 text-foreground hover:bg-surface focus-visible:ring-primary/30`}
+              className={`${actionBtnBase} col-span-2 border border-border-subtle bg-hero-bg/60 text-foreground hover:bg-surface focus-visible:ring-primary/30 md:col-span-1 xl:col-span-auto`}
             >
               <Plus className="size-3 sm:size-3.5" aria-hidden="true" />
               Post Job

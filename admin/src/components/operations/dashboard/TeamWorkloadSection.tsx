@@ -43,24 +43,24 @@ export function TeamWorkloadSection({
       action={
         <Link
           to={OPERATIONS_ROUTES.TEAM_MANAGEMENT}
-          className="text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="text-[11px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-[12px]"
         >
           View team →
         </Link>
       }
     >
       {isLoading ? (
-        <p className="text-[12px] text-muted" role="status">
+        <p className="text-[11px] text-muted sm:text-[12px]" role="status">
           Loading team…
         </p>
       ) : isError ? (
-        <p className="text-[12px] text-muted" role="alert">
+        <p className="text-[11px] text-muted sm:text-[12px]" role="alert">
           Unable to load team members.
         </p>
       ) : isEmpty ? (
-        <p className="text-[12px] text-muted">No active team members yet.</p>
+        <p className="text-[11px] text-muted sm:text-[12px]">No active team members yet.</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-2 sm:space-y-3">
           {members.map((member) => {
             const showWorkload = hasWorkloadCounts(member);
             const assigned = member.assigned ?? 0;
@@ -71,11 +71,11 @@ export function TeamWorkloadSection({
 
             return (
               <li key={member.id}>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2 sm:gap-2.5">
                   <OperationsAvatar
                     initials={member.initials}
                     size="sm"
-                    className="size-7 text-[10px]"
+                    className="size-6 text-[9px] sm:size-7 sm:text-[10px]"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">

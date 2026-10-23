@@ -25,7 +25,7 @@ export function OperationsHomePage() {
       subtitle="Command center"
       headerVariant="command"
     >
-      <div className="operations-home-command flex w-full min-w-0 flex-col gap-3.5 sm:gap-4">
+      <div className="operations-home-command flex w-full min-w-0 flex-col gap-2.5 max-sm:gap-2 sm:gap-4">
         <DashboardGreetingSection />
 
         {data.platformPulse.length > 0 ? (
@@ -34,8 +34,8 @@ export function OperationsHomePage() {
 
         <OperationsOverviewSplit
           variant="command"
-          className="gap-3.5 sm:gap-4"
-          railClassName="gap-3.5"
+          className="gap-2.5 max-sm:gap-2 sm:gap-4"
+          railClassName="gap-2.5 max-sm:gap-2 sm:gap-3.5"
           rail={
             <>
               {data.operationsHealth.length > 0 ? (
@@ -53,7 +53,7 @@ export function OperationsHomePage() {
             </>
           }
         >
-          <div className="flex min-w-0 flex-col gap-3.5">
+          <div className="flex min-w-0 flex-col gap-2.5 max-sm:gap-2 sm:gap-3.5">
             {data.attentionStatus.canRead ? (
               <WhatNeedsAttentionSection
                 total={data.attentionTotal}
