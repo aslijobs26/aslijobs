@@ -152,7 +152,7 @@ export function FloatingWhatsAppButton() {
             onClick={() => setOpen(false)}
           />
 
-          <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6">
             <div
               role="dialog"
               aria-modal="true"
@@ -160,8 +160,8 @@ export function FloatingWhatsAppButton() {
               aria-describedby={descriptionId}
               tabIndex={-1}
               className={cn(
-                "relative w-full max-w-md overflow-hidden rounded-2xl border border-border-subtle bg-surface outline-none",
-                "px-5 pb-5 pt-4 shadow-[0_24px_64px_rgba(26,43,60,0.22)] sm:px-6 sm:pb-6 sm:pt-5",
+                "relative w-full max-w-[20.5rem] overflow-hidden rounded-2xl border border-border-subtle bg-surface outline-none sm:max-w-md",
+                "px-3.5 pb-3.5 pt-3 shadow-[0_24px_64px_rgba(26,43,60,0.22)] sm:px-6 sm:pb-6 sm:pt-5",
                 "ring-1 ring-black/5",
               )}
               onClick={(event) => event.stopPropagation()}
@@ -170,33 +170,33 @@ export function FloatingWhatsAppButton() {
                 ref={closeButtonRef}
                 type="button"
                 onClick={() => setOpen(false)}
-                className="absolute top-3 right-3 inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="absolute top-2 right-2 inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:top-3 sm:right-3 sm:size-9"
                 aria-label={t("whatsappFab.closeAria")}
               >
-                <X className="size-4" strokeWidth={2.25} aria-hidden="true" />
+                <X className="size-3.5 sm:size-4" strokeWidth={2.25} aria-hidden="true" />
               </button>
 
-              <div className="flex flex-col items-center px-1 pt-2 text-center sm:pt-3">
-                <span className="inline-flex size-12 items-center justify-center rounded-full bg-whatsapp/10 text-whatsapp ring-1 ring-whatsapp/20">
+              <div className="flex flex-col items-center px-0.5 pt-1 text-center sm:px-1 sm:pt-3">
+                <span className="inline-flex size-9 items-center justify-center rounded-full bg-whatsapp/10 text-whatsapp ring-1 ring-whatsapp/20 sm:size-12">
                   {status === "loading" ? (
                     <LoaderCircle
-                      className="size-6 animate-spin"
+                      className="size-4 animate-spin sm:size-6"
                       strokeWidth={2.25}
                       aria-hidden="true"
                     />
                   ) : (
-                    <WhatsAppIcon className="text-[1.5rem] leading-none" />
+                    <WhatsAppIcon className="text-[1.15rem] leading-none sm:text-[1.5rem]" />
                   )}
                 </span>
                 <h2
                   id={titleId}
-                  className="mt-3 text-lg font-bold tracking-tight text-foreground sm:text-xl"
+                  className="mt-2 text-base font-bold tracking-tight text-foreground sm:mt-3 sm:text-xl"
                 >
                   {title}
                 </h2>
                 <p
                   id={descriptionId}
-                  className="mt-1.5 max-w-[22rem] text-sm leading-relaxed text-muted"
+                  className="mt-1 max-w-[18rem] text-xs leading-snug text-muted sm:mt-1.5 sm:max-w-[22rem] sm:text-sm sm:leading-relaxed"
                 >
                   {subtitle}
                 </p>
@@ -204,7 +204,7 @@ export function FloatingWhatsAppButton() {
 
               {status === "loading" ? (
                 <div
-                  className="mt-5 flex items-center justify-center gap-2 py-6 text-sm text-muted sm:mt-6"
+                  className="mt-3 flex items-center justify-center gap-2 py-4 text-xs text-muted sm:mt-6 sm:py-6 sm:text-sm"
                   role="status"
                   aria-live="polite"
                 >
@@ -214,11 +214,11 @@ export function FloatingWhatsAppButton() {
               ) : null}
 
               {status === "unknown" ? (
-                <div className="mt-5 flex flex-col gap-2.5 sm:mt-6">
+                <div className="mt-3 flex flex-col gap-2 sm:mt-6 sm:gap-2.5">
                   <button
                     type="button"
                     onClick={retry}
-                    className="inline-flex w-full items-center justify-center rounded-2xl bg-whatsapp px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-whatsapp-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/35"
+                    className="inline-flex w-full items-center justify-center rounded-xl bg-whatsapp px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-whatsapp-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/35 sm:rounded-2xl sm:px-4 sm:py-3"
                   >
                     {t("whatsappFab.retryLabel")}
                   </button>
@@ -228,7 +228,7 @@ export function FloatingWhatsAppButton() {
               {status === "guest" ||
               status === "jobseeker" ||
               status === "employer" ? (
-                <div className="mt-5 flex max-h-[min(60vh,28rem)] flex-col gap-2.5 overflow-y-auto sm:mt-6">
+                <div className="mt-3 flex max-h-[min(52vh,22rem)] flex-col gap-2 overflow-y-auto sm:mt-6 sm:max-h-[min(60vh,28rem)] sm:gap-2.5">
                   {actionIds.map((actionId) => {
                     const Icon = ACTION_ICONS[actionId];
                     return (
@@ -237,21 +237,25 @@ export function FloatingWhatsAppButton() {
                         type="button"
                         onClick={() => openWhatsApp(actionId)}
                         aria-label={t(actionMessageKey(actionId, "aria"))}
-                        className="flex w-full items-start gap-3 rounded-2xl border border-border-subtle bg-surface px-4 py-3.5 text-left transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/35"
+                        className="flex w-full items-center gap-2.5 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 text-left transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/35 sm:items-start sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-3.5"
                       >
                         <span
                           className={cn(
-                            "mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-xl",
+                            "inline-flex size-8 shrink-0 items-center justify-center rounded-lg sm:mt-0.5 sm:size-10 sm:rounded-xl",
                             ACTION_ICON_TONES[actionId],
                           )}
                         >
-                          <Icon className="size-5" strokeWidth={2.25} aria-hidden="true" />
+                          <Icon
+                            className="size-4 sm:size-5"
+                            strokeWidth={2.25}
+                            aria-hidden="true"
+                          />
                         </span>
                         <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-foreground">
+                          <span className="block text-sm font-semibold leading-tight text-foreground">
                             {t(actionMessageKey(actionId, "title"))}
                           </span>
-                          <span className="mt-0.5 block text-xs leading-relaxed text-muted sm:text-sm">
+                          <span className="mt-0.5 block text-[11px] leading-snug text-muted sm:text-sm sm:leading-relaxed">
                             {t(actionMessageKey(actionId, "description"))}
                           </span>
                         </span>
