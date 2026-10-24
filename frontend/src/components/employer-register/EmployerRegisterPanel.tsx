@@ -51,7 +51,7 @@ export function EmployerRegisterPanel({
         src={panelGradient}
         alt=""
         fill
-        className="object-cover"
+        className="employer-register-panel-gradient object-cover"
         sizes="(max-width: 1024px) 100vw, 40vw"
         priority
         aria-hidden
