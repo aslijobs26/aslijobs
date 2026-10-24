@@ -8,6 +8,7 @@ import { privacyBundle } from "./bundles/privacy";
 import { publicContentBundle } from "./bundles/public-content";
 import { seekerBundle } from "./bundles/seeker";
 import { termsBundle } from "./bundles/terms";
+import { whatsappFabBundle } from "./bundles/whatsapp-fab";
 import { useSiteLanguage } from "./site-language";
 import en from "./locales/en.json";
 import hi from "./locales/hi.json";
@@ -27,6 +28,7 @@ const BUNDLES = [
   publicContentBundle,
   termsBundle,
   privacyBundle,
+  whatsappFabBundle,
 ] as const;
 
 type Messages = typeof en &
@@ -38,7 +40,8 @@ type Messages = typeof en &
   (typeof guidelinesBundle)["en"] &
   (typeof publicContentBundle)["en"] &
   (typeof termsBundle)["en"] &
-  (typeof privacyBundle)["en"];
+  (typeof privacyBundle)["en"] &
+  (typeof whatsappFabBundle)["en"];
 
 export type { Messages };
 

@@ -1373,6 +1373,476 @@ describe("whatsapp job search — requested city is the source of truth", () => 
     assert.equal(parentCity("Madhapur"), "Hyderabad");
   });
 
+
+  it("identifies website WhatsApp welcome prefills as seeker or employer", () => {
+    {
+      const message = "Hi AsliJobs! I am looking for a job. Please help me find suitable jobs.";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "seeker");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! నాకు ఉద్యోగం కావాలి. సరైన ఉద్యోగాలను కనుగొనడంలో సహాయం చేయండి.";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "seeker");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! मुझे नौकरी ढूंढनी है। कृपया मुझे सही नौकरी खोजने में मदद करें।";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "seeker");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! எனக்கு வேலை தேவை. பொருத்தமான வேலையைக் கண்டறிய உதவுங்கள்.";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "seeker");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! ನನಗೆ ಉದ್ಯೋಗ ಬೇಕು. ಸೂಕ್ತವಾದ ಉದ್ಯೋಗವನ್ನು ಹುಡುಕಲು ಸಹಾಯ ಮಾಡಿ.";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "seeker");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! എനിക്ക് ജോലി വേണം. അനുയോജ്യമായ ജോലി കണ്ടെത്താൻ സഹായിക്കൂ.";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "seeker");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "ml");
+    }
+    {
+      const message = "Hi AsliJobs! I want to hire staff for my business. Please help me with recruitment.";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "employer");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! మా వ్యాపారం కోసం సిబ్బందిని నియమించుకోవాలి. రిక్రూట్‌మెంట్‌లో సహాయం చేయండి.";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "employer");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! मुझे अपने व्यवसाय के लिए कर्मचारी चाहिए। कृपया भर्ती करने में मेरी मदद करें।";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "employer");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! என் நிறுவனத்திற்கு ஊழியர்கள் தேவை. ஆட்களைத் தேர்வு செய்ய உதவுங்கள்.";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "employer");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! ನನ್ನ ವ್ಯವಹಾರಕ್ಕೆ ಸಿಬ್ಬಂದಿ ಬೇಕು. ನೇಮಕಾತಿಯಲ್ಲಿ ಸಹಾಯ ಮಾಡಿ.";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "employer");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! എന്റെ സ്ഥാപനത്തിലേക്ക് ജീവനക്കാരെ നിയമിക്കണം. നിയമനത്തിൽ സഹായിക്കൂ.";
+      const hinted = applyRoleHints(message, understandLocally(message), "none");
+      assert.equal(chooseAccountRole(message), "employer");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "ml");
+    }
+  });
+
+
+  it("identifies website WhatsApp FAB role actions with supported intents", () => {
+    {
+      const message = "Hi AsliJobs! I am looking for a job. Please help me find suitable jobs.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! నాకు ఉద్యోగం కావాలి. సరైన ఉద్యోగాలను కనుగొనడంలో సహాయం చేయండి.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! मुझे नौकरी ढूंढनी है। कृपया मुझे सही नौकरी खोजने में मदद करें।";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! எனக்கு வேலை தேவை. பொருத்தமான வேலையைக் கண்டறிய உதவுங்கள்.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! ನನಗೆ ಉದ್ಯೋಗ ಬೇಕು. ಸೂಕ್ತವಾದ ಉದ್ಯೋಗವನ್ನು ಹುಡುಕಲು ಸಹಾಯ ಮಾಡಿ.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! എനിക്ക് ജോലി വേണം. അനുയോജ്യമായ ജോലി കണ്ടെത്താൻ സഹായിക്കൂ.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "JOB_SEARCH");
+      assert.equal(detectLanguage(message), "ml");
+    }
+    {
+      const message = "Hi AsliJobs! I want to hire staff for my business. Please help me with recruitment.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! మా వ్యాపారం కోసం సిబ్బందిని నియమించుకోవాలి. రిక్రూట్‌మెంట్‌లో సహాయం చేయండి.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! मुझे अपने व्यवसाय के लिए कर्मचारी चाहिए। कृपया भर्ती करने में मेरी मदद करें।";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! என் நிறுவனத்திற்கு ஊழியர்கள் தேவை. ஆட்களைத் தேர்வு செய்ய உதவுங்கள்.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! ನನ್ನ ವ್ಯವಹಾರಕ್ಕೆ ಸಿಬ್ಬಂದಿ ಬೇಕು. ನೇಮಕಾತಿಯಲ್ಲಿ ಸಹಾಯ ಮಾಡಿ.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! എന്റെ സ്ഥാപനത്തിലേക്ക് ജീവനക്കാരെ നിയമിക്കണം. നിയമനത്തിൽ സഹായിക്കൂ.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "ml");
+    }
+    {
+      const message = "Hi AsliJobs! Please recommend suitable jobs based on my profile.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "PROFILE_JOBS");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! నా profile కి సరిపోయే jobs సిఫార్సు చేయండి.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "PROFILE_JOBS");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! कृपया मेरे profile के आधार पर suitable jobs सुझाएं।";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "PROFILE_JOBS");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! என் profile அடிய்ய suitable jobs பரிந்துரைக்கவும்.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "PROFILE_JOBS");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! ನನ್ನ profile ಆಧಾರಿತ suitable jobs ಶಿಫಾರಸು ಮಾಡಿ.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "PROFILE_JOBS");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! എന്റെ profile അടിസ്ഥിച്ച് suitable jobs ശിപാര്ശ് ചെയ്യൂ.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "PROFILE_JOBS");
+      assert.equal(detectLanguage(message), "ml");
+    }
+    {
+      const message = "Hi AsliJobs! I want to check the status of my applications.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "APPLICATION_STATUS");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! నా applications status చూడాలి.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "APPLICATION_STATUS");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! मैं अपने applications की status जाँचना चाहता/चाहती हूँ।";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "APPLICATION_STATUS");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! என் applications status-ஐப் பார்க்க விரும்புகிறேன்.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "APPLICATION_STATUS");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! ನನ್ನ applications status ಪರಿಶಿಸಬೇಕು.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "APPLICATION_STATUS");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! എന്റെ applications status പരിശോധിക്കണം.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "APPLICATION_STATUS");
+      assert.equal(detectLanguage(message), "ml");
+    }
+    {
+      const message = "Hi AsliJobs! What can you do? Please help me with my account.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! What can you do? దయచేసి నా account కి సహాయం చేయండి.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! What can you do? कृपया मेरे account में मदद करें।";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! What can you do? என் account-க்கு உதவவும்.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! What can you do? ದಯವಿಟ್ಟು ನನ್ನ accountಗೆ ಸಹಾಯ ಮಾಡಿ.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! What can you do? എന്റെ account-ില് സഹായിക്കൂ.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "ml");
+    }
+    {
+      const message = "Hi AsliJobs! I want to post a job and hire suitable candidates.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! నేను job post చేసి suitable candidates hire చేయాలి.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! मैं job post करके suitable candidates hire करना चाहता/चाहती हूँ।";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! நான் job post செய்து suitable candidates-ஐ hire செய்ய விரும்புகிறேன்.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! ನಾನು job post ಮಾಡಿ suitable candidates hire ಮಾಡಬೇಕು.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! ഞാൻ job post ചെയ്തു suitable candidates hire ചെയ്യണം.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "POST_JOB");
+      assert.equal(detectLanguage(message), "ml");
+    }
+    {
+      const message = "Hi AsliJobs! I want to check my posted jobs.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_JOBS");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! నా posted jobs / my jobs చూడాలి.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_JOBS");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! मैं अपनी posted jobs / my jobs जाँचना चाहता/चाहती हूँ।";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_JOBS");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! என் posted jobs / my jobs-ஐப் பார்க்க விரும்புகிறேன்.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_JOBS");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! ನನ್ನ posted jobs / my jobs ಪರಿಶಿಸಬೇಕು.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_JOBS");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! എന്റെ posted jobs / my jobs പരിശോധിക്കണം.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_JOBS");
+      assert.equal(detectLanguage(message), "ml");
+    }
+    {
+      const message = "Hi AsliJobs! How many applications did I get for my jobs?";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_APPLICATION_COUNT");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! నా jobs కి how many applications వచ్చాయి?";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_APPLICATION_COUNT");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! मेरे my jobs पर how many applications आए?";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_APPLICATION_COUNT");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! என் my jobs-க்கு how many applications வந்து?";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_APPLICATION_COUNT");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! ನನ್ನ my jobs ಗೆ how many applications ಬಂದಿವೆ?";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_APPLICATION_COUNT");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! എന്റെ my jobs-നു how many applications ലഭിച്ചു?";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "EMPLOYER_APPLICATION_COUNT");
+      assert.equal(detectLanguage(message), "ml");
+    }
+    {
+      const message = "Hi AsliJobs! What can you do? Please help me with my account.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "en");
+    }
+    {
+      const message = "నమస్కారం AsliJobs! What can you do? దయచేసి నా account కి సహాయం చేయండి.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "te");
+    }
+    {
+      const message = "नमस्ते AsliJobs! What can you do? कृपया मेरे account में मदद करें।";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "hi");
+    }
+    {
+      const message = "வணக்கம் AsliJobs! What can you do? என் account-க்கு உதவவும்.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "ta");
+    }
+    {
+      const message = "ನಮಸ್ಕಾರ AsliJobs! What can you do? ದಯವಿಟ್ಟು ನನ್ನ accountಗೆ ಸಹಾಯ ಮಾಡಿ.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "kn");
+    }
+    {
+      const message = "നമസ്കാരം AsliJobs! What can you do? എന്റെ account-ില് സഹായിക്കൂ.";
+      const local = understandLocally(message);
+      const hinted = applyRoleHints(message, local, "none");
+      assert.equal(hinted.intent, "HELP");
+      assert.equal(detectLanguage(message), "ml");
+    }
+  });
+
   it("identifies hire vs job-seeker intent without an LLM", () => {
     assert.equal(chooseAccountRole("Naaku job kavali"), "seeker");
     assert.equal(chooseAccountRole("मुझे नौकरी चाहिए"), "seeker");

@@ -418,9 +418,14 @@ export function understandLocally(
   const mentionsRequest = includesAny(text, REQUEST_WORDS);
   const ownApply =
     /apply|applied|అప్లై|చేశా|applications?|అప్లికేషన్|आवेदन/i.test(text);
+  // Require an explicit profile cue so generic "suitable jobs" search stays JOB_SEARCH.
   const profile =
-    /profile|ప్రొఫైల్|సరిపోయే|प्रोफाइल|प्रोफ़ाइल|suitable/i.test(text) &&
-    (mentionsJob || mentionsRequest || /jobs?/i.test(folded) || ownApply);
+    /profile|ప్రొఫైల్|प्रोफाइल|प्रोफ़ाइल/i.test(text) &&
+    (mentionsJob ||
+      mentionsRequest ||
+      /jobs?/i.test(folded) ||
+      ownApply ||
+      /suitable|సరిపోయే/i.test(text));
   const howToApply = /how (do|to|can) i apply|apply cheyya|apply kaise|apply ela/i.test(folded);
   const applications = ownApply;
   const myPosted = looksLikeOwnPostedJobsQuestion(text);
@@ -453,7 +458,16 @@ export function understandLocally(
 
   let intent: BotIntent = "UNKNOWN";
   if (unrelated) intent = "UNRELATED";
-  else if (/^(help|సహాయం|मदद)\b|what can you do/i.test(text.trim())) intent = "HELP";
+  else if (
+    /^(help|సహాయం|मदद|உதவி|ಸಹಾಯ|സഹായം)\b/i.test(text.trim()) ||
+    /\bwhat can you do\b/i.test(text) ||
+    /\bneed help with my account\b/i.test(text) ||
+    /(help|సహాయం|मदद|உதவி|ಸಹಾಯ|സഹായം).{0,60}(account|ఖాతా|खाता|கணக்கு|ಖಾತೆ|അക്കൗണ്ട്)/i.test(
+      text,
+    )
+  ) {
+    intent = "HELP";
+  }
   else if (greeting && text.trim().length < 20 && !mentionsJob && !ownApply) intent = "GREETING";
   else if (profile) intent = "PROFILE_JOBS";
   else if (appliedAll) intent = "APPLIED_COVERAGE";
@@ -1281,17 +1295,17 @@ export type AccountKind = "seeker" | "employer" | "both" | "none";
 export function chooseAccountRole(text: string): "seeker" | "employer" | null {
   const trimmed = text.trim();
   const employer = looksLikePostJobRequest(trimmed) ||
-    /\b(employer|hiring|hire|recruit|workers?|staff needed|need staff)\b|నియమించ|మనిషి కావాలి|వర్కర్స్ కావాలి|भर्ती|कर्मचारी चाहिए|मुझे कर्मचारी|ஆள் எடுக்க|வேலை போஸ்ட்|ನೇಮಕ|ನೌಕರ ಬೇಕು|നിയമിക്ക|തൊഴിലാളി/i.test(
+    /\b(employer|hiring|hire|recruit|workers?|staff needed|need staff|hire staff)\b|నియమించ|సిబ్బంది|రిక్రూట్|మనిషి కావాలి|వర్కర్స్ కావాలి|भर्ती|कर्मचारी चाहिए|मुझे कर्मचारी|ஊழியர்|ஆட்களை|ஆள் எடுக்க|வேலை போஸ்ட்|ನೇಮಕ|ಸಿಬ್ಬಂದಿ|ನೌಕರ ಬೇಕು|നിയമിക്ക|ജീവനക്കാര്|തൊഴിലാളി/i.test(
       trimmed,
     );
   const seeker =
-    /\b(job seeker|looking for (a )?job|looking for work|need (a )?job|find (a )?job|want (a )?job|want work|need work)\b|ఉద్యోగం కావాలి|జాబ్ కావాలి|పని కావాలి|नौकरी चाहिए|काम चाहिए|जॉब चाहिए|வேலை வேண்டும்|ಕೆಲಸ ಬೇಕು|ജോലി വേണം|job kavali|jobs kavali|naaku job|naku job|pani kavali/i.test(
+    /\b(job seeker|looking for (a )?job|looking for work|need (a )?job|find (a )?job|want (a )?job|want work|need work|suitable jobs?)\b|ఉద్యోగం కావాలి|ఉద్యోగాలను|జాబ్ కావాలి|పని కావాలి|नौकरी चाहिए|नौकरी ढूंढ|सही नौकरी|काम चाहिए|जॉब चाहिए|வேலை தேவை|வேலை வேண்டும்|ಉದ್ಯೋಗ ಬೇಕು|ಕೆಲಸ ಬೇಕು|ജോലി വേണം|job kavali|jobs kavali|naaku job|naku job|pani kavali/i.test(
       trimmed,
     );
   if (employer && !seeker) return "employer";
   if (seeker && !employer) return "seeker";
   if (employer && seeker) {
-    return /post|hire|hiring|recruit|workers|कर्मचारी|నియమించ/i.test(trimmed)
+    return /post|hire|hiring|recruit|workers|कर्मचारी|నియమించ|సిబ్బంది|ஊழியர்|ಸಿಬ್ಬಂದಿ|ജീവനക്കാര്/i.test(trimmed)
       ? "employer"
       : "seeker";
   }
@@ -1444,11 +1458,34 @@ export function applyAccountAwareIntent(
   return understanding;
 }
 
+const ROLE_HINT_PRESERVE_INTENTS = new Set<BotIntent>([
+  "HELP",
+  "PROFILE_JOBS",
+  "PROFILE_MATCH",
+  "MY_APPLICATIONS",
+  "APPLICATION_STATUS",
+  "APPLICATION_COUNT",
+  "APPLIED_COVERAGE",
+  "EMPLOYER_JOBS",
+  "EMPLOYER_JOB_STATUS",
+  "EMPLOYER_APPLICATION_COUNT",
+  "ACCOUNT_STATUS",
+  "MY_SKILLS",
+  "HOW_TO_APPLY",
+  "JOB_DETAILS",
+  "JOB_COUNT",
+  "UNRELATED",
+  "CLARIFY",
+]);
+
 export function applyRoleHints(
   text: string,
   understanding: BotUnderstanding,
   account: AccountKind,
 ): BotUnderstanding {
+  if (ROLE_HINT_PRESERVE_INTENTS.has(understanding.intent)) {
+    return understanding;
+  }
   const role = chooseAccountRole(text);
   if (!role) return understanding;
   if (account === "none" && role === "seeker") {
