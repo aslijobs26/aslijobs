@@ -13,6 +13,7 @@ import { SavedCandidatesExportModal } from "@/components/employer-saved-candidat
 import { SavedCandidatesToolbar } from "@/components/employer-saved-candidates/SavedCandidatesToolbar";
 import {
   getSavedCandidatesApiErrorMessage,
+  handleSavedCandidatesPanelWheel,
   parseSavedCandidatePriority,
   parseSavedCandidateSort,
   parseSavedCandidateTag,
@@ -549,7 +550,10 @@ export function SavedCandidatesPageContent() {
                       />
                     ) : (
                       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface">
-                        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-hidden">
+                        <div
+                          className="min-h-0 flex-1 basis-0 overflow-y-auto overscroll-y-contain scrollbar-hidden"
+                          onWheel={handleSavedCandidatesPanelWheel}
+                        >
                           <SavedCandidatesCardGrid
                             items={items}
                             selectedApplicationId={selectedApplicationId}

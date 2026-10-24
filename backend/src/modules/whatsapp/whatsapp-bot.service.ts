@@ -771,7 +771,7 @@ async function buildReply(
     }
     case "POST_JOB": {
       if (!asEmployer || !employer) return reply({ situation: "denied", reason: "employer_required" });
-      const urls = siteUrls();
+      const urls = siteUrls(understanding.language);
       const canPost =
         employer.verificationStatus === "verified" &&
         (employer.isProfileComplete == null || employer.isProfileComplete);
@@ -792,7 +792,7 @@ async function buildReply(
     }
     case "ACCOUNT_STATUS": {
       if (!asEmployer || !employer) return reply({ situation: "denied", reason: "employer_required" });
-      const urls = siteUrls();
+      const urls = siteUrls(understanding.language);
       return reply({
         situation: "account_status",
         verification: employer.verificationStatus || "pending",

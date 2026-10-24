@@ -94,6 +94,21 @@ describe("site language persistence", () => {
     assert.equal(localStorage.getItem(SITE_LANGUAGE_STORAGE_KEY), "english");
   });
 
+  it("lets an incoming Hindi job link beat a stale English localStorage preference", () => {
+    const { localStorage } = installBrowser("en-US", "?lang=hi");
+    localStorage.setItem(SITE_LANGUAGE_STORAGE_KEY, "english");
+    assert.equal(readSiteLanguage().code, "hi");
+    assert.equal(readExplicitSiteLanguage()?.code, "hi");
+    assert.equal(localStorage.getItem(SITE_LANGUAGE_STORAGE_KEY), "english");
+  });
+
+  it("opens Tamil, Kannada, and Malayalam job links in those languages", () => {
+    for (const code of ["ta", "kn", "ml"] as const) {
+      installBrowser("en-US", `?lang=${code}`);
+      assert.equal(readSiteLanguage().code, code);
+    }
+  });
+
   it("opens an English notification link in English", () => {
     installBrowser("te-IN", "?lang=en");
     assert.equal(readSiteLanguage().code, "en");

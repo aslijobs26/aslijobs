@@ -523,7 +523,7 @@ function EmployerJobsTableRow({
         <div className="flex min-w-0 flex-col gap-1">
           {job.status === "pending_approval" ? (
             <span
-              className="inline-flex w-fit max-w-full items-center justify-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold leading-none whitespace-nowrap text-amber-950 ring-1 ring-inset ring-amber-300/70 xl:text-xs"
+              className="inline-flex w-fit max-w-full items-center justify-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold leading-none whitespace-nowrap text-amber-950 ring-1 ring-inset ring-amber-300/70 xl:text-[11px]"
               title={t("employer.jobs.waitingForReview")}
             >
               {t("employer.status.job.pending_approval")}

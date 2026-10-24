@@ -101,3 +101,25 @@ export function hasSavedCandidateInterviewScheduled(input: {
     input.applicationStatus === "interview_completed"
   );
 }
+
+/**
+ * Sticky full-height panels trap wheel events when their body does not overflow.
+ * Forward those gestures (and edge overscroll) to the page so scrolling still moves.
+ */
+export function handleSavedCandidatesPanelWheel(
+  event: { currentTarget: HTMLElement; deltaY: number },
+): void {
+  const target = event.currentTarget;
+  const canScrollY = target.scrollHeight > target.clientHeight + 1;
+  if (!canScrollY) {
+    window.scrollBy({ top: event.deltaY, left: 0 });
+    return;
+  }
+  const atTop = target.scrollTop <= 0 && event.deltaY < 0;
+  const atBottom =
+    target.scrollTop + target.clientHeight >= target.scrollHeight - 1 &&
+    event.deltaY > 0;
+  if (atTop || atBottom) {
+    window.scrollBy({ top: event.deltaY, left: 0 });
+  }
+}

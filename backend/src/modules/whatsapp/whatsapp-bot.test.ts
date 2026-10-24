@@ -256,6 +256,21 @@ describe("whatsapp bot", () => {
     assert.equal(understandLocally("నేను అన్ని jobs కి apply చేశాను").intent, "APPLIED_COVERAGE");
   });
 
+  it("uses STT language hints for Hindi and Telugu voice turns", () => {
+    assert.equal(
+      detectLanguage("driver jobs hyderabad", "en", "hi"),
+      "hi",
+    );
+    assert.equal(
+      detectLanguage("driver jobs hyderabad", "en", "te"),
+      "te",
+    );
+    assert.equal(
+      detectLanguage("OK", "hi", "te"),
+      "hi",
+    );
+  });
+
   it("treats a voice transcript as a normal job search", () => {
     const english = understandLocally("I want electrician jobs in Hyderabad");
     assert.equal(english.intent, "JOB_SEARCH");
@@ -1185,7 +1200,7 @@ describe("whatsapp job seeker apply links", () => {
         salaryLabel: "₹30,000",
       },
     ];
-    for (const language of ["te", "en", "hi"] as const) {
+    for (const language of ["te", "en", "hi", "ta", "kn", "ml"] as const) {
       const reply = renderJobSearchReply({
         language,
         location: "Hyderabad",
@@ -1201,6 +1216,31 @@ describe("whatsapp job seeker apply links", () => {
         ),
       );
     }
+  });
+
+  it("localizes unknown-user registration links with the conversation language", () => {
+    const reply =
+      buildDeterministicReply("hi", {
+        situation: "jobs",
+        accountType: "none",
+        location: "Hyderabad",
+        role: "Driver",
+        total: 1,
+        jobs: [
+          {
+            jobTitle: "Driver",
+            companyName: "Fleet Co",
+            cityName: "Hyderabad",
+            jobId: "AJ-DRV-1",
+            salary: "₹18,000",
+          },
+        ],
+        registration: {
+          seekerRegisterUrl: "https://aslijobs.com/job-seeker/register?lang=hi",
+        },
+      }) ?? "";
+    assert.match(reply, /job-seeker\/register\?lang=hi/);
+    assert.doesNotMatch(reply, /Apply Now/);
   });
 });
 
@@ -1389,8 +1429,22 @@ describe("whatsapp job search — requested city is the source of truth", () => 
 
   it("answers English after Telugu instead of keeping the previous language", () => {
     assert.equal(detectLanguage("I need a job", "te"), "en");
+    assert.equal(detectLanguage("Show me driver jobs in Hyderabad", "te"), "en");
+    assert.equal(detectLanguage("I want driver jobs in Hyderabad", "hi"), "en");
     assert.equal(detectLanguage("నాకు జాబ్ కావాలి", "en"), "te");
     assert.equal(detectLanguage("मुझे नौकरी चाहिए", "en"), "hi");
+    assert.equal(detectLanguage("எனக்கு வேலை வேண்டும்", "en"), "ta");
+    assert.equal(detectLanguage("ನನಗೆ ಕೆಲಸ ಬೇಕು", "en"), "kn");
+    assert.equal(detectLanguage("എനിക്ക് ജോലി വേണം", "en"), "ml");
+  });
+
+  it("detects romanized Telugu and Hindi when cues are present", () => {
+    assert.equal(detectLanguage("Naku Hyderabad lo driver jobs kavali", "en"), "te");
+    assert.equal(detectLanguage("Mujhe driver naukri chahiye", "en"), "hi");
+    assert.equal(
+      understandLocally("Naku Hyderabad lo driver jobs kavali", "en").language,
+      "te",
+    );
   });
 
   it("does not switch a saved language on yes, ok, hi, or a phone number", () => {
@@ -1399,6 +1453,37 @@ describe("whatsapp job search — requested city is the source of truth", () => 
     assert.equal(detectLanguage("Hi", "te"), "te");
     assert.equal(detectLanguage("9876543210", "hi"), "hi");
     assert.equal(detectLanguage("Yes", "en"), "en");
+  });
+
+  it("lets clear English override a non-English AI language guess", () => {
+    const parsed = parseUnderstanding(
+      JSON.stringify({
+        intent: "JOB_SEARCH",
+        language: "te",
+        location: "Hyderabad",
+        category: "Driver",
+        confidence: 0.9,
+      }),
+      "Show me driver jobs in Hyderabad",
+      "te",
+    );
+    assert.equal(parsed.language, "en");
+    assert.equal(parsed.intent, "JOB_SEARCH");
+  });
+
+  it("keeps Hindi when the AI wrongly returns Telugu for Devanagari text", () => {
+    const parsed = parseUnderstanding(
+      JSON.stringify({
+        intent: "JOB_SEARCH",
+        language: "te",
+        location: "Hyderabad",
+        category: "Driver",
+        confidence: 0.9,
+      }),
+      "मुझे हैदराबाद में ड्राइवर की नौकरी चाहिए",
+      "en",
+    );
+    assert.equal(parsed.language, "hi");
   });
 
   it("routes numbered menus from conversation state", () => {

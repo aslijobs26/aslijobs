@@ -110,6 +110,10 @@ export async function resolveJobSeekerNotificationLanguage(input: {
   return fromSession ?? "en";
 }
 
+/**
+ * Seeds JobSeeker.whatsappLanguage only when the account has no saved preference.
+ * WhatsApp conversation language must not overwrite a website-selected language.
+ */
 export async function persistJobSeekerWhatsAppLanguage(input: {
   phone: string;
   language: string;
@@ -133,9 +137,19 @@ export async function persistJobSeekerWhatsAppLanguage(input: {
   }
 
   try {
-    await JobSeekerModel.updateOne(filter, {
-      $set: { whatsappLanguage: language },
-    });
+    await JobSeekerModel.updateOne(
+      {
+        ...filter,
+        $or: [
+          { whatsappLanguage: { $exists: false } },
+          { whatsappLanguage: null },
+          { whatsappLanguage: "" },
+        ],
+      },
+      {
+        $set: { whatsappLanguage: language },
+      },
+    );
   } catch (error) {
     console.error("[WhatsAppNotification] job seeker language persist failed", {
       errorCategory: error instanceof Error ? error.name : "unknown",

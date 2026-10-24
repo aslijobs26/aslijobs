@@ -121,6 +121,39 @@ describe("job seeker WhatsApp language preference", () => {
     });
   });
 
+  it("seeds whatsappLanguage only when the saved preference is empty", async () => {
+    Object.defineProperty(mongoose.connection, "readyState", {
+      configurable: true,
+      get: () => 1,
+    });
+    const filters: unknown[] = [];
+    mock.method(JobSeekerModel, "updateOne", async (filter: unknown) => {
+      filters.push(filter);
+      return { acknowledged: true, matchedCount: 0, modifiedCount: 0 };
+    });
+
+    await persistJobSeekerWhatsAppLanguage({
+      phone: "9876543210",
+      language: "te",
+      jobSeekerId: "64f0000000000000000000aa",
+    });
+
+    assert.equal(filters.length, 1);
+    const filter = filters[0] as {
+      _id: string;
+      $or: Array<Record<string, unknown>>;
+    };
+    assert.equal(filter._id, "64f0000000000000000000aa");
+    assert.ok(Array.isArray(filter.$or));
+    assert.ok(
+      filter.$or.some(
+        (clause) =>
+          clause.whatsappLanguage === "" ||
+          (clause.whatsappLanguage as { $exists?: boolean })?.$exists === false,
+      ),
+    );
+  });
+
   it("keeps a stored website preference over a conflicting WhatsApp session", async () => {
     Object.defineProperty(mongoose.connection, "readyState", {
       configurable: true,

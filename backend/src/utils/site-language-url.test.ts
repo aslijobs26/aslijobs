@@ -47,4 +47,21 @@ describe("site language URL helper", () => {
     );
     assert.equal(appendSiteLanguageQuery("not a url", "te"), "not a url");
   });
+
+  it("replaces an existing lang parameter and preserves hash fragments", () => {
+    assert.equal(
+      appendSiteLanguageQuery("https://aslijobs.com/jobs/AJ-1?lang=en&ref=wa", "hi"),
+      "https://aslijobs.com/jobs/AJ-1?lang=hi&ref=wa",
+    );
+    assert.equal(
+      appendSiteLanguageQuery("https://aslijobs.com/jobs/AJ-1?lang=te#details", "ta"),
+      "https://aslijobs.com/jobs/AJ-1?lang=ta#details",
+    );
+    for (const code of ["ta", "kn", "ml"] as const) {
+      assert.equal(
+        appendSiteLanguageQuery("https://aslijobs.com/jobs/AJ-1", code),
+        `https://aslijobs.com/jobs/AJ-1?lang=${code}`,
+      );
+    }
+  });
 });

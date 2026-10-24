@@ -6,7 +6,10 @@ import {
   formatCandidateDate,
   getCandidateInitials,
 } from "@/components/employer-candidates/candidates-ats-utils";
-import { hasSavedCandidateInterviewScheduled } from "@/components/employer-saved-candidates/saved-candidates-utils";
+import {
+  handleSavedCandidatesPanelWheel,
+  hasSavedCandidateInterviewScheduled,
+} from "@/components/employer-saved-candidates/saved-candidates-utils";
 import {
   getSavedCandidatePriorityLabel,
   getSavedCandidateTagLabel,
@@ -505,22 +508,8 @@ export function SavedCandidatesTable({
       </div>
 
       <div
-        className="min-h-0 flex-1 overflow-y-auto overflow-x-auto overscroll-y-contain scrollbar-hidden"
-        onWheel={(event) => {
-          const target = event.currentTarget;
-          const canScrollY = target.scrollHeight > target.clientHeight + 1;
-          if (!canScrollY) {
-            window.scrollBy({ top: event.deltaY, left: 0 });
-            return;
-          }
-          const atTop = target.scrollTop <= 0 && event.deltaY < 0;
-          const atBottom =
-            target.scrollTop + target.clientHeight >=
-              target.scrollHeight - 1 && event.deltaY > 0;
-          if (atTop || atBottom) {
-            window.scrollBy({ top: event.deltaY, left: 0 });
-          }
-        }}
+        className="min-h-0 flex-1 basis-0 overflow-y-auto overflow-x-auto overscroll-y-contain scrollbar-hidden"
+        onWheel={handleSavedCandidatesPanelWheel}
       >
         {isLoading ? (
           <div className="space-y-3 p-4" aria-hidden="true">

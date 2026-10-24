@@ -70,9 +70,12 @@ export function buildPublicJobApplyUrl(
   const origin = frontendOrigin.trim().replace(/\/+$/, "");
   if (!id || !origin) return "";
   const url = `${origin}/jobs/${encodeURIComponent(id)}`;
-  return language
-    ? appendSiteLanguageQuery(url, language)
-    : url;
+  // Chatbot replies always pass a conversation language; omit only for
+  // callers that intentionally want a language-neutral absolute path.
+  if (language == null || String(language).trim() === "") {
+    return url;
+  }
+  return appendSiteLanguageQuery(url, language);
 }
 
 const TELUGU_SCRIPT = /[\u0C00-\u0C7F]/;
@@ -253,6 +256,30 @@ export function isAmbiguousLanguageSignal(text: string): boolean {
   return false;
 }
 
+export function hasClearCurrentLanguageSignal(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return false;
+  }
+  if (TAMIL_SCRIPT.test(trimmed) || ROMAN_TAMIL.test(trimmed)) return true;
+  if (KANNADA_SCRIPT.test(trimmed) || ROMAN_KANNADA.test(trimmed)) return true;
+  if (MALAYALAM_SCRIPT.test(trimmed) || ROMAN_MALAYALAM.test(trimmed)) return true;
+  if (TELUGU_SCRIPT.test(trimmed) || ROMAN_TELUGU.test(trimmed)) return true;
+  if (HINDI_SCRIPT.test(trimmed) || ROMAN_HINDI.test(trimmed)) return true;
+  return isClearEnglishSignal(trimmed);
+}
+
+export function isClearEnglishSignal(text: string): boolean {
+  return /\b(i want|i need|hello|please|are there|show me|find jobs?|post a job|how many)\b/i.test(
+    text.trim(),
+  );
+}
+
+/**
+ * Resolves the conversation language for the current turn.
+ * Clear script/roman/English signals from this message win over the session.
+ * Ambiguous acknowledgments inherit the session language.
+ */
 export function detectLanguage(
   text: string,
   previous?: BotLanguage | null,
@@ -268,10 +295,7 @@ export function detectLanguage(
   if (previous && isAmbiguousLanguageSignal(trimmed)) {
     return previous;
   }
-  const clearEnglish = /\b(i want|i need|hello|please|are there|show me|find jobs?|post a job|how many)\b/i.test(
-    trimmed,
-  );
-  if (clearEnglish) return "en";
+  if (isClearEnglishSignal(trimmed)) return "en";
   if (hint && hint !== "en") return hint;
   if (inheritPrevious && previous) return previous;
   if (
@@ -552,19 +576,33 @@ export function parseUnderstanding(
   }
 }
 
-function resolveLanguage(
+/**
+ * Prefer this-message signals (script, romanized cues, clear English, ambiguous inherit).
+ * Use the AI language only when the text has no clear current-language signal.
+ */
+export function resolveLanguage(
   text: string,
   aiLanguage: BotLanguage,
   previous?: BotLanguage | null,
   hint?: BotLanguage | null,
 ): BotLanguage {
-  if (TAMIL_SCRIPT.test(text)) return "ta";
-  if (KANNADA_SCRIPT.test(text)) return "kn";
-  if (MALAYALAM_SCRIPT.test(text)) return "ml";
-  if (TELUGU_SCRIPT.test(text)) return "te";
-  if (HINDI_SCRIPT.test(text)) return "hi";
-  if (aiLanguage !== "en") return aiLanguage;
-  return detectLanguage(text, previous, hint);
+  if (hasClearCurrentLanguageSignal(text) || isAmbiguousLanguageSignal(text)) {
+    return detectLanguage(text, previous, hint, true);
+  }
+  if (aiLanguage !== "en") {
+    return aiLanguage;
+  }
+  return detectLanguage(text, previous, hint, true);
+}
+
+/** Alias used by callers/tests for the turn-level conversation language policy. */
+export function resolveConversationLanguage(
+  text: string,
+  previous?: BotLanguage | null,
+  hint?: BotLanguage | null,
+  inheritPrevious = true,
+): BotLanguage {
+  return detectLanguage(text, previous, hint, inheritPrevious);
 }
 
 /** Website page size is 20; WhatsApp fetches one public page then compacts for Sarvam. */

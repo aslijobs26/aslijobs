@@ -102,7 +102,9 @@ function readBrowserLanguage(): SiteLanguageOption | null {
 
 /**
  * Apply a trusted `lang` query for this visit.
- * Does not overwrite an already saved explicit localStorage preference.
+ * Incoming URL language always becomes the visit overlay (unless the user
+ * already made an explicit navbar/settings choice this tab). It does not
+ * overwrite an already saved localStorage preference.
  */
 function applyVisitLanguageHint(): void {
   if (typeof window === "undefined") {
@@ -129,6 +131,9 @@ function applyVisitLanguageHint(): void {
       SITE_LANGUAGE_QUERY_APPLIED_KEY,
       fromQuery.value,
     );
+    // Seed storage only when empty so a Hindi WhatsApp link cannot permanently
+    // replace a saved English website preference — the visit overlay still wins
+    // for UI during this tab.
     if (!window.localStorage.getItem(SITE_LANGUAGE_STORAGE_KEY)) {
       window.localStorage.setItem(SITE_LANGUAGE_STORAGE_KEY, fromQuery.value);
     }
@@ -161,7 +166,9 @@ export function readSiteLanguage(): SiteLanguageOption {
 }
 
 /**
- * Explicit saved preference or this-visit notification overlay.
+ * Language for account writes and registration during this visit.
+ * Visit overlay from a trusted `lang` query (e.g. WhatsApp job link) wins over
+ * a stale localStorage preference so Hindi/Telugu entry links seed correctly.
  * Browser language is excluded so it is never written to the account.
  */
 export function readExplicitSiteLanguage(): SiteLanguageOption | null {
@@ -169,7 +176,7 @@ export function readExplicitSiteLanguage(): SiteLanguageOption | null {
     return null;
   }
   applyVisitLanguageHint();
-  return readStoredLanguage() ?? readVisitLanguage();
+  return readVisitLanguage() ?? readStoredLanguage();
 }
 
 /** True after the user picks a language in the navbar or settings this tab. */
