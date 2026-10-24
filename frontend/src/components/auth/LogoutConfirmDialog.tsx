@@ -75,7 +75,7 @@ export function LogoutConfirmDialog({
         }}
       />
 
-      <div className="absolute inset-0 flex items-end justify-center p-0 sm:items-center sm:p-6">
+      <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
         <div
           ref={panelRef}
           role="dialog"
@@ -84,8 +84,8 @@ export function LogoutConfirmDialog({
           aria-describedby={descriptionId}
           tabIndex={-1}
           className={cn(
-            "relative w-full max-w-md overflow-hidden rounded-t-2xl border border-border-subtle bg-surface outline-none sm:rounded-2xl",
-            "px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_24px_64px_rgba(26,43,60,0.22)] sm:px-6 sm:pb-6 sm:pt-5",
+            "relative w-full max-w-md overflow-hidden rounded-2xl border border-border-subtle bg-surface outline-none",
+            "px-5 pb-5 pt-4 shadow-[0_24px_64px_rgba(26,43,60,0.22)] sm:px-6 sm:pb-6 sm:pt-5",
             "ring-1 ring-black/5",
           )}
         >
