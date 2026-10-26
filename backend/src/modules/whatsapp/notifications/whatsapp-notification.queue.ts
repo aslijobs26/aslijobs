@@ -396,6 +396,27 @@ export async function deliverWhatsAppNotificationJob(
     idempotencyKey: job.idempotencyKey,
     messageId: result.messageId,
   });
+  if (result.messageId) {
+    const { recordOutboundMessage } = await import("../inbox/whatsapp-inbox-store.js");
+    const { notificationInboxText } = await import("../inbox/whatsapp-template-text.js");
+    await recordOutboundMessage({
+      phoneNational: job.phoneNumber,
+      body: await notificationInboxText({
+        templateName: job.templateName,
+        language: job.languageCode,
+        bodyParameters: job.bodyParameters,
+      }),
+      senderType: "notification",
+      providerMessageId: result.messageId,
+      status: "accepted",
+    }).catch((error: unknown) => {
+      console.error(
+        `[WhatsAppNotification] inbox mirror failed reason=${
+          error instanceof Error ? error.name : "unknown"
+        }`,
+      );
+    });
+  }
   syncReminderFromQueueJob(job, "accepted");
 
   console.info("[WhatsAppNotification] accepted by Meta", {

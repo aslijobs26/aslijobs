@@ -167,9 +167,28 @@ describe("WhatsAppService template and existing senders", () => {
       return jsonResponse(200, { messages: [{ id: "wamid.text" }] });
     });
 
-    await new WhatsAppService().sendTextMessage("9876543210", "Hello from bot");
+    const messageId = await new WhatsAppService().sendTextMessage(
+      "9876543210",
+      "Hello from bot",
+    );
     assert.equal(captured.type, "text");
     assert.equal((captured.text as { body: string }).body, "Hello from bot");
+    assert.equal(messageId, "wamid.text");
+  });
+
+  it("sendSessionTextMessage returns the Meta message id", async () => {
+    mock.method(globalThis, "fetch", async () =>
+      jsonResponse(200, {
+        messages: [{ id: "wamid.inbox", message_status: "accepted" }],
+      }),
+    );
+
+    const result = await new WhatsAppService().sendSessionTextMessage(
+      "9876543210",
+      "Hello from admin",
+    );
+    assert.equal(result.messageId, "wamid.inbox");
+    assert.equal(result.messageStatus, "accepted");
   });
 
   it("keeps Graph failure status and code without the recipient", async () => {

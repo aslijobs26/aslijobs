@@ -189,6 +189,14 @@ export async function handleConversationalMessage(input: {
     return;
   }
 
+  const { isBotPausedForPhone } = await import("./inbox/whatsapp-inbox-store.js");
+  if (await isBotPausedForPhone(phone)) {
+    console.info(
+      `[WhatsAppBot] skipped auto-reply phone=${maskPhone(phone)} reason=human_handoff`,
+    );
+    return;
+  }
+
   const started = Date.now();
   const timing = {
     account_lookup: 0,

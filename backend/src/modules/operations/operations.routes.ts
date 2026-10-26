@@ -17,6 +17,7 @@ import operationsDashboardRouter from "./dashboard/operations-dashboard.routes.j
 import operationsAnalyticsRouter from "./analytics/operations-analytics.routes.js";
 import operationsTeamsRouter from "./teams/operations-teams.routes.js";
 import operationsSettingsRouter from "./organization/operations-settings.routes.js";
+import operationsWhatsAppInboxRouter from "./whatsapp-inbox/operations-whatsapp-inbox.routes.js";
 
 export const operationsRouter = Router();
 
@@ -41,5 +42,6 @@ operationsRouter.use(
   "/registration-awareness",
   operationsRegistrationAwarenessRouter,
 );
+operationsRouter.use("/whatsapp-inbox", operationsWhatsAppInboxRouter);
 
 export default operationsRouter;

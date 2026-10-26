@@ -19,6 +19,7 @@ import { OperationsDepartmentsPage } from "./operations-departments-page";
 import { OperationsOrganizationPage } from "./operations-organization-page";
 import { OperationsAnalyticsPage } from "./operations-analytics-page";
 import { OperationsPlaceholderPage } from "./operations-placeholder-page";
+import { OperationsWhatsAppInboxPage } from "./operations-whatsapp-inbox-page";
 import { OperationsRoleEditorPage } from "./operations-role-editor-page";
 import { OperationsRolePreviewPage } from "./operations-role-preview-page";
 import { OperationsRolesPage } from "./operations-roles-page";
@@ -82,11 +83,11 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.WHATSAPP_INBOX}
-          element={<OperationsPlaceholderPage title="WhatsApp Inbox" />}
+          element={<OperationsWhatsAppInboxPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.INBOX}
-          element={<OperationsPlaceholderPage title="Inbox" />}
+          element={<OperationsWhatsAppInboxPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.JOURNEY_ALERTS}

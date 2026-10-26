@@ -1,7 +1,9 @@
+import mongoose from "mongoose";
 import { env } from "../../config/env.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { toWhatsAppCloudRecipient } from "../../utils/whatsapp-phone.js";
+import { WHATSAPP_VERIFICATION_CODE_SENT } from "./inbox/whatsapp-inbox-redaction.js";
 
 export function maskWhatsAppRecipient(phoneNumber: string): string {
   const digits = phoneNumber.replace(/\D/g, "");
@@ -241,6 +243,22 @@ export class WhatsAppService {
         messageId ? ` messageId=${messageId}` : ""
       }${messageStatus ? ` status=${messageStatus}` : ""}`,
     );
+
+    if (mongoose.connection.readyState === 1) {
+      void import("./inbox/whatsapp-inbox-store.js")
+        .then((store) =>
+          store.recordOutboundMessage({
+            phoneNational: phoneNumber,
+            body: WHATSAPP_VERIFICATION_CODE_SENT,
+            senderType: "notification",
+            ...(messageId
+              ? { providerMessageId: messageId }
+              : { clientMessageId: `otp-${recipient}-${Date.now()}` }),
+            status: "accepted",
+          }),
+        )
+        .catch(() => undefined);
+    }
   }
 
   /**
@@ -360,46 +378,119 @@ export class WhatsAppService {
 
   /**
    * Session text reply inside the user-initiated 24-hour window.
+   * Returns Meta message id when accepted. Throws on Graph rejection.
    * Transactional templates (OTP and future alerts) stay on sendOtpMessage / templates.
    */
-  async sendTextMessage(phoneNumber: string, body: string): Promise<void> {
-    if (!env.WHATSAPP_ACCESS_TOKEN.trim() || !env.WHATSAPP_PHONE_NUMBER_ID.trim()) {
-      console.error("[WhatsAppService] text reply skipped: credentials missing");
-      return;
+  async sendSessionTextMessage(
+    phoneNumber: string,
+    body: string,
+  ): Promise<WhatsAppTemplateSendResult> {
+    if (!this.hasCloudCredentials) {
+      throw new AppError(
+        "WhatsApp messaging is not configured.",
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      );
     }
 
     const recipient = toWhatsAppCloudRecipient(phoneNumber);
-    const version = env.WHATSAPP_API_VERSION.replace(/^\/+|\/+$/g, "");
-    const url = `https://graph.facebook.com/${version}/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
     const text = body.trim().slice(0, 4000);
-    const started = Date.now();
+    if (!text) {
+      throw new AppError("Message text is required.", HTTP_STATUS.BAD_REQUEST);
+    }
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      signal: AbortSignal.timeout(15_000),
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: recipient,
-        type: "text",
-        text: { preview_url: false, body: text },
-      }),
-    });
+    const started = Date.now();
+    let response: Response;
+    try {
+      response = await fetch(this.messagesUrl(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        signal: AbortSignal.timeout(15_000),
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: recipient,
+          type: "text",
+          text: { preview_url: false, body: text },
+        }),
+      });
+    } catch (error) {
+      console.error(
+        `[WhatsAppService] text reply network failure latencyMs=${Date.now() - started}`,
+      );
+      throw new WhatsAppTemplateDeliveryError({
+        status: 0,
+        detail: error instanceof Error ? error.name : "network",
+        failureClass: "ambiguous",
+      });
+    }
 
     if (!response.ok) {
-      console.error(
-        `[WhatsAppService] text reply failed status=${response.status} latencyMs=${Date.now() - started}`,
-      );
-      return;
+      await this.handleTemplateFailure(response, "session_text", "und", "inbox");
+    }
+
+    const payload = (await response.json()) as MetaSendSuccessBody;
+    const messageId = payload.messages?.[0]?.id?.trim() || "";
+    const messageStatus = payload.messages?.[0]?.message_status?.trim() || "accepted";
+    if (!messageId) {
+      throw new WhatsAppTemplateDeliveryError({
+        status: response.status,
+        detail: "missing_message_id",
+        failureClass: "ambiguous",
+      });
     }
 
     console.info(
-      `[WhatsAppService] text reply sent latencyMs=${Date.now() - started}`,
+      `[WhatsAppService] text reply sent latencyMs=${Date.now() - started} to=${maskWhatsAppRecipient(recipient)} messageId=${messageId}`,
     );
+
+    return { messageId, messageStatus };
+  }
+
+  /**
+   * Bot-compatible session text helper. Swallows send failures so automated
+   * replies never crash the inbound worker. Prefer sendSessionTextMessage for
+   * admin inbox sends that must surface errors.
+   */
+  async sendTextMessage(phoneNumber: string, body: string): Promise<string | null> {
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const store = await import("./inbox/whatsapp-inbox-store.js");
+        if (await store.isBotPausedForPhone(phoneNumber)) {
+          console.info("[WhatsAppService] bot reply skipped reason=human_handoff");
+          return null;
+        }
+      }
+      const result = await this.sendSessionTextMessage(phoneNumber, body);
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const store = await import("./inbox/whatsapp-inbox-store.js");
+          await store.recordOutboundMessage({
+            phoneNational: phoneNumber,
+            body,
+            senderType: "bot",
+            providerMessageId: result.messageId,
+            status: "accepted",
+          });
+        } catch (error) {
+          console.error(
+            `[WhatsAppService] bot inbox persist failed reason=${
+              error instanceof Error ? error.name : "unknown"
+            }`,
+          );
+        }
+      }
+      return result.messageId;
+    } catch (error) {
+      console.error(
+        `[WhatsAppService] text reply failed reason=${
+          error instanceof Error ? error.name : "unknown"
+        }`,
+      );
+      return null;
+    }
   }
 
   async downloadMedia(mediaId: string): Promise<{ buffer: Buffer; mimeType: string }> {

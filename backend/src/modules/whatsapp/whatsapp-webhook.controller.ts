@@ -8,18 +8,22 @@ import {
   WhatsAppNotificationDispatchModel,
 } from "./notifications/whatsapp-notification.model.js";
 import { syncReminderWithDispatchStatus } from "./notifications/whatsapp-notification.reminder-sync.js";
+import {
+  applyInboxDeliveryStatus,
+  isBotPausedForPhone,
+  recordInboundUserMessage,
+} from "./inbox/whatsapp-inbox-store.js";
+import {
+  describeInboundWhatsAppMessage,
+  isWebhookForConfiguredPhone,
+  whatsAppWebhookTime,
+  type InboundWhatsAppMessage,
+} from "./whatsapp-inbound-message.js";
 
-type IncomingMessage = {
+type IncomingMessage = InboundWhatsAppMessage & {
   id?: string;
   from?: string;
-  type?: string;
-  text?: { body?: string };
   audio?: { id?: string; mime_type?: string };
-  button?: { text?: string };
-  interactive?: {
-    button_reply?: { title?: string };
-    list_reply?: { title?: string };
-  };
 };
 
 export function verifyWhatsAppWebhook(req: Request, res: Response): void {
@@ -46,28 +50,27 @@ export function receiveWhatsAppWebhook(req: Request, res: Response): void {
     return;
   }
 
+  const body = req.body as WebhookBody;
   console.info("[WhatsApp] webhook_received");
-  res.sendStatus(200);
-  console.info("[WhatsApp] webhook_ack");
 
-  const body = req.body as {
-    entry?: Array<{
-      changes?: Array<{
-        value?: {
-          messages?: IncomingMessage[];
-          statuses?: unknown[];
-        };
-      }>;
-    }>;
-  };
-
-  void processWebhook(body).catch((error: unknown) => {
-    console.error(
-      `[WhatsAppWebhook] async failure reason=${
-        error instanceof Error ? error.name : "unknown"
-      }`,
-    );
-  });
+  void persistInboundMessages(body)
+    .then(() => {
+      if (!res.headersSent) {
+        res.sendStatus(200);
+      }
+      console.info("[WhatsApp] webhook_ack");
+      return routeConversationalMessages(body);
+    })
+    .catch((error: unknown) => {
+      console.error(
+        `[WhatsAppWebhook] inbound persist failed reason=${
+          error instanceof Error ? error.name : "unknown"
+        }`,
+      );
+      if (!res.headersSent) {
+        res.sendStatus(500);
+      }
+    });
 }
 
 async function persistDeliveryStatuses(statuses: unknown[]): Promise<void> {
@@ -98,6 +101,12 @@ async function persistDeliveryStatuses(statuses: unknown[]): Promise<void> {
     if (!messageId) {
       continue;
     }
+    await applyInboxDeliveryStatus({
+      providerMessageId: messageId,
+      status: deliveryStatus,
+      timestamp,
+      ...(typeof errorCode === "number" ? { errorCode: String(errorCode) } : {}),
+    });
     const result = await applyWhatsAppNotificationDeliveryStatus({
       messageId,
       status: deliveryStatus,
@@ -141,22 +150,63 @@ async function persistDeliveryStatuses(statuses: unknown[]): Promise<void> {
   }
 }
 
-async function processWebhook(body: {
+type WebhookBody = {
   entry?: Array<{
     changes?: Array<{
-      value?: { messages?: IncomingMessage[]; statuses?: unknown[] };
+      value?: {
+        metadata?: { phone_number_id?: string };
+        messages?: IncomingMessage[];
+        statuses?: unknown[];
+      };
     }>;
   }>;
-}): Promise<void> {
+};
+
+function acceptsWebhookValue(
+  value: { metadata?: { phone_number_id?: string } } | undefined,
+): boolean {
+  return isWebhookForConfiguredPhone(
+    value?.metadata?.phone_number_id,
+    env.WHATSAPP_PHONE_NUMBER_ID,
+  );
+}
+
+async function persistInboundMessages(body: WebhookBody): Promise<void> {
+  let persisted = 0;
   for (const entry of body.entry ?? []) {
     for (const change of entry.changes ?? []) {
       const value = change.value;
-      if (!value?.messages?.length) {
-        if (value?.statuses?.length) {
-          await persistDeliveryStatuses(value.statuses);
-        }
+      if (!acceptsWebhookValue(value)) {
+        console.info("[WhatsAppWebhook] ignored event for a different phone number");
         continue;
       }
+      if (value?.statuses?.length) {
+        await persistDeliveryStatuses(value.statuses);
+      }
+      for (const message of value?.messages ?? []) {
+        const messageId = message.id?.trim();
+        const from = message.from?.trim();
+        const described = describeInboundWhatsAppMessage(message);
+        if (!messageId || !from || !described) continue;
+        const saved = await recordInboundUserMessage({
+          from,
+          body: described.body,
+          providerMessageId: messageId,
+          messageType: described.messageType,
+          occurredAt: whatsAppWebhookTime(message.timestamp),
+        });
+        if (saved.created) persisted += 1;
+      }
+    }
+  }
+  console.info(`[WhatsAppWebhook] inbox_persist created=${persisted}`);
+}
+
+async function routeConversationalMessages(body: WebhookBody): Promise<void> {
+  for (const entry of body.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      const value = change.value;
+      if (!acceptsWebhookValue(value) || !value?.messages?.length) continue;
 
       for (const message of value.messages) {
         const messageId = message.id?.trim();
@@ -169,11 +219,15 @@ async function processWebhook(body: {
           continue;
         }
 
-        const parsedAt = performance.now();
-        if (message.type === "audio" && message.audio?.id) {
+        const paused = await isBotPausedForPhone(from);
+        if (paused) {
           console.info(
-            `[WhatsApp] message_parsed: ${Math.round(performance.now() - parsedAt)}ms type=audio`,
+            `[WhatsAppWebhook] bot paused; human inbox only messageId=${messageId}`,
           );
+          continue;
+        }
+
+        if (message.type === "audio" && message.audio?.id) {
           await enqueueWhatsAppInbound({
             from,
             messageId,
@@ -186,10 +240,6 @@ async function processWebhook(body: {
 
         const extracted = extractText(message);
         if (!extracted?.text) continue;
-        console.info(
-          `[WhatsApp] message_parsed: ${Math.round(performance.now() - parsedAt)}ms type=${message.type ?? "unknown"}`,
-        );
-
         console.info(
           `[WhatsAppWebhook] routed conversational type=${message.type ?? "unknown"} messageId=${messageId}`,
         );
