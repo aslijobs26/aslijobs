@@ -2683,7 +2683,8 @@ body:has(.employer-register-page) {
   }
 
   .employer-register-page .employer-register-logo-link {
-    top: 0.15rem;
+    top: calc(1px + env(safe-area-inset-top, 0px));
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
   }
 
   .employer-register-page .employer-register-logo {
@@ -2754,18 +2755,26 @@ body:has(.employer-register-page) {
 
   .employer-register-page .employer-register-logo-link {
     order: 1;
-    position: relative;
-    top: auto;
-    left: auto;
+    position: absolute;
+    top: calc(1px + env(safe-area-inset-top, 0px));
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
     z-index: 52;
     width: auto;
-    margin: 1.15rem 1.15rem 0;
+    margin: 0;
+    line-height: 0;
+    overflow: visible;
     pointer-events: auto;
   }
 
   .employer-register-page .employer-register-logo {
-    width: clamp(9.25rem, 32vw, 12.25rem);
-    margin-left: calc(clamp(9.25rem, 32vw, 12.25rem) * -27 / 217);
+    display: block;
+    width: clamp(8.5rem, 30vw, 10.5rem);
+    height: auto;
+    margin-top: 0;
+    /* PNG has transparent left padding — keep glyph flush left. */
+    margin-left: calc(clamp(8.5rem, 30vw, 10.5rem) * -18 / 217);
+    object-fit: contain;
+    object-position: left top;
   }
 
   .employer-register-page .auth-brand-headline {
@@ -2773,7 +2782,8 @@ body:has(.employer-register-page) {
     display: block;
     max-width: none;
     width: calc(100% - 2.3rem);
-    margin: 0.35rem 1.15rem 0;
+    /* Clear absolute logo; nudge slightly lower on mobile. */
+    margin: 3.75rem 1.15rem 0;
     font-size: clamp(1.4rem, 6.2vw, 1.85rem);
     line-height: 1.28;
     white-space: normal;

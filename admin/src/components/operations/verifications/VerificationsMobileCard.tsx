@@ -2,12 +2,9 @@ import { Building2, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { operationsVerificationReviewPath } from "../../../constants/operations-routes";
 import type { OperationsVerificationListItem } from "../../../types/operations-verifications";
-import { resolveMediaUrl } from "../../../utils/resolve-media-url";
+import { EmployerLogo } from "../../ui/EmployerLogo";
 import { OperationsBadge } from "../../ui/OperationsBadge";
-import {
-  employerAvatarInitials,
-  formatEmployerDateTime,
-} from "../employers/employers-format";
+import { formatEmployerDateTime } from "../employers/employers-format";
 import {
   verificationIndustryOrAccountLabel,
   verificationOperationalStatusBadgeVariant,
@@ -33,7 +30,6 @@ function submittedLabel(item: OperationsVerificationListItem): {
 export function VerificationsMobileCard({
   item,
 }: VerificationsMobileCardProps) {
-  const logoUrl = resolveMediaUrl(item.logoUrl);
   const submitted = submittedLabel(item);
   const reviewPath = operationsVerificationReviewPath(item.id);
   const companyName =
@@ -44,13 +40,11 @@ export function VerificationsMobileCard({
     <li className="min-w-0 rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow">
       <div className="flex items-start justify-between gap-2 border-b border-border-subtle pb-2.5">
         <Link to={reviewPath} className="flex min-w-0 items-center gap-2.5">
-          <span className="inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-xs font-semibold text-primary">
-            {logoUrl ? (
-              <img src={logoUrl} alt="" className="size-full object-cover" />
-            ) : (
-              employerAvatarInitials(companyName)
-            )}
-          </span>
+          <EmployerLogo
+            name={companyName}
+            logoUrl={item.logoUrl}
+            className="size-10 text-xs ring-0"
+          />
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-semibold text-foreground">
               {companyName}

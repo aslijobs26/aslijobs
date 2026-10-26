@@ -16,6 +16,10 @@ import { getConnectedDatabaseName } from "./config/db.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { requestIdMiddleware } from "./middleware/request-id.middleware.js";
+import {
+  hasCloudinaryPublicUploadCredentials,
+  resolveExistingCloudinaryDeliveryUrlForPublicUpload,
+} from "./modules/storage/cloudinary-public-uploads.js";
 import { isSensitiveUploadPublicPath } from "./modules/storage/private-file.service.js";
 import apiRouter from "./routes/index.js";
 
@@ -101,21 +105,30 @@ app.use(
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+/**
+ * Public media under /uploads (employer logos, company assets, profile images).
+ * Sensitive prefixes always 404 here — use authenticated download APIs instead.
+ *
+ * - local: serve from disk first.
+ * - If the local file is missing (or STORAGE_PROVIDER=cloudinary), optionally
+ *   redirect to Cloudinary ONLY when a HEAD check confirms the asset exists.
+ *   Never redirect to a non-existent Cloudinary URL — that breaks <img> tags.
+ */
+app.use("/uploads", (req, res, next) => {
+  if (isSensitiveUploadPublicPath(req.path)) {
+    res.status(404).end();
+    return;
+  }
+  next();
+});
+
 if (env.STORAGE_PROVIDER === "local") {
-  // Public static only for non-sensitive assets (employer logos, company assets).
-  // Resumes / job-seeker profiles / employer docs require authenticated APIs.
-  app.use("/uploads", (req, res, next) => {
-    if (isSensitiveUploadPublicPath(req.path)) {
-      res.status(404).end();
-      return;
-    }
-    next();
-  });
   app.use(
     "/uploads",
     express.static(path.resolve(process.cwd(), env.UPLOAD_DIR), {
       etag: true,
       lastModified: true,
+      fallthrough: true,
       setHeaders(res) {
         res.setHeader(
           "Cache-Control",
@@ -125,6 +138,36 @@ if (env.STORAGE_PROVIDER === "local") {
     }),
   );
 }
+
+app.use("/uploads", async (req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    next();
+    return;
+  }
+
+  if (!hasCloudinaryPublicUploadCredentials()) {
+    res.status(404).end();
+    return;
+  }
+
+  try {
+    const deliveryUrl = await resolveExistingCloudinaryDeliveryUrlForPublicUpload(
+      req.path,
+    );
+    if (!deliveryUrl) {
+      res.status(404).end();
+      return;
+    }
+
+    res.setHeader(
+      "Cache-Control",
+      "public, max-age=86400, stale-while-revalidate=604800",
+    );
+    res.redirect(302, deliveryUrl);
+  } catch {
+    res.status(404).end();
+  }
+});
 
 /**
  * General API rate limit.

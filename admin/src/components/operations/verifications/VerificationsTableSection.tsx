@@ -3,12 +3,9 @@ import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { operationsVerificationReviewPath } from "../../../constants/operations-routes";
 import type { OperationsVerificationListItem } from "../../../types/operations-verifications";
-import { resolveMediaUrl } from "../../../utils/resolve-media-url";
+import { EmployerLogo } from "../../ui/EmployerLogo";
 import { OperationsBadge } from "../../ui/OperationsBadge";
-import {
-  employerAvatarInitials,
-  formatEmployerDateTime,
-} from "../employers/employers-format";
+import { formatEmployerDateTime } from "../employers/employers-format";
 import { VerificationsMobileCard } from "./VerificationsMobileCard";
 import {
   verificationIndustryOrAccountLabel,
@@ -181,7 +178,6 @@ export function VerificationsTableSection({
             {!isLoading &&
               !isError &&
               items.map((item) => {
-                const logoUrl = resolveMediaUrl(item.logoUrl);
                 const submitted = submittedLabel(item);
                 const reviewPath = operationsVerificationReviewPath(item.id);
                 const companyName =
@@ -201,17 +197,11 @@ export function VerificationsTableSection({
                         to={reviewPath}
                         className="flex min-w-0 items-center gap-2.5 xl:gap-2"
                       >
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary xl:size-7 xl:text-[10px]">
-                          {logoUrl ? (
-                            <img
-                              src={logoUrl}
-                              alt=""
-                              className="size-full object-cover"
-                            />
-                          ) : (
-                            employerAvatarInitials(companyName)
-                          )}
-                        </span>
+                        <EmployerLogo
+                          name={companyName}
+                          logoUrl={item.logoUrl}
+                          className="size-9 text-[11px] ring-0 xl:size-7 xl:text-[10px]"
+                        />
                         <span className="truncate text-xs font-semibold text-foreground hover:text-primary xl:text-[11px]">
                           {companyName}
                         </span>

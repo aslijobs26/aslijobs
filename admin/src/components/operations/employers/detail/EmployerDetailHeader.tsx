@@ -15,12 +15,11 @@ import {
   OPERATIONS_ROUTES,
 } from "../../../../constants/operations-routes";
 import type { OperationsEmployerDetail } from "../../../../types/operations-employers";
-import { resolveMediaUrl } from "../../../../utils/resolve-media-url";
+import { EmployerLogo } from "../../../ui/EmployerLogo";
 import { OperationsBadge } from "../../../ui/OperationsBadge";
 import { OperationsCan } from "../../auth/OperationsCan";
 import { OperationsCanKey } from "../../auth/OperationsCanKey";
 import {
-  employerAvatarInitials,
   employerStatusBadgeVariant,
   verificationStatusBadgeVariant,
 } from "../employers-format";
@@ -42,7 +41,6 @@ export function EmployerDetailHeader({
   onToggleStatus,
 }: EmployerDetailHeaderProps) {
   const navigate = useNavigate();
-  const logoUrl = resolveMediaUrl(employer.logoUrl);
   const isVerified = employer.verificationStatus === "verified";
   const isSuspended = employer.status === "suspended";
 
@@ -59,13 +57,11 @@ export function EmployerDetailHeader({
           </Link>
 
           <span className="relative shrink-0">
-            <span className="inline-flex size-10 items-center justify-center overflow-hidden rounded-lg bg-primary-light text-[11px] font-bold text-primary max-sm:size-10 max-sm:rounded-lg sm:size-12 sm:rounded-xl sm:text-sm lg:size-16 lg:text-base">
-              {logoUrl ? (
-                <img src={logoUrl} alt="" className="size-full object-cover" />
-              ) : (
-                employerAvatarInitials(employer.displayName)
-              )}
-            </span>
+            <EmployerLogo
+              name={employer.displayName}
+              logoUrl={employer.logoUrl}
+              className="size-10 rounded-lg text-[11px] font-bold ring-0 sm:size-12 sm:rounded-xl sm:text-sm lg:size-16 lg:text-base"
+            />
             {isVerified ? (
               <span
                 className="absolute -bottom-0.5 -right-0.5 inline-flex size-3.5 items-center justify-center rounded-full bg-success text-white ring-2 ring-surface sm:hidden"

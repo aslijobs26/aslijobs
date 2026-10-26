@@ -1,17 +1,28 @@
 import { env } from "@/constants/env";
 
 /**
- * Resolves backend-relative media URLs (e.g. /uploads/...) to absolute URLs.
+ * Resolves backend-relative media URLs (e.g. /uploads/...) to absolute URLs
+ * against the API host. Absolute Cloudinary URLs pass through unchanged.
  */
 export function resolveMediaUrl(pathOrUrl: string | null | undefined): string {
   if (!pathOrUrl) {
     return "";
   }
 
-  if (/^https?:\/\//i.test(pathOrUrl)) {
-    return pathOrUrl;
+  const trimmed = pathOrUrl.trim();
+  if (!trimmed) {
+    return "";
   }
 
-  const apiOrigin = env.apiUrl.replace(/\/api\/v1\/?$/, "");
-  return `${apiOrigin}${pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`}`;
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("//")) {
+    return `https:${trimmed}`;
+  }
+
+  const apiOrigin = env.apiUrl.replace(/\/api\/v1\/?$/i, "").replace(/\/+$/, "");
+  const path = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return `${apiOrigin}${path}`;
 }

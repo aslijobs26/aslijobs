@@ -18,6 +18,7 @@ import {
   placementCandidateInitials,
   placementJoiningStatusBadgeVariant,
 } from "../components/operations/placements/placements-format";
+import { EmployerLogo } from "../components/ui/EmployerLogo";
 import { OperationsBadge } from "../components/ui/OperationsBadge";
 import {
   OPERATIONS_ROUTES,
@@ -30,7 +31,6 @@ import {
   useUpdateOperationsPlacementJoining,
 } from "../hooks/use-operations-placements";
 import { isOperationsSessionTransientError } from "../utils/operations-session-errors";
-import { resolveMediaUrl } from "../utils/resolve-media-url";
 
 function DetailSkeleton() {
   return (
@@ -343,19 +343,11 @@ export function OperationsPlacementDetailPage() {
                   Employer
                 </h2>
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[10px] font-semibold text-primary">
-                    {resolveMediaUrl(placement.employerLogoUrl) ? (
-                      <img
-                        src={resolveMediaUrl(placement.employerLogoUrl)}
-                        alt=""
-                        className="size-full object-cover"
-                      />
-                    ) : (
-                      placementCandidateInitials(
-                        placement.employerName || placement.company,
-                      )
-                    )}
-                  </span>
+                  <EmployerLogo
+                    name={placement.employerName || placement.company || "Employer"}
+                    logoUrl={placement.employerLogoUrl}
+                    className="size-8 text-[10px] ring-0"
+                  />
                   <Link
                     to={operationsEmployerDetailPath(placement.employerId)}
                     className="truncate text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"

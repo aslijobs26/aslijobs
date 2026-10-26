@@ -1,7 +1,15 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/:path*",
+      "destination": "https://aslijobs-backend.onrender.com/api/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://aslijobs-backend.onrender.com/uploads/:path*"
+    },
+    {
+      "source": "/((?!api/|uploads/).*)",
       "destination": "/index.html"
     }
   ]

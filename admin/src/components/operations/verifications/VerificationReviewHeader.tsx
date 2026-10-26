@@ -2,10 +2,9 @@ import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
 import type { OperationsVerificationDetail } from "../../../types/operations-verifications";
-import { resolveMediaUrl } from "../../../utils/resolve-media-url";
+import { EmployerLogo } from "../../ui/EmployerLogo";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import {
-  employerAvatarInitials,
   formatEmployerDateTimeFull,
   formatEmployerDisplayId,
 } from "../employers/employers-format";
@@ -41,7 +40,6 @@ function accountTypeLabel(verification: OperationsVerificationDetail): string {
 export function VerificationReviewHeader({
   verification,
 }: VerificationReviewHeaderProps) {
-  const logoUrl = resolveMediaUrl(verification.logoUrl);
   const submittedOn = formatEmployerDateTimeFull(verification.submittedAt);
   const displayId =
     verification.displayId || formatEmployerDisplayId(verification.id);
@@ -57,13 +55,11 @@ export function VerificationReviewHeader({
           <ArrowLeft className="size-3.5 sm:size-4" aria-hidden="true" />
         </Link>
 
-        <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-primary-light text-[11px] font-bold text-primary sm:size-10 sm:rounded-lg sm:text-xs lg:size-12">
-          {logoUrl ? (
-            <img src={logoUrl} alt="" className="size-full object-cover" />
-          ) : (
-            employerAvatarInitials(verification.displayName)
-          )}
-        </span>
+        <EmployerLogo
+          name={verification.displayName}
+          logoUrl={verification.logoUrl}
+          className="size-9 rounded-md text-[11px] font-bold ring-0 sm:size-10 sm:rounded-lg sm:text-xs lg:size-12"
+        />
 
         <div className="min-w-0 flex-1">
           <h1 className="break-words text-[13px] font-bold leading-snug text-foreground sm:text-sm lg:text-base">

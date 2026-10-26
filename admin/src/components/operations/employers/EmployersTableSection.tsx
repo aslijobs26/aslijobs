@@ -3,10 +3,9 @@ import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { operationsEmployerDetailPath } from "../../../constants/operations-routes";
 import type { OperationsEmployerListItem } from "../../../types/operations-employers";
-import { resolveMediaUrl } from "../../../utils/resolve-media-url";
+import { EmployerLogo } from "../../ui/EmployerLogo";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import {
-  employerAvatarInitials,
   employerProvidedDisplayName,
   employerStatusBadgeVariant,
   formatEmployerRegisteredParts,
@@ -196,7 +195,6 @@ export function EmployersTableSection({
             {!isLoading &&
               !isError &&
               employers.map((emp) => {
-                const logoUrl = resolveMediaUrl(emp.logoUrl);
                 const companyName = employerProvidedDisplayName(emp);
                 const registered = formatEmployerRegisteredParts(emp);
 
@@ -210,17 +208,11 @@ export function EmployersTableSection({
                         to={operationsEmployerDetailPath(emp.id)}
                         className="flex min-w-0 items-center gap-2.5 xl:gap-2"
                       >
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary xl:size-7 xl:text-[10px]">
-                          {logoUrl ? (
-                            <img
-                              src={logoUrl}
-                              alt=""
-                              className="size-full object-cover"
-                            />
-                          ) : (
-                            employerAvatarInitials(companyName)
-                          )}
-                        </span>
+                        <EmployerLogo
+                          name={companyName}
+                          logoUrl={emp.logoUrl}
+                          className="size-9 text-[11px] ring-0 xl:size-7 xl:text-[10px]"
+                        />
                         <div className="min-w-0">
                           <span className="flex min-w-0 items-start gap-1.5">
                             <span

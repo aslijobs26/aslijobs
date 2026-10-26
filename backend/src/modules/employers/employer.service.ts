@@ -32,6 +32,7 @@ import {
 import * as employerProfileCompletionReminderQueue from "../whatsapp/notifications/employer-profile-completion-reminder.queue.js";
 import { scheduleWhatsAppNotification } from "../whatsapp/notifications/whatsapp-notification.service.js";
 import { scheduleEmployerVerificationWork } from "../operations/work/operations-work-emit.js";
+import { toPublicMediaUrl } from "../storage/public-media-url.js";
 import { storageService } from "../storage/storage.service.js";
 import { EmployerDocumentModel } from "./employer-document.model.js";
 import { EmployerModel } from "./employer.model.js";
@@ -110,7 +111,7 @@ function toPublicImageAsset(asset?: EmployerImageAsset | null) {
   }
 
   return {
-    url: asset.url ?? "",
+    url: toPublicMediaUrl(asset.url ?? ""),
     storagePath: asset.storagePath ?? "",
     publicId: asset.publicId ?? "",
     storageProvider: asset.storageProvider ?? "",

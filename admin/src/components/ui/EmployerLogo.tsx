@@ -45,7 +45,7 @@ export function EmployerLogo({
 
   useEffect(() => {
     setFailed(false);
-  }, [logoUrl]);
+  }, [logoUrl, resolvedUrl]);
 
   if (!resolvedUrl || failed) {
     return (
@@ -67,12 +67,16 @@ export function EmployerLogo({
     <img
       src={resolvedUrl}
       alt=""
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
       className={cn(
         "shrink-0 rounded-full object-cover",
         sizeClass.box,
         sizeClass.ring,
         className,
       )}
+      onLoad={() => setFailed(false)}
       onError={() => setFailed(true)}
     />
   );

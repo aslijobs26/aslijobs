@@ -10,10 +10,9 @@ import { Link } from "react-router-dom";
 import { operationsEmployerDetailPath } from "../../../constants/operations-routes";
 import type { OperationsEmployerListItem } from "../../../types/operations-employers";
 import { cn } from "../../../utils/cn";
-import { resolveMediaUrl } from "../../../utils/resolve-media-url";
+import { EmployerLogo } from "../../ui/EmployerLogo";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import {
-  employerAvatarInitials,
   employerProvidedDisplayName,
   formatEmployerRegisteredParts,
   formatIndustryOrCategory,
@@ -127,7 +126,6 @@ export function EmployersMobileCard({
   onToggleStatus,
   onDelete,
 }: EmployersMobileCardProps) {
-  const logoUrl = resolveMediaUrl(employer.logoUrl);
   const profilePath = operationsEmployerDetailPath(employer.id);
   const companyName = employerProvidedDisplayName(employer);
   const rawIndustry = industryOrAccountLabel(employer);
@@ -149,13 +147,11 @@ export function EmployersMobileCard({
             to={profilePath}
             className="group flex min-w-0 flex-1 items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
           >
-            <span className="inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-light text-[11px] font-semibold text-primary ring-1 ring-border-subtle/60">
-              {logoUrl ? (
-                <img src={logoUrl} alt="" className="size-full object-cover" />
-              ) : (
-                employerAvatarInitials(companyName)
-              )}
-            </span>
+            <EmployerLogo
+              name={companyName}
+              logoUrl={employer.logoUrl}
+              className="size-10 rounded-xl text-[11px] ring-1 ring-border-subtle/60"
+            />
 
             <span className="min-w-0 flex-1">
               <span className="flex min-w-0 items-start gap-1.5">

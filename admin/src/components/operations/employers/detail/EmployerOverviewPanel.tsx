@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import type { OperationsEmployerDetail } from "../../../../types/operations-employers";
+import { cn } from "../../../../utils/cn";
 import { formatEmployerRegisteredLabel, formatIndustryOrCategory } from "../employers-format";
 
 interface EmployerOverviewPanelProps {
@@ -29,23 +30,29 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow max-sm:rounded-lg max-sm:p-3 sm:p-4 lg:p-5">
-      <div className="flex items-center gap-2 border-b border-border-subtle pb-2.5 max-sm:pb-2.5 sm:gap-2 sm:pb-3">
-        <Icon className="size-3.5 text-primary sm:size-4" aria-hidden="true" />
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-foreground sm:text-xs">
+    <section className="@container flex h-full min-h-0 min-w-0 flex-col rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow max-sm:rounded-lg sm:p-3.5">
+      <header className="flex min-w-0 shrink-0 items-center gap-2 border-b border-border-subtle pb-2">
+        <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
+          <Icon className="size-3.5" aria-hidden="true" />
+        </span>
+        <h3 className="min-w-0 text-xs font-semibold leading-tight tracking-wide text-foreground sm:text-[13px]">
           {title}
         </h3>
-      </div>
-      <div className="mt-3 max-sm:mt-3 sm:mt-4">{children}</div>
-    </div>
+      </header>
+      <div className="mt-2.5 min-w-0 flex-1">{children}</div>
+    </section>
   );
 }
 
+/**
+ * Field grid keyed to the card's own width (container queries), not only
+ * the viewport. Narrow cards stay single-column; wider cards use two columns.
+ */
 function InfoGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-3 max-sm:gap-x-3 max-sm:gap-y-3 sm:grid-cols-1 sm:gap-0 sm:divide-y sm:divide-border-subtle">
+    <dl className="grid grid-cols-1 gap-x-5 gap-y-3 @[18rem]:grid-cols-2 @[18rem]:gap-x-6 @[18rem]:gap-y-3.5">
       {children}
-    </div>
+    </dl>
   );
 }
 
@@ -62,37 +69,48 @@ function InfoRow({
   isMono?: boolean;
   isLink?: boolean;
   href?: string;
-  /** Span both columns on mobile (addresses, remarks, long links). */
+  /** Span both columns (addresses, remarks, long links). */
   fullWidth?: boolean;
 }) {
   const display = value != null && value !== "" ? String(value) : "—";
 
   return (
     <div
-      className={`flex min-w-0 flex-col gap-1 py-0.5 max-sm:gap-1 max-sm:py-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-1.5 ${
-        fullWidth ? "col-span-2" : ""
-      }`}
-    >
-      <span className="text-[10px] font-medium leading-snug text-muted sm:text-xs">
-        {label}
-      </span>
-      {isLink && href && display !== "—" ? (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex max-w-full items-center gap-1 break-all text-[11px] font-semibold leading-snug text-primary hover:underline sm:text-xs"
-        >
-          <span className="truncate">{display}</span>
-          <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
-        </a>
-      ) : (
-        <span
-          className={`break-words text-[11px] font-semibold leading-snug text-foreground sm:text-xs ${isMono ? "font-mono" : ""}`}
-        >
-          {display}
-        </span>
+      className={cn(
+        "flex min-w-0 flex-col gap-1",
+        fullWidth && "col-span-full",
       )}
+    >
+      <dt className="text-[11px] font-medium leading-none text-muted">
+        {label}
+      </dt>
+      <dd className="min-w-0">
+        {isLink && href && display !== "—" ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex max-w-full items-start gap-1 text-xs font-semibold leading-snug text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            <span className="min-w-0 break-all [overflow-wrap:anywhere]">
+              {display}
+            </span>
+            <ExternalLink
+              className="mt-0.5 size-3 shrink-0"
+              aria-hidden="true"
+            />
+          </a>
+        ) : (
+          <span
+            className={cn(
+              "block text-xs font-semibold leading-snug text-foreground [overflow-wrap:anywhere] break-words",
+              isMono && "font-mono text-[11px] tracking-tight",
+            )}
+          >
+            {display}
+          </span>
+        )}
+      </dd>
     </div>
   );
 }
@@ -132,75 +150,75 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
   return (
     <div className="space-y-3 max-sm:space-y-2.5 sm:space-y-4">
       {/* KPI Stats Strip */}
-      <div className="grid grid-cols-2 gap-1.5 max-sm:gap-1.5 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6">
-        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
-          <div className="flex items-center gap-1 text-muted sm:gap-2">
-            <Briefcase className="size-3 text-primary sm:size-3.5" />
-            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6">
+        <article className="min-w-0 rounded-lg border border-border-subtle bg-surface p-2 shadow-xs sm:rounded-xl sm:p-3">
+          <div className="flex min-w-0 items-center gap-1.5 text-muted">
+            <Briefcase className="size-3.5 shrink-0 text-primary" />
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]">
               Total Jobs
             </span>
           </div>
-          <p className="mt-1 text-base font-bold tabular-nums text-foreground max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
+          <p className="mt-1.5 text-base font-bold tabular-nums text-foreground sm:text-xl">
             {stats.totalJobs}
           </p>
         </article>
 
-        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
-          <div className="flex items-center gap-1 text-muted sm:gap-2">
-            <CheckCircle2 className="size-3 text-success sm:size-3.5" />
-            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+        <article className="min-w-0 rounded-lg border border-border-subtle bg-surface p-2 shadow-xs sm:rounded-xl sm:p-3">
+          <div className="flex min-w-0 items-center gap-1.5 text-muted">
+            <CheckCircle2 className="size-3.5 shrink-0 text-success" />
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]">
               Active Jobs
             </span>
           </div>
-          <p className="mt-1 text-base font-bold tabular-nums text-success max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
+          <p className="mt-1.5 text-base font-bold tabular-nums text-success sm:text-xl">
             {stats.activeJobs}
           </p>
         </article>
 
-        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
-          <div className="flex items-center gap-1 text-muted sm:gap-2">
-            <Clock className="size-3 text-warning sm:size-3.5" />
-            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+        <article className="min-w-0 rounded-lg border border-border-subtle bg-surface p-2 shadow-xs sm:rounded-xl sm:p-3">
+          <div className="flex min-w-0 items-center gap-1.5 text-muted">
+            <Clock className="size-3.5 shrink-0 text-warning" />
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]">
               Pending Jobs
             </span>
           </div>
-          <p className="mt-1 text-base font-bold tabular-nums text-warning max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
+          <p className="mt-1.5 text-base font-bold tabular-nums text-warning sm:text-xl">
             {stats.pendingJobs}
           </p>
         </article>
 
-        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
-          <div className="flex items-center gap-1 text-muted sm:gap-2">
-            <Users className="size-3 text-chart-accent sm:size-3.5" />
-            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+        <article className="min-w-0 rounded-lg border border-border-subtle bg-surface p-2 shadow-xs sm:rounded-xl sm:p-3">
+          <div className="flex min-w-0 items-center gap-1.5 text-muted">
+            <Users className="size-3.5 shrink-0 text-chart-accent" />
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]">
               Applications
             </span>
           </div>
-          <p className="mt-1 text-base font-bold tabular-nums text-chart-accent max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
+          <p className="mt-1.5 text-base font-bold tabular-nums text-chart-accent sm:text-xl">
             {stats.totalApplications}
           </p>
         </article>
 
-        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
-          <div className="flex items-center gap-1 text-muted sm:gap-2">
-            <FileCheck className="size-3 text-chart-accent-alt sm:size-3.5" />
-            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+        <article className="min-w-0 rounded-lg border border-border-subtle bg-surface p-2 shadow-xs sm:rounded-xl sm:p-3">
+          <div className="flex min-w-0 items-center gap-1.5 text-muted">
+            <FileCheck className="size-3.5 shrink-0 text-chart-accent-alt" />
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]">
               Shortlisted
             </span>
           </div>
-          <p className="mt-1 text-base font-bold tabular-nums text-chart-accent-alt max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
+          <p className="mt-1.5 text-base font-bold tabular-nums text-chart-accent-alt sm:text-xl">
             {stats.shortlistedApplications}
           </p>
         </article>
 
-        <article className="rounded-lg border border-border-subtle bg-surface p-2 shadow-xs max-sm:p-1.5 sm:rounded-xl sm:p-3">
-          <div className="flex items-center gap-1 text-muted sm:gap-2">
-            <Award className="size-3 text-success sm:size-3.5" />
-            <span className="text-[9px] font-semibold uppercase tracking-wide sm:text-[11px]">
+        <article className="min-w-0 rounded-lg border border-border-subtle bg-surface p-2 shadow-xs sm:rounded-xl sm:p-3">
+          <div className="flex min-w-0 items-center gap-1.5 text-muted">
+            <Award className="size-3.5 shrink-0 text-success" />
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]">
               Hired
             </span>
           </div>
-          <p className="mt-1 text-base font-bold tabular-nums text-success max-sm:text-[15px] sm:mt-1.5 sm:text-xl">
+          <p className="mt-1.5 text-base font-bold tabular-nums text-success sm:text-xl">
             {stats.hiredApplications}
           </p>
         </article>
@@ -208,8 +226,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
 
       {/* Account Type Specific Details & Contacts */}
       {isIndividual ? (
-        /* 1. INDIVIDUAL EMPLOYER PROFILE */
-        <div className="grid gap-3 max-sm:gap-3 sm:gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2 lg:gap-3.5">
           <SectionCard title="Individual & Account Details" icon={UserCheck}>
             <InfoGrid>
               <InfoRow
@@ -217,7 +234,8 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 value={employer.contactPersonName || employer.displayName}
               />
               {hasText(employer.establishmentName) &&
-              employer.establishmentName.trim().toLowerCase() !== "individual" ? (
+              employer.establishmentName.trim().toLowerCase() !==
+                "individual" ? (
                 <InfoRow
                   label="Establishment Name"
                   value={employer.establishmentName}
@@ -276,9 +294,15 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 label="Verification Status"
                 value={employer.verificationStatusLabel}
               />
-              {hasText(employer.verifiedAtDate) ? (
-                <InfoRow label="Verified Date" value={employer.verifiedAtDate} />
-              ) : null}
+              <InfoRow
+                label="Verified Date"
+                value={
+                  hasText(employer.verifiedAtDate)
+                    ? employer.verifiedAtDate
+                    : "—"
+                }
+              />
+              <InfoRow label="Account Status" value={employer.statusLabel} />
               {hasText(employer.verificationRemarks) ? (
                 <InfoRow
                   label="Verification Remarks"
@@ -286,7 +310,6 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                   fullWidth
                 />
               ) : null}
-              <InfoRow label="Account Status" value={employer.statusLabel} />
               {hasText(employer.suspensionReason) ? (
                 <InfoRow
                   label="Suspension Reason"
@@ -298,8 +321,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
           </SectionCard>
         </div>
       ) : isConsultancy ? (
-        /* 2. CONSULTANCY EMPLOYER PROFILE */
-        <div className="grid gap-3 max-sm:gap-3 sm:gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2 lg:gap-3.5">
           <SectionCard title="Consultancy Details" icon={Building}>
             <InfoGrid>
               <InfoRow
@@ -397,9 +419,15 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 label="Verification Status"
                 value={employer.verificationStatusLabel}
               />
-              {hasText(employer.verifiedAtDate) ? (
-                <InfoRow label="Verified Date" value={employer.verifiedAtDate} />
-              ) : null}
+              <InfoRow
+                label="Verified Date"
+                value={
+                  hasText(employer.verifiedAtDate)
+                    ? employer.verifiedAtDate
+                    : "—"
+                }
+              />
+              <InfoRow label="Account Status" value={employer.statusLabel} />
               {hasText(employer.verificationRemarks) ? (
                 <InfoRow
                   label="Verification Remarks"
@@ -407,7 +435,6 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                   fullWidth
                 />
               ) : null}
-              <InfoRow label="Account Status" value={employer.statusLabel} />
               {hasText(employer.suspensionReason) ? (
                 <InfoRow
                   label="Suspension Reason"
@@ -419,8 +446,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
           </SectionCard>
         </div>
       ) : (
-        /* 3. COMPANY / BUSINESS EMPLOYER PROFILE */
-        <div className="grid gap-3 max-sm:gap-3 sm:gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2 lg:gap-3.5">
           <SectionCard title="Company & Organization Details" icon={Building}>
             <InfoGrid>
               <InfoRow
@@ -494,6 +520,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
               <InfoRow
                 label="Registered On"
                 value={formatEmployerRegisteredLabel(employer)}
+                fullWidth
               />
             </InfoGrid>
           </SectionCard>
@@ -506,24 +533,26 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                   value={employer.contactPersonName}
                 />
               ) : null}
-              {hasText(employer.contactDesignation) ? (
+              <InfoRow
+                label="Designation"
+                value={
+                  hasText(employer.contactDesignation)
+                    ? employer.contactDesignation
+                    : "—"
+                }
+              />
+              <InfoRow label="WhatsApp Phone" value={employer.phone} />
+              {hasText(employer.alternatePhone) ? (
                 <InfoRow
-                  label="Designation"
-                  value={employer.contactDesignation}
+                  label="Alternate Phone"
+                  value={employer.alternatePhone}
                 />
               ) : null}
-              <InfoRow label="WhatsApp Phone" value={employer.phone} />
               {hasText(employer.email) ? (
                 <InfoRow
                   label="Email Address"
                   value={employer.email}
                   fullWidth
-                />
-              ) : null}
-              {hasText(employer.alternatePhone) ? (
-                <InfoRow
-                  label="Alternate Phone"
-                  value={employer.alternatePhone}
                 />
               ) : null}
               <InfoRow
@@ -534,9 +563,15 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 label="Verification Status"
                 value={employer.verificationStatusLabel}
               />
-              {hasText(employer.verifiedAtDate) ? (
-                <InfoRow label="Verified Date" value={employer.verifiedAtDate} />
-              ) : null}
+              <InfoRow
+                label="Verified Date"
+                value={
+                  hasText(employer.verifiedAtDate)
+                    ? employer.verifiedAtDate
+                    : "—"
+                }
+              />
+              <InfoRow label="Account Status" value={employer.statusLabel} />
               {hasText(employer.verificationRemarks) ? (
                 <InfoRow
                   label="Verification Remarks"
@@ -544,7 +579,6 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                   fullWidth
                 />
               ) : null}
-              <InfoRow label="Account Status" value={employer.statusLabel} />
               {hasText(employer.suspensionReason) ? (
                 <InfoRow
                   label="Suspension Reason"
@@ -572,40 +606,46 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
           }
           icon={Globe}
         >
-          <div className="space-y-3 text-[11px] max-sm:space-y-2.5 sm:space-y-4 sm:text-xs">
+          <div className="space-y-3 text-xs">
             {hasText(employer.companyDescription) ? (
-              <div>
-                <h4 className="font-semibold text-foreground">
+              <div className="min-w-0">
+                <h4 className="text-[11px] font-semibold text-foreground">
                   {isIndividual ? "Profile Description" : "Company Description"}
                 </h4>
-                <p className="mt-1 leading-relaxed text-muted whitespace-pre-wrap">
+                <p className="mt-1 leading-relaxed whitespace-pre-wrap break-words text-muted [overflow-wrap:anywhere]">
                   {employer.companyDescription}
                 </p>
               </div>
             ) : null}
 
             {hasText(employer.aboutUs) ? (
-              <div>
-                <h4 className="font-semibold text-foreground">About Us</h4>
-                <p className="mt-1 leading-relaxed text-muted whitespace-pre-wrap">
+              <div className="min-w-0">
+                <h4 className="text-[11px] font-semibold text-foreground">
+                  About Us
+                </h4>
+                <p className="mt-1 leading-relaxed whitespace-pre-wrap break-words text-muted [overflow-wrap:anywhere]">
                   {employer.aboutUs}
                 </p>
               </div>
             ) : null}
 
             {!isIndividual && hasText(employer.culture) ? (
-              <div>
-                <h4 className="font-semibold text-foreground">Work Culture</h4>
-                <p className="mt-1 leading-relaxed text-muted whitespace-pre-wrap">
+              <div className="min-w-0">
+                <h4 className="text-[11px] font-semibold text-foreground">
+                  Work Culture
+                </h4>
+                <p className="mt-1 leading-relaxed whitespace-pre-wrap break-words text-muted [overflow-wrap:anywhere]">
                   {employer.culture}
                 </p>
               </div>
             ) : null}
 
             {!isIndividual && hasText(employer.benefits) ? (
-              <div>
-                <h4 className="font-semibold text-foreground">Perks & Benefits</h4>
-                <p className="mt-1 leading-relaxed text-muted whitespace-pre-wrap">
+              <div className="min-w-0">
+                <h4 className="text-[11px] font-semibold text-foreground">
+                  Perks & Benefits
+                </h4>
+                <p className="mt-1 leading-relaxed whitespace-pre-wrap break-words text-muted [overflow-wrap:anywhere]">
                   {employer.benefits}
                 </p>
               </div>
@@ -616,4 +656,3 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
     </div>
   );
 }
-

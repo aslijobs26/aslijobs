@@ -1,3 +1,5 @@
+import { toPublicMediaUrl } from "../storage/public-media-url.js";
+
 export type EmployerPosterImageAsset = {
   url?: string;
   fileSize?: number;
@@ -49,20 +51,21 @@ export function withMediaCacheBuster(
   }
 
   if (/[?&]v=/.test(trimmed)) {
-    return trimmed;
+    return toPublicMediaUrl(trimmed);
   }
 
   if (version === undefined || version === "") {
-    return trimmed;
+    return toPublicMediaUrl(trimmed);
   }
 
   const versionValue = String(version);
   if (!versionValue || versionValue === "0") {
-    return trimmed;
+    return toPublicMediaUrl(trimmed);
   }
 
   const separator = trimmed.includes("?") ? "&" : "?";
-  return `${trimmed}${separator}v=${encodeURIComponent(versionValue)}`;
+  const withVersion = `${trimmed}${separator}v=${encodeURIComponent(versionValue)}`;
+  return toPublicMediaUrl(withVersion);
 }
 
 export function resolveEmployerPosterImageUrl(
