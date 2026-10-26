@@ -299,7 +299,10 @@ export async function recordInboundUserMessage(input: {
   from: string;
   body: string;
   providerMessageId: string;
-  messageType?: "text" | "audio_transcript";
+  messageType?: "text" | "audio_transcript" | "image" | "document" | "audio" | "video";
+  mediaProviderId?: string;
+  mediaMimeType?: string;
+  mediaFileName?: string;
   occurredAt?: Date;
 }): Promise<{ conversationId: string; messageId: string; created: boolean }> {
   const phone = normalizeInboxPhone(input.from);
@@ -333,6 +336,9 @@ export async function recordInboundUserMessage(input: {
       senderType: "user",
       body,
       messageType: input.messageType ?? "text",
+      mediaProviderId: input.mediaProviderId?.trim() ?? "",
+      mediaMimeType: input.mediaMimeType?.trim() ?? "",
+      mediaFileName: input.mediaFileName?.trim() ?? "",
       providerMessageId,
       status: "delivered",
       statusAt: occurredAt,
@@ -394,6 +400,10 @@ export async function recordOutboundMessage(input: {
   adminUserId?: string | null;
   status: WhatsAppInboxMessageStatus;
   failureReason?: string;
+  messageType?: "text" | "image" | "document" | "audio" | "video";
+  mediaProviderId?: string;
+  mediaMimeType?: string;
+  mediaFileName?: string;
   occurredAt?: Date;
 }): Promise<{ conversationId: string; messageId: string; created: boolean }> {
   const phone = normalizeInboxPhone(input.phoneNational);
@@ -436,7 +446,10 @@ export async function recordOutboundMessage(input: {
       direction: "outbound",
       senderType: input.senderType,
       body,
-      messageType: "text",
+      messageType: input.messageType ?? "text",
+      mediaProviderId: input.mediaProviderId?.trim() ?? "",
+      mediaMimeType: input.mediaMimeType?.trim() ?? "",
+      mediaFileName: input.mediaFileName?.trim() ?? "",
       providerMessageId,
       clientMessageId,
       status: input.status,

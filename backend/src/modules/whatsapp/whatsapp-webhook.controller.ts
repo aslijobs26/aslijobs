@@ -193,6 +193,9 @@ async function persistInboundMessages(body: WebhookBody): Promise<void> {
           body: described.body,
           providerMessageId: messageId,
           messageType: described.messageType,
+          mediaProviderId: described.mediaProviderId,
+          mediaMimeType: described.mediaMimeType,
+          mediaFileName: described.mediaFileName,
           occurredAt: whatsAppWebhookTime(message.timestamp),
         });
         if (saved.created) persisted += 1;

@@ -45,6 +45,9 @@ export interface WhatsAppInboxMessage {
   senderType: WhatsAppInboxSenderType;
   body: string;
   messageType: string;
+  hasMedia?: boolean;
+  mediaMimeType?: string;
+  mediaFileName?: string;
   status: WhatsAppInboxMessageStatus;
   failureReason: string;
   createdAt: string;

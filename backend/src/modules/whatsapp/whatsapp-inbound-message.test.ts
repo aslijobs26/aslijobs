@@ -11,7 +11,13 @@ describe("inbound WhatsApp messages", () => {
   it("keeps the customer's text, including Hi", () => {
     assert.deepEqual(
       describeInboundWhatsAppMessage({ type: "text", text: { body: "Hi" } }),
-      { body: "Hi", messageType: "text" },
+      {
+        body: "Hi",
+        messageType: "text",
+        mediaProviderId: "",
+        mediaMimeType: "",
+        mediaFileName: "",
+      },
     );
   });
 
@@ -20,9 +26,23 @@ describe("inbound WhatsApp messages", () => {
       describeInboundWhatsAppMessage({ type: "image" })?.body,
       "[Image]",
     );
+    const image = describeInboundWhatsAppMessage({
+      type: "image",
+      image: { id: "media-1", mime_type: "image/jpeg", caption: "Site photo" },
+    });
+    assert.equal(image?.messageType, "image");
+    assert.equal(image?.mediaProviderId, "media-1");
+    assert.equal(image?.mediaMimeType, "image/jpeg");
+    assert.equal(image?.body, "Site photo");
+    const document = describeInboundWhatsAppMessage({
+      type: "document",
+      document: { id: "doc-1", mime_type: "application/pdf", filename: "resume.pdf" },
+    });
+    assert.equal(document?.messageType, "document");
+    assert.equal(document?.mediaProviderId, "doc-1");
     assert.equal(
       describeInboundWhatsAppMessage({ type: "audio" })?.messageType,
-      "audio_transcript",
+      "audio",
     );
     assert.equal(
       describeInboundWhatsAppMessage({

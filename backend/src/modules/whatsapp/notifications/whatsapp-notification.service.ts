@@ -89,6 +89,7 @@ export async function enqueueWhatsAppNotification(
     templateName,
     language: languageCode,
     recipientMasked: maskWhatsAppRecipient(payload.phoneNumber),
+    bodyParameters,
     ...(payload.correlationId?.trim()
       ? { correlationId: payload.correlationId.trim() }
       : {}),

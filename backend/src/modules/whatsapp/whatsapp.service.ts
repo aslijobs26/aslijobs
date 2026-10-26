@@ -493,7 +493,105 @@ export class WhatsAppService {
     }
   }
 
-  async downloadMedia(mediaId: string): Promise<{ buffer: Buffer; mimeType: string }> {
+  async uploadMedia(input: {
+    bytes: Buffer;
+    mimeType: string;
+    fileName: string;
+  }): Promise<string> {
+    if (!this.hasCloudCredentials) {
+      throw new AppError(
+        "WhatsApp messaging is not configured.",
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      );
+    }
+    const form = new FormData();
+    form.append("messaging_product", "whatsapp");
+    form.append("type", input.mimeType);
+    form.append(
+      "file",
+      new Blob([new Uint8Array(input.bytes)], { type: input.mimeType }),
+      input.fileName,
+    );
+    const version = env.WHATSAPP_API_VERSION.replace(/^\/+|\/+$/g, "");
+    const response = await fetch(
+      `https://graph.facebook.com/${version}/${env.WHATSAPP_PHONE_NUMBER_ID}/media`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}` },
+        body: form,
+        signal: AbortSignal.timeout(30_000),
+      },
+    );
+    if (!response.ok) {
+      await this.handleTemplateFailure(response, "session_media", "und", "inbox");
+    }
+    const payload = (await response.json()) as { id?: string };
+    const mediaId = payload.id?.trim() || "";
+    if (!mediaId) {
+      throw new WhatsAppTemplateDeliveryError({
+        status: response.status,
+        detail: "missing_media_id",
+        failureClass: "ambiguous",
+      });
+    }
+    return mediaId;
+  }
+
+  async sendMediaMessage(input: {
+    phoneNumber: string;
+    kind: "image" | "document" | "audio" | "video";
+    mediaId: string;
+    caption?: string;
+    fileName?: string;
+  }): Promise<WhatsAppTemplateSendResult> {
+    if (!this.hasCloudCredentials) {
+      throw new AppError(
+        "WhatsApp messaging is not configured.",
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      );
+    }
+    const recipient = toWhatsAppCloudRecipient(input.phoneNumber);
+    const caption = input.caption?.trim().slice(0, 1024) ?? "";
+    const media: Record<string, string> = { id: input.mediaId };
+    if (caption && input.kind !== "audio") media.caption = caption;
+    if (input.kind === "document" && input.fileName) {
+      media.filename = input.fileName;
+    }
+    const response = await fetch(this.messagesUrl(), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(20_000),
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: recipient,
+        type: input.kind,
+        [input.kind]: media,
+      }),
+    });
+    if (!response.ok) {
+      await this.handleTemplateFailure(response, "session_media", "und", "inbox");
+    }
+    const payload = (await response.json()) as MetaSendSuccessBody;
+    const messageId = payload.messages?.[0]?.id?.trim() || "";
+    const messageStatus = payload.messages?.[0]?.message_status?.trim() || "accepted";
+    if (!messageId) {
+      throw new WhatsAppTemplateDeliveryError({
+        status: response.status,
+        detail: "missing_message_id",
+        failureClass: "ambiguous",
+      });
+    }
+    return { messageId, messageStatus };
+  }
+
+  async downloadMedia(
+    mediaId: string,
+    options?: { maxBytes?: number },
+  ): Promise<{ buffer: Buffer; mimeType: string }> {
     if (!env.WHATSAPP_ACCESS_TOKEN.trim()) {
       throw new Error("WhatsApp media download is not configured");
     }
@@ -525,7 +623,8 @@ export class WhatsAppService {
     }
 
     const bytes = Buffer.from(await file.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > 8_000_000) {
+    const maxBytes = options?.maxBytes ?? 8_000_000;
+    if (bytes.length === 0 || bytes.length > maxBytes) {
       throw new Error("WhatsApp media size is invalid");
     }
 

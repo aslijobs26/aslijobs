@@ -129,3 +129,40 @@ export async function sendWhatsAppInboxMessage(input: {
   );
   return response.data.data;
 }
+
+export async function sendWhatsAppInboxMedia(input: {
+  conversationId: string;
+  file: File;
+  caption?: string;
+  clientMessageId?: string;
+  onProgress?: (percent: number) => void;
+}): Promise<WhatsAppInboxSendResult> {
+  const form = new FormData();
+  form.append("file", input.file);
+  if (input.caption?.trim()) form.append("caption", input.caption.trim());
+  if (input.clientMessageId) form.append("clientMessageId", input.clientMessageId);
+  const response = await apiClient.post<{ data: WhatsAppInboxSendResult }>(
+    `${BASE}/conversations/${input.conversationId}/messages/media`,
+    form,
+    {
+      onUploadProgress: (event) => {
+        if (!input.onProgress || !event.total) return;
+        input.onProgress(
+          Math.min(100, Math.round((event.loaded / event.total) * 100)),
+        );
+      },
+    },
+  );
+  return response.data.data;
+}
+
+export async function fetchWhatsAppInboxMedia(
+  conversationId: string,
+  messageId: string,
+): Promise<Blob> {
+  const response = await apiClient.get<Blob>(
+    `${BASE}/conversations/${conversationId}/messages/${messageId}/media`,
+    { responseType: "blob" },
+  );
+  return response.data;
+}

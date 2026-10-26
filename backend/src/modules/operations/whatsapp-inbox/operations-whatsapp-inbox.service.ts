@@ -31,8 +31,20 @@ import {
   WhatsAppService,
   WhatsAppTemplateDeliveryError,
 } from "../../whatsapp/whatsapp.service.js";
+import {
+  safeMediaFileName,
+  validateWhatsAppMedia,
+  type WhatsAppMediaKind,
+} from "../../whatsapp/whatsapp-media.js";
 
 const whatsAppService = new WhatsAppService();
+
+function mediaLabel(kind: WhatsAppMediaKind, fileName: string): string {
+  if (kind === "image") return "[Image]";
+  if (kind === "audio") return "[Audio]";
+  if (kind === "video") return "[Video]";
+  return `[Document] ${fileName}`;
+}
 
 const OUTSIDE_WINDOW_MESSAGE =
   "Free-form WhatsApp replies are only allowed within 24 hours of the customer's last message. Ask the customer to message AsliJobs on WhatsApp first.";
@@ -293,6 +305,9 @@ export const operationsWhatsAppInboxService = {
         senderType: row.senderType,
         body: row.body,
         messageType: row.messageType,
+        hasMedia: Boolean(row.mediaProviderId),
+        mediaMimeType: row.mediaMimeType || "",
+        mediaFileName: row.mediaFileName || "",
         status: row.status,
         failureReason: row.failureReason || "",
         createdAt: row.createdAt?.toISOString?.() ?? new Date().toISOString(),
@@ -559,6 +574,9 @@ export const operationsWhatsAppInboxService = {
         senderType: "admin" as const,
         body: text,
         messageType: "text" as const,
+        hasMedia: false,
+        mediaMimeType: "",
+        mediaFileName: "",
         status: message?.status ?? "accepted",
         failureReason: "",
         createdAt:
@@ -568,6 +586,157 @@ export const operationsWhatsAppInboxService = {
       conversation: serializeConversation(refreshed),
       duplicated: !recorded.created,
     };
+  },
+
+  async sendMedia(input: {
+    conversationId: string;
+    adminUserId: string;
+    bytes: Buffer;
+    mimeType: string;
+    fileName: string;
+    caption?: string;
+    clientMessageId?: string;
+  }) {
+    const conversation = await loadConversationOrThrow(input.conversationId);
+    if (!isInsideCustomerServiceWindow(conversation.lastInboundAt)) {
+      throw new AppError(OUTSIDE_WINDOW_MESSAGE, HTTP_STATUS.BAD_REQUEST, {
+        code: "WHATSAPP_OUTSIDE_SERVICE_WINDOW",
+      });
+    }
+    const checked = validateWhatsAppMedia({
+      mimeType: input.mimeType,
+      sizeBytes: input.bytes.length,
+    });
+    if ("error" in checked) {
+      throw new AppError(checked.error, HTTP_STATUS.BAD_REQUEST, {
+        code: "WHATSAPP_MEDIA_REJECTED",
+      });
+    }
+    const fileName = safeMediaFileName(input.fileName);
+    const caption = input.caption?.trim().slice(0, 1024) ?? "";
+    const body = caption || mediaLabel(checked.kind, fileName);
+    const clientMessageId = input.clientMessageId?.trim() || "";
+
+    let acceptedByProvider = false;
+    try {
+      const mediaId = await whatsAppService.uploadMedia({
+        bytes: input.bytes,
+        mimeType: input.mimeType,
+        fileName,
+      });
+      const result = await whatsAppService.sendMediaMessage({
+        phoneNumber: conversation.phoneNational,
+        kind: checked.kind,
+        mediaId,
+        caption,
+        fileName,
+      });
+      acceptedByProvider = true;
+      await pauseBotForAdmin(conversation.phoneNational, input.adminUserId);
+      const recorded = await recordOutboundMessage({
+        phoneNational: conversation.phoneNational,
+        body,
+        senderType: "admin",
+        providerMessageId: result.messageId,
+        clientMessageId,
+        adminUserId: input.adminUserId,
+        status: "accepted",
+        messageType: checked.kind,
+        mediaProviderId: mediaId,
+        mediaMimeType: input.mimeType,
+        mediaFileName: fileName,
+      });
+      const message = await WhatsAppInboxMessageModel.findById(recorded.messageId).lean();
+      const refreshed = await loadConversationOrThrow(input.conversationId);
+      return {
+        message: {
+          id: String(message?._id ?? recorded.messageId),
+          direction: "outbound" as const,
+          senderType: "admin" as const,
+          body,
+          messageType: checked.kind,
+          hasMedia: true,
+          mediaMimeType: input.mimeType,
+          mediaFileName: fileName,
+          status: message?.status ?? "accepted",
+          failureReason: "",
+          createdAt: message?.createdAt?.toISOString?.() ?? new Date().toISOString(),
+          statusAt: message?.statusAt?.toISOString?.() ?? null,
+        },
+        conversation: serializeConversation(refreshed),
+        duplicated: !recorded.created,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      if (acceptedByProvider) {
+        throw new AppError(
+          "WhatsApp accepted the file, but the inbox could not save it. Refresh before sending again.",
+          HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          { code: "WHATSAPP_MEDIA_PERSIST_FAILED" },
+        );
+      }
+      const failureReason = sanitizeWhatsAppErrorDetail(
+        error instanceof WhatsAppTemplateDeliveryError
+          ? error.detail || error.message
+          : error instanceof Error
+            ? error.message
+            : "send_failed",
+      );
+      await recordOutboundMessage({
+        phoneNational: conversation.phoneNational,
+        body,
+        senderType: "admin",
+        clientMessageId,
+        adminUserId: input.adminUserId,
+        status: "failed",
+        failureReason,
+        messageType: checked.kind,
+        mediaMimeType: input.mimeType,
+        mediaFileName: fileName,
+      });
+      if (
+        error instanceof WhatsAppTemplateDeliveryError &&
+        error.metaCode === 131047
+      ) {
+        throw new AppError(OUTSIDE_WINDOW_MESSAGE, HTTP_STATUS.BAD_REQUEST, {
+          code: "WHATSAPP_OUTSIDE_SERVICE_WINDOW",
+        });
+      }
+      throw new AppError(
+        "Unable to send the WhatsApp attachment right now. Please try again.",
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        { code: "WHATSAPP_MEDIA_SEND_FAILED" },
+      );
+    }
+  },
+
+  async getMessageMedia(conversationId: string, messageId: string) {
+    if (!Types.ObjectId.isValid(messageId)) {
+      throw new AppError("Message not found.", HTTP_STATUS.NOT_FOUND);
+    }
+    const message = await WhatsAppInboxMessageModel.findById(messageId).lean();
+    if (!message || String(message.conversationId) !== conversationId) {
+      throw new AppError("Message not found.", HTTP_STATUS.NOT_FOUND);
+    }
+    const mediaId = message.mediaProviderId?.trim() ?? "";
+    if (!mediaId) {
+      throw new AppError("This message has no file.", HTTP_STATUS.NOT_FOUND);
+    }
+    try {
+      const file = await whatsAppService.downloadMedia(mediaId, {
+        maxBytes: 16 * 1024 * 1024,
+      });
+      return {
+        bytes: file.buffer,
+        mimeType: message.mediaMimeType || file.mimeType || "application/octet-stream",
+        fileName: safeMediaFileName(message.mediaFileName || "file"),
+      };
+    } catch {
+      throw new AppError(
+        "The file could not be retrieved from WhatsApp.",
+        HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      );
+    }
   },
 
   /** Test / ops helper: ensure a conversation exists for a known phone. */

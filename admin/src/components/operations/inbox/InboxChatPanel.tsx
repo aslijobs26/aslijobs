@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useEffect,
   useId,
   useRef,
@@ -6,6 +8,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import type { EmojiClickData } from "emoji-picker-react";
 import {
   Check,
   CheckCheck,
@@ -16,12 +19,19 @@ import {
   Play,
   SendHorizontal,
   Smile,
+  X,
 } from "lucide-react";
 import type {
   WhatsAppInboxConversation,
   WhatsAppInboxMessage,
 } from "../../../types/operations-whatsapp-inbox";
+import { fetchWhatsAppInboxMedia } from "../../../services/operations-whatsapp-inbox.service";
 import { cn } from "../../../utils/cn";
+import {
+  formatAttachmentSize,
+  insertEmojiAtSelection,
+  validateInboxAttachment,
+} from "../../../utils/whatsapp-inbox-composer";
 import {
   formatInboxTimestamp,
   formatMessageTime,
@@ -31,6 +41,8 @@ import whatsappChatBg from "../../../assets/whatsapp-chat-bg.png";
 import { OperationsCandidateAvatar } from "../candidates/OperationsCandidateAvatar";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 
+const EmojiPicker = lazy(() => import("emoji-picker-react"));
+
 interface InboxChatPanelProps {
   conversation: WhatsAppInboxConversation | null;
   messages: WhatsAppInboxMessage[];
@@ -39,6 +51,12 @@ interface InboxChatPanelProps {
   sending: boolean;
   sendError: string | null;
   onSend: (text: string, clientMessageId: string) => Promise<void>;
+  onSendMedia: (
+    file: File,
+    caption: string,
+    clientMessageId: string,
+    onProgress: (percent: number) => void,
+  ) => Promise<void>;
   hasOlder?: boolean;
   loadingOlder?: boolean;
   onLoadOlder?: () => void;
@@ -55,6 +73,7 @@ export function InboxChatPanel({
   sending,
   sendError,
   onSend,
+  onSendMedia,
   hasOlder = false,
   loadingOlder = false,
   onLoadOlder,
@@ -63,14 +82,37 @@ export function InboxChatPanel({
   onOpenDetails,
 }: InboxChatPanelProps) {
   const [draft, setDraft] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const stickToBottomRef = useRef(true);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const emojiRootRef = useRef<HTMLFormElement | null>(null);
   const inputId = useId();
+  const emojiPanelId = useId();
 
   useEffect(() => {
     setDraft("");
+    setAttachment(null);
+    setAttachmentError(null);
+    setEmojiOpen(false);
+    setUploadProgress(null);
     stickToBottomRef.current = true;
   }, [conversation?.id]);
+
+  useEffect(() => {
+    if (!emojiOpen) return;
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (!emojiRootRef.current?.contains(event.target as Node)) {
+        setEmojiOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, [emojiOpen]);
 
   useEffect(() => {
     if (!stickToBottomRef.current) return;
@@ -93,25 +135,62 @@ export function InboxChatPanel({
     );
   }
 
+  const caption = draft.trim();
+  const captionTooLong = attachment ? caption.length > 1024 : caption.length > 4000;
   const canSend =
     conversation.canSendFreeForm &&
     !sending &&
-    draft.trim().length > 0 &&
-    draft.trim().length <= 4000;
+    !captionTooLong &&
+    (attachment !== null || (caption.length > 0 && caption.length <= 4000));
 
   async function handleSubmit(event?: FormEvent) {
     event?.preventDefault();
-    const text = draft.trim();
-    if (!conversation || !text || sending || !conversation.canSendFreeForm) {
+    if (!conversation || sending || !conversation.canSendFreeForm || !canSend) {
       return;
     }
     const clientMessageId = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     try {
-      await onSend(text, clientMessageId);
+      if (attachment) {
+        setUploadProgress(0);
+        await onSendMedia(attachment, caption, clientMessageId, setUploadProgress);
+        setAttachment(null);
+        setAttachmentError(null);
+        setUploadProgress(null);
+      } else {
+        await onSend(caption, clientMessageId);
+      }
       setDraft("");
+      setEmojiOpen(false);
     } catch {
-      // Draft is preserved on failure.
+      setUploadProgress(null);
     }
+  }
+
+  function insertEmoji(emoji: string) {
+    const node = textareaRef.current;
+    const start = node?.selectionStart ?? draft.length;
+    const end = node?.selectionEnd ?? draft.length;
+    const next = insertEmojiAtSelection(draft, start, end, emoji);
+    setDraft(next.value);
+    requestAnimationFrame(() => {
+      node?.focus();
+      node?.setSelectionRange(next.cursor, next.cursor);
+    });
+  }
+
+  function handleEmojiClick(data: EmojiClickData) {
+    insertEmoji(data.emoji);
+  }
+
+  function handleFileChange(file: File | undefined) {
+    if (!file) return;
+    const error = validateInboxAttachment({ type: file.type, size: file.size });
+    if (error) {
+      setAttachmentError(error);
+      return;
+    }
+    setAttachmentError(null);
+    setAttachment(file);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -260,7 +339,7 @@ export function InboxChatPanel({
                 <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#667781]">
                   {senderLabel(message.senderType)}
                 </p>
-                <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                <MessageContent conversationId={conversation.id} message={message} />
                 <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#667781]">
                   <span>{formatMessageTime(message.createdAt)}</span>
                   {outbound ? <StatusTicks status={message.status} /> : null}
@@ -279,8 +358,9 @@ export function InboxChatPanel({
       </div>
 
       <form
+        ref={emojiRootRef}
         onSubmit={(event) => void handleSubmit(event)}
-        className="shrink-0 border-t border-border-subtle bg-[#f0f2f5] px-2 py-1.5 sm:bg-surface sm:px-3 sm:py-2.5"
+        className="relative shrink-0 border-t border-border-subtle bg-[#f0f2f5] px-2 py-1.5 sm:bg-surface sm:px-3 sm:py-2.5"
       >
         {!conversation.canSendFreeForm ? (
           <p
@@ -292,19 +372,65 @@ export function InboxChatPanel({
             <span className="hidden sm:inline">{serviceWindowMessage(conversation)}</span>
           </p>
         ) : null}
-        {sendError ? (
+        {sendError || attachmentError || captionTooLong ? (
           <p className="mb-1 text-[11px] text-danger sm:text-xs" role="alert">
-            {sendError}
+            {attachmentError ||
+              (captionTooLong
+                ? "Message is too long for WhatsApp."
+                : sendError)}
           </p>
         ) : null}
-        <div className="flex items-end gap-1">
-          <span className="hidden pb-2.5 text-muted sm:inline" aria-hidden>
-            <Paperclip className="size-4 opacity-40" />
-          </span>
+        {attachment ? (
+          <div className="mb-1 flex items-center gap-2 rounded-lg border border-border bg-white px-2 py-1.5 text-xs">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-foreground">{attachment.name}</p>
+              <p className="text-muted">
+                {attachment.type || "file"} · {formatAttachmentSize(attachment.size)}
+                {uploadProgress !== null ? ` · ${uploadProgress}%` : ""}
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="Remove attachment"
+              disabled={sending}
+              onClick={() => {
+                setAttachment(null);
+                setAttachmentError(null);
+                setUploadProgress(null);
+              }}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-hero-bg disabled:opacity-40"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        ) : null}
+        <div className="relative flex items-end gap-1">
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="sr-only"
+            aria-label="Choose a file"
+            accept="image/jpeg,image/png,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,audio/mpeg,audio/mp4,audio/ogg,audio/aac,audio/amr,video/mp4,video/3gpp"
+            disabled={sending || !conversation.canSendFreeForm}
+            onChange={(event) => {
+              handleFileChange(event.target.files?.[0]);
+              event.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            aria-label="Attach file"
+            disabled={sending || !conversation.canSendFreeForm}
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-white disabled:opacity-40"
+          >
+            <Paperclip className="size-4" />
+          </button>
           <label htmlFor={inputId} className="sr-only">
             Type a message
           </label>
           <textarea
+            ref={textareaRef}
             id={inputId}
             rows={1}
             value={draft}
@@ -314,9 +440,41 @@ export function InboxChatPanel({
             disabled={sending || !conversation.canSendFreeForm}
             className="max-h-24 min-h-10 flex-1 resize-none rounded-full border border-border bg-white px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted disabled:opacity-60 sm:max-h-28 sm:rounded-2xl sm:bg-hero-bg"
           />
-          <span className="hidden pb-2.5 text-muted sm:inline" aria-hidden>
-            <Smile className="size-4 opacity-40" />
-          </span>
+          <div>
+            {emojiOpen ? (
+              <div
+                id={emojiPanelId}
+                className="absolute bottom-full left-2 z-30 mb-2 w-[min(20rem,calc(100%-1rem))] overflow-hidden rounded-xl border border-border bg-white shadow-lg"
+              >
+                <Suspense
+                  fallback={
+                    <p className="px-3 py-6 text-center text-xs text-muted">
+                      Loading emojis...
+                    </p>
+                  }
+                >
+                  <EmojiPicker
+                    onEmojiClick={handleEmojiClick}
+                    width="100%"
+                    height={320}
+                    lazyLoadEmojis
+                    previewConfig={{ showPreview: false }}
+                  />
+                </Suspense>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              aria-label={emojiOpen ? "Close emoji picker" : "Open emoji picker"}
+              aria-expanded={emojiOpen}
+              aria-controls={emojiPanelId}
+              disabled={sending || !conversation.canSendFreeForm}
+              onClick={() => setEmojiOpen((open) => !open)}
+              className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-white disabled:opacity-40"
+            >
+              <Smile className="size-4" />
+            </button>
+          </div>
           <button
             type="submit"
             disabled={!canSend}
@@ -408,4 +566,129 @@ function StatusTicks({ status }: { status: WhatsAppInboxMessage["status"] }) {
     return <CheckCheck className="size-3.5 text-[#8696a0]" aria-label="Delivered" />;
   }
   return <Check className="size-3.5 text-[#8696a0]" aria-label="Sent" />;
+}
+
+function MessageContent({
+  conversationId,
+  message,
+}: {
+  conversationId: string;
+  message: WhatsAppInboxMessage;
+}) {
+  const isMedia = ["image", "document", "audio", "video"].includes(message.messageType);
+  const hideBody =
+    message.hasMedia &&
+    (message.body === "[Image]" ||
+      message.body === "[Audio]" ||
+      message.body === "[Video]" ||
+      message.body === "[Voice message]" ||
+      message.body.startsWith("[Document]"));
+
+  return (
+    <div className="space-y-1">
+      {isMedia ? (
+        <InboxMedia conversationId={conversationId} message={message} />
+      ) : null}
+      {message.body && !hideBody ? (
+        <p className="whitespace-pre-wrap break-words">{message.body}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function InboxMedia({
+  conversationId,
+  message,
+}: {
+  conversationId: string;
+  message: WhatsAppInboxMessage;
+}) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!message.hasMedia || (message.messageType !== "image" && message.messageType !== "video")) {
+      return;
+    }
+    let objectUrl = "";
+    let cancelled = false;
+    void fetchWhatsAppInboxMedia(conversationId, message.id)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setError("This file could not be retrieved.");
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [conversationId, message.hasMedia, message.id, message.messageType]);
+
+  if (!message.hasMedia) {
+    return (
+      <p className="text-xs text-[#667781]">
+        File unavailable. The WhatsApp media reference was not stored.
+      </p>
+    );
+  }
+
+  if (error) {
+    return <p className="text-xs text-danger">{error}</p>;
+  }
+
+  if (
+    (message.messageType === "image" || message.messageType === "video") &&
+    !previewUrl
+  ) {
+    return <p className="text-xs text-[#667781]">Loading file...</p>;
+  }
+
+  if (message.messageType === "image" && previewUrl) {
+    return (
+      <img
+        src={previewUrl}
+        alt={message.mediaFileName || "WhatsApp image"}
+        className="max-h-64 max-w-full rounded-md object-contain"
+      />
+    );
+  }
+
+  if (message.messageType === "video" && previewUrl) {
+    return (
+      <video src={previewUrl} controls className="max-h-64 max-w-full rounded-md" />
+    );
+  }
+
+  async function download() {
+    setBusy(true);
+    setError(null);
+    try {
+      const blob = await fetchWhatsAppInboxMedia(conversationId, message.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = message.mediaFileName || "whatsapp-file";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("This file could not be retrieved.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void download()}
+      disabled={busy}
+      className="max-w-full break-all text-left text-xs font-medium text-[#027eb5] underline disabled:opacity-60"
+    >
+      {busy ? "Opening file..." : message.mediaFileName || "Download file"}
+    </button>
+  );
 }

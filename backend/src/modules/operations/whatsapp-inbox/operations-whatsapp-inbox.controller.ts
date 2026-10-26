@@ -98,4 +98,45 @@ export const operationsWhatsAppInboxController = {
     });
     sendSuccess(res, HTTP_STATUS.CREATED, { data });
   },
+
+  async sendMedia(req: Request, res: Response): Promise<void> {
+    const { conversationId } = req.params as { conversationId: string };
+    const file = req.file;
+    if (!file || file.buffer.length === 0) {
+      throw new AppError("Choose a file to send.", HTTP_STATUS.BAD_REQUEST);
+    }
+    const caption = typeof req.body?.caption === "string" ? req.body.caption : "";
+    const clientMessageId =
+      typeof req.body?.clientMessageId === "string" ? req.body.clientMessageId : "";
+    const data = await operationsWhatsAppInboxService.sendMedia({
+      conversationId,
+      adminUserId: requireAdminUserId(req),
+      bytes: file.buffer,
+      mimeType: file.mimetype,
+      fileName: file.originalname,
+      caption,
+      clientMessageId,
+    });
+    sendSuccess(res, HTTP_STATUS.CREATED, { data });
+  },
+
+  async getMessageMedia(req: Request, res: Response): Promise<void> {
+    const { conversationId, messageId } = req.params as {
+      conversationId: string;
+      messageId: string;
+    };
+    const file = await operationsWhatsAppInboxService.getMessageMedia(
+      conversationId,
+      messageId,
+    );
+    const inline = file.mimeType.startsWith("image/") || file.mimeType.startsWith("video/");
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader(
+      "Content-Disposition",
+      `${inline ? "inline" : "attachment"}; filename="${file.fileName.replace(/"/g, "")}"`,
+    );
+    res.status(HTTP_STATUS.OK).send(file.bytes);
+  },
 };

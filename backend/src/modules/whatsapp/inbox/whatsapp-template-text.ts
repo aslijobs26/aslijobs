@@ -17,14 +17,45 @@ export function notificationPlaceholderTemplateName(body: string): string | null
   return match?.[1]?.trim() || null;
 }
 
+export const HISTORICAL_TEMPLATE_DETAILS_UNAVAILABLE =
+  "Historical template details unavailable";
+
+const PLACEHOLDER = /\{\{\s*(\d+)\s*\}\}/g;
+const MISSING_PARAMETER = "\u0000";
+
 export function fillWhatsAppTemplateParameters(
   templateText: string,
   bodyParameters: readonly string[],
 ): string {
-  return templateText.replace(/\{\{\s*(\d+)\s*\}\}/g, (token, index) => {
-    const value = bodyParameters[Number(index) - 1]?.trim() ?? "";
-    return value || token;
+  return templateText.replace(PLACEHOLDER, (token, index) => {
+    const value = bodyParameters[Number(index) - 1];
+    if (value === undefined || value.trim() === "") return token;
+    return value;
   });
+}
+
+/**
+ * Inbox display text. Filled values are kept exactly, including characters
+ * that look like placeholders. Unresolved slots are not shown as {{n}}.
+ */
+export function presentWhatsAppTemplateText(input: {
+  templateText: string;
+  bodyParameters: readonly string[];
+  templateName: string;
+}): string {
+  const filled = input.templateText.replace(PLACEHOLDER, (_token, index) => {
+    const value = input.bodyParameters[Number(index) - 1];
+    if (value === undefined || value.trim() === "") return MISSING_PARAMETER;
+    return value;
+  });
+  if (!filled.includes(MISSING_PARAMETER)) return filled;
+  const name = input.templateName.trim();
+  if (input.bodyParameters.every((value) => value.trim() === "")) {
+    return name
+      ? `${HISTORICAL_TEMPLATE_DETAILS_UNAVAILABLE} (${name}).`
+      : `${HISTORICAL_TEMPLATE_DETAILS_UNAVAILABLE}.`;
+  }
+  return filled.replaceAll(MISSING_PARAMETER, "unavailable");
 }
 
 export function composeWhatsAppTemplateText(
@@ -93,7 +124,13 @@ export async function notificationInboxText(input: {
       input.language?.trim() || "en",
     );
     if (!template) return fallback;
-    return fillWhatsAppTemplateParameters(template, input.bodyParameters ?? []) || fallback;
+    return (
+      presentWhatsAppTemplateText({
+        templateText: template,
+        bodyParameters: input.bodyParameters ?? [],
+        templateName,
+      }) || fallback
+    );
   } catch (error: unknown) {
     console.error(
       `[WhatsAppInbox] template text unavailable reason=${

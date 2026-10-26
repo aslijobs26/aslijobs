@@ -7,9 +7,10 @@ export type InboundWhatsAppMessage = {
     button_reply?: { title?: string };
     list_reply?: { title?: string };
   };
-  image?: { caption?: string };
-  video?: { caption?: string };
-  document?: { caption?: string; filename?: string };
+  image?: { id?: string; mime_type?: string; caption?: string };
+  audio?: { id?: string; mime_type?: string };
+  video?: { id?: string; mime_type?: string; caption?: string };
+  document?: { id?: string; mime_type?: string; caption?: string; filename?: string };
   location?: { name?: string; address?: string };
 };
 
@@ -30,51 +31,87 @@ export function isWebhookForConfiguredPhone(
   return incoming === configured;
 }
 
+export type DescribedInboundMessage = {
+  body: string;
+  messageType: "text" | "audio_transcript" | "image" | "document" | "audio" | "video";
+  mediaProviderId: string;
+  mediaMimeType: string;
+  mediaFileName: string;
+};
+
+function described(
+  body: string,
+  messageType: DescribedInboundMessage["messageType"],
+  media?: { id?: string; mimeType?: string; fileName?: string },
+): DescribedInboundMessage {
+  return {
+    body,
+    messageType,
+    mediaProviderId: media?.id?.trim() ?? "",
+    mediaMimeType: media?.mimeType?.trim() ?? "",
+    mediaFileName: media?.fileName?.trim() ?? "",
+  };
+}
+
 export function describeInboundWhatsAppMessage(
   message: InboundWhatsAppMessage,
-): { body: string; messageType: "text" | "audio_transcript" } | null {
+): DescribedInboundMessage | null {
   const type = message.type?.trim() || "unknown";
   if (type === "text") {
     const text = message.text?.body?.trim() ?? "";
-    return text ? { body: text, messageType: "text" } : null;
+    return text ? described(text, "text") : null;
   }
   if (type === "button") {
     const text = message.button?.text?.trim() ?? "";
-    return text ? { body: text, messageType: "text" } : null;
+    return text ? described(text, "text") : null;
   }
   if (type === "interactive") {
     const text =
       message.interactive?.button_reply?.title?.trim() ||
       message.interactive?.list_reply?.title?.trim() ||
       "";
-    return { body: text || "[Interactive reply]", messageType: "text" };
+    return described(text || "[Interactive reply]", "text");
   }
   if (type === "audio") {
-    return { body: "[Voice message]", messageType: "audio_transcript" };
+    return described("[Voice message]", "audio", {
+      id: message.audio?.id,
+      mimeType: message.audio?.mime_type,
+    });
   }
   if (type === "image") {
-    return { body: message.image?.caption?.trim() || "[Image]", messageType: "text" };
+    return described(message.image?.caption?.trim() || "[Image]", "image", {
+      id: message.image?.id,
+      mimeType: message.image?.mime_type,
+    });
   }
   if (type === "video") {
-    return { body: message.video?.caption?.trim() || "[Video]", messageType: "text" };
+    return described(message.video?.caption?.trim() || "[Video]", "video", {
+      id: message.video?.id,
+      mimeType: message.video?.mime_type,
+    });
   }
   if (type === "document") {
     const caption = message.document?.caption?.trim() ?? "";
     const filename = message.document?.filename?.trim() ?? "";
-    return {
-      body: caption || (filename ? `[Document] ${filename}` : "[Document]"),
-      messageType: "text",
-    };
+    return described(
+      caption || (filename ? `[Document] ${filename}` : "[Document]"),
+      "document",
+      {
+        id: message.document?.id,
+        mimeType: message.document?.mime_type,
+        fileName: filename,
+      },
+    );
   }
   if (type === "location") {
     const label = [message.location?.name, message.location?.address]
       .map((part) => part?.trim() ?? "")
       .filter(Boolean)
       .join(", ");
-    return { body: label ? `[Location] ${label}` : "[Location]", messageType: "text" };
+    return described(label ? `[Location] ${label}` : "[Location]", "text");
   }
-  if (type === "sticker") return { body: "[Sticker]", messageType: "text" };
-  if (type === "contacts") return { body: "[Contact card]", messageType: "text" };
-  if (type === "reaction") return { body: "[Reaction]", messageType: "text" };
-  return { body: `[WhatsApp ${type} message]`, messageType: "text" };
+  if (type === "sticker") return described("[Sticker]", "text");
+  if (type === "contacts") return described("[Contact card]", "text");
+  if (type === "reaction") return described("[Reaction]", "text");
+  return described(`[WhatsApp ${type} message]`, "text");
 }

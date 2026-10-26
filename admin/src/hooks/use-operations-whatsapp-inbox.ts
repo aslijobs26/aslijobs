@@ -11,6 +11,7 @@ import {
   fetchWhatsAppInboxMessages,
   markWhatsAppInboxRead,
   openWhatsAppInboxConversation,
+  sendWhatsAppInboxMedia,
   sendWhatsAppInboxMessage,
   setWhatsAppInboxBotPaused,
 } from "../services/operations-whatsapp-inbox.service";
@@ -134,21 +135,38 @@ export function useSetWhatsAppInboxBotPaused() {
   });
 }
 
+function invalidateInboxThread(
+  queryClient: ReturnType<typeof useQueryClient>,
+  conversationId: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: [
+      ...OPERATIONS_WHATSAPP_INBOX_QUERY_KEY,
+      "messages",
+      conversationId,
+    ],
+  });
+  void queryClient.invalidateQueries({
+    queryKey: [...OPERATIONS_WHATSAPP_INBOX_QUERY_KEY, "list"],
+  });
+}
+
 export function useSendWhatsAppInboxMessage() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: sendWhatsAppInboxMessage,
     onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: [
-          ...OPERATIONS_WHATSAPP_INBOX_QUERY_KEY,
-          "messages",
-          variables.conversationId,
-        ],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: [...OPERATIONS_WHATSAPP_INBOX_QUERY_KEY, "list"],
-      });
+      invalidateInboxThread(queryClient, variables.conversationId);
+    },
+  });
+}
+
+export function useSendWhatsAppInboxMedia() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: sendWhatsAppInboxMedia,
+    onSuccess: (_data, variables) => {
+      invalidateInboxThread(queryClient, variables.conversationId);
     },
   });
 }

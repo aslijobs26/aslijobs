@@ -7,6 +7,7 @@ import { OperationsLayout } from "../components/operations/layout/OperationsLayo
 import {
   useMarkWhatsAppInboxRead,
   useOpenWhatsAppInboxConversation,
+  useSendWhatsAppInboxMedia,
   useSendWhatsAppInboxMessage,
   useSetWhatsAppInboxBotPaused,
   useWhatsAppInboxContact,
@@ -127,6 +128,7 @@ export function OperationsWhatsAppInboxPage() {
   const contactQuery = useWhatsAppInboxContact(selectedId);
   const markRead = useMarkWhatsAppInboxRead();
   const sendMessage = useSendWhatsAppInboxMessage();
+  const sendMedia = useSendWhatsAppInboxMedia();
   const openConversation = useOpenWhatsAppInboxConversation();
   const setBotPaused = useSetWhatsAppInboxBotPaused();
 
@@ -205,6 +207,28 @@ export function OperationsWhatsAppInboxPage() {
     } catch (error) {
       const message = readApiError(error);
       setSendError(message);
+      throw error;
+    }
+  }
+
+  async function handleSendMedia(
+    file: File,
+    caption: string,
+    clientMessageId: string,
+    onProgress: (percent: number) => void,
+  ) {
+    if (!selectedId) return;
+    setSendError(null);
+    try {
+      await sendMedia.mutateAsync({
+        conversationId: selectedId,
+        file,
+        caption,
+        clientMessageId,
+        onProgress,
+      });
+    } catch (error) {
+      setSendError(readApiError(error));
       throw error;
     }
   }
@@ -291,7 +315,7 @@ export function OperationsWhatsAppInboxPage() {
                 errorMessage={
                   messagesQuery.isError ? readApiError(messagesQuery.error) : null
                 }
-                sending={sendMessage.isPending}
+                sending={sendMessage.isPending || sendMedia.isPending}
                 sendError={sendError}
                 hasOlder={hasOlder}
                 loadingOlder={loadingOlder}
@@ -299,6 +323,7 @@ export function OperationsWhatsAppInboxPage() {
                   void handleLoadOlder();
                 }}
                 onSend={handleSend}
+                onSendMedia={handleSendMedia}
                 onToggleBot={
                   selectedId
                     ? () => {

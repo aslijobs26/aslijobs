@@ -127,9 +127,12 @@ const messageSchema = new Schema(
     body: { type: String, required: true, trim: true, maxlength: 4096 },
     messageType: {
       type: String,
-      enum: ["text", "audio_transcript", "system"],
+      enum: ["text", "audio_transcript", "system", "image", "document", "audio", "video"],
       default: "text",
     },
+    mediaProviderId: { type: String, trim: true, default: "" },
+    mediaMimeType: { type: String, trim: true, default: "" },
+    mediaFileName: { type: String, trim: true, default: "" },
     providerMessageId: {
       type: String,
       trim: true,

@@ -166,6 +166,7 @@ export default defineConfig(() => {
     ],
     optimizeDeps: {
       exclude: ["pdfjs-dist"],
+      include: ["emoji-picker-react"],
     },
     server: {
       port: 5173,

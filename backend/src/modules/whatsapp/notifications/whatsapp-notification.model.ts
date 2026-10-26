@@ -67,6 +67,10 @@ const whatsAppNotificationDispatchSchema = new Schema(
       required: true,
       trim: true,
     },
+    bodyParameters: {
+      type: [String],
+      default: [],
+    },
     recipientMasked: {
       type: String,
       required: true,
@@ -142,6 +146,12 @@ export const WhatsAppNotificationDispatchModel = model(
   whatsAppNotificationDispatchSchema,
 );
 
+function sanitizeTemplateParameters(values: readonly string[] | undefined): string[] {
+  return (values ?? [])
+    .slice(0, 10)
+    .map((value) => value.trim().slice(0, 1000));
+}
+
 function isDuplicateKeyError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -194,11 +204,13 @@ export async function claimWhatsAppNotificationDispatch(input: {
   templateName: string;
   language: string;
   recipientMasked: string;
+  bodyParameters?: readonly string[];
   correlationId?: string;
 }): Promise<"claimed" | "duplicate"> {
   try {
     await WhatsAppNotificationDispatchModel.create({
       ...input,
+      bodyParameters: sanitizeTemplateParameters(input.bodyParameters),
       status: "queued",
       correlationId: input.correlationId?.trim() ?? "",
       statusAt: new Date(),
@@ -230,6 +242,7 @@ export async function claimWhatsAppNotificationDispatch(input: {
         status: "queued",
         templateName: input.templateName,
         language: input.language,
+        bodyParameters: sanitizeTemplateParameters(input.bodyParameters),
         recipientMasked: input.recipientMasked,
         correlationId: input.correlationId?.trim() ?? "",
         lastError: "",

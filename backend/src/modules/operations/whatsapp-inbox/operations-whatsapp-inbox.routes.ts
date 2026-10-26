@@ -6,6 +6,7 @@ import {
 import { validate } from "../../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../../utils/async-handler.js";
 import { operationsWhatsAppInboxController } from "./operations-whatsapp-inbox.controller.js";
+import { whatsAppInboxMediaUpload } from "./operations-whatsapp-inbox-upload.middleware.js";
 import {
   listWhatsAppInboxContactsQuerySchema,
   listWhatsAppInboxConversationsQuerySchema,
@@ -14,6 +15,7 @@ import {
   sendWhatsAppInboxMessageBodySchema,
   setWhatsAppInboxBotBodySchema,
   whatsAppInboxConversationParamsSchema,
+  whatsAppInboxMessageParamsSchema,
 } from "./operations-whatsapp-inbox.validation.js";
 
 export const operationsWhatsAppInboxRouter = Router();
@@ -76,6 +78,21 @@ operationsWhatsAppInboxRouter.post(
   requireFineOrCoarsePermission("whatsapp.view", "whatsapp", "read"),
   validate(whatsAppInboxConversationParamsSchema, "params"),
   asyncHandler(operationsWhatsAppInboxController.markRead),
+);
+
+operationsWhatsAppInboxRouter.get(
+  "/conversations/:conversationId/messages/:messageId/media",
+  requireFineOrCoarsePermission("whatsapp.view", "whatsapp", "read"),
+  validate(whatsAppInboxMessageParamsSchema, "params"),
+  asyncHandler(operationsWhatsAppInboxController.getMessageMedia),
+);
+
+operationsWhatsAppInboxRouter.post(
+  "/conversations/:conversationId/messages/media",
+  requireFineOrCoarsePermission("whatsapp.create", "whatsapp", "create"),
+  validate(whatsAppInboxConversationParamsSchema, "params"),
+  whatsAppInboxMediaUpload,
+  asyncHandler(operationsWhatsAppInboxController.sendMedia),
 );
 
 operationsWhatsAppInboxRouter.post(

@@ -13,7 +13,10 @@ const PREVIEW_MAX = 160;
 export async function refreshStoredNotificationTemplates(): Promise<number> {
   const rows = await WhatsAppInboxMessageModel.find({
     senderType: "notification",
-    body: /^WhatsApp notification sent \([^)]+\)\.?$/,
+    $or: [
+      { body: /^WhatsApp notification sent \([^)]+\)\.?$/ },
+      { body: /\{\{\s*\d+\s*\}\}/ },
+    ],
   })
     .select("_id body providerMessageId conversationId")
     .limit(300)
@@ -27,20 +30,25 @@ export async function refreshStoredNotificationTemplates(): Promise<number> {
     ? await WhatsAppNotificationDispatchModel.find({
         messageId: { $in: providerIds },
       })
-        .select("messageId language")
+        .select("messageId language templateName bodyParameters")
         .lean()
     : [];
-  const languageByMessageId = new Map(
-    dispatches.map((row) => [row.messageId, row.language]),
+  const dispatchByMessageId = new Map(
+    dispatches.map((row) => [row.messageId, row]),
   );
 
   let updated = 0;
   for (const row of rows) {
-    const templateName = notificationPlaceholderTemplateName(row.body);
+    const dispatch = dispatchByMessageId.get(row.providerMessageId);
+    const templateName =
+      notificationPlaceholderTemplateName(row.body) ||
+      dispatch?.templateName?.trim() ||
+      "";
     if (!templateName) continue;
     const rendered = await notificationInboxText({
       templateName,
-      language: languageByMessageId.get(row.providerMessageId) || "en",
+      language: dispatch?.language || "en",
+      bodyParameters: dispatch?.bodyParameters ?? [],
     });
     if (!rendered || rendered === row.body || notificationPlaceholderTemplateName(rendered)) {
       continue;
@@ -54,7 +62,10 @@ export async function refreshStoredNotificationTemplates(): Promise<number> {
     await WhatsAppInboxConversationModel.updateOne(
       {
         _id: row.conversationId,
-        lastMessagePreview: { $regex: /^WhatsApp notification sent \(/ },
+        $or: [
+          { lastMessagePreview: { $regex: /^WhatsApp notification sent \(/ } },
+          { lastMessagePreview: { $regex: /\{\{\s*\d+\s*\}\}/ } },
+        ],
       },
       { $set: { lastMessagePreview: preview } },
     );

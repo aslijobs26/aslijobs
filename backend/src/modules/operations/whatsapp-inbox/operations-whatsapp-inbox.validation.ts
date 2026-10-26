@@ -19,6 +19,11 @@ export const whatsAppInboxConversationParamsSchema = z.object({
   conversationId: objectId,
 });
 
+export const whatsAppInboxMessageParamsSchema =
+  whatsAppInboxConversationParamsSchema.extend({
+    messageId: objectId,
+  });
+
 export const listWhatsAppInboxMessagesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   before: z.string().trim().optional(),
