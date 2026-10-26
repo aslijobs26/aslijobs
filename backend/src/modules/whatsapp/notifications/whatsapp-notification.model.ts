@@ -71,6 +71,17 @@ const whatsAppNotificationDispatchSchema = new Schema(
       type: [String],
       default: [],
     },
+    urlButtonParameters: {
+      type: [String],
+      default: [],
+    },
+    /** Exact rendered template text saved after Meta accepts the send. */
+    renderedBody: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 4096,
+    },
     recipientMasked: {
       type: String,
       required: true,
@@ -205,12 +216,14 @@ export async function claimWhatsAppNotificationDispatch(input: {
   language: string;
   recipientMasked: string;
   bodyParameters?: readonly string[];
+  urlButtonParameters?: readonly string[];
   correlationId?: string;
 }): Promise<"claimed" | "duplicate"> {
   try {
     await WhatsAppNotificationDispatchModel.create({
       ...input,
       bodyParameters: sanitizeTemplateParameters(input.bodyParameters),
+      urlButtonParameters: sanitizeTemplateParameters(input.urlButtonParameters),
       status: "queued",
       correlationId: input.correlationId?.trim() ?? "",
       statusAt: new Date(),
@@ -243,6 +256,7 @@ export async function claimWhatsAppNotificationDispatch(input: {
         templateName: input.templateName,
         language: input.language,
         bodyParameters: sanitizeTemplateParameters(input.bodyParameters),
+        urlButtonParameters: sanitizeTemplateParameters(input.urlButtonParameters),
         recipientMasked: input.recipientMasked,
         correlationId: input.correlationId?.trim() ?? "",
         lastError: "",
@@ -281,8 +295,11 @@ export async function markWhatsAppNotificationDispatchProcessing(input: {
 export async function markWhatsAppNotificationDispatchAccepted(input: {
   idempotencyKey: string;
   messageId: string;
+  renderedBody?: string;
+  urlButtonParameters?: readonly string[];
 }): Promise<void> {
   const now = new Date();
+  const renderedBody = input.renderedBody?.trim() ?? "";
   await WhatsAppNotificationDispatchModel.updateOne(
     {
       idempotencyKey: input.idempotencyKey,
@@ -296,6 +313,44 @@ export async function markWhatsAppNotificationDispatchAccepted(input: {
         statusAt: now,
         lastError: "",
         failureClass: "",
+        ...(renderedBody ? { renderedBody: renderedBody.slice(0, 4096) } : {}),
+        ...(input.urlButtonParameters
+          ? {
+              urlButtonParameters: sanitizeTemplateParameters(
+                input.urlButtonParameters,
+              ),
+            }
+          : {}),
+      },
+    },
+  );
+}
+
+/**
+ * Meta returned a message id, but the acceptance row could not be saved.
+ * Ambiguous is not retried, so a later attempt cannot send the template again.
+ */
+export async function lockWhatsAppNotificationDispatchAfterAccept(input: {
+  idempotencyKey: string;
+  messageId: string;
+  lastError: string;
+  renderedBody?: string;
+}): Promise<void> {
+  const now = new Date();
+  const renderedBody = input.renderedBody?.trim() ?? "";
+  await WhatsAppNotificationDispatchModel.updateOne(
+    {
+      idempotencyKey: input.idempotencyKey,
+      status: { $nin: ["accepted", "sent", "delivered", "read"] },
+    },
+    {
+      $set: {
+        status: "ambiguous",
+        failureClass: "ambiguous",
+        messageId: input.messageId,
+        lastError: input.lastError.slice(0, 300),
+        statusAt: now,
+        ...(renderedBody ? { renderedBody: renderedBody.slice(0, 4096) } : {}),
       },
     },
   );

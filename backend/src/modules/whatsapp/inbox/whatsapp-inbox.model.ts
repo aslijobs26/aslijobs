@@ -125,6 +125,9 @@ const messageSchema = new Schema(
       index: true,
     },
     body: { type: String, required: true, trim: true, maxlength: 4096 },
+    templateName: { type: String, trim: true, default: "" },
+    templateLanguage: { type: String, trim: true, default: "" },
+    templateParameters: { type: [String], default: [] },
     messageType: {
       type: String,
       enum: ["text", "audio_transcript", "system", "image", "document", "audio", "video"],

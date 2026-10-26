@@ -6,7 +6,10 @@ import {
   fillWhatsAppTemplateParameters,
   lookupWhatsAppTemplateText,
   notificationPlaceholderTemplateName,
+  inboxBodyReplacement,
+  isUnresolvedInboxTemplateBody,
   presentWhatsAppTemplateText,
+  renderWhatsAppTemplateMessage,
 } from "./whatsapp-template-text.js";
 
 describe("whatsapp template text", () => {
@@ -73,6 +76,41 @@ describe("whatsapp template text", () => {
         templateName: "job_application_submitted",
       }),
       "Job: Welder note unavailable",
+    );
+    const missing = renderWhatsAppTemplateMessage({
+      templateText: "Job: {{1}}\nCompany: {{2}}",
+      bodyParameters: [],
+      templateName: "job_application_submitted",
+    });
+    assert.equal(missing.complete, false);
+    assert.deepEqual(missing.missingParameters, [1, 2]);
+    assert.equal(missing.text.includes("{{"), false);
+    assert.equal(
+      renderWhatsAppTemplateMessage({
+        templateText: "Hello {{1}}, {{1}}",
+        bodyParameters: ["రవి"],
+        templateName: "greeting",
+      }).text,
+      "Hello రవి, రవి",
+    );
+    assert.equal(inboxBodyReplacement("Hello రవి", "Hello రవి again"), "keep");
+    assert.equal(
+      inboxBodyReplacement(
+        "Historical template details unavailable (job_application_submitted).",
+        "Job: Welder\nCompany: Northwind",
+      ),
+      "replace",
+    );
+    assert.equal(
+      inboxBodyReplacement(
+        "Historical template details unavailable (job_application_submitted).",
+        "Historical template details unavailable (job_application_submitted).",
+      ),
+      "keep",
+    );
+    assert.equal(
+      isUnresolvedInboxTemplateBody("Job: {{1}}"),
+      true,
     );
     assert.equal(
       presentWhatsAppTemplateText({

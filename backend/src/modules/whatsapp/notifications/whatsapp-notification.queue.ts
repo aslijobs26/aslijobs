@@ -14,6 +14,7 @@ import {
   WHATSAPP_NOTIFICATION_WORKER_CONCURRENCY,
 } from "./whatsapp-notification.constants.js";
 import {
+  lockWhatsAppNotificationDispatchAfterAccept,
   markWhatsAppNotificationDispatchAccepted,
   markWhatsAppNotificationDispatchAmbiguous,
   markWhatsAppNotificationDispatchFailed,
@@ -392,31 +393,48 @@ export async function deliverWhatsAppNotificationJob(
     throw error;
   }
 
-  await markWhatsAppNotificationDispatchAccepted({
-    idempotencyKey: job.idempotencyKey,
-    messageId: result.messageId,
+  const { notificationInboxText, isUnresolvedInboxTemplateBody } = await import(
+    "../inbox/whatsapp-template-text.js"
+  );
+  const { recordOutboundMessage } = await import("../inbox/whatsapp-inbox-store.js");
+  const { persistAcceptedWhatsAppTemplate } = await import(
+    "./whatsapp-notification-inbox-persist.js"
+  );
+  const rendered = await notificationInboxText({
+    templateName: job.templateName,
+    language: job.languageCode,
+    bodyParameters: job.bodyParameters,
   });
-  if (result.messageId) {
-    const { recordOutboundMessage } = await import("../inbox/whatsapp-inbox-store.js");
-    const { notificationInboxText } = await import("../inbox/whatsapp-template-text.js");
-    await recordOutboundMessage({
-      phoneNational: job.phoneNumber,
-      body: await notificationInboxText({
-        templateName: job.templateName,
-        language: job.languageCode,
-        bodyParameters: job.bodyParameters,
+  const renderedBody = isUnresolvedInboxTemplateBody(rendered) ? "" : rendered;
+  await persistAcceptedWhatsAppTemplate({
+    markAccepted: () =>
+      markWhatsAppNotificationDispatchAccepted({
+        idempotencyKey: job.idempotencyKey,
+        messageId: result.messageId,
+        renderedBody,
+        urlButtonParameters: job.urlButtonParameters ?? [],
       }),
-      senderType: "notification",
-      providerMessageId: result.messageId,
-      status: "accepted",
-    }).catch((error: unknown) => {
-      console.error(
-        `[WhatsAppNotification] inbox mirror failed reason=${
-          error instanceof Error ? error.name : "unknown"
-        }`,
-      );
-    });
-  }
+    recordInbox: async () => {
+      if (!result.messageId) return;
+      await recordOutboundMessage({
+        phoneNational: job.phoneNumber,
+        body: rendered,
+        senderType: "notification",
+        providerMessageId: result.messageId,
+        status: "accepted",
+        templateName: job.templateName,
+        templateLanguage: job.languageCode,
+        templateParameters: job.bodyParameters,
+      });
+    },
+    stopRetry: (reason) =>
+      lockWhatsAppNotificationDispatchAfterAccept({
+        idempotencyKey: job.idempotencyKey,
+        messageId: result.messageId,
+        lastError: reason,
+        renderedBody,
+      }),
+  });
   syncReminderFromQueueJob(job, "accepted");
 
   console.info("[WhatsAppNotification] accepted by Meta", {

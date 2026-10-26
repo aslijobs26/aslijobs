@@ -3,8 +3,9 @@ import {
   WhatsAppInboxConversationModel,
   WhatsAppInboxMessageModel,
 } from "./whatsapp-inbox.model.js";
+import { renderStoredDispatchForInbox } from "./whatsapp-template-parameter-recovery.js";
 import {
-  notificationInboxText,
+  isUnresolvedInboxTemplateBody,
   notificationPlaceholderTemplateName,
 } from "./whatsapp-template-text.js";
 
@@ -16,10 +17,11 @@ export async function refreshStoredNotificationTemplates(): Promise<number> {
     $or: [
       { body: /^WhatsApp notification sent \([^)]+\)\.?$/ },
       { body: /\{\{\s*\d+\s*\}\}/ },
+      { body: /^Historical template details unavailable/ },
     ],
   })
     .select("_id body providerMessageId conversationId")
-    .limit(300)
+    .limit(500)
     .lean();
   if (rows.length === 0) return 0;
 
@@ -30,7 +32,9 @@ export async function refreshStoredNotificationTemplates(): Promise<number> {
     ? await WhatsAppNotificationDispatchModel.find({
         messageId: { $in: providerIds },
       })
-        .select("messageId language templateName bodyParameters")
+        .select(
+          "messageId language templateName bodyParameters renderedBody event entityId",
+        )
         .lean()
     : [];
   const dispatchByMessageId = new Map(
@@ -45,26 +49,41 @@ export async function refreshStoredNotificationTemplates(): Promise<number> {
       dispatch?.templateName?.trim() ||
       "";
     if (!templateName) continue;
-    const rendered = await notificationInboxText({
+    if (!dispatch) continue;
+    const rendered = await renderStoredDispatchForInbox({
+      ...dispatch,
       templateName,
-      language: dispatch?.language || "en",
-      bodyParameters: dispatch?.bodyParameters ?? [],
+      language: dispatch.language || "en",
     });
-    if (!rendered || rendered === row.body || notificationPlaceholderTemplateName(rendered)) {
+    if (
+      !rendered.body ||
+      rendered.body === row.body ||
+      isUnresolvedInboxTemplateBody(rendered.body) ||
+      notificationPlaceholderTemplateName(rendered.body)
+    ) {
       continue;
     }
 
     await WhatsAppInboxMessageModel.updateOne(
       { _id: row._id },
-      { $set: { body: rendered.slice(0, 4096) } },
+      {
+        $set: {
+          body: rendered.body.slice(0, 4096),
+          templateName,
+          templateLanguage: dispatch.language || "en",
+          templateParameters: rendered.parameters,
+        },
+      },
     );
-    const preview = previewOf(rendered);
+    const preview = previewOf(rendered.body);
     await WhatsAppInboxConversationModel.updateOne(
       {
         _id: row.conversationId,
         $or: [
           { lastMessagePreview: { $regex: /^WhatsApp notification sent \(/ } },
           { lastMessagePreview: { $regex: /\{\{\s*\d+\s*\}\}/ } },
+          { lastMessagePreview: { $regex: /^Historical template details unavailable/ } },
+          { lastMessagePreview: previewOf(row.body) },
         ],
       },
       { $set: { lastMessagePreview: preview } },

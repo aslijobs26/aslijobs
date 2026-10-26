@@ -9,6 +9,7 @@ import {
   seekerInboxName,
 } from "./whatsapp-inbox-identity.js";
 import { sanitizeWhatsAppErrorDetail } from "../whatsapp.service.js";
+import { inboxBodyReplacement } from "./whatsapp-template-text.js";
 import {
   WhatsAppInboxConversationModel,
   WhatsAppInboxMessageModel,
@@ -404,18 +405,25 @@ export async function recordOutboundMessage(input: {
   mediaProviderId?: string;
   mediaMimeType?: string;
   mediaFileName?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  templateParameters?: readonly string[];
   occurredAt?: Date;
 }): Promise<{ conversationId: string; messageId: string; created: boolean }> {
   const phone = normalizeInboxPhone(input.phoneNational);
   const body = input.body.trim().slice(0, 4096);
   const providerMessageId = input.providerMessageId?.trim() || "";
   const clientMessageId = input.clientMessageId?.trim() || "";
+  const templateFields = templateSnapshot(input);
 
   if (providerMessageId) {
     const existing = await WhatsAppInboxMessageModel.findOne({ providerMessageId })
-      .select("_id conversationId")
+      .select("_id conversationId body")
       .lean();
     if (existing) {
+      if (input.senderType === "notification") {
+        await replaceUnresolvedNotificationBody(existing, body, templateFields);
+      }
       return {
         conversationId: String(existing.conversationId),
         messageId: String(existing._id),
@@ -425,9 +433,12 @@ export async function recordOutboundMessage(input: {
   }
   if (clientMessageId) {
     const existing = await WhatsAppInboxMessageModel.findOne({ clientMessageId })
-      .select("_id conversationId")
+      .select("_id conversationId body")
       .lean();
     if (existing) {
+      if (input.senderType === "notification") {
+        await replaceUnresolvedNotificationBody(existing, body, templateFields);
+      }
       return {
         conversationId: String(existing.conversationId),
         messageId: String(existing._id),
@@ -450,6 +461,7 @@ export async function recordOutboundMessage(input: {
       mediaProviderId: input.mediaProviderId?.trim() ?? "",
       mediaMimeType: input.mediaMimeType?.trim() ?? "",
       mediaFileName: input.mediaFileName?.trim() ?? "",
+      ...templateFields,
       providerMessageId,
       clientMessageId,
       status: input.status,
@@ -537,6 +549,54 @@ export async function applyInboxDeliveryStatus(input: {
   }
   await message.save();
   return "updated";
+}
+
+function templateSnapshot(input: {
+  templateName?: string;
+  templateLanguage?: string;
+  templateParameters?: readonly string[];
+}): {
+  templateName: string;
+  templateLanguage: string;
+  templateParameters: string[];
+} {
+  return {
+    templateName: input.templateName?.trim().slice(0, 200) ?? "",
+    templateLanguage: input.templateLanguage?.trim().slice(0, 20) ?? "",
+    templateParameters: (input.templateParameters ?? [])
+      .slice(0, 10)
+      .map((value) => value.trim().slice(0, 1000)),
+  };
+}
+
+async function replaceUnresolvedNotificationBody(
+  existing: { _id: unknown; conversationId: unknown; body?: string },
+  body: string,
+  templateFields: {
+    templateName: string;
+    templateLanguage: string;
+    templateParameters: string[];
+  },
+): Promise<void> {
+  const current = existing.body ?? "";
+  if (inboxBodyReplacement(current, body) !== "replace") return;
+  await WhatsAppInboxMessageModel.updateOne(
+    { _id: existing._id },
+    { $set: { body, ...templateFields } },
+  );
+  const nextPreview = previewOf(body);
+  await WhatsAppInboxConversationModel.updateOne(
+    {
+      _id: existing.conversationId,
+      $or: [
+        { lastMessagePreview: previewOf(current) },
+        { lastMessagePreview: { $regex: /^WhatsApp notification sent \(/ } },
+        { lastMessagePreview: { $regex: /\{\{\s*\d+\s*\}\}/ } },
+        { lastMessagePreview: { $regex: /^Historical template details unavailable/ } },
+      ],
+    },
+    { $set: { lastMessagePreview: nextPreview } },
+  );
 }
 
 function mapProviderStatus(status: string): WhatsAppInboxMessageStatus | null {

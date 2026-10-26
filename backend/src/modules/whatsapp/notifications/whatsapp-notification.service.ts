@@ -90,6 +90,7 @@ export async function enqueueWhatsAppNotification(
     language: languageCode,
     recipientMasked: maskWhatsAppRecipient(payload.phoneNumber),
     bodyParameters,
+    urlButtonParameters,
     ...(payload.correlationId?.trim()
       ? { correlationId: payload.correlationId.trim() }
       : {}),

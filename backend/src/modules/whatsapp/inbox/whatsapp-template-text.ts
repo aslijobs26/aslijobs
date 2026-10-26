@@ -20,42 +20,103 @@ export function notificationPlaceholderTemplateName(body: string): string | null
 export const HISTORICAL_TEMPLATE_DETAILS_UNAVAILABLE =
   "Historical template details unavailable";
 
-const PLACEHOLDER = /\{\{\s*(\d+)\s*\}\}/g;
 const MISSING_PARAMETER = "\u0000";
+
+function placeholderPattern(): RegExp {
+  return /\{\{\s*(\d+)\s*\}\}/g;
+}
+
+function hasUnresolvedPlaceholder(text: string): boolean {
+  return /\{\{\s*\d+\s*\}\}/.test(text);
+}
 
 export function fillWhatsAppTemplateParameters(
   templateText: string,
   bodyParameters: readonly string[],
 ): string {
-  return templateText.replace(PLACEHOLDER, (token, index) => {
+  return templateText.replace(placeholderPattern(), (token, index) => {
     const value = bodyParameters[Number(index) - 1];
     if (value === undefined || value.trim() === "") return token;
     return value;
   });
 }
 
+export type WhatsAppTemplateRender = {
+  text: string;
+  complete: boolean;
+  missingParameters: number[];
+};
+
 /**
- * Inbox display text. Filled values are kept exactly, including characters
- * that look like placeholders. Unresolved slots are not shown as {{n}}.
+ * One renderer for persistence and preview. Filled values are kept exactly,
+ * including characters that look like placeholders. A missing slot is reported
+ * and is never left in the text as {{n}}.
  */
+export function renderWhatsAppTemplateMessage(input: {
+  templateText: string;
+  bodyParameters: readonly string[];
+  templateName: string;
+}): WhatsAppTemplateRender {
+  const missingParameters: number[] = [];
+  const filled = input.templateText.replace(placeholderPattern(), (_token, index) => {
+    const slot = Number(index);
+    const value = input.bodyParameters[slot - 1];
+    if (value === undefined || value.trim() === "") {
+      if (!missingParameters.includes(slot)) missingParameters.push(slot);
+      return MISSING_PARAMETER;
+    }
+    return value;
+  });
+  if (missingParameters.length === 0) {
+    return { text: filled, complete: true, missingParameters };
+  }
+  const name = input.templateName.trim();
+  if (input.bodyParameters.every((value) => value.trim() === "")) {
+    return {
+      text: name
+        ? `${HISTORICAL_TEMPLATE_DETAILS_UNAVAILABLE} (${name}).`
+        : `${HISTORICAL_TEMPLATE_DETAILS_UNAVAILABLE}.`,
+      complete: false,
+      missingParameters,
+    };
+  }
+  return {
+    text: filled.replaceAll(MISSING_PARAMETER, "unavailable"),
+    complete: false,
+    missingParameters,
+  };
+}
+
 export function presentWhatsAppTemplateText(input: {
   templateText: string;
   bodyParameters: readonly string[];
   templateName: string;
 }): string {
-  const filled = input.templateText.replace(PLACEHOLDER, (_token, index) => {
-    const value = input.bodyParameters[Number(index) - 1];
-    if (value === undefined || value.trim() === "") return MISSING_PARAMETER;
-    return value;
-  });
-  if (!filled.includes(MISSING_PARAMETER)) return filled;
-  const name = input.templateName.trim();
-  if (input.bodyParameters.every((value) => value.trim() === "")) {
-    return name
-      ? `${HISTORICAL_TEMPLATE_DETAILS_UNAVAILABLE} (${name}).`
-      : `${HISTORICAL_TEMPLATE_DETAILS_UNAVAILABLE}.`;
-  }
-  return filled.replaceAll(MISSING_PARAMETER, "unavailable");
+  return renderWhatsAppTemplateMessage(input).text;
+}
+
+export function isUnresolvedInboxTemplateBody(body: string): boolean {
+  const text = body.trim();
+  return (
+    text.startsWith(HISTORICAL_TEMPLATE_DETAILS_UNAVAILABLE) ||
+    hasUnresolvedPlaceholder(text) ||
+    NOTIFICATION_PLACEHOLDER.test(text)
+  );
+}
+
+/**
+ * Keeps a stored message unless a later render recovered the real text.
+ * Duplicate webhooks therefore do not create a second body.
+ */
+export function inboxBodyReplacement(
+  existingBody: string,
+  nextBody: string,
+): "keep" | "replace" {
+  const next = nextBody.trim();
+  if (!next || isUnresolvedInboxTemplateBody(next)) return "keep";
+  if (!isUnresolvedInboxTemplateBody(existingBody)) return "keep";
+  if (existingBody.trim() === next) return "keep";
+  return "replace";
 }
 
 export function composeWhatsAppTemplateText(
@@ -124,13 +185,18 @@ export async function notificationInboxText(input: {
       input.language?.trim() || "en",
     );
     if (!template) return fallback;
-    return (
-      presentWhatsAppTemplateText({
-        templateText: template,
-        bodyParameters: input.bodyParameters ?? [],
-        templateName,
-      }) || fallback
-    );
+    const rendered = renderWhatsAppTemplateMessage({
+      templateText: template,
+      bodyParameters: input.bodyParameters ?? [],
+      templateName,
+    });
+    const provided = (input.bodyParameters ?? []).some((value) => value.trim());
+    if (rendered.missingParameters.length > 0 && provided) {
+      console.error(
+        `[WhatsAppInbox] template parameters missing template=${templateName} slots=${rendered.missingParameters.join(",")}`,
+      );
+    }
+    return rendered.text || fallback;
   } catch (error: unknown) {
     console.error(
       `[WhatsAppInbox] template text unavailable reason=${

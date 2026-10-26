@@ -5,8 +5,9 @@ import { JobModel } from "../../jobs/job.model.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import { WhatsAppNotificationDispatchModel } from "../notifications/whatsapp-notification.model.js";
 import { refreshStoredNotificationTemplates } from "./whatsapp-inbox-template-refresh.js";
-import { notificationInboxText } from "./whatsapp-template-text.js";
-import { recordOutboundMessage } from "./whatsapp-inbox-store.js";
+import { renderStoredDispatchForInbox } from "./whatsapp-template-parameter-recovery.js";
+import { isUnresolvedInboxTemplateBody } from "./whatsapp-template-text.js";
+import { normalizeInboxPhone, recordOutboundMessage } from "./whatsapp-inbox-store.js";
 import type { WhatsAppInboxMessageStatus } from "./whatsapp-inbox.model.js";
 
 const EMPLOYER_EVENTS = new Set([
@@ -50,6 +51,7 @@ const RECOVERABLE_STATUSES = new Set([
   "sent",
   "delivered",
   "read",
+  "ambiguous",
 ]);
 
 let backfillTask: Promise<{ recovered: number; skipped: number }> | null = null;
@@ -92,36 +94,41 @@ export async function backfillInboxFromNotificationDispatches(): Promise<{
     messageId: { $nin: ["", null] },
     status: { $in: [...RECOVERABLE_STATUSES] },
   })
-    .select("event entityId templateName language messageId status acceptedAt sentAt createdAt")
+    .select(
+      "event entityId templateName language messageId status bodyParameters renderedBody acceptedAt sentAt createdAt",
+    )
     .limit(500)
     .lean();
 
   let recovered = 0;
   let skipped = 0;
+  let unrecoverable = 0;
 
   for (const row of rows) {
+    const rendered = await renderStoredDispatchForInbox(row);
     const phone = await resolveDispatchPhone(row.event, row.entityId);
     if (!phone) {
       skipped += 1;
       continue;
     }
+    if (isUnresolvedInboxTemplateBody(rendered.body)) unrecoverable += 1;
     const occurredAt = row.sentAt ?? row.acceptedAt ?? row.createdAt ?? new Date();
     const saved = await recordOutboundMessage({
       phoneNational: phone,
-      body: await notificationInboxText({
-        templateName: row.templateName,
-        language: row.language,
-      }),
+      body: rendered.body,
       senderType: "notification",
       providerMessageId: row.messageId,
       status: mapStatus(row.status),
+      templateName: row.templateName,
+      templateLanguage: row.language,
+      templateParameters: rendered.parameters,
       occurredAt,
     });
     if (saved.created) recovered += 1;
   }
 
   console.info(
-    `[WhatsAppInbox] history backfill recovered=${recovered} skipped=${skipped}`,
+    `[WhatsAppInbox] history backfill recovered=${recovered} skipped=${skipped} unrecoverable=${unrecoverable}`,
   );
   return { recovered, skipped };
 }
@@ -168,14 +175,17 @@ async function resolveDispatchPhone(
 async function phoneFromEmployerId(id: string): Promise<string | null> {
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
   const employer = await EmployerModel.findById(id).select("whatsappNumber").lean();
-  const phone = employer?.whatsappNumber?.trim() ?? "";
-  return /^\d{10}$/.test(phone) ? phone : null;
+  return nationalInboxPhone(employer?.whatsappNumber);
 }
 
 async function phoneFromSeekerId(id: string): Promise<string | null> {
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
   const seeker = await JobSeekerModel.findById(id).select("whatsappNumber").lean();
-  const phone = seeker?.whatsappNumber?.trim() ?? "";
+  return nationalInboxPhone(seeker?.whatsappNumber);
+}
+
+function nationalInboxPhone(value: string | null | undefined): string | null {
+  const phone = normalizeInboxPhone(value ?? "");
   return /^\d{10}$/.test(phone) ? phone : null;
 }
 

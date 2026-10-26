@@ -17,7 +17,6 @@ import {
   Paperclip,
   Pause,
   Play,
-  SendHorizontal,
   Smile,
   X,
 } from "lucide-react";
@@ -360,7 +359,7 @@ export function InboxChatPanel({
       <form
         ref={emojiRootRef}
         onSubmit={(event) => void handleSubmit(event)}
-        className="relative shrink-0 border-t border-border-subtle bg-[#f0f2f5] px-2 py-1.5 sm:bg-surface sm:px-3 sm:py-2.5"
+        className="relative shrink-0 border-t border-[#e9edef] bg-[#f0f2f5] px-2 py-1.5 sm:px-3 sm:py-2.5"
       >
         {!conversation.canSendFreeForm ? (
           <p
@@ -422,9 +421,9 @@ export function InboxChatPanel({
             aria-label="Attach file"
             disabled={sending || !conversation.canSendFreeForm}
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-white disabled:opacity-40"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-[#54656f] hover:bg-white disabled:cursor-not-allowed"
           >
-            <Paperclip className="size-4" />
+            <Paperclip className="size-6" strokeWidth={1.75} />
           </button>
           <label htmlFor={inputId} className="sr-only">
             Type a message
@@ -438,13 +437,13 @@ export function InboxChatPanel({
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             disabled={sending || !conversation.canSendFreeForm}
-            className="max-h-24 min-h-10 flex-1 resize-none rounded-full border border-border bg-white px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted disabled:opacity-60 sm:max-h-28 sm:rounded-2xl sm:bg-hero-bg"
+            className="max-h-24 min-h-10 flex-1 resize-none rounded-lg border-0 bg-white px-3 py-2 text-sm text-[#111b21] outline-none placeholder:text-[#667781] disabled:opacity-60 sm:max-h-28"
           />
           <div>
             {emojiOpen ? (
               <div
                 id={emojiPanelId}
-                className="absolute bottom-full left-2 z-30 mb-2 w-[min(20rem,calc(100%-1rem))] overflow-hidden rounded-xl border border-border bg-white shadow-lg"
+                className="absolute bottom-full left-2 z-30 mb-2 w-[min(20rem,calc(100%-1rem))] overflow-hidden rounded-xl border border-[#e9edef] bg-white shadow-lg [--epr-category-icon-active-color:#00a884] [--epr-highlight-color:#00a884] [--epr-hover-bg-color:#f0f2f5] [--epr-focus-bg-color:#e7fce3]"
               >
                 <Suspense
                   fallback={
@@ -470,18 +469,26 @@ export function InboxChatPanel({
               aria-controls={emojiPanelId}
               disabled={sending || !conversation.canSendFreeForm}
               onClick={() => setEmojiOpen((open) => !open)}
-              className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-white disabled:opacity-40"
+              className={cn(
+                "inline-flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white disabled:cursor-not-allowed",
+                emojiOpen ? "text-[#00a884]" : "text-[#54656f]",
+              )}
             >
-              <Smile className="size-4" />
+              <Smile className="size-6" strokeWidth={1.75} />
             </button>
           </div>
           <button
             type="submit"
             disabled={!canSend}
             aria-label="Send message"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-white transition enabled:hover:bg-primary-hover disabled:opacity-40"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white transition enabled:hover:bg-[#008069] disabled:cursor-not-allowed"
           >
-            <SendHorizontal className="size-4" />
+            <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M1.101 21.757 23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"
+              />
+            </svg>
           </button>
         </div>
       </form>
