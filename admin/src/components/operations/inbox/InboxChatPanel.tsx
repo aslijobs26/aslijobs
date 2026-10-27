@@ -48,13 +48,10 @@ import whatsappChatBg from "../../../assets/whatsapp-chat-bg.png";
 import whatsappChatBgDark from "../../../assets/whatsapp-chat-bg-dark.jpg";
 import { useOperationsTheme } from "../../../providers/theme-provider";
 import { useInboxChatTranslation } from "../../../hooks/use-inbox-chat-translation";
-import {
-  INBOX_TRANSLATION_LANGUAGE_OPTIONS,
-  type InboxViewLanguage,
-} from "../../../constants/inbox-translation-languages";
+import { type InboxViewLanguage } from "../../../constants/inbox-translation-languages";
 import { OperationsCandidateAvatar } from "../candidates/OperationsCandidateAvatar";
 import { OperationsBadge } from "../../ui/OperationsBadge";
-import { InboxTranslateMenu } from "./InboxTranslateMenu";
+import { InboxDraftLanguageMenu, InboxTranslateMenu } from "./InboxTranslateMenu";
 import { InboxTranslatedBody } from "./InboxTranslatedBody";
 import { InboxVoiceMessagePlayer } from "./InboxVoiceMessagePlayer";
 
@@ -119,6 +116,7 @@ export function InboxChatPanel({
   const stickToBottomRef = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const draftTranslateButtonRef = useRef<HTMLButtonElement | null>(null);
   const emojiRootRef = useRef<HTMLFormElement | null>(null);
   const inputId = useId();
   const emojiPanelId = useId();
@@ -330,7 +328,7 @@ export function InboxChatPanel({
         chatPaneBg,
       )}
     >
-      <header className="flex h-14 shrink-0 items-center gap-1 overflow-hidden border-b border-border-subtle bg-surface px-2 @min-[40rem]/inbox-chat:gap-2 @min-[40rem]/inbox-chat:px-3">
+      <header className="flex h-14 shrink-0 items-center gap-1 border-b border-border-subtle bg-surface px-2 @min-[40rem]/inbox-chat:gap-2 @min-[40rem]/inbox-chat:px-3">
         {onBack ? (
           <button
             type="button"
@@ -717,37 +715,14 @@ export function InboxChatPanel({
             </button>
           </div>
           <div className="relative shrink-0">
-            {draftLanguageMenuOpen ? (
-              <div
-                className={cn(
-                  "absolute bottom-full right-0 z-30 mb-2 w-44 overflow-hidden rounded-lg border shadow-lg",
-                  isDarkTheme
-                    ? "border-[#2a3942] bg-[#202c33]"
-                    : "border-[#e9edef] bg-white",
-                )}
-                role="menu"
-                aria-label="Recipient language"
-              >
-                {INBOX_TRANSLATION_LANGUAGE_OPTIONS.map((option) => (
-                  <button
-                    key={option.code}
-                    type="button"
-                    role="menuitem"
-                    className={cn(
-                      "flex w-full px-3 py-2 text-left text-xs hover:bg-[#f0f2f5]",
-                      isDarkTheme && "hover:bg-[#2a3942]",
-                    )}
-                    onClick={() => void translateDraft(option.code)}
-                  >
-                    {option.nativeLabel}
-                    <span className="ml-auto text-[10px] text-muted">
-                      {option.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : null}
+            <InboxDraftLanguageMenu
+              open={draftLanguageMenuOpen}
+              anchorRef={draftTranslateButtonRef}
+              onClose={() => setDraftLanguageMenuOpen(false)}
+              onSelect={(language) => void translateDraft(language)}
+            />
             <button
+              ref={draftTranslateButtonRef}
               type="button"
               aria-label="Translate draft to recipient language"
               disabled={
