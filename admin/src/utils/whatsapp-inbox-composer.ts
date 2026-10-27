@@ -53,6 +53,18 @@ export function validateInboxAttachment(file: {
   return null;
 }
 
+/** Enter sends on laptop and desktop. Shift+Enter keeps a new line. */
+export function shouldSendInboxDraftOnEnter(event: {
+  key: string;
+  code?: string;
+  shiftKey: boolean;
+  repeat?: boolean;
+  isComposing?: boolean;
+}): boolean {
+  if (event.shiftKey || event.repeat || event.isComposing) return false;
+  return event.key === "Enter" || event.code === "Enter" || event.code === "NumpadEnter";
+}
+
 export function formatAttachmentSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;

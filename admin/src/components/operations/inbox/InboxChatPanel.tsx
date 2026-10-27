@@ -10,8 +10,6 @@ import {
 } from "react";
 import type { EmojiClickData } from "emoji-picker-react";
 import {
-  Check,
-  CheckCheck,
   ChevronLeft,
   Info,
   Languages,
@@ -36,6 +34,7 @@ import { cn } from "../../../utils/cn";
 import {
   formatAttachmentSize,
   insertEmojiAtSelection,
+  shouldSendInboxDraftOnEnter,
   validateInboxAttachment,
 } from "../../../utils/whatsapp-inbox-composer";
 import {
@@ -376,10 +375,25 @@ export function InboxChatPanel({
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      void handleSubmit();
+    if (
+      !shouldSendInboxDraftOnEnter({
+        key: event.key,
+        code: event.code,
+        shiftKey: event.shiftKey,
+        repeat: event.repeat,
+        isComposing: event.nativeEvent.isComposing,
+      })
+    ) {
+      return;
     }
+    event.preventDefault();
+    if (!canSend) return;
+    const form = event.currentTarget.form;
+    if (form) {
+      form.requestSubmit();
+      return;
+    }
+    void handleSubmit();
   }
 
   return (
@@ -445,7 +459,7 @@ export function InboxChatPanel({
             type="button"
             onClick={onToggleBot}
             aria-label={conversation.botPaused ? "Resume bot" : "Pause bot"}
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#54656f] @min-[40rem]/inbox-chat:h-9 @min-[40rem]/inbox-chat:w-auto @min-[40rem]/inbox-chat:gap-1.5 @min-[40rem]/inbox-chat:rounded-lg @min-[40rem]/inbox-chat:border @min-[40rem]/inbox-chat:border-border @min-[40rem]/inbox-chat:px-2.5 @min-[40rem]/inbox-chat:text-xs @min-[40rem]/inbox-chat:font-medium @min-[40rem]/inbox-chat:text-foreground"
+            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[#54656f] @min-[40rem]/inbox-chat:h-9 @min-[40rem]/inbox-chat:w-auto @min-[40rem]/inbox-chat:gap-1.5 @min-[40rem]/inbox-chat:rounded-lg @min-[40rem]/inbox-chat:border @min-[40rem]/inbox-chat:border-border @min-[40rem]/inbox-chat:px-2.5 @min-[40rem]/inbox-chat:text-xs @min-[40rem]/inbox-chat:font-medium @min-[40rem]/inbox-chat:text-foreground"
           >
             {conversation.botPaused ? (
               <Play className="size-4" />
@@ -888,19 +902,47 @@ function senderLabel(senderType: WhatsAppInboxMessage["senderType"]): string {
 }
 
 function StatusTicks({ status }: { status: WhatsAppInboxMessage["status"] }) {
-  if (status === "failed") {
-    return <Check className="size-3.5 text-danger" aria-label="Failed" />;
-  }
-  if (status === "pending") {
-    return <Check className="size-3.5 text-[#8696a0]" aria-label="Pending" />;
-  }
-  if (status === "read") {
-    return <CheckCheck className="size-3.5 text-[#53bdeb]" aria-label="Read" />;
-  }
-  if (status === "delivered") {
-    return <CheckCheck className="size-3.5 text-[#8696a0]" aria-label="Delivered" />;
-  }
-  return <Check className="size-3.5 text-[#8696a0]" aria-label="Sent" />;
+  const read = status === "read";
+  const delivered = status === "delivered";
+  const label =
+    status === "failed"
+      ? "Failed"
+      : status === "pending"
+        ? "Pending"
+        : read
+          ? "Read"
+          : delivered
+            ? "Delivered"
+            : "Sent";
+  const tone =
+    status === "failed"
+      ? "text-danger"
+      : read
+        ? "text-[#53bdeb]"
+        : "text-[#8696a0]";
+  return (
+    <svg
+      viewBox={read || delivered ? "0 0 22 16" : "0 0 16 16"}
+      className={cn(
+        "h-3.5 shrink-0 overflow-visible",
+        read || delivered ? "w-5 max-w-none" : "w-3.5 max-w-none",
+        tone,
+      )}
+      aria-label={label}
+      role="img"
+    >
+      <path
+        fill="currentColor"
+        d="M3.4 6.6 1.6 8.4 6.6 13.4 14.4 5 12.8 3.4 6.6 10.2Z"
+      />
+      {read || delivered ? (
+        <path
+          fill="currentColor"
+          d="M9.4 6.6 7.6 8.4 12.6 13.4 20.4 5 18.8 3.4 12.6 10.2Z"
+        />
+      ) : null}
+    </svg>
+  );
 }
 
 function MessageContent({

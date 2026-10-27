@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   formatAttachmentSize,
   insertEmojiAtSelection,
+  shouldSendInboxDraftOnEnter,
   validateInboxAttachment,
 } from "./whatsapp-inbox-composer.ts";
 
@@ -38,5 +39,46 @@ describe("whatsapp inbox composer", () => {
       null,
     );
     assert.equal(formatAttachmentSize(2048), "2 KB");
+  });
+
+  it("sends the draft on Enter and keeps Shift+Enter as a new line", () => {
+    assert.equal(
+      shouldSendInboxDraftOnEnter({ key: "Enter", code: "Enter", shiftKey: false }),
+      true,
+    );
+    assert.equal(
+      shouldSendInboxDraftOnEnter({
+        key: "Enter",
+        code: "NumpadEnter",
+        shiftKey: false,
+      }),
+      true,
+    );
+    assert.equal(
+      shouldSendInboxDraftOnEnter({ key: "Enter", code: "Enter", shiftKey: true }),
+      false,
+    );
+    assert.equal(
+      shouldSendInboxDraftOnEnter({
+        key: "Enter",
+        code: "Enter",
+        shiftKey: false,
+        repeat: true,
+      }),
+      false,
+    );
+    assert.equal(
+      shouldSendInboxDraftOnEnter({
+        key: "Enter",
+        code: "Enter",
+        shiftKey: false,
+        isComposing: true,
+      }),
+      false,
+    );
+    assert.equal(
+      shouldSendInboxDraftOnEnter({ key: "a", code: "KeyA", shiftKey: false }),
+      false,
+    );
   });
 });
