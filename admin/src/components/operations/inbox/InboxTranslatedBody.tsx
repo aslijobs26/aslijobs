@@ -11,6 +11,9 @@ interface InboxTranslatedBodyProps {
   onRetry: () => void;
 }
 
+const MESSAGE_TEXT_CLASS =
+  "whitespace-pre-wrap break-words [overflow-wrap:anywhere]";
+
 export function InboxTranslatedBody({
   originalBody,
   translation,
@@ -23,17 +26,13 @@ export function InboxTranslatedBody({
   const muted = isDark ? "text-[#8696a0]" : "text-[#667781]";
 
   if (!translation) {
-    return (
-      <p className="whitespace-pre-wrap break-words">{originalBody}</p>
-    );
+    return <p className={MESSAGE_TEXT_CLASS}>{originalBody}</p>;
   }
 
   if (translation.loading && !translation.translatedText) {
     return (
       <div className="space-y-1">
-        <p className="whitespace-pre-wrap break-words opacity-70">
-          {originalBody}
-        </p>
+        <p className={cn(MESSAGE_TEXT_CLASS, "opacity-70")}>{originalBody}</p>
         <p className={cn("inline-flex items-center gap-1 text-[11px]", muted)}>
           <LoaderCircle className="size-3 animate-spin" aria-hidden="true" />
           Translating…
@@ -45,7 +44,7 @@ export function InboxTranslatedBody({
   if (translation.status === "failed") {
     return (
       <div className="space-y-1">
-        <p className="whitespace-pre-wrap break-words">{originalBody}</p>
+        <p className={MESSAGE_TEXT_CLASS}>{originalBody}</p>
         <button
           type="button"
           onClick={onRetry}
@@ -62,16 +61,14 @@ export function InboxTranslatedBody({
     translation.status === "same_language" ||
     !translation.translatedText
   ) {
-    return (
-      <p className="whitespace-pre-wrap break-words">{originalBody}</p>
-    );
+    return <p className={MESSAGE_TEXT_CLASS}>{originalBody}</p>;
   }
 
   const displayText = showOriginal ? originalBody : translation.translatedText;
 
   return (
     <div className="space-y-1">
-      <p className="whitespace-pre-wrap break-words">{displayText}</p>
+      <p className={MESSAGE_TEXT_CLASS}>{displayText}</p>
       <button
         type="button"
         onClick={onToggleOriginal}

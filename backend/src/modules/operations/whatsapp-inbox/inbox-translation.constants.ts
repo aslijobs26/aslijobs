@@ -20,8 +20,13 @@ export const INBOX_VIEW_LANGUAGES = [
   "original",
 ] as const satisfies readonly InboxViewLanguage[];
 
-/** Bump when the translation pipeline / prompt / post-processing changes. */
-export const INBOX_TRANSLATION_PIPELINE_VERSION = "inbox-v1";
+/**
+ * Bump when translated text is produced differently.
+ * inbox-v1 stored provider text that had lost newlines.
+ * inbox-v3 batches every structural segment into the fewest Mayura
+ * requests and rejects a result whose layout no longer matches.
+ */
+export const INBOX_TRANSLATION_PIPELINE_VERSION = "inbox-v3";
 
 export const INBOX_TRANSLATION_PROVIDER = "sarvam-mayura-v1";
 

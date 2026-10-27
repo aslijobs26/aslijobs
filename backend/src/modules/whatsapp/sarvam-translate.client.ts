@@ -10,7 +10,8 @@ import {
 /** Official Sarvam Text Translation API. https://docs.sarvam.ai/api-reference/text/translate-text */
 export const SARVAM_TRANSLATE_URL = "https://api.sarvam.ai/translate";
 const TRANSLATE_TIMEOUT_MS = 8_000;
-const TRANSLATE_INPUT_MAX = 1000;
+/** Mayura v1 accepts one string of at most 1000 characters. Longer input is sliced. */
+export const SARVAM_TRANSLATE_INPUT_MAX = 1000;
 
 const LANGUAGE_TO_SARVAM: Record<BotLanguage, string> = {
   en: "en-IN",
@@ -172,7 +173,7 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
       },
       signal: AbortSignal.timeout(TRANSLATE_TIMEOUT_MS),
       body: JSON.stringify({
-        input: original.slice(0, TRANSLATE_INPUT_MAX),
+        input: original.slice(0, SARVAM_TRANSLATE_INPUT_MAX),
         source_language_code: input.autoDetectSource
           ? "auto"
           : toSarvamLanguageCode(source),

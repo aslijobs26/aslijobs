@@ -55,6 +55,7 @@ import {
   applyComposerTranslation,
   editComposerDraft,
   restoreAuthoredDraft,
+  shouldApplyDraftTranslation,
   textForNextTranslation,
   translationFailureMessage,
   type ComposerDraftState,
@@ -115,6 +116,15 @@ export function InboxChatPanel({
   const [lastTranslatedText, setLastTranslatedText] = useState<string | null>(
     null,
   );
+  const draftRequestRef = useRef(0);
+  const conversationIdRef = useRef<string | null>(conversation?.id ?? null);
+  const draftStateRef = useRef({
+    draft: "",
+    originalDraft: null as string | null,
+    draftMode: "original" as "original" | "translated",
+    draftTargetLanguage: null as InboxTranslationLanguageCode | null,
+    lastTranslatedText: null as string | null,
+  });
   const [draftTranslateBusy, setDraftTranslateBusy] = useState(false);
   const [draftTranslateError, setDraftTranslateError] = useState<string | null>(
     null,
@@ -143,7 +153,17 @@ export function InboxChatPanel({
     scrollRoot,
   });
 
+  conversationIdRef.current = conversation?.id ?? null;
+  draftStateRef.current = {
+    draft,
+    originalDraft,
+    draftMode,
+    draftTargetLanguage,
+    lastTranslatedText,
+  };
+
   useEffect(() => {
+    draftRequestRef.current += 1;
     setDraft("");
     setOriginalDraft(null);
     setDraftMode("original");
@@ -242,6 +262,17 @@ export function InboxChatPanel({
     };
   }
 
+  function currentComposerState(): ComposerDraftState {
+    const current = draftStateRef.current;
+    return {
+      draft: current.draft,
+      authoredText: current.originalDraft ?? current.draft,
+      mode: current.draftMode,
+      targetLanguage: current.draftTargetLanguage,
+      lastTranslatedText: current.lastTranslatedText,
+    };
+  }
+
   function commitComposer(next: ComposerDraftState) {
     setDraft(next.draft);
     setOriginalDraft(next.mode === "translated" ? next.authoredText : null);
@@ -261,15 +292,27 @@ export function InboxChatPanel({
     if (!conversation || draftTranslateBusy || attachment) return;
     const source = textForNextTranslation(composerState()).trim();
     if (!source) return;
+    const requestId = draftRequestRef.current + 1;
+    draftRequestRef.current = requestId;
+    const requestConversationId = conversation.id;
     setDraftLanguageMenuOpen(false);
     setDraftTranslateBusy(true);
     setDraftTranslateError(null);
     try {
       const result = await translateWhatsAppInboxDraft({
-        conversationId: conversation.id,
+        conversationId: requestConversationId,
         text: source,
         targetLanguage: language,
       });
+      const stillCurrent = shouldApplyDraftTranslation({
+        requestId,
+        activeRequestId: draftRequestRef.current,
+        requestConversationId,
+        activeConversationId: conversationIdRef.current,
+        sourceSnapshot: source,
+        state: currentComposerState(),
+      });
+      if (!stillCurrent) return;
       if (result.failed) {
         setDraftTranslateError(translationFailureMessage(result.errorCode));
         return;
@@ -281,22 +324,20 @@ export function InboxChatPanel({
         return;
       }
       commitComposer(
-        applyComposerTranslation(
-          {
-            draft: source,
-            authoredText: source,
-            mode: "original",
-            targetLanguage: null,
-            lastTranslatedText: null,
-          },
-          result.translatedText,
-          language,
-        ),
+        applyComposerTranslation(currentComposerState(), result.translatedText, language),
       );
     } catch {
+      if (
+        draftRequestRef.current !== requestId ||
+        conversationIdRef.current !== requestConversationId
+      ) {
+        return;
+      }
       setDraftTranslateError(translationFailureMessage());
     } finally {
-      setDraftTranslateBusy(false);
+      if (draftRequestRef.current === requestId) {
+        setDraftTranslateBusy(false);
+      }
     }
   }
 
@@ -495,7 +536,7 @@ export function InboxChatPanel({
             >
               <div
                 className={cn(
-                  "max-w-[85%] rounded-lg px-2.5 py-1.5 text-sm shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]",
+                  "min-w-0 max-w-[85%] rounded-lg px-2.5 py-1.5 text-sm shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]",
                   isDarkTheme ? "text-[#e9edef]" : "text-[#111b21]",
                   outbound
                     ? isDarkTheme

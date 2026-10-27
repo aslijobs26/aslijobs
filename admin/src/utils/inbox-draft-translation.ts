@@ -86,12 +86,28 @@ export function restoreAuthoredDraft(
   };
 }
 
+export function shouldApplyDraftTranslation(input: {
+  requestId: number;
+  activeRequestId: number;
+  requestConversationId: string;
+  activeConversationId: string | null;
+  sourceSnapshot: string;
+  state: ComposerDraftState;
+}): boolean {
+  if (input.requestId !== input.activeRequestId) return false;
+  if (input.activeConversationId !== input.requestConversationId) return false;
+  return textForNextTranslation(input.state).trim() === input.sourceSnapshot.trim();
+}
+
 export function translationFailureMessage(errorCode?: string): string {
   if (errorCode === "missing_key") {
     return "Translation is unavailable because SARVAM_API_KEY is not configured on the server. Your draft was not changed.";
   }
   if (errorCode === "timeout") {
     return "Translation timed out. Your draft was not changed.";
+  }
+  if (errorCode === "layout_mismatch" || errorCode === "protected_token") {
+    return "Translation could not keep the message formatting. Your draft was not changed.";
   }
   return "Translation failed. Your draft was not changed.";
 }

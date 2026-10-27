@@ -7,6 +7,7 @@ import {
   editComposerDraft,
   emptyComposerDraft,
   restoreAuthoredDraft,
+  shouldApplyDraftTranslation,
   textForNextTranslation,
   translationFailureMessage,
 } from "./inbox-draft-translation.ts";
@@ -43,10 +44,88 @@ describe("composer draft translation", () => {
     assert.equal(restoreAuthoredDraft(again).draft, "హలో, ధన్యవాదాలు");
   });
 
+  it("restores every newline and blank line from the authored draft", () => {
+    const authored = [
+      "Hyderabad has openings today.",
+      "",
+      "1. Warehouse assistant — Employer 1",
+      "📍 Hyderabad",
+      "💰 ₹17,000–₹22,000",
+      "👉 Apply Now: https://www.aslijobs.com/jobs/AJ-2026-000001?lang=kn",
+      "",
+      "2. Delivery associate — Employer 2",
+      "📍 Hyderabad",
+      "💰 ₹18,000–₹23,000",
+      "👉 Apply Now: https://www.aslijobs.com/jobs/AJ-2026-000002?lang=kn",
+    ].join("\n");
+    const typed = editComposerDraft(emptyComposerDraft(), authored);
+    const telugu = applyComposerTranslation(typed, "translated te\nstill structured", "te");
+    const kannada = applyComposerTranslation(telugu, "translated kn\nstill structured", "kn");
+    assert.equal(textForNextTranslation(telugu), authored);
+    assert.equal(textForNextTranslation(kannada), authored);
+    assert.equal(kannada.authoredText, authored);
+    const restored = restoreAuthoredDraft(kannada);
+    assert.equal(restored.draft, authored);
+    assert.equal(restored.draft.split("\n\n").length, authored.split("\n\n").length);
+    assert.equal(restored.mode, "original");
+  });
+
   it("does not change the draft message when translation fails", () => {
     assert.match(translationFailureMessage("missing_key"), /SARVAM_API_KEY/);
     assert.match(translationFailureMessage("timeout"), /not changed/);
     assert.match(translationFailureMessage("http_error"), /not changed/);
+    assert.match(translationFailureMessage("layout_mismatch"), /not changed/);
+    assert.match(translationFailureMessage("protected_token"), /formatting/);
+  });
+
+  it("drops a translation that belongs to an older draft or conversation", () => {
+    const typed = editComposerDraft(emptyComposerDraft(), "Please share your resume.");
+    const translated = applyComposerTranslation(typed, "దయచేసి రెజ్యూమ్ పంపండి.", "te");
+    assert.equal(
+      shouldApplyDraftTranslation({
+        requestId: 1,
+        activeRequestId: 1,
+        requestConversationId: "conversation-a",
+        activeConversationId: "conversation-a",
+        sourceSnapshot: "Please share your resume.",
+        state: translated,
+      }),
+      true,
+    );
+    assert.equal(
+      shouldApplyDraftTranslation({
+        requestId: 1,
+        activeRequestId: 2,
+        requestConversationId: "conversation-a",
+        activeConversationId: "conversation-a",
+        sourceSnapshot: "Please share your resume.",
+        state: translated,
+      }),
+      false,
+    );
+    assert.equal(
+      shouldApplyDraftTranslation({
+        requestId: 2,
+        activeRequestId: 2,
+        requestConversationId: "conversation-a",
+        activeConversationId: "conversation-b",
+        sourceSnapshot: "Please share your resume.",
+        state: translated,
+      }),
+      false,
+    );
+    const edited = editComposerDraft(translated, "దయచేసి రెజ్యూమ్ పంపండి. ధన్యవాదాలు");
+    assert.equal(
+      shouldApplyDraftTranslation({
+        requestId: 2,
+        activeRequestId: 2,
+        requestConversationId: "conversation-a",
+        activeConversationId: "conversation-a",
+        sourceSnapshot: "Please share your resume.",
+        state: edited,
+      }),
+      false,
+    );
   });
 
   it("offers all six destination languages from the composer control", () => {
@@ -61,6 +140,13 @@ describe("composer draft translation", () => {
     assert.equal(panel.includes("setDraftLanguageMenuOpen((open) => !open)"), true);
     assert.equal(panel.includes("fetchWhatsAppInboxRecipientLanguage"), false);
     assert.equal(panel.includes("translateWhatsAppInboxDraft"), true);
+    assert.equal(panel.includes("shouldApplyDraftTranslation"), true);
     assert.equal(panel.includes("onSend(caption"), true);
+    assert.equal(panel.includes("canSendFreeForm"), true);
+    const hook = readFileSync(
+      new URL("../hooks/use-inbox-chat-translation.ts", import.meta.url),
+      "utf8",
+    );
+    assert.equal(hook.includes("generation !== requestGenerationRef.current"), true);
   });
 });

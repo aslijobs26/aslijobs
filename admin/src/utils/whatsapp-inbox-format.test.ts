@@ -24,7 +24,12 @@ describe("whatsapp inbox format helpers", () => {
       ),
       "utf8",
     );
-    assert.equal(translatedBody.includes("whitespace-pre-wrap break-words"), true);
+    assert.equal(
+      translatedBody.includes("whitespace-pre-wrap break-words [overflow-wrap:anywhere]"),
+      true,
+    );
+    assert.equal(translatedBody.includes("className={MESSAGE_TEXT_CLASS}"), true);
+    assert.equal(panel.includes("min-w-0 max-w-[85%]"), true);
     assert.equal(panel.includes("originalBody={message.body}"), true);
     assert.equal(panel.includes("Historical template details unavailable"), false);
     assert.equal(panel.includes("{{1}}"), false);
