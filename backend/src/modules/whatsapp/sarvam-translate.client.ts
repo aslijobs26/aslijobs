@@ -87,6 +87,8 @@ export type TranslateTextInput = {
   targetLanguage: BotLanguage;
   /** Cache only static, non-personalized copy. Never cache job/application rows. */
   cache?: boolean;
+  /** Ask Sarvam to detect the source language instead of sending a fixed code. */
+  autoDetectSource?: boolean;
   fetchImpl?: typeof fetch;
   /** Job-translation usage audit. Never include source text or API keys. */
   jobLog?: TranslateJobHttpLog;
@@ -125,7 +127,7 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
   const source = input.sourceLanguage;
   const target = input.targetLanguage;
   const original = input.text.trim();
-  if (!original || !shouldTranslate(source, target)) {
+  if (!original || (!input.autoDetectSource && !shouldTranslate(source, target))) {
     return { text: input.text, translated: false, skipped: true, failed: false, durationMs: 0 };
   }
 
@@ -171,7 +173,9 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
       signal: AbortSignal.timeout(TRANSLATE_TIMEOUT_MS),
       body: JSON.stringify({
         input: original.slice(0, TRANSLATE_INPUT_MAX),
-        source_language_code: toSarvamLanguageCode(source),
+        source_language_code: input.autoDetectSource
+          ? "auto"
+          : toSarvamLanguageCode(source),
         target_language_code: toSarvamLanguageCode(target),
         model: "mayura:v1",
         mode: "formal",

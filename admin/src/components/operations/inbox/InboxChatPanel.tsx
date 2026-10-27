@@ -30,7 +30,6 @@ import type {
 } from "../../../types/operations-whatsapp-inbox";
 import {
   fetchWhatsAppInboxMedia,
-  fetchWhatsAppInboxRecipientLanguage,
   translateWhatsAppInboxDraft,
 } from "../../../services/operations-whatsapp-inbox.service";
 import { cn } from "../../../utils/cn";
@@ -48,7 +47,18 @@ import whatsappChatBg from "../../../assets/whatsapp-chat-bg.png";
 import whatsappChatBgDark from "../../../assets/whatsapp-chat-bg-dark.jpg";
 import { useOperationsTheme } from "../../../providers/theme-provider";
 import { useInboxChatTranslation } from "../../../hooks/use-inbox-chat-translation";
-import { type InboxViewLanguage } from "../../../constants/inbox-translation-languages";
+import {
+  inboxLanguageDisplayName,
+  type InboxViewLanguage,
+} from "../../../constants/inbox-translation-languages";
+import {
+  applyComposerTranslation,
+  editComposerDraft,
+  restoreAuthoredDraft,
+  textForNextTranslation,
+  translationFailureMessage,
+  type ComposerDraftState,
+} from "../../../utils/inbox-draft-translation";
 import { OperationsCandidateAvatar } from "../candidates/OperationsCandidateAvatar";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import { InboxDraftLanguageMenu, InboxTranslateMenu } from "./InboxTranslateMenu";
@@ -102,6 +112,9 @@ export function InboxChatPanel({
   );
   const [draftTargetLanguage, setDraftTargetLanguage] =
     useState<InboxTranslationLanguageCode | null>(null);
+  const [lastTranslatedText, setLastTranslatedText] = useState<string | null>(
+    null,
+  );
   const [draftTranslateBusy, setDraftTranslateBusy] = useState(false);
   const [draftTranslateError, setDraftTranslateError] = useState<string | null>(
     null,
@@ -135,6 +148,7 @@ export function InboxChatPanel({
     setOriginalDraft(null);
     setDraftMode("original");
     setDraftTargetLanguage(null);
+    setLastTranslatedText(null);
     setDraftTranslateBusy(false);
     setDraftTranslateError(null);
     setDraftLanguageMenuOpen(false);
@@ -210,6 +224,7 @@ export function InboxChatPanel({
       setOriginalDraft(null);
       setDraftMode("original");
       setDraftTargetLanguage(null);
+      setLastTranslatedText(null);
       setDraftTranslateError(null);
       setEmojiOpen(false);
     } catch {
@@ -217,73 +232,78 @@ export function InboxChatPanel({
     }
   }
 
-  async function translateDraft(
-    explicitLanguage?: InboxTranslationLanguageCode,
-  ) {
-    const text = draft.trim();
-    if (!conversation || !text || draftTranslateBusy || attachment) return;
+  function composerState(): ComposerDraftState {
+    return {
+      draft,
+      authoredText: originalDraft ?? draft,
+      mode: draftMode,
+      targetLanguage: draftTargetLanguage,
+      lastTranslatedText,
+    };
+  }
+
+  function commitComposer(next: ComposerDraftState) {
+    setDraft(next.draft);
+    setOriginalDraft(next.mode === "translated" ? next.authoredText : null);
+    setDraftMode(next.mode);
+    setDraftTargetLanguage(next.targetLanguage);
+    setLastTranslatedText(next.lastTranslatedText);
+  }
+
+  function openDraftLanguageMenu() {
+    if (!draft.trim() || draftTranslateBusy || attachment) return;
+    setEmojiOpen(false);
+    setDraftTranslateError(null);
+    setDraftLanguageMenuOpen((open) => !open);
+  }
+
+  async function translateDraft(language: InboxTranslationLanguageCode) {
+    if (!conversation || draftTranslateBusy || attachment) return;
+    const source = textForNextTranslation(composerState()).trim();
+    if (!source) return;
+    setDraftLanguageMenuOpen(false);
     setDraftTranslateBusy(true);
     setDraftTranslateError(null);
-    setDraftLanguageMenuOpen(false);
     try {
-      if (!explicitLanguage) {
-        const recipient = await fetchWhatsAppInboxRecipientLanguage(
-          conversation.id,
-        );
-        if (recipient.needsSelection || !recipient.language) {
-          setDraftLanguageMenuOpen(true);
-          setDraftTranslateError(
-            "Choose the recipient language before translating.",
-          );
-          return;
-        }
-      }
-      const sourceForRestore =
-        draftMode === "translated" && originalDraft != null
-          ? originalDraft
-          : draft;
       const result = await translateWhatsAppInboxDraft({
         conversationId: conversation.id,
-        text: sourceForRestore,
-        targetLanguage: explicitLanguage,
+        text: source,
+        targetLanguage: language,
       });
-      if (result.needsSelection && !explicitLanguage) {
-        setDraftLanguageMenuOpen(true);
-        setDraftTranslateError(
-          "Choose the recipient language before translating.",
-        );
-        return;
-      }
       if (result.failed) {
+        setDraftTranslateError(translationFailureMessage(result.errorCode));
+        return;
+      }
+      if (result.skipped || result.translatedText.trim() === source) {
         setDraftTranslateError(
-          "Translation failed. You can edit the draft and try again.",
+          `This draft is already in ${inboxLanguageDisplayName(language)}.`,
         );
         return;
       }
-      if (result.skipped) {
-        setDraftTranslateError(null);
-        setDraftMode("original");
-        setOriginalDraft(null);
-        return;
-      }
-      setOriginalDraft(sourceForRestore);
-      setDraft(result.translatedText);
-      setDraftMode("translated");
-      setDraftTargetLanguage(result.targetLanguage);
-    } catch {
-      setDraftTranslateError(
-        "Translation failed. You can edit the draft and try again.",
+      commitComposer(
+        applyComposerTranslation(
+          {
+            draft: source,
+            authoredText: source,
+            mode: "original",
+            targetLanguage: null,
+            lastTranslatedText: null,
+          },
+          result.translatedText,
+          language,
+        ),
       );
+    } catch {
+      setDraftTranslateError(translationFailureMessage());
     } finally {
       setDraftTranslateBusy(false);
     }
   }
 
   function restoreOriginalDraft() {
-    if (originalDraft == null) return;
-    setDraft(originalDraft);
-    setDraftMode("original");
-    setDraftTargetLanguage(null);
+    const restored = restoreAuthoredDraft(composerState());
+    if (restored.draft === draft && draftMode === "original") return;
+    commitComposer(restored);
     setDraftTranslateError(null);
   }
 
@@ -292,7 +312,7 @@ export function InboxChatPanel({
     const start = node?.selectionStart ?? draft.length;
     const end = node?.selectionEnd ?? draft.length;
     const next = insertEmojiAtSelection(draft, start, end, emoji);
-    setDraft(next.value);
+    commitComposer(editComposerDraft(composerState(), next.value));
     requestAnimationFrame(() => {
       node?.focus();
       node?.setSelectionRange(next.cursor, next.cursor);
@@ -561,11 +581,9 @@ export function InboxChatPanel({
         {draftMode === "translated" && originalDraft != null ? (
           <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] text-muted">
             <span>
-              Draft translated
               {draftTargetLanguage
-                ? ` to ${draftTargetLanguage.toUpperCase()}`
-                : ""}
-              . Review before sending.
+                ? `Draft translated to ${inboxLanguageDisplayName(draftTargetLanguage)}. Review before sending.`
+                : "You edited this translation. Review before sending."}
             </span>
             <button
               type="button"
@@ -654,7 +672,9 @@ export function InboxChatPanel({
             id={inputId}
             rows={1}
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) =>
+              commitComposer(editComposerDraft(composerState(), event.target.value))
+            }
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             disabled={sending || !conversation.canSendFreeForm}
@@ -724,7 +744,9 @@ export function InboxChatPanel({
             <button
               ref={draftTranslateButtonRef}
               type="button"
-              aria-label="Translate draft to recipient language"
+              aria-label="Translate draft"
+              aria-haspopup="menu"
+              aria-expanded={draftLanguageMenuOpen}
               disabled={
                 sending ||
                 !conversation.canSendFreeForm ||
@@ -732,7 +754,7 @@ export function InboxChatPanel({
                 !draft.trim() ||
                 Boolean(attachment)
               }
-              onClick={() => void translateDraft()}
+              onClick={openDraftLanguageMenu}
               className={cn(
                 "inline-flex size-9 shrink-0 items-center justify-center rounded-full disabled:cursor-not-allowed @min-[40rem]/inbox-chat:h-9 @min-[40rem]/inbox-chat:w-auto @min-[40rem]/inbox-chat:gap-1 @min-[40rem]/inbox-chat:px-2 @min-[40rem]/inbox-chat:text-xs @min-[40rem]/inbox-chat:font-medium",
                 isDarkTheme

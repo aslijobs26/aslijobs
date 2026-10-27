@@ -191,7 +191,12 @@ export function InboxDraftLanguageMenu({
   const { theme } = useOperationsTheme();
   const isDark = theme === "dark";
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const menuStyle = useAnchoredMenuStyle(open, anchorRef, "above", 200, 260);
+  const menuStyle = useAnchoredMenuStyle(open, anchorRef, "above", 220, 280);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -222,7 +227,7 @@ export function InboxDraftLanguageMenu({
     <div
       ref={menuRef}
       role="menu"
-      aria-label="Recipient language"
+      aria-label="Destination language"
       style={menuStyle}
       className={cn(
         "overflow-y-auto rounded-lg border shadow-lg",

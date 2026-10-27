@@ -56,10 +56,27 @@ export function detectInboxSourceLanguage(
   return detectLanguage(text, hint ?? null, hint ?? null, Boolean(hint));
 }
 
+const INDIC_SCRIPT: Array<{ language: BotLanguage; pattern: RegExp }> = [
+  { language: "te", pattern: /[\u0C00-\u0C7F]/ },
+  { language: "hi", pattern: /[\u0900-\u097F]/ },
+  { language: "ta", pattern: /[\u0B80-\u0BFF]/ },
+  { language: "kn", pattern: /[\u0C80-\u0CFF]/ },
+  { language: "ml", pattern: /[\u0D00-\u0D7F]/ },
+];
+
+export function confidentInboxScript(text: string): BotLanguage | null {
+  for (const entry of INDIC_SCRIPT) {
+    if (entry.pattern.test(text)) return entry.language;
+  }
+  return null;
+}
+
 export async function translateInboxText(input: {
   text: string;
   sourceLanguage: BotLanguage;
   targetLanguage: InboxTranslationLanguage;
+  /** Composer drafts let Sarvam detect the source so any language pair works. */
+  autoDetectSource?: boolean;
 }): Promise<{
   text: string;
   translated: boolean;
@@ -71,7 +88,11 @@ export async function translateInboxText(input: {
   if (!original) {
     return { text: input.text, translated: false, skipped: true, failed: false };
   }
-  if (input.sourceLanguage === input.targetLanguage) {
+  const script = confidentInboxScript(original);
+  if (script === input.targetLanguage) {
+    return { text: input.text, translated: false, skipped: true, failed: false };
+  }
+  if (!input.autoDetectSource && input.sourceLanguage === input.targetLanguage) {
     return { text: input.text, translated: false, skipped: true, failed: false };
   }
 
@@ -85,6 +106,7 @@ export async function translateInboxText(input: {
       text: protectedIds.text,
       sourceLanguage: input.sourceLanguage,
       targetLanguage: input.targetLanguage,
+      autoDetectSource: input.autoDetectSource,
       cache: false,
     });
     return {
@@ -107,6 +129,7 @@ export async function translateInboxText(input: {
       text: chunk,
       sourceLanguage: input.sourceLanguage,
       targetLanguage: input.targetLanguage,
+      autoDetectSource: input.autoDetectSource,
       cache: false,
     });
     if (result.failed) {

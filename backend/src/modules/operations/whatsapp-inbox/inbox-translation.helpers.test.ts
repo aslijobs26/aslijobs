@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  confidentInboxScript,
   detectInboxSourceLanguage,
   extractProtectedIdentifiers,
   hashInboxSourceText,
@@ -59,6 +60,11 @@ describe("inbox translation helpers", () => {
     assert.equal(detectInboxSourceLanguage("నాకు ఉద్యోగం కావాలి"), "te");
     assert.equal(detectInboxSourceLanguage("मुझे नौकरी चाहिए"), "hi");
     assert.equal(detectInboxSourceLanguage("Please share your resume"), "en");
+  });
+
+  it("recognizes a confident native script before calling a provider", () => {
+    assert.equal(confidentInboxScript("నాకు ఉద్యోగం కావాలి"), "te");
+    assert.equal(confidentInboxScript("Please share your resume"), null);
   });
 
   it("extracts URLs and phone numbers for protection", () => {

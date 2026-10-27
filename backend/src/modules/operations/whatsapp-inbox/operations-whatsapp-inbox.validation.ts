@@ -96,5 +96,5 @@ export const translateWhatsAppInboxDraftBodySchema = z.object({
     .trim()
     .min(1, "Draft text is required.")
     .max(INBOX_TRANSLATE_DRAFT_MAX, "Draft is too long."),
-  targetLanguage: inboxTranslationLanguageSchema.optional(),
+  targetLanguage: inboxTranslationLanguageSchema,
 });

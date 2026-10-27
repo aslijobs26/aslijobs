@@ -241,35 +241,20 @@ export const operationsWhatsAppInboxTranslationService = {
       throw new AppError("Draft is too long.", HTTP_STATUS.BAD_REQUEST);
     }
 
-    let target: InboxTranslationLanguage | null = null;
-    let needsSelection = false;
-    if (input.targetLanguage?.trim()) {
-      if (!isInboxTranslationLanguage(input.targetLanguage)) {
-        throw new AppError("Unsupported language.", HTTP_STATUS.BAD_REQUEST);
-      }
-      target = input.targetLanguage;
-    } else {
-      const resolved = await this.resolveRecipientLanguage(input.conversationId);
-      target = resolved.language;
-      needsSelection = resolved.needsSelection;
+    if (!input.targetLanguage || !isInboxTranslationLanguage(input.targetLanguage)) {
+      throw new AppError(
+        "Choose a supported destination language.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
     }
-
-    if (!target) {
-      return {
-        translatedText: draft,
-        targetLanguage: "en",
-        sourceLanguage: detectInboxSourceLanguage(draft),
-        skipped: true,
-        failed: false,
-        needsSelection: true,
-      };
-    }
+    const target = input.targetLanguage;
 
     const sourceLanguage = detectInboxSourceLanguage(draft);
     const result = await translateInboxText({
       text: draft,
       sourceLanguage,
       targetLanguage: target,
+      autoDetectSource: true,
     });
 
     return {
@@ -278,7 +263,7 @@ export const operationsWhatsAppInboxTranslationService = {
       sourceLanguage,
       skipped: result.skipped,
       failed: result.failed,
-      needsSelection,
+      needsSelection: false,
       errorCode: result.errorCode,
     };
   },

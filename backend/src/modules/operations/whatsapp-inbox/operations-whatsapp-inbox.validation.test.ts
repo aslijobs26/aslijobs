@@ -60,6 +60,12 @@ describe("operations whatsapp inbox validation", () => {
       targetLanguage: "te",
     });
     assert.equal(draft.targetLanguage, "te");
+    assert.equal(
+      translateWhatsAppInboxDraftBodySchema.safeParse({
+        text: "Please share your resume",
+      }).success,
+      false,
+    );
   });
 
   it("rejects unsupported translation languages", () => {

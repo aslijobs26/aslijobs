@@ -220,7 +220,7 @@ export async function translateWhatsAppInboxMessages(input: {
 export async function translateWhatsAppInboxDraft(input: {
   conversationId: string;
   text: string;
-  targetLanguage?: InboxTranslationLanguageCode;
+  targetLanguage: InboxTranslationLanguageCode;
 }): Promise<InboxDraftTranslateResult> {
   const response = await apiClient.post<{ data: InboxDraftTranslateResult }>(
     `${BASE}/conversations/${input.conversationId}/draft-translate`,
