@@ -3,6 +3,7 @@ import { HTTP_STATUS } from "../../../constants/http-status.js";
 import { AppError } from "../../../middleware/error.middleware.js";
 import { sendSuccess } from "../../../utils/api-response.js";
 import { operationsWhatsAppInboxService } from "./operations-whatsapp-inbox.service.js";
+import { operationsWhatsAppInboxTranslationService } from "./operations-whatsapp-inbox-translation.service.js";
 
 function requireAdminUserId(req: Request): string {
   const userId = req.operationsUserId?.trim();
@@ -129,7 +130,11 @@ export const operationsWhatsAppInboxController = {
       conversationId,
       messageId,
     );
-    const inline = file.mimeType.startsWith("image/") || file.mimeType.startsWith("video/");
+    const mime = file.mimeType.toLowerCase();
+    const inline =
+      mime.startsWith("image/") ||
+      mime.startsWith("video/") ||
+      mime.startsWith("audio/");
     res.setHeader("Content-Type", file.mimeType);
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Cache-Control", "private, no-store");
@@ -138,5 +143,59 @@ export const operationsWhatsAppInboxController = {
       `${inline ? "inline" : "attachment"}; filename="${file.fileName.replace(/"/g, "")}"`,
     );
     res.status(HTTP_STATUS.OK).send(file.bytes);
+  },
+
+  async getViewLanguage(req: Request, res: Response): Promise<void> {
+    const { conversationId } = req.params as { conversationId: string };
+    const data = await operationsWhatsAppInboxTranslationService.getViewLanguage({
+      conversationId,
+      operationsUserId: requireAdminUserId(req),
+    });
+    sendSuccess(res, HTTP_STATUS.OK, { data });
+  },
+
+  async setViewLanguage(req: Request, res: Response): Promise<void> {
+    const { conversationId } = req.params as { conversationId: string };
+    const body = req.body as { language: string };
+    const data = await operationsWhatsAppInboxTranslationService.setViewLanguage({
+      conversationId,
+      operationsUserId: requireAdminUserId(req),
+      language: body.language,
+    });
+    sendSuccess(res, HTTP_STATUS.OK, { data });
+  },
+
+  async getRecipientLanguage(req: Request, res: Response): Promise<void> {
+    const { conversationId } = req.params as { conversationId: string };
+    const data =
+      await operationsWhatsAppInboxTranslationService.resolveRecipientLanguage(
+        conversationId,
+      );
+    sendSuccess(res, HTTP_STATUS.OK, { data });
+  },
+
+  async translateMessages(req: Request, res: Response): Promise<void> {
+    const { conversationId } = req.params as { conversationId: string };
+    const body = req.body as {
+      targetLanguage: string;
+      messageIds: string[];
+    };
+    const data = await operationsWhatsAppInboxTranslationService.translateMessages({
+      conversationId,
+      targetLanguage: body.targetLanguage,
+      messageIds: body.messageIds,
+    });
+    sendSuccess(res, HTTP_STATUS.OK, { data });
+  },
+
+  async translateDraft(req: Request, res: Response): Promise<void> {
+    const { conversationId } = req.params as { conversationId: string };
+    const body = req.body as { text: string; targetLanguage?: string };
+    const data = await operationsWhatsAppInboxTranslationService.translateDraft({
+      conversationId,
+      text: body.text,
+      targetLanguage: body.targetLanguage,
+    });
+    sendSuccess(res, HTTP_STATUS.OK, { data });
   },
 };

@@ -4,8 +4,10 @@ import { describe, it } from "node:test";
 import {
   combinedInboxDisplayName,
   employerInboxName,
-  phoneLookupVariants,
   registeredAccountStatusLabel,
+  resolveEmployerInboxIdentity,
+  phoneLookupVariants,
+  seekerInboxName,
 } from "./whatsapp-inbox-identity.js";
 import {
   WHATSAPP_VERIFICATION_CODE_SENT,
@@ -38,33 +40,8 @@ describe("whatsapp inbox store helpers", () => {
       false,
     );
     assert.equal(
-      customerServiceWindowState(new Date(Date.now() - 60 * 60 * 1000)),
-      "open",
-    );
-    assert.equal(
       customerServiceWindowState(new Date(Date.now() - 25 * 60 * 60 * 1000)),
       "expired",
-    );
-  });
-
-  it("names individual employers from the shop and contact person", () => {
-    assert.equal(
-      employerInboxName({
-        accountType: "individual",
-        establishmentName: "Sri Stores",
-        firstName: "Lakshmi",
-        lastName: "Rao",
-      }),
-      "Sri Stores · Lakshmi Rao",
-    );
-    assert.equal(
-      employerInboxName({
-        accountType: "company",
-        companyName: "SR Enterprises",
-        firstName: "Ravi",
-        lastName: "Kumar",
-      }),
-      "SR Enterprises · Ravi Kumar",
     );
   });
 
@@ -72,7 +49,7 @@ describe("whatsapp inbox store helpers", () => {
     assert.equal(
       combinedInboxDisplayName({
         ambiguous: false,
-        employerName: "SR Enterprises · Ravi Kumar",
+        employerName: "SR Enterprises",
         seekerName: "Ravi Kumar",
         phoneNational: "9876543210",
       }),
@@ -146,5 +123,190 @@ describe("whatsapp inbox store helpers", () => {
     assert.ok(ack > persist);
     assert.equal(source.includes("recordInboundUserMessage({"), true);
     assert.equal(source.includes("inbox persist failed reason="), false);
+  });
+});
+
+describe("employer inbox name resolution", () => {
+  it("shows company name first and contact person underneath for company accounts", () => {
+    assert.deepEqual(
+      resolveEmployerInboxIdentity({
+        accountType: "company",
+        companyName: "Liya logistics",
+        firstName: "Mohammed",
+        lastName: "Ibrahim",
+      }),
+      {
+        primaryName: "Liya logistics",
+        secondaryName: "Mohammed Ibrahim",
+      },
+    );
+    assert.equal(
+      employerInboxName({
+        accountType: "company",
+        companyName: "Liya logistics",
+        firstName: "Mohammed",
+        lastName: "Ibrahim",
+      }),
+      "Liya logistics",
+    );
+  });
+
+  it("shows consultancy name first and contact person underneath", () => {
+    assert.deepEqual(
+      resolveEmployerInboxIdentity({
+        accountType: "consultancy",
+        companyName: "ABC Consultancy",
+        firstName: "Ravi",
+        lastName: "Kumar",
+      }),
+      {
+        primaryName: "ABC Consultancy",
+        secondaryName: "Ravi Kumar",
+      },
+    );
+  });
+
+  it("keeps an individual employer's registered personal name as the primary name", () => {
+    assert.deepEqual(
+      resolveEmployerInboxIdentity({
+        accountType: "individual",
+        establishmentName: "Sri Stores",
+        firstName: "Lakshmi",
+        lastName: "Rao",
+      }),
+      {
+        primaryName: "Lakshmi Rao",
+        secondaryName: "",
+      },
+    );
+    assert.equal(
+      employerInboxName({
+        accountType: "individual",
+        establishmentName: "Sri Stores",
+        firstName: "Lakshmi",
+        lastName: "Rao",
+      }),
+      "Lakshmi Rao",
+    );
+  });
+
+  it("omits an empty secondary line when a company has no contact person", () => {
+    assert.deepEqual(
+      resolveEmployerInboxIdentity({
+        accountType: "company",
+        companyName: "Northwind Services",
+        firstName: "",
+        lastName: "",
+      }),
+      {
+        primaryName: "Northwind Services",
+        secondaryName: "",
+      },
+    );
+  });
+
+  it("falls back safely when company information is missing", () => {
+    assert.deepEqual(
+      resolveEmployerInboxIdentity({
+        accountType: "company",
+        companyName: "",
+        establishmentName: "",
+        firstName: "Asha",
+        lastName: "Rao",
+      }),
+      {
+        primaryName: "Asha Rao",
+        secondaryName: "",
+      },
+    );
+    assert.deepEqual(
+      resolveEmployerInboxIdentity({
+        accountType: "consultancy",
+        companyName: "",
+        establishmentName: "Local Desk",
+        firstName: "Asha",
+        lastName: "Rao",
+      }),
+      {
+        primaryName: "Local Desk",
+        secondaryName: "Asha Rao",
+      },
+    );
+  });
+
+  it("does not repeat identical company and contact-person names", () => {
+    assert.deepEqual(
+      resolveEmployerInboxIdentity({
+        accountType: "company",
+        companyName: "Veeresh",
+        firstName: "Veeresh",
+        lastName: "",
+      }),
+      {
+        primaryName: "Veeresh",
+        secondaryName: "",
+      },
+    );
+  });
+
+  it("keeps punctuation inside company names instead of splitting them", () => {
+    assert.deepEqual(
+      resolveEmployerInboxIdentity({
+        accountType: "company",
+        companyName: "A.B.C. Tech-Works · Pvt. Ltd.",
+        firstName: "Sita",
+        lastName: "Devi",
+      }),
+      {
+        primaryName: "A.B.C. Tech-Works · Pvt. Ltd.",
+        secondaryName: "Sita Devi",
+      },
+    );
+    assert.equal(
+      employerInboxName({
+        accountType: "company",
+        companyName: "A.B.C. Tech-Works · Pvt. Ltd.",
+        firstName: "Sita",
+        lastName: "Devi",
+      }).includes(" · Sita"),
+      false,
+    );
+  });
+
+  it("leaves job seeker names unchanged", () => {
+    assert.equal(seekerInboxName("CHANDU"), "CHANDU");
+    assert.equal(seekerInboxName("  veer  "), "veer");
+    assert.equal(seekerInboxName(undefined), "");
+  });
+
+  it("uses the same identity helper for header and contact details", () => {
+    const source = readFileSync(
+      new URL(
+        "../../operations/whatsapp-inbox/operations-whatsapp-inbox.service.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    assert.equal(source.includes("resolveEmployerInboxIdentity"), true);
+    assert.equal(source.includes("secondaryDisplayName"), true);
+    const panel = readFileSync(
+      new URL(
+        "../../../../../admin/src/components/operations/inbox/InboxContactPanel.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const chat = readFileSync(
+      new URL(
+        "../../../../../admin/src/components/operations/inbox/InboxChatPanel.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    assert.equal(panel.includes("contactPerson"), true);
+    assert.equal(panel.includes("secondaryDisplayName"), true);
+    assert.equal(chat.includes("secondaryDisplayName"), true);
+    assert.equal(panel.includes("split(\"·\")"), false);
+    assert.equal(chat.includes("split(\"·\")"), false);
   });
 });

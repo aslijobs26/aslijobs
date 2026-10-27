@@ -1,22 +1,78 @@
-export function employerInboxName(employer: {
-  accountType?: string;
-  companyName?: string;
-  establishmentName?: string;
-  firstName?: string;
-  lastName?: string;
-}): string {
-  const person = [employer.firstName, employer.lastName]
-    .map((part) => part?.trim() ?? "")
+import {
+  EMPLOYER_ACCOUNT_TYPES,
+  isBusinessEmployerAccountType,
+} from "../../../constants/employer.constants.js";
+
+export type EmployerInboxIdentityInput = {
+  accountType?: string | null;
+  companyName?: string | null;
+  establishmentName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+};
+
+export type EmployerInboxIdentity = {
+  /** Company/consultancy name, or the individual's registered personal name. */
+  primaryName: string;
+  /**
+   * Contact person for company and consultancy accounts only.
+   * Empty for individual accounts and when the person matches the primary name.
+   */
+  secondaryName: string;
+};
+
+function text(value: string | null | undefined): string {
+  return value?.trim() ?? "";
+}
+
+function personName(employer: EmployerInboxIdentityInput): string {
+  return [text(employer.firstName), text(employer.lastName)]
     .filter(Boolean)
     .join(" ");
-  const business =
-    employer.accountType === "individual"
-      ? employer.establishmentName?.trim() || employer.companyName?.trim() || ""
-      : employer.companyName?.trim() || employer.establishmentName?.trim() || "";
-  if (business && person && business.toLowerCase() !== person.toLowerCase()) {
-    return `${business} · ${person}`;
+}
+
+function sameName(left: string, right: string): boolean {
+  return left.trim().toLowerCase() === right.trim().toLowerCase();
+}
+
+function isBusinessEmployerAccount(accountType: string | null | undefined): boolean {
+  const key = accountType?.trim().toLowerCase() ?? "";
+  if (!(EMPLOYER_ACCOUNT_TYPES as readonly string[]).includes(key)) {
+    return false;
   }
-  return business || person;
+  return isBusinessEmployerAccountType(
+    key as (typeof EMPLOYER_ACCOUNT_TYPES)[number],
+  );
+}
+
+/**
+ * Authoritative Inbox name parts for an employer account.
+ * Company and consultancy accounts lead with the registered business name.
+ * Individual accounts lead with the registered person and have no secondary line.
+ */
+export function resolveEmployerInboxIdentity(
+  employer: EmployerInboxIdentityInput,
+): EmployerInboxIdentity {
+  const person = personName(employer);
+  const companyName = text(employer.companyName);
+  const establishmentName = text(employer.establishmentName);
+
+  if (isBusinessEmployerAccount(employer.accountType)) {
+    const primaryName = companyName || establishmentName || person;
+    const secondaryName =
+      person && primaryName && !sameName(person, primaryName) ? person : "";
+    return { primaryName, secondaryName };
+  }
+
+  // Individual: personal name is primary. Establishment/company is not promoted
+  // to a company heading and is not shown as a secondary contact line.
+  const primaryName = person || establishmentName || companyName;
+  return { primaryName, secondaryName: "" };
+}
+
+/** Compact single-line label for lists, search hydration, and stored displayName. */
+export function employerInboxName(employer: EmployerInboxIdentityInput): string {
+  return resolveEmployerInboxIdentity(employer).primaryName;
 }
 
 export function seekerInboxName(fullName: string | undefined): string {
@@ -37,11 +93,7 @@ export function combinedInboxDisplayName(input: {
   const seeker = input.seekerName.trim();
   if (!employer) return seeker || input.phoneNational;
   if (!seeker) return employer;
-  const employerParts = employer.split("·").map((part) => part.trim().toLowerCase());
-  if (
-    employer.toLowerCase() === seeker.toLowerCase() ||
-    employerParts.includes(seeker.toLowerCase())
-  ) {
+  if (sameName(employer, seeker)) {
     return employer;
   }
   return `${employer} · ${seeker}`;

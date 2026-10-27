@@ -4,6 +4,9 @@ import {
   listWhatsAppInboxConversationsQuerySchema,
   openWhatsAppInboxConversationBodySchema,
   sendWhatsAppInboxMessageBodySchema,
+  setWhatsAppInboxViewLanguageBodySchema,
+  translateWhatsAppInboxDraftBodySchema,
+  translateWhatsAppInboxMessagesBodySchema,
 } from "./operations-whatsapp-inbox.validation.js";
 
 describe("operations whatsapp inbox validation", () => {
@@ -34,5 +37,43 @@ describe("operations whatsapp inbox validation", () => {
     });
     assert.equal(parsed.text, "Hello from Operations");
     assert.equal(parsed.clientMessageId, "admin-123");
+  });
+
+  it("accepts view-language and translation payloads", () => {
+    assert.equal(
+      setWhatsAppInboxViewLanguageBodySchema.parse({ language: "te" }).language,
+      "te",
+    );
+    assert.equal(
+      setWhatsAppInboxViewLanguageBodySchema.parse({ language: "original" })
+        .language,
+      "original",
+    );
+    const translated = translateWhatsAppInboxMessagesBodySchema.parse({
+      targetLanguage: "hi",
+      messageIds: ["507f1f77bcf86cd799439011"],
+    });
+    assert.equal(translated.targetLanguage, "hi");
+    assert.equal(translated.messageIds.length, 1);
+    const draft = translateWhatsAppInboxDraftBodySchema.parse({
+      text: "Please share your resume",
+      targetLanguage: "te",
+    });
+    assert.equal(draft.targetLanguage, "te");
+  });
+
+  it("rejects unsupported translation languages", () => {
+    assert.equal(
+      setWhatsAppInboxViewLanguageBodySchema.safeParse({ language: "fr" })
+        .success,
+      false,
+    );
+    assert.equal(
+      translateWhatsAppInboxMessagesBodySchema.safeParse({
+        targetLanguage: "fr",
+        messageIds: ["507f1f77bcf86cd799439011"],
+      }).success,
+      false,
+    );
   });
 });

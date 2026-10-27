@@ -14,6 +14,9 @@ import {
   openWhatsAppInboxConversationBodySchema,
   sendWhatsAppInboxMessageBodySchema,
   setWhatsAppInboxBotBodySchema,
+  setWhatsAppInboxViewLanguageBodySchema,
+  translateWhatsAppInboxDraftBodySchema,
+  translateWhatsAppInboxMessagesBodySchema,
   whatsAppInboxConversationParamsSchema,
   whatsAppInboxMessageParamsSchema,
 } from "./operations-whatsapp-inbox.validation.js";
@@ -101,6 +104,44 @@ operationsWhatsAppInboxRouter.post(
   validate(whatsAppInboxConversationParamsSchema, "params"),
   validate(sendWhatsAppInboxMessageBodySchema, "body"),
   asyncHandler(operationsWhatsAppInboxController.sendMessage),
+);
+
+operationsWhatsAppInboxRouter.get(
+  "/conversations/:conversationId/view-language",
+  requireFineOrCoarsePermission("whatsapp.view", "whatsapp", "read"),
+  validate(whatsAppInboxConversationParamsSchema, "params"),
+  asyncHandler(operationsWhatsAppInboxController.getViewLanguage),
+);
+
+operationsWhatsAppInboxRouter.put(
+  "/conversations/:conversationId/view-language",
+  requireFineOrCoarsePermission("whatsapp.view", "whatsapp", "read"),
+  validate(whatsAppInboxConversationParamsSchema, "params"),
+  validate(setWhatsAppInboxViewLanguageBodySchema, "body"),
+  asyncHandler(operationsWhatsAppInboxController.setViewLanguage),
+);
+
+operationsWhatsAppInboxRouter.get(
+  "/conversations/:conversationId/recipient-language",
+  requireFineOrCoarsePermission("whatsapp.view", "whatsapp", "read"),
+  validate(whatsAppInboxConversationParamsSchema, "params"),
+  asyncHandler(operationsWhatsAppInboxController.getRecipientLanguage),
+);
+
+operationsWhatsAppInboxRouter.post(
+  "/conversations/:conversationId/translations",
+  requireFineOrCoarsePermission("whatsapp.view", "whatsapp", "read"),
+  validate(whatsAppInboxConversationParamsSchema, "params"),
+  validate(translateWhatsAppInboxMessagesBodySchema, "body"),
+  asyncHandler(operationsWhatsAppInboxController.translateMessages),
+);
+
+operationsWhatsAppInboxRouter.post(
+  "/conversations/:conversationId/draft-translate",
+  requireFineOrCoarsePermission("whatsapp.create", "whatsapp", "create"),
+  validate(whatsAppInboxConversationParamsSchema, "params"),
+  validate(translateWhatsAppInboxDraftBodySchema, "body"),
+  asyncHandler(operationsWhatsAppInboxController.translateDraft),
 );
 
 export default operationsWhatsAppInboxRouter;

@@ -14,6 +14,8 @@ import {
   CheckCheck,
   ChevronLeft,
   Info,
+  Languages,
+  LoaderCircle,
   Paperclip,
   Pause,
   Play,
@@ -21,10 +23,16 @@ import {
   X,
 } from "lucide-react";
 import type {
+  InboxMessageTranslationItem,
+  InboxTranslationLanguageCode,
   WhatsAppInboxConversation,
   WhatsAppInboxMessage,
 } from "../../../types/operations-whatsapp-inbox";
-import { fetchWhatsAppInboxMedia } from "../../../services/operations-whatsapp-inbox.service";
+import {
+  fetchWhatsAppInboxMedia,
+  fetchWhatsAppInboxRecipientLanguage,
+  translateWhatsAppInboxDraft,
+} from "../../../services/operations-whatsapp-inbox.service";
 import { cn } from "../../../utils/cn";
 import {
   formatAttachmentSize,
@@ -37,8 +45,18 @@ import {
   initialsFromName,
 } from "../../../utils/whatsapp-inbox-format";
 import whatsappChatBg from "../../../assets/whatsapp-chat-bg.png";
+import whatsappChatBgDark from "../../../assets/whatsapp-chat-bg-dark.jpg";
+import { useOperationsTheme } from "../../../providers/theme-provider";
+import { useInboxChatTranslation } from "../../../hooks/use-inbox-chat-translation";
+import {
+  INBOX_TRANSLATION_LANGUAGE_OPTIONS,
+  type InboxViewLanguage,
+} from "../../../constants/inbox-translation-languages";
 import { OperationsCandidateAvatar } from "../candidates/OperationsCandidateAvatar";
 import { OperationsBadge } from "../../ui/OperationsBadge";
+import { InboxTranslateMenu } from "./InboxTranslateMenu";
+import { InboxTranslatedBody } from "./InboxTranslatedBody";
+import { InboxVoiceMessagePlayer } from "./InboxVoiceMessagePlayer";
 
 const EmojiPicker = lazy(() => import("emoji-picker-react"));
 
@@ -81,10 +99,22 @@ export function InboxChatPanel({
   onOpenDetails,
 }: InboxChatPanelProps) {
   const [draft, setDraft] = useState("");
+  const [originalDraft, setOriginalDraft] = useState<string | null>(null);
+  const [draftMode, setDraftMode] = useState<"original" | "translated">(
+    "original",
+  );
+  const [draftTargetLanguage, setDraftTargetLanguage] =
+    useState<InboxTranslationLanguageCode | null>(null);
+  const [draftTranslateBusy, setDraftTranslateBusy] = useState(false);
+  const [draftTranslateError, setDraftTranslateError] = useState<string | null>(
+    null,
+  );
+  const [draftLanguageMenuOpen, setDraftLanguageMenuOpen] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const stickToBottomRef = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -92,9 +122,24 @@ export function InboxChatPanel({
   const emojiRootRef = useRef<HTMLFormElement | null>(null);
   const inputId = useId();
   const emojiPanelId = useId();
+  const { theme } = useOperationsTheme();
+  const isDarkTheme = theme === "dark";
+  const chatPaneBg = isDarkTheme ? "bg-[#0b141a]" : "bg-[#efeae2]";
+  const chatWallpaper = isDarkTheme ? whatsappChatBgDark : whatsappChatBg;
+  const translation = useInboxChatTranslation({
+    conversationId: conversation?.id ?? null,
+    messages,
+    scrollRoot,
+  });
 
   useEffect(() => {
     setDraft("");
+    setOriginalDraft(null);
+    setDraftMode("original");
+    setDraftTargetLanguage(null);
+    setDraftTranslateBusy(false);
+    setDraftTranslateError(null);
+    setDraftLanguageMenuOpen(false);
     setAttachment(null);
     setAttachmentError(null);
     setEmojiOpen(false);
@@ -122,7 +167,12 @@ export function InboxChatPanel({
 
   if (!conversation) {
     return (
-      <section className="flex h-full min-h-0 flex-col items-center justify-center bg-[#f3f6f7] px-6 text-center">
+      <section
+        className={cn(
+          "flex h-full min-h-0 flex-col items-center justify-center px-6 text-center",
+          isDarkTheme ? "bg-[#0b141a]" : "bg-[#f3f6f7]",
+        )}
+      >
         <p className="text-sm font-medium text-foreground">
           Select a conversation
         </p>
@@ -159,10 +209,84 @@ export function InboxChatPanel({
         await onSend(caption, clientMessageId);
       }
       setDraft("");
+      setOriginalDraft(null);
+      setDraftMode("original");
+      setDraftTargetLanguage(null);
+      setDraftTranslateError(null);
       setEmojiOpen(false);
     } catch {
       setUploadProgress(null);
     }
+  }
+
+  async function translateDraft(
+    explicitLanguage?: InboxTranslationLanguageCode,
+  ) {
+    const text = draft.trim();
+    if (!conversation || !text || draftTranslateBusy || attachment) return;
+    setDraftTranslateBusy(true);
+    setDraftTranslateError(null);
+    setDraftLanguageMenuOpen(false);
+    try {
+      if (!explicitLanguage) {
+        const recipient = await fetchWhatsAppInboxRecipientLanguage(
+          conversation.id,
+        );
+        if (recipient.needsSelection || !recipient.language) {
+          setDraftLanguageMenuOpen(true);
+          setDraftTranslateError(
+            "Choose the recipient language before translating.",
+          );
+          return;
+        }
+      }
+      const sourceForRestore =
+        draftMode === "translated" && originalDraft != null
+          ? originalDraft
+          : draft;
+      const result = await translateWhatsAppInboxDraft({
+        conversationId: conversation.id,
+        text: sourceForRestore,
+        targetLanguage: explicitLanguage,
+      });
+      if (result.needsSelection && !explicitLanguage) {
+        setDraftLanguageMenuOpen(true);
+        setDraftTranslateError(
+          "Choose the recipient language before translating.",
+        );
+        return;
+      }
+      if (result.failed) {
+        setDraftTranslateError(
+          "Translation failed. You can edit the draft and try again.",
+        );
+        return;
+      }
+      if (result.skipped) {
+        setDraftTranslateError(null);
+        setDraftMode("original");
+        setOriginalDraft(null);
+        return;
+      }
+      setOriginalDraft(sourceForRestore);
+      setDraft(result.translatedText);
+      setDraftMode("translated");
+      setDraftTargetLanguage(result.targetLanguage);
+    } catch {
+      setDraftTranslateError(
+        "Translation failed. You can edit the draft and try again.",
+      );
+    } finally {
+      setDraftTranslateBusy(false);
+    }
+  }
+
+  function restoreOriginalDraft() {
+    if (originalDraft == null) return;
+    setDraft(originalDraft);
+    setDraftMode("original");
+    setDraftTargetLanguage(null);
+    setDraftTranslateError(null);
   }
 
   function insertEmoji(emoji: string) {
@@ -200,8 +324,13 @@ export function InboxChatPanel({
   }
 
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-[#f3f6f7]">
-      <header className="flex h-14 shrink-0 items-center gap-0.5 border-b border-border-subtle bg-surface px-1 sm:h-auto sm:gap-2 sm:px-3 sm:py-2.5">
+    <section
+      className={cn(
+        "flex h-full min-h-0 min-w-0 flex-1 flex-col @container/inbox-chat",
+        chatPaneBg,
+      )}
+    >
+      <header className="flex h-14 shrink-0 items-center gap-1 overflow-hidden border-b border-border-subtle bg-surface px-2 @min-[40rem]/inbox-chat:gap-2 @min-[40rem]/inbox-chat:px-3">
         {onBack ? (
           <button
             type="button"
@@ -223,36 +352,48 @@ export function InboxChatPanel({
               {conversation.displayName}
             </h2>
             <OperationsBadge
-              className="hidden shrink-0 sm:inline-flex"
+              className="hidden shrink-0 @min-[28rem]/inbox-chat:inline-flex"
               variant={accountBadgeVariant(conversation.participantType)}
             >
               {conversation.participantLabel}
             </OperationsBadge>
           </div>
+          {conversation.secondaryDisplayName?.trim() ? (
+            <p className="truncate text-[11px] font-normal leading-tight text-muted">
+              {conversation.secondaryDisplayName.trim()}
+            </p>
+          ) : null}
           <p className="truncate text-[11px] leading-tight text-muted">
-            <span className="sm:hidden">
+            <span className="@min-[40rem]/inbox-chat:hidden">
               {conversation.botPaused ? "Human handling" : "Bot active"}
               {" · "}
             </span>
             {conversation.phoneDisplay}
           </p>
         </div>
-        <span className="hidden shrink-0 text-[11px] font-medium text-muted sm:inline">
+        <span className="hidden shrink-0 text-[11px] font-medium text-muted @min-[40rem]/inbox-chat:inline">
           {conversation.botPaused ? "Human handling" : "Bot active"}
         </span>
+        <InboxTranslateMenu
+          language={translation.viewLanguage}
+          disabled={translation.preferenceLoading}
+          onSelect={(language: InboxViewLanguage) => {
+            void translation.selectViewLanguage(language);
+          }}
+        />
         {onToggleBot ? (
           <button
             type="button"
             onClick={onToggleBot}
             aria-label={conversation.botPaused ? "Resume bot" : "Pause bot"}
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-[#54656f] sm:h-9 sm:w-auto sm:gap-1.5 sm:rounded-lg sm:border sm:border-border sm:px-2.5 sm:text-xs sm:font-medium sm:text-foreground"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#54656f] @min-[40rem]/inbox-chat:h-9 @min-[40rem]/inbox-chat:w-auto @min-[40rem]/inbox-chat:gap-1.5 @min-[40rem]/inbox-chat:rounded-lg @min-[40rem]/inbox-chat:border @min-[40rem]/inbox-chat:border-border @min-[40rem]/inbox-chat:px-2.5 @min-[40rem]/inbox-chat:text-xs @min-[40rem]/inbox-chat:font-medium @min-[40rem]/inbox-chat:text-foreground"
           >
             {conversation.botPaused ? (
               <Play className="size-4" />
             ) : (
               <Pause className="size-4" />
             )}
-            <span className="hidden sm:inline">
+            <span className="hidden @min-[40rem]/inbox-chat:inline">
               {conversation.botPaused ? "Resume bot" : "Pause bot"}
             </span>
           </button>
@@ -262,26 +403,33 @@ export function InboxChatPanel({
             type="button"
             onClick={onOpenDetails}
             aria-label="Contact details"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-[#54656f] sm:h-9 sm:w-auto sm:gap-1.5 sm:rounded-lg sm:border sm:border-border sm:px-2.5 sm:text-xs sm:font-medium sm:text-foreground xl:hidden"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#54656f] @min-[40rem]/inbox-chat:h-9 @min-[40rem]/inbox-chat:w-auto @min-[40rem]/inbox-chat:gap-1.5 @min-[40rem]/inbox-chat:rounded-lg @min-[40rem]/inbox-chat:border @min-[40rem]/inbox-chat:border-border @min-[40rem]/inbox-chat:px-2.5 @min-[40rem]/inbox-chat:text-xs @min-[40rem]/inbox-chat:font-medium @min-[40rem]/inbox-chat:text-foreground @min-[72rem]/inbox-chat:hidden"
           >
             <Info className="size-4" />
-            <span className="hidden sm:inline">Details</span>
+            <span className="hidden @min-[40rem]/inbox-chat:inline">Details</span>
           </button>
         ) : null}
       </header>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden">
+      <div className={cn("relative min-h-0 flex-1 overflow-hidden", chatPaneBg)}>
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-[0.28]"
+          className={cn(
+            "pointer-events-none absolute inset-0",
+            isDarkTheme ? "opacity-[0.55]" : "opacity-[0.42]",
+          )}
           style={{
-            backgroundImage: `url(${whatsappChatBg})`,
+            backgroundImage: `url(${chatWallpaper})`,
             backgroundRepeat: "repeat",
-            backgroundSize: "360px",
+            backgroundSize: "320px",
+            backgroundPosition: "center top",
           }}
         />
         <div
-          ref={listRef}
+          ref={(node) => {
+            listRef.current = node;
+            setScrollRoot(node);
+          }}
           onScroll={() => {
             const node = listRef.current;
             if (!node) return;
@@ -324,22 +472,47 @@ export function InboxChatPanel({
           return (
             <div
               key={message.id}
+              data-message-id={message.id}
               className={cn("flex", outbound ? "justify-end" : "justify-start")}
             >
               <div
                 className={cn(
-                  "max-w-[85%] rounded-lg px-2.5 py-1.5 text-sm text-[#111b21] shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]",
+                  "max-w-[85%] rounded-lg px-2.5 py-1.5 text-sm shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]",
+                  isDarkTheme ? "text-[#e9edef]" : "text-[#111b21]",
                   outbound
-                    ? "rounded-br-none bg-[#d9fdd3]"
-                    : "rounded-bl-none bg-white",
+                    ? isDarkTheme
+                      ? "rounded-br-none bg-[#005c4b]"
+                      : "rounded-br-none bg-[#d9fdd3]"
+                    : isDarkTheme
+                      ? "rounded-bl-none bg-[#202c33]"
+                      : "rounded-bl-none bg-white",
                   message.status === "failed" && "ring-1 ring-danger/40",
                 )}
               >
-                <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#667781]">
+                <p
+                  className={cn(
+                    "mb-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    isDarkTheme ? "text-[#8696a0]" : "text-[#667781]",
+                  )}
+                >
                   {senderLabel(message.senderType)}
                 </p>
-                <MessageContent conversationId={conversation.id} message={message} />
-                <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#667781]">
+                <MessageContent
+                  conversationId={conversation.id}
+                  message={message}
+                  translation={translation.getTranslation(message.id)}
+                  showOriginal={translation.showOriginalIds.has(message.id)}
+                  onToggleOriginal={() =>
+                    translation.toggleShowOriginal(message.id)
+                  }
+                  onRetryTranslation={() => translation.retryMessage(message.id)}
+                />
+                <div
+                  className={cn(
+                    "mt-1 flex items-center justify-end gap-1 text-[11px]",
+                    isDarkTheme ? "text-[#8696a0]" : "text-[#667781]",
+                  )}
+                >
                   <span>{formatMessageTime(message.createdAt)}</span>
                   {outbound ? <StatusTicks status={message.status} /> : null}
                 </div>
@@ -359,31 +532,71 @@ export function InboxChatPanel({
       <form
         ref={emojiRootRef}
         onSubmit={(event) => void handleSubmit(event)}
-        className="relative shrink-0 border-t border-[#e9edef] bg-[#f0f2f5] px-2 py-1.5 sm:px-3 sm:py-2.5"
+        className={cn(
+          "relative shrink-0 border-t px-2 py-1.5 sm:px-3 sm:py-2.5",
+          isDarkTheme
+            ? "border-[#222d34] bg-[#1f2c34]"
+            : "border-[#e9edef] bg-[#f0f2f5]",
+        )}
       >
         {!conversation.canSendFreeForm ? (
           <p
-            className="mb-1 line-clamp-2 text-[11px] leading-snug text-warning sm:line-clamp-none sm:text-xs"
+            className="mb-1 line-clamp-2 text-[11px] leading-snug text-warning"
             role="status"
             title={serviceWindowMessage(conversation)}
           >
-            <span className="sm:hidden">{serviceWindowMessageShort(conversation)}</span>
-            <span className="hidden sm:inline">{serviceWindowMessage(conversation)}</span>
+            {serviceWindowMessage(conversation)}
           </p>
         ) : null}
-        {sendError || attachmentError || captionTooLong ? (
+        {sendError ||
+        attachmentError ||
+        captionTooLong ||
+        draftTranslateError ? (
           <p className="mb-1 text-[11px] text-danger sm:text-xs" role="alert">
             {attachmentError ||
+              draftTranslateError ||
               (captionTooLong
                 ? "Message is too long for WhatsApp."
                 : sendError)}
           </p>
         ) : null}
+        {draftMode === "translated" && originalDraft != null ? (
+          <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+            <span>
+              Draft translated
+              {draftTargetLanguage
+                ? ` to ${draftTargetLanguage.toUpperCase()}`
+                : ""}
+              . Review before sending.
+            </span>
+            <button
+              type="button"
+              onClick={restoreOriginalDraft}
+              className="font-medium text-[#027eb5] underline"
+            >
+              Show original draft
+            </button>
+          </div>
+        ) : null}
         {attachment ? (
-          <div className="mb-1 flex items-center gap-2 rounded-lg border border-border bg-white px-2 py-1.5 text-xs">
+          <div
+            className={cn(
+              "mb-1 flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs",
+              isDarkTheme
+                ? "border-[#2a3942] bg-[#2a3942] text-[#e9edef]"
+                : "border-border bg-white",
+            )}
+          >
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-foreground">{attachment.name}</p>
-              <p className="text-muted">
+              <p
+                className={cn(
+                  "truncate font-medium",
+                  isDarkTheme ? "text-[#e9edef]" : "text-foreground",
+                )}
+              >
+                {attachment.name}
+              </p>
+              <p className={isDarkTheme ? "text-[#8696a0]" : "text-muted"}>
                 {attachment.type || "file"} · {formatAttachmentSize(attachment.size)}
                 {uploadProgress !== null ? ` · ${uploadProgress}%` : ""}
               </p>
@@ -397,13 +610,18 @@ export function InboxChatPanel({
                 setAttachmentError(null);
                 setUploadProgress(null);
               }}
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-hero-bg disabled:opacity-40"
+              className={cn(
+                "inline-flex size-8 shrink-0 items-center justify-center rounded-full disabled:opacity-40",
+                isDarkTheme
+                  ? "text-[#aebac1] hover:bg-[#182229]"
+                  : "text-muted hover:bg-hero-bg",
+              )}
             >
               <X className="size-4" />
             </button>
           </div>
         ) : null}
-        <div className="relative flex items-end gap-1">
+        <div className="relative flex min-w-0 items-center gap-0.5 @min-[28rem]/inbox-chat:gap-1">
           <input
             ref={fileInputRef}
             type="file"
@@ -421,9 +639,14 @@ export function InboxChatPanel({
             aria-label="Attach file"
             disabled={sending || !conversation.canSendFreeForm}
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-[#54656f] hover:bg-white disabled:cursor-not-allowed"
+            className={cn(
+              "inline-flex size-9 shrink-0 items-center justify-center rounded-full disabled:cursor-not-allowed @min-[28rem]/inbox-chat:size-10",
+              isDarkTheme
+                ? "text-[#aebac1] hover:bg-[#2a3942]"
+                : "text-[#54656f] hover:bg-white",
+            )}
           >
-            <Paperclip className="size-6" strokeWidth={1.75} />
+            <Paperclip className="size-5 @min-[28rem]/inbox-chat:size-6" strokeWidth={1.75} />
           </button>
           <label htmlFor={inputId} className="sr-only">
             Type a message
@@ -437,13 +660,23 @@ export function InboxChatPanel({
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             disabled={sending || !conversation.canSendFreeForm}
-            className="max-h-24 min-h-10 flex-1 resize-none rounded-lg border-0 bg-white px-3 py-2 text-sm text-[#111b21] outline-none placeholder:text-[#667781] disabled:opacity-60 sm:max-h-28"
+            className={cn(
+              "max-h-24 min-h-9 min-w-0 flex-1 resize-none rounded-lg border-0 px-3 py-2 text-sm outline-none disabled:opacity-60 @min-[28rem]/inbox-chat:min-h-10 @min-[28rem]/inbox-chat:max-h-28",
+              isDarkTheme
+                ? "bg-[#2a3942] text-[#e9edef] placeholder:text-[#8696a0]"
+                : "bg-white text-[#111b21] placeholder:text-[#667781]",
+            )}
           />
           <div>
             {emojiOpen ? (
               <div
                 id={emojiPanelId}
-                className="absolute bottom-full left-2 z-30 mb-2 w-[min(20rem,calc(100%-1rem))] overflow-hidden rounded-xl border border-[#e9edef] bg-white shadow-lg [--epr-category-icon-active-color:#00a884] [--epr-highlight-color:#00a884] [--epr-hover-bg-color:#f0f2f5] [--epr-focus-bg-color:#e7fce3]"
+                className={cn(
+                  "absolute bottom-full left-2 z-30 mb-2 w-[min(20rem,calc(100%-1rem))] overflow-hidden rounded-xl border shadow-lg [--epr-category-icon-active-color:#00a884] [--epr-highlight-color:#00a884]",
+                  isDarkTheme
+                    ? "border-[#2a3942] bg-[#202c33] [--epr-bg-color:#202c33] [--epr-category-label-bg-color:#202c33] [--epr-text-color:#e9edef] [--epr-hover-bg-color:#2a3942] [--epr-focus-bg-color:#005c4b] [--epr-search-input-bg-color:#2a3942]"
+                    : "border-[#e9edef] bg-white [--epr-hover-bg-color:#f0f2f5] [--epr-focus-bg-color:#e7fce3]",
+                )}
               >
                 <Suspense
                   fallback={
@@ -458,6 +691,7 @@ export function InboxChatPanel({
                     height={320}
                     lazyLoadEmojis
                     previewConfig={{ showPreview: false }}
+                    theme={isDarkTheme ? "dark" : "light"}
                   />
                 </Suspense>
               </div>
@@ -470,18 +704,81 @@ export function InboxChatPanel({
               disabled={sending || !conversation.canSendFreeForm}
               onClick={() => setEmojiOpen((open) => !open)}
               className={cn(
-                "inline-flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white disabled:cursor-not-allowed",
-                emojiOpen ? "text-[#00a884]" : "text-[#54656f]",
+                "inline-flex size-9 shrink-0 items-center justify-center rounded-full disabled:cursor-not-allowed @min-[28rem]/inbox-chat:size-10",
+                isDarkTheme ? "hover:bg-[#2a3942]" : "hover:bg-white",
+                emojiOpen
+                  ? "text-[#00a884]"
+                  : isDarkTheme
+                    ? "text-[#aebac1]"
+                    : "text-[#54656f]",
               )}
             >
-              <Smile className="size-6" strokeWidth={1.75} />
+              <Smile className="size-5 @min-[28rem]/inbox-chat:size-6" strokeWidth={1.75} />
+            </button>
+          </div>
+          <div className="relative shrink-0">
+            {draftLanguageMenuOpen ? (
+              <div
+                className={cn(
+                  "absolute bottom-full right-0 z-30 mb-2 w-44 overflow-hidden rounded-lg border shadow-lg",
+                  isDarkTheme
+                    ? "border-[#2a3942] bg-[#202c33]"
+                    : "border-[#e9edef] bg-white",
+                )}
+                role="menu"
+                aria-label="Recipient language"
+              >
+                {INBOX_TRANSLATION_LANGUAGE_OPTIONS.map((option) => (
+                  <button
+                    key={option.code}
+                    type="button"
+                    role="menuitem"
+                    className={cn(
+                      "flex w-full px-3 py-2 text-left text-xs hover:bg-[#f0f2f5]",
+                      isDarkTheme && "hover:bg-[#2a3942]",
+                    )}
+                    onClick={() => void translateDraft(option.code)}
+                  >
+                    {option.nativeLabel}
+                    <span className="ml-auto text-[10px] text-muted">
+                      {option.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              aria-label="Translate draft to recipient language"
+              disabled={
+                sending ||
+                !conversation.canSendFreeForm ||
+                draftTranslateBusy ||
+                !draft.trim() ||
+                Boolean(attachment)
+              }
+              onClick={() => void translateDraft()}
+              className={cn(
+                "inline-flex size-9 shrink-0 items-center justify-center rounded-full disabled:cursor-not-allowed @min-[40rem]/inbox-chat:h-9 @min-[40rem]/inbox-chat:w-auto @min-[40rem]/inbox-chat:gap-1 @min-[40rem]/inbox-chat:px-2 @min-[40rem]/inbox-chat:text-xs @min-[40rem]/inbox-chat:font-medium",
+                isDarkTheme
+                  ? "text-[#aebac1] hover:bg-[#2a3942] disabled:opacity-50"
+                  : "text-[#54656f] hover:bg-white disabled:opacity-50",
+                draftMode === "translated" && "text-[#00a884]",
+              )}
+            >
+              {draftTranslateBusy ? (
+                <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Languages className="size-4" aria-hidden="true" />
+              )}
+              <span className="hidden @min-[40rem]/inbox-chat:inline">Translate</span>
             </button>
           </div>
           <button
             type="submit"
             disabled={!canSend}
             aria-label="Send message"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white transition enabled:hover:bg-[#008069] disabled:cursor-not-allowed"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white transition enabled:hover:bg-[#008069] disabled:cursor-not-allowed @min-[28rem]/inbox-chat:size-10"
           >
             <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
               <path
@@ -535,13 +832,6 @@ function accountBadgeVariant(
   return "default";
 }
 
-function serviceWindowMessageShort(conversation: WhatsAppInboxConversation): string {
-  if (conversation.serviceWindow === "expired") {
-    return "Reply window closed. The customer must message again.";
-  }
-  return "Replies open after this customer messages you on WhatsApp.";
-}
-
 function serviceWindowMessage(conversation: WhatsAppInboxConversation): string {
   if (conversation.serviceWindow === "expired" && conversation.lastInboundAt) {
     const when = formatInboxTimestamp(conversation.lastInboundAt);
@@ -578,9 +868,17 @@ function StatusTicks({ status }: { status: WhatsAppInboxMessage["status"] }) {
 function MessageContent({
   conversationId,
   message,
+  translation,
+  showOriginal,
+  onToggleOriginal,
+  onRetryTranslation,
 }: {
   conversationId: string;
   message: WhatsAppInboxMessage;
+  translation: (InboxMessageTranslationItem & { loading?: boolean }) | null;
+  showOriginal: boolean;
+  onToggleOriginal: () => void;
+  onRetryTranslation: () => void;
 }) {
   const isMedia = ["image", "document", "audio", "video"].includes(message.messageType);
   const hideBody =
@@ -597,7 +895,13 @@ function MessageContent({
         <InboxMedia conversationId={conversationId} message={message} />
       ) : null}
       {message.body && !hideBody ? (
-        <p className="whitespace-pre-wrap break-words">{message.body}</p>
+        <InboxTranslatedBody
+          originalBody={message.body}
+          translation={translation}
+          showOriginal={showOriginal}
+          onToggleOriginal={onToggleOriginal}
+          onRetry={onRetryTranslation}
+        />
       ) : null}
     </div>
   );
@@ -667,6 +971,17 @@ function InboxMedia({
   if (message.messageType === "video" && previewUrl) {
     return (
       <video src={previewUrl} controls className="max-h-64 max-w-full rounded-md" />
+    );
+  }
+
+  if (message.messageType === "audio") {
+    return (
+      <InboxVoiceMessagePlayer
+        conversationId={conversationId}
+        messageId={message.id}
+        mediaMimeType={message.mediaMimeType}
+        outbound={message.direction === "outbound"}
+      />
     );
   }
 

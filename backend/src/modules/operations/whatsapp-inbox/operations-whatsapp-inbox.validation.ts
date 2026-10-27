@@ -1,9 +1,18 @@
 import { z } from "zod";
+import {
+  INBOX_TRANSLATE_DRAFT_MAX,
+  INBOX_TRANSLATE_MESSAGE_BATCH_MAX,
+  INBOX_TRANSLATION_LANGUAGES,
+  INBOX_VIEW_LANGUAGES,
+} from "./inbox-translation.constants.js";
 
 const objectId = z
   .string()
   .trim()
   .regex(/^[a-fA-F0-9]{24}$/, "Invalid conversation id.");
+
+const inboxTranslationLanguageSchema = z.enum(INBOX_TRANSLATION_LANGUAGES);
+const inboxViewLanguageSchema = z.enum(INBOX_VIEW_LANGUAGES);
 
 export const listWhatsAppInboxConversationsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -64,4 +73,28 @@ export const sendWhatsAppInboxMessageBodySchema = z.object({
     .regex(/^[a-zA-Z0-9_-]*$/, "Invalid client message id.")
     .optional()
     .default(""),
+});
+
+export const setWhatsAppInboxViewLanguageBodySchema = z.object({
+  language: inboxViewLanguageSchema,
+});
+
+export const translateWhatsAppInboxMessagesBodySchema = z.object({
+  targetLanguage: inboxTranslationLanguageSchema,
+  messageIds: z
+    .array(objectId)
+    .min(1, "Select at least one message.")
+    .max(
+      INBOX_TRANSLATE_MESSAGE_BATCH_MAX,
+      `Translate at most ${INBOX_TRANSLATE_MESSAGE_BATCH_MAX} messages at a time.`,
+    ),
+});
+
+export const translateWhatsAppInboxDraftBodySchema = z.object({
+  text: z
+    .string()
+    .trim()
+    .min(1, "Draft text is required.")
+    .max(INBOX_TRANSLATE_DRAFT_MAX, "Draft is too long."),
+  targetLanguage: inboxTranslationLanguageSchema.optional(),
 });

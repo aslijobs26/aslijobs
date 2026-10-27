@@ -1,5 +1,11 @@
 import { apiClient } from "./api-client";
 import type {
+  InboxDraftTranslateResult,
+  InboxMessageTranslationsResult,
+  InboxRecipientLanguageResult,
+  InboxTranslationLanguageCode,
+  InboxViewLanguageCode,
+  InboxViewLanguageResult,
   WhatsAppInboxContactDetails,
   WhatsAppInboxContactsResult,
   WhatsAppInboxConversation,
@@ -165,4 +171,63 @@ export async function fetchWhatsAppInboxMedia(
     { responseType: "blob" },
   );
   return response.data;
+}
+
+export async function fetchWhatsAppInboxViewLanguage(
+  conversationId: string,
+): Promise<InboxViewLanguageResult> {
+  const response = await apiClient.get<{ data: InboxViewLanguageResult }>(
+    `${BASE}/conversations/${conversationId}/view-language`,
+  );
+  return response.data.data;
+}
+
+export async function setWhatsAppInboxViewLanguage(input: {
+  conversationId: string;
+  language: InboxViewLanguageCode;
+}): Promise<InboxViewLanguageResult> {
+  const response = await apiClient.put<{ data: InboxViewLanguageResult }>(
+    `${BASE}/conversations/${input.conversationId}/view-language`,
+    { language: input.language },
+  );
+  return response.data.data;
+}
+
+export async function fetchWhatsAppInboxRecipientLanguage(
+  conversationId: string,
+): Promise<InboxRecipientLanguageResult> {
+  const response = await apiClient.get<{ data: InboxRecipientLanguageResult }>(
+    `${BASE}/conversations/${conversationId}/recipient-language`,
+  );
+  return response.data.data;
+}
+
+export async function translateWhatsAppInboxMessages(input: {
+  conversationId: string;
+  targetLanguage: InboxTranslationLanguageCode;
+  messageIds: string[];
+}): Promise<InboxMessageTranslationsResult> {
+  const response = await apiClient.post<{ data: InboxMessageTranslationsResult }>(
+    `${BASE}/conversations/${input.conversationId}/translations`,
+    {
+      targetLanguage: input.targetLanguage,
+      messageIds: input.messageIds,
+    },
+  );
+  return response.data.data;
+}
+
+export async function translateWhatsAppInboxDraft(input: {
+  conversationId: string;
+  text: string;
+  targetLanguage?: InboxTranslationLanguageCode;
+}): Promise<InboxDraftTranslateResult> {
+  const response = await apiClient.post<{ data: InboxDraftTranslateResult }>(
+    `${BASE}/conversations/${input.conversationId}/draft-translate`,
+    {
+      text: input.text,
+      targetLanguage: input.targetLanguage,
+    },
+  );
+  return response.data.data;
 }

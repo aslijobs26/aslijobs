@@ -9,6 +9,7 @@ import { resolveEmployerPosterImageUrl } from "../../employers/employer-poster-i
 import { buildOperationsCandidatePhotoPath } from "../candidates/operations-candidates.service.js";
 import {
   employerInboxName,
+  resolveEmployerInboxIdentity,
   registeredAccountStatusLabel,
 } from "../../whatsapp/inbox/whatsapp-inbox-identity.js";
 import { ensureWhatsAppInboxBackfill } from "../../whatsapp/inbox/whatsapp-inbox-backfill.js";
@@ -389,11 +390,16 @@ export const operationsWhatsAppInboxService = {
       : [];
 
     const seekerName = seeker?.fullName?.trim() || "";
-    const employerName = employer ? employerInboxName(employer) : "";
-    const displayName =
-      conversation.displayName ||
-      [employerName, seekerName].filter(Boolean).join(" · ") ||
-      conversation.phoneNational;
+    const employerIdentity = employer
+      ? resolveEmployerInboxIdentity(employer)
+      : { primaryName: "", secondaryName: "" };
+    const displayName = employer && !seeker
+      ? employerIdentity.primaryName ||
+        conversation.displayName ||
+        conversation.phoneNational
+      : conversation.displayName ||
+        [employerIdentity.primaryName, seekerName].filter(Boolean).join(" · ") ||
+        conversation.phoneNational;
     const seekerAvatar = seeker
       ? seekerPhotoPath(String(seeker._id), seeker.profilePhoto)
       : "";
@@ -409,10 +415,7 @@ export const operationsWhatsAppInboxService = {
         Boolean(part) && all.indexOf(part) === index,
       )
       .join(", ");
-    const contactPerson = [employer?.firstName, employer?.lastName]
-      .map((part) => part?.trim())
-      .filter(Boolean)
-      .join(" ");
+    const contactPerson = employerIdentity.secondaryName;
 
     const kind = seeker && employer
       ? ("both" as const)
@@ -425,6 +428,8 @@ export const operationsWhatsAppInboxService = {
     return {
       kind,
       displayName,
+      secondaryDisplayName:
+        contactPerson || conversation.secondaryDisplayName || "",
       phoneDisplay,
       phoneNational: conversation.phoneNational,
       profileId: seeker
@@ -765,6 +770,7 @@ function serializeConversation(
     _id: Types.ObjectId;
     phoneNational: string;
     displayName?: string;
+    secondaryDisplayName?: string;
     participantType: WhatsAppInboxParticipantType;
     jobSeekerId?: Types.ObjectId | null;
     employerId?: Types.ObjectId | null;
@@ -782,6 +788,7 @@ function serializeConversation(
     phoneNational: conversation.phoneNational,
     phoneDisplay: formatDisplayPhone(conversation.phoneNational),
     displayName: conversation.displayName || conversation.phoneNational,
+    secondaryDisplayName: conversation.secondaryDisplayName?.trim() || "",
     participantType: conversation.participantType,
     participantLabel: roleLabel(conversation.participantType),
     filterType: primaryFilterType(conversation.participantType),

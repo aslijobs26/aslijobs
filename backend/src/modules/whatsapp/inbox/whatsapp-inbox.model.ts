@@ -62,6 +62,11 @@ const conversationSchema = new Schema(
       index: true,
     },
     displayName: { type: String, trim: true, default: "" },
+    /**
+     * Contact person for company/consultancy employer threads.
+     * Empty for individuals, job seekers, and ambiguous numbers.
+     */
+    secondaryDisplayName: { type: String, trim: true, default: "" },
     jobSeekerId: {
       type: Schema.Types.ObjectId,
       ref: "JobSeeker",

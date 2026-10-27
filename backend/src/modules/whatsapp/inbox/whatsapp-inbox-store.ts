@@ -4,8 +4,8 @@ import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
 import { nationalPhone } from "../whatsapp-bot.logic.js";
 import {
   combinedInboxDisplayName,
-  employerInboxName,
   phoneLookupVariants,
+  resolveEmployerInboxIdentity,
   seekerInboxName,
 } from "./whatsapp-inbox-identity.js";
 import { sanitizeWhatsAppErrorDetail } from "../whatsapp.service.js";
@@ -61,6 +61,7 @@ function participantFromMatches(
 ): {
   participantType: WhatsAppInboxParticipantType;
   displayName: string;
+  secondaryDisplayName: string;
   jobSeekerId: Types.ObjectId | null;
   employerId: Types.ObjectId | null;
 } {
@@ -68,7 +69,10 @@ function participantFromMatches(
   const employer = employers.length === 1 ? employers[0] : null;
   const ambiguous = seekers.length > 1 || employers.length > 1;
   const seekerName = seeker ? seekerInboxName(seeker.fullName) : "";
-  const employerName = employer ? employerInboxName(employer) : "";
+  const employerIdentity = employer
+    ? resolveEmployerInboxIdentity(employer)
+    : { primaryName: "", secondaryName: "" };
+  const employerName = employerIdentity.primaryName;
 
   let participantType: WhatsAppInboxParticipantType = "unknown";
   if (!ambiguous && seeker && employer) participantType = "both";
@@ -83,6 +87,7 @@ function participantFromMatches(
       seekerName,
       phoneNational,
     }),
+    secondaryDisplayName: ambiguous ? "" : employerIdentity.secondaryName,
     jobSeekerId: ambiguous ? null : toObjectIdOrNull(seeker?._id),
     employerId: ambiguous ? null : toObjectIdOrNull(employer?._id),
   };
@@ -105,6 +110,7 @@ function groupAccountsByPhone<T extends { whatsappNumber?: string }>(
 async function resolveParticipant(phoneNational: string): Promise<{
   participantType: WhatsAppInboxParticipantType;
   displayName: string;
+  secondaryDisplayName: string;
   jobSeekerId: Types.ObjectId | null;
   employerId: Types.ObjectId | null;
 }> {
@@ -157,6 +163,7 @@ export async function hydrateInboxConversations(phoneNationals: string[]) {
         $set: {
           participantType: WhatsAppInboxParticipantType;
           displayName: string;
+          secondaryDisplayName: string;
           jobSeekerId: Types.ObjectId | null;
           employerId: Types.ObjectId | null;
         };
@@ -173,12 +180,14 @@ export async function hydrateInboxConversations(phoneNationals: string[]) {
     const changed =
       conversation.participantType !== resolved.participantType ||
       conversation.displayName !== resolved.displayName ||
+      (conversation.secondaryDisplayName ?? "") !== resolved.secondaryDisplayName ||
       String(conversation.jobSeekerId ?? "") !== String(resolved.jobSeekerId ?? "") ||
       String(conversation.employerId ?? "") !== String(resolved.employerId ?? "");
     if (!changed) continue;
 
     conversation.participantType = resolved.participantType;
     conversation.displayName = resolved.displayName;
+    conversation.secondaryDisplayName = resolved.secondaryDisplayName;
     conversation.jobSeekerId = resolved.jobSeekerId;
     conversation.employerId = resolved.employerId;
     updates.push({
@@ -188,6 +197,7 @@ export async function hydrateInboxConversations(phoneNationals: string[]) {
           $set: {
             participantType: resolved.participantType,
             displayName: resolved.displayName,
+            secondaryDisplayName: resolved.secondaryDisplayName,
             jobSeekerId: resolved.jobSeekerId,
             employerId: resolved.employerId,
           },
@@ -229,11 +239,13 @@ export async function ensureInboxConversation(phoneNational: string) {
     const needsUpdate =
       existing.participantType !== resolved.participantType ||
       existing.displayName !== resolved.displayName ||
+      (existing.secondaryDisplayName ?? "") !== resolved.secondaryDisplayName ||
       String(existing.jobSeekerId ?? "") !== String(resolved.jobSeekerId ?? "") ||
       String(existing.employerId ?? "") !== String(resolved.employerId ?? "");
     if (needsUpdate) {
       existing.participantType = resolved.participantType;
       existing.displayName = resolved.displayName;
+      existing.secondaryDisplayName = resolved.secondaryDisplayName;
       existing.jobSeekerId = resolved.jobSeekerId;
       existing.employerId = resolved.employerId;
       await existing.save();
@@ -246,6 +258,7 @@ export async function ensureInboxConversation(phoneNational: string) {
     phoneNational: phone,
     participantType: resolved.participantType,
     displayName: resolved.displayName,
+    secondaryDisplayName: resolved.secondaryDisplayName,
     jobSeekerId: resolved.jobSeekerId,
     employerId: resolved.employerId,
   });

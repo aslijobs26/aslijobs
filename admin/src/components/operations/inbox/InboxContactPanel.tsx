@@ -87,6 +87,12 @@ function ContactIdentity({
   loading: boolean;
 }) {
   const name = contact?.displayName || conversation.displayName;
+  const secondaryName = (
+    contact?.contactPerson ||
+    contact?.secondaryDisplayName ||
+    conversation.secondaryDisplayName ||
+    ""
+  ).trim();
   const phone = contact?.phoneDisplay || conversation.phoneDisplay;
   const seekerId = contact?.jobSeekerId || null;
   const employerId = contact?.employerId || null;
@@ -109,7 +115,15 @@ function ContactIdentity({
         avatarUrl={contact?.avatarUrl}
         jobSeekerId={seekerId}
       />
-      <p className="mt-3 text-lg font-semibold text-foreground">{name}</p>
+      <p className="mt-3 max-w-full break-words text-lg font-semibold text-foreground">
+        {name}
+      </p>
+      {secondaryName &&
+      secondaryName.toLowerCase() !== name.trim().toLowerCase() ? (
+        <p className="mt-1 max-w-full break-words text-sm font-normal text-muted">
+          {secondaryName}
+        </p>
+      ) : null}
       <OperationsBadge
         className="mt-2 gap-1"
         variant={

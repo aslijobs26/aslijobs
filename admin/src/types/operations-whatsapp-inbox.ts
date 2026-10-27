@@ -23,6 +23,8 @@ export interface WhatsAppInboxConversation {
   phoneNational: string;
   phoneDisplay: string;
   displayName: string;
+  /** Contact person for company/consultancy employers. Empty for individuals. */
+  secondaryDisplayName?: string;
   participantType: WhatsAppInboxParticipantType;
   participantLabel: string;
   filterType: "job_seeker" | "employer" | "unknown";
@@ -71,6 +73,7 @@ export interface WhatsAppInboxMessagesResult {
 export interface WhatsAppInboxContactDetails {
   kind: "job_seeker" | "employer" | "both" | "unknown";
   displayName: string;
+  secondaryDisplayName?: string;
   phoneDisplay: string;
   phoneNational: string;
   profileId: string | null;
@@ -133,4 +136,54 @@ export interface WhatsAppInboxListParams {
   limit: number;
   search: string;
   participantType: WhatsAppInboxFilterType;
+}
+
+export type InboxTranslationLanguageCode =
+  | "en"
+  | "hi"
+  | "te"
+  | "ta"
+  | "kn"
+  | "ml";
+
+export type InboxViewLanguageCode = InboxTranslationLanguageCode | "original";
+
+export type InboxMessageTranslationStatus =
+  | "ready"
+  | "same_language"
+  | "skipped"
+  | "failed";
+
+export interface InboxMessageTranslationItem {
+  messageId: string;
+  targetLanguage: InboxTranslationLanguageCode;
+  status: InboxMessageTranslationStatus;
+  translatedText: string | null;
+  sourceLanguage: InboxTranslationLanguageCode | null;
+  cached: boolean;
+  errorCode?: string;
+}
+
+export interface InboxMessageTranslationsResult {
+  items: InboxMessageTranslationItem[];
+}
+
+export interface InboxViewLanguageResult {
+  language: InboxViewLanguageCode;
+}
+
+export interface InboxRecipientLanguageResult {
+  language: InboxTranslationLanguageCode | null;
+  source: "job_seeker" | "session" | "default" | "unknown";
+  needsSelection: boolean;
+}
+
+export interface InboxDraftTranslateResult {
+  translatedText: string;
+  targetLanguage: InboxTranslationLanguageCode;
+  sourceLanguage: InboxTranslationLanguageCode;
+  skipped: boolean;
+  failed: boolean;
+  needsSelection: boolean;
+  errorCode?: string;
 }
