@@ -20,6 +20,13 @@ describe("job seeker preferred language", () => {
       preferredLanguage: "telugu",
     });
     assert.equal(telugu.preferredLanguage, "te");
+
+    const malayalam = registerJobSeekerSchema.parse({
+      fullName: "Ravi Kumar",
+      whatsappNumber: "9876543210",
+      preferredLanguage: "malayalam",
+    });
+    assert.equal(malayalam.preferredLanguage, "ml");
   });
 
   it("omits preferredLanguage when the user did not select one", () => {

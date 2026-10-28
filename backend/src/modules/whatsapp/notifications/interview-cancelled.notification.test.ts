@@ -262,8 +262,8 @@ describe("interview_cancelled scheduling", () => {
     assert.equal(queued[0]?.urlButtonParameters, undefined);
   });
 
-  it("keeps Tamil and Kannada preferences on cancelled interview notifications", async () => {
-    for (const language of ["ta", "kn"] as const) {
+  it("keeps Tamil, Kannada, and Malayalam preferences on cancelled interview notifications", async () => {
+    for (const language of ["ta", "kn", "ml"] as const) {
       mock.restoreAll();
       const { queued } = installSchedulingMocks({
         seeker: {

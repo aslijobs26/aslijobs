@@ -284,8 +284,8 @@ describe("interview_scheduled_offline scheduling", () => {
     assert.equal(offlineQueued[0]?.urlButtonParameters, undefined);
   });
 
-  it("keeps Tamil and Kannada preferences on offline interview notifications", async () => {
-    for (const language of ["ta", "kn"] as const) {
+  it("keeps Tamil, Kannada, and Malayalam preferences on offline interview notifications", async () => {
+    for (const language of ["ta", "kn", "ml"] as const) {
       mock.restoreAll();
       const { offlineQueued } = installSchedulingMocks({
         seeker: {

@@ -94,6 +94,31 @@ describe("whatsapp inbox template rendering", () => {
     assert.equal(rendered.includes("{{"), false);
   });
 
+  it("adds the Malayalam interview method only for the Malayalam online template", () => {
+    assert.deepEqual(
+      historicalBodyParameters({
+        event: "INTERVIEW_SCHEDULED_ONLINE",
+        jobTitle: "Welder",
+        companyName: "Northwind",
+        interviewDate: "2026-12-30",
+        interviewTime: "11:00",
+        language: "ml",
+      }),
+      ["Welder", "Northwind", "30 December 2026", "11:00 AM", "ഓൺലൈൻ"],
+    );
+    assert.deepEqual(
+      historicalBodyParameters({
+        event: "INTERVIEW_SCHEDULED_PHONE",
+        jobTitle: "Welder",
+        companyName: "Northwind",
+        interviewDate: "2026-12-30",
+        interviewTime: "11:00",
+        language: "en",
+      }),
+      ["Welder", "Northwind", "30 December 2026", "11:00 AM"],
+    );
+  });
+
   it("keeps the approved account-created wording when the template has no variables", () => {
     assert.equal(
       presentWhatsAppTemplateText({

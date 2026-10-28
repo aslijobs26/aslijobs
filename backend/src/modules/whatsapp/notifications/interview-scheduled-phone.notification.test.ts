@@ -275,8 +275,8 @@ describe("interview_scheduled_phone WhatsApp", () => {
     assert.equal(phoneQueued[0]?.interviewTime, "11:00 AM");
   });
 
-  it("queues Tamil and Kannada phone interviews from the saved preference", async () => {
-    for (const language of ["ta", "kn"] as const) {
+  it("queues Tamil, Kannada, and Malayalam phone interviews from the saved preference", async () => {
+    for (const language of ["ta", "kn", "ml"] as const) {
       mock.restoreAll();
       const { phoneQueued, onlineQueued } = installPhoneMocks(language);
       await applicationService.updateInterviewForEmployer({

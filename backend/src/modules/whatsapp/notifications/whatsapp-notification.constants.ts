@@ -46,6 +46,7 @@ export const WHATSAPP_TEMPLATE_LANGUAGE_TELUGU = "te";
 export const WHATSAPP_TEMPLATE_LANGUAGE_HINDI = "hi";
 export const WHATSAPP_TEMPLATE_LANGUAGE_TAMIL = "ta";
 export const WHATSAPP_TEMPLATE_LANGUAGE_KANNADA = "kn";
+export const WHATSAPP_TEMPLATE_LANGUAGE_MALAYALAM = "ml";
 
 export type WhatsAppNotificationTemplateConfig = {
   /** English Meta template name. Never rename existing English templates. */
@@ -60,8 +61,9 @@ export type WhatsAppNotificationTemplateConfig = {
   >;
   /**
    * Site language -> distinct approved Meta template name.
-   * Telugu and Hindi use `_te` and `_hi`. Tamil uses `_ta`. Kannada uses `_ka`
-   * with Meta language `kn`, not a `_kn` name. Those are distinct template names.
+ * Telugu and Hindi use `_te` and `_hi`. Tamil uses `_ta`. Kannada uses `_ka`
+ * with Meta language `kn`, not a `_kn` name. Malayalam uses `_ml` with Meta
+ * language `ml`. Those are distinct template names.
    */
   localizedTemplateNames?: Partial<
     Record<WhatsAppNotificationSiteLanguage, string>
@@ -100,12 +102,14 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
       hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
       ta: WHATSAPP_TEMPLATE_LANGUAGE_TAMIL,
       kn: WHATSAPP_TEMPLATE_LANGUAGE_KANNADA,
+      ml: WHATSAPP_TEMPLATE_LANGUAGE_MALAYALAM,
     },
     localizedTemplateNames: {
       te: "jobseeker_account_created_te",
       hi: "jobseeker_account_created_hi",
       ta: "jobseeker_account_created_ta",
       kn: "jobseeker_account_created_ka",
+      ml: "jobseeker_account_created_ml",
     },
   },
   JOBSEEKER_PROFILE_COMPLETION: {
@@ -121,12 +125,14 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
       hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
       ta: WHATSAPP_TEMPLATE_LANGUAGE_TAMIL,
       kn: WHATSAPP_TEMPLATE_LANGUAGE_KANNADA,
+      ml: WHATSAPP_TEMPLATE_LANGUAGE_MALAYALAM,
     },
     localizedTemplateNames: {
       te: "jobseeker_profile_completion_te",
       hi: "jobseeker_profile_completion_hi",
       ta: "jobseeker_profile_completion_ta",
       kn: "jobseeker_profile_completion_ka",
+      ml: "jobseeker_profile_completion_ml",
     },
   },
   EMPLOYER_PROFILE_COMPLETION_REQUIRED: {
@@ -189,18 +195,22 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
       hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
       ta: WHATSAPP_TEMPLATE_LANGUAGE_TAMIL,
       kn: WHATSAPP_TEMPLATE_LANGUAGE_KANNADA,
+      ml: WHATSAPP_TEMPLATE_LANGUAGE_MALAYALAM,
     },
     localizedTemplateNames: {
       te: "job_application_submitted_te",
       hi: "job_application_submitted_hi",
       ta: "job_application_submitted_ta",
       kn: "job_application_submitted_ka",
+      ml: "job_application_submitted_ml",
     },
   },
   INTERVIEW_SCHEDULED_PHONE: {
     // Approved Utility. English name interview_scheduled_phone, language en.
     // Body matches interview_scheduled_online: {{1}} job title, {{2}} company,
-    // {{3}} date, {{4}} time. Interview type is static. No URL button.
+    // {{3}} date, {{4}} time. Interview type is static in English, Telugu,
+    // Hindi, Tamil, and Kannada. The approved Malayalam template makes that
+    // method {{5}}. No URL button.
     // Telugu uses a separate approved name, not this English name with language te.
     templateName: "interview_scheduled_phone",
     defaultLanguage: "en",
@@ -210,18 +220,21 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
       hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
       ta: WHATSAPP_TEMPLATE_LANGUAGE_TAMIL,
       kn: WHATSAPP_TEMPLATE_LANGUAGE_KANNADA,
+      ml: WHATSAPP_TEMPLATE_LANGUAGE_MALAYALAM,
     },
     localizedTemplateNames: {
       te: "interview_scheduled_phone_te",
       hi: "interview_scheduled_phone_hi",
       ta: "interview_scheduled_phone_ta",
       kn: "interview_scheduled_phone_ka",
+      ml: "interview_scheduled_phone_ml",
     },
   },
   INTERVIEW_SCHEDULED_ONLINE: {
     // Graph-confirmed APPROVED Utility, language en.
     // Body {{1}} job title, {{2}} company, {{3}} date, {{4}} time.
-    // Interview Type is static text. There is no URL button.
+    // Interview Type is static text except on the approved Malayalam template,
+    // where the method is {{5}}. There is no URL button.
     templateName: "interview_scheduled_online",
     defaultLanguage: "en",
     approvedLanguages: {
@@ -230,12 +243,14 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
       hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
       ta: WHATSAPP_TEMPLATE_LANGUAGE_TAMIL,
       kn: WHATSAPP_TEMPLATE_LANGUAGE_KANNADA,
+      ml: WHATSAPP_TEMPLATE_LANGUAGE_MALAYALAM,
     },
     localizedTemplateNames: {
       te: "interview_scheduled_online_te",
       hi: "interview_scheduled_online_hi",
       ta: "interview_scheduled_online_ta",
       kn: "interview_scheduled_online_ka",
+      ml: "interview_scheduled_online_ml",
     },
   },
   INTERVIEW_SCHEDULED_OFFLINE: {
@@ -250,12 +265,14 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
       hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
       ta: WHATSAPP_TEMPLATE_LANGUAGE_TAMIL,
       kn: WHATSAPP_TEMPLATE_LANGUAGE_KANNADA,
+      ml: WHATSAPP_TEMPLATE_LANGUAGE_MALAYALAM,
     },
     localizedTemplateNames: {
       te: "interview_scheduled_offline_te",
       hi: "interview_scheduled_offline_hi",
       ta: "interview_scheduled_offline_ta",
       kn: "interview_scheduled_offline_ka",
+      ml: "interview_scheduled_offline_ml",
     },
   },
   INTERVIEW_RESCHEDULED: {
@@ -270,12 +287,14 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
       hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
       ta: WHATSAPP_TEMPLATE_LANGUAGE_TAMIL,
       kn: WHATSAPP_TEMPLATE_LANGUAGE_KANNADA,
+      ml: WHATSAPP_TEMPLATE_LANGUAGE_MALAYALAM,
     },
     localizedTemplateNames: {
       te: "interview_rescheduled_te",
       hi: "interview_rescheduled_hi",
       ta: "interview_rescheduled_ta",
       kn: "interview_rescheduled_ka",
+      ml: "interview_rescheduled_ml",
     },
   },
   INTERVIEW_CANCELLED: {
@@ -290,12 +309,14 @@ export const WHATSAPP_NOTIFICATION_TEMPLATES: Partial<
       hi: WHATSAPP_TEMPLATE_LANGUAGE_HINDI,
       ta: WHATSAPP_TEMPLATE_LANGUAGE_TAMIL,
       kn: WHATSAPP_TEMPLATE_LANGUAGE_KANNADA,
+      ml: WHATSAPP_TEMPLATE_LANGUAGE_MALAYALAM,
     },
     localizedTemplateNames: {
       te: "interview_cancelled_te",
       hi: "interview_cancelled_hi",
       ta: "interview_cancelled_ta",
       kn: "interview_cancelled_ka",
+      ml: "interview_cancelled_ml",
     },
   },
   JOB_POST_INCOMPLETE: {

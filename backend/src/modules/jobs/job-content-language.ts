@@ -36,6 +36,7 @@ const SITE_LANGUAGE_ALIASES: Record<string, JobContentLanguage> = {
   ml: "ml",
   malayalam: "ml",
   "ml-in": "ml",
+  ml_in: "ml",
 };
 
 /** Script detection. Latin text stays English; romanized Indic is not guessed. */

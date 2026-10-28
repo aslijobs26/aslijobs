@@ -276,6 +276,102 @@ describe("deliverWhatsAppNotificationJob", () => {
     ]);
   });
 
+  it("forwards a Malayalam online interview template without rewriting language or parameters", async () => {
+    const sent: Array<{ name: string; language: string; body: string[] }> = [];
+    mock.method(
+      WhatsAppService.prototype,
+      "sendTemplateMessage",
+      async (
+        _phone: string,
+        name: string,
+        language: string,
+        body: string[],
+      ) => {
+        sent.push({ name, language, body });
+        return { messageId: "wamid.ml", messageStatus: "accepted" };
+      },
+    );
+    mock.method(WhatsAppNotificationDispatchModel, "findOne", () => ({
+      select: () => ({
+        lean: async () => null,
+      }),
+    }));
+    mock.method(WhatsAppNotificationDispatchModel, "updateOne", async () => ({
+      acknowledged: true,
+    }));
+
+    await notificationQueue.deliverWhatsAppNotificationJob({
+      event: "INTERVIEW_SCHEDULED_ONLINE",
+      entityId: payload.entityId,
+      phoneNumber: payload.phoneNumber,
+      templateName: "interview_scheduled_online_ml",
+      languageCode: "ml",
+      bodyParameters: [
+        "Welder",
+        "Northwind Services",
+        "30 December 2026",
+        "11:00 AM",
+        "ഓൺലൈൻ",
+      ],
+      idempotencyKey: `INTERVIEW_SCHEDULED_ONLINE:${payload.entityId}`,
+    });
+
+    assert.deepEqual(sent, [
+      {
+        name: "interview_scheduled_online_ml",
+        language: "ml",
+        body: [
+          "Welder",
+          "Northwind Services",
+          "30 December 2026",
+          "11:00 AM",
+          "ഓൺലൈൻ",
+        ],
+      },
+    ]);
+  });
+
+  it("records a missing Malayalam template as a permanent failure", async () => {
+    const updates: Array<{ status?: string; failureClass?: string; messageId?: string }> = [];
+    mock.method(WhatsAppNotificationDispatchModel, "findOne", () => ({
+      select: () => ({
+        lean: async () => null,
+      }),
+    }));
+    mock.method(
+      WhatsAppNotificationDispatchModel,
+      "updateOne",
+      async (
+        _filter: unknown,
+        update: { $set?: { status?: string; failureClass?: string; messageId?: string } },
+      ) => {
+        updates.push(update.$set ?? {});
+        return { acknowledged: true };
+      },
+    );
+    mock.method(WhatsAppService.prototype, "sendTemplateMessage", async () => {
+      throw new WhatsAppTemplateDeliveryError({
+        status: 404,
+        metaCode: 132001,
+        detail: "Template name does not exist in the translation",
+      });
+    });
+
+    await notificationQueue.deliverWhatsAppNotificationJob({
+      event: "JOBSEEKER_ACCOUNT_CREATED",
+      entityId: payload.entityId,
+      phoneNumber: payload.phoneNumber,
+      templateName: "jobseeker_account_created_ml",
+      languageCode: "ml",
+      bodyParameters: [],
+      idempotencyKey: `JOBSEEKER_ACCOUNT_CREATED:${payload.entityId}:ml`,
+    });
+
+    assert.equal(updates.at(-1)?.status, "failed");
+    assert.equal(updates.at(-1)?.failureClass, "permanent");
+    assert.equal(updates.at(-1)?.messageId, undefined);
+  });
+
   it("does not send again when the dispatch was already marked sent", async () => {
     let sendCount = 0;
     mock.method(

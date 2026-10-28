@@ -647,6 +647,22 @@ describe("jobseeker profile completion reminder", () => {
         languageCode: "kn",
       },
     );
+
+    const malayalam = createDeps({
+      now,
+      dueAt: now,
+      seeker: { ...incompleteSeeker, whatsappLanguage: "ml" },
+    });
+    await processJobSeekerProfileCompletionReminder(jobSeekerId, malayalam.deps);
+    const malayalamJob = malayalam.enqueued[0] as { preferredLanguage: string };
+    assert.equal(malayalamJob.preferredLanguage, "ml");
+    assert.deepEqual(
+      resolveWhatsAppNotificationDelivery("JOBSEEKER_PROFILE_COMPLETION", "ml"),
+      {
+        templateName: "jobseeker_profile_completion_ml",
+        languageCode: "ml",
+      },
+    );
   });
 
   it("invalidates processing and queued reminders when registration completes", async () => {

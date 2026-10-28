@@ -469,6 +469,38 @@ describe("job application submitted WhatsApp", () => {
     assert.deepEqual(queued[0]?.bodyParameters, ["Electrician", "ABC Services"]);
   });
 
+  it("sends the Malayalam application template from the saved Job Seeker preference", async () => {
+    const { queued, payloads } = await applyAndQueue({
+      whatsappLanguage: "ml",
+    });
+    assert.equal(payloads[0]?.preferredLanguage, "ml");
+    assert.equal(queued[0]?.templateName, "job_application_submitted_ml");
+    assert.equal(queued[0]?.languageCode, "ml");
+    assert.notEqual(queued[0]?.languageCode, "ml-IN");
+    assert.deepEqual(queued[0]?.bodyParameters, ["Electrician", "ABC Services"]);
+  });
+
+  it("does not notify a Malayalam applicant who has no WhatsApp number", async () => {
+    const job = jobRecord();
+    let queued = 0;
+    stubApply(job, employerRecord(), {
+      whatsappLanguage: "ml",
+      whatsappNumber: "",
+    });
+    mock.method(jobApplicationSubmittedWhatsApp, "enqueue", async () => {
+      queued += 1;
+      return "queued" as const;
+    });
+
+    const result = await applicationService.applyToJob({
+      jobSeekerId,
+      publicJobId: job.jobId,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(result.application.publicJobId, job.jobId);
+    assert.equal(queued, 0);
+  });
+
   it("keeps a saved Kannada preference ahead of another language alias", async () => {
     const kannada = await applyAndQueue({ whatsappLanguage: "kannada" });
     assert.equal(kannada.payloads[0]?.preferredLanguage, "kn");

@@ -74,6 +74,7 @@ export type HistoricalTemplateParameterInput = {
   interviewDate?: string | null;
   interviewTime?: string | null;
   interviewVenue?: string | null;
+  language?: string | null;
 };
 
 export function recoverableEmployerName(
@@ -165,13 +166,17 @@ export function historicalBodyParameters(
     const interviewTime = formatInterviewScheduledTime(input.interviewTime ?? "");
     const interviewVenue = input.interviewVenue?.trim() ?? "";
     if (!interviewDate || !interviewTime) return null;
-    const built = buildParameters(event, {
-      jobTitle: input.jobTitle?.trim() ?? "",
-      companyName: input.companyName?.trim() ?? "",
-      interviewDate,
-      interviewTime,
-      interviewVenue,
-    });
+    const built = buildParameters(
+      event,
+      {
+        jobTitle: input.jobTitle?.trim() ?? "",
+        companyName: input.companyName?.trim() ?? "",
+        interviewDate,
+        interviewTime,
+        interviewVenue,
+      },
+      input.language,
+    );
     return built.length > 0 ? built : null;
   }
 
@@ -181,6 +186,7 @@ export function historicalBodyParameters(
 export async function loadHistoricalBodyParameters(input: {
   event: string;
   entityId: string;
+  language?: string | null;
 }): Promise<string[] | null> {
   if (!isNotificationEvent(input.event)) return null;
   const event = input.event;
@@ -193,7 +199,7 @@ export async function loadHistoricalBodyParameters(input: {
   }
 
   if (event === "JOB_APPLICATION_SUBMITTED" || INTERVIEW_EVENTS.has(event)) {
-    return loadApplicationParameters(event, entityId);
+    return loadApplicationParameters(event, entityId, input.language);
   }
 
   if (event === "EMPLOYER_ACCOUNT_APPROVED" || EMPLOYER_NAME_EVENTS.has(event)) {
@@ -229,6 +235,7 @@ export async function renderStoredDispatchForInbox(row: {
       loadHistoricalBodyParameters({
         event: row.event,
         entityId: row.entityId,
+        language: row.language,
       }),
   });
   if (resolved.renderedBody) {
@@ -263,13 +270,18 @@ export async function renderStoredDispatchForInbox(row: {
 function buildParameters(
   event: WhatsAppNotificationEvent,
   fields: Partial<WhatsAppNotificationPayload>,
+  language?: string | null,
 ): string[] {
-  return buildWhatsAppNotificationBodyParameters(event, {
+  return buildWhatsAppNotificationBodyParameters(
     event,
-    entityId: "historical",
-    phoneNumber: "0000000000",
-    ...fields,
-  });
+    {
+      event,
+      entityId: "historical",
+      phoneNumber: "0000000000",
+      ...fields,
+    },
+    language,
+  );
 }
 
 function isNotificationEvent(value: string): value is WhatsAppNotificationEvent {
@@ -286,6 +298,7 @@ async function findEmployer(id: string): Promise<EmployerNameSource | null> {
 async function loadApplicationParameters(
   event: WhatsAppNotificationEvent,
   entityId: string,
+  language?: string | null,
 ): Promise<string[] | null> {
   if (!mongoose.Types.ObjectId.isValid(entityId)) return null;
   const application = await ApplicationModel.findById(entityId)
@@ -312,6 +325,7 @@ async function loadApplicationParameters(
     interviewDate: interview.date ?? "",
     interviewTime: interview.time ?? "",
     interviewVenue: interview.venue ?? "",
+    language,
   });
 }
 

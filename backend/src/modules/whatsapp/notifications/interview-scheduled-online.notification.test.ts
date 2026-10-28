@@ -329,8 +329,8 @@ describe("interview_scheduled_online scheduling", () => {
     assert.equal(queued[0]?.event, "INTERVIEW_SCHEDULED_ONLINE");
   });
 
-  it("uses the stored Tamil and Kannada preferences for a later interview notification", async () => {
-    for (const language of ["ta", "kn"] as const) {
+  it("uses the stored Tamil, Kannada, and Malayalam preferences for a later interview notification", async () => {
+    for (const language of ["ta", "kn", "ml"] as const) {
       mock.restoreAll();
       const { queued } = installSchedulingMocks({
         seeker: {

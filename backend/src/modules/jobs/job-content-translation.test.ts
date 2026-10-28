@@ -124,6 +124,8 @@ describe("job content language", () => {
       ["kn-IN", "kn"],
       ["ml", "ml"],
       ["malayalam", "ml"],
+      ["ml-IN", "ml"],
+      ["ml_IN", "ml"],
     ];
     for (const [alias, expected] of aliases) {
       assert.equal(parseJobContentLanguage(alias), expected);

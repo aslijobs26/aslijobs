@@ -39,6 +39,10 @@ describe("job seeker WhatsApp language preference", () => {
     assert.equal(parseBotWhatsAppLanguage("kn"), "kn");
     assert.equal(parseBotWhatsAppLanguage("Kannada"), "kn");
     assert.equal(parseBotWhatsAppLanguage("kn-IN"), "kn");
+    assert.equal(parseBotWhatsAppLanguage("ml"), "ml");
+    assert.equal(parseBotWhatsAppLanguage("Malayalam"), "ml");
+    assert.equal(parseBotWhatsAppLanguage("ml-IN"), "ml");
+    assert.equal(parseBotWhatsAppLanguage("ml_IN"), "ml");
     assert.equal(parseBotWhatsAppLanguage("ka"), null);
     assert.equal(parseBotWhatsAppLanguage(""), null);
     assert.equal(parseBotWhatsAppLanguage("fr"), null);
@@ -201,6 +205,14 @@ describe("job seeker WhatsApp language preference", () => {
       }),
       "kn",
     );
+    assert.equal(
+      await resolveJobSeekerNotificationLanguage({
+        phoneNumber: "9876543210",
+        storedLanguage: "ml",
+        jobSeekerId: "64f0000000000000000000aa",
+      }),
+      "ml",
+    );
     assert.equal(sessionLookups, 0);
   });
 
@@ -228,6 +240,65 @@ describe("job seeker WhatsApp language preference", () => {
       }),
       "hi",
     );
+  });
+
+  it("uses a Malayalam session only when no saved preference exists", async () => {
+    Object.defineProperty(mongoose.connection, "readyState", {
+      configurable: true,
+      get: () => 1,
+    });
+    mock.method(JobSeekerModel, "findById", () => ({
+      select: () => ({
+        lean: async () => ({ whatsappLanguage: "" }),
+      }),
+    }));
+    mock.method(WhatsAppSessionModel, "findOne", () => ({
+      select: () => ({
+        lean: async () => ({ language: "ml" }),
+      }),
+    }));
+
+    assert.equal(
+      await resolveJobSeekerNotificationLanguage({
+        phoneNumber: "9876543210",
+        storedLanguage: "",
+        jobSeekerId: "64f0000000000000000000aa",
+      }),
+      "ml",
+    );
+  });
+
+  it("keeps a saved Malayalam preference ahead of an older session language", async () => {
+    Object.defineProperty(mongoose.connection, "readyState", {
+      configurable: true,
+      get: () => 1,
+    });
+    let sessionLookups = 0;
+    mock.method(JobSeekerModel, "findById", () => {
+      sessionLookups += 1;
+      return {
+        select: () => ({
+          lean: async () => ({ whatsappLanguage: "ml" }),
+        }),
+      };
+    });
+    mock.method(WhatsAppSessionModel, "findOne", () => {
+      sessionLookups += 1;
+      return {
+        select: () => ({
+          lean: async () => ({ language: "te" }),
+        }),
+      };
+    });
+
+    assert.equal(
+      await resolveJobSeekerNotificationLanguage({
+        phoneNumber: "9876543210",
+        jobSeekerId: "64f0000000000000000000aa",
+      }),
+      "ml",
+    );
+    assert.equal(sessionLookups, 1);
   });
 
   it("falls through unsupported stored values to English when no session exists", async () => {

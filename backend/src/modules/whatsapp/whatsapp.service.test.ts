@@ -503,6 +503,117 @@ describe("Tamil and Kannada template Cloud API payloads", () => {
   }
 });
 
+describe("Malayalam template Cloud API payloads", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  const cases = [
+    { name: "jobseeker_account_created_ml", body: [] as string[] },
+    { name: "jobseeker_profile_completion_ml", body: [] as string[] },
+    { name: "job_application_submitted_ml", body: ["Welder", "Northwind"] },
+    {
+      name: "interview_scheduled_phone_ml",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM", "ഫോൺ കോൾ"],
+    },
+    {
+      name: "interview_scheduled_online_ml",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM", "ഓൺലൈൻ"],
+    },
+    {
+      name: "interview_scheduled_offline_ml",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM", "North gate"],
+    },
+    {
+      name: "interview_rescheduled_ml",
+      body: ["Welder", "Northwind", "2 December 2026", "3:05 PM", "South gate"],
+    },
+    {
+      name: "interview_cancelled_ml",
+      body: ["Welder", "Northwind", "1 December 2026", "11:00 AM"],
+    },
+  ];
+
+  for (const item of cases) {
+    it(`posts ${item.name} with language ml and ${item.body.length} body parameters`, async () => {
+      const captured: { body?: Record<string, unknown>; authorization?: string } = {};
+      mock.method(globalThis, "fetch", async (_url: string | URL, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        captured.authorization = headers.get("authorization") ?? "";
+        captured.body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+        return jsonResponse(200, {
+          messages: [{ id: "wamid.ml", message_status: "accepted" }],
+        });
+      });
+
+      const result = await new WhatsAppService().sendTemplateMessage(
+        "9876543210",
+        item.name,
+        "ml",
+        item.body,
+      );
+      const template = captured.body?.template as {
+        name: string;
+        language: { code: string };
+        components?: Array<{
+          type: string;
+          parameters: Array<{ text: string }>;
+        }>;
+      };
+      assert.equal(result.messageId, "wamid.ml");
+      assert.equal(result.messageStatus, "accepted");
+      assert.notEqual(result.messageStatus, "delivered");
+      assert.equal(template.name, item.name);
+      assert.equal(template.language.code, "ml");
+      assert.notEqual(template.language.code, "ml-IN");
+      if (item.body.length === 0) {
+        assert.equal(template.components, undefined);
+      } else {
+        assert.equal(template.components?.length, 1);
+        assert.equal(template.components?.[0]?.type, "body");
+        assert.deepEqual(
+          template.components?.[0]?.parameters.map((parameter) => parameter.text),
+          item.body,
+        );
+      }
+      assert.equal(JSON.stringify(captured.body).includes("9876543210"), true);
+      assert.equal(captured.authorization?.startsWith("Bearer "), true);
+      assert.equal(JSON.stringify(captured.body).includes(captured.authorization ?? "Bearer "), false);
+    });
+  }
+
+  it("keeps a rejected Malayalam template as a permanent error without secrets", async () => {
+    mock.method(globalThis, "fetch", async () =>
+      jsonResponse(404, {
+        error: {
+          message: "(#132001) Template name does not exist in the translation",
+          type: "OAuthException",
+          code: 132001,
+        },
+      }),
+    );
+
+    await assert.rejects(
+      () =>
+        new WhatsAppService().sendTemplateMessage(
+          "9876543210",
+          "interview_scheduled_online_ml",
+          "ml",
+          ["Welder", "Northwind", "1 December 2026", "11:00 AM", "ഓൺലൈൻ"],
+        ),
+      (error: unknown) => {
+        assert.equal(error instanceof WhatsAppTemplateDeliveryError, true);
+        const deliveryError = error as WhatsAppTemplateDeliveryError;
+        assert.equal(deliveryError.failureClass, "permanent");
+        assert.equal(deliveryError.metaCode, 132001);
+        assert.equal(deliveryError.message.includes("Bearer"), false);
+        assert.equal(deliveryError.detail.includes("9876543210"), false);
+        return true;
+      },
+    );
+  });
+});
+
 describe("maskWhatsAppRecipient", () => {
   it("masks all but the last four digits", () => {
     assert.equal(maskWhatsAppRecipient("919876543210"), "****3210");

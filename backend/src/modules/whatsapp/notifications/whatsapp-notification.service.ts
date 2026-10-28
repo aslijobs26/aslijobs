@@ -61,6 +61,7 @@ export async function enqueueWhatsAppNotification(
   const bodyParameters = buildWhatsAppNotificationBodyParameters(
     payload.event,
     payload,
+    languageCode,
   );
   if (
     payload.event === "EMPLOYER_ACCOUNT_APPROVED" &&

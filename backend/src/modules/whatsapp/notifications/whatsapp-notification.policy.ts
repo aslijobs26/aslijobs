@@ -50,9 +50,9 @@ export type WhatsAppNotificationDelivery = {
 /**
  * Picks the approved Meta template name and language together.
  * Telugu and Hindi use `_te` and `_hi`. Tamil uses `_ta` with language `ta`.
- * Kannada uses `_ka` with language `kn`. A missing localized name falls back
- * to the English template and language `en` together. Malayalam has no
- * approved job-seeker templates and uses that English fallback.
+ * Kannada uses `_ka` with language `kn`. Malayalam uses `_ml` with language
+ * `ml` on the eight approved job-seeker templates. A missing localized name
+ * falls back to the English template and language `en` together.
  */
 export function resolveWhatsAppNotificationDelivery(
   event: WhatsAppNotificationEvent,
@@ -122,9 +122,42 @@ export function resolveWhatsAppNotificationTemplateName(
   );
 }
 
+/**
+ * Interview-method slot on the approved Malayalam online and phone templates.
+ * The other five languages print this label as static template text
+ * ("Online" / "Phone Call" and their translations). Job title, company,
+ * date, time, and venue stay the stored business values.
+ */
+export const MALAYALAM_ONLINE_INTERVIEW_MODE = "ഓൺലൈൻ";
+export const MALAYALAM_PHONE_INTERVIEW_MODE = "ഫോൺ കോൾ";
+
+function malayalamInterviewModeParameter(
+  event: WhatsAppNotificationEvent,
+  languageCode: string | null | undefined,
+  payload: WhatsAppNotificationPayload,
+): string | null {
+  if (
+    event !== "INTERVIEW_SCHEDULED_ONLINE" &&
+    event !== "INTERVIEW_SCHEDULED_PHONE"
+  ) {
+    return null;
+  }
+  const language =
+    languageCode !== undefined
+      ? parseJobContentLanguage(languageCode)
+      : parseJobContentLanguage(payload.preferredLanguage);
+  if (language !== "ml") {
+    return null;
+  }
+  return event === "INTERVIEW_SCHEDULED_ONLINE"
+    ? MALAYALAM_ONLINE_INTERVIEW_MODE
+    : MALAYALAM_PHONE_INTERVIEW_MODE;
+}
+
 export function buildWhatsAppNotificationBodyParameters(
   event: WhatsAppNotificationEvent,
   payload: WhatsAppNotificationPayload,
+  languageCode?: string | null,
 ): string[] {
   if (event === "JOBSEEKER_PROFILE_COMPLETION") {
     return [];
@@ -164,7 +197,13 @@ export function buildWhatsAppNotificationBodyParameters(
     if (!jobTitle || !companyName || !interviewDate || !interviewTime) {
       return [];
     }
-    return [jobTitle, companyName, interviewDate, interviewTime];
+    const parameters = [jobTitle, companyName, interviewDate, interviewTime];
+    const interviewMode = malayalamInterviewModeParameter(
+      event,
+      languageCode,
+      payload,
+    );
+    return interviewMode ? [...parameters, interviewMode] : parameters;
   }
   if (
     event === "INTERVIEW_SCHEDULED_OFFLINE" ||

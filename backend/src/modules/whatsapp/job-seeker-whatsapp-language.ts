@@ -72,7 +72,7 @@ export function resolveJobSeekerAccountLanguage(input: {
  * 3. WhatsApp session language for that phone, only when 1 and 2 are absent
  * 4. English
  *
- * A saved Hindi, Telugu, Tamil, or Kannada preference is not overridden by a stale session.
+ * A saved Hindi, Telugu, Tamil, Kannada, or Malayalam preference is not overridden by a stale session.
  * Unsupported values fall through; they are never sent to Meta as-is.
  */
 export async function resolveJobSeekerNotificationLanguage(input: {
