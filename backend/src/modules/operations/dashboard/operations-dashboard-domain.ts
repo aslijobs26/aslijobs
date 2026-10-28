@@ -7,6 +7,18 @@ import type { DashboardDatePreset } from "./operations-dashboard.validation.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * Jobs waiting on Operations. Employer submit writes `pending_approval`
+ * (and live edits use `liveChangeReviewStatus`). Older labels such as
+ * `pending_review` / `submitted` are not job statuses.
+ */
+export const PENDING_JOB_MODERATION_FILTER = {
+  $or: [
+    { status: "pending_approval" as const },
+    { liveChangeReviewStatus: "pending_approval" as const },
+  ],
+};
+
 export type DashboardDateRange = {
   preset: DashboardDatePreset;
   from: Date;

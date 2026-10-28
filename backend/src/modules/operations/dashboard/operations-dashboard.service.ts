@@ -29,6 +29,7 @@ import {
   completionRate,
   enumerateKolkataDays,
   mapWorkStatusToTaskBucket,
+  PENDING_JOB_MODERATION_FILTER,
   percentChange,
   resolveDashboardDateRange,
   resolveOverallChartFrom,
@@ -912,9 +913,9 @@ async function buildAlerts(input: {
   }
 
   if (input.canJobs) {
-    const pendingJobs = await JobModel.countDocuments({
-      status: { $in: ["pending_review", "under_review", "submitted"] },
-    });
+    const pendingJobs = await JobModel.countDocuments(
+      PENDING_JOB_MODERATION_FILTER,
+    );
     if (pendingJobs >= 5) {
       alerts.push({
         id: "job-moderation-backlog",

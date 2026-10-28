@@ -3,12 +3,25 @@ import { describe, it } from "node:test";
 import {
   completionRate,
   mapWorkStatusToTaskBucket,
+  PENDING_JOB_MODERATION_FILTER,
   percentChange,
   resolveDashboardDateRange,
   resolveOverallChartFrom,
 } from "./operations-dashboard-domain.js";
 
 describe("operations dashboard domain", () => {
+  it("counts employer job submissions that are actually pending approval", () => {
+    const filter = JSON.stringify(PENDING_JOB_MODERATION_FILTER);
+    assert.match(filter, /pending_approval/);
+    assert.equal(filter.includes("pending_review"), false);
+    assert.equal(filter.includes("under_review"), false);
+    assert.equal(filter.includes("\"submitted\""), false);
+    assert.deepEqual(PENDING_JOB_MODERATION_FILTER.$or, [
+      { status: "pending_approval" },
+      { liveChangeReviewStatus: "pending_approval" },
+    ]);
+  });
+
   it("computes percent change safely", () => {
     assert.equal(percentChange(120, 100), 20);
     assert.equal(percentChange(80, 100), -20);

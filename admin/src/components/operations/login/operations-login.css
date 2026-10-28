@@ -2113,3 +2113,63 @@
 }
 
 
+
+/* The form card is always light. Keep its copy dark even when the app theme is dark. */
+
+.operations-login-form-container {
+
+  color: #1a2b3c;
+
+}
+
+
+
+.operations-login-form-container .operations-login-heading,
+
+.operations-login-form-container .operations-login-label,
+
+.operations-login-form-container .operations-login-field-input {
+
+  color: #1a2b3c;
+
+}
+
+
+
+.operations-login-form-container .operations-login-subtitle,
+
+.operations-login-form-container .operations-login-helper,
+
+.operations-login-form-container .operations-login-trust,
+
+.operations-login-form-container .operations-login-footer {
+
+  color: #5a6570;
+
+}
+
+
+
+.operations-login-form-container .operations-login-field-input::placeholder {
+
+  color: color-mix(in srgb, #5a6570 88%, transparent);
+
+}
+
+
+
+.operations-login-form-container .operations-login-submit {
+
+  color: #ffffff;
+
+}
+
+
+
+.operations-login-form-container .operations-login-footer-separator {
+
+  color: #e5e7eb;
+
+}
+
+

@@ -32,6 +32,7 @@ export class OperationsRegistrationAwarenessController {
     const data = await operationsRegistrationAwarenessService.getMetrics({
       permissions: req.operationsPermissions,
       userId,
+      isSuperAdmin: req.operationsAccess?.isSuperAdmin === true,
     });
 
     sendSuccess(res, HTTP_STATUS.OK, {
@@ -45,6 +46,7 @@ export class OperationsRegistrationAwarenessController {
     const data = await operationsRegistrationAwarenessService.getBadgeCounts({
       permissions: req.operationsPermissions,
       userId,
+      isSuperAdmin: req.operationsAccess?.isSuperAdmin === true,
     });
 
     sendSuccess(res, HTTP_STATUS.OK, {

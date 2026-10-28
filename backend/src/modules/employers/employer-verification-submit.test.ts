@@ -49,8 +49,13 @@ describe("first-time employer verification submission", () => {
   it("rejects an incomplete profile before review or account-created WhatsApp", async () => {
     const employer = readyEmployer({ companyAddress: "", city: "" });
     let scheduled = 0;
+    let inboxWrites = 0;
     mock.method(EmployerModel, "findById", async () => employer);
     mock.method(EmployerDocumentModel, "countDocuments", async () => 0);
+    mock.method(OperationsNotificationModel, "updateOne", async () => {
+      inboxWrites += 1;
+      return { acknowledged: true };
+    });
     mock.method(employerAccountCreatedWhatsApp, "schedule", () => {
       scheduled += 1;
     });
@@ -65,6 +70,7 @@ describe("first-time employer verification submission", () => {
     assert.equal(employer.registrationStatus, "otp_verified");
     assert.equal(employer.verificationSubmittedAt, null);
     assert.equal(scheduled, 0);
+    assert.equal(inboxWrites, 0);
   });
 
   it("submits a complete profile for review and sends employer_account_created once", async () => {
@@ -72,9 +78,23 @@ describe("first-time employer verification submission", () => {
     const scheduled: string[] = [];
     mock.method(EmployerModel, "findById", async () => employer);
     mock.method(EmployerDocumentModel, "countDocuments", async () => 1);
-    mock.method(OperationsNotificationModel, "updateOne", async () => ({
-      acknowledged: true,
-    }));
+    const inboxWrites: Array<{ idempotencyKey?: string; type?: string; body?: string }> =
+      [];
+    mock.method(
+      OperationsNotificationModel,
+      "updateOne",
+      async (
+        filter: { idempotencyKey?: string },
+        update: { $setOnInsert?: { type?: string; body?: string } },
+      ) => {
+        inboxWrites.push({
+          idempotencyKey: filter.idempotencyKey,
+          type: update.$setOnInsert?.type,
+          body: update.$setOnInsert?.body,
+        });
+        return { acknowledged: true };
+      },
+    );
     mock.method(OperationsAuditLogModel, "findOne", () => ({
       select() {
         return this;
@@ -88,6 +108,7 @@ describe("first-time employer verification submission", () => {
     });
 
     const result = await employerService.submitVerification(employerId);
+    await new Promise((resolve) => setImmediate(resolve));
 
     assert.equal(result.alreadySubmitted, false);
     assert.equal(result.employer.verificationStatus, "pending");
@@ -95,6 +116,15 @@ describe("first-time employer verification submission", () => {
     assert.equal(employer.isProfileComplete, true);
     assert.ok(employer.verificationSubmittedAt instanceof Date);
     assert.deepEqual(scheduled, ["created"]);
+    const registrationNotes = inboxWrites.filter(
+      (row) => row.type === "employer.registered",
+    );
+    assert.equal(registrationNotes.length, 1);
+    assert.equal(
+      registrationNotes[0]?.idempotencyKey,
+      `employer.registered:${employerId}`,
+    );
+    assert.match(registrationNotes[0]?.body ?? "", /Veeresh/);
   });
 
   it("does not send another account-created message when submission is repeated", async () => {

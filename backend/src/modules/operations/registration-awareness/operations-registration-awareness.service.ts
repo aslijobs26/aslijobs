@@ -11,6 +11,7 @@ import {
 import { PENDING_VERIFICATION_FILTER } from "../verifications/operations-verifications-analytics.js";
 import {
   OPERATIONS_REGISTRATION_RECENT_LIMIT,
+  type OperationsNotificationType,
   type OperationsRegistrationEntityType,
 } from "./operations-registration-awareness.constants.js";
 import { OperationsNotificationModel } from "./operations-notification.model.js";
@@ -29,6 +30,70 @@ import type {
   OperationsRegistrationMetricBlock,
   OperationsRegistrationMetricsResult,
 } from "./operations-registration-awareness.types.js";
+
+/**
+ * Inbox types the caller is allowed to see. Super Admin sees every type.
+ * Coarse module read matches the Employers / Jobs / Verifications navigation.
+ */
+export function operationsNotificationVisibleTypes(input: {
+  permissions?: OperationsPermissionMap;
+  isSuperAdmin?: boolean;
+}): OperationsNotificationType[] {
+  const canRead = (
+    module: Parameters<typeof canOperationsPermission>[1],
+  ): boolean =>
+    input.isSuperAdmin === true ||
+    canOperationsPermission(input.permissions, module, "read");
+
+  const types: OperationsNotificationType[] = [];
+  if (canRead("employers")) {
+    types.push("employer.registered");
+  }
+  if (canRead("candidates")) {
+    types.push("candidate.registered");
+  }
+  if (canRead("verifications") || canRead("employers")) {
+    types.push("employer.verification_resubmitted");
+  }
+  if (canRead("jobs")) {
+    types.push(
+      "job.pending_approval",
+      "job.resubmitted",
+      "job.live_revision_submitted",
+    );
+  }
+  if (canRead("my_work")) {
+    types.push("work.assigned", "work.reassigned", "work.claimed");
+  }
+  if (canRead("roles")) {
+    types.push("role.created");
+  }
+  return types;
+}
+
+/**
+ * Unread for this Operations user. `$ne` on `reads.userId` stays true when
+ * any other user has a read entry, so a read notification never clears.
+ */
+export function operationsNotificationUnreadClause(
+  userId: mongoose.Types.ObjectId,
+): Record<string, unknown> {
+  return {
+    reads: { $not: { $elemMatch: { userId } } },
+  };
+}
+
+function notificationAudienceFilter(
+  userObjectId: mongoose.Types.ObjectId | null,
+): Record<string, unknown> {
+  return {
+    $or: [
+      { recipientUserId: null },
+      { recipientUserId: { $exists: false } },
+      ...(userObjectId ? [{ recipientUserId: userObjectId }] : []),
+    ],
+  };
+}
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -246,21 +311,24 @@ async function loadRecentCandidates(
   });
 }
 
-async function countUnreadNotifications(userId: string): Promise<number> {
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
+async function countUnreadNotifications(input: {
+  userId: string;
+  permissions?: OperationsPermissionMap;
+  isSuperAdmin?: boolean;
+}): Promise<number> {
+  if (!mongoose.Types.ObjectId.isValid(input.userId)) {
     return 0;
   }
-  const userObjectId = new mongoose.Types.ObjectId(userId);
+  const visibleTypes = operationsNotificationVisibleTypes(input);
+  if (visibleTypes.length === 0) {
+    return 0;
+  }
+  const userObjectId = new mongoose.Types.ObjectId(input.userId);
   return OperationsNotificationModel.countDocuments({
     $and: [
-      {
-        $or: [
-          { recipientUserId: null },
-          { recipientUserId: { $exists: false } },
-          { recipientUserId: userObjectId },
-        ],
-      },
-      { "reads.userId": { $ne: userObjectId } },
+      notificationAudienceFilter(userObjectId),
+      { type: { $in: visibleTypes } },
+      operationsNotificationUnreadClause(userObjectId),
     ],
   });
 }
@@ -269,6 +337,7 @@ export const operationsRegistrationAwarenessService = {
   async getMetrics(input: {
     permissions: OperationsPermissionMap | undefined;
     userId: string;
+    isSuperAdmin?: boolean;
     recentLimit?: number;
   }): Promise<OperationsRegistrationMetricsResult> {
     const now = new Date();
@@ -313,7 +382,11 @@ export const operationsRegistrationAwarenessService = {
       canCandidates
         ? loadRecentCandidates(now, recentLimit)
         : Promise.resolve([]),
-      countUnreadNotifications(input.userId),
+      countUnreadNotifications({
+        userId: input.userId,
+        permissions: input.permissions,
+        isSuperAdmin: input.isSuperAdmin,
+      }),
     ]);
 
     const badges: OperationsNavBadgeCounts = {
@@ -338,6 +411,7 @@ export const operationsRegistrationAwarenessService = {
   async getBadgeCounts(input: {
     permissions: OperationsPermissionMap | undefined;
     userId: string;
+    isSuperAdmin?: boolean;
   }): Promise<OperationsNavBadgeCounts> {
     const metrics = await this.getMetrics({
       ...input,
@@ -443,59 +517,28 @@ export const operationsRegistrationAwarenessService = {
       ? new mongoose.Types.ObjectId(input.userId)
       : null;
 
+    const visibleTypes = operationsNotificationVisibleTypes(input);
     const [docs, unreadCount] = await Promise.all([
-      OperationsNotificationModel.find({
-        $or: [
-          { recipientUserId: null },
-          { recipientUserId: { $exists: false } },
-          ...(userObjectId ? [{ recipientUserId: userObjectId }] : []),
-        ],
-      })
-        .sort({ createdAt: -1 })
-        .limit(Math.min(limit * 3, 150))
-        .lean(),
-      countUnreadNotifications(input.userId),
+      visibleTypes.length === 0
+        ? Promise.resolve([])
+        : OperationsNotificationModel.find({
+            $and: [
+              notificationAudienceFilter(userObjectId),
+              { type: { $in: visibleTypes } },
+            ],
+          })
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .lean(),
+      countUnreadNotifications({
+        userId: input.userId,
+        permissions: input.permissions,
+        isSuperAdmin: input.isSuperAdmin,
+      }),
     ]);
-
-    const canRead = (module: Parameters<typeof canOperationsPermission>[1]) =>
-      input.isSuperAdmin === true ||
-      canOperationsPermission(input.permissions, module, "read");
 
     const items: OperationsNotificationListItem[] = [];
     for (const doc of docs) {
-      if (doc.type === "candidate.registered" && !canRead("candidates")) {
-        continue;
-      }
-      if (doc.type === "employer.registered" && !canRead("employers")) {
-        continue;
-      }
-      if (
-        doc.type === "employer.verification_resubmitted" &&
-        !canRead("verifications") &&
-        !canRead("employers")
-      ) {
-        continue;
-      }
-      if (
-        (doc.type === "job.pending_approval" ||
-          doc.type === "job.resubmitted" ||
-          doc.type === "job.live_revision_submitted") &&
-        !canRead("jobs")
-      ) {
-        continue;
-      }
-      if (
-        (doc.type === "work.assigned" ||
-          doc.type === "work.reassigned" ||
-          doc.type === "work.claimed") &&
-        !canRead("my_work")
-      ) {
-        continue;
-      }
-      if (doc.type === "role.created" && !canRead("roles")) {
-        continue;
-      }
-
       const isRead = userObjectId
         ? (doc.reads ?? []).some(
             (read) => String(read.userId) === String(userObjectId),
@@ -540,7 +583,7 @@ export const operationsRegistrationAwarenessService = {
     const result = await OperationsNotificationModel.updateOne(
       {
         _id: input.notificationId,
-        "reads.userId": { $ne: userObjectId },
+        ...operationsNotificationUnreadClause(userObjectId),
       },
       {
         $push: {
