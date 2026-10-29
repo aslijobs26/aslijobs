@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { env } from "../../config/env.js";
 import { claimWhatsAppEvent } from "./whatsapp-processed-event.model.js";
 import { verifyWhatsAppSignature } from "./whatsapp-signature.js";
+import { formatWhatsAppStatusFailure } from "./whatsapp.service.js";
 import { enqueueWhatsAppInbound } from "./whatsapp-inbound.queue.js";
 import {
   applyWhatsAppNotificationDeliveryStatus,
@@ -82,13 +83,12 @@ async function persistDeliveryStatuses(statuses: unknown[]): Promise<void> {
       id?: string;
       status?: string;
       timestamp?: string;
-      errors?: Array<{ code?: number }>;
+      errors?: Array<{ code?: number; title?: string }>;
     };
     const messageId = status.id?.trim() || "";
     const deliveryStatus = status.status?.trim() || "unknown";
-    const errorCode = status.errors?.find(
-      (error) => typeof error.code === "number",
-    )?.code;
+    const error = status.errors?.find((item) => typeof item.code === "number");
+    const errorCode = error?.code;
     const timestampSeconds = Number(status.timestamp);
     const timestamp = Number.isFinite(timestampSeconds)
       ? new Date(timestampSeconds * 1000)
@@ -106,6 +106,14 @@ async function persistDeliveryStatuses(statuses: unknown[]): Promise<void> {
       status: deliveryStatus,
       timestamp,
       ...(typeof errorCode === "number" ? { errorCode: String(errorCode) } : {}),
+      ...(deliveryStatus.toLowerCase() === "failed"
+        ? {
+            failureDetail: formatWhatsAppStatusFailure({
+              code: errorCode,
+              title: error?.title,
+            }),
+          }
+        : {}),
     });
     const result = await applyWhatsAppNotificationDeliveryStatus({
       messageId,

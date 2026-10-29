@@ -5,6 +5,7 @@ import {
   WhatsAppService,
   WhatsAppTemplateDeliveryError,
   classifyWhatsAppTemplateFailure,
+  formatWhatsAppStatusFailure,
   maskWhatsAppRecipient,
 } from "./whatsapp.service.js";
 
@@ -138,6 +139,15 @@ describe("WhatsAppService template and existing senders", () => {
       assert.equal(joined.includes(token), false);
     }
     assert.match(joined, /to=\*\*\*\*3210/);
+  });
+
+  it("keeps a WhatsApp delivery failure code and drops the phone number", () => {
+    const detail = formatWhatsAppStatusFailure({
+      code: 131037,
+      title: "Display name pending 919876543210",
+    });
+    assert.match(detail, /code=131037/);
+    assert.doesNotMatch(detail, /919876543210/);
   });
 
   it("sendOtpMessage still sends the OTP template payload", async () => {

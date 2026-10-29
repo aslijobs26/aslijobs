@@ -34,6 +34,58 @@ export type WhatsAppTemplateSendResult = {
   messageStatus: string;
 };
 
+type WhatsAppPhoneHealth = {
+  nameStatus: string;
+  codeVerification: string;
+  phoneStatus: string;
+  checkedAt: number;
+};
+
+let phoneHealthCache: WhatsAppPhoneHealth | null = null;
+
+async function logWhatsAppPhoneHealth(): Promise<void> {
+  const cached =
+    phoneHealthCache && Date.now() - phoneHealthCache.checkedAt < 10 * 60 * 1000
+      ? phoneHealthCache
+      : null;
+  const health = cached ?? (await readWhatsAppPhoneHealth());
+  if (!health) return;
+  if (health.nameStatus === "APPROVED" && health.phoneStatus === "CONNECTED") return;
+  console.error(
+    `[WhatsAppService] OTP number health nameStatus=${health.nameStatus || "-"} codeVerification=${health.codeVerification || "-"} phoneStatus=${health.phoneStatus || "-"}`,
+  );
+}
+
+async function readWhatsAppPhoneHealth(): Promise<WhatsAppPhoneHealth | null> {
+  const phoneId = env.WHATSAPP_PHONE_NUMBER_ID.trim();
+  const token = env.WHATSAPP_ACCESS_TOKEN.trim();
+  if (!phoneId || !token) return null;
+  try {
+    const version = env.WHATSAPP_API_VERSION.replace(/^\/+|\/+$/g, "");
+    const url = new URL(`https://graph.facebook.com/${version}/${phoneId}`);
+    url.searchParams.set("fields", "name_status,code_verification_status,status");
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) return null;
+    const body = (await response.json()) as {
+      name_status?: string;
+      code_verification_status?: string;
+      status?: string;
+    };
+    phoneHealthCache = {
+      nameStatus: body.name_status?.trim() ?? "",
+      codeVerification: body.code_verification_status?.trim() ?? "",
+      phoneStatus: body.status?.trim() ?? "",
+      checkedAt: Date.now(),
+    };
+    return phoneHealthCache;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Graph rejection details safe to persist and log.
  * Meta's message text is omitted because it can contain the recipient.
@@ -63,6 +115,19 @@ export function sanitizeWhatsAppErrorDetail(value: string): string {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 180);
+}
+
+/** Webhook failure text safe for the Operations inbox. Titles only; Meta messages can contain the phone. */
+export function formatWhatsAppStatusFailure(input: {
+  code?: number | null;
+  title?: string | null;
+}): string {
+  const code = typeof input.code === "number" && Number.isFinite(input.code) ? String(input.code) : "";
+  const title = (input.title ?? "").replace(/[^\w\s.:()/-]/g, " ").replace(/\s+/g, " ").trim();
+  const detail = [code ? `code=${code}` : "", title ? `title=${title}` : ""]
+    .filter(Boolean)
+    .join(" ");
+  return sanitizeWhatsAppErrorDetail(detail || "webhook_failed");
 }
 
 /**
@@ -238,6 +303,16 @@ export class WhatsAppService {
       // Acceptance without a parseable body is still treated as success.
     }
 
+    if (messageStatus.toLowerCase() === "failed") {
+      console.error(
+        `[WhatsAppService] WhatsApp OTP delivery failed messageId=${messageId || "-"} status=failed`,
+      );
+      throw new AppError(
+        "Unable to send OTP right now. Please try again.",
+        HTTP_STATUS.BAD_REQUEST,
+      );
+    }
+
     console.info(
       `[WhatsAppService] WhatsApp OTP delivery successful${
         messageId ? ` messageId=${messageId}` : ""
@@ -245,20 +320,29 @@ export class WhatsAppService {
     );
 
     if (mongoose.connection.readyState === 1) {
-      void import("./inbox/whatsapp-inbox-store.js")
+      await import("./inbox/whatsapp-inbox-store.js")
         .then((store) =>
           store.recordOutboundMessage({
             phoneNational: phoneNumber,
             body: WHATSAPP_VERIFICATION_CODE_SENT,
             senderType: "notification",
+            templateName: env.WHATSAPP_OTP_TEMPLATE_NAME,
+            templateLanguage: env.WHATSAPP_TEMPLATE_LANGUAGE,
             ...(messageId
               ? { providerMessageId: messageId }
               : { clientMessageId: `otp-${recipient}-${Date.now()}` }),
             status: "accepted",
           }),
         )
-        .catch(() => undefined);
+        .catch((error: unknown) => {
+          console.error(
+            `[WhatsAppService] OTP inbox record failed reason=${
+              error instanceof Error ? error.name : "unknown"
+            }`,
+          );
+        });
     }
+    void logWhatsAppPhoneHealth();
   }
 
   /**

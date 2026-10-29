@@ -530,6 +530,7 @@ export async function applyInboxDeliveryStatus(input: {
   status: string;
   timestamp?: Date | null;
   errorCode?: string;
+  failureDetail?: string;
 }): Promise<"updated" | "ignored" | "missing"> {
   const providerMessageId = input.providerMessageId.trim();
   if (!providerMessageId) {
@@ -557,7 +558,8 @@ export async function applyInboxDeliveryStatus(input: {
   message.statusAt = input.timestamp ?? new Date();
   if (mapped === "failed") {
     message.failureReason = sanitizeWhatsAppErrorDetail(
-      input.errorCode ? `webhook_failed code=${input.errorCode}` : "webhook_failed",
+      input.failureDetail ||
+        (input.errorCode ? `webhook_failed code=${input.errorCode}` : "webhook_failed"),
     );
   }
   await message.save();

@@ -591,7 +591,7 @@ export function InboxChatPanel({
                 </div>
                 {message.status === "failed" && message.failureReason ? (
                   <p className="mt-1 text-[11px] text-danger">
-                    Failed to send
+                    {failedSendLabel(message.failureReason)}
                   </p>
                 ) : null}
               </div>
@@ -899,6 +899,23 @@ function senderLabel(senderType: WhatsAppInboxMessage["senderType"]): string {
   if (senderType === "bot") return "AsliJobs bot";
   if (senderType === "notification") return "AsliJobs";
   return "Customer";
+}
+
+function failedSendLabel(reason: string): string {
+  if (/131037/.test(reason)) {
+    return "Failed to send. WhatsApp is still reviewing the business display name.";
+  }
+  if (/131026/.test(reason)) {
+    return "Failed to send. This number cannot receive a WhatsApp message.";
+  }
+  if (/131049/.test(reason)) {
+    return "Failed to send. WhatsApp held this message.";
+  }
+  if (/131045|133010/.test(reason)) {
+    return "Failed to send. The business WhatsApp number needs to be registered again.";
+  }
+  const code = reason.match(/code=(\d{3,7})/)?.[1] ?? "";
+  return code ? `Failed to send (${code})` : "Failed to send";
 }
 
 function StatusTicks({ status }: { status: WhatsAppInboxMessage["status"] }) {
