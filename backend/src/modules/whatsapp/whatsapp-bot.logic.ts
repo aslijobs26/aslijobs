@@ -1,5 +1,15 @@
 import { z } from "zod";
 import { appendSiteLanguageQuery } from "../../utils/site-language-url.js";
+import {
+  extractExperienceDetail,
+  extractFreeJobTitle,
+  extractIndianState,
+  extractSalaryBand,
+  jobOrdinalFromText,
+  placeKind,
+  recallsEarlierLocation,
+  wantsAnyLocation,
+} from "./whatsapp-bot.criteria.js";
 
 export const BOT_INTENTS = [
   "GREETING",
@@ -42,6 +52,23 @@ export type BotUnderstanding = {
   requiresAuth: boolean;
   confidence: number;
   focus: "" | "salary" | "company";
+  /** City search, or a state with no city invented from it. */
+  locationKind?: "city" | "state" | "";
+  experienceLevel?: string;
+  /** Years the user stated, kept even when the search API uses a nearby level. */
+  originalExperienceYears?: number | null;
+  /** Set when the user gave a range the public API cannot filter exactly. */
+  experienceRangeLabel?: string;
+  minSalary?: number | null;
+  maxSalary?: number | null;
+  /** "annual" means an LPA figure already converted to a monthly filter. */
+  salaryBasis?: "monthly" | "annual";
+  /** Set only when this account's role cannot perform the understood intent. */
+  crossRole?: "" | "seeker" | "employer";
+  anyLocation?: boolean;
+  reuseLocation?: boolean;
+  /** 1-based index into the last jobs shown on WhatsApp. */
+  jobOrdinal?: number | null;
 };
 
 export type PublicJobFact = {
@@ -87,7 +114,7 @@ const MALAYALAM_SCRIPT = /[\u0D00-\u0D7F]/;
 const ROMAN_TELUGU =
   /\b(undha|unda|vundha|vunda|yundha|yunda|unnaya|unnayi|unnai|kavali|kaavali|cheppu|cheppandi|chudandi|chupinchu|naaku|nenu|enni|vachayi|chesina|pani)\b|\blo\b/i;
 const ROMAN_HINDI = /\b(kya|hai|hain|mujhe|chahiye|dikhao|naukri|mereko|mein)\b/i;
-const ROMAN_TAMIL = /\b(venum|venam|irukka|irukku|enakku|velai)\b/i;
+const ROMAN_TAMIL = /\b(venum|irukka|irukku|enakku|velai)\b|\bla\b/i;
 const ROMAN_KANNADA = /\b(beku|ideya|nanage|kelasa)\b/i;
 const ROMAN_MALAYALAM = /\b(venam|undo|enikku|joli)\b/i;
 
@@ -130,6 +157,8 @@ const PLACE_PARENT_CITY: Record<string, string> = {
 };
 
 const ROLES: Array<{ canonical: string; forms: string[] }> = [
+  { canonical: "Safety Supervisor", forms: ["safety supervisor", "saftey supervisor", "safety superviser"] },
+  { canonical: "Accountant", forms: ["accountant", "अकाउंटेंट", "అకౌంటెంట్"] },
   { canonical: "Driver", forms: ["driver", "డ్రైవర్", "డ్రైవరు", "ड्राइवर", "டிரைவர்", "ಡ್ರೈವರ್", "ഡ്രൈവർ"] },
   { canonical: "Delivery", forms: ["delivery", "డెలివరీ", "డెలివరి", "डिलीवरी"] },
   { canonical: "Watchman", forms: ["watchman", "security", "వాచ్‌మన్", "వాచ్మన్", "वॉचमैन"] },
@@ -152,6 +181,10 @@ const ROLES: Array<{ canonical: string; forms: string[] }> = [
 const JOB_WORDS = [
   "job",
   "jobs",
+  "vacancy",
+  "vacancies",
+  "opening",
+  "openings",
   "ఉద్యోగం",
   "ఉద్యోగాలు",
   "జాబ్",
@@ -165,6 +198,11 @@ const JOB_WORDS = [
   "ಕೆಲಸ",
   "ಉದ್ಯೋಗ",
   "ജോലി",
+  "naukri",
+  "udyog",
+  "velai",
+  "kelasa",
+  "joli",
 ];
 
 const REQUEST_WORDS = [
@@ -193,6 +231,10 @@ const REQUEST_WORDS = [
   "ಬೇಕು",
   "വേണം",
   "undo",
+  "chahiye",
+  "beku",
+  "venum",
+  "venam",
 ];
 
 const TE_PLACE: Record<string, string> = {
@@ -452,7 +494,9 @@ export function understandLocally(
     /apply|applied|అప్లై|చేశా/i.test(text);
   const salaryAsk =
     /salary|జీతం|వేతనం|वेतन|तनख्वाह|சம்பளம்|ಸಂಬಳ|ശമ്പളം/i.test(text) &&
-    !/\b(jobs?|kavali|chahiye|want)\b/i.test(folded);
+    /what(?:'s| is)|how much|ఎంత|कितना|for this job|for that job|this job|that job/i.test(text) &&
+    !category &&
+    !location;
   const companyAsk =
     /company|కంపెనీ|कंपनी|நிறுவனம்/i.test(text) && !category && text.trim().length < 60;
 
@@ -480,11 +524,11 @@ export function understandLocally(
       : /ఎన్ని|how many|applications?|applied|వచ్చాయి|vachayi|\benni\b/i.test(text)
         ? "EMPLOYER_APPLICATION_COUNT"
         : "EMPLOYER_JOBS";
-  } else if (hireIntent) {
+  } else if (hireIntent && !ownApply) {
     intent = /verif|account|profile complete/i.test(folded) ? "ACCOUNT_STATUS" : "POST_JOB";
   } else if (howToApply) intent = "HOW_TO_APPLY";
   else if (applications) {
-    intent = /status|స్టేటస్|స్టేజ్|स्थिति|நிலை/i.test(text)
+    intent = /status|review|reviewed|స్టేటస్|స్టేజ్|स्थिति|நிலை/i.test(text)
       ? "APPLICATION_STATUS"
       : /ఎన్ని|how many|कितनी|எத்தனை|ಎಷ್ಟು|എത്ര/i.test(text)
         ? "APPLICATION_COUNT"
@@ -502,13 +546,22 @@ export function understandLocally(
     intent = "JOB_SEARCH";
   }
 
-  const openSearch = intent === "JOB_SEARCH" && !category && (mentionsJob || mentionsRequest);
+  const ordinal = jobOrdinalFromText(text);
+  if (ordinal && intent === "UNKNOWN") {
+    intent = "JOB_DETAILS";
+  } else if (ordinal && /\bapply\b/i.test(text)) {
+    intent = "JOB_DETAILS";
+  }
+  const salaryBand = extractSalaryBand(text);
+  const experience = extractExperienceDetail(text);
+  const anyLocation = wantsAnyLocation(text);
+  const openSearch = intent === "JOB_SEARCH" && !category && (mentionsJob || mentionsRequest || anyLocation);
   const scope = scopeForIntent(intent);
 
   return {
     intent,
     language,
-    location,
+    location: anyLocation ? "" : location,
     category,
     jobQuery: category,
     openSearch,
@@ -516,6 +569,17 @@ export function understandLocally(
     requiresAuth: scope === "OWN_DATA" || scope === "OWN_EMPLOYER_DATA",
     confidence: intent === "UNKNOWN" ? 0.35 : intent === "CLARIFY" ? 0.7 : 0.94,
     focus: companyAsk ? "company" : salaryAsk ? "salary" : "",
+    locationKind: anyLocation ? "" : placeKind(location),
+    experienceLevel: experience.level,
+    originalExperienceYears: experience.years,
+    experienceRangeLabel: experience.rangeLabel,
+    minSalary: salaryBand.min,
+    maxSalary: salaryBand.max,
+    salaryBasis: salaryBand.basis,
+    crossRole: "",
+    anyLocation,
+    reuseLocation: recallsEarlierLocation(text),
+    jobOrdinal: ordinal,
   };
 }
 
@@ -549,6 +613,17 @@ export function minimalUnderstanding(
     requiresAuth: false,
     confidence: 0,
     focus: "",
+    locationKind: "",
+    experienceLevel: "",
+    originalExperienceYears: null,
+    experienceRangeLabel: "",
+    minSalary: null,
+    maxSalary: null,
+    salaryBasis: "monthly",
+    crossRole: "",
+    anyLocation: false,
+    reuseLocation: false,
+    jobOrdinal: null,
   };
 }
 
@@ -713,7 +788,57 @@ export type PendingSearchContext = {
   category: string;
   openSearch?: boolean;
   intent?: string;
+  locationKind?: "city" | "state" | "";
+  experienceLevel?: string;
+  originalExperienceYears?: number | null;
+  experienceRangeLabel?: string;
+  minSalary?: number | null;
+  maxSalary?: number | null;
+  salaryBasis?: "monthly" | "annual";
 };
+
+export type StoredSearchSession = {
+  pendingIntent?: string;
+  pendingLocation?: string;
+  pendingCategory?: string;
+  pendingOpenSearch?: boolean;
+  lastLocation?: string;
+  lastCategory?: string;
+  lastExperience?: string;
+  lastExperienceYears?: number | null;
+  lastExperienceRange?: string;
+  lastMinSalary?: number | null;
+  lastMaxSalary?: number | null;
+  lastSalaryBasis?: string;
+  locationKind?: string;
+};
+
+/**
+ * While the bot is waiting for a location, do not reuse an older city.
+ * A finished search still remembers its last city for a short follow-up.
+ */
+export function activeSearchContext(session: StoredSearchSession | null | undefined): PendingSearchContext | null {
+  if (!session) return null;
+  const waitingForLocation =
+    Boolean(session.pendingIntent) &&
+    !session.pendingLocation &&
+    Boolean(session.pendingCategory || session.pendingOpenSearch);
+  const locationKind =
+    session.locationKind === "state" || session.locationKind === "city" ? session.locationKind : "";
+  return {
+    location: waitingForLocation ? "" : session.pendingLocation || session.lastLocation || "",
+    category: session.pendingCategory || session.lastCategory || "",
+    openSearch: Boolean(session.pendingOpenSearch),
+    intent: session.pendingIntent || "",
+    locationKind: waitingForLocation ? "" : locationKind,
+    experienceLevel: session.lastExperience || "",
+    originalExperienceYears: session.lastExperienceYears ?? null,
+    experienceRangeLabel: session.lastExperienceRange || "",
+    minSalary: session.lastMinSalary ?? null,
+    maxSalary: session.lastMaxSalary ?? null,
+    salaryBasis: session.lastSalaryBasis === "annual" ? "annual" : "monthly",
+  };
+}
 
 export function mergePending(
   previous: PendingSearchContext | null,
@@ -731,20 +856,28 @@ export function mergePending(
     };
   }
 
+  const slotUpdate = Boolean(
+    next.location ||
+      next.category ||
+      next.experienceLevel ||
+      next.minSalary != null ||
+      next.anyLocation ||
+      next.reuseLocation,
+  );
+  const previousSearch = Boolean(previous.location || previous.category || previous.intent);
+
   if (next.intent === "UNKNOWN") {
-    if (!isFollowUpFragment(text)) {
+    const shortUpdate = slotUpdate && previousSearch && text.trim().length <= 80;
+    if (!isFollowUpFragment(text) && !shortUpdate) {
       return next;
     }
-    const location = next.location || previous.location;
-    const category = next.category || previous.category;
+    const merged = combineSearchSlots(previous, next);
     return {
       ...next,
-      location,
-      category,
-      jobQuery: category,
+      ...merged,
       intent: "JOB_SEARCH",
-      openSearch: !category,
       scope: "PUBLIC_JOBS",
+      requiresAuth: false,
     };
   }
 
@@ -752,19 +885,105 @@ export function mergePending(
     return next;
   }
 
-  const location = next.location || previous.location;
-  // "jobs in Chennai" is a broad search; "Chennai lo unnaya?" only changes the city.
-  const broadAsk =
-    next.openSearch && Boolean(next.location) && !next.category && (!text || mentionsJobWord(text));
-  const keepOpenSearch =
-    Boolean(previous.openSearch) && !next.category && Boolean(location);
-  const category = broadAsk || keepOpenSearch ? "" : next.category || previous.category;
+  const merged = combineSearchSlots(previous, next, text);
   return {
     ...next,
+    ...merged,
+  };
+}
+
+function combineSearchSlots(
+  previous: PendingSearchContext,
+  next: BotUnderstanding,
+  text = "",
+): Pick<
+  BotUnderstanding,
+  | "location"
+  | "locationKind"
+  | "category"
+  | "jobQuery"
+  | "openSearch"
+  | "experienceLevel"
+  | "originalExperienceYears"
+  | "experienceRangeLabel"
+  | "minSalary"
+  | "maxSalary"
+  | "salaryBasis"
+  | "anyLocation"
+> {
+  const anyLocation = Boolean(next.anyLocation);
+  const reuseLocation = Boolean(next.reuseLocation) && !next.location && !anyLocation;
+  const location = anyLocation ? "" : next.location || (reuseLocation ? previous.location : "") || previous.location;
+  const locationKind = anyLocation
+    ? ""
+    : next.location
+      ? next.locationKind || placeKind(next.location)
+      : previous.locationKind || placeKind(location);
+  // "jobs in Chennai" is a broad search; "Chennai lo unnaya?" only changes the city.
+  const broadAsk =
+    next.openSearch && Boolean(next.location || anyLocation) && !next.category && (!text || mentionsJobWord(text));
+  const keepOpenSearch = Boolean(previous.openSearch) && !next.category && Boolean(location || anyLocation);
+  const category = broadAsk || keepOpenSearch ? "" : next.category || previous.category;
+  const freshSearch =
+    Boolean(text) &&
+    !isFollowUpFragment(text) &&
+    text.trim().length > 24 &&
+    Boolean(next.category || next.openSearch) &&
+    Boolean(next.location || anyLocation);
+  const experienceLevel = next.experienceLevel
+    ? next.experienceLevel
+    : freshSearch
+      ? ""
+      : previous.experienceLevel || "";
+  const originalExperienceYears = next.experienceLevel
+    ? next.originalExperienceYears ?? null
+    : freshSearch
+      ? null
+      : previous.originalExperienceYears ?? null;
+  const experienceRangeLabel = next.experienceLevel
+    ? next.experienceRangeLabel || ""
+    : freshSearch
+      ? ""
+      : previous.experienceRangeLabel || "";
+  const minSalary = next.minSalary != null ? next.minSalary : freshSearch ? null : previous.minSalary ?? null;
+  const maxSalary = next.minSalary != null ? next.maxSalary ?? null : freshSearch ? null : previous.maxSalary ?? null;
+  const salaryBasis = next.minSalary != null
+    ? next.salaryBasis || "monthly"
+    : freshSearch
+      ? "monthly"
+      : previous.salaryBasis || "monthly";
+  return {
     location,
+    locationKind,
     category,
     jobQuery: category,
     openSearch: (next.openSearch && !category) || keepOpenSearch,
+    experienceLevel,
+    originalExperienceYears,
+    experienceRangeLabel,
+    minSalary,
+    maxSalary,
+    salaryBasis,
+    anyLocation,
+  };
+}
+
+function overlayMessageEntities(text: string, understanding: BotUnderstanding): BotUnderstanding {
+  const experience = extractExperienceDetail(text);
+  const salary = extractSalaryBand(text);
+  return {
+    ...understanding,
+    ...(experience.level
+      ? {
+          experienceLevel: experience.level,
+          originalExperienceYears: experience.years,
+          experienceRangeLabel: experience.rangeLabel,
+        }
+      : {}),
+    ...(salary.min != null
+      ? { minSalary: salary.min, maxSalary: salary.max, salaryBasis: salary.basis }
+      : {}),
+    ...(wantsAnyLocation(text) ? { anyLocation: true, location: "" } : {}),
   };
 }
 
@@ -775,7 +994,7 @@ export function resolveTurnUnderstanding(
 ): BotUnderstanding {
   return applyCurrentMessageSearchRules(
     text,
-    mergePending(previous, validateCurrentMessageIntent(text, raw), text),
+    mergePending(previous, validateCurrentMessageIntent(text, overlayMessageEntities(text, raw)), text),
   );
 }
 
@@ -799,12 +1018,18 @@ export function applyCurrentMessageSearchRules(
   const locationInMessage = extractPlace(text);
   const mentionsJob = mentionsJobWord(text);
   const mentionsRequest = includesAny(text, REQUEST_WORDS);
-  const location = locationInMessage || understanding.location;
+  const location = understanding.anyLocation ? "" : locationInMessage || understanding.location;
+  const locationKind = understanding.anyLocation
+    ? ""
+    : locationInMessage
+      ? placeKind(locationInMessage)
+      : understanding.locationKind || placeKind(location);
 
   if (roleInMessage) {
     return {
       ...understanding,
       location,
+      locationKind,
       category: roleInMessage,
       jobQuery: roleInMessage,
       openSearch: false,
@@ -812,13 +1037,14 @@ export function applyCurrentMessageSearchRules(
   }
 
   if (!mentionsJob && mentionsRequest && locationInMessage && understanding.category) {
-    return { ...understanding, location, openSearch: false };
+    return { ...understanding, location, locationKind, openSearch: false };
   }
 
-  if ((mentionsJob || mentionsRequest) && location) {
+  if ((mentionsJob || mentionsRequest) && (location || understanding.anyLocation)) {
     return {
       ...understanding,
       location,
+      locationKind,
       category: "",
       jobQuery: "",
       openSearch: true,
@@ -848,10 +1074,41 @@ export function toPublicJobsLookup(input: {
   category: string;
   location: string;
   openSearch: boolean;
+  locationKind?: "city" | "state" | "";
+  anyLocation?: boolean;
 }): { search: string; city: string } {
+  const stateOnly = input.locationKind === "state" || Boolean(input.anyLocation);
   return {
     search: input.openSearch ? "" : input.category,
-    city: input.location,
+    city: stateOnly ? "" : input.location,
+  };
+}
+
+/** Filters the public job API actually supports. State is not sent as a city. */
+export function publicJobFilters(input: {
+  category: string;
+  location: string;
+  openSearch: boolean;
+  locationKind?: "city" | "state" | "";
+  anyLocation?: boolean;
+  experienceLevel?: string;
+  minSalary?: number | null;
+  maxSalary?: number | null;
+}): {
+  search: string;
+  city: string;
+  state: string;
+  experience: string;
+  minSalary?: number;
+  maxSalary?: number;
+} {
+  const base = toPublicJobsLookup(input);
+  return {
+    ...base,
+    state: input.locationKind === "state" && !input.anyLocation ? input.location : "",
+    experience: input.experienceLevel || "",
+    ...(input.minSalary != null ? { minSalary: input.minSalary } : {}),
+    ...(input.maxSalary != null ? { maxSalary: input.maxSalary } : {}),
   };
 }
 
@@ -880,12 +1137,18 @@ export function renderJobSearchReply(input: {
   includeApplyLinks?: boolean;
   accountType?: AccountKind;
   seekerRegisterUrl?: string;
+  /** Only filters that were sent to the job search. */
+  appliedFilters?: string;
 }): string {
   const place = labelPlace(input.location, input.language);
   const role = labelRole(input.jobTitle, input.language);
   const count = input.total ?? input.jobs.length;
   const unknown = input.accountType === "none";
   const registerUrl = input.seekerRegisterUrl ?? "";
+  const filterNote =
+    input.language === "en" && input.appliedFilters
+      ? ` I used ${input.appliedFilters}.`
+      : "";
 
   if (count === 0) {
     const emptyCore =
@@ -895,7 +1158,7 @@ export function renderJobSearchReply(input: {
           ? `अभी ${place || "इस जगह"} में ${role || "नौकरी"} नहीं मिली.`
           : input.language === "ta" || input.language === "kn" || input.language === "ml"
             ? regionalLead(input.language, "empty", place, role, "")
-            : `Sorry, I could not find ${role || "jobs"}${place ? ` in ${place}` : ""} right now.`;
+            : `Sorry, I could not find ${role || "jobs"}${place ? ` in ${place}` : ""} right now.${filterNote}`;
     if (unknown) {
       return `${emptyCore}\n\n${unknownApplyFooter(input.language, registerUrl, "after_empty")}`;
     }
@@ -953,8 +1216,8 @@ export function renderJobSearchReply(input: {
     return withFooter(`${lead}\n\n${lines.join("\n\n")}`);
   }
   const lead = input.widenedTo
-    ? `No ${role || "jobs"} in ${place}. These are in ${input.widenedTo}:`
-    : `I found ${count} active ${role || "job"} listing${count === 1 ? "" : "s"}${place ? ` in ${place}` : ""}.`;
+    ? `No ${role || "jobs"} in ${place}. These are in ${input.widenedTo}:${filterNote}`
+    : `I found ${count} active ${role || "job"} listing${count === 1 ? "" : "s"}${place ? ` in ${place}` : ""}.${filterNote}`;
   const more =
     count > input.jobs.length
       ? `\n\nThere are ${count} matching jobs. Showing the first ${input.jobs.length}.`
@@ -1111,20 +1374,27 @@ export function buildDeterministicReply(
       ? unauthorizedCopy(language, "employer")
       : denyPrivateCopy(language);
   }
+  if (situation === "role_redirect") {
+    const target = facts.target === "employer" ? "employer" : "seeker";
+    return roleRedirectCopy(language, target, String(facts.url ?? ""));
+  }
   if (situation === "new_user") {
     const registration =
       facts.registration && typeof facts.registration === "object"
         ? (facts.registration as { seekerRegisterUrl?: string; employerRegisterUrl?: string })
         : {};
-    const employerNeeded = String(facts.reason ?? "") === "employer_account_required";
+    const reason = String(facts.reason ?? "");
+    const employerNeeded = reason === "employer_account_required" || reason === "incomplete_employer";
+    const resume = reason.startsWith("incomplete");
     return [
-      unauthorizedCopy(language, employerNeeded ? "employer" : "seeker"),
+      resume ? "" : unauthorizedCopy(language, employerNeeded ? "employer" : "seeker"),
       registrationCopy({
         language,
         role: employerNeeded ? "employer" : "seeker",
         url: employerNeeded
           ? registration.employerRegisterUrl || ""
           : registration.seekerRegisterUrl || "",
+        resume,
       }),
     ]
       .filter((line) => line.trim())
@@ -1190,6 +1460,7 @@ export function buildDeterministicReply(
         facts.registration && typeof facts.registration === "object"
           ? String((facts.registration as { seekerRegisterUrl?: string }).seekerRegisterUrl ?? "")
           : "",
+      appliedFilters: facts.appliedFilters ? String(facts.appliedFilters) : "",
     });
   }
   if (situation === "count" || situation === "status" || situation === "list") {
@@ -1411,17 +1682,49 @@ export function shouldUseLlmFallback(local: BotUnderstanding, text: string): boo
   return local.intent === "UNKNOWN" || local.confidence < 0.9;
 }
 
+const EMPLOYER_ONLY_INTENTS = new Set<BotIntent>([
+  "POST_JOB",
+  "EMPLOYER_JOBS",
+  "EMPLOYER_JOB_STATUS",
+  "EMPLOYER_APPLICATION_COUNT",
+  "ACCOUNT_STATUS",
+]);
+
+const SEEKER_ONLY_INTENTS = new Set<BotIntent>([
+  "JOB_SEARCH",
+  "JOB_COUNT",
+  "PROFILE_MATCH",
+  "PROFILE_JOBS",
+  "MY_APPLICATIONS",
+  "APPLICATION_STATUS",
+  "APPLICATION_COUNT",
+  "APPLIED_COVERAGE",
+  "MY_SKILLS",
+  "HOW_TO_APPLY",
+]);
+
+/** Account role decides permission. Mentioning hire or job-search does not. */
+export function roleRedirectTarget(
+  intent: BotIntent,
+  account: AccountKind,
+): "" | "seeker" | "employer" {
+  if (account === "seeker" && EMPLOYER_ONLY_INTENTS.has(intent)) return "employer";
+  if (account === "employer" && SEEKER_ONLY_INTENTS.has(intent)) return "seeker";
+  return "";
+}
+
 export function applyAccountAwareIntent(
   understanding: BotUnderstanding,
   account: AccountKind,
 ): BotUnderstanding {
+  let next = understanding;
   if (account === "employer") {
     if (
       understanding.intent === "MY_APPLICATIONS" ||
       understanding.intent === "APPLICATION_COUNT" ||
       understanding.intent === "APPLICATION_STATUS"
     ) {
-      return {
+      next = {
         ...understanding,
         intent: "EMPLOYER_APPLICATION_COUNT",
         location: "",
@@ -1430,32 +1733,23 @@ export function applyAccountAwareIntent(
         openSearch: false,
         scope: "OWN_EMPLOYER_DATA",
         requiresAuth: true,
+        crossRole: "",
       };
-    }
-    if (understanding.intent === "MY_SKILLS" || understanding.intent === "PROFILE_JOBS") {
-      return { ...understanding, intent: "ACCOUNT_STATUS", scope: "OWN_EMPLOYER_DATA", requiresAuth: true };
-    }
-  }
-  if (account === "seeker") {
-    if (
-      understanding.intent === "EMPLOYER_JOBS" ||
-      understanding.intent === "EMPLOYER_JOB_STATUS" ||
-      understanding.intent === "EMPLOYER_APPLICATION_COUNT" ||
-      understanding.intent === "POST_JOB"
-    ) {
-      return {
+    } else if (understanding.intent === "MY_SKILLS" || understanding.intent === "PROFILE_JOBS") {
+      next = {
         ...understanding,
-        intent: understanding.intent === "POST_JOB" ? "HELP" : "MY_APPLICATIONS",
-        location: "",
-        category: "",
-        jobQuery: "",
-        openSearch: false,
-        scope: understanding.intent === "POST_JOB" ? "NONE" : "OWN_DATA",
-        requiresAuth: understanding.intent !== "POST_JOB",
+        intent: "ACCOUNT_STATUS",
+        scope: "OWN_EMPLOYER_DATA",
+        requiresAuth: true,
+        crossRole: "",
       };
     }
   }
-  return understanding;
+  const redirect = roleRedirectTarget(next.intent, account);
+  if (redirect) {
+    return { ...next, crossRole: redirect, scope: "NONE", requiresAuth: false };
+  }
+  return { ...next, crossRole: "" };
 }
 
 const ROLE_HINT_PRESERVE_INTENTS = new Set<BotIntent>([
@@ -1522,6 +1816,9 @@ export function capabilityCopy(language: BotLanguage, account: AccountKind = "se
   if (account === "none" || account === "both") {
     if (language === "te") return "మీరు ఉద్యోగం వెతుకుతున్నారా, లేక ఉద్యోగులను నియమించాలనుకుంటున్నారా?";
     if (language === "hi") return "क्या आप नौकरी ढूंढ रहे हैं, या कर्मचारियों को रखना चाहते हैं?";
+    if (language === "ta") return "வேலை தேடுகிறீர்களா, அல்லது ஆட்களை நியமிக்க வேண்டுமா?";
+    if (language === "kn") return "ನೀವು ಉದ್ಯೋಗ ಹುಡುಕುತ್ತಿದ್ದೀರಾ, ಅಥವಾ ಉದ್ಯೋಗಿಗಳನ್ನು ನೇಮಿಸಬೇಕೇ?";
+    if (language === "ml") return "നിങ്ങൾ ജോലി തിരയുകയാണോ, അതോ ആളുകളെ നിയമിക്കണോ?";
     return "Are you looking for a job, or are you an employer who wants to hire?";
   }
   if (language === "te") return "నేను ఉద్యోగాలు వెతకడం, మీ దరఖాస్తులు, వాటి స్థితి, మరియు మీ ప్రొఫైల్‌కు సరిపోయే ఉద్యోగాల్లో సహాయం చేయగలను.";
@@ -1575,6 +1872,15 @@ export function greetingCopy(input: {
     }
     if (input.language === "hi") {
       return "आपका WhatsApp नंबर एक से अधिक AsliJobs खातों से जुड़ा है. नौकरी खोजनी है या employer के रूप में जारी रखना है?";
+    }
+    if (input.language === "ta") {
+      return "உங்கள் WhatsApp எண் ஒன்றுக்கு மேற்பட்ட AsliJobs கணக்குகளுடன் இணைந்துள்ளது. வேலை தேடுபவராகத் தொடரவா, Employer ஆகத் தொடரவா?";
+    }
+    if (input.language === "kn") {
+      return "ನಿಮ್ಮ WhatsApp ಸಂಖ್ಯೆ ಒಂದಕ್ಕಿಂತ ಹೆಚ್ಚು AsliJobs ಖಾತೆಗಳಿಗೆ ಸಂಪರ್ಕವಾಗಿದೆ. ಉದ್ಯೋಗ ಹುಡುಕುವವರಾಗಿ ಮುಂದುವರಿಯೋ, Employer ಆಗಿ ಮುಂದುವರಿಯೋ?";
+    }
+    if (input.language === "ml") {
+      return "നിങ്ങളുടെ WhatsApp നമ്പർ ഒന്നിലധികം AsliJobs അക്കൗണ്ടുകളുമായി ബന്ധപ്പെട്ടിരിക്കുന്നു. ജോലി അന്വേഷകനായി തുടരണോ, Employer ആയി തുടരണോ?";
     }
     return "Your WhatsApp number is linked to more than one AsliJobs account. Continue as a job seeker or as an employer?";
   }
@@ -1638,8 +1944,18 @@ export function registrationCopy(input: {
   language: BotLanguage;
   role: "seeker" | "employer";
   url: string;
+  resume?: boolean;
 }): string {
   const url = input.url.trim();
+  if (input.resume) {
+    const who = input.role === "employer" ? "Employer" : "Job Seeker";
+    if (input.language === "te") return `మీ ${who} రిజిస్ట్రేషన్ ఇంకా పూర్తి కాలేదు. ఇక్కడ కొనసాగించండి:\n${url}`;
+    if (input.language === "hi") return `आपका ${who} रजिस्ट्रेशन अभी पूरा नहीं हुआ है. यहाँ जारी रखें:\n${url}`;
+    if (input.language === "ta") return `உங்கள் ${who} பதிவு இன்னும் முடியவில்லை. இங்கே தொடருங்கள்:\n${url}`;
+    if (input.language === "kn") return `ನಿಮ್ಮ ${who} ನೋಂದಣಿ ಇನ್ನೂ ಪೂರ್ಣವಾಗಿಲ್ಲ. ಇಲ್ಲಿ ಮುಂದುವರಿಸಿ:\n${url}`;
+    if (input.language === "ml") return `നിങ്ങളുടെ ${who} രജിസ്ട്രേഷൻ ഇനിയും പൂർത്തിയായിട്ടില്ല. ഇവിടെ തുടരൂ:\n${url}`;
+    return `Your ${who} registration is still open. Continue here:\n${url}`;
+  }
   if (input.role === "employer") {
     if (input.language === "te") {
       return `సరే 👍 జాబ్ పోస్ట్ చేయడానికి ముందు AsliJobs లో Employer account create చేసుకోండి.\n\n👉 Register as Employer:\n${url}\n\nAccount create చేసాక WhatsApp లో మళ్లీ message చేయండి.`;
@@ -1674,6 +1990,48 @@ export function registrationCopy(input: {
     return `ശരി 👍 ജോലി തേടാൻ Job Seeker അക്കൗണ്ട് ഉണ്ടാക്കൂ.\n\n👉 Register as Job Seeker:\n${url}`;
   }
   return `Great! 👍 You're looking for a job.\n\nCreate your free Job Seeker account on AsliJobs to find and apply for jobs:\n${url}\n\nAfter registering, you can search and apply for jobs directly.`;
+}
+
+export function roleRedirectCopy(
+  language: BotLanguage,
+  target: "seeker" | "employer",
+  url: string,
+): string {
+  const link = url.trim();
+  if (target === "employer") {
+    if (language === "te") {
+      return `క్షమించండి, నేను ఉద్యోగాలు వెతకడం, దరఖాస్తులు, ఇంటర్వ్యూలు, మరియు మీ Job Seeker ప్రొఫైల్‌లో సహాయం చేయగలను. ఉద్యోగులను నియమించాలంటే Employer గా నమోదు చేసుకోండి:\n${link}`;
+    }
+    if (language === "hi") {
+      return `क्षमा करें, मैं नौकरी खोज, आवेदन, इंटरव्यू और आपकी Job Seeker प्रोफ़ाइल में मदद कर सकता हूँ. भर्ती करनी है तो Employer के रूप में रजिस्टर करें:\n${link}`;
+    }
+    if (language === "ta") {
+      return `மன்னிக்கவும், வேலை தேடல், விண்ணப்பங்கள், நேர்காணல்கள், மற்றும் உங்கள் Job Seeker சுயவிவரத்தில் உதவ முடியும். ஆட்களை நியமிக்க Employer ஆகப் பதிவு செய்யுங்கள்:\n${link}`;
+    }
+    if (language === "kn") {
+      return `ಕ್ಷಮಿಸಿ, ಉದ್ಯೋಗ ಹುಡುಕಾಟ, ಅರ್ಜಿಗಳು, ಸಂದರ್ಶನಗಳು, ಮತ್ತು ನಿಮ್ಮ Job Seeker ಪ್ರೊಫೈಲ್‌ನಲ್ಲಿ ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. ನೇಮಕ ಮಾಡಲು Employer ಆಗಿ ನೋಂದಾಯಿಸಿ:\n${link}`;
+    }
+    if (language === "ml") {
+      return `ക്ഷമിക്കണം, ജോലി തിരയൽ, അപേക്ഷകൾ, അഭിമുഖങ്ങൾ, നിങ്ങളുടെ Job Seeker പ്രൊഫൈൽ എന്നിവയിൽ സഹായിക്കാം. നിയമിക്കണമെങ്കിൽ Employer ആയി രജിസ്റ്റർ ചെയ്യൂ:\n${link}`;
+    }
+    return `Sorry, I can help you with job searches, applications, interviews, and your Job Seeker profile. If you want to hire candidates, please register as an Employer here:\n${link}`;
+  }
+  if (language === "te") {
+    return `క్షమించండి, నేను Employer నమోదు, జాబ్ పోస్టింగ్, నియామకం, మరియు దరఖాస్తుల నిర్వహణలో సహాయం చేయగలను. మీరు ఉద్యోగం వెతుకుతుంటే Job Seeker గా నమోదు చేసుకోండి:\n${link}`;
+  }
+  if (language === "hi") {
+    return `क्षमा करें, मैं Employer रजिस्ट्रेशन, नौकरी पोस्टिंग, भर्ती और आवेदन प्रबंधन में मदद कर सकता हूँ. नौकरी ढूंढनी है तो Job Seeker के रूप में रजिस्टर करें:\n${link}`;
+  }
+  if (language === "ta") {
+    return `மன்னிக்கவும், Employer பதிவு, வேலை போஸ்டிங், நியமனம், மற்றும் விண்ணப்ப நிர்வாகத்தில் உதவ முடியும். வேலை தேடுகிறீர்கள் என்றால் Job Seeker ஆகப் பதிவு செய்யுங்கள்:\n${link}`;
+  }
+  if (language === "kn") {
+    return `ಕ್ಷಮಿಸಿ, Employer ನೋಂದಣಿ, ಜಾಬ್ ಪೋಸ್ಟಿಂಗ್, ನೇಮಕಾತಿ, ಮತ್ತು ಅರ್ಜಿ ನಿರ್ವಹಣೆಯಲ್ಲಿ ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. ಉದ್ಯೋಗ ಹುಡುಕುತ್ತಿದ್ದರೆ Job Seeker ಆಗಿ ನೋಂದಾಯಿಸಿ:\n${link}`;
+  }
+  if (language === "ml") {
+    return `ക്ഷമിക്കണം, Employer രജിസ്ട്രേഷൻ, ജോലി പോസ്റ്റിംഗ്, നിയമനം, അപേക്ഷ നടത്തിപ്പ് എന്നിവയിൽ സഹായിക്കാം. ജോലി തിരയുകയാണെങ്കിൽ Job Seeker ആയി രജിസ്റ്റർ ചെയ്യൂ:\n${link}`;
+  }
+  return `Sorry, I can help with Employer registration, job posting, hiring, and application management. If you're looking for a job, please register as a Job Seeker here:\n${link}`;
 }
 
 export function purposeClarifyCopy(language: BotLanguage): string {
@@ -1921,11 +2279,21 @@ export function formatSalaryLabel(job: {
   return "";
 }
 
+const PLACE_MISSPELLINGS: Record<string, string> = {
+  hyderbad: "Hyderabad",
+  hydrabad: "Hyderabad",
+  bangalor: "Bangalore",
+};
+
 function extractPlace(text: string): string {
+  const folded = text.toLowerCase();
   const hit = PLACES.find((place) =>
-    place.forms.some((form) => text.toLowerCase().includes(form.toLowerCase())),
+    place.forms.some((form) => folded.includes(form.toLowerCase())),
   );
-  return hit?.canonical ?? "";
+  if (hit) return hit.canonical;
+  const missed = Object.keys(PLACE_MISSPELLINGS).find((form) => folded.includes(form));
+  if (missed) return PLACE_MISSPELLINGS[missed] ?? "";
+  return extractIndianState(text);
 }
 
 export function matchesRequestedRole(title: string, role: string): boolean {
@@ -1941,7 +2309,8 @@ function extractRole(text: string): string {
   const hit = ROLES.find((role) =>
     role.forms.some((form) => text.toLowerCase().includes(form.toLowerCase())),
   );
-  return hit?.canonical ?? "";
+  if (hit) return hit.canonical;
+  return extractFreeJobTitle(text, (phrase) => extractPlace(phrase) !== "");
 }
 
 function normalizePlace(value: string): string {

@@ -19,6 +19,17 @@ const whatsAppSessionSchema = new Schema(
     pendingIntent: { type: String, default: "" },
     lastLocation: { type: String, default: "" },
     lastCategory: { type: String, default: "" },
+    lastExperience: { type: String, default: "" },
+    lastExperienceYears: { type: Number, default: null },
+    lastExperienceRange: { type: String, default: "" },
+    lastMinSalary: { type: Number, default: null },
+    lastMaxSalary: { type: Number, default: null },
+    lastSalaryBasis: { type: String, enum: ["", "monthly", "annual"], default: "" },
+    locationKind: {
+      type: String,
+      enum: ["", "city", "state"],
+      default: "",
+    },
     conversationState: {
       type: String,
       enum: ["", "NEW_USER_INTENT", "SEEKER_MENU", "EMPLOYER_MENU"],

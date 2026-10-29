@@ -255,11 +255,33 @@ export type WhatsAppSeekerRecord = {
   registrationStatus?: string;
 };
 
+export type AccountProgress =
+  | "registered"
+  | "unregistered"
+  | "incomplete_seeker"
+  | "incomplete_employer"
+  | "incomplete_both";
+
 export type WhatsAppLinkedAccount = {
   kind: "job_seeker" | "employer" | "none" | "both";
   jobSeeker: WhatsAppSeekerRecord | null;
   employer: WhatsAppEmployerRecord | null;
+  progress: AccountProgress;
 };
+
+/** Incomplete rows stay unlinked. A missing row is unregistered. A thrown lookup is neither. */
+export function classifyAccountProgress(input: {
+  seekerStatus?: string | null;
+  employerStatus?: string | null;
+}): AccountProgress {
+  const seekerOpen = Boolean(input.seekerStatus) && input.seekerStatus !== "COMPLETED";
+  const employerOpen = Boolean(input.employerStatus) && input.employerStatus !== "completed";
+  if (seekerOpen && employerOpen) return "incomplete_both";
+  if (seekerOpen) return "incomplete_seeker";
+  if (employerOpen) return "incomplete_employer";
+  if (input.seekerStatus === "COMPLETED" || input.employerStatus === "completed") return "registered";
+  return "unregistered";
+}
 
 const SEEKER_LOOKUP =
   "fullName city jobRole skills preferredJobLocation registrationStatus";
@@ -282,7 +304,7 @@ export async function resolveWhatsAppLinkedAccount(
   nationalPhone: string,
 ): Promise<WhatsAppLinkedAccount> {
   if (!/^\d{10}$/.test(nationalPhone)) {
-    return { kind: "none", jobSeeker: null, employer: null };
+    return { kind: "none", jobSeeker: null, employer: null, progress: "unregistered" };
   }
 
   const identity = await PhoneAccountIdentityModel.findOne({
@@ -291,13 +313,17 @@ export async function resolveWhatsAppLinkedAccount(
     .select("accountKind accountId")
     .lean();
 
+  let linkedSeekerStatus: string | null = null;
+  let linkedEmployerStatus: string | null = null;
+
   if (identity?.accountId && identity.accountKind === "employer") {
     const employer = await EmployerModel.findById(identity.accountId)
       .select(EMPLOYER_LOOKUP)
       .lean();
     if (employer && isCompletedEmployer(employer)) {
-      return { kind: "employer", jobSeeker: null, employer };
+      return { kind: "employer", jobSeeker: null, employer, progress: "registered" };
     }
+    linkedEmployerStatus = employer?.registrationStatus ?? null;
   }
 
   if (identity?.accountId && identity.accountKind === "job_seeker") {
@@ -305,8 +331,9 @@ export async function resolveWhatsAppLinkedAccount(
       .select(SEEKER_LOOKUP)
       .lean();
     if (jobSeeker && isCompletedSeeker(jobSeeker)) {
-      return { kind: "job_seeker", employer: null, jobSeeker };
+      return { kind: "job_seeker", employer: null, jobSeeker, progress: "registered" };
     }
+    linkedSeekerStatus = jobSeeker?.registrationStatus ?? null;
   }
 
   const [jobSeeker, employer] = await Promise.all([
@@ -328,7 +355,14 @@ export async function resolveWhatsAppLinkedAccount(
         : employerOk
           ? "employer"
           : "none";
-  return { kind, jobSeeker: seekerOk, employer: employerOk };
+  const progress =
+    kind === "none"
+      ? classifyAccountProgress({
+          seekerStatus: jobSeeker?.registrationStatus ?? linkedSeekerStatus,
+          employerStatus: employer?.registrationStatus ?? linkedEmployerStatus,
+        })
+      : "registered";
+  return { kind, jobSeeker: seekerOk, employer: employerOk, progress };
 }
 
 /** Blocks the opposite account type even after OTP, before the account is finalized. */
