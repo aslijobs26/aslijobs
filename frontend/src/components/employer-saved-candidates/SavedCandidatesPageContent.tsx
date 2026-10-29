@@ -415,13 +415,13 @@ export function SavedCandidatesPageContent() {
   }, [mobileDetailOpen]);
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 py-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-5 lg:overflow-x-visible lg:px-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 py-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:py-5 md:pb-5 lg:overflow-x-visible lg:px-5 lg:py-4">
+      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between lg:gap-2">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl xl:text-3xl">
+          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-xl">
             Shortlisted Candidates
           </h1>
-          <p className="mt-1 max-w-2xl text-[11px] leading-snug text-muted sm:text-sm">
+          <p className="mt-1 max-w-2xl text-[11px] leading-snug text-muted sm:text-sm lg:mt-0.5 lg:max-w-xl lg:truncate lg:text-[11px] lg:leading-snug">
             Candidates you&apos;ve shortlisted and saved for future
             opportunities.
           </p>
@@ -441,14 +441,14 @@ export function SavedCandidatesPageContent() {
         </div>
       </header>
 
-      <div className="mt-5">
+      <div className="mt-3 sm:mt-5 lg:mt-3">
         <SavedCandidatesStatsCards
           stats={statsQuery.data}
           isLoading={statsQuery.isLoading}
         />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 lg:mt-3">
         <SavedCandidatesToolbar
           searchDraft={searchDraft}
           onSearchDraftChange={setSearchDraft}
@@ -482,32 +482,32 @@ export function SavedCandidatesPageContent() {
       </div>
 
       {showEmptyState ? (
-        <div className="mt-6 rounded-xl border border-dashed border-border-subtle bg-surface px-6 py-12 text-center">
-          <span className="mx-auto inline-flex size-14 items-center justify-center rounded-2xl bg-primary-light text-primary">
-            <Bookmark className="size-7" aria-hidden="true" />
+        <div className="mt-4 rounded-xl border border-dashed border-border-subtle bg-surface px-4 py-6 text-center sm:mt-6 sm:px-6 sm:py-12 lg:mt-4 lg:px-5 lg:py-8">
+          <span className="mx-auto inline-flex size-10 items-center justify-center rounded-xl bg-primary-light text-primary sm:size-14 sm:rounded-2xl lg:size-11">
+            <Bookmark className="size-5 sm:size-7 lg:size-5" aria-hidden="true" />
           </span>
-          <h2 className="mt-4 text-lg font-bold text-foreground">
+          <h2 className="mt-2 text-xs font-bold text-foreground sm:mt-4 sm:text-lg lg:mt-3 lg:text-sm">
             No shortlisted candidates yet
           </h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+          <p className="mx-auto mt-1 max-w-md text-[11px] leading-snug text-muted sm:mt-2 sm:text-sm sm:leading-normal lg:text-[11px] lg:leading-snug">
             Shortlist applicants from your pipeline to build a list you can
             filter, tag, and export anytime.
           </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:mt-6 sm:gap-3 lg:mt-4">
             {canUpdateCandidates ? (
               <button
                 type="button"
                 onClick={() => setAddModalOpen(true)}
-                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="inline-flex min-h-8 items-center justify-center rounded-lg bg-primary px-3 text-[11px] font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:px-5 sm:text-sm lg:min-h-9 lg:px-4 lg:text-xs"
               >
                 Add saved candidate
               </button>
             ) : null}
             <Link
               href={ROUTES.EMPLOYER_CANDIDATES}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border-subtle px-5 text-sm font-semibold text-foreground hover:border-primary/30 hover:bg-primary-light/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 text-[11px] font-semibold text-foreground hover:border-primary/30 hover:bg-primary-light/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:gap-2 sm:px-5 sm:text-sm lg:min-h-9 lg:px-4 lg:text-xs"
             >
-              <Users className="size-4 shrink-0" aria-hidden="true" />
+              <Users className="size-3.5 shrink-0 sm:size-4 lg:size-3.5" aria-hidden="true" />
               Browse candidates
             </Link>
           </div>
@@ -516,11 +516,11 @@ export function SavedCandidatesPageContent() {
         <div className={EMPLOYER_SAVED_CANDIDATES_LAYOUT_GRID_CLASS}>
           <div className="min-w-0">
             {!listQuery.isLoading && items.length === 0 && hasActiveFilters ? (
-              <div className="rounded-xl border border-border-subtle bg-surface px-6 py-10 text-center">
-                <p className="text-sm font-semibold text-foreground">
+              <div className="rounded-xl border border-border-subtle bg-surface px-4 py-6 text-left sm:px-6 sm:py-10 sm:text-center lg:px-5 lg:py-8">
+                <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
                   No shortlisted candidates match your filters
                 </p>
-                <p className="mt-1 text-sm text-muted">
+                <p className="mt-1 text-[11px] text-muted sm:text-sm lg:text-[11px]">
                   Try clearing search or filters to see more results.
                 </p>
               </div>

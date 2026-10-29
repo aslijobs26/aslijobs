@@ -260,13 +260,13 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Search by name, email or role..."
-                className="h-10 w-full rounded-xl border border-border-subtle bg-surface pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="h-10 w-full rounded-xl border border-border-subtle bg-surface pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 lg:h-9 lg:text-xs"
               />
             </label>
             <button
               type="button"
               onClick={() => setFiltersOpen((current) => !current)}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-9 lg:text-xs"
             >
               <Filter className="size-4" aria-hidden="true" />
               Filter
@@ -288,7 +288,7 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
                 setInvitePrefill({});
                 setModalMode("invite");
               }}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-9 lg:px-3 lg:text-xs"
             >
               <Plus className="size-4" aria-hidden="true" strokeWidth={2.5} />
               Invite Member

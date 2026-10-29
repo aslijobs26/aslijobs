@@ -76,37 +76,40 @@ export function MessagesStatsCards({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
+    <div className="grid gap-3 max-sm:grid-cols-2 max-sm:gap-2.5 sm:grid-cols-2 lg:gap-2 xl:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
           <article
             key={card.id}
-            className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm sm:p-4"
+            className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm max-sm:p-2.5 lg:rounded-lg lg:p-2.5"
           >
-            <div className="flex items-start justify-between gap-2 sm:gap-3">
+            <div className="flex items-start justify-between gap-3 max-sm:gap-2 lg:gap-2">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold leading-tight text-foreground sm:text-sm">
+                <p className="text-sm font-semibold text-foreground max-sm:text-[11px] max-sm:leading-tight lg:text-xs lg:leading-tight">
                   {card.title}
                 </p>
-                <p className="mt-0.5 text-[10px] text-muted sm:text-xs">
+                <p className="mt-0.5 text-xs text-muted max-sm:text-[10px] lg:text-[10px]">
                   {card.description}
                 </p>
               </div>
               <span
                 className={cn(
-                  "inline-flex size-7 shrink-0 items-center justify-center rounded-lg sm:size-9",
+                  "inline-flex size-9 shrink-0 items-center justify-center rounded-lg max-sm:size-7 lg:size-7",
                   card.iconClassName,
                 )}
                 aria-hidden="true"
               >
-                <Icon className="size-3.5 sm:size-4" strokeWidth={2} />
+                <Icon
+                  className="size-4 max-sm:size-3.5 lg:size-3.5"
+                  strokeWidth={2}
+                />
               </span>
             </div>
             {isLoading ? (
-              <SkeletonKpiValue className="mt-2 sm:mt-3" />
+              <SkeletonKpiValue className="mt-3 max-sm:mt-2 lg:mt-1.5" />
             ) : (
-              <p className="mt-2 text-xl font-bold text-foreground sm:mt-3 sm:text-2xl">
+              <p className="mt-3 text-2xl font-bold text-foreground max-sm:mt-2 max-sm:text-xl lg:mt-1.5 lg:text-xl">
                 {card.value ?? 0}
               </p>
             )}

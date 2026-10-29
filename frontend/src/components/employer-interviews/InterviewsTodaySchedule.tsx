@@ -142,7 +142,7 @@ export function InterviewsTodaySchedule({
   return (
     <section className="flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-3 py-3 sm:px-4">
-        <h2 className="text-sm font-semibold text-foreground">
+        <h2 className="text-sm font-semibold text-foreground lg:text-xs">
           Today&apos;s Schedule
         </h2>
         <time

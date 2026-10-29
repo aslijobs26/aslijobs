@@ -52,36 +52,36 @@ export function TeamManagementStatsCards({
               // Mobile: bordered surface KPI tile (readable on hero-bg pages)
               "flex h-full min-h-[5.25rem] flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
               // sm+: horizontal employer stats card
-              "sm:min-h-[5.5rem] sm:flex-row sm:items-center sm:gap-3 sm:p-4 sm:shadow-sm",
+              "sm:min-h-[5.5rem] sm:flex-row sm:items-center sm:gap-3 sm:p-4 sm:shadow-sm lg:min-h-0 lg:gap-2.5 lg:rounded-lg lg:p-3",
             )}
           >
             <div
               className={cn(
-                "inline-flex size-6 shrink-0 items-center justify-center rounded-lg sm:size-11 sm:rounded-full",
+                "inline-flex size-6 shrink-0 items-center justify-center rounded-lg sm:size-11 sm:rounded-full lg:size-8",
                 card.iconWrapClassName,
               )}
               aria-hidden="true"
             >
-              <Icon className="size-3 sm:size-5" strokeWidth={2} />
+              <Icon className="size-3 sm:size-5 lg:size-3.5" strokeWidth={2} />
             </div>
 
             <div className="mt-1.5 flex min-w-0 flex-1 flex-col sm:mt-0">
-              <p className="text-[10px] font-medium leading-tight text-muted sm:text-sm">
+              <p className="text-[10px] font-medium leading-tight text-muted sm:text-sm lg:text-[10px]">
                 {card.label}
               </p>
 
               {isLoading ? (
                 <div
-                  className="mt-auto h-5 w-9 animate-pulse rounded bg-border-subtle/80 sm:mt-1 sm:h-7 sm:w-12"
+                  className="mt-auto h-5 w-9 animate-pulse rounded bg-border-subtle/80 sm:mt-1 sm:h-7 sm:w-12 lg:h-5 lg:w-9"
                   aria-hidden="true"
                 />
               ) : (
-                <p className="mt-auto pt-1 text-lg font-bold tabular-nums leading-none tracking-tight text-foreground sm:mt-0.5 sm:pt-0 sm:text-2xl sm:leading-tight">
+                <p className="mt-auto pt-1 text-lg font-bold tabular-nums leading-none tracking-tight text-foreground sm:mt-0.5 sm:pt-0 sm:text-2xl sm:leading-tight lg:text-base">
                   {value}
                 </p>
               )}
 
-              <p className="mt-0.5 hidden text-xs text-muted sm:block">
+              <p className="mt-0.5 hidden text-xs text-muted sm:block lg:text-[11px]">
                 {subtitle}
               </p>
             </div>

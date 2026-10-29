@@ -25,7 +25,7 @@ function SupportItem({
   external?: boolean;
 }) {
   const className =
-    "flex min-h-11 items-center gap-3 rounded-lg px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+    "flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:gap-3 sm:px-2.5 sm:text-sm";
 
   if (external) {
     return (
@@ -60,22 +60,22 @@ export function DashboardSupportCard() {
   const whatsappExternal = WHATSAPP_JOIN_URL.startsWith("http");
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-      <div className="flex items-center gap-2.5">
-        <span className="inline-flex size-9 items-center justify-center rounded-lg bg-primary-light text-primary">
-          <Headphones className="size-4" aria-hidden="true" />
+    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4">
+      <div className="flex items-center gap-2 sm:gap-2.5">
+        <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-9">
+          <Headphones className="size-3.5 sm:size-4" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-bold text-foreground">
+          <h2 className="text-xs font-bold text-foreground sm:text-sm">
             {t("employer.shell.helpTitle")}
           </h2>
-          <p className="break-words text-xs text-muted">
+          <p className="break-words text-[0.6875rem] text-muted sm:text-xs">
             {t("employer.dashboard.supportSubtitle")}
           </p>
         </div>
       </div>
 
-      <ul className="mt-3 space-y-0.5">
+      <ul className="mt-2 space-y-0.5 sm:mt-3">
         <li>
           <SupportItem
             href={ROUTES.EMPLOYER_HELP_CENTER}

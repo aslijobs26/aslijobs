@@ -114,6 +114,35 @@ export function EmployerCandidatesPageContent() {
   const [appliedFrom, setAppliedFrom] = useState("");
   const [appliedTo, setAppliedTo] = useState("");
 
+  /**
+   * Laptop shell uses overflow:clip, but some engines still move html.scrollTop.
+   * That shifts the page (top becomes negative) and clips the title/KPI row.
+   */
+  useEffect(() => {
+    const resetRootScroll = () => {
+      if (!window.matchMedia("(min-width: 1024px)").matches) {
+        return;
+      }
+      if (
+        window.scrollY !== 0 ||
+        document.documentElement.scrollTop !== 0 ||
+        document.body.scrollTop !== 0
+      ) {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }
+    };
+
+    resetRootScroll();
+    window.addEventListener("scroll", resetRootScroll, { passive: true });
+    window.addEventListener("resize", resetRootScroll);
+    return () => {
+      window.removeEventListener("scroll", resetRootScroll);
+      window.removeEventListener("resize", resetRootScroll);
+    };
+  }, []);
+
   const normalizeSearch = (value: string) =>
     value.trim().replace(/\s+/g, " ");
   const search = useDebouncedValue(normalizeSearch(searchDraft), 300);
@@ -394,15 +423,15 @@ export function EmployerCandidatesPageContent() {
   return (
     <div
       data-employer-candidates-page
-      className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col px-3 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-5 lg:h-full lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:px-6 lg:pb-4"
+      className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:pt-5 md:pb-5 lg:h-full lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:px-4 lg:pt-3 lg:pb-2"
     >
       <div className="shrink-0">
-      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+      <header className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3 lg:gap-2">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-3xl lg:text-xl">
             Candidates
           </h1>
-          <p className="mt-1 max-w-2xl text-xs text-muted sm:text-sm">
+          <p className="mt-0.5 max-w-2xl text-[11px] leading-snug text-muted sm:mt-1 sm:text-sm sm:leading-normal lg:mt-0.5 lg:max-w-xl lg:truncate lg:text-[11px] lg:leading-snug">
             Manage applicants, review resumes, schedule interviews and move
             candidates through the hiring pipeline.
           </p>
@@ -427,10 +456,10 @@ export function EmployerCandidatesPageContent() {
             <button
               type="button"
               onClick={() => setExportModalOpen(true)}
-              className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary-light px-4 text-xs font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:w-auto sm:min-w-[7.5rem] sm:gap-2 sm:px-5 sm:text-sm"
+              className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary-light px-4 text-xs font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:w-auto sm:min-w-[7.5rem] sm:gap-2 sm:px-5 sm:text-sm lg:min-h-9 lg:min-w-0 lg:px-3.5 lg:text-xs"
             >
               <Download
-                className="size-3.5 shrink-0 sm:size-4"
+                className="size-3.5 shrink-0 sm:size-4 lg:size-3.5"
                 aria-hidden="true"
               />
               Export
@@ -457,7 +486,7 @@ export function EmployerCandidatesPageContent() {
         />
       ) : null}
 
-      <div className="mt-5">
+      <div className="mt-3 sm:mt-5 lg:mt-2">
         <CandidatesKpiStrip
           stats={statsQuery.data}
           isLoading={statsQuery.isLoading}

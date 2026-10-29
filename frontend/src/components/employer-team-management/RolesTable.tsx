@@ -162,7 +162,7 @@ export function RolesTable({
                         >
                           <Icon className="size-4" aria-hidden="true" />
                         </span>
-                        <span className="truncate text-sm font-semibold text-foreground">
+                        <span className="truncate text-sm font-semibold text-foreground lg:text-xs">
                           {role.name}
                         </span>
                       </div>

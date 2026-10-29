@@ -66,7 +66,7 @@ export function InterviewsStatusOverview() {
   return (
     <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">
+        <h2 className="text-sm font-semibold text-foreground lg:text-xs">
           Interview Status Overview
         </h2>
         <div className="min-w-[7.5rem] shrink-0">

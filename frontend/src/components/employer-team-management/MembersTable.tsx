@@ -143,7 +143,7 @@ export function MembersTable({
                       </span>
                       <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-1.5">
-                          <p className="truncate text-sm font-semibold text-foreground">
+                          <p className="truncate text-sm font-semibold text-foreground lg:text-xs">
                             {member.fullName}
                           </p>
                           {isYou ? (

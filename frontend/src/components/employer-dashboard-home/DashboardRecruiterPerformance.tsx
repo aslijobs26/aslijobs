@@ -40,27 +40,27 @@ export function DashboardRecruiterPerformance({
 
   return (
     <section
-      className="flex h-full min-h-[22rem] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm sm:min-h-[22rem] lg:min-h-[17rem]"
       aria-labelledby="dashboard-recruiter-performance-title"
     >
-      <div className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
+      <div className="flex items-center justify-between gap-2 px-3 pt-3 sm:gap-3 sm:px-5 sm:pt-5 lg:px-4 lg:pt-3">
         <h2
           id="dashboard-recruiter-performance-title"
-          className="min-w-0 break-words text-base font-bold text-foreground"
+          className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base lg:text-sm"
         >
           {t("employer.dashboard.recruiterPerformance")}
         </h2>
         <Link
           href={ROUTES.EMPLOYER_INTERVIEWS}
-          className="shrink-0 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="shrink-0 text-xs font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm lg:text-xs"
         >
           {t("employer.common.viewAll")}
         </Link>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col px-3 pb-4 pt-4 sm:px-4 sm:pb-5 sm:pt-5">
+      <div className="flex min-h-0 flex-1 flex-col px-2.5 pb-3 pt-2 sm:px-4 sm:pb-5 sm:pt-5 lg:px-3 lg:pb-3 lg:pt-2.5">
         <div
-          className="relative flex min-h-[16rem] flex-1 gap-2 sm:gap-3"
+          className="relative flex min-h-[11rem] flex-1 gap-1.5 sm:min-h-[16rem] sm:gap-3 lg:min-h-[12.5rem] lg:gap-2"
           role="img"
           aria-label={t("employer.dashboard.recruiterChartAria")}
         >

@@ -2,6 +2,7 @@
 
 type EmployerProfileCompletionCircleProps = {
   percentage: number;
+  compact?: boolean;
 };
 
 const CIRCLE_SIZE = 64;
@@ -11,13 +12,18 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function EmployerProfileCompletionCircle({
   percentage,
+  compact = false,
 }: EmployerProfileCompletionCircleProps) {
   const clamped = Math.min(100, Math.max(0, percentage));
   const offset = CIRCUMFERENCE * (1 - clamped / 100);
 
   return (
     <div
-      className="relative inline-flex size-16 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface shadow-sm"
+      className={
+        compact
+          ? "relative inline-flex size-12 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface shadow-sm sm:size-16"
+          : "relative inline-flex size-16 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface shadow-sm lg:size-12"
+      }
       role="progressbar"
       aria-label={`Profile ${clamped}% complete`}
       aria-valuemin={0}
@@ -28,7 +34,7 @@ export function EmployerProfileCompletionCircle({
         width={CIRCLE_SIZE}
         height={CIRCLE_SIZE}
         viewBox={`0 0 ${CIRCLE_SIZE} ${CIRCLE_SIZE}`}
-        className="absolute inset-0 -rotate-90"
+        className="absolute inset-0 size-full -rotate-90"
         aria-hidden="true"
       >
         <circle
@@ -57,7 +63,13 @@ export function EmployerProfileCompletionCircle({
         className="relative z-10 flex flex-col items-center justify-center leading-none"
         aria-live="polite"
       >
-        <span className="text-sm font-bold tabular-nums text-foreground">
+        <span
+          className={
+            compact
+              ? "text-xs font-bold tabular-nums text-foreground sm:text-sm"
+              : "text-sm font-bold tabular-nums text-foreground lg:text-xs"
+          }
+        >
           {clamped}%
         </span>
       </span>

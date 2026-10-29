@@ -51,7 +51,7 @@ export function DashboardStatCards({
   return (
     <section
       aria-label={t("employer.dashboard.statsAria")}
-      className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5"
+      className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:grid-cols-5"
     >
       {EMPLOYER_DASHBOARD_STAT_CARDS.map((card) => {
         const Icon = card.icon;
@@ -61,38 +61,44 @@ export function DashboardStatCards({
         return (
           <article
             key={card.key}
-            className="flex min-h-[7.5rem] min-w-0 flex-col rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm transition-shadow hover:shadow-md sm:p-4"
+            className="flex min-h-[5.5rem] min-w-0 flex-col rounded-lg border border-border-subtle bg-surface p-2.5 shadow-sm transition-shadow hover:shadow-md sm:min-h-[7.5rem] sm:rounded-xl sm:p-4 lg:min-h-[5.75rem] lg:p-2.5"
           >
             <div className="flex items-start justify-between gap-2">
               <span
                 className={cn(
-                  "inline-flex size-9 items-center justify-center rounded-lg",
+                  "inline-flex size-7 items-center justify-center rounded-md sm:size-9 sm:rounded-lg lg:size-7",
                   card.iconWrapClassName,
                 )}
                 aria-hidden="true"
               >
-                <Icon className={cn("size-4", card.iconClassName)} strokeWidth={2} />
+                <Icon
+                  className={cn(
+                    "size-3.5 sm:size-4 lg:size-3.5",
+                    card.iconClassName,
+                  )}
+                  strokeWidth={2}
+                />
               </span>
             </div>
 
-            <p className="mt-3 break-words text-xs font-medium text-muted">
+            <p className="mt-1.5 break-words text-[0.6875rem] font-medium leading-tight text-muted sm:mt-3 sm:text-xs sm:leading-normal lg:mt-2">
               {t(`employer.stats.${card.key}`)}
             </p>
 
             {isLoading ? (
-              <div className="mt-2 h-7 w-16 animate-pulse rounded bg-border-subtle" />
+              <div className="mt-1.5 h-6 w-12 animate-pulse rounded bg-border-subtle sm:mt-2 sm:h-7 sm:w-16 lg:mt-1.5 lg:h-6 lg:w-14" />
             ) : (
-              <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-foreground">
+              <p className="mt-0.5 text-xl font-bold tabular-nums leading-none tracking-tight text-foreground sm:mt-1 sm:text-2xl sm:leading-normal lg:text-xl lg:leading-none">
                 {formatEmployerJobCount(value)}
               </p>
             )}
 
             {isGrowthLoading ? (
-              <div className="mt-auto h-3 w-20 animate-pulse rounded bg-border-subtle pt-2" />
+              <div className="mt-auto h-2.5 w-16 animate-pulse rounded bg-border-subtle pt-1 sm:h-3 sm:w-20 sm:pt-2 lg:h-2.5 lg:w-16 lg:pt-1.5" />
             ) : !isLoading && trend ? (
               <p
                 className={cn(
-                  "mt-auto break-words pt-2 text-[0.6875rem] font-medium",
+                  "mt-auto break-words pt-1 text-[0.625rem] font-medium leading-tight sm:pt-2 sm:text-[0.6875rem] sm:leading-normal lg:pt-1.5 lg:text-[0.625rem] lg:leading-tight",
                   trend.direction === "up" && "text-primary",
                   trend.direction === "down" && "text-pin-state",
                   (trend.direction === "flat" || trend.direction === "new") &&
@@ -102,7 +108,7 @@ export function DashboardStatCards({
                 {formatGrowthLabel(t, card.key, trend)}
               </p>
             ) : (
-              <p className="mt-auto pt-2 text-[0.6875rem] font-medium text-muted">
+              <p className="mt-auto pt-1 text-[0.625rem] font-medium leading-tight text-muted sm:pt-2 sm:text-[0.6875rem] sm:leading-normal lg:pt-1.5 lg:text-[0.625rem] lg:leading-tight">
                 {isLoading ? null : t("employer.dashboard.updatedLive")}
               </p>
             )}

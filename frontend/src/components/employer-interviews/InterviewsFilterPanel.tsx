@@ -98,7 +98,7 @@ export function InterviewsFilterPanel({
           <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
             <Filter className="size-3.5" aria-hidden="true" />
           </span>
-          <h2 className="text-sm font-semibold text-foreground">Filters</h2>
+          <h2 className="text-sm font-semibold text-foreground lg:text-xs">Filters</h2>
         </div>
         <button
           type="button"

@@ -6,7 +6,7 @@ export const EMPLOYER_CANDIDATE_DETAIL_PANEL_WIDTH_REM = "32rem";
 
 /** Aside width utility used by CandidatesDetailPanel (panel variant). */
 export const EMPLOYER_CANDIDATE_DETAIL_PANEL_ASIDE_CLASS =
-  "flex h-full min-h-0 w-full flex-col overflow-hidden lg:w-[32rem] xl:w-[34rem]";
+  "flex h-full min-h-0 w-full flex-col overflow-hidden lg:w-[30rem] xl:w-[30rem]";
 
 /**
  * Sticky shell for the Shortlisted detail panel. Fixed height so the resume
@@ -25,7 +25,7 @@ export const EMPLOYER_SAVED_CANDIDATES_LIST_STICKY_SHELL_CLASS =
 
 /** Candidates page 3-column layout (filters | list | detail). */
 export const EMPLOYER_CANDIDATES_LAYOUT_GRID_CLASS =
-  "mt-4 grid min-h-0 flex-1 gap-4 lg:grid-cols-[15rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] xl:grid-cols-[16rem_minmax(0,1fr)_34rem]";
+  "mt-4 grid min-h-0 flex-1 gap-4 lg:mt-2.5 lg:gap-2.5 lg:grid-cols-[12.5rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] xl:grid-cols-[13.5rem_minmax(0,1fr)_30rem]";
 
 /** Shortlisted candidates page 2-column layout (list | detail). */
 export const EMPLOYER_SAVED_CANDIDATES_LAYOUT_GRID_CLASS =

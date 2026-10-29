@@ -60,10 +60,10 @@ export function TeamManagementPageContent() {
     <div className="flex flex-1 flex-col gap-4 px-4 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:gap-5 sm:px-6 sm:pt-6 md:pb-6 lg:px-8 lg:pb-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl">
+          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-xl">
             {EMPLOYER_TEAM_PAGE_TITLE}
           </h1>
-          <p className="mt-1 text-xs text-muted sm:text-[0.9375rem]">
+          <p className="mt-1 text-xs text-muted sm:text-[0.9375rem] lg:mt-0.5 lg:text-[11px]">
             {EMPLOYER_TEAM_PAGE_SUBTITLE}
           </p>
         </div>
@@ -72,10 +72,10 @@ export function TeamManagementPageContent() {
             <button
               type="button"
               onClick={() => setActiveTab("roles")}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-4 sm:text-sm"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-4 sm:text-sm lg:h-9 lg:gap-1.5 lg:px-3 lg:text-xs"
             >
               <TableProperties
-                className="size-3.5 sm:size-4"
+                className="size-3.5 sm:size-4 lg:size-3.5"
                 aria-hidden="true"
               />
               Permission Matrix
@@ -88,10 +88,10 @@ export function TeamManagementPageContent() {
                 setInviteError(null);
                 setInviteOpen(true);
               }}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-4 sm:text-sm"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-4 sm:text-sm lg:h-9 lg:gap-1.5 lg:px-3 lg:text-xs"
             >
               <Plus
-                className="size-3.5 sm:size-4"
+                className="size-3.5 sm:size-4 lg:size-3.5"
                 aria-hidden="true"
                 strokeWidth={2.5}
               />

@@ -357,22 +357,22 @@ function SavedCandidateTableRow({
         isSelected && "bg-primary-light/25",
       )}
     >
-      <td className="min-w-0 max-w-[18rem] px-3 py-3 align-middle sm:max-w-[22rem] sm:px-4">
-        <div className="flex w-full min-w-0 items-start gap-2.5 sm:gap-3">
+      <td className="min-w-0 max-w-[18rem] px-3 py-3 align-middle sm:max-w-[22rem] sm:px-4 lg:px-3 lg:py-2.5">
+        <div className="flex w-full min-w-0 items-start gap-2.5 sm:gap-3 lg:gap-2">
           <span
-            className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-bold text-surface sm:size-10 sm:text-xs"
+            className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-bold text-surface sm:size-10 sm:text-xs lg:size-8 lg:text-[10px]"
             aria-hidden="true"
           >
             {getCandidateInitials(item.candidateName)}
           </span>
           <span className="min-w-0 flex-1">
             <span className="flex min-w-0 items-center justify-between gap-2">
-              <span className="min-w-0 flex-1 truncate text-sm font-bold leading-5 tracking-tight text-foreground">
+              <span className="min-w-0 flex-1 truncate text-sm font-bold leading-5 tracking-tight text-foreground lg:text-xs lg:leading-4">
                 {item.candidateName}
               </span>
               <PriorityBadge priority={item.priority} />
             </span>
-            <span className="mt-1 flex min-w-0 flex-col gap-0.5 text-[11px] leading-4 text-muted sm:text-xs sm:leading-5">
+            <span className="mt-1 flex min-w-0 flex-col gap-0.5 text-[11px] leading-4 text-muted sm:text-xs sm:leading-5 lg:mt-0.5 lg:text-[11px] lg:leading-4">
               {item.candidateExperienceLabel ? (
                 <span className="flex min-w-0 items-center gap-1.5">
                   <Briefcase
@@ -399,19 +399,19 @@ function SavedCandidateTableRow({
           </span>
         </div>
       </td>
-      <td className="hidden whitespace-nowrap px-3 py-3 align-middle text-[11px] font-semibold text-foreground sm:text-xs xl:table-cell">
+      <td className="hidden whitespace-nowrap px-3 py-3 align-middle text-[11px] font-semibold text-foreground sm:text-xs lg:py-2.5 xl:table-cell">
         {item.publicJobId}
       </td>
-      <td className="min-w-[8rem] max-w-[12rem] px-3 py-3 align-middle text-[11px] text-foreground sm:text-xs">
+      <td className="min-w-[8rem] max-w-[12rem] px-3 py-3 align-middle text-[11px] text-foreground sm:text-xs lg:py-2.5 lg:text-[11px]">
         <span className="block truncate font-semibold">{item.jobTitle}</span>
       </td>
-      <td className="hidden whitespace-nowrap px-3 py-3 align-middle text-[11px] text-muted sm:text-xs lg:table-cell">
+      <td className="hidden whitespace-nowrap px-3 py-3 align-middle text-[11px] text-muted sm:text-xs lg:table-cell lg:py-2.5 lg:text-[11px]">
         {formatCandidateDate(item.savedAt)}
       </td>
-      <td className="hidden min-w-[7rem] max-w-[10rem] px-3 py-3 align-middle md:table-cell">
+      <td className="hidden min-w-[7rem] max-w-[10rem] px-3 py-3 align-middle md:table-cell lg:py-2.5">
         <TagPills tags={item.tags} />
       </td>
-      <td className="whitespace-nowrap px-2 py-3 align-middle sm:px-3">
+      <td className="whitespace-nowrap px-2 py-3 align-middle sm:px-3 lg:py-2.5">
         <div className="flex items-center justify-end gap-0.5">
           {whatsappHref ? (
             <a
@@ -419,20 +419,20 @@ function SavedCandidateTableRow({
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`WhatsApp ${item.candidateName}`}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:size-7"
               onClick={(event) => event.stopPropagation()}
             >
-              <WhatsAppIcon className="text-base leading-none" />
+              <WhatsAppIcon className="text-base leading-none lg:text-sm" />
             </a>
           ) : null}
           {telHref ? (
             <a
               href={telHref}
               aria-label={`Call ${item.candidateName}`}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:size-7"
               onClick={(event) => event.stopPropagation()}
             >
-              <Phone className="size-4" aria-hidden="true" />
+              <Phone className="size-4 lg:size-3.5" aria-hidden="true" />
             </a>
           ) : null}
           {canScheduleInterview ? (
@@ -450,7 +450,7 @@ function SavedCandidateTableRow({
                   : "Schedule interview"
               }
               className={cn(
-                "inline-flex size-8 items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                "inline-flex size-8 items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:size-7",
                 interviewScheduled
                   ? "bg-primary-light text-primary hover:bg-primary-light/80"
                   : "text-primary hover:bg-primary-light",
@@ -462,12 +462,12 @@ function SavedCandidateTableRow({
             >
               {interviewScheduled ? (
                 <CalendarCheck
-                  className="size-4"
+                  className="size-4 lg:size-3.5"
                   aria-hidden="true"
                   strokeWidth={2.25}
                 />
               ) : (
-                <Calendar className="size-4" aria-hidden="true" />
+                <Calendar className="size-4 lg:size-3.5" aria-hidden="true" />
               )}
             </button>
           ) : null}
@@ -521,19 +521,19 @@ export function SavedCandidatesTable({
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="px-4 py-12 text-center">
-            <p className="text-sm font-semibold text-foreground">
+          <div className="px-4 py-12 text-center lg:py-8">
+            <p className="text-sm font-semibold text-foreground lg:text-xs">
               No shortlisted candidates found.
             </p>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-sm text-muted lg:text-[11px]">
               No candidates match your filters.
             </p>
           </div>
         ) : (
           <table className="w-full min-w-[40rem] border-collapse text-left xl:min-w-0">
             <thead className="sticky top-0 z-10">
-              <tr className="border-b border-border-subtle bg-hero-bg/95 text-[11px] font-semibold uppercase tracking-wide text-muted backdrop-blur-sm sm:text-xs">
-                <th className="min-w-0 px-3 py-3 sm:px-4">Candidate</th>
+              <tr className="border-b border-border-subtle bg-hero-bg/95 text-[11px] font-semibold uppercase tracking-wide text-muted backdrop-blur-sm sm:text-xs lg:text-[10px]">
+                <th className="min-w-0 px-3 py-3 sm:px-4 lg:px-3 lg:py-2.5">Candidate</th>
                 <th className="hidden whitespace-nowrap px-3 py-3 xl:table-cell">
                   Job ID
                 </th>
@@ -562,7 +562,7 @@ export function SavedCandidatesTable({
       </div>
 
       <div className="flex shrink-0 flex-col gap-2 border-t border-border-subtle px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
-        <p className="text-xs text-muted">
+        <p className="text-xs text-muted lg:text-[11px]">
           Page {page} of {Math.max(1, totalPages)}
         </p>
         <div className="flex items-center gap-2">
@@ -570,19 +570,19 @@ export function SavedCandidatesTable({
             type="button"
             disabled={page <= 1 || isLoading}
             onClick={() => onPageChange(page - 1)}
-            className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-8 lg:px-2.5 lg:text-xs"
           >
-            <ChevronLeft className="size-4" aria-hidden="true" />
+            <ChevronLeft className="size-4 lg:size-3.5" aria-hidden="true" />
             Prev
           </button>
           <button
             type="button"
             disabled={page >= totalPages || isLoading}
             onClick={() => onPageChange(page + 1)}
-            className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-8 lg:px-2.5 lg:text-xs"
           >
             Next
-            <ChevronRight className="size-4" aria-hidden="true" />
+            <ChevronRight className="size-4 lg:size-3.5" aria-hidden="true" />
           </button>
         </div>
       </div>

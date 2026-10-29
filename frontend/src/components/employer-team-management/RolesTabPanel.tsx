@@ -456,7 +456,7 @@ export function RolesTabPanel({
         <section className="flex min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
           <div className="flex flex-col gap-3 border-b border-border-subtle p-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h3 className="text-base font-bold text-foreground">Roles</h3>
+              <h3 className="text-base font-bold text-foreground lg:text-sm">Roles</h3>
               <p className="mt-0.5 text-xs text-muted">
                 Create and manage roles for your team.
               </p>

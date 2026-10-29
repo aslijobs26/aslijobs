@@ -49,9 +49,9 @@ export function DashboardNotifications({
 
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5">
+      <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3.5">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-foreground">
+          <h2 className="text-xs font-bold text-foreground sm:text-sm">
             {t("employer.dashboard.notifications")}
           </h2>
           {unreadCount > 0 ? (
@@ -83,9 +83,9 @@ export function DashboardNotifications({
       ) : null}
 
       {!isLoading && latestNotifications.length === 0 ? (
-        <div className="flex flex-col items-center px-4 py-8 text-center">
-          <Bell className="size-5 text-muted" aria-hidden="true" />
-          <p className="mt-2 text-sm text-muted">
+        <div className="flex flex-col items-center px-3 py-5 text-center sm:px-4 sm:py-8">
+          <Bell className="size-4 text-muted sm:size-5" aria-hidden="true" />
+          <p className="mt-1.5 text-xs text-muted sm:mt-2 sm:text-sm">
             {t("employer.dashboard.noNotifications")}
           </p>
         </div>

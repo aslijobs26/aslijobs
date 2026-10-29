@@ -1,6 +1,7 @@
 /**
  * Candidates desktop: lock document height to the viewport; panels scroll internally.
  * Scoped via [data-employer-candidates-page] on the page root only.
+ * `overflow: clip` is required — some engines still allow root scrollTop with `hidden`.
  */
 @media (min-width: 1024px) {
   html:has([data-employer-candidates-page]),
@@ -8,7 +9,9 @@
     height: 100dvh;
     max-height: 100dvh;
     overflow: hidden;
+    overflow: clip;
     overscroll-behavior: none;
+    scrollbar-gutter: auto;
   }
 
   body:has([data-employer-candidates-page]) .min-h-dvh.bg-hero-bg {
@@ -16,6 +19,7 @@
     max-height: 100dvh;
     min-height: 0;
     overflow: hidden;
+    overflow: clip;
   }
 
   body:has([data-employer-candidates-page])
@@ -25,6 +29,7 @@
     max-height: 100%;
     min-height: 0;
     overflow: hidden;
+    overflow: clip;
   }
 
   body:has([data-employer-candidates-page]) main.flex.flex-1.flex-col {
@@ -32,5 +37,6 @@
     min-height: 0;
     max-height: 100%;
     overflow: hidden;
+    overflow: clip;
   }
 }

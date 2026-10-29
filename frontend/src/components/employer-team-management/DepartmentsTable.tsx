@@ -156,7 +156,7 @@ export function DepartmentsTable({
                             <Icon className="size-4" aria-hidden="true" />
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-foreground">
+                            <p className="truncate text-sm font-semibold text-foreground lg:text-xs">
                               {department.name}
                             </p>
                             {department.code ? (

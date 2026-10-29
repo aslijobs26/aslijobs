@@ -3,6 +3,7 @@
 import { formatSavedCandidateChangePercent } from "@/components/employer-saved-candidates/saved-candidates-utils";
 import type { SavedCandidateStats } from "@/types/saved-candidates";
 import { cn } from "@/utils/cn";
+import { formatEmployerJobCount } from "@/utils/employer-jobs-format";
 import {
   Briefcase,
   CalendarCheck,
@@ -69,8 +70,10 @@ const KPI_ITEMS: KpiConfig[] = [
 
 function ChangeBadge({
   changePercent,
+  className,
 }: {
   changePercent: number | null | undefined;
+  className?: string;
 }) {
   const label = formatSavedCandidateChangePercent(changePercent);
   if (!label) {
@@ -81,6 +84,7 @@ function ChangeBadge({
     <span
       className={cn(
         "text-[9px] font-semibold leading-none sm:text-[11px]",
+        className,
         value > 0 && "text-emerald-600",
         value < 0 && "text-red-600",
         value === 0 && "text-muted",
@@ -96,7 +100,10 @@ export function SavedCandidatesStatsCards({
   isLoading,
 }: SavedCandidatesStatsCardsProps) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
+    <section
+      aria-label="Shortlisted candidate statistics"
+      className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5"
+    >
       {KPI_ITEMS.map((item) => {
         const Icon = item.icon;
         const value = stats?.[item.key];
@@ -106,40 +113,49 @@ export function SavedCandidatesStatsCards({
             : null;
 
         return (
-          <div
+          <article
             key={item.key}
-            className={cn(
-              "flex min-h-[5rem] flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:min-h-[5.5rem] sm:px-3 sm:py-2.5",
-            )}
+            className="flex min-h-[5rem] min-w-0 flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:min-h-[5.5rem] sm:px-3 sm:py-2.5 lg:min-h-0 lg:rounded-lg lg:px-2.5 lg:py-2 max-sm:min-h-[6.75rem] max-sm:px-3.5 max-sm:py-3 max-sm:shadow-[0_1px_2px_rgba(15,23,42,0.04)] max-sm:hover:border-primary/20"
           >
-            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+            <div className="order-1 flex items-center justify-between gap-1.5 sm:gap-2">
               <span
                 className={cn(
-                  "inline-flex size-6 shrink-0 items-center justify-center rounded-lg sm:size-7",
+                  "inline-flex size-6 shrink-0 items-center justify-center rounded-lg sm:size-7 lg:size-6 max-sm:size-8",
                   item.iconClassName,
                 )}
+                aria-hidden="true"
               >
-                <Icon className="size-3 sm:size-3.5" aria-hidden="true" />
+                <Icon
+                  className="size-3 sm:size-3.5 lg:size-3 max-sm:size-3.5"
+                  strokeWidth={2}
+                />
               </span>
               {item.showChange && !isLoading ? (
-                <ChangeBadge changePercent={changeValue} />
+                <ChangeBadge
+                  changePercent={changeValue}
+                  className="hidden sm:inline lg:text-[10px]"
+                />
               ) : null}
             </div>
-            <p className="mt-1.5 text-lg font-bold leading-none tracking-tight text-foreground sm:mt-2 sm:text-2xl xl:text-[1.75rem]">
+            <p className="order-2 mt-1.5 text-lg font-bold leading-none tracking-tight text-foreground sm:mt-2 sm:text-2xl lg:mt-1 lg:text-base max-sm:order-3 max-sm:mt-auto max-sm:pt-1 max-sm:text-lg">
               {isLoading ? (
-                <span className="inline-block h-5 w-7 animate-pulse rounded bg-primary-light/50 sm:h-7 sm:w-9" />
-              ) : typeof value === "number" ? (
-                value
+                <span className="inline-block h-5 w-7 animate-pulse rounded bg-primary-light/50 sm:h-7 sm:w-9 lg:h-5 lg:w-7" />
               ) : (
-                0
+                formatEmployerJobCount(typeof value === "number" ? value : 0)
               )}
             </p>
-            <p className="mt-1 text-[10px] font-semibold leading-tight text-muted sm:mt-1.5 sm:text-xs">
+            <p className="order-3 mt-1 break-words text-[10px] font-semibold leading-tight text-muted sm:mt-1.5 sm:text-xs lg:mt-0.5 lg:text-[10px] max-sm:order-2 max-sm:mt-2 max-sm:font-medium">
               {item.label}
             </p>
-          </div>
+            {item.showChange && !isLoading ? (
+              <ChangeBadge
+                changePercent={changeValue}
+                className="order-4 mt-1 sm:hidden"
+              />
+            ) : null}
+          </article>
         );
       })}
-    </div>
+    </section>
   );
 }

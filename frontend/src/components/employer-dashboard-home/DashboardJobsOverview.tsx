@@ -55,14 +55,14 @@ export function DashboardJobsOverview({
 
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
-        <h2 className="min-w-0 break-words text-base font-bold text-foreground">
+      <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5 lg:px-4 lg:py-2.5">
+        <h2 className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base lg:text-sm">
           {t("employer.dashboard.jobsOverview")}
         </h2>
         <Can module="jobs" action="read">
           <Link
             href={ROUTES.EMPLOYER_JOBS}
-            className="shrink-0 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="shrink-0 text-xs font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm lg:text-xs"
           >
             {t("employer.common.viewAll")}
           </Link>
@@ -99,15 +99,15 @@ export function DashboardJobsOverview({
       ) : null}
 
       {!isLoading && !isError && jobs.length === 0 ? (
-        <div className="px-4 py-10 text-center sm:px-5">
-          <p className="text-sm font-semibold text-foreground">
+        <div className="px-3 py-6 text-center sm:px-5 sm:py-10 lg:px-4 lg:py-6">
+          <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
             {t("employer.dashboard.noJobsTitle")}
           </p>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-[0.6875rem] text-muted sm:text-xs lg:text-[0.6875rem]">
             {t("employer.dashboard.noJobsDescription")}
           </p>
           {canCreateJobs ? (
-            <EmployerPostJobLink className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+            <EmployerPostJobLink className="mt-3 inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-4 sm:min-h-10 sm:px-4 sm:text-sm lg:mt-3 lg:min-h-9 lg:px-3 lg:text-xs">
               {t("employer.common.postNewJob")}
             </EmployerPostJobLink>
           ) : null}

@@ -16,6 +16,7 @@ import {
 import { MessagesFilterPanel } from "@/components/employer-messages/MessagesFilterPanel";
 import { MessagesMobileFiltersSheet } from "@/components/employer-messages/MessagesMobileFiltersSheet";
 import { MessagesStatsCards } from "@/components/employer-messages/MessagesStatsCards";
+import "@/components/employer-messages/employer-messages-page-layout.css";
 import { ROUTES } from "@/constants/routes";
 import { useCan } from "@/providers/employer-permission-provider";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
@@ -606,10 +607,9 @@ export function EmployerMessagesPageContent() {
   );
 
   /**
-   * Messaging-app shell on lg+ (and mobile conversation view): claim the
-   * remaining viewport so columns scroll internally.
-   * Mobile conversation-list view leaves height unlocked so the page can scroll
-   * naturally above the floating bottom nav.
+   * Desktop (lg+) height is owned by flex + page-layout CSS so the shell
+   * fills the viewport without a short measured height leaving a bottom gap.
+   * Mobile conversation view still locks height above the floating bottom nav.
    */
   useEffect(() => {
     const element = workspaceRef.current;
@@ -619,14 +619,18 @@ export function EmployerMessagesPageContent() {
 
     const measure = () => {
       const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
-      const lockShell = isDesktop || mobileShowTimeline;
 
-      if (!lockShell) {
+      if (isDesktop) {
         setWorkspaceHeight(null);
         return;
       }
 
-      if (!isDesktop && mobileShowTimeline && window.scrollY !== 0) {
+      if (!mobileShowTimeline) {
+        setWorkspaceHeight(null);
+        return;
+      }
+
+      if (window.scrollY !== 0) {
         window.scrollTo({ top: 0, behavior: "auto" });
       }
 
@@ -1205,12 +1209,12 @@ export function EmployerMessagesPageContent() {
   let timelineBody: ReactNode;
   if (!showTimeline) {
     timelineBody = (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <div className="rounded-lg bg-brand-accent/25 px-5 py-3 shadow-sm ring-1 ring-black/5">
-          <p className="text-sm font-medium text-muted">
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center lg:px-4">
+        <div className="rounded-lg bg-brand-accent/25 px-5 py-3 shadow-sm ring-1 ring-black/5 lg:px-4 lg:py-2.5">
+          <p className="text-sm font-medium text-muted lg:text-xs">
             Select a conversation
           </p>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-xs text-muted lg:mt-0.5 lg:text-[11px]">
             Notification activity for each application appears here.
           </p>
         </div>
@@ -1352,17 +1356,18 @@ export function EmployerMessagesPageContent() {
   return (
     <div
       ref={workspaceRef}
+      data-employer-messages-page
       style={
         isLockedShell
           ? { height: workspaceHeight, maxHeight: workspaceHeight }
           : undefined
       }
       className={cn(
-        "mx-auto flex w-full max-w-[1600px] min-h-0 flex-col px-3 py-3 sm:px-4 lg:px-5",
+        "mx-auto flex w-full max-w-[1600px] min-h-0 flex-col px-3 py-3 sm:px-4 lg:px-4 lg:py-2.5",
         isLockedShell
           ? "max-h-dvh overflow-hidden"
-          : "overflow-visible pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] lg:pb-3",
-        "lg:h-[calc(100dvh-4rem)] lg:max-h-[calc(100dvh-4rem)] lg:overflow-hidden",
+          : "overflow-visible pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] lg:overflow-hidden lg:pb-2.5",
+        "lg:h-full lg:min-h-0 lg:flex-1 lg:max-h-full",
       )}
     >
       <header
@@ -1372,10 +1377,10 @@ export function EmployerMessagesPageContent() {
         )}
       >
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
+          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl lg:text-lg">
             Messages
           </h1>
-          <p className="mt-0.5 text-[11px] leading-snug text-muted sm:text-sm">
+          <p className="mt-0.5 text-[11px] leading-snug text-muted sm:text-sm lg:text-xs lg:leading-snug">
             Review hiring notifications for each candidate application in one
             place.
           </p>
@@ -1392,7 +1397,7 @@ export function EmployerMessagesPageContent() {
 
       <div
         className={cn(
-          "mt-2.5 grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(14rem,20%)]",
+          "mt-2.5 grid gap-2.5 lg:mt-2 lg:min-h-0 lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:gap-2 lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(13rem,18%)]",
           isLockedShell
             ? "min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden"
             : "flex-1",
@@ -1400,7 +1405,7 @@ export function EmployerMessagesPageContent() {
       >
         <div
           className={cn(
-            "flex min-w-0 flex-col",
+            "flex min-w-0 flex-col lg:min-h-0 lg:overflow-hidden",
             isLockedShell && "min-h-0 overflow-hidden",
           )}
         >
@@ -1421,12 +1426,12 @@ export function EmployerMessagesPageContent() {
 
           <div
             className={cn(
-              "mt-2.5 grid gap-0 rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:grid-cols-[minmax(16rem,31.25%)_minmax(0,1fr)]",
+              "mt-2.5 grid gap-0 rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:mt-2 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(15rem,30%)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden",
               isLockedShell
                 ? "min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden"
                 : "flex-1",
               mobileShowTimeline &&
-                "mt-0 border-0 shadow-none lg:mt-2.5 lg:border lg:shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+                "mt-0 border-0 shadow-none lg:mt-2 lg:border lg:shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
             )}
           >
             <section
@@ -1583,12 +1588,15 @@ export function EmployerMessagesPageContent() {
                 </button>
               </div>
             ) : conversations.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-                <MessageSquare className="size-7 text-muted" aria-hidden="true" />
-                <p className="text-sm font-medium text-foreground">
+              <div className="flex flex-col items-center gap-2 px-4 py-10 text-center lg:gap-1.5 lg:px-3 lg:py-6">
+                <MessageSquare
+                  className="size-7 text-muted lg:size-5"
+                  aria-hidden="true"
+                />
+                <p className="text-sm font-medium text-foreground lg:text-xs">
                   No conversations yet.
                 </p>
-                <p className="text-xs text-muted">
+                <p className="text-xs text-muted lg:text-[11px]">
                   Application activity will appear here as notifications.
                 </p>
               </div>

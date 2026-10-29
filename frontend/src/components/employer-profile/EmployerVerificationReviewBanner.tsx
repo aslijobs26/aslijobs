@@ -68,11 +68,11 @@ export function EmployerVerificationReviewBanner() {
             <div className="flex flex-wrap items-center gap-2">
               <h2
                 id="profile-verification-review-title"
-                className="text-base font-bold text-foreground sm:text-lg"
+                className="text-base font-bold text-foreground sm:text-lg lg:text-sm"
               >
                 Account Verification — Under Review
               </h2>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 lg:text-[11px]">
                 <span
                   className="size-1.5 rounded-full bg-amber-500"
                   aria-hidden="true"
@@ -81,7 +81,7 @@ export function EmployerVerificationReviewBanner() {
               </span>
             </div>
 
-            <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            <p className="mt-1.5 text-sm leading-relaxed text-muted lg:mt-1 lg:text-xs lg:leading-snug">
               Your account is currently under review by our Operations team.
               You can complete and save your profile information, but
               submitting or publishing jobs will be available after your
@@ -129,15 +129,15 @@ export function EmployerVerificationReviewBanner() {
                   />
                 </span>
 
-                <span className="mt-2 text-xs font-bold text-foreground sm:text-sm">
+                <span className="mt-2 text-xs font-bold text-foreground sm:text-sm lg:text-xs">
                   {step.label}
                 </span>
-                <span className="mt-0.5 break-words text-[0.6875rem] leading-snug text-muted sm:text-sm">
+                <span className="mt-0.5 break-words text-[0.6875rem] leading-snug text-muted sm:text-sm lg:text-[11px] lg:leading-snug">
                   {step.description}
                 </span>
                 <span
                   className={cn(
-                    "mt-1.5 inline-flex max-w-full items-center justify-center rounded-full px-2 py-0.5 text-[0.625rem] leading-tight font-semibold break-words sm:px-2.5 sm:text-xs",
+                    "mt-1.5 inline-flex max-w-full items-center justify-center rounded-full px-2 py-0.5 text-[0.625rem] leading-tight font-semibold break-words sm:px-2.5 sm:text-xs lg:text-[10px]",
                     STEP_STATUS_CLASS[step.state],
                   )}
                 >

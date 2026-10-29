@@ -45,24 +45,24 @@ export function SecurityCard({
           return (
             <li
               key={action.id}
-              className="flex flex-wrap items-center gap-3 py-3.5 first:pt-0 last:pb-0"
+              className="flex flex-wrap items-center gap-3 py-3.5 first:pt-0 last:pb-0 lg:gap-2.5 lg:py-2.5"
             >
               <span
                 className={cn(
-                  "inline-flex size-9 shrink-0 items-center justify-center rounded-lg",
+                  "inline-flex size-9 shrink-0 items-center justify-center rounded-lg lg:size-7",
                   isDanger
                     ? "bg-red-50 text-red-600"
                     : "bg-primary-light text-primary",
                 )}
                 aria-hidden="true"
               >
-                <Icon className="size-4" strokeWidth={2} />
+                <Icon className="size-4 lg:size-3.5" strokeWidth={2} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-foreground sm:text-sm">
+                <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
                   {action.title}
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted sm:text-xs">
+                <p className="mt-0.5 text-[11px] text-muted sm:text-xs lg:text-[11px] lg:leading-snug">
                   {action.description}
                 </p>
               </div>
@@ -71,7 +71,7 @@ export function SecurityCard({
                 disabled={disabled}
                 onClick={action.onAction}
                 className={cn(
-                  "inline-flex min-h-8 shrink-0 items-center justify-center rounded-lg border px-2.5 text-xs font-semibold transition-colors sm:min-h-9 sm:px-3 sm:text-sm",
+                  "inline-flex min-h-8 shrink-0 items-center justify-center rounded-lg border px-2.5 text-xs font-semibold transition-colors sm:min-h-9 sm:px-3 sm:text-sm lg:min-h-8 lg:px-2.5 lg:text-xs",
                   "focus-visible:outline-none focus-visible:ring-2",
                   "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent",
                   isDanger

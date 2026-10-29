@@ -466,8 +466,8 @@ export function CandidatesDetailPanel({
           variant === "panel" && PANEL_DESKTOP_CLASSES,
         )}
       >
-        <div className="p-8 pb-9 text-center">
-          <p className="text-sm text-muted">
+        <div className="p-8 pb-9 text-center lg:p-5 lg:pb-5">
+          <p className="text-sm text-muted lg:text-xs lg:leading-snug">
             Select a candidate to preview their profile, resume, and hiring
             actions.
           </p>

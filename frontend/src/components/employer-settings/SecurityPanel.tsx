@@ -52,20 +52,20 @@ export function SecurityPanel({
         title="Authentication"
         description="How you sign in to this workspace."
       >
-        <dl className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-lg border border-border-subtle px-3 py-2.5">
-            <dt className="text-[11px] font-medium text-muted sm:text-xs">
+        <dl className="grid gap-3 sm:grid-cols-2 lg:gap-2.5">
+          <div className="rounded-lg border border-border-subtle px-3 py-2.5 lg:px-2.5 lg:py-2">
+            <dt className="text-[11px] font-medium text-muted sm:text-xs lg:text-[10px]">
               Sign-in method
             </dt>
-            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm">
+            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
               {isMember ? "Email & password (team member)" : "WhatsApp OTP"}
             </dd>
           </div>
-          <div className="rounded-lg border border-border-subtle px-3 py-2.5">
-            <dt className="text-[11px] font-medium text-muted sm:text-xs">
+          <div className="rounded-lg border border-border-subtle px-3 py-2.5 lg:px-2.5 lg:py-2">
+            <dt className="text-[11px] font-medium text-muted sm:text-xs lg:text-[10px]">
               Workspace role
             </dt>
-            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm">
+            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
               {roleLabel}
             </dd>
           </div>

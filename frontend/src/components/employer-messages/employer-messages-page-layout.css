@@ -1,0 +1,40 @@
+/**
+ * Messages desktop: lock document height to the viewport; panes scroll internally.
+ * Scoped via [data-employer-messages-page] on the page root only.
+ */
+@media (min-width: 1024px) {
+  html:has([data-employer-messages-page]),
+  body:has([data-employer-messages-page]) {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    overflow: clip;
+    overscroll-behavior: none;
+  }
+
+  body:has([data-employer-messages-page]) .min-h-dvh.bg-hero-bg {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    overflow: clip;
+  }
+
+  body:has([data-employer-messages-page])
+    .min-h-dvh.bg-hero-bg
+    > .flex.min-h-dvh.flex-col {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    overflow: clip;
+  }
+
+  body:has([data-employer-messages-page]) main.flex.flex-1.flex-col {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+    overflow: clip;
+  }
+}

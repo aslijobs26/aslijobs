@@ -40,8 +40,8 @@ export function DashboardRecruitmentFunnel({
 
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
-        <h2 className="min-w-0 break-words text-base font-bold text-foreground">
+      <div className="flex items-center justify-between gap-2 px-3 pt-3 sm:gap-3 sm:px-5 sm:pt-5 lg:px-4 lg:pt-3">
+        <h2 className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base lg:text-sm">
           {t("employer.dashboard.recruitmentFunnel")}
         </h2>
         <div className="min-w-[7.5rem] shrink-0">
@@ -62,21 +62,21 @@ export function DashboardRecruitmentFunnel({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
+      <div className="flex flex-1 flex-col px-3 pb-3 pt-3 sm:px-5 sm:pb-5 sm:pt-5 lg:px-4 lg:pb-3 lg:pt-3">
         <ul
-          className="flex flex-1 flex-col justify-center gap-2.5"
+          className="flex flex-1 flex-col justify-center gap-1.5 sm:gap-2.5 lg:gap-1.5"
           aria-label={t("employer.dashboard.funnelStagesAria")}
         >
           {isLoading
             ? Array.from({ length: 6 }).map((_, index) => (
-                <li
+                  <li
                   key={index}
-                  className="flex items-center gap-2.5"
+                  className="flex items-center gap-2 sm:gap-2.5"
                   aria-hidden="true"
                 >
                   <div className="flex min-w-0 flex-1 justify-center">
                     <div
-                      className="h-9 animate-pulse rounded-lg bg-hero-bg"
+                      className="h-7 animate-pulse rounded-lg bg-hero-bg sm:h-9 lg:h-8"
                       style={{
                         width: `${EMPLOYER_DASHBOARD_FUNNEL_STAGES[index]?.widthPercent ?? 70}%`,
                       }}
@@ -99,11 +99,11 @@ export function DashboardRecruitmentFunnel({
                 );
 
                 return (
-                  <li key={stage.id} className="flex items-center gap-2.5">
+                  <li key={stage.id} className="flex items-center gap-2 sm:gap-2.5">
                     <div className="flex min-w-0 flex-1 justify-center">
                       <div
                         className={cn(
-                          "relative flex h-9 w-full items-center justify-center overflow-hidden rounded-lg px-3 text-center text-xs font-semibold sm:text-[0.8125rem]",
+                          "relative flex h-7 w-full items-center justify-center overflow-hidden rounded-lg px-2 text-center text-[0.6875rem] font-semibold sm:h-9 sm:px-3 sm:text-[0.8125rem] lg:h-8 lg:px-2.5 lg:text-[0.75rem]",
                           stageMeta.trackClassName,
                         )}
                         style={{ width: `${stageMeta.widthPercent}%` }}
@@ -141,7 +141,7 @@ export function DashboardRecruitmentFunnel({
                         </span>
                       </div>
                     </div>
-                    <span className="w-9 shrink-0 text-right text-sm font-bold tabular-nums text-foreground">
+                    <span className="w-8 shrink-0 text-right text-xs font-bold tabular-nums text-foreground sm:w-9 sm:text-sm lg:w-8 lg:text-xs">
                       {stage.count.toLocaleString("en-IN")}
                     </span>
                   </li>
@@ -149,11 +149,11 @@ export function DashboardRecruitmentFunnel({
               })}
         </ul>
 
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-border-subtle pt-4">
-          <p className="min-w-0 text-sm font-medium text-muted">
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-border-subtle pt-2.5 sm:mt-5 sm:gap-3 sm:pt-4 lg:mt-3 lg:pt-2.5">
+          <p className="min-w-0 text-xs font-medium text-muted sm:text-sm lg:text-xs">
             {t("employer.dashboard.conversionRate")}
           </p>
-          <p className="text-xl font-bold tabular-nums text-primary sm:text-2xl">
+          <p className="text-lg font-bold tabular-nums text-primary sm:text-2xl lg:text-xl">
             {isLoading ? "…" : `${conversionRate}%`}
           </p>
         </div>

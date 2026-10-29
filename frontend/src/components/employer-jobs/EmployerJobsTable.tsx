@@ -162,8 +162,40 @@ export function EmployerJobsTable({
       somePageSelected && !allPageSelected && !selectionLocked;
   }, [allPageSelected, selectionLocked, somePageSelected]);
 
+  const showTable = isLoading || (!isError && jobs.length > 0);
+
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      {!showTable && isError ? (
+        <div className="px-4 py-10 text-left sm:py-14 sm:text-center">
+          <p className="text-sm font-semibold text-foreground sm:text-base">
+            {t("employer.jobs.errorTitle")}
+          </p>
+          <p className="mt-1 break-words text-xs text-muted sm:text-sm">
+            {errorMessage?.trim() || t("employer.jobs.errorDescription")}
+          </p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-4 inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            {t("employer.common.tryAgain")}
+          </button>
+        </div>
+      ) : null}
+
+      {!showTable && !isError ? (
+        <div className="px-4 py-10 text-left sm:py-14 sm:text-center">
+          <p className="text-sm font-semibold text-foreground sm:text-base">
+            {t("employer.jobs.emptyTitle")}
+          </p>
+          <p className="mt-1 break-words text-xs text-muted sm:text-sm">
+            {t("employer.jobs.emptyDescription")}
+          </p>
+        </div>
+      ) : null}
+
+      {showTable ? (
       <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto text-[11px] leading-snug xl:text-[12px] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <table
           className={cn(
@@ -217,41 +249,6 @@ export function EmployerJobsTable({
           <tbody>
             {isLoading ? (
               <EmployerTableRowsSkeleton rows={8} colSpan={columnCount} />
-            ) : isError ? (
-              <tr>
-                <td
-                  colSpan={columnCount}
-                  className="px-4 py-14 text-center"
-                >
-                  <p className="text-base font-semibold text-foreground">
-                    {t("employer.jobs.errorTitle")}
-                  </p>
-                  <p className="mt-1 break-words text-sm text-muted">
-                    {errorMessage?.trim() || t("employer.jobs.errorDescription")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={onRetry}
-                    className="mt-4 inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                  >
-                    {t("employer.common.tryAgain")}
-                  </button>
-                </td>
-              </tr>
-            ) : jobs.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columnCount}
-                  className="px-4 py-14 text-center"
-                >
-                  <p className="text-base font-semibold text-foreground">
-                    {t("employer.jobs.emptyTitle")}
-                  </p>
-                  <p className="mt-1 break-words text-sm text-muted">
-                    {t("employer.jobs.emptyDescription")}
-                  </p>
-                </td>
-              </tr>
             ) : (
               jobs.map((job) => (
                 <EmployerJobsTableRow
@@ -271,6 +268,7 @@ export function EmployerJobsTable({
           </tbody>
         </table>
       </div>
+      ) : null}
 
       <div className="mt-auto shrink-0">
         <EmployerJobsPagination

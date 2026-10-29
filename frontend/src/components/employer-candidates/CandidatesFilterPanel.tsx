@@ -151,13 +151,13 @@ export function CandidatesFilterPanel({
   return (
     <aside
       className={cn(
-        "rounded-xl border border-border-subtle bg-surface p-3 sm:p-4",
+        "rounded-xl border border-border-subtle bg-surface p-3 sm:p-4 lg:p-3",
         !isSheet &&
           "lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:overflow-y-auto lg:overscroll-contain lg:scrollbar-hidden",
         className,
       )}
     >
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:gap-2.5">
         <label className="block min-w-0 flex-1">
           <span className="sr-only">Search candidates</span>
           <span className="relative block">
@@ -174,7 +174,7 @@ export function CandidatesFilterPanel({
               }}
               placeholder="Search name, skills, job, location, phone…"
               className={cn(
-                "h-11 w-full rounded-xl border border-border bg-surface pl-4 pr-12 text-sm text-foreground shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20",
+                "h-11 w-full rounded-xl border border-border bg-surface pl-4 pr-12 text-sm text-foreground shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 lg:h-9 lg:rounded-lg lg:pl-3 lg:pr-10 lg:text-xs",
                 isSheet && "min-h-11",
               )}
             />
@@ -184,7 +184,7 @@ export function CandidatesFilterPanel({
               aria-label="Search candidates"
               className={cn(
                 "absolute top-1/2 right-2 inline-flex -translate-y-1/2 items-center justify-center rounded-lg bg-primary text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                isSheet ? "size-10" : "size-8",
+                isSheet ? "size-10" : "size-8 lg:size-7",
               )}
             >
               <Search
@@ -196,12 +196,16 @@ export function CandidatesFilterPanel({
         </label>
       </div>
 
-      <div className="mt-5 border-t border-border-subtle pt-4">
-        <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
-          <Filter className="h-4 w-4 text-primary-soft" />
+      <div className="mt-5 border-t border-border-subtle pt-4 lg:mt-3.5 lg:pt-3">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-foreground lg:text-xs">
+          <Filter className="h-4 w-4 text-primary-soft lg:size-3.5" />
           Quick Filters
         </h2>
-        <ul className="mt-3 flex flex-col gap-1" role="listbox" aria-label="Status filters">
+        <ul
+          className="mt-3 flex flex-col gap-1 lg:mt-2 lg:gap-0.5"
+          role="listbox"
+          aria-label="Status filters"
+        >
           {QUICK_FILTERS.map((item) => {
             const count =
               item.statsKey && stats ? stats[item.statsKey] : undefined;
@@ -215,8 +219,8 @@ export function CandidatesFilterPanel({
                   aria-selected={isActive}
                   onClick={() => onFilterChange(item.key)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                    isSheet ? "min-h-11 py-2.5" : "py-2",
+                    "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:px-2 lg:text-xs",
+                    isSheet ? "min-h-11 py-2.5" : "py-2 lg:py-1.5",
                     isActive
                       ? "bg-primary-soft text-surface"
                       : "text-foreground hover:bg-primary-light",
@@ -225,7 +229,7 @@ export function CandidatesFilterPanel({
                   <span className="min-w-0 truncate">{item.label}</span>
                   <span
                     className={cn(
-                      "inline-flex min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
+                      "inline-flex min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold lg:min-w-5 lg:px-1 lg:text-[10px]",
                       isActive
                         ? "bg-surface/20 text-surface"
                         : "bg-primary-light text-muted",
@@ -240,9 +244,11 @@ export function CandidatesFilterPanel({
         </ul>
       </div>
 
-      <div className="mt-5 border-t border-border-subtle pt-4">
+      <div className="mt-5 border-t border-border-subtle pt-4 lg:mt-3.5 lg:pt-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-foreground">Advanced Filters</h2>
+          <h2 className="text-sm font-bold text-foreground lg:text-xs">
+            Advanced Filters
+          </h2>
           {hasAdvanced ? (
             <button
               type="button"
@@ -259,7 +265,7 @@ export function CandidatesFilterPanel({
           ) : null}
         </div>
 
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-3 lg:mt-2.5 lg:space-y-2.5">
           {canFilterByLocation ? (
             <label className="block" htmlFor={`${idPrefix}candidates-location-filter`}>
               <span className="text-xs font-medium text-muted">Location</span>

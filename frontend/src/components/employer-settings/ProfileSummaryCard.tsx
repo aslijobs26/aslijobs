@@ -38,32 +38,32 @@ export function ProfileSummaryCard({
   const showImage = Boolean(avatarUrl) && !hasImageError;
 
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
+    <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:rounded-lg lg:p-4">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-bold tracking-tight text-foreground sm:text-base">
+          <h2 className="text-sm font-bold tracking-tight text-foreground sm:text-base lg:text-sm">
             Account Settings
           </h2>
-          <p className="mt-0.5 text-xs text-muted sm:text-sm">
+          <p className="mt-0.5 text-xs text-muted sm:text-sm lg:text-[11px] lg:leading-snug">
             Update your account information and email preferences.
           </p>
         </div>
         {canEdit ? (
           <Link
             href={editHref}
-            className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-9 sm:px-3 sm:text-sm"
+            className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-9 sm:px-3 sm:text-sm lg:min-h-8 lg:px-2.5 lg:text-xs"
           >
-            <Pencil className="size-3.5" aria-hidden="true" />
+            <Pencil className="size-3.5 lg:size-3" aria-hidden="true" />
             Edit
           </Link>
         ) : null}
       </header>
 
-      <div className="mt-4 grid gap-4 sm:mt-5 sm:gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
-        <div className="flex min-w-0 items-start gap-3 sm:gap-3.5">
+      <div className="mt-4 grid gap-4 sm:mt-5 sm:gap-5 lg:mt-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start lg:gap-3">
+        <div className="flex min-w-0 items-start gap-3 sm:gap-3.5 lg:gap-2.5">
           <div className="relative shrink-0">
             {showImage ? (
-              <span className="relative flex size-14 items-center justify-center overflow-hidden rounded-full bg-hero-bg ring-2 ring-primary-light sm:size-[4.5rem]">
+              <span className="relative flex size-14 items-center justify-center overflow-hidden rounded-full bg-hero-bg ring-2 ring-primary-light sm:size-[4.5rem] lg:size-12">
                 {/* eslint-disable-next-line @next/next/no-img-element -- backend upload URL */}
                 <img
                   src={avatarUrl ?? ""}
@@ -76,7 +76,7 @@ export function ProfileSummaryCard({
               </span>
             ) : (
               <span
-                className="inline-flex size-14 items-center justify-center rounded-full bg-primary text-base font-bold text-surface sm:size-[4.5rem] sm:text-lg"
+                className="inline-flex size-14 items-center justify-center rounded-full bg-primary text-base font-bold text-surface sm:size-[4.5rem] sm:text-lg lg:size-12 lg:text-sm"
                 aria-hidden="true"
               >
                 {avatarInitials}
@@ -85,43 +85,43 @@ export function ProfileSummaryCard({
             {canEdit ? (
               <Link
                 href={editHref}
-                className="absolute -right-0.5 -bottom-0.5 inline-flex size-7 items-center justify-center rounded-full border border-border-subtle bg-surface text-primary shadow-sm transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="absolute -right-0.5 -bottom-0.5 inline-flex size-7 items-center justify-center rounded-full border border-border-subtle bg-surface text-primary shadow-sm transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:size-6"
                 aria-label="Update profile photo"
               >
-                <Camera className="size-3.5" aria-hidden="true" />
+                <Camera className="size-3.5 lg:size-3" aria-hidden="true" />
               </Link>
             ) : null}
           </div>
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate text-base font-bold text-foreground sm:text-lg">
+              <h3 className="truncate text-base font-bold text-foreground sm:text-lg lg:text-sm">
                 {displayName}
               </h3>
-              <span className="inline-flex rounded-full bg-primary-light px-2 py-0.5 text-[0.625rem] font-semibold text-primary sm:text-[0.6875rem]">
+              <span className="inline-flex rounded-full bg-primary-light px-2 py-0.5 text-[0.625rem] font-semibold text-primary sm:text-[0.6875rem] lg:text-[10px]">
                 {roleLabel}
               </span>
             </div>
-            <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-muted sm:mt-2 sm:text-sm">
-              <Mail className="size-3.5 shrink-0" aria-hidden="true" />
+            <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-muted sm:mt-2 sm:text-sm lg:mt-1 lg:text-[11px]">
+              <Mail className="size-3.5 shrink-0 lg:size-3" aria-hidden="true" />
               <span className="truncate">{email || "—"}</span>
             </p>
-            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted sm:text-sm">
-              <Phone className="size-3.5 shrink-0" aria-hidden="true" />
+            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted sm:text-sm lg:text-[11px]">
+              <Phone className="size-3.5 shrink-0 lg:size-3" aria-hidden="true" />
               <span className="truncate">{phone || "—"}</span>
             </p>
           </div>
         </div>
 
-        <dl className="grid gap-3 rounded-xl bg-hero-bg/80 p-3 sm:grid-cols-2 sm:p-3.5 lg:grid-cols-1 xl:grid-cols-2">
+        <dl className="grid gap-3 rounded-xl bg-hero-bg/80 p-3 sm:grid-cols-2 sm:p-3.5 lg:grid-cols-1 lg:gap-2 lg:rounded-lg lg:p-2.5 xl:grid-cols-2">
           {details.map((detail) => (
             <div key={detail.label} className="min-w-0">
-              <dt className="text-[11px] font-medium text-muted sm:text-xs">
+              <dt className="text-[11px] font-medium text-muted sm:text-xs lg:text-[10px]">
                 {detail.label}
               </dt>
               <dd
                 className={cn(
-                  "mt-0.5 truncate text-xs font-semibold text-foreground sm:text-sm",
+                  "mt-0.5 truncate text-xs font-semibold text-foreground sm:text-sm lg:text-xs",
                 )}
               >
                 {detail.value}

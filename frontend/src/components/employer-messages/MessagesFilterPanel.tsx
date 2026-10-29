@@ -34,13 +34,13 @@ type MessagesFilterPanelProps = {
 };
 
 const fieldClassName =
-  "h-9 w-full min-w-0 rounded-md border border-border-subtle bg-surface px-2.5 text-xs font-normal text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] placeholder:text-muted hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
+  "h-9 w-full min-w-0 rounded-md border border-border-subtle bg-surface px-2.5 text-xs font-normal text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] placeholder:text-muted hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-8 lg:px-2 lg:text-[11px]";
 
 const sheetFieldClassName =
   "h-11 w-full min-w-0 rounded-md border border-border-subtle bg-surface px-3 text-sm font-normal text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] placeholder:text-muted hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
 
 const filterSelectTriggerClassName =
-  "!h-9 lg:!h-9 !min-h-9 !px-2.5 !text-xs !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] h-9 w-full min-w-0 rounded-md border border-border-subtle bg-surface text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
+  "!h-9 lg:!h-8 !min-h-9 lg:!min-h-8 !px-2.5 lg:!px-2 !text-xs lg:!text-[11px] !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] h-9 w-full min-w-0 rounded-md border border-border-subtle bg-surface text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
 
 const sheetSelectTriggerClassName =
   "!h-11 !min-h-11 !px-3 !text-sm !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] h-11 w-full min-w-0 rounded-md border border-border-subtle bg-surface text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
@@ -376,13 +376,15 @@ export function MessagesFilterPanel({
   }
 
   return (
-    <section className="flex h-full min-h-0 w-full flex-col bg-surface p-3">
+    <section className="flex h-full min-h-0 w-full flex-col bg-surface p-3 lg:p-2.5">
       <div className="flex shrink-0 items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
-            <Filter className="size-3" aria-hidden="true" />
+          <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary lg:size-5">
+            <Filter className="size-3 lg:size-2.5" aria-hidden="true" />
           </span>
-          <h2 className="text-sm font-semibold text-foreground">Filters</h2>
+          <h2 className="text-sm font-semibold text-foreground lg:text-xs">
+            Filters
+          </h2>
         </div>
         <button
           type="button"
@@ -392,25 +394,25 @@ export function MessagesFilterPanel({
           }}
           disabled={!hasActiveFilters && !messagesFiltersAreActive(filters)}
           className={cn(
-            "inline-flex shrink-0 items-center gap-0.5 rounded-md px-1 py-0.5 text-[0.6875rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+            "inline-flex shrink-0 items-center gap-0.5 rounded-md px-1 py-0.5 text-[0.6875rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:text-[10px]",
             hasActiveFilters || messagesFiltersAreActive(filters)
               ? "text-primary hover:bg-primary-light"
               : "cursor-not-allowed text-muted/50",
           )}
         >
-          <X className="size-3" aria-hidden="true" />
+          <X className="size-3 lg:size-2.5" aria-hidden="true" />
           Clear All
         </button>
       </div>
 
-      <div className="mt-3 flex min-h-0 w-full flex-1 flex-col justify-between gap-2 overflow-x-hidden overflow-y-auto pr-0.5 scrollbar-thin">
+      <div className="mt-3 flex min-h-0 w-full flex-1 flex-col justify-start gap-2 overflow-x-hidden overflow-y-auto pr-0.5 scrollbar-thin lg:mt-2 lg:gap-1.5">
         {filterFields}
       </div>
 
       <button
         type="button"
         onClick={() => onApply(draft)}
-        className="mt-3 inline-flex h-9 w-full shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="mt-3 inline-flex h-9 w-full shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 lg:mt-2 lg:h-8 lg:text-xs"
       >
         Apply Filters
       </button>

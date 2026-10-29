@@ -221,13 +221,13 @@ function CardHeader({
   editLabel?: string;
 }) {
   return (
-    <header className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
-      <h2 className="text-sm font-bold text-foreground">{title}</h2>
+    <header className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 lg:min-h-10 lg:px-3.5 lg:py-2.5">
+      <h2 className="text-sm font-bold text-foreground lg:text-xs">{title}</h2>
       {onEdit ? (
         <button
           type="button"
           onClick={onEdit}
-          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-9"
+          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-9 lg:min-h-8 lg:px-2.5 lg:text-[11px]"
           aria-label={editLabel ?? `Edit ${title}`}
         >
           <Pencil className="size-3.5" aria-hidden="true" />
@@ -609,31 +609,31 @@ export function EmployerProfilePageContent() {
       <header className="overflow-hidden rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl lg:text-xl">
               {isBusinessProfile ? "Company Profile" : "Individual Profile"}
       </h1>
-            <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted">
+            <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted lg:mt-0.5 lg:text-[11px] lg:leading-snug">
               {isBusinessProfile
                 ? "Manage your company information, branding and preferences."
                 : "Manage your professional information, profile photo and preferences."}
             </p>
             </div>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center lg:shrink-0">
-            <div className="relative min-w-[14.5rem] overflow-hidden rounded-xl border border-primary/20 bg-primary-light/40 p-3 shadow-xs">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center lg:shrink-0 lg:gap-3">
+            <div className="relative min-w-[14.5rem] overflow-hidden rounded-xl border border-primary/20 bg-primary-light/40 p-3 shadow-xs lg:min-w-[13rem] lg:p-2.5">
               <div
                 className="pointer-events-none absolute -right-7 -top-8 size-24 rounded-full bg-primary/10 blur-2xl"
                 aria-hidden="true"
               />
-              <div className="relative flex items-center gap-3">
+              <div className="relative flex items-center gap-3 lg:gap-2.5">
                 <EmployerProfileCompletionCircle
                   percentage={profileCompletion.percentage}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-primary">
+                  <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-primary lg:text-[10px]">
                     Profile completion
                   </p>
-                  <p className="mt-1 text-sm font-semibold leading-snug text-foreground">
+                  <p className="mt-1 text-sm font-semibold leading-snug text-foreground lg:mt-0.5 lg:text-xs">
                     {profileCompletion.isComplete
                       ? "Your profile is complete"
                       : `${profileCompletion.missingCount} ${
@@ -649,7 +649,7 @@ export function EmployerProfilePageContent() {
             <button
               type="button"
               onClick={() => setPreviewOpen(true)}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-9 lg:gap-1.5 lg:px-3 lg:text-xs"
             >
               {isBusinessProfile
                 ? "Preview Company Page"
@@ -720,7 +720,7 @@ export function EmployerProfilePageContent() {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="truncate text-lg font-bold text-foreground">
+                    <h2 className="truncate text-lg font-bold text-foreground lg:text-base">
                       {displayName || "Profile name not provided"}
                     </h2>
                     {isVerified ? (
@@ -770,7 +770,7 @@ export function EmployerProfilePageContent() {
                     </DetailLine>
                   </div>
 
-                  <p className="mt-4 text-sm leading-6 text-muted">
+                  <p className="mt-4 text-sm leading-6 text-muted lg:mt-3 lg:text-xs lg:leading-5">
                     {profile.companyDescription ||
                       profile.aboutUs ||
                       (isBusinessProfile

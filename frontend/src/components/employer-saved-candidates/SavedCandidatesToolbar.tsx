@@ -66,19 +66,25 @@ type SavedCandidatesToolbarProps = {
 };
 
 const searchControlClassName =
-  "h-9 w-full rounded-xl border border-border bg-surface pl-10 pr-3 text-xs text-foreground shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 sm:h-10 sm:text-sm";
+  "h-8 w-full rounded-xl border border-border bg-surface pl-8 pr-2.5 text-[11px] text-foreground shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 sm:h-10 sm:pl-10 sm:pr-3 sm:text-sm lg:h-9 lg:pl-9 lg:pr-2.5 lg:text-xs";
 
 const filterControlClassName =
-  "h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-xs leading-tight text-foreground shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 sm:h-10 sm:rounded-xl sm:px-3 2xl:text-sm";
+  "h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-xs leading-tight text-foreground shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted/80 hover:border-primary/25 focus:border-primary-soft focus:ring-2 focus:ring-primary-soft/20 sm:h-10 sm:rounded-xl sm:px-3 lg:h-9 lg:text-[11px]";
 
 const selectTriggerClassName =
-  "!h-9 w-full rounded-lg border-border bg-surface !text-xs !leading-tight shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary-soft focus-visible:ring-2 focus-visible:ring-primary-soft/20 sm:!h-10 sm:rounded-xl 2xl:!text-sm";
+  "!h-8 !px-2.5 !text-[11px] !leading-tight w-full rounded-lg border-border bg-surface shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary-soft focus-visible:ring-2 focus-visible:ring-primary-soft/20 sm:!h-10 sm:!px-3.5 sm:!text-xs sm:rounded-xl lg:!h-9 lg:!px-3 lg:!text-[11px]";
+
+const selectOptionClassName =
+  "!px-2.5 !py-1.5 !text-[11px] sm:!px-3 sm:!py-2.5 sm:!text-sm lg:!py-2 lg:!text-xs";
+
+const selectPanelClassName =
+  "[&_.employer-register-searchable-select-options]:!max-h-48 sm:[&_.employer-register-searchable-select-options]:!max-h-[min(18rem,45vh)]";
 
 const primaryActionButtonClassName =
-  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-3.5 sm:text-sm";
+  "inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-xl px-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-3.5 sm:text-sm lg:h-9 lg:px-3 lg:text-xs";
 
 const filterActionButtonClassName =
-  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:rounded-xl sm:px-3 2xl:text-sm";
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:rounded-xl sm:px-3 lg:h-9 lg:text-[11px]";
 
 type MobileFilterKey =
   | "job"
@@ -253,13 +259,13 @@ export function SavedCandidatesToolbar({
   };
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface p-3 sm:p-4">
-      <div className="flex flex-col gap-3">
+    <div className="rounded-xl border border-border-subtle bg-surface p-2.5 sm:p-4 lg:p-3">
+      <div className="flex flex-col gap-2 sm:gap-3 lg:gap-2.5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="relative min-w-0 flex-1" htmlFor={searchId}>
             <span className="sr-only">Search saved candidates</span>
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+              className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted sm:left-3 sm:size-4"
               aria-hidden="true"
             />
             <input
@@ -329,7 +335,7 @@ export function SavedCandidatesToolbar({
                   aria-expanded={isOpen}
                   aria-controls={isOpen ? mobileFilterPanelId : undefined}
                   className={cn(
-                    "inline-flex h-9 max-w-[12rem] shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                    "inline-flex h-7 max-w-[12rem] shrink-0 items-center gap-1 rounded-full border px-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs",
                     isOpen || chip.active
                       ? "border-primary/40 bg-primary-light/40 text-primary"
                       : "border-border-subtle bg-surface text-foreground hover:border-primary/30",
@@ -368,7 +374,9 @@ export function SavedCandidatesToolbar({
                     onChange={onJobChange}
                     initialVisibleCount={8}
                     searchPlaceholder="Search job title or ID…"
-                    triggerClassName={selectTriggerClassName}
+                  triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
                   />
                 </label>
               ) : null}
@@ -403,7 +411,9 @@ export function SavedCandidatesToolbar({
                     options={experienceOptions}
                     onChange={onExperienceChange}
                     hideSearch
-                    triggerClassName={selectTriggerClassName}
+                  triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
                   />
                 </label>
               ) : null}
@@ -426,7 +436,9 @@ export function SavedCandidatesToolbar({
                       )
                     }
                     hideSearch
-                    triggerClassName={selectTriggerClassName}
+                  triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
                   />
                 </label>
               ) : null}
@@ -447,7 +459,9 @@ export function SavedCandidatesToolbar({
                       onPriorityChange(value as SavedCandidatePriority | "")
                     }
                     hideSearch
-                    triggerClassName={selectTriggerClassName}
+                  triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
                   />
                 </label>
               ) : null}
@@ -466,7 +480,9 @@ export function SavedCandidatesToolbar({
                     options={tagOptions}
                     onChange={onTagChange}
                     hideSearch
-                    triggerClassName={selectTriggerClassName}
+                  triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
                   />
                 </label>
               ) : null}
@@ -487,7 +503,9 @@ export function SavedCandidatesToolbar({
                       onSortChange(value as SavedCandidateSort)
                     }
                     hideSearch
-                    triggerClassName={selectTriggerClassName}
+                  triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
                   />
                 </label>
               ) : null}
@@ -509,7 +527,9 @@ export function SavedCandidatesToolbar({
               onChange={onJobChange}
               initialVisibleCount={8}
               searchPlaceholder="Search job title or ID…"
-              triggerClassName={selectTriggerClassName}
+                  triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
             />
           </label>
           <label className="min-w-0">
@@ -533,7 +553,9 @@ export function SavedCandidatesToolbar({
               options={experienceOptions}
               onChange={onExperienceChange}
               hideSearch
-              triggerClassName={selectTriggerClassName}
+                  triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
             />
           </label>
           <label className="min-w-0">
@@ -549,7 +571,9 @@ export function SavedCandidatesToolbar({
                 onAvailabilityChange(value as EmployerAvailabilityFilterValue)
               }
               hideSearch
-              triggerClassName={selectTriggerClassName}
+                  triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
             />
           </label>
 
@@ -584,12 +608,14 @@ export function SavedCandidatesToolbar({
               options={sortOptions}
               onChange={(value) => onSortChange(value as SavedCandidateSort)}
               hideSearch
-              triggerClassName={selectTriggerClassName}
+                  triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
             />
           </label>
 
           <div
-            className="flex h-10 w-auto items-center gap-0.5 rounded-xl border border-border-subtle p-1"
+            className="flex h-10 w-auto items-center gap-0.5 rounded-xl border border-border-subtle p-1 lg:h-9"
             role="group"
             aria-label="View mode"
           >
@@ -643,6 +669,8 @@ export function SavedCandidatesToolbar({
                   }
                   hideSearch
                   triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
                 />
               </label>
               <label className="min-w-0">
@@ -659,6 +687,8 @@ export function SavedCandidatesToolbar({
                   onChange={onTagChange}
                   hideSearch
                   triggerClassName={selectTriggerClassName}
+                  optionClassName={selectOptionClassName}
+                  panelClassName={selectPanelClassName}
                 />
               </label>
             </div>

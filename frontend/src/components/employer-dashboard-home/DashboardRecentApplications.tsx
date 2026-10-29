@@ -92,11 +92,11 @@ export function DashboardRecentApplications({
       ) : null}
 
       {!isLoading && !isError && applications.length === 0 ? (
-        <div className="px-4 py-10 text-center sm:px-5">
-          <p className="text-sm font-semibold text-foreground">
+        <div className="px-4 py-10 text-center sm:px-5 lg:px-4 lg:py-6">
+          <p className="text-sm font-semibold text-foreground lg:text-[11px]">
             {t("employer.dashboard.noApplicationsTitle")}
           </p>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-xs text-muted lg:text-[10px]">
             {t("employer.dashboard.noApplicationsDescription")}
           </p>
         </div>

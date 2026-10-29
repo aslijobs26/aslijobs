@@ -411,14 +411,16 @@ export function CandidatesListPanel({
   );
 
   const toolbarSelectTriggerClassName =
-    "!h-9 text-xs sm:!h-11 sm:text-sm rounded-xl border-border bg-surface shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary-soft focus-visible:ring-2 focus-visible:ring-primary-soft/20 lg:!h-11";
+    "!h-8 !px-2.5 !text-[11px] sm:!h-11 sm:!px-3.5 sm:!text-sm rounded-xl border-border bg-surface shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary-soft focus-visible:ring-2 focus-visible:ring-primary-soft/20 lg:!h-9 lg:!px-3 lg:!text-xs";
+  const toolbarSelectOptionClassName =
+    "!px-2.5 !py-1.5 !text-[11px] sm:!px-3 sm:!py-2.5 sm:!text-sm lg:!py-2 lg:!text-xs";
 
   return (
     <section className="flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface lg:h-full">
-      <div className="shrink-0 border-b border-border-subtle p-3 sm:p-4">
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(8.5rem,10.5rem)]">
+      <div className="shrink-0 border-b border-border-subtle p-3 sm:p-4 lg:p-3">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(8.5rem,10.5rem)] lg:gap-2.5">
           <label className="min-w-0">
-            <span className="mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs">
+            <span className="mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs lg:mb-1">
               Filter by job
             </span>
             <EmployerRegisterSearchableSelect
@@ -432,10 +434,11 @@ export function CandidatesListPanel({
               initialVisibleCount={8}
               countLabel="applications"
               triggerClassName={toolbarSelectTriggerClassName}
+              optionClassName={toolbarSelectOptionClassName}
             />
           </label>
           <label className="min-w-0 md:max-w-[10.5rem]">
-            <span className="mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs">
+            <span className="mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs lg:mb-1">
               Sort by
             </span>
             <EmployerRegisterSearchableSelect
@@ -450,6 +453,7 @@ export function CandidatesListPanel({
               }
               hideSearch
               triggerClassName={toolbarSelectTriggerClassName}
+              optionClassName={toolbarSelectOptionClassName}
             />
           </label>
         </div>
@@ -496,13 +500,13 @@ export function CandidatesListPanel({
             </div>
           </>
         ) : applications.length === 0 ? (
-          <div className="px-4 py-12 text-center">
-            <p className="text-sm font-semibold text-foreground">
+          <div className="px-3 py-6 text-left sm:px-4 sm:py-12 sm:text-center lg:px-4 lg:py-8">
+            <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
               {hasLocationFilter && !hasActiveSearch
                 ? "No candidates found for the selected location."
                 : "No candidates found."}
             </p>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-[11px] leading-snug text-muted sm:text-sm sm:leading-normal lg:text-[11px] lg:leading-snug">
               {hasActiveSearch
                 ? "Try searching with another name, skill, location or job title."
                 : hasLocationFilter
@@ -582,28 +586,28 @@ export function CandidatesListPanel({
         )}
       </div>
 
-      <div className="flex shrink-0 flex-col gap-2 border-t border-border-subtle px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
-        <p className="text-xs text-muted">
+      <div className="flex shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t border-border-subtle px-3 py-2 sm:px-4 sm:py-3 lg:px-3 lg:py-2">
+        <p className="text-[11px] text-muted sm:text-xs lg:text-[11px]">
           Page {page} of {totalPages}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:flex-none lg:min-h-9"
+            className="inline-flex min-h-8 items-center justify-center gap-1 rounded-lg border border-border-subtle px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:px-3 sm:text-sm lg:min-h-9"
           >
-            <ChevronLeft className="size-4" aria-hidden="true" />
+            <ChevronLeft className="size-3.5 sm:size-4" aria-hidden="true" />
             Prev
           </button>
           <button
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:flex-none lg:min-h-9"
+            className="inline-flex min-h-8 items-center justify-center gap-1 rounded-lg border border-border-subtle px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:px-3 sm:text-sm lg:min-h-9"
           >
             Next
-            <ChevronRight className="size-4" aria-hidden="true" />
+            <ChevronRight className="size-3.5 sm:size-4" aria-hidden="true" />
           </button>
         </div>
       </div>

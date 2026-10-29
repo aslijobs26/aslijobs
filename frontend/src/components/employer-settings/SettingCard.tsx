@@ -25,30 +25,30 @@ export function SettingCard({
     <>
       <span
         className={cn(
-          "inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-10",
+          "inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-10 lg:size-8",
           iconClassName,
         )}
         aria-hidden="true"
       >
-        <Icon className="size-4 sm:size-5" strokeWidth={2} />
+        <Icon className="size-4 sm:size-5 lg:size-3.5" strokeWidth={2} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-xs font-semibold text-foreground sm:text-sm">
+        <span className="block text-xs font-semibold text-foreground sm:text-sm lg:text-[11px]">
           {title}
         </span>
-        <span className="mt-0.5 block text-[11px] text-muted sm:text-xs">
+        <span className="mt-0.5 block text-[11px] text-muted sm:text-xs lg:text-[10px] lg:leading-snug">
           {description}
         </span>
       </span>
       <ChevronRight
-        className="size-3.5 shrink-0 text-muted transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-primary sm:size-4"
+        className="size-3.5 shrink-0 text-muted transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-primary sm:size-4 lg:size-3.5"
         aria-hidden="true"
       />
     </>
   );
 
   const className = cn(
-    "group flex w-full items-center gap-2.5 rounded-xl border border-border-subtle bg-surface p-3 text-left shadow-sm transition-[box-shadow,border-color] duration-200 sm:gap-3 sm:p-3.5",
+    "group flex w-full items-center gap-2.5 rounded-xl border border-border-subtle bg-surface p-3 text-left shadow-sm transition-[box-shadow,border-color] duration-200 sm:gap-3 sm:p-3.5 lg:gap-2.5 lg:rounded-lg lg:p-3",
     "hover:border-primary/25 hover:shadow-md",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
   );

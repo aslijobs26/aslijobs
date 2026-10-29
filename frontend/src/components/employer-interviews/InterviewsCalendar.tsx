@@ -593,7 +593,7 @@ export function InterviewsCalendar({
           >
             Today
           </button>
-          <h2 className="text-sm font-bold text-foreground sm:text-base">
+          <h2 className="text-sm font-bold text-foreground sm:text-base lg:text-sm">
             {headerLabel}
           </h2>
         </div>
@@ -623,7 +623,7 @@ export function InterviewsCalendar({
         </div>
       </header>
 
-      <header className="border-b border-border-subtle p-3 lg:hidden">
+      <header className="border-b border-border-subtle p-2.5 sm:p-3 lg:hidden">
         <div
           className="grid grid-cols-3 overflow-hidden rounded-lg border border-border-subtle"
           role="tablist"
@@ -637,7 +637,7 @@ export function InterviewsCalendar({
               aria-selected={mobileMode === option}
               onClick={() => selectMobileMode(option)}
               className={cn(
-                "min-h-11 px-2 text-sm font-semibold",
+                "min-h-8 px-2 text-[11px] font-semibold sm:min-h-11 sm:text-sm",
                 mobileMode === option
                   ? "bg-primary text-surface"
                   : "bg-surface text-muted hover:bg-primary-light/40 hover:text-foreground",
@@ -652,12 +652,12 @@ export function InterviewsCalendar({
           ))}
         </div>
 
-        <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
+        <div className="mt-2 flex min-w-0 items-center justify-between gap-2 sm:mt-3">
           <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-border-subtle">
             <button
               type="button"
               onClick={goPrev}
-              className="inline-flex size-11 items-center justify-center text-muted hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30"
+              className="inline-flex size-8 items-center justify-center text-muted hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:size-11"
               aria-label={`Previous ${mobileMode === "day" ? "day" : mobileMode}`}
             >
               <ChevronLeft className="size-4" aria-hidden="true" />
@@ -665,26 +665,26 @@ export function InterviewsCalendar({
             <button
               type="button"
               onClick={goNext}
-              className="inline-flex size-11 items-center justify-center border-l border-border-subtle text-muted hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30"
+              className="inline-flex size-8 items-center justify-center border-l border-border-subtle text-muted hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:size-11"
               aria-label={`Next ${mobileMode === "day" ? "day" : mobileMode}`}
             >
               <ChevronRight className="size-4" aria-hidden="true" />
             </button>
           </div>
-          <h2 className="min-w-0 flex-1 truncate text-center text-sm font-bold text-foreground">
+          <h2 className="min-w-0 flex-1 truncate text-center text-xs font-bold text-foreground sm:text-sm">
             {headerLabel}
           </h2>
           <button
             type="button"
             onClick={goToday}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="inline-flex min-h-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle px-2.5 text-[11px] font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:px-3 sm:text-xs"
           >
             Today
           </button>
         </div>
       </header>
 
-      <div className="p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-auto">
+      <div className="p-2.5 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-auto">
         {isLoading ? (
           <>
             <div className="space-y-3 lg:hidden" aria-hidden="true">

@@ -1,7 +1,10 @@
 "use client";
 
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
-import { interviewsToolbarSelectTriggerClassName } from "@/components/employer-interviews/interviews-toolbar-styles";
+import {
+  interviewsToolbarSelectOptionClassName,
+  interviewsToolbarSelectTriggerClassName,
+} from "@/components/employer-interviews/interviews-toolbar-styles";
 import type { EmployerInterviewJobTab } from "@/types/employer-interviews";
 import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import { useMemo } from "react";
@@ -52,6 +55,7 @@ export function InterviewsJobSelect({
         searchPlaceholder="Search Job..."
         countLabel="interviews"
         triggerClassName={interviewsToolbarSelectTriggerClassName}
+        optionClassName={interviewsToolbarSelectOptionClassName}
       />
     </div>
   );

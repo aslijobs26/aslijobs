@@ -94,7 +94,7 @@ export function DashboardSourcesPerformance({
         ) : null}
 
         {!isLoading && slices.length === 0 ? (
-          <p className="px-2 text-center text-sm text-muted">
+          <p className="px-2 text-center text-sm text-muted lg:text-xs">
             {t("employer.dashboard.sourcesEmpty")}
           </p>
         ) : null}

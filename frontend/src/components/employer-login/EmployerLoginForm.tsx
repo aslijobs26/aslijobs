@@ -270,6 +270,7 @@ export function EmployerLoginForm() {
           />
           <FieldError
             id="whatsappNumber-error"
+            className="text-xs font-medium text-red-600"
             message={translateMessage(fieldErrors.whatsappNumber)}
           />
         </div>

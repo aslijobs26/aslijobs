@@ -142,6 +142,7 @@ export function InterviewsTable({
 
   const from = total === 0 ? 0 : (page - 1) * limit + 1;
   const to = Math.min(page * limit, total);
+  const showTable = isLoading || (!isError && interviews.length > 0);
 
   const toggleDateSort = () => {
     onSortChange(sort === "interview_asc" ? "interview_desc" : "interview_asc");
@@ -149,9 +150,43 @@ export function InterviewsTable({
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface">
+      {!showTable && isError ? (
+        <div className="px-3 py-6 text-left sm:px-4 sm:py-10 sm:text-center">
+          <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
+            Unable to load interviews
+          </p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-2 inline-flex min-h-8 items-center rounded-lg bg-primary px-2.5 text-[11px] font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-3 sm:min-h-0 sm:px-3 sm:py-2 sm:text-xs"
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
+
+      {!showTable && !isError ? (
+        <div className="px-3 py-6 text-left sm:px-4 sm:py-10 sm:text-center">
+          <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
+            {emptyTitle}
+          </p>
+          <p className="mt-1 text-[11px] text-muted sm:text-xs lg:text-[11px]">{emptyDescription}</p>
+          {onScheduleInterview ? (
+            <button
+              type="button"
+              onClick={onScheduleInterview}
+              className="mt-2 inline-flex min-h-8 items-center rounded-lg bg-primary px-2.5 text-[11px] font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-3 sm:min-h-0 sm:px-3 sm:py-2 sm:text-xs lg:min-h-8 lg:px-2.5 lg:text-[11px]"
+            >
+              Schedule Interview
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showTable ? (
       <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        <table className="min-w-[64rem] w-full border-collapse text-left text-sm">
-          <thead className="sticky top-0 z-10 bg-[#f7f8fa] text-[11px] font-semibold uppercase tracking-wide text-muted">
+        <table className="min-w-[64rem] w-full border-collapse text-left text-sm lg:text-xs">
+          <thead className="sticky top-0 z-10 bg-[#f7f8fa] text-[11px] font-semibold uppercase tracking-wide text-muted lg:text-[10px]">
             <tr className="border-b border-border-subtle">
               <th className="px-4 py-3.5 whitespace-nowrap">Candidate</th>
               <th className="px-4 py-3.5 whitespace-nowrap">Job ID</th>
@@ -190,39 +225,6 @@ export function InterviewsTable({
                   </td>
                 </tr>
               ))
-            ) : isError ? (
-              <tr>
-                <td colSpan={COLUMN_COUNT} className="px-4 py-10 text-center">
-                  <p className="text-sm font-semibold text-foreground">
-                    Unable to load interviews
-                  </p>
-                  <button
-                    type="button"
-                    onClick={onRetry}
-                    className="mt-3 inline-flex rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                  >
-                    Retry
-                  </button>
-                </td>
-              </tr>
-            ) : interviews.length === 0 ? (
-              <tr>
-                <td colSpan={COLUMN_COUNT} className="px-4 py-10 text-center">
-                  <p className="text-sm font-semibold text-foreground">
-                    {emptyTitle}
-                  </p>
-                  <p className="mt-1 text-xs text-muted">{emptyDescription}</p>
-                  {onScheduleInterview ? (
-                    <button
-                      type="button"
-                      onClick={onScheduleInterview}
-                      className="mt-3 inline-flex rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                    >
-                      Schedule Interview
-                    </button>
-                  ) : null}
-                </td>
-              </tr>
             ) : (
               interviews.map((item) => {
                 const status = interviewDisplayStatus(item);
@@ -391,28 +393,29 @@ export function InterviewsTable({
           </tbody>
         </table>
       </div>
+      ) : null}
 
-      <div className="mt-auto flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-surface px-4 py-3">
-        <p className="text-xs text-muted">
+      <div className="mt-auto flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border-subtle bg-surface px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
+        <p className="text-[11px] text-muted sm:text-xs">
           Showing {from} to {to} of {total} interviews
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
-            className="rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-primary-light/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="min-h-8 rounded-lg border border-border-subtle px-2.5 text-[11px] font-semibold text-foreground hover:bg-primary-light/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-xs"
           >
             Previous
           </button>
-          <span className="text-xs font-semibold text-foreground">
+          <span className="text-[11px] font-semibold text-foreground sm:text-xs">
             {page} / {Math.max(totalPages, 1)}
           </span>
           <button
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
-            className="rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-primary-light/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="min-h-8 rounded-lg border border-border-subtle px-2.5 text-[11px] font-semibold text-foreground hover:bg-primary-light/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-xs"
           >
             Next
           </button>
