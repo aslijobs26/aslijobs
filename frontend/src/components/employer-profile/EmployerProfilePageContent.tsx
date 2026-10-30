@@ -9,6 +9,7 @@ import {
 } from "@/components/employer-profile/EmployerProfileEditModal";
 import { EmployerProfileDialog } from "@/components/employer-profile/EmployerProfileDialog";
 import { EmployerVerificationReviewBanner } from "@/components/employer-profile/EmployerVerificationReviewBanner";
+import "@/components/employer-profile/employer-profile-page-layout.css";
 import {
   EmployerSocialBrandIcon,
   type EmployerSocialBrand,
@@ -93,7 +94,7 @@ const INDIVIDUAL_ABOUT_TABS: { id: AboutTab; label: string }[] = [
 ];
 
 const cardClassName =
-  "overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm";
+  "employer-profile-card overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm";
 
 function getErrorMessage(error: unknown): string {
   if (
@@ -221,13 +222,15 @@ function CardHeader({
   editLabel?: string;
 }) {
   return (
-    <header className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 lg:min-h-10 lg:px-3.5 lg:py-2.5">
-      <h2 className="text-sm font-bold text-foreground lg:text-xs">{title}</h2>
+    <header className="employer-profile-card__header flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 lg:min-h-10 lg:px-3.5 lg:py-2.5">
+      <h2 className="employer-profile-card__title text-sm font-bold text-foreground lg:text-xs">
+        {title}
+      </h2>
       {onEdit ? (
         <button
           type="button"
           onClick={onEdit}
-          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-9 lg:min-h-8 lg:px-2.5 lg:text-[11px]"
+          className="employer-profile-card__edit inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-9 lg:min-h-8 lg:px-2.5 lg:text-[11px]"
           aria-label={editLabel ?? `Edit ${title}`}
         >
           <Pencil className="size-3.5" aria-hidden="true" />
@@ -246,7 +249,7 @@ function DetailLine({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 items-start gap-2 text-xs text-muted">
+    <div className="employer-profile-detail-line flex min-w-0 items-start gap-2 text-xs text-muted lg:text-[11px]">
       <Icon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
       <span className="min-w-0 break-words">{children}</span>
     </div>
@@ -266,7 +269,7 @@ function MetadataItem({ label, value }: { label: string; value: string }) {
 
 function EmptyCopy({ children }: { children: ReactNode }) {
   return (
-    <p className="rounded-lg border border-dashed border-border-subtle bg-hero-bg/60 px-4 py-5 text-sm text-muted">
+    <p className="employer-profile-empty rounded-lg border border-dashed border-border-subtle bg-hero-bg/60 px-4 py-5 text-sm text-muted lg:px-3.5 lg:py-3.5 lg:text-xs">
       {children}
     </p>
   );
@@ -605,35 +608,38 @@ export function EmployerProfilePageContent() {
   const profileCompletion = calculateEmployerProfileCompletion(profile);
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-8 lg:px-6">
-      <header className="overflow-hidden rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+    <div
+      data-employer-profile-page
+      className="employer-page-shell employer-profile-shell mx-auto w-full max-w-[1600px] overflow-x-clip px-3 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-8 lg:px-3.5 lg:pt-3 lg:pb-5"
+    >
+      <header className="employer-profile-header overflow-hidden rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:p-3">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl lg:text-xl">
+            <h1 className="employer-profile-header__title text-xl font-bold tracking-tight text-foreground sm:text-2xl lg:text-[1.125rem]">
               {isBusinessProfile ? "Company Profile" : "Individual Profile"}
-      </h1>
-            <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted lg:mt-0.5 lg:text-[11px] lg:leading-snug">
+            </h1>
+            <p className="employer-profile-header__subtitle mt-1 max-w-xl text-sm leading-relaxed text-muted lg:mt-0.5 lg:text-[11px] lg:leading-snug">
               {isBusinessProfile
                 ? "Manage your company information, branding and preferences."
                 : "Manage your professional information, profile photo and preferences."}
             </p>
-            </div>
+          </div>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center lg:shrink-0 lg:gap-3">
-            <div className="relative min-w-[14.5rem] overflow-hidden rounded-xl border border-primary/20 bg-primary-light/40 p-3 shadow-xs lg:min-w-[13rem] lg:p-2.5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center lg:shrink-0 lg:gap-2.5">
+            <div className="employer-profile-completion relative min-w-[14.5rem] overflow-hidden rounded-xl border border-primary/20 bg-primary-light/40 p-3 shadow-xs lg:min-w-[12.5rem] lg:p-2">
               <div
                 className="pointer-events-none absolute -right-7 -top-8 size-24 rounded-full bg-primary/10 blur-2xl"
                 aria-hidden="true"
               />
-              <div className="relative flex items-center gap-3 lg:gap-2.5">
+              <div className="relative flex items-center gap-3 lg:gap-2">
                 <EmployerProfileCompletionCircle
                   percentage={profileCompletion.percentage}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-primary lg:text-[10px]">
+                  <p className="employer-profile-completion__label text-[0.6875rem] font-bold uppercase tracking-wide text-primary lg:text-[10px]">
                     Profile completion
                   </p>
-                  <p className="mt-1 text-sm font-semibold leading-snug text-foreground lg:mt-0.5 lg:text-xs">
+                  <p className="employer-profile-completion__meta mt-1 text-sm font-semibold leading-snug text-foreground lg:mt-0.5 lg:text-[11px]">
                     {profileCompletion.isComplete
                       ? "Your profile is complete"
                       : `${profileCompletion.missingCount} ${
@@ -644,19 +650,19 @@ export function EmployerProfilePageContent() {
                   </p>
                 </div>
               </div>
-                </div>
+            </div>
 
             <button
               type="button"
               onClick={() => setPreviewOpen(true)}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-9 lg:gap-1.5 lg:px-3 lg:text-xs"
+              className="employer-profile-preview-btn inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-8 lg:gap-1.5 lg:px-3 lg:text-[11px]"
             >
               {isBusinessProfile
                 ? "Preview Company Page"
                 : "Preview Profile Page"}
               <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
             </button>
-                    </div>
+          </div>
         </div>
       </header>
 
@@ -686,8 +692,8 @@ export function EmployerProfilePageContent() {
         <EmployerVerificationReviewBanner />
       ) : null}
 
-      <div className="mt-5 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,0.9fr)]">
-        <main className="min-w-0 space-y-4">
+      <div className="employer-profile-layout mt-5 grid items-start gap-4 lg:mt-3 lg:grid-cols-[minmax(0,1fr)_minmax(14rem,0.85fr)] lg:gap-2.5">
+        <main className="employer-profile-primary min-w-0 space-y-4 lg:space-y-2.5">
           <section
             id="profile-section-company"
             data-profile-section="company"
@@ -701,9 +707,9 @@ export function EmployerProfilePageContent() {
               }
               onEdit={canUpdateProfile ? () => openEditor("company") : undefined}
             />
-            <div className="p-4">
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <div className="flex size-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border-subtle bg-hero-bg">
+            <div className="employer-profile-card__body p-4 lg:p-3">
+              <div className="flex flex-col gap-4 sm:flex-row lg:gap-3">
+                <div className="employer-profile-avatar flex size-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border-subtle bg-hero-bg lg:size-[5.5rem]">
                   <ProfileImage
                     src={logoUrl}
                     alt={`${displayName} ${
@@ -711,16 +717,16 @@ export function EmployerProfilePageContent() {
                     }`}
                     className={PROFILE_IMAGE_FIT_CLASSNAME}
                     fallback={
-                      <span className="text-2xl font-bold text-primary">
+                      <span className="text-2xl font-bold text-primary lg:text-xl">
                         {getInitials(displayName)}
                       </span>
                     }
-                      />
-                    </div>
+                  />
+                </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="truncate text-lg font-bold text-foreground lg:text-base">
+                    <h2 className="employer-profile-name truncate text-lg font-bold text-foreground lg:text-[0.9375rem]">
                       {displayName || "Profile name not provided"}
                     </h2>
                     {isVerified ? (
@@ -739,7 +745,7 @@ export function EmployerProfilePageContent() {
                     ) : null}
                   </div>
 
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div className="employer-profile-detail-grid mt-3 grid gap-2 sm:grid-cols-2 lg:mt-2 lg:gap-1.5">
                     <DetailLine icon={MapPin}>
                       {valueOrDash(location)}
                     </DetailLine>
@@ -770,7 +776,7 @@ export function EmployerProfilePageContent() {
                     </DetailLine>
                   </div>
 
-                  <p className="mt-4 text-sm leading-6 text-muted lg:mt-3 lg:text-xs lg:leading-5">
+                  <p className="employer-profile-summary mt-4 text-sm leading-6 text-muted lg:mt-2.5 lg:text-[11px] lg:leading-snug">
                     {profile.companyDescription ||
                       profile.aboutUs ||
                       (isBusinessProfile
@@ -843,9 +849,9 @@ export function EmployerProfilePageContent() {
               title={isBusinessProfile ? "About Company" : "About Me"}
               onEdit={canUpdateProfile ? () => openEditor("about") : undefined}
             />
-            <div className="grid min-w-0 md:grid-cols-[9rem_minmax(0,1fr)]">
+            <div className="grid min-w-0 md:grid-cols-[9rem_minmax(0,1fr)] lg:grid-cols-[8rem_minmax(0,1fr)]">
               <div
-                className="flex flex-wrap gap-1 border-b border-border-subtle p-3 md:flex-col md:flex-nowrap md:border-r md:border-b-0"
+                className="employer-profile-about-tabs flex flex-wrap gap-1 border-b border-border-subtle p-3 md:flex-col md:flex-nowrap md:border-r md:border-b-0 lg:p-2"
                 role="tablist"
                 aria-label={
                   isBusinessProfile
@@ -861,7 +867,7 @@ export function EmployerProfilePageContent() {
                     aria-selected={aboutTab === tab.id}
                     onClick={() => setAboutTab(tab.id)}
                     className={cn(
-                      "min-h-11 shrink-0 rounded-lg px-3 text-left text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 md:min-h-10",
+                      "employer-profile-about-tab min-h-11 shrink-0 rounded-lg px-3 text-left text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 md:min-h-10 lg:min-h-8 lg:px-2.5 lg:text-[11px]",
                       aboutTab === tab.id
                         ? "bg-primary-light text-primary"
                         : "text-muted hover:bg-hero-bg hover:text-foreground",
@@ -870,13 +876,13 @@ export function EmployerProfilePageContent() {
                     {tab.label}
                   </button>
                 ))}
-            </div>
+              </div>
 
-              <div className="min-w-0 p-4">
+              <div className="employer-profile-about-panel min-w-0 p-4 lg:p-3">
                 {aboutTab === "about" ? (
                   <div>
                     {profile.aboutUs ? (
-                      <p className="whitespace-pre-line text-sm leading-6 text-muted">
+                      <p className="employer-profile-about-copy whitespace-pre-line text-sm leading-6 text-muted lg:text-[11px] lg:leading-snug">
                         {profile.aboutUs}
                       </p>
                     ) : (
@@ -886,7 +892,7 @@ export function EmployerProfilePageContent() {
                           : "No introduction has been added yet."}
                       </EmptyCopy>
                     )}
-                    <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                    <div className="mt-4 grid gap-3 lg:mt-3 lg:grid-cols-3 lg:gap-2">
                       {(isBusinessProfile
                         ? [
                             {
@@ -922,17 +928,20 @@ export function EmployerProfilePageContent() {
                         return (
                           <article
                             key={item.title}
-                            className="rounded-xl border border-border-subtle bg-hero-bg/50 p-3"
+                            className="employer-profile-vision-card rounded-xl border border-border-subtle bg-hero-bg/50 p-3 lg:p-2"
                           >
                             <div className="flex items-center gap-2">
-                              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary">
-                                <Icon className="size-4" aria-hidden="true" />
+                              <span className="employer-profile-vision-card__icon inline-flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary lg:size-6">
+                                <Icon
+                                  className="size-4 lg:size-3.5"
+                                  aria-hidden="true"
+                                />
                               </span>
-                              <h3 className="text-sm font-bold text-foreground">
+                              <h3 className="employer-profile-vision-card__title text-sm font-bold text-foreground lg:text-[11px]">
                                 {item.title}
                               </h3>
-              </div>
-                            <p className="mt-2 text-xs leading-5 text-muted">
+                            </div>
+                            <p className="employer-profile-vision-card__body mt-2 text-xs leading-5 text-muted lg:mt-1.5 lg:text-[10px] lg:leading-snug">
                               {item.value || "Not provided"}
                             </p>
                           </article>
@@ -944,7 +953,7 @@ export function EmployerProfilePageContent() {
 
                 {aboutTab === "benefits" ? (
                   profile.benefits ? (
-                    <p className="whitespace-pre-line text-sm leading-6 text-muted">
+                    <p className="employer-profile-about-copy whitespace-pre-line text-sm leading-6 text-muted lg:text-[11px] lg:leading-snug">
                       {profile.benefits}
                     </p>
                   ) : (
@@ -958,7 +967,7 @@ export function EmployerProfilePageContent() {
 
                 {aboutTab === "achievements" ? (
                   profile.values ? (
-                    <p className="whitespace-pre-line text-sm leading-6 text-muted">
+                    <p className="employer-profile-about-copy whitespace-pre-line text-sm leading-6 text-muted lg:text-[11px] lg:leading-snug">
                       {profile.values}
                     </p>
                   ) : (
@@ -1114,12 +1123,12 @@ export function EmployerProfilePageContent() {
           ) : null}
         </main>
 
-        <aside className="min-w-0 space-y-4">
+        <aside className="employer-profile-aside min-w-0 space-y-4 lg:space-y-2.5">
           <section className={cardClassName}>
             <CardHeader
               title={isBusinessProfile ? "Company Snapshot" : "Recruiter Summary"}
             />
-            <dl className="divide-y divide-border-subtle px-4">
+            <dl className="divide-y divide-border-subtle px-4 lg:px-3">
               {[
                 {
                   label: "Jobs Posted",
@@ -1151,19 +1160,22 @@ export function EmployerProfilePageContent() {
                 return (
                   <div
                     key={item.label}
-                    className="flex items-center justify-between gap-3 py-3"
+                    className="employer-profile-snapshot-row flex items-center justify-between gap-3 py-3 lg:py-2"
                   >
-                    <dt className="flex min-w-0 items-center gap-2 text-xs text-muted">
-                      <Icon className="size-4 shrink-0" aria-hidden="true" />
+                    <dt className="flex min-w-0 items-center gap-2 text-xs text-muted lg:text-[11px]">
+                      <Icon
+                        className="size-4 shrink-0 lg:size-3.5"
+                        aria-hidden="true"
+                      />
                       <span>{item.label}</span>
                     </dt>
-                    <dd className="shrink-0 text-xs font-bold tabular-nums text-foreground">
+                    <dd className="shrink-0 text-xs font-bold tabular-nums text-foreground lg:text-[11px]">
                       {jobStatsQuery.isLoading &&
                       typeof item.value === "undefined"
                         ? "…"
                         : valueOrDash(item.value)}
                     </dd>
-              </div>
+                  </div>
                 );
               })}
             </dl>
@@ -1178,7 +1190,7 @@ export function EmployerProfilePageContent() {
               title="Contact Information"
               onEdit={canUpdateProfile ? () => openEditor("contact") : undefined}
             />
-            <dl className="space-y-3 p-4">
+            <dl className="employer-profile-contact-list space-y-3 p-4 lg:space-y-2 lg:p-3">
               {[
                 {
                   label: isBusinessProfile ? "Contact Person" : "Full Name",
@@ -1218,7 +1230,7 @@ export function EmployerProfilePageContent() {
                 return (
                   <div
                     key={item.label}
-                    className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-2 text-xs"
+                    className="employer-profile-contact-row grid grid-cols-[7.5rem_minmax(0,1fr)] gap-2 text-xs lg:grid-cols-[6.5rem_minmax(0,1fr)] lg:text-[11px]"
                   >
                     <dt className="flex items-start gap-2 text-muted">
                       <Icon
@@ -1230,7 +1242,7 @@ export function EmployerProfilePageContent() {
                     <dd className="break-words font-medium text-foreground">
                       {valueOrDash(item.value)}
                     </dd>
-              </div>
+                  </div>
                 );
               })}
             </dl>
@@ -1245,7 +1257,7 @@ export function EmployerProfilePageContent() {
               title={isBusinessProfile ? "Social Links" : "Professional Links"}
               onEdit={canUpdateProfile ? () => openEditor("social") : undefined}
             />
-            <div className="divide-y divide-border-subtle px-4">
+            <div className="divide-y divide-border-subtle px-4 lg:px-3">
               {activeSocialItems.length > 0 ? (
                 activeSocialItems.map((item) => {
                   const href = safeExternalHref(item.value);
@@ -1255,18 +1267,18 @@ export function EmployerProfilePageContent() {
                       href={href ?? undefined}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex min-h-11 min-w-0 items-center gap-2 py-3 text-xs text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      className="employer-profile-social-row flex min-h-11 min-w-0 items-center gap-2 py-3 text-xs text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-8 lg:py-2 lg:text-[11px]"
                     >
                       <span
                         className={cn(
-                          "inline-flex size-6 shrink-0 items-center justify-center rounded-md",
+                          "inline-flex size-6 shrink-0 items-center justify-center rounded-md lg:size-5",
                           SOCIAL_BRAND_BADGE_CLASS[item.brand],
                         )}
                         aria-hidden="true"
                       >
                         <EmployerSocialBrandIcon
                           brand={item.brand}
-                          className="size-3.5"
+                          className="size-3.5 lg:size-3"
                         />
                       </span>
                       <span className="min-w-0 flex-1 truncate">
@@ -1280,7 +1292,7 @@ export function EmployerProfilePageContent() {
                   );
                 })
               ) : (
-                <p className="py-6 text-center text-sm text-muted">
+                <p className="employer-profile-social-empty py-6 text-center text-sm text-muted lg:py-4 lg:text-xs">
                   {isBusinessProfile
                     ? "No social links added."
                     : "No professional links added."}

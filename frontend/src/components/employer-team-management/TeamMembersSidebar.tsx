@@ -3,6 +3,8 @@
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
 import {
   EMPLOYER_TEAM_QUERY_KEYS,
+  EMPLOYER_TEAM_SELECT_OPTION_CLASSNAME,
+  EMPLOYER_TEAM_SELECT_PANEL_CLASSNAME,
   EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME,
 } from "@/constants/employer-team-management";
 import { useCan } from "@/providers/employer-permission-provider";
@@ -123,21 +125,23 @@ export function TeamMembersSidebar({
   }, [slices, total]);
 
   return (
-    <aside className="space-y-4">
+    <aside className="employer-team-sidebar space-y-4 lg:space-y-2.5">
       {canInviteMember ? (
-      <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-        <h3 className="text-sm font-bold text-foreground">Invite Team Member</h3>
-        <p className="mt-1 text-xs text-muted">
+      <section className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
+        <h3 className="employer-team-sidebar__title text-sm font-bold text-foreground lg:text-xs">
+          Invite Team Member
+        </h3>
+        <p className="employer-team-sidebar__desc mt-1 text-xs text-muted lg:text-[11px]">
           Send an invitation to add new members to your team.
         </p>
-        <label className="mt-3 block text-sm">
+        <label className="mt-3 block text-sm lg:mt-2">
           <span className="sr-only">Email</span>
           <input
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="Enter email address"
-            className="h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="employer-team-sidebar__field h-10 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 lg:h-8 lg:px-2 lg:text-[11px]"
           />
         </label>
         <div className="mt-2">
@@ -151,6 +155,8 @@ export function TeamMembersSidebar({
             onChange={setRoleId}
             searchPlaceholder="Search role"
             triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+            panelClassName={EMPLOYER_TEAM_SELECT_PANEL_CLASSNAME}
+            optionClassName={EMPLOYER_TEAM_SELECT_OPTION_CLASSNAME}
           />
         </div>
         <div className="mt-2">
@@ -164,6 +170,8 @@ export function TeamMembersSidebar({
             onChange={setDepartmentId}
             searchPlaceholder="Search department"
             triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+            panelClassName={EMPLOYER_TEAM_SELECT_PANEL_CLASSNAME}
+            optionClassName={EMPLOYER_TEAM_SELECT_OPTION_CLASSNAME}
           />
         </div>
         <button
@@ -176,20 +184,22 @@ export function TeamMembersSidebar({
             });
             setEmail("");
           }}
-          className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="employer-team-sidebar__cta mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mt-2 lg:h-8 lg:text-[11px]"
         >
-          <Send className="size-4" aria-hidden="true" />
+          <Send className="size-4 lg:size-3.5" aria-hidden="true" />
           Send Invitation
         </button>
       </section>
       ) : null}
 
-      <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-        <h3 className="text-sm font-bold text-foreground">Team by Role</h3>
+      <section className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
+        <h3 className="employer-team-sidebar__title text-sm font-bold text-foreground lg:text-xs">
+          Team by Role
+        </h3>
         {sidebarQuery.isLoading ? (
-          <div className="mt-4 h-28 animate-pulse rounded-full bg-hero-bg" />
+          <div className="mt-4 h-28 animate-pulse rounded-full bg-hero-bg lg:mt-3 lg:h-24" />
         ) : slices.length === 0 ? (
-          <p className="mt-4 text-center text-xs text-muted">
+          <p className="employer-team-sidebar__empty mt-4 text-center text-xs text-muted lg:mt-3 lg:text-[11px]">
             Role distribution appears after members join.
           </p>
         ) : (
@@ -236,49 +246,51 @@ export function TeamMembersSidebar({
         )}
         <button
           type="button"
-          className="mt-3 text-xs font-semibold text-primary hover:underline"
+          className="employer-team-sidebar__link mt-3 text-xs font-semibold text-primary hover:underline lg:mt-2 lg:text-[11px]"
           onClick={onOpenRoles}
         >
           View All Roles →
         </button>
       </section>
 
-      <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+      <section className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-foreground">Recent Activity</h3>
+          <h3 className="employer-team-sidebar__title text-sm font-bold text-foreground lg:text-xs">
+            Recent Activity
+          </h3>
           <button
             type="button"
-            className="text-xs font-semibold text-primary hover:underline"
+            className="employer-team-sidebar__link text-xs font-semibold text-primary hover:underline lg:text-[11px]"
             onClick={onOpenRoles}
           >
             View All
           </button>
         </div>
         {sidebarQuery.isLoading ? (
-          <div className="mt-3 space-y-2">
-            <div className="h-10 animate-pulse rounded bg-hero-bg" />
-            <div className="h-10 animate-pulse rounded bg-hero-bg" />
+          <div className="mt-3 space-y-2 lg:mt-2">
+            <div className="h-10 animate-pulse rounded bg-hero-bg lg:h-8" />
+            <div className="h-10 animate-pulse rounded bg-hero-bg lg:h-8" />
           </div>
         ) : activities.length === 0 ? (
-          <p className="mt-3 text-xs text-muted">
+          <p className="employer-team-sidebar__empty mt-3 text-xs text-muted lg:mt-2 lg:text-[11px]">
             Activity will appear as you invite and manage members.
           </p>
         ) : (
-          <ul className="mt-3 space-y-3">
+          <ul className="mt-3 space-y-3 lg:mt-2 lg:space-y-2">
             {activities.map((activity) => {
               const { Icon, wrap } = activityIcon(activity.type);
               return (
-                <li key={activity.id} className="flex items-start gap-2.5">
+                <li key={activity.id} className="flex items-start gap-2.5 lg:gap-2">
                   <span
-                    className={`mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full ${wrap}`}
+                    className={`mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full lg:size-6 ${wrap}`}
                   >
-                    <Icon className="size-3.5" aria-hidden="true" />
+                    <Icon className="size-3.5 lg:size-3" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm leading-snug text-foreground">
+                    <p className="text-sm leading-snug text-foreground lg:text-[11px]">
                       {activity.message}
                     </p>
-                    <p className="mt-0.5 text-xs text-muted">
+                    <p className="mt-0.5 text-xs text-muted lg:text-[10px]">
                       {formatRelativeActivity(activity.createdAt)}
                     </p>
                   </div>
@@ -289,17 +301,19 @@ export function TeamMembersSidebar({
         )}
       </section>
 
-      <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-        <h3 className="text-sm font-bold text-foreground">Access Control</h3>
-        <p className="mt-1 text-xs text-muted">
+      <section className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
+        <h3 className="employer-team-sidebar__title text-sm font-bold text-foreground lg:text-xs">
+          Access Control
+        </h3>
+        <p className="employer-team-sidebar__desc mt-1 text-xs text-muted lg:text-[11px]">
           Manage permissions and access levels for your team.
         </p>
         <button
           type="button"
           onClick={onOpenRoles}
-          className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-primary bg-surface px-3 text-sm font-semibold text-primary hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="employer-team-sidebar__cta mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-primary bg-surface px-3 text-sm font-semibold text-primary hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mt-2 lg:h-8 lg:text-[11px]"
         >
-          <Shield className="size-4" aria-hidden="true" />
+          <Shield className="size-4 lg:size-3.5" aria-hidden="true" />
           Manage Roles & Permissions
         </button>
       </section>

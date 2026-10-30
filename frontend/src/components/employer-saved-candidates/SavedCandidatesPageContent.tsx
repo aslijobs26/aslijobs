@@ -415,7 +415,7 @@ export function SavedCandidatesPageContent() {
   }, [mobileDetailOpen]);
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] overflow-x-clip px-3 py-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:py-5 md:pb-5 lg:overflow-x-visible lg:px-5 lg:py-4">
+    <div className="employer-page-shell mx-auto w-full max-w-[1600px] overflow-x-clip px-3 py-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:py-5 md:pb-5 lg:overflow-x-visible">
       <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between lg:gap-2">
         <div className="min-w-0">
           <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-xl">

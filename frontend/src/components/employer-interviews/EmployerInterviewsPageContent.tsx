@@ -277,17 +277,20 @@ export function EmployerInterviewsPageContent() {
   const cancelLookup = view === "calendar" ? calendarInterviews : interviews;
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:pt-5 md:pb-5 lg:px-6">
-      <header className="flex flex-col gap-2 sm:gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div
+      data-employer-interviews-page
+      className="employer-page-shell employer-interviews-shell mx-auto w-full max-w-[1600px] px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:pt-5 md:pb-5"
+    >
+      <header className="employer-interviews-header flex flex-col gap-2 sm:gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-3">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-xl">
+          <h1 className="employer-interviews-header__title text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-[1.25rem]">
             Interviews
           </h1>
-          <p className="mt-0.5 text-[11px] leading-snug text-muted sm:mt-1 sm:text-sm sm:leading-normal lg:mt-0.5 lg:text-[11px] lg:leading-snug">
+          <p className="employer-interviews-header__subtitle mt-0.5 text-[11px] leading-snug text-muted sm:mt-1 sm:text-sm sm:leading-normal lg:mt-0.5 lg:text-[11px] lg:leading-snug">
             Schedule, manage and track all interviews in one place.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div className="employer-interviews-header__actions flex flex-wrap items-center gap-1.5 sm:gap-2 lg:gap-1.5">
           <span
             className="inline-flex overflow-hidden rounded-lg border border-border-subtle bg-surface"
             role="tablist"
@@ -299,7 +302,7 @@ export function EmployerInterviewsPageContent() {
               aria-selected={view === "calendar"}
               onClick={() => setView("calendar")}
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs lg:gap-1 lg:px-2.5 lg:py-1.5 lg:text-[11px]",
+                "employer-interviews-view-tab inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs lg:gap-1 lg:px-2.5 lg:py-1.5 lg:text-[11px]",
                 view === "calendar"
                   ? "bg-primary text-surface"
                   : "text-muted hover:bg-primary-light/40 hover:text-foreground",
@@ -318,7 +321,7 @@ export function EmployerInterviewsPageContent() {
               aria-current={view === "list" ? "page" : undefined}
               onClick={() => setView("list")}
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs lg:gap-1 lg:px-2.5 lg:py-1.5 lg:text-[11px]",
+                "employer-interviews-view-tab inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs lg:gap-1 lg:px-2.5 lg:py-1.5 lg:text-[11px]",
                 view === "list"
                   ? "bg-primary text-surface"
                   : "text-muted hover:bg-primary-light/40 hover:text-foreground",
@@ -332,7 +335,7 @@ export function EmployerInterviewsPageContent() {
             <button
               type="button"
               onClick={() => openScheduleModal(null)}
-              className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm lg:gap-1 lg:px-2.5 lg:py-1.5 lg:text-xs"
+              className="employer-interviews-schedule-btn inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm lg:gap-1 lg:px-2.5 lg:py-1.5 lg:text-xs"
             >
               <Plus className="size-3.5 sm:size-4 lg:size-3.5" aria-hidden="true" />
               Schedule Interview
@@ -341,17 +344,17 @@ export function EmployerInterviewsPageContent() {
         </div>
       </header>
 
-      <div className="mt-3 sm:mt-5">
+      <div className="employer-interviews-kpi-wrap mt-3 sm:mt-5 lg:mt-2.5">
         <InterviewsKpiStrip
           stats={statsQuery.data?.stats}
           isLoading={statsQuery.isLoading}
         />
       </div>
 
-      <div className="mt-3 grid gap-3 sm:mt-4 sm:gap-4 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-stretch lg:grid-cols-1">
-        <div className="flex min-h-0 min-w-0 flex-col gap-3 sm:gap-4 lg:min-h-[32rem] xl:min-h-[calc(100dvh-13rem)]">
-          <div className="shrink-0 rounded-xl border border-border-subtle bg-surface p-2.5 sm:p-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <div className="employer-interviews-layout mt-3 grid gap-3 sm:mt-4 sm:gap-4 lg:mt-2.5 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-stretch lg:gap-2.5 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="employer-interviews-primary flex min-h-0 min-w-0 flex-col gap-3 sm:gap-4 lg:min-h-[28rem] lg:gap-2.5 xl:min-h-[calc(100dvh-13rem)]">
+          <div className="employer-interviews-toolbar shrink-0 rounded-xl border border-border-subtle bg-surface p-2.5 sm:p-4 lg:p-2.5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 lg:gap-2">
               <InterviewsJobSelect
                 jobTabs={jobTabs}
                 selectedPublicJobId={selectedPublicJobId}
@@ -443,9 +446,7 @@ export function EmployerInterviewsPageContent() {
           )}
         </div>
 
-        <aside
-          className={cn("space-y-4", !mobileFiltersOpen && "hidden lg:block")}
-        >
+        <aside className="employer-interviews-rail hidden space-y-4 lg:block lg:space-y-2.5">
           <div className="hidden lg:block">
             <InterviewsFilterPanel
               quickDate={quickDate}

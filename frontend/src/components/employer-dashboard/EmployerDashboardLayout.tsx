@@ -4,12 +4,9 @@ import { EmployerAuthGuard } from "@/components/employer-dashboard/EmployerAuthG
 import { EmployerDashboardPlaceholder } from "@/components/employer-dashboard/EmployerDashboardPlaceholder";
 import { EmployerNavbar } from "@/components/employer-dashboard/EmployerNavbar";
 import { EmployerSidebar } from "@/components/employer-dashboard/EmployerSidebar";
+import "@/components/employer-dashboard/employer-workspace-layout.css";
 import { FloatingBottomNav } from "@/components/layout/FloatingBottomNav";
 import { EmployerPermissionRouteGuard } from "@/components/rbac/EmployerPermissionRouteGuard";
-import {
-  EMPLOYER_DASHBOARD_SIDEBAR_COLLAPSED_WIDTH,
-  EMPLOYER_DASHBOARD_SIDEBAR_WIDTH,
-} from "@/constants/employer-dashboard";
 import { EmployerPermissionProvider } from "@/providers/employer-permission-provider";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
@@ -48,16 +45,7 @@ export function EmployerDashboardLayout({
   return (
     <EmployerAuthGuard>
       <EmployerPermissionProvider>
-        <div
-          className="min-h-dvh bg-hero-bg"
-          style={
-            {
-              "--employer-sidebar-width": EMPLOYER_DASHBOARD_SIDEBAR_WIDTH,
-              "--employer-sidebar-collapsed-width":
-                EMPLOYER_DASHBOARD_SIDEBAR_COLLAPSED_WIDTH,
-            } as CSSProperties
-          }
-        >
+        <div className="min-h-dvh bg-hero-bg" data-employer-workspace="">
           <EmployerSidebar
             collapsed={collapsed}
             mobileOpen={mobileOpen}

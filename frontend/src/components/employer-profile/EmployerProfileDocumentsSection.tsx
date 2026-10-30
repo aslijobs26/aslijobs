@@ -300,15 +300,17 @@ export function EmployerProfileDocumentsSection({
     <section
       id="profile-section-documents"
       data-profile-section="documents"
-      className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
+      className="employer-profile-card overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
     >
-      <header className="flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
-        <h2 className="text-sm font-bold text-foreground">{title}</h2>
+      <header className="employer-profile-card__header flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 lg:min-h-10 lg:px-3.5 lg:py-2.5">
+        <h2 className="employer-profile-card__title text-sm font-bold text-foreground lg:text-xs">
+          {title}
+        </h2>
         {canUpdate ? (
           <button
             type="button"
             onClick={openUpload}
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-9"
+            className="employer-profile-card__edit inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 text-xs font-semibold text-foreground hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-9 lg:min-h-8 lg:px-2.5 lg:text-[11px]"
           >
             <Upload className="size-3.5" aria-hidden="true" />
             Upload
@@ -316,68 +318,70 @@ export function EmployerProfileDocumentsSection({
         ) : null}
       </header>
 
-      <div className="p-4">
-        <p className="text-xs leading-5 text-muted">
+      <div className="employer-profile-card__body p-4 lg:p-3">
+        <p className="text-xs leading-5 text-muted lg:text-[11px] lg:leading-snug">
           {isBusinessAccount
             ? "Documents uploaded during registration are stored here. Reupload if Operations asked for a clearer copy."
             : "Identity documents uploaded during registration are stored here. Reupload if Operations asked for a clearer copy."}
         </p>
 
         {documentsQuery.isError ? (
-          <p className="mt-3 text-sm text-red-700" role="alert">
+          <p className="mt-3 text-sm text-red-700 lg:text-xs" role="alert">
             Could not load verification documents. Please refresh and try again.
           </p>
         ) : null}
 
         {documentsQuery.isLoading ? (
-          <p className="mt-4 text-sm text-muted">Loading documents…</p>
+          <p className="mt-4 text-sm text-muted lg:mt-3 lg:text-xs">
+            Loading documents…
+          </p>
         ) : documents.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-dashed border-border-subtle bg-hero-bg/60 px-4 py-5 text-sm text-muted">
+          <p className="employer-profile-empty mt-4 rounded-lg border border-dashed border-border-subtle bg-hero-bg/60 px-4 py-5 text-sm text-muted lg:mt-3 lg:px-3.5 lg:py-3.5 lg:text-xs">
             No verification document is on file yet.
             {canUpdate
               ? " Upload the same document type used at registration."
               : ""}
           </p>
         ) : (
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ul className="employer-profile-doc-list mt-4 grid gap-3 sm:grid-cols-2 lg:mt-3 lg:gap-2">
             {documents.map((doc) => (
               <li
                 key={doc.id}
-                className="flex min-w-0 flex-col justify-between rounded-xl border border-border-subtle bg-hero-bg/40 p-3"
+                className="employer-profile-doc-card flex min-w-0 flex-col justify-between rounded-xl border border-border-subtle bg-hero-bg/40 p-3 lg:p-2"
               >
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
-                    <FileText className="size-4" aria-hidden="true" />
+                <div className="flex items-start gap-3 lg:gap-2">
+                  <span className="employer-profile-doc-card__icon inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary lg:size-8">
+                    <FileText className="size-4 lg:size-3.5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate text-sm font-semibold text-foreground">
+                      <h3 className="employer-profile-doc-card__title truncate text-sm font-semibold text-foreground lg:text-xs">
                         {documentTypeDisplayLabel(doc, documentOptions)}
                       </h3>
                       <span
                         className={cn(
-                          "inline-flex rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
+                          "inline-flex rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold lg:text-[10px]",
                           documentStatusClass(doc.verificationStatus),
                         )}
                       >
                         {documentStatusLabel(doc.verificationStatus)}
                       </span>
                     </div>
-                    <p className="mt-1 truncate text-xs text-muted">
+                    <p className="employer-profile-doc-card__meta mt-1 truncate text-xs text-muted lg:text-[10px]">
                       {doc.originalName}
                     </p>
-                    <p className="mt-1 text-[0.6875rem] text-muted">
+                    <p className="employer-profile-doc-card__meta mt-1 text-[0.6875rem] text-muted lg:text-[10px]">
                       {formatBytes(doc.fileSize)} • Uploaded{" "}
                       {formatUploadedAt(doc.uploadedAt)}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border-subtle pt-3">
+                <div className="employer-profile-doc-card__actions mt-3 flex flex-wrap gap-1.5 border-t border-border-subtle pt-3 lg:mt-2 lg:pt-2">
                   <button
                     type="button"
                     onClick={() => void handlePreview(doc)}
-                    className="inline-flex min-h-10 flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface px-2 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    className="inline-flex min-h-10 flex-1 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface px-2 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-7 lg:text-[10px]"
                   >
                     <Eye className="size-3.5" aria-hidden="true" />
                     Preview
@@ -385,7 +389,7 @@ export function EmployerProfileDocumentsSection({
                   <button
                     type="button"
                     onClick={() => void handleDownload(doc)}
-                    className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-7"
                     aria-label={`Download ${doc.originalName}`}
                   >
                     <Download className="size-3.5" aria-hidden="true" />
@@ -394,7 +398,7 @@ export function EmployerProfileDocumentsSection({
                     <button
                       type="button"
                       onClick={() => openReupload(doc)}
-                      className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-7 lg:text-[10px]"
                     >
                       <Pencil className="size-3.5" aria-hidden="true" />
                       Reupload

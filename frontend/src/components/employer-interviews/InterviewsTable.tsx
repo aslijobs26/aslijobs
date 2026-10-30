@@ -149,16 +149,16 @@ export function InterviewsTable({
   };
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface">
+    <section className="employer-interviews-table flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface">
       {!showTable && isError ? (
-        <div className="px-3 py-6 text-left sm:px-4 sm:py-10 sm:text-center">
-          <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
+        <div className="employer-interviews-empty px-3 py-6 text-left sm:px-4 sm:py-10 sm:text-center lg:px-4 lg:py-5">
+          <p className="employer-interviews-empty__title text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
             Unable to load interviews
           </p>
           <button
             type="button"
             onClick={onRetry}
-            className="mt-2 inline-flex min-h-8 items-center rounded-lg bg-primary px-2.5 text-[11px] font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-3 sm:min-h-0 sm:px-3 sm:py-2 sm:text-xs"
+            className="employer-interviews-empty__cta mt-2 inline-flex min-h-8 items-center rounded-lg bg-primary px-2.5 text-[11px] font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-3 sm:min-h-0 sm:px-3 sm:py-2 sm:text-xs lg:mt-2 lg:min-h-8 lg:px-2.5 lg:text-[11px]"
           >
             Retry
           </button>
@@ -166,16 +166,18 @@ export function InterviewsTable({
       ) : null}
 
       {!showTable && !isError ? (
-        <div className="px-3 py-6 text-left sm:px-4 sm:py-10 sm:text-center">
-          <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
+        <div className="employer-interviews-empty px-3 py-6 text-left sm:px-4 sm:py-10 sm:text-center lg:px-4 lg:py-5">
+          <p className="employer-interviews-empty__title text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
             {emptyTitle}
           </p>
-          <p className="mt-1 text-[11px] text-muted sm:text-xs lg:text-[11px]">{emptyDescription}</p>
+          <p className="employer-interviews-empty__desc mt-1 text-[11px] text-muted sm:text-xs lg:text-[11px]">
+            {emptyDescription}
+          </p>
           {onScheduleInterview ? (
             <button
               type="button"
               onClick={onScheduleInterview}
-              className="mt-2 inline-flex min-h-8 items-center rounded-lg bg-primary px-2.5 text-[11px] font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-3 sm:min-h-0 sm:px-3 sm:py-2 sm:text-xs lg:min-h-8 lg:px-2.5 lg:text-[11px]"
+              className="employer-interviews-empty__cta mt-2 inline-flex min-h-8 items-center rounded-lg bg-primary px-2.5 text-[11px] font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-3 sm:min-h-0 sm:px-3 sm:py-2 sm:text-xs lg:mt-2 lg:min-h-8 lg:px-2.5 lg:text-[11px]"
             >
               Schedule Interview
             </button>
@@ -395,27 +397,27 @@ export function InterviewsTable({
       </div>
       ) : null}
 
-      <div className="mt-auto flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border-subtle bg-surface px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
-        <p className="text-[11px] text-muted sm:text-xs">
+      <div className="employer-interviews-pager mt-auto flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border-subtle bg-surface px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:gap-2 lg:px-2.5 lg:py-1.5">
+        <p className="text-[11px] text-muted sm:text-xs lg:text-[11px]">
           Showing {from} to {to} of {total} interviews
         </p>
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-1.5">
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
-            className="min-h-8 rounded-lg border border-border-subtle px-2.5 text-[11px] font-semibold text-foreground hover:bg-primary-light/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-xs"
+            className="employer-interviews-pager-btn min-h-8 rounded-lg border border-border-subtle px-2.5 text-[11px] font-semibold text-foreground hover:bg-primary-light/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-xs lg:min-h-8 lg:px-2.5 lg:py-1 lg:text-[11px]"
           >
             Previous
           </button>
-          <span className="text-[11px] font-semibold text-foreground sm:text-xs">
+          <span className="text-[11px] font-semibold text-foreground sm:text-xs lg:text-[11px]">
             {page} / {Math.max(totalPages, 1)}
           </span>
           <button
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
-            className="min-h-8 rounded-lg border border-border-subtle px-2.5 text-[11px] font-semibold text-foreground hover:bg-primary-light/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-xs"
+            className="employer-interviews-pager-btn min-h-8 rounded-lg border border-border-subtle px-2.5 text-[11px] font-semibold text-foreground hover:bg-primary-light/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-xs lg:min-h-8 lg:px-2.5 lg:py-1 lg:text-[11px]"
           >
             Next
           </button>

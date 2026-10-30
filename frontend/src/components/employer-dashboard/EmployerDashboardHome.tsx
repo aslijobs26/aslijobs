@@ -272,9 +272,9 @@ export function EmployerDashboardHome() {
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-3 px-4 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:gap-4 sm:px-6 sm:pt-6 md:pb-6 lg:px-8 lg:pb-5">
-      <div className="grid items-start gap-3 sm:gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)]">
-        <div className="min-w-0 space-y-3 sm:space-y-4">
+    <div className="employer-page-shell employer-home-shell flex flex-1 flex-col gap-3 px-4 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:gap-4 sm:px-6 sm:pt-6 md:pb-6">
+      <div className="employer-home-layout">
+        <div className="employer-home-primary">
           <DashboardWelcomeBanner
             displayName={displayName}
             isLoading={profileQuery.isLoading}
@@ -306,7 +306,7 @@ export function EmployerDashboardHome() {
           </Can>
 
           {(canCandidates || canInterviews) && (
-            <div className="grid items-stretch gap-3 sm:gap-4 xl:grid-cols-2">
+            <div className="employer-analytics-grid">
               <Can module="candidates" action="read">
                 <DashboardRecruitmentFunnel
                   stages={funnelStages}
@@ -328,7 +328,7 @@ export function EmployerDashboardHome() {
           )}
 
           <Can module="candidates" action="read">
-            <div className="grid items-stretch gap-3 sm:gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(16rem,0.95fr)]">
+            <div className="employer-apps-sources-grid">
               <DashboardRecentApplications
                 applications={recentApplicationsQuery.data?.applications ?? []}
                 isLoading={recentApplicationsQuery.isLoading}
@@ -350,7 +350,7 @@ export function EmployerDashboardHome() {
           </Can>
         </div>
 
-        <aside className="min-w-0 space-y-3 sm:space-y-4 xl:sticky xl:top-20 xl:self-start">
+        <aside className="employer-home-rail">
           {canCompanyProfile ? (
             profileCompletion ? (
               <DashboardProfileCompletion

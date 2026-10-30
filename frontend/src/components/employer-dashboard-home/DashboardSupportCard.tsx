@@ -25,7 +25,7 @@ function SupportItem({
   external?: boolean;
 }) {
   const className =
-    "flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:gap-3 sm:px-2.5 sm:text-sm";
+    "employer-support-item flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:gap-3 sm:px-2.5 sm:text-sm";
 
   if (external) {
     return (
@@ -60,16 +60,16 @@ export function DashboardSupportCard() {
   const whatsappExternal = WHATSAPP_JOIN_URL.startsWith("http");
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4">
+    <section className="employer-rail-card overflow-hidden rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4">
       <div className="flex items-center gap-2 sm:gap-2.5">
         <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-9">
           <Headphones className="size-3.5 sm:size-4" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-xs font-bold text-foreground sm:text-sm">
+          <h2 className="employer-rail-title text-xs font-bold text-foreground sm:text-sm">
             {t("employer.shell.helpTitle")}
           </h2>
-          <p className="break-words text-[0.6875rem] text-muted sm:text-xs">
+          <p className="employer-rail-text break-words text-[0.6875rem] text-muted sm:text-xs">
             {t("employer.dashboard.supportSubtitle")}
           </p>
         </div>

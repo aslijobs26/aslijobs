@@ -10,6 +10,8 @@ import {
   EMPLOYER_TEAM_DEFAULT_PAGE_SIZE,
   EMPLOYER_TEAM_QUERY_KEYS,
   EMPLOYER_TEAM_SEARCH_DEBOUNCE_MS,
+  EMPLOYER_TEAM_SELECT_OPTION_CLASSNAME,
+  EMPLOYER_TEAM_SELECT_PANEL_CLASSNAME,
   EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME,
 } from "@/constants/employer-team-management";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
@@ -245,14 +247,14 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
     (filters.status ? 1 : 0);
 
   return (
-    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)]">
-      <div className="min-w-0 space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+    <div className="employer-team-members-layout grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(12rem,15.5rem)] lg:gap-2.5">
+      <div className="employer-team-members-primary min-w-0 space-y-4 lg:space-y-2.5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center lg:gap-1.5">
             <label className="relative min-w-0 flex-1">
               <span className="sr-only">Search members</span>
               <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted lg:left-2.5 lg:size-3.5"
                 aria-hidden="true"
               />
               <input
@@ -260,18 +262,18 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Search by name, email or role..."
-                className="h-10 w-full rounded-xl border border-border-subtle bg-surface pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 lg:h-9 lg:text-xs"
+                className="employer-team-toolbar__search h-10 w-full rounded-xl border border-border-subtle bg-surface pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 lg:h-8 lg:pl-8 lg:text-[11px]"
               />
             </label>
             <button
               type="button"
               onClick={() => setFiltersOpen((current) => !current)}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-9 lg:text-xs"
+              className="employer-team-toolbar__btn inline-flex h-10 items-center gap-2 rounded-xl border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-8 lg:gap-1.5 lg:px-2.5 lg:text-[11px]"
             >
-              <Filter className="size-4" aria-hidden="true" />
+              <Filter className="size-4 lg:size-3.5" aria-hidden="true" />
               Filter
               {activeFilterCount > 0 ? (
-                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[0.6875rem] font-bold text-surface">
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[0.6875rem] font-bold text-surface lg:min-w-4 lg:text-[10px]">
                   {activeFilterCount}
                 </span>
               ) : (
@@ -288,30 +290,38 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
                 setInvitePrefill({});
                 setModalMode("invite");
               }}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-9 lg:px-3 lg:text-xs"
+              className="employer-team-toolbar__btn inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-8 lg:gap-1.5 lg:px-2.5 lg:text-[11px]"
             >
-              <Plus className="size-4" aria-hidden="true" strokeWidth={2.5} />
+              <Plus
+                className="size-4 lg:size-3.5"
+                aria-hidden="true"
+                strokeWidth={2.5}
+              />
               Invite Member
             </button>
           ) : null}
         </div>
 
         {filtersOpen ? (
-          <div className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-foreground">Filters</h3>
+          <div className="employer-team-filters rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
+            <div className="mb-3 flex items-center justify-between lg:mb-2">
+              <h3 className="employer-team-filters__title text-sm font-bold text-foreground lg:text-xs">
+                Filters
+              </h3>
               <button
                 type="button"
                 onClick={() => setFiltersOpen(false)}
-                className="inline-flex size-8 items-center justify-center rounded-md text-muted hover:bg-primary-light"
+                className="inline-flex size-8 items-center justify-center rounded-md text-muted hover:bg-primary-light lg:size-7"
                 aria-label="Close filters"
               >
-                <X className="size-4" aria-hidden="true" />
+                <X className="size-4 lg:size-3.5" aria-hidden="true" />
               </button>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="block text-sm">
-                <span className="mb-1.5 block font-medium">Department</span>
+            <div className="grid gap-3 sm:grid-cols-3 lg:gap-2">
+              <div className="block text-sm lg:text-[11px]">
+                <span className="employer-team-filters__label mb-1.5 block font-medium">
+                  Department
+                </span>
                 <EmployerRegisterSearchableSelect
                   id="members-filter-department"
                   label="Department"
@@ -328,10 +338,14 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
                   }}
                   searchPlaceholder="Search department"
                   triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+                  panelClassName={EMPLOYER_TEAM_SELECT_PANEL_CLASSNAME}
+                  optionClassName={EMPLOYER_TEAM_SELECT_OPTION_CLASSNAME}
                 />
               </div>
-              <div className="block text-sm">
-                <span className="mb-1.5 block font-medium">Role</span>
+              <div className="block text-sm lg:text-[11px]">
+                <span className="employer-team-filters__label mb-1.5 block font-medium">
+                  Role
+                </span>
                 <EmployerRegisterSearchableSelect
                   id="members-filter-role"
                   label="Role"
@@ -348,10 +362,14 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
                   }}
                   searchPlaceholder="Search role"
                   triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+                  panelClassName={EMPLOYER_TEAM_SELECT_PANEL_CLASSNAME}
+                  optionClassName={EMPLOYER_TEAM_SELECT_OPTION_CLASSNAME}
                 />
               </div>
-              <div className="block text-sm">
-                <span className="mb-1.5 block font-medium">Status</span>
+              <div className="block text-sm lg:text-[11px]">
+                <span className="employer-team-filters__label mb-1.5 block font-medium">
+                  Status
+                </span>
                 <EmployerRegisterSearchableSelect
                   id="members-filter-status"
                   label="Status"
@@ -370,6 +388,8 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
                   }}
                   hideSearch
                   triggerClassName={EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME}
+                  panelClassName={EMPLOYER_TEAM_SELECT_PANEL_CLASSNAME}
+                  optionClassName={EMPLOYER_TEAM_SELECT_OPTION_CLASSNAME}
                 />
               </div>
             </div>
@@ -379,7 +399,7 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
                 setFilters(DEFAULT_FILTERS);
                 setPage(1);
               }}
-              className="mt-3 text-sm font-semibold text-primary"
+              className="employer-team-filters__clear mt-3 text-sm font-semibold text-primary lg:mt-2 lg:text-[11px]"
             >
               Clear filters
             </button>

@@ -23,29 +23,32 @@ export function EmployerNavbar({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border-subtle bg-surface px-3 sm:px-4 lg:px-5",
+        "employer-shell-header sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border-subtle bg-surface px-3 sm:px-4 lg:h-[var(--employer-header-height)] lg:gap-2",
         className,
       )}
     >
       <button
         type="button"
         onClick={onSidebarToggle}
-        className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-nav transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        className="employer-shell-menu-btn inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-nav transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:size-8"
         aria-label={t("employer.shell.toggleSidebar")}
       >
-        <Menu className="size-5" strokeWidth={2} aria-hidden="true" />
+        <Menu className="size-5 lg:size-4" strokeWidth={2} aria-hidden="true" />
       </button>
 
-      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
+      <div className="employer-shell-actions ml-auto flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-2">
         <Can module="jobs" action="create">
-          <EmployerPostJobLink className="inline-flex h-9 shrink-0 items-center rounded-lg bg-primary-soft px-2.5 text-xs font-semibold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-10 sm:px-4 sm:text-sm">
+          <EmployerPostJobLink className="employer-shell-post-job inline-flex h-9 shrink-0 items-center rounded-lg bg-primary-soft px-2.5 text-xs font-semibold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-10 sm:px-4 sm:text-sm lg:h-8 lg:px-3 lg:text-xs">
             <span className="whitespace-nowrap">{t("employer.shell.postJob")}</span>
           </EmployerPostJobLink>
         </Can>
 
-        <NotificationBell viewAllHref={ROUTES.EMPLOYER_NOTIFICATIONS} />
+        <NotificationBell
+          className="employer-shell-bell"
+          viewAllHref={ROUTES.EMPLOYER_NOTIFICATIONS}
+        />
 
-        <EmployerProfileMenu />
+        <EmployerProfileMenu className="employer-shell-profile" />
       </div>
     </header>
   );

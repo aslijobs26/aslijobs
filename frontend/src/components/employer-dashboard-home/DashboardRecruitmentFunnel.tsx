@@ -12,7 +12,7 @@ import type { EmployerDashboardFunnelStage } from "@/utils/employer-dashboard-ho
 
 /** Matches the Interviews status-overview period dropdown. */
 const FUNNEL_PERIOD_TRIGGER_CLASS_NAME =
-  "!h-8 lg:!h-8 !min-w-[7.5rem] !w-auto !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] rounded-lg border border-border-subtle bg-surface px-2.5 text-xs text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
+  "!h-8 lg:!h-7 !min-w-[6.5rem] lg:!min-w-[6.25rem] !w-auto !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] rounded-lg border border-border-subtle bg-surface px-2.5 lg:!px-2 text-xs lg:!text-[11px] text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
 
 type DashboardRecruitmentFunnelProps = {
   stages: EmployerDashboardFunnelStage[];
@@ -39,12 +39,12 @@ export function DashboardRecruitmentFunnel({
   );
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="flex items-center justify-between gap-2 px-3 pt-3 sm:gap-3 sm:px-5 sm:pt-5 lg:px-4 lg:pt-3">
-        <h2 className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base lg:text-sm">
+    <section className="employer-analytics-card flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+      <div className="employer-analytics-card__header flex items-center justify-between gap-2 px-3 pt-3 sm:gap-3 sm:px-5 sm:pt-5">
+        <h2 className="employer-analytics-card__title employer-section-title min-w-0 break-words text-sm font-bold text-foreground sm:text-base">
           {t("employer.dashboard.recruitmentFunnel")}
         </h2>
-        <div className="min-w-[7.5rem] shrink-0">
+        <div className="min-w-[7.5rem] shrink-0 lg:min-w-[6.25rem]">
           <EmployerRegisterSearchableSelect
             id="dashboard-funnel-period"
             label={t("employer.dashboard.funnelPeriodLabel")}
@@ -57,32 +57,32 @@ export function DashboardRecruitmentFunnel({
               onPeriodChange(value as EmployerDashboardFunnelPeriod)
             }
             triggerClassName={FUNNEL_PERIOD_TRIGGER_CLASS_NAME}
-            optionClassName="!py-2 !text-xs"
+            optionClassName="!py-2 !text-xs lg:!py-1.5 lg:!text-[11px]"
           />
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col px-3 pb-3 pt-3 sm:px-5 sm:pb-5 sm:pt-5 lg:px-4 lg:pb-3 lg:pt-3">
+      <div className="employer-analytics-card__body flex flex-1 flex-col px-3 pb-3 pt-3 sm:px-5 sm:pb-5 sm:pt-5">
         <ul
-          className="flex flex-1 flex-col justify-center gap-1.5 sm:gap-2.5 lg:gap-1.5"
+          className="flex flex-1 flex-col justify-center gap-1.5 sm:gap-2.5 lg:gap-1"
           aria-label={t("employer.dashboard.funnelStagesAria")}
         >
           {isLoading
             ? Array.from({ length: 6 }).map((_, index) => (
                   <li
                   key={index}
-                  className="flex items-center gap-2 sm:gap-2.5"
+                  className="employer-funnel-row flex items-center gap-2 sm:gap-2.5"
                   aria-hidden="true"
                 >
                   <div className="flex min-w-0 flex-1 justify-center">
                     <div
-                      className="h-7 animate-pulse rounded-lg bg-hero-bg sm:h-9 lg:h-8"
+                      className="employer-funnel-bar h-7 animate-pulse rounded-lg bg-hero-bg sm:h-9"
                       style={{
                         width: `${EMPLOYER_DASHBOARD_FUNNEL_STAGES[index]?.widthPercent ?? 70}%`,
                       }}
                     />
                   </div>
-                  <span className="inline-block h-4 w-8 shrink-0 animate-pulse rounded bg-hero-bg" />
+                  <span className="employer-funnel-count inline-block h-4 w-8 shrink-0 animate-pulse rounded bg-hero-bg" />
                 </li>
               ))
             : EMPLOYER_DASHBOARD_FUNNEL_STAGES.map((stageMeta) => {
@@ -99,11 +99,14 @@ export function DashboardRecruitmentFunnel({
                 );
 
                 return (
-                  <li key={stage.id} className="flex items-center gap-2 sm:gap-2.5">
+                  <li
+                    key={stage.id}
+                    className="employer-funnel-row flex items-center gap-2 sm:gap-2.5"
+                  >
                     <div className="flex min-w-0 flex-1 justify-center">
                       <div
                         className={cn(
-                          "relative flex h-7 w-full items-center justify-center overflow-hidden rounded-lg px-2 text-center text-[0.6875rem] font-semibold sm:h-9 sm:px-3 sm:text-[0.8125rem] lg:h-8 lg:px-2.5 lg:text-[0.75rem]",
+                          "employer-funnel-bar relative flex h-7 w-full items-center justify-center overflow-hidden rounded-lg px-2 text-center text-[0.6875rem] font-semibold sm:h-9 sm:px-3 sm:text-[0.8125rem]",
                           stageMeta.trackClassName,
                         )}
                         style={{ width: `${stageMeta.widthPercent}%` }}
@@ -113,7 +116,7 @@ export function DashboardRecruitmentFunnel({
                         role="meter"
                         aria-label={`${stage.label}: ${stage.count}`}
                       >
-                        <span className="absolute inset-0 flex items-center justify-center truncate px-3">
+                        <span className="absolute inset-0 flex items-center justify-center truncate px-2 sm:px-3">
                           {stage.label}
                         </span>
 
@@ -129,7 +132,7 @@ export function DashboardRecruitmentFunnel({
                         {/* Same label clipped to the fill so it stays readable over it. */}
                         <span
                           className={cn(
-                            "absolute inset-0 flex items-center justify-center truncate px-3 transition-[clip-path] duration-500 ease-out",
+                            "absolute inset-0 flex items-center justify-center truncate px-2 transition-[clip-path] duration-500 ease-out sm:px-3",
                             stageMeta.fillTextClassName,
                           )}
                           style={{
@@ -141,7 +144,7 @@ export function DashboardRecruitmentFunnel({
                         </span>
                       </div>
                     </div>
-                    <span className="w-8 shrink-0 text-right text-xs font-bold tabular-nums text-foreground sm:w-9 sm:text-sm lg:w-8 lg:text-xs">
+                    <span className="employer-funnel-count w-8 shrink-0 text-right text-xs font-bold tabular-nums text-foreground sm:w-9 sm:text-sm">
                       {stage.count.toLocaleString("en-IN")}
                     </span>
                   </li>
@@ -149,11 +152,11 @@ export function DashboardRecruitmentFunnel({
               })}
         </ul>
 
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-border-subtle pt-2.5 sm:mt-5 sm:gap-3 sm:pt-4 lg:mt-3 lg:pt-2.5">
-          <p className="min-w-0 text-xs font-medium text-muted sm:text-sm lg:text-xs">
+        <div className="employer-funnel-footer mt-3 flex items-center justify-between gap-2 border-t border-border-subtle pt-2.5 sm:mt-5 sm:gap-3 sm:pt-4">
+          <p className="employer-funnel-footer__label min-w-0 text-xs font-medium text-muted sm:text-sm">
             {t("employer.dashboard.conversionRate")}
           </p>
-          <p className="text-lg font-bold tabular-nums text-primary sm:text-2xl lg:text-xl">
+          <p className="employer-funnel-footer__value text-lg font-bold tabular-nums text-primary sm:text-2xl">
             {isLoading ? "…" : `${conversionRate}%`}
           </p>
         </div>

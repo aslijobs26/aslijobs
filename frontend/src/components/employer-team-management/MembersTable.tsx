@@ -90,18 +90,28 @@ export function MembersTable({
     );
   }
 
+  if (!isLoading && members.length === 0) {
+    return (
+      <div className="employer-team-table__empty flex flex-col items-center justify-center px-4 py-12 text-center lg:px-3 lg:py-8">
+        <p className="text-sm text-muted lg:text-xs">
+          No team members yet. Invite your first teammate to get started.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-w-0 overflow-x-auto overscroll-x-contain scrollbar-hidden">
-      <table className="min-w-[70rem] w-full border-collapse text-left">
+      <table className="employer-team-table min-w-[70rem] w-full border-collapse text-left">
         <thead>
           <tr className="border-b border-border-subtle bg-hero-bg/60 text-xs font-semibold uppercase tracking-wide text-muted">
-            <th className="px-4 py-3">Member</th>
-            <th className="px-4 py-3">Role</th>
-            <th className="px-4 py-3">Department</th>
-            <th className="px-4 py-3">Access Level</th>
-            <th className="px-4 py-3">Status</th>
-            <th className="px-4 py-3">Last Active</th>
-            <th className="px-4 py-3 text-right">Actions</th>
+            <th className="px-4 py-3 lg:px-3 lg:py-2">Member</th>
+            <th className="px-4 py-3 lg:px-3 lg:py-2">Role</th>
+            <th className="px-4 py-3 lg:px-3 lg:py-2">Department</th>
+            <th className="px-4 py-3 lg:px-3 lg:py-2">Access Level</th>
+            <th className="px-4 py-3 lg:px-3 lg:py-2">Status</th>
+            <th className="px-4 py-3 lg:px-3 lg:py-2">Last Active</th>
+            <th className="px-4 py-3 text-right lg:px-3 lg:py-2">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -109,21 +119,13 @@ export function MembersTable({
             ? Array.from({ length: 6 }).map((_, index) => (
                 <tr key={`sk-${index}`} className="border-b border-border-subtle">
                   {Array.from({ length: 7 }).map((__, cell) => (
-                    <td key={cell} className="px-4 py-3.5">
+                    <td key={cell} className="px-4 py-3.5 lg:px-3 lg:py-2">
                       <div className="h-4 w-24 animate-pulse rounded bg-hero-bg" />
                     </td>
                   ))}
                 </tr>
               ))
             : null}
-
-          {!isLoading && members.length === 0 ? (
-            <tr>
-              <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted">
-                No team members yet. Invite your first teammate to get started.
-              </td>
-            </tr>
-          ) : null}
 
           {!isLoading
             ? members.map((member) => {
@@ -136,14 +138,14 @@ export function MembersTable({
                   key={member.id}
                   className="border-b border-border-subtle last:border-b-0 hover:bg-primary-light/20"
                 >
-                  <td className="px-4 py-3.5">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-light text-[0.6875rem] font-bold text-primary">
+                  <td className="px-4 py-3.5 lg:px-3 lg:py-2">
+                    <div className="flex min-w-0 items-center gap-2.5 lg:gap-2">
+                      <span className="employer-team-table__avatar inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-light text-[0.6875rem] font-bold text-primary lg:size-7 lg:text-[10px]">
                         {getInitials(member.fullName)}
                       </span>
                       <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-1.5">
-                          <p className="truncate text-sm font-semibold text-foreground lg:text-xs">
+                          <p className="employer-team-table__name truncate text-sm font-semibold text-foreground lg:text-[11px]">
                             {member.fullName}
                           </p>
                           {isYou ? (
@@ -158,7 +160,7 @@ export function MembersTable({
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-4 py-3.5 lg:px-3 lg:py-2">
                     {canViewRole && member.role ? (
                       <span
                         className={cn(
@@ -172,12 +174,12 @@ export function MembersTable({
                       <span className="text-sm text-muted">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3.5 text-sm text-foreground">
+                  <td className="px-4 py-3.5 lg:px-3 lg:py-2 text-sm text-foreground">
                     {canViewDepartment
                       ? (member.department?.name ?? "—")
                       : "—"}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-4 py-3.5 lg:px-3 lg:py-2">
                     <span
                       className={cn(
                         "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold",
@@ -187,7 +189,7 @@ export function MembersTable({
                       {ACCESS_LEVEL_LABELS[member.accessLevel]}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-4 py-3.5 lg:px-3 lg:py-2">
                     <span
                       className={cn(
                         "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
@@ -203,10 +205,10 @@ export function MembersTable({
                       </span>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3.5 text-sm text-muted">
+                  <td className="px-4 py-3.5 lg:px-3 lg:py-2 text-sm text-muted">
                     {formatLastActive(member.lastActiveAt)}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-4 py-3.5 lg:px-3 lg:py-2">
                     <div className="flex items-center justify-end gap-1">
                       {member.status === "invited" ? (
                         canCreateMember || canUpdateMember ? (

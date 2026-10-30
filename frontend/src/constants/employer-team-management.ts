@@ -67,6 +67,8 @@ export type TeamStatCardConfig = {
   subtitle: (value: number, stats: Record<TeamStatKey, number>) => string;
   icon: LucideIcon;
   iconWrapClassName: string;
+  cardClassName: string;
+  valueClassName: string;
 };
 
 export const EMPLOYER_TEAM_STAT_CARDS: readonly TeamStatCardConfig[] = [
@@ -77,6 +79,9 @@ export const EMPLOYER_TEAM_STAT_CARDS: readonly TeamStatCardConfig[] = [
       `Across ${stats.departments} department${stats.departments === 1 ? "" : "s"}`,
     icon: Users,
     iconWrapClassName: "bg-primary-light text-primary",
+    cardClassName:
+      "border-primary/20 bg-gradient-to-br from-primary/10 to-white hover:border-primary/35",
+    valueClassName: "text-primary",
   },
   {
     key: "roles",
@@ -84,6 +89,9 @@ export const EMPLOYER_TEAM_STAT_CARDS: readonly TeamStatCardConfig[] = [
     subtitle: () => "Custom roles created",
     icon: ShieldCheck,
     iconWrapClassName: "bg-violet-50 text-violet-600",
+    cardClassName:
+      "border-violet-200/80 bg-gradient-to-br from-violet-50 to-white hover:border-violet-300",
+    valueClassName: "text-violet-700",
   },
   {
     key: "departments",
@@ -91,6 +99,9 @@ export const EMPLOYER_TEAM_STAT_CARDS: readonly TeamStatCardConfig[] = [
     subtitle: () => "Across the organization",
     icon: Building2,
     iconWrapClassName: "bg-orange-50 text-orange-600",
+    cardClassName:
+      "border-orange-200/80 bg-gradient-to-br from-orange-50 to-white hover:border-orange-300",
+    valueClassName: "text-orange-600",
   },
   {
     key: "pendingInvitations",
@@ -98,6 +109,9 @@ export const EMPLOYER_TEAM_STAT_CARDS: readonly TeamStatCardConfig[] = [
     subtitle: () => "Invites not accepted",
     icon: UserPlus,
     iconWrapClassName: "bg-sky-50 text-sky-600",
+    cardClassName:
+      "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white hover:border-sky-300",
+    valueClassName: "text-sky-700",
   },
 ] as const;
 
@@ -264,7 +278,13 @@ export const PERMISSION_ACTIONS = [
 ] as const;
 
 export const EMPLOYER_TEAM_SELECT_TRIGGER_CLASSNAME =
-  "!h-10 w-full rounded-lg border-border-subtle bg-surface !text-sm shadow-none transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20";
+  "!h-10 lg:!h-8 lg:!min-h-8 w-full rounded-lg border-border-subtle bg-surface !text-sm lg:!text-[11px] shadow-none transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20";
 
 export const EMPLOYER_TEAM_SELECT_TRIGGER_COMPACT_CLASSNAME =
   "!h-8 min-w-0 flex-1 rounded-md border-border-subtle bg-surface !text-xs shadow-none";
+
+export const EMPLOYER_TEAM_SELECT_OPTION_CLASSNAME =
+  "!px-2.5 !py-2 !text-sm lg:!px-2 lg:!py-1.5 lg:!text-[11px]";
+
+export const EMPLOYER_TEAM_SELECT_PANEL_CLASSNAME =
+  "employer-team-select-panel";

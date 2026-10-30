@@ -123,6 +123,9 @@ export type EmployerDashboardStatCardConfig = {
   icon: LucideIcon;
   iconWrapClassName: string;
   iconClassName: string;
+  /** Tinted card surface + border for the KPI tile. */
+  cardClassName: string;
+  valueClassName: string;
 };
 
 export const EMPLOYER_DASHBOARD_STAT_CARDS: EmployerDashboardStatCardConfig[] = [
@@ -132,6 +135,9 @@ export const EMPLOYER_DASHBOARD_STAT_CARDS: EmployerDashboardStatCardConfig[] = 
     icon: Briefcase,
     iconWrapClassName: "bg-primary-light text-primary",
     iconClassName: "text-primary",
+    cardClassName:
+      "border-primary/20 bg-gradient-to-br from-primary/10 to-white hover:border-primary/35",
+    valueClassName: "text-primary",
   },
   {
     key: "applications",
@@ -139,6 +145,9 @@ export const EMPLOYER_DASHBOARD_STAT_CARDS: EmployerDashboardStatCardConfig[] = 
     icon: Users,
     iconWrapClassName: "bg-sky-50 text-sky-600",
     iconClassName: "text-sky-600",
+    cardClassName:
+      "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white hover:border-sky-300",
+    valueClassName: "text-sky-700",
   },
   {
     key: "shortlisted",
@@ -146,6 +155,9 @@ export const EMPLOYER_DASHBOARD_STAT_CARDS: EmployerDashboardStatCardConfig[] = 
     icon: UserCheck,
     iconWrapClassName: "bg-amber-50 text-amber-600",
     iconClassName: "text-amber-600",
+    cardClassName:
+      "border-amber-200/80 bg-gradient-to-br from-amber-50 to-white hover:border-amber-300",
+    valueClassName: "text-amber-700",
   },
   {
     key: "interviews",
@@ -153,6 +165,9 @@ export const EMPLOYER_DASHBOARD_STAT_CARDS: EmployerDashboardStatCardConfig[] = 
     icon: CalendarDays,
     iconWrapClassName: "bg-violet-50 text-violet-600",
     iconClassName: "text-violet-600",
+    cardClassName:
+      "border-violet-200/80 bg-gradient-to-br from-violet-50 to-white hover:border-violet-300",
+    valueClassName: "text-violet-700",
   },
   {
     key: "hired",
@@ -160,6 +175,9 @@ export const EMPLOYER_DASHBOARD_STAT_CARDS: EmployerDashboardStatCardConfig[] = 
     icon: CheckCircle2,
     iconWrapClassName: "bg-emerald-50 text-emerald-600",
     iconClassName: "text-emerald-600",
+    cardClassName:
+      "border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white hover:border-emerald-300",
+    valueClassName: "text-emerald-700",
   },
 ];
 

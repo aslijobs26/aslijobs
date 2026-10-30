@@ -476,11 +476,11 @@ export function EmployerJobsPageContent() {
     bulkDeleteMutation.isPending;
 
   return (
-    <div className="flex flex-1 flex-col gap-4 px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:gap-4 sm:px-5 sm:pt-5 md:pb-5 lg:px-6 lg:pb-5 xl:px-7">
+    <div className="employer-page-shell employer-jobs-shell flex flex-1 flex-col gap-4 px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:gap-4 sm:px-5 sm:pt-5 md:pb-5">
       <EmployerJobsHeader />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row xl:items-stretch xl:gap-5">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+      <div className="employer-jobs-layout flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-3">
+        <div className="employer-jobs-primary flex min-h-0 min-w-0 flex-1 flex-col gap-4 lg:gap-3">
           <EmployerJobsToolbar
             activeTab={statusTab}
             counts={counts}

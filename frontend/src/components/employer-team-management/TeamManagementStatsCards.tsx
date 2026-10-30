@@ -35,7 +35,7 @@ export function TeamManagementStatsCards({
   return (
     <section
       aria-label="Team management statistics"
-      className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4"
+      className="employer-team-kpi grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 lg:gap-2"
     >
       {EMPLOYER_TEAM_STAT_CARDS.map((card) => {
         const Icon = card.icon;
@@ -49,15 +49,14 @@ export function TeamManagementStatsCards({
           <article
             key={card.key}
             className={cn(
-              // Mobile: bordered surface KPI tile (readable on hero-bg pages)
-              "flex h-full min-h-[5.25rem] flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
-              // sm+: horizontal employer stats card
-              "sm:min-h-[5.5rem] sm:flex-row sm:items-center sm:gap-3 sm:p-4 sm:shadow-sm lg:min-h-0 lg:gap-2.5 lg:rounded-lg lg:p-3",
+              "employer-team-kpi-card flex h-full min-h-[5.25rem] flex-col rounded-xl border px-2.5 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow]",
+              "sm:min-h-[5.5rem] sm:flex-row sm:items-center sm:gap-3 sm:p-4 sm:shadow-sm lg:min-h-0 lg:gap-2 lg:rounded-lg lg:p-2",
+              card.cardClassName,
             )}
           >
             <div
               className={cn(
-                "inline-flex size-6 shrink-0 items-center justify-center rounded-lg sm:size-11 sm:rounded-full lg:size-8",
+                "employer-team-kpi-card__icon inline-flex size-6 shrink-0 items-center justify-center rounded-lg sm:size-11 sm:rounded-full lg:size-7",
                 card.iconWrapClassName,
               )}
               aria-hidden="true"
@@ -66,7 +65,7 @@ export function TeamManagementStatsCards({
             </div>
 
             <div className="mt-1.5 flex min-w-0 flex-1 flex-col sm:mt-0">
-              <p className="text-[10px] font-medium leading-tight text-muted sm:text-sm lg:text-[10px]">
+              <p className="employer-team-kpi-card__label text-[10px] font-medium leading-tight text-muted sm:text-sm lg:text-[10px]">
                 {card.label}
               </p>
 
@@ -76,12 +75,17 @@ export function TeamManagementStatsCards({
                   aria-hidden="true"
                 />
               ) : (
-                <p className="mt-auto pt-1 text-lg font-bold tabular-nums leading-none tracking-tight text-foreground sm:mt-0.5 sm:pt-0 sm:text-2xl sm:leading-tight lg:text-base">
+                <p
+                  className={cn(
+                    "employer-team-kpi-card__value mt-auto pt-1 text-lg font-bold tabular-nums leading-none tracking-tight sm:mt-0.5 sm:pt-0 sm:text-2xl sm:leading-tight lg:text-base",
+                    card.valueClassName,
+                  )}
+                >
                   {value}
                 </p>
               )}
 
-              <p className="mt-0.5 hidden text-xs text-muted sm:block lg:text-[11px]">
+              <p className="employer-team-kpi-card__desc mt-0.5 hidden text-xs text-muted sm:block lg:text-[10px]">
                 {subtitle}
               </p>
             </div>

@@ -61,12 +61,16 @@ const MODE_OPTIONS: EmployerRegisterSelectOption[] = [
 ];
 
 const fieldClassName =
-  "mt-1 h-8 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm font-normal text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] placeholder:text-muted hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
+  "employer-interviews-filters__field mt-1 h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm font-normal text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] placeholder:text-muted hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-8 lg:px-2.5 lg:text-[11px]";
 
 const filterSelectTriggerClassName =
-  "!h-8 lg:!h-8 !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] h-9 w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
+  "employer-interviews-filters__select-trigger !h-9 !px-3 !text-sm !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] w-full rounded-lg border border-border-subtle bg-surface text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 lg:!h-8 lg:!min-h-8 lg:!px-2.5 lg:!text-[11px]";
 
-const labelClassName = "text-xs font-medium text-muted";
+const filterSelectOptionClassName =
+  "!px-2.5 !py-2 !text-sm lg:!py-1.5 lg:!text-[11px]";
+
+const labelClassName =
+  "employer-interviews-filters__label text-xs font-medium text-muted lg:text-[10px]";
 
 export function InterviewsFilterPanel({
   quickDate,
@@ -92,13 +96,15 @@ export function InterviewsFilterPanel({
     Boolean(interviewTo);
 
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+    <section className="employer-interviews-filters rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-2.5">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
-            <Filter className="size-3.5" aria-hidden="true" />
+        <div className="flex min-w-0 items-center gap-2 lg:gap-1.5">
+          <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary lg:size-6">
+            <Filter className="size-3.5 lg:size-3" aria-hidden="true" />
           </span>
-          <h2 className="text-sm font-semibold text-foreground lg:text-xs">Filters</h2>
+          <h2 className="employer-interviews-filters__title text-sm font-semibold text-foreground lg:text-xs">
+            Filters
+          </h2>
         </div>
         <button
           type="button"
@@ -116,7 +122,7 @@ export function InterviewsFilterPanel({
         </button>
       </div>
 
-      <div className="mt-3 space-y-2.5">
+      <div className="employer-interviews-filters__fields mt-3 space-y-2.5 lg:mt-2 lg:space-y-2">
         <div>
           <label htmlFor="interview-filter-quick-date" className={labelClassName}>
             Quick date
@@ -134,6 +140,7 @@ export function InterviewsFilterPanel({
               }
               hideSearch
               triggerClassName={filterSelectTriggerClassName}
+              optionClassName={filterSelectOptionClassName}
             />
           </div>
         </div>
@@ -155,6 +162,7 @@ export function InterviewsFilterPanel({
               }
               hideSearch
               triggerClassName={filterSelectTriggerClassName}
+              optionClassName={filterSelectOptionClassName}
             />
           </div>
         </div>
@@ -174,6 +182,7 @@ export function InterviewsFilterPanel({
               onChange={(value) => onModeChange(value as InterviewsModeFilter)}
               hideSearch
               triggerClassName={filterSelectTriggerClassName}
+              optionClassName={filterSelectOptionClassName}
             />
           </div>
         </div>

@@ -34,8 +34,10 @@ export function EmployerSidebarItem({
       aria-label={ariaLabel}
       title={collapsed ? (ariaLabel ?? item.label) : undefined}
       className={cn(
-        "group relative flex items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-        collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
+        "employer-sidebar-item group relative flex items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:text-xs",
+        collapsed
+          ? "justify-center px-2 py-2.5 lg:py-2"
+          : "gap-3 px-3 py-2.5 lg:gap-2.5 lg:px-2.5 lg:py-2",
         isActive
           ? "bg-primary-soft text-surface"
           : "text-nav hover:bg-primary-light hover:text-foreground",
@@ -43,7 +45,7 @@ export function EmployerSidebarItem({
     >
       <Icon
         className={cn(
-          "size-[1.125rem] shrink-0",
+          "employer-sidebar-item__icon size-[1.125rem] shrink-0 lg:size-4",
           isActive ? "text-surface" : "text-muted group-hover:text-foreground",
         )}
         strokeWidth={2}

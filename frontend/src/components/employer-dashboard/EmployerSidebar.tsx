@@ -9,8 +9,6 @@ import {
   EMPLOYER_DASHBOARD_HELP_ICON,
   EMPLOYER_DASHBOARD_LOGO_TAGLINE,
   EMPLOYER_DASHBOARD_NAV_ITEMS,
-  EMPLOYER_DASHBOARD_SIDEBAR_COLLAPSED_WIDTH,
-  EMPLOYER_DASHBOARD_SIDEBAR_WIDTH,
 } from "@/constants/employer-dashboard";
 import { NAV_ITEM_PERMISSION_MODULE } from "@/constants/employer-rbac";
 import { ROUTES } from "@/constants/routes";
@@ -28,7 +26,7 @@ import { ChevronsLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, type CSSProperties } from "react";
+import { useMemo } from "react";
 
 type EmployerSidebarProps = {
   collapsed: boolean;
@@ -142,25 +140,18 @@ export function EmployerSidebar({
       <aside
         aria-label={t("employer.shell.sidebarAria")}
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-dvh flex-col border-r border-border-subtle bg-surface transition-[width,transform] duration-200 ease-out",
+          "employer-sidebar fixed inset-y-0 left-0 z-50 flex h-dvh flex-col border-r border-border-subtle bg-surface transition-[width,transform] duration-200 ease-out",
           collapsed
             ? "lg:w-[var(--employer-sidebar-collapsed-width)]"
             : "lg:w-[var(--employer-sidebar-width)]",
           "w-[var(--employer-sidebar-width)]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
-        style={
-          {
-            "--employer-sidebar-width": EMPLOYER_DASHBOARD_SIDEBAR_WIDTH,
-            "--employer-sidebar-collapsed-width":
-              EMPLOYER_DASHBOARD_SIDEBAR_COLLAPSED_WIDTH,
-          } as CSSProperties
-        }
       >
         <div
           className={cn(
-            "flex shrink-0 flex-col border-b border-border-subtle",
-            collapsed ? "items-center px-2 py-4" : "px-4 py-4",
+            "employer-sidebar-brand flex shrink-0 flex-col border-b border-border-subtle",
+            collapsed ? "items-center px-2 py-4 lg:py-3" : "px-4 py-4 lg:px-3 lg:py-3",
           )}
         >
           <Link
@@ -180,7 +171,7 @@ export function EmployerSidebar({
                 alt=""
                 width={40}
                 height={40}
-                className="size-9 object-contain"
+                className="employer-sidebar-logo-mark size-9 object-contain lg:size-8"
                 priority
                 aria-hidden
               />
@@ -191,11 +182,11 @@ export function EmployerSidebar({
                   alt=""
                   width={213}
                   height={70}
-                  className="block h-9 w-auto max-w-full object-contain object-left"
+                  className="employer-sidebar-logo block h-9 w-auto max-w-full object-contain object-left lg:h-7"
                   priority
                   aria-hidden
                 />
-                <span className="whitespace-nowrap text-[10px] font-medium leading-tight text-primary-soft">
+                <span className="employer-sidebar-tagline whitespace-nowrap text-[10px] font-medium leading-tight text-primary-soft lg:text-[9px]">
                   {EMPLOYER_DASHBOARD_LOGO_TAGLINE}
                 </span>
               </>
@@ -205,27 +196,29 @@ export function EmployerSidebar({
 
         <nav
           className={cn(
-            "flex-1 overflow-y-auto overflow-x-hidden py-3",
-            collapsed ? "px-2" : "px-3",
+            "employer-sidebar-nav flex-1 overflow-y-auto overflow-x-hidden py-3 lg:py-2",
+            collapsed ? "px-2" : "px-3 lg:px-2.5",
           )}
           aria-label={t("employer.shell.primaryNavAria")}
         >
-          <ul className="flex flex-col gap-1">
+          <ul className="employer-sidebar-nav-list flex flex-col gap-1 lg:gap-0.5">
             {permissionsLoading
               ? EMPLOYER_DASHBOARD_NAV_ITEMS.map((item) => (
                   <li key={item.id}>
                     <div
                       className={cn(
-                        "flex items-center rounded-lg",
-                        collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
+                        "employer-sidebar-item flex items-center rounded-lg",
+                        collapsed
+                          ? "justify-center px-2 py-2.5 lg:py-2"
+                          : "gap-3 px-3 py-2.5 lg:gap-2.5 lg:px-2.5 lg:py-2",
                       )}
                       aria-hidden="true"
                     >
-                      <SkeletonBone className="size-[1.125rem] shrink-0 rounded" />
+                      <SkeletonBone className="size-[1.125rem] shrink-0 rounded lg:size-4" />
                       {!collapsed ? (
                         <>
-                          <SkeletonBone className="h-4 flex-1 max-w-[8rem] rounded" />
-                          <SkeletonBone className="size-4 shrink-0 rounded-full" />
+                          <SkeletonBone className="h-4 flex-1 max-w-[8rem] rounded lg:h-3.5" />
+                          <SkeletonBone className="size-4 shrink-0 rounded-full lg:size-3.5" />
                         </>
                       ) : null}
                     </div>
@@ -249,26 +242,26 @@ export function EmployerSidebar({
 
         <div
           className={cn(
-            "mt-auto shrink-0 border-t border-border-subtle",
-            collapsed ? "p-2" : "p-3",
+            "employer-sidebar-footer mt-auto shrink-0 border-t border-border-subtle",
+            collapsed ? "p-2" : "p-3 lg:p-2.5",
           )}
         >
           {!collapsed ? (
-            <div className="rounded-xl bg-hero-bg p-3.5">
-              <p className="text-sm font-bold text-foreground">
+            <div className="employer-sidebar-help rounded-xl bg-hero-bg p-3.5 lg:rounded-lg lg:p-2.5">
+              <p className="employer-sidebar-help__title text-sm font-bold text-foreground lg:text-xs">
                 {t("employer.shell.helpTitle")}
               </p>
-              <p className="mt-1 text-xs leading-relaxed text-muted">
+              <p className="employer-sidebar-help__text mt-1 text-xs leading-relaxed text-muted lg:mt-0.5 lg:text-[0.625rem] lg:leading-snug">
                 {t("employer.shell.helpSubtitle")}
               </p>
               <Link
                 href={ROUTES.EMPLOYER_HELP_CENTER}
                 onClick={onMobileClose}
                 aria-current={isHelpCenterActive ? "page" : undefined}
-                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-primary-soft transition-colors hover:border-primary-soft/40 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="employer-sidebar-help__cta mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-semibold text-primary-soft transition-colors hover:border-primary-soft/40 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mt-2 lg:gap-1.5 lg:px-2 lg:py-1.5 lg:text-xs"
               >
                 <HelpIcon
-                  className="size-4 shrink-0"
+                  className="size-4 shrink-0 lg:size-3.5"
                   strokeWidth={2}
                   aria-hidden="true"
                 />
@@ -280,18 +273,18 @@ export function EmployerSidebar({
               href={ROUTES.EMPLOYER_HELP_CENTER}
               onClick={onMobileClose}
               aria-current={isHelpCenterActive ? "page" : undefined}
-              className="inline-flex w-full items-center justify-center rounded-lg border border-border bg-surface p-2.5 text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="inline-flex w-full items-center justify-center rounded-lg border border-border bg-surface p-2.5 text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:p-2"
               aria-label={t("employer.shell.helpCta")}
               title={t("employer.shell.helpCta")}
             >
-              <HelpIcon className="size-4" strokeWidth={2} aria-hidden="true" />
+              <HelpIcon className="size-4 lg:size-3.5" strokeWidth={2} aria-hidden="true" />
             </Link>
           )}
 
           <button
             type="button"
             onClick={onCollapseToggle}
-            className="mt-2 hidden w-full items-center justify-center rounded-lg p-2 text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:inline-flex"
+            className="mt-2 hidden w-full items-center justify-center rounded-lg p-2 text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mt-1.5 lg:inline-flex lg:p-1.5"
             aria-label={
               collapsed
                 ? t("employer.shell.expandSidebar")
@@ -300,7 +293,7 @@ export function EmployerSidebar({
           >
             <ChevronsLeft
               className={cn(
-                "size-4 transition-transform",
+                "size-4 transition-transform lg:size-3.5",
                 collapsed && "rotate-180",
               )}
               strokeWidth={2}

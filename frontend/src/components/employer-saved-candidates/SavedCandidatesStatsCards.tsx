@@ -23,6 +23,8 @@ type KpiConfig = {
   label: string;
   icon: typeof Users;
   iconClassName: string;
+  cardClassName: string;
+  valueClassName: string;
   showChange?: boolean;
 };
 
@@ -32,6 +34,9 @@ const KPI_ITEMS: KpiConfig[] = [
     label: "Total Shortlisted",
     icon: Users,
     iconClassName: "bg-primary-light text-primary",
+    cardClassName:
+      "border-primary/20 bg-gradient-to-br from-primary/10 to-white hover:border-primary/35",
+    valueClassName: "text-primary",
     showChange: false,
   },
   {
@@ -39,7 +44,10 @@ const KPI_ITEMS: KpiConfig[] = [
     changeKey: "newThisWeekChangePercent",
     label: "New This Week",
     icon: Sparkles,
-    iconClassName: "bg-benefit-verified-surface text-benefit-verified-icon",
+    iconClassName: "bg-sky-50 text-sky-600",
+    cardClassName:
+      "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white hover:border-sky-300",
+    valueClassName: "text-sky-700",
     showChange: true,
   },
   {
@@ -47,7 +55,10 @@ const KPI_ITEMS: KpiConfig[] = [
     changeKey: "contactedChangePercent",
     label: "Contacted",
     icon: PhoneCall,
-    iconClassName: "bg-benefit-free-surface text-benefit-free-icon",
+    iconClassName: "bg-amber-50 text-amber-600",
+    cardClassName:
+      "border-amber-200/80 bg-gradient-to-br from-amber-50 to-white hover:border-amber-300",
+    valueClassName: "text-amber-700",
     showChange: true,
   },
   {
@@ -55,7 +66,10 @@ const KPI_ITEMS: KpiConfig[] = [
     changeKey: "interviewedChangePercent",
     label: "Interviewed",
     icon: CalendarCheck,
-    iconClassName: "bg-benefit-languages-surface text-benefit-languages-icon",
+    iconClassName: "bg-violet-50 text-violet-600",
+    cardClassName:
+      "border-violet-200/80 bg-gradient-to-br from-violet-50 to-white hover:border-violet-300",
+    valueClassName: "text-violet-700",
     showChange: true,
   },
   {
@@ -64,6 +78,9 @@ const KPI_ITEMS: KpiConfig[] = [
     label: "Hired",
     icon: Briefcase,
     iconClassName: "bg-emerald-50 text-emerald-700",
+    cardClassName:
+      "border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white hover:border-emerald-300",
+    valueClassName: "text-emerald-700",
     showChange: true,
   },
 ];
@@ -115,7 +132,10 @@ export function SavedCandidatesStatsCards({
         return (
           <article
             key={item.key}
-            className="flex min-h-[5rem] min-w-0 flex-col rounded-xl border border-border-subtle bg-surface px-2.5 py-2 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:min-h-[5.5rem] sm:px-3 sm:py-2.5 lg:min-h-0 lg:rounded-lg lg:px-2.5 lg:py-2 max-sm:min-h-[6.75rem] max-sm:px-3.5 max-sm:py-3 max-sm:shadow-[0_1px_2px_rgba(15,23,42,0.04)] max-sm:hover:border-primary/20"
+            className={cn(
+              "flex min-h-[5rem] min-w-0 flex-col rounded-xl border px-2.5 py-2 shadow-sm transition-[border-color,box-shadow] hover:shadow-md sm:min-h-[5.5rem] sm:px-3 sm:py-2.5 lg:min-h-0 lg:rounded-lg lg:px-2.5 lg:py-2 max-sm:min-h-[6.75rem] max-sm:px-3.5 max-sm:py-3 max-sm:shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+              item.cardClassName,
+            )}
           >
             <div className="order-1 flex items-center justify-between gap-1.5 sm:gap-2">
               <span
@@ -137,7 +157,12 @@ export function SavedCandidatesStatsCards({
                 />
               ) : null}
             </div>
-            <p className="order-2 mt-1.5 text-lg font-bold leading-none tracking-tight text-foreground sm:mt-2 sm:text-2xl lg:mt-1 lg:text-base max-sm:order-3 max-sm:mt-auto max-sm:pt-1 max-sm:text-lg">
+            <p
+              className={cn(
+                "order-2 mt-1.5 text-lg font-bold leading-none tracking-tight sm:mt-2 sm:text-2xl lg:mt-1 lg:text-base max-sm:order-3 max-sm:mt-auto max-sm:pt-1 max-sm:text-lg",
+                item.valueClassName,
+              )}
+            >
               {isLoading ? (
                 <span className="inline-block h-5 w-7 animate-pulse rounded bg-primary-light/50 sm:h-7 sm:w-9 lg:h-5 lg:w-7" />
               ) : (

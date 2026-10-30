@@ -34,19 +34,25 @@ type MessagesFilterPanelProps = {
 };
 
 const fieldClassName =
-  "h-9 w-full min-w-0 rounded-md border border-border-subtle bg-surface px-2.5 text-xs font-normal text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] placeholder:text-muted hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-8 lg:px-2 lg:text-[11px]";
+  "employer-messages-filters__field h-9 w-full min-w-0 rounded-md border border-border-subtle bg-surface px-2.5 text-xs font-normal text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] placeholder:text-muted hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-8 lg:px-2 lg:text-[11px]";
 
 const sheetFieldClassName =
-  "h-11 w-full min-w-0 rounded-md border border-border-subtle bg-surface px-3 text-sm font-normal text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] placeholder:text-muted hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
+  "employer-messages-filters__field h-11 w-full min-w-0 rounded-md border border-border-subtle bg-surface px-3 text-sm font-normal text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] placeholder:text-muted hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-8 lg:px-2 lg:text-[11px]";
 
 const filterSelectTriggerClassName =
-  "!h-9 lg:!h-8 !min-h-9 lg:!min-h-8 !px-2.5 lg:!px-2 !text-xs lg:!text-[11px] !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] h-9 w-full min-w-0 rounded-md border border-border-subtle bg-surface text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
+  "employer-messages-filters__select-trigger !h-9 lg:!h-8 !min-h-9 lg:!min-h-8 !px-2.5 lg:!px-2 !text-xs lg:!text-[11px] !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] h-9 w-full min-w-0 rounded-md border border-border-subtle bg-surface text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
 
 const sheetSelectTriggerClassName =
-  "!h-11 !min-h-11 !px-3 !text-sm !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] h-11 w-full min-w-0 rounded-md border border-border-subtle bg-surface text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
+  "employer-messages-filters__select-trigger !h-11 !min-h-11 lg:!h-8 lg:!min-h-8 !px-3 lg:!px-2 !text-sm lg:!text-[11px] !font-medium !shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:!shadow-[0_1px_2px_rgba(15,23,42,0.06)] h-11 w-full min-w-0 rounded-md border border-border-subtle bg-surface text-foreground transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30";
+
+const filterSelectOptionClassName =
+  "employer-messages-filters__select-option !px-2.5 !py-2 !text-sm lg:!px-2 lg:!py-1.5 lg:!text-[11px]";
+
+const filterSelectPanelClassName =
+  "employer-messages-filters-select-panel";
 
 const labelClassName =
-  "block text-[0.6875rem] font-medium leading-none text-muted";
+  "employer-messages-filters__label block text-[0.6875rem] font-medium leading-none text-muted lg:text-[0.625rem]";
 
 function FilterField({
   label,
@@ -123,6 +129,8 @@ export function MessagesFilterPanel({
           options={jobOptions}
           onChange={(value) => patch({ publicJobId: value })}
           triggerClassName={selectTriggerClassName}
+          panelClassName={filterSelectPanelClassName}
+          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
@@ -153,6 +161,8 @@ export function MessagesFilterPanel({
             patch({ category: value as MessagesCategoryFilter })
           }
           triggerClassName={selectTriggerClassName}
+          panelClassName={filterSelectPanelClassName}
+          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
@@ -167,6 +177,8 @@ export function MessagesFilterPanel({
           options={MESSAGES_STATUS_OPTIONS}
           onChange={(value) => patch({ applicationStatus: value })}
           triggerClassName={selectTriggerClassName}
+          panelClassName={filterSelectPanelClassName}
+          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
@@ -186,6 +198,8 @@ export function MessagesFilterPanel({
             })
           }
           triggerClassName={selectTriggerClassName}
+          panelClassName={filterSelectPanelClassName}
+          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
@@ -205,6 +219,8 @@ export function MessagesFilterPanel({
             })
           }
           triggerClassName={selectTriggerClassName}
+          panelClassName={filterSelectPanelClassName}
+          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
@@ -225,6 +241,8 @@ export function MessagesFilterPanel({
             })
           }
           triggerClassName={selectTriggerClassName}
+          panelClassName={filterSelectPanelClassName}
+          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
@@ -256,8 +274,8 @@ export function MessagesFilterPanel({
 
       <label
         className={cn(
-          "flex w-full min-w-0 items-center gap-2 rounded-md border border-border-subtle px-2.5 text-xs text-foreground",
-          isSheet ? "min-h-11 py-2.5" : "py-2",
+          "flex w-full min-w-0 items-center gap-2 rounded-md border border-border-subtle px-2.5 text-xs text-foreground lg:py-1.5 lg:text-[11px]",
+          isSheet ? "min-h-11 py-2.5 lg:min-h-8" : "py-2",
         )}
       >
         <input
@@ -280,6 +298,8 @@ export function MessagesFilterPanel({
           options={MESSAGES_EMPLOYER_ACTION_OPTIONS}
           onChange={(value) => patch({ employerAction: value })}
           triggerClassName={selectTriggerClassName}
+          panelClassName={filterSelectPanelClassName}
+          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
@@ -294,6 +314,8 @@ export function MessagesFilterPanel({
           options={MESSAGES_CANDIDATE_ACTION_OPTIONS}
           onChange={(value) => patch({ candidateAction: value })}
           triggerClassName={selectTriggerClassName}
+          panelClassName={filterSelectPanelClassName}
+          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
@@ -312,6 +334,8 @@ export function MessagesFilterPanel({
             })
           }
           triggerClassName={selectTriggerClassName}
+          panelClassName={filterSelectPanelClassName}
+          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
     </>
@@ -319,7 +343,7 @@ export function MessagesFilterPanel({
 
   if (isSheet) {
     return (
-      <section className="flex h-full min-h-0 w-full flex-col bg-surface">
+      <section className="employer-messages-filters flex h-full min-h-0 w-full flex-col bg-surface">
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
             <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
@@ -376,7 +400,7 @@ export function MessagesFilterPanel({
   }
 
   return (
-    <section className="flex h-full min-h-0 w-full flex-col bg-surface p-3 lg:p-2.5">
+    <section className="employer-messages-filters flex h-full min-h-0 w-full flex-col bg-surface p-3 lg:p-2.5">
       <div className="flex shrink-0 items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary lg:size-5">

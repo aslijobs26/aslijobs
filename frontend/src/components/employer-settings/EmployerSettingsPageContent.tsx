@@ -13,6 +13,7 @@ import { NotificationsSettingsPanel } from "@/components/employer-settings/Notif
 import { SecurityPanel } from "@/components/employer-settings/SecurityPanel";
 import { SettingsNav } from "@/components/employer-settings/SettingsNav";
 import { UserAccessSettingsPanel } from "@/components/employer-settings/UserAccessSettingsPanel";
+import "@/components/employer-settings/employer-settings-page-layout.css";
 import {
   EMPLOYER_SETTINGS_DEFAULT_SECTION,
   EMPLOYER_SETTINGS_NAV_ITEMS,
@@ -274,16 +275,19 @@ export function EmployerSettingsPageContent() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:pt-5 md:pb-5 lg:px-6 lg:pb-6">
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(16rem,18.5rem)_minmax(0,1fr)] xl:grid-cols-[minmax(17rem,20rem)_minmax(0,1fr)]">
-        <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
+    <div
+      data-employer-settings-page
+      className="employer-page-shell employer-settings-shell mx-auto w-full max-w-[1600px] px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:pt-5 md:pb-5 lg:px-3.5 lg:pt-3 lg:pb-5"
+    >
+      <div className="employer-settings-layout grid items-start gap-4 lg:grid-cols-[minmax(13rem,15rem)_minmax(0,1fr)] lg:gap-2.5">
+        <aside className="min-w-0 lg:sticky lg:top-16 lg:self-start">
           <SettingsNav
             items={visibleNavItems}
             activeId={activeSection}
             onSelect={setActiveSection}
           />
         </aside>
-        <div className="min-w-0">{content}</div>
+        <div className="employer-settings-content min-w-0">{content}</div>
       </div>
     </div>
   );

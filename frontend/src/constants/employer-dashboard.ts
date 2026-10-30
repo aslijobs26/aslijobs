@@ -15,6 +15,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
+/** Fallback widths; live laptop values come from employer-workspace-layout.css. */
 export const EMPLOYER_DASHBOARD_SIDEBAR_WIDTH = "16.5rem";
 export const EMPLOYER_DASHBOARD_SIDEBAR_COLLAPSED_WIDTH = "4.5rem";
 

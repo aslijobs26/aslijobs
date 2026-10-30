@@ -59,7 +59,7 @@ export function MessagesMobileFiltersSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 xl:hidden" role="presentation">
+    <div className="fixed inset-0 z-50 lg:hidden" role="presentation">
       <button
         type="button"
         aria-label="Close filters"

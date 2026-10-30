@@ -140,8 +140,8 @@ export function InterviewsTodaySchedule({
   const hasItems = !isLoading && sortedItems.length > 0;
 
   return (
-    <section className="flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-3 py-3 sm:px-4">
+    <section className="employer-interviews-today flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <header className="employer-interviews-today__header flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-3 py-3 sm:px-4 lg:px-2.5 lg:py-2">
         <h2 className="text-sm font-semibold text-foreground lg:text-xs">
           Today&apos;s Schedule
         </h2>
@@ -179,20 +179,20 @@ export function InterviewsTodaySchedule({
             ))}
           </div>
         ) : sortedItems.length === 0 ? (
-          <div className="px-3 py-6 text-center sm:px-4">
-            <p className="text-sm font-medium text-foreground">
+          <div className="employer-interviews-today__empty px-3 py-6 text-center sm:px-4 lg:px-2.5 lg:py-4">
+            <p className="employer-interviews-today__empty-title text-sm font-medium text-foreground lg:text-xs">
               No interviews scheduled today.
             </p>
-            <p className="mt-1 text-xs text-muted">
+            <p className="employer-interviews-today__empty-desc mt-1 text-xs text-muted lg:text-[11px]">
               Schedule a candidate to see them here.
             </p>
             {onScheduleInterview ? (
               <button
                 type="button"
                 onClick={onScheduleInterview}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="employer-interviews-today__cta mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mt-2 lg:px-2.5 lg:py-1 lg:text-[11px]"
               >
-                <CalendarPlus className="size-3.5" aria-hidden="true" />
+                <CalendarPlus className="size-3.5 lg:size-3" aria-hidden="true" />
                 Schedule Interview
               </button>
             ) : null}

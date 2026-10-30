@@ -13,6 +13,7 @@ type CandidatesLocationAutocompleteProps = {
   publicJobId?: string;
   disabled?: boolean;
   onChange: (value: string) => void;
+  inputClassName?: string;
 };
 
 export function CandidatesLocationAutocomplete({
@@ -21,6 +22,7 @@ export function CandidatesLocationAutocomplete({
   publicJobId,
   disabled = false,
   onChange,
+  inputClassName,
 }: CandidatesLocationAutocompleteProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -109,7 +111,10 @@ export function CandidatesLocationAutocomplete({
         aria-controls={listId}
         aria-autocomplete="list"
         placeholder="Search city or state"
-        className="mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
+        className={cn(
+          "mt-1 w-full rounded-lg border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60",
+          inputClassName,
+        )}
         onChange={(event) => {
           const nextValue = event.target.value;
           if (nextValue.trim() !== committedValueRef.current) {
@@ -128,13 +133,15 @@ export function CandidatesLocationAutocomplete({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
+          className="employer-candidates-filters__suggest absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
         >
           {isLoading ? (
-            <li className="px-3 py-2 text-sm text-muted">Searching…</li>
+            <li className="px-3 py-2 text-sm text-muted lg:px-2 lg:py-1.5 lg:text-[11px]">
+              Searching…
+            </li>
           ) : null}
           {!isLoading && suggestions.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-muted">
+            <li className="px-3 py-2 text-sm text-muted lg:px-2 lg:py-1.5 lg:text-[11px]">
               No matching locations found.
             </li>
           ) : null}
@@ -144,7 +151,7 @@ export function CandidatesLocationAutocomplete({
                   <button
                     type="button"
                     className={cn(
-                      "flex min-h-10 w-full px-3 py-2 text-left text-sm hover:bg-primary-light focus-visible:outline-none focus-visible:bg-primary-light",
+                      "flex min-h-10 w-full px-3 py-2 text-left text-sm hover:bg-primary-light focus-visible:outline-none focus-visible:bg-primary-light lg:min-h-8 lg:px-2 lg:py-1.5 lg:text-[11px]",
                       suggestion === value.trim()
                         ? "font-semibold text-primary"
                         : "text-foreground",

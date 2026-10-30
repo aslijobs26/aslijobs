@@ -19,7 +19,7 @@ export function TeamManagementTabs({
     <div
       role="tablist"
       aria-label="Team management sections"
-      className="flex gap-1 overflow-x-auto border-b border-border-subtle [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="employer-team-tabs flex gap-1 overflow-x-auto border-b border-border-subtle [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {EMPLOYER_TEAM_TABS.map((tab) => {
         const isActive = tab.id === activeTab;

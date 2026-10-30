@@ -49,25 +49,25 @@ export function DashboardRecentApplications({
   const t = useTranslate();
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
-        <h2 className="min-w-0 break-words text-base font-bold text-foreground">
+    <section className="employer-panel-card overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+      <div className="employer-panel-card__header flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
+        <h2 className="employer-panel-card__title min-w-0 break-words text-base font-bold text-foreground">
           {t("employer.dashboard.recentApplications")}
         </h2>
         <Link
           href={ROUTES.EMPLOYER_CANDIDATES}
-          className="shrink-0 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="employer-panel-card__link shrink-0 text-sm font-semibold text-primary transition-colors hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           {t("employer.common.viewAll")}
         </Link>
       </div>
 
       {isLoading ? (
-        <div className="space-y-3 p-4 sm:p-5">
+        <div className="employer-panel-card__body space-y-3 p-4 sm:p-5">
           {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={index}
-              className="h-16 animate-pulse rounded-lg bg-hero-bg"
+              className="h-16 animate-pulse rounded-lg bg-hero-bg lg:h-12"
               aria-hidden="true"
             />
           ))}
@@ -75,15 +75,15 @@ export function DashboardRecentApplications({
       ) : null}
 
       {isError ? (
-        <div className="px-4 py-10 text-center sm:px-5">
-          <p className="text-sm font-semibold text-foreground">
+        <div className="employer-panel-card__empty px-4 py-10 text-center sm:px-5">
+          <p className="employer-panel-card__empty-title text-sm font-semibold text-foreground">
             {t("employer.dashboard.applicationsError")}
           </p>
           {onRetry ? (
             <button
               type="button"
               onClick={onRetry}
-              className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-4 text-sm font-semibold text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-4 text-sm font-semibold text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-8 lg:px-3 lg:text-xs"
             >
               {t("employer.common.tryAgain")}
             </button>
@@ -92,11 +92,11 @@ export function DashboardRecentApplications({
       ) : null}
 
       {!isLoading && !isError && applications.length === 0 ? (
-        <div className="px-4 py-10 text-center sm:px-5 lg:px-4 lg:py-6">
-          <p className="text-sm font-semibold text-foreground lg:text-[11px]">
+        <div className="employer-panel-card__empty px-4 py-10 text-center sm:px-5">
+          <p className="employer-panel-card__empty-title text-sm font-semibold text-foreground">
             {t("employer.dashboard.noApplicationsTitle")}
           </p>
-          <p className="mt-1 text-xs text-muted lg:text-[10px]">
+          <p className="employer-panel-card__empty-desc mt-1 text-xs text-muted">
             {t("employer.dashboard.noApplicationsDescription")}
           </p>
         </div>
@@ -108,17 +108,17 @@ export function DashboardRecentApplications({
             <li key={application.id}>
               <Link
                 href={`${ROUTES.EMPLOYER_CANDIDATES}/${application.id}`}
-                className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-hero-bg/50 focus-visible:bg-hero-bg/50 focus-visible:outline-none sm:px-5"
+                className="employer-apps-row flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-hero-bg/50 focus-visible:bg-hero-bg/50 focus-visible:outline-none sm:px-5"
               >
                 <span
-                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary"
+                  className="employer-apps-avatar inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary"
                   aria-hidden="true"
                 >
                   {getInitials(application.candidateName)}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-foreground">
+                    <p className="employer-apps-name truncate text-sm font-semibold text-foreground">
                       {application.candidateName}
                     </p>
                     <span
@@ -131,10 +131,10 @@ export function DashboardRecentApplications({
                       {t(`employer.status.application.${application.status}`)}
                     </span>
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-muted">
+                  <p className="employer-apps-meta mt-0.5 truncate text-xs text-muted">
                     {application.jobTitle}
                   </p>
-                  <p className="mt-1 truncate text-xs text-muted">
+                  <p className="employer-apps-meta mt-1 truncate text-xs text-muted">
                     {[
                       application.candidateExperienceLabel,
                       application.candidateLocation,

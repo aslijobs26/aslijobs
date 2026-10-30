@@ -462,11 +462,11 @@ export function CandidatesDetailPanel({
     return (
       <aside
         className={cn(
-          "rounded-xl border border-border-subtle bg-surface",
+          "employer-candidates-detail rounded-xl border border-border-subtle bg-surface",
           variant === "panel" && PANEL_DESKTOP_CLASSES,
         )}
       >
-        <div className="p-8 pb-9 text-center lg:p-5 lg:pb-5">
+        <div className="employer-candidates-detail__empty p-8 pb-9 text-center lg:p-4 lg:pb-4">
           <p className="text-sm text-muted lg:text-xs lg:leading-snug">
             Select a candidate to preview their profile, resume, and hiring
             actions.
@@ -480,15 +480,15 @@ export function CandidatesDetailPanel({
     return (
       <aside
         className={cn(
-          "rounded-xl border border-border-subtle bg-surface p-6",
+          "employer-candidates-detail rounded-xl border border-border-subtle bg-surface p-6 lg:p-4",
           variant === "panel" && PANEL_DESKTOP_CLASSES,
         )}
       >
-        <div className="animate-pulse space-y-3">
-          <div className="h-12 w-12 rounded-full bg-primary-light/50" />
-          <div className="h-4 w-40 rounded bg-primary-light/40" />
+        <div className="animate-pulse space-y-3 lg:space-y-2">
+          <div className="h-12 w-12 rounded-full bg-primary-light/50 lg:size-9" />
+          <div className="h-4 w-40 rounded bg-primary-light/40 lg:h-3" />
           <div className="h-3 w-56 rounded bg-primary-light/30" />
-          <div className="h-40 rounded-lg bg-primary-light/25" />
+          <div className="h-40 rounded-lg bg-primary-light/25 lg:h-28" />
         </div>
       </aside>
     );
@@ -498,11 +498,11 @@ export function CandidatesDetailPanel({
     return (
       <aside
         className={cn(
-          "rounded-xl border border-border-subtle bg-surface p-6 text-center",
+          "employer-candidates-detail rounded-xl border border-border-subtle bg-surface p-6 text-center lg:p-4",
           variant === "panel" && PANEL_DESKTOP_CLASSES,
         )}
       >
-        <p className="text-sm text-muted">
+        <p className="text-sm text-muted lg:text-xs">
           {getErrorMessage(detailQuery.error ?? new Error("Not found"))}
         </p>
       </aside>
@@ -529,14 +529,14 @@ export function CandidatesDetailPanel({
 
   const isDrawer = variant === "drawer";
   const headerActionClassName = cn(
-    "inline-flex items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-    isDrawer ? "size-11" : "size-8",
+    "employer-candidates-detail__action inline-flex items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+    isDrawer ? "size-11" : "size-8 lg:size-7",
   );
 
   return (
     <aside
       className={cn(
-        "rounded-xl border border-border-subtle bg-surface",
+        "employer-candidates-detail rounded-xl border border-border-subtle bg-surface",
         variant === "panel" && PANEL_DESKTOP_CLASSES,
         variant === "drawer" &&
           "flex min-h-0 h-full w-full flex-col overflow-hidden border-0 shadow-none",
@@ -544,14 +544,14 @@ export function CandidatesDetailPanel({
     >
       <div
         className={cn(
-          "border-b border-border-subtle p-4",
+          "employer-candidates-detail__header border-b border-border-subtle p-4 lg:p-3",
           "shrink-0",
           variant === "drawer" && "relative z-20",
         )}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 lg:gap-2">
           <span
-            className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-surface"
+            className="employer-candidates-detail__avatar inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-surface lg:size-9 lg:text-xs"
             aria-hidden="true"
           >
             {getCandidateInitials(application.candidate.fullName)}
@@ -559,10 +559,10 @@ export function CandidatesDetailPanel({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h2 className="truncate text-base font-bold text-foreground">
+                <h2 className="employer-candidates-detail__name truncate text-base font-bold text-foreground lg:text-sm">
                   {application.candidate.fullName}
                 </h2>
-                <p className="mt-0.5 truncate text-xs text-muted">
+                <p className="employer-candidates-detail__meta mt-0.5 truncate text-xs text-muted lg:text-[11px]">
                   {application.candidate.headline || experienceLabel}
                 </p>
               </div>
@@ -572,24 +572,24 @@ export function CandidatesDetailPanel({
                   onClick={onClose}
                   className={cn(
                     "inline-flex items-center justify-center rounded-lg text-muted hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                    isDrawer ? "size-11" : "size-8",
+                    isDrawer ? "size-11" : "size-8 lg:size-7",
                   )}
                   aria-label="Close candidate details"
                 >
-                  <X className="size-4" aria-hidden="true" />
+                  <X className="size-4 lg:size-3.5" aria-hidden="true" />
                 </button>
               ) : null}
             </div>
             <span
               className={cn(
-                "mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset",
+                "mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset lg:mt-1.5 lg:text-[10px]",
                 employerApplicationStatusClass(application.status),
               )}
             >
               {EMPLOYER_APPLICATION_STATUS_LABELS[application.status]}
             </span>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="min-w-0 flex-1 truncate text-xs text-muted">
+            <div className="mt-2 flex items-center justify-between gap-2 lg:mt-1.5">
+              <p className="min-w-0 flex-1 truncate text-xs text-muted lg:text-[11px]">
                 Applied for{" "}
                 <span className="font-semibold text-foreground">
                   {application.jobTitle}
@@ -604,7 +604,7 @@ export function CandidatesDetailPanel({
                     aria-label="WhatsApp candidate"
                     className={headerActionClassName}
                   >
-                    <MessageCircle className="size-4" aria-hidden="true" />
+                    <MessageCircle className="size-4 lg:size-3.5" aria-hidden="true" />
                   </a>
                 ) : null}
                 {canUsePhone && telHref ? (
@@ -613,7 +613,7 @@ export function CandidatesDetailPanel({
                     aria-label="Call candidate"
                     className={headerActionClassName}
                   >
-                    <Phone className="size-4" aria-hidden="true" />
+                    <Phone className="size-4 lg:size-3.5" aria-hidden="true" />
                   </a>
                 ) : null}
                 {canViewResume ? (
@@ -623,7 +623,7 @@ export function CandidatesDetailPanel({
                     aria-label="View resume"
                     className={headerActionClassName}
                   >
-                    <FileText className="size-4" aria-hidden="true" />
+                    <FileText className="size-4 lg:size-3.5" aria-hidden="true" />
                   </button>
                 ) : null}
                 {canScheduleInterview ? (
@@ -639,7 +639,7 @@ export function CandidatesDetailPanel({
                     aria-label="Schedule interview"
                     className={headerActionClassName}
                   >
-                    <Calendar className="size-4" aria-hidden="true" />
+                    <Calendar className="size-4 lg:size-3.5" aria-hidden="true" />
                   </button>
                 ) : null}
               </div>
@@ -647,7 +647,7 @@ export function CandidatesDetailPanel({
           </div>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-3 lg:mt-2">
           {isEmployerTerminalStatus(application.status) ? (
             <div className="rounded-lg border border-border-subtle bg-hero-bg px-2.5 py-2">
               <p className="text-sm font-semibold text-foreground">
@@ -705,7 +705,7 @@ export function CandidatesDetailPanel({
       {visibleTabs.length > 1 ? (
         <div
           className={cn(
-            "flex shrink-0 gap-1 overflow-x-auto border-b border-border-subtle px-2 py-2 scrollbar-hidden",
+            "employer-candidates-detail__tabs flex shrink-0 gap-1 overflow-x-auto border-b border-border-subtle px-2 py-2 scrollbar-hidden lg:gap-0.5 lg:px-1.5 lg:py-1.5",
           )}
           role="tablist"
           aria-label="Candidate detail sections"
@@ -718,8 +718,8 @@ export function CandidatesDetailPanel({
               aria-selected={activeTab === tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "shrink-0 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                isDrawer ? "min-h-11 px-3 py-2.5" : "py-1.5",
+                "employer-candidates-detail__tab shrink-0 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                isDrawer ? "min-h-11 px-3 py-2.5" : "py-1.5 lg:px-2 lg:py-1 lg:text-[11px]",
                 activeTab === tab.id
                   ? "bg-primary-soft text-surface"
                   : "text-muted hover:bg-primary-light hover:text-foreground",
@@ -733,11 +733,11 @@ export function CandidatesDetailPanel({
 
       <div
         className={cn(
-          "min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-5 scrollbar-hidden",
+          "employer-candidates-detail__body min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-5 scrollbar-hidden lg:p-3 lg:pb-3",
         )}
       >
         {activeTab === "profile" ? (
-          <dl className="grid gap-3 sm:grid-cols-2">
+          <dl className="grid gap-3 sm:grid-cols-2 lg:gap-2">
             <ProfileField label="Name" value={application.candidate.fullName} />
             {canViewDob ? (
               <ProfileField label="Age" value={age ?? "Not available"} />

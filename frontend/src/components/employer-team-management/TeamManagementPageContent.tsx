@@ -6,6 +6,7 @@ import { MembersTabPanel } from "@/components/employer-team-management/MembersTa
 import { RolesTabPanel } from "@/components/employer-team-management/RolesTabPanel";
 import { TeamManagementStatsCards } from "@/components/employer-team-management/TeamManagementStatsCards";
 import { TeamManagementTabs } from "@/components/employer-team-management/TeamManagementTabs";
+import "@/components/employer-team-management/employer-team-page-layout.css";
 import { Can } from "@/components/rbac/Can";
 import {
   EMPLOYER_TEAM_DEFAULT_TAB,
@@ -57,22 +58,25 @@ export function TeamManagementPageContent() {
   });
 
   return (
-    <div className="flex flex-1 flex-col gap-4 px-4 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:gap-5 sm:px-6 sm:pt-6 md:pb-6 lg:px-8 lg:pb-5">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div
+      data-employer-team-page
+      className="employer-page-shell employer-team-shell flex flex-1 flex-col gap-4 px-4 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:gap-5 sm:px-6 sm:pt-6 md:pb-6 lg:gap-3 lg:px-3.5 lg:pt-3 lg:pb-5"
+    >
+      <header className="employer-team-header flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between lg:gap-2">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-xl">
+          <h1 className="employer-team-header__title text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-[1.125rem]">
             {EMPLOYER_TEAM_PAGE_TITLE}
           </h1>
-          <p className="mt-1 text-xs text-muted sm:text-[0.9375rem] lg:mt-0.5 lg:text-[11px]">
+          <p className="employer-team-header__subtitle mt-1 text-xs text-muted sm:text-[0.9375rem] lg:mt-0.5 lg:text-[11px]">
             {EMPLOYER_TEAM_PAGE_SUBTITLE}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 sm:shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 sm:shrink-0 lg:gap-1.5">
           <Can module="team_management" action="read">
             <button
               type="button"
               onClick={() => setActiveTab("roles")}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-4 sm:text-sm lg:h-9 lg:gap-1.5 lg:px-3 lg:text-xs"
+              className="employer-team-header__btn inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-4 sm:text-sm lg:h-8 lg:gap-1.5 lg:px-2.5 lg:text-[11px]"
             >
               <TableProperties
                 className="size-3.5 sm:size-4 lg:size-3.5"
@@ -88,7 +92,7 @@ export function TeamManagementPageContent() {
                 setInviteError(null);
                 setInviteOpen(true);
               }}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-4 sm:text-sm lg:h-9 lg:gap-1.5 lg:px-3 lg:text-xs"
+              className="employer-team-header__btn inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-4 sm:text-sm lg:h-8 lg:gap-1.5 lg:px-2.5 lg:text-[11px]"
             >
               <Plus
                 className="size-3.5 sm:size-4 lg:size-3.5"
@@ -114,7 +118,7 @@ export function TeamManagementPageContent() {
           {inviteNotice}
         </p>
       ) : null}
-      <div className="space-y-4">
+      <div className="space-y-4 lg:space-y-3">
         <TeamManagementTabs activeTab={activeTab} onChange={setActiveTab} />
 
         <div
@@ -123,12 +127,12 @@ export function TeamManagementPageContent() {
           className="min-w-0"
         >
           {activeTab === "departments" ? (
-            <div className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4 lg:p-5">
+            <div className="employer-team-panel rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4 lg:p-3">
               <DepartmentsTabPanel />
             </div>
           ) : null}
           {activeTab === "members" ? (
-            <div className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4 lg:p-5">
+            <div className="employer-team-panel rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4 lg:p-3">
               <MembersTabPanel onOpenRoles={() => setActiveTab("roles")} />
             </div>
           ) : null}

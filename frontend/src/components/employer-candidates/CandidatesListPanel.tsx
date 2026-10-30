@@ -259,21 +259,21 @@ function CandidateDesktopRow({
     canViewPhone && phoneLevel !== "mask" ? buildTelHref(rawPhone) : null;
 
   return (
-    <div className="flex items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
+    <div className="employer-candidates-row flex items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4 lg:gap-2 lg:px-2.5 lg:py-2">
       <button
         type="button"
         onClick={() => onSelect(item.id)}
-        className="flex min-w-0 flex-1 gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+        className="flex min-w-0 flex-1 gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:gap-2"
       >
         <span
-          className="mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-surface"
+          className="employer-candidates-row__avatar mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-surface lg:size-8 lg:text-[10px]"
           aria-hidden="true"
         >
           {getCandidateInitials(item.candidateName)}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-sm font-bold text-foreground">
+            <span className="employer-candidates-row__name truncate text-sm font-bold text-foreground lg:text-xs">
               {item.candidateName}
             </span>
             <span
@@ -411,16 +411,16 @@ export function CandidatesListPanel({
   );
 
   const toolbarSelectTriggerClassName =
-    "!h-8 !px-2.5 !text-[11px] sm:!h-11 sm:!px-3.5 sm:!text-sm rounded-xl border-border bg-surface shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary-soft focus-visible:ring-2 focus-visible:ring-primary-soft/20 lg:!h-9 lg:!px-3 lg:!text-xs";
+    "employer-candidates-list__select-trigger !h-8 !px-2.5 !text-[11px] max-sm:!h-8 sm:!h-11 sm:!px-3.5 sm:!text-sm rounded-xl border-border bg-surface shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 focus-visible:border-primary-soft focus-visible:ring-2 focus-visible:ring-primary-soft/20 lg:!h-8 lg:!min-h-8 lg:!rounded-lg lg:!px-2.5 lg:!text-[11px]";
   const toolbarSelectOptionClassName =
-    "!px-2.5 !py-1.5 !text-[11px] sm:!px-3 sm:!py-2.5 sm:!text-sm lg:!py-2 lg:!text-xs";
+    "!px-2.5 !py-1.5 !text-[11px] sm:!px-3 sm:!py-2.5 sm:!text-sm lg:!py-1.5 lg:!text-[11px]";
 
   return (
-    <section className="flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface lg:h-full">
-      <div className="shrink-0 border-b border-border-subtle p-3 sm:p-4 lg:p-3">
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(8.5rem,10.5rem)] lg:gap-2.5">
+    <section className="employer-candidates-list flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface lg:h-full">
+      <div className="employer-candidates-list__toolbar shrink-0 border-b border-border-subtle p-3 sm:p-4 lg:p-2">
+        <div className="employer-candidates-list__toolbar-grid grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(8.5rem,10.5rem)] lg:gap-1.5">
           <label className="min-w-0">
-            <span className="mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs lg:mb-1">
+            <span className="employer-candidates-list__label mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs lg:mb-1 lg:text-[10px]">
               Filter by job
             </span>
             <EmployerRegisterSearchableSelect
@@ -438,7 +438,7 @@ export function CandidatesListPanel({
             />
           </label>
           <label className="min-w-0 md:max-w-[10.5rem]">
-            <span className="mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs lg:mb-1">
+            <span className="employer-candidates-list__label mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs lg:mb-1 lg:text-[10px]">
               Sort by
             </span>
             <EmployerRegisterSearchableSelect
@@ -459,8 +459,8 @@ export function CandidatesListPanel({
         </div>
       </div>
 
-      <div className="shrink-0 border-b border-border-subtle px-3 py-2 sm:px-4">
-        <p className="text-[11px] text-muted sm:text-xs">
+      <div className="employer-candidates-list__meta shrink-0 border-b border-border-subtle px-3 py-2 sm:px-4 lg:px-2.5 lg:py-1.5">
+        <p className="text-[11px] text-muted sm:text-xs lg:text-[11px]">
           {isLoading
             ? "Loading candidates…"
             : `Showing ${from}–${to} of ${total}`}
@@ -586,28 +586,28 @@ export function CandidatesListPanel({
         )}
       </div>
 
-      <div className="flex shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t border-border-subtle px-3 py-2 sm:px-4 sm:py-3 lg:px-3 lg:py-2">
+      <div className="employer-candidates-list__pager flex shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t border-border-subtle px-3 py-2 sm:px-4 sm:py-3 lg:px-2.5 lg:py-1.5">
         <p className="text-[11px] text-muted sm:text-xs lg:text-[11px]">
           Page {page} of {totalPages}
         </p>
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-1.5">
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
-            className="inline-flex min-h-8 items-center justify-center gap-1 rounded-lg border border-border-subtle px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:px-3 sm:text-sm lg:min-h-9"
+            className="employer-candidates-pager-btn inline-flex min-h-8 items-center justify-center gap-1 rounded-lg border border-border-subtle px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:px-3 sm:text-sm lg:min-h-8 lg:px-2.5 lg:text-[11px]"
           >
-            <ChevronLeft className="size-3.5 sm:size-4" aria-hidden="true" />
+            <ChevronLeft className="size-3.5 sm:size-4 lg:size-3.5" aria-hidden="true" />
             Prev
           </button>
           <button
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
-            className="inline-flex min-h-8 items-center justify-center gap-1 rounded-lg border border-border-subtle px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:px-3 sm:text-sm lg:min-h-9"
+            className="employer-candidates-pager-btn inline-flex min-h-8 items-center justify-center gap-1 rounded-lg border border-border-subtle px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:px-3 sm:text-sm lg:min-h-8 lg:px-2.5 lg:text-[11px]"
           >
             Next
-            <ChevronRight className="size-3.5 sm:size-4" aria-hidden="true" />
+            <ChevronRight className="size-3.5 sm:size-4 lg:size-3.5" aria-hidden="true" />
           </button>
         </div>
       </div>

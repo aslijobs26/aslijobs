@@ -132,6 +132,8 @@ export type EmployerJobStatConfig = {
   icon: LucideIcon;
   iconClassName: string;
   iconWrapClassName: string;
+  cardClassName: string;
+  valueClassName: string;
 };
 
 export const EMPLOYER_JOB_STAT_CARDS: readonly EmployerJobStatConfig[] = [
@@ -139,43 +141,61 @@ export const EMPLOYER_JOB_STAT_CARDS: readonly EmployerJobStatConfig[] = [
     key: "activeJobs",
     label: "Active Jobs",
     icon: Briefcase,
-    iconClassName: "text-primary-soft",
-    iconWrapClassName: "bg-primary-light",
+    iconClassName: "text-primary",
+    iconWrapClassName: "bg-primary-light text-primary",
+    cardClassName:
+      "border-primary/20 bg-gradient-to-br from-primary/10 to-white hover:border-primary/35",
+    valueClassName: "text-primary",
   },
   {
     key: "applications",
     label: "Applications",
     icon: Users,
     iconClassName: "text-sky-600",
-    iconWrapClassName: "bg-sky-50",
+    iconWrapClassName: "bg-sky-50 text-sky-600",
+    cardClassName:
+      "border-sky-200/80 bg-gradient-to-br from-sky-50 to-white hover:border-sky-300",
+    valueClassName: "text-sky-700",
   },
   {
     key: "shortlisted",
     label: "Shortlisted",
     icon: UserCheck,
     iconClassName: "text-orange-500",
-    iconWrapClassName: "bg-orange-50",
+    iconWrapClassName: "bg-orange-50 text-orange-500",
+    cardClassName:
+      "border-orange-200/80 bg-gradient-to-br from-orange-50 to-white hover:border-orange-300",
+    valueClassName: "text-orange-600",
   },
   {
     key: "interviews",
     label: "Interviews",
     icon: CalendarDays,
     iconClassName: "text-violet-600",
-    iconWrapClassName: "bg-violet-50",
+    iconWrapClassName: "bg-violet-50 text-violet-600",
+    cardClassName:
+      "border-violet-200/80 bg-gradient-to-br from-violet-50 to-white hover:border-violet-300",
+    valueClassName: "text-violet-700",
   },
   {
     key: "hired",
     label: "Hired",
     icon: CheckCircle2,
     iconClassName: "text-emerald-600",
-    iconWrapClassName: "bg-emerald-50",
+    iconWrapClassName: "bg-emerald-50 text-emerald-600",
+    cardClassName:
+      "border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-white hover:border-emerald-300",
+    valueClassName: "text-emerald-700",
   },
   {
     key: "views",
     label: "Total Views",
     icon: Eye,
     iconClassName: "text-amber-600",
-    iconWrapClassName: "bg-amber-50",
+    iconWrapClassName: "bg-amber-50 text-amber-600",
+    cardClassName:
+      "border-amber-200/80 bg-gradient-to-br from-amber-50 to-white hover:border-amber-300",
+    valueClassName: "text-amber-700",
   },
 ] as const;
 

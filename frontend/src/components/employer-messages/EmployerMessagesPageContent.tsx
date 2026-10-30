@@ -1209,12 +1209,12 @@ export function EmployerMessagesPageContent() {
   let timelineBody: ReactNode;
   if (!showTimeline) {
     timelineBody = (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center lg:px-4">
-        <div className="rounded-lg bg-brand-accent/25 px-5 py-3 shadow-sm ring-1 ring-black/5 lg:px-4 lg:py-2.5">
-          <p className="text-sm font-medium text-muted lg:text-xs">
+      <div className="employer-messages-thread-empty flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center lg:gap-1 lg:px-4">
+        <div className="rounded-lg bg-brand-accent/25 px-5 py-3 shadow-sm ring-1 ring-black/5 lg:px-3.5 lg:py-2">
+          <p className="employer-messages-thread-empty__title text-sm font-medium text-muted lg:text-[11px]">
             Select a conversation
           </p>
-          <p className="mt-1 text-xs text-muted lg:mt-0.5 lg:text-[11px]">
+          <p className="employer-messages-thread-empty__desc mt-1 text-xs text-muted lg:mt-0.5 lg:text-[10px]">
             Notification activity for each application appears here.
           </p>
         </div>
@@ -1363,24 +1363,24 @@ export function EmployerMessagesPageContent() {
           : undefined
       }
       className={cn(
-        "mx-auto flex w-full max-w-[1600px] min-h-0 flex-col px-3 py-3 sm:px-4 lg:px-4 lg:py-2.5",
+        "employer-page-shell employer-messages-shell mx-auto flex w-full max-w-[1600px] min-h-0 flex-col px-3 py-3 sm:px-4 lg:px-3.5 lg:py-2",
         isLockedShell
           ? "max-h-dvh overflow-hidden"
-          : "overflow-visible pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] lg:overflow-hidden lg:pb-2.5",
+          : "overflow-visible pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] lg:overflow-hidden lg:pb-2",
         "lg:h-full lg:min-h-0 lg:flex-1 lg:max-h-full",
       )}
     >
       <header
         className={cn(
-          "flex shrink-0 flex-wrap items-start justify-between gap-2",
+          "employer-messages-header flex shrink-0 flex-wrap items-start justify-between gap-2",
           mobileShowTimeline && "hidden lg:flex",
         )}
       >
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl lg:text-lg">
+          <h1 className="employer-messages-header__title text-lg font-bold tracking-tight text-foreground sm:text-xl lg:text-[1.125rem]">
             Messages
           </h1>
-          <p className="mt-0.5 text-[11px] leading-snug text-muted sm:text-sm lg:text-xs lg:leading-snug">
+          <p className="employer-messages-header__subtitle mt-0.5 text-[11px] leading-snug text-muted sm:text-sm lg:text-[11px] lg:leading-snug">
             Review hiring notifications for each candidate application in one
             place.
           </p>
@@ -1388,7 +1388,7 @@ export function EmployerMessagesPageContent() {
         <button
           type="button"
           onClick={() => setMobileFiltersOpen(true)}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:hidden"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
         >
           <Filter className="size-3.5" aria-hidden="true" />
           Filters
@@ -1397,7 +1397,7 @@ export function EmployerMessagesPageContent() {
 
       <div
         className={cn(
-          "mt-2.5 grid gap-2.5 lg:mt-2 lg:min-h-0 lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:gap-2 lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(13rem,18%)]",
+          "employer-messages-layout mt-2.5 grid gap-2.5 lg:mt-2 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_minmax(12rem,16%)] lg:grid-rows-[minmax(0,1fr)] lg:gap-2 lg:overflow-hidden",
           isLockedShell
             ? "min-h-0 flex-1 grid-rows-[minmax(0,1fr)] overflow-hidden"
             : "flex-1",
@@ -1441,7 +1441,7 @@ export function EmployerMessagesPageContent() {
                 mobileShowTimeline ? "hidden lg:flex" : "flex",
               )}
             >
-          <div className="shrink-0 border-b border-border-subtle px-2.5 pt-2">
+          <div className="employer-messages-list-toolbar shrink-0 border-b border-border-subtle px-2.5 pt-2 lg:px-2 lg:pt-1.5">
             <div className="flex gap-0.5 overflow-x-auto scrollbar-hidden">
               {(
                 [
@@ -1470,7 +1470,7 @@ export function EmployerMessagesPageContent() {
                     }
                   }}
                   className={cn(
-                    "inline-flex min-h-9 shrink-0 items-center gap-1 border-b-2 px-2 py-1.5 text-[11px] font-semibold sm:min-h-11 sm:px-2.5 sm:py-2 sm:text-xs lg:min-h-0 lg:px-2 lg:py-1.5 lg:text-[0.6875rem]",
+                    "employer-messages-list-tab inline-flex min-h-9 shrink-0 items-center gap-1 border-b-2 px-2 py-1.5 text-[11px] font-semibold sm:min-h-11 sm:px-2.5 sm:py-2 sm:text-xs lg:min-h-0 lg:px-1.5 lg:py-1 lg:text-[0.6875rem]",
                     tab === item.id
                       ? "border-primary text-primary"
                       : "border-transparent text-muted hover:text-foreground",
@@ -1480,7 +1480,7 @@ export function EmployerMessagesPageContent() {
                   {item.count !== null ? (
                     <span
                       className={cn(
-                        "inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[0.5rem] font-bold sm:text-[0.5625rem]",
+                        "inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[0.5rem] font-bold sm:text-[0.5625rem] lg:text-[0.5rem]",
                         tab === item.id
                           ? "bg-primary text-surface"
                           : "bg-hero-bg text-muted",
@@ -1493,7 +1493,7 @@ export function EmployerMessagesPageContent() {
               ))}
             </div>
 
-            <div className="relative py-2">
+            <div className="relative py-2 lg:py-1.5">
               <Search
                 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted lg:left-2.5 lg:size-3.5"
                 aria-hidden="true"
@@ -1508,11 +1508,11 @@ export function EmployerMessagesPageContent() {
                   })
                 }
                 placeholder="Search conversations..."
-                className="h-9 w-full rounded-full border border-border-subtle bg-hero-bg py-2 pr-3 pl-9 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:text-sm lg:h-8 lg:py-1.5 lg:pl-8 lg:text-xs"
+                className="employer-messages-list-search h-9 w-full rounded-full border border-border-subtle bg-hero-bg py-2 pr-3 pl-9 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:text-sm lg:h-8 lg:py-1.5 lg:pl-8 lg:text-[11px]"
               />
             </div>
 
-            <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hidden">
+            <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hidden lg:pb-1.5">
               {(
                 [
                   { id: "all", label: "All" },
@@ -1532,7 +1532,7 @@ export function EmployerMessagesPageContent() {
                     })
                   }
                   className={cn(
-                    "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors sm:px-3 sm:py-1.5 sm:text-xs lg:px-2.5 lg:py-0.5 lg:text-[0.625rem]",
+                    "employer-messages-list-chip shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors sm:px-3 sm:py-1.5 sm:text-xs lg:px-2 lg:py-0.5 lg:text-[0.625rem]",
                     filters.category === chip.id
                       ? "bg-primary text-surface"
                       : "bg-hero-bg text-muted hover:text-foreground",
@@ -1588,15 +1588,15 @@ export function EmployerMessagesPageContent() {
                 </button>
               </div>
             ) : conversations.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-4 py-10 text-center lg:gap-1.5 lg:px-3 lg:py-6">
+              <div className="employer-messages-empty flex flex-col items-center gap-2 px-4 py-10 text-center lg:gap-1 lg:px-3 lg:py-5">
                 <MessageSquare
-                  className="size-7 text-muted lg:size-5"
+                  className="employer-messages-empty__icon size-7 text-muted lg:size-3.5"
                   aria-hidden="true"
                 />
-                <p className="text-sm font-medium text-foreground lg:text-xs">
+                <p className="employer-messages-empty__title text-sm font-medium text-foreground lg:text-[11px]">
                   No conversations yet.
                 </p>
-                <p className="text-xs text-muted lg:text-[11px]">
+                <p className="employer-messages-empty__desc text-xs text-muted lg:text-[10px]">
                   Application activity will appear here as notifications.
                 </p>
               </div>
@@ -1720,7 +1720,7 @@ export function EmployerMessagesPageContent() {
           </div>
         </div>
 
-        <aside className="hidden min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)] xl:flex">
+        <aside className="employer-messages-rail hidden min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:flex">
           <MessagesFilterPanel
             filters={filters}
             jobFacets={jobFacets}

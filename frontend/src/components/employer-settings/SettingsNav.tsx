@@ -30,18 +30,21 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
   return (
     <nav
       aria-label="Settings sections"
-      className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4 lg:rounded-lg lg:p-3"
+      className="employer-settings-nav rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4 lg:rounded-lg lg:p-2.5"
     >
-      <div className="px-2 pb-3 lg:px-1.5 lg:pb-2.5">
-        <h1 className="text-base font-bold tracking-tight text-foreground sm:text-lg lg:text-sm">
+      <div className="employer-settings-nav__intro px-2 pb-3 lg:px-1 lg:pb-2">
+        <h1 className="employer-settings-nav__title text-base font-bold tracking-tight text-foreground sm:text-lg lg:text-[0.8125rem]">
           Settings
         </h1>
-        <p className="mt-1 text-xs text-muted sm:text-sm lg:mt-0.5 lg:text-[10px] lg:leading-snug">
+        <p className="employer-settings-nav__subtitle mt-1 text-xs text-muted sm:text-sm lg:mt-0.5 lg:text-[10px] lg:leading-snug">
           Manage your account, preferences and application settings.
         </p>
       </div>
 
-      <ul className="hidden space-y-1 lg:block" role="list">
+      <ul
+        className="employer-settings-nav__list hidden space-y-1 lg:block lg:space-y-0.5"
+        role="list"
+      >
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = item.id === activeId;
@@ -52,7 +55,7 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
                 onClick={() => onSelect(item.id)}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-200 lg:gap-2.5 lg:rounded-lg lg:px-2.5 lg:py-2",
+                  "employer-settings-nav__item flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-200 lg:gap-2 lg:rounded-md lg:px-2 lg:py-1.5",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
                   isActive
                     ? "bg-primary-light text-primary"
@@ -61,19 +64,19 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
               >
                 <span
                   className={cn(
-                    "mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg lg:size-7",
+                    "employer-settings-nav__icon mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg lg:mt-0 lg:size-6",
                     isActive
                       ? "bg-surface text-primary"
                       : "bg-primary-light text-primary",
                   )}
                   aria-hidden="true"
                 >
-                  <Icon className="size-4 lg:size-3.5" strokeWidth={2} />
+                  <Icon className="size-4 lg:size-3" strokeWidth={2} />
                 </span>
                 <span className="min-w-0">
                   <span
                     className={cn(
-                      "block text-xs font-semibold sm:text-sm lg:text-[11px]",
+                      "employer-settings-nav__label block text-xs font-semibold sm:text-sm lg:text-[11px]",
                       isActive ? "text-primary" : "text-foreground",
                     )}
                   >
@@ -81,7 +84,7 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
                   </span>
                   <span
                     className={cn(
-                      "mt-0.5 block text-[11px] sm:text-xs lg:text-[10px] lg:leading-snug",
+                      "employer-settings-nav__desc mt-0.5 block text-[11px] sm:text-xs lg:text-[9px] lg:leading-snug",
                       isActive ? "text-primary/80" : "text-muted",
                     )}
                   >

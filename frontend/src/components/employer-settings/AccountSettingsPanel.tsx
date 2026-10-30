@@ -46,7 +46,7 @@ export function AccountSettingsPanel({
   onOpenJobPreferences,
 }: AccountSettingsPanelProps) {
   return (
-    <div className="space-y-4">
+    <div className="employer-settings-content space-y-4 lg:space-y-2.5">
       <ProfileSummaryCard
         displayName={displayName}
         roleLabel={roleLabel}
@@ -64,7 +64,7 @@ export function AccountSettingsPanel({
         ]}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="employer-settings-quick-grid grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-2">
         {showCompanyQuickLink ? (
           <SettingCard
             title="Company Settings"

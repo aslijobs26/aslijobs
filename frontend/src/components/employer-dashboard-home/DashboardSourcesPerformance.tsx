@@ -78,30 +78,30 @@ export function DashboardSourcesPerformance({
   }, []);
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
-        <h2 className="min-w-0 break-words text-base font-bold text-foreground">
+    <section className="employer-panel-card flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+      <div className="employer-panel-card__header flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
+        <h2 className="employer-panel-card__title min-w-0 break-words text-base font-bold text-foreground">
           {t("employer.dashboard.sourcesPerformance")}
         </h2>
-        <span className="shrink-0 text-xs font-semibold text-muted">
+        <span className="employer-panel-card__link shrink-0 text-xs font-semibold text-muted">
           {t("employer.common.live")}
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 p-4 sm:p-5">
+      <div className="employer-sources-body flex flex-1 flex-col items-center justify-center gap-5 p-4 sm:p-5">
         {isLoading ? (
-          <div className="size-36 animate-pulse rounded-full bg-hero-bg" />
+          <div className="employer-sources-donut size-36 animate-pulse rounded-full bg-hero-bg" />
         ) : null}
 
         {!isLoading && slices.length === 0 ? (
-          <p className="px-2 text-center text-sm text-muted lg:text-xs">
+          <p className="employer-panel-card__empty-desc px-2 text-center text-sm text-muted">
             {t("employer.dashboard.sourcesEmpty")}
           </p>
         ) : null}
 
         {!isLoading && slices.length > 0 ? (
           <>
-            <div className="relative size-36">
+            <div className="employer-sources-donut relative size-36">
               <svg
                 viewBox="-54 -54 108 108"
                 className="size-full"
@@ -120,7 +120,7 @@ export function DashboardSourcesPerformance({
                 ))}
               </svg>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-xl font-bold tabular-nums text-foreground">
+                <p className="employer-sources-total text-xl font-bold tabular-nums text-foreground">
                   {total.toLocaleString("en-IN")}
                 </p>
                 <p className="text-[0.6875rem] font-medium text-muted">

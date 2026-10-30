@@ -47,25 +47,25 @@ export function SecurityPanel({
   const isMember = principalType === "member";
 
   return (
-    <div className="space-y-4">
+    <div className="employer-settings-content space-y-4 lg:space-y-2.5">
       <SettingsSection
         title="Authentication"
         description="How you sign in to this workspace."
       >
-        <dl className="grid gap-3 sm:grid-cols-2 lg:gap-2.5">
-          <div className="rounded-lg border border-border-subtle px-3 py-2.5 lg:px-2.5 lg:py-2">
-            <dt className="text-[11px] font-medium text-muted sm:text-xs lg:text-[10px]">
+        <dl className="grid gap-3 sm:grid-cols-2 lg:gap-2">
+          <div className="employer-settings-meta-tile rounded-lg border border-border-subtle px-3 py-2.5 lg:px-2 lg:py-1.5">
+            <dt className="text-[11px] font-medium text-muted sm:text-xs lg:text-[9px]">
               Sign-in method
             </dt>
-            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
+            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm lg:text-[11px]">
               {isMember ? "Email & password (team member)" : "WhatsApp OTP"}
             </dd>
           </div>
-          <div className="rounded-lg border border-border-subtle px-3 py-2.5 lg:px-2.5 lg:py-2">
-            <dt className="text-[11px] font-medium text-muted sm:text-xs lg:text-[10px]">
+          <div className="employer-settings-meta-tile rounded-lg border border-border-subtle px-3 py-2.5 lg:px-2 lg:py-1.5">
+            <dt className="text-[11px] font-medium text-muted sm:text-xs lg:text-[9px]">
               Workspace role
             </dt>
-            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
+            <dd className="mt-0.5 text-xs font-semibold text-foreground sm:text-sm lg:text-[11px]">
               {roleLabel}
             </dd>
           </div>

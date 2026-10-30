@@ -423,20 +423,20 @@ export function EmployerCandidatesPageContent() {
   return (
     <div
       data-employer-candidates-page
-      className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:pt-5 md:pb-5 lg:h-full lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:px-4 lg:pt-3 lg:pb-2"
+      className="employer-page-shell employer-candidates-shell mx-auto flex w-full min-w-0 max-w-[1600px] flex-col px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:pt-5 md:pb-5 lg:h-full lg:min-h-0 lg:flex-1 lg:overflow-hidden"
     >
-      <div className="shrink-0">
-      <header className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3 lg:gap-2">
+      <div className="employer-candidates-chrome shrink-0">
+      <header className="employer-candidates-header flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3 lg:gap-2">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-3xl lg:text-xl">
+          <h1 className="employer-candidates-header__title text-lg font-bold tracking-tight text-foreground sm:text-3xl lg:text-[1.25rem]">
             Candidates
           </h1>
-          <p className="mt-0.5 max-w-2xl text-[11px] leading-snug text-muted sm:mt-1 sm:text-sm sm:leading-normal lg:mt-0.5 lg:max-w-xl lg:truncate lg:text-[11px] lg:leading-snug">
+          <p className="employer-candidates-header__subtitle mt-0.5 max-w-2xl text-[11px] leading-snug text-muted sm:mt-1 sm:text-sm sm:leading-normal lg:mt-0.5 lg:max-w-xl lg:truncate lg:text-[11px] lg:leading-snug">
             Manage applicants, review resumes, schedule interviews and move
             candidates through the hiring pipeline.
           </p>
           {publicJobId ? (
-            <p className="mt-2 text-[11px] font-medium text-primary sm:text-xs">
+            <p className="mt-2 text-[11px] font-medium text-primary sm:text-xs lg:mt-1 lg:text-[11px]">
               Filtered by job {publicJobId}
               {" · "}
               <button
@@ -456,7 +456,7 @@ export function EmployerCandidatesPageContent() {
             <button
               type="button"
               onClick={() => setExportModalOpen(true)}
-              className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary-light px-4 text-xs font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:w-auto sm:min-w-[7.5rem] sm:gap-2 sm:px-5 sm:text-sm lg:min-h-9 lg:min-w-0 lg:px-3.5 lg:text-xs"
+              className="employer-candidates-export inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary-light px-4 text-xs font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:w-auto sm:min-w-[7.5rem] sm:gap-2 sm:px-5 sm:text-sm lg:min-h-8 lg:min-w-0 lg:gap-1.5 lg:px-3 lg:text-xs"
             >
               <Download
                 className="size-3.5 shrink-0 sm:size-4 lg:size-3.5"
@@ -486,7 +486,7 @@ export function EmployerCandidatesPageContent() {
         />
       ) : null}
 
-      <div className="mt-3 sm:mt-5 lg:mt-2">
+      <div className="employer-candidates-kpi-wrap mt-3 sm:mt-5 lg:mt-2">
         <CandidatesKpiStrip
           stats={statsQuery.data}
           isLoading={statsQuery.isLoading}

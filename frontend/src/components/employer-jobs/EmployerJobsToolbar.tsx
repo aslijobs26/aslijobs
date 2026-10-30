@@ -46,12 +46,12 @@ export function EmployerJobsToolbar({
   return (
     <section
       aria-label={t("employer.jobs.filtersAria")}
-      className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-3"
+      className="employer-jobs-toolbar flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-2"
     >
       <div
         role="tablist"
         aria-label={t("employer.jobs.statusTabsAria")}
-        className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-1.5"
+        className="employer-jobs-tabs flex min-w-0 flex-wrap items-center gap-1 sm:gap-1.5 lg:gap-1"
       >
         {EMPLOYER_JOBS_STATUS_TABS.map((tab) => {
           const isActive = tab === activeTab;
@@ -69,7 +69,7 @@ export function EmployerJobsToolbar({
               }
               onClick={() => onTabChange(tab)}
               className={cn(
-                "inline-flex h-8 items-center gap-1 rounded-md border px-2 text-[11px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-1.5 sm:px-3 sm:text-[13px]",
+                "employer-jobs-tab inline-flex h-8 items-center gap-1 rounded-md border px-2 text-[11px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-1.5 sm:px-3 sm:text-[13px] lg:h-8 lg:gap-1 lg:px-2 lg:text-[11px]",
                 isActive
                   ? "border-primary-soft bg-primary-light text-primary-soft"
                   : "border-border bg-surface text-muted hover:border-primary-soft/40 hover:bg-primary-light/50 hover:text-foreground",
@@ -79,7 +79,7 @@ export function EmployerJobsToolbar({
               {count !== undefined ? (
                 <span
                   className={cn(
-                    "inline-flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums sm:size-5 sm:text-[11px]",
+                    "employer-jobs-tab__count inline-flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums sm:size-5 sm:text-[11px] lg:size-4 lg:text-[10px]",
                     isActive
                       ? "bg-primary-soft/15 text-primary-soft"
                       : "bg-hero-bg text-muted",
@@ -93,20 +93,20 @@ export function EmployerJobsToolbar({
         })}
       </div>
 
-      <div className="flex w-full shrink-0 items-center gap-2 lg:w-auto">
+      <div className="employer-jobs-toolbar__controls flex w-full shrink-0 items-center gap-2 lg:w-auto">
         <button
           type="button"
           onClick={onOpenFilters}
           aria-expanded={filtersOpen}
           aria-haspopup="dialog"
           className={cn(
-            "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:px-3 sm:text-sm",
+            "employer-jobs-filter-btn inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:px-3 sm:text-sm lg:h-8 lg:px-2.5 lg:text-xs",
             activeFilterCount > 0 || filtersOpen
               ? "border-primary bg-primary-light text-primary"
               : "border-border bg-surface text-muted hover:border-primary/40 hover:bg-primary-light/50 hover:text-foreground",
           )}
         >
-          <Filter className="size-3.5" aria-hidden="true" strokeWidth={2} />
+          <Filter className="size-3.5 lg:size-3" aria-hidden="true" strokeWidth={2} />
           <span>
             {activeFilterCount > 0
               ? `${filtersLabel} (${activeFilterCount})`
@@ -114,10 +114,10 @@ export function EmployerJobsToolbar({
           </span>
         </button>
 
-        <label className="relative min-w-0 flex-1 lg:w-[17.5rem] lg:flex-none">
+        <label className="relative min-w-0 flex-1 lg:w-[15rem] lg:flex-none xl:w-[17.5rem]">
           <span className="sr-only">{t("employer.jobs.searchJobs")}</span>
           <Search
-            className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted"
+            className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted lg:size-3"
             aria-hidden="true"
             strokeWidth={2}
           />
@@ -126,7 +126,7 @@ export function EmployerJobsToolbar({
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder={t("employer.jobs.searchPlaceholder")}
-            className="h-9 w-full rounded-lg border border-border bg-surface py-2 pr-3 pl-9 text-xs text-foreground placeholder:text-muted/80 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none sm:h-10 sm:text-sm"
+            className="employer-jobs-search h-9 w-full rounded-lg border border-border bg-surface py-2 pr-3 pl-9 text-xs text-foreground placeholder:text-muted/80 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none sm:h-10 sm:text-sm lg:h-8 lg:pl-8 lg:text-xs"
           />
         </label>
       </div>

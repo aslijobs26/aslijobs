@@ -165,19 +165,19 @@ export function EmployerJobsTable({
   const showTable = isLoading || (!isError && jobs.length > 0);
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+    <section className="employer-jobs-table flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       {!showTable && isError ? (
-        <div className="px-4 py-10 text-left sm:py-14 sm:text-center">
-          <p className="text-sm font-semibold text-foreground sm:text-base">
+        <div className="employer-jobs-empty px-4 py-10 text-left sm:py-14 sm:text-center lg:py-8">
+          <p className="employer-jobs-empty__title text-sm font-semibold text-foreground sm:text-base lg:text-sm">
             {t("employer.jobs.errorTitle")}
           </p>
-          <p className="mt-1 break-words text-xs text-muted sm:text-sm">
+          <p className="employer-jobs-empty__desc mt-1 break-words text-xs text-muted sm:text-sm lg:text-xs">
             {errorMessage?.trim() || t("employer.jobs.errorDescription")}
           </p>
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="mt-4 inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:mt-3 lg:px-3 lg:py-1.5 lg:text-xs"
           >
             {t("employer.common.tryAgain")}
           </button>
@@ -185,11 +185,11 @@ export function EmployerJobsTable({
       ) : null}
 
       {!showTable && !isError ? (
-        <div className="px-4 py-10 text-left sm:py-14 sm:text-center">
-          <p className="text-sm font-semibold text-foreground sm:text-base">
+        <div className="employer-jobs-empty px-4 py-10 text-left sm:py-14 sm:text-center lg:py-8">
+          <p className="employer-jobs-empty__title text-sm font-semibold text-foreground sm:text-base lg:text-sm">
             {t("employer.jobs.emptyTitle")}
           </p>
-          <p className="mt-1 break-words text-xs text-muted sm:text-sm">
+          <p className="employer-jobs-empty__desc mt-1 break-words text-xs text-muted sm:text-sm lg:text-xs">
             {t("employer.jobs.emptyDescription")}
           </p>
         </div>

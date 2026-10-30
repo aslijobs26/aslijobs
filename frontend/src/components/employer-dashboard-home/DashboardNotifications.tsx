@@ -48,10 +48,10 @@ export function DashboardNotifications({
   );
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3.5">
+    <section className="employer-rail-card overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+      <div className="employer-notifications-header flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3.5">
         <div className="flex items-center gap-2">
-          <h2 className="text-xs font-bold text-foreground sm:text-sm">
+          <h2 className="employer-rail-title text-xs font-bold text-foreground sm:text-sm">
             {t("employer.dashboard.notifications")}
           </h2>
           {unreadCount > 0 ? (
@@ -62,19 +62,19 @@ export function DashboardNotifications({
         </div>
         <Link
           href={ROUTES.EMPLOYER_NOTIFICATIONS}
-          className="text-xs font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="employer-rail-link text-xs font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           {t("employer.common.viewAll")}
         </Link>
       </div>
 
       {isLoading ? (
-        <div className="space-y-2.5 p-4">
+        <div className="space-y-2.5 p-4 lg:p-3">
           {Array.from({ length: DASHBOARD_NOTIFICATIONS_PREVIEW_LIMIT }).map(
             (_, index) => (
               <div
                 key={index}
-                className="h-12 animate-pulse rounded-lg bg-hero-bg"
+                className="h-12 animate-pulse rounded-lg bg-hero-bg lg:h-9"
                 aria-hidden="true"
               />
             ),
@@ -83,9 +83,9 @@ export function DashboardNotifications({
       ) : null}
 
       {!isLoading && latestNotifications.length === 0 ? (
-        <div className="flex flex-col items-center px-3 py-5 text-center sm:px-4 sm:py-8">
+        <div className="employer-notifications-empty flex flex-col items-center px-3 py-5 text-center sm:px-4 sm:py-8">
           <Bell className="size-4 text-muted sm:size-5" aria-hidden="true" />
-          <p className="mt-1.5 text-xs text-muted sm:mt-2 sm:text-sm">
+          <p className="employer-rail-text mt-1.5 text-xs text-muted sm:mt-2 sm:text-sm">
             {t("employer.dashboard.noNotifications")}
           </p>
         </div>

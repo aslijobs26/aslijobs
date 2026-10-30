@@ -56,7 +56,7 @@ export function DashboardJobsOverview({
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5 lg:px-4 lg:py-2.5">
-        <h2 className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base lg:text-sm">
+        <h2 className="employer-section-title min-w-0 break-words text-sm font-bold text-foreground sm:text-base">
           {t("employer.dashboard.jobsOverview")}
         </h2>
         <Can module="jobs" action="read">
