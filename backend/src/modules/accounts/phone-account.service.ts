@@ -243,6 +243,7 @@ export type WhatsAppEmployerRecord = {
   verificationStatus?: "pending" | "verified" | "rejected";
   isProfileComplete?: boolean;
   registrationStatus?: string;
+  verificationRemarks?: string;
 };
 
 export type WhatsAppSeekerRecord = {
@@ -253,6 +254,8 @@ export type WhatsAppSeekerRecord = {
   skills?: string[];
   preferredJobLocation?: string;
   registrationStatus?: string;
+  isWhatsappVerified?: boolean;
+  accountStatus?: string;
 };
 
 export type AccountProgress =
@@ -284,9 +287,9 @@ export function classifyAccountProgress(input: {
 }
 
 const SEEKER_LOOKUP =
-  "fullName city jobRole skills preferredJobLocation registrationStatus";
+  "fullName city jobRole skills preferredJobLocation registrationStatus isWhatsappVerified accountStatus";
 const EMPLOYER_LOOKUP =
-  "companyName verificationStatus isProfileComplete registrationStatus";
+  "companyName verificationStatus isProfileComplete registrationStatus verificationRemarks";
 
 function isCompletedSeeker(seeker: { registrationStatus?: string } | null): boolean {
   return seeker?.registrationStatus === "COMPLETED";

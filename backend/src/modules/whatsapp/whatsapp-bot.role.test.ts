@@ -165,7 +165,7 @@ describe("whatsapp role and account routing", () => {
       name: "Acme",
       profileUrl: "https://aslijobs.com/employer/company-profile",
     });
-    assert.match(pending, /under review/);
+    assert.match(pending, /pending verification|under review/i);
     assert.doesNotMatch(pending, /is verified/);
     const rejected = employerVerificationCopy({
       language: "en",

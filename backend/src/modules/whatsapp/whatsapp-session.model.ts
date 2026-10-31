@@ -17,6 +17,8 @@ const whatsAppSessionSchema = new Schema(
     pendingCategory: { type: String, default: "" },
     pendingOpenSearch: { type: Boolean, default: false },
     pendingIntent: { type: String, default: "" },
+    /** Last answered product intent — used for short follow-ups (Status?, bare role). */
+    lastIntent: { type: String, default: "" },
     lastLocation: { type: String, default: "" },
     lastCategory: { type: String, default: "" },
     lastExperience: { type: String, default: "" },

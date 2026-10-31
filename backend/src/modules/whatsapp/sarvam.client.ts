@@ -13,7 +13,7 @@ export const SARVAM_CHAT_MODEL = "sarvam-105b";
 const UNDERSTAND_TIMEOUT_MS = 8_000;
 
 export const UNDERSTAND_SYSTEM =
-  "AsliJobs classifier. JSON only. Fields: intent,language,location,category,openSearch,confidence. intent=GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_SKILLS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|POST_JOB|ACCOUNT_STATUS|UNRELATED|UNKNOWN. language=en|hi|te|ta|kn|ml from THIS message only. Hire/post job=POST_JOB. Posted/my jobs + applications = EMPLOYER_APPLICATION_COUNT. Public job hunt = JOB_SEARCH. Ignore prev unless THIS message is only a role or place follow-up. Do not answer, authorize, or invent jobs.";
+  "AsliJobs classifier. JSON only. Fields: intent,language,location,category,openSearch,confidence. intent=GREETING|HELP|CLARIFY|JOB_SEARCH|JOB_DETAILS|PROFILE_JOBS|MY_SKILLS|MY_APPLICATIONS|APPLICATION_COUNT|APPLICATION_STATUS|APPLIED_COVERAGE|HOW_TO_APPLY|EMPLOYER_JOBS|EMPLOYER_JOB_STATUS|EMPLOYER_APPLICATION_COUNT|POST_JOB|ACCOUNT_STATUS|UNRELATED|UNKNOWN. language=en|hi|te|ta|kn|ml from THIS message only. Profile/verify status=ACCOUNT_STATUS (never JOB_SEARCH). Hire/post=POST_JOB. Posted jobs status=EMPLOYER_JOB_STATUS. Posted apps=EMPLOYER_APPLICATION_COUNT. Public hunt=JOB_SEARCH. Follow-up role/place only from prev. Do not answer, authorize, or invent jobs.";
 
 type SarvamUsage = {
   prompt_tokens?: number;

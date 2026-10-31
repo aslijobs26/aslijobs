@@ -18,7 +18,6 @@ export const EMPLOYER_REQUIRED_INTENTS = new Set<BotIntent>([
   "EMPLOYER_JOBS",
   "EMPLOYER_JOB_STATUS",
   "EMPLOYER_APPLICATION_COUNT",
-  "ACCOUNT_STATUS",
 ]);
 
 /** Job-seeker-only product intents (includes public job discovery for registered seekers / guests). */
@@ -36,13 +35,17 @@ export const SEEKER_REQUIRED_INTENTS = new Set<BotIntent>([
   "HOW_TO_APPLY",
 ]);
 
-/** Shared intents — no role gate (still account-aware in handlers). */
+/**
+ * Shared intents — no cross-role gate.
+ * ACCOUNT_STATUS is answered from the linked account's own profile/verification facts.
+ */
 export const NEUTRAL_INTENTS = new Set<BotIntent>([
   "GREETING",
   "HELP",
   "CLARIFY",
   "UNRELATED",
   "UNKNOWN",
+  "ACCOUNT_STATUS",
 ]);
 
 export function requiredRoleForIntent(intent: BotIntent): RequiredWhatsAppRole {

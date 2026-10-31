@@ -439,11 +439,11 @@ function scopeForIntent(intent: BotIntent): BotScope {
     intent === "EMPLOYER_JOBS" ||
     intent === "EMPLOYER_JOB_STATUS" ||
     intent === "EMPLOYER_APPLICATION_COUNT" ||
-    intent === "POST_JOB" ||
-    intent === "ACCOUNT_STATUS"
+    intent === "POST_JOB"
   ) {
     return "OWN_EMPLOYER_DATA";
   }
+  // ACCOUNT_STATUS is dual-role; applyAccountAwareIntent sets OWN_DATA / OWN_EMPLOYER_DATA.
   if (
     intent === "MY_APPLICATIONS" ||
     intent === "APPLICATION_COUNT" ||
@@ -485,6 +485,7 @@ export function understandLocally(
   const howToApply = /how (do|to|can) i apply|apply cheyya|apply kaise|apply ela/i.test(folded);
   const applications = ownApply;
   const myPosted = looksLikeOwnPostedJobsQuestion(text);
+  const profileStatusAsk = looksLikeProfileStatusQuestion(text);
   const seekerRoleCue = chooseAccountRole(text) === "seeker";
   const explicitPostJob = looksLikePostJobRequest(text);
   // Explicit "post a job" stays hire. Role+job phrases ("electrician job") never become POST_JOB.
@@ -530,13 +531,15 @@ export function understandLocally(
     /^(help|సహాయం|मदद|உதவி|ಸಹಾಯ|സഹായം)\b/i.test(text.trim()) ||
     /\bwhat can you do\b/i.test(text) ||
     /\bneed help with my account\b/i.test(text) ||
-    /(help|సహాయం|मदद|உதவி|ಸಹಾಯ|സഹായം).{0,60}(account|ఖాతా|खाता|கணக்கு|ಖಾತೆ|അക്കൗണ്ട്)/i.test(
+    /(help|సహాయం|मदद|உதவி|ಸಹಾಯ|സഹായം).{0,60}(account|ఖాతా|खाता|கணக்கு|ಖాతೆ|അക്കൗണ്ട്)/i.test(
       text,
     )
   ) {
     intent = "HELP";
   }
   else if (greeting && text.trim().length < 20 && !mentionsJob && !ownApply) intent = "GREETING";
+  // Profile / verification status — never PROFILE_JOBS or JOB_SEARCH.
+  else if (profileStatusAsk) intent = "ACCOUNT_STATUS";
   else if (profile) intent = "PROFILE_JOBS";
   else if (appliedAll) intent = "APPLIED_COVERAGE";
   else if (/company|కంపెనీ|कंपनी/i.test(text) && applications && !myPosted) {
@@ -549,7 +552,7 @@ export function understandLocally(
         ? "EMPLOYER_APPLICATION_COUNT"
         : "EMPLOYER_JOBS";
   } else if (hireIntent && !ownApply) {
-    intent = /verif|account|profile complete/i.test(folded) ? "ACCOUNT_STATUS" : "POST_JOB";
+    intent = "POST_JOB";
   } else if (howToApply) intent = "HOW_TO_APPLY";
   else if (applications) {
     intent = /status|review|reviewed|స్టేటస్|స్టేజ్|स्थिति|நிலை/i.test(text)
@@ -581,13 +584,20 @@ export function understandLocally(
   const anyLocation = wantsAnyLocation(text);
   const openSearch = intent === "JOB_SEARCH" && !category && (mentionsJob || mentionsRequest || anyLocation);
   const scope = scopeForIntent(intent);
+  // Employer management intents must not keep free-title noise as a job filter.
+  const employerManaged =
+    intent === "EMPLOYER_JOBS" ||
+    intent === "EMPLOYER_JOB_STATUS" ||
+    intent === "EMPLOYER_APPLICATION_COUNT" ||
+    intent === "ACCOUNT_STATUS";
+  const cleanCategory = employerManaged ? "" : category;
 
   return {
     intent,
     language,
-    location: anyLocation ? "" : location,
-    category,
-    jobQuery: category,
+    location: anyLocation || employerManaged ? "" : location,
+    category: cleanCategory,
+    jobQuery: cleanCategory,
     openSearch,
     scope,
     requiresAuth: scope === "OWN_DATA" || scope === "OWN_EMPLOYER_DATA",
@@ -728,8 +738,40 @@ const JOB_SEARCH_INTENTS = new Set<BotIntent>(["JOB_SEARCH", "JOB_COUNT", "JOB_D
 export function looksLikeOwnPostedJobsQuestion(text: string): boolean {
   const seekerApply = /apply\s*ches|apply\s*chey|applied|అప్లై|చేశా/i.test(text);
   if (seekerApply) return false;
-  return /post\s*chesina|nenu\s+post|i posted|my posted|na posted|posted jobs?|which jobs did i post|\bna jobs\b|నా\s*jobs|\bmy jobs\b|నా posted|పోస్ట్/i.test(
+  return /post\s*chesina|nenu\s+post|i posted|my posted|na posted|posted jobs?|which jobs did i post|\bna jobs\b|నా\s*jobs|\bmy jobs\b|నా posted|పోస్ట్|job postings?|my\s+vacanc/i.test(
     text,
+  );
+}
+
+/** Profile / company verification or profile-status questions (not "jobs matching my profile"). */
+export function looksLikeProfileStatusQuestion(text: string): boolean {
+  const folded = text.toLowerCase().trim();
+  if (!folded) return false;
+  // Explicit English / romanized verification or status about a profile/account/company.
+  if (
+    /profile\s+(is\s+)?(status|verify|verified|verification)|is\s+(my\s+)?profile\s+verif|profile\s+is\s+verified|verify\s+ayyindh|verification\s+status|account\s+(status|verif)|company\s+profile|naa\s+profile|naaku\s+profile|i\s+want\s+profile\s+status|my\s+profile\s+status|profile\s+status\s+(ela|elu|enti|undhi|undi)|status\s+(ela|elu|enti)\s+undh/i.test(
+      folded,
+    )
+  ) {
+    return true;
+  }
+  const hasProfile =
+    /profile|ప్రొఫైల్|प्रोफाइल|प्रोफ़ाइल|company\s+profile|అకౌంట్|account/i.test(text);
+  const hasStatusCue =
+    /status|verify|verified|verification|స్టేటస్|స్టేటస్|వెరిఫై|वेरिफ|ayyindh|అయ్యింద|undhi|undi|\bela\b|\belu\b|\benti\b|pending|approved|approval/i.test(
+      folded,
+    );
+  const jobMatchCue =
+    /match(ing)?\s+(my\s+)?(profile|resume)|jobs?\s+(for|matching)\s+(my\s+)?profile|suitable\s+jobs|సరిపోయే/i.test(
+      folded,
+    );
+  return hasProfile && hasStatusCue && !jobMatchCue;
+}
+
+/** Short status follow-up after an employer posting / profile turn. */
+export function looksLikeStatusFollowUp(text: string): boolean {
+  return /^(status\??|status\s+kavali|emi status|entandi status|what(?:'s| is)?\s+(the\s+)?status\??|when\s+will\s+it\s+be\s+approved\??|approval\s+timeline\??)$/i.test(
+    text.trim(),
   );
 }
 
@@ -780,6 +822,19 @@ export function validateCurrentMessageIntent(
   text: string,
   understanding: BotUnderstanding,
 ): BotUnderstanding {
+  if (looksLikeProfileStatusQuestion(text)) {
+    return {
+      ...understanding,
+      intent: "ACCOUNT_STATUS",
+      location: "",
+      category: "",
+      jobQuery: "",
+      openSearch: false,
+      scope: "NONE",
+      requiresAuth: true,
+      confidence: Math.max(understanding.confidence, 0.95),
+    };
+  }
   if (looksLikeOwnPostedJobsQuestion(text) && /applications?|applicants|enni|ఎన్ని|vachayi|వచ్చాయి|how many/i.test(text)) {
     return {
       ...understanding,
@@ -792,10 +847,29 @@ export function validateCurrentMessageIntent(
       requiresAuth: true,
     };
   }
-  if (looksLikeOwnPostedJobsQuestion(text) && JOB_SEARCH_INTENTS.has(understanding.intent)) {
+  if (looksLikeOwnPostedJobsQuestion(text)) {
+    const resolved: BotIntent = /status|స్టేటస్|స్టేజ్|स्थिति/i.test(text)
+      ? "EMPLOYER_JOB_STATUS"
+      : "EMPLOYER_JOBS";
     return {
       ...understanding,
-      intent: "EMPLOYER_JOBS",
+      intent: resolved,
+      location: "",
+      category: "",
+      jobQuery: "",
+      openSearch: false,
+      scope: "OWN_EMPLOYER_DATA",
+      requiresAuth: true,
+    };
+  }
+  // Wipe free-title pollution on employer intents (e.g. "Nenu Post Chesina").
+  if (
+    understanding.intent === "EMPLOYER_JOBS" ||
+    understanding.intent === "EMPLOYER_JOB_STATUS" ||
+    understanding.intent === "EMPLOYER_APPLICATION_COUNT"
+  ) {
+    return {
+      ...understanding,
       location: "",
       category: "",
       jobQuery: "",
@@ -1015,10 +1089,13 @@ export function resolveTurnUnderstanding(
   text: string,
   raw: BotUnderstanding,
   previous: PendingSearchContext | null,
+  lastIntent?: string | null,
 ): BotUnderstanding {
+  const validated = validateCurrentMessageIntent(text, overlayMessageEntities(text, raw));
+  const withFollowUp = applyConversationFollowUp(text, validated, lastIntent ?? previous?.intent);
   return applyCurrentMessageSearchRules(
     text,
-    mergePending(previous, validateCurrentMessageIntent(text, overlayMessageEntities(text, raw)), text),
+    mergePending(previous, withFollowUp, text),
   );
 }
 
@@ -1461,12 +1538,33 @@ export function buildDeterministicReply(
     });
   }
   if (situation === "account_status") {
+    const accountType = String(facts.accountType ?? "");
+    if (accountType === "seeker") {
+      return seekerProfileStatusCopy({
+        language,
+        registrationStatus: String(facts.registrationStatus ?? ""),
+        whatsappVerified: Boolean(facts.whatsappVerified),
+        accountStatus: String(facts.accountStatus ?? "active"),
+        name: String(facts.name ?? ""),
+        role: String(facts.role ?? ""),
+      });
+    }
     return employerVerificationCopy({
       language,
       verification: String(facts.verification ?? "pending"),
       name: String(facts.name ?? ""),
       profileUrl: String(facts.profileUrl ?? ""),
+      remarks: String(facts.remarks ?? ""),
     });
+  }
+  if (situation === "verification_timeline_unknown") {
+    if (language === "te") {
+      return "ప్రస్తుతం ఖచ్చితమైన approval సమయం అందుబాటులో లేదు. Operations review పూర్తయిన తర్వాత స్టేటస్ మారుతుంది.";
+    }
+    if (language === "hi") {
+      return "अभी सटीक approval समय उपलब्ध नहीं है. Operations समीक्षा पूरी होने पर स्टेटस अपडेट होगा.";
+    }
+    return "An exact approval timeline is not available right now. Your status will update after Operations finishes the review.";
   }
   if (situation === "profile") {
     return profileCopy({
@@ -1719,6 +1817,7 @@ export function unknownUserAction(
   const { intent, scope } = understanding;
   if (intent === "GREETING" || intent === "HELP") return "greeting";
   if (intent === "POST_JOB" || scope === "OWN_EMPLOYER_DATA") return "employer_register";
+  if (intent === "ACCOUNT_STATUS") return "seeker_register";
   if (intent === "HOW_TO_APPLY") return "how_to_apply";
   if (scope === "OWN_DATA") return "seeker_register";
   if (intent === "JOB_SEARCH" || intent === "JOB_COUNT" || intent === "JOB_DETAILS") {
@@ -1742,7 +1841,6 @@ const EMPLOYER_ONLY_INTENTS = new Set<BotIntent>([
   "EMPLOYER_JOBS",
   "EMPLOYER_JOB_STATUS",
   "EMPLOYER_APPLICATION_COUNT",
-  "ACCOUNT_STATUS",
 ]);
 
 /**
@@ -1779,16 +1877,47 @@ export function applyAccountAwareIntent(
   account: AccountKind,
 ): BotUnderstanding {
   let next = understanding;
+  // Dual-role profile/verification status — bind scope to the linked account.
+  if (understanding.intent === "ACCOUNT_STATUS") {
+    if (account === "seeker") {
+      next = {
+        ...understanding,
+        scope: "OWN_DATA",
+        requiresAuth: true,
+        crossRole: "",
+        category: "",
+        jobQuery: "",
+        openSearch: false,
+      };
+    } else if (account === "employer") {
+      next = {
+        ...understanding,
+        scope: "OWN_EMPLOYER_DATA",
+        requiresAuth: true,
+        crossRole: "",
+        category: "",
+        jobQuery: "",
+        openSearch: false,
+      };
+    } else if (account === "none") {
+      next = {
+        ...understanding,
+        scope: "NONE",
+        requiresAuth: false,
+        crossRole: "",
+      };
+    }
+  }
   // Employer asking about "applications" in the hiring sense → employer applicants.
   // Seeker-only intents (skills, profile jobs, how to apply, job search) are not remapped.
   if (account === "employer") {
     if (
-      understanding.intent === "MY_APPLICATIONS" ||
-      understanding.intent === "APPLICATION_COUNT" ||
-      understanding.intent === "APPLICATION_STATUS"
+      next.intent === "MY_APPLICATIONS" ||
+      next.intent === "APPLICATION_COUNT" ||
+      next.intent === "APPLICATION_STATUS"
     ) {
       next = {
-        ...understanding,
+        ...next,
         intent: "EMPLOYER_APPLICATION_COUNT",
         location: "",
         category: "",
@@ -1805,6 +1934,78 @@ export function applyAccountAwareIntent(
     return { ...next, crossRole: redirect, scope: "NONE", requiresAuth: false };
   }
   return { ...next, crossRole: "" };
+}
+
+const EMPLOYER_TOPIC_INTENTS = new Set<string>([
+  "POST_JOB",
+  "EMPLOYER_JOBS",
+  "EMPLOYER_JOB_STATUS",
+  "EMPLOYER_APPLICATION_COUNT",
+  "ACCOUNT_STATUS",
+]);
+
+/**
+ * Continue a prior topic for short follow-ups ("Status?", "electrician" after post-job).
+ * Explicit corrections and private intents in the current message always win.
+ */
+export function applyConversationFollowUp(
+  text: string,
+  understanding: BotUnderstanding,
+  lastIntent: string | undefined | null,
+): BotUnderstanding {
+  const prior = String(lastIntent ?? "").trim();
+  if (!prior || isPrivateIntent(understanding.intent) || understanding.intent === "ACCOUNT_STATUS") {
+    return understanding;
+  }
+  if (understanding.intent === "GREETING" || understanding.intent === "HELP" || understanding.intent === "UNRELATED") {
+    return understanding;
+  }
+
+  // "Status?" / "when will it be approved?" after posting or profile → keep employer/profile topic.
+  if (looksLikeStatusFollowUp(text) && EMPLOYER_TOPIC_INTENTS.has(prior)) {
+    if (prior === "ACCOUNT_STATUS" || /approved|approval|verify/i.test(text)) {
+      return {
+        ...understanding,
+        intent: "ACCOUNT_STATUS",
+        scope: "NONE",
+        requiresAuth: true,
+        category: "",
+        jobQuery: /approved|approval/i.test(text) ? "verification_timeline" : "",
+        openSearch: false,
+        confidence: Math.max(understanding.confidence, 0.92),
+      };
+    }
+    return {
+      ...understanding,
+      intent: "EMPLOYER_JOB_STATUS",
+      scope: "OWN_EMPLOYER_DATA",
+      requiresAuth: true,
+      category: "",
+      jobQuery: "",
+      openSearch: false,
+      confidence: Math.max(understanding.confidence, 0.92),
+    };
+  }
+
+  // Bare job role after employer posting flow → continue POST_JOB, not candidate JOB_SEARCH.
+  const bareRole =
+    understanding.intent === "JOB_SEARCH" &&
+    Boolean(understanding.category) &&
+    !understanding.location &&
+    text.trim().split(/\s+/).length <= 3 &&
+    !/job|jobs|kavali|chahiye|find|search|apply|hire/i.test(text);
+  if (bareRole && (prior === "POST_JOB" || prior === "EMPLOYER_JOBS" || prior === "EMPLOYER_JOB_STATUS")) {
+    return {
+      ...understanding,
+      intent: "POST_JOB",
+      scope: "OWN_EMPLOYER_DATA",
+      requiresAuth: true,
+      openSearch: false,
+      confidence: Math.max(understanding.confidence, 0.9),
+    };
+  }
+
+  return understanding;
 }
 
 const ROLE_HINT_PRESERVE_INTENTS = new Set<BotIntent>([
@@ -2107,30 +2308,89 @@ export function employerVerificationCopy(input: {
   verification: string;
   name: string;
   profileUrl: string;
+  remarks?: string;
 }): string {
   const who = input.name.trim() ? ` ${input.name.trim()}` : "";
   const url = input.profileUrl.trim();
+  const remarks = String(input.remarks ?? "").trim();
   if (input.verification === "verified") {
-    if (input.language === "te") return "మీ employer account verify అయింది. జాబ్స్ పోస్ట్ చేయవచ్చు.";
-    if (input.language === "hi") return "आपका employer खाता वेरिफाइड है. नौकरियां पोस्ट कर सकते हैं.";
-    return `Your employer account is verified${who}. You can post jobs.`;
+    if (input.language === "te") return `మీ company profile verify అయింది${who}. జాబ్స్ పోస్ట్ చేయవచ్చు.`;
+    if (input.language === "hi") return `आपकी company प्रोफ़ाइल वेरिफाइड है${who}. नौकरियां पोस्ट कर सकते हैं.`;
+    return `Your company profile is verified${who}. You can post jobs.`;
   }
   if (input.verification === "rejected") {
+    const reason =
+      remarks.length > 0
+        ? input.language === "te"
+          ? `\nకారణం: ${remarks}`
+          : input.language === "hi"
+            ? `\nकारण: ${remarks}`
+            : `\nReason: ${remarks}`
+        : input.language === "te"
+          ? "\nకారణం ప్రస్తుతం అందుబాటులో లేదు."
+          : input.language === "hi"
+            ? "\nकारण अभी उपलब्ध नहीं है."
+            : "\nA specific reason is not available right now.";
     if (input.language === "te") {
-      return `మీ account verification approve కాలేదు. ప్రొఫైల్ అప్డేట్ చేసి మళ్లీ సమర్పించండి.${url ? `\n👉 ${url}` : ""}`;
+      return `మీ company profile verification approve కాలేదు.${reason} ప్రొఫైల్ అప్డేట్ చేసి మళ్లీ సమర్పించండి.${url ? `\n👉 ${url}` : ""}`;
     }
     if (input.language === "hi") {
-      return `आपका वेरिफिकेशन स्वीकृत नहीं हुआ. प्रोफ़ाइल अपडेट करें.${url ? `\n👉 ${url}` : ""}`;
+      return `आपकी company प्रोफ़ाइल वेरिफिकेशन स्वीकृत नहीं हुई.${reason} प्रोफ़ाइल अपडेट करें.${url ? `\n👉 ${url}` : ""}`;
     }
-    return `Your account verification was not approved. Please update your profile and resubmit.${url ? `\n👉 ${url}` : ""}`;
+    return `Your company profile verification was not approved.${reason} Please update your profile and resubmit.${url ? `\n👉 ${url}` : ""}`;
   }
   if (input.language === "te") {
-    return "మీ account ప్రస్తుతం review లో ఉంది. Operations verify చేసిన తర్వాత మీరు జాబ్స్ పోస్ట్ చేయవచ్చు.";
+    return "మీ company profile ప్రస్తుతం pending verification లో ఉంది. Operations verify చేసిన తర్వాత మీరు జాబ్స్ పోస్ట్ చేయవచ్చు.";
   }
   if (input.language === "hi") {
-    return "आपका खाता अभी समीक्षा में है. वेरिफाई होने के बाद नौकरी पोस्ट कर सकते हैं.";
+    return "आपकी company प्रोफ़ाइल अभी pending verification में है. वेरिफाई होने के बाद नौकरी पोस्ट कर सकते हैं.";
   }
-  return "Your account is currently under review. Once Operations verifies your account, you can post jobs.";
+  return "Your company profile is currently pending verification. Once Operations verifies it, you can post jobs.";
+}
+
+export function seekerProfileStatusCopy(input: {
+  language: BotLanguage;
+  registrationStatus: string;
+  whatsappVerified: boolean;
+  accountStatus: string;
+  name: string;
+  role: string;
+}): string {
+  const who = input.name.trim() ? ` ${input.name.trim()}` : "";
+  const blocked = /block|suspend/i.test(input.accountStatus);
+  if (blocked) {
+    if (input.language === "te") return `మీ Job Seeker account ప్రస్తుతం ${input.accountStatus} స్థితిలో ఉంది.`;
+    if (input.language === "hi") return `आपका Job Seeker खाता अभी ${input.accountStatus} है.`;
+    return `Your Job Seeker account is currently ${input.accountStatus}.`;
+  }
+  const registrationDone = input.registrationStatus === "COMPLETED";
+  const whatsapp = input.whatsappVerified;
+  if (registrationDone && whatsapp) {
+    const role = input.role.trim();
+    if (input.language === "te") {
+      return `మీ Job Seeker profile active గా ఉంది${who}.${role ? ` Role: ${role}.` : ""} WhatsApp verified.`;
+    }
+    if (input.language === "hi") {
+      return `आपकी Job Seeker प्रोफ़ाइल active है${who}.${role ? ` Role: ${role}.` : ""} WhatsApp verified.`;
+    }
+    return `Your Job Seeker profile is active${who}.${role ? ` Preferred role: ${role}.` : ""} WhatsApp is verified.`;
+  }
+  if (!whatsapp) {
+    if (input.language === "te") {
+      return `మీ Job Seeker profile ఇంకా WhatsApp verify కాలేదు${who}. OTP verify చేసి registration పూర్తి చేయండి.`;
+    }
+    if (input.language === "hi") {
+      return `आपकी Job Seeker प्रोफ़ाइल अभी WhatsApp verified नहीं है${who}. OTP पूरा करें.`;
+    }
+    return `Your Job Seeker profile is not WhatsApp-verified yet${who}. Please complete OTP verification to finish registration.`;
+  }
+  if (input.language === "te") {
+    return `మీ Job Seeker registration ఇంకా incomplete గా ఉంది${who}. Profile పూర్తి చేయండి.`;
+  }
+  if (input.language === "hi") {
+    return `आपका Job Seeker registration अभी incomplete है${who}. प्रोफ़ाइल पूरा करें.`;
+  }
+  return `Your Job Seeker registration is still incomplete${who}. Please finish your profile on AsliJobs.`;
 }
 
 export function postJobGuideCopy(input: {

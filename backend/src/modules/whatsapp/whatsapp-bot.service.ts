@@ -133,12 +133,16 @@ type LinkedAccount = {
     jobRole?: string;
     skills?: string[];
     preferredJobLocation?: string;
+    registrationStatus?: string;
+    isWhatsappVerified?: boolean;
+    accountStatus?: string;
   } | null;
   employer: {
     _id: { toString(): string };
     companyName?: string;
     verificationStatus?: "pending" | "verified" | "rejected";
     isProfileComplete?: boolean;
+    verificationRemarks?: string;
   } | null;
   linked: AccountKind;
   seekerId: string;
@@ -279,6 +283,7 @@ async function processInboundTurn(input: {
       pendingCategory?: string;
       pendingOpenSearch?: boolean;
       pendingIntent?: string;
+      lastIntent?: string;
       lastLocation?: string;
       lastCategory?: string;
       lastJobs?: Array<Record<string, string>>;
@@ -572,10 +577,14 @@ async function processInboundTurn(input: {
         );
       }
     }
-    let merged = resolveTurnUnderstanding(
-      text,
-      understood.understanding,
-      activeSearchContext(session),
+    let merged = applyAccountAwareIntent(
+      resolveTurnUnderstanding(
+        text,
+        understood.understanding,
+        activeSearchContext(session),
+        session?.lastIntent ?? "",
+      ),
+      identity.linked,
     );
 
     // Central role-permission gate: after classify + account resolve, before any
@@ -697,6 +706,8 @@ async function processInboundTurn(input: {
         pendingCategory: waitingForLocation ? merged.category : "",
         pendingOpenSearch: waitingForLocation && merged.openSearch,
         pendingIntent: waitingForLocation || waitingForRole ? merged.intent : "",
+        // Persist product intent for follow-ups; clear on role redirect noise.
+        lastIntent: redirected ? session?.lastIntent || "" : merged.intent,
         lastLocation: rememberGoal
           ? merged.location || session?.lastLocation || ""
           : session?.lastLocation || "",
@@ -1156,13 +1167,37 @@ async function buildReply(
       });
     }
     case "ACCOUNT_STATUS": {
-      if (!asEmployer || !employer) return reply({ situation: "denied", reason: "employer_required" });
-      const urls = siteUrls(understanding.language);
+      if (understanding.jobQuery === "verification_timeline") {
+        return reply({ situation: "verification_timeline_unknown", accountType });
+      }
+      if (asEmployer && employer) {
+        const urls = siteUrls(understanding.language);
+        return reply({
+          situation: "account_status",
+          accountType: "employer",
+          verification: employer.verificationStatus || "pending",
+          name: employer.companyName || "",
+          profileUrl: urls.employerProfileUrl,
+          remarks: employer.verificationRemarks || "",
+        });
+      }
+      if (asSeeker && seeker) {
+        return reply({
+          situation: "account_status",
+          accountType: "seeker",
+          registrationStatus: seeker.registrationStatus || "",
+          whatsappVerified: Boolean(seeker.isWhatsappVerified),
+          accountStatus: seeker.accountStatus || "active",
+          name: seeker.fullName || "",
+          role: seeker.jobRole || "",
+        });
+      }
+      if (linked === "both" && !activeRole) {
+        return reply({ situation: "choose_account", accountType: "both" });
+      }
       return reply({
-        situation: "account_status",
-        verification: employer.verificationStatus || "pending",
-        name: employer.companyName || "",
-        profileUrl: urls.employerProfileUrl,
+        situation: "denied",
+        reason: asEmployer ? "employer_required" : "seeker_required",
       });
     }
     case "JOB_COUNT":

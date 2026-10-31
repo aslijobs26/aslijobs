@@ -1,9 +1,68 @@
 # AsliJobs WhatsApp Bot — Implementation Report (Updated)
 
 Date: 2026-10-31  
-Scope: Strict Employer vs Job Seeker role separation (central permission gate), plus prior OCR/OpenAI and conversation-intelligence work.
+Scope: Conversational intelligence root-cause fix (profile/status/context), plus prior strict role separation and OCR/OpenAI work.
 
-## 0. Strict role separation (2026-10-31) — production requirement
+## 0. Conversational intelligence fix (2026-10-31) — screenshot root causes
+
+### Confirmed root causes (traced, not assumed)
+
+| Failure | Root cause |
+|---------|------------|
+| `naa profile status elu/ela undhi?`, `i want profile status` → “Looking at your question…” then job-title ask | No local **ACCOUNT_STATUS** path; phrases stayed **UNKNOWN** → LLM ack (`lookingAtQuestionCopy`) → Sarvam often **JOB_SEARCH** → clarify role |
+| `profile is verified or not?` / `naa profile verify ayyindha?` | Same UNKNOWN path; ACCOUNT_STATUS was only reachable via hireIntent+verif |
+| `nenu post chesina jobs status kavali` wrong/empty employer reply | Intent was already EMPLOYER_JOB_STATUS, but **category pollution** (`Nenu Post Chesina`) filtered `listEmployerJobs` to empty |
+| Bare `electrician` after employer flow → seeker restriction | Classified as JOB_SEARCH; no **lastIntent** follow-up to keep POST_JOB |
+| Seeker profile verification unanswered | SEEKER_LOOKUP omitted `isWhatsappVerified` / `accountStatus`; ACCOUNT_STATUS handler employer-only |
+
+### Fixes implemented
+
+1. **`looksLikeProfileStatusQuestion`** → high-confidence **ACCOUNT_STATUS** (never PROFILE_JOBS / JOB_SEARCH).
+2. **Dual-role ACCOUNT_STATUS**: neutral in role policy; seeker uses registration/WhatsApp/account fields; employer uses `verificationStatus` (+ optional `verificationRemarks`).
+3. **Clear employer category/location noise** for EMPLOYER_* / ACCOUNT_STATUS; expand ROLE_REJECT.
+4. **`lastIntent` session + `applyConversationFollowUp`**: `Status?` after POST_JOB → EMPLOYER_JOB_STATUS; bare role after POST_JOB → POST_JOB; approval follow-up → honest “timeline not available”.
+5. **Sarvam prompt** teaches profile/verify → ACCOUNT_STATUS.
+6. Phone account lookup loads seeker verification + employer remarks fields.
+
+### Database facts used
+
+- Employer: `verificationStatus`, `isProfileComplete`, `verificationRemarks`, `companyName`
+- Job Seeker: `registrationStatus`, `isWhatsappVerified`, `accountStatus`, `fullName`, `jobRole`
+- Employer jobs: existing `jobService.listEmployerJobs` (status + applications)
+
+### Files changed (this fix)
+
+| Path | Why |
+|------|-----|
+| `whatsapp-bot.logic.ts` | Profile-status classify, follow-ups, copies, category wipe |
+| `whatsapp-bot.service.ts` | Dual ACCOUNT_STATUS handler; persist `lastIntent`; re-apply account-aware after follow-up |
+| `whatsapp-role-policy.ts` | ACCOUNT_STATUS neutral (own-account facts) |
+| `whatsapp-session.model.ts` | `lastIntent` |
+| `phone-account.service.ts` | Seeker/employer verification fields in lookup |
+| `whatsapp-bot.criteria.ts` | ROLE_REJECT noise tokens |
+| `sarvam.client.ts` | ACCOUNT_STATUS classification hint |
+| `whatsapp-conversation-intelligence.test.ts` | Screenshot + acceptance regressions |
+
+### Regression results (code only — not live WhatsApp)
+
+- `whatsapp-conversation-intelligence` + role + policy + bot + OpenAI routing: **166 passed**
+- `tsc --noEmit`: **passed** (exit 0)
+- Live Meta/WhatsApp staging sends: **not run**
+
+### Remaining limitations
+
+- Exact Operations approval SLA is not stored → timeline follow-up states that honestly.
+- Dual-role phones without `activeRole` still get choose-account for ACCOUNT_STATUS.
+- OpenAI assist still rephrases verified facts only; it does not invent verification.
+
+### Deployment / rollback
+
+- Deploy backend; no new env flags for this conversation fix.
+- Rollback: prior backend build (restores UNKNOWN→LLM path for profile phrases).
+
+---
+
+## 0b. Strict role separation (2026-10-31) — production requirement
 
 ### Root cause
 

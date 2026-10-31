@@ -386,7 +386,7 @@ describe("whatsapp bot", () => {
   });
 
   it("keeps compact Sarvam understand prompts and does not send a Chat LLM reply prompt", () => {
-    assert.ok(UNDERSTAND_SYSTEM.length < 780);
+    assert.ok(UNDERSTAND_SYSTEM.length < 900);
     assert.doesNotMatch(UNDERSTAND_SYSTEM, /supported languages include/i);
     assert.match(UNDERSTAND_SYSTEM, /EMPLOYER_APPLICATION_COUNT/);
     assert.doesNotMatch(UNDERSTAND_SYSTEM, /Reply in lang/);
@@ -1989,7 +1989,7 @@ describe("whatsapp job search — requested city is the source of truth", () => 
       postJobUrl: "https://aslijobs.com/post-job",
       profileUrl: "https://aslijobs.com/employer/company-profile",
     });
-    assert.match(pending, /under review/i);
+    assert.match(pending, /pending verification|under review/i);
     assert.doesNotMatch(pending, /post-job/);
     const verified = postJobGuideCopy({
       language: "en",
