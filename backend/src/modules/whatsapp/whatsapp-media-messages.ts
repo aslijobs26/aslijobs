@@ -40,21 +40,21 @@ export function mediaUnsupportedCopy(language: BotLanguage): string {
 
 export function mediaEmptyOrFailedCopy(language: BotLanguage): string {
   if (language === "te") {
-    return "ఫైల్ చదవలేకపోయాను (స్కాన్/ఖాళీ కావచ్చు). టెక్స్ట్ ఉన్న PDF/DOCX పంపండి లేదా aslijobs.com లో అప్‌లోడ్ చేయండి.";
+    return "ఫైల్ చదవలేకపోయాను (స్కాన్/ఖాళీ కావచ్చు). క్లియర్ PDF/DOCX లేదా టెక్స్ట్ పంపండి.";
   }
   if (language === "hi") {
-    return "फ़ाइल पढ़ नहीं पाए (स्कैन/खाली हो सकती है). टेक्स्ट वाला PDF/DOCX भेजें या aslijobs.com पर अपलोड करें.";
+    return "फ़ाइल पढ़ नहीं पाए (स्कैन/खाली हो सकती है). साफ़ PDF/DOCX या टेक्स्ट भेजें.";
   }
   if (language === "ta") {
-    return "கோப்பைப் படிக்க முடியவில்லை. உரை உள்ள PDF/DOCX அனுப்புங்கள் அல்லது aslijobs.com இல் பதிவேற்றுங்கள்.";
+    return "கோப்பைப் படிக்க முடியவில்லை. தெளிவான PDF/DOCX அல்லது உரை அனுப்புங்கள்.";
   }
   if (language === "kn") {
-    return "ಫೈಲ್ ಓದಲಾಗಲಿಲ್ಲ. ಪಠ್ಯವಿರುವ PDF/DOCX ಕಳುಹಿಸಿ ಅಥವಾ aslijobs.com ನಲ್ಲಿ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.";
+    return "ಫೈಲ್ ಓದಲಾಗಲಿಲ್ಲ. ಸ್ಪಷ್ಟ PDF/DOCX ಅಥವಾ ಪಠ್ಯ ಕಳುಹಿಸಿ.";
   }
   if (language === "ml") {
-    return "ഫയൽ വായിക്കാനായില്ല. ടെക്സ്റ്റ് ഉള്ള PDF/DOCX അയയ്ക്കുക അല്ലെങ്കിൽ aslijobs.com-ൽ അപ്‌ലോഡ് ചെയ്യുക.";
+    return "ഫയൽ വായിക്കാനായില്ല. വ്യക്തമായ PDF/DOCX അല്ലെങ്കിൽ ടെക്സ്റ്റ് അയയ്ക്കുക.";
   }
-  return "I couldn't read that file (it may be scanned or empty). Send a text PDF/DOCX or upload on aslijobs.com.";
+  return "I couldn't read that file (it may be scanned or empty). Please send a clearer PDF/DOCX or type the text.";
 }
 
 export function mediaImageAskCopy(language: BotLanguage): string {
@@ -105,6 +105,31 @@ export function mediaEncryptedCopy(language: BotLanguage): string {
   return "This PDF is password-protected. Unlock it and send it again.";
 }
 
+export function mediaProgressCopy(
+  language: BotLanguage,
+  kind: "image" | "document" | "audio",
+): string {
+  if (kind === "audio") {
+    if (language === "te") return "వాయిస్ మెసేజ్ అందింది. విని అర్థం చేసుకుంటున్నాను…";
+    if (language === "hi") return "वॉइस मैसेज मिल गया. सुनकर समझ रहा हूँ…";
+    return "Got your voice message. Listening now…";
+  }
+  if (kind === "image") {
+    if (language === "te") return "చిత్రం అందింది. టెక్స్ట్ చదువుతున్నాను…";
+    if (language === "hi") return "इमेज मिल गई. टेक्स्ट पढ़ रहा हूँ…";
+    if (language === "ta") return "படம் கிடைத்தது. உரையைப் படிக்கிறேன்…";
+    if (language === "kn") return "ಚಿತ್ರ ಸಿಕ್ಕಿದೆ. ಪಠ್ಯ ಓದುತ್ತಿದ್ದೇನೆ…";
+    if (language === "ml") return "ചിത്രം ലഭിച്ചു. ടെക്സ്റ്റ് വായിക്കുന്നു…";
+    return "I've received your image. Reading the text now…";
+  }
+  if (language === "te") return "మీ డాక్యుమెంట్ అందింది. చదువుతున్నాను — కొద్ది సేపు పట్టవచ్చు.";
+  if (language === "hi") return "दस्तावेज़ मिल गया. पढ़ रहा हूँ — इसमें कुछ पल लग सकते हैं.";
+  if (language === "ta") return "உங்கள் ஆவணம் கிடைத்தது. படிக்கிறேன் — சிறிது நேரம் ஆகலாம்.";
+  if (language === "kn") return "ನಿಮ್ಮ ಡಾಕ್ಯುಮೆಂಟ್ ಸಿಕ್ಕಿದೆ. ಓದುತ್ತಿದ್ದೇನೆ — ಸ್ವಲ್ಪ ಸಮಯ ಬೇಕಾಗಬಹುದು.";
+  if (language === "ml") return "നിങ്ങളുടെ ഡോക്യുമെന്റ് ലഭിച്ചു. വായിക്കുന്നു — കുറച്ച് സമയം എടുത്തേക്കാം.";
+  return "Your document has been received. I'm reading it now — this may take a few moments.";
+}
+
 export function mediaJobAdSummaryCopy(input: {
   language: BotLanguage;
   skills: string[];
@@ -116,18 +141,18 @@ export function mediaJobAdSummaryCopy(input: {
       : "";
   if (input.language === "te") {
     return [
-      "జాబ్ వివరాలు చదివాను (AsliJobs డేటాబేస్ జాబ్ కాదు — స్క్రీన్‌షాట్ మాత్రమే).",
+      "జాబ్ వివరాలు చదివాను (స్క్రీన్‌షాట్ టెక్స్ట్ మాత్రమే — AsliJobs ఖాళీ కాదు).",
       skillLine ? `గుర్తించిన స్కిల్స్: ${skillLine}` : "",
-      "మీకు సరిపోయే జాబ్‌లు కావాలా? రోల్ / ఏరియా చెప్పండి.",
+      "మీకు సరిపోయే జాబ్‌లు కావాలా? రోల్ లేదా ఏరియా చెప్పండి.",
     ]
       .filter(Boolean)
       .join("\n");
   }
   if (input.language === "hi") {
     return [
-      "जॉब विवरण पढ़ा (यह AsliJobs डेटाबेस जॉब नहीं — केवल स्क्रीनशॉट).",
+      "जॉब विवरण पढ़ा (केवल स्क्रीनशॉट — AsliJobs वैकेंसी नहीं).",
       skillLine ? `मिले कौशल: ${skillLine}` : "",
-      "मैचिंग जॉब चाहिए? भूमिका / इलाका बताएं.",
+      "मैचिंग जॉब चाहिए? भूमिका या इलाका बताएं.",
     ]
       .filter(Boolean)
       .join("\n");
@@ -142,25 +167,10 @@ export function mediaJobAdSummaryCopy(input: {
     .join("\n");
 }
 
-export function mediaNoResumeContinueCopy(language: BotLanguage): string {
-  if (language === "te") {
-    return "సరే — రెజ్యూమ్ లేకుండా కూడా జాబ్‌లు చూడవచ్చు. ఏ రోల్ / ఏ ఏరియా కావాలి?";
-  }
-  if (language === "hi") {
-    return "ठीक है — बिना रिज़्यूमे भी जॉब देख सकते हैं. कौनसी भूमिका / इलाका चाहिए?";
-  }
-  if (language === "ta") {
-    return "சரி — ரெஸ்யூம் இல்லாமலும் வேலைகளைப் பார்க்கலாம். எந்த பங்கு / பகுதி வேண்டும்?";
-  }
-  if (language === "kn") {
-    return "ಸರಿ — ರೆಸ್ಯೂಮ್ ಇಲ್ಲದೆಯೂ ಉದ್ಯೋಗಗಳನ್ನು ನೋಡಬಹುದು. ಯಾವ ಪಾತ್ರ / ಪ್ರದೇಶ ಬೇಕು?";
-  }
-  if (language === "ml") {
-    return "ശരി — റെസ്യൂം ഇല്ലാതെയും ജോലികൾ കാണാം. ഏത് റോൾ / ഏരിയ വേണം?";
-  }
-  return "No problem — you can still browse jobs without a resume. Which role or area are you looking for?";
-}
-
+/**
+ * Natural resume follow-up. Does not push profile completion as the only next step.
+ * Never claims the profile was updated.
+ */
 export function buildResumeExtractSummary(input: {
   language: BotLanguage;
   skills: string[];
@@ -172,35 +182,42 @@ export function buildResumeExtractSummary(input: {
     input.skills.length > 0
       ? input.skills.map((s) => s.replace(/\b\w/g, (c) => c.toUpperCase())).join(", ")
       : "";
-  const missing =
-    input.missingHints.length > 0 ? input.missingHints.join(", ") : "";
   if (input.language === "te") {
     return [
-      "రెజ్యూమ్ నుంచి టెక్స్ట్ చదివాను (ఆటోమేటిక్‌గా ప్రొఫైల్ అప్‌డేట్ కాలేదు).",
-      skillLine ? `గుర్తించిన స్కిల్స్: ${skillLine}` : "స్పష్టమైన స్కిల్స్ జాబితా కనపడలేదు.",
-      missing ? `తనిఖీ చేయాల్సినవి: ${missing}` : "",
-      input.truncated ? "(పొడవైన ఫైల్ — కొంత భాగం మాత్రమే.)" : "",
-      `ప్రొఫైల్ పూర్తి చేయడానికి: ${input.profileUrl}`,
+      "మీ రెజ్యూమ్ అందింది, చదివాను. ప్రొఫైల్ ఆటోమేటిక్‌గా మారలేదు.",
+      skillLine ? `కనిపించిన స్కిల్స్: ${skillLine}` : "స్పష్టమైన స్కిల్స్ జాబితా కనపడలేదు.",
+      input.truncated ? "ఫైల్ పొడవుగా ఉంది — కొంత భాగం మాత్రమే చదివాను." : "",
+      "తర్వాత ఏం చేయాలి?",
+      "1. రెజ్యూమ్‌కు సరిపోయే జాబ్‌లు చూపించు",
+      "2. నేను చెప్పే రోల్ కోసం సెర్చ్ చేయి (ఉదా: Electrician Hyderabad)",
+      "3. రెజ్యూమ్ లేకుండా జాబ్‌లు చూపించు",
     ]
       .filter(Boolean)
       .join("\n");
   }
   if (input.language === "hi") {
     return [
-      "रिज़्यूमे से टेक्स्ट पढ़ा (प्रोफ़ाइल अपने-आप अपडेट नहीं हुई).",
+      "आपका रिज़्यूमे मिल गया और पढ़ लिया. प्रोफ़ाइल अपने-आप नहीं बदली.",
       skillLine ? `मिले कौशल: ${skillLine}` : "स्पष्ट कौशल सूची नहीं मिली.",
-      missing ? `जाँचें: ${missing}` : "",
-      `प्रोफ़ाइल पूरा करें: ${input.profileUrl}`,
+      "आगे क्या करना है?",
+      "1. रिज़्यूमे के अनुसार जॉब दिखाओ",
+      "2. मैं जो भूमिका बताऊँ उसके लिए खोजो (जैसे Electrician Hyderabad)",
+      "3. बिना रिज़्यूमे जॉब दिखाओ",
     ]
       .filter(Boolean)
       .join("\n");
   }
   return [
-    "I read text from your resume (your profile was not changed automatically).",
-    skillLine ? `Skills spotted: ${skillLine}` : "No clear skills list was found.",
-    missing ? `Please confirm: ${missing}` : "",
-    input.truncated ? "(File was long — only part was read.)" : "",
-    `Complete your profile: ${input.profileUrl}`,
+    "Your resume has been received and scanned.",
+    "Your profile was not changed automatically.",
+    skillLine
+      ? `Skills I could spot: ${skillLine}`
+      : "I could not spot a clear skills list from the text.",
+    input.truncated ? "The file was long, so only part of it was read." : "",
+    "What would you like to do next?",
+    "1. Find jobs matching my resume",
+    "2. Search for a specific job (e.g. Electrician in Hyderabad)",
+    "3. Browse jobs without using the resume",
   ]
     .filter(Boolean)
     .join("\n");

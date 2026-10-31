@@ -534,6 +534,47 @@ export class WhatsAppService {
   }
 
   /**
+   * Mark inbound message as read and show typing indicator (official Cloud API).
+   * Docs: POST /{phone-number-id}/messages with status=read + typing_indicator.
+   * Failures are swallowed — progress text remains the user-visible fallback.
+   */
+  async markReadWithTyping(messageId: string | undefined): Promise<boolean> {
+    const wamid = messageId?.trim() ?? "";
+    if (!wamid || !this.isConfigured) return false;
+    try {
+      const version = env.WHATSAPP_API_VERSION.replace(/^\/+|\/+$/g, "");
+      const phoneId = env.WHATSAPP_PHONE_NUMBER_ID.trim();
+      const response = await fetch(
+        `https://graph.facebook.com/${version}/${phoneId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            status: "read",
+            message_id: wamid,
+            typing_indicator: { type: "text" },
+          }),
+          signal: AbortSignal.timeout(8_000),
+        },
+      );
+      if (!response.ok) {
+        console.info(`[WhatsAppService] typing_indicator status=${response.status}`);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.info(
+        `[WhatsAppService] typing_indicator_failed reason=${error instanceof Error ? error.name : "unknown"}`,
+      );
+      return false;
+    }
+  }
+
+  /**
    * Bot-compatible session text helper. Swallows send failures so automated
    * replies never crash the inbound worker. Prefer sendSessionTextMessage for
    * admin inbox sends that must surface errors.

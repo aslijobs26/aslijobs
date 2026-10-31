@@ -50,18 +50,47 @@ describe("whatsapp role and account routing", () => {
     assert.equal(mapped.scope, "OWN_EMPLOYER_DATA");
   });
 
-  it("sends an employer who asks for a job to job seeker registration", () => {
+  it("blocks an employer from candidate job search and redirects to seeker registration", () => {
     const mapped = applyAccountAwareIntent(local("Find me a job in Hyderabad"), "employer");
     assert.equal(mapped.intent, "JOB_SEARCH");
     assert.equal(mapped.crossRole, "seeker");
     assert.equal(mapped.scope, "NONE");
-    const reply = buildDeterministicReply("en", {
-      situation: "role_redirect",
-      target: "seeker",
-      url: seekerUrl,
-    });
-    assert.match(reply ?? "", /job-seeker\/register/);
-    assert.doesNotMatch(reply ?? "", /I found/);
+    const reply = roleRedirectCopy(mapped.language, "seeker", seekerUrl);
+    assert.match(reply, /job-seeker\/register/);
+    assert.match(reply, /Employer services only|Employer సేవలకు|Employer सेवाओं/i);
+  });
+
+  it("blocks employer seeker-profile intents instead of remapping them", () => {
+    const skills = applyAccountAwareIntent(local("What are my skills?"), "employer");
+    assert.equal(skills.intent, "MY_SKILLS");
+    assert.equal(skills.crossRole, "seeker");
+    const search = applyAccountAwareIntent(local("i wnat electrician jobseeker"), "employer");
+    assert.equal(search.intent, "JOB_SEARCH");
+    assert.equal(search.crossRole, "seeker");
+    assert.equal(search.category, "Electrician");
+    const applyHow = applyAccountAwareIntent(local("How do I apply for a job?"), "employer");
+    assert.equal(applyHow.intent, "HOW_TO_APPLY");
+    assert.equal(applyHow.crossRole, "seeker");
+  });
+
+  it("never routes electrician jobseeker phrases to employer posting for unregistered users", () => {
+    for (const text of [
+      "i wnat electrician jobseeker",
+      "I want electrician job",
+      "Naku electrician job kavali",
+      "Electrician job chupinchu",
+      "Mujhe electrician ki naukri chahiye",
+    ]) {
+      const mapped = applyAccountAwareIntent(local(text), "none");
+      assert.equal(mapped.intent, "JOB_SEARCH", text);
+      assert.equal(unknownUserAction(mapped), "public_jobs", text);
+      assert.notEqual(mapped.intent, "POST_JOB", text);
+      const asEmployer = applyAccountAwareIntent(local(text), "employer");
+      assert.equal(asEmployer.intent, "JOB_SEARCH", text);
+      assert.equal(asEmployer.crossRole, "seeker", text);
+      const asSeeker = applyAccountAwareIntent(local(text), "seeker");
+      assert.equal(asSeeker.crossRole, "", text);
+    }
   });
 
   it("lets an unregistered person search public jobs and a hire request use employer registration", () => {

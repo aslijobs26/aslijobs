@@ -45,6 +45,12 @@ const ROLE_REJECT = new Set([
   "some",
   "my",
   "me",
+  "find",
+  "matching",
+  "match",
+  "resume",
+  "cv",
+  "suitable",
   "job",
   "jobs",
   "work",
@@ -111,12 +117,15 @@ function cleanRolePhrase(value: string, isKnownPlace: (place: string) => boolean
     previous = phrase;
     phrase = phrase
       .replace(
-        /^(?:a|an|the|any|some|my|me|i|please|show|need|want|looking|for|available|are|there|what|which|how|do|can|is)\s+/i,
+        /^(?:a|an|the|any|some|my|me|i|please|show|find|need|want|wnat|looking|for|available|are|there|what|which|how|do|can|is|matching)\s+/i,
         "",
       )
       .trim();
   }
-  phrase = phrase.replace(/\s+(?:job|jobs|work|role|position)$/i, "").trim();
+  phrase = phrase
+    .replace(/\s+(?:job|jobs|work|role|position|resume|cv)$/i, "")
+    .replace(/^(?:matching|suitable)\s+/i, "")
+    .trim();
   if (!phrase || phrase.length < 3 || phrase.length > 40) return "";
   const tokens = phrase.toLowerCase().split(/\s+/);
   if (tokens.every((token) => ROLE_REJECT.has(token))) return "";

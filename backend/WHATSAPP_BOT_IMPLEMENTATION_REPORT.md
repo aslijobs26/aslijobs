@@ -1,8 +1,93 @@
 # AsliJobs WhatsApp Bot — Implementation Report (Updated)
 
 Date: 2026-10-31  
-Scope: Complete pending OCR / document / OpenAI validation on the existing hybrid bot.
+Scope: Strict Employer vs Job Seeker role separation (central permission gate), plus prior OCR/OpenAI and conversation-intelligence work.
 
+## 0. Strict role separation (2026-10-31) — production requirement
+
+### Root cause
+
+Cross-role answers were possible because:
+
+1. `roleRedirectTarget` temporarily allowed employers to run **JOB_SEARCH / JOB_COUNT / JOB_DETAILS** (public candidate discovery).
+2. Employer `MY_SKILLS` / `PROFILE_JOBS` were remapped to `ACCOUNT_STATUS` instead of being denied.
+3. There was no single authorization gate after classify + account resolve; media/resume OCR could start seeker workflows on employer phones.
+4. Account cache could serve a stale role if permissions changed while a BullMQ job was delayed.
+
+### Central role-permission policy
+
+New module: `backend/src/modules/whatsapp/whatsapp-role-policy.ts`
+
+| Account | Allowed | Denied → one localized restriction |
+|---------|---------|--------------------------------------|
+| `employer` | POST_JOB, EMPLOYER_JOBS, EMPLOYER_JOB_STATUS, EMPLOYER_APPLICATION_COUNT, ACCOUNT_STATUS, neutrals | JOB_SEARCH, JOB_COUNT, JOB_DETAILS, HOW_TO_APPLY, MY_SKILLS, PROFILE_*, MY_APPLICATIONS*, APPLICATIONS*, APPLIED_COVERAGE, resume/OCR matching |
+| `seeker` | Job search/details/apply guidance, applications, profile, resume matching, neutrals | POST_JOB, EMPLOYER_*, ACCOUNT_STATUS (employer dashboard) |
+| `none` (unregistered) | Existing registration / public-job guidance via `unknownUserAction` | N/A — not treated as lookup failure |
+| `both` | Existing dual-role; gate enforces **active** role once selected | Active employer cannot run seeker intents (and vice versa) |
+| Lookup failure | `serviceErrorCopy` only | Never classified as unregistered |
+
+\* Employer “my applications” still remaps to `EMPLOYER_APPLICATION_COUNT` (hiring applicants).
+
+### Effective turn flow
+
+1. Webhook ACK / dedupe / queue / per-phone order (unchanged).
+2. **Fresh** `lookupAccount(phone, { bypassCache: true })` — DB failure → temporary error.
+3. Classify (local / Sarvam / menu).
+4. `applyAccountAwareIntent` sets `crossRole` from policy-aligned intent sets.
+5. **`authorizeWhatsAppRole`** central gate (also blocks resume-match override and OpenAI `role_redirect`).
+6. If forbidden → one `role_redirect` reply; **no** job search / applications / OCR / OpenAI assist.
+7. If allowed → existing `buildReply` handlers.
+8. Defensive: `searchJobs` refuses `accountType/activeRole === employer`.
+
+### Media / resume
+
+Employer (or both + active employer) image/document uploads: **no OCR**, one seeker-registration restriction reply. Document text cannot change account role.
+
+### Files changed (this gate)
+
+| Path | Why |
+|------|-----|
+| `whatsapp-role-policy.ts` | Typed required-role sets + `authorizeWhatsAppRole` + media seeker check |
+| `whatsapp-role-policy.test.ts` | Acceptance table + OCR/session/dual-role cases |
+| `whatsapp-bot.logic.ts` | Restore seeker-only redirect for JOB_SEARCH+; vacancy/candidates intent; restriction copy |
+| `whatsapp-bot.service.ts` | Central gate; bypass account cache; employer media block; searchJobs defense |
+| `whatsapp-bot.role.test.ts` | Employer search now expects redirect |
+| `whatsapp-conversation-regression.test.ts` | Employer electrician → crossRole seeker |
+
+### Exact behavior
+
+- **Employer** “Post a new electrician vacancy” → POST_JOB. “I want an electrician job” / “job kavali” / resume match → one seeker-link restriction.
+- **Job Seeker** “Find electrician jobs” → JOB_SEARCH. “Post a vacancy” / “candidates who applied” → one employer-link restriction.
+- **Unregistered** job intent → public jobs / seeker CTA; hire → employer registration (existing URLs + language).
+- **Unknown** (DB down) ≠ unregistered.
+
+### Regression test results (code — not live WhatsApp)
+
+| Suite | Result |
+|-------|--------|
+| `whatsapp-role-policy.test.ts` + `whatsapp-bot.role.test.ts` + conversation regression + OpenAI routing | **61 passed** |
+| `whatsapp-bot.test.ts` + media/OCR unit suites | **99 passed** |
+| `tsc --noEmit` | **passed** |
+
+Live Meta/WhatsApp staging sends: **not run** in this session.
+
+### Deployment / rollback
+
+- Deploy backend with this gate; no new env flags required for role separation.
+- Rollback: redeploy previous backend build (reverts gate + restores prior employer public-search allowance).
+- Role policy is code-enforced; prompt/LLM instructions alone are not the control.
+
+### Remaining limitations
+
+- Dual-role phones without `activeRole` still allow public JOB_SEARCH until a role is chosen (preserves prior product behavior).
+- Intent quality for rare phrasings still depends on local/Sarvam classify; the gate only authorizes classified intents against the DB account.
+- Live WhatsApp E2E not verified here.
+
+---
+
+## 0b. Conversation intelligence notes (superseded in part)
+
+Earlier temporary change that **opened** employer public job search is **reversed** by §0. Resume UX, seeker cue typos (`wnat` / `jobseeker`), media progress typing, and account-lookup-failure copy remain.
 ## 1. Existing architecture preserved
 
 Meta webhook → signature → fast ACK → inbox persist + dedupe → BullMQ/inline inbound → per-phone order → bot turn → local intent / Sarvam-105B → DB `buildReply` → Mayura → send → delivery webhooks.

@@ -21,6 +21,12 @@ import { localizeDeterministicReply, whatsappAiCallPlan } from "./sarvam-transla
 import { assistWhatsAppReply } from "./openai-assist.client.js";
 import { shouldUseOpenAiAssist } from "./openai-assist.routing.js";
 import { understandInboundWhatsAppMedia } from "./whatsapp-media-understand.service.js";
+import { mediaProgressCopy } from "./whatsapp-media-messages.js";
+import {
+  authorizeWhatsAppRole,
+  mediaRequiresSeekerRole,
+  roleRestrictionReply,
+} from "./whatsapp-role-policy.js";
 import {
   activeSearchContext,
   applyAccountAwareIntent,
@@ -49,6 +55,7 @@ import {
   unknownUserAction,
   voiceUnclearCopy,
   type AccountKind,
+  type BotLanguage,
   type BotUnderstanding,
   type ConversationState,
   type PublicJobFact,
@@ -71,6 +78,36 @@ function allowReply(phone: string): boolean {
   hits.push(now);
   recentReplies.set(phone, hits);
   return true;
+}
+
+const mediaProgressAcked = new Set<string>();
+
+async function acknowledgeMediaProcessing(input: {
+  from: string;
+  phone: string;
+  messageId?: string;
+  messageType: "image" | "document" | "audio";
+  language: "en" | "hi" | "te" | "ta" | "kn" | "ml";
+  priorProgressId: string;
+}): Promise<void> {
+  const messageId = input.messageId?.trim() ?? "";
+  if (messageId && (mediaProgressAcked.has(messageId) || input.priorProgressId === messageId)) {
+    return;
+  }
+  if (messageId) mediaProgressAcked.add(messageId);
+  // Official Cloud API: mark read + typing indicator (dismisses on reply or ~25s).
+  await whatsAppService.markReadWithTyping(messageId || undefined);
+  await whatsAppService.sendTextMessage(
+    input.from,
+    mediaProgressCopy(input.language, input.messageType),
+  );
+  if (messageId) {
+    await WhatsAppSessionModel.findOneAndUpdate(
+      { phone: input.phone },
+      { phone: input.phone, lastMediaProgressMessageId: messageId },
+      { upsert: true },
+    ).catch(() => undefined);
+  }
 }
 
 function phoneHash(phone: string): string {
@@ -116,10 +153,15 @@ function toAccountKind(kind: "job_seeker" | "employer" | "none" | "both"): Accou
   return "none";
 }
 
-async function lookupAccount(phone: string): Promise<LinkedAccount> {
-  const cached = accountCache.get(phone);
-  if (cached && cached.expires > Date.now()) {
-    return cached.value;
+async function lookupAccount(
+  phone: string,
+  options?: { bypassCache?: boolean },
+): Promise<LinkedAccount> {
+  if (!options?.bypassCache) {
+    const cached = accountCache.get(phone);
+    if (cached && cached.expires > Date.now()) {
+      return cached.value;
+    }
   }
   const resolved = await resolveWhatsAppLinkedAccount(phone);
   const linked = toAccountKind(resolved.kind);
@@ -229,10 +271,43 @@ async function processInboundTurn(input: {
   };
   try {
     const lookupStarted = Date.now();
-    const [session, identity] = await Promise.all([
-      WhatsAppSessionModel.findOne({ phone }).lean(),
-      lookupAccount(phone),
-    ]);
+    type SessionLean = {
+      language?: BotLanguage;
+      conversationState?: string;
+      activeRole?: string;
+      pendingLocation?: string;
+      pendingCategory?: string;
+      pendingOpenSearch?: boolean;
+      pendingIntent?: string;
+      lastLocation?: string;
+      lastCategory?: string;
+      lastJobs?: Array<Record<string, string>>;
+      lastResumeSkills?: string[];
+      lastResumeAt?: Date | null;
+      lastMediaProgressMessageId?: string;
+    };
+    let session: SessionLean | null = null;
+    let identity: LinkedAccount;
+    try {
+      // Always re-resolve account at turn start (queue delay / role change).
+      const [foundSession, foundIdentity] = await Promise.all([
+        WhatsAppSessionModel.findOne({ phone }).lean(),
+        lookupAccount(phone, { bypassCache: true }),
+      ]);
+      session = (foundSession as SessionLean | null) ?? null;
+      identity = foundIdentity;
+    } catch (error) {
+      console.error(
+        `[WhatsAppBot] account_lookup_failed phone=${phoneHash(phone)} reason=${
+          error instanceof Error ? error.name : "unknown"
+        }`,
+      );
+      await whatsAppService.sendTextMessage(
+        input.from,
+        serviceErrorCopy("en"),
+      );
+      return;
+    }
     timing.account_lookup = Date.now() - lookupStarted;
     timing.session_lookup = timing.account_lookup;
     logWhatsAppBot(
@@ -250,6 +325,42 @@ async function processInboundTurn(input: {
       input.mediaId &&
       (input.messageType === "image" || input.messageType === "document")
     ) {
+      const mediaActiveRole =
+        session?.activeRole === "seeker" || session?.activeRole === "employer"
+          ? session.activeRole
+          : "";
+      // Resume / OCR matching is seeker-only. Do not OCR for employer accounts.
+      if (
+        mediaRequiresSeekerRole(input.messageType) &&
+        (identity.linked === "employer" ||
+          (identity.linked === "both" && mediaActiveRole === "employer"))
+      ) {
+        const urls = siteUrls(sessionLanguage);
+        const restriction = roleRestrictionReply({
+          language: sessionLanguage,
+          redirectTo: "seeker",
+          seekerRegisterUrl: urls.seekerRegisterUrl,
+          employerRegisterUrl: urls.employerRegisterUrl,
+        });
+        await WhatsAppSessionModel.findOneAndUpdate(
+          { phone },
+          { phone, lastInteractionAt: new Date() },
+          { upsert: true },
+        );
+        await whatsAppService.sendTextMessage(input.from, restriction);
+        console.info(
+          `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=MEDIA_ROLE_BLOCK language=${sessionLanguage} understandingMode=GATE llmUsed=false responseType=role_redirect latency=${Date.now() - started}`,
+        );
+        return;
+      }
+      await acknowledgeMediaProcessing({
+        from: input.from,
+        phone,
+        messageId: input.messageId,
+        messageType: input.messageType,
+        language: sessionLanguage,
+        priorProgressId: session?.lastMediaProgressMessageId ?? "",
+      });
       const mediaOutcome = await understandInboundWhatsAppMedia({
         mediaId: input.mediaId,
         mimeType: input.mimeType,
@@ -261,7 +372,19 @@ async function processInboundTurn(input: {
       });
       await WhatsAppSessionModel.findOneAndUpdate(
         { phone },
-        { phone, lastInteractionAt: new Date() },
+        {
+          phone,
+          lastInteractionAt: new Date(),
+          ...(mediaOutcome.status === "completed"
+            ? {
+                lastResumeSkills: mediaOutcome.skills.slice(0, 12),
+                lastResumeAt: new Date(),
+              }
+            : {}),
+          ...(input.messageId
+            ? { lastMediaProgressMessageId: input.messageId }
+            : {}),
+        },
         { upsert: true },
       );
       await whatsAppService.sendTextMessage(input.from, mediaOutcome.replyText);
@@ -272,6 +395,14 @@ async function processInboundTurn(input: {
     }
 
     if (input.mediaId && input.messageType === "audio" && !text) {
+      await acknowledgeMediaProcessing({
+        from: input.from,
+        phone,
+        messageId: input.messageId,
+        messageType: "audio",
+        language: sessionLanguage,
+        priorProgressId: session?.lastMediaProgressMessageId ?? "",
+      });
       try {
         const media = await whatsAppService.downloadMedia(input.mediaId);
         const speech = await transcribeWhatsAppAudio({
@@ -441,11 +572,88 @@ async function processInboundTurn(input: {
         );
       }
     }
-    const merged = resolveTurnUnderstanding(
+    let merged = resolveTurnUnderstanding(
       text,
       understood.understanding,
       activeSearchContext(session),
     );
+
+    // Central role-permission gate: after classify + account resolve, before any
+    // role-specific handler / resume match / OpenAI. Session history cannot override.
+    const gateActiveRole =
+      session?.activeRole === "seeker" || session?.activeRole === "employer"
+        ? session.activeRole
+        : "";
+    const roleDecision = authorizeWhatsAppRole({
+      account: identity.linked,
+      intent: merged.intent,
+      activeRole: gateActiveRole,
+    });
+    if (!roleDecision.allowed && roleDecision.redirectTo) {
+      merged = {
+        ...merged,
+        crossRole: roleDecision.redirectTo,
+        scope: "NONE",
+        requiresAuth: false,
+      };
+      logWhatsAppBot(
+        "ROLE_GATE",
+        `denied account=${accountLabel(identity.linked)} intent=${merged.intent} redirect=${roleDecision.redirectTo} reason=${roleDecision.reason}`,
+      );
+    } else if (merged.crossRole === "seeker" || merged.crossRole === "employer") {
+      logWhatsAppBot(
+        "ROLE_GATE",
+        `denied account=${accountLabel(identity.linked)} intent=${merged.intent} redirect=${merged.crossRole} reason=cross_role`,
+      );
+    }
+
+    // Resume follow-up: seeker-only. Never apply for employer / redirected turns.
+    const roleBlocked =
+      merged.crossRole === "seeker" || merged.crossRole === "employer";
+    const wantsResumeMatch =
+      !roleBlocked &&
+      /match(ing)?\s+(my\s+)?(resume|cv)|jobs?\s+(for|matching)\s+me|రెజ్యూమ్.?కు సరిపో|रिज़्यूमे के अनुसार|^1[).:]?\s*$/i.test(
+        text.trim(),
+      );
+    const resumeSkills = (session?.lastResumeSkills ?? []).filter(Boolean);
+    const resumeFresh =
+      session?.lastResumeAt &&
+      Date.now() - new Date(session.lastResumeAt).getTime() < 24 * 60 * 60 * 1000;
+    if (
+      wantsResumeMatch &&
+      resumeFresh &&
+      resumeSkills.length > 0 &&
+      (merged.intent === "JOB_SEARCH" || merged.intent === "UNKNOWN" || merged.intent === "HELP") &&
+      !merged.category
+    ) {
+      const resumeGate = authorizeWhatsAppRole({
+        account: identity.linked,
+        intent: "JOB_SEARCH",
+        activeRole: gateActiveRole,
+      });
+      if (resumeGate.allowed) {
+        merged = {
+          ...merged,
+          intent: "JOB_SEARCH",
+          openSearch: true,
+          scope: "PUBLIC_JOBS",
+          requiresAuth: false,
+          confidence: Math.max(merged.confidence, 0.9),
+          // Do not invent a job title from soft skills like "excel" — ask location then browse.
+          category: "",
+          jobQuery: resumeSkills.slice(0, 3).join(" "),
+          crossRole: "",
+        };
+      } else if (resumeGate.redirectTo) {
+        merged = {
+          ...merged,
+          intent: "JOB_SEARCH",
+          crossRole: resumeGate.redirectTo,
+          scope: "NONE",
+          requiresAuth: false,
+        };
+      }
+    }
     const remembered = (session?.lastJobs ?? []).map((job) => ({
       jobId: job.jobId ?? "",
       jobTitle: job.jobTitle ?? "",
@@ -459,7 +667,7 @@ async function processInboundTurn(input: {
     const turn = await buildReply(
       identity,
       merged,
-      merged.intent === "JOB_DETAILS" ? remembered : [],
+      merged.intent === "JOB_DETAILS" && !roleBlocked ? remembered : [],
       session?.activeRole ?? "",
     );
     timing.db_query = Date.now() - dbStarted;
@@ -985,6 +1193,15 @@ async function searchJobs(
   meta: { accountType: AccountKind; activeRole: "" | "seeker" | "employer" },
   language?: string,
 ): Promise<BotTurn> {
+  // Defensive: employer accounts must never reach public candidate job search.
+  if (meta.accountType === "employer" || meta.activeRole === "employer") {
+    const urls = siteUrls(language);
+    return say("", [], meta, {
+      situation: "role_redirect",
+      target: "seeker",
+      url: urls.seekerRegisterUrl,
+    });
+  }
   const lookup = publicJobFilters(understanding);
   const role = lookup.search || "ANY";
   const appliedFilters = formatAppliedFilters(understanding);

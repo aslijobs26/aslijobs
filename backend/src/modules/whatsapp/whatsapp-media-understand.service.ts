@@ -33,6 +33,7 @@ export type MediaUnderstandOutcome = {
   extractedChars: number;
   storedPath: string;
   source?: string;
+  skills: string[];
 };
 
 function profileUrl(): string {
@@ -50,7 +51,7 @@ function skipPublicMediaPersistence(): true {
 function replyForExtractFailure(
   language: BotLanguage,
   extracted: Extract<MediaExtractResult, { ok: false }>,
-): { replyText: string; status: MediaUnderstandOutcome["status"] } {
+): Pick<MediaUnderstandOutcome, "replyText" | "status"> {
   if (extracted.reason === "unsupported" || extracted.reason === "too_large") {
     return { replyText: mediaUnsupportedCopy(language), status: "unsupported" };
   }
@@ -95,6 +96,7 @@ function buildTextOutcome(
     extractedChars: text.length,
     storedPath: "",
     source,
+    skills: hints.skills,
   };
 }
 
@@ -115,6 +117,7 @@ async function processImageBuffer(input: {
       status: "unsupported",
       extractedChars: 0,
       storedPath: "",
+      skills: [],
     };
   }
 
@@ -125,6 +128,7 @@ async function processImageBuffer(input: {
       status: "unsupported",
       extractedChars: 0,
       storedPath: "",
+      skills: [],
     };
   }
 
@@ -137,6 +141,7 @@ async function processImageBuffer(input: {
       status: "ask_intent",
       extractedChars: 0,
       storedPath: "",
+      skills: [],
     };
   }
 
@@ -162,6 +167,7 @@ async function processImageBuffer(input: {
         status: "failed",
         extractedChars: 0,
         storedPath: "",
+        skills: [],
       };
     }
     return {
@@ -169,6 +175,7 @@ async function processImageBuffer(input: {
       status: "failed",
       extractedChars: 0,
       storedPath: "",
+      skills: [],
     };
   }
 
@@ -204,6 +211,7 @@ export async function understandInboundWhatsAppMedia(input: {
       status: "ask_intent",
       extractedChars: 0,
       storedPath: "",
+      skills: [],
     };
   }
 
@@ -225,6 +233,7 @@ export async function understandInboundWhatsAppMedia(input: {
       status: "failed",
       extractedChars: 0,
       storedPath: "",
+      skills: [],
     };
   }
 
@@ -256,6 +265,7 @@ export async function understandInboundWhatsAppMedia(input: {
       status: "unsupported",
       extractedChars: 0,
       storedPath: "",
+      skills: [],
     };
   }
 
@@ -265,6 +275,7 @@ export async function understandInboundWhatsAppMedia(input: {
       status: "unsupported",
       extractedChars: 0,
       storedPath: "",
+      skills: [],
     };
   }
 
@@ -292,6 +303,7 @@ export async function understandInboundWhatsAppMedia(input: {
       status: mapped.status,
       extractedChars: 0,
       storedPath: "",
+      skills: [],
     };
   }
 

@@ -485,9 +485,19 @@ export function understandLocally(
   const howToApply = /how (do|to|can) i apply|apply cheyya|apply kaise|apply ela/i.test(folded);
   const applications = ownApply;
   const myPosted = looksLikeOwnPostedJobsQuestion(text);
-  const hireIntent = chooseAccountRole(text) === "employer" || looksLikePostJobRequest(text);
+  const seekerRoleCue = chooseAccountRole(text) === "seeker";
+  const explicitPostJob = looksLikePostJobRequest(text);
+  // Explicit "post a job" stays hire. Role+job phrases ("electrician job") never become POST_JOB.
+  const hireIntent =
+    !seekerRoleCue &&
+    (explicitPostJob ||
+      (chooseAccountRole(text) === "employer" &&
+        !(category && (mentionsJob || mentionsRequest))));
   const employer =
     myPosted ||
+    /candidates?\s+who\s+applied|show\s+(?:me\s+)?(?:the\s+)?candidates|applicants\s+(?:who|for)|who\s+applied\s+(?:to|for)\s+(?:my|the)/i.test(
+      text,
+    ) ||
     (/(applications?|applied|applicants|వచ్చాయి|vachayi)/i.test(text) &&
       /(my job|my jobs|నా\s*jobs|\bna jobs\b|for my|posted|post\s*chesina|nenu\s+post)/i.test(
         text,
@@ -1597,26 +1607,39 @@ export type AccountKind = "seeker" | "employer" | "both" | "none";
 
 export function chooseAccountRole(text: string): "seeker" | "employer" | null {
   const trimmed = text.trim();
-  const employer = looksLikePostJobRequest(trimmed) ||
+  const posting =
+    looksLikePostJobRequest(trimmed) ||
     /\b(employer|hiring|hire|recruit|workers?|staff needed|need staff|hire staff)\b|నియమించ|సిబ్బంది|రిక్రూట్|మనిషి కావాలి|వర్కర్స్ కావాలి|भर्ती|कर्मचारी चाहिए|मुझे कर्मचारी|ஊழியர்|ஆட்களை|ஆள் எடுக்க|வேலை போஸ்ட்|ನೇಮಕ|ಸಿಬ್ಬಂದಿ|ನೌಕರ ಬೇಕು|നിയമിക്ക|ജീവനക്കാര്|തൊഴിലാളി/i.test(
       trimmed,
     );
-  const seeker =
-    /\b(job seeker|looking for (a )?job|looking for work|need (a )?job|find (a )?job|want (a )?job|want work|need work|suitable jobs?)\b|ఉద్యోగం కావాలి|ఉద్యోగాలను|జాబ్ కావాలి|పని కావాలి|नौकरी चाहिए|नौकरी ढूंढ|सही नौकरी|काम चाहिए|जॉब चाहिए|வேலை தேவை|வேலை வேண்டும்|ಉದ್ಯೋಗ ಬೇಕು|ಕೆಲಸ ಬೇಕು|ജോലി വേണം|job kavali|jobs kavali|naaku job|naku job|pani kavali/i.test(
+  // Typo-tolerant seeker cues (wnat→want) and compacted "jobseeker".
+  const seekerPhrase =
+    /\b(job[-\s]?seeker|jobseeker|looking for (a )?job|looking for work|need (a )?job|find (a )?job|want (a )?job|wnat (a )?job|want work|need work|suitable jobs?|match(ing)? (my )?resume|jobs? (for|matching) me)\b|ఉద్యోగం కావాలి|ఉద్యోగాలను|జాబ్ కావాలి|పని కావాలి|नौकरी चाहिए|नौकरी ढूंढ|सही नौकरी|काम चाहिए|जॉब चाहिए|வேலை தேவை|வேலை வேண்டும்|ಉದ್ಯೋಗ ಬೇಕು|ಕೆಲಸ ಬೇಕು|ജോലി വേണം|job kavali|jobs kavali|naaku job|naku job|pani kavali|job chupinchu|jobs chupinchu/i.test(
       trimmed,
     );
-  if (employer && !seeker) return "employer";
-  if (seeker && !employer) return "seeker";
-  if (employer && seeker) {
-    return /post|hire|hiring|recruit|workers|कर्मचारी|నియమించ|సిబ్బంది|ஊழியர்|ಸಿಬ್ಬಂದಿ|ജീവനക്കാര്/i.test(trimmed)
+  // Role + job = seeker only when not posting ("post electrician job" stays employer).
+  const rolePlusJob =
+    !posting &&
+    /\b(electrician|driver|helper|plumber|carpenter|cook|mason|welder|painter|mechanic|labour|labor|watchman|security|delivery|sales)\b/i.test(
+      trimmed,
+    ) &&
+    /\b(job|jobs|work|kavali|chahiye|naukri|udyog|வேலை|ಕೆಲಸ|ജോലി)\b/i.test(trimmed);
+  const seeker = seekerPhrase || rolePlusJob;
+  if (posting && !seekerPhrase) return "employer";
+  if (seeker && !posting) return "seeker";
+  if (posting && seekerPhrase) {
+    return /post|hire|hiring|recruit|workers|कर्मचारी|నియమించ|సిబ్బంది|ஊழியர்|ಸಿಬ್ಬಂದಿ|ജീവനക്കാര്/i.test(
+      trimmed,
+    )
       ? "employer"
       : "seeker";
   }
+  if (posting) return "employer";
   return null;
 }
 
 export function looksLikePostJobRequest(text: string): boolean {
-  return /want to post|\bpost(?:ing)?\b.{0,40}\bjobs?\b|\bjobs?\s*post|post cheyy|పోస్ట్ చేయ|नौकरी पोस्ट|जॉब पोस्ट|வேலை போஸ்ட்|ಜಾಬ್ ಪೋಸ್ಟ್|ജോലി പോസ്റ്റ്/i.test(
+  return /want to post|\bpost(?:ing)?\b.{0,48}\b(jobs?|vacanc(?:y|ies)|opening)\b|\b(jobs?|vacanc(?:y|ies))\s*post|post\s+a\s+new\b.{0,40}\b(job|vacanc)|post cheyy|పోస్ట్ చేయ|नौकरी पोस्ट|जॉब पोस्ट|வேலை போஸ்ட்|ಜಾಬ್ ಪೋಸ್ಟ್|ജോലി പോസ്റ്റ്/i.test(
     text,
   );
 }
@@ -1722,9 +1745,15 @@ const EMPLOYER_ONLY_INTENTS = new Set<BotIntent>([
   "ACCOUNT_STATUS",
 ]);
 
-const SEEKER_ONLY_INTENTS = new Set<BotIntent>([
+/**
+ * Seeker-only product surface — employers are redirected (strict role separation).
+ * Includes public job discovery: an Employer WhatsApp account must not run
+ * candidate job search / apply flows.
+ */
+const SEEKER_PRIVATE_INTENTS = new Set<BotIntent>([
   "JOB_SEARCH",
   "JOB_COUNT",
+  "JOB_DETAILS",
   "PROFILE_MATCH",
   "PROFILE_JOBS",
   "MY_APPLICATIONS",
@@ -1735,13 +1764,13 @@ const SEEKER_ONLY_INTENTS = new Set<BotIntent>([
   "HOW_TO_APPLY",
 ]);
 
-/** Account role decides permission. Mentioning hire or job-search does not. */
+/** Account role decides permission. Cross-role intents are redirected, not answered. */
 export function roleRedirectTarget(
   intent: BotIntent,
   account: AccountKind,
 ): "" | "seeker" | "employer" {
   if (account === "seeker" && EMPLOYER_ONLY_INTENTS.has(intent)) return "employer";
-  if (account === "employer" && SEEKER_ONLY_INTENTS.has(intent)) return "seeker";
+  if (account === "employer" && SEEKER_PRIVATE_INTENTS.has(intent)) return "seeker";
   return "";
 }
 
@@ -1750,6 +1779,8 @@ export function applyAccountAwareIntent(
   account: AccountKind,
 ): BotUnderstanding {
   let next = understanding;
+  // Employer asking about "applications" in the hiring sense → employer applicants.
+  // Seeker-only intents (skills, profile jobs, how to apply, job search) are not remapped.
   if (account === "employer") {
     if (
       understanding.intent === "MY_APPLICATIONS" ||
@@ -1763,14 +1794,6 @@ export function applyAccountAwareIntent(
         category: "",
         jobQuery: "",
         openSearch: false,
-        scope: "OWN_EMPLOYER_DATA",
-        requiresAuth: true,
-        crossRole: "",
-      };
-    } else if (understanding.intent === "MY_SKILLS" || understanding.intent === "PROFILE_JOBS") {
-      next = {
-        ...understanding,
-        intent: "ACCOUNT_STATUS",
         scope: "OWN_EMPLOYER_DATA",
         requiresAuth: true,
         crossRole: "",
@@ -2046,24 +2069,24 @@ export function roleRedirectCopy(
     if (language === "ml") {
       return `ക്ഷമിക്കണം, ജോലി തിരയൽ, അപേക്ഷകൾ, അഭിമുഖങ്ങൾ, നിങ്ങളുടെ Job Seeker പ്രൊഫൈൽ എന്നിവയിൽ സഹായിക്കാം. നിയമിക്കണമെങ്കിൽ Employer ആയി രജിസ്റ്റർ ചെയ്യൂ:\n${link}`;
     }
-    return `Sorry, I can help you with job searches, applications, interviews, and your Job Seeker profile. If you want to hire candidates, please register as an Employer here:\n${link}`;
+    return `Sorry, this WhatsApp account is configured for Job Seeker services only. Employer registration, job posting, and hiring management require an Employer account:\n${link}`;
   }
   if (language === "te") {
-    return `క్షమించండి, నేను Employer నమోదు, జాబ్ పోస్టింగ్, నియామకం, మరియు దరఖాస్తుల నిర్వహణలో సహాయం చేయగలను. మీరు ఉద్యోగం వెతుకుతుంటే Job Seeker గా నమోదు చేసుకోండి:\n${link}`;
+    return `క్షమించండి, ఈ WhatsApp ఖాతా Employer సేవలకు మాత్రమే. ఉద్యోగం వెతకడం, దరఖాస్తు, లేదా Job Seeker ప్రొఫైల్ కోసం Job Seeker ఖాతా ఉపయోగించండి:\n${link}`;
   }
   if (language === "hi") {
-    return `क्षमा करें, मैं Employer रजिस्ट्रेशन, नौकरी पोस्टिंग, भर्ती और आवेदन प्रबंधन में मदद कर सकता हूँ. नौकरी ढूंढनी है तो Job Seeker के रूप में रजिस्टर करें:\n${link}`;
+    return `क्षमा करें, यह WhatsApp खाता केवल Employer सेवाओं के लिए है. नौकरी खोज, आवेदन, या Job Seeker प्रोफ़ाइल के लिए Job Seeker खाता उपयोग करें:\n${link}`;
   }
   if (language === "ta") {
-    return `மன்னிக்கவும், Employer பதிவு, வேலை போஸ்டிங், நியமனம், மற்றும் விண்ணப்ப நிர்வாகத்தில் உதவ முடியும். வேலை தேடுகிறீர்கள் என்றால் Job Seeker ஆகப் பதிவு செய்யுங்கள்:\n${link}`;
+    return `மன்னிக்கவும், இந்த WhatsApp கணக்கு Employer சேவைகளுக்கு மட்டும். வேலை தேடல், விண்ணப்பம் அல்லது Job Seeker சுயவிவரம் வேண்டுமானால் Job Seeker கணக்கைப் பயன்படுத்துங்கள்:\n${link}`;
   }
   if (language === "kn") {
-    return `ಕ್ಷಮಿಸಿ, Employer ನೋಂದಣಿ, ಜಾಬ್ ಪೋಸ್ಟಿಂಗ್, ನೇಮಕಾತಿ, ಮತ್ತು ಅರ್ಜಿ ನಿರ್ವಹಣೆಯಲ್ಲಿ ಸಹಾಯ ಮಾಡುತ್ತೇನೆ. ಉದ್ಯೋಗ ಹುಡುಕುತ್ತಿದ್ದರೆ Job Seeker ಆಗಿ ನೋಂದಾಯಿಸಿ:\n${link}`;
+    return `ಕ್ಷಮಿಸಿ, ಈ WhatsApp ಖಾತೆ Employer ಸೇವೆಗಳಿಗೆ ಮಾತ್ರ. ಉದ್ಯೋಗ ಹುಡುಕಾಟ, ಅರ್ಜಿ, ಅಥವಾ Job Seeker ಪ್ರೊಫೈಲ್‌ಗೆ Job Seeker ಖಾತೆ ಬಳಸಿ:\n${link}`;
   }
   if (language === "ml") {
-    return `ക്ഷമിക്കണം, Employer രജിസ്ട്രേഷൻ, ജോലി പോസ്റ്റിംഗ്, നിയമനം, അപേക്ഷ നടത്തിപ്പ് എന്നിവയിൽ സഹായിക്കാം. ജോലി തിരയുകയാണെങ്കിൽ Job Seeker ആയി രജിസ്റ്റർ ചെയ്യൂ:\n${link}`;
+    return `ക്ഷമിക്കണം, ഈ WhatsApp അക്കൗണ്ട് Employer സേവനങ്ങൾക്ക് മാത്രം. ജോലി തിരയൽ, അപേക്ഷ, അല്ലെങ്കിൽ Job Seeker പ്രൊഫൈലിന് Job Seeker അക്കൗണ്ട് ഉപയോഗിക്കൂ:\n${link}`;
   }
-  return `Sorry, I can help with Employer registration, job posting, hiring, and application management. If you're looking for a job, please register as a Job Seeker here:\n${link}`;
+  return `Sorry, this WhatsApp account is configured for Employer services only. For job searching, applying for jobs, or managing a Job Seeker profile, please use your Job Seeker account:\n${link}`;
 }
 
 export function purposeClarifyCopy(language: BotLanguage): string {

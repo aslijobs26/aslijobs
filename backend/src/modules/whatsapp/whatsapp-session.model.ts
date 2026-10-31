@@ -35,6 +35,11 @@ const whatsAppSessionSchema = new Schema(
       enum: ["", "NEW_USER_INTENT", "SEEKER_MENU", "EMPLOYER_MENU"],
       default: "",
     },
+    /** Soft resume context from WhatsApp media extract — never auto-writes JobSeeker. */
+    lastResumeSkills: { type: [String], default: [] },
+    lastResumeAt: { type: Date, default: null },
+    /** Last inbound message id that already got a media progress ack (idempotency). */
+    lastMediaProgressMessageId: { type: String, default: "" },
     lastJobs: {
       type: [
         {
