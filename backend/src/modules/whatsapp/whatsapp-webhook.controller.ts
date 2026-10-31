@@ -25,6 +25,13 @@ type IncomingMessage = InboundWhatsAppMessage & {
   id?: string;
   from?: string;
   audio?: { id?: string; mime_type?: string };
+  image?: { id?: string; mime_type?: string; caption?: string };
+  document?: {
+    id?: string;
+    mime_type?: string;
+    caption?: string;
+    filename?: string;
+  };
 };
 
 export function verifyWhatsAppWebhook(req: Request, res: Response): void {
@@ -45,7 +52,11 @@ export function verifyWhatsAppWebhook(req: Request, res: Response): void {
 export function receiveWhatsAppWebhook(req: Request, res: Response): void {
   const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
   const signature = req.header("x-hub-signature-256") ?? undefined;
-  if (!verifyWhatsAppSignature(rawBody, signature, env.META_APP_SECRET)) {
+  if (
+    !verifyWhatsAppSignature(rawBody, signature, env.META_APP_SECRET, {
+      requireSecret: env.NODE_ENV === "production",
+    })
+  ) {
     console.error("[WhatsAppWebhook] signature rejected");
     res.sendStatus(403);
     return;
@@ -259,6 +270,39 @@ async function routeConversationalMessages(body: WebhookBody): Promise<void> {
             messageType: "audio",
             mediaId: message.audio.id,
             mimeType: message.audio.mime_type,
+          });
+          continue;
+        }
+
+        // Feature-flagged: image/document enter the bot media pipeline (inbox still always persists).
+        if (
+          env.WHATSAPP_MEDIA_UNDERSTAND_ENABLED &&
+          message.type === "image" &&
+          message.image?.id
+        ) {
+          await enqueueWhatsAppInbound({
+            from,
+            messageId,
+            messageType: "image",
+            mediaId: message.image.id,
+            mimeType: message.image.mime_type,
+            text: message.image.caption?.trim() || undefined,
+          });
+          continue;
+        }
+        if (
+          env.WHATSAPP_MEDIA_UNDERSTAND_ENABLED &&
+          message.type === "document" &&
+          message.document?.id
+        ) {
+          await enqueueWhatsAppInbound({
+            from,
+            messageId,
+            messageType: "document",
+            mediaId: message.document.id,
+            mimeType: message.document.mime_type,
+            fileName: message.document.filename,
+            text: message.document.caption?.trim() || undefined,
           });
           continue;
         }

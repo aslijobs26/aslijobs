@@ -203,6 +203,84 @@ const envSchema = z.object({
     .default(1),
   /** Parallel WhatsApp AI jobs when REDIS_URL is set. */
   WHATSAPP_INBOUND_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(4),
+  /**
+   * OpenAI API key for selective WhatsApp assist (never exposed to clients).
+   * Leave empty to keep deterministic + Sarvam paths only.
+   */
+  OPENAI_API_KEY: z.string().optional().default(""),
+  /**
+   * OpenAI model id used when WHATSAPP_OPENAI_ASSIST_ENABLED=true.
+   * Verified against OpenAI docs as of 2026-10: gpt-6-luna (efficient chat).
+   * Override if your project has a different enabled model.
+   */
+  OPENAI_MODEL: z.string().trim().optional().default("gpt-6-luna"),
+  /**
+   * Feature flag: natural-language phrasing of verified bot facts via OpenAI.
+   * Default off — deterministic templates + Mayura remain the production path.
+   */
+  WHATSAPP_OPENAI_ASSIST_ENABLED: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
+  /**
+   * Feature flag: download + extract text from inbound image/document resumes.
+   * Default off — inbox still persists media; bot does not auto-process files.
+   */
+  WHATSAPP_MEDIA_UNDERSTAND_ENABLED: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
+  /**
+   * Independent OCR flag (tesseract.js). Does not auto-enable with media understand.
+   * When false, scanned PDFs/images skip OCR and return a localized fallback.
+   */
+  WHATSAPP_OCR_ENABLED: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
+  /** Tesseract language packs, e.g. eng or eng+hin+tel. */
+  WHATSAPP_OCR_LANGUAGES: z.string().trim().default("eng"),
+  WHATSAPP_OCR_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(5_000)
+    .max(120_000)
+    .default(45_000),
+  WHATSAPP_OCR_MAX_PDF_PAGES: z.coerce.number().int().min(1).max(20).default(5),
+  WHATSAPP_OCR_PDF_SCALE: z.coerce.number().min(0.5).max(2).default(1.5),
+  WHATSAPP_MEDIA_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .min(100_000)
+    .max(16_000_000)
+    .default(8_000_000),
+  WHATSAPP_MEDIA_MAX_EXTRACT_CHARS: z.coerce
+    .number()
+    .int()
+    .min(500)
+    .max(50_000)
+    .default(12_000),
+  WHATSAPP_MEDIA_EXTRACT_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(5_000)
+    .max(180_000)
+    .default(60_000),
+  /** Max OpenAI completion tokens for a WhatsApp reply. */
+  OPENAI_ASSIST_MAX_TOKENS: z.coerce.number().int().min(64).max(1024).default(280),
+  /** OpenAI request timeout (ms). */
+  OPENAI_ASSIST_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(2_000)
+    .max(60_000)
+    .default(12_000),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -275,8 +353,18 @@ if (parsed.data.NODE_ENV === "production") {
   }
   if (!parsed.data.META_APP_SECRET.trim()) {
     console.error(
-      "Production warning: META_APP_SECRET is empty. Webhook signatures cannot be verified.",
+      "Production refused to start: META_APP_SECRET is required so webhook signatures cannot be bypassed.",
     );
+    process.exit(1);
+  }
+  if (
+    parsed.data.WHATSAPP_OPENAI_ASSIST_ENABLED &&
+    (!parsed.data.OPENAI_API_KEY.trim() || !parsed.data.OPENAI_MODEL.trim())
+  ) {
+    console.error(
+      "Production refused to start: WHATSAPP_OPENAI_ASSIST_ENABLED requires OPENAI_API_KEY and OPENAI_MODEL.",
+    );
+    process.exit(1);
   }
   if (parsed.data.STORAGE_PROVIDER !== "cloudinary") {
     console.error(

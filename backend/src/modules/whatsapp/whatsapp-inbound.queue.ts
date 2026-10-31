@@ -13,6 +13,7 @@ export type WhatsAppInboundJob = {
   messageType?: string;
   mediaId?: string;
   mimeType?: string;
+  fileName?: string;
 };
 
 let queue: Queue | null = null;

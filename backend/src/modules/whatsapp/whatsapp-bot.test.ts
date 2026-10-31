@@ -723,7 +723,19 @@ describe("whatsapp bot", () => {
       verifyWhatsAppSignature(body, "sha256=deadbeef", "secret"),
       false,
     );
+    // Local/dev: empty secret may bypass.
     assert.equal(verifyWhatsAppSignature(body, undefined, ""), true);
+    // Production: empty secret must never bypass.
+    assert.equal(
+      verifyWhatsAppSignature(body, undefined, "", { requireSecret: true }),
+      false,
+    );
+    assert.equal(
+      verifyWhatsAppSignature(body, `sha256=${digest}`, "secret", {
+        requireSecret: true,
+      }),
+      true,
+    );
   });
 });
 

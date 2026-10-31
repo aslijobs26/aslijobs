@@ -697,10 +697,30 @@ export class WhatsAppService {
     if (!mediaUrl) {
       throw new Error("WhatsApp media URL missing");
     }
+    // SSRF guard: only fetch Meta CDN hosts returned by Graph API.
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(mediaUrl);
+    } catch {
+      throw new Error("WhatsApp media URL invalid");
+    }
+    if (parsedUrl.protocol !== "https:") {
+      throw new Error("WhatsApp media URL protocol rejected");
+    }
+    const host = parsedUrl.hostname.toLowerCase();
+    const allowedHost =
+      host.endsWith(".fbcdn.net") ||
+      host.endsWith(".facebook.com") ||
+      host === "lookaside.fbsbx.com" ||
+      host.endsWith(".whatsapp.net");
+    if (!allowedHost) {
+      throw new Error("WhatsApp media URL host rejected");
+    }
 
     const file = await fetch(mediaUrl, {
       headers: { Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}` },
       signal: AbortSignal.timeout(20_000),
+      redirect: "error",
     });
     if (!file.ok) {
       throw new Error(`WhatsApp media download failed status=${file.status}`);

@@ -360,6 +360,20 @@ export function nationalPhone(from: string): string {
 export type ProtocolTurn = "greeting" | "thanks" | "ack";
 
 /** Whole-message protocol only. Never used to classify jobs or applications. */
+/** User says they have no resume — continue discovery; do not block. */
+export function isNoResumeMessage(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  if (!t) return false;
+  return (
+    /don'?t have (a )?resume/.test(t) ||
+    /\bno resume\b/.test(t) ||
+    /without (a )?resume/.test(t) ||
+    /resume ledu|cv ledu|రెజ్యూమ్ లేదు|रिज़्यूमे नहीं|रिज्यूम नहीं|ரெஸ்யூம் இல்லை|ರೆಸ್ಯೂಮ್ ಇಲ್ಲ|റെസ്യൂം ഇല്ല/.test(
+      text,
+    )
+  );
+}
+
 export function detectProtocolTurn(text: string): ProtocolTurn | null {
   const trimmed = text.trim();
   if (!trimmed || trimmed.length > 24) return null;
@@ -1406,6 +1420,24 @@ export function buildDeterministicReply(
     if (missing === "which_account_data") return clarifyAmbiguousCopy(language);
     if (missing === "purpose") return purposeClarifyCopy(language);
     return clarifyJobTitle(language);
+  }
+  if (situation === "no_resume") {
+    if (language === "te") {
+      return "సరే — రెజ్యూమ్ లేకుండా కూడా జాబ్‌లు చూడవచ్చు. ఏ రోల్ / ఏ ఏరియా కావాలి?";
+    }
+    if (language === "hi") {
+      return "ठीक है — बिना रिज़्यूमे भी जॉब देख सकते हैं. कौनसी भूमिका / इलाका चाहिए?";
+    }
+    if (language === "ta") {
+      return "சரி — ரெஸ்யூம் இல்லாமலும் வேலைகளைப் பார்க்கலாம். எந்த பங்கு / பகுதி வேண்டும்?";
+    }
+    if (language === "kn") {
+      return "ಸರಿ — ರೆಸ್ಯೂಮ್ ಇಲ್ಲದೆಯೂ ಉದ್ಯೋಗಗಳನ್ನು ನೋಡಬಹುದು. ಯಾವ ಪಾತ್ರ / ಪ್ರದೇಶ ಬೇಕು?";
+    }
+    if (language === "ml") {
+      return "ശരി — റെസ്യൂം ഇല്ലാതെയും ജോലികൾ കാണാം. ഏത് റോൾ / ഏരിയ വേണം?";
+    }
+    return "No problem — you can still browse jobs without a resume. Which role or area are you looking for?";
   }
   if (situation === "post_job") {
     return postJobGuideCopy({

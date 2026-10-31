@@ -18,6 +18,9 @@ import { formatAppliedFilters } from "./whatsapp-bot.criteria.js";
 import { runInPhoneOrder } from "./whatsapp-phone-order.js";
 import { transcribeWhatsAppAudio, understandMessage } from "./sarvam.client.js";
 import { localizeDeterministicReply, whatsappAiCallPlan } from "./sarvam-translate.client.js";
+import { assistWhatsAppReply } from "./openai-assist.client.js";
+import { shouldUseOpenAiAssist } from "./openai-assist.routing.js";
+import { understandInboundWhatsAppMedia } from "./whatsapp-media-understand.service.js";
 import {
   activeSearchContext,
   applyAccountAwareIntent,
@@ -28,6 +31,7 @@ import {
   detectProtocolTurn,
   formatSalaryLabel,
   isFollowUpFragment,
+  isNoResumeMessage,
   languageFromHint,
   lookingAtQuestionCopy,
   menuUnderstanding,
@@ -200,6 +204,7 @@ async function processInboundTurn(input: {
   messageType?: string;
   mediaId?: string;
   mimeType?: string;
+  fileName?: string;
 }): Promise<void> {
   const phone = nationalPhone(input.from);
   if (!allowReply(phone)) {
@@ -237,7 +242,36 @@ async function processInboundTurn(input: {
 
     let text = input.text?.trim() ?? "";
     let languageHint = input.languageHint;
-    if (input.mediaId && !text) {
+    const sessionLanguage =
+      (session?.language as "en" | "hi" | "te" | "ta" | "kn" | "ml") ?? "en";
+
+    // Image / document: never run STT. Feature-flagged content understanding.
+    if (
+      input.mediaId &&
+      (input.messageType === "image" || input.messageType === "document")
+    ) {
+      const mediaOutcome = await understandInboundWhatsAppMedia({
+        mediaId: input.mediaId,
+        mimeType: input.mimeType,
+        fileName: input.fileName,
+        messageType: input.messageType,
+        language: sessionLanguage,
+        phoneHash: phoneHash(phone),
+        caption: text || undefined,
+      });
+      await WhatsAppSessionModel.findOneAndUpdate(
+        { phone },
+        { phone, lastInteractionAt: new Date() },
+        { upsert: true },
+      );
+      await whatsAppService.sendTextMessage(input.from, mediaOutcome.replyText);
+      console.info(
+        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=MEDIA language=${sessionLanguage} understandingMode=MEDIA llmUsed=false responseType=media status=${mediaOutcome.status} latency=${Date.now() - started}`,
+      );
+      return;
+    }
+
+    if (input.mediaId && input.messageType === "audio" && !text) {
       try {
         const media = await whatsAppService.downloadMedia(input.mediaId);
         const speech = await transcribeWhatsAppAudio({
@@ -254,19 +288,38 @@ async function processInboundTurn(input: {
         );
         await whatsAppService.sendTextMessage(
           input.from,
-          voiceUnclearCopy((session?.language as "en" | "hi" | "te" | "ta" | "kn" | "ml") ?? "en"),
+          voiceUnclearCopy(sessionLanguage),
         );
         return;
       }
       if (!text) {
         await whatsAppService.sendTextMessage(
           input.from,
-          voiceUnclearCopy((session?.language as "en" | "hi" | "te" | "ta" | "kn" | "ml") ?? "en"),
+          voiceUnclearCopy(sessionLanguage),
         );
         return;
       }
     }
     if (!text) {
+      return;
+    }
+
+    if (isNoResumeMessage(text)) {
+      const language = detectLanguage(text, session?.language, languageFromHint(languageHint), true);
+      const turnFacts = { situation: "no_resume" as const };
+      const localized = await localizeDeterministicReply({
+        language,
+        facts: turnFacts,
+      });
+      await WhatsAppSessionModel.findOneAndUpdate(
+        { phone },
+        { phone, language, lastInteractionAt: new Date() },
+        { upsert: true },
+      );
+      await whatsAppService.sendTextMessage(input.from, localized.text);
+      console.info(
+        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=NO_RESUME language=${language} understandingMode=RULE llmUsed=false responseType=deterministic latency=${Date.now() - started}`,
+      );
       return;
     }
 
@@ -501,9 +554,47 @@ async function processInboundTurn(input: {
       sessionWrite,
     ]);
     const translateMs = performance.now() - localizeStarted;
-    const replyText = localized.text;
+    let replyText = localized.text;
+    let openAiUsed = false;
     if (localized.skipped) {
       logWhatsAppBot("TEMPLATE_USED", `situation=${String(turn.facts.situation ?? "-")} language=${merged.language}`);
+    }
+    const assistEligible = shouldUseOpenAiAssist({
+      enabled: env.WHATSAPP_OPENAI_ASSIST_ENABLED,
+      hasApiKey: Boolean(env.OPENAI_API_KEY.trim()),
+      model: env.OPENAI_MODEL,
+      protocol: false,
+      menuIntent: Boolean(menuIntent),
+      situation: String(turn.facts.situation ?? ""),
+      userText: text,
+      understandingSource: menuIntent
+        ? "menu"
+        : understood.source === "sarvam"
+          ? "sarvam"
+          : "local",
+      language: merged.language,
+    });
+    if (assistEligible) {
+      const assist = await assistWhatsAppReply({
+        userText: text,
+        language: merged.language,
+        deterministicReply: localized.text,
+        facts: turn.facts,
+        intent: merged.intent,
+      });
+      if (assist.ok) {
+        replyText = assist.response_text;
+        openAiUsed = true;
+        logWhatsAppBot(
+          "OPENAI_ASSIST",
+          `situation=${String(turn.facts.situation ?? "-")} model=${assist.model} latencyMs=${assist.latencyMs}`,
+        );
+      } else {
+        logWhatsAppBot(
+          "OPENAI_ASSIST_SKIP",
+          `reason=${assist.reason} latencyMs=${assist.latencyMs}`,
+        );
+      }
     }
     const plan = whatsappAiCallPlan({
       protocol: false,
@@ -514,7 +605,7 @@ async function processInboundTurn(input: {
     const trace = describeTurn(merged, turn);
     const llmUsed = understood.source === "sarvam";
     console.info(
-      `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${merged.intent} language=${merged.language} understandingMode=${menuIntent ? "MENU" : llmUsed ? "LLM_FALLBACK" : "RULE"} llmUsed=${llmUsed} llmCalls=${plan.chatLlmCalls} dbService=${trace.service} responseType=deterministic latency=${Date.now() - started}`,
+      `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${merged.intent} language=${merged.language} understandingMode=${menuIntent ? "MENU" : llmUsed ? "LLM_FALLBACK" : "RULE"} llmUsed=${llmUsed} openAiAssist=${openAiUsed} llmCalls=${plan.chatLlmCalls} dbService=${trace.service} responseType=${openAiUsed ? "openai_assist" : "deterministic"} latency=${Date.now() - started}`,
     );
     console.info(
       [
@@ -567,7 +658,8 @@ async function processInboundTurn(input: {
         `resultCount=${trace.resultCount}`,
         "[REPLY]",
         `language=${merged.language}`,
-        `deterministic=yes`,
+        `deterministic=${openAiUsed ? "base" : "yes"}`,
+        `openAiAssist=${openAiUsed ? "yes" : "no"}`,
         `chatLlmFinal=no`,
         `translated=${localized.translated ? "yes" : "no"}`,
       ].join(" "),
