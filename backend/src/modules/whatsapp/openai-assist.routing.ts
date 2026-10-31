@@ -29,6 +29,9 @@ const BLOCKED_SITUATIONS = new Set([
   "EMPLOYER_JOBS",
   "EMPLOYER_JOB_STATUS",
   "EMPLOYER_APPLICATION_COUNT",
+  "job_search_no_match",
+  "job_search_no_more",
+  "verification_timeline_unknown",
 ]);
 
 export type OpenAiAssistRouteInput = {

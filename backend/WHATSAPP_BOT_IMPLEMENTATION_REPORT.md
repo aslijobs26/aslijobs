@@ -1,9 +1,62 @@
 # AsliJobs WhatsApp Bot — Implementation Report (Updated)
 
 Date: 2026-10-31  
-Scope: Conversational intelligence root-cause fix (profile/status/context), plus prior strict role separation and OCR/OpenAI work.
+Scope: Conversational job matching (salary follow-ups, show-more, no-results), plus prior profile/status and role-separation work.
 
-## 0. Conversational intelligence fix (2026-10-31) — screenshot root causes
+## 0. Conversational job matching (2026-10-31) — salary / show-more / no-results
+
+### Confirmed root causes
+
+| Failure | Root cause |
+|---------|------------|
+| `Naku salary 40,000 kavali` lost Driver/Hyderabad and asked unrelated questions | `extractSalaryBand` did not parse plain `40,000`/`40000` (only ₹ / `k` / LPA) → UNKNOWN → LLM ack (“Looking at your question…”) |
+| Even after salary parse, role could be wiped | `applyCurrentMessageSearchRules` treated `kavali` as a broad job ask and cleared `category` |
+| `Inka chuinu` / `Show more` → “What kind of job…?” | No show-more intent; short UNKNOWN; no reuse of last search slots |
+| Lower-paying job could reappear after ₹40k preference | Empty salary-filtered search could still widen / return unconstrained results as if they matched |
+| `More jobs` / `Vere jobs` polluted category | Free-title extraction treated “More” / “Vere” / “Inka” as roles |
+
+### Fixes
+
+1. **Salary parsing:** plain amounts with salary cues, ranges, `40k`, minimum/at least/above; relative bump (`konchem ekkuva`) adds ₹5,000 to prior min.
+2. **Context merge:** salary-only and show-more keep prior job title + location; `minSalary` applied via `publicJobFilters` → `listPublicActiveJobs`.
+3. **Show more:** `looksLikeShowMoreJobs` + `showMore` flag; excludes previously shown `jobId`s when practical.
+4. **No-match:** when salary filter returns zero, do **not** silently show lower pay as a match; localized options (lower salary / nearby with permission / undisclosed / check later). **No automatic WhatsApp job-alert subscription** (mechanism not wired from this chat flow).
+5. Neighbourhood→parent city widen remains only when **no** salary constraint and not show-more.
+
+### Files changed
+
+| Path | Why |
+|------|-----|
+| `whatsapp-bot.criteria.ts` | Salary parse + ROLE_REJECT noise + relative salary |
+| `whatsapp-bot.logic.ts` | Show-more / salary follow-ups, merge rules, no-match copy |
+| `whatsapp-bot.service.ts` | Exclude shown IDs; salary no-match path; pass remembered jobs into search |
+| `openai-assist.routing.ts` | Block OpenAI rewrite of no-match templates |
+| `whatsapp-job-search-context.test.ts` | Screenshot A/B/C/D regressions |
+
+### Job alerts
+
+**Not implemented** as auto-subscribe from chat. No-results option 4 says check again later; does not promise push alerts.
+
+### Tests (code only)
+
+- Job-search context + role + intelligence + policy suites: **84 passed**.
+- Broader WhatsApp bot + job-search context + conversation regression + OpenAI routing: **passed** with `tsc --noEmit`.
+- Live WhatsApp: **not run**.
+
+### Deployment / rollback
+
+- Deploy backend; no new env flags.
+- Rollback prior build restores old salary/show-more behaviour.
+
+### Remaining limitations
+
+- Menu choices after no-match (1–4) are offered in copy; dedicated pending-clarification handlers for each option can be extended next.
+- Undisclosed-salary alternative counts jobs with empty salary labels in unconstrained city/role results.
+- Annual vs monthly comparison relies on existing job `salaryPeriod` conversion in `buildSalaryFilter`.
+
+---
+
+## 0b. Conversational intelligence fix (2026-10-31) — profile/status screenshot root causes
 
 ### Confirmed root causes (traced, not assumed)
 

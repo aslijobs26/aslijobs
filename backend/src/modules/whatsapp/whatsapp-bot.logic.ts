@@ -6,6 +6,7 @@ import {
   extractIndianState,
   extractSalaryBand,
   jobOrdinalFromText,
+  looksLikeRelativeHigherSalary,
   placeKind,
   recallsEarlierLocation,
   wantsAnyLocation,
@@ -69,6 +70,8 @@ export type BotUnderstanding = {
   reuseLocation?: boolean;
   /** 1-based index into the last jobs shown on WhatsApp. */
   jobOrdinal?: number | null;
+  /** Continue prior JOB_SEARCH and exclude previously shown jobs when practical. */
+  showMore?: boolean;
 };
 
 export type PublicJobFact = {
@@ -470,6 +473,15 @@ export function understandLocally(
   const folded = text.toLowerCase();
   const location = extractPlace(text);
   const category = extractRole(text);
+  const salaryBandEarly = extractSalaryBand(text);
+  const showMoreAsk = looksLikeShowMoreJobs(text);
+  const salaryOnlyAsk =
+    !showMoreAsk &&
+    salaryBandEarly.min != null &&
+    /salary|జీతం|వేతనం|वेतन|minimum|at\s+least|above|over|₹|\brs\.?\b/i.test(text) &&
+    !category &&
+    !location;
+  const relativeSalaryAsk = !showMoreAsk && !salaryOnlyAsk && looksLikeRelativeHigherSalary(text);
   const mentionsJob = includesAny(text, JOB_WORDS) || /\bjobs?\b/i.test(folded);
   const mentionsRequest = includesAny(text, REQUEST_WORDS);
   const ownApply =
@@ -562,6 +574,7 @@ export function understandLocally(
         : "MY_APPLICATIONS";
   } else if (/my skills|skills unnayi|నైపుణ్యాలు/i.test(text)) intent = "MY_SKILLS";
   else if (salaryAsk || companyAsk) intent = "JOB_DETAILS";
+  else if (showMoreAsk || salaryOnlyAsk || relativeSalaryAsk) intent = "JOB_SEARCH";
   else if (
     category ||
     mentionsJob ||
@@ -579,10 +592,9 @@ export function understandLocally(
   } else if (ordinal && /\bapply\b/i.test(text)) {
     intent = "JOB_DETAILS";
   }
-  const salaryBand = extractSalaryBand(text);
+  const salaryBand = salaryBandEarly;
   const experience = extractExperienceDetail(text);
   const anyLocation = wantsAnyLocation(text);
-  const openSearch = intent === "JOB_SEARCH" && !category && (mentionsJob || mentionsRequest || anyLocation);
   const scope = scopeForIntent(intent);
   // Employer management intents must not keep free-title noise as a job filter.
   const employerManaged =
@@ -590,19 +602,29 @@ export function understandLocally(
     intent === "EMPLOYER_JOB_STATUS" ||
     intent === "EMPLOYER_APPLICATION_COUNT" ||
     intent === "ACCOUNT_STATUS";
-  const cleanCategory = employerManaged ? "" : category;
+  const followUpSlot = showMoreAsk || salaryOnlyAsk || relativeSalaryAsk;
+  const cleanCategory = employerManaged || followUpSlot ? "" : category;
+  const openSearch =
+    intent === "JOB_SEARCH" &&
+    !cleanCategory &&
+    !followUpSlot &&
+    (mentionsJob || mentionsRequest || anyLocation);
 
   return {
     intent,
     language,
-    location: anyLocation || employerManaged ? "" : location,
+    location: anyLocation || employerManaged || followUpSlot ? "" : location,
     category: cleanCategory,
     jobQuery: cleanCategory,
     openSearch,
     scope,
     requiresAuth: scope === "OWN_DATA" || scope === "OWN_EMPLOYER_DATA",
     confidence: intent === "UNKNOWN" ? 0.35 : intent === "CLARIFY" ? 0.7 : 0.94,
-    focus: companyAsk ? "company" : salaryAsk ? "salary" : "",
+    focus: companyAsk
+      ? "company"
+      : salaryAsk || salaryOnlyAsk || relativeSalaryAsk
+        ? "salary"
+        : "",
     locationKind: anyLocation ? "" : placeKind(location),
     experienceLevel: experience.level,
     originalExperienceYears: experience.years,
@@ -612,8 +634,9 @@ export function understandLocally(
     salaryBasis: salaryBand.basis,
     crossRole: "",
     anyLocation,
-    reuseLocation: recallsEarlierLocation(text),
+    reuseLocation: recallsEarlierLocation(text) || followUpSlot,
     jobOrdinal: ordinal,
+    showMore: showMoreAsk,
   };
 }
 
@@ -772,6 +795,15 @@ export function looksLikeProfileStatusQuestion(text: string): boolean {
 export function looksLikeStatusFollowUp(text: string): boolean {
   return /^(status\??|status\s+kavali|emi status|entandi status|what(?:'s| is)?\s+(the\s+)?status\??|when\s+will\s+it\s+be\s+approved\??|approval\s+timeline\??)$/i.test(
     text.trim(),
+  );
+}
+
+/** Continue prior job search: "Inka chuinu", "show more", "vere jobs", etc. */
+export function looksLikeShowMoreJobs(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  return /^(inka\s*chuinu|inka\s+jobs?(?:\s+chupin\w*)?|inka\s+chupin\w*|show\s+more(?:\s+jobs?)?|more\s+jobs?|next(?:\s+jobs?)?|vere\s+jobs?(?:\s+unnaya)?|any\s+other\s+jobs?|inkaa?\s+unnaya|మరిన్ని(?:\s*జాబ్స్)?|और\s+(?:नौकर|जॉब)|வேறு\s+வேலை)/i.test(
+    trimmed,
   );
 }
 
@@ -1043,19 +1075,24 @@ function combineSearchSlots(
     : freshSearch
       ? ""
       : previous.experienceRangeLabel || "";
-  const minSalary = next.minSalary != null ? next.minSalary : freshSearch ? null : previous.minSalary ?? null;
-  const maxSalary = next.minSalary != null ? next.maxSalary ?? null : freshSearch ? null : previous.maxSalary ?? null;
+  let minSalary = next.minSalary != null ? next.minSalary : freshSearch ? null : previous.minSalary ?? null;
+  let maxSalary = next.minSalary != null ? next.maxSalary ?? null : freshSearch ? null : previous.maxSalary ?? null;
   const salaryBasis = next.minSalary != null
     ? next.salaryBasis || "monthly"
     : freshSearch
       ? "monthly"
       : previous.salaryBasis || "monthly";
+  // Relative bump ("salary konchem ekkuva") without a number.
+  if (next.minSalary == null && looksLikeRelativeHigherSalary(text) && (previous.minSalary ?? 0) > 0) {
+    minSalary = Math.round(Number(previous.minSalary) + 5000);
+    maxSalary = null;
+  }
   return {
     location,
     locationKind,
     category,
     jobQuery: category,
-    openSearch: (next.openSearch && !category) || keepOpenSearch,
+    openSearch: next.showMore ? false : (next.openSearch && !category) || keepOpenSearch,
     experienceLevel,
     originalExperienceYears,
     experienceRangeLabel,
@@ -1113,6 +1150,23 @@ export function applyCurrentMessageSearchRules(
   }
   if (looksLikeOwnPostedJobsQuestion(text) || isPrivateIntent(understanding.intent)) {
     return understanding;
+  }
+  // Salary-only / show-more follow-ups must keep prior role + city.
+  if (
+    understanding.showMore ||
+    understanding.focus === "salary" ||
+    looksLikeShowMoreJobs(text) ||
+    (understanding.minSalary != null &&
+      /salary|జీతం|వేతనం|वेतन|minimum|at\s+least|above|₹/i.test(text) &&
+      !extractRole(text) &&
+      !extractPlace(text))
+  ) {
+    return {
+      ...understanding,
+      openSearch: false,
+      category: understanding.category,
+      jobQuery: understanding.category,
+    };
   }
 
   const roleInMessage = extractRole(text);
@@ -1324,6 +1378,81 @@ export function renderJobSearchReply(input: {
       ? `\n\nThere are ${count} matching jobs. Showing the first ${input.jobs.length}.`
       : "";
   return withFooter(`${lead}\n\n${lines.join("\n\n")}${more}`);
+}
+
+export function jobSearchNoMatchCopy(input: {
+  language: BotLanguage;
+  location: string;
+  role: string;
+  minSalary: number | null;
+  lowerSalaryCount: number;
+  undisclosedCount: number;
+  nearbyCity: string;
+  showMore?: boolean;
+}): string {
+  const place = input.location.trim() || "your area";
+  const role = input.role.trim() || "jobs";
+  const salary =
+    input.minSalary != null ? `₹${input.minSalary.toLocaleString("en-IN")}/month` : "";
+  if (input.language === "te") {
+    const lead = salary
+      ? `Sorry, ${place} lo ${salary} preference ki match ayye ${role} jobs ippudu dorakaledhu.`
+      : `Sorry, ${place} lo match ayye ${role} jobs ippudu dorakaledhu.`;
+    const options = [
+      input.lowerSalaryCount > 0
+        ? `1. ${place} lo konchem takkuva salary unna ${role} jobs chudali.`
+        : "",
+      input.nearbyCity
+        ? `2. ${input.nearbyCity} lanti daggarlo locations lo search cheyyali (meeru okay ante).`
+        : "",
+      input.undisclosedCount > 0
+        ? `3. Salary mention cheyyani ${role} jobs chudali.`
+        : "",
+      "4. Ee requirements alage unchi tarvatha malli check cheyyali.",
+    ].filter(Boolean);
+    return `${lead}\n\nMeeru em cheyyalanukuntunnaru?\n\n${options.join("\n")}`;
+  }
+  if (input.language === "hi") {
+    const lead = salary
+      ? `माफ़ करें, ${place} में ${salary} के अनुसार कोई ${role} जॉब अभी नहीं मिली.`
+      : `माफ़ करें, ${place} में कोई ${role} जॉब अभी नहीं मिली.`;
+    return `${lead}\n\nक्या आप चाहेंगे?\n1. कम सैलरी वाली ${role} जॉब्स\n2. पास के शहर में खोजें\n3. सैलरी न बताई गई जॉब्स\n4. बाद में फिर जाँचें`;
+  }
+  const lead = salary
+    ? `Sorry, I couldn't find any ${role} jobs in ${place} matching your ${salary} salary preference right now.`
+    : `Sorry, I couldn't find any ${role} jobs in ${place} right now.`;
+  const options = [
+    input.lowerSalaryCount > 0
+      ? `1. See ${role} jobs in ${place} with a lower salary.`
+      : "",
+    input.nearbyCity
+      ? `2. Search similar jobs near ${input.nearbyCity} (only if you allow).`
+      : "",
+    input.undisclosedCount > 0
+      ? `3. View ${role} jobs where salary is not specified.`
+      : "",
+    "4. Keep your current preferences and check again later.",
+  ].filter(Boolean);
+  return `${lead}\n\nWould you like to:\n${options.join("\n")}`;
+}
+
+export function jobSearchNoMoreCopy(input: {
+  language: BotLanguage;
+  location: string;
+  role: string;
+  minSalary: number | null;
+}): string {
+  const place = input.location.trim();
+  const role = input.role.trim() || "jobs";
+  const salary =
+    input.minSalary != null ? ` (₹${input.minSalary.toLocaleString("en-IN")}+)` : "";
+  if (input.language === "te") {
+    return `Ippudu inkoti ${role} job${place ? ` ${place} lo` : ""}${salary} dorakaledhu. Salary relax cheyyali aa, location marchali aa, leda tarvatha malli try cheyyali aa?`;
+  }
+  if (input.language === "hi") {
+    return `अब और ${role} जॉब${place ? ` ${place} में` : ""}${salary} नहीं मिली. सैलरी कम करें, जगह बदलें, या बाद में फिर देखें?`;
+  }
+  return `I don't have more ${role} listings${place ? ` in ${place}` : ""}${salary} to show right now. You can relax the salary, change location, or check again later.`;
 }
 
 export function clarifyJobTitle(language: BotLanguage): string {
@@ -1572,6 +1701,26 @@ export function buildDeterministicReply(
       name: String(facts.name ?? ""),
       role: String(facts.role ?? ""),
       skills: Array.isArray(facts.skills) ? facts.skills.map((item) => String(item)) : [],
+    });
+  }
+  if (situation === "job_search_no_match") {
+    return jobSearchNoMatchCopy({
+      language,
+      location: String(facts.location ?? ""),
+      role: String(facts.role ?? ""),
+      minSalary: typeof facts.minSalary === "number" ? facts.minSalary : null,
+      lowerSalaryCount: Number(facts.lowerSalaryCount ?? 0),
+      undisclosedCount: Number(facts.undisclosedCount ?? 0),
+      nearbyCity: String(facts.nearbyCity ?? ""),
+      showMore: Boolean(facts.showMore),
+    });
+  }
+  if (situation === "job_search_no_more") {
+    return jobSearchNoMoreCopy({
+      language,
+      location: String(facts.location ?? ""),
+      role: String(facts.role ?? ""),
+      minSalary: typeof facts.minSalary === "number" ? facts.minSalary : null,
     });
   }
   if (situation === "jobs" || situation === "job_details") {
@@ -2002,6 +2151,22 @@ export function applyConversationFollowUp(
       requiresAuth: true,
       openSearch: false,
       confidence: Math.max(understanding.confidence, 0.9),
+    };
+  }
+
+  // Show-more / salary-only follow-ups keep JOB_SEARCH when a prior search exists.
+  if (
+    (understanding.showMore || looksLikeShowMoreJobs(text) || understanding.focus === "salary") &&
+    (prior === "JOB_SEARCH" || prior === "JOB_COUNT" || prior === "JOB_DETAILS")
+  ) {
+    return {
+      ...understanding,
+      intent: "JOB_SEARCH",
+      scope: "PUBLIC_JOBS",
+      requiresAuth: false,
+      showMore: understanding.showMore || looksLikeShowMoreJobs(text),
+      openSearch: false,
+      confidence: Math.max(understanding.confidence, 0.92),
     };
   }
 

@@ -110,6 +110,18 @@ const ROLE_REJECT = new Set([
   "elu",
   "ela",
   "enti",
+  "more",
+  "next",
+  "other",
+  "others",
+  "any",
+  "inka",
+  "inkaa",
+  "vere",
+  "chuinu",
+  "chupinchu",
+  "chupinchi",
+  "unnaya",
 ]);
 
 const EXPERIENCE_LABELS: Record<string, string> = {
@@ -261,18 +273,24 @@ export function extractSalaryBand(text: string): {
   basis: "monthly" | "annual";
 } {
   const empty = { min: null, max: null, basis: "monthly" as const };
-  const lpaRange = text.match(/(\d+(?:\.\d+)?)\s*(?:to|-|–)\s*(\d+(?:\.\d+)?)\s*lpa\b/i);
+  const normalized = text.replace(/,/g, "");
+  const salaryCue =
+    /salary|జీతం|వేతనం|वेतन|तनख्वाह|சம்பளம்|ಸಂಬಳ|ശമ്പളം|minimum|min\.?|at\s+least|above|over|upto|up\s+to|from|between|₹|\brs\.?\b|\binr\b|kavali/i.test(
+      text,
+    );
+
+  const lpaRange = normalized.match(/(\d+(?:\.\d+)?)\s*(?:to|-|–)\s*(\d+(?:\.\d+)?)\s*lpa\b/i);
   if (lpaRange?.[1] && lpaRange[2]) {
     const min = lpaToMonthly(Number(lpaRange[1]));
     const max = lpaToMonthly(Number(lpaRange[2]));
     if (min > 0 && max >= min) return { min, max, basis: "annual" };
   }
-  const lpa = text.match(/(\d+(?:\.\d+)?)\s*lpa\b/i);
+  const lpa = normalized.match(/(\d+(?:\.\d+)?)\s*lpa\b/i);
   if (lpa?.[1]) {
     const min = lpaToMonthly(Number(lpa[1]));
     if (min > 0) return { min, max: null, basis: "annual" };
   }
-  const rupee = text.replace(/,/g, "").match(/₹\s*(\d{4,7})/);
+  const rupee = normalized.match(/₹\s*(\d{4,7})/);
   if (rupee?.[1]) {
     const amount = Number(rupee[1]);
     if (Number.isFinite(amount) && amount > 0) {
@@ -282,20 +300,55 @@ export function extractSalaryBand(text: string): {
       return { min: amount, max: null, basis: "monthly" };
     }
   }
-  const range = text.match(/(\d+(?:\.\d+)?)\s*k\s*(?:to|-|–)\s*(\d+(?:\.\d+)?)\s*k/i);
-  if (range?.[1] && range[2]) {
-    const min = Math.round(Number(range[1]) * 1000);
-    const max = Math.round(Number(range[2]) * 1000);
+  const rangeK = normalized.match(/(\d+(?:\.\d+)?)\s*k\s*(?:to|-|–)\s*(\d+(?:\.\d+)?)\s*k/i);
+  if (rangeK?.[1] && rangeK[2]) {
+    const min = Math.round(Number(rangeK[1]) * 1000);
+    const max = Math.round(Number(rangeK[2]) * 1000);
     if (Number.isFinite(min) && Number.isFinite(max) && min > 0 && max >= min) {
       return { min, max, basis: "monthly" };
     }
   }
-  const one = text.match(/(\d+(?:\.\d+)?)\s*k\b/i);
-  if (!one?.[1]) return empty;
-  if (!/salary|₹|\brs\b|\binr\b|\d\s*k\b/i.test(text)) return empty;
-  const min = Math.round(Number(one[1]) * 1000);
-  if (!Number.isFinite(min) || min <= 0) return empty;
-  return { min, max: null, basis: "monthly" };
+  const oneK = normalized.match(/(\d+(?:\.\d+)?)\s*k\b/i);
+  if (oneK?.[1] && (/salary|₹|\brs\.?\b|\binr\b|\d\s*k\b/i.test(text) || salaryCue)) {
+    const min = Math.round(Number(oneK[1]) * 1000);
+    if (Number.isFinite(min) && min > 0) return { min, max: null, basis: "monthly" };
+  }
+  // Plain monthly amounts: "salary 40000", "minimum 40000", "Naku salary 40,000 kavali"
+  const rangePlain = normalized.match(
+    /(?:salary|minimum|min|between|from)?[^\d]{0,24}(\d{4,7})\s*(?:to|-|–)\s*(\d{4,7})\b/i,
+  );
+  if (rangePlain?.[1] && rangePlain[2] && salaryCue) {
+    const min = Number(rangePlain[1]);
+    const max = Number(rangePlain[2]);
+    if (Number.isFinite(min) && Number.isFinite(max) && min > 0 && max >= min && min <= 500000) {
+      if (/\b(?:per\s*year|a year|annually|p\.?a\.?)\b/i.test(text)) {
+        return { min: Math.round(min / 12), max: Math.round(max / 12), basis: "annual" };
+      }
+      return { min, max, basis: "monthly" };
+    }
+  }
+  const plain = salaryCue
+    ? normalized.match(
+        /(?:salary|minimum|min\.?|at\s+least|above|over|upto|up\s+to|from)?[^\d]{0,24}(\d{4,7})\b/i,
+      )
+    : null;
+  if (plain?.[1]) {
+    const amount = Number(plain[1]);
+    if (Number.isFinite(amount) && amount >= 1000 && amount <= 500000) {
+      if (/\b(?:per\s*year|a year|annually|p\.?a\.?)\b/i.test(text)) {
+        return { min: Math.round(amount / 12), max: null, basis: "annual" };
+      }
+      return { min: amount, max: null, basis: "monthly" };
+    }
+  }
+  return empty;
+}
+
+/** Relative salary bump without a number ("konchem ekkuva", "low salary vaddu"). */
+export function looksLikeRelativeHigherSalary(text: string): boolean {
+  return /konchem\s+ekkuva|salary\s+ekkuva|ekkuva\s+salary|low\s+salary\s+vaddu|takkuva\s+salary\s+vaddu|higher\s+salary|more\s+salary|salary\s+increase/i.test(
+    text,
+  );
 }
 
 export function wantsAnyLocation(text: string): boolean {

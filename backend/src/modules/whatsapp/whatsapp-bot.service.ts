@@ -676,7 +676,12 @@ async function processInboundTurn(input: {
     const turn = await buildReply(
       identity,
       merged,
-      merged.intent === "JOB_DETAILS" && !roleBlocked ? remembered : [],
+      !roleBlocked &&
+        (merged.intent === "JOB_DETAILS" ||
+          merged.intent === "JOB_SEARCH" ||
+          merged.intent === "JOB_COUNT")
+        ? remembered
+        : [],
       session?.activeRole ?? "",
     );
     timing.db_query = Date.now() - dbStarted;
@@ -1217,6 +1222,7 @@ async function buildReply(
         asSeeker ? seeker?._id.toString() : undefined,
         meta,
         understanding.language,
+        remembered,
       );
     }
   }
@@ -1227,6 +1233,7 @@ async function searchJobs(
   jobSeekerId: string | undefined,
   meta: { accountType: AccountKind; activeRole: "" | "seeker" | "employer" },
   language?: string,
+  remembered: PublicJobFact[] = [],
 ): Promise<BotTurn> {
   // Defensive: employer accounts must never reach public candidate job search.
   if (meta.accountType === "employer" || meta.activeRole === "employer") {
@@ -1240,12 +1247,21 @@ async function searchJobs(
   const lookup = publicJobFilters(understanding);
   const role = lookup.search || "ANY";
   const appliedFilters = formatAppliedFilters(understanding);
+  const excludeIds = understanding.showMore
+    ? new Set(remembered.map((job) => job.jobId).filter(Boolean))
+    : new Set<string>();
   logWhatsAppBot(
     "JOB_SEARCH",
-    `accountType=${meta.accountType} location=${lookup.city || lookup.state || "-"} role=${role} experience=${lookup.experience || "-"} language=${language || "-"}`,
+    `accountType=${meta.accountType} location=${lookup.city || lookup.state || "-"} role=${role} experience=${lookup.experience || "-"} minSalary=${lookup.minSalary ?? "-"} showMore=${Boolean(understanding.showMore)} language=${language || "-"}`,
   );
-  const primary = await loadJobs(lookup, jobSeekerId, language);
-  if (primary.jobs.length > 0 || !understanding.location) {
+  const primaryRaw = await loadJobs(lookup, jobSeekerId, language);
+  const primaryJobs = primaryRaw.jobs.filter((job) => !excludeIds.has(job.jobId));
+  const primary = {
+    ...primaryRaw,
+    jobs: primaryJobs,
+    total: Math.max(0, primaryRaw.total - (primaryRaw.jobs.length - primaryJobs.length)),
+  };
+  if (primary.jobs.length > 0) {
     logWhatsAppJobs({
       intent: understanding.intent,
       location: lookup.city,
@@ -1253,24 +1269,61 @@ async function searchJobs(
       dbMatches: primary.dbMatches,
       jobsReturned: primary.jobs.length,
       jobsForAI: primary.jobs.length,
-      path: primary.jobs.length > 0 ? "primary" : "empty",
+      path: "primary",
       cities: primary.jobs.map((job) => job.cityName),
     });
     console.info(
-      `[WHATSAPP-BOT] ${primary.jobs.length > 0 ? "JOB_RESULTS" : "JOB_SEARCH_EMPTY"} accountType=${meta.accountType} location=${lookup.city || "-"} role=${role} count=${primary.jobs.length}`,
+      `[WHATSAPP-BOT] JOB_RESULTS accountType=${meta.accountType} location=${lookup.city || "-"} role=${role} count=${primary.jobs.length}`,
     );
     return say("", primary.jobs, meta, publicJobReplyFacts(meta, {
       situation: "jobs",
       location: understanding.location,
       role: understanding.category,
       appliedFilters,
-      empty: primary.total === 0,
+      empty: false,
       total: primary.total,
       more: primary.hasMore,
       jobs: primary.jobs.map(publicJobFact),
     }, language));
   }
 
+  // Salary-constrained empty search: never silently show a lower-paying job as a match.
+  if (understanding.minSalary != null && understanding.location) {
+    const unconstrained = await loadJobs(
+      { ...lookup, minSalary: undefined, maxSalary: undefined },
+      jobSeekerId,
+      language,
+    );
+    const lowerSalaryJobs = unconstrained.jobs.filter((job) => {
+      const maxKnown = parseSalaryLabelMax(job.salaryLabel);
+      return maxKnown != null && maxKnown < Number(understanding.minSalary);
+    });
+    const undisclosedJobs = unconstrained.jobs.filter((job) => !job.salaryLabel.trim());
+    const nearbyCity = parentCity(understanding.location);
+    return say("", [], meta, publicJobReplyFacts(meta, {
+      situation: "job_search_no_match",
+      location: understanding.location,
+      role: understanding.category,
+      minSalary: understanding.minSalary,
+      appliedFilters,
+      lowerSalaryCount: lowerSalaryJobs.length,
+      undisclosedCount: undisclosedJobs.length,
+      nearbyCity: nearbyCity || "",
+      showMore: Boolean(understanding.showMore),
+    }, language));
+  }
+
+  if (understanding.showMore) {
+    return say("", [], meta, publicJobReplyFacts(meta, {
+      situation: "job_search_no_more",
+      location: understanding.location,
+      role: understanding.category,
+      minSalary: understanding.minSalary ?? null,
+      appliedFilters,
+    }, language));
+  }
+
+  // Neighbourhood → parent city only when no salary constraint (existing behaviour).
   const widerCity = parentCity(understanding.location);
   const wider = widerCity
     ? await loadJobs({ ...lookup, city: widerCity, state: "" }, jobSeekerId, language)
@@ -1299,6 +1352,19 @@ async function searchJobs(
     widenedTo: wider.jobs.length > 0 ? widerCity : "",
     jobs: wider.jobs.map(publicJobFact),
   }, language));
+}
+
+function parseSalaryLabelMax(label: string): number | null {
+  const cleaned = label.replace(/,/g, "");
+  const range = cleaned.match(/(\d{4,7})\s*[–\-to]+\s*(\d{4,7})/i);
+  if (range?.[2]) {
+    const max = Number(range[2]);
+    return Number.isFinite(max) ? max : null;
+  }
+  const one = cleaned.match(/(\d{4,7})/);
+  if (!one?.[1]) return null;
+  const amount = Number(one[1]);
+  return Number.isFinite(amount) ? amount : null;
 }
 
 function publicJobReplyFacts(
