@@ -37,6 +37,7 @@ import {
   activeSearchContext,
   applyAccountAwareIntent,
   applyRoleHints,
+  clearedTemporarySearchSessionFields,
   conversationStateForAccount,
   detectLanguage,
   detectMenuSelection,
@@ -487,11 +488,23 @@ async function processInboundTurn(input: {
         protocol === "greeting"
           ? conversationStateForAccount(identity.linked)
           : ((session?.conversationState as ConversationState | undefined) ?? "");
+      // Standalone Hi/Hello starts a fresh conversational search — clear temp filters only.
+      const greetingReset =
+        protocol === "greeting" ? clearedTemporarySearchSessionFields() : {};
       await WhatsAppSessionModel.findOneAndUpdate(
         { phone },
-        { phone, language, conversationState, lastInteractionAt: new Date() },
+        {
+          phone,
+          language,
+          conversationState,
+          lastInteractionAt: new Date(),
+          ...greetingReset,
+        },
         { upsert: true },
       );
+      if (protocol === "greeting") {
+        logWhatsAppBot("SESSION_RESET", "reason=standalone_greeting cleared=temporary_search");
+      }
       void persistJobSeekerWhatsAppLanguage({
         phone,
         language,
@@ -857,6 +870,7 @@ async function processInboundTurn(input: {
             : menuIntent
               ? ""
               : ((session?.conversationState as ConversationState | undefined) ?? ""),
+        ...(merged.intent === "GREETING" ? clearedTemporarySearchSessionFields() : {}),
       },
       { upsert: true },
     );

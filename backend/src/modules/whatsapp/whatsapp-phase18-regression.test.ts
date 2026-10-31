@@ -33,10 +33,11 @@ function playTurns(messages: string[]) {
   const turns: Array<ReturnType<typeof resolveTurnUnderstanding>> = [];
   for (const text of messages) {
     const raw = understandLocally(text);
-    // Greetings do not wipe search memory in the service for protocol Hi;
-    // resolveTurnUnderstanding leaves GREETING without merging — keep prior pending.
+    // Standalone greeting clears temporary search context (matches processInboundTurn).
     if (raw.intent === "GREETING") {
       turns.push(raw);
+      previous = null;
+      lastIntent = "";
       continue;
     }
     const merged = resolveTurnUnderstanding(text, raw, previous, lastIntent || previous?.intent);

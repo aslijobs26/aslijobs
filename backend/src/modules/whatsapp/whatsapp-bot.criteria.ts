@@ -187,12 +187,25 @@ export function extractFreeJobTitle(
   text: string,
   isKnownPlace: (place: string) => boolean,
 ): string {
+  // "interior designer in bhubaneswar" — role before a *known* place only.
+  // Do not treat "job in accounts" as role=job / place=accounts.
+  const roleInPlace = text.match(
+    /\b([a-z][a-z\s\-']{1,40}?)\s+(?:in|at|@|lo)\s+([a-z][a-z\s\-']{2,40})\b/i,
+  );
+  if (roleInPlace?.[1] && roleInPlace[2]) {
+    const rolePart = roleInPlace[1].trim();
+    const placePart = roleInPlace[2].trim();
+    if (!isKnownPlace(rolePart) && isKnownPlace(placePart)) {
+      const title = cleanRolePhrase(rolePart, isKnownPlace);
+      if (title && !/^(jobs?|work|role|near|near me|fresher)$/i.test(title)) return title;
+    }
+  }
   const patterns = [
     /\b([a-z][a-z\s]{1,40}?)\s+vacanc(?:y|ies)\b/i,
     /\b([a-z][a-z\s]{1,40}?)\s+openings?\b/i,
-    /\bjobs?\s+in\s+([a-z][a-z\s]{2,30})/i,
     /\b(?:looking for|searching for)\s+(?:a\s+|an\s+)?([a-z][a-z\s]{2,40}?)\s+jobs?\b/i,
     /\b([a-z][a-z\s]{2,40}?)\s+jobs?\b/i,
+    /\b(?:need|want|wnat)\s+(?:a\s+|an\s+)?(?:fresher\s+)?(?:job|jobs)\s+in\s+([a-z][a-z\s]{2,40})\b/i,
   ];
   for (const pattern of patterns) {
     const match = pattern.exec(text);

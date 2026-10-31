@@ -151,6 +151,15 @@ const PLACES: Array<{ canonical: string; forms: string[] }> = [
   { canonical: "Karimnagar", forms: ["karimnagar", "కరీంనగర్"] },
   { canonical: "Nizamabad", forms: ["nizamabad", "నిజామాబాద్"] },
   { canonical: "Khammam", forms: ["khammam", "ఖమ్మం"] },
+  { canonical: "Bhubaneswar", forms: ["bhubaneswar", "bhubaneshwar", "bhubaneswar", "భువనేశ్వర్", "भुवनेश्वर"] },
+  { canonical: "Cuttack", forms: ["cuttack", "కటక్", "कटक"] },
+  { canonical: "Bhopal", forms: ["bhopal", "భోపాల్", "भोपाल"] },
+  { canonical: "Indore", forms: ["indore", "ఇండోర్", "इंदौर"] },
+  { canonical: "Jaipur", forms: ["jaipur", "జైపూర్", "जयपुर"] },
+  { canonical: "Ahmedabad", forms: ["ahmedabad", "amdavad", "అహ్మదాబాద్", "अहमदाबाद"] },
+  { canonical: "Kolkata", forms: ["kolkata", "calcutta", "కోల్‌కతా", "कोलकाता"] },
+  { canonical: "Lucknow", forms: ["lucknow", "లక్నో", "लखनऊ"] },
+  { canonical: "Chandigarh", forms: ["chandigarh", "చండీగఢ్", "चंडीगढ़"] },
 ];
 
 /** Neighbourhoods searched again at city level when they have no results. */
@@ -162,14 +171,20 @@ const PLACE_PARENT_CITY: Record<string, string> = {
 
 const ROLES: Array<{ canonical: string; forms: string[] }> = [
   { canonical: "Safety Supervisor", forms: ["safety supervisor", "saftey supervisor", "safety superviser"] },
+  { canonical: "Interior Designer", forms: ["interior designer", "interior design", "ఇంటీరియర్ డిజైనర్"] },
+  { canonical: "Software Developer", forms: ["software developer", "software engineer", "web developer", "programmer"] },
   { canonical: "Accountant", forms: ["accountant", "अकाउंटेंट", "అకౌంటెంట్"] },
+  { canonical: "Car Driver", forms: ["car driver", "car drivers"] },
   { canonical: "Driver", forms: ["driver", "డ్రైవర్", "డ్రైవరు", "ड्राइवर", "டிரைவர்", "ಡ್ರೈವರ್", "ഡ്രൈവർ"] },
+  { canonical: "Delivery Executive", forms: ["delivery executive", "delivery boy", "delivery agent"] },
   { canonical: "Delivery", forms: ["delivery", "డెలివరీ", "డెలివరి", "डिलीवरी"] },
+  { canonical: "Security Guard", forms: ["security guard", "security guards"] },
   { canonical: "Watchman", forms: ["watchman", "security", "వాచ్‌మన్", "వాచ్మన్", "वॉचमैन"] },
   { canonical: "Electrician", forms: ["electrician", "electrical", "ఎలక్ట్రీషియన్", "ఎలక్ట్రిషియన్", "ఎలెక్ట్రీషియన్", "ఎలెక్ట్రిషియన్", "इलेक्ट्रीशियन", "इलेक्ट्रिशियन", "बिजली मिस्त्री", "எலக்ட்ரீஷியன்", "எலக்ட்ரிஷியன்", "ಎಲೆಕ್ಟ್ರಿಷಿಯನ್", "ಎಲೆಕ್ಟ್ರೀಷಿಯನ್", "ഇലക്ട്രീഷ്യൻ", "ഇലക്ട്രിഷ്യൻ"] },
   { canonical: "Carpenter", forms: ["carpenter", "కార్పెంటర్", "कारपेंटर"] },
   { canonical: "Plumber", forms: ["plumber", "ప్లంబర్", "प्लंबर"] },
   { canonical: "Cook", forms: ["cook", "వంటవాడు", "रसोइया"] },
+  { canonical: "Sales Executive", forms: ["sales executive", "sales executives"] },
   { canonical: "Sales", forms: ["sales", "సేల్స్", "सेल्स"] },
   { canonical: "Helper", forms: ["helper", "హెల్పర్", "हेल्पर"] },
   { canonical: "Mason", forms: ["mason", "మేసన్", "मेसन", "రాయి పని"] },
@@ -378,11 +393,39 @@ export function isNoResumeMessage(text: string): boolean {
   );
 }
 
+/**
+ * Temporary conversational search slots cleared on a standalone greeting / fresh start.
+ * Does not touch permanent account data (seeker profile, language preference, applications).
+ */
+export function clearedTemporarySearchSessionFields(): Record<string, unknown> {
+  return {
+    pendingLocation: "",
+    pendingCategory: "",
+    pendingOpenSearch: false,
+    pendingIntent: "",
+    pendingClarification: "",
+    pendingNearbyCity: "",
+    lastClarifyMissing: "",
+    clarifyAttempts: 0,
+    lastIntent: "",
+    lastLocation: "",
+    lastCategory: "",
+    lastExperience: "",
+    lastExperienceYears: null,
+    lastExperienceRange: "",
+    lastMinSalary: null,
+    lastMaxSalary: null,
+    lastSalaryBasis: "",
+    locationKind: "",
+    lastJobs: [],
+  };
+}
+
 export function detectProtocolTurn(text: string): ProtocolTurn | null {
   const trimmed = text.trim();
   if (!trimmed || trimmed.length > 24) return null;
   if (
-    /^(hi|hello|hey|hy|హాయ్|హాయి|హలో|నమస్తే|नमस्ते|हाय|हेलो|வணக்கம்|ನಮಸ್ಕಾರ|നമസ്കാരം)[!.,]?$/i.test(
+    /^(hi|hello|hey|hy|namaste|హాయ్|హాయి|హలో|నమస్తే|నమస్కారం|नमस्ते|हाय|हेलो|வணக்கம்|ನಮಸ್ಕಾರ|നമസ്കാരം)[!.,]?$/i.test(
       trimmed,
     )
   ) {
@@ -550,7 +593,13 @@ export function understandLocally(
   ) {
     intent = "HELP";
   }
-  else if (greeting && text.trim().length < 20 && !mentionsJob && !ownApply) intent = "GREETING";
+  else if (greeting && text.trim().length < 20 && !mentionsJob && !ownApply && !category && !location) {
+    intent = "GREETING";
+  }
+  // Standalone menu-style "profile" (not "jobs matching my profile").
+  else if (/^(profile|my profile|👤)\b/i.test(text.trim()) && !mentionsJob && !ownApply) {
+    intent = "ACCOUNT_STATUS";
+  }
   // Profile / verification status — never PROFILE_JOBS or JOB_SEARCH.
   else if (profileStatusAsk) intent = "ACCOUNT_STATUS";
   else if (profile) intent = "PROFILE_JOBS";
@@ -578,6 +627,7 @@ export function understandLocally(
   else if (showMoreAsk || salaryOnlyAsk || relativeSalaryAsk) intent = "JOB_SEARCH";
   else if (
     category ||
+    (category && location) ||
     mentionsJob ||
     (location && mentionsRequest) ||
     /\b(search cheyyi|job kavali|jobs unnaya)\b/i.test(folded)
@@ -2433,7 +2483,7 @@ export function greetingCopy(input: {
   if (input.language === "ml") {
     return `ഹായ്${who} 👋 AsliJobs-ലേക്ക് വീണ്ടും സ്വാഗതം.\n\nജോലി തിരയാം, അപേക്ഷകളും നിലയും കാണാം. ഏത് ജോലി വേണം?`;
   }
-  return `Hi${who} 👋\nWelcome back to AsliJobs!\n\nWhat are you looking for today?\n\n🔎 Find Jobs\n📋 Check Applications\n👤 Profile\n💬 Something else\n\nYou can type your question or send a voice message.`;
+  return `Hi${who} 👋 Welcome to AsliJobs!\n\nWhat are you looking for today?\n\n🔎 Find Jobs\n📋 Check Applications\n👤 Profile\n💬 Something else\n\nYou can also type your job requirement directly, for example:\n'Car driver jobs in Hyderabad.'\n\nHow can I help you today?`;
 }
 
 export function registrationCopy(input: {
