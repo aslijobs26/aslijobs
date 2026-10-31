@@ -19,6 +19,9 @@ const whatsAppSessionSchema = new Schema(
     pendingIntent: { type: String, default: "" },
     /** Last answered product intent — used for short follow-ups (Status?, bare role). */
     lastIntent: { type: String, default: "" },
+    /** e.g. job_search_no_match — menu follow-up after empty salary-constrained search. */
+    pendingClarification: { type: String, default: "" },
+    pendingNearbyCity: { type: String, default: "" },
     lastLocation: { type: String, default: "" },
     lastCategory: { type: String, default: "" },
     lastExperience: { type: String, default: "" },

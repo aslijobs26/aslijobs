@@ -28,6 +28,12 @@ import {
   roleRestrictionReply,
 } from "./whatsapp-role-policy.js";
 import {
+  applyNoMatchChoiceToSearch,
+  noMatchWaitCopy,
+  resolveNoMatchChoice,
+} from "./whatsapp-conversation-orchestrator.js";
+import { selectWhatsAppTool } from "./whatsapp-bot-tools.js";
+import {
   activeSearchContext,
   applyAccountAwareIntent,
   applyRoleHints,
@@ -284,8 +290,14 @@ async function processInboundTurn(input: {
       pendingOpenSearch?: boolean;
       pendingIntent?: string;
       lastIntent?: string;
+      pendingClarification?: string;
+      pendingNearbyCity?: string;
       lastLocation?: string;
       lastCategory?: string;
+      lastMinSalary?: number | null;
+      lastMaxSalary?: number | null;
+      lastSalaryBasis?: string;
+      locationKind?: string;
       lastJobs?: Array<Record<string, string>>;
       lastResumeSkills?: string[];
       lastResumeAt?: Date | null;
@@ -587,6 +599,56 @@ async function processInboundTurn(input: {
       identity.linked,
     );
 
+    // No-match menu follow-up (1–4) after salary-constrained empty search.
+    let noMatchWaitOnly = false;
+    if (session?.pendingClarification === "job_search_no_match") {
+      const choice = resolveNoMatchChoice(text);
+      const applied = applyNoMatchChoiceToSearch(
+        choice,
+        {
+          lastCategory: session.lastCategory,
+          lastLocation: session.lastLocation,
+          lastMinSalary: session.lastMinSalary,
+          lastMaxSalary: session.lastMaxSalary,
+          lastSalaryBasis: session.lastSalaryBasis,
+          locationKind: session.locationKind,
+          pendingNearbyCity: session.pendingNearbyCity,
+          pendingClarification: session.pendingClarification,
+        },
+        merged.language,
+      );
+      if (applied === "wait") {
+        noMatchWaitOnly = true;
+        logWhatsAppBot("NO_MATCH_CHOICE", "choice=wait");
+      } else if (applied) {
+        merged = applyAccountAwareIntent(applied, identity.linked);
+        logWhatsAppBot(
+          "NO_MATCH_CHOICE",
+          `choice=${choice} role=${merged.category || "-"} location=${merged.location || "-"} minSalary=${merged.minSalary ?? "-"}`,
+        );
+      }
+    }
+
+    if (noMatchWaitOnly) {
+      const language = merged.language;
+      await WhatsAppSessionModel.findOneAndUpdate(
+        { phone },
+        {
+          phone,
+          language,
+          pendingClarification: "",
+          pendingNearbyCity: "",
+          lastInteractionAt: new Date(),
+        },
+        { upsert: true },
+      );
+      await whatsAppService.sendTextMessage(input.from, noMatchWaitCopy(language));
+      console.info(
+        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=JOB_SEARCH_WAIT language=${language} understandingMode=ORCHESTRATOR llmUsed=false responseType=no_match_wait latency=${Date.now() - started}`,
+      );
+      return;
+    }
+
     // Central role-permission gate: after classify + account resolve, before any
     // role-specific handler / resume match / OpenAI. Session history cannot override.
     const gateActiveRole =
@@ -686,6 +748,12 @@ async function processInboundTurn(input: {
     );
     timing.db_query = Date.now() - dbStarted;
     const redirected = merged.crossRole === "seeker" || merged.crossRole === "employer";
+    const situation = String(turn.facts.situation ?? "");
+    const toolSelected = selectWhatsAppTool(merged.intent);
+    logWhatsAppBot(
+      "TOOL_SELECTED",
+      `tool=${toolSelected} intent=${merged.intent} situation=${situation || "-"}`,
+    );
     const waitingForLocation =
       !redirected &&
       merged.intent === "JOB_SEARCH" &&
@@ -701,6 +769,7 @@ async function processInboundTurn(input: {
       !redirected &&
       (merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT" || merged.intent === "JOB_DETAILS");
     const rememberGoal = rememberSearch || (!redirected && merged.intent === "POST_JOB");
+    const noMatchPending = situation === "job_search_no_match";
     const sessionWrite = WhatsAppSessionModel.findOneAndUpdate(
       { phone },
       {
@@ -711,6 +780,8 @@ async function processInboundTurn(input: {
         pendingCategory: waitingForLocation ? merged.category : "",
         pendingOpenSearch: waitingForLocation && merged.openSearch,
         pendingIntent: waitingForLocation || waitingForRole ? merged.intent : "",
+        pendingClarification: noMatchPending ? "job_search_no_match" : "",
+        pendingNearbyCity: noMatchPending ? String(turn.facts.nearbyCity ?? "") : "",
         // Persist product intent for follow-ups; clear on role redirect noise.
         lastIntent: redirected ? session?.lastIntent || "" : merged.intent,
         lastLocation: rememberGoal

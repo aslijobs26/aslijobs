@@ -1,9 +1,83 @@
 # AsliJobs WhatsApp Bot — Implementation Report (Updated)
 
 Date: 2026-10-31  
-Scope: Conversational job matching (salary follow-ups, show-more, no-results), plus prior profile/status and role-separation work.
+Scope: End-to-end WhatsApp AI brain production hardening on the existing architecture (orchestrator helpers, typed tools, no-match choices, multi-turn e2e), plus prior job-matching / profile / role work.
 
-## 0. Conversational job matching (2026-10-31) — salary / show-more / no-results
+## 0. Architecture audit & AI brain completion (2026-10-31)
+
+### What already worked (preserved)
+
+| Area | Status |
+|------|--------|
+| Meta webhook → signature → ACK → inbox/dedupe → BullMQ/inline → per-phone order | Implemented |
+| Local intent + Sarvam fallback + Mayura localization | Implemented |
+| Optional OpenAI assist (feature-flagged, fact-grounded, hallucination reject) | Implemented |
+| Central `authorizeWhatsAppRole` gate | Implemented |
+| Dual-role ACCOUNT_STATUS + employer job status | Implemented |
+| Salary follow-up / show-more / no-match messaging | Implemented |
+| Media/OCR flags, human handoff / bot pause | Implemented |
+
+### Confirmed gaps closed in this pass
+
+1. **Typed tool layer** (`whatsapp-bot-tools.ts`) — finite tools (`search_public_jobs`, `list_seeker_applications`, `list_employer_jobs`) with Zod input + role gate before service calls. Live search still uses existing `loadJobs`/`buildReply`; tools are the authorized capability surface for tests and future LLM tool-calling.
+2. **Orchestration helpers** (`whatsapp-conversation-orchestrator.ts`) — documented turn stages; no-match menu choices 1–4 (relax salary / nearby / undisclosed / wait) without a second competing router.
+3. **Session** — `pendingClarification` + `pendingNearbyCity` for post–no-match follow-ups.
+4. **Multi-turn e2e tests** covering Driver→salary→show more, employer status, seeker verify, unregistered search, cross-role deny.
+
+### OpenAI integration (verified in code)
+
+| Item | Status |
+|------|--------|
+| Env: `WHATSAPP_OPENAI_ASSIST_ENABLED`, `OPENAI_API_KEY`, `OPENAI_MODEL` (default `gpt-6-luna`) | Configured |
+| Runs **after** deterministic facts; blocked for role_redirect / no_match / greetings | Yes |
+| Schema + hallucination checks; fallback to deterministic on failure | Yes |
+| Live OpenAI call in this session | **Not re-run** (prior smoke existed; do not treat as live WhatsApp verification) |
+| Model availability | Must be confirmed against the project’s OpenAI account before production enable |
+
+### Job alerts
+
+Still **not** auto-subscribed from chat. Option 4 = check later only.
+
+### Files added/changed (this pass)
+
+| Path | Why |
+|------|-----|
+| `whatsapp-bot-tools.ts` (+ test) | Typed authorized tools |
+| `whatsapp-conversation-orchestrator.ts` | No-match choices + pipeline stages |
+| `whatsapp-session.model.ts` | pendingClarification / pendingNearbyCity |
+| `whatsapp-bot.service.ts` | Wire no-match choices + TOOL_SELECTED log |
+| `whatsapp-orchestration-e2e.test.ts` | Multi-turn acceptance examples |
+
+### Tests executed (code)
+
+- Orchestration e2e + tools + job-search + role + intelligence + policy: **97 passed**.
+- `tsc --noEmit`: **passed**.
+- Live Meta/WhatsApp staging: **not performed**.
+- Full monorepo backend suite: **not run** (WhatsApp-focused verification).
+
+### Staging checklist (manual — not run here)
+
+1. Deploy with OpenAI/media/OCR flags **false**.
+2. Verify Meta signature + test number inbound.
+3. Seeker: Driver + Hyderabad → salary 40000 → Inka chuinu.
+4. Employer: posted jobs status; profile verify.
+5. Enable OpenAI assist in staging only after model ID confirmed.
+6. Confirm no duplicate replies on Meta retry.
+
+### Deployment / rollback
+
+- Deploy backend; no new required env for tools/orchestrator.
+- Rollback previous build if needed; disable `WHATSAPP_OPENAI_ASSIST_ENABLED` independently.
+
+### Remaining limitations
+
+- Tools module is not yet the sole runtime path for every `buildReply` branch (search still uses `loadJobs` directly).
+- Live WhatsApp and live OpenAI production enablement remain operator-gated.
+- Full backend monorepo test suite not required for this WhatsApp-focused pass.
+
+---
+
+## 0b. Conversational job matching (2026-10-31) — salary / show-more / no-results
 
 ### Confirmed root causes
 
