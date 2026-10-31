@@ -231,8 +231,13 @@ export function useInboxChatTranslation(input: {
 
   const selectViewLanguage = useCallback(
     async (language: InboxViewLanguageCode) => {
-      setViewLanguage(language);
+      // Drop prior ready/same_language entries so a newly selected language
+      // re-evaluates mixed-script messages against the current pipeline.
+      requestGenerationRef.current += 1;
+      inFlightRef.current.clear();
+      setTranslations({});
       setShowOriginalIds(new Set());
+      setViewLanguage(language);
       if (!input.conversationId) return;
       try {
         await setWhatsAppInboxViewLanguage({

@@ -196,6 +196,20 @@ async function persistInboundMessages(body: WebhookBody): Promise<void> {
         const from = message.from?.trim();
         const described = describeInboundWhatsAppMessage(message);
         if (!messageId || !from || !described) continue;
+        if (
+          message.type === "unsupported" ||
+          described.body.startsWith("[WhatsApp ")
+        ) {
+          console.info("[WhatsAppWebhook] unsupported_or_unknown_inbound", {
+            messageId,
+            webhookType: message.type ?? "unknown",
+            unsupportedType:
+              (message as { unsupported?: { type?: string } }).unsupported
+                ?.type ?? "",
+            messageType: described.messageType,
+            hasMedia: Boolean(described.mediaProviderId),
+          });
+        }
         const saved = await recordInboundUserMessage({
           from,
           body: described.body,

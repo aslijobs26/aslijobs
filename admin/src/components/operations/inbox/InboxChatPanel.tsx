@@ -32,6 +32,14 @@ import {
 } from "../../../services/operations-whatsapp-inbox.service";
 import { cn } from "../../../utils/cn";
 import {
+  documentDisplayName,
+  isMediaPlaceholderBody,
+  isUnsupportedWhatsAppBody,
+  mimeTypeLabel,
+  parseContactMessage,
+  parseLocationMessage,
+} from "../../../utils/inbox-message-display";
+import {
   formatAttachmentSize,
   insertEmojiAtSelection,
   shouldSendInboxDraftOnEnter,
@@ -977,20 +985,26 @@ function MessageContent({
   onToggleOriginal: () => void;
   onRetryTranslation: () => void;
 }) {
-  const isMedia = ["image", "document", "audio", "video"].includes(message.messageType);
+  const isMedia = ["image", "document", "audio", "video"].includes(
+    message.messageType,
+  );
+  const location = parseLocationMessage(message.body);
+  const contact = parseContactMessage(message.body);
+  const unsupported = isUnsupportedWhatsAppBody(message.body);
   const hideBody =
-    message.hasMedia &&
-    (message.body === "[Image]" ||
-      message.body === "[Audio]" ||
-      message.body === "[Video]" ||
-      message.body === "[Voice message]" ||
-      message.body.startsWith("[Document]"));
+    (message.hasMedia && isMediaPlaceholderBody(message.body)) ||
+    Boolean(location) ||
+    Boolean(contact) ||
+    unsupported;
 
   return (
     <div className="space-y-1">
       {isMedia ? (
         <InboxMedia conversationId={conversationId} message={message} />
       ) : null}
+      {location ? <InboxLocationCard location={location} /> : null}
+      {contact ? <InboxContactCard summary={contact} /> : null}
+      {unsupported ? <InboxUnsupportedCard body={message.body} /> : null}
       {message.body && !hideBody ? (
         <InboxTranslatedBody
           originalBody={message.body}
@@ -1000,6 +1014,54 @@ function MessageContent({
           onRetry={onRetryTranslation}
         />
       ) : null}
+    </div>
+  );
+}
+
+function InboxLocationCard({
+  location,
+}: {
+  location: { label: string; mapsUrl: string | null };
+}) {
+  return (
+    <div className="rounded-md border border-[#d1d7db] bg-white/70 px-2.5 py-2 text-sm text-[#111b21]">
+      <p className="font-medium">📍 {location.label || "Location"}</p>
+      {location.mapsUrl ? (
+        <a
+          href={location.mapsUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-1 inline-block text-xs font-medium text-[#027eb5] underline"
+        >
+          Open in Maps
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function InboxContactCard({ summary }: { summary: string }) {
+  return (
+    <div className="rounded-md border border-[#d1d7db] bg-white/70 px-2.5 py-2 text-sm text-[#111b21]">
+      <p className="font-medium">👤 Contact</p>
+      <p className="mt-0.5 text-xs text-[#3b4a54] break-words">{summary}</p>
+    </div>
+  );
+}
+
+function InboxUnsupportedCard({ body }: { body: string }) {
+  const detail = body
+    .replace(/^\[WhatsApp\s+/i, "")
+    .replace(/\]$/i, "")
+    .trim();
+  return (
+    <div className="rounded-md border border-dashed border-[#d1d7db] bg-white/60 px-2.5 py-2 text-sm text-[#3b4a54]">
+      <p className="font-medium text-[#111b21]">Message type unavailable</p>
+      <p className="mt-0.5 text-xs leading-relaxed">
+        WhatsApp Cloud API did not deliver this content
+        {detail ? ` (${detail})` : ""}. Ask the customer to resend as text, a
+        single image, PDF/document, audio, or video.
+      </p>
     </div>
   );
 }
@@ -1056,11 +1118,15 @@ function InboxMedia({
   }
 
   if (message.messageType === "image" && previewUrl) {
+    const isSticker = message.body.trim() === "[Sticker]";
     return (
       <img
         src={previewUrl}
-        alt={message.mediaFileName || "WhatsApp image"}
-        className="max-h-64 max-w-full rounded-md object-contain"
+        alt={message.mediaFileName || (isSticker ? "Sticker" : "WhatsApp image")}
+        className={cn(
+          "max-w-full object-contain",
+          isSticker ? "max-h-40" : "max-h-64 rounded-md",
+        )}
       />
     );
   }
@@ -1090,7 +1156,7 @@ function InboxMedia({
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = message.mediaFileName || "whatsapp-file";
+      link.download = documentDisplayName(message);
       link.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -1100,14 +1166,31 @@ function InboxMedia({
     }
   }
 
+  const fileName = documentDisplayName(message);
+  const typeLabel = mimeTypeLabel(message.mediaMimeType);
+
   return (
-    <button
-      type="button"
-      onClick={() => void download()}
-      disabled={busy}
-      className="max-w-full break-all text-left text-xs font-medium text-[#027eb5] underline disabled:opacity-60"
-    >
-      {busy ? "Opening file..." : message.mediaFileName || "Download file"}
-    </button>
+    <div className="flex min-w-[12rem] max-w-full items-center gap-2 rounded-md border border-[#d1d7db] bg-white/80 px-2.5 py-2">
+      <span
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-[#e9edef] text-xs font-semibold text-[#54656f]"
+        aria-hidden="true"
+      >
+        {typeLabel.slice(0, 3).toUpperCase()}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-[#111b21]">
+          {fileName}
+        </span>
+        <span className="block text-[11px] text-[#667781]">{typeLabel}</span>
+      </span>
+      <button
+        type="button"
+        onClick={() => void download()}
+        disabled={busy}
+        className="shrink-0 rounded-md px-2 py-1 text-xs font-semibold text-[#027eb5] hover:bg-[#e7f8ff] disabled:opacity-60"
+      >
+        {busy ? "…" : "Download"}
+      </button>
+    </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   seekerInboxName,
 } from "./whatsapp-inbox-identity.js";
 import { sanitizeWhatsAppErrorDetail } from "../whatsapp.service.js";
+import { inboxListPreview } from "../whatsapp-inbound-message.js";
 import { inboxBodyReplacement } from "./whatsapp-template-text.js";
 import {
   WhatsAppInboxConversationModel,
@@ -18,7 +19,6 @@ import {
   type WhatsAppInboxSenderType,
 } from "./whatsapp-inbox.model.js";
 
-const PREVIEW_MAX = 160;
 const BOT_PAUSE_MS = 24 * 60 * 60 * 1000;
 const CUSTOMER_SERVICE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -31,12 +31,12 @@ const STATUS_RANK: Record<WhatsAppInboxMessageStatus, number> = {
   failed: 100,
 };
 
-function previewOf(body: string): string {
-  const trimmed = body.replace(/\s+/g, " ").trim();
-  if (trimmed.length <= PREVIEW_MAX) {
-    return trimmed;
-  }
-  return `${trimmed.slice(0, PREVIEW_MAX - 1)}…`;
+function previewOf(
+  body: string,
+  messageType?: string,
+  mediaFileName?: string,
+): string {
+  return inboxListPreview({ body, messageType, mediaFileName });
 }
 
 export function normalizeInboxPhone(fromOrNational: string): string {
@@ -369,7 +369,11 @@ export async function recordInboundUserMessage(input: {
     const activity: Record<string, unknown> = {};
     if (newerActivity) {
       activity.lastMessageAt = occurredAt;
-      activity.lastMessagePreview = previewOf(body);
+      activity.lastMessagePreview = previewOf(
+        body,
+        input.messageType ?? "text",
+        input.mediaFileName,
+      );
       activity.lastMessageDirection = "inbound";
     }
     if (newerInbound) {
@@ -493,7 +497,11 @@ export async function recordOutboundMessage(input: {
           {
             $set: {
               lastMessageAt: occurredAt,
-              lastMessagePreview: previewOf(body),
+              lastMessagePreview: previewOf(
+                body,
+                input.messageType ?? "text",
+                input.mediaFileName,
+              ),
               lastMessageDirection: "outbound",
             },
           },

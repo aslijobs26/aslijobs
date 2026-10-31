@@ -15,7 +15,7 @@ import {
 } from "./inbox-translation.constants.js";
 
 const MEDIA_PLACEHOLDER =
-  /^\[(Image|Audio|Video|Voice message|Document)(\]|:|\s)/i;
+  /^\[(Image|Audio|Video|Voice message|Sticker|Document|Location|Contact|Reaction|WhatsApp)(\]|:|\s)/i;
 
 export function hashInboxSourceText(text: string): string {
   return createHash("sha256").update(text).digest("hex");
@@ -130,6 +130,58 @@ export function confidentInboxScript(text: string): BotLanguage | null {
   return null;
 }
 
+const BRAND_LATIN_TOKEN =
+  /\b(?:AsliJobs|ASLIJOBS|WhatsApp|OTP|SMS|INR|Rs|ID|URL|PDF|API)\b/gi;
+
+/**
+ * True when the message is already in `target` and has no substantial leftover
+ * content that still needs translating (other Indic scripts or Latin prose).
+ *
+ * A single Kannada/Telugu glyph must NOT skip a mixed English+Indic template —
+ * that left English sentences visible while neighbors looked translated.
+ */
+export function isAlreadyTargetLanguage(
+  text: string,
+  target: InboxTranslationLanguage,
+): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+
+  if (hasOtherIndicScript(trimmed, target)) {
+    return false;
+  }
+
+  if (target === "en") {
+    return confidentInboxScript(trimmed) === null;
+  }
+
+  const script = confidentInboxScript(trimmed);
+  if (script !== target && detectInboxSourceLanguage(trimmed) !== target) {
+    return false;
+  }
+
+  return !hasSubstantialLatinProse(trimmed);
+}
+
+function hasOtherIndicScript(
+  text: string,
+  target: InboxTranslationLanguage,
+): boolean {
+  return INDIC_SCRIPT.some(
+    (entry) => entry.language !== target && entry.pattern.test(text),
+  );
+}
+
+function hasSubstantialLatinProse(text: string): boolean {
+  let rest = text;
+  for (const id of extractProtectedIdentifiers(text)) {
+    rest = rest.split(id).join(" ");
+  }
+  rest = rest.replace(BRAND_LATIN_TOKEN, " ");
+  const words = rest.match(/[A-Za-z]{3,}/g) ?? [];
+  return words.length >= 3;
+}
+
 export async function translateInboxText(input: {
   text: string;
   sourceLanguage: BotLanguage;
@@ -150,18 +202,7 @@ export async function translateInboxText(input: {
       cacheHit: false,
     });
   }
-  const script = confidentInboxScript(original);
-  if (script === input.targetLanguage) {
-    return finish(input, {
-      text: input.text,
-      translated: false,
-      skipped: true,
-      failed: false,
-      providerRequests: 0,
-      cacheHit: false,
-    });
-  }
-  if (!input.autoDetectSource && input.sourceLanguage === input.targetLanguage) {
+  if (isAlreadyTargetLanguage(original, input.targetLanguage)) {
     return finish(input, {
       text: input.text,
       translated: false,
@@ -172,10 +213,17 @@ export async function translateInboxText(input: {
     });
   }
 
+  // Mixed English+Indic bodies often detect as the Indic language even when
+  // Latin sentences remain. Force Sarvam auto-detect so those sentences translate.
+  const autoDetectSource =
+    Boolean(input.autoDetectSource) ||
+    input.sourceLanguage === input.targetLanguage;
+  const resolvedInput = { ...input, autoDetectSource };
+
   const key = [
     INBOX_TRANSLATION_PIPELINE_VERSION,
     input.targetLanguage,
-    input.autoDetectSource ? "auto" : input.sourceLanguage,
+    autoDetectSource ? "auto" : input.sourceLanguage,
     hashInboxSourceText(original),
   ].join("|");
   const cached = translationMemory.get(key);
@@ -197,7 +245,7 @@ export async function translateInboxText(input: {
   });
   translationFlights.set(key, flight);
   try {
-    const result = await translateStructuredText(original, input);
+    const result = await translateStructuredText(original, resolvedInput);
     resolveFlight(result);
     if (result.translated && !result.failed) {
       rememberTranslation(key, { ...result, providerRequests: 0, cacheHit: false });
@@ -448,6 +496,51 @@ async function translateAllCores(
     return { failed: false, translated: single.translated, values: [single.text] };
   }
 
+  const batched = await translateCoresBatched(cores, context);
+  if (!batched.failed) return batched;
+
+  // Sarvam often mangled multi-segment separators on account/template bodies.
+  // Fall back to one provider call per structural unit so multiline English
+  // still translates instead of staying English with Retry.
+  if (
+    batched.errorCode === "layout_mismatch" ||
+    batched.errorCode === "protected_token"
+  ) {
+    return translateCoresIndividually(cores, context);
+  }
+  return batched;
+}
+
+async function translateCoresIndividually(
+  cores: readonly string[],
+  context: TranslateContext,
+): Promise<
+  | { failed: true; errorCode?: string }
+  | { failed: false; translated: boolean; values: string[] }
+> {
+  const values: string[] = [];
+  let translated = false;
+  for (const core of cores) {
+    const single = await translateOneCore(core, context);
+    if (single.failed) {
+      return { failed: true, errorCode: single.errorCode };
+    }
+    if (single.translated) translated = true;
+    values.push(single.text);
+  }
+  if (values.length !== cores.length || !coresAlign(cores, values)) {
+    return { failed: true, errorCode: "layout_mismatch" };
+  }
+  return { failed: false, translated, values };
+}
+
+async function translateCoresBatched(
+  cores: readonly string[],
+  context: TranslateContext,
+): Promise<
+  | { failed: true; errorCode?: string }
+  | { failed: false; translated: boolean; values: string[] }
+> {
   const marked = cores.map((core, index) => `${segmentMark(index)}${core}`);
   const joined = marked.join(LAYOUT_SEPARATOR);
   const protectedIds = protectProperNouns(joined, [

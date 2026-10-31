@@ -20,6 +20,7 @@ import {
 import {
   detectInboxSourceLanguage,
   hashInboxSourceText,
+  isAlreadyTargetLanguage,
   isTranslatableInboxMessage,
   translateInboxText,
 } from "./inbox-translation.helpers.js";
@@ -293,7 +294,9 @@ async function translateOneMessage(input: {
   }
 
   const sourceLanguage = detectInboxSourceLanguage(input.body);
-  if (sourceLanguage === input.targetLanguage) {
+  // Do not treat mixed English+Indic bodies as already translated just because
+  // script detection picks the Indic language from a greeting or partial line.
+  if (isAlreadyTargetLanguage(input.body, input.targetLanguage)) {
     return {
       messageId: input.messageId,
       targetLanguage: input.targetLanguage,

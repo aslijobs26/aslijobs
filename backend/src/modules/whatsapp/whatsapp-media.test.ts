@@ -15,6 +15,22 @@ describe("whatsapp media validation", () => {
       validateWhatsAppMedia({ mimeType: "application/pdf", sizeBytes: 2048 }),
       { kind: "document" },
     );
+    assert.deepEqual(
+      validateWhatsAppMedia({
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        sizeBytes: 4096,
+      }),
+      { kind: "document" },
+    );
+    assert.deepEqual(
+      validateWhatsAppMedia({
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        sizeBytes: 4096,
+      }),
+      { kind: "document" },
+    );
   });
 
   it("rejects unsupported types and oversized images", () => {

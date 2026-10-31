@@ -1,7 +1,7 @@
 import type { WhatsAppInboxMessage } from "../types/operations-whatsapp-inbox";
 
 const MEDIA_PLACEHOLDER =
-  /^\[(Image|Audio|Video|Voice message|Document)(\]|:|\s)/i;
+  /^\[(Image|Audio|Video|Voice message|Sticker|Document|Location|Contact|Reaction|WhatsApp)(\]|:|\s)/i;
 
 export function isTranslatableInboxMessage(
   message: Pick<WhatsAppInboxMessage, "messageType" | "body" | "hasMedia">,
@@ -14,7 +14,12 @@ export function isTranslatableInboxMessage(
     body === "[Audio]" ||
     body === "[Video]" ||
     body === "[Voice message]" ||
-    body.startsWith("[Document]")
+    body === "[Sticker]" ||
+    body.startsWith("[Document]") ||
+    body.startsWith("[Location]") ||
+    body.startsWith("[Contact]") ||
+    body.startsWith("[Reaction]") ||
+    /^\[WhatsApp .+ message/i.test(body)
   ) {
     return false;
   }

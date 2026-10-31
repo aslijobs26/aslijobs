@@ -5,6 +5,7 @@ import type {
   WhatsAppInboxFilterType,
 } from "../../../types/operations-whatsapp-inbox";
 import { cn } from "../../../utils/cn";
+import { formatConversationPreview } from "../../../utils/inbox-message-display";
 import {
   formatInboxTimestamp,
   initialsFromName,
@@ -227,7 +228,9 @@ export function InboxConversationList({
                       </span>
                       <span className="mt-1.5 flex items-center justify-between gap-2">
                         <span className={cn("truncate text-xs", mutedClass)}>
-                          {contact.lastMessagePreview || contact.phoneDisplay}
+                          {formatConversationPreview(
+                            contact.lastMessagePreview || "",
+                          ) || contact.phoneDisplay}
                         </span>
                         {contact.unreadCount > 0 ? (
                           <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#25d366] px-1.5 text-[10px] font-semibold text-white">
@@ -300,7 +303,9 @@ export function InboxConversationList({
                             : mutedClass,
                         )}
                       >
-                        {conversation.lastMessagePreview || "No messages yet"}
+                        {formatConversationPreview(
+                          conversation.lastMessagePreview || "",
+                        ) || "No messages yet"}
                       </span>
                       {conversation.unreadCount > 0 ? (
                         <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#25d366] px-1.5 text-[10px] font-semibold text-white">
