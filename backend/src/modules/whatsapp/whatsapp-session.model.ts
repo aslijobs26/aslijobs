@@ -21,6 +21,9 @@ const whatsAppSessionSchema = new Schema(
     lastIntent: { type: String, default: "" },
     /** e.g. job_search_no_match — menu follow-up after empty salary-constrained search. */
     pendingClarification: { type: String, default: "" },
+    /** Same clarify field asked again without new slots — loop break after bound. */
+    lastClarifyMissing: { type: String, default: "" },
+    clarifyAttempts: { type: Number, default: 0 },
     pendingNearbyCity: { type: String, default: "" },
     lastLocation: { type: String, default: "" },
     lastCategory: { type: String, default: "" },

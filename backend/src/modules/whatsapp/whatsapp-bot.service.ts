@@ -48,6 +48,7 @@ import {
   lookingAtQuestionCopy,
   menuUnderstanding,
   nationalPhone,
+  nextClarifyLoopState,
   parentCity,
   placeCityAliases,
   publicJobFilters,
@@ -291,6 +292,8 @@ async function processInboundTurn(input: {
       pendingIntent?: string;
       lastIntent?: string;
       pendingClarification?: string;
+      lastClarifyMissing?: string;
+      clarifyAttempts?: number;
       pendingNearbyCity?: string;
       lastLocation?: string;
       lastCategory?: string;
@@ -748,7 +751,32 @@ async function processInboundTurn(input: {
     );
     timing.db_query = Date.now() - dbStarted;
     const redirected = merged.crossRole === "seeker" || merged.crossRole === "employer";
-    const situation = String(turn.facts.situation ?? "");
+    let situation = String(turn.facts.situation ?? "");
+    const clarifyLoop = nextClarifyLoopState({
+      situation,
+      missing: String(turn.facts.missing ?? ""),
+      priorMissing: session?.lastClarifyMissing ?? "",
+      priorAttempts: session?.clarifyAttempts ?? 0,
+    });
+    if (clarifyLoop.exhausted) {
+      turn.facts = {
+        ...turn.facts,
+        situation: "clarify_exhausted",
+        knownRole: merged.category || session?.lastCategory || "",
+        knownLocation: merged.location || session?.lastLocation || "",
+        knownMinSalary: merged.minSalary ?? session?.lastMinSalary ?? null,
+      };
+      situation = "clarify_exhausted";
+      logWhatsAppBot(
+        "CLARIFY_LOOP_BREAK",
+        `missing=${String(turn.facts.missing ?? "-")} priorAttempts=${session?.clarifyAttempts ?? 0}`,
+      );
+    } else if (clarifyLoop.attempts > 1) {
+      logWhatsAppBot(
+        "CLARIFY_REPEAT",
+        `missing=${clarifyLoop.missing} attempts=${clarifyLoop.attempts}`,
+      );
+    }
     const toolSelected = selectWhatsAppTool(merged.intent);
     logWhatsAppBot(
       "TOOL_SELECTED",
@@ -782,6 +810,8 @@ async function processInboundTurn(input: {
         pendingIntent: waitingForLocation || waitingForRole ? merged.intent : "",
         pendingClarification: noMatchPending ? "job_search_no_match" : "",
         pendingNearbyCity: noMatchPending ? String(turn.facts.nearbyCity ?? "") : "",
+        lastClarifyMissing: clarifyLoop.missing,
+        clarifyAttempts: clarifyLoop.attempts,
         // Persist product intent for follow-ups; clear on role redirect noise.
         lastIntent: redirected ? session?.lastIntent || "" : merged.intent,
         lastLocation: rememberGoal
@@ -1299,6 +1329,16 @@ async function buildReply(
   }
 }
 
+/**
+ * Runtime job search path (authorized):
+ * 1. processInboundTurn → authorizeWhatsAppRole(intent)
+ * 2. buildReply → searchJobs (defensive employer block again)
+ * 3. loadJobs → jobService.listPublicActiveJobs
+ *
+ * Typed tools (`executeSearchPublicJobs`) share the same role gate + jobService
+ * but are not yet the sole call site — they are the authorized capability surface
+ * for tests / future tool-calling. Do not treat tool.ok empty as a DB failure.
+ */
 async function searchJobs(
   understanding: BotUnderstanding,
   jobSeekerId: string | undefined,
@@ -1315,6 +1355,30 @@ async function searchJobs(
       url: urls.seekerRegisterUrl,
     });
   }
+  try {
+    return await runAuthorizedJobSearch(understanding, jobSeekerId, meta, language, remembered);
+  } catch (error) {
+    logWhatsAppBot(
+      "JOB_SEARCH_FAILED",
+      `accountType=${meta.accountType} reason=${error instanceof Error ? error.name : "unknown"}`,
+    );
+    // Never present a database/timeout failure as situation=jobs with empty=true.
+    return say("", [], meta, {
+      situation: "search_failed",
+      location: understanding.location,
+      role: understanding.category,
+      accountType: meta.accountType,
+    });
+  }
+}
+
+async function runAuthorizedJobSearch(
+  understanding: BotUnderstanding,
+  jobSeekerId: string | undefined,
+  meta: { accountType: AccountKind; activeRole: "" | "seeker" | "employer" },
+  language: string | undefined,
+  remembered: PublicJobFact[],
+): Promise<BotTurn> {
   const lookup = publicJobFilters(understanding);
   const role = lookup.search || "ANY";
   const appliedFilters = formatAppliedFilters(understanding);

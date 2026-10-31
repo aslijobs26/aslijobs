@@ -274,7 +274,14 @@ export function extractSalaryBand(text: string): {
 } {
   const empty = { min: null, max: null, basis: "monthly" as const };
   const normalized = text.replace(/,/g, "");
+  // Telugu "20000 lo chudu/chunchandi" = show jobs at that salary preference.
+  const teluguSalaryShow =
+    /\b\d{4,7}\b|\b\d+(?:\.\d+)?\s*k\b/i.test(normalized) &&
+    /\blo\s+(chudu|chunchandi|chupin\w*|chupu)|chunchandi|chudu\b|change\s+salary|salary\s+\w+\s+vaddu|\b\d+\s*k\s+vaddu/i.test(
+      text,
+    );
   const salaryCue =
+    teluguSalaryShow ||
     /salary|జీతం|వేతనం|वेतन|तनख्वाह|சம்பளம்|ಸಂಬಳ|ശമ്പളം|minimum|min\.?|at\s+least|above|over|upto|up\s+to|from|between|₹|\brs\.?\b|\binr\b|kavali/i.test(
       text,
     );
@@ -308,9 +315,45 @@ export function extractSalaryBand(text: string): {
       return { min, max, basis: "monthly" };
     }
   }
+  // "40k vaddu, 20k chudu" / "40000 vaddu 20000" — prefer the replacement amount.
+  const rejectThenK = normalized.match(
+    /(\d+(?:\.\d+)?)\s*k\b[^\d]{0,48}?\bvaddu\b[^\d]{0,48}?(\d+(?:\.\d+)?)\s*k\b/i,
+  );
+  if (rejectThenK?.[2] && salaryCue) {
+    const min = Math.round(Number(rejectThenK[2]) * 1000);
+    if (Number.isFinite(min) && min > 0) return { min, max: null, basis: "monthly" };
+  }
+  const rejectThenPlain = normalized.match(
+    /(\d{4,7})\b[^\d]{0,48}?\bvaddu\b[^\d]{0,48}?(\d{4,7})\b/i,
+  );
+  if (rejectThenPlain?.[2] && salaryCue) {
+    const min = Number(rejectThenPlain[2]);
+    if (Number.isFinite(min) && min >= 1000 && min <= 500000) {
+      return { min, max: null, basis: "monthly" };
+    }
+  }
+  const changeToK = normalized.match(
+    /(?:change\s+salary\s+to|salary\s+(?:to|is)|update\s+salary\s+to)\s*(\d+(?:\.\d+)?)\s*k\b/i,
+  );
+  if (changeToK?.[1]) {
+    const min = Math.round(Number(changeToK[1]) * 1000);
+    if (Number.isFinite(min) && min > 0) return { min, max: null, basis: "monthly" };
+  }
+  const changeToPlain = normalized.match(
+    /(?:change\s+salary\s+to|salary\s+(?:to|is)|update\s+salary\s+to)\s*(\d{4,7})\b/i,
+  );
+  if (changeToPlain?.[1]) {
+    const min = Number(changeToPlain[1]);
+    if (Number.isFinite(min) && min >= 1000 && min <= 500000) {
+      return { min, max: null, basis: "monthly" };
+    }
+  }
   const oneK = normalized.match(/(\d+(?:\.\d+)?)\s*k\b/i);
   if (oneK?.[1] && (/salary|₹|\brs\.?\b|\binr\b|\d\s*k\b/i.test(text) || salaryCue)) {
-    const min = Math.round(Number(oneK[1]) * 1000);
+    // Prefer the last k-amount when the message is a salary update with multiple figures.
+    const allK = [...normalized.matchAll(/(\d+(?:\.\d+)?)\s*k\b/gi)];
+    const pick = salaryCue && allK.length > 1 ? allK[allK.length - 1] : oneK;
+    const min = Math.round(Number(pick?.[1]) * 1000);
     if (Number.isFinite(min) && min > 0) return { min, max: null, basis: "monthly" };
   }
   // Plain monthly amounts: "salary 40000", "minimum 40000", "Naku salary 40,000 kavali"
@@ -348,6 +391,18 @@ export function extractSalaryBand(text: string): {
 export function looksLikeRelativeHigherSalary(text: string): boolean {
   return /konchem\s+ekkuva|salary\s+ekkuva|ekkuva\s+salary|low\s+salary\s+vaddu|takkuva\s+salary\s+vaddu|higher\s+salary|more\s+salary|salary\s+increase/i.test(
     text,
+  );
+}
+
+/** Explicit salary preference / correction without requiring the word "salary". */
+export function looksLikeSalaryPreferenceUpdate(text: string): boolean {
+  const normalized = text.replace(/,/g, "");
+  if (extractSalaryBand(text).min == null) return false;
+  return (
+    /salary|జీతం|వేతనం|वेतन|minimum|at\s+least|above|₹|\brs\.?\b/i.test(text) ||
+    /\blo\s+(chudu|chunchandi|chupin\w*|chupu)|chunchandi|change\s+salary|\b\d+\s*k\s+vaddu|\b\d{4,7}\s+vaddu/i.test(
+      normalized,
+    )
   );
 }
 

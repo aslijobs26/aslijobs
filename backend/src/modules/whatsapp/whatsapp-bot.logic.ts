@@ -7,6 +7,7 @@ import {
   extractSalaryBand,
   jobOrdinalFromText,
   looksLikeRelativeHigherSalary,
+  looksLikeSalaryPreferenceUpdate,
   placeKind,
   recallsEarlierLocation,
   wantsAnyLocation,
@@ -478,7 +479,7 @@ export function understandLocally(
   const salaryOnlyAsk =
     !showMoreAsk &&
     salaryBandEarly.min != null &&
-    /salary|జీతం|వేతనం|वेतन|minimum|at\s+least|above|over|₹|\brs\.?\b/i.test(text) &&
+    looksLikeSalaryPreferenceUpdate(text) &&
     !category &&
     !location;
   const relativeSalaryAsk = !showMoreAsk && !salaryOnlyAsk && looksLikeRelativeHigherSalary(text);
@@ -1049,10 +1050,19 @@ function combineSearchSlots(
     : next.location
       ? next.locationKind || placeKind(next.location)
       : previous.locationKind || placeKind(location);
-  // "jobs in Chennai" is a broad search; "Chennai lo unnaya?" only changes the city.
+  // "jobs in Chennai" is a broad search; vague "I want jobs" (no new place) keeps a prior role.
+  const nextBroughtPlace = Boolean(next.location || next.anyLocation || anyLocation);
   const broadAsk =
-    next.openSearch && Boolean(next.location || anyLocation) && !next.category && (!text || mentionsJobWord(text));
-  const keepOpenSearch = Boolean(previous.openSearch) && !next.category && Boolean(location || anyLocation);
+    next.openSearch &&
+    Boolean(next.location || anyLocation) &&
+    !next.category &&
+    (!text || mentionsJobWord(text)) &&
+    (nextBroughtPlace || !previous.category);
+  const keepOpenSearch =
+    Boolean(previous.openSearch) &&
+    !next.category &&
+    Boolean(location || anyLocation) &&
+    !previous.category;
   const category = broadAsk || keepOpenSearch ? "" : next.category || previous.category;
   const freshSearch =
     Boolean(text) &&
@@ -1156,10 +1166,8 @@ export function applyCurrentMessageSearchRules(
     understanding.showMore ||
     understanding.focus === "salary" ||
     looksLikeShowMoreJobs(text) ||
-    (understanding.minSalary != null &&
-      /salary|జీతం|వేతనం|वेतन|minimum|at\s+least|above|₹/i.test(text) &&
-      !extractRole(text) &&
-      !extractPlace(text))
+    looksLikeSalaryPreferenceUpdate(text) ||
+    (understanding.minSalary != null && !extractRole(text) && !extractPlace(text))
   ) {
     return {
       ...understanding,
@@ -1468,6 +1476,62 @@ export function clarifyJobTitle(language: BotLanguage): string {
   return "Tell me what kind of job you're looking for. For example: 'driver jobs in Madhapur'.";
 }
 
+const CLARIFY_LOOP_LIMIT = 3;
+
+/** Track repeated clarify asks for the same missing field (location/role). */
+export function nextClarifyLoopState(input: {
+  situation: string;
+  missing: string;
+  priorMissing?: string;
+  priorAttempts?: number;
+}): { attempts: number; missing: string; exhausted: boolean } {
+  if (input.situation !== "clarify") {
+    return { attempts: 0, missing: "", exhausted: false };
+  }
+  const field = input.missing.trim();
+  if (field !== "location" && field !== "role") {
+    return { attempts: 0, missing: "", exhausted: false };
+  }
+  const same = input.priorMissing === field;
+  const attempts = same ? (input.priorAttempts ?? 0) + 1 : 1;
+  return {
+    attempts: attempts >= CLARIFY_LOOP_LIMIT ? 0 : attempts,
+    missing: attempts >= CLARIFY_LOOP_LIMIT ? "" : field,
+    exhausted: attempts >= CLARIFY_LOOP_LIMIT,
+  };
+}
+
+/** Bound clarification loops: summarize known filters and ask once for the gap. */
+export function clarifyExhaustedCopy(
+  language: BotLanguage,
+  known: { missing: string; role: string; location: string; minSalary: number | null },
+): string {
+  const role = known.role || (language === "te" ? "ఏదైనా రోల్" : "any role");
+  const location = known.location || (language === "te" ? "ఏదైనా లొకేషన్" : "any location");
+  const salary =
+    known.minSalary != null && known.minSalary > 0
+      ? language === "te"
+        ? `₹${known.minSalary.toLocaleString("en-IN")}+ జీతం`
+        : `₹${known.minSalary.toLocaleString("en-IN")}+ salary`
+      : "";
+  if (language === "te") {
+    if (known.missing === "location") {
+      return `మీకు ${role} జాబ్ కావాలని అర్థమైంది${salary ? ` (${salary})` : ""}. దయచేసి ఒక్కసారి లొకేషన్ చెప్పండి — ఉదా: Hyderabad. లేదా "anywhere" అని చెప్పండి.`;
+    }
+    if (known.missing === "role") {
+      return `లొకేషన్: ${location}${salary ? `, ${salary}` : ""}. ఏ రకం జాబ్ కావాలో ఒక్కసారి చెప్పండి — ఉదా: Electrician / Driver. లేదా "any job" అని చెప్పండి.`;
+    }
+    return `ఇంకా కొంత సమాచారం కావాలి (${known.missing || "details"}). రోల్ + లొకేషన్ ఒకే మెసేజ్‌లో చెప్పండి — ఉదా: "Hyderabad lo electrician job".`;
+  }
+  if (known.missing === "location") {
+    return `I have ${role}${salary ? ` (${salary})` : ""} — please send a location once (e.g. Hyderabad), or say "anywhere".`;
+  }
+  if (known.missing === "role") {
+    return `Location: ${location}${salary ? `, ${salary}` : ""}. Please send the job type once (e.g. Electrician / Driver), or say "any job".`;
+  }
+  return `I still need a bit more detail (${known.missing || "role/location"}). Send role + location together — e.g. "electrician jobs in Hyderabad".`;
+}
+
 export function askLocationCopy(language: BotLanguage): string {
   if (language === "te") {
     return "సరే 👍 మీరు ఏ ప్రాంతంలో జాబ్ కావాలి? ఉదాహరణ: Hyderabad, Chennai, Bangalore.";
@@ -1630,8 +1694,16 @@ export function buildDeterministicReply(
       .filter((line) => line.trim())
       .join("\n");
   }
-  if (situation === "clarify") {
+  if (situation === "clarify" || situation === "clarify_exhausted") {
     const missing = String(facts.missing ?? "");
+    if (situation === "clarify_exhausted") {
+      return clarifyExhaustedCopy(language, {
+        missing,
+        role: String(facts.knownRole ?? ""),
+        location: String(facts.knownLocation ?? ""),
+        minSalary: facts.knownMinSalary != null ? Number(facts.knownMinSalary) : null,
+      });
+    }
     if (missing === "location") return askLocationCopy(language);
     if (missing === "which_account_data") return clarifyAmbiguousCopy(language);
     if (missing === "purpose") return purposeClarifyCopy(language);
@@ -1722,6 +1794,9 @@ export function buildDeterministicReply(
       role: String(facts.role ?? ""),
       minSalary: typeof facts.minSalary === "number" ? facts.minSalary : null,
     });
+  }
+  if (situation === "search_failed") {
+    return serviceErrorCopy(language);
   }
   if (situation === "jobs" || situation === "job_details") {
     const jobs = Array.isArray(facts.jobs)
@@ -2765,14 +2840,71 @@ const PLACE_MISSPELLINGS: Record<string, string> = {
   bangalor: "Bangalore",
 };
 
-function extractPlace(text: string): string {
+function placeHitsIn(text: string): Array<{ canonical: string; index: number }> {
   const folded = text.toLowerCase();
-  const hit = PLACES.find((place) =>
-    place.forms.some((form) => folded.includes(form.toLowerCase())),
+  const hits: Array<{ canonical: string; index: number }> = [];
+  for (const place of PLACES) {
+    for (const form of place.forms) {
+      const idx = folded.indexOf(form.toLowerCase());
+      if (idx >= 0) hits.push({ canonical: place.canonical, index: idx });
+    }
+  }
+  for (const [form, canonical] of Object.entries(PLACE_MISSPELLINGS)) {
+    const idx = folded.indexOf(form);
+    if (idx >= 0 && canonical) hits.push({ canonical, index: idx });
+  }
+  hits.sort((a, b) => a.index - b.index || a.canonical.localeCompare(b.canonical));
+  return hits;
+}
+
+function firstDistinctPlace(text: string): string {
+  const ordered: string[] = [];
+  for (const hit of placeHitsIn(text)) {
+    if (ordered[ordered.length - 1] !== hit.canonical) ordered.push(hit.canonical);
+  }
+  return ordered[0] ?? "";
+}
+
+function lastDistinctPlace(text: string): string {
+  const ordered: string[] = [];
+  for (const hit of placeHitsIn(text)) {
+    if (ordered[ordered.length - 1] !== hit.canonical) ordered.push(hit.canonical);
+  }
+  return ordered[ordered.length - 1] ?? ordered[0] ?? "";
+}
+
+function extractPlace(text: string): string {
+  // "Chennai instead of Hyderabad" → Chennai (city before the cue).
+  const insteadOf = text.match(/^(.+?)\binstead\s+of\b/i);
+  if (insteadOf?.[1]) {
+    const before = firstDistinctPlace(insteadOf[1]);
+    if (before) return before;
+  }
+  // "rather than Hyderabad show Chennai" → last city after the cue.
+  const ratherThan = text.match(/\brather\s+than\b(.+)$/i);
+  if (ratherThan?.[1]) {
+    const after = lastDistinctPlace(ratherThan[1]);
+    if (after) return after;
+  }
+  // Telugu: "Hyderabad badhulu Vijayawada" → city after the cue.
+  const teluguSwap = text.match(/\b(?:badhulu|badulu)\b(.+)$/i);
+  if (teluguSwap?.[1]) {
+    const after = firstDistinctPlace(teluguSwap[1]);
+    if (after) return after;
+  }
+  const changeTo = text.match(
+    /(?:change\s+(?:location\s+)?to|location\s+(?:change\s+)?to)\s+(.+)$/i,
   );
-  if (hit) return hit.canonical;
-  const missed = Object.keys(PLACE_MISSPELLINGS).find((form) => folded.includes(form));
-  if (missed) return PLACE_MISSPELLINGS[missed] ?? "";
+  if (changeTo?.[1]) {
+    const target = firstDistinctPlace(changeTo[1]);
+    if (target) return target;
+  }
+  if (/\b(?:ki\s+marchu|\bmarchu\b)\b/i.test(text)) {
+    const target = firstDistinctPlace(text);
+    if (target) return target;
+  }
+  const hit = firstDistinctPlace(text);
+  if (hit) return hit;
   return extractIndianState(text);
 }
 
