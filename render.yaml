@@ -19,6 +19,16 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Pin LTS. `engines: ">=20"` previously let Render install Node 26 Current.
+      - key: NODE_VERSION
+        value: "20"
+      # Keep a single Node process. This app is Express + in-process WhatsApp
+      # phone-order chains (not a throng/cluster worker). Raising WEB_CONCURRENCY
+      # does not add HTTP workers unless a process manager forks, and multi-process
+      # would break in-memory per-phone ordering. BullMQ concurrency is separate
+      # (WHATSAPP_INBOUND_CONCURRENCY).
+      - key: WEB_CONCURRENCY
+        value: "1"
       # Production code also forces this to 30 minutes. A short dashboard
       # value cannot send job_post_incomplete_ early.
       - key: JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES

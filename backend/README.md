@@ -58,6 +58,17 @@ npm run translation:backfill
 
 Keep `NODE_ENV=production` in the Render environment (required for DB safety guards).
 
+**Node.js:** use **20.x LTS** (`engines.node` is `20.x`, plus `backend/.node-version` and
+`NODE_VERSION=20` in `render.yaml`). Do not leave `engines` as a bare `>=20` range —
+Render may install Node Current (e.g. 26) and break runtime assumptions.
+
+**WEB_CONCURRENCY:** keep **`1`**. This service is a single Express process
+(`node dist/server.js`). Render’s “Setting WEB_CONCURRENCY=1 by default…” line is
+expected on starter instances and is **not** a deploy failure. Do not raise it unless
+you add a real multi-process manager **and** replace in-memory WhatsApp phone-order
+coordination. Queue parallelism uses `WHATSAPP_INBOUND_CONCURRENCY` (BullMQ), not
+`WEB_CONCURRENCY`.
+
 **Build Command** (required):
 
 ```bash
