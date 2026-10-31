@@ -1066,6 +1066,97 @@ function InboxUnsupportedCard({ body }: { body: string }) {
   );
 }
 
+/** Inbound/outbound WhatsApp image: thumbnail, click-to-enlarge, and download. */
+function InboxImageMessage({
+  previewUrl,
+  alt,
+  isSticker,
+  downloadBusy,
+  onDownload,
+}: {
+  previewUrl: string;
+  alt: string;
+  isSticker: boolean;
+  downloadBusy: boolean;
+  onDownload: () => void;
+}) {
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  useEffect(() => {
+    if (!viewerOpen) return;
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") setViewerOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [viewerOpen]);
+
+  return (
+    <div className="space-y-1.5">
+      <button
+        type="button"
+        onClick={() => setViewerOpen(true)}
+        className="block max-w-full cursor-zoom-in rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#027eb5]"
+        aria-label="View full image"
+      >
+        <img
+          src={previewUrl}
+          alt={alt}
+          className={cn(
+            "max-w-full object-contain",
+            isSticker ? "max-h-40" : "max-h-64 rounded-md",
+          )}
+        />
+      </button>
+      {!isSticker ? (
+        <button
+          type="button"
+          onClick={onDownload}
+          disabled={downloadBusy}
+          className="rounded-md px-2 py-1 text-xs font-semibold text-[#027eb5] hover:bg-[#e7f8ff] disabled:opacity-60"
+        >
+          {downloadBusy ? "…" : "Download"}
+        </button>
+      ) : null}
+      {viewerOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image viewer"
+          onClick={() => setViewerOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setViewerOpen(false)}
+            className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+            aria-label="Close image"
+          >
+            <X className="size-5" />
+          </button>
+          <img
+            src={previewUrl}
+            alt={alt}
+            className="max-h-[90dvh] max-w-[min(96vw,56rem)] object-contain"
+            onClick={(event) => event.stopPropagation()}
+          />
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDownload();
+            }}
+            disabled={downloadBusy}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#111b21] shadow disabled:opacity-60"
+          >
+            {downloadBusy ? "Downloading…" : "Download"}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function InboxMedia({
   conversationId,
   message,
@@ -1117,16 +1208,33 @@ function InboxMedia({
     return <p className="text-xs text-[#667781]">Loading file...</p>;
   }
 
+  async function download() {
+    setBusy(true);
+    setError(null);
+    try {
+      const blob = await fetchWhatsAppInboxMedia(conversationId, message.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = documentDisplayName(message);
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("This file could not be retrieved.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (message.messageType === "image" && previewUrl) {
     const isSticker = message.body.trim() === "[Sticker]";
     return (
-      <img
-        src={previewUrl}
+      <InboxImageMessage
+        previewUrl={previewUrl}
         alt={message.mediaFileName || (isSticker ? "Sticker" : "WhatsApp image")}
-        className={cn(
-          "max-w-full object-contain",
-          isSticker ? "max-h-40" : "max-h-64 rounded-md",
-        )}
+        isSticker={isSticker}
+        downloadBusy={busy}
+        onDownload={() => void download()}
       />
     );
   }
@@ -1148,26 +1256,8 @@ function InboxMedia({
     );
   }
 
-  async function download() {
-    setBusy(true);
-    setError(null);
-    try {
-      const blob = await fetchWhatsAppInboxMedia(conversationId, message.id);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = documentDisplayName(message);
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      setError("This file could not be retrieved.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const fileName = documentDisplayName(message);
-  const typeLabel = mimeTypeLabel(message.mediaMimeType);
+  const typeLabel = mimeTypeLabel(message.mediaMimeType ?? "");
 
   return (
     <div className="flex min-w-[12rem] max-w-full items-center gap-2 rounded-md border border-[#d1d7db] bg-white/80 px-2.5 py-2">
