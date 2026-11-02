@@ -561,6 +561,9 @@ jobSchema.post("save", (doc) => {
 });
 
 jobSchema.index({ employerId: 1, status: 1, createdAt: -1 });
+/** Period hiring analytics group jobs by employer without a status predicate. */
+jobSchema.index({ createdAt: -1, employerId: 1 });
+jobSchema.index({ status: 1, stateName: 1, cityName: 1, createdAt: -1 });
 /** Public Jobs listing default sort: active → publishedAt/createdAt. */
 jobSchema.index({ status: 1, publishedAt: -1, createdAt: -1 });
 jobSchema.index({

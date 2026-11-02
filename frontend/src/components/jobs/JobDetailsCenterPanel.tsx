@@ -4,6 +4,7 @@ import { useSiteLanguage } from "@/i18n/site-language";
 import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
+import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import { JobRecruiterContactDetails } from "@/components/jobs/JobRecruiterContactDetails";
 import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
@@ -248,6 +249,11 @@ export function JobDetailsCenterPanel({
       return;
     }
     setIsApplying(true);
+    trackAnalyticsEvent({
+      eventName: "job_apply_started",
+      path: `/jobs/${job.jobId}`,
+      audience: "job_seeker",
+    });
     void protectedApply({
       applyWhatsAppNumber: job.applyWhatsAppNumber,
       jobTitle: job.jobTitle,
@@ -256,6 +262,11 @@ export function JobDetailsCenterPanel({
     })
       .then((result) => {
         if (result.status === "success") {
+          trackAnalyticsEvent({
+            eventName: "job_application_submitted",
+            path: `/jobs/${job.jobId}`,
+            audience: "job_seeker",
+          });
           setAppliedLocally(true);
           return;
         }

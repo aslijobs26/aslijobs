@@ -15,4 +15,7 @@ export const OPERATIONS_THEME_CSS_VARIABLES = {
   success: "--ds-success",
   chartAccent: "--ds-chart-accent",
   chartAccentAlt: "--ds-chart-accent-alt",
+  muted: "--ds-muted",
+  surface: "--ds-surface",
+  foreground: "--ds-foreground",
 } as const;

@@ -11,7 +11,7 @@ import {
 } from "../jobs/job.validation.js";
 import { resolveWhatsAppLinkedAccount } from "../accounts/phone-account.service.js";
 import { persistJobSeekerWhatsAppLanguage } from "./job-seeker-whatsapp-language.js";
-import { appendSiteLanguageQuery } from "../../utils/site-language-url.js";
+import { getLocalizedWebsiteUrl } from "../../utils/site-language-url.js";
 import { WhatsAppSessionModel } from "./whatsapp-session.model.js";
 import { WhatsAppService } from "./whatsapp.service.js";
 import { formatAppliedFilters } from "./whatsapp-bot.criteria.js";
@@ -198,13 +198,10 @@ function siteUrls(language?: string): {
 } {
   const origin = env.FRONTEND_URL.replace(/\/+$/, "");
   return {
-    seekerRegisterUrl: appendSiteLanguageQuery(
-      `${origin}/job-seeker/register`,
-      language,
-    ),
-    employerRegisterUrl: `${origin}/employer/register`,
-    postJobUrl: `${origin}/post-job`,
-    employerProfileUrl: `${origin}/employer/company-profile`,
+    seekerRegisterUrl: getLocalizedWebsiteUrl("/job-seeker/register", language, origin),
+    employerRegisterUrl: getLocalizedWebsiteUrl("/employer/register", language, origin),
+    postJobUrl: getLocalizedWebsiteUrl("/post-job", language, origin),
+    employerProfileUrl: getLocalizedWebsiteUrl("/employer/company-profile", language, origin),
   };
 }
 

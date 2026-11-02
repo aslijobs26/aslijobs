@@ -14,10 +14,18 @@ export const ANALYTICS_EVENT_NAMES = [
   "session_start",
   "registration_started",
   "registration_completed",
+  "otp_verified",
+  "profile_completed",
   "job_search",
   "job_detail_viewed",
   "job_apply_started",
   "job_application_submitted",
+  "employer_job_posted",
+  "interview_scheduled",
+  "interview_completed",
+  "offer_sent",
+  "candidate_selected",
+  "candidate_joined",
 ] as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
@@ -110,6 +118,31 @@ const analyticsEventSchema = new Schema(
       maxlength: 120,
       default: "",
     },
+    utmContent: {
+      type: String,
+      trim: true,
+      maxlength: 120,
+      default: "",
+    },
+    utmTerm: {
+      type: String,
+      trim: true,
+      maxlength: 120,
+      default: "",
+    },
+    /** Current visit attribution. Does not replace the first-touch fields above. */
+    sessionUtmSource: { type: String, trim: true, maxlength: 120, default: "" },
+    sessionUtmMedium: { type: String, trim: true, maxlength: 120, default: "" },
+    sessionUtmCampaign: { type: String, trim: true, maxlength: 120, default: "" },
+    sessionUtmContent: { type: String, trim: true, maxlength: 120, default: "" },
+    sessionUtmTerm: { type: String, trim: true, maxlength: 120, default: "" },
+    landingPath: { type: String, trim: true, maxlength: 500, default: "" },
+    audience: {
+      type: String,
+      enum: ["job_seeker", "employer", "unknown"],
+      default: "unknown",
+    },
+    idempotencyKey: { type: String, trim: true, maxlength: 140, default: "" },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
@@ -118,9 +151,17 @@ const analyticsEventSchema = new Schema(
 );
 
 analyticsEventSchema.index({ eventName: 1, occurredAt: -1 });
+/** Registration-page counts filter event, path, and time together. */
+analyticsEventSchema.index({ eventName: 1, path: 1, occurredAt: -1 });
 analyticsEventSchema.index({ visitorId: 1, occurredAt: -1 });
 analyticsEventSchema.index({ sessionId: 1, occurredAt: -1 });
 analyticsEventSchema.index({ portal: 1, occurredAt: -1 });
+analyticsEventSchema.index({ eventName: 1, audience: 1, occurredAt: -1 });
+analyticsEventSchema.index({ utmSource: 1, occurredAt: -1 });
+analyticsEventSchema.index(
+  { idempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKey: { $gt: "" } } },
+);
 
 export type AnalyticsEventDocument = InferSchemaType<
   typeof analyticsEventSchema

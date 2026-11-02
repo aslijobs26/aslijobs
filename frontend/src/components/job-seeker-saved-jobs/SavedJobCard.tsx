@@ -6,6 +6,7 @@ import { useSiteLanguage } from "@/i18n/site-language";
 import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import type { SavedJobListItem } from "@/types/saved-jobs";
 import { formatJobSearchJobType } from "@/utils/job-search-format";
+import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
 import { protectedApply } from "@/utils/job-apply-auth";
 import { cn } from "@/utils/cn";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
@@ -165,6 +166,7 @@ export function SavedJobCard({
       return;
     }
     setIsApplying(true);
+    trackAnalyticsEvent({ eventName: "job_apply_started", path: `/jobs/${job.publicJobId}`, audience: "job_seeker" });
     try {
       const result = await protectedApply({
         jobId: job.publicJobId,
@@ -173,6 +175,7 @@ export function SavedJobCard({
         applyWhatsAppNumber: null,
       });
       if (result.status === "success") {
+        trackAnalyticsEvent({ eventName: "job_application_submitted", path: `/jobs/${job.publicJobId}`, audience: "job_seeker" });
         setAppliedLocally(true);
       } else if (
         result.status === "error" &&

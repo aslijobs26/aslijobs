@@ -36,6 +36,26 @@
   height: 100%;
 }
 
+/* Laptop and up: placement, market, and forecast cards share one height. */
+@media (min-width: 768px) {
+  .operations-dashboard-density .operations-analytics-equal-row > [class*="min-w-0"] {
+    height: 25rem;
+    min-height: 0;
+  }
+
+  .operations-dashboard-density .operations-analytics-equal-row .operations-density-card > div:last-child {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+html[data-theme="dark"] .analytics-placement-metric {
+  background: var(--ds-hero-bg);
+  border-color: var(--ds-border);
+  box-shadow: none;
+  color: var(--ds-foreground);
+}
+
 .operations-dashboard-density .operations-density-card {
   border-radius: var(--operations-density-radius);
 }

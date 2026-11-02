@@ -1,6 +1,7 @@
 "use client";
 
 import { FieldError } from "@/components/auth/FieldError";
+import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { AUTH_VALIDATION_MESSAGES } from "@/constants/auth-validation-messages";
 import { ROUTES } from "@/constants/routes";
@@ -303,8 +304,18 @@ export function EmployerRegisterForm({
         const result = await resendEmployerOtp(employerId);
         startCooldown(result.resendAvailableIn);
       } else {
+        trackAnalyticsEvent({
+          eventName: "registration_started",
+          portal: "employer",
+          audience: "employer",
+        });
         const result = await registerEmployerAccount(formData, accountType);
         setEmployerId(result.employer.id);
+        trackAnalyticsEvent({
+          eventName: "registration_completed",
+          portal: "employer",
+          audience: "employer",
+        });
         startCooldown(result.resendAvailableIn);
       }
 
@@ -392,6 +403,11 @@ export function EmployerRegisterForm({
           accessToken: session.accessToken,
           refreshToken: session.refreshToken,
         });
+        trackAnalyticsEvent({
+          eventName: "profile_completed",
+          portal: "employer",
+          audience: "employer",
+        });
         onContinue(formData, accountType, employerId);
       } catch (error) {
         applyApiError(error, AUTH_VALIDATION_MESSAGES.GENERIC_SUBMIT_ERROR);
@@ -402,6 +418,11 @@ export function EmployerRegisterForm({
       return;
     }
 
+    trackAnalyticsEvent({
+      eventName: "profile_completed",
+      portal: "employer",
+      audience: "employer",
+    });
     onContinue(formData, accountType, employerId);
   };
 
@@ -436,6 +457,11 @@ export function EmployerRegisterForm({
     try {
       await verifyEmployerOtp(employerId, otp);
       setIsWhatsappVerified(true);
+      trackAnalyticsEvent({
+        eventName: "otp_verified",
+        portal: "employer",
+        audience: "employer",
+      });
       setFieldErrors((current) => clearFieldError(current, "otp"));
     } catch (error) {
       applyApiError(error, AUTH_VALIDATION_MESSAGES.OTP_INVALID);

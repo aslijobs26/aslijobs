@@ -24,6 +24,7 @@ import {
   formatJobSearchWalkInTimeRange,
   formatJobSearchWorkMode,
 } from "@/utils/job-search-format";
+import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
 import { protectedApply } from "@/utils/job-apply-auth";
 import { getPublicJobRecruiterDetails } from "@/utils/public-job-recruiter";
 import {
@@ -231,6 +232,7 @@ export function JobSearchMobileJobDetails({
       return;
     }
     setIsApplying(true);
+    trackAnalyticsEvent({ eventName: "job_apply_started", path: `/jobs/${job.jobId}`, audience: "job_seeker" });
     void protectedApply({
       applyWhatsAppNumber: job.applyWhatsAppNumber,
       jobTitle: job.jobTitle,
@@ -239,6 +241,7 @@ export function JobSearchMobileJobDetails({
     })
       .then((result) => {
         if (result.status === "success") {
+          trackAnalyticsEvent({ eventName: "job_application_submitted", path: `/jobs/${job.jobId}`, audience: "job_seeker" });
           setAppliedLocally(true);
           return;
         }

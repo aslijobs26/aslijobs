@@ -16,6 +16,16 @@ export const trackAnalyticsEventBodySchema = z.object({
   utmSource: z.string().trim().max(120).optional().default(""),
   utmMedium: z.string().trim().max(120).optional().default(""),
   utmCampaign: z.string().trim().max(120).optional().default(""),
+  utmContent: z.string().trim().max(120).optional().default(""),
+  utmTerm: z.string().trim().max(120).optional().default(""),
+  sessionUtmSource: z.string().trim().max(120).optional().default(""),
+  sessionUtmMedium: z.string().trim().max(120).optional().default(""),
+  sessionUtmCampaign: z.string().trim().max(120).optional().default(""),
+  sessionUtmContent: z.string().trim().max(120).optional().default(""),
+  sessionUtmTerm: z.string().trim().max(120).optional().default(""),
+  landingPath: z.string().trim().max(500).optional().default(""),
+  audience: z.enum(["job_seeker", "employer", "unknown"]).optional().default("unknown"),
+  idempotencyKey: z.string().trim().max(140).optional().default(""),
   occurredAt: z.string().datetime().optional(),
 });
 

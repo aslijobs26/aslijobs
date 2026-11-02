@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
 import {
   POST_JOB_INITIAL_STEP,
   POST_JOB_INITIAL_WIZARD_DATA,
@@ -663,6 +664,13 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       }
 
       const successSummary = buildJobPostedSuccessSummary(formData, createdJob);
+      if (!isActiveEditMode) {
+        trackAnalyticsEvent({
+          eventName: "employer_job_posted",
+          portal: "employer",
+          audience: "employer",
+        });
+      }
       setJobPostedSuccessSummary(successSummary);
 
       await invalidateEmployerJobCascadeCaches(queryClient);

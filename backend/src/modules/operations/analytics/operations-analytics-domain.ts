@@ -1,112 +1,237 @@
 import type { AnalyticsDatePreset } from "./operations-analytics.types.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const KOLKATA_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 
-function startOfLocalDay(date: Date): Date {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
+export type AnalyticsComparisonLabel =
+  | "percent"
+  | "new"
+  | "no_baseline"
+  | "unavailable";
+
+export type AnalyticsComparisonBasis =
+  | "equivalent_length"
+  | "previous_calendar_period"
+  | "unavailable";
+
+type CalendarDate = { y: number; m: number; d: number };
+
+export function kolkataParts(date: Date): CalendarDate {
+  const shifted = new Date(date.getTime() + KOLKATA_OFFSET_MS);
+  return {
+    y: shifted.getUTCFullYear(),
+    m: shifted.getUTCMonth(),
+    d: shifted.getUTCDate(),
+  };
 }
 
-function endOfLocalDay(date: Date): Date {
-  const next = new Date(date);
-  next.setHours(23, 59, 59, 999);
-  return next;
+export function kolkataDateKey(date: Date): string {
+  const parts = kolkataParts(date);
+  return `${parts.y}-${String(parts.m + 1).padStart(2, "0")}-${String(parts.d).padStart(2, "0")}`;
 }
 
-function toIsoDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+export function parseCalendarDate(value: string): CalendarDate | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const y = Number(match[1]);
+  const m = Number(match[2]) - 1;
+  const d = Number(match[3]);
+  if (m < 0 || m > 11 || d < 1 || d > 31) return null;
+  const probe = new Date(Date.UTC(y, m, d));
+  if (
+    probe.getUTCFullYear() !== y ||
+    probe.getUTCMonth() !== m ||
+    probe.getUTCDate() !== d
+  ) {
+    return null;
+  }
+  return { y, m, d };
 }
 
-export function resolveAnalyticsDateRange(input: {
-  preset: AnalyticsDatePreset;
-  dateFrom?: string;
-  dateTo?: string;
-}): {
+export function startOfKolkataDay(parts: CalendarDate): Date {
+  return new Date(Date.UTC(parts.y, parts.m, parts.d) - KOLKATA_OFFSET_MS);
+}
+
+export function endOfKolkataDay(parts: CalendarDate): Date {
+  return new Date(
+    Date.UTC(parts.y, parts.m, parts.d, 23, 59, 59, 999) - KOLKATA_OFFSET_MS,
+  );
+}
+
+function addDays(parts: CalendarDate, days: number): CalendarDate {
+  const probe = new Date(Date.UTC(parts.y, parts.m, parts.d + days));
+  return {
+    y: probe.getUTCFullYear(),
+    m: probe.getUTCMonth(),
+    d: probe.getUTCDate(),
+  };
+}
+
+function daysInMonth(year: number, monthIndex: number): number {
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+}
+
+function shiftMonth(parts: CalendarDate, delta: number): CalendarDate {
+  const probe = new Date(Date.UTC(parts.y, parts.m + delta, 1));
+  return { y: probe.getUTCFullYear(), m: probe.getUTCMonth(), d: 1 };
+}
+
+function quarterStartMonth(monthIndex: number): number {
+  return Math.floor(monthIndex / 3) * 3;
+}
+
+export function resolveAnalyticsDateRange(
+  input: {
+    preset: AnalyticsDatePreset;
+    dateFrom?: string;
+    dateTo?: string;
+  },
+  now: Date = new Date(),
+): {
   preset: AnalyticsDatePreset;
   from: string;
   to: string;
   previousFrom: string;
   previousTo: string;
   label: string;
+  comparisonBasis: AnalyticsComparisonBasis;
 } {
-  const now = new Date();
-  const todayEnd = endOfLocalDay(now);
-  let from: Date;
-  let to: Date = todayEnd;
-  let label: string;
+  const today = kolkataParts(now);
+  let fromParts = today;
+  let toParts = today;
+  let label = "Today";
+  let comparisonBasis: AnalyticsComparisonBasis = "equivalent_length";
+  let previousFromParts: CalendarDate | null = null;
+  let previousToParts: CalendarDate | null = null;
 
   switch (input.preset) {
     case "today": {
-      from = startOfLocalDay(now);
       label = "Today";
+      previousFromParts = addDays(today, -1);
+      previousToParts = addDays(today, -1);
+      comparisonBasis = "previous_calendar_period";
       break;
     }
     case "yesterday": {
-      const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
-      from = startOfLocalDay(yesterday);
-      to = endOfLocalDay(yesterday);
+      fromParts = addDays(today, -1);
+      toParts = fromParts;
       label = "Yesterday";
+      previousFromParts = addDays(today, -2);
+      previousToParts = previousFromParts;
+      comparisonBasis = "previous_calendar_period";
       break;
     }
     case "last_7_days": {
-      from = startOfLocalDay(now);
-      from.setDate(from.getDate() - 6);
+      fromParts = addDays(today, -6);
       label = "Last 7 days";
       break;
     }
     case "last_30_days": {
-      from = startOfLocalDay(now);
-      from.setDate(from.getDate() - 29);
+      fromParts = addDays(today, -29);
       label = "Last 30 days";
       break;
     }
     case "last_90_days": {
-      from = startOfLocalDay(now);
-      from.setDate(from.getDate() - 89);
+      fromParts = addDays(today, -89);
       label = "Last 3 months";
       break;
     }
     case "last_6_months": {
-      from = startOfLocalDay(now);
-      from.setMonth(from.getMonth() - 6);
+      fromParts = shiftMonth(today, -6);
+      fromParts = { ...fromParts, d: Math.min(today.d, daysInMonth(fromParts.y, fromParts.m)) };
       label = "Last 6 months";
       break;
     }
     case "last_12_months": {
-      from = startOfLocalDay(now);
-      from.setMonth(from.getMonth() - 12);
+      fromParts = shiftMonth(today, -12);
+      fromParts = { ...fromParts, d: Math.min(today.d, daysInMonth(fromParts.y, fromParts.m)) };
       label = "Last 12 months";
       break;
     }
+    case "this_month": {
+      fromParts = { y: today.y, m: today.m, d: 1 };
+      label = "This month";
+      const prev = shiftMonth(today, -1);
+      previousFromParts = prev;
+      previousToParts = {
+        y: prev.y,
+        m: prev.m,
+        d: daysInMonth(prev.y, prev.m),
+      };
+      comparisonBasis = "previous_calendar_period";
+      break;
+    }
+    case "last_month": {
+      const prev = shiftMonth(today, -1);
+      fromParts = prev;
+      toParts = { y: prev.y, m: prev.m, d: daysInMonth(prev.y, prev.m) };
+      label = "Last month";
+      const before = shiftMonth(today, -2);
+      previousFromParts = before;
+      previousToParts = {
+        y: before.y,
+        m: before.m,
+        d: daysInMonth(before.y, before.m),
+      };
+      comparisonBasis = "previous_calendar_period";
+      break;
+    }
+    case "this_quarter": {
+      const startMonth = quarterStartMonth(today.m);
+      fromParts = { y: today.y, m: startMonth, d: 1 };
+      label = "This quarter";
+      const prevStart = shiftMonth({ y: today.y, m: startMonth, d: 1 }, -3);
+      previousFromParts = prevStart;
+      const prevEndMonth = shiftMonth(prevStart, 2);
+      previousToParts = {
+        y: prevEndMonth.y,
+        m: prevEndMonth.m,
+        d: daysInMonth(prevEndMonth.y, prevEndMonth.m),
+      };
+      comparisonBasis = "previous_calendar_period";
+      break;
+    }
     case "this_year": {
-      from = startOfLocalDay(new Date(now.getFullYear(), 0, 1));
+      fromParts = { y: today.y, m: 0, d: 1 };
       label = "This year";
+      previousFromParts = { y: today.y - 1, m: 0, d: 1 };
+      previousToParts = { y: today.y - 1, m: 11, d: 31 };
+      comparisonBasis = "previous_calendar_period";
       break;
     }
     case "custom": {
-      from = startOfLocalDay(
-        input.dateFrom ? new Date(input.dateFrom) : now,
-      );
-      to = endOfLocalDay(input.dateTo ? new Date(input.dateTo) : now);
+      const parsedFrom = parseCalendarDate(input.dateFrom ?? "");
+      const parsedTo = parseCalendarDate(input.dateTo ?? "");
+      fromParts = parsedFrom ?? today;
+      toParts = parsedTo ?? today;
       label = "Custom range";
       break;
     }
     case "all":
     default: {
-      from = startOfLocalDay(new Date(2020, 0, 1));
+      fromParts = { y: 2020, m: 0, d: 1 };
       label = "Overall";
+      comparisonBasis = "unavailable";
       break;
     }
   }
 
-  const durationMs = Math.max(to.getTime() - from.getTime(), MS_PER_DAY);
-  const previousTo = new Date(from.getTime() - 1);
-  const previousFrom = new Date(previousTo.getTime() - durationMs);
+  const from = startOfKolkataDay(fromParts);
+  const to = endOfKolkataDay(toParts);
+  let previousFrom = new Date(0);
+  let previousTo = new Date(0);
+
+  if (comparisonBasis === "unavailable") {
+    previousFrom = from;
+    previousTo = new Date(from.getTime() - 1);
+  } else if (previousFromParts && previousToParts) {
+    previousFrom = startOfKolkataDay(previousFromParts);
+    previousTo = endOfKolkataDay(previousToParts);
+  } else {
+    const durationMs = Math.max(to.getTime() - from.getTime(), MS_PER_DAY - 1);
+    previousTo = new Date(from.getTime() - 1);
+    previousFrom = new Date(previousTo.getTime() - durationMs);
+  }
 
   return {
     preset: input.preset,
@@ -115,11 +240,12 @@ export function resolveAnalyticsDateRange(input: {
     previousFrom: previousFrom.toISOString(),
     previousTo: previousTo.toISOString(),
     label,
+    comparisonBasis,
   };
 }
 
 export function toIsoDateOnly(iso: string): string {
-  return toIsoDate(new Date(iso));
+  return kolkataDateKey(new Date(iso));
 }
 
 export function percentOf(part: number, whole: number): number | null {
@@ -131,10 +257,59 @@ export function percentChange(
   current: number,
   previous: number,
 ): number | null {
-  if (previous <= 0) {
-    return current > 0 ? 100 : current === 0 ? 0 : null;
+  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous <= 0) {
+    return null;
   }
   return Math.round(((current - previous) / previous) * 1000) / 10;
+}
+
+export function compareMetric(
+  current: number,
+  previous: number | null,
+): {
+  previousValue: number | null;
+  absoluteDifference: number | null;
+  changePercent: number | null;
+  trendDirection: "up" | "down" | "flat" | null;
+  changeLabel: AnalyticsComparisonLabel;
+} {
+  if (previous == null) {
+    return {
+      previousValue: null,
+      absoluteDifference: null,
+      changePercent: null,
+      trendDirection: null,
+      changeLabel: "unavailable",
+    };
+  }
+  if (previous <= 0 && current <= 0) {
+    return {
+      previousValue: 0,
+      absoluteDifference: 0,
+      changePercent: null,
+      trendDirection: "flat",
+      changeLabel: "no_baseline",
+    };
+  }
+  if (previous <= 0 && current > 0) {
+    return {
+      previousValue: 0,
+      absoluteDifference: current,
+      changePercent: null,
+      trendDirection: "up",
+      changeLabel: "new",
+    };
+  }
+  const changePercent = percentChange(current, previous);
+  const absoluteDifference = current - previous;
+  return {
+    previousValue: previous,
+    absoluteDifference,
+    changePercent,
+    trendDirection:
+      absoluteDifference > 0 ? "up" : absoluteDifference < 0 ? "down" : "flat",
+    changeLabel: "percent",
+  };
 }
 
 export function consecutiveConversionPercent(

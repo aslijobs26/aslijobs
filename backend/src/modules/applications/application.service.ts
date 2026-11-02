@@ -745,6 +745,33 @@ function emitApplicationEvent(
       });
     });
 
+  const analyticsName =
+    eventName === APPLICATION_EVENT_NAMES.INTERVIEW_SCHEDULED
+      ? "interview_scheduled"
+      : eventName === APPLICATION_EVENT_NAMES.INTERVIEW_COMPLETED
+        ? "interview_completed"
+        : eventName === APPLICATION_EVENT_NAMES.OFFER_SENT
+          ? "offer_sent"
+          : eventName === APPLICATION_EVENT_NAMES.SELECTED
+            ? "candidate_selected"
+            : eventName === APPLICATION_EVENT_NAMES.JOINED
+              ? "candidate_joined"
+              : null;
+  if (analyticsName) {
+    void import("../analytics/analytics-event.service.js")
+      .then(({ recordHiringAnalyticsEvent }) => {
+        recordHiringAnalyticsEvent({
+          eventName: analyticsName,
+          applicationId: context.applicationId,
+          employerId: context.employerId,
+          publicJobId: context.publicJobId,
+        });
+      })
+      .catch(() => {
+        // Analytics must not block hiring.
+      });
+  }
+
   if (eventName === APPLICATION_EVENT_NAMES.SELECTED) {
     void import("../operations/work/operations-work-emit.js")
       .then(({ scheduleJoiningPendingWork }) => {

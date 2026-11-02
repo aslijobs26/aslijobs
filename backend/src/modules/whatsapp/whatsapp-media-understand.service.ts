@@ -1,4 +1,5 @@
 import { env } from "../../config/env.js";
+import { getLocalizedWebsiteUrl } from "../../utils/site-language-url.js";
 import { WhatsAppService } from "./whatsapp.service.js";
 import {
   extractDocumentText,
@@ -36,8 +37,12 @@ export type MediaUnderstandOutcome = {
   skills: string[];
 };
 
-function profileUrl(): string {
-  return `${env.FRONTEND_URL.replace(/\/+$/, "")}/job-seeker/profile`;
+function profileUrl(language: BotLanguage): string {
+  return getLocalizedWebsiteUrl(
+    "/job-seeker/profile",
+    language,
+    env.FRONTEND_URL,
+  );
 }
 
 /**
@@ -84,7 +89,7 @@ function buildTextOutcome(
       skills: hints.skills,
       missingHints: hints.missingHints,
       truncated,
-      profileUrl: profileUrl(),
+      profileUrl: profileUrl(language),
     });
   }
   console.info(

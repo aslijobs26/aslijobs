@@ -37,34 +37,34 @@ const INSIGHT_TONE_STYLES: Record<
   { card: string; iconWrap: string; icon: LucideIcon; cta: string }
 > = {
   growth: {
-    card: "border-emerald-200/80 bg-emerald-50/70",
-    iconWrap: "bg-emerald-100 text-emerald-700",
+    card: "border-emerald-200/80 bg-emerald-50/70 dark:border-emerald-500/30 dark:bg-emerald-500/10",
+    iconWrap: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
     icon: BarChart3,
-    cta: "text-emerald-700 hover:text-emerald-800",
+    cta: "text-emerald-700 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200",
   },
   concern: {
-    card: "border-rose-200/80 bg-rose-50/70",
-    iconWrap: "bg-rose-100 text-rose-700",
+    card: "border-rose-200/80 bg-rose-50/70 dark:border-rose-500/30 dark:bg-rose-500/10",
+    iconWrap: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
     icon: AlertTriangle,
-    cta: "text-rose-700 hover:text-rose-800",
+    cta: "text-rose-700 hover:text-rose-800 dark:text-rose-300 dark:hover:text-rose-200",
   },
   expansion: {
-    card: "border-sky-200/80 bg-sky-50/70",
-    iconWrap: "bg-sky-100 text-sky-700",
+    card: "border-sky-200/80 bg-sky-50/70 dark:border-sky-500/30 dark:bg-sky-500/10",
+    iconWrap: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
     icon: Rocket,
-    cta: "text-sky-700 hover:text-sky-800",
+    cta: "text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200",
   },
   gap: {
-    card: "border-amber-200/80 bg-amber-50/70",
-    iconWrap: "bg-amber-100 text-amber-700",
+    card: "border-amber-200/80 bg-amber-50/70 dark:border-amber-500/30 dark:bg-amber-500/10",
+    iconWrap: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
     icon: Users,
-    cta: "text-amber-700 hover:text-amber-800",
+    cta: "text-amber-700 hover:text-amber-800 dark:text-amber-300 dark:hover:text-amber-200",
   },
   positive: {
-    card: "border-violet-200/80 bg-violet-50/70",
-    iconWrap: "bg-violet-100 text-violet-700",
+    card: "border-violet-200/80 bg-violet-50/70 dark:border-violet-500/30 dark:bg-violet-500/10",
+    iconWrap: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
     icon: TrendingUp,
-    cta: "text-violet-700 hover:text-violet-800",
+    cta: "text-violet-700 hover:text-violet-800 dark:text-violet-300 dark:hover:text-violet-200",
   },
 };
 
@@ -81,32 +81,32 @@ const STATUS_BADGE: Record<
   AnalyticsSupplyDemandStatus,
   string
 > = {
-  shortage: "bg-rose-50 text-rose-700 ring-1 ring-rose-200/80",
-  surplus: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80",
-  balanced: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80",
+  shortage: "bg-rose-50 text-rose-700 ring-1 ring-rose-200/80 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/30",
+  surplus: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30",
+  balanced: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
 };
 
 const OPPORTUNITY_BADGE: Record<AnalyticsOpportunityLevel, string> = {
-  high: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80",
-  medium: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80",
-  low: "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80",
+  high: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30",
+  medium: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
+  low: "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 dark:bg-white/5 dark:text-slate-300 dark:ring-white/10",
 };
 
 const LEVEL_TEXT: Record<AnalyticsLevel, string> = {
-  high: "text-emerald-700",
-  medium: "text-amber-600",
-  low: "text-rose-600",
+  high: "text-emerald-700 dark:text-emerald-300",
+  medium: "text-amber-600 dark:text-amber-300",
+  low: "text-rose-600 dark:text-rose-300",
 };
 
 const MARKET_STATUS_TEXT: Record<
   OperationsAnalyticsMarketRow["marketStatusTone"],
   string
 > = {
-  danger: "text-rose-600",
-  success: "text-emerald-700",
-  warning: "text-amber-600",
-  info: "text-sky-700",
-  neutral: "text-slate-600",
+  danger: "text-rose-600 dark:text-rose-300",
+  success: "text-emerald-700 dark:text-emerald-300",
+  warning: "text-amber-600 dark:text-amber-300",
+  info: "text-sky-700 dark:text-sky-300",
+  neutral: "text-slate-600 dark:text-slate-300",
 };
 
 function formatCount(value: number): string {
@@ -221,11 +221,20 @@ export function HiringFunnelCard({
               key={stage.key}
               className="grid grid-cols-[minmax(0,4.75rem)_minmax(0,1fr)_auto_auto] items-center gap-x-2 sm:grid-cols-[minmax(0,6.5rem)_minmax(0,1fr)_auto_auto] sm:gap-x-3 md:grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_auto_auto]"
             >
-              <span className="truncate text-[11px] font-medium text-foreground sm:text-[12px]">
-                {stage.label}
+              <span
+                className="truncate text-[11px] font-medium text-foreground sm:text-[12px]"
+                title={stage.definition}
+              >
+                <button
+                  type="button"
+                  className="truncate text-left"
+                  aria-label={stage.definition ? `${stage.label}. ${stage.definition}` : stage.label}
+                >
+                  {stage.label}
+                </button>
               </span>
               <div
-                className="h-3.5 w-full min-w-0 overflow-hidden rounded bg-[#EEF2F6]"
+                className="h-3.5 w-full min-w-0 overflow-hidden rounded bg-[#EEF2F6] dark:bg-white/10"
                 role="progressbar"
                 aria-label={`${stage.label}: ${stage.conversionPercent}% conversion`}
                 aria-valuenow={stage.conversionPercent}
@@ -264,7 +273,7 @@ export function SupplyDemandCard({
   return (
     <OperationsCard
       title="Supply vs Demand by Job Category"
-      subtitle="Compare available talent with employer demand"
+      subtitle="Registered jobseekers compared with active jobs. Registration is not confirmed availability."
       action={
         <span className="text-[11px] font-semibold text-primary">View all</span>
       }
@@ -304,7 +313,7 @@ export function SupplyDemandCard({
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <div className="h-2.5 flex-1 overflow-hidden rounded bg-[#EEF2F6]">
+                  <div className="h-2.5 flex-1 overflow-hidden rounded bg-[#EEF2F6] dark:bg-white/10">
                     <div
                       className="h-full rounded bg-[#3B82F6]"
                       style={{
@@ -317,7 +326,7 @@ export function SupplyDemandCard({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-2.5 flex-1 overflow-hidden rounded bg-[#EEF2F6]">
+                  <div className="h-2.5 flex-1 overflow-hidden rounded bg-[#EEF2F6] dark:bg-white/10">
                     <div
                       className="h-full rounded bg-[#10B981]"
                       style={{
@@ -367,7 +376,7 @@ export function TopLocationsCard({
               key={`${location.rank}-${location.name}`}
               className="flex min-h-[3.125rem] shrink-0 items-start gap-2.5 rounded-lg border border-border-subtle/80 bg-surface px-2.5 py-2"
             >
-              <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-foreground">
+              <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-foreground dark:bg-white/10">
                 {location.rank}
               </span>
               <div className="min-w-0 flex-1">
@@ -400,19 +409,19 @@ const PLACEMENT_METRIC_STYLES: Record<
 > = {
   "avg-time": {
     icon: FileCheck2,
-    iconWrap: "bg-emerald-100 text-emerald-700",
+    iconWrap: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
   },
   "interview-offer": {
     icon: UserCheck,
-    iconWrap: "bg-sky-100 text-sky-700",
+    iconWrap: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
   },
   "employer-repeat": {
     icon: Building2,
-    iconWrap: "bg-violet-100 text-violet-700",
+    iconWrap: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
   },
   "top-category": {
     icon: Star,
-    iconWrap: "bg-amber-100 text-amber-700",
+    iconWrap: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
   },
 };
 
@@ -452,7 +461,7 @@ export function PlacementIntelligenceCard({
           return (
             <div
               key={metric.id}
-              className="flex min-h-[6.75rem] flex-col rounded-xl border border-slate-200/80 bg-[#F8FAFC] p-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
+              className="analytics-placement-metric flex min-h-[6.75rem] flex-col rounded-xl border border-border-subtle bg-hero-bg p-3"
             >
               <div
                 className={cn(
@@ -489,7 +498,7 @@ export function PlacementIntelligenceCard({
                     <p
                       className={cn(
                         "mt-auto flex items-center gap-0.5 pt-2 text-[11px] font-semibold",
-                        trendPositive ? "text-emerald-600" : "text-rose-600",
+                        trendPositive ? "text-emerald-600 dark:text-emerald-300" : "text-rose-600 dark:text-rose-300",
                       )}
                     >
                       <TrendIcon className="h-3 w-3" aria-hidden />
@@ -606,8 +615,10 @@ export function MarketIntelligenceCard({
 
 export function ForecastsCard({
   forecasts,
+  model,
 }: {
   forecasts: OperationsAnalyticsForecast[];
+  model?: OperationsAnalyticsOverview["forecastModel"];
 }) {
   const icons: Record<OperationsAnalyticsForecast["tone"], LucideIcon> = {
     growth: TrendingUp,
@@ -615,21 +626,42 @@ export function ForecastsCard({
     seasonal: CalendarDays,
   };
   const wraps: Record<OperationsAnalyticsForecast["tone"], string> = {
-    growth: "bg-emerald-100 text-emerald-700",
-    expansion: "bg-violet-100 text-violet-700",
-    seasonal: "bg-amber-100 text-amber-700",
+    growth: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+    expansion: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
+    seasonal: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
   };
 
   return (
     <OperationsCard
       title="Forecasts & Predictions"
-      subtitle="Based on historical data and market trends"
+      subtitle={model?.methodology ?? "Estimates from historical daily counts. Not guaranteed outcomes."}
       action={
         <span className="text-[11px] font-semibold text-primary">View all</span>
       }
       className="h-full min-w-0"
       bodyClassName="p-3 sm:p-3.5"
     >
+      {model?.series?.length ? (
+        <ul className="mb-3 flex flex-col gap-2">
+          {model.series.map((series) => (
+            <li key={series.id} className="rounded-lg border border-border-subtle p-2.5 text-[12px]">
+              <p className="font-semibold text-foreground">{series.label}</p>
+              <p className="mt-1 text-muted">{series.message}</p>
+              {series.sufficient && series.projection[0] ? (
+                <p className="mt-1 text-foreground">
+                  Next day estimate {series.projection[0].estimate} (range {series.projection[0].lower}–{series.projection[0].upper})
+                </p>
+              ) : null}
+              {series.backtest ? (
+                <p className="mt-1 text-muted">
+                  Backtest MAE {series.backtest.mae}
+                  {series.backtest.mape != null ? `, MAPE ${series.backtest.mape}%` : ""} over {series.backtest.holdoutDays} days
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {forecasts.length === 0 ? (
         <p className="flex min-h-[12rem] items-center justify-center text-xs text-muted">
           No evidence-based outlook available for this period.
@@ -689,7 +721,7 @@ export function AnalyticsInsightsDashboard({
         </div>
       </div>
 
-      <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+      <div className="operations-analytics-grid operations-analytics-equal-row grid grid-cols-1 gap-3 max-sm:gap-2.5 md:grid-cols-2 xl:grid-cols-3">
         <div className="min-w-0">
           <PlacementIntelligenceCard
             metrics={data.placementMetrics}

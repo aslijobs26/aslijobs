@@ -270,6 +270,10 @@ applicationSchema.index({ employerId: 1, jobId: 1, status: 1 });
 /** Operations Placements list/analytics by status + recency. */
 applicationSchema.index({ status: 1, updatedAt: -1 });
 applicationSchema.index({ status: 1, appliedAt: -1 });
+/** Period analytics match appliedAt before grouping by employer or job. */
+applicationSchema.index({ appliedAt: -1, employerId: 1, jobId: 1 });
+/** History-time funnel: one stage event per application, matched by status and time. */
+applicationSchema.index({ "statusHistory.status": 1, "statusHistory.at": 1 });
 
 export type ApplicationDocumentLean = InferSchemaType<
   typeof applicationSchema

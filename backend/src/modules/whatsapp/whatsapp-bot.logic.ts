@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { appendSiteLanguageQuery } from "../../utils/site-language-url.js";
+import { getLocalizedWebsiteUrl } from "../../utils/site-language-url.js";
 import {
   extractExperienceDetail,
   extractFreeJobTitle,
@@ -120,7 +120,7 @@ export function buildPublicJobApplyUrl(
   if (language == null || String(language).trim() === "") {
     return url;
   }
-  return appendSiteLanguageQuery(url, language);
+  return getLocalizedWebsiteUrl(url, language);
 }
 
 const TELUGU_SCRIPT = /[\u0C00-\u0C7F]/;

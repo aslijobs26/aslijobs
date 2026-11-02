@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { OperationsAnalyticsKpiCard } from "../../../types/operations-analytics";
 import { cn } from "../../../utils/cn";
+import { drilldownMetricForKpi } from "./analytics-drilldown";
 
 function formatCount(value: number): string {
   return value.toLocaleString("en-IN");
@@ -74,9 +75,10 @@ const FALLBACK_TONE: KpiTone = {
 interface PlatformKpisStripProps {
   kpis: OperationsAnalyticsKpiCard[];
   rangeLabel: string;
+  onOpenKpi?: (kpiId: string) => void;
 }
 
-export function PlatformKpisStrip({ kpis, rangeLabel }: PlatformKpisStripProps) {
+export function PlatformKpisStrip({ kpis, rangeLabel, onOpenKpi }: PlatformKpisStripProps) {
   if (!kpis.length) {
     return (
       <p className="rounded-lg border border-border-subtle bg-surface px-3 py-4 text-center text-sm text-muted">
@@ -132,12 +134,16 @@ export function PlatformKpisStrip({ kpis, rangeLabel }: PlatformKpisStripProps) 
               <p className="mt-1.5 text-[18px] font-semibold tabular-nums tracking-tight text-foreground sm:text-[20px]">
                 {formatCount(kpi.value)}
               </p>
-              {kpi.changePercent != null ? (
+              {kpi.changeLabel === "new" ? (
+                <p className="mt-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-300 sm:text-[11px]">New</p>
+              ) : kpi.changeLabel === "no_baseline" || kpi.changeLabel === "unavailable" ? (
+                <p className="mt-1 text-[10px] text-muted sm:text-[11px]">No previous baseline</p>
+              ) : kpi.changePercent != null ? (
                 <p
                   className={cn(
                     "mt-1 inline-flex items-center gap-0.5 text-[10px] font-medium sm:text-[11px]",
-                    trendPositive && "text-emerald-700",
-                    trendNegative && "text-rose-600",
+                    trendPositive && "text-emerald-700 dark:text-emerald-300",
+                    trendNegative && "text-rose-600 dark:text-rose-300",
                     !trendPositive && !trendNegative && "text-muted",
                   )}
                 >
@@ -156,6 +162,15 @@ export function PlatformKpisStrip({ kpis, rangeLabel }: PlatformKpisStripProps) 
                   vs prior period —
                 </p>
               )}
+              {onOpenKpi && drilldownMetricForKpi(kpi.id) ? (
+                <button
+                  type="button"
+                  className="mt-1 text-[10px] font-medium text-primary underline-offset-2 hover:underline focus-visible:underline"
+                  onClick={() => onOpenKpi(kpi.id)}
+                >
+                  View records
+                </button>
+              ) : null}
             </article>
           );
         })}

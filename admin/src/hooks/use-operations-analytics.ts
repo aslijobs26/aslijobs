@@ -39,7 +39,8 @@ export async function downloadOperationsAnalyticsExport(
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `asli-os-analytics-${params.preset}.csv`;
+  const extension = params.format === "xlsx" ? "xlsx" : params.format === "pdf" ? "pdf" : "csv";
+  anchor.download = `aslijobs-analytics-${params.report ?? "summary"}-${params.preset}.${extension}`;
   anchor.click();
   URL.revokeObjectURL(url);
 }

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { kolkataDateKey } from "../analytics/operations-analytics-domain.js";
 import {
   percentChange,
   percentOf,
@@ -190,6 +191,6 @@ describe("placements analytics date range", () => {
       now,
     });
     assert.equal(year.preset, "this_year");
-    assert.equal(new Date(year.from).getMonth(), 0);
+    assert.equal(kolkataDateKey(new Date(year.from)), "2026-01-01");
   });
 });

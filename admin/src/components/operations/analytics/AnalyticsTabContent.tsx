@@ -22,6 +22,7 @@ interface AnalyticsTabContentProps {
   canExport: boolean;
   onExport: () => void;
   isExporting?: boolean;
+  onOpenKpi?: (kpiId: string) => void;
 }
 
 function formatCount(value: number): string {
@@ -34,13 +35,42 @@ export function AnalyticsTabContent({
   canExport,
   onExport,
   isExporting = false,
+  onOpenKpi,
 }: AnalyticsTabContentProps) {
   if (tab === "insights") {
     return (
       <div className="flex min-w-0 flex-col gap-3 max-sm:gap-2.5">
+        {data.limitations && data.limitations.length > 0 ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            <p>
+              {data.range.label}
+              {data.filters?.state ? ` · ${data.filters.state}` : ""}
+              {data.filters?.city ? ` · ${data.filters.city}` : ""}
+              {data.filters?.category ? ` · ${data.filters.category}` : ""}
+              {data.filters?.employer ? ` · ${data.filters.employer}` : ""}
+              {data.generatedAt ? ` · Generated ${new Date(data.generatedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}` : ""}
+            </p>
+            <ul className="mt-1 list-disc pl-4">
+              {data.limitations.slice(0, 6).map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {data.interviewMetrics ? (
+          <OperationsCard title="Interview outcomes" subtitle={data.interviewMetrics.note} bodyClassName="grid grid-cols-2 gap-2 p-3 md:grid-cols-4">
+            <p className="text-[12px]">Scheduled <strong>{formatCount(data.interviewMetrics.scheduled)}</strong></p>
+            <p className="text-[12px]">Completed <strong>{formatCount(data.interviewMetrics.completed)}</strong></p>
+            <p className="text-[12px]">Rescheduled <strong>{formatCount(data.interviewMetrics.rescheduled ?? 0)}</strong></p>
+            <p className="text-[12px]">Cancelled <strong>{formatCount(data.interviewMetrics.cancelled)}</strong></p>
+            <p className="text-[12px]">Missing history <strong>{formatCount(data.interviewMetrics.missingHistory ?? 0)}</strong></p>
+            <p className="text-[12px]">No-shows <strong>{data.interviewMetrics.noShows == null ? "Not tracked" : formatCount(data.interviewMetrics.noShows)}</strong></p>
+          </OperationsCard>
+        ) : null}
         <PlatformKpisStrip
           kpis={data.platformKpis ?? []}
           rangeLabel={data.range.label}
+          onOpenKpi={onOpenKpi}
         />
         <WebsiteTrafficPanel
           traffic={data.websiteTraffic}
@@ -65,7 +95,7 @@ export function AnalyticsTabContent({
             <TopLocationsCard locations={data.topLocations} />
           </div>
         </div>
-        <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="operations-analytics-grid operations-analytics-equal-row grid grid-cols-1 gap-3 max-sm:gap-2.5 md:grid-cols-2 xl:grid-cols-3">
           <div className="min-w-0">
             <PlacementIntelligenceCard
               metrics={data.placementMetrics}
@@ -76,7 +106,7 @@ export function AnalyticsTabContent({
             <MarketIntelligenceCard rows={data.marketIntelligence} />
           </div>
           <div className="min-w-0 md:col-span-2 xl:col-span-1">
-            <ForecastsCard forecasts={data.forecasts} />
+            <ForecastsCard forecasts={data.forecasts} model={data.forecastModel} />
           </div>
         </div>
       </div>
@@ -183,7 +213,7 @@ export function AnalyticsTabContent({
   }
 
   if (tab === "forecasts") {
-    return <ForecastsCard forecasts={data.forecasts} />;
+    return <ForecastsCard forecasts={data.forecasts} model={data.forecastModel} />;
   }
 
   // reports

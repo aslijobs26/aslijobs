@@ -300,6 +300,7 @@ const jobSeekerSchema = new Schema(
 );
 
 jobSeekerSchema.index({ createdAt: -1 });
+jobSeekerSchema.index({ state: 1, city: 1, createdAt: -1 });
 jobSeekerSchema.index({
   "operationsRegistrationAwareness.state": 1,
   "operationsRegistrationAwareness.registeredAt": -1,

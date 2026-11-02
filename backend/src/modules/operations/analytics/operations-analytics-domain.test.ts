@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   classifySupplyDemand,
   consecutiveConversionPercent,
+  kolkataDateKey,
   marketStatusForLevels,
   resolveAnalyticsDateRange,
 } from "./operations-analytics-domain.js";
@@ -37,9 +38,7 @@ describe("operations-analytics-domain", () => {
   it("resolves yesterday as a single calendar day", () => {
     const range = resolveAnalyticsDateRange({ preset: "yesterday" });
     assert.equal(range.label, "Yesterday");
-    const from = new Date(range.from);
-    const to = new Date(range.to);
-    assert.equal(from.toDateString(), to.toDateString());
+    assert.equal(kolkataDateKey(new Date(range.from)), kolkataDateKey(new Date(range.to)));
   });
 
   it("maps market status from levels", () => {

@@ -6,6 +6,7 @@ import type { SiteLanguageCode } from "@/constants/site-language";
 import { useSiteLanguage } from "@/i18n/site-language";
 import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import { useTranslate } from "@/i18n/translate";
+import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
 import { protectedApply } from "@/utils/job-apply-auth";
 import { cn } from "@/utils/cn";
 import {
@@ -149,6 +150,7 @@ export function JobSearchJobCard({
       return;
     }
     setIsApplying(true);
+    trackAnalyticsEvent({ eventName: "job_apply_started", path: `/jobs/${job.jobId}`, audience: "job_seeker" });
     void protectedApply({
       applyWhatsAppNumber: job.applyWhatsAppNumber,
       jobTitle: job.jobTitle,
@@ -157,6 +159,7 @@ export function JobSearchJobCard({
     })
       .then((result) => {
         if (result.status === "success") {
+          trackAnalyticsEvent({ eventName: "job_application_submitted", path: `/jobs/${job.jobId}`, audience: "job_seeker" });
           setAppliedLocally(true);
           return;
         }

@@ -49,32 +49,34 @@ export function AnalyticsTrendsPanel({
               data={series}
               margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.borderSubtle} />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 10, fill: "#5a6570" }}
+                tick={{ fontSize: 10, fill: colors.muted }}
                 tickLine={false}
-                axisLine={{ stroke: "#E5E7EB" }}
+                axisLine={{ stroke: colors.borderSubtle }}
               />
               <YAxis
                 allowDecimals={false}
-                tick={{ fontSize: 10, fill: "#5a6570" }}
+                tick={{ fontSize: 10, fill: colors.muted }}
                 tickLine={false}
-                axisLine={{ stroke: "#E5E7EB" }}
+                axisLine={{ stroke: colors.borderSubtle }}
                 width={36}
               />
               <Tooltip
                 contentStyle={{
                   borderRadius: 8,
-                  borderColor: "#E5E7EB",
+                  borderColor: colors.borderSubtle,
+                  background: colors.surface,
+                  color: colors.foreground,
                   fontSize: 12,
                 }}
               />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 12, color: colors.foreground }} />
               <Line
                 type="monotone"
                 dataKey="placements"
-                name="Placements"
+                name="Selected"
                 stroke={colors.primary}
                 strokeWidth={2}
                 dot={false}

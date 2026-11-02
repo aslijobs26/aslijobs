@@ -1144,16 +1144,16 @@ describe("whatsapp job seeker apply links", () => {
     );
   });
 
-  it("adds lang to job-seeker register URLs and leaves employer URLs unchanged", () => {
+  it("localizes every bot website link, including post-job and employer pages", () => {
     const service = readFileSync(
       new URL("./whatsapp-bot.service.ts", import.meta.url),
       "utf8",
     );
-    assert.match(service, /seekerRegisterUrl: appendSiteLanguageQuery/);
-    assert.match(
-      service,
-      /employerRegisterUrl: `\$\{origin\}\/employer\/register`/,
-    );
+    assert.match(service, /seekerRegisterUrl: getLocalizedWebsiteUrl\("\/job-seeker\/register"/);
+    assert.match(service, /employerRegisterUrl: getLocalizedWebsiteUrl\("\/employer\/register"/);
+    assert.match(service, /postJobUrl: getLocalizedWebsiteUrl\("\/post-job"/);
+    assert.match(service, /employerProfileUrl: getLocalizedWebsiteUrl\("\/employer\/company-profile"/);
+    assert.doesNotMatch(service, /postJobUrl: `\$\{origin\}\/post-job`/);
   });
 
   it("does not invent Apply Now URLs from empty or unsafe job IDs", () => {

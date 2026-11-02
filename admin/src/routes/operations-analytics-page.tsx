@@ -1,6 +1,16 @@
 import { isAxiosError } from "axios";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { canAccessOperationsAnalytics } from "../components/operations/analytics/analytics-access";
+import { AnalyticsDrilldownDrawer } from "../components/operations/analytics/AnalyticsDrilldownDrawer";
+import { AnalyticsFilterBar } from "../components/operations/analytics/AnalyticsFilterBar";
+import { drilldownMetricForKpi } from "../components/operations/analytics/analytics-drilldown";
+import type { DrilldownMetric } from "../components/operations/analytics/analytics-drilldown";
+import {
+  filtersFromSearch,
+  writeFiltersToSearch,
+  type AnalyticsFilterDraft,
+} from "../components/operations/analytics/analytics-filters";
 import { AnalyticsInsightsSkeleton } from "../components/operations/analytics/AnalyticsInsightsSkeleton";
 import { AnalyticsPageHeader } from "../components/operations/analytics/AnalyticsPageHeader";
 import { AnalyticsTabContent } from "../components/operations/analytics/AnalyticsTabContent";
@@ -56,34 +66,39 @@ export function OperationsAnalyticsPage() {
     ? (searchParams.get("tab") as AnalyticsTabId)
     : "insights";
 
-  const preset: AnalyticsDatePreset = isAnalyticsPreset(
-    searchParams.get("preset"),
-  )
-    ? (searchParams.get("preset") as AnalyticsDatePreset)
+  const appliedFilters = useMemo(
+    () => filtersFromSearch(searchParams),
+    [searchParams],
+  );
+  const preset = isAnalyticsPreset(appliedFilters.preset)
+    ? appliedFilters.preset
     : "last_6_months";
 
-  const state = searchParams.get("state") ?? "";
-
   const [exporting, setExporting] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"csv" | "xlsx" | "pdf">("csv");
+  const [report, setReport] = useState("summary");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [drilldown, setDrilldown] = useState<DrilldownMetric | null>(null);
 
   const params = useMemo(
     () => ({
+      ...appliedFilters,
       preset,
-      state,
+      format: exportFormat,
+      report,
     }),
-    [preset, state],
+    [appliedFilters, exportFormat, preset, report],
   );
 
-  const overviewQuery = useOperationsAnalyticsOverview(params);
+  const canView = canAccessOperationsAnalytics({
+    isSuperAdmin,
+    reportsRead: can("reports", "read"),
+    reportsView: canKey("reports.view"),
+  });
+  const overviewQuery = useOperationsAnalyticsOverview(params, { enabled: canView });
   const data = overviewQuery.data;
 
-  const canExport =
-    isSuperAdmin ||
-    canKey("jobs.list.export") ||
-    can("jobs", "export") ||
-    can("reports", "read") ||
-    canKey("reports.view");
+  const canExport = canView;
 
   const stateOptions = useMemo(
     () => [
@@ -93,24 +108,20 @@ export function OperationsAnalyticsPage() {
     [],
   );
 
-  const updateParams = (next: {
-    tab?: AnalyticsTabId;
-    preset?: AnalyticsDatePreset;
-    state?: string;
-  }) => {
+  const updateParams = (next: { tab?: AnalyticsTabId }) => {
     const updated = new URLSearchParams(searchParams);
     if (next.tab) {
       if (next.tab === "insights") updated.delete("tab");
       else updated.set("tab", next.tab);
     }
-    if (next.preset) {
-      if (next.preset === "last_6_months") updated.delete("preset");
-      else updated.set("preset", next.preset);
-    }
-    if (next.state !== undefined) {
-      if (!next.state) updated.delete("state");
-      else updated.set("state", next.state);
-    }
+    setSearchParams(updated, { replace: true });
+  };
+
+  const applyFilters = (draft: AnalyticsFilterDraft) => {
+    const updated = writeFiltersToSearch(searchParams, {
+      ...draft,
+      preset: isAnalyticsPreset(draft.preset) ? draft.preset : "last_6_months",
+    });
     setSearchParams(updated, { replace: true });
   };
 
@@ -139,13 +150,21 @@ export function OperationsAnalyticsPage() {
       <div className="flex min-w-0 flex-col gap-3 max-sm:gap-2.5">
         <AnalyticsPageHeader
           preset={preset}
-          state={state}
+          state={appliedFilters.state}
           stateOptions={stateOptions}
-          onPresetChange={(next) => updateParams({ preset: next })}
-          onStateChange={(next) => updateParams({ state: next })}
+          onPresetChange={() => undefined}
+          onStateChange={() => undefined}
           onExport={() => void handleExport()}
           isExporting={exporting}
           canExport={canExport}
+          hideControls
+        />
+
+        <AnalyticsFilterBar
+          applied={{ ...appliedFilters, preset }}
+          stateOptions={stateOptions}
+          onApply={applyFilters}
+          isRefreshing={overviewQuery.isFetching}
         />
 
         {actionError ? (
@@ -159,7 +178,13 @@ export function OperationsAnalyticsPage() {
           onChange={(tab) => updateParams({ tab })}
         />
 
-        {overviewQuery.isLoading && !data ? (
+        {!canView ? (
+          <OperationsCard className="min-w-0" bodyClassName="p-6">
+            <p className="text-center text-sm text-muted">
+              Analytics requires reports access. Job view does not include website traffic or employer analytics.
+            </p>
+          </OperationsCard>
+        ) : overviewQuery.isLoading && !data ? (
           <AnalyticsInsightsSkeleton />
         ) : errorMessage && !data ? (
           <OperationsCard className="min-w-0" bodyClassName="p-6">
@@ -181,6 +206,10 @@ export function OperationsAnalyticsPage() {
             canExport={canExport}
             onExport={() => void handleExport()}
             isExporting={exporting}
+            onOpenKpi={(kpiId) => {
+              const metric = drilldownMetricForKpi(kpiId);
+              if (metric) setDrilldown(metric);
+            }}
           />
         ) : (
           <OperationsCard className="min-w-0" bodyClassName="p-6">
@@ -189,6 +218,13 @@ export function OperationsAnalyticsPage() {
             </p>
           </OperationsCard>
         )}
+        {drilldown ? (
+          <AnalyticsDrilldownDrawer
+            metric={drilldown}
+            params={params}
+            onClose={() => setDrilldown(null)}
+          />
+        ) : null}
       </div>
     </OperationsLayout>
   );

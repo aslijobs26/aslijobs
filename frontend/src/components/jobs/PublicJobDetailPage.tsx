@@ -1,7 +1,8 @@
 "use client";
 
-import { JobSearchMobileJobDetails } from "@/components/job-search/JobSearchMobileJobDetails";
+import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
 import { JobDetailsPageLayout } from "@/components/jobs/JobDetailsPageLayout";
+import { JobSearchMobileJobDetails } from "@/components/job-search/JobSearchMobileJobDetails";
 import { ROUTES } from "@/constants/routes";
 import { useSiteLanguage } from "@/i18n/site-language";
 import {
@@ -75,6 +76,15 @@ export function PublicJobDetailPage({ publicJobId }: PublicJobDetailPageProps) {
     getServerMobileSnapshot,
   );
   const isSeekerAuthenticated = Boolean(getJobSeekerAccessToken()?.trim());
+
+  useEffect(() => {
+    trackAnalyticsEvent({
+      eventName: "job_detail_viewed",
+      path: `/jobs/${publicJobId}`,
+      portal: "public_site",
+      audience: "job_seeker",
+    });
+  }, [publicJobId]);
 
   useEffect(() => {
     const bump = () => setSeekerAuthEpoch((value) => value + 1);

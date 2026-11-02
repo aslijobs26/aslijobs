@@ -25,6 +25,7 @@ interface AnalyticsPageHeaderProps {
   onExport: () => void;
   isExporting?: boolean;
   canExport?: boolean;
+  hideControls?: boolean;
 }
 
 export function AnalyticsPageHeader({
@@ -36,6 +37,7 @@ export function AnalyticsPageHeader({
   onExport,
   isExporting = false,
   canExport = false,
+  hideControls = false,
 }: AnalyticsPageHeaderProps) {
   return (
     <header className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5">
@@ -62,7 +64,7 @@ export function AnalyticsPageHeader({
           </p>
         </div>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {hideControls ? null : <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="relative min-w-[9.5rem]">
             <CalendarDays
               className="pointer-events-none absolute left-2.5 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-muted"
@@ -104,7 +106,7 @@ export function AnalyticsPageHeader({
               {isExporting ? "Exporting…" : "Export Report"}
             </button>
           ) : null}
-        </div>
+        </div>}
       </div>
     </header>
   );

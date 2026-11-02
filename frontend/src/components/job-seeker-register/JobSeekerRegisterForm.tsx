@@ -20,6 +20,7 @@ import {
 import { ROUTES } from "@/constants/routes";
 import { useOtpResendCooldown } from "@/hooks/useOtpResendCooldown";
 import { readExplicitSiteLanguage, useSiteLanguage } from "@/i18n/site-language";
+import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
 import { useTranslate } from "@/i18n/translate";
 import {
   completeJobSeekerRegistration,
@@ -447,6 +448,11 @@ export function JobSeekerRegisterForm() {
 
     setIsSubmitting(true);
     clearErrors();
+    trackAnalyticsEvent({
+      eventName: "registration_started",
+      portal: "job_seeker",
+      audience: "job_seeker",
+    });
 
     try {
       const result = await registerJobSeekerAccount(
@@ -461,6 +467,11 @@ export function JobSeekerRegisterForm() {
       }
 
       setJobSeekerId(result.jobSeekerId);
+      trackAnalyticsEvent({
+        eventName: "registration_completed",
+        portal: "job_seeker",
+        audience: "job_seeker",
+      });
       setOtpDigits([...EMPTY_OTP_DIGITS]);
       setStep("otp");
       startCooldown(result.resendAvailableIn);
@@ -515,6 +526,11 @@ export function JobSeekerRegisterForm() {
         otpDigits.join(""),
       );
       setRegistrationContinuationToken(verified.registrationContinuationToken);
+      trackAnalyticsEvent({
+        eventName: "otp_verified",
+        portal: "job_seeker",
+        audience: "job_seeker",
+      });
       setStep("preferences");
     } catch (error) {
       showApiFailure(error);
@@ -604,6 +620,11 @@ export function JobSeekerRegisterForm() {
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
         jobSeeker: data.jobSeeker,
+      });
+      trackAnalyticsEvent({
+        eventName: "profile_completed",
+        portal: "job_seeker",
+        audience: "job_seeker",
       });
       router.push(ROUTES.HOME);
     } catch (error) {

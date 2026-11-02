@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
 import { JobSearchBar } from "@/components/job-search/JobSearchBar";
 import { JobSearchFiltersSidebar } from "@/components/job-search/JobSearchFiltersSidebar";
 import { JobSearchJobList } from "@/components/job-search/JobSearchJobList";
@@ -111,6 +112,17 @@ export function JobSearchPageContent() {
       window.removeEventListener("storage", bump);
     };
   }, []);
+
+  useEffect(() => {
+    const searched = ["q", "search", "within", "state", "city", "jobType", "experience", "gender", "workMode", "minSalary", "maxSalary"]
+      .some((key) => searchParams.get(key)?.trim());
+    if (!searched) return;
+    trackAnalyticsEvent({
+      eventName: "job_search",
+      path: pathname || "/job-search",
+      audience: "job_seeker",
+    });
+  }, [pathname, searchParams]);
 
   const savedIdsQuery = useQuery({
     queryKey: savedJobsQueryKeys.ids(),

@@ -21,6 +21,12 @@ export function useOperationsThemeColors() {
         OPERATIONS_THEME_CSS_VARIABLES.chartAccentAlt,
         "#7c3aed",
       ),
+      muted: readOperationsCssColor(OPERATIONS_THEME_CSS_VARIABLES.muted, "#5a6570"),
+      surface: readOperationsCssColor(OPERATIONS_THEME_CSS_VARIABLES.surface, "#ffffff"),
+      foreground: readOperationsCssColor(
+        OPERATIONS_THEME_CSS_VARIABLES.foreground,
+        "#1a2b3c",
+      ),
     }),
     [theme],
   );

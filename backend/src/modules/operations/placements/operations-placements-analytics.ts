@@ -1,18 +1,20 @@
+import {
+  endOfKolkataDay,
+  kolkataParts,
+  parseCalendarDate,
+  startOfKolkataDay,
+} from "../analytics/operations-analytics-domain.js";
 import { ApplicationModel } from "../../applications/application.model.js";
-import { PLACEMENT_APPLICATION_STATUSES } from "../../applications/application.constants.js";
 import {
   resolveCityLabelFromLocationFields,
   resolveIndiaStateFromLocationFields,
 } from "../employers/india-state-normalize.js";
 import { resolveEmployerIndustryLabel } from "../verifications/operations-verifications-industry.js";
 import {
-  PLACEMENT_STATUS_MATCH,
   daysBetweenOfferAndJoin,
+  findStatusHistoryAt,
   placementStatusLabel,
-  resolveActualJoinedAt,
   resolveOfferMadeAt,
-  resolvePlacementCohortDate,
-  resolvePlacementJoiningStatus,
 } from "./operations-placements-domain.js";
 import type {
   OperationsPlacementsAnalyticsQuery,
@@ -35,58 +37,43 @@ const TOP_STATES_LIMIT = 12;
 const TOP_CITIES_LIMIT = 12;
 
 /**
- * Funnel stage semantics (Application statuses — confirmed ATS mapping):
- * - Applications  = appliedAt in range (all statuses)
- * - Shortlisted   = current status in shortlisted…did_not_join (reached shortlist+)
- * - Interviews    = current status in interview_scheduled…did_not_join
- * - Offers Made   = current status in offer_sent…did_not_join
- * - Placements    = selected + joined + did_not_join (cohort date in range)
- * - Joined        = joined subset of placements in range
- *
- * Note: shortlisted/interview/offer stages use *current* status counts for apps
- * applied in-range (same pattern as other Operations analytics funnels). They are
- * not historical “ever reached” event counts.
+ * Funnel stage semantics:
+ * - Applications = appliedAt in range
+ * - Shortlisted, interviews, offers, selected, and joined = distinct applications
+ *   with that history status timestamp in range
+ * - A later rejection does not remove an earlier in-range stage
+ * - Joined is only a joined history event. Current status is not used.
+ * - Location, outcomes, and time-to-join use the same history timestamps.
+ *   A planned joining date or updatedAt is not treated as a join.
+ *   Current status is not used, so a later rejection does not remove an earlier stage.
  */
-const SHORTLISTED_OR_LATER = [
-  "shortlisted",
-  "interview_scheduled",
-  "interview_completed",
-  "offer_sent",
-  "selected",
-  "joined",
-  "did_not_join",
-] as const;
-
-const INTERVIEW_OR_LATER = [
-  "interview_scheduled",
-  "interview_completed",
-  "offer_sent",
-  "selected",
-  "joined",
-  "did_not_join",
-] as const;
-
-const OFFER_OR_LATER = [
-  "offer_sent",
-  "selected",
-  "joined",
-  "did_not_join",
-] as const;
-
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+async function countHistoryStage(
+  status: string | string[],
+  from: Date,
+  to: Date,
+): Promise<number> {
+  const rows = await ApplicationModel.aggregate<{ n: number }>([
+    {
+      $match: {
+        statusHistory: {
+          $elemMatch: {
+            status: Array.isArray(status) ? { $in: status } : status,
+            at: { $gte: from, $lte: to },
+          },
+        },
+      },
+    },
+    { $count: "n" },
+  ]).option({ maxTimeMS: 20_000 });
+  return rows[0]?.n ?? 0;
 }
 
-function endOfLocalDay(date: Date): Date {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    23,
-    59,
-    59,
-    999,
-  );
+function shiftKolkataDays(
+  parts: { y: number; m: number; d: number },
+  days: number,
+): { y: number; m: number; d: number } {
+  const probe = new Date(Date.UTC(parts.y, parts.m, parts.d + days));
+  return { y: probe.getUTCFullYear(), m: probe.getUTCMonth(), d: probe.getUTCDate() };
 }
 
 function parseDateOnly(value: string): Date | null {
@@ -227,55 +214,53 @@ export function resolvePlacementsAnalyticsDateRange(input: {
   now?: Date;
 }): OperationsPlacementsAnalyticsRange {
   const now = input.now ?? new Date();
-  const todayEnd = endOfLocalDay(now);
+  const today = kolkataParts(now);
+  const todayEnd = endOfKolkataDay(today);
   let from: Date;
   let to: Date;
   let preset: PlacementsAnalyticsPreset = input.preset;
 
   switch (input.preset) {
     case "all": {
-      from = new Date(2020, 0, 1);
+      from = startOfKolkataDay({ y: 2020, m: 0, d: 1 });
       to = todayEnd;
       break;
     }
     case "last_7_days": {
-      from = startOfLocalDay(now);
-      from.setDate(from.getDate() - 6);
+      from = startOfKolkataDay(shiftKolkataDays(today, -6));
       to = todayEnd;
       break;
     }
     case "last_90_days": {
-      from = startOfLocalDay(now);
-      from.setDate(from.getDate() - 89);
+      from = startOfKolkataDay(shiftKolkataDays(today, -89));
       to = todayEnd;
       break;
     }
     case "this_year": {
-      from = new Date(now.getFullYear(), 0, 1);
+      from = startOfKolkataDay({ y: today.y, m: 0, d: 1 });
       to = todayEnd;
       break;
     }
     case "custom": {
-      const fromRaw = parseDateOnly(input.dateFrom);
-      const toRaw = parseDateOnly(input.dateTo);
-      from = fromRaw ? startOfLocalDay(fromRaw) : startOfLocalDay(now);
-      to = toRaw
-        ? endOfLocalDay(toRaw)
-        : fromRaw
-          ? endOfLocalDay(fromRaw)
-          : todayEnd;
-      if (from.getTime() > to.getTime()) {
-        const swappedFrom = startOfLocalDay(to);
-        to = endOfLocalDay(from);
-        from = swappedFrom;
+      const fromParts = parseCalendarDate(input.dateFrom) ?? today;
+      let toParts = parseCalendarDate(input.dateTo) ?? fromParts;
+      if (
+        Date.UTC(toParts.y, toParts.m, toParts.d) < Date.UTC(fromParts.y, fromParts.m, fromParts.d)
+      ) {
+        const swap = fromParts;
+        from = startOfKolkataDay(toParts);
+        toParts = swap;
+        to = endOfKolkataDay(toParts);
+      } else {
+        from = startOfKolkataDay(fromParts);
+        to = endOfKolkataDay(toParts);
       }
       break;
     }
     case "last_30_days":
     default: {
       preset = "last_30_days";
-      from = startOfLocalDay(now);
-      from.setDate(from.getDate() - 29);
+      from = startOfKolkataDay(shiftKolkataDays(today, -29));
       to = todayEnd;
       break;
     }
@@ -295,8 +280,8 @@ export function resolvePlacementsAnalyticsDateRange(input: {
     preset,
     from: from.toISOString(),
     to: to.toISOString(),
-    previousFrom: startOfLocalDay(previousFrom).toISOString(),
-    previousTo: endOfLocalDay(previousTo).toISOString(),
+    previousFrom: startOfKolkataDay(kolkataParts(previousFrom)).toISOString(),
+    previousTo: endOfKolkataDay(kolkataParts(previousTo)).toISOString(),
     label: rangeLabel(preset, from, to),
     granularity,
   };
@@ -457,14 +442,18 @@ function buildInsights(input: {
   return insights.slice(0, 6);
 }
 
-async function loadPlacementRows(): Promise<PlacementLeanRow[]> {
-  /**
-   * Loads the placement-status subset only (selected | joined | did_not_join),
-   * not the full applications collection. Cohort KPIs require statusHistory, so
-   * rows are projected narrowly and summarized in-process for the active range.
-   */
+async function loadPlacementRows(from: Date, to: Date): Promise<PlacementLeanRow[]> {
   return ApplicationModel.aggregate<PlacementLeanRow>([
-    { $match: PLACEMENT_STATUS_MATCH },
+    {
+      $match: {
+        statusHistory: {
+          $elemMatch: {
+            status: { $in: ["selected", "joined", "did_not_join"] },
+            at: { $gte: from, $lte: to },
+          },
+        },
+      },
+    },
     {
       $lookup: {
         from: "jobs",
@@ -502,7 +491,31 @@ async function loadPlacementRows(): Promise<PlacementLeanRow[]> {
         },
       },
     },
-  ]);
+  ]).option({ maxTimeMS: 20_000 });
+}
+
+export type PlacementOutcome = "joined" | "did_not_join" | "joining_pending";
+
+/** Outcome inside a reporting window. Missing join history stays null; it is not invented. */
+export function classifyPlacementOutcome(input: {
+  selectedAt: Date | null;
+  joinedAt: Date | null;
+  didNotJoinAt: Date | null;
+  rejectedAt: Date | null;
+  from: Date;
+  to: Date;
+}): PlacementOutcome | null {
+  const joinedIn = inRange(input.joinedAt, input.from, input.to);
+  const didNotIn = inRange(input.didNotJoinAt, input.from, input.to);
+  const selectedIn = inRange(input.selectedAt, input.from, input.to);
+  if (joinedIn) return "joined";
+  if (didNotIn) return "did_not_join";
+  const terminalByEnd =
+    (input.joinedAt != null && input.joinedAt.getTime() <= input.to.getTime()) ||
+    (input.didNotJoinAt != null && input.didNotJoinAt.getTime() <= input.to.getTime()) ||
+    (input.rejectedAt != null && input.rejectedAt.getTime() <= input.to.getTime());
+  if (selectedIn && !terminalByEnd) return "joining_pending";
+  return null;
 }
 
 function summarizeCohort(
@@ -524,27 +537,26 @@ function summarizeCohort(
   const joinDays: number[] = [];
 
   for (const row of rows) {
-    const cohortDate = resolvePlacementCohortDate({
-      statusHistory: row.statusHistory,
-      updatedAt: row.updatedAt,
+    const outcome = classifyPlacementOutcome({
+      selectedAt: findStatusHistoryAt(row.statusHistory, "selected"),
+      joinedAt: findStatusHistoryAt(row.statusHistory, "joined"),
+      didNotJoinAt: findStatusHistoryAt(row.statusHistory, "did_not_join"),
+      rejectedAt: findStatusHistoryAt(row.statusHistory, "rejected"),
+      from,
+      to,
     });
-    if (!inRange(cohortDate, from, to)) {
-      continue;
-    }
+    if (!outcome) continue;
     total += 1;
-    const joining = resolvePlacementJoiningStatus(row.status);
-    if (joining === "joined") {
+    if (outcome === "joined") {
       joined += 1;
       const days = daysBetweenOfferAndJoin(
         resolveOfferMadeAt(row),
-        resolveActualJoinedAt(row),
+        findStatusHistoryAt(row.statusHistory, "joined"),
       );
-      if (days != null) {
-        joinDays.push(days);
-      }
-    } else if (joining === "joining_pending") {
+      if (days != null) joinDays.push(days);
+    } else if (outcome === "joining_pending") {
       joiningPending += 1;
-    } else if (joining === "did_not_join") {
+    } else {
       didNotJoin += 1;
     }
   }
@@ -578,24 +590,17 @@ export async function getPlacementsAnalytics(
   const caption = periodCaption(range.preset);
   const isOverall = range.preset === "all";
 
-  const [rows, applicationsInRange, shortlistedInRange, interviewsInRange, offersInRange] =
+  const [rows, applicationsInRange, shortlistedInRange, interviewsInRange, offersInRange, selectedInRange, joinedInRange] =
     await Promise.all([
-      loadPlacementRows(),
+      loadPlacementRows(isOverall ? from : new Date(range.previousFrom), to),
       ApplicationModel.countDocuments({
         appliedAt: { $gte: from, $lte: to },
       }),
-      ApplicationModel.countDocuments({
-        appliedAt: { $gte: from, $lte: to },
-        status: { $in: [...SHORTLISTED_OR_LATER] },
-      }),
-      ApplicationModel.countDocuments({
-        appliedAt: { $gte: from, $lte: to },
-        status: { $in: [...INTERVIEW_OR_LATER] },
-      }),
-      ApplicationModel.countDocuments({
-        appliedAt: { $gte: from, $lte: to },
-        status: { $in: [...OFFER_OR_LATER] },
-      }),
+      countHistoryStage("shortlisted", from, to),
+      countHistoryStage(["interview_scheduled", "interview_completed"], from, to),
+      countHistoryStage("offer_sent", from, to),
+      countHistoryStage("selected", from, to),
+      countHistoryStage("joined", from, to),
     ]);
 
   const current = summarizeCohort(rows, from, to);
@@ -611,20 +616,15 @@ export async function getPlacementsAnalytics(
     : summarizeCohort(rows, previousFrom, previousTo);
 
   const placementsInRange = rows.filter((row) =>
-    inRange(
-      resolvePlacementCohortDate({
-        statusHistory: row.statusHistory,
-        updatedAt: row.updatedAt,
-      }),
+    classifyPlacementOutcome({
+      selectedAt: findStatusHistoryAt(row.statusHistory, "selected"),
+      joinedAt: findStatusHistoryAt(row.statusHistory, "joined"),
+      didNotJoinAt: findStatusHistoryAt(row.statusHistory, "did_not_join"),
+      rejectedAt: findStatusHistoryAt(row.statusHistory, "rejected"),
       from,
       to,
-    ),
+    }) != null,
   );
-
-  const funnelPlacements = placementsInRange.length;
-  const funnelJoined = placementsInRange.filter(
-    (row) => resolvePlacementJoiningStatus(row.status) === "joined",
-  ).length;
 
   const funnelBase = Math.max(applicationsInRange, 1);
   const funnel: OperationsPlacementsFunnelStage[] = [
@@ -653,16 +653,16 @@ export async function getPlacementsAnalytics(
       percent: percentOf(offersInRange, funnelBase) ?? 0,
     },
     {
-      key: "placements",
-      label: "Placements",
-      count: funnelPlacements,
-      percent: percentOf(funnelPlacements, funnelBase) ?? 0,
+      key: "selected",
+      label: "Selected",
+      count: selectedInRange,
+      percent: percentOf(selectedInRange, funnelBase) ?? 0,
     },
     {
       key: "joined",
       label: "Joined",
-      count: funnelJoined,
-      percent: percentOf(funnelJoined, funnelBase) ?? 0,
+      count: joinedInRange,
+      percent: percentOf(joinedInRange, funnelBase) ?? 0,
     },
   ];
 
@@ -672,7 +672,7 @@ export async function getPlacementsAnalytics(
           const sixMonthsAgo = new Date(to);
           sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
           sixMonthsAgo.setDate(1);
-          return startOfLocalDay(sixMonthsAgo);
+          return startOfKolkataDay(kolkataParts(sixMonthsAgo));
         })()
       : from;
 
@@ -682,17 +682,19 @@ export async function getPlacementsAnalytics(
   const joinedByBucket = new Map<string, number>();
 
   for (const row of rows) {
-    const cohortDate = resolvePlacementCohortDate({
-      statusHistory: row.statusHistory,
-      updatedAt: row.updatedAt,
-    });
-    if (!inRange(cohortDate, trendFrom, to) || !cohortDate) {
-      continue;
-    }
-    const key = bucketKey(cohortDate, trendGranularity);
+    const selectedAt = findStatusHistoryAt(row.statusHistory, "selected");
+    const joinedAt = findStatusHistoryAt(row.statusHistory, "joined");
+    const didNotAt = findStatusHistoryAt(row.statusHistory, "did_not_join");
+    const dates = [selectedAt, joinedAt, didNotAt].filter((date): date is Date =>
+      inRange(date, trendFrom, to),
+    );
+    if (dates.length === 0) continue;
+    const earliest = dates.reduce((left, right) => (left.getTime() <= right.getTime() ? left : right));
+    const key = bucketKey(earliest, trendGranularity);
     placementsByBucket.set(key, (placementsByBucket.get(key) ?? 0) + 1);
-    if (resolvePlacementJoiningStatus(row.status) === "joined") {
-      joinedByBucket.set(key, (joinedByBucket.get(key) ?? 0) + 1);
+    if (inRange(joinedAt, trendFrom, to) && joinedAt) {
+      const joinedKey = bucketKey(joinedAt, trendGranularity);
+      joinedByBucket.set(joinedKey, (joinedByBucket.get(joinedKey) ?? 0) + 1);
     }
   }
 
@@ -814,10 +816,7 @@ export async function getPlacementsAnalytics(
   );
   const joinDaysByMonth = new Map<string, number[]>();
   for (const row of rows) {
-    if (resolvePlacementJoiningStatus(row.status) !== "joined") {
-      continue;
-    }
-    const joinedAt = resolveActualJoinedAt(row);
+    const joinedAt = findStatusHistoryAt(row.statusHistory, "joined");
     if (!joinedAt || !inRange(joinedAt, isOverall ? trendFrom : from, to)) {
       continue;
     }
@@ -898,8 +897,6 @@ export async function getPlacementsAnalytics(
         ? "No joined placements with offer dates"
         : "Offer to join (days)",
   };
-
-  void PLACEMENT_APPLICATION_STATUSES;
 
   return {
     range,

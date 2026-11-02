@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   appendSiteLanguageQuery,
+  getLocalizedWebsiteUrl,
   parseSiteLanguageQuery,
   SITE_LANGUAGE_QUERY_PARAM,
 } from "./site-language-url.js";
@@ -46,6 +47,49 @@ describe("site language URL helper", () => {
       "https://aslijobs.com/jobs/AJ-1?lang=en",
     );
     assert.equal(appendSiteLanguageQuery("not a url", "te"), "not a url");
+  });
+
+  it("builds language-aware website links without a language path prefix", () => {
+    const origin = "https://www.aslijobs.com";
+    assert.equal(
+      getLocalizedWebsiteUrl("/post-job", "te", origin),
+      "https://www.aslijobs.com/post-job?lang=te",
+    );
+    assert.equal(
+      getLocalizedWebsiteUrl("/post-job", "hi", origin),
+      "https://www.aslijobs.com/post-job?lang=hi",
+    );
+    assert.equal(
+      getLocalizedWebsiteUrl("/post-job", "en", origin),
+      "https://www.aslijobs.com/post-job?lang=en",
+    );
+    for (const code of ["ta", "kn", "ml"] as const) {
+      assert.equal(
+        getLocalizedWebsiteUrl("/employer/register", code, origin),
+        `https://www.aslijobs.com/employer/register?lang=${code}`,
+      );
+    }
+    assert.equal(
+      getLocalizedWebsiteUrl("/jobs/AJ-ELEC-2?ref=wa", "te", origin),
+      "https://www.aslijobs.com/jobs/AJ-ELEC-2?ref=wa&lang=te",
+    );
+    assert.equal(
+      getLocalizedWebsiteUrl("/post-job?lang=en", "te", origin),
+      "https://www.aslijobs.com/post-job?lang=te",
+    );
+    assert.equal(
+      getLocalizedWebsiteUrl("/post-job", "french", origin),
+      "https://www.aslijobs.com/post-job?lang=en",
+    );
+    assert.equal(getLocalizedWebsiteUrl("/post-job", "te").includes("/te/"), false);
+    assert.equal(
+      getLocalizedWebsiteUrl("https://graph.facebook.com/v21.0/messages", "te"),
+      "https://graph.facebook.com/v21.0/messages",
+    );
+    assert.equal(
+      getLocalizedWebsiteUrl("https://api.openai.com/v1/chat/completions", "hi"),
+      "https://api.openai.com/v1/chat/completions",
+    );
   });
 
   it("replaces an existing lang parameter and preserves hash fragments", () => {

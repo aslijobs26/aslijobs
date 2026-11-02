@@ -1,10 +1,7 @@
 import { JobModel } from "../../jobs/job.model.js";
 import { JobViewModel } from "../../jobs/job-view.model.js";
 import { ApplicationModel } from "../../applications/application.model.js";
-import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
-import { EmployerModel } from "../../employers/employer.model.js";
 import { resolveIndiaStateLabel } from "../employers/india-state-normalize.js";
-import { resolveEmployerIndustryLabel } from "../verifications/operations-verifications-industry.js";
 import { getPlacementsAnalytics } from "../placements/operations-placements-analytics.js";
 import { getOperationsCandidatesAnalytics } from "../candidates/operations-candidates-analytics.js";
 import { loadJobsAnalyticsCharts } from "../jobs/operations-jobs-analytics.js";
@@ -14,15 +11,26 @@ import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js"
 import { aggregateWebsiteTraffic } from "../../analytics/analytics-event.service.js";
 import {
   classifyLevel,
-  classifySupplyDemand,
+  compareMetric,
   consecutiveConversionPercent,
   marketStatusForLevels,
-  percentChange,
   percentOf,
   resolveAnalyticsDateRange,
   toIsoDateOnly,
 } from "./operations-analytics-domain.js";
-import type { OperationsAnalyticsOverviewQuery } from "./operations-analytics.validation.js";
+import { buildCalendarForecast } from "./operations-analytics-forecast.js";
+import { aggregateHiringPeriod } from "./operations-analytics-aggregate.js";
+import { buildP1Analytics } from "./operations-analytics-p1.js";
+import { resolveAnalyticsScope } from "./operations-analytics-scope.js";
+import { ANALYTICS_KPI_DEFINITIONS } from "./operations-analytics-kpi.js";
+import { previousWebsiteCounts } from "./operations-analytics-metrics.js";
+import { buildAnalyticsExport } from "./operations-analytics-export.js";
+import { exportAnalyticsDrilldownCsv, loadAnalyticsDrilldown } from "./operations-analytics-drilldown.js";
+import type {
+  OperationsAnalyticsDrilldownQuery,
+  OperationsAnalyticsExportQuery,
+  OperationsAnalyticsOverviewQuery,
+} from "./operations-analytics.validation.js";
 import type {
   AnalyticsDatePreset,
   OperationsAnalyticsForecast,
@@ -32,19 +40,9 @@ import type {
   OperationsAnalyticsMarketRow,
   OperationsAnalyticsOverview,
   OperationsAnalyticsPlacementMetric,
-  OperationsAnalyticsSupplyDemandRow,
   OperationsAnalyticsTopLocation,
   OperationsAnalyticsTrendPoint,
 } from "./operations-analytics.types.js";
-
-const FUNNEL_COLORS_ORDER = [
-  "job_views",
-  "applications",
-  "shortlisted",
-  "interviews",
-  "offers",
-  "joined",
-] as const;
 
 function mapToPlacementsPreset(preset: AnalyticsDatePreset): {
   preset: "all" | "last_30_days" | "last_90_days" | "this_year" | "custom";
@@ -57,6 +55,9 @@ function mapToPlacementsPreset(preset: AnalyticsDatePreset): {
     preset === "today" ||
     preset === "yesterday" ||
     preset === "last_7_days" ||
+    preset === "this_month" ||
+    preset === "last_month" ||
+    preset === "this_quarter" ||
     preset === "custom"
   ) {
     return { preset: "custom", dateFrom: "", dateTo: "" };
@@ -85,6 +86,9 @@ function mapToJobsPreset(preset: AnalyticsDatePreset): {
     preset === "today" ||
     preset === "yesterday" ||
     preset === "last_7_days" ||
+    preset === "this_month" ||
+    preset === "last_month" ||
+    preset === "this_quarter" ||
     preset === "custom"
   ) {
     return { preset: "custom", dateFrom: "", dateTo: "" };
@@ -110,6 +114,9 @@ function mapToCandidatesPreset(preset: AnalyticsDatePreset): {
     preset === "today" ||
     preset === "yesterday" ||
     preset === "last_7_days" ||
+    preset === "this_month" ||
+    preset === "last_month" ||
+    preset === "this_quarter" ||
     preset === "custom"
   ) {
     return { preset: "custom", dateFrom: "", dateTo: "" };
@@ -243,7 +250,9 @@ function buildKeyInsights(input: {
   return insights.slice(0, 5);
 }
 
-function buildFunnel(stages: Array<{ key: string; label: string; count: number }>): OperationsAnalyticsFunnelStage[] {
+function buildFunnel(
+  stages: Array<{ key: string; label: string; count: number; definition?: string }>,
+): OperationsAnalyticsFunnelStage[] {
   const max = Math.max(...stages.map((s) => s.count), 1);
   return stages.map((stage, index) => {
     const previous = index === 0 ? stage.count : stages[index - 1].count;
@@ -251,52 +260,12 @@ function buildFunnel(stages: Array<{ key: string; label: string; count: number }
       key: stage.key,
       label: stage.label,
       count: stage.count,
+      definition: stage.definition,
       conversionPercent:
         index === 0 ? 100 : consecutiveConversionPercent(stage.count, previous),
       widthPercent: Math.max(8, Math.round((stage.count / max) * 100)),
     };
   });
-}
-
-function buildForecasts(input: {
-  topDemandCategory: string | null;
-  topDemandCount: number;
-  candidatesTrend: number | null;
-  placementsTrendPercent: number | null;
-}): OperationsAnalyticsForecast[] {
-  const forecasts: OperationsAnalyticsForecast[] = [];
-
-  if (
-    input.topDemandCategory &&
-    !isUnspecifiedLabel(input.topDemandCategory) &&
-    input.topDemandCount > 0
-  ) {
-    forecasts.push({
-      id: "demand-outlook",
-      tone: "growth",
-      text: `${input.topDemandCategory} currently leads live demand with ${input.topDemandCount.toLocaleString("en-IN")} active job${input.topDemandCount === 1 ? "" : "s"} in the selected period.`,
-    });
-  }
-
-  if (input.candidatesTrend != null) {
-    const direction = input.candidatesTrend >= 0 ? "grew" : "declined";
-    forecasts.push({
-      id: "registration-outlook",
-      tone: "expansion",
-      text: `Jobseeker registrations ${direction} ${Math.abs(Math.round(input.candidatesTrend))}% versus the previous period.`,
-    });
-  }
-
-  if (input.placementsTrendPercent != null) {
-    const direction = input.placementsTrendPercent >= 0 ? "increased" : "decreased";
-    forecasts.push({
-      id: "placement-outlook",
-      tone: "seasonal",
-      text: `Placements ${direction} ${Math.abs(Math.round(input.placementsTrendPercent))}% versus the previous period.`,
-    });
-  }
-
-  return forecasts.slice(0, 3);
 }
 
 function mergeTrendSeries(input: {
@@ -356,6 +325,53 @@ function mergeTrendSeries(input: {
   );
 }
 
+const WEBSITE_JOB_PATH_CAP = 2000;
+
+/**
+ * Page views do not store location. When a job filter is active, visits are
+ * limited to `/jobs/:jobId` pages for jobs that match that filter.
+ */
+async function websiteJobPaths(query: OperationsAnalyticsOverviewQuery): Promise<{
+  extra: Record<string, unknown>;
+  note?: string;
+}> {
+  const scope = await resolveAnalyticsScope(query);
+  const jobScoped = scope.needsJobJoin || scope.employerIds != null;
+  if (!jobScoped) {
+    const notes = [
+      scope.outOfScopeCountry
+        ? "Website visits are not stored with a country. Visit totals follow the date range only."
+        : "",
+      query.applicationStatus
+        ? "Application status is not stored on page views. Visit totals follow the date range only."
+        : "",
+    ].filter(Boolean);
+    return { extra: {}, note: notes.join(" ") || undefined };
+  }
+  if (scope.outOfScopeCountry || (scope.employerIds && scope.employerIds.length === 0)) {
+    return {
+      extra: { path: { $in: [] } },
+      note: "No jobs match these filters, so there are no job page views in this range.",
+    };
+  }
+  const rows = await JobModel.find(scope.jobMatch)
+    .select("jobId")
+    .limit(WEBSITE_JOB_PATH_CAP + 1)
+    .lean();
+  const paths = rows
+    .slice(0, WEBSITE_JOB_PATH_CAP)
+    .map((row) => `/jobs/${String(row.jobId ?? "").trim()}`)
+    .filter((path) => path.length > "/jobs/".length);
+  const truncated = rows.length > WEBSITE_JOB_PATH_CAP;
+  const statusNote = query.applicationStatus
+    ? " Application status is not stored on page views."
+    : "";
+  return {
+    extra: { path: { $in: paths } },
+    note: `Visit totals are page views of jobs matching the location, category, employer, and job type filters.${truncated ? " The first 2,000 matching jobs are included." : ""}${statusNote}`,
+  };
+}
+
 async function sumJobViews(from: Date, to: Date): Promise<number> {
   // Period job views from the visitor ledger (not jobs.createdAt × jobs.views).
   return JobViewModel.countDocuments({
@@ -368,85 +384,22 @@ function buildKpiCard(input: {
   label: string;
   value: number;
   previousValue: number | null;
+  filterNote?: string;
 }): OperationsAnalyticsKpiCard {
-  const change =
-    input.previousValue == null
-      ? null
-      : percentChange(input.value, input.previousValue);
+  const comparison = compareMetric(input.value, input.previousValue);
   return {
     id: input.id,
     label: input.label,
     value: input.value,
-    previousValue: input.previousValue,
-    changePercent: change,
-    trendDirection:
-      change == null ? null : change > 0 ? "up" : change < 0 ? "down" : "flat",
+    previousValue: comparison.previousValue,
+    absoluteDifference: comparison.absoluteDifference,
+    changePercent: comparison.changePercent,
+    trendDirection: comparison.trendDirection,
+    changeLabel: comparison.changeLabel,
     format: "number",
+    filterNote: input.filterNote,
+    definition: ANALYTICS_KPI_DEFINITIONS[input.id],
   };
-}
-
-async function jobsByIndustryCounts(
-  from: Date,
-  to: Date,
-  state: string,
-): Promise<Map<string, number>> {
-  const match: Record<string, unknown> = {
-    // Live listings only — same definition as Jobs "Live" tab.
-    status: "active",
-    createdAt: { $gte: from, $lte: to },
-  };
-  if (state.trim()) {
-    const label = resolveIndiaStateLabel(state) ?? state.trim();
-    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    match.$or = [
-      { "location.state": new RegExp(escaped, "i") },
-      { state: new RegExp(escaped, "i") },
-    ];
-  }
-
-  const rows = await JobModel.aggregate<{ _id: string; count: number }>([
-    { $match: match },
-    {
-      $project: {
-        industryKey: {
-          $let: {
-            vars: {
-              category: {
-                $trim: { input: { $ifNull: ["$businessCategory", ""] } },
-              },
-              industry: {
-                $trim: { input: { $ifNull: ["$industry", ""] } },
-              },
-            },
-            in: {
-              $cond: [
-                { $ne: ["$$category", ""] },
-                "$$category",
-                "$$industry",
-              ],
-            },
-          },
-        },
-      },
-    },
-    { $match: { industryKey: { $ne: "" } } },
-    {
-      $group: {
-        _id: "$industryKey",
-        count: { $sum: 1 },
-      },
-    },
-    { $sort: { count: -1 } },
-    { $limit: 12 },
-  ]);
-
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    const label = resolveEmployerIndustryLabel(row._id || "Unspecified");
-    if (!label || label === "Unspecified") continue;
-    map.set(label, (map.get(label) ?? 0) + row.count);
-  }
-  return map;
 }
 
 export async function getOperationsAnalyticsOverview(
@@ -504,34 +457,19 @@ export async function getOperationsAnalyticsOverview(
     filledClosedJobs: 0,
   };
 
-  const previousFrom = new Date(range.previousFrom);
-  const previousTo = new Date(range.previousTo);
-
+  const trafficScope = await websiteJobPaths(query);
   const [
     placements,
     candidates,
     jobsCharts,
     jobViews,
-    demandByIndustry,
     websiteTrafficRaw,
-    jobseekersCurrent,
-    jobseekersPrevious,
-    verifiedEmployersCurrent,
   ] = await Promise.all([
     getPlacementsAnalytics(placementsQuery),
     getOperationsCandidatesAnalytics(candidatesQuery),
     loadJobsAnalyticsCharts(jobsQuery, emptyJobsKpis).catch(() => null),
     sumJobViews(from, to),
-    jobsByIndustryCounts(from, to, state),
-    aggregateWebsiteTraffic(from, to).catch(() => null),
-    JobSeekerModel.countDocuments({ createdAt: { $gte: from, $lte: to } }),
-    JobSeekerModel.countDocuments({
-      createdAt: { $gte: previousFrom, $lte: previousTo },
-    }),
-    EmployerModel.countDocuments({
-      createdAt: { $gte: from, $lte: to },
-      verificationStatus: "verified",
-    }),
+    aggregateWebsiteTraffic(from, to, trafficScope.extra).catch(() => null),
   ]);
 
   const websiteTraffic = websiteTrafficRaw ?? {
@@ -546,39 +484,6 @@ export async function getOperationsAnalyticsOverview(
     daily: [],
   };
 
-  const platformKpis: OperationsAnalyticsKpiCard[] = [
-    buildKpiCard({
-      id: "unique-visitors",
-      label: "Unique Visitors",
-      value: websiteTraffic.uniqueVisitors,
-      previousValue: null,
-    }),
-    buildKpiCard({
-      id: "page-views",
-      label: "Page Views",
-      value: websiteTraffic.pageViews,
-      previousValue: null,
-    }),
-    buildKpiCard({
-      id: "sessions",
-      label: "Sessions",
-      value: websiteTraffic.sessions,
-      previousValue: null,
-    }),
-    buildKpiCard({
-      id: "jobseeker-registrations",
-      label: "Jobseeker Registrations",
-      value: jobseekersCurrent,
-      previousValue: jobseekersPrevious,
-    }),
-    buildKpiCard({
-      id: "verified-employers",
-      label: "Verified Employers",
-      value: verifiedEmployersCurrent,
-      previousValue: null,
-    }),
-  ];
-
   const funnelCounts = {
     job_views: jobViews,
     applications:
@@ -590,51 +495,6 @@ export async function getOperationsAnalyticsOverview(
     offers: placements.funnel.find((s) => s.key === "offers")?.count ?? 0,
     joined: placements.funnel.find((s) => s.key === "joined")?.count ?? 0,
   };
-
-  const funnel = buildFunnel(
-    FUNNEL_COLORS_ORDER.map((key) => ({
-      key,
-      label:
-        key === "job_views"
-          ? "Job Views"
-          : key === "offers"
-            ? "Offers"
-            : key.charAt(0).toUpperCase() + key.slice(1),
-      count: funnelCounts[key],
-    })),
-  );
-
-  const supplyMap = new Map<string, number>();
-  for (const row of candidates.topJobCategories) {
-    const label = row.label?.trim();
-    if (!label || /^unspecified$/i.test(label)) continue;
-    supplyMap.set(label, row.count);
-  }
-
-  // Prefer live-job demand categories as the primary rows so Supply vs Demand
-  // reflects active listings, not draft/pending/closed jobs.
-  const categoryKeys =
-    demandByIndustry.size > 0
-      ? Array.from(demandByIndustry.keys())
-      : Array.from(supplyMap.keys());
-
-  const supplyDemand: OperationsAnalyticsSupplyDemandRow[] = categoryKeys
-    .map((category) => {
-      const supply = supplyMap.get(category) ?? 0;
-      const demand = demandByIndustry.get(category) ?? 0;
-      return {
-        category,
-        supply,
-        demand,
-        status: classifySupplyDemand(supply, demand),
-      };
-    })
-    .filter((row) => row.demand > 0 || row.supply > 0)
-    .sort((a, b) => b.demand + b.supply - (a.demand + a.supply))
-    .slice(0, 5);
-
-  const topShortage =
-    supplyDemand.find((row) => row.status === "shortage")?.category ?? null;
 
   const citySource =
     (candidates.byCity ?? []).filter((row) => !isUnspecifiedLabel(row.label))
@@ -779,23 +639,6 @@ export async function getOperationsAnalyticsOverview(
     .sort((a, b) => a.state.localeCompare(b.state))
     .slice(0, 8);
 
-  const keyInsights = buildKeyInsights({
-    placementsInsights: placements.insights,
-    jobsInsightText: jobsCharts?.insight
-      ? `${jobsCharts.insight.headline} ${jobsCharts.insight.detail}`.trim()
-      : null,
-    candidatesTrendPercent: candidates.kpis.totalJobseekersTrendPercent,
-    avgTimeTrend: placements.kpis.avgTimeToJoinTrendPercent,
-    topShortageCategory: topShortage,
-  });
-
-  const forecasts = buildForecasts({
-    topDemandCategory: supplyDemand[0]?.category ?? null,
-    topDemandCount: supplyDemand[0]?.demand ?? 0,
-    candidatesTrend: candidates.kpis.totalJobseekersTrendPercent,
-    placementsTrendPercent: placements.kpis.totalPlacementsTrendPercent,
-  });
-
   const trends = mergeTrendSeries({
     placements: placements.trend.map((point) => ({
       date: point.date,
@@ -815,6 +658,213 @@ export async function getOperationsAnalyticsOverview(
     })),
   });
 
+  const previousAllowed = range.comparisonBasis !== "unavailable";
+  const [websitePrevious, currentSnapshot, previousSnapshot, p1] = await Promise.all([
+    previousAllowed
+      ? previousWebsiteCounts(
+          new Date(range.previousFrom),
+          new Date(range.previousTo),
+          trafficScope.extra,
+        )
+      : Promise.resolve(null),
+    aggregateHiringPeriod({ query, from, to }),
+    previousAllowed
+      ? aggregateHiringPeriod({
+          query,
+          from: new Date(range.previousFrom),
+          to: new Date(range.previousTo),
+        })
+      : Promise.resolve(null),
+    buildP1Analytics({ query, from, to }),
+  ]);
+
+  const trafficNote = trafficScope.note;
+  const comparedKpis: OperationsAnalyticsKpiCard[] = [
+    buildKpiCard({
+      id: "unique-visitors",
+      label: "Unique Visitors",
+      value: websiteTraffic.uniqueVisitors,
+      previousValue: websitePrevious?.uniqueVisitors ?? (previousAllowed ? 0 : null),
+      filterNote: trafficNote,
+    }),
+    buildKpiCard({
+      id: "page-views",
+      label: "Page Views",
+      value: websiteTraffic.pageViews,
+      previousValue: websitePrevious?.pageViews ?? (previousAllowed ? 0 : null),
+      filterNote: trafficNote,
+    }),
+    buildKpiCard({
+      id: "sessions",
+      label: "Sessions",
+      value: websiteTraffic.sessions,
+      previousValue: websitePrevious?.sessions ?? (previousAllowed ? 0 : null),
+      filterNote: trafficNote,
+    }),
+    buildKpiCard({
+      id: "job-views",
+      label: "Visitor–job pairs",
+      value: currentSnapshot.jobViews,
+      previousValue: previousSnapshot?.jobViews ?? null,
+      filterNote: ANALYTICS_KPI_DEFINITIONS["job-views"]?.limitation,
+    }),
+    buildKpiCard({
+      id: "jobseeker-registrations",
+      label: "Jobseeker Registrations",
+      value: currentSnapshot.registrations,
+      previousValue: previousSnapshot?.registrations ?? null,
+    }),
+    buildKpiCard({
+      id: "employer-registrations",
+      label: "Employer Registrations",
+      value: currentSnapshot.employerRegistrations,
+      previousValue: previousSnapshot?.employerRegistrations ?? null,
+    }),
+    buildKpiCard({
+      id: "verified-employers",
+      label: "Verified Employers",
+      value: currentSnapshot.verifiedEmployers,
+      previousValue: previousSnapshot?.verifiedEmployers ?? null,
+    }),
+    buildKpiCard({
+      id: "applications",
+      label: "Job Applications",
+      value: currentSnapshot.applications,
+      previousValue: previousSnapshot?.applications ?? null,
+    }),
+    buildKpiCard({
+      id: "interviews-scheduled",
+      label: "Interviews Scheduled",
+      value: currentSnapshot.interviewsScheduled,
+      previousValue: previousSnapshot?.interviewsScheduled ?? null,
+    }),
+    buildKpiCard({
+      id: "interviews-completed",
+      label: "Interviews Completed",
+      value: currentSnapshot.interviewsCompleted,
+      previousValue: previousSnapshot?.interviewsCompleted ?? null,
+    }),
+    buildKpiCard({
+      id: "offers",
+      label: "Offers",
+      value: currentSnapshot.offers,
+      previousValue: previousSnapshot?.offers ?? null,
+    }),
+    buildKpiCard({
+      id: "selected",
+      label: "Selected",
+      value: currentSnapshot.selected,
+      previousValue: previousSnapshot?.selected ?? null,
+    }),
+    buildKpiCard({
+      id: "joined",
+      label: "Joined",
+      value: currentSnapshot.joined,
+      previousValue: previousSnapshot?.joined ?? null,
+    }),
+  ];
+
+  const filteredFunnel = buildFunnel([
+    {
+      key: "applications",
+      label: "Applications",
+      count: currentSnapshot.applications,
+      definition: "Applications submitted in the period. Each application is counted once.",
+    },
+    {
+      key: "shortlisted",
+      label: "Shortlisted",
+      count: currentSnapshot.shortlisted,
+      definition: "Reached shortlisted in the period. A later rejection stays in this stage.",
+    },
+    {
+      key: "interview_scheduled",
+      label: "Interview scheduled",
+      count: currentSnapshot.interviewsScheduled,
+      definition: "At least one interview_scheduled history event in the period. A reschedule is not a second person.",
+    },
+    {
+      key: "interview_completed",
+      label: "Interview completed",
+      count: currentSnapshot.interviewsCompleted,
+      definition: "An interview_completed history event in the period. Offer or joined status is not used.",
+    },
+    {
+      key: "offers",
+      label: "Offers",
+      count: currentSnapshot.offers,
+      definition: "An offer_sent history event in the period.",
+    },
+    {
+      key: "selected",
+      label: "Selected",
+      count: currentSnapshot.selected,
+      definition: "Selected for the job. This is not a joining event.",
+    },
+    {
+      key: "joined",
+      label: "Joined",
+      count: currentSnapshot.joined,
+      definition: "A joined history event in the period. Selected candidates who have not joined are excluded.",
+    },
+  ]);
+  const filteredSupply = currentSnapshot.supplyDemand;
+
+  const forecastModel = buildForecastModel({
+    horizonDays: query.horizonDays ?? 30,
+    snapshot: currentSnapshot.daily,
+  });
+  const selectedByDay = new Map(currentSnapshot.daily.selected.map((point) => [point.date, point.count]));
+  const joinedByDay = new Map(currentSnapshot.daily.placements.map((point) => [point.date, point.count]));
+  const sumBucket = (source: Map<string, number>, start: string, end: string | undefined) => {
+    let total = 0;
+    for (const [date, count] of source) {
+      if (date >= start && (end == null || date < end)) total += count;
+    }
+    return total;
+  };
+  const orderedTrends = [...trends].sort((a, b) => a.date.localeCompare(b.date));
+  const historyTrends =
+    orderedTrends.length > 0
+      ? orderedTrends.map((point, index) => ({
+          ...point,
+          placements: sumBucket(selectedByDay, point.date, orderedTrends[index + 1]?.date),
+          joined: sumBucket(joinedByDay, point.date, orderedTrends[index + 1]?.date),
+        }))
+      : [...new Set([...selectedByDay.keys(), ...joinedByDay.keys()])].sort().map((date) => ({
+          date,
+          label: date,
+          placements: selectedByDay.get(date) ?? 0,
+          joined: joinedByDay.get(date) ?? 0,
+          registrations: 0,
+          jobsCreated: 0,
+        }));
+  const accuratePlacementMetrics = placementMetrics.map((metric) => {
+    if (metric.id === "interview-offer") {
+      const rate = currentSnapshot.interviewMetrics.interviewToOfferRate;
+      return { ...metric, value: rate != null ? `${rate}%` : "—" };
+    }
+    if (metric.id === "employer-repeat") {
+      const rate = currentSnapshot.employerHiring.repeatHiringPercent;
+      return { ...metric, value: rate != null ? `${Math.round(rate)}%` : "—" };
+    }
+    return metric;
+  });
+  const keyInsights = buildKeyInsights({
+    placementsInsights: placements.insights,
+    jobsInsightText: jobsCharts?.insight
+      ? `${jobsCharts.insight.headline} ${jobsCharts.insight.detail}`.trim()
+      : null,
+    candidatesTrendPercent: candidates.kpis.totalJobseekersTrendPercent,
+    avgTimeTrend: placements.kpis.avgTimeToJoinTrendPercent,
+    topShortageCategory:
+      currentSnapshot.supplyDemand.find((row) => row.status === "shortage")?.category ?? null,
+  });
+  const forecasts = forecastSentences(forecastModel);
+  console.info(
+    `[OPS-ANALYTICS] overview preset=${query.preset} state=${state || "all"} durationReady=1`,
+  );
+
   return {
     range: {
       preset: range.preset,
@@ -823,22 +873,49 @@ export async function getOperationsAnalyticsOverview(
       previousFrom: range.previousFrom,
       previousTo: range.previousTo,
       label: range.label,
+      comparisonBasis: range.comparisonBasis,
+      timezone: "Asia/Kolkata",
     },
     state,
-    platformKpis,
+    filters: {
+      country: query.country,
+      state: query.state,
+      city: query.city,
+      category: query.category,
+      employer: query.employer,
+      jobType: query.jobType,
+      applicationStatus: query.applicationStatus,
+      horizonDays: query.horizonDays ?? 30,
+    },
+    limitations: analyticsLimitations(query, currentSnapshot.outOfScope, currentSnapshot.supplyDemandTruncated),
+    generatedAt: new Date().toISOString(),
+    platformKpis: comparedKpis,
     websiteTraffic: {
       ...websiteTraffic,
-      // Event ingest + frontend beacons are deployed; zeros mean no traffic yet.
       trackingActive: true,
+      scopeNote: trafficScope.note,
     },
     keyInsights,
-    funnel,
-    supplyDemand,
+    funnel: filteredFunnel,
+    supplyDemand: filteredSupply,
+    supplyDemandTruncated: currentSnapshot.supplyDemandTruncated,
+    categoryCoverage: currentSnapshot.categoryCoverage,
     topLocations,
-    placementMetrics,
+    placementMetrics: accuratePlacementMetrics,
     marketIntelligence,
+    interviewMetrics: currentSnapshot.interviewMetrics,
+    employerHiring: {
+      ...currentSnapshot.employerHiring,
+      ...p1.employers,
+    },
+    categoryBreakdown: p1.categories,
+    acquisition: p1.acquisition,
+    registrationFunnel: p1.registration,
+    jobConversion: p1.jobConversion,
     forecasts,
-    trends,
+    forecastModel,
+    trends: historyTrends,
+    scheduledReports: false,
   };
 }
 
@@ -852,8 +929,9 @@ async function computeEmployerRepeatRate(
   }>([
     {
       $match: {
-        status: { $in: ["selected", "joined", "did_not_join"] },
-        updatedAt: { $gte: from, $lte: to },
+        statusHistory: {
+          $elemMatch: { status: "joined", at: { $gte: from, $lte: to } },
+        },
       },
     },
     {
@@ -868,10 +946,88 @@ async function computeEmployerRepeatRate(
   return (repeat / rows.length) * 100;
 }
 
-export async function exportOperationsAnalyticsOverview(
+function analyticsLimitations(
   query: OperationsAnalyticsOverviewQuery,
+  outOfScope: boolean,
+  supplyDemandTruncated: boolean,
+): string[] {
+  const notes = [
+    "Dates are inclusive Asia/Kolkata calendar days. Overall has no previous-period baseline.",
+    "Page views do not store location. When a job filter is applied, visit totals count only /jobs/:jobId pages for matching jobs. Home, search, and account pages stay out of that filtered total.",
+    "Visitor–job pairs use lastViewedAt. A repeat view updates that time and is not stored as a separate page-view event.",
+    "Funnel stages count each application once for a stage reached in the period. A later rejection does not remove the earlier stage.",
+    "Selected and Joined are separate history events. A selected candidate is not counted as joined unless a joined event exists.",
+    "Completed interviews count only interview_completed history events. Offer, selected, or joined status is not treated as an interview.",
+    "Registered jobseekers are not treated as confirmed available candidates.",
+    "Interview no-shows are not stored. Scheduled report delivery is not enabled.",
+    "Registration start, OTP, profile completion, job search, and job detail views are unavailable for periods before those events were tracked.",
+    "Employer hiring, category coverage, job conversion, drilldowns, and job page views use the same state, city, category, employer, and job type filters. Application status is not stored on page views. Acquisition and registration event stages say when a filter is not applied.",
+  ];
+  if (supplyDemandTruncated) {
+    notes.push(
+      "The supply and demand chart shows the first 12 categories. KPI totals are not limited to those rows.",
+    );
+  }
+  if (outOfScope) {
+    notes.unshift(
+      "Country is not stored on hiring records. A non-India country filter returns no hiring metrics instead of an unfiltered India result.",
+    );
+  }
+  if (query.state || query.city || query.category || query.employer || query.jobType) {
+    notes.push(
+      "Job views are filtered by joining the job record. The view ledger itself has no location.",
+    );
+  }
+  return notes;
+}
+
+function buildForecastModel(input: {
+  horizonDays: number;
+  snapshot: {
+    applications: Array<{ date: string; count: number }>;
+    registrations: Array<{ date: string; count: number }>;
+    jobsCreated: Array<{ date: string; count: number }>;
+    placements: Array<{ date: string; count: number }>;
+  };
+}): NonNullable<OperationsAnalyticsOverview["forecastModel"]> {
+  const seriesInput = [
+    { id: "job-demand", label: "Jobs created", points: input.snapshot.jobsCreated },
+    { id: "applications", label: "Applications", points: input.snapshot.applications },
+    { id: "registrations", label: "Jobseeker registrations", points: input.snapshot.registrations },
+    { id: "joined", label: "Joined", points: input.snapshot.placements },
+  ];
+  return {
+    horizonDays: input.horizonDays,
+    methodology:
+      "Holt linear exponential smoothing. Historical dates are the Asia/Kolkata dates of the source records. Missing days inside that span are zero. Projection dates start the day after the last actual date. Estimates are not historical values.",
+    generatedAt: new Date().toISOString(),
+    series: seriesInput.map((series) => {
+      const result = buildCalendarForecast(series.points, input.horizonDays);
+      return {
+        id: series.id,
+        label: series.label,
+        ...result,
+      };
+    }),
+  };
+}
+
+function forecastSentences(
+  model: NonNullable<OperationsAnalyticsOverview["forecastModel"]>,
+): OperationsAnalyticsForecast[] {
+  return model.series.slice(0, 3).map((series) => ({
+    id: series.id,
+    tone: series.sufficient ? "growth" : "seasonal",
+    text: series.sufficient
+      ? `${series.label}: next ${model.horizonDays} days are estimated from ${series.history.length} historical days. First-day estimate ${series.projection[0]?.estimate ?? 0}. ${series.backtest ? `Backtest MAE ${series.backtest.mae}.` : ""} This is an estimate, not a guaranteed outcome.`
+      : series.message,
+  }));
+}
+
+export async function exportOperationsAnalyticsOverview(
+  query: OperationsAnalyticsExportQuery,
   access: OperationsResolvedAccess,
-): Promise<{ filename: string; contentType: string; body: string }> {
+): Promise<{ filename: string; contentType: string; body: string | Buffer }> {
   const overview = await getOperationsAnalyticsOverview(query, access);
 
   await recordOperationsAuditEvent({
@@ -883,51 +1039,65 @@ export async function exportOperationsAnalyticsOverview(
     metadata: {
       preset: overview.range.preset,
       state: overview.state || "all",
+      format: query.format,
+      report: query.report,
     },
   });
 
-  const lines: string[] = [
-    "Section,Metric,Value",
-    `Range,Preset,${overview.range.label}`,
-    `Range,State,${overview.state || "All India"}`,
-    ...overview.platformKpis.map(
-      (kpi) => `PlatformKPI,${kpi.label},${kpi.value}`,
-    ),
-    `WebsiteTraffic,Page views,${overview.websiteTraffic.pageViews}`,
-    `WebsiteTraffic,Unique visitors,${overview.websiteTraffic.uniqueVisitors}`,
-    `WebsiteTraffic,Sessions,${overview.websiteTraffic.sessions}`,
-    `WebsiteTraffic,New visitors,${overview.websiteTraffic.newVisitors}`,
-    `WebsiteTraffic,Returning visitors,${overview.websiteTraffic.returningVisitors}`,
-    ...overview.funnel.map(
-      (stage) =>
-        `Funnel,${stage.label},${stage.count} (${stage.conversionPercent}%)`,
-    ),
-    ...overview.supplyDemand.map(
-      (row) =>
-        `SupplyDemand,${row.category},"supply=${row.supply};demand=${row.demand};status=${row.status}"`,
-    ),
-    ...overview.topLocations.map(
-      (row) =>
-        `TopLocations,${row.rank}. ${row.name},${row.opportunity}`,
-    ),
-    ...overview.placementMetrics.map(
-      (row) => `PlacementIntelligence,${row.label},${row.value}`,
-    ),
-    ...overview.marketIntelligence.map(
-      (row) =>
-        `Market,${row.state},"${row.talentSupply}/${row.jobDemand}/${row.placementRate};${row.marketStatus}"`,
-    ),
-    ...overview.forecasts.map((row) => `Forecast,${row.id},"${row.text.replace(/"/g, '""')}"`),
-  ];
+  return buildAnalyticsExport(overview, query.report, query.format);
+}
 
-  return {
-    filename: `asli-os-analytics-${overview.range.preset}.csv`,
-    contentType: "text/csv; charset=utf-8",
-    body: lines.join("\n"),
-  };
+export async function getOperationsAnalyticsDrilldown(
+  query: OperationsAnalyticsDrilldownQuery,
+): Promise<Awaited<ReturnType<typeof loadAnalyticsDrilldown>>> {
+  const range = resolveAnalyticsDateRange({
+    preset: query.preset,
+    dateFrom: query.dateFrom,
+    dateTo: query.dateTo,
+  });
+  return loadAnalyticsDrilldown({
+    query,
+    from: new Date(range.from),
+    to: new Date(range.to),
+  });
+}
+
+export async function exportOperationsAnalyticsDrilldown(
+  query: OperationsAnalyticsDrilldownQuery,
+  access: OperationsResolvedAccess,
+) {
+  const range = resolveAnalyticsDateRange({
+    preset: query.preset,
+    dateFrom: query.dateFrom,
+    dateTo: query.dateTo,
+  });
+  const file = await exportAnalyticsDrilldownCsv({
+    query,
+    from: new Date(range.from),
+    to: new Date(range.to),
+  });
+  await recordOperationsAuditEvent({
+    actorUserId: access.userId,
+    action: "analytics.export",
+    targetType: "analytics",
+    targetId: "drilldown",
+    targetLabel: "Analytics drilldown export",
+    metadata: {
+      metric: query.metric,
+      preset: query.preset,
+      format: "csv",
+      scope: "filtered",
+      exported: file.exported,
+      total: file.total,
+      truncated: file.truncated,
+    },
+  });
+  return file;
 }
 
 export const operationsAnalyticsService = {
   getOverview: getOperationsAnalyticsOverview,
   exportOverview: exportOperationsAnalyticsOverview,
+  drilldown: getOperationsAnalyticsDrilldown,
+  exportDrilldown: exportOperationsAnalyticsDrilldown,
 };
