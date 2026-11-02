@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { shouldUseOpenAiAssist } from "./openai-assist.routing.js";
 import {
+  groundOpenAiUnderstanding,
   looksLikeHallucinatedFacts,
   sanitizeUntrustedUserText,
 } from "./openai-assist.client.js";
@@ -99,6 +100,70 @@ describe("OpenAI assist routing", () => {
       }),
       true,
     );
+  });
+});
+
+describe("OpenAI grounded understanding", () => {
+  it("keeps a stated role and city and ignores invented places", () => {
+    const grounded = groundOpenAiUnderstanding("Any jobs near Madhapur for a driver?", {
+      intent: "JOB_SEARCH",
+      language: "en",
+      location: "Madhapur",
+      category: "driver",
+    });
+    assert.ok(grounded);
+    assert.equal(grounded?.intent, "JOB_SEARCH");
+    assert.match(grounded?.location ?? "", /Madhapur/i);
+    assert.match(grounded?.category ?? "", /driver/i);
+
+    const invented = groundOpenAiUnderstanding("I need a job", {
+      intent: "JOB_SEARCH",
+      language: "en",
+      location: "Atlantis",
+      category: "Astronaut",
+    });
+    assert.equal(invented?.location ?? "", "");
+    assert.equal(invented?.category ?? "", "");
+  });
+
+  it("does not take a model salary; salary stays with the deterministic parser", () => {
+    const grounded = groundOpenAiUnderstanding("Naku 20k salary jobs kavali", {
+      intent: "JOB_SEARCH",
+      language: "te",
+      location: "",
+      category: "",
+    });
+    assert.equal(grounded?.minSalary, 20000);
+  });
+
+  it("does not let the model turn a job sentence into a greeting or application status", () => {
+    const greeting = groundOpenAiUnderstanding("I need a job in Hyderabad", {
+      intent: "GREETING",
+      language: "en",
+      location: "Hyderabad",
+      category: "",
+    });
+    assert.notEqual(greeting?.intent, "GREETING");
+    assert.equal(greeting?.location, "Hyderabad");
+
+    const status = groundOpenAiUnderstanding("show me driver jobs", {
+      intent: "APPLICATION_STATUS",
+      language: "en",
+      location: "",
+      category: "driver",
+    });
+    assert.notEqual(status?.intent, "APPLICATION_STATUS");
+    assert.match(status?.category ?? "", /driver/i);
+  });
+
+  it("rejects an unknown intent when nothing in the message is grounded", () => {
+    const grounded = groundOpenAiUnderstanding("asdf qwerty zxcvbn", {
+      intent: "NOT_A_REAL_INTENT",
+      language: "en",
+      location: "Atlantis",
+      category: "Astronaut",
+    });
+    assert.equal(grounded, null);
   });
 });
 

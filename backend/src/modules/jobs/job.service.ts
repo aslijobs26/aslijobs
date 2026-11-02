@@ -12,6 +12,7 @@ import { EmployerModel } from "../employers/employer.model.js";
 import { ApplicationModel } from "../applications/application.model.js";
 import { JobCounterModel } from "./job-counter.model.js";
 import { JobModel, type JobDocument } from "./job.model.js";
+import { invalidateWhatsAppSearchCatalog } from "../whatsapp/whatsapp-search-catalog.js";
 import { detectCanonicalSourceLanguage, parseJobContentLanguage } from "./job-content-language.js";
 import {
   presentPublicWebsiteJobContent,
@@ -1803,6 +1804,7 @@ export class JobService {
         HTTP_STATUS.CONFLICT,
       );
     }
+    invalidateWhatsAppSearchCatalog("job_status");
 
     const updatedJob = await JobModel.findById(job._id);
 

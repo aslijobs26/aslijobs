@@ -165,6 +165,17 @@ export type SarvamUnderstanding = {
   source: "sarvam" | "fallback" | "local";
 };
 
+export function sarvamFallbackUnderstanding(
+  text: string,
+  previous?: BotLanguage | null,
+  hint?: BotLanguage | null,
+): SarvamUnderstanding {
+  return {
+    understanding: understandLocally(text, previous, hint),
+    source: "fallback",
+  };
+}
+
 export async function understandMessage(
   text: string,
   previous?: BotLanguage | null,
@@ -175,10 +186,7 @@ export async function understandMessage(
     priorRole?: string;
   },
 ): Promise<SarvamUnderstanding> {
-  const fallback = (): SarvamUnderstanding => ({
-    understanding: understandLocally(text, previous, hint),
-    source: "fallback",
-  });
+  const fallback = (): SarvamUnderstanding => sarvamFallbackUnderstanding(text, previous, hint);
   if (!env.SARVAM_API_KEY.trim()) {
     console.error("[Sarvam] SARVAM_UNAVAILABLE reason=missing_key");
     return fallback();

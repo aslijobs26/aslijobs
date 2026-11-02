@@ -203,6 +203,8 @@ const envSchema = z.object({
     .default(1),
   /** Parallel WhatsApp AI jobs when REDIS_URL is set. */
   WHATSAPP_INBOUND_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(4),
+  /** Safety-net TTL for the in-process job title and city catalog. Job saves invalidate sooner. */
+  WHATSAPP_CATALOG_TTL_MS: z.coerce.number().int().min(15_000).max(600_000).default(60_000),
   /**
    * OpenAI API key for selective WhatsApp assist (never exposed to clients).
    * Leave empty to keep deterministic + Sarvam paths only.

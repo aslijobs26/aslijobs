@@ -1,4 +1,5 @@
 import { Schema, model, type InferSchemaType, type Types } from "mongoose";
+import { invalidateWhatsAppSearchCatalog } from "../whatsapp/whatsapp-search-catalog.js";
 import {
   JOB_EDUCATION_LEVELS,
   JOB_EXPERIENCE_LEVELS,
@@ -552,6 +553,12 @@ const jobSchema = new Schema(
     collection: "jobs",
   },
 );
+
+jobSchema.post("save", (doc) => {
+  const status = String(doc.status ?? "");
+  if (status === "draft" || status === "pending_approval") return;
+  invalidateWhatsAppSearchCatalog("job_save");
+});
 
 jobSchema.index({ employerId: 1, status: 1, createdAt: -1 });
 /** Public Jobs listing default sort: active → publishedAt/createdAt. */

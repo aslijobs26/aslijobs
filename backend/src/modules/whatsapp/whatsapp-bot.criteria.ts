@@ -261,6 +261,15 @@ export function extractExperienceDetail(text: string): {
       };
     }
   }
+  const nativeYears = text.match(
+    /(?:^|\D)(\d{1,2})\s*(?:సంవత్సరాలు|సంవత్సరం|సంవత్సరాల|साल|वर्ष|வருடங்கள்|வருடం|ವರ್ಷ|വർഷം)/,
+  );
+  if (nativeYears?.[1]) {
+    const years = Number(nativeYears[1]);
+    if (Number.isFinite(years)) {
+      return { level: experienceSearchLevel(years), years, rangeLabel: "" };
+    }
+  }
   const numeric = folded.match(new RegExp(`\\b(${amount})\\s*(?:years?|yrs?)\\b`));
   if (numeric?.[1]) {
     const years = Number(words[numeric[1]] ?? numeric[1]);
@@ -274,6 +283,16 @@ export function extractExperienceDetail(text: string): {
 
 export function extractExperienceLevel(text: string): string {
   return extractExperienceDetail(text).level;
+}
+
+/** Recognized education words. The public job search API does not filter on this. */
+export function extractEducationHint(text: string): string {
+  if (/intermediate|ఇంటర్మీడియట్|ఇంటర్|इंटरमीडिएट|\binter\b|\b12th\b|twelfth/i.test(text)) {
+    return "intermediate";
+  }
+  if (/\b10th\b|\bssc\b|tenth|పదవ తరగతి/i.test(text)) return "10th";
+  if (/\b(degree|graduate|graduation|గ్రాడ్యుయేషన్|स्नातक)\b/i.test(text)) return "degree";
+  return "";
 }
 
 function lpaToMonthly(lpa: number): number {

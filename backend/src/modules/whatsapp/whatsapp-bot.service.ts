@@ -18,7 +18,8 @@ import { formatAppliedFilters } from "./whatsapp-bot.criteria.js";
 import { runInPhoneOrder } from "./whatsapp-phone-order.js";
 import { transcribeWhatsAppAudio, understandMessage } from "./sarvam.client.js";
 import { localizeDeterministicReply, whatsappAiCallPlan } from "./sarvam-translate.client.js";
-import { assistWhatsAppReply } from "./openai-assist.client.js";
+import { assistWhatsAppReply, understandWithOpenAi } from "./openai-assist.client.js";
+import { ensureWhatsAppSearchCatalog } from "./whatsapp-search-catalog.js";
 import { shouldUseOpenAiAssist } from "./openai-assist.routing.js";
 import { understandInboundWhatsAppMedia } from "./whatsapp-media-understand.service.js";
 import { mediaProgressCopy } from "./whatsapp-media-messages.js";
@@ -534,6 +535,7 @@ async function processInboundTurn(input: {
       return;
     }
 
+    await ensureWhatsAppSearchCatalog(loadActiveJobCatalog);
     const understandStarted = performance.now();
     const followUp = isFollowUpFragment(text);
     const prior = {
@@ -542,6 +544,7 @@ async function processInboundTurn(input: {
       priorRole: followUp ? session?.pendingCategory || session?.lastCategory || "" : "",
     };
     const menuIntent = detectMenuSelection(text, session?.conversationState);
+    let openAiUnderstood = false;
     let understood: Awaited<ReturnType<typeof understandMessage>>;
     if (menuIntent) {
       const language = detectLanguage(text, session?.language, hint, true);
@@ -571,6 +574,25 @@ async function processInboundTurn(input: {
           "LLM_FALLBACK",
           `reason=ambiguous_or_low_confidence localIntent=${local.intent} confidence=${local.confidence} language=${languageForAck}`,
         );
+        const openAiUnderstanding = await understandWithOpenAi(text, session?.language);
+        if (openAiUnderstanding && openAiUnderstanding.intent !== "UNKNOWN") {
+          understood = {
+            understanding: applyAccountAwareIntent(
+              applyRoleHints(text, openAiUnderstanding, identity.linked),
+              identity.linked,
+            ),
+            source: "local",
+          };
+          openAiUnderstood = true;
+          timing.sarvam_understand = performance.now() - understandStarted;
+          logWhatsAppBot(
+            "OPENAI_UNDERSTAND",
+            `intent=${understood.understanding.intent} location=${understood.understanding.location || "-"} role=${understood.understanding.category || "-"} latencyMs=${Math.round(timing.sarvam_understand)}`,
+          );
+          console.info(
+            `[WhatsApp] intent_detection: ${Math.round(timing.sarvam_understand)}ms source=openai`,
+          );
+        } else {
         const llmStarted = performance.now();
         const [remote] = await Promise.all([
           understandMessage(text, session?.language, hint, prior),
@@ -603,6 +625,7 @@ async function processInboundTurn(input: {
         console.info(
           `[WhatsApp] intent_detection: ${Math.round(timing.sarvam_understand)}ms source=${understood.source}`,
         );
+        }
       }
     }
     let merged = applyAccountAwareIntent(
@@ -913,7 +936,7 @@ async function processInboundTurn(input: {
           : "local",
       language: merged.language,
     });
-    if (assistEligible) {
+    if (assistEligible && !openAiUnderstood) {
       const assist = await assistWhatsAppReply({
         userText: text,
         language: merged.language,
@@ -944,7 +967,7 @@ async function processInboundTurn(input: {
     const trace = describeTurn(merged, turn);
     const llmUsed = understood.source === "sarvam";
     console.info(
-      `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${merged.intent} language=${merged.language} understandingMode=${menuIntent ? "MENU" : llmUsed ? "LLM_FALLBACK" : "RULE"} llmUsed=${llmUsed} openAiAssist=${openAiUsed} llmCalls=${plan.chatLlmCalls} dbService=${trace.service} responseType=${openAiUsed ? "openai_assist" : "deterministic"} latency=${Date.now() - started}`,
+      `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${merged.intent} language=${merged.language} understandingMode=${menuIntent ? "MENU" : openAiUnderstood ? "OPENAI" : llmUsed ? "LLM_FALLBACK" : "RULE"} llmUsed=${llmUsed} openAiUnderstand=${openAiUnderstood} openAiAssist=${openAiUsed} llmCalls=${plan.chatLlmCalls} dbService=${trace.service} responseType=${openAiUsed ? "openai_assist" : "deterministic"} latency=${Date.now() - started}`,
     );
     console.info(
       [
@@ -1323,6 +1346,16 @@ async function buildReply(
     case "JOB_COUNT":
     case "JOB_SEARCH":
     default: {
+      if (
+        (understanding.clarifyField === "which_city" || understanding.clarifyField === "which_role") &&
+        (understanding.clarifyOptions?.length ?? 0) >= 2
+      ) {
+        return reply({
+          situation: "clarify",
+          missing: understanding.clarifyField,
+          options: understanding.clarifyOptions,
+        });
+      }
       if (understanding.intent === "UNKNOWN") {
         return reply({ situation: "clarify", missing: linked === "none" ? "purpose" : "intent" });
       }
@@ -1592,6 +1625,24 @@ function logWhatsAppJobs(input: {
  * Matches roles on canonical source titles (list API without language), then
  * overlays a stored Mongo translation for display. Never enqueues translation.
  */
+async function loadActiveJobCatalog(): Promise<{ titles: string[]; cities: string[] }> {
+  const [titles, cities] = await Promise.all([
+    distinctActiveField("jobTitle"),
+    distinctActiveField("cityName"),
+  ]);
+  return { titles, cities };
+}
+
+async function distinctActiveField(field: "jobTitle" | "cityName"): Promise<string[]> {
+  const rows = await JobModel.aggregate<{ value?: string }>([
+    { $match: { status: "active", [field]: { $type: "string", $nin: ["", null] } } },
+    { $group: { _id: { $toLower: `$${field}` }, value: { $first: `$${field}` } } },
+  ]).option({ allowDiskUse: true });
+  return rows
+    .map((row) => (typeof row.value === "string" ? row.value.trim() : ""))
+    .filter((value) => value.length > 1);
+}
+
 async function loadJobs(
   filters: {
     search: string;

@@ -12,6 +12,17 @@ import {
   recallsEarlierLocation,
   wantsAnyLocation,
 } from "./whatsapp-bot.criteria.js";
+import {
+  acceptRankedLabel,
+  alignKnownRole,
+  ambiguousRoleOptions,
+  withinOneEdit,
+  closestSupportedLabel,
+  currentSearchCatalog,
+  matchCatalogCityInText,
+  matchCatalogRole,
+  rankLabels,
+} from "./whatsapp-search-catalog.js";
 
 export const BOT_INTENTS = [
   "GREETING",
@@ -73,6 +84,9 @@ export type BotUnderstanding = {
   jobOrdinal?: number | null;
   /** Continue prior JOB_SEARCH and exclude previously shown jobs when practical. */
   showMore?: boolean;
+  /** Set when two roles or cities are plausible and the bot should ask. */
+  clarifyField?: "" | "which_role" | "which_city";
+  clarifyOptions?: string[];
 };
 
 export type PublicJobFact = {
@@ -178,17 +192,17 @@ const ROLES: Array<{ canonical: string; forms: string[] }> = [
   { canonical: "Driver", forms: ["driver", "డ్రైవర్", "డ్రైవరు", "ड्राइवर", "டிரைவர்", "ಡ್ರೈವರ್", "ഡ്രൈവർ"] },
   { canonical: "Delivery Executive", forms: ["delivery executive", "delivery boy", "delivery agent"] },
   { canonical: "Delivery", forms: ["delivery", "డెలివరీ", "డెలివరి", "डिलीवरी"] },
-  { canonical: "Security Guard", forms: ["security guard", "security guards"] },
+  { canonical: "Security Guard", forms: ["security guard", "security guards", "security officer"] },
   { canonical: "Watchman", forms: ["watchman", "security", "వాచ్‌మన్", "వాచ్మన్", "वॉचमैन"] },
-  { canonical: "Electrician", forms: ["electrician", "electrical", "ఎలక్ట్రీషియన్", "ఎలక్ట్రిషియన్", "ఎలెక్ట్రీషియన్", "ఎలెక్ట్రిషియన్", "इलेक्ट्रीशियन", "इलेक्ट्रिशियन", "बिजली मिस्त्री", "எலக்ட்ரீஷியன்", "எலக்ட்ரிஷியன்", "ಎಲೆಕ್ಟ್ರಿಷಿಯನ್", "ಎಲೆಕ್ಟ್ರೀಷಿಯನ್", "ഇലക്ട്രീഷ്യൻ", "ഇലക്ട്രിഷ്യൻ"] },
+  { canonical: "Electrician", forms: ["electrician", "electrian", "electrcian", "electrical", "ఎలక్ట్రీషియన్", "ఎలక్ట్రిషియన్", "ఎలెక్ట్రీషియన్", "ఎలెక్ట్రిషియన్", "इलेक्ट्रीशियन", "इलेक्ट्रिशियन", "बिजली मिस्त्री", "எலக்ட்ரீஷியன்", "எலக்ட்ரிஷியன்", "ಎಲೆಕ್ಟ್ರಿಷಿಯನ್", "ಎಲೆಕ್ಟ್ರೀಷಿಯನ್", "ഇലക്ട്രീഷ്യൻ", "ഇലക്ട്രിഷ്യൻ"] },
   { canonical: "Carpenter", forms: ["carpenter", "కార్పెంటర్", "कारपेंटर"] },
   { canonical: "Plumber", forms: ["plumber", "ప్లంబర్", "प्लंबर"] },
   { canonical: "Cook", forms: ["cook", "వంటవాడు", "रसोइया"] },
-  { canonical: "Sales Executive", forms: ["sales executive", "sales executives"] },
+  { canonical: "Sales Executive", forms: ["sales executive", "sales executives", "sales boy", "sales girl", "salesgirl"] },
   { canonical: "Sales", forms: ["sales", "సేల్స్", "सेल्स"] },
   { canonical: "Helper", forms: ["helper", "హెల్పర్", "हेल्पर"] },
   { canonical: "Mason", forms: ["mason", "మేసన్", "मेसन", "రాయి పని"] },
-  { canonical: "Housekeeping", forms: ["housekeeping", "హౌస్ కీపింగ్", "हाउसकीपिंग"] },
+  { canonical: "Housekeeping", forms: ["housekeeping staff", "house keeping", "housekeeping", "హౌస్ కీపింగ్", "हाउसकीपिंग"] },
   { canonical: "Warehouse", forms: ["warehouse", "వేర్‌హౌస్", "वेयरहाउस"] },
   { canonical: "Painter", forms: ["painter", "పెయింటర్", "पेंटर"] },
   { canonical: "Welder", forms: ["welder", "వెల్డర్", "वेल्डर"] },
@@ -515,8 +529,22 @@ export function understandLocally(
 ): BotUnderstanding {
   const language = detectLanguage(text, previous, hint, isFollowUpFragment(text));
   const folded = text.toLowerCase();
-  const location = extractPlace(text);
-  const category = extractRole(text);
+  let location = extractPlace(text);
+  let category = extractRole(text);
+  const cityOptions = competingPlaces(text);
+  let clarifyField: "" | "which_role" | "which_city" = "";
+  let clarifyOptions: string[] = [];
+  if (cityOptions.length >= 2) {
+    location = "";
+    clarifyField = "which_city";
+    clarifyOptions = cityOptions;
+  }
+  const roleOptions = ambiguousRoleOptions(text, category);
+  if (!clarifyField && roleOptions.length >= 2) {
+    category = "";
+    clarifyField = "which_role";
+    clarifyOptions = roleOptions;
+  }
   const salaryBandEarly = extractSalaryBand(text);
   const showMoreAsk = looksLikeShowMoreJobs(text);
   const salaryOnlyAsk =
@@ -688,6 +716,8 @@ export function understandLocally(
     reuseLocation: recallsEarlierLocation(text) || followUpSlot,
     jobOrdinal: ordinal,
     showMore: showMoreAsk,
+    clarifyField,
+    clarifyOptions,
   };
 }
 
@@ -1331,7 +1361,22 @@ export function placeCityAliases(location: string): string[] {
   if (!trimmed) return [];
   const place = PLACES.find((item) => item.canonical === (extractPlace(trimmed) || trimmed));
   const latin = (place?.forms ?? []).filter((form) => /^[a-z][a-z\s-]*$/i.test(form));
-  return [...new Set([trimmed, ...(place ? [place.canonical] : []), ...latin])];
+  const catalogCity = currentSearchCatalog().cities.find(
+    (city) => city.toLowerCase() === trimmed.toLowerCase(),
+  );
+  return [...new Set([trimmed, ...(place ? [place.canonical] : []), ...latin, ...(catalogCity ? [catalogCity] : [])])];
+}
+
+/** Locality when the place is searched again at a parent city. Cities and states stay distinct. */
+export function locationGrain(location: string): "locality" | "city" | "state" | "" {
+  if (!location) return "";
+  if (placeKind(location) === "state") return "state";
+  if (parentCity(location)) return "locality";
+  return "city";
+}
+
+export function messageLooksLikeJobAsk(text: string): boolean {
+  return includesAny(text, JOB_WORDS) || includesAny(text, REQUEST_WORDS) || /\bjobs?\b/i.test(text);
 }
 
 /** City to retry for a neighbourhood search; never a different city than the one asked for. */
@@ -1684,6 +1729,27 @@ export function profileCopy(input: {
   return `${name ? `${name}: ` : ""}Your role is ${role}${skills ? `. Skills: ${skills}` : ""}.`;
 }
 
+export function disambiguationCopy(language: BotLanguage, missing: string, options: unknown): string {
+  const names = Array.isArray(options)
+    ? options.map((item) => String(item).trim()).filter(Boolean).slice(0, 3)
+    : [];
+  const list = names.join(" or ");
+  const city = missing === "which_city";
+  if (language === "te") {
+    return city
+      ? `ఏ నగరం? ${list || "ఒక నగరం పేరు చెప్పండి."}`
+      : `ఏ రోల్? ${list || "ఒక రోల్ చెప్పండి."}`;
+  }
+  if (language === "hi") {
+    return city
+      ? `कौन सा शहर? ${list || "शहर का नाम भेजें."}`
+      : `कौन सी भूमिका? ${list || "भूमिका भेजें."}`;
+  }
+  return city
+    ? `Which city did you mean? ${list || "Send the city name."}`
+    : `Which role did you mean? ${list || "Send the role name."}`;
+}
+
 export function buildDeterministicReply(
   language: BotLanguage,
   facts: Record<string, unknown>,
@@ -1755,6 +1821,9 @@ export function buildDeterministicReply(
       });
     }
     if (missing === "location") return askLocationCopy(language);
+    if (missing === "which_city" || missing === "which_role") {
+      return disambiguationCopy(language, missing, facts.options);
+    }
     if (missing === "which_account_data") return clarifyAmbiguousCopy(language);
     if (missing === "purpose") return purposeClarifyCopy(language);
     return clarifyJobTitle(language);
@@ -2890,6 +2959,13 @@ const PLACE_MISSPELLINGS: Record<string, string> = {
   bangalor: "Bangalore",
 };
 
+/** Short forms matched on a word boundary so "hyd" does not fire inside "Hyderabad". */
+const SHORT_PLACES: Array<{ canonical: string; pattern: RegExp }> = [
+  { canonical: "Hyderabad", pattern: /(^|[^a-z])hyd(?![a-z])/gi },
+  { canonical: "Bangalore", pattern: /(^|[^a-z])blr(?![a-z])/gi },
+  { canonical: "Secunderabad", pattern: /(^|[^a-z])secbad(?![a-z])/gi },
+];
+
 function placeHitsIn(text: string): Array<{ canonical: string; index: number }> {
   const folded = text.toLowerCase();
   const hits: Array<{ canonical: string; index: number }> = [];
@@ -2902,6 +2978,13 @@ function placeHitsIn(text: string): Array<{ canonical: string; index: number }> 
   for (const [form, canonical] of Object.entries(PLACE_MISSPELLINGS)) {
     const idx = folded.indexOf(form);
     if (idx >= 0 && canonical) hits.push({ canonical, index: idx });
+  }
+  for (const place of SHORT_PLACES) {
+    place.pattern.lastIndex = 0;
+    const match = place.pattern.exec(folded);
+    if (match?.[1] != null) {
+      hits.push({ canonical: place.canonical, index: match.index + match[1].length });
+    }
   }
   hits.sort((a, b) => a.index - b.index || a.canonical.localeCompare(b.canonical));
   return hits;
@@ -2955,7 +3038,45 @@ function extractPlace(text: string): string {
   }
   const hit = firstDistinctPlace(text);
   if (hit) return hit;
+  const fuzzy = fuzzyKnownPlace(text);
+  if (fuzzy) return fuzzy;
+  const dynamic = matchCatalogCityInText(text);
+  if (dynamic) return dynamic;
   return extractIndianState(text);
+}
+
+const PLACE_FUZZY_SKIP = new Set(["driver", "jobs", "job", "jobs", "electrician", "plumber", "helper"]);
+
+function fuzzyKnownPlace(text: string): string {
+  const tokens = text.toLowerCase().match(/[a-z]{5,}/g) ?? [];
+  const names = knownPlaceNames();
+  for (const token of tokens) {
+    if (PLACE_FUZZY_SKIP.has(token)) continue;
+    const found = closestSupportedLabel(token, names, 0.88);
+    if (found) return found;
+  }
+  return "";
+}
+
+function hasLocationChangeCue(text: string): boolean {
+  return /\binstead\s+of\b|\brather\s+than\b|\b(?:badhulu|badulu)\b|change\s+(?:location\s+)?to|\bki\s+marchu\b|\bmarchu\b/i.test(
+    text,
+  );
+}
+
+/** Two known cities in one message, unless one is a locality of the other or the user named a swap. */
+export function competingPlaces(text: string): string[] {
+  if (hasLocationChangeCue(text)) return [];
+  const ordered: string[] = [];
+  for (const hit of placeHitsIn(text)) {
+    if (!ordered.includes(hit.canonical)) ordered.push(hit.canonical);
+  }
+  if (ordered.length < 2) return [];
+  if (ordered.length === 2) {
+    const [first, second] = ordered;
+    if (first && second && (parentCity(first) === second || parentCity(second) === first)) return [];
+  }
+  return ordered.slice(0, 3);
 }
 
 export function matchesRequestedRole(title: string, role: string): boolean {
@@ -2968,11 +3089,50 @@ export function matchesRequestedRole(title: string, role: string): boolean {
 }
 
 function extractRole(text: string): string {
-  const hit = ROLES.find((role) =>
-    role.forms.some((form) => text.toLowerCase().includes(form.toLowerCase())),
-  );
-  if (hit) return hit.canonical;
-  return extractFreeJobTitle(text, (phrase) => extractPlace(phrase) !== "");
+  const folded = text.toLowerCase();
+  let best = "";
+  let bestLen = 0;
+  for (const role of ROLES) {
+    for (const form of role.forms) {
+      const needle = form.toLowerCase();
+      if (needle.length > bestLen && folded.includes(needle)) {
+        best = role.canonical;
+        bestLen = needle.length;
+      }
+    }
+  }
+  if (best) return alignKnownRole(best, text);
+  const free = extractFreeJobTitle(text, (phrase) => extractPlace(phrase) !== "");
+  if (free) {
+    const spelled = correctRoleSpelling(free);
+    if (spelled) return alignKnownRole(spelled, text);
+    return matchCatalogRole(free) || free;
+  }
+  return matchCatalogRole(text);
+}
+
+export function knownPlaceNames(): string[] {
+  return PLACES.map((place) => place.canonical);
+}
+
+export function knownRoleNames(): string[] {
+  return ROLES.map((role) => role.canonical);
+}
+
+/** High-confidence spelling fix against known roles. Empty when unsure. */
+export function correctRoleSpelling(token: string): string {
+  const decision = acceptRankedLabel(rankLabels(token, knownRoleNames()), 0.9);
+  if (!decision.label || decision.options.length > 0) return "";
+  return withinOneEdit(token, decision.label) ? decision.label : "";
+}
+
+/** High-confidence spelling fix against known cities. Empty when two cities are close. */
+export function correctCitySpelling(token: string): string {
+  return acceptRankedLabel(rankLabels(token, knownPlaceNames()), 0.88).label;
+}
+
+export function ambiguousCitySpellings(token: string): string[] {
+  return acceptRankedLabel(rankLabels(token, knownPlaceNames()), 0.88).options;
 }
 
 function normalizePlace(value: string): string {
