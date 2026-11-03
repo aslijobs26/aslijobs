@@ -22,6 +22,7 @@ import {
   looksLikeStalePublicJobReply,
   menuUnderstanding,
   properNounsFromFacts,
+  publicJobFilters,
   PUBLIC_JOB_FETCH_LIMIT,
   purposeClarifyCopy,
   registrationCopy,
@@ -2186,6 +2187,37 @@ describe("whatsapp unknown-user public job search", () => {
     assert.notEqual(reply, registerOnly);
     assert.match(registerOnly, /job-seeker\/register/);
     assert.doesNotMatch(registerOnly, /Plumber/);
+  });
+
+  it("2b. unknown + Hyderabad lo enni jobs… is open city search, not role Enni", () => {
+    const text = "Hyderabad lo enni jobs available ga vunnayi";
+    const local = understandLocally(text);
+    assert.equal(local.intent, "JOB_SEARCH");
+    assert.equal(local.location, "Hyderabad");
+    assert.equal(local.category, "");
+    assert.equal(local.openSearch, true);
+    assert.equal(unknownUserAction(local), "public_jobs");
+    const filters = publicJobFilters(local);
+    assert.equal(filters.search, "");
+    assert.equal(filters.city, "Hyderabad");
+    const reply =
+      buildDeterministicReply("te", {
+        situation: "jobs",
+        accountType: "none",
+        location: "Hyderabad",
+        role: "",
+        total: 9,
+        jobs: hyderabadJobs.map((job) => ({
+          jobTitle: job.jobTitle,
+          companyName: job.companyName,
+          cityName: job.cityName,
+          salary: job.salaryLabel,
+          jobId: job.jobId,
+        })),
+        registration: { seekerRegisterUrl },
+      }) ?? "";
+    assert.match(reply, /9|హైదరాబాద్|Hyderabad|ఉద్యోగ/);
+    assert.doesNotMatch(reply, /కనిపించలేదు/);
   });
 
   it("3. unknown + Hyderabad electrician jobs extracts role and city", () => {

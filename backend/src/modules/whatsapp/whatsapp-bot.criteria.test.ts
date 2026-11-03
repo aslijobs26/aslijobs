@@ -228,4 +228,22 @@ describe("whatsapp conversation criteria", () => {
     assert.equal(understood.location, "");
     assert.equal(understood.openSearch, false);
   });
+
+  it("does not treat Telugu 'enni' (how many) as a job role", () => {
+    const samples = [
+      "Hyderabad lo enni jobs available ga vunnayi",
+      "Hyderabad lo enni jobs unnayi",
+      "Hyderabad lo enni jobs unnaya?",
+    ];
+    for (const text of samples) {
+      const understood = understandLocally(text);
+      assert.equal(understood.intent, "JOB_SEARCH", text);
+      assert.equal(understood.location, "Hyderabad", text);
+      assert.equal(understood.category, "", text);
+      assert.equal(understood.openSearch, true, text);
+      const filters = publicJobFilters(understood);
+      assert.equal(filters.search, "", text);
+      assert.equal(filters.city, "Hyderabad", text);
+    }
+  });
 });

@@ -122,6 +122,28 @@ const ROLE_REJECT = new Set([
   "chupinchu",
   "chupinchi",
   "unnaya",
+  // Telugu/romanized quantity & existence fillers — never job titles
+  // ("Hyderabad lo enni jobs…" must stay open city search, not role=Enni).
+  "enni",
+  "entha",
+  "enta",
+  "ennni",
+  "unnayi",
+  "vunnayi",
+  "vunnaya",
+  "vundi",
+  "vundhi",
+  "unnai",
+  "unnaayi",
+  "ga",
+  "lo",
+  "kosam",
+  "ledu",
+  "levu",
+  "available",
+  "avail",
+  "there",
+  "are",
 ]);
 
 const EXPERIENCE_LABELS: Record<string, string> = {
@@ -166,11 +188,17 @@ function cleanRolePhrase(value: string, isKnownPlace: (place: string) => boolean
     previous = phrase;
     phrase = phrase
       .replace(
-        /^(?:a|an|the|any|some|my|me|i|please|show|find|need|want|wnat|looking|for|available|are|there|what|which|how|do|can|is|matching|suitable|only|just|sirf|fresher|freshers|experienced)\s+/i,
+        /^(?:a|an|the|any|some|my|me|i|please|show|find|need|want|wnat|looking|for|available|are|there|what|which|how|do|can|is|matching|suitable|only|just|sirf|fresher|freshers|experienced|enni|entha|enta|unnayi|vunnayi|vunnaya|unnaya|unnai|unnaayi|vundi|vundhi|ga|lo)\s+/i,
         "",
       )
-      .replace(/\s+(?:job|jobs|work|role|position|resume|cv|only|just|sirf|fresher|freshers|experienced)$/i, "")
-      .replace(/^(?:only|just|sirf|fresher|freshers|experienced)$/i, "")
+      .replace(
+        /\s+(?:job|jobs|work|role|position|resume|cv|only|just|sirf|fresher|freshers|experienced|available|enni|entha|enta|unnayi|vunnayi|vunnaya|unnaya|ga)$/i,
+        "",
+      )
+      .replace(
+        /^(?:only|just|sirf|fresher|freshers|experienced|enni|entha|enta|unnayi|vunnayi|available)$/i,
+        "",
+      )
       .trim();
     const locative = phrase.match(/^(.+?)\s+(?:lo|mein|me|in|at|la)\s+(.+)$/i);
     if (locative?.[1] && locative[2] && isKnownPlace(locative[1].trim())) {
@@ -180,6 +208,8 @@ function cleanRolePhrase(value: string, isKnownPlace: (place: string) => boolean
   if (!phrase || phrase.length < 3 || phrase.length > 40) return "";
   const tokens = phrase.toLowerCase().split(/\s+/);
   if (tokens.every((token) => ROLE_REJECT.has(token))) return "";
+  // Single filler/question token after stripping must never become a role.
+  if (tokens.length === 1 && ROLE_REJECT.has(tokens[0] ?? "")) return "";
   if (isKnownPlace(phrase) || extractIndianState(phrase)) return "";
   return titleCase(phrase);
 }
