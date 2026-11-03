@@ -244,6 +244,8 @@ export type WhatsAppEmployerRecord = {
   isProfileComplete?: boolean;
   registrationStatus?: string;
   verificationRemarks?: string;
+  /** Login/account gate — suspended/inactive must not use private bot surfaces. */
+  status?: string;
 };
 
 export type WhatsAppSeekerRecord = {
@@ -289,7 +291,7 @@ export function classifyAccountProgress(input: {
 const SEEKER_LOOKUP =
   "fullName city jobRole skills preferredJobLocation registrationStatus isWhatsappVerified accountStatus";
 const EMPLOYER_LOOKUP =
-  "companyName verificationStatus isProfileComplete registrationStatus verificationRemarks";
+  "companyName verificationStatus isProfileComplete registrationStatus verificationRemarks status";
 
 function isCompletedSeeker(seeker: { registrationStatus?: string } | null): boolean {
   return seeker?.registrationStatus === "COMPLETED";
@@ -297,6 +299,20 @@ function isCompletedSeeker(seeker: { registrationStatus?: string } | null): bool
 
 function isCompletedEmployer(employer: { registrationStatus?: string } | null): boolean {
   return employer?.registrationStatus === "completed";
+}
+
+/** Completed + not blocked/suspended — mirrors web JobSeeker auth for WhatsApp. */
+export function isWhatsAppLinkedSeeker(seeker: WhatsAppSeekerRecord | null): boolean {
+  if (!seeker || !isCompletedSeeker(seeker)) return false;
+  const status = String(seeker.accountStatus ?? "active").toLowerCase();
+  return status !== "blocked" && status !== "suspended";
+}
+
+/** Completed + active employer status — mirrors employer login eligibility. */
+export function isWhatsAppLinkedEmployer(employer: WhatsAppEmployerRecord | null): boolean {
+  if (!employer || !isCompletedEmployer(employer)) return false;
+  const status = String(employer.status ?? "active").toLowerCase();
+  return status === "active" || status === "";
 }
 
 /**
@@ -323,7 +339,7 @@ export async function resolveWhatsAppLinkedAccount(
     const employer = await EmployerModel.findById(identity.accountId)
       .select(EMPLOYER_LOOKUP)
       .lean();
-    if (employer && isCompletedEmployer(employer)) {
+    if (employer && isWhatsAppLinkedEmployer(employer)) {
       return { kind: "employer", jobSeeker: null, employer, progress: "registered" };
     }
     linkedEmployerStatus = employer?.registrationStatus ?? null;
@@ -333,7 +349,7 @@ export async function resolveWhatsAppLinkedAccount(
     const jobSeeker = await JobSeekerModel.findById(identity.accountId)
       .select(SEEKER_LOOKUP)
       .lean();
-    if (jobSeeker && isCompletedSeeker(jobSeeker)) {
+    if (jobSeeker && isWhatsAppLinkedSeeker(jobSeeker)) {
       return { kind: "job_seeker", employer: null, jobSeeker, progress: "registered" };
     }
     linkedSeekerStatus = jobSeeker?.registrationStatus ?? null;
@@ -348,8 +364,8 @@ export async function resolveWhatsAppLinkedAccount(
       .lean(),
   ]);
 
-  const seekerOk = jobSeeker && isCompletedSeeker(jobSeeker) ? jobSeeker : null;
-  const employerOk = employer && isCompletedEmployer(employer) ? employer : null;
+  const seekerOk = jobSeeker && isWhatsAppLinkedSeeker(jobSeeker) ? jobSeeker : null;
+  const employerOk = employer && isWhatsAppLinkedEmployer(employer) ? employer : null;
   const kind =
     seekerOk && employerOk
       ? "both"

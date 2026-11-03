@@ -169,6 +169,8 @@ export class WhatsAppTemplateDeliveryError extends Error {
   readonly failureClass: WhatsAppTemplateFailureClass;
   /** Sanitized Meta detail. Phone numbers and tokens are removed. */
   readonly detail: string;
+  /** Parsed Retry-After (ms). Zero when absent or invalid. */
+  readonly retryAfterMs: number;
 
   constructor(input: {
     status: number;
@@ -176,6 +178,7 @@ export class WhatsAppTemplateDeliveryError extends Error {
     metaType?: string;
     detail?: string;
     failureClass?: WhatsAppTemplateFailureClass;
+    retryAfterMs?: number;
   }) {
     const code =
       typeof input.metaCode === "number" ? String(input.metaCode) : "none";
@@ -188,6 +191,12 @@ export class WhatsAppTemplateDeliveryError extends Error {
     this.metaCode = typeof input.metaCode === "number" ? input.metaCode : null;
     this.metaType = input.metaType?.trim() ?? "";
     this.detail = detail;
+    this.retryAfterMs =
+      typeof input.retryAfterMs === "number" &&
+      Number.isFinite(input.retryAfterMs) &&
+      input.retryAfterMs > 0
+        ? Math.min(Math.floor(input.retryAfterMs), 120_000)
+        : 0;
     this.failureClass =
       input.failureClass ??
       classifyWhatsAppTemplateFailure({
@@ -196,6 +205,32 @@ export class WhatsAppTemplateDeliveryError extends Error {
       });
   }
 }
+
+/** Parse Meta Retry-After (seconds or HTTP-date) into milliseconds. */
+export function parseWhatsAppRetryAfterMs(
+  header: string | null | undefined,
+  nowMs = Date.now(),
+): number {
+  const raw = header?.trim() ?? "";
+  if (!raw) return 0;
+  if (/^\d+$/.test(raw)) {
+    const seconds = Number(raw);
+    return Number.isFinite(seconds) && seconds > 0
+      ? Math.min(seconds * 1000, 120_000)
+      : 0;
+  }
+  const when = Date.parse(raw);
+  if (!Number.isFinite(when)) return 0;
+  const delta = when - nowMs;
+  return delta > 0 ? Math.min(delta, 120_000) : 0;
+}
+
+export type WhatsAppBotTextSendResult = {
+  messageId: string | null;
+  /** True only for Meta rate-limit / 5xx — safe for a bounded BullMQ retry. */
+  retryable: boolean;
+  retryAfterMs: number;
+};
 
 /**
  * WhatsApp Cloud API adapter.
@@ -283,10 +318,12 @@ export class WhatsAppService {
           isTimeout ? "timeout" : "network error"
         }`,
       );
-      throw new AppError(
-        "Unable to send OTP right now. Please try again.",
-        HTTP_STATUS.BAD_REQUEST,
-      );
+      // Ambiguous: Meta may already have accepted the OTP template.
+      throw new WhatsAppTemplateDeliveryError({
+        status: 0,
+        detail: isTimeout ? "timeout" : "network",
+        failureClass: "ambiguous",
+      });
     }
 
     if (!response.ok) {
@@ -576,16 +613,27 @@ export class WhatsAppService {
 
   /**
    * Bot-compatible session text helper. Swallows send failures so automated
-   * replies never crash the inbound worker. Prefer sendSessionTextMessage for
-   * admin inbox sends that must surface errors.
+   * replies never crash callers that ignore the result. Prefer
+   * {@link sendBotTextMessage} when retryability must be observed.
    */
   async sendTextMessage(phoneNumber: string, body: string): Promise<string | null> {
+    return (await this.sendBotTextMessage(phoneNumber, body)).messageId;
+  }
+
+  /**
+   * Bot reply send with an honest outcome. Does not throw.
+   * Ambiguous failures (timeout after Meta may have accepted) are not retryable.
+   */
+  async sendBotTextMessage(
+    phoneNumber: string,
+    body: string,
+  ): Promise<WhatsAppBotTextSendResult> {
     try {
       if (mongoose.connection.readyState === 1) {
         const store = await import("./inbox/whatsapp-inbox-store.js");
         if (await store.isBotPausedForPhone(phoneNumber)) {
           console.info("[WhatsAppService] bot reply skipped reason=human_handoff");
-          return null;
+          return { messageId: null, retryable: false, retryAfterMs: 0 };
         }
       }
       const result = await this.sendSessionTextMessage(phoneNumber, body);
@@ -607,14 +655,23 @@ export class WhatsAppService {
           );
         }
       }
-      return result.messageId;
+      return {
+        messageId: result.messageId,
+        retryable: false,
+        retryAfterMs: 0,
+      };
     } catch (error) {
+      const retryable =
+        error instanceof WhatsAppTemplateDeliveryError &&
+        error.failureClass === "retryable";
+      const retryAfterMs =
+        error instanceof WhatsAppTemplateDeliveryError ? error.retryAfterMs : 0;
       console.error(
         `[WhatsAppService] text reply failed reason=${
           error instanceof Error ? error.name : "unknown"
-        }`,
+        } retryable=${retryable}`,
       );
-      return null;
+      return { messageId: null, retryable, retryAfterMs };
     }
   }
 
@@ -758,6 +815,7 @@ export class WhatsAppService {
       throw new Error("WhatsApp media URL host rejected");
     }
 
+    const maxBytes = options?.maxBytes ?? 8_000_000;
     const file = await fetch(mediaUrl, {
       headers: { Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}` },
       signal: AbortSignal.timeout(20_000),
@@ -766,9 +824,12 @@ export class WhatsAppService {
     if (!file.ok) {
       throw new Error(`WhatsApp media download failed status=${file.status}`);
     }
+    const contentLength = Number(file.headers.get("content-length") ?? "");
+    if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+      throw new Error("WhatsApp media size is invalid");
+    }
 
     const bytes = Buffer.from(await file.arrayBuffer());
-    const maxBytes = options?.maxBytes ?? 8_000_000;
     if (bytes.length === 0 || bytes.length > maxBytes) {
       throw new Error("WhatsApp media size is invalid");
     }
@@ -789,6 +850,9 @@ export class WhatsAppService {
     let errorType = "";
     let fbtraceId = "";
     let detail = "";
+    const retryAfterMs = parseWhatsAppRetryAfterMs(
+      response.headers.get("retry-after"),
+    );
 
     try {
       const body = (await response.json()) as MetaErrorBody;
@@ -810,7 +874,8 @@ export class WhatsAppService {
         `${typeof errorCode === "number" ? ` code=${errorCode}` : ""}` +
         `${errorType ? ` type=${errorType}` : ""}` +
         `${detail ? ` detail=${detail}` : ""}` +
-        `${fbtraceId ? ` fbtrace=${fbtraceId}` : ""}`,
+        `${fbtraceId ? ` fbtrace=${fbtraceId}` : ""}` +
+        `${retryAfterMs ? ` retryAfterMs=${retryAfterMs}` : ""}`,
     );
 
     throw new WhatsAppTemplateDeliveryError({
@@ -818,6 +883,7 @@ export class WhatsAppService {
       ...(typeof errorCode === "number" ? { metaCode: errorCode } : {}),
       ...(errorType ? { metaType: errorType } : {}),
       ...(detail ? { detail } : {}),
+      ...(retryAfterMs ? { retryAfterMs } : {}),
       failureClass: classifyWhatsAppTemplateFailure({
         status: response.status,
         metaCode: typeof errorCode === "number" ? errorCode : null,

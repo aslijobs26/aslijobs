@@ -1,6 +1,12 @@
 import { Queue, Worker } from "bullmq";
-import { Redis } from "ioredis";
+import type { Redis } from "ioredis";
 import { env } from "../../../config/env.js";
+import {
+  isBullMqDuplicateJobError,
+  openWhatsAppProducerRedis,
+  openWhatsAppWorkerRedis,
+  withQueueEnqueueTimeout,
+} from "../whatsapp-redis.js";
 import {
   getJobPostIncompleteReminderDelayMinutes,
   getJobPostIncompleteReminderDelayMs,
@@ -29,23 +35,12 @@ function reminderPollIntervalMs(): number {
   );
 }
 
-function openRedis(): Redis {
-  const connection = new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-  });
-  connection.on("error", (error: Error) => {
-    console.error(`[JobPostIncompleteReminder] redis_error ${error.message}`);
-  });
-  return connection;
-}
-
 function getQueue(): Queue | null {
   if (!env.REDIS_URL.trim()) {
     return null;
   }
   if (!queue) {
-    queueConnection = openRedis();
+    queueConnection = openWhatsAppProducerRedis(env.REDIS_URL);
     queue = new Queue(QUEUE_NAME, { connection: queueConnection });
   }
   return queue;
@@ -56,11 +51,6 @@ export function jobPostIncompleteReminderJobId(
   generation: number,
 ): string {
   return `job-post-incomplete-${jobMongoId.trim()}-g${generation}`;
-}
-
-function isDuplicateJobError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : "";
-  return /already exists|duplicate|jobid/i.test(message);
 }
 
 async function removeQueuedReminder(
@@ -124,20 +114,22 @@ export async function enqueueJobPostIncompleteReminderJob(input: {
   }
 
   try {
-    await activeQueue.add(
-      JOB_NAME,
-      { jobMongoId, generation: input.generation },
-      {
-        jobId: jobPostIncompleteReminderJobId(jobMongoId, input.generation),
-        delay: delayMs,
-        attempts: 3,
-        backoff: { type: "exponential", delay: 2_000 },
-        removeOnComplete: true,
-        removeOnFail: 50,
-      },
+    await withQueueEnqueueTimeout(
+      activeQueue.add(
+        JOB_NAME,
+        { jobMongoId, generation: input.generation },
+        {
+          jobId: jobPostIncompleteReminderJobId(jobMongoId, input.generation),
+          delay: delayMs,
+          attempts: 3,
+          backoff: { type: "exponential", delay: 2_000 },
+          removeOnComplete: true,
+          removeOnFail: 50,
+        },
+      ),
     );
   } catch (error) {
-    if (isDuplicateJobError(error)) {
+    if (isBullMqDuplicateJobError(error)) {
       console.info("[JobPostIncompleteReminder] duplicate queue job skipped", {
         jobMongoId,
         generation: input.generation,
@@ -181,7 +173,7 @@ export function startJobPostIncompleteReminderRuntime(): () => Promise<void> {
   });
 
   if (env.REDIS_URL.trim() && !worker) {
-    workerConnection = openRedis();
+    workerConnection = openWhatsAppWorkerRedis(env.REDIS_URL);
     worker = new Worker(
       QUEUE_NAME,
       async (bullJob) => {

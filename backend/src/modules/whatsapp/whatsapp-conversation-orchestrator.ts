@@ -19,6 +19,9 @@ export type JobSearchSessionSlots = {
   lastMinSalary?: number | null;
   lastMaxSalary?: number | null;
   lastSalaryBasis?: string;
+  lastExperience?: string;
+  lastExperienceYears?: number | null;
+  lastExperienceRange?: string;
   locationKind?: string;
   pendingNearbyCity?: string;
   pendingClarification?: string;
@@ -79,6 +82,9 @@ export function applyNoMatchChoiceToSearch(
     maxSalary: clearSalary ? null : session.lastMaxSalary ?? null,
     salaryBasis:
       session.lastSalaryBasis === "annual" ? "annual" : "monthly",
+    experienceLevel: session.lastExperience || "",
+    originalExperienceYears: session.lastExperienceYears ?? null,
+    experienceRangeLabel: session.lastExperienceRange || "",
     crossRole: "",
     showMore: false,
   };

@@ -8,6 +8,7 @@ import {
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { createOtpProvider } from "./otp.factory.js";
+import { WhatsAppTemplateDeliveryError } from "../whatsapp/whatsapp.service.js";
 
 export type GeneratedOtp = {
   otp: string;
@@ -181,14 +182,33 @@ export class OtpService {
           employerName: options?.accountName,
         },
       );
+    } catch (error) {
+      const ambiguous =
+        error instanceof WhatsAppTemplateDeliveryError &&
+        error.failureClass === "ambiguous";
+      if (!ambiguous) {
+        record.otpHash = previous.otpHash;
+        record.otpExpiresAt = previous.otpExpiresAt;
+        record.otpAttempts = previous.otpAttempts;
+        await record.save();
+        throw error;
+      }
+      // Meta may already have delivered the code — keep the new hash.
+      console.error(
+        `[OTP] ambiguous WhatsApp delivery; keeping issued OTP reason=${error.name}`,
+      );
+    }
+
+    // Stamp cooldown separately so a DB hiccup after Meta accept does not roll back the OTP.
+    try {
       record.lastOtpSentAt = new Date();
       await record.save();
-    } catch (error) {
-      record.otpHash = previous.otpHash;
-      record.otpExpiresAt = previous.otpExpiresAt;
-      record.otpAttempts = previous.otpAttempts;
-      await record.save();
-      throw error;
+    } catch (stampError) {
+      console.error(
+        `[OTP] lastOtpSentAt stamp failed reason=${
+          stampError instanceof Error ? stampError.name : "unknown"
+        }`,
+      );
     }
 
     return this.buildDeliveryMeta(generated.expiresAt);

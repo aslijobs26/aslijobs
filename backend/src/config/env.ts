@@ -117,6 +117,16 @@ const envSchema = z.object({
   WHATSAPP_VERIFY_TOKEN: z.string().optional().default(""),
   META_APP_ID: z.string().optional().default(""),
   META_APP_SECRET: z.string().optional().default(""),
+  /**
+   * Local tooling only: allow POST /whatsapp/webhook without HMAC when
+   * META_APP_SECRET is empty. Ignored on production / Render (signatures always required).
+   */
+  WHATSAPP_ALLOW_UNSIGNED_WEBHOOKS: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
   /** Sarvam AI key for WhatsApp speech-to-text and intent understanding. */
   SARVAM_API_KEY: z.string().optional().default(""),
   /**
@@ -309,6 +319,19 @@ if (
   );
 }
 
+// Hosted runtimes (Render) must never accept an empty Meta app secret even if
+// NODE_ENV was left as development by misconfiguration.
+if (
+  process.env.RENDER === "true" &&
+  parsed.data.NODE_ENV !== "production" &&
+  !parsed.data.META_APP_SECRET.trim()
+) {
+  console.error(
+    "Hosted runtime refused to start: META_APP_SECRET is required (NODE_ENV is not production).",
+  );
+  process.exit(1);
+}
+
 if (parsed.data.NODE_ENV === "production") {
   const secrets = [
     parsed.data.JWT_ACCESS_SECRET,
@@ -356,6 +379,12 @@ if (parsed.data.NODE_ENV === "production") {
   if (!parsed.data.META_APP_SECRET.trim()) {
     console.error(
       "Production refused to start: META_APP_SECRET is required so webhook signatures cannot be bypassed.",
+    );
+    process.exit(1);
+  }
+  if (parsed.data.WHATSAPP_ALLOW_UNSIGNED_WEBHOOKS) {
+    console.error(
+      "Production refused to start: WHATSAPP_ALLOW_UNSIGNED_WEBHOOKS must be false.",
     );
     process.exit(1);
   }

@@ -1,4 +1,10 @@
-import type { BotLanguage } from "./whatsapp-bot.logic.js";
+import {
+  looksLikeAboutAsliJobs,
+  looksLikeContactEmployerGuide,
+  looksLikeHowToFindJobs,
+  looksLikeHowToRegister,
+  type BotLanguage,
+} from "./whatsapp-bot.logic.js";
 
 /** Situations where OpenAI may rephrase verified facts — never invent new ones. */
 const ASSIST_SITUATIONS = new Set([
@@ -60,6 +66,22 @@ export function shouldUseOpenAiAssist(input: OpenAiAssistRouteInput): boolean {
   if (!ASSIST_SITUATIONS.has(situation)) return false;
   const text = input.userText.trim();
   if (text.length < 8) return false;
+  // Keep platform guides deterministic so assist cannot invent contacts or features.
+  if (
+    situation === "help" ||
+    situation === "how_to_apply" ||
+    situation === "out_of_scope"
+  ) {
+    if (
+      looksLikeAboutAsliJobs(text) ||
+      looksLikeHowToFindJobs(text) ||
+      looksLikeHowToRegister(text) ||
+      looksLikeContactEmployerGuide(text) ||
+      /how\s+(?:do\s+i\s+|to\s+|can\s+i\s+)?apply/i.test(text)
+    ) {
+      return false;
+    }
+  }
   // Prefer assist for ambiguous / follow-up turns; still allow for jobs lists
   // when the user asked a natural-language question longer than a keyword.
   if (situation === "jobs" || situation === "job_details") {

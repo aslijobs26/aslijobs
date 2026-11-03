@@ -351,7 +351,9 @@ describe("whatsapp inbox template rendering", () => {
     );
     const status = store.slice(store.indexOf("export async function applyInboxDeliveryStatus"));
     assert.ok(outbound.indexOf("if (providerMessageId)") < outbound.indexOf("WhatsAppInboxMessageModel.create"));
-    assert.equal(status.includes("message.status = mapped"), true);
+    // Atomic rank-aware update — avoids concurrent regress and missing-row races.
+    assert.equal(status.includes("WhatsAppInboxMessageModel.updateOne"), true);
+    assert.equal(status.includes("status: { $in: allowableCurrent }"), true);
     assert.equal(status.includes("message.body"), false);
     assert.equal(shouldApplyWhatsAppDeliveryStatus("accepted", "sent"), true);
     assert.equal(shouldApplyWhatsAppDeliveryStatus("sent", "delivered"), true);

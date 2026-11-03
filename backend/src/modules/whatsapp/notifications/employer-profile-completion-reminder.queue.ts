@@ -1,6 +1,12 @@
 import { Queue, Worker } from "bullmq";
-import { Redis } from "ioredis";
+import type { Redis } from "ioredis";
 import { env } from "../../../config/env.js";
+import {
+  isBullMqDuplicateJobError,
+  openWhatsAppProducerRedis,
+  openWhatsAppWorkerRedis,
+  withQueueEnqueueTimeout,
+} from "../whatsapp-redis.js";
 import {
   enqueueEmployerProfileCompletionReminder,
   getEmployerProfileCompletionReminderDelayMs,
@@ -28,31 +34,15 @@ function reminderPollIntervalMs(): number {
   );
 }
 
-function openRedis(): Redis {
-  const connection = new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-  });
-  connection.on("error", (error: Error) => {
-    console.error(`[EmployerProfileReminder] redis_error ${error.message}`);
-  });
-  return connection;
-}
-
 function getQueue(): Queue | null {
   if (!env.REDIS_URL.trim()) {
     return null;
   }
   if (!queue) {
-    queueConnection = openRedis();
+    queueConnection = openWhatsAppProducerRedis(env.REDIS_URL);
     queue = new Queue(QUEUE_NAME, { connection: queueConnection });
   }
   return queue;
-}
-
-function isDuplicateJobError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : "";
-  return /already exists|duplicate|jobid/i.test(message);
 }
 
 export function employerProfileCompletionReminderJobId(
@@ -91,23 +81,25 @@ export async function enqueueEmployerProfileCompletionReminderJob(
   }
 
   try {
-    await activeQueue.add(
-      JOB_NAME,
-      { employerId: employerId.trim() },
-      {
-        jobId: employerProfileCompletionReminderJobId(employerId),
-        delay: getEmployerProfileCompletionReminderDelayMs(),
-        attempts: 3,
-        backoff: {
-          type: "exponential",
-          delay: 2_000,
+    await withQueueEnqueueTimeout(
+      activeQueue.add(
+        JOB_NAME,
+        { employerId: employerId.trim() },
+        {
+          jobId: employerProfileCompletionReminderJobId(employerId),
+          delay: getEmployerProfileCompletionReminderDelayMs(),
+          attempts: 3,
+          backoff: {
+            type: "exponential",
+            delay: 2_000,
+          },
+          removeOnComplete: true,
+          removeOnFail: 50,
         },
-        removeOnComplete: true,
-        removeOnFail: 50,
-      },
+      ),
     );
   } catch (error) {
-    if (isDuplicateJobError(error)) {
+    if (isBullMqDuplicateJobError(error)) {
       console.info("[EmployerProfileReminder] duplicate queue job skipped");
       return;
     }
@@ -148,7 +140,7 @@ export function startEmployerProfileCompletionReminderRuntime(): () => Promise<v
   });
 
   if (env.REDIS_URL.trim() && !worker) {
-    workerConnection = openRedis();
+    workerConnection = openWhatsAppWorkerRedis(env.REDIS_URL);
     worker = new Worker(
       QUEUE_NAME,
       async (bullJob) => {

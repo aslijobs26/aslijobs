@@ -2,15 +2,15 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type VerifyWhatsAppSignatureOptions = {
   /**
-   * When true (production), an empty Meta app secret never bypasses verification.
-   * Local/dev may leave the secret empty so unsigned local webhook tests still work.
+   * When true, an empty Meta app secret never bypasses verification.
+   * Controllers should pass true unless WHATSAPP_ALLOW_UNSIGNED_WEBHOOKS is set for local tooling.
    */
   requireSecret?: boolean;
 };
 
 /**
  * Validates Meta `X-Hub-Signature-256` against the raw request body.
- * Empty secret + requireSecret=false → allow (local only).
+ * Empty secret + requireSecret=false → allow (explicit local opt-in only).
  * Empty secret + requireSecret=true → reject.
  */
 export function verifyWhatsAppSignature(

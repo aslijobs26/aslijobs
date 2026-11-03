@@ -5,6 +5,7 @@ import { JobModel } from "../jobs/job.model.js";
 import { parseJobContentLanguage } from "../jobs/job-content-language.js";
 import { resolveJobContent } from "../jobs/job-content-translation.js";
 import { jobService, toLocationSlug } from "../jobs/job.service.js";
+import { loadEmployerApplicationMetricsTotals } from "../jobs/employer-job-application-metrics.js";
 import {
   listEmployerJobsQuerySchema,
   publicJobsQuerySchema,
@@ -14,7 +15,7 @@ import { persistJobSeekerWhatsAppLanguage } from "./job-seeker-whatsapp-language
 import { getLocalizedWebsiteUrl } from "../../utils/site-language-url.js";
 import { WhatsAppSessionModel } from "./whatsapp-session.model.js";
 import { WhatsAppService } from "./whatsapp.service.js";
-import { formatAppliedFilters } from "./whatsapp-bot.criteria.js";
+import { formatAppliedFilters, looksLikeJobOrdinalSelection } from "./whatsapp-bot.criteria.js";
 import { runInPhoneOrder } from "./whatsapp-phone-order.js";
 import { transcribeWhatsAppAudio, understandMessage } from "./sarvam.client.js";
 import { localizeDeterministicReply, whatsappAiCallPlan } from "./sarvam-translate.client.js";
@@ -49,11 +50,13 @@ import {
   languageFromHint,
   lookingAtQuestionCopy,
   menuUnderstanding,
-  nationalPhone,
+  indianWhatsAppNationalPhone,
+  whatsAppSessionPhoneKey,
   nextClarifyLoopState,
   parentCity,
   placeCityAliases,
   publicJobFilters,
+  JOBS_FOR_AI_LIMIT,
   PUBLIC_JOB_FETCH_LIMIT,
   resolveTurnUnderstanding,
   selectVerifiedJobsForReply,
@@ -73,8 +76,7 @@ import {
 const whatsAppService = new WhatsAppService();
 
 const recentReplies = new Map<string, number[]>();
-const ACCOUNT_CACHE_MS = 60_000;
-const accountCache = new Map<string, { value: LinkedAccount; expires: number }>();
+const RECENT_REPLIES_MAX_KEYS = 5_000;
 
 function allowReply(phone: string): boolean {
   const now = Date.now();
@@ -86,10 +88,18 @@ function allowReply(phone: string): boolean {
   }
   hits.push(now);
   recentReplies.set(phone, hits);
+  if (recentReplies.size > RECENT_REPLIES_MAX_KEYS) {
+    for (const [key, times] of recentReplies) {
+      const kept = times.filter((time) => time > windowStart);
+      if (kept.length === 0) recentReplies.delete(key);
+      else recentReplies.set(key, kept);
+    }
+  }
   return true;
 }
 
 const mediaProgressAcked = new Set<string>();
+const MEDIA_PROGRESS_ACK_MAX = 2_000;
 
 async function acknowledgeMediaProcessing(input: {
   from: string;
@@ -103,7 +113,12 @@ async function acknowledgeMediaProcessing(input: {
   if (messageId && (mediaProgressAcked.has(messageId) || input.priorProgressId === messageId)) {
     return;
   }
-  if (messageId) mediaProgressAcked.add(messageId);
+  if (messageId) {
+    if (mediaProgressAcked.size >= MEDIA_PROGRESS_ACK_MAX) {
+      mediaProgressAcked.clear();
+    }
+    mediaProgressAcked.add(messageId);
+  }
   // Official Cloud API: mark read + typing indicator (dismisses on reply or ~25s).
   await whatsAppService.markReadWithTyping(messageId || undefined);
   await whatsAppService.sendTextMessage(
@@ -166,19 +181,10 @@ function toAccountKind(kind: "job_seeker" | "employer" | "none" | "both"): Accou
   return "none";
 }
 
-async function lookupAccount(
-  phone: string,
-  options?: { bypassCache?: boolean },
-): Promise<LinkedAccount> {
-  if (!options?.bypassCache) {
-    const cached = accountCache.get(phone);
-    if (cached && cached.expires > Date.now()) {
-      return cached.value;
-    }
-  }
+async function lookupAccount(phone: string): Promise<LinkedAccount> {
   const resolved = await resolveWhatsAppLinkedAccount(phone);
   const linked = toAccountKind(resolved.kind);
-  const value: LinkedAccount = {
+  return {
     seeker: resolved.jobSeeker,
     employer: resolved.employer,
     linked,
@@ -186,8 +192,6 @@ async function lookupAccount(
     employerId: resolved.employer?._id.toString() ?? "",
     progress: resolved.progress,
   };
-  accountCache.set(phone, { value, expires: Date.now() + ACCOUNT_CACHE_MS });
-  return value;
 }
 
 function siteUrls(language?: string): {
@@ -245,7 +249,9 @@ export function handleConversationalMessage(input: {
   mediaId?: string;
   mimeType?: string;
 }): Promise<void> {
-  return runInPhoneOrder(nationalPhone(input.from), () => processInboundTurn(input));
+  return runInPhoneOrder(whatsAppSessionPhoneKey(input.from), () =>
+    processInboundTurn(input),
+  );
 }
 
 async function processInboundTurn(input: {
@@ -258,7 +264,9 @@ async function processInboundTurn(input: {
   mimeType?: string;
   fileName?: string;
 }): Promise<void> {
-  const phone = nationalPhone(input.from);
+  const phone = whatsAppSessionPhoneKey(input.from);
+  /** Account lookup uses Indian identity only — never last-10 foreign collapse. */
+  const identityPhone = indianWhatsAppNationalPhone(input.from) ?? "";
   if (!allowReply(phone)) {
     return;
   }
@@ -301,9 +309,15 @@ async function processInboundTurn(input: {
       lastSalaryBasis?: string;
       locationKind?: string;
       lastJobs?: Array<Record<string, string>>;
+      lastSeenJobIds?: string[];
+      lastExperience?: string;
+      lastExperienceYears?: number | null;
+      lastExperienceRange?: string;
       lastResumeSkills?: string[];
       lastResumeAt?: Date | null;
       lastMediaProgressMessageId?: string;
+      linkedAccountId?: string;
+      linkedAccountKind?: string;
     };
     let session: SessionLean | null = null;
     let identity: LinkedAccount;
@@ -311,10 +325,23 @@ async function processInboundTurn(input: {
       // Always re-resolve account at turn start (queue delay / role change).
       const [foundSession, foundIdentity] = await Promise.all([
         WhatsAppSessionModel.findOne({ phone }).lean(),
-        lookupAccount(phone, { bypassCache: true }),
+        lookupAccount(identityPhone),
       ]);
       session = (foundSession as SessionLean | null) ?? null;
       identity = foundIdentity;
+      const linkedId = identity.seekerId || identity.employerId || "";
+      if (
+        session?.linkedAccountId &&
+        linkedId &&
+        session.linkedAccountId !== linkedId
+      ) {
+        // Phone recycled / account reclaim — drop prior user's private session context.
+        session = {
+          language: session.language,
+          linkedAccountId: linkedId,
+          linkedAccountKind: identity.linked,
+        };
+      }
     } catch (error) {
       console.error(
         `[WhatsAppBot] account_lookup_failed phone=${phoneHash(phone)} reason=${
@@ -540,7 +567,12 @@ async function processInboundTurn(input: {
       priorLocation: followUp ? session?.pendingLocation || session?.lastLocation || "" : "",
       priorRole: followUp ? session?.pendingCategory || session?.lastCategory || "" : "",
     };
-    const menuIntent = detectMenuSelection(text, session?.conversationState);
+    // After a job list, "2" / "apply for 5" must pick a shown job, not the seeker menu.
+    const pickingShownJob =
+      (session?.lastJobs?.length ?? 0) > 0 && looksLikeJobOrdinalSelection(text);
+    const menuIntent = pickingShownJob
+      ? null
+      : detectMenuSelection(text, session?.conversationState);
     let openAiUnderstood = false;
     let understood: Awaited<ReturnType<typeof understandMessage>>;
     if (menuIntent) {
@@ -647,6 +679,9 @@ async function processInboundTurn(input: {
           lastMinSalary: session.lastMinSalary,
           lastMaxSalary: session.lastMaxSalary,
           lastSalaryBasis: session.lastSalaryBasis,
+          lastExperience: session.lastExperience,
+          lastExperienceYears: session.lastExperienceYears,
+          lastExperienceRange: session.lastExperienceRange,
           locationKind: session.locationKind,
           pendingNearbyCity: session.pendingNearbyCity,
           pendingClarification: session.pendingClarification,
@@ -769,6 +804,13 @@ async function processInboundTurn(input: {
       stateName: "",
       salaryLabel: job.salaryLabel ?? "",
     }));
+    const seenJobIds = [
+      ...new Set(
+        [...(session?.lastSeenJobIds ?? []), ...remembered.map((job) => job.jobId)].filter(
+          (id): id is string => Boolean(id),
+        ),
+      ),
+    ];
 
     const dbStarted = Date.now();
     const turn = await buildReply(
@@ -781,6 +823,7 @@ async function processInboundTurn(input: {
         ? remembered
         : [],
       session?.activeRole ?? "",
+      merged.showMore ? seenJobIds : [],
     );
     timing.db_query = Date.now() - dbStarted;
     const redirected = merged.crossRole === "seeker" || merged.crossRole === "employer";
@@ -831,87 +874,93 @@ async function processInboundTurn(input: {
       (merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT" || merged.intent === "JOB_DETAILS");
     const rememberGoal = rememberSearch || (!redirected && merged.intent === "POST_JOB");
     const noMatchPending = situation === "job_search_no_match";
-    const sessionWrite = WhatsAppSessionModel.findOneAndUpdate(
-      { phone },
-      {
-        phone,
-        language: merged.language,
-        activeRole: turn.activeRole,
-        pendingLocation: waitingForRole ? merged.location : "",
-        pendingCategory: waitingForLocation ? merged.category : "",
-        pendingOpenSearch: waitingForLocation && merged.openSearch,
-        pendingIntent: waitingForLocation || waitingForRole ? merged.intent : "",
-        pendingClarification: noMatchPending ? "job_search_no_match" : "",
-        pendingNearbyCity: noMatchPending ? String(turn.facts.nearbyCity ?? "") : "",
-        lastClarifyMissing: clarifyLoop.missing,
-        clarifyAttempts: clarifyLoop.attempts,
-        // Persist product intent for follow-ups; clear on role redirect noise.
-        lastIntent: redirected ? session?.lastIntent || "" : merged.intent,
-        lastLocation: rememberGoal
-          ? merged.location || session?.lastLocation || ""
-          : session?.lastLocation || "",
-        lastCategory: rememberSearch
-          ? merged.openSearch
-            ? ""
-            : merged.category || session?.lastCategory || ""
-          : rememberGoal
-            ? merged.category || session?.lastCategory || ""
-            : session?.lastCategory || "",
-        ...(rememberSearch && (merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT")
-          ? {
-              lastExperience: merged.experienceLevel || "",
-              lastExperienceYears: merged.originalExperienceYears ?? null,
-              lastExperienceRange: merged.experienceRangeLabel || "",
-              lastMinSalary: merged.minSalary ?? null,
-              lastMaxSalary: merged.maxSalary ?? null,
-              lastSalaryBasis: merged.salaryBasis || "",
-              locationKind: merged.locationKind || "",
-            }
-          : {}),
-        ...(rememberSearch
-          ? turn.shownJobs.length > 0
-            ? {
-                lastJobs: turn.shownJobs.slice(0, 3).map((job) => ({
-                  jobId: job.jobId,
-                  jobTitle: job.jobTitle,
-                  companyName: job.companyName,
-                  cityName: job.cityName,
-                  salaryLabel: job.salaryLabel,
-                })),
-              }
-            : {}
-          : redirected
-            ? {}
-            : { lastJobs: [] }),
-        lastInteractionAt: new Date(),
-        conversationState:
-          merged.intent === "GREETING"
-            ? conversationStateForAccount(identity.linked)
-            : menuIntent
-              ? ""
-              : ((session?.conversationState as ConversationState | undefined) ?? ""),
-        ...(merged.intent === "GREETING" ? clearedTemporarySearchSessionFields() : {}),
-      },
-      { upsert: true },
-    );
-    void persistJobSeekerWhatsAppLanguage({
+    // Build session patch now, but persist only after Meta accepts the reply so
+    // lastJobs / lastSeenJobIds never advance for a message the user never saw.
+    const sessionPatch = {
       phone,
+      language: merged.language,
+      activeRole: turn.activeRole,
+      pendingLocation: waitingForRole ? merged.location : "",
+      pendingCategory: waitingForLocation ? merged.category : "",
+      pendingOpenSearch: waitingForLocation && merged.openSearch,
+      pendingIntent: waitingForLocation || waitingForRole ? merged.intent : "",
+      pendingClarification: noMatchPending ? "job_search_no_match" : "",
+      pendingNearbyCity: noMatchPending ? String(turn.facts.nearbyCity ?? "") : "",
+      lastClarifyMissing: clarifyLoop.missing,
+      clarifyAttempts: clarifyLoop.attempts,
+      lastIntent: redirected ? session?.lastIntent || "" : merged.intent,
+      lastLocation: rememberGoal
+        ? merged.location || session?.lastLocation || ""
+        : session?.lastLocation || "",
+      lastCategory: rememberSearch
+        ? merged.openSearch
+          ? ""
+          : merged.category || session?.lastCategory || ""
+        : rememberGoal
+          ? merged.category || session?.lastCategory || ""
+          : session?.lastCategory || "",
+      ...(rememberSearch && (merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT")
+        ? {
+            lastExperience: merged.experienceLevel || "",
+            lastExperienceYears: merged.originalExperienceYears ?? null,
+            lastExperienceRange: merged.experienceRangeLabel || "",
+            lastMinSalary: merged.minSalary ?? null,
+            lastMaxSalary: merged.maxSalary ?? null,
+            lastSalaryBasis: merged.salaryBasis || "",
+            locationKind: merged.locationKind || "",
+          }
+        : {}),
+      ...(merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT"
+        ? turn.shownJobs.length > 0
+          ? {
+              lastJobs: turn.shownJobs.slice(0, JOBS_FOR_AI_LIMIT).map((job) => ({
+                jobId: job.jobId,
+                jobTitle: job.jobTitle,
+                companyName: job.companyName,
+                cityName: job.cityName,
+                salaryLabel: job.salaryLabel,
+              })),
+              lastSeenJobIds: (
+                merged.showMore
+                  ? [...seenJobIds, ...turn.shownJobs.map((job) => job.jobId)]
+                  : turn.shownJobs.map((job) => job.jobId)
+              )
+                .filter(Boolean)
+                .filter((id, index, all) => all.indexOf(id) === index)
+                .slice(0, PUBLIC_JOB_FETCH_LIMIT),
+            }
+          : merged.showMore
+            ? {}
+            : { lastJobs: [], lastSeenJobIds: [] }
+        : redirected || merged.intent === "JOB_DETAILS"
+          ? {}
+          : { lastJobs: [], lastSeenJobIds: [] }),
+      lastInteractionAt: new Date(),
+      linkedAccountId: identity.seekerId || identity.employerId || "",
+      linkedAccountKind: identity.linked,
+      conversationState:
+        merged.intent === "GREETING"
+          ? conversationStateForAccount(identity.linked)
+          : menuIntent
+            ? ""
+            : ((session?.conversationState as ConversationState | undefined) ?? ""),
+      ...(merged.intent === "GREETING" ? clearedTemporarySearchSessionFields() : {}),
+    };
+    void persistJobSeekerWhatsAppLanguage({
+      phone: identityPhone || phone,
       language: merged.language,
       jobSeekerId: identity.seekerId,
     });
     const localizeStarted = performance.now();
-    const [localized] = await Promise.all([
-      localizeDeterministicReply({
-        language: merged.language,
-        facts: {
-          ...turn.facts,
-          intent: merged.intent,
-          accountType: turn.accountType,
-          applyOrigin: env.FRONTEND_URL,
-        },
-      }),
-      sessionWrite,
-    ]);
+    const localized = await localizeDeterministicReply({
+      language: merged.language,
+      facts: {
+        ...turn.facts,
+        intent: merged.intent,
+        accountType: turn.accountType,
+        applyOrigin: env.FRONTEND_URL,
+      },
+    });
     const translateMs = performance.now() - localizeStarted;
     let replyText = localized.text;
     let openAiUsed = false;
@@ -1024,11 +1073,30 @@ async function processInboundTurn(input: {
       ].join(" "),
     );
     const sendStarted = Date.now();
-    await whatsAppService.sendTextMessage(input.from, replyText);
+    const sendResult = await whatsAppService.sendBotTextMessage(
+      input.from,
+      replyText,
+    );
     timing.whatsapp_send = Date.now() - sendStarted;
+    if (!sendResult.messageId) {
+      logWhatsAppBot(
+        "REPLY_FAILED",
+        `language=${merged.language} intent=${merged.intent} situation=${String(turn.facts.situation ?? "-")} retryable=${sendResult.retryable} messageId=${input.messageId ?? "-"}`,
+      );
+      // Only Meta rate-limit / 5xx are safe to retry. Ambiguous must not resend.
+      if (sendResult.retryable) {
+        const err = new Error("WhatsAppSendRetryable");
+        err.name = "WhatsAppSendRetryable";
+        throw err;
+      }
+      return;
+    }
+    await WhatsAppSessionModel.findOneAndUpdate({ phone }, sessionPatch, {
+      upsert: true,
+    });
     logWhatsAppBot(
       "REPLY_SENT",
-      `language=${merged.language} intent=${merged.intent} situation=${String(turn.facts.situation ?? "-")} llm=${understood.source === "sarvam"}`,
+      `language=${merged.language} intent=${merged.intent} situation=${String(turn.facts.situation ?? "-")} llm=${understood.source === "sarvam"} messageId=${sendResult.messageId} inbound=${input.messageId ?? "-"}`,
     );
     const totalMs = Date.now() - started;
     console.info(`[WhatsApp] job_search: ${timing.db_query}ms`);
@@ -1045,6 +1113,9 @@ async function processInboundTurn(input: {
         error instanceof Error ? error.name : "unknown"
       }`,
     );
+    if (error instanceof Error && error.name === "WhatsAppSendRetryable") {
+      throw error;
+    }
     await whatsAppService.sendTextMessage(
       input.from,
       serviceErrorCopy(detectLanguage(input.text ?? "", undefined, undefined, true)),
@@ -1095,6 +1166,7 @@ async function buildReply(
   understanding: BotUnderstanding,
   remembered: PublicJobFact[],
   savedRole: string,
+  excludeJobIds: string[] = [],
 ): Promise<BotTurn> {
   const { seeker, employer, linked } = identity;
   const activeRole = resolveActiveRole(
@@ -1181,7 +1253,14 @@ async function buildReply(
       return reply({ situation: "greeting", accountType, name: displayName });
     case "HELP":
     case "UNRELATED":
-      return reply({ situation: understanding.intent === "UNRELATED" ? "out_of_scope" : "help", accountType });
+      return reply({
+        situation: understanding.intent === "UNRELATED" ? "out_of_scope" : "help",
+        accountType,
+        focus: understanding.focus || "",
+        ...(understanding.focus === "register"
+          ? { registration: siteUrls(understanding.language) }
+          : {}),
+      });
     case "CLARIFY":
       return reply({ situation: "clarify", accountType, missing: "which_account_data" });
     case "HOW_TO_APPLY":
@@ -1267,17 +1346,20 @@ async function buildReply(
     case "EMPLOYER_JOB_STATUS":
     case "EMPLOYER_APPLICATION_COUNT": {
       if (!asEmployer || !employer) return reply({ situation: "denied", reason: "employer_required" });
+      const employerId = employer._id.toString();
       const query = listEmployerJobsQuerySchema.parse({
         limit: 5,
         page: 1,
         search: understanding.category || "",
       });
-      const listed = await jobService.listEmployerJobs(employer._id.toString(), query);
+      const [listed, metrics] = await Promise.all([
+        jobService.listEmployerJobs(employerId, query),
+        loadEmployerApplicationMetricsTotals(employerId),
+      ]);
       const ranked = [...listed.jobs].sort((a, b) => b.applications - a.applications);
-      const totalApplications = ranked.reduce((sum, job) => sum + job.applications, 0);
       return reply({
         situation: understanding.intent,
-        totalApplications,
+        totalApplications: metrics.applications,
         jobs: ranked.slice(0, 3).map((job) => ({
           jobTitle: job.jobTitle,
           status: job.status,
@@ -1368,6 +1450,7 @@ async function buildReply(
         meta,
         understanding.language,
         remembered,
+        excludeJobIds,
       );
     }
   }
@@ -1389,6 +1472,7 @@ async function searchJobs(
   meta: { accountType: AccountKind; activeRole: "" | "seeker" | "employer" },
   language?: string,
   remembered: PublicJobFact[] = [],
+  excludeJobIds: string[] = [],
 ): Promise<BotTurn> {
   // Defensive: employer accounts must never reach public candidate job search.
   if (meta.accountType === "employer" || meta.activeRole === "employer") {
@@ -1400,7 +1484,14 @@ async function searchJobs(
     });
   }
   try {
-    return await runAuthorizedJobSearch(understanding, jobSeekerId, meta, language, remembered);
+    return await runAuthorizedJobSearch(
+      understanding,
+      jobSeekerId,
+      meta,
+      language,
+      remembered,
+      excludeJobIds,
+    );
   } catch (error) {
     logWhatsAppBot(
       "JOB_SEARCH_FAILED",
@@ -1422,24 +1513,21 @@ async function runAuthorizedJobSearch(
   meta: { accountType: AccountKind; activeRole: "" | "seeker" | "employer" },
   language: string | undefined,
   remembered: PublicJobFact[],
+  excludeJobIds: string[] = [],
 ): Promise<BotTurn> {
   const lookup = publicJobFilters(understanding);
   const role = lookup.search || "ANY";
   const appliedFilters = formatAppliedFilters(understanding);
-  const excludeIds = understanding.showMore
-    ? new Set(remembered.map((job) => job.jobId).filter(Boolean))
-    : new Set<string>();
+  const excludeIds = new Set(
+    understanding.showMore
+      ? [...excludeJobIds, ...remembered.map((job) => job.jobId)].filter(Boolean)
+      : [],
+  );
   logWhatsAppBot(
     "JOB_SEARCH",
     `accountType=${meta.accountType} location=${lookup.city || lookup.state || "-"} role=${role} experience=${lookup.experience || "-"} minSalary=${lookup.minSalary ?? "-"} showMore=${Boolean(understanding.showMore)} language=${language || "-"}`,
   );
-  const primaryRaw = await loadJobs(lookup, jobSeekerId, language);
-  const primaryJobs = primaryRaw.jobs.filter((job) => !excludeIds.has(job.jobId));
-  const primary = {
-    ...primaryRaw,
-    jobs: primaryJobs,
-    total: Math.max(0, primaryRaw.total - (primaryRaw.jobs.length - primaryJobs.length)),
-  };
+  const primary = await loadJobs(lookup, jobSeekerId, language, excludeIds);
   if (primary.jobs.length > 0) {
     logWhatsAppJobs({
       intent: understanding.intent,
@@ -1651,6 +1739,7 @@ async function loadJobs(
   },
   jobSeekerId?: string,
   language?: string,
+  excludeIds: ReadonlySet<string> = new Set(),
 ): Promise<{ jobs: PublicJobFact[]; total: number; dbMatches: number; hasMore: boolean }> {
   const cityAliases = placeCityAliases(filters.city);
   const query = publicJobsQuerySchema.parse({
@@ -1677,6 +1766,7 @@ async function loadJobs(
     inCity,
     filters.search,
     result.pagination.total - (result.jobs.length - inCity.length),
+    excludeIds,
   );
   const jobs = await overlayStoredWhatsAppJobTitles(
     selected.jobs.map((job) => ({

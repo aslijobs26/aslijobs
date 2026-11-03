@@ -68,14 +68,59 @@ export async function transcribeWhatsAppAudio(input: {
   let lastStatus = 0;
   for (const attempt of attempts) {
     const started = Date.now();
-    const response = await fetch(SARVAM_STT_URL, {
-      method: "POST",
-      headers: { "api-subscription-key": env.SARVAM_API_KEY },
-      body: buildAudioForm(input, attempt),
-      signal: AbortSignal.timeout(25_000),
-    });
-    lastStatus = response.status;
-    if (!response.ok) {
+    try {
+      const response = await fetch(SARVAM_STT_URL, {
+        method: "POST",
+        headers: { "api-subscription-key": env.SARVAM_API_KEY },
+        body: buildAudioForm(input, attempt),
+        signal: AbortSignal.timeout(25_000),
+      });
+      lastStatus = response.status;
+      if (!response.ok) {
+        logSarvam({
+          stage: "STT",
+          model: attempt.model,
+          latencyMs: Date.now() - started,
+          ok: false,
+          inChars: input.buffer.length,
+          outChars: 0,
+          extra: `status=${response.status}`,
+        });
+        continue;
+      }
+
+      const body = (await response.json()) as {
+        transcript?: string;
+        language_code?: string | null;
+      };
+      const transcript = body.transcript?.trim() ?? "";
+      if (!transcript) {
+        logSarvam({
+          stage: "STT",
+          model: attempt.model,
+          latencyMs: Date.now() - started,
+          ok: false,
+          inChars: input.buffer.length,
+          outChars: 0,
+          extra: "empty",
+        });
+        continue;
+      }
+
+      logSarvam({
+        stage: "STT",
+        model: attempt.model,
+        latencyMs: Date.now() - started,
+        ok: true,
+        inChars: input.buffer.length,
+        outChars: transcript.length,
+      });
+      return {
+        transcript,
+        languageHint: body.language_code?.trim() ?? "",
+      };
+    } catch (error) {
+      // Timeout/network on the first model must still try the fallback model.
       logSarvam({
         stage: "STT",
         model: attempt.model,
@@ -83,41 +128,9 @@ export async function transcribeWhatsAppAudio(input: {
         ok: false,
         inChars: input.buffer.length,
         outChars: 0,
-        extra: `status=${response.status}`,
+        extra: `error=${error instanceof Error ? error.name : "unknown"}`,
       });
-      continue;
     }
-
-    const body = (await response.json()) as {
-      transcript?: string;
-      language_code?: string | null;
-    };
-    const transcript = body.transcript?.trim() ?? "";
-    if (!transcript) {
-      logSarvam({
-        stage: "STT",
-        model: attempt.model,
-        latencyMs: Date.now() - started,
-        ok: false,
-        inChars: input.buffer.length,
-        outChars: 0,
-        extra: "empty",
-      });
-      continue;
-    }
-
-    logSarvam({
-      stage: "STT",
-      model: attempt.model,
-      latencyMs: Date.now() - started,
-      ok: true,
-      inChars: input.buffer.length,
-      outChars: transcript.length,
-    });
-    return {
-      transcript,
-      languageHint: body.language_code?.trim() ?? "",
-    };
   }
 
   throw new Error(`Sarvam speech-to-text failed status=${lastStatus}`);

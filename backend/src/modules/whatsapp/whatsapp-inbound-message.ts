@@ -50,7 +50,10 @@ export function isWebhookForConfiguredPhone(
 ): boolean {
   const configured = configuredPhoneNumberId.trim();
   const incoming = incomingPhoneNumberId?.trim() ?? "";
-  if (!configured || !incoming) return true;
+  // Local/dev with no phone id configured: accept. When configured, missing
+  // incoming metadata must fail closed (do not trust unsigned phone routing).
+  if (!configured) return true;
+  if (!incoming) return false;
   return incoming === configured;
 }
 

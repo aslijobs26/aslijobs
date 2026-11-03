@@ -159,7 +159,9 @@ describe("inbound WhatsApp messages", () => {
     assert.equal(whatsAppWebhookTime("not-a-time"), undefined);
     assert.equal(isWebhookForConfiguredPhone("123", "123"), true);
     assert.equal(isWebhookForConfiguredPhone("999", "123"), false);
-    assert.equal(isWebhookForConfiguredPhone(undefined, "123"), true);
+    // Configured phone id + missing metadata must fail closed.
+    assert.equal(isWebhookForConfiguredPhone(undefined, "123"), false);
+    assert.equal(isWebhookForConfiguredPhone(undefined, ""), true);
   });
 
   it("checks the latest human-handoff state before a bot reply is sent", () => {

@@ -1,6 +1,10 @@
+import { timingSafeEqual } from "node:crypto";
 import type { Request, Response } from "express";
 import { env } from "../../config/env.js";
-import { claimWhatsAppEvent } from "./whatsapp-processed-event.model.js";
+import {
+  claimWhatsAppEvent,
+  releaseWhatsAppEvent,
+} from "./whatsapp-processed-event.model.js";
 import { verifyWhatsAppSignature } from "./whatsapp-signature.js";
 import { formatWhatsAppStatusFailure } from "./whatsapp.service.js";
 import { enqueueWhatsAppInbound } from "./whatsapp-inbound.queue.js";
@@ -21,6 +25,21 @@ import {
   type InboundWhatsAppMessage,
 } from "./whatsapp-inbound-message.js";
 
+function safeEqualToken(left: string, right: string): boolean {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+/** Unsigned webhooks only when explicitly opted in (local tooling). Never on hosted runtimes. */
+function requireWhatsAppWebhookSecret(): boolean {
+  if (env.WHATSAPP_ALLOW_UNSIGNED_WEBHOOKS) {
+    return env.NODE_ENV === "production" || process.env.RENDER === "true";
+  }
+  return true;
+}
+
 type IncomingMessage = InboundWhatsAppMessage & {
   id?: string;
   from?: string;
@@ -40,8 +59,16 @@ export function verifyWhatsAppWebhook(req: Request, res: Response): void {
   const challenge = String(req.query["hub.challenge"] ?? "");
   const expected = env.WHATSAPP_VERIFY_TOKEN.trim();
 
-  if (mode === "subscribe" && expected && token === expected) {
-    res.status(200).send(challenge);
+  // Meta challenges are opaque tokens; reject HTML/script-shaped values.
+  const challengeSafe = /^[A-Za-z0-9._-]{1,256}$/.test(challenge);
+
+  if (
+    mode === "subscribe" &&
+    expected &&
+    challengeSafe &&
+    safeEqualToken(token, expected)
+  ) {
+    res.status(200).type("text/plain").send(challenge);
     return;
   }
 
@@ -54,7 +81,7 @@ export function receiveWhatsAppWebhook(req: Request, res: Response): void {
   const signature = req.header("x-hub-signature-256") ?? undefined;
   if (
     !verifyWhatsAppSignature(rawBody, signature, env.META_APP_SECRET, {
-      requireSecret: env.NODE_ENV === "production",
+      requireSecret: requireWhatsAppWebhookSecret(),
     })
   ) {
     console.error("[WhatsAppWebhook] signature rejected");
@@ -63,14 +90,16 @@ export function receiveWhatsAppWebhook(req: Request, res: Response): void {
   }
 
   const body = req.body as WebhookBody;
-  console.info("[WhatsApp] webhook_received");
+  const firstMessageId =
+    body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.id?.trim() || "-";
+  console.info(`[WhatsApp] webhook_received messageId=${firstMessageId}`);
 
   void persistInboundMessages(body)
     .then(() => {
       if (!res.headersSent) {
         res.sendStatus(200);
       }
-      console.info("[WhatsApp] webhook_ack");
+      console.info(`[WhatsApp] webhook_ack messageId=${firstMessageId}`);
       return routeConversationalMessages(body);
     })
     .catch((error: unknown) => {
@@ -249,76 +278,89 @@ async function routeConversationalMessages(body: WebhookBody): Promise<void> {
         const from = message.from?.trim();
         if (!messageId || !from) continue;
 
-        const claimed = await claimWhatsAppEvent(messageId);
-        if (!claimed) {
-          console.info("[WhatsAppWebhook] duplicate event skipped");
-          continue;
-        }
+        let claimed = false;
+        try {
+          claimed = await claimWhatsAppEvent(messageId);
+          if (!claimed) {
+            console.info("[WhatsAppWebhook] duplicate event skipped");
+            continue;
+          }
 
-        const paused = await isBotPausedForPhone(from);
-        if (paused) {
+          const paused = await isBotPausedForPhone(from);
+          if (paused) {
+            console.info(
+              `[WhatsAppWebhook] bot paused; human inbox only messageId=${messageId}`,
+            );
+            continue;
+          }
+
+          if (message.type === "audio" && message.audio?.id) {
+            await enqueueWhatsAppInbound({
+              from,
+              messageId,
+              messageType: "audio",
+              mediaId: message.audio.id,
+              mimeType: message.audio.mime_type,
+            });
+            continue;
+          }
+
+          // Feature-flagged: image/document enter the bot media pipeline (inbox still always persists).
+          if (
+            env.WHATSAPP_MEDIA_UNDERSTAND_ENABLED &&
+            message.type === "image" &&
+            message.image?.id
+          ) {
+            await enqueueWhatsAppInbound({
+              from,
+              messageId,
+              messageType: "image",
+              mediaId: message.image.id,
+              mimeType: message.image.mime_type,
+              text: message.image.caption?.trim() || undefined,
+            });
+            continue;
+          }
+          if (
+            env.WHATSAPP_MEDIA_UNDERSTAND_ENABLED &&
+            message.type === "document" &&
+            message.document?.id
+          ) {
+            await enqueueWhatsAppInbound({
+              from,
+              messageId,
+              messageType: "document",
+              mediaId: message.document.id,
+              mimeType: message.document.mime_type,
+              fileName: message.document.filename,
+              text: message.document.caption?.trim() || undefined,
+            });
+            continue;
+          }
+
+          const extracted = extractText(message);
+          if (!extracted?.text) continue;
           console.info(
-            `[WhatsAppWebhook] bot paused; human inbox only messageId=${messageId}`,
+            `[WhatsAppWebhook] routed conversational type=${message.type ?? "unknown"} messageId=${messageId}`,
           );
-          continue;
-        }
-
-        if (message.type === "audio" && message.audio?.id) {
           await enqueueWhatsAppInbound({
             from,
+            text: extracted.text,
+            languageHint: extracted.languageHint,
             messageId,
-            messageType: "audio",
-            mediaId: message.audio.id,
-            mimeType: message.audio.mime_type,
+            messageType: message.type,
           });
-          continue;
+        } catch (error) {
+          console.error(
+            `[WhatsAppWebhook] route_failed messageId=${messageId} reason=${
+              error instanceof Error ? error.name : "unknown"
+            }`,
+          );
+          // Webhook already ACKed — release claim so a later redelivery can retry.
+          if (claimed) {
+            await releaseWhatsAppEvent(messageId);
+          }
         }
-
-        // Feature-flagged: image/document enter the bot media pipeline (inbox still always persists).
-        if (
-          env.WHATSAPP_MEDIA_UNDERSTAND_ENABLED &&
-          message.type === "image" &&
-          message.image?.id
-        ) {
-          await enqueueWhatsAppInbound({
-            from,
-            messageId,
-            messageType: "image",
-            mediaId: message.image.id,
-            mimeType: message.image.mime_type,
-            text: message.image.caption?.trim() || undefined,
-          });
-          continue;
-        }
-        if (
-          env.WHATSAPP_MEDIA_UNDERSTAND_ENABLED &&
-          message.type === "document" &&
-          message.document?.id
-        ) {
-          await enqueueWhatsAppInbound({
-            from,
-            messageId,
-            messageType: "document",
-            mediaId: message.document.id,
-            mimeType: message.document.mime_type,
-            fileName: message.document.filename,
-            text: message.document.caption?.trim() || undefined,
-          });
-          continue;
-        }
-
-        const extracted = extractText(message);
-        if (!extracted?.text) continue;
-        console.info(
-          `[WhatsAppWebhook] routed conversational type=${message.type ?? "unknown"} messageId=${messageId}`,
-        );
-        await enqueueWhatsAppInbound({
-          from,
-          text: extracted.text,
-          languageHint: extracted.languageHint,
-          messageId,
-          messageType: message.type,
-        });
       }
     }
   }

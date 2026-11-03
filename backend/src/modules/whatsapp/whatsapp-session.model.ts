@@ -60,6 +60,18 @@ const whatsAppSessionSchema = new Schema(
       ],
       default: [],
     },
+    /** Job IDs already shown for the active search — used by show-more to avoid repeats. */
+    lastSeenJobIds: { type: [String], default: [] },
+    /**
+     * Authoritative account binding for this phone session.
+     * When the linked account changes (number reclaim), prior private context is cleared.
+     */
+    linkedAccountId: { type: String, default: "" },
+    linkedAccountKind: {
+      type: String,
+      enum: ["", "none", "seeker", "employer", "both"],
+      default: "",
+    },
     lastInteractionAt: { type: Date, default: Date.now },
   },
   { timestamps: true },

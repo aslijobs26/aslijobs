@@ -1,11 +1,17 @@
 import { Queue, Worker } from "bullmq";
-import { Redis } from "ioredis";
+import type { Redis } from "ioredis";
 import { env } from "../../../config/env.js";
 import {
   maskWhatsAppRecipient,
   WhatsAppService,
   WhatsAppTemplateDeliveryError,
 } from "../whatsapp.service.js";
+import {
+  isBullMqDuplicateJobError,
+  openWhatsAppProducerRedis,
+  openWhatsAppWorkerRedis,
+  withQueueEnqueueTimeout,
+} from "../whatsapp-redis.js";
 import {
   WHATSAPP_NOTIFICATION_BACKOFF_MS,
   WHATSAPP_NOTIFICATION_JOB_NAME,
@@ -35,23 +41,12 @@ let queueConnection: Redis | null = null;
 let worker: Worker | null = null;
 let workerConnection: Redis | null = null;
 
-function openRedis(): Redis {
-  const connection = new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-  });
-  connection.on("error", (error: Error) => {
-    console.error(`[WhatsAppNotification] redis_error ${error.message}`);
-  });
-  return connection;
-}
-
 function getQueue(): Queue | null {
   if (!env.REDIS_URL.trim()) {
     return null;
   }
   if (!queue) {
-    queueConnection = openRedis();
+    queueConnection = openWhatsAppProducerRedis(env.REDIS_URL);
     queue = new Queue(WHATSAPP_NOTIFICATION_QUEUE_NAME, {
       connection: queueConnection,
     });
@@ -297,10 +292,6 @@ function logJobPostIncompleteDelivery(
   console.error("[JobPostIncompleteReminder] delivery failed", details);
 }
 
-function isDuplicateJobError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : "";
-  return /already exists|duplicate|jobid/i.test(message);
-}
 
 export async function deliverWhatsAppNotificationJob(
   job: WhatsAppNotificationQueueJob,
@@ -556,6 +547,17 @@ export async function enqueueWhatsAppNotificationJob(
   }
 
   try {
+    const jobId = whatsAppNotificationQueueJobId(
+      job.event,
+      job.entityId,
+      job.idempotencyScope,
+    );
+    // A prior failed job with the same id blocks reclaim silently — remove first.
+    try {
+      await activeQueue.remove(jobId);
+    } catch {
+      // Missing job is fine.
+    }
     console.info("[WhatsAppNotification] queue job created", {
       event: job.event,
       entityId: job.entityId,
@@ -563,22 +565,20 @@ export async function enqueueWhatsAppNotificationJob(
       language: job.languageCode,
       correlationId: job.correlationId || "-",
     });
-    await activeQueue.add(WHATSAPP_NOTIFICATION_JOB_NAME, job, {
-      jobId: whatsAppNotificationQueueJobId(
-        job.event,
-        job.entityId,
-        job.idempotencyScope,
-      ),
-      attempts: WHATSAPP_NOTIFICATION_MAX_ATTEMPTS,
-      backoff: {
-        type: "exponential",
-        delay: WHATSAPP_NOTIFICATION_BACKOFF_MS,
-      },
-      removeOnComplete: true,
-      removeOnFail: 50,
-    });
+    await withQueueEnqueueTimeout(
+      activeQueue.add(WHATSAPP_NOTIFICATION_JOB_NAME, job, {
+        jobId,
+        attempts: WHATSAPP_NOTIFICATION_MAX_ATTEMPTS,
+        backoff: {
+          type: "exponential",
+          delay: WHATSAPP_NOTIFICATION_BACKOFF_MS,
+        },
+        removeOnComplete: true,
+        removeOnFail: 50,
+      }),
+    );
   } catch (error) {
-    if (isDuplicateJobError(error)) {
+    if (isBullMqDuplicateJobError(error)) {
       console.info("[WhatsAppNotification] duplicate queue job skipped");
       return;
     }
@@ -608,7 +608,7 @@ export function startWhatsAppNotificationRuntime(): () => Promise<void> {
   console.info(
     "[WhatsAppNotification] worker started queue=whatsapp-notifications",
   );
-  workerConnection = openRedis();
+  workerConnection = openWhatsAppWorkerRedis(env.REDIS_URL);
   worker = new Worker(
     WHATSAPP_NOTIFICATION_QUEUE_NAME,
     async (bullJob) => {

@@ -13,6 +13,9 @@ import morgan from "morgan";
 import path from "node:path";
 import { env } from "./config/env.js";
 import { getConnectedDatabaseName } from "./config/db.js";
+import { isRuntimeShuttingDown } from "./config/runtime-ready.js";
+import mongoose from "mongoose";
+import { Redis } from "ioredis";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { requestIdMiddleware } from "./middleware/request-id.middleware.js";
@@ -91,13 +94,23 @@ app.use(
     maxAge: 86_400,
   }),
 );
+// Never write Meta hub.verify_token into access logs.
+morgan.token("url", (req) => {
+  const expressReq = req as express.Request;
+  const raw = expressReq.originalUrl || expressReq.url || "";
+  return raw.replace(/([?&]hub\.verify_token=)[^&]*/gi, "$1[REDACTED]");
+});
 app.use(morgan(env.NODE_ENV === "development" ? "dev" : "combined"));
 app.use(
   express.json({
     limit: "2mb",
     verify(req, _res, buf) {
       if (req.url?.includes("/whatsapp/webhook")) {
-        (req as Express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+        // Meta payloads are small. Oversized bodies skip rawBody so HMAC fails closed.
+        if (buf.length <= 256_000) {
+          (req as Express.Request & { rawBody?: Buffer }).rawBody =
+            Buffer.from(buf);
+        }
       }
     },
   }),
@@ -252,6 +265,68 @@ app.get("/api/v1/health", (_req, res) => {
       environment: env.NODE_ENV,
       // Database name only — never credentials or full URI.
       database: getConnectedDatabaseName(),
+    },
+  });
+});
+
+/** Readiness: Mongo required; Redis ping when configured; reject while draining. */
+app.get("/api/v1/health/ready", async (_req, res) => {
+  if (isRuntimeShuttingDown()) {
+    res.status(503).json({
+      success: false,
+      message: "Shutting down",
+      data: { status: "draining" },
+    });
+    return;
+  }
+
+  const mongoOk = mongoose.connection.readyState === 1;
+  let redisOk = true;
+  if (env.REDIS_URL.trim()) {
+    let client: Redis | null = null;
+    try {
+      client = new Redis(env.REDIS_URL, {
+        maxRetriesPerRequest: 1,
+        enableOfflineQueue: false,
+        connectTimeout: 2_000,
+        lazyConnect: true,
+      });
+      await client.connect();
+      const pong = await client.ping();
+      redisOk = pong === "PONG";
+    } catch {
+      redisOk = false;
+    } finally {
+      if (client) {
+        try {
+          await client.quit();
+        } catch {
+          client.disconnect();
+        }
+      }
+    }
+  }
+
+  if (!mongoOk || !redisOk) {
+    res.status(503).json({
+      success: false,
+      message: "Not ready",
+      data: {
+        status: "not_ready",
+        mongo: mongoOk ? "up" : "down",
+        redis: env.REDIS_URL.trim() ? (redisOk ? "up" : "down") : "not_configured",
+      },
+    });
+    return;
+  }
+
+  res.json({
+    success: true,
+    message: "Ready",
+    data: {
+      status: "ready",
+      mongo: "up",
+      redis: env.REDIS_URL.trim() ? "up" : "not_configured",
     },
   });
 });

@@ -2,6 +2,7 @@ import type { Server } from "node:http";
 import app from "./app.js";
 import { connectDB, getConnectedDatabaseName } from "./config/db.js";
 import { env } from "./config/env.js";
+import { markRuntimeShuttingDown } from "./config/runtime-ready.js";
 import { startNotificationRetentionScheduler } from "./modules/notifications/notification.retention.js";
 import { startJobTranslationRuntime } from "./modules/jobs/job-translation.queue.js";
 import { startWhatsAppInboundRuntime } from "./modules/whatsapp/whatsapp-inbound.queue.js";
@@ -24,69 +25,73 @@ let stopEmployerProfileReminders: (() => Promise<void>) | null = null;
 let stopJobSeekerProfileReminders: (() => Promise<void>) | null = null;
 let stopJobPostIncompleteReminders: (() => Promise<void>) | null = null;
 
-async function shutdown(signal: string): Promise<void> {
+async function shutdown(signal: string, exitCode = 0): Promise<void> {
   if (isShuttingDown) {
     return;
   }
   isShuttingDown = true;
+  markRuntimeShuttingDown();
   console.info(`[shutdown] received ${signal}; draining...`);
 
   const forceTimer = setTimeout(() => {
     console.error("[shutdown] forced exit after timeout");
     process.exit(1);
-  }, 15_000);
+  }, 25_000);
   forceTimer.unref();
 
-  try {
-    stopNotificationRetention?.();
-    stopNotificationRetention = null;
-    stopWorkReconcile?.();
-    stopWorkReconcile = null;
-    if (stopJobTranslation) {
-      await stopJobTranslation();
-      stopJobTranslation = null;
-    }
-    if (stopWhatsAppInbound) {
-      await stopWhatsAppInbound();
-      stopWhatsAppInbound = null;
-    }
-    if (stopWhatsAppNotifications) {
-      await stopWhatsAppNotifications();
-      stopWhatsAppNotifications = null;
-    }
-    if (stopEmployerProfileReminders) {
-      await stopEmployerProfileReminders();
-      stopEmployerProfileReminders = null;
-    }
-    if (stopJobSeekerProfileReminders) {
-      await stopJobSeekerProfileReminders();
-      stopJobSeekerProfileReminders = null;
-    }
-    if (stopJobPostIncompleteReminders) {
-      await stopJobPostIncompleteReminders();
-      stopJobPostIncompleteReminders = null;
-    }
-    if (httpServer) {
-      await new Promise<void>((resolve, reject) => {
+  // Stop accepting traffic first so readiness fails while workers drain.
+  const closeHttp = httpServer
+    ? new Promise<void>((resolve) => {
         httpServer?.close((error) => {
           if (error) {
-            reject(error);
-            return;
+            console.error("[shutdown] http close failed", error);
           }
           resolve();
         });
-      });
+      })
+    : Promise.resolve();
+
+  stopNotificationRetention?.();
+  stopNotificationRetention = null;
+  stopWorkReconcile?.();
+  stopWorkReconcile = null;
+
+  const stops: Array<Promise<unknown>> = [
+    closeHttp,
+    stopJobTranslation?.() ?? Promise.resolve(),
+    stopWhatsAppInbound?.() ?? Promise.resolve(),
+    stopWhatsAppNotifications?.() ?? Promise.resolve(),
+    stopEmployerProfileReminders?.() ?? Promise.resolve(),
+    stopJobSeekerProfileReminders?.() ?? Promise.resolve(),
+    stopJobPostIncompleteReminders?.() ?? Promise.resolve(),
+  ];
+  stopJobTranslation = null;
+  stopWhatsAppInbound = null;
+  stopWhatsAppNotifications = null;
+  stopEmployerProfileReminders = null;
+  stopJobSeekerProfileReminders = null;
+  stopJobPostIncompleteReminders = null;
+
+  const results = await Promise.allSettled(stops);
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error("[shutdown] stop step failed", result.reason);
     }
-    clearAllRbacCaches();
+  }
+
+  clearAllRbacCaches();
+  try {
     if (mongoose.connection.readyState !== 0) {
       await mongoose.connection.close();
     }
-    console.info("[shutdown] clean exit");
-    process.exit(0);
   } catch (error) {
-    console.error("[shutdown] failed", error);
+    console.error("[shutdown] mongo close failed", error);
     process.exit(1);
+    return;
   }
+
+  console.info(`[shutdown] exit code=${exitCode}`);
+  process.exit(exitCode);
 }
 
 async function startServer(): Promise<void> {
@@ -129,17 +134,17 @@ async function startServer(): Promise<void> {
   });
 
   process.on("SIGTERM", () => {
-    void shutdown("SIGTERM");
+    void shutdown("SIGTERM", 0);
   });
   process.on("SIGINT", () => {
-    void shutdown("SIGINT");
+    void shutdown("SIGINT", 0);
   });
   process.on("unhandledRejection", (reason) => {
     console.error("[process] unhandledRejection", reason);
   });
   process.on("uncaughtException", (error) => {
     console.error("[process] uncaughtException", error);
-    void shutdown("uncaughtException");
+    void shutdown("uncaughtException", 1);
   });
 }
 

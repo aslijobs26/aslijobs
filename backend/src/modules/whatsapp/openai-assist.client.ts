@@ -120,6 +120,26 @@ export function looksLikeHallucinatedFacts(
     return true;
   }
 
+  // WhatsApp never creates applications — reject invented apply/interview success claims.
+  if (
+    /\b(successfully applied|application (has been |was )?(submitted|created|successful)|we (have |('ve ))?(received|created) your application|your application (is|was) (confirmed|successful)|you('ve| have) been (hired|shortlisted|selected)|interview (is |has been )?scheduled for\b)/i.test(
+      responseText,
+    )
+  ) {
+    const situation = String(facts.situation ?? "");
+    // Status/list may mention stored statuses; still block "successfully applied" invents.
+    if (
+      /successfully applied|application (has been |was )?(submitted|created)|we (have |('ve ))?(received|created) your application/i.test(
+        responseText,
+      ) ||
+      (situation !== "status" &&
+        situation !== "list" &&
+        situation !== "applied_coverage")
+    ) {
+      return true;
+    }
+  }
+
   if (verified.length === 0) return false;
 
   const salaryHits = text.match(/₹\s*[\d,]+|\brs\.?\s*[\d,]+|\binr\s*[\d,]+/gi) ?? [];

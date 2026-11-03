@@ -15,7 +15,8 @@ services:
     plan: starter
     buildCommand: npm run render-build
     startCommand: npm start
-    healthCheckPath: /api/v1/health
+    # Readiness checks Mongo (+ Redis when configured) and fails while draining.
+    healthCheckPath: /api/v1/health/ready
     envVars:
       - key: NODE_ENV
         value: production

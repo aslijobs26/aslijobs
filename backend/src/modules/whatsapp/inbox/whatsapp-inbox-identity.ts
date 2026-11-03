@@ -126,7 +126,14 @@ export function registeredAccountStatusLabel(input: {
 }
 
 export function phoneLookupVariants(nationalPhone: string): string[] {
+  // intl:/raw: session keys are not Indian account numbers — do not invent +91 variants.
+  if (nationalPhone.startsWith("intl:") || nationalPhone.startsWith("raw:")) {
+    return [];
+  }
   const digits = nationalPhone.replace(/\D/g, "");
   const national = digits.length > 10 ? digits.slice(-10) : digits;
+  if (!/^[6-9]\d{9}$/.test(national)) {
+    return national ? [national] : [];
+  }
   return [national, `91${national}`, `+91${national}`, `0${national}`];
 }

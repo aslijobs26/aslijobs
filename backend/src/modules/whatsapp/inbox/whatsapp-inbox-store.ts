@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { EmployerModel } from "../../employers/employer.model.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
-import { nationalPhone } from "../whatsapp-bot.logic.js";
+import { whatsAppSessionPhoneKey } from "../whatsapp-bot.logic.js";
 import {
   combinedInboxDisplayName,
   phoneLookupVariants,
@@ -40,7 +40,8 @@ function previewOf(
 }
 
 export function normalizeInboxPhone(fromOrNational: string): string {
-  return nationalPhone(fromOrNational);
+  // Foreign WhatsApp numbers must not collapse onto Indian 10-digit threads.
+  return whatsAppSessionPhoneKey(fromOrNational);
 }
 
 type InboxAccountMatch = {
@@ -550,28 +551,56 @@ export async function applyInboxDeliveryStatus(input: {
     return "ignored";
   }
 
-  const message = await WhatsAppInboxMessageModel.findOne({ providerMessageId });
-  if (!message) {
-    return "missing";
-  }
-
-  const currentRank = STATUS_RANK[message.status as WhatsAppInboxMessageStatus] ?? 0;
   const nextRank = STATUS_RANK[mapped];
+  const allowableCurrent = (
+    Object.entries(STATUS_RANK) as Array<[WhatsAppInboxMessageStatus, number]>
+  )
+    .filter(([, rank]) => {
+      if (mapped === "failed") {
+        // Match notification policy: failed may replace early states, not delivered/read.
+        return rank < STATUS_RANK.delivered;
+      }
+      return rank < nextRank;
+    })
+    .map(([status]) => status);
 
-  if (mapped !== "failed" && nextRank <= currentRank) {
+  if (allowableCurrent.length === 0) {
     return "ignored";
   }
 
-  message.status = mapped;
-  message.statusAt = input.timestamp ?? new Date();
+  const statusAt = input.timestamp ?? new Date();
+  const patch: Record<string, unknown> = {
+    status: mapped,
+    statusAt,
+  };
   if (mapped === "failed") {
-    message.failureReason = sanitizeWhatsAppErrorDetail(
+    patch.failureReason = sanitizeWhatsAppErrorDetail(
       input.failureDetail ||
         (input.errorCode ? `webhook_failed code=${input.errorCode}` : "webhook_failed"),
     );
   }
-  await message.save();
-  return "updated";
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const updated = await WhatsAppInboxMessageModel.updateOne(
+      {
+        providerMessageId,
+        status: { $in: allowableCurrent },
+      },
+      { $set: patch },
+    );
+    if (updated.matchedCount === 0) {
+      const exists = await WhatsAppInboxMessageModel.exists({ providerMessageId });
+      if (!exists) {
+        if (attempt === 3) return "missing";
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        continue;
+      }
+      // Row exists but status is already equal or higher — ignore regress.
+      return "ignored";
+    }
+    return updated.modifiedCount === 1 ? "updated" : "ignored";
+  }
+  return "missing";
 }
 
 function templateSnapshot(input: {

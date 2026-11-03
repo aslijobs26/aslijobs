@@ -32,3 +32,19 @@ export async function claimWhatsAppEvent(messageId: string): Promise<boolean> {
     throw error;
   }
 }
+
+/**
+ * Releases a claim after enqueue/routing failure so Meta redelivery (or a later
+ * recovery path) can process the message. Never throws.
+ */
+export async function releaseWhatsAppEvent(messageId: string): Promise<void> {
+  try {
+    await WhatsAppProcessedEventModel.deleteOne({ messageId });
+  } catch (error) {
+    console.error(
+      `[WhatsAppWebhook] claim_release_failed messageId=${messageId} reason=${
+        error instanceof Error ? error.name : "unknown"
+      }`,
+    );
+  }
+}

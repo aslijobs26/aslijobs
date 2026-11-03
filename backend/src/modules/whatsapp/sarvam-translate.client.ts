@@ -355,9 +355,11 @@ export async function localizeDeterministicReply(input: {
     cache: isCacheableSituation(String(input.facts.situation ?? ""), input.facts),
     fetchImpl: input.fetchImpl,
   });
-  if (localized.failed && generatedLanguage !== input.language) {
+  if (localized.failed) {
+    // Keep the verified draft rather than a generic error — job/application facts
+    // must still reach the user when Sarvam translation is down.
     return {
-      text: serviceErrorCopy(input.language),
+      text: restoreProperNouns(protectedText.text, protectedText.tokens),
       generatedLanguage,
       translated: false,
       skipped: false,

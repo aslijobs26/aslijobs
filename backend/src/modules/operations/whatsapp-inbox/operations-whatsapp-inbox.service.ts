@@ -518,13 +518,60 @@ export const operationsWhatsAppInboxService = {
     }
 
     let providerMessageId = "";
+    let acceptedByProvider = false;
     try {
       const result = await whatsAppService.sendSessionTextMessage(
         conversation.phoneNational,
         text,
       );
       providerMessageId = result.messageId;
+      acceptedByProvider = Boolean(providerMessageId);
+
+      await pauseBotForAdmin(conversation.phoneNational, input.adminUserId);
+      const recorded = await recordOutboundMessage({
+        phoneNational: conversation.phoneNational,
+        body: text,
+        senderType: "admin",
+        providerMessageId,
+        clientMessageId,
+        adminUserId: input.adminUserId,
+        status: "accepted",
+      });
+
+      const message = await WhatsAppInboxMessageModel.findById(recorded.messageId).lean();
+      const refreshed = await loadConversationOrThrow(input.conversationId);
+
+      return {
+        message: {
+          id: String(message?._id ?? recorded.messageId),
+          direction: "outbound" as const,
+          senderType: "admin" as const,
+          body: text,
+          messageType: "text" as const,
+          hasMedia: false,
+          mediaMimeType: "",
+          mediaFileName: "",
+          status: message?.status ?? "accepted",
+          failureReason: "",
+          createdAt:
+            message?.createdAt?.toISOString?.() ?? new Date().toISOString(),
+          statusAt: message?.statusAt?.toISOString?.() ?? null,
+        },
+        conversation: serializeConversation(refreshed),
+        duplicated: !recorded.created,
+      };
     } catch (error) {
+      if (error instanceof AppError) throw error;
+      if (acceptedByProvider) {
+        throw new AppError(
+          "WhatsApp accepted the message, but the inbox could not save it. Refresh before sending again.",
+          HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          { code: "WHATSAPP_INBOX_PERSIST_FAILED" },
+        );
+      }
+      const ambiguous =
+        error instanceof WhatsAppTemplateDeliveryError &&
+        error.failureClass === "ambiguous";
       const failureReason = sanitizeWhatsAppErrorDetail(
         error instanceof WhatsAppTemplateDeliveryError
           ? error.detail || error.message
@@ -538,8 +585,11 @@ export const operationsWhatsAppInboxService = {
         senderType: "admin",
         clientMessageId,
         adminUserId: input.adminUserId,
-        status: "failed",
-        failureReason,
+        // Ambiguous: Meta may have delivered; do not label as hard failed.
+        status: ambiguous ? "accepted" : "failed",
+        failureReason: ambiguous
+          ? sanitizeWhatsAppErrorDetail(`ambiguous:${failureReason}`)
+          : failureReason,
       });
 
       if (
@@ -552,45 +602,17 @@ export const operationsWhatsAppInboxService = {
       }
 
       throw new AppError(
-        "Unable to send WhatsApp message right now. Please try again.",
+        ambiguous
+          ? "WhatsApp delivery is uncertain. Refresh before sending again."
+          : "Unable to send WhatsApp message right now. Please try again.",
         HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        { code: "WHATSAPP_SEND_FAILED" },
+        {
+          code: ambiguous
+            ? "WHATSAPP_SEND_AMBIGUOUS"
+            : "WHATSAPP_SEND_FAILED",
+        },
       );
     }
-
-    await pauseBotForAdmin(conversation.phoneNational, input.adminUserId);
-    const recorded = await recordOutboundMessage({
-      phoneNational: conversation.phoneNational,
-      body: text,
-      senderType: "admin",
-      providerMessageId,
-      clientMessageId,
-      adminUserId: input.adminUserId,
-      status: "accepted",
-    });
-
-    const message = await WhatsAppInboxMessageModel.findById(recorded.messageId).lean();
-    const refreshed = await loadConversationOrThrow(input.conversationId);
-
-    return {
-      message: {
-        id: String(message?._id ?? recorded.messageId),
-        direction: "outbound" as const,
-        senderType: "admin" as const,
-        body: text,
-        messageType: "text" as const,
-        hasMedia: false,
-        mediaMimeType: "",
-        mediaFileName: "",
-        status: message?.status ?? "accepted",
-        failureReason: "",
-        createdAt:
-          message?.createdAt?.toISOString?.() ?? new Date().toISOString(),
-        statusAt: message?.statusAt?.toISOString?.() ?? null,
-      },
-      conversation: serializeConversation(refreshed),
-      duplicated: !recorded.created,
-    };
   },
 
   async sendMedia(input: {

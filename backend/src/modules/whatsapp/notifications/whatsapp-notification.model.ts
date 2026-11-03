@@ -481,16 +481,6 @@ export async function applyWhatsAppNotificationDeliveryStatus(input: {
     return "ignored";
   }
 
-  const row = await WhatsAppNotificationDispatchModel.findOne({ messageId })
-    .select("status event entityId")
-    .lean();
-  if (!row) {
-    return "unknown";
-  }
-  if (!shouldApplyWhatsAppDeliveryStatus(row.status, incoming)) {
-    return "ignored";
-  }
-
   const at = input.timestamp ?? new Date();
   const patch: Record<string, unknown> = {
     status: incoming,
@@ -513,9 +503,32 @@ export async function applyWhatsAppNotificationDeliveryStatus(input: {
     }
   }
 
-  const updated = await WhatsAppNotificationDispatchModel.updateOne(
-    { messageId, status: row.status },
-    { $set: patch },
-  );
-  return updated.modifiedCount === 1 ? "updated" : "ignored";
+  // Retry briefly when the accept row is not yet written (race with Graph send).
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const row = await WhatsAppNotificationDispatchModel.findOne({ messageId })
+      .select("status event entityId")
+      .lean();
+    if (!row) {
+      if (attempt === 3) return "unknown";
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      continue;
+    }
+    if (!shouldApplyWhatsAppDeliveryStatus(row.status, incoming)) {
+      return "ignored";
+    }
+    const updated = await WhatsAppNotificationDispatchModel.updateOne(
+      { messageId, status: row.status },
+      { $set: patch },
+    );
+    if (updated.modifiedCount === 1) {
+      return "updated";
+    }
+    // Concurrent status race — re-read once more.
+    if (attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      continue;
+    }
+    return "ignored";
+  }
+  return "unknown";
 }

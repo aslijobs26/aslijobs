@@ -65,6 +65,35 @@ describe("whatsapp bot", () => {
     assert.equal(nationalPhone("919876543210"), "9876543210");
   });
 
+  it("accepts a valid Meta signature and rejects missing/malformed signatures when a secret is set", () => {
+    const body = Buffer.from('{"object":"whatsapp_business_account"}');
+    const digest = createHmac("sha256", "app-secret").update(body).digest("hex");
+    assert.equal(
+      verifyWhatsAppSignature(body, `sha256=${digest}`, "app-secret", {
+        requireSecret: true,
+      }),
+      true,
+    );
+    assert.equal(
+      verifyWhatsAppSignature(body, undefined, "app-secret", {
+        requireSecret: true,
+      }),
+      false,
+    );
+    assert.equal(
+      verifyWhatsAppSignature(body, "sha256=00", "app-secret", {
+        requireSecret: true,
+      }),
+      false,
+    );
+    assert.equal(
+      verifyWhatsAppSignature(undefined, `sha256=${digest}`, "app-secret", {
+        requireSecret: true,
+      }),
+      false,
+    );
+  });
+
   it("routes Telugu job search locally without inventing jobs", () => {
     const understood = understandLocally("Hyderabad lo driver job undha?");
     assert.equal(understood.intent, "JOB_SEARCH");

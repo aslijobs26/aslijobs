@@ -166,15 +166,17 @@ function cleanRolePhrase(value: string, isKnownPlace: (place: string) => boolean
     previous = phrase;
     phrase = phrase
       .replace(
-        /^(?:a|an|the|any|some|my|me|i|please|show|find|need|want|wnat|looking|for|available|are|there|what|which|how|do|can|is|matching)\s+/i,
+        /^(?:a|an|the|any|some|my|me|i|please|show|find|need|want|wnat|looking|for|available|are|there|what|which|how|do|can|is|matching|suitable|only|just|sirf|fresher|freshers|experienced)\s+/i,
         "",
       )
+      .replace(/\s+(?:job|jobs|work|role|position|resume|cv|only|just|sirf|fresher|freshers|experienced)$/i, "")
+      .replace(/^(?:only|just|sirf|fresher|freshers|experienced)$/i, "")
       .trim();
+    const locative = phrase.match(/^(.+?)\s+(?:lo|mein|me|in|at|la)\s+(.+)$/i);
+    if (locative?.[1] && locative[2] && isKnownPlace(locative[1].trim())) {
+      phrase = locative[2].trim();
+    }
   }
-  phrase = phrase
-    .replace(/\s+(?:job|jobs|work|role|position|resume|cv)$/i, "")
-    .replace(/^(?:matching|suitable)\s+/i, "")
-    .trim();
   if (!phrase || phrase.length < 3 || phrase.length > 40) return "";
   const tokens = phrase.toLowerCase().split(/\s+/);
   if (tokens.every((token) => ROLE_REJECT.has(token))) return "";
@@ -216,6 +218,10 @@ export function extractFreeJobTitle(
   return "";
 }
 
+/** Non-fresher levels the public job API can match together. */
+export const EXPERIENCED_SEARCH_LEVEL =
+  "6_month,1_year,2_year,3_year,4_year,5_year,6_year,10_year";
+
 /** Map a stated year count onto the public job API's experience levels. */
 export function experienceSearchLevel(years: number): string {
   if (years <= 0) return "fresher";
@@ -247,8 +253,9 @@ export function extractExperienceDetail(text: string): {
     ten: "10",
   };
   const amount = "\\d+|one|two|three|four|five|six|seven|eight|nine|ten";
+  const yearUnit = "years?|yrs?|saal|varsham|varsha|varudam|varusham";
   const range = folded.match(
-    new RegExp(`\\b(${amount})\\s*(?:to|-|–)\\s*(${amount})\\s*(?:years?|yrs?)\\b`),
+    new RegExp(`\\b(${amount})\\s*(?:to|-|–)\\s*(${amount})\\s*(?:${yearUnit})\\b`),
   );
   if (range?.[1] && range[2]) {
     const low = Number(words[range[1]] ?? range[1]);
@@ -262,7 +269,7 @@ export function extractExperienceDetail(text: string): {
     }
   }
   const nativeYears = text.match(
-    /(?:^|\D)(\d{1,2})\s*(?:సంవత్సరాలు|సంవత్సరం|సంవత్సరాల|साल|वर्ष|வருடங்கள்|வருடం|ವರ್ಷ|വർഷം)/,
+    /(?:^|\D)(\d{1,2})\s*(?:సంవత్సరాలు|సంవత్సరం|సంవత్సరాల|ఏళ్లు|ఏళ్ళు|साल|वर्ष|வருடங்கள்|வருடம்|வருஷம்|ஆண்டுகள்|ஆண்டு|ವರ್ಷಗಳು|ವರ್ಷ|വർഷങ്ങൾ|വർഷം)/,
   );
   if (nativeYears?.[1]) {
     const years = Number(nativeYears[1]);
@@ -270,14 +277,27 @@ export function extractExperienceDetail(text: string): {
       return { level: experienceSearchLevel(years), years, rangeLabel: "" };
     }
   }
-  const numeric = folded.match(new RegExp(`\\b(${amount})\\s*(?:years?|yrs?)\\b`));
+  const numeric = folded.match(new RegExp(`\\b(${amount})\\s*(?:${yearUnit})\\b`));
   if (numeric?.[1]) {
     const years = Number(words[numeric[1]] ?? numeric[1]);
     if (!Number.isFinite(years)) return { level: "", years: null, rangeLabel: "" };
     return { level: experienceSearchLevel(years), years, rangeLabel: "" };
   }
   if (/\b6\s*months?\b/.test(folded)) return { level: "6_month", years: null, rangeLabel: "" };
-  if (/\bfreshers?\b|\bno experience\b/.test(folded)) return { level: "fresher", years: 0, rangeLabel: "" };
+  if (
+    /\bfreshers?\b|\bno experience\b|ఫ్రెషర్|అనుభవం\s*లేదు|फ्रेशर|अनुभव\s*नहीं|बिना\s*अनुभव|புதிய|அனுபவம்\s*இல்லை|ಫ್ರೆಶರ್|ಅನುಭವವಿಲ್ಲ|ഫ്രഷർ|പരിചയമില്ല/i.test(
+      text,
+    )
+  ) {
+    return { level: "fresher", years: 0, rangeLabel: "" };
+  }
+  if (
+    /\bexperienced\b|అనుభవం\s*ఉన్న|अनुभवी|அனுபவம்\s*உள்ள|ಅನುಭವವಿರುವ|പരിചയമുള്ള/i.test(
+      text,
+    )
+  ) {
+    return { level: EXPERIENCED_SEARCH_LEVEL, years: null, rangeLabel: "experienced" };
+  }
   return { level: "", years: null, rangeLabel: "" };
 }
 
@@ -314,7 +334,7 @@ export function extractSalaryBand(text: string): {
     );
   const salaryCue =
     teluguSalaryShow ||
-    /salary|జీతం|వేతనం|वेतन|तनख्वाह|சம்பளம்|ಸಂಬಳ|ശമ്പളം|minimum|min\.?|at\s+least|above|over|upto|up\s+to|from|between|₹|\brs\.?\b|\binr\b|kavali/i.test(
+    /salary|జీతం|వేతనం|वेतन|सैलरी|सैलेरी|तनख्वाह|சம்பளம்|ಸಂಬಳ|ശമ്പളം|minimum|min\.?|at\s+least|above|over|upto|up\s+to|from|between|₹|\brs\.?\b|\binr\b|kavali/i.test(
       text,
     );
 
@@ -390,7 +410,7 @@ export function extractSalaryBand(text: string): {
   }
   // Plain monthly amounts: "salary 40000", "minimum 40000", "Naku salary 40,000 kavali"
   const rangePlain = normalized.match(
-    /(?:salary|minimum|min|between|from)?[^\d]{0,24}(\d{4,7})\s*(?:to|-|–)\s*(\d{4,7})\b/i,
+    /(?:salary|minimum|min|between|from|सैलरी|జీతం|वेतन)?[^\d]{0,24}(\d{4,7})\s*(?:to|-|–|से)\s*(\d{4,7})\b/i,
   );
   if (rangePlain?.[1] && rangePlain[2] && salaryCue) {
     const min = Number(rangePlain[1]);
@@ -427,11 +447,18 @@ export function looksLikeRelativeHigherSalary(text: string): boolean {
 }
 
 /** Explicit salary preference / correction without requiring the word "salary". */
+/** Drop a saved experience filter. "No experience" stays a fresher request, not a clear. */
+export function looksLikeClearExperience(text: string): boolean {
+  return /remove\s+experience|experience\s+(?:filter\s+)?(?:remove|clear|hatao|vaddu)|any\s+experience|అనుభవం\s*వద్దు|experience\s+vaddu|अनुभव\s*हटा|experience\s+hatao|அனுபவம்\s*வேண்டாம்|ಅನುಭವ\s*ಬೇಡ|പരിചയം\s*വേണ്ട/i.test(
+    text,
+  );
+}
+
 export function looksLikeSalaryPreferenceUpdate(text: string): boolean {
   const normalized = text.replace(/,/g, "");
   if (extractSalaryBand(text).min == null) return false;
   return (
-    /salary|జీతం|వేతనం|वेतन|minimum|at\s+least|above|₹|\brs\.?\b/i.test(text) ||
+    /salary|జీతం|వేతనం|वेतन|सैलरी|சம்பளம்|ಸಂಬಳ|ശമ്പളം|minimum|at\s+least|above|₹|\brs\.?\b/i.test(text) ||
     /\blo\s+(chudu|chunchandi|chupin\w*|chupu)|chunchandi|change\s+salary|\b\d+\s*k\s+vaddu|\b\d{4,7}\s+vaddu/i.test(
       normalized,
     )
@@ -450,22 +477,72 @@ const ORDINALS: Record<string, number> = {
   first: 1,
   second: 2,
   third: 3,
+  fourth: 4,
+  fifth: 5,
+  sixth: 6,
+  seventh: 7,
+  eighth: 8,
   "1st": 1,
   "2nd": 2,
   "3rd": 3,
+  "4th": 4,
+  "5th": 5,
+  "6th": 6,
+  "7th": 7,
+  "8th": 8,
   "1": 1,
   "2": 2,
   "3": 3,
+  "4": 4,
+  "5": 5,
+  "6": 6,
+  "7": 7,
+  "8": 8,
 };
 
-/** "the second job" / "apply for the 2nd job" against the last shown results. */
+const ORDINAL_TOKEN =
+  "first|second|third|fourth|fifth|sixth|seventh|eighth|1st|2nd|3rd|4th|5th|6th|7th|8th|[1-8]";
+
+/**
+ * Map "apply for 5" / "the second job" / bare "5" onto the last shown WhatsApp results.
+ * Supports 1–8 to match JOBS_FOR_AI_LIMIT. Returns null when the message is not a selection.
+ */
 export function jobOrdinalFromText(text: string): number | null {
-  if (!/\b(?:jobs?|apply)\b/i.test(text)) return null;
-  const match = text.match(
-    /\b(?:apply(?:\s+for)?|show|open|the)\s+(?:the\s+)?(first|second|third|1st|2nd|3rd|[123])\b/i,
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  const bare = trimmed.match(new RegExp(`^(${ORDINAL_TOKEN})$`, "i"));
+  if (bare?.[1]) {
+    return ORDINALS[bare[1].toLowerCase()] ?? null;
+  }
+
+  if (!/\b(?:jobs?|apply|select|choose|open|show)\b/i.test(trimmed)) return null;
+
+  const patterns = [
+    new RegExp(
+      `\\b(?:apply(?:\\s+for)?|select|choose|show|open)\\s+(?:the\\s+)?(${ORDINAL_TOKEN})(?:\\s*(?:st|nd|rd|th))?\\s*(?:jobs?)?\\b`,
+      "i",
+    ),
+    new RegExp(`\\b(?:the\\s+)?(${ORDINAL_TOKEN})\\s+jobs?\\b`, "i"),
+    new RegExp(`\\bjobs?\\s+(?:number\\s+|#\\s*)?(${ORDINAL_TOKEN})\\b`, "i"),
+  ];
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (match?.[1]) {
+      return ORDINALS[match[1].toLowerCase()] ?? null;
+    }
+  }
+  return null;
+}
+
+/** True when the user tried to pick a listed job by number, including invalid numbers. */
+export function looksLikeJobOrdinalSelection(text: string): boolean {
+  if (jobOrdinalFromText(text) != null) return true;
+  const trimmed = text.trim();
+  if (/^(0|-?\d+)$/.test(trimmed)) return true;
+  return /\b(?:apply(?:\s+for)?|select|choose|show|open|job)\s+(?:the\s+)?(?:-?\d+|ninth|tenth|0th)\b/i.test(
+    trimmed,
   );
-  if (!match?.[1]) return null;
-  return ORDINALS[match[1].toLowerCase()] ?? null;
 }
 
 export function formatAppliedFilters(input: {
