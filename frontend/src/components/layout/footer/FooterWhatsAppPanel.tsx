@@ -1,7 +1,8 @@
 "use client";
 
 import { WhatsAppIcon } from "@/components/home/hero/HeroIcons";
-import { WHATSAPP_CONTACT_URL } from "@/constants/cta";
+import { buildWhatsAppWelcomeUrl } from "@/constants/whatsapp-welcome-messages";
+import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import { ExternalLink, QrCode } from "lucide-react";
 import Image from "next/image";
@@ -11,6 +12,8 @@ const whatsappQrCodePath = process.env.NEXT_PUBLIC_WHATSAPP_QR_IMAGE;
 
 export function FooterWhatsAppPanel() {
   const t = useTranslate();
+  const siteLanguage = useSiteLanguage();
+  const whatsappHref = buildWhatsAppWelcomeUrl("seeker", siteLanguage.code);
 
   return (
     <aside
@@ -24,7 +27,7 @@ export function FooterWhatsAppPanel() {
       </p>
 
       <Link
-        href={WHATSAPP_CONTACT_URL}
+        href={whatsappHref}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-4 inline-flex h-11 w-full min-w-0 items-center justify-center gap-2 rounded-xl bg-whatsapp px-4 text-center text-sm font-semibold text-surface transition-colors hover:bg-whatsapp-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-whatsapp/40 sm:w-auto sm:min-w-[12.5rem] xl:h-auto xl:min-h-9 xl:min-w-0 xl:gap-1.5 xl:px-3 xl:py-2 xl:text-xs"

@@ -76,7 +76,7 @@ describe("WhatsApp response quality", () => {
     }
 
     const about = understandLocally("What is AsliJobs?");
-    assert.equal(about.intent, "HELP");
+    assert.equal(about.intent, "PLATFORM_KNOWLEDGE");
     assert.equal(about.focus, "about");
     assert.equal(about.openSearch, false);
     assert.equal(about.category, "");
@@ -90,7 +90,7 @@ describe("WhatsApp response quality", () => {
     assert.doesNotMatch(aboutReply ?? "", /₹\d|AJ-\d|undefined/);
 
     const find = understandLocally("How to find jobs?");
-    assert.equal(find.intent, "HELP");
+    assert.equal(find.intent, "PLATFORM_KNOWLEDGE");
     assert.equal(find.focus, "find_jobs");
     assert.equal(find.category, "");
     assert.equal(
@@ -99,7 +99,7 @@ describe("WhatsApp response quality", () => {
     );
 
     const register = understandLocally("How to register?");
-    assert.equal(register.intent, "HELP");
+    assert.equal(register.intent, "PLATFORM_KNOWLEDGE");
     assert.equal(register.focus, "register");
     const registerReply = buildDeterministicReply("en", {
       situation: "help",
@@ -118,7 +118,7 @@ describe("WhatsApp response quality", () => {
     assert.doesNotMatch(registerReply ?? "", /applied successfully|registered successfully/i);
 
     const contact = understandLocally("How to contact employer?");
-    assert.equal(contact.intent, "HELP");
+    assert.equal(contact.intent, "PLATFORM_KNOWLEDGE");
     assert.equal(contact.focus, "contact_employer");
     assert.notEqual(contact.intent, "POST_JOB");
     const contactReply = buildDeterministicReply("en", {

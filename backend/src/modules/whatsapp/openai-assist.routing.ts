@@ -67,6 +67,9 @@ export function shouldUseOpenAiAssist(input: OpenAiAssistRouteInput): boolean {
   const text = input.userText.trim();
   if (text.length < 8) return false;
   // Keep platform guides deterministic so assist cannot invent contacts or features.
+  if (situation === "platform_knowledge") {
+    return false;
+  }
   if (
     situation === "help" ||
     situation === "how_to_apply" ||

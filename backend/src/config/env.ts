@@ -213,6 +213,23 @@ const envSchema = z.object({
     .default(1),
   /** Parallel WhatsApp AI jobs when REDIS_URL is set. */
   WHATSAPP_INBOUND_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(4),
+  /**
+   * When true, admin/CLI knowledge refresh may HTTP-fetch allowlisted FRONTEND_URL
+   * public docs. Default false — bundled official corpus is always used.
+   */
+  WEBSITE_KNOWLEDGE_CRAWL_ENABLED: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
+  WEBSITE_KNOWLEDGE_FETCH_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(2_000)
+    .max(30_000)
+    .default(8_000),
+  WEBSITE_KNOWLEDGE_MAX_PAGES: z.coerce.number().int().min(1).max(80).default(40),
   /** Safety-net TTL for the in-process job title and city catalog. Job saves invalidate sooner. */
   WHATSAPP_CATALOG_TTL_MS: z.coerce.number().int().min(15_000).max(600_000).default(60_000),
   /**

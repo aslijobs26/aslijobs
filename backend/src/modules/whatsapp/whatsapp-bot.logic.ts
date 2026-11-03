@@ -48,6 +48,7 @@ export const BOT_INTENTS = [
   "EMPLOYER_APPLICATION_COUNT",
   "POST_JOB",
   "ACCOUNT_STATUS",
+  "PLATFORM_KNOWLEDGE",
   "HELP",
   "CLARIFY",
   "UNRELATED",
@@ -669,6 +670,7 @@ export function understandLocally(
   const howToFindJobs = looksLikeHowToFindJobs(text);
   const howToRegister = looksLikeHowToRegister(text);
   const contactEmployerGuide = looksLikeContactEmployerGuide(text);
+  const platformKnowledge = looksLikePlatformKnowledge(text);
   const applications = ownApply && !howToApply;
   const myPosted = looksLikeOwnPostedJobsQuestion(text);
   const profileStatusAsk = looksLikeProfileStatusQuestion(text);
@@ -724,18 +726,12 @@ export function understandLocally(
     )
   ) {
     intent = "HELP";
-  } else if (aboutAsliJobs) {
-    intent = "HELP";
-    guideFocus = "about";
-  } else if (howToFindJobs) {
-    intent = "HELP";
-    guideFocus = "find_jobs";
-  } else if (howToRegister) {
-    intent = "HELP";
-    guideFocus = "register";
-  } else if (contactEmployerGuide) {
-    intent = "HELP";
-    guideFocus = "contact_employer";
+  } else if (platformKnowledge) {
+    intent = "PLATFORM_KNOWLEDGE";
+    if (aboutAsliJobs) guideFocus = "about";
+    else if (howToFindJobs) guideFocus = "find_jobs";
+    else if (howToRegister) guideFocus = "register";
+    else if (contactEmployerGuide) guideFocus = "contact_employer";
   } else if (howToApply) {
     intent = "HOW_TO_APPLY";
   } else if (greeting && text.trim().length < 20 && !mentionsJob && !ownApply && !category && !location) {
@@ -802,6 +798,7 @@ export function understandLocally(
   const followUpSlot = showMoreAsk || salaryOnlyAsk || relativeSalaryAsk;
   const wipeRoleNoise =
     intent === "HELP" ||
+    intent === "PLATFORM_KNOWLEDGE" ||
     intent === "HOW_TO_APPLY" ||
     intent === "GREETING" ||
     intent === "UNRELATED" ||
@@ -1191,7 +1188,7 @@ export function mergePending(
   text = "",
 ): BotUnderstanding {
   if (!previous) return next;
-  if (isPrivateIntent(next.intent) || next.intent === "GREETING" || next.intent === "HELP" || next.intent === "UNRELATED" || next.intent === "HOW_TO_APPLY" || next.intent === "CLARIFY" || next.intent === "POST_JOB" || next.intent === "ACCOUNT_STATUS") {
+  if (isPrivateIntent(next.intent) || next.intent === "GREETING" || next.intent === "HELP" || next.intent === "PLATFORM_KNOWLEDGE" || next.intent === "UNRELATED" || next.intent === "HOW_TO_APPLY" || next.intent === "CLARIFY" || next.intent === "POST_JOB" || next.intent === "ACCOUNT_STATUS") {
     return {
       ...next,
       location: next.location,
@@ -2067,6 +2064,11 @@ export function buildDeterministicReply(
       name: String(facts.name ?? ""),
     });
   }
+  if (situation === "platform_knowledge") {
+    const answer = String(facts.answer ?? "").trim();
+    if (answer) return answer;
+    return null;
+  }
   if (situation === "help" || situation === "out_of_scope") {
     const account = (facts.accountType as AccountKind) || "seeker";
     const focus = String(facts.focus ?? "");
@@ -2359,6 +2361,7 @@ export function isCacheableSituation(situation: string, facts: Record<string, un
   if (situation === "greeting") return !String(facts.name ?? "").trim();
   return (
     situation === "help" ||
+    situation === "platform_knowledge" ||
     situation === "out_of_scope" ||
     situation === "how_to_apply" ||
     situation === "choose_account" ||
@@ -2482,7 +2485,9 @@ export function unknownUserAction(
   understanding: Pick<BotUnderstanding, "intent" | "scope">,
 ): UnknownUserAction {
   const { intent, scope } = understanding;
-  if (intent === "GREETING" || intent === "HELP") return "greeting";
+  if (intent === "GREETING" || intent === "HELP") {
+    return "greeting";
+  }
   if (intent === "POST_JOB" || scope === "OWN_EMPLOYER_DATA") return "employer_register";
   if (intent === "ACCOUNT_STATUS") return "seeker_register";
   if (intent === "HOW_TO_APPLY") return "how_to_apply";
@@ -2624,7 +2629,12 @@ export function applyConversationFollowUp(
   if (!prior || isPrivateIntent(understanding.intent) || understanding.intent === "ACCOUNT_STATUS") {
     return understanding;
   }
-  if (understanding.intent === "GREETING" || understanding.intent === "HELP" || understanding.intent === "UNRELATED") {
+  if (
+    understanding.intent === "GREETING" ||
+    understanding.intent === "HELP" ||
+    understanding.intent === "PLATFORM_KNOWLEDGE" ||
+    understanding.intent === "UNRELATED"
+  ) {
     return understanding;
   }
 
@@ -2709,6 +2719,7 @@ export function applyConversationFollowUp(
 
 const ROLE_HINT_PRESERVE_INTENTS = new Set<BotIntent>([
   "HELP",
+  "PLATFORM_KNOWLEDGE",
   "PROFILE_JOBS",
   "PROFILE_MATCH",
   "MY_APPLICATIONS",
@@ -3544,7 +3555,7 @@ export function looksLikeHowToFindJobs(text: string): boolean {
 }
 
 export function looksLikeHowToRegister(text: string): boolean {
-  return /how\s+(?:do\s+i\s+|to\s+|can\s+i\s+)?register|sign\s*up|create\s+(?:an?\s+)?account|account\s+ela\s+create|రిజిస్టర్\s+ఎలా|रजिस्टर\s+कैसे|register\s+ఎలా/i.test(
+  return /how\s+(?:do\s+i\s+|to\s+|can\s+i\s+)?register|sign\s*up|create\s+(?:an?\s+)?account|account\s+ela\s+create|రిజిస్టర్\s+ఎలా|रजिस्टर\s+कैसे|register\s+ఎలా|job\s*seeker\s+registration|job\s*seeker\s+register/i.test(
     text,
   );
 }
@@ -3553,6 +3564,68 @@ export function looksLikeContactEmployerGuide(text: string): boolean {
   return /how\s+(?:do\s+i\s+|to\s+|can\s+i\s+)?contact\s+(?:the\s+)?employer|employer\s+(?:number|phone|contact|details)|contact\s+(?:the\s+)?recruiter|employer\s+ni\s+contact/i.test(
     text,
   );
+}
+
+export function looksLikeHowToPostJobGuide(text: string): boolean {
+  // Guide / explain questions only. English "How can I post a job?" stays POST_JOB
+  // (hire CTA). Romanized ela/kaise/epdi and "employer guide" use documentation.
+  if (/employer\s+guide|job\s+posting\s+process|how\s+do\s+employers\s+post/i.test(text)) {
+    return true;
+  }
+  return /(?:job|jobs?|employer).{0,40}(?:ela|epdi|kaise|hege|engane|ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ).{0,24}(?:post|publish)|(?:ela|epdi|kaise|hege|engane|ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ).{0,24}(?:post|publish).{0,24}(?:job|jobs?)|aslijobs.{0,48}(?:post|publish).{0,24}(?:job|jobs?).{0,24}(?:ela|epdi|kaise|hege|engane|ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ)|aslijobs.{0,48}(?:ela|epdi|kaise|hege|engane|ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ).{0,24}(?:post|publish)/i.test(
+    text,
+  );
+}
+
+export function looksLikePricingQuestion(text: string): boolean {
+  return /pricing|price\s*plans?|subscription\s*plans?|hiring\s*plans?|plans?\s*(?:enti|ఏంటి|क्या|enna|ಏನು|എന്ത്)|plan\s*(?:entha|ఎంత|कितना)|प्राइसिंग|விலை\s*திட்ட|ಬೆಲೆ\s*ಯೋಜನ|വില\s*പദ്ധതി/i.test(
+    text,
+  );
+}
+
+export function looksLikePolicyQuestion(text: string): boolean {
+  return /privacy\s*policy|terms?\s*(?:and|&)?\s*conditions?|guidelines?|గోప్యత|प्राइवेसी|தனியுரிமை|ಗೌಪ್ಯತೆ|സ്വകാര്യത|terms\s+explain|privacy\s+explain/i.test(
+    text,
+  );
+}
+
+export function looksLikeApplicantsWhereGuide(text: string): boolean {
+  return /(?:applicants?|applications?|candidates?).{0,24}(?:ekkada|where|எங்க|ಎಲ್ಲಿ|എവിടെ|कहाँ|ఎక్కడ)|(?:ekkada|where|ఎక్కడ).{0,24}(?:applicants?|applications?|candidates?)|dashboard.{0,32}(?:applicants?|applications?|candidates?)|na\s+applicants/i.test(
+    text,
+  );
+}
+
+/**
+ * Official website / platform documentation questions.
+ * Must not steal concrete job-search turns (role+city) or private account counts.
+ */
+export function looksLikePlatformKnowledge(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (looksLikeAboutAsliJobs(trimmed)) return true;
+  if (looksLikeHowToFindJobs(trimmed)) return true;
+  if (looksLikeHowToRegister(trimmed)) return true;
+  if (looksLikeContactEmployerGuide(trimmed)) return true;
+  if (looksLikeHowToPostJobGuide(trimmed)) return true;
+  if (looksLikePricingQuestion(trimmed)) return true;
+  if (looksLikePolicyQuestion(trimmed)) return true;
+  if (looksLikeApplicantsWhereGuide(trimmed)) return true;
+  if (
+    /(?:help\s*center|faqs?|contact\s+us|contact\s+support|aslijobs\s+support|whatsapp\s+support)/i.test(
+      trimmed,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /aslijobs.{0,40}(?:ela|epdi|kaise|hege|engane|ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ)/i.test(trimmed) &&
+    !/\b(hyderabad|chennai|bangalore|bengaluru|mumbai|delhi|pune|vizag|vijayawada)\b/i.test(
+      trimmed,
+    )
+  ) {
+    return true;
+  }
+  return false;
 }
 
 

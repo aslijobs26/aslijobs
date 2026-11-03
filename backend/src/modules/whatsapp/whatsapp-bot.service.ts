@@ -36,6 +36,10 @@ import {
 } from "./whatsapp-conversation-orchestrator.js";
 import { selectWhatsAppTool } from "./whatsapp-bot-tools.js";
 import {
+  answerWebsiteKnowledgeQuestion,
+  inferKnowledgePersona,
+} from "../website-knowledge/website-knowledge.service.js";
+import {
   activeSearchContext,
   applyAccountAwareIntent,
   applyRoleHints,
@@ -824,6 +828,7 @@ async function processInboundTurn(input: {
         : [],
       session?.activeRole ?? "",
       merged.showMore ? seenJobIds : [],
+      text,
     );
     timing.db_query = Date.now() - dbStarted;
     const redirected = merged.crossRole === "seeker" || merged.crossRole === "employer";
@@ -1167,6 +1172,7 @@ async function buildReply(
   remembered: PublicJobFact[],
   savedRole: string,
   excludeJobIds: string[] = [],
+  userText = "",
 ): Promise<BotTurn> {
   const { seeker, employer, linked } = identity;
   const activeRole = resolveActiveRole(
@@ -1196,6 +1202,39 @@ async function buildReply(
   const displayName = asEmployer
     ? employer?.companyName?.trim() || ""
     : seeker?.fullName?.trim() || "";
+
+  // Public website documentation — answer without forcing registration.
+  if (understanding.intent === "PLATFORM_KNOWLEDGE") {
+    const persona = inferKnowledgePersona({
+      accountType: linked === "none" ? "none" : accountType,
+      query: userText,
+    });
+    const knowledge = await answerWebsiteKnowledgeQuestion({
+      query: userText,
+      language: understanding.language,
+      frontendOrigin: env.FRONTEND_URL,
+      persona,
+    });
+    if (knowledge.confidence === "none" && understanding.focus) {
+      return reply({
+        situation: "help",
+        accountType: linked === "none" ? "none" : accountType,
+        focus: understanding.focus,
+        ...(understanding.focus === "register"
+          ? { registration: siteUrls(understanding.language) }
+          : {}),
+      });
+    }
+    return reply({
+      situation: "platform_knowledge",
+      accountType: linked === "none" ? "none" : accountType,
+      answer: knowledge.text,
+      sourceUrl: knowledge.sourceUrl,
+      sourceTitle: knowledge.sourceTitle,
+      confidence: knowledge.confidence,
+      usedFaq: knowledge.usedFaq,
+    });
+  }
 
   if (understanding.crossRole === "employer" || understanding.crossRole === "seeker") {
     const urls = siteUrls(understanding.language);

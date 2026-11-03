@@ -42,6 +42,7 @@ export const SEEKER_REQUIRED_INTENTS = new Set<BotIntent>([
 export const NEUTRAL_INTENTS = new Set<BotIntent>([
   "GREETING",
   "HELP",
+  "PLATFORM_KNOWLEDGE",
   "CLARIFY",
   "UNRELATED",
   "UNKNOWN",
