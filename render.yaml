@@ -37,5 +37,15 @@ services:
       # Minutes after verified incomplete job seeker registration.
       - key: JOBSEEKER_PROFILE_COMPLETION_REMINDER_DELAY_MINUTES
         value: "30"
+      # Website knowledge (defaults safe for starter RAM/CPU). Enable crawl/auto-sync
+      # only after FRONTEND_URL is the public site and Redis is configured.
+      - key: WEBSITE_KNOWLEDGE_CRAWL_ENABLED
+        value: "false"
+      - key: WEBSITE_KNOWLEDGE_AUTO_SYNC_ENABLED
+        value: "false"
+      - key: WEBSITE_KNOWLEDGE_SEMANTIC_ENABLED
+        value: "false"
+      - key: WEBSITE_KNOWLEDGE_SYNC_AT_STARTUP
+        value: "false"
       # Set remaining secrets in the Render dashboard (never commit URIs/secrets):
       # MONGO_URI, JWT_*, WHATSAPP_*, FRONTEND_URL, ADMIN_URL, etc.

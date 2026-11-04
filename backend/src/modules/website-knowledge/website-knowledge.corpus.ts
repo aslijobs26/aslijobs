@@ -528,4 +528,70 @@ export const CORPUS_SECTIONS: readonly CorpusSection[] = [
     persona: "seeker",
     keywords: ["find jobs", "browse", "search"],
   },
+  {
+    id: "job-categories-page",
+    path: "/job-categories",
+    title: "Job Categories",
+    sectionHeading: "Job Categories",
+    content:
+      "AsliJobs supports industries such as manufacturing, construction, logistics and transportation, warehousing, retail, hospitality, facility management, security services, automotive, healthcare support, and other blue-collar and grey-collar sectors. Browse job categories on the AsliJobs website or ask on WhatsApp.",
+    sourceType: "guide",
+    persona: "seeker",
+    keywords: ["job categories", "industries", "manufacturing", "construction"],
+  },
+  {
+    id: "interview-tips-page",
+    path: "/interview-tips",
+    title: "Interview Tips",
+    sectionHeading: "Interview Tips",
+    content:
+      "AsliJobs interview tips help job seekers prepare for employer interviews with practical guidance on punctuality, documents, dress, and clear communication. Read the full Interview Tips page on the AsliJobs website.",
+    sourceType: "guide",
+    persona: "seeker",
+    keywords: ["interview", "tips", "prepare"],
+  },
+  {
+    id: "salary-guide-page",
+    path: "/salary-guide",
+    title: "Salary Guide",
+    sectionHeading: "Salary Guide",
+    content:
+      "The AsliJobs Salary Guide helps job seekers understand common salary expectations for blue-collar and grey-collar roles. Actual salary depends on city, experience, and employer. Read the Salary Guide on the AsliJobs website for more detail.",
+    sourceType: "guide",
+    persona: "seeker",
+    keywords: ["salary", "guide", "pay", "wages"],
+  },
+  {
+    id: "career-advice-page",
+    path: "/career-advice",
+    title: "Career Advice",
+    sectionHeading: "Career Advice",
+    content:
+      "AsliJobs Career Advice shares practical guidance for job seekers on building skills, preparing profiles, and finding suitable work through WhatsApp and the website.",
+    sourceType: "guide",
+    persona: "seeker",
+    keywords: ["career", "advice", "skills"],
+  },
+  {
+    id: "browse-by-city-page",
+    path: "/browse-by-city",
+    title: "Browse by City",
+    sectionHeading: "Browse Jobs by City",
+    content:
+      "Job seekers can browse AsliJobs openings by city on the website, or ask the WhatsApp bot for jobs in a specific city.",
+    sourceType: "guide",
+    persona: "seeker",
+    keywords: ["city", "browse", "location"],
+  },
+  {
+    id: "browse-by-state-page",
+    path: "/browse-by-state",
+    title: "Browse by State",
+    sectionHeading: "Browse Jobs by State",
+    content:
+      "Job seekers can browse AsliJobs openings by state on the website, or ask the WhatsApp bot for jobs in a specific state or city.",
+    sourceType: "guide",
+    persona: "seeker",
+    keywords: ["state", "browse", "location"],
+  },
 ];

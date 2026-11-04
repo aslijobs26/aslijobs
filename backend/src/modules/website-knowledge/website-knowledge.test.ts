@@ -151,8 +151,9 @@ describe("website knowledge retrieval", () => {
   });
 
   it("returns low/none confidence without inventing facts", async () => {
+    const unrelated = "quantum blockchain oracle neutrino";
     const hits = rankKnowledgeHits({
-      query: "quantum blockchain salary oracle",
+      query: unrelated,
       faqs: CORPUS_FAQS.map((faq) => ({
         question: faq.question,
         answer: faq.answer,
@@ -173,7 +174,7 @@ describe("website knowledge retrieval", () => {
     });
     assert.equal(confidenceFromHits(hits), "none");
     const answer = composeGroundedKnowledgeAnswer({
-      query: "quantum blockchain salary oracle",
+      query: unrelated,
       hits,
       helpCenterUrl: `${ORIGIN}/help-center`,
       contactUrl: `${ORIGIN}/contact`,

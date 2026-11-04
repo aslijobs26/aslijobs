@@ -1,4 +1,5 @@
 import type {
+  KnowledgeChunk,
   KnowledgeDocument,
   KnowledgeFaq,
   KnowledgeSyncStatus,
@@ -7,18 +8,21 @@ import type {
 type MemoryState = {
   documents: KnowledgeDocument[];
   faqs: KnowledgeFaq[];
+  chunks: KnowledgeChunk[];
   sync: KnowledgeSyncStatus | null;
 };
 
 const memory: MemoryState = {
   documents: [],
   faqs: [],
+  chunks: [],
   sync: null,
 };
 
 export function resetWebsiteKnowledgeMemory(): void {
   memory.documents = [];
   memory.faqs = [];
+  memory.chunks = [];
   memory.sync = null;
 }
 
@@ -28,6 +32,10 @@ export function getMemoryKnowledgeDocuments(): KnowledgeDocument[] {
 
 export function getMemoryKnowledgeFaqs(): KnowledgeFaq[] {
   return memory.faqs.filter((faq) => faq.active);
+}
+
+export function getMemoryKnowledgeChunks(): KnowledgeChunk[] {
+  return memory.chunks.filter((chunk) => chunk.active);
 }
 
 export function getMemoryKnowledgeSyncStatus(): KnowledgeSyncStatus | null {
@@ -52,6 +60,14 @@ export function upsertMemoryKnowledgeFaqs(faqs: KnowledgeFaq[]): void {
     byKey.set(`${faq.normalizedQuestion}|${faq.language}`, faq);
   }
   memory.faqs = [...byKey.values()];
+}
+
+export function upsertMemoryKnowledgeChunks(chunks: KnowledgeChunk[]): void {
+  const byKey = new Map(memory.chunks.map((chunk) => [chunk.chunkId, chunk]));
+  for (const chunk of chunks) {
+    byKey.set(chunk.chunkId, chunk);
+  }
+  memory.chunks = [...byKey.values()];
 }
 
 export function deactivateMemoryMissing(
@@ -83,7 +99,6 @@ export function shouldReplaceKnowledgeContent(
   const upcoming = next.trim();
   if (!upcoming) return false;
   if (!prev) return true;
-  // Reject near-empty replacements that would wipe a known-good page.
   const minKeep = Math.max(24, Math.floor(prev.length * 0.35));
   return upcoming.length >= minKeep;
 }

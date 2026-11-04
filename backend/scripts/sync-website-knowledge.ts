@@ -1,11 +1,12 @@
 /**
  * Admin/ops CLI: refresh AsliJobs website knowledge from the official corpus
- * (and optionally crawl FRONTEND_URL when WEBSITE_KNOWLEDGE_CRAWL_ENABLED=true).
+ * (and optionally crawl FRONTEND_URL when crawl is enabled).
  *
  * Usage:
  *   npx tsx scripts/sync-website-knowledge.ts
  *   npx tsx scripts/sync-website-knowledge.ts --crawl
  *   npx tsx scripts/sync-website-knowledge.ts --memory-only
+ *   npx tsx scripts/sync-website-knowledge.ts --crawl --semantic
  */
 import mongoose from "mongoose";
 import { env } from "../src/config/env.js";
@@ -13,6 +14,8 @@ import { syncWebsiteKnowledge } from "../src/modules/website-knowledge/website-k
 
 async function main() {
   const crawl = process.argv.includes("--crawl") || env.WEBSITE_KNOWLEDGE_CRAWL_ENABLED;
+  const semantic =
+    process.argv.includes("--semantic") || env.WEBSITE_KNOWLEDGE_SEMANTIC_ENABLED;
   const memoryOnly = process.argv.includes("--memory-only");
   if (!memoryOnly) {
     if (!env.MONGO_URI) {
@@ -26,6 +29,13 @@ async function main() {
       crawlEnabled: crawl,
       persistMongo: !memoryOnly,
       timeoutMs: env.WEBSITE_KNOWLEDGE_FETCH_TIMEOUT_MS,
+      maxPages: env.WEBSITE_KNOWLEDGE_MAX_PAGES,
+      maxBytes: env.WEBSITE_KNOWLEDGE_MAX_RESPONSE_BYTES,
+      concurrency: env.WEBSITE_KNOWLEDGE_CRAWL_CONCURRENCY,
+      maxDurationMs: env.WEBSITE_KNOWLEDGE_MAX_CRAWL_DURATION_MS,
+      fetchSitemap: true,
+      semanticEnabled: semantic,
+      embeddingProvider: env.WEBSITE_KNOWLEDGE_EMBEDDING_PROVIDER,
     });
     console.log(JSON.stringify(status, null, 2));
   } finally {

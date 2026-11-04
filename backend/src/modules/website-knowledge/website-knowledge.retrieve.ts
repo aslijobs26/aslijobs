@@ -12,6 +12,16 @@ const FAQ_QUERY_ALIASES: Array<{ pattern: RegExp; questionNeedle: string }> = [
     questionNeedle: "what is aslijobs",
   },
   {
+    pattern:
+      /how\s+(?:does|do)\s+aslijobs\s+work|aslijobs\s+(?:ela|epdi|kaise|hege|engane)\s+work|aslijobs\s+work\s+(?:ela|epdi|kaise)|aslijobs\s+(?:ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ)\s*(?:work|పని|काम)/i,
+    questionNeedle: "how does aslijobs work",
+  },
+  {
+    pattern:
+      /(?:need|have)\s+to\s+download\s+(?:an?\s+)?app|download\s+(?:an?\s+)?app|app\s+download\s+(?:avala|కావాలా|चाहिए)|any\s+app\s+needed/i,
+    questionNeedle: "do i need to download an app",
+  },
+  {
     pattern: /job\s+categor|categor(?:y|ies).{0,24}available|which\s+job\s+categor/i,
     questionNeedle: "which job categories are available",
   },
@@ -25,7 +35,8 @@ const FAQ_QUERY_ALIASES: Array<{ pattern: RegExp; questionNeedle: string }> = [
     questionNeedle: "how do employers post a job",
   },
   {
-    pattern: /^(phone|email|support|contact|call|mobile|number|helpline)\b|contact\s+aslijobs\s+support/i,
+    pattern:
+      /^(phone|email|support|contact|call|mobile|number|helpline)\b|contact\s+aslijobs(?:\s+support)?|how\s+(?:can|do)\s+i\s+contact\s+aslijobs/i,
     questionNeedle: "how can users contact aslijobs support",
   },
   {
@@ -35,6 +46,10 @@ const FAQ_QUERY_ALIASES: Array<{ pattern: RegExp; questionNeedle: string }> = [
   {
     pattern: /job\s*seeker\s+regist|how\s+(?:do\s+i\s+|to\s+|can\s+i\s+)?register|register\s+ela|registration\s+ela/i,
     questionNeedle: "how can users update their profile details",
+  },
+  {
+    pattern: /interview\s+tips?|salary\s+guide|career\s+advice/i,
+    questionNeedle: "where can users get more help",
   },
 ];
 
@@ -274,4 +289,86 @@ export function confidenceFromHits(hits: KnowledgeHit[]): "high" | "low" | "none
   if (top.score >= 24) return "high";
   if (top.score >= MIN_SECTION_SCORE) return "low";
   return "none";
+}
+
+export type SemanticChunk = {
+  sectionTitle: string;
+  text: string;
+  sourceUrl: string;
+  sourceType: KnowledgeHit["sourceType"];
+  language: KnowledgeHit["language"];
+  embedding?: number[];
+  path?: string;
+};
+
+/** Blend lexical ranks with optional dense cosine scores (hybrid retrieval). */
+export function blendSemanticHits(input: {
+  queryEmbedding: number[] | null;
+  chunks: SemanticChunk[];
+  lexicalHits: KnowledgeHit[];
+  limit?: number;
+}): KnowledgeHit[] {
+  const limit = input.limit ?? 5;
+  const byKey = new Map<string, KnowledgeHit>();
+  for (const hit of input.lexicalHits) {
+    const key = `${hit.kind}|${hit.canonicalUrl}|${normalizeKnowledgeText(hit.sectionHeading)}`;
+    byKey.set(key, {
+      ...hit,
+      retrievalPath: hit.kind === "faq" ? (hit.score >= EXACT_FAQ_SCORE ? "faq_exact" : "faq_alias") : "keyword",
+    });
+  }
+
+  if (input.queryEmbedding && input.queryEmbedding.length > 0) {
+    const { cosineSimilarity } = requireCosine();
+    for (const chunk of input.chunks) {
+      if (!chunk.embedding?.length) continue;
+      const sim = cosineSimilarity(input.queryEmbedding, chunk.embedding);
+      if (sim < 0.22) continue;
+      const semanticScore = Math.round(sim * 70);
+      const key = `section|${chunk.sourceUrl}|${normalizeKnowledgeText(chunk.sectionTitle)}`;
+      const existing = byKey.get(key);
+      if (existing) {
+        existing.score = Math.max(existing.score, existing.score * 0.7 + semanticScore * 0.45);
+        existing.retrievalPath = "hybrid";
+      } else if (semanticScore >= 18) {
+        byKey.set(key, {
+          score: semanticScore,
+          title: chunk.sectionTitle,
+          sectionHeading: chunk.sectionTitle,
+          content: chunk.text,
+          canonicalUrl: chunk.sourceUrl,
+          sourceType: chunk.sourceType,
+          language: chunk.language,
+          kind: "section",
+          retrievalPath: "semantic",
+        });
+      }
+    }
+  }
+
+  return [...byKey.values()]
+    .sort((a, b) => b.score - a.score || a.sectionHeading.localeCompare(b.sectionHeading))
+    .slice(0, limit);
+}
+
+function requireCosine(): { cosineSimilarity: (a: number[], b: number[]) => number } {
+  // Local import keeps retrieve usable in tests without circular init issues.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return {
+    cosineSimilarity: (a: number[], b: number[]) => {
+      const n = Math.min(a.length, b.length);
+      let dot = 0;
+      let na = 0;
+      let nb = 0;
+      for (let i = 0; i < n; i += 1) {
+        const x = a[i] ?? 0;
+        const y = b[i] ?? 0;
+        dot += x * y;
+        na += x * x;
+        nb += y * y;
+      }
+      if (na <= 0 || nb <= 0) return 0;
+      return dot / (Math.sqrt(na) * Math.sqrt(nb));
+    },
+  };
 }

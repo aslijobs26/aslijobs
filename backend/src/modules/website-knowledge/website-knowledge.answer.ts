@@ -57,9 +57,21 @@ export function composeGroundedKnowledgeAnswer(input: {
           .filter(Boolean)
       : [];
 
+  // Prefer official contact numbers from a contact hit when FAQ answer is generic.
+  const contactHit = input.hits.find(
+    (hit) =>
+      hit.sourceType === "contact"
+      || /contact@aslijobs\.com|9248719057/i.test(hit.content),
+  );
+  const contactSupplement =
+    contactHit && top.kind === "faq" && /contact|support|phone|email/i.test(top.sectionHeading + top.content)
+      && !/contact@aslijobs\.com|9248719057/i.test(evidence)
+      ? sanitizeRetrievedContent(contactHit.content)
+      : "";
+
   const body =
     top.kind === "faq"
-      ? evidence
+      ? [evidence, contactSupplement].filter(Boolean).join(" ")
       : [top.sectionHeading ? `${top.sectionHeading}:` : "", evidence, ...extras]
           .filter(Boolean)
           .join(" ")
@@ -70,6 +82,9 @@ export function composeGroundedKnowledgeAnswer(input: {
     lines.push("If you need more detail, open the official page below.");
   }
   lines.push(`Details: ${top.canonicalUrl}`);
+  if (contactHit && contactHit.canonicalUrl !== top.canonicalUrl && /contact|phone|email/i.test(input.query)) {
+    lines.push(`Contact: ${contactHit.canonicalUrl}`);
+  }
 
   return {
     text: lines.join("\n\n").slice(0, 1_600),

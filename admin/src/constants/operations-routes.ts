@@ -33,6 +33,7 @@ export const OPERATIONS_ROUTES = {
   BUSINESS_DEVELOPMENT: "/operations/business-development",
   PROMOTIONS_EVENTS: "/operations/promotions-events",
   LANGUAGES: "/operations/languages",
+  WEBSITE_KNOWLEDGE: "/operations/website-knowledge",
   TRANSACTIONS: "/operations/transactions",
   REFUNDS: "/operations/refunds",
   TRUST_COMPLIANCE: "/operations/trust-compliance",

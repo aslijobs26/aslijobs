@@ -35,6 +35,7 @@ import { OperationsMyWorkPage } from "./operations-my-work-page";
 import { OperationsMyWorkPerformancePage } from "./operations-my-work-performance-page";
 import { OperationsVerificationReviewPage } from "./operations-verification-review-page";
 import { OperationsVerificationsPage } from "./operations-verifications-page";
+import { OperationsWebsiteKnowledgePage } from "./operations-website-knowledge-page";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 function OperationsProtectedLayout() {
@@ -204,6 +205,10 @@ export function AppRoutes() {
           element={
             <OperationsPlaceholderPage title="Languages & Localization" />
           }
+        />
+        <Route
+          path={OPERATIONS_ROUTES.WEBSITE_KNOWLEDGE}
+          element={<OperationsWebsiteKnowledgePage />}
         />
         <Route
           path={OPERATIONS_ROUTES.BUSINESS_DEVELOPMENT}

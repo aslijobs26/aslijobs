@@ -3551,7 +3551,19 @@ function mentionsJobWord(text: string): boolean {
 }
 
 export function looksLikeAboutAsliJobs(text: string): boolean {
-  return /what\s+is\s+aslijobs|about\s+aslijobs|aslijobs\s+(?:ante|అంటే|क्या\s+है|என்ன|ಏನು|എന്താണ്)|aslijobs\s+గురించి/i.test(
+  return /what\s+is\s+aslijobs|about\s+aslijobs|how\s+(?:does|do)\s+aslijobs\s+work|aslijobs\s+(?:ante|అంటే|क्या\s+है|என்ன|ಏನು|എന്താണ്)|aslijobs\s+గురించి|(?:need|have)\s+to\s+download\s+(?:an?\s+)?app|download\s+(?:an?\s+)?app\??$/i.test(
+    text,
+  );
+}
+
+export function looksLikeHowAsliJobsWorks(text: string): boolean {
+  return /how\s+(?:does|do)\s+aslijobs\s+work|aslijobs\s+(?:ela|epdi|kaise|hege|engane).{0,12}work|aslijobs\s+work\s+(?:ela|epdi|kaise)|aslijobs\s+(?:ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങనെ)\s*(?:work|పని|काम)?/i.test(
+    text,
+  );
+}
+
+export function looksLikeAppDownloadQuestion(text: string): boolean {
+  return /(?:need|have)\s+to\s+download\s+(?:an?\s+)?app|download\s+(?:an?\s+)?app|app\s+download\s*(?:avala|కావాలా|चाहिए)?|any\s+app\s+needed/i.test(
     text,
   );
 }
@@ -3653,7 +3665,10 @@ export function looksLikePlatformKnowledge(text: string): boolean {
     return false;
   }
   if (looksLikeAboutAsliJobs(trimmed)) return true;
+  if (looksLikeHowAsliJobsWorks(trimmed)) return true;
+  if (looksLikeAppDownloadQuestion(trimmed)) return true;
   if (looksLikeHowToFindJobs(trimmed)) return true;
+  if (/interview\s+tips?|salary\s+guide|career\s+advice|help\s+center/i.test(trimmed)) return true;
   if (looksLikeHowToRegister(trimmed)) return true;
   if (looksLikeContactEmployerGuide(trimmed)) return true;
   if (looksLikePublicContactQuestion(trimmed)) return true;

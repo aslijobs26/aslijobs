@@ -16,6 +16,16 @@ export type KnowledgeSourceType = (typeof KNOWLEDGE_SOURCE_TYPES)[number];
 export const KNOWLEDGE_PERSONAS = ["general", "seeker", "employer"] as const;
 export type KnowledgePersona = (typeof KNOWLEDGE_PERSONAS)[number];
 
+export const KNOWLEDGE_DISCOVERY_SOURCES = [
+  "footer",
+  "route_manifest",
+  "sitemap",
+  "manual_seed",
+  "catalog",
+  "crawler_discovery",
+] as const;
+export type KnowledgeDiscoverySource = (typeof KNOWLEDGE_DISCOVERY_SOURCES)[number];
+
 export type KnowledgeDocument = {
   canonicalUrl: string;
   path: string;
@@ -29,6 +39,18 @@ export type KnowledgeDocument = {
   fetchedAt: string;
   active: boolean;
   version: number;
+  discoverySource?: KnowledgeDiscoverySource;
+  pageDescription?: string;
+  httpStatus?: number;
+  lastChangedAt?: string;
+  lastSuccessfulSyncAt?: string;
+  lastAttemptedSyncAt?: string;
+  crawlVersion?: number;
+  extractionVersion?: number;
+  /** How the page body was obtained: ssr fetch vs Playwright render. */
+  extractionMethod?: "ssr" | "browser" | "corpus" | "policy";
+  embeddingModel?: string;
+  embeddingProvider?: string;
 };
 
 export type KnowledgeFaq = {
@@ -38,6 +60,24 @@ export type KnowledgeFaq = {
   language: KnowledgeLanguage;
   normalizedQuestion: string;
   contentHash: string;
+  active: boolean;
+  persona?: KnowledgePersona;
+  discoverySource?: KnowledgeDiscoverySource;
+};
+
+export type KnowledgeChunk = {
+  chunkId: string;
+  documentKey: string;
+  path: string;
+  sectionTitle: string;
+  text: string;
+  sourceUrl: string;
+  language: KnowledgeLanguage;
+  sourceType: KnowledgeSourceType;
+  contentHash: string;
+  embedding?: number[];
+  embeddingModel?: string;
+  embeddingVersion?: number;
   active: boolean;
 };
 
@@ -50,6 +90,15 @@ export type KnowledgeSyncStatus = {
   lastSuccessAt: string;
   errors: string[];
   crawlEnabled: boolean;
+  unchanged?: number;
+  removed?: number;
+  fetched?: number;
+  sitemapFetched?: boolean;
+  durationMs?: number;
+  status?: "idle" | "running" | "success" | "partial" | "failed";
+  lastError?: string;
+  semanticIndexed?: number;
+  workerStatus?: "idle" | "running" | "disabled";
 };
 
 export type KnowledgeHit = {
@@ -61,6 +110,7 @@ export type KnowledgeHit = {
   sourceType: KnowledgeSourceType;
   language: KnowledgeLanguage;
   kind: "faq" | "section";
+  retrievalPath?: "faq_exact" | "faq_alias" | "keyword" | "semantic" | "hybrid";
 };
 
 export type KnowledgeAnswer = {

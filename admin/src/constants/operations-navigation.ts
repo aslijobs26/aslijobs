@@ -8,6 +8,7 @@ import {
   HelpCircle,
   Home,
   Inbox,
+  BookOpen,
   Languages,
   LayoutDashboard,
   Megaphone,
@@ -216,6 +217,13 @@ export const OPERATIONS_NAV_SECTIONS: OperationsNavSection[] = [
         href: OPERATIONS_ROUTES.LANGUAGES,
         icon: Languages,
         requiredPermission: { module: "settings", action: "read" },
+      },
+      {
+        id: "website-knowledge",
+        label: "Website Knowledge",
+        href: OPERATIONS_ROUTES.WEBSITE_KNOWLEDGE,
+        icon: BookOpen,
+        requiredPermission: { module: "whatsapp", action: "read" },
       },
       {
         id: "settings",

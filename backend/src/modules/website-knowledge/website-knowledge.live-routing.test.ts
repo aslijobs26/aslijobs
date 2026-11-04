@@ -56,6 +56,24 @@ describe("website knowledge live routing regressions", () => {
 
   const knowledgeCases = [
     {
+      q: "What is AsliJobs?",
+      expectIntent: "PLATFORM_KNOWLEDGE",
+      content: /WhatsApp-based job portal|blue-collar|grey-collar/i,
+      source: /faqs/i,
+    },
+    {
+      q: "How does AsliJobs work?",
+      expectIntent: "PLATFORM_KNOWLEDGE",
+      content: /WhatsApp|job seekers|employers/i,
+      source: /faqs/i,
+    },
+    {
+      q: "Do I need to download an app?",
+      expectIntent: "PLATFORM_KNOWLEDGE",
+      content: /do not need to download|WhatsApp/i,
+      source: /faqs/i,
+    },
+    {
       q: "Which job category are available",
       expectIntent: "PLATFORM_KNOWLEDGE",
       content: /manufacturing|construction|logistics|categories/i,

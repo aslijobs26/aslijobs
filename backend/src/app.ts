@@ -327,6 +327,11 @@ app.get("/api/v1/health/ready", async (_req, res) => {
       status: "ready",
       mongo: "up",
       redis: env.REDIS_URL.trim() ? "up" : "not_configured",
+      websiteKnowledge: {
+        autoSyncEnabled: env.WEBSITE_KNOWLEDGE_AUTO_SYNC_ENABLED,
+        crawlEnabled: env.WEBSITE_KNOWLEDGE_CRAWL_ENABLED,
+        semanticEnabled: env.WEBSITE_KNOWLEDGE_SEMANTIC_ENABLED,
+      },
     },
   });
 });

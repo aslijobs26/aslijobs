@@ -10,6 +10,7 @@ import { startEmployerProfileCompletionReminderRuntime } from "./modules/whatsap
 import { startJobSeekerProfileCompletionReminderRuntime } from "./modules/whatsapp/notifications/jobseeker-profile-completion-reminder.queue.js";
 import { startJobPostIncompleteReminderRuntime } from "./modules/whatsapp/notifications/job-post-incomplete-reminder.queue.js";
 import { startWhatsAppNotificationRuntime } from "./modules/whatsapp/notifications/whatsapp-notification.queue.js";
+import { startWebsiteKnowledgeRuntime } from "./modules/website-knowledge/website-knowledge.queue.js";
 import { clearAllRbacCaches } from "./modules/rbac/rbac-context.cache.js";
 import { logEmailConfigurationStatus } from "./modules/team/team-invitation-email.service.js";
 import mongoose from "mongoose";
@@ -24,6 +25,7 @@ let stopWhatsAppNotifications: (() => Promise<void>) | null = null;
 let stopEmployerProfileReminders: (() => Promise<void>) | null = null;
 let stopJobSeekerProfileReminders: (() => Promise<void>) | null = null;
 let stopJobPostIncompleteReminders: (() => Promise<void>) | null = null;
+let stopWebsiteKnowledge: (() => Promise<void>) | null = null;
 
 async function shutdown(signal: string, exitCode = 0): Promise<void> {
   if (isShuttingDown) {
@@ -64,6 +66,7 @@ async function shutdown(signal: string, exitCode = 0): Promise<void> {
     stopEmployerProfileReminders?.() ?? Promise.resolve(),
     stopJobSeekerProfileReminders?.() ?? Promise.resolve(),
     stopJobPostIncompleteReminders?.() ?? Promise.resolve(),
+    stopWebsiteKnowledge?.() ?? Promise.resolve(),
   ];
   stopJobTranslation = null;
   stopWhatsAppInbound = null;
@@ -71,6 +74,7 @@ async function shutdown(signal: string, exitCode = 0): Promise<void> {
   stopEmployerProfileReminders = null;
   stopJobSeekerProfileReminders = null;
   stopJobPostIncompleteReminders = null;
+  stopWebsiteKnowledge = null;
 
   const results = await Promise.allSettled(stops);
   for (const result of results) {
@@ -124,6 +128,7 @@ async function startServer(): Promise<void> {
   stopEmployerProfileReminders = startEmployerProfileCompletionReminderRuntime();
   stopJobSeekerProfileReminders = startJobSeekerProfileCompletionReminderRuntime();
   stopJobPostIncompleteReminders = startJobPostIncompleteReminderRuntime();
+  stopWebsiteKnowledge = startWebsiteKnowledgeRuntime();
 
   httpServer = app.listen(env.PORT, () => {
     console.log(`AsliJobs API running on port ${env.PORT}`);

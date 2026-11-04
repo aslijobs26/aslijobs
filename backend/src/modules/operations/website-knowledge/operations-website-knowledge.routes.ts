@@ -16,10 +16,46 @@ operationsWebsiteKnowledgeRouter.get(
   asyncHandler(operationsWebsiteKnowledgeController.status),
 );
 
+operationsWebsiteKnowledgeRouter.get(
+  "/documents",
+  requireFineOrCoarsePermission("whatsapp.view", "whatsapp", "read"),
+  asyncHandler(operationsWebsiteKnowledgeController.documents),
+);
+
+operationsWebsiteKnowledgeRouter.get(
+  "/ops",
+  requireFineOrCoarsePermission("whatsapp.view", "whatsapp", "read"),
+  asyncHandler(operationsWebsiteKnowledgeController.ops),
+);
+
 operationsWebsiteKnowledgeRouter.post(
   "/refresh",
   requireFineOrCoarsePermission("whatsapp.create", "whatsapp", "create"),
   asyncHandler(operationsWebsiteKnowledgeController.refresh),
+);
+
+operationsWebsiteKnowledgeRouter.post(
+  "/refresh-page",
+  requireFineOrCoarsePermission("whatsapp.create", "whatsapp", "create"),
+  asyncHandler(operationsWebsiteKnowledgeController.refreshPage),
+);
+
+operationsWebsiteKnowledgeRouter.post(
+  "/reindex",
+  requireFineOrCoarsePermission("whatsapp.create", "whatsapp", "create"),
+  asyncHandler(operationsWebsiteKnowledgeController.reindex),
+);
+
+operationsWebsiteKnowledgeRouter.post(
+  "/diagnose",
+  requireFineOrCoarsePermission("whatsapp.view", "whatsapp", "read"),
+  asyncHandler(operationsWebsiteKnowledgeController.diagnose),
+);
+
+operationsWebsiteKnowledgeRouter.post(
+  "/diagnose-send",
+  requireFineOrCoarsePermission("whatsapp.create", "whatsapp", "create"),
+  asyncHandler(operationsWebsiteKnowledgeController.diagnoseSend),
 );
 
 export default operationsWebsiteKnowledgeRouter;

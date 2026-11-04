@@ -223,6 +223,25 @@ const envSchema = z.object({
       .trim()
       .toLowerCase() === "true";
   }, z.boolean()),
+  /** Automatic scheduled sync (BullMQ + interval). Default off for local/dev. */
+  WEBSITE_KNOWLEDGE_AUTO_SYNC_ENABLED: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
+  WEBSITE_KNOWLEDGE_SYNC_AT_STARTUP: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
+  WEBSITE_KNOWLEDGE_SYNC_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .min(60_000)
+    .max(86_400_000)
+    .default(6 * 60 * 60_000),
   WEBSITE_KNOWLEDGE_FETCH_TIMEOUT_MS: z.coerce
     .number()
     .int()
@@ -230,6 +249,60 @@ const envSchema = z.object({
     .max(30_000)
     .default(8_000),
   WEBSITE_KNOWLEDGE_MAX_PAGES: z.coerce.number().int().min(1).max(80).default(40),
+  WEBSITE_KNOWLEDGE_MAX_RESPONSE_BYTES: z.coerce
+    .number()
+    .int()
+    .min(50_000)
+    .max(5_000_000)
+    .default(1_500_000),
+  WEBSITE_KNOWLEDGE_CRAWL_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
+  WEBSITE_KNOWLEDGE_MAX_CRAWL_DURATION_MS: z.coerce
+    .number()
+    .int()
+    .min(10_000)
+    .max(600_000)
+    .default(120_000),
+  WEBSITE_KNOWLEDGE_SYNC_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+  /** Dense hybrid retrieval (hash embeddings by default). Off by default. */
+  WEBSITE_KNOWLEDGE_SEMANTIC_ENABLED: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
+  WEBSITE_KNOWLEDGE_EMBEDDING_PROVIDER: z.string().trim().default("hash"),
+  /** Logical model id recorded on chunks (hash or Xenova model id). */
+  WEBSITE_KNOWLEDGE_EMBEDDING_MODEL: z
+    .string()
+    .trim()
+    .default("aslijobs-hash-v1"),
+  WEBSITE_KNOWLEDGE_EMBEDDING_BATCH_SIZE: z.coerce.number().int().min(1).max(64).default(16),
+  WEBSITE_KNOWLEDGE_RETRIEVAL_LIMIT: z.coerce.number().int().min(1).max(20).default(5),
+  WEBSITE_KNOWLEDGE_MIN_CONFIDENCE: z
+    .enum(["high", "low", "none"])
+    .default("low"),
+  /** Optional Playwright fallback for thin Next.js shells. Default off. */
+  WEBSITE_KNOWLEDGE_BROWSER_FALLBACK_ENABLED: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
+  /**
+   * Admin-only Meta WhatsApp E2E for knowledge diagnostics.
+   * Default false. Never auto-sends. Requires allowlisted recipients + confirm.
+   */
+  WHATSAPP_E2E_ENABLED: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    return String(value ?? "")
+      .trim()
+      .toLowerCase() === "true";
+  }, z.boolean()),
+  /**
+   * Comma/space-separated authorized test recipients (10-digit national or 91…).
+   * Empty = no live E2E sends possible.
+   */
+  WHATSAPP_E2E_ALLOWED_RECIPIENTS: z.string().optional().default(""),
   /** Safety-net TTL for the in-process job title and city catalog. Job saves invalidate sooner. */
   WHATSAPP_CATALOG_TTL_MS: z.coerce.number().int().min(15_000).max(600_000).default(60_000),
   /**

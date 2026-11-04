@@ -2,16 +2,21 @@ import mongoose from "mongoose";
 import { getLocalizedWebsiteUrl } from "../../utils/site-language-url.js";
 import { composeGroundedKnowledgeAnswer } from "./website-knowledge.answer.js";
 import { CORPUS_FAQS, CORPUS_SECTIONS } from "./website-knowledge.corpus.js";
+import { embedKnowledgeText } from "./website-knowledge.embeddings.js";
+import { bumpKnowledgeMetric, knowledgeHealthSnapshot } from "./website-knowledge.metrics.js";
 import {
   hashKnowledgeContent,
   normalizeKnowledgeText,
 } from "./website-knowledge.normalize.js";
 import {
+  blendSemanticHits,
   rankKnowledgeHits,
   type RetrievableFaq,
   type RetrievableSection,
+  type SemanticChunk,
 } from "./website-knowledge.retrieve.js";
 import {
+  getMemoryKnowledgeChunks,
   getMemoryKnowledgeDocuments,
   getMemoryKnowledgeFaqs,
   getMemoryKnowledgeSyncStatus,
@@ -23,10 +28,13 @@ import type {
   KnowledgeSyncStatus,
 } from "./website-knowledge.types.js";
 import {
+  WebsiteKnowledgeChunkModel,
   WebsiteKnowledgeDocumentModel,
   WebsiteKnowledgeFaqModel,
   WebsiteKnowledgeSyncModel,
 } from "./website-knowledge.model.js";
+import { env } from "../../config/env.js";
+import { getWebsiteKnowledgeWorkerStatus } from "./website-knowledge.queue.js";
 
 function mongoReady(): boolean {
   return mongoose.connection.readyState === 1;
@@ -78,6 +86,7 @@ async function loadFaqs(origin: string): Promise<RetrievableFaq[]> {
       language: faq.language,
       normalizedQuestion: faq.normalizedQuestion,
       active: faq.active,
+      persona: faq.persona,
     }));
   }
   if (mongoReady()) {
@@ -91,6 +100,7 @@ async function loadFaqs(origin: string): Promise<RetrievableFaq[]> {
           language: faq.language as RetrievableFaq["language"],
           normalizedQuestion: faq.normalizedQuestion,
           active: faq.active,
+          persona: faq.persona as KnowledgePersona | undefined,
         }));
       }
     } catch {
@@ -136,12 +146,54 @@ async function loadSections(origin: string): Promise<RetrievableSection[]> {
   return corpusAsSections(origin);
 }
 
+async function loadChunks(): Promise<SemanticChunk[]> {
+  const memory = getMemoryKnowledgeChunks();
+  if (memory.length > 0) {
+    return memory.map((chunk) => ({
+      sectionTitle: chunk.sectionTitle,
+      text: chunk.text,
+      sourceUrl: chunk.sourceUrl,
+      sourceType: chunk.sourceType,
+      language: chunk.language,
+      embedding: chunk.embedding,
+      path: chunk.path,
+    }));
+  }
+  if (!mongoReady() || !env.WEBSITE_KNOWLEDGE_SEMANTIC_ENABLED) return [];
+  try {
+    const rows = await WebsiteKnowledgeChunkModel.find({ active: true })
+      .select({
+        sectionTitle: 1,
+        text: 1,
+        sourceUrl: 1,
+        sourceType: 1,
+        language: 1,
+        embedding: 1,
+        path: 1,
+      })
+      .limit(500)
+      .lean();
+    return rows.map((chunk) => ({
+      sectionTitle: chunk.sectionTitle,
+      text: chunk.text,
+      sourceUrl: chunk.sourceUrl,
+      sourceType: chunk.sourceType as SemanticChunk["sourceType"],
+      language: chunk.language as SemanticChunk["language"],
+      embedding: chunk.embedding as number[] | undefined,
+      path: chunk.path,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export type KnowledgeAnswerTrace = KnowledgeAnswer & {
   intentPath: "platform_knowledge";
   topHitKind: KnowledgeHit["kind"] | "";
   topHitTitle: string;
   topHitScore: number;
   fallbackReason: string;
+  retrievalPath?: string;
 };
 
 export async function answerWebsiteKnowledgeQuestion(input: {
@@ -151,22 +203,55 @@ export async function answerWebsiteKnowledgeQuestion(input: {
   persona?: KnowledgePersona | null;
 }): Promise<KnowledgeAnswerTrace> {
   const origin = input.frontendOrigin.replace(/\/+$/, "");
-  const [faqs, sections] = await Promise.all([loadFaqs(origin), loadSections(origin)]);
-  const hits = rankKnowledgeHits({
+  const started = Date.now();
+  bumpKnowledgeMetric("knowledge_queries");
+  const [faqs, sections, chunks] = await Promise.all([
+    loadFaqs(origin),
+    loadSections(origin),
+    loadChunks(),
+  ]);
+  const lexicalHits = rankKnowledgeHits({
     query: input.query,
     faqs,
     sections,
     persona: input.persona,
-    limit: 5,
+    limit: env.WEBSITE_KNOWLEDGE_RETRIEVAL_LIMIT,
   });
 
+  let hits = lexicalHits;
+  let queryEmbedding: number[] | null = null;
+  if (env.WEBSITE_KNOWLEDGE_SEMANTIC_ENABLED) {
+    const embedded = await embedKnowledgeText({
+      text: input.query,
+      enabled: true,
+      provider: env.WEBSITE_KNOWLEDGE_EMBEDDING_PROVIDER,
+      asQuery: true,
+    });
+    queryEmbedding = embedded?.vector ?? null;
+    if (queryEmbedding) {
+      bumpKnowledgeMetric("semantic_retrieval");
+      hits = blendSemanticHits({
+        queryEmbedding,
+        chunks,
+        lexicalHits,
+        limit: env.WEBSITE_KNOWLEDGE_RETRIEVAL_LIMIT,
+      });
+    }
+  } else if (lexicalHits[0]?.kind === "faq") {
+    bumpKnowledgeMetric("faq_exact_or_alias");
+  } else if (lexicalHits.length > 0) {
+    bumpKnowledgeMetric("keyword_retrieval");
+  } else {
+    bumpKnowledgeMetric("no_result");
+  }
+
   const top = hits[0];
-  // Cache by query text so a prior FAQ answer cannot attach to a different question.
   const queryCacheKey = `${normalizeKnowledgeText(input.query)}|${input.language}`;
   if (top?.kind === "faq") {
     const contentHash = hashKnowledgeContent([top.sectionHeading, top.content, input.query]);
     const cached = faqAnswerCache.get(queryCacheKey);
     if (cached && cached.hash === contentHash) {
+      bumpKnowledgeMetric("answer_cache_hit");
       console.info(
         `[website-knowledge] lang=${input.language} persona=${input.persona ?? "general"} confidence=${cached.answer.confidence} score=${top.score} kind=faq title=${JSON.stringify(top.sectionHeading.slice(0, 80))} source=${cached.answer.sourceUrl} reason=faq_cache_hit`,
       );
@@ -177,6 +262,7 @@ export async function answerWebsiteKnowledgeQuestion(input: {
         topHitTitle: top.sectionHeading,
         topHitScore: top.score,
         fallbackReason: "faq_cache_hit",
+        retrievalPath: top.retrievalPath || "faq_exact",
       };
     }
   }
@@ -189,8 +275,6 @@ export async function answerWebsiteKnowledgeQuestion(input: {
     faqsUrl: siteUrl("/faqs", origin, input.language),
   });
 
-  // Prefer localized official page links while keeping English evidence text
-  // (outbound WhatsApp translation localizes the reply when needed).
   if (answer.sourceUrl) {
     try {
       const parsed = new URL(answer.sourceUrl);
@@ -215,6 +299,9 @@ export async function answerWebsiteKnowledgeQuestion(input: {
     });
   }
 
+  if (answer.confidence === "low") bumpKnowledgeMetric("low_confidence");
+  if (answer.confidence === "none") bumpKnowledgeMetric("no_result");
+
   const traced: KnowledgeAnswerTrace = {
     ...answer,
     intentPath: "platform_knowledge",
@@ -229,10 +316,11 @@ export async function answerWebsiteKnowledgeQuestion(input: {
           : top?.kind === "faq"
             ? "faq_match"
             : "section_match",
+    retrievalPath: top?.retrievalPath || (top?.kind === "faq" ? "faq_exact" : "keyword"),
   };
 
   console.info(
-    `[website-knowledge] lang=${input.language} persona=${input.persona ?? "general"} confidence=${traced.confidence} score=${traced.topHitScore} kind=${traced.topHitKind || "-"} title=${JSON.stringify(traced.topHitTitle.slice(0, 80))} source=${traced.sourceUrl} reason=${traced.fallbackReason}`,
+    `[website-knowledge] lang=${input.language} persona=${input.persona ?? "general"} confidence=${traced.confidence} score=${traced.topHitScore} kind=${traced.topHitKind || "-"} title=${JSON.stringify(traced.topHitTitle.slice(0, 80))} source=${traced.sourceUrl} reason=${traced.fallbackReason} path=${traced.retrievalPath} ms=${Date.now() - started}`,
   );
 
   return traced;
@@ -251,11 +339,20 @@ export async function getWebsiteKnowledgeSyncStatus(): Promise<KnowledgeSyncStat
       discovered: row.discovered,
       updated: row.updated,
       failed: row.failed,
+      unchanged: row.unchanged ?? 0,
+      removed: row.removed ?? 0,
+      fetched: row.fetched ?? 0,
       lastSuccessAt: new Date(row.lastSuccessAt).toISOString(),
       errors: (row as { syncErrors?: string[]; errors?: string[] }).syncErrors
         ?? (row as { errors?: string[] }).errors
         ?? [],
       crawlEnabled: Boolean(row.crawlEnabled),
+      sitemapFetched: Boolean(row.sitemapFetched),
+      durationMs: row.durationMs ?? 0,
+      status: (row.status as KnowledgeSyncStatus["status"]) || "idle",
+      lastError: row.lastError || "",
+      semanticIndexed: row.semanticIndexed ?? 0,
+      workerStatus: getWebsiteKnowledgeWorkerStatus(),
     };
   } catch {
     return null;
@@ -280,4 +377,85 @@ export function inferKnowledgePersona(input: {
     return "seeker";
   }
   return "general";
+}
+
+export async function listWebsiteKnowledgeDocuments(input: {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{
+  total: number;
+  items: Array<{
+    path: string;
+    title: string;
+    sectionHeading: string;
+    sourceType: string;
+    language: string;
+    active: boolean;
+    canonicalUrl: string;
+    fetchedAt?: string;
+    contentPreview: string;
+  }>;
+}> {
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(50, Math.max(1, input.pageSize ?? 20));
+  const memory = getMemoryKnowledgeDocuments();
+  if (memory.length > 0) {
+    const filtered = memory.filter((doc) => {
+      if (!input.q) return true;
+      const hay = `${doc.title} ${doc.sectionHeading} ${doc.path} ${doc.content}`.toLowerCase();
+      return hay.includes(input.q.toLowerCase());
+    });
+    const start = (page - 1) * pageSize;
+    return {
+      total: filtered.length,
+      items: filtered.slice(start, start + pageSize).map((doc) => ({
+        path: doc.path,
+        title: doc.title,
+        sectionHeading: doc.sectionHeading,
+        sourceType: doc.sourceType,
+        language: doc.language,
+        active: doc.active,
+        canonicalUrl: doc.canonicalUrl,
+        fetchedAt: doc.fetchedAt,
+        contentPreview: doc.content.slice(0, 240),
+      })),
+    };
+  }
+  if (!mongoReady()) return { total: 0, items: [] };
+  const filter: Record<string, unknown> = {};
+  if (input.q?.trim()) {
+    filter.$text = { $search: input.q.trim() };
+  }
+  const total = await WebsiteKnowledgeDocumentModel.countDocuments(filter);
+  const rows = await WebsiteKnowledgeDocumentModel.find(filter)
+    .sort({ updatedAt: -1 })
+    .skip((page - 1) * pageSize)
+    .limit(pageSize)
+    .lean();
+  return {
+    total,
+    items: rows.map((doc) => ({
+      path: doc.path,
+      title: doc.title,
+      sectionHeading: doc.sectionHeading,
+      sourceType: String(doc.sourceType),
+      language: String(doc.language),
+      active: Boolean(doc.active),
+      canonicalUrl: doc.canonicalUrl,
+      fetchedAt: doc.fetchedAt ? new Date(doc.fetchedAt).toISOString() : undefined,
+      contentPreview: String(doc.content || "").slice(0, 240),
+    })),
+  };
+}
+
+export function getWebsiteKnowledgeHealth(): Record<string, unknown> {
+  return knowledgeHealthSnapshot({
+    mongoReady: mongoReady(),
+    syncWorker: getWebsiteKnowledgeWorkerStatus(),
+    semanticEnabled: env.WEBSITE_KNOWLEDGE_SEMANTIC_ENABLED,
+    lastSyncStatus: getMemoryKnowledgeSyncStatus()?.status ?? null,
+    documentCount: getMemoryKnowledgeDocuments().length,
+    faqCount: getMemoryKnowledgeFaqs().length,
+  });
 }

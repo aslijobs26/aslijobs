@@ -1,0 +1,718 @@
+{
+  "generatedAt": "2026-11-04T05:46:29.847Z",
+  "source": "frontend/src/i18n/bundles/{privacy,terms,guidelines}.ts en",
+  "sectionCount": 79,
+  "sections": [
+    {
+      "id": "-privacy-policy-overview",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Overview",
+      "content": "AsliJobs respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how AsliJobs collects, uses, stores, shares, protects, and processes personal data when you use our website, WhatsApp-based job services, employer dashboard, admin-supported services, job alerts, video profile features, support channels, promotional services, and any other services offered by AsliJobs. By using AsliJobs, communicating with us on WhatsApp, registering as a job seeker, posting a job as an employer, submitting information, uploading a video profile, applying for a job, or using any of our services, you agree to the practices described in this Privacy Policy. If you do not agree with this Privacy Policy, you should not use AsliJobs or share your personal information with us.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-aboutAslijobs",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "About AsliJobs",
+      "content": "About AsliJobs AsliJobs is a WhatsApp-based job portal designed to connect India’s blue-collar and entry-level workforce with employers. We help job seekers discover nearby job opportunities, apply for jobs, receive interview updates, communicate in preferred languages, and connect with employers through simple and familiar digital channels such as WhatsApp. We also help employers post job openings, receive candidate applications, shortlist candidates, schedule interviews, manage hiring communication, run hiring campaigns, and track recruitment activity. For the purpose of this Privacy Policy, “AsliJobs,” “we,” “us,” or “our” refers to Propenu Solutions Private Limited, operating the AsliJobs platform.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-scope",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Scope of this Privacy Policy",
+      "content": "Scope of this Privacy Policy This Privacy Policy applies to all users of AsliJobs, including job seekers, employers, recruiters, business representatives, visitors, support users, and any person who interacts with AsliJobs through WhatsApp, website, dashboard, social media, forms, campaigns, or other supported channels. This Privacy Policy covers personal data collected through: AsliJobs website WhatsApp communication Job seeker registration Employer registration Job applications Candidate profiles Video profiles Transcripts and translations Employer dashboard Admin dashboard Support tickets Promotional campaigns Analytics and reporting tools Payment or subscription-related services Third-party tools used to operate the platform",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-personalInformation",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Personal Information We Collect",
+      "content": "Personal Information We Collect We collect information that is required to provide job search, hiring, communication, verification, support, analytics, and platform services.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-jobSeekerInformation",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Information Collected from Job Seekers",
+      "content": "Information Collected from Job Seekers When you register or use AsliJobs as a job seeker, we may collect: Full name Mobile number WhatsApp number Email address, if provided Gender, if required for job matching or employer preference Age or date of birth, if required for eligibility verification City, area, locality, pincode, district, and state Preferred language Job category preference Skills Education level Work experience Previous job details Expected salary Availability Preferred shift Preferred work location Application history Interview status Joining status Feedback and ratings Support requests Documents submitted by you, if any Video profile, if uploaded Transcript of video profile Translated transcript or summary Communication history with AsliJobs We may also collect any other information you voluntarily share with us through WhatsApp, forms, calls, support chats, or other communication channels.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-employerInformation",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Information Collected from Employers",
+      "content": "Information Collected from Employers When you register or use AsliJobs as an employer, recruiter, business owner, or company representative, we may collect: Company name Business name Contact person name Mobile number WhatsApp number Email address Business address City, area, locality, pincode, district, and state Industry type Company size Hiring requirements Job posting details Salary details Work location Interview location Employer verification documents, if required GST details, if applicable Payment and subscription details Job posting history Candidate shortlisting history Employer response rate Hiring performance data Support queries Communication history with AsliJobs We may also collect information required to verify employer identity, business authenticity, and job posting genuineness.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-jobPostingApplication",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Job Posting and Application Information",
+      "content": "Job Posting and Application Information When jobs are posted or applications are submitted, we may collect and process: Job title Job category Job description Salary range Work timing Shift details Benefits Openings Experience requirement Language requirement Location and locality Employer details Application status Candidate shortlist status Interview schedule Selection status Joining status Candidate feedback Employer feedback This information helps us connect job seekers with relevant employers and track the hiring journey.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-whatsappCommunication",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "WhatsApp Communication Data",
+      "content": "WhatsApp Communication Data Since AsliJobs is a WhatsApp-first platform, we may collect and process communication data related to your interaction with us on WhatsApp. This may include: Your WhatsApp number Messages sent by you Messages sent by AsliJobs Job alert responses Application confirmations Interview confirmations Support messages Language selection Menu selections Template message responses Delivery status Read status, where available Reply status Opt-in and opt-out preferences We use WhatsApp to send job alerts, application updates, interview reminders, employer responses, support replies, feedback requests, promotional messages where permitted, and service-related communication. Your use of WhatsApp is also subject to WhatsApp’s own terms, privacy policy, and platform rules.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-videoProfiles",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Video Profiles and Transcripts",
+      "content": "Video Profiles and Transcripts AsliJobs may allow job seekers to upload short video profiles to introduce themselves, explain their experience, demonstrate skills, or improve their chances of getting shortlisted. When you upload a video profile, we may collect: Video file Audio from the video Image or thumbnail from the video Spoken language Transcript generated from the video Translated transcript Summary of the video Skills or keywords identified from the video Admin review status Employer view status We may use AI-based tools or third-party service providers to generate transcripts, translations, summaries, or searchable text from video profiles. Transcripts and translations may not always be fully accurate due to accent, background noise, language differences, audio quality, or technical limitations. You may request correction where such support is available. Video profiles and transcripts may be shared with relevant employers, recruiters, and authorized platform users for hiring-related purposes.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-regionalLanguage",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Regional Language Information",
+      "content": "Regional Language Information AsliJobs supports regional language communication to make the platform accessible for users across India. We may collect your preferred language and use it to: Send job alerts in your preferred language Provide onboarding support Send interview reminders Share application updates Respond to support queries Generate translated transcripts Create language-wise reports Improve user experience Assign language-specific support agents Supported languages may include English, Hindi, Telugu, Tamil, Marathi, Bengali, Kannada, Malayalam, Gujarati, Punjabi, Odia, and other Indian languages as introduced from time to time.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-locationData",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Location and Locality Data",
+      "content": "Location and Locality Data AsliJobs may collect your location details such as city, area, locality, district, state, and pincode. We use this information to: Show nearby jobs Match candidates with local employers Filter job seekers area-wise or locality-wise Help employers find nearby candidates Send locality-specific job alerts Run area-based hiring campaigns Generate city-wise and locality-wise analytics Improve job matching and operational planning We may not always collect precise GPS location unless specifically required and consented to. Most location-based services may rely on the information you provide manually, such as city, area, locality, or pincode.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-deviceUsage",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Device, Technical, and Usage Information",
+      "content": "Device, Technical, and Usage Information When you visit our website, dashboard, or digital services, we may collect technical information such as: IP address Browser type Device type Operating system Pages visited Time spent on pages Referring links Login activity Session activity Error logs Cookies and similar identifiers Usage patterns Dashboard activity Campaign interaction data This helps us improve platform performance, prevent misuse, monitor security, understand user behaviour, and improve the overall experience.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-paymentBilling",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Payment and Billing Information",
+      "content": "Payment and Billing Information If you purchase employer plans, subscriptions, promotions, job posting services, hiring campaigns, or other paid services, we may collect: Name Company name Contact details Billing address GST details, if applicable Plan details Payment status Invoice details Transaction reference Subscription validity Renewal status Payment processing may be handled by third-party payment gateways. AsliJobs does not store full card numbers, UPI PINs, bank passwords, or other sensitive payment credentials unless legally permitted and technically required through compliant systems.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-howWeCollect",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "How We Collect Information",
+      "content": "How We Collect Information We may collect information directly from you when you: Start a WhatsApp chat with AsliJobs Register as a job seeker Register as an employer Submit a job application Post a job Upload a video profile Share documents Contact support Respond to job alerts Confirm interviews Submit feedback Purchase a paid service Use our website or dashboard Participate in campaigns or promotions We may also collect information from employers, recruiters, service providers, analytics tools, WhatsApp communication systems, payment providers, verification partners, support tools, and other platform integrations.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-howWeUse",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "How We Use Your Information",
+      "content": "How We Use Your Information AsliJobs uses personal information to provide, operate, improve, secure, and promote its services. We may use your information to: Create and manage your profile Send job alerts Match job seekers with relevant jobs Share applications with employers Help employers shortlist candidates Schedule interviews Send interview reminders Track hiring progress Confirm joining status Provide customer support Verify employers and job postings Review video profiles Generate transcripts and translations Improve regional language support Run locality-wise job matching Manage employer subscriptions Process payments Create invoices Run promotional campaigns Monitor platform performance Prevent fraud and misuse Detect fake jobs or suspicious activity Generate analytics and reports Improve user experience Comply with legal obligations Resolve disputes Enforce platform terms and policies",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-legalBasis",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Legal Basis for Processing",
+      "content": "Legal Basis for Processing We process personal data only for lawful purposes. Depending on the context, we may process your information based on: Your consent Your request to use AsliJobs services The need to provide job search or hiring services The need to share candidate information with employers after application The need to verify employers or jobs The need to provide support The need to prevent fraud, misuse, spam, or illegal activity Compliance with applicable laws Legitimate platform operations and service improvement Where consent is required, you may withdraw consent as permitted by applicable law. However, withdrawal of consent may affect your ability to use certain AsliJobs services.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-sharingEmployers",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Sharing of Information with Employers",
+      "content": "Sharing of Information with Employers When a job seeker applies for a job or expresses interest in a job opportunity, AsliJobs may share relevant candidate information with the employer. This may include: Name Mobile number Location Preferred language Job category Skills Experience Expected salary Availability Application status Video profile Transcript Translated summary Interview status Employers must use candidate information only for hiring-related purposes and must not misuse, sell, share, harass, spam, or contact candidates for unrelated purposes.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-sharingJobSeekers",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Sharing of Information with Job Seekers",
+      "content": "Sharing of Information with Job Seekers When a job seeker applies for or receives information about a job, AsliJobs may share relevant employer and job details with the job seeker. This may include: Company name Job title Work location Salary range Work timing Job description Interview details Contact details, where required Benefits Employer instructions AsliJobs may limit or withhold certain employer details if required for safety, verification, privacy, or operational reasons.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-sharingServiceProviders",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Sharing with Service Providers",
+      "content": "Sharing with Service Providers We may share information with trusted service providers who help us operate AsliJobs. These may include: WhatsApp Business service providers Cloud hosting providers Database providers AI transcription tools Translation tools Analytics tools Payment gateways Customer support tools Verification partners Email or SMS providers Campaign management tools Technology development partners Security and monitoring tools These service providers may process information only for the purposes required to provide their services to AsliJobs, subject to applicable contracts and privacy obligations.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-aiAutomation",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "AI, Automation, and Decision Support",
+      "content": "AI, Automation, and Decision Support AsliJobs may use AI and automation to improve job matching, generate transcripts, translate messages, summarize video profiles, suggest job categories, identify incomplete profiles, detect suspicious activity, and generate analytics. AI tools may assist with decision-making, but important hiring decisions are generally made by employers or authorized platform teams. AI-generated outputs such as transcripts, translations, summaries, skill tags, or match suggestions may not always be fully accurate. Users should review important information before relying on it. AsliJobs may use human review where necessary, especially for video profile approval, job approval, promotion approval, complaints, suspicious activity, and support escalations.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-promotionsCampaigns",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Promotions and Campaigns",
+      "content": "Promotions and Campaigns AsliJobs may use your information to send job alerts, hiring campaigns, locality-wise opportunities, language-based campaigns, employer promotions, referral campaigns, and service updates. Promotional messages may be sent only where permitted and based on applicable communication rules, user consent, or platform interaction. You may opt out of promotional messages where such an option is provided. However, you may still receive important service-related messages such as application updates, interview reminders, account notifications, support replies, or safety alerts.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-dataSecurity",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Data Security",
+      "content": "Data Security We take reasonable security measures to protect personal data from unauthorized access, misuse, loss, alteration, disclosure, or destruction. Security measures may include: Access controls Role-based permissions Password protection Secure cloud storage Encryption where applicable Admin activity monitoring Data backup Internal review processes Limited access to sensitive data Verification and approval workflows Security monitoring tools However, no digital platform, internet service, WhatsApp communication, or cloud system can be guaranteed to be completely secure. Users should also take care not to share sensitive information with unknown persons or suspicious contacts.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-dataRetention",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Data Retention",
+      "content": "Data Retention We retain personal information only for as long as necessary for the purposes described in this Privacy Policy, unless a longer retention period is required for legal, tax, accounting, fraud prevention, dispute resolution, security, or compliance purposes. Retention periods may depend on the type of user and data. For job seekers, profile data may be retained while the account is active and for a reasonable period after inactivity. For employers, business and transaction data may be retained for account management, legal, billing, and compliance purposes. Job applications, interview records, support tickets, campaign logs, payment records, and communication history may be retained for operational, legal, and dispute resolution purposes. Users may request deletion of personal data, subject to legal and operational limitations.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-userRights",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "User Rights",
+      "content": "User Rights Subject to applicable law, users may have the right to: Access their personal data Correct inaccurate or incomplete data Update profile information Withdraw consent where applicable Request deletion of personal data Request grievance redressal Opt out of certain promotional communications Ask questions about data processing To exercise these rights, users may contact AsliJobs through the contact details provided in this Privacy Policy. We may verify your identity before processing certain requests.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-correctionUpdate",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Correction and Update of Information",
+      "content": "Correction and Update of Information You are responsible for keeping your information accurate and updated. Job seekers should update their location, skills, experience, salary expectation, availability, and language preference whenever required. Employers should update job status, salary details, interview details, hiring status, company details, and contact information whenever required. Incorrect or outdated information may affect job matching, application results, interview communication, and hiring outcomes.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-consentOptOut",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Consent Withdrawal and Opt-Out",
+      "content": "Consent Withdrawal and Opt-Out You may withdraw consent or opt out of certain communications by using available optout options, messaging us on WhatsApp, or contacting support. If you withdraw consent for essential data processing, AsliJobs may not be able to provide certain services such as job alerts, applications, interview updates, employer communication, video profile access, or dashboard access. Withdrawal of consent will not affect processing already completed before the withdrawal, where such processing was lawful.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-childrensPrivacy",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Children’s Privacy",
+      "content": "Children’s Privacy AsliJobs is intended for users who are legally eligible to work and enter into employment or service-related arrangements under applicable laws. We do not knowingly collect personal data from children for unlawful employment or inappropriate job matching. Employers must not post jobs that involve illegal child labour or violate employment laws. If we discover that personal data of a child has been collected in violation of applicable law, we may delete or restrict such information.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-employerCandidateData",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Employer Use of Candidate Data",
+      "content": "Employer Use of Candidate Data Employers who receive candidate data from AsliJobs must use it only for genuine hiring purposes. Employers must not: Sell candidate data Share candidate data with unauthorized parties Use candidate data for unrelated marketing Harass or spam candidates Mislead candidates Demand illegal payments Use candidate data for fraud Discriminate unlawfully Store data longer than necessary Contact candidates outside legitimate hiring needs Employers are responsible for complying with applicable privacy, labour, employment, and communication laws.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-cookies",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Cookies and Tracking Technologies",
+      "content": "Cookies and Tracking Technologies Our website and dashboard may use cookies, pixels, tags, analytics tools, and similar technologies to improve user experience and platform performance. These technologies may help us: Remember preferences Improve website speed Understand visitor behaviour Measure campaign performance Detect technical issues Improve security Track conversions Analyze traffic sources You may manage cookie preferences through your browser settings. Disabling cookies may affect certain website or dashboard features.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-thirdPartyLinks",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Third-Party Links",
+      "content": "Third-Party Links AsliJobs may contain links to third-party websites, employer pages, payment gateways, WhatsApp, social media platforms, or external services. We are not responsible for the privacy practices, content, terms, security, or actions of third-party websites or services. Users should review the privacy policies of such third parties before sharing information with them.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-internationalTransfers",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "International Data Transfers",
+      "content": "International Data Transfers Some of our technology partners, cloud providers, WhatsApp-related service providers, AI tools, analytics tools, or support systems may process or store data on servers located outside India. Where required, AsliJobs will take reasonable steps to ensure that such processing is carried out in accordance with applicable data protection laws and appropriate safeguards.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-dataBreach",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Data Breach and Incident Handling",
+      "content": "Data Breach and Incident Handling If AsliJobs becomes aware of a data breach or security incident affecting personal data, we will take reasonable steps to investigate, contain, mitigate, and address the incident. Where required by applicable law, we may notify affected users, regulators, or relevant authorities. Users should immediately inform AsliJobs if they suspect unauthorized use of their account, misuse of their data, fake job activity, suspicious employer communication, or privacy-related issues.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-grievanceContact",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Grievance and Privacy Contact",
+      "content": "Grievance and Privacy Contact For privacy-related questions, correction requests, consent withdrawal, deletion requests, complaints, or grievances, you may contact: Privacy / Grievance Officer:Gandhi Chejarla Email:contact@aslijobs.com Phone / WhatsApp:9248719057 Address:3rd Floor, SV Chambers, Plot No. 193, Kavuri Hills, Madhapur, Hyderabad - 500081. Working Hours:24 hours We will make reasonable efforts to respond to privacy-related requests within a reasonable time as required under applicable law.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-changes",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Changes to this Privacy Policy",
+      "content": "Changes to this Privacy Policy AsliJobs may update this Privacy Policy from time to time to reflect changes in law, technology, platform features, business operations, or user requirements. The updated Privacy Policy may be posted on our website or shared through other appropriate channels. The “Last Updated” date will reflect the latest version. Your continued use of AsliJobs after the updated Privacy Policy is published means you accept the revised policy.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-privacy-policy-contact",
+      "path": "/privacy-policy",
+      "title": "Privacy Policy",
+      "sectionHeading": "Contact Information",
+      "content": "Contact Information For questions about this Privacy Policy or how AsliJobs handles your personal information, please contact: AsliJobs Legal Entity Name:Propenu Solutions Private Limited Email:contact@aslijobs.com Phone / WhatsApp:9248719057 Address:3rd Floor, SV Chambers, Plot No. 193, Kavuri Hills, Madhapur, Hyderabad - 500081. Website:https://www.aslijobs.com/",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-overview",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Overview",
+      "content": "Welcome to AsliJobs. These Terms and Conditions govern your access to and use of the AsliJobs website, WhatsApp-based services, employer dashboard, admin-supported services, communication channels, job listings, application features, promotional services, and any related products or services offered by AsliJobs. By using AsliJobs, registering with us, applying for a job, posting a job, communicating with us on WhatsApp, submitting any information, or accessing our services, you agree to be bound by these Terms and Conditions. If you do not agree with these Terms, you should not use the AsliJobs platform or services.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-about",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "About AsliJobs",
+      "content": "About AsliJobs AsliJobs is a WhatsApp-based job portal designed to connect India’s blue-collar and entry-level workforce with employers. The platform helps job seekers discover job opportunities, apply for jobs, receive updates, communicate in preferred languages, and connect with employers in a simple and familiar way through WhatsApp and other supported channels. AsliJobs also enables employers to post job openings, receive candidate applications, shortlist candidates, schedule interviews, promote hiring requirements, and manage hiring-related activities through platform tools and admin support. AsliJobs acts as a facilitator between job seekers and employers. AsliJobs is not the employer of any job seeker unless specifically stated in writing. AsliJobs does not guarantee employment, candidate selection, interview attendance, joining, job performance, salary payment, or hiring success.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-definitions",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Definitions",
+      "content": "Definitions In these Terms, “AsliJobs,” “we,” “us,” or “our” refers to the AsliJobs platform and its operators. “User,” “you,” or “your” refers to any person or entity accessing or using AsliJobs, including job seekers, employers, recruiters, business representatives, and visitors. “Job Seeker” refers to an individual using AsliJobs to search, apply for, or receive information about jobs. “Employer” refers to any company, business, recruiter, agency, contractor, shop, establishment, or individual hiring entity that posts jobs or seeks candidates through AsliJobs. “Platform” refers to the AsliJobs website, WhatsApp communication system, employer dashboard, admin dashboard, support channels, databases, campaigns, and related services. “Job Listing” means any job post, vacancy, hiring requirement, employment opportunity, or recruitment advertisement published or shared through AsliJobs. “Content” includes text, images, videos, documents, job posts, candidate profiles, video profiles, transcripts, messages, promotional material, and any other information submitted or displayed on the platform.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-eligibility",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Eligibility",
+      "content": "Eligibility You must be legally capable of entering into a binding agreement under applicable Indian laws to use AsliJobs. If you are using AsliJobs on behalf of a company, business, employer, agency, or other entity, you confirm that you are authorized to represent that entity and bind it to these Terms. Job seekers must provide accurate and truthful information about their identity, skills, experience, location, language preference, availability, salary expectation, and other relevant details. Employers must provide accurate and truthful information about their company, hiring requirements, salary, work location, job role, working hours, benefits, interview process, and employment terms. AsliJobs may refuse access, restrict services, suspend accounts, reject job postings, or remove users if false information, misuse, fraud, spam, abusive conduct, misleading activity, or violation of these Terms is found.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-account",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Account Registration and User Information",
+      "content": "Account Registration and User Information To use certain services, you may be required to register through WhatsApp, website forms, dashboard access, or admin-assisted onboarding. You agree to provide complete, correct, updated, and genuine information. You are responsible for ensuring that the mobile number, WhatsApp account, email address, and other contact details provided by you are active and accessible. You agree not to create fake profiles, duplicate accounts, misleading employer profiles, fraudulent job listings, or unauthorized accounts on behalf of another person or business. AsliJobs may verify user details, employer details, job details, documents, phone numbers, or other information where required. Verification by AsliJobs does not create any guarantee, warranty, or legal certification regarding a user, employer, job, candidate, or business.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-whatsapp",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "WhatsApp-Based Communication",
+      "content": "WhatsApp-Based Communication AsliJobs is designed as a WhatsApp-first platform. By interacting with AsliJobs on WhatsApp, submitting your number, clicking a WhatsApp link, opting in to receive job alerts, or using our services, you agree to receive service-related messages, job alerts, application updates, interview reminders, employer responses, support messages, promotional messages where permitted, and other platform communications. You may receive messages in your preferred language where language support is available. AsliJobs may use automated replies, chat flows, templates, admin responses, or support team communication to assist you. You are responsible for the accuracy of the information you share on WhatsApp. AsliJobs is not responsible for delays, message delivery failures, account restrictions, network issues, device issues, user-side deletion of chats, or third-party limitations related to WhatsApp or telecom providers. You may opt out of promotional or non-essential communications where such options are provided. However, opting out may affect your ability to receive job alerts, application updates, interview reminders, or other service-related information.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-jobSeeker",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Job Seeker Responsibilities",
+      "content": "Job Seeker Responsibilities Job seekers agree to provide genuine personal and professional information while using AsliJobs. This includes name, mobile number, location, preferred language, job category, skills, experience, expected salary, availability, and other profile details. Job seekers must not submit false experience, fake documents, misleading video profiles, abusive content, offensive language, incorrect identity details, or any information that may mislead employers or AsliJobs. Job seekers are responsible for checking job details carefully before applying, attending interviews on time, communicating honestly with employers, and making their own decision before accepting any job offer. AsliJobs does not guarantee that every application will result in shortlisting, interview, selection, offer, or joining. Employer decisions are independent and may depend on the employer’s requirements, candidate profile, availability, interview performance, background checks, or other factors. Job seekers should not make any payment to employers, agents, third parties, or unknown persons unless they independently verify the legitimacy of such payment. AsliJobs does not encourage or support fraudulent job charges, illegal placement fees, misleading deposits, or suspicious money requests. If a job seeker notices a fake job, misleading offer, unsafe work condition, payment demand, abusive employer, or suspicious activity, they should report it to AsliJobs immediately through the available support channels.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-employer",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Employer Responsibilities",
+      "content": "Employer Responsibilities Employers agree to provide true, complete, and updated hiring information. This includes company name, contact person, job title, job location, salary range, working hours, job type, number of openings, experience requirement, language requirement, benefits, interview process, and employment terms. Employers must not post fake jobs, misleading salary details, discriminatory job conditions, illegal employment opportunities, unsafe work requirements, fraudulent schemes, commission-based offers disguised as fixed salary jobs, or jobs that violate applicable laws. Employers are solely responsible for the accuracy of job postings, candidate selection, interview process, salary payment, employment offer, workplace safety, statutory compliance, and all legal obligations arising from employment or engagement of workers. Employers must communicate respectfully with candidates and must not harass, abuse, threaten, discriminate against, exploit, or mislead job seekers. Employers must update the status of jobs, applications, interviews, selections, and closures in a timely manner. AsliJobs may contact employers for status updates and may pause or remove inactive job posts. AsliJobs reserves the right to reject, edit, pause, suspend, or remove employer accounts or job listings that are incomplete, misleading, suspicious, inactive, illegal, harmful, or in violation of these Terms.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-jobListings",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Job Listings and Applications",
+      "content": "Job Listings and Applications AsliJobs may review, approve, reject, edit, pause, promote, or remove job listings at its discretion. Approval of a job listing does not mean AsliJobs guarantees the employer, role, salary, working conditions, or final employment outcome. Job listings may be shared through WhatsApp, website pages, employer dashboards, job alerts, promotional campaigns, social media, or other channels. Job seekers may apply to job listings through WhatsApp, platform forms, adminassisted processes, or other supported methods. Once an application is submitted, AsliJobs may share relevant candidate information with the employer for hiring purposes. Employers may shortlist, reject, schedule interviews, select, or close applications based on their hiring requirements. AsliJobs may assist in communication, coordination, reminders, and tracking but does not control the final hiring decision. Job seekers and employers are responsible for independently verifying important details before proceeding with interviews, joining, or hiring.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-verification",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Verification",
+      "content": "Verification AsliJobs may conduct verification checks for employers, job posts, user profiles, phone numbers, documents, job details, business identity, or other information where required. Verification may include document checks, phone verification, business checks, manual review, admin approval, or other reasonable methods. However, verification is not a legal guarantee of authenticity, financial status, compliance, employment quality, background, or future conduct. AsliJobs may mark certain employers, jobs, or profiles as verified, approved, pending, rejected, or under review based on internal processes. AsliJobs may revoke verification or approval if new concerns arise. Users must not misuse verified status, badges, approvals, profile labels, or platform trust indicators.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-videoProfiles",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Video Profiles and Transcripts",
+      "content": "Video Profiles and Transcripts AsliJobs may allow job seekers to upload short video profiles to introduce themselves, explain their experience, demonstrate skills, or support their job applications. By uploading a video profile, you confirm that the video belongs to you, is genuine, does not violate any third-party rights, does not contain abusive or unlawful content, and may be reviewed, processed, transcribed, translated, displayed, or shared with relevant employers and platform users for hiring-related purposes. AsliJobs may generate transcripts, summaries, translations, or searchable text from video profiles. Transcripts and translations may contain errors due to language, accent, audio quality, background noise, or technical limitations. Users may request correction where such support is available. AsliJobs may reject, remove, hide, or disable any video profile or transcript that contains misleading information, offensive content, unlawful material, poor quality, impersonation, spam, or content unrelated to hiring.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-languageSupport",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Regional Language Support",
+      "content": "Regional Language Support AsliJobs may provide communication, job alerts, support, transcripts, and platform content in multiple Indian languages such as Hindi, Telugu, Tamil, Marathi, Bengali, Kannada, Malayalam, Gujarati, Punjabi, Odia, English, and others as supported from time to time. Language support is provided for accessibility and convenience. Translations may not always be exact, complete, or legally precise. In case of conflict between translated content and official English terms, the English version may prevail unless otherwise stated. Users are encouraged to contact support if they do not understand any job detail, employer message, policy, or platform communication.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-promotions",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Promotions and Campaigns",
+      "content": "Promotions and Campaigns AsliJobs may offer promotional services for employers, job listings, hiring campaigns, urgent job alerts, locality-based promotions, language-based campaigns, featured jobs, sponsored listings, or similar visibility services. All promotions may be subject to review and approval by AsliJobs. AsliJobs may use a multi-level approval process involving marketing review, operations review, content or language review, compliance review, and final admin approval before publishing or sending a campaign. Employers are responsible for ensuring that promoted job details are accurate, lawful, genuine, and not misleading. AsliJobs may reject or stop any promotion that contains incorrect salary, false urgency, misleading claims, discriminatory content, spam, or suspicious hiring activity. Promotion performance may vary depending on location, job category, audience, timing, message quality, candidate availability, and other factors. AsliJobs does not guarantee a fixed number of applications, interviews, hires, conversions, or joinings from any promotion.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-payments",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Payments, Fees, and Refunds",
+      "content": "Payments, Fees, and Refunds Certain services on AsliJobs may be free, while others may be paid. Paid services may include employer subscriptions, job posting plans, promoted job listings, hiring campaigns, candidate access, featured visibility, support packages, or other services introduced from time to time. All fees, payment terms, validity periods, service inclusions, and renewal terms will be communicated before purchase wherever applicable. Unless specifically stated otherwise in writing, payments made for subscriptions, promotions, campaigns, job postings, or other paid services may be non-refundable once the service is activated, used, scheduled, published, or delivered. AsliJobs may revise pricing, plans, features, or payment terms from time to time. Any changes will apply prospectively unless otherwise stated. Users are responsible for providing correct billing details, payment information, GST details where applicable, and other required information.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-prohibited",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Prohibited Activities",
+      "content": "Prohibited Activities Users must not use AsliJobs for any unlawful, fraudulent, harmful, abusive, misleading, or unauthorized activity. Users must not post fake jobs, fake profiles, misleading salaries, scam offers, adult content, hate speech, political propaganda, illegal work, discriminatory hiring conditions, spam, malware, phishing links, unauthorized advertisements, or content that violates applicable laws. Users must not scrape data, copy platform content, misuse candidate data, sell user information, send unauthorized bulk messages, reverse engineer platform systems, interfere with platform security, impersonate another person, or attempt unauthorized access to AsliJobs systems. Employers must not misuse candidate information for non-hiring purposes, harassment, marketing without consent, resale of data, or any unlawful activity. Any violation may result in removal of content, account suspension, service restriction, legal action, or reporting to appropriate authorities.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-privacy",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Candidate and Employer Data Usage",
+      "content": "Candidate and Employer Data Usage Job seekers understand that when they apply for a job, relevant profile information may be shared with employers for recruitment purposes. This may include name, mobile number, location, job category, skills, experience, expected salary, availability, language preference, video profile, transcript, and application status. Employers agree to use candidate information only for legitimate hiring-related purposes and to protect such information from misuse, unauthorized sharing, or unlawful processing. AsliJobs may use platform data to operate services, improve job matching, send alerts, provide support, generate analytics, prevent fraud, verify users, improve campaigns, and comply with legal obligations. Personal data will be handled in accordance with the AsliJobs Privacy Policy. Users should read the Privacy Policy carefully to understand how personal data is collected, used, stored, shared, and protected.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-thirdParty",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Third-Party Services",
+      "content": "Third-Party Services AsliJobs may rely on third-party services such as WhatsApp, payment gateways, cloud hosting providers, analytics tools, AI transcription tools, translation tools, customer support tools, email/SMS providers, and other technology partners. Use of such third-party services may be subject to their own terms, policies, limitations, availability, and charges. AsliJobs is not responsible for failures, delays, downtime, policy changes, account restrictions, delivery issues, or errors caused by third-party services.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-support",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Support and Grievance Redressal",
+      "content": "Support and Grievance Redressal Users may contact AsliJobs for support related to job applications, employer issues, fake job complaints, account access, language support, profile updates, video profile issues, transcript corrections, payments, promotions, or other platform matters. AsliJobs may categorize, assign, review, escalate, resolve, or close support requests based on the nature of the issue. For complaints or grievances, users may contact: Grievance Officer / Support Contact:Gandhi Chejarla Email:contact@aslijobs.com Phone / WhatsApp:9248719057 Address:3rd Floor, SV Chambers, Plot No. 193, Kavuri Hills, Madhapur, Hyderabad - 500081. Working Hours:24 hours AsliJobs will make reasonable efforts to address user complaints within a reasonable time, subject to the nature of the complaint and information provided by the user.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-availability",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Platform Availability",
+      "content": "Platform Availability AsliJobs aims to provide reliable access to its services. However, the platform may be unavailable or interrupted due to maintenance, upgrades, technical issues, internet failures, WhatsApp limitations, third-party failures, security issues, or events beyond our control. AsliJobs does not guarantee uninterrupted, error-free, secure, or always available service.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-intellectualProperty",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Intellectual Property",
+      "content": "Intellectual Property All rights in the AsliJobs name, logo, brand identity, website content, dashboard designs, workflows, technology, text, graphics, templates, campaigns, software, databases, and other platform materials belong to AsliJobs or its licensors. Users may not copy, reproduce, modify, distribute, sell, misuse, or create derivative works from AsliJobs content or platform materials without prior written permission. Users retain ownership of content they submit, but grant AsliJobs a limited right to use, process, display, share, translate, transcribe, promote, and store such content for operating and improving the platform and providing services.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-disclaimers",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Disclaimers",
+      "content": "Disclaimers AsliJobs provides a platform to connect job seekers and employers. AsliJobs does not guarantee that job seekers will get jobs, employers will find suitable candidates, interviews will happen, candidates will join, or employment relationships will be successful. Job details such as salary, location, timing, benefits, responsibilities, and working conditions are generally provided by employers. While AsliJobs may review or verify certain details, users must independently confirm important information before proceeding. AsliJobs is not responsible for disputes between job seekers and employers, including salary disputes, workplace issues, joining issues, background checks, attendance, performance, termination, employment conditions, or statutory obligations. Nothing on the platform should be considered legal, financial, employment, tax, or professional advice.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-liability",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Limitation of Liability",
+      "content": "Limitation of Liability To the maximum extent permitted by law, AsliJobs shall not be liable for indirect, incidental, special, consequential, punitive, or exemplary damages, including loss of income, loss of opportunity, loss of data, business interruption, failed hiring, failed joining, reputational loss, or claims arising from user conduct, employer conduct, thirdparty services, job listings, interviews, or platform use. AsliJobs’ total liability, if any, shall be limited to the amount paid by the user to AsliJobs for the specific service giving rise to the claim, or a reasonable amount as determined under applicable law where no payment was made.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-indemnity",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Indemnity",
+      "content": "Indemnity You agree to indemnify and hold harmless AsliJobs, its founders, directors, employees, partners, service providers, and affiliates from any claims, losses, damages, liabilities, penalties, costs, or expenses arising from your use of the platform, your violation of these Terms, your submitted content, your job postings, your misuse of candidate or employer data, your violation of law, or your dispute with another user.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-termination",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Suspension and Termination",
+      "content": "Suspension and Termination AsliJobs may suspend, restrict, deactivate, or terminate access to the platform or any service if a user violates these Terms, provides false information, posts misleading jobs, misuses data, engages in fraud, causes harm to other users, fails verification, abuses support, violates platform policies, or creates legal or reputational risk for AsliJobs. Users may stop using AsliJobs at any time. Certain data may be retained where required for legal, operational, security, fraud prevention, dispute resolution, or compliance purposes.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-changes",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Changes to Terms",
+      "content": "Changes to Terms AsliJobs may update or modify these Terms from time to time. Updated Terms may be posted on the website, shared through platform notices, or communicated through other appropriate channels. Continued use of AsliJobs after changes are published will mean that you accept the updated Terms.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-governingLaw",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Governing Law and Jurisdiction",
+      "content": "Governing Law and Jurisdiction These Terms & Conditions shall be governed by and interpreted in accordance with the laws of India. All disputes, claims, or legal proceedings arising out of or relating to the use of the AsliJobs Platform or Services shall be subject to the exclusive jurisdiction of the courts located in Hyderabad, Telangana, India.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-terms-and-conditions-contact",
+      "path": "/terms-and-conditions",
+      "title": "Terms & Conditions",
+      "sectionHeading": "Contact Information",
+      "content": "Contact Information For any questions, complaints, support requests, or legal notices related to these Terms, please contact: AsliJobs Email:contact@aslijobs.com Phone / WhatsApp:9248719057 Address:3rd Floor, SV Chambers, Plot No. 193, Kavuri Hills, Madhapur, Hyderabad - 500081. Website:https://www.aslijobs.com/",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-introduction",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Introduction",
+      "content": "Introduction AsliJobs is built to make job search and hiring simple, genuine, and accessible for India’s blue-collar and entry-level workforce. These guidelines are created to help job seekers, employers, recruiters, admins, and support teams use the platform responsibly and safely. The purpose of these guidelines is to maintain trust, reduce fake job activity, improve communication, support regional language users, and create a reliable hiring experience for everyone using AsliJobs through WhatsApp, website, dashboard, or any other official channel. All users are expected to follow these guidelines while using AsliJobs.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-generalPlatform",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "General Platform Guidelines",
+      "content": "General Platform Guidelines Users must provide correct, genuine, and updated information while using AsliJobs. Fake profiles, misleading details, duplicate accounts, false job posts, spam activity, abusive communication, or misuse of the platform are not allowed. AsliJobs should be used only for genuine job search, hiring, job posting, application tracking, interview coordination, candidate communication, and related employment purposes. Users must communicate respectfully with each other. Any form of abusive language, harassment, discrimination, threats, fraud, or inappropriate behaviour may lead to account restriction, job post removal, or permanent suspension from the platform. AsliJobs may review, verify, approve, reject, edit, pause, remove, or restrict any profile, job post, video profile, transcript, campaign, or message that violates platform rules or affects user safety.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-jobSeeker",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Job Seeker Guidelines",
+      "content": "Job Seeker Guidelines Job seekers should share accurate personal and professional information such as name, mobile number, location, preferred language, job category, skills, experience, salary expectation, availability, and preferred work area. Job seekers should apply only for jobs they are genuinely interested in and available to attend. They should carefully read the job location, salary, timing, responsibilities, experience requirements, and interview details before applying. Once shortlisted, job seekers should respond to interview messages on time. If they cannot attend an interview, they should inform AsliJobs or the employer in advance. Job seekers should not share false experience, fake documents, misleading video profiles, incorrect location details, or wrong availability information. Job seekers should not pay money to unknown persons, fake agents, or suspicious employers for job confirmation. If anyone asks for payment, deposit, registration fee, training fee, or any suspicious amount, the job seeker should report it to AsliJobs immediately. Job seekers should use respectful language while communicating with employers, admins, or support teams.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-employer",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Employer Guidelines",
+      "content": "Employer Guidelines Employers must post only genuine job openings with correct and complete information. Every job post should clearly mention the job title, company name, work location, salary range, job role, working hours, experience required, number of openings, benefits, and interview process. Employers must not post fake jobs, misleading salary details, incorrect locations, unclear work conditions, illegal job offers, commission-only jobs disguised as salary jobs, or jobs that involve unsafe or unlawful work. Employers must communicate professionally with candidates. They should not harass, mislead, abuse, threaten, discriminate against, or exploit any job seeker. Employers should update the status of applications, shortlisted candidates, interviews, selections, rejections, and job closures on time. Employers must use candidate information only for hiring purposes. Candidate phone numbers, profiles, videos, transcripts, and personal details should not be shared, sold, misused, or used for unrelated marketing. Employers must inform AsliJobs if a position is filled, paused, cancelled, or no longer available.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-jobPosting",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Job Posting Guidelines",
+      "content": "Job Posting Guidelines Every job post on AsliJobs should be clear, truthful, and easy to understand. A good job post should include all important details that help a job seeker make the right decision. A job post should include the job title, company or employer name, salary range, work location, area or locality, working hours, experience requirement, language preference, benefits, interview location, and joining requirement. Job posts should not contain false claims, exaggerated salary promises, incomplete details, spam links, offensive language, discriminatory requirements, or misleading information. AsliJobs may reject or ask for changes in job posts that are unclear, incomplete, suspicious, unsafe, misleading, or not suitable for the platform.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-whatsappCommunication",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "WhatsApp Communication Guidelines",
+      "content": "WhatsApp Communication Guidelines AsliJobs uses WhatsApp to make job search and hiring easier. Users may receive job alerts, application updates, interview reminders, employer responses, support messages, and other service-related communication through WhatsApp. Users should reply clearly to WhatsApp messages and avoid sending spam, repeated unrelated messages, abusive content, or false information. Job seekers should use the correct options while applying for jobs, confirming interviews, updating profile details, or asking for support. Employers should ensure that WhatsApp communication related to hiring is professional, clear, and relevant. AsliJobs may use automated messages, admin replies, templates, and support responses to improve communication.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-regionalLanguage",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Regional Language Guidelines",
+      "content": "Regional Language Guidelines AsliJobs supports regional language communication to make the platform easier for users across India. Users may choose their preferred language for job alerts, support messages, interview updates, and other communication. Users should select the language they are most comfortable with so that AsliJobs can communicate clearly. Employers should keep job descriptions simple and easy to translate. They should avoid complicated words, unclear terms, or confusing salary details. AsliJobs may translate job posts, candidate details, support messages, transcripts, or communication content for user convenience. Translations should be used as support content, and users may ask for clarification if something is unclear.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-videoProfile",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Video Profile Guidelines",
+      "content": "Video Profile Guidelines Job seekers may be allowed to upload video profiles to introduce themselves, explain their work experience, or showcase their skills. Video profiles should be clear, respectful, and related to employment. The candidate should speak about their name, location, experience, job preference, skills, availability, and expected role. Video profiles should not contain abusive language, false claims, unrelated content, personal attacks, political content, religious hate, adult content, unsafe behaviour, or misleading information. Candidates should upload only their own video. Impersonation or uploading someone else’s video is not allowed. AsliJobs may review, approve, reject, hide, or remove video profiles that do not follow platform guidelines.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-transcript",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Transcript Guidelines",
+      "content": "Transcript Guidelines AsliJobs may generate transcripts from candidate video profiles to make the content accessible to employers, admins, and users who prefer reading instead of watching videos. Transcripts may be generated in the original language and may also be translated into other supported languages. Users should understand that transcripts and translations may sometimes have small errors due to pronunciation, accent, audio quality, background noise, or language differences. Candidates may request correction if their transcript contains important mistakes. Employers should use transcripts only for hiring-related understanding and should not misuse or share them outside the hiring process.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-applicationInterview",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Application and Interview Guidelines",
+      "content": "Application and Interview Guidelines Job seekers should apply only to suitable jobs and should avoid applying randomly to every job without checking details. Employers should review applications within a reasonable time and update candidates or AsliJobs regarding shortlisting, rejection, interview scheduling, selection, or closure. Once an interview is scheduled, both job seekers and employers should respect the confirmed time and location. If an interview is cancelled, delayed, or rescheduled, the concerned party should inform AsliJobs or the other party as early as possible. Repeated no-shows, fake interview scheduling, or careless application behaviour may affect platform access.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-promotion",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Promotion Guidelines",
+      "content": "Promotion Guidelines Employers may use AsliJobs promotional services to highlight job posts, urgent hiring requirements, locality-based campaigns, language-based campaigns, or employer visibility. All promotions must be truthful, clear, and based on genuine hiring requirements. Promotions should not include fake urgency, misleading salary details, exaggerated promises, false benefits, spam content, or unverified job claims. Every promotion may go through a multi-factor approval process before being published. This may include marketing review, operations review, language review, compliance review, and final admin approval. AsliJobs may reject, pause, edit, or remove any promotion that does not meet platform standards.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-support",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Support Guidelines",
+      "content": "Support Guidelines Users can contact AsliJobs support for help with job applications, employer issues, interview updates, fake job complaints, profile updates, language support, video profile issues, transcript corrections, payment issues, or promotion-related concerns. Users should explain their issue clearly and provide the required details such as mobile number, job title, employer name, application status, screenshot, or message reference where applicable. Support requests should not contain abusive language, spam, false complaints, or repeated unrelated messages. AsliJobs will make reasonable efforts to review and resolve support issues based on priority and available information.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-safety",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Safety Guidelines",
+      "content": "Safety Guidelines Job seekers should be careful while attending interviews or joining jobs. They should verify important details such as company name, location, salary, job role, work timing, and reporting person before proceeding. Job seekers should avoid sharing sensitive personal information unless necessary for genuine hiring purposes. Users should immediately report suspicious employers, fake jobs, payment demands, unsafe interview locations, abusive communication, or misleading job offers. Employers must provide safe, lawful, and respectful work opportunities. Any job post or employer activity that appears unsafe, illegal, misleading, or exploitative may be removed from AsliJobs.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-adminOperations",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Admin and Operations Guidelines",
+      "content": "Admin and Operations Guidelines The AsliJobs admin and operations team should review employer profiles, job posts, candidate issues, support tickets, promotions, video profiles, transcripts, and platform activity regularly. Admins should ensure that job posts are clear, genuine, and complete before approval. Operations teams should monitor pending applications, employer response delays, interview updates, joining confirmations, support complaints, and suspicious activity. Support teams should handle user queries respectfully and try to resolve issues in the user’s preferred language wherever possible. Marketing teams should ensure that promotions are accurate, approved, and not misleading before publishing. All internal teams should use platform data responsibly and only for official AsliJobs work.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-contentRemoval",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Content Removal and Account Restriction",
+      "content": "Content Removal and Account Restriction AsliJobs may remove content, reject job posts, hide video profiles, restrict accounts, pause employer access, or suspend users if any guideline is violated. Reasons for restriction may include fake information, misleading job posts, spam, abusive communication, repeated complaints, suspicious activity, payment fraud, candidate data misuse, unsafe job offers, or violation of platform policies. AsliJobs may also take action based on user complaints, admin review, verification failure, legal requirements, or safety concerns.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-reportingViolations",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Reporting Violations",
+      "content": "Reporting Violations Users should report any violation of these guidelines to AsliJobs support. This includes fake jobs, misleading salary details, suspicious payment requests, employer misconduct, candidate misconduct, spam, abusive language, false profiles, unsafe interview locations, or misuse of personal data. Reports may be reviewed by the AsliJobs team, and necessary action may be taken based on available information.",
+      "sourceType": "policy",
+      "persona": "general"
+    },
+    {
+      "id": "-guidelines-finalNote",
+      "path": "/guidelines",
+      "title": "Guidelines",
+      "sectionHeading": "Final Note",
+      "content": "Final Note AsliJobs is created to make job search and hiring easier, safer, and more accessible for India’s workforce. These guidelines help maintain a platform where job seekers can find genuine opportunities and employers can connect with suitable candidates in a simple, respectful, and reliable way. By using AsliJobs, every user plays a role in keeping the platform trustworthy, helpful, and workforce-friendly.",
+      "sourceType": "policy",
+      "persona": "general"
+    }
+  ]
+}
