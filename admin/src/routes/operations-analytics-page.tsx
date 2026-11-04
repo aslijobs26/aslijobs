@@ -75,8 +75,8 @@ export function OperationsAnalyticsPage() {
     : "last_6_months";
 
   const [exporting, setExporting] = useState(false);
-  const [exportFormat, setExportFormat] = useState<"csv" | "xlsx" | "pdf">("csv");
-  const [report, setReport] = useState("summary");
+  const exportFormat = "csv" as const;
+  const report = "summary";
   const [actionError, setActionError] = useState<string | null>(null);
   const [drilldown, setDrilldown] = useState<DrilldownMetric | null>(null);
 
