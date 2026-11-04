@@ -676,9 +676,13 @@ export function understandLocally(
   const profileStatusAsk = looksLikeProfileStatusQuestion(text);
   const seekerRoleCue = chooseAccountRole(text) === "seeker";
   const explicitPostJob = looksLikePostJobRequest(text);
+  const employerInfoQuestion = looksLikeEmployerInformationQuestion(text);
   // Explicit "post a job" stays hire. Role+job phrases ("electrician job") never become POST_JOB.
+  // Informational employer FAQ/pricing/guide questions must not become POST_JOB.
   const hireIntent =
     !seekerRoleCue &&
+    !employerInfoQuestion &&
+    !platformKnowledge &&
     (explicitPostJob ||
       (chooseAccountRole(text) === "employer" &&
         !(category && (mentionsJob || mentionsRequest))));
@@ -965,7 +969,11 @@ const JOB_SEARCH_INTENTS = new Set<BotIntent>(["JOB_SEARCH", "JOB_COUNT", "JOB_D
 export function looksLikeOwnPostedJobsQuestion(text: string): boolean {
   const seekerApply = /apply\s*ches|apply\s*chey|applied|అప్లై|చేశా/i.test(text);
   if (seekerApply) return false;
-  return /post\s*chesina|nenu\s+post|i posted|my posted|na posted|posted jobs?|which jobs did i post|\bna jobs\b|నా\s*jobs|\bmy jobs\b|నా posted|పోస్ట్|job postings?|my\s+vacanc/i.test(
+  // Public pricing/FAQ wording ("is job posting free?") is not an own-jobs question.
+  if (looksLikeEmployerInformationQuestion(text) || looksLikePricingQuestion(text)) {
+    return false;
+  }
+  return /post\s*chesina|nenu\s+post|i posted|my posted|na posted|posted jobs?|which jobs did i post|\bna jobs\b|నా\s*jobs|\bmy jobs\b|నా posted|పోస్ట్|my\s+job\s+postings?|my\s+vacanc/i.test(
     text,
   );
 }
@@ -3567,9 +3575,13 @@ export function looksLikeContactEmployerGuide(text: string): boolean {
 }
 
 export function looksLikeHowToPostJobGuide(text: string): boolean {
-  // Guide / explain questions only. English "How can I post a job?" stays POST_JOB
-  // (hire CTA). Romanized ela/kaise/epdi and "employer guide" use documentation.
-  if (/employer\s+guide|job\s+posting\s+process|how\s+do\s+employers\s+post/i.test(text)) {
+  // How-to / guide explanations use documentation. Imperative hire CTAs
+  // ("I want to post a job", "Post a job") stay POST_JOB via looksLikePostJobRequest.
+  if (
+    /employer\s+guide|job\s+posting\s+process|how\s+(?:do\s+(?:i|we|employers)\s+|can\s+(?:i|we)\s+|to\s+)?post\s+(?:a\s+)?jobs?|how\s+(?:do\s+(?:i|we)\s+|can\s+(?:i|we)\s+|to\s+)?publish\s+(?:a\s+)?jobs?/i.test(
+      text,
+    )
+  ) {
     return true;
   }
   return /(?:job|jobs?|employer).{0,40}(?:ela|epdi|kaise|hege|engane|ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ).{0,24}(?:post|publish)|(?:ela|epdi|kaise|hege|engane|ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ).{0,24}(?:post|publish).{0,24}(?:job|jobs?)|aslijobs.{0,48}(?:post|publish).{0,24}(?:job|jobs?).{0,24}(?:ela|epdi|kaise|hege|engane|ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ)|aslijobs.{0,48}(?:ela|epdi|kaise|hege|engane|ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ).{0,24}(?:post|publish)/i.test(
@@ -3578,9 +3590,38 @@ export function looksLikeHowToPostJobGuide(text: string): boolean {
 }
 
 export function looksLikePricingQuestion(text: string): boolean {
-  return /pricing|price\s*plans?|subscription\s*plans?|hiring\s*plans?|plans?\s*(?:enti|ఏంటి|क्या|enna|ಏನು|എന്ത്)|plan\s*(?:entha|ఎంత|कितना)|प्राइसिंग|விலை\s*திட்ட|ಬೆಲೆ\s*ಯೋಜನ|വില\s*പദ്ധതി/i.test(
+  return /pricing|price\s*plans?|subscription\s*plans?|hiring\s*plans?|employer\s+pricing|plans?\s*(?:enti|ఏంటి|क्या|enna|ಏನು|എന്ത്)|plan\s*(?:entha|ఎంత|कितना)|प्राइसिंग|விலை\s*திட்ட|ಬೆಲೆ\s*ಯೋಜನ|വില\s*പദ്ധതി|employer\s+services?\s+(?:free|paid)|(?:free|paid)\s+(?:or\s+)?(?:paid|free).{0,24}employer|is\s+(?:job\s+)?posting\s+free|how\s+much\s+(?:does\s+)?(?:job\s+)?posting\s+cost|job\s+posting\s+cost|posting\s+(?:a\s+)?job\s+cost/i.test(
     text,
   );
+}
+
+export function looksLikeJobCategoriesQuestion(text: string): boolean {
+  return /which\s+job\s+categor(?:y|ies)|job\s+categor(?:y|ies)\s+(?:are\s+)?available|available\s+job\s+categor|(?:what|which)\s+categor(?:y|ies).{0,24}(?:job|aslijobs)|aslijobs.{0,40}categor/i.test(
+    text,
+  );
+}
+
+export function looksLikePublicContactQuestion(text: string): boolean {
+  const trimmed = text.trim();
+  if (/^(phone|email|support|contact|call|mobile|number|helpline)\s*[?!.]*$/i.test(trimmed)) {
+    return true;
+  }
+  return /(?:support|contact|aslijobs).{0,24}(?:phone|email|number|call|mobile)|(?:phone|email|number|call|mobile).{0,24}(?:support|contact|aslijobs)|how\s+(?:do\s+i\s+|can\s+i\s+|to\s+)?contact\s+aslijobs|aslijobs\s+(?:phone|email|number|helpline)/i.test(
+    trimmed,
+  );
+}
+
+/** Employer documentation / pricing / free-vs-paid — not an action to hire. */
+export function looksLikeEmployerInformationQuestion(text: string): boolean {
+  if (looksLikePricingQuestion(text)) return true;
+  if (looksLikeHowToPostJobGuide(text)) return true;
+  if (/employer\s+guide|employer\s+services?|are\s+employer|is\s+employer|employer.{0,40}(?:free|paid|pricing|cost|plan)/i.test(text)) {
+    return true;
+  }
+  if (/is\s+(?:job\s+)?posting\s+free|how\s+much.{0,40}post(?:ing)?\s+(?:a\s+)?job|job\s+posting\s+(?:free|cost|price|paid)/i.test(text)) {
+    return true;
+  }
+  return false;
 }
 
 export function looksLikePolicyQuestion(text: string): boolean {
@@ -3602,10 +3643,22 @@ export function looksLikeApplicantsWhereGuide(text: string): boolean {
 export function looksLikePlatformKnowledge(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
+  // Concrete job hunt with a place stays JOB_SEARCH even if wording mentions AsliJobs.
+  const hasPlace =
+    Boolean(extractPlace(trimmed)) ||
+    /\b(hyderabad|chennai|bangalore|bengaluru|mumbai|delhi|pune|vizag|vijayawada)\b/i.test(
+      trimmed,
+    );
+  if (hasPlace && mentionsJobWord(trimmed) && !looksLikeAboutAsliJobs(trimmed)) {
+    return false;
+  }
   if (looksLikeAboutAsliJobs(trimmed)) return true;
   if (looksLikeHowToFindJobs(trimmed)) return true;
   if (looksLikeHowToRegister(trimmed)) return true;
   if (looksLikeContactEmployerGuide(trimmed)) return true;
+  if (looksLikePublicContactQuestion(trimmed)) return true;
+  if (looksLikeJobCategoriesQuestion(trimmed)) return true;
+  if (looksLikeEmployerInformationQuestion(trimmed)) return true;
   if (looksLikeHowToPostJobGuide(trimmed)) return true;
   if (looksLikePricingQuestion(trimmed)) return true;
   if (looksLikePolicyQuestion(trimmed)) return true;
@@ -3619,9 +3672,7 @@ export function looksLikePlatformKnowledge(text: string): boolean {
   }
   if (
     /aslijobs.{0,40}(?:ela|epdi|kaise|hege|engane|ఎలా|कैसे|எப்படி|ಹೇಗೆ|എങ്ങനെ)/i.test(trimmed) &&
-    !/\b(hyderabad|chennai|bangalore|bengaluru|mumbai|delhi|pune|vizag|vijayawada)\b/i.test(
-      trimmed,
-    )
+    !hasPlace
   ) {
     return true;
   }

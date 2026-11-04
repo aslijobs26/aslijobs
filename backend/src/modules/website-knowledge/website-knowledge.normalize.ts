@@ -8,6 +8,18 @@ export function normalizeKnowledgeText(input: string): string {
     .trim();
 }
 
+/** Soften plurals / filler so near-exact FAQ matching survives typos like "category are". */
+export function softNormalizeKnowledgeText(input: string): string {
+  return normalizeKnowledgeText(input)
+    .replace(/\bcategories\b/g, "category")
+    .replace(/\bjobs\b/g, "job")
+    .replace(/\bservices\b/g, "service")
+    .replace(/\bplans\b/g, "plan")
+    .replace(/\b(?:ante|enti|enna|eno)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function tokenizeKnowledgeQuery(input: string): string[] {
   const normalized = normalizeKnowledgeText(input);
   if (!normalized) return [];

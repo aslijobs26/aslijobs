@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { getLocalizedWebsiteUrl } from "../../utils/site-language-url.js";
 import { composeGroundedKnowledgeAnswer } from "./website-knowledge.answer.js";
 import { CORPUS_FAQS, CORPUS_SECTIONS } from "./website-knowledge.corpus.js";
@@ -17,6 +18,7 @@ import {
 } from "./website-knowledge.store.js";
 import type {
   KnowledgeAnswer,
+  KnowledgeHit,
   KnowledgePersona,
   KnowledgeSyncStatus,
 } from "./website-knowledge.types.js";
@@ -25,6 +27,10 @@ import {
   WebsiteKnowledgeFaqModel,
   WebsiteKnowledgeSyncModel,
 } from "./website-knowledge.model.js";
+
+function mongoReady(): boolean {
+  return mongoose.connection.readyState === 1;
+}
 
 const faqAnswerCache = new Map<string, { hash: string; answer: KnowledgeAnswer }>();
 
@@ -74,20 +80,22 @@ async function loadFaqs(origin: string): Promise<RetrievableFaq[]> {
       active: faq.active,
     }));
   }
-  try {
-    const rows = await WebsiteKnowledgeFaqModel.find({ active: true }).lean();
-    if (rows.length > 0) {
-      return rows.map((faq) => ({
-        question: faq.question,
-        answer: faq.answer,
-        canonicalUrl: faq.canonicalUrl,
-        language: faq.language as RetrievableFaq["language"],
-        normalizedQuestion: faq.normalizedQuestion,
-        active: faq.active,
-      }));
+  if (mongoReady()) {
+    try {
+      const rows = await WebsiteKnowledgeFaqModel.find({ active: true }).lean();
+      if (rows.length > 0) {
+        return rows.map((faq) => ({
+          question: faq.question,
+          answer: faq.answer,
+          canonicalUrl: faq.canonicalUrl,
+          language: faq.language as RetrievableFaq["language"],
+          normalizedQuestion: faq.normalizedQuestion,
+          active: faq.active,
+        }));
+      }
+    } catch {
+      // fall through to corpus
     }
-  } catch {
-    // Mongo may be unavailable in unit tests — fall back to bundled corpus.
   }
   return corpusAsFaqs(origin);
 }
@@ -106,32 +114,42 @@ async function loadSections(origin: string): Promise<RetrievableSection[]> {
       active: doc.active,
     }));
   }
-  try {
-    const rows = await WebsiteKnowledgeDocumentModel.find({ active: true }).lean();
-    if (rows.length > 0) {
-      return rows.map((doc) => ({
-        title: doc.title,
-        sectionHeading: doc.sectionHeading,
-        content: doc.content,
-        canonicalUrl: doc.canonicalUrl,
-        sourceType: doc.sourceType as RetrievableSection["sourceType"],
-        language: doc.language as RetrievableSection["language"],
-        persona: doc.persona as RetrievableSection["persona"],
-        active: doc.active,
-      }));
+  if (mongoReady()) {
+    try {
+      const rows = await WebsiteKnowledgeDocumentModel.find({ active: true }).lean();
+      if (rows.length > 0) {
+        return rows.map((doc) => ({
+          title: doc.title,
+          sectionHeading: doc.sectionHeading,
+          content: doc.content,
+          canonicalUrl: doc.canonicalUrl,
+          sourceType: doc.sourceType as RetrievableSection["sourceType"],
+          language: doc.language as RetrievableSection["language"],
+          persona: doc.persona as RetrievableSection["persona"],
+          active: doc.active,
+        }));
+      }
+    } catch {
+      // fall through to corpus
     }
-  } catch {
-    // fall through to corpus
   }
   return corpusAsSections(origin);
 }
+
+export type KnowledgeAnswerTrace = KnowledgeAnswer & {
+  intentPath: "platform_knowledge";
+  topHitKind: KnowledgeHit["kind"] | "";
+  topHitTitle: string;
+  topHitScore: number;
+  fallbackReason: string;
+};
 
 export async function answerWebsiteKnowledgeQuestion(input: {
   query: string;
   language: string;
   frontendOrigin: string;
   persona?: KnowledgePersona | null;
-}): Promise<KnowledgeAnswer> {
+}): Promise<KnowledgeAnswerTrace> {
   const origin = input.frontendOrigin.replace(/\/+$/, "");
   const [faqs, sections] = await Promise.all([loadFaqs(origin), loadSections(origin)]);
   const hits = rankKnowledgeHits({
@@ -143,12 +161,23 @@ export async function answerWebsiteKnowledgeQuestion(input: {
   });
 
   const top = hits[0];
+  // Cache by query text so a prior FAQ answer cannot attach to a different question.
+  const queryCacheKey = `${normalizeKnowledgeText(input.query)}|${input.language}`;
   if (top?.kind === "faq") {
-    const cacheKey = `${normalizeKnowledgeText(top.sectionHeading)}|${input.language}`;
-    const contentHash = hashKnowledgeContent([top.sectionHeading, top.content]);
-    const cached = faqAnswerCache.get(cacheKey);
+    const contentHash = hashKnowledgeContent([top.sectionHeading, top.content, input.query]);
+    const cached = faqAnswerCache.get(queryCacheKey);
     if (cached && cached.hash === contentHash) {
-      return cached.answer;
+      console.info(
+        `[website-knowledge] lang=${input.language} persona=${input.persona ?? "general"} confidence=${cached.answer.confidence} score=${top.score} kind=faq title=${JSON.stringify(top.sectionHeading.slice(0, 80))} source=${cached.answer.sourceUrl} reason=faq_cache_hit`,
+      );
+      return {
+        ...cached.answer,
+        intentPath: "platform_knowledge",
+        topHitKind: "faq",
+        topHitTitle: top.sectionHeading,
+        topHitScore: top.score,
+        fallbackReason: "faq_cache_hit",
+      };
     }
   }
 
@@ -180,19 +209,39 @@ export async function answerWebsiteKnowledgeQuestion(input: {
   }
 
   if (top?.kind === "faq" && answer.usedFaq) {
-    const cacheKey = `${normalizeKnowledgeText(top.sectionHeading)}|${input.language}`;
-    faqAnswerCache.set(cacheKey, {
-      hash: hashKnowledgeContent([top.sectionHeading, top.content]),
+    faqAnswerCache.set(queryCacheKey, {
+      hash: hashKnowledgeContent([top.sectionHeading, top.content, input.query]),
       answer,
     });
   }
 
-  return answer;
+  const traced: KnowledgeAnswerTrace = {
+    ...answer,
+    intentPath: "platform_knowledge",
+    topHitKind: top?.kind ?? "",
+    topHitTitle: top?.sectionHeading || top?.title || "",
+    topHitScore: top?.score ?? 0,
+    fallbackReason:
+      answer.confidence === "none"
+        ? "no_confident_hit"
+        : answer.confidence === "low"
+          ? "low_confidence_hit"
+          : top?.kind === "faq"
+            ? "faq_match"
+            : "section_match",
+  };
+
+  console.info(
+    `[website-knowledge] lang=${input.language} persona=${input.persona ?? "general"} confidence=${traced.confidence} score=${traced.topHitScore} kind=${traced.topHitKind || "-"} title=${JSON.stringify(traced.topHitTitle.slice(0, 80))} source=${traced.sourceUrl} reason=${traced.fallbackReason}`,
+  );
+
+  return traced;
 }
 
 export async function getWebsiteKnowledgeSyncStatus(): Promise<KnowledgeSyncStatus | null> {
   const memory = getMemoryKnowledgeSyncStatus();
   if (memory) return memory;
+  if (!mongoReady()) return null;
   try {
     const row = await WebsiteKnowledgeSyncModel.findOne({ key: "default" }).lean();
     if (!row) return null;

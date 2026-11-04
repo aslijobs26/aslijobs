@@ -1225,6 +1225,10 @@ async function buildReply(
           : {}),
       });
     }
+    logWhatsAppBot(
+      "PLATFORM_KNOWLEDGE",
+      `confidence=${knowledge.confidence} score=${knowledge.topHitScore} kind=${knowledge.topHitKind || "-"} reason=${knowledge.fallbackReason} source=${knowledge.sourceUrl}`,
+    );
     return reply({
       situation: "platform_knowledge",
       accountType: linked === "none" ? "none" : accountType,

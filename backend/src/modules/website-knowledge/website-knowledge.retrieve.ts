@@ -1,8 +1,42 @@
 import type { KnowledgeHit, KnowledgePersona } from "./website-knowledge.types.js";
 import {
   normalizeKnowledgeText,
+  softNormalizeKnowledgeText,
   tokenizeKnowledgeQuery,
 } from "./website-knowledge.normalize.js";
+
+const FAQ_QUERY_ALIASES: Array<{ pattern: RegExp; questionNeedle: string }> = [
+  {
+    pattern:
+      /what\s+is\s+aslijobs|about\s+aslijobs|aslijobs\s+(?:ante|అంటే|enti|enna|क्या|என்ன|ಏನು|എന്ത്)/i,
+    questionNeedle: "what is aslijobs",
+  },
+  {
+    pattern: /job\s+categor|categor(?:y|ies).{0,24}available|which\s+job\s+categor/i,
+    questionNeedle: "which job categories are available",
+  },
+  {
+    pattern:
+      /employer\s+services?\s+(?:free|paid)|(?:free|paid).{0,24}employer|are\s+employer\s+services/i,
+    questionNeedle: "are employer services free or paid",
+  },
+  {
+    pattern: /how\s+(?:do\s+(?:i|employers)\s+|can\s+i\s+|to\s+)?post\s+(?:a\s+)?jobs?/i,
+    questionNeedle: "how do employers post a job",
+  },
+  {
+    pattern: /^(phone|email|support|contact|call|mobile|number|helpline)\b|contact\s+aslijobs\s+support/i,
+    questionNeedle: "how can users contact aslijobs support",
+  },
+  {
+    pattern: /is\s+(?:job\s+)?posting\s+free|job\s+posting\s+free|posting\s+(?:a\s+)?job\s+cost|how\s+much.{0,30}post/i,
+    questionNeedle: "are employer services free or paid",
+  },
+  {
+    pattern: /job\s*seeker\s+regist|how\s+(?:do\s+i\s+|to\s+|can\s+i\s+)?register|register\s+ela|registration\s+ela/i,
+    questionNeedle: "how can users update their profile details",
+  },
+];
 
 export type RetrievableFaq = {
   question: string;
@@ -36,7 +70,29 @@ export function scoreFaqMatch(query: string, faq: RetrievableFaq): number {
   const nq = faq.normalizedQuestion || normalizeKnowledgeText(faq.question);
   if (!q || !nq) return 0;
   if (q === nq) return EXACT_FAQ_SCORE;
-  if (nq.includes(q) || q.includes(nq)) return NEAR_FAQ_SCORE;
+  const softQ = softNormalizeKnowledgeText(query);
+  const softNq = softNormalizeKnowledgeText(faq.question);
+  if (softQ && softNq && softQ === softNq) return EXACT_FAQ_SCORE;
+  // "AsliJobs ante enti?" collapses to softQ "aslijobs" — only the about FAQ may win.
+  const aboutQuery =
+    /(?:what\s+is\s+aslijobs|about\s+aslijobs|aslijobs\s+(?:ante|అంటే|enti|enna))/i.test(query) ||
+    (softQ === "aslijobs" &&
+      /ante|enti|enna|అంటే|क्या|என்ன|ಏನು|എന്ത്/.test(normalizeKnowledgeText(query)));
+  if (aboutQuery) {
+    if (/^what is aslijobs/.test(softNq)) return EXACT_FAQ_SCORE;
+    return 0;
+  }
+  // Avoid treating a lone brand token as a near-exact match against every FAQ.
+  if (softQ === "aslijobs") {
+    if (/^what is aslijobs/.test(softNq)) return EXACT_FAQ_SCORE;
+  } else if (nq.includes(q) || q.includes(nq) || softNq.includes(softQ) || softQ.includes(softNq)) {
+    return NEAR_FAQ_SCORE;
+  }
+  for (const alias of FAQ_QUERY_ALIASES) {
+    if (alias.pattern.test(query) && softNq.includes(softNormalizeKnowledgeText(alias.questionNeedle))) {
+      return EXACT_FAQ_SCORE;
+    }
+  }
   const qTokens = new Set(tokenizeKnowledgeQuery(query));
   const fTokens = new Set(tokenizeKnowledgeQuery(`${faq.question} ${faq.answer}`));
   if (qTokens.size === 0) return 0;
@@ -48,6 +104,13 @@ export function scoreFaqMatch(query: string, faq: RetrievableFaq): number {
   let score = 0;
   if (ratio >= 0.7) score = 70 + Math.round(ratio * 20);
   else if (ratio >= 0.45) score = 50 + Math.round(ratio * 20);
+  // A lone "aslijobs" token matches almost every FAQ answer — keep it weak.
+  if (qTokens.size === 1 && qTokens.has("aslijobs") && !/^what is aslijobs/.test(softNq)) {
+    score = Math.min(score, 25);
+  }
+  if (/^employer guide$/.test(softQ) && !/employer guide/.test(softNq)) {
+    return 0;
+  }
   // Prefer dedicated pricing/policy pages over loosely overlapping FAQ blurbs.
   if (
     score > 0 &&
@@ -136,6 +199,16 @@ export function scoreSectionMatch(
   if (/(?:applicant|application|candidate).{0,20}(?:where|ekkada|dashboard)/.test(foldedQuery)) {
     if (/receive applications|employer dashboard|track hiring/i.test(section.sectionHeading + section.content)) {
       score += 20;
+    }
+  }
+  if (/employer\s+guide/.test(foldedQuery)) {
+    if (/employer guide/i.test(`${section.title} ${section.sectionHeading}`)) {
+      score += 30;
+    }
+  }
+  if (/job\s+categor/.test(foldedQuery)) {
+    if (/job categor|industries such as/i.test(`${section.sectionHeading} ${section.content}`)) {
+      score += 18;
     }
   }
   return score;

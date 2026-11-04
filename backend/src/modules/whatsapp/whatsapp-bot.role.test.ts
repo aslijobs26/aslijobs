@@ -32,19 +32,16 @@ describe("whatsapp role and account routing", () => {
     assert.equal(mapped.scope, "PUBLIC_JOBS");
   });
 
-  it("sends a job seeker who wants to post a job to employer registration", () => {
+  it("answers how-to post-job documentation without forcing employer registration", () => {
     const mapped = applyAccountAwareIntent(local("How can I post a job?"), "seeker");
-    assert.equal(mapped.intent, "POST_JOB");
-    assert.equal(mapped.crossRole, "employer");
+    assert.equal(mapped.intent, "PLATFORM_KNOWLEDGE");
+    assert.equal(mapped.crossRole, "");
     assert.equal(mapped.scope, "NONE");
     assert.equal(mapped.requiresAuth, false);
-    const reply = roleRedirectCopy(mapped.language, "employer", employerUrl);
-    assert.match(reply, /employer\/register/);
-    assert.doesNotMatch(reply, /job-seeker\/register/);
   });
 
-  it("keeps a registered employer on job posting", () => {
-    const mapped = applyAccountAwareIntent(local("How can I post a job?"), "employer");
+  it("keeps a registered employer hire CTA on job posting", () => {
+    const mapped = applyAccountAwareIntent(local("I want to post a job"), "employer");
     assert.equal(mapped.intent, "POST_JOB");
     assert.equal(mapped.crossRole, "");
     assert.equal(mapped.scope, "OWN_EMPLOYER_DATA");
@@ -118,11 +115,13 @@ describe("whatsapp role and account routing", () => {
 
   it("follows intent when the number has both accounts", () => {
     const search = applyAccountAwareIntent(local("Find me a job in Hyderabad"), "both");
-    const post = applyAccountAwareIntent(local("How can I post a job?"), "both");
+    const post = applyAccountAwareIntent(local("I want to post a job"), "both");
+    const guide = applyAccountAwareIntent(local("How can I post a job?"), "both");
     assert.equal(search.crossRole, "");
     assert.equal(search.intent, "JOB_SEARCH");
     assert.equal(post.crossRole, "");
     assert.equal(post.intent, "POST_JOB");
+    assert.equal(guide.intent, "PLATFORM_KNOWLEDGE");
   });
 
   it("does not describe a lookup failure as an unregistered number", () => {
