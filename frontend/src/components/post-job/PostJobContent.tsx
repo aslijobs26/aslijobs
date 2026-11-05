@@ -31,9 +31,9 @@ import { setJobPostedSuccessSummary } from "@/utils/job-posted-success-storage";
 import { mapWizardDataToCreateJobPayload } from "@/utils/map-post-job-payload";
 import { getApiErrorMessage } from "@/utils/normalize-api-error";
 import {
-  hasMeaningfulPostJobDraftContent,
   mapJobDetailToWizardState,
   mapWizardDataToDraftPayload,
+  postJobWizardMatchesBaseline,
 } from "@/utils/post-job-draft";
 import {
   findFirstInvalidPostJobStep,
@@ -204,6 +204,17 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   const isActiveEditMode = loadedJobStatus === "active";
   const isRejectedEditMode = loadedJobStatus === "rejected";
   const formDataRef = useRef(formData);
+  const draftBaselineRef = useRef<PostJobWizardFormData>(
+    structuredClone(POST_JOB_INITIAL_WIZARD_DATA),
+  );
+  const adoptDraftBaselineIfUntouched = (
+    current: PostJobWizardFormData,
+    next: PostJobWizardFormData,
+  ) => {
+    if (postJobWizardMatchesBaseline(current, draftBaselineRef.current)) {
+      draftBaselineRef.current = structuredClone(next);
+    }
+  };
   const activeStepRef = useRef(activeStep);
   const lastSavedSignatureRef = useRef("");
   const isSavingDraftRef = useRef(false);
@@ -246,19 +257,23 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
               : "";
           const companySize = matchedCompanySize || fallbackCompanySize;
 
-          setFormData((current) => ({
-            ...current,
-            jobInformation: {
-              ...current.jobInformation,
-              industry:
-                current.jobInformation.industry || profile.industry || "",
-              businessCategory:
-                current.jobInformation.businessCategory ||
-                profile.businessCategory ||
-                "",
-              companySize: current.jobInformation.companySize || companySize,
-            },
-          }));
+          setFormData((current) => {
+            const next = {
+              ...current,
+              jobInformation: {
+                ...current.jobInformation,
+                industry:
+                  current.jobInformation.industry || profile.industry || "",
+                businessCategory:
+                  current.jobInformation.businessCategory ||
+                  profile.businessCategory ||
+                  "",
+                companySize: current.jobInformation.companySize || companySize,
+              },
+            };
+            adoptDraftBaselineIfUntouched(current, next);
+            return next;
+          });
           return;
         }
 
@@ -268,14 +283,18 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
             return;
           }
 
-          setFormData((current) => ({
-            ...current,
-            jobInformation: {
-              ...current.jobInformation,
-              companyDetails:
-                current.jobInformation.companyDetails || establishmentName,
-            },
-          }));
+          setFormData((current) => {
+            const next = {
+              ...current,
+              jobInformation: {
+                ...current.jobInformation,
+                companyDetails:
+                  current.jobInformation.companyDetails || establishmentName,
+              },
+            };
+            adoptDraftBaselineIfUntouched(current, next);
+            return next;
+          });
         }
       } catch {
         if (!cancelled) {
@@ -325,8 +344,13 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
     const currentFormData = formDataRef.current;
     const currentStep = activeStepRef.current;
 
-    if (!hasMeaningfulPostJobDraftContent(currentFormData)) {
-      return draftIdRef.current;
+    // Opening the form, including company fields copied from the profile,
+    // must not create a draft until the employer changes something.
+    if (
+      !draftIdRef.current &&
+      postJobWizardMatchesBaseline(currentFormData, draftBaselineRef.current)
+    ) {
+      return null;
     }
 
     const payload = mapWizardDataToDraftPayload(currentFormData, currentStep);

@@ -9,6 +9,38 @@ import type {
   PostJobWizardFormData,
 } from "@/types/post-job";
 
+function normalizeDraftComparable(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeDraftComparable(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        normalizeDraftComparable(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+/** True when the form still matches the untouched baseline, including profile prefill. */
+export function postJobWizardMatchesBaseline(
+  current: PostJobWizardFormData,
+  baseline: PostJobWizardFormData,
+): boolean {
+  return (
+    JSON.stringify(normalizeDraftComparable(current)) ===
+    JSON.stringify(normalizeDraftComparable(baseline))
+  );
+}
+
 export function hasMeaningfulPostJobDraftContent(
   formData: PostJobWizardFormData,
 ): boolean {

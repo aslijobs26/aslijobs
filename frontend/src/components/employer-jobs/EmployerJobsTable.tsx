@@ -2,10 +2,7 @@
 
 import { EmployerTableRowsSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
 import { EmployerJobsPagination } from "@/components/employer-jobs/EmployerJobsPagination";
-import {
-  EMPLOYER_JOB_STATUS_PILL_CLASS,
-  EMPLOYER_JOBS_DELETE_UI_ENABLED,
-} from "@/constants/employer-jobs";
+import { EMPLOYER_JOB_STATUS_PILL_CLASS } from "@/constants/employer-jobs";
 import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type {
   EmployerJobListItem,
@@ -317,8 +314,7 @@ function EmployerJobsTableRow({
   const { can } = useCan();
   const canReadJobs = can("jobs", "read");
   const canUpdateJobs = can("jobs", "update");
-  const canDeleteJobs =
-    EMPLOYER_JOBS_DELETE_UI_ENABLED && can("jobs", "delete");
+  const canDeleteDraft = job.status === "draft" && can("jobs", "delete");
   const canViewCandidates = can("candidates", "read");
   const hasMoreActions =
     (canUpdateJobs &&
@@ -328,7 +324,7 @@ function EmployerJobsTableRow({
         job.status === "pending_approval" ||
         job.status === "rejected" ||
         job.status === "closed")) ||
-    canDeleteJobs;
+    canDeleteDraft;
 
   useLayoutEffect(() => {
     if (!menuOpen) {
@@ -445,7 +441,7 @@ function EmployerJobsTableRow({
     (job.status === "closed" || job.status === "expired") &&
     String(job.reviewDecision ?? "").toLowerCase() === "approved";
   const hasMenuItems =
-    (canUpdateJobs && (canClose || canReactivate)) || canDeleteJobs;
+    (canUpdateJobs && (canClose || canReactivate)) || canDeleteDraft;
 
   return (
     <tr
@@ -711,7 +707,7 @@ function EmployerJobsTableRow({
                           {t("employer.jobs.activateJob")}
                         </button>
                       ) : null}
-                      {canDeleteJobs ? (
+                      {canDeleteDraft ? (
                         <button
                           type="button"
                           role="menuitem"
