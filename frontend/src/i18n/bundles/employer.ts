@@ -211,6 +211,9 @@ const en = {
       toastBulkDeleteFailed: "Unable to delete jobs. Please try again.",
       deleteConfirm:
         "Deleting this job will permanently remove:\n\n• Job Details\n• Applications\n• Saved Candidates\n• Shortlisted Candidates\n• Interview Records\n• Interview Calendar Events\n• Notifications\n• Related Analytics\n\nThis action cannot be undone.",
+      deleteDraftTitle: "Delete draft",
+      deleteDraftBody:
+        "This draft will be permanently removed. This cannot be undone.",
       cascade: {
         jobDetails: "Job Details",
         applications: "Applications",
@@ -792,6 +795,9 @@ const hi: EmployerMessages = {
       toastBulkDeleteFailed: "नौकरियाँ हटाई नहीं जा सकीं। कृपया फिर से कोशिश करें।",
       deleteConfirm:
         "इस नौकरी को हटाने से ये स्थायी रूप से हट जाएँगे:\n\n• नौकरी विवरण\n• आवेदन\n• सेव किए गए उम्मीदवार\n• शॉर्टलिस्टेड उम्मीदवार\n• इंटरव्यू रिकॉर्ड\n• इंटरव्यू कैलेंडर इवेंट\n• सूचनाएँ\n• संबंधित एनालिटिक्स\n\nयह कार्रवाई वापस नहीं ली जा सकती।",
+      deleteDraftTitle: "ड्राफ्ट हटाएँ",
+      deleteDraftBody:
+        "यह ड्राफ्ट स्थायी रूप से हट जाएगा। इसे वापस नहीं लाया जा सकता।",
       cascade: {
         jobDetails: "नौकरी विवरण",
         applications: "आवेदन",
@@ -1371,6 +1377,9 @@ const te: EmployerMessages = {
       toastBulkDeleteFailed: "ఉద్యోగాలను తొలగించలేకపోయాము. దయచేసి మళ్ళీ ప్రయత్నించండి.",
       deleteConfirm:
         "ఈ ఉద్యోగాన్ని తొలగిస్తే ఇవి శాశ్వతంగా తొలగిపోతాయి:\n\n• ఉద్యోగ వివరాలు\n• దరఖాస్తులు\n• సేవ్ చేసిన అభ్యర్థులు\n• షార్ట్‌లిస్ట్ చేసిన అభ్యర్థులు\n• ఇంటర్వ్యూ రికార్డులు\n• ఇంటర్వ్యూ క్యాలెండర్ ఈవెంట్‌లు\n• నోటిఫికేషన్‌లు\n• సంబంధిత అనలిటిక్స్\n\nఈ చర్యను రద్దు చేయలేరు.",
+      deleteDraftTitle: "డ్రాఫ్ట్ తొలగించండి",
+      deleteDraftBody:
+        "ఈ డ్రాఫ్ట్ శాశ్వతంగా తొలగించబడుతుంది. దీన్ని రద్దు చేయలేరు.",
       cascade: {
         jobDetails: "ఉద్యోగ వివరాలు",
         applications: "దరఖాస్తులు",
@@ -1950,6 +1959,9 @@ const ta: EmployerMessages = {
       toastBulkDeleteFailed: "வேலைகளை நீக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
       deleteConfirm:
         "இந்த வேலையை நீக்கினால் இவை நிரந்தரமாக அகற்றப்படும்:\n\n• வேலை விவரங்கள்\n• விண்ணப்பங்கள்\n• சேமித்த விண்ணப்பதாரர்கள்\n• தேர்வுப் பட்டியல் விண்ணப்பதாரர்கள்\n• நேர்காணல் பதிவுகள்\n• நேர்காணல் நாட்காட்டி நிகழ்வுகள்\n• அறிவிப்புகள்\n• தொடர்புடைய பகுப்பாய்வுகள்\n\nஇந்தச் செயலைத் திரும்பப் பெற முடியாது.",
+      deleteDraftTitle: "வரைவை நீக்கு",
+      deleteDraftBody:
+        "இந்த வரைவு நிரந்தரமாக நீக்கப்படும். இதைத் திரும்பப் பெற முடியாது.",
       cascade: {
         jobDetails: "வேலை விவரங்கள்",
         applications: "விண்ணப்பங்கள்",
@@ -2529,6 +2541,9 @@ const kn: EmployerMessages = {
       toastBulkDeleteFailed: "ಉದ್ಯೋಗಗಳನ್ನು ಅಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
       deleteConfirm:
         "ಈ ಉದ್ಯೋಗವನ್ನು ಅಳಿಸಿದರೆ ಇವು ಶಾಶ್ವತವಾಗಿ ತೆಗೆದುಹಾಕಲ್ಪಡುತ್ತವೆ:\n\n• ಉದ್ಯೋಗದ ವಿವರಗಳು\n• ಅರ್ಜಿಗಳು\n• ಉಳಿಸಿದ ಅಭ್ಯರ್ಥಿಗಳು\n• ಶಾರ್ಟ್‌ಲಿಸ್ಟ್ ಮಾಡಿದ ಅಭ್ಯರ್ಥಿಗಳು\n• ಸಂದರ್ಶನ ದಾಖಲೆಗಳು\n• ಸಂದರ್ಶನ ಕ್ಯಾಲೆಂಡರ್ ಈವೆಂಟ್‌ಗಳು\n• ಅಧಿಸೂಚನೆಗಳು\n• ಸಂಬಂಧಿತ ವಿಶ್ಲೇಷಣೆಗಳು\n\nಈ ಕ್ರಿಯೆಯನ್ನು ರದ್ದುಗೊಳಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.",
+      deleteDraftTitle: "ಡ್ರಾಫ್ಟ್ ಅಳಿಸಿ",
+      deleteDraftBody:
+        "ಈ ಡ್ರಾಫ್ಟ್ ಶಾಶ್ವತವಾಗಿ ತೆಗೆದುಹಾಕಲ್ಪಡುತ್ತದೆ. ಇದನ್ನು ರದ್ದುಗೊಳಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.",
       cascade: {
         jobDetails: "ಉದ್ಯೋಗದ ವಿವರಗಳು",
         applications: "ಅರ್ಜಿಗಳು",
@@ -3108,6 +3123,9 @@ const ml: EmployerMessages = {
       toastBulkDeleteFailed: "ജോലികൾ ഇല്ലാതാക്കാനായില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
       deleteConfirm:
         "ഈ ജോലി ഇല്ലാതാക്കിയാൽ ഇവ ശാശ്വതമായി നീക്കം ചെയ്യപ്പെടും:\n\n• ജോലി വിശദാംശങ്ങൾ\n• അപേക്ഷകൾ\n• സേവ് ചെയ്ത ഉദ്യോഗാർത്ഥികൾ\n• ഷോർട്ട്‌ലിസ്റ്റ് ചെയ്ത ഉദ്യോഗാർത്ഥികൾ\n• ഇന്റർവ്യൂ രേഖകൾ\n• ഇന്റർവ്യൂ കലണ്ടർ ഇവന്റുകൾ\n• അറിയിപ്പുകൾ\n• ബന്ധപ്പെട്ട അനലിറ്റിക്സ്\n\nഈ പ്രവർത്തനം പഴയപടിയാക്കാനാകില്ല.",
+      deleteDraftTitle: "ഡ്രാഫ്റ്റ് ഇല്ലാതാക്കുക",
+      deleteDraftBody:
+        "ഈ ഡ്രാഫ്റ്റ് ശാശ്വതമായി നീക്കം ചെയ്യപ്പെടും. ഇത് പഴയപടിയാക്കാനാകില്ല.",
       cascade: {
         jobDetails: "ജോലി വിശദാംശങ്ങൾ",
         applications: "അപേക്ഷകൾ",

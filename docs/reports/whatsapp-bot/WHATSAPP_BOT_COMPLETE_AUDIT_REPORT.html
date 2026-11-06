@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>AsliJobs WhatsApp Bot — Technical Audit</title>
+<style>
+  @page {
+    size: A4;
+    margin: 16mm 14mm 18mm;
+    @bottom-right {
+      content: counter(page);
+      font-family: "Segoe UI", Calibri, Arial, sans-serif;
+      font-size: 9pt;
+      color: #5c6b66;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Calibri, Arial, sans-serif; color: #1c2430; font-size: 10.5pt; line-height: 1.45; }
+  h1 { font-size: 22pt; line-height: 1.15; margin: 0 0 8px; color: #0e3b36; }
+  h2 { font-size: 14pt; margin: 18px 0 6px; color: #0e3b36; page-break-after: avoid; border-bottom: 1px solid #d5e2de; padding-bottom: 3px; }
+  h3 { font-size: 11.5pt; margin: 12px 0 4px; color: #14564c; page-break-after: avoid; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 4px 0 8px; padding-left: 18px; }
+  li { margin: 0 0 3px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; page-break-inside: avoid; font-size: 9pt; }
+  th, td { border: 1px solid #d5ddd9; padding: 4px 6px; vertical-align: top; text-align: left; }
+  th { background: #e7f3ef; color: #0e3b36; font-weight: 650; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 8.7pt; background: #f4f7f6; padding: 0 3px; }
+  .cover { min-height: 250mm; page-break-after: always; display: flex; flex-direction: column; justify-content: space-between; }
+  .kicker { letter-spacing: 0.14em; text-transform: uppercase; color: #1f7a68; font-size: 9pt; font-weight: 700; }
+  .sub { font-size: 12pt; color: #3d4d48; max-width: 38em; }
+  .meta { margin-top: 28px; }
+  .band { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 22px; }
+  .stat { background: #f3faf7; border: 1px solid #d5e2de; border-radius: 8px; padding: 8px 10px; }
+  .stat b { display: block; font-size: 13pt; color: #0e3b36; }
+  .stat span { font-size: 8.5pt; color: #3d4d48; }
+  .foot { font-size: 8.5pt; color: #5c6b66; }
+  .flow { background: #f7faf9; border: 1px solid #d5e2de; border-radius: 8px; padding: 10px 12px; font-family: Consolas, monospace; font-size: 8.4pt; line-height: 1.4; white-space: pre-wrap; }
+  .note { background: #fff8e8; border-left: 3px solid #c48a12; padding: 6px 10px; margin: 8px 0 12px; }
+  .toc a { color: inherit; text-decoration: none; }
+  .toc td:last-child { text-align: right; width: 2.2em; color: #5c6b66; }
+  h2, h3, table, .flow { break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div>
+    <p class="kicker">AsliJobs engineering audit</p>
+    <h1>WhatsApp Bot<br />Technical audit</h1>
+    <p class="sub">Current architecture, question understanding, accuracy limits, and a prioritized improvement plan. Written from the repository. No application code was changed.</p>
+    <div class="band">
+      <div class="stat"><b>26</b><span>runtime components traced</span></div>
+      <div class="stat"><b>3</b><span>AI paths, two of them off by default</span></div>
+      <div class="stat"><b>55</b><span>unit tests executed, all passed</span></div>
+      <div class="stat"><b>116</b><span>proposed cases, not executed</span></div>
+    </div>
+    <div class="meta">
+      <p><b>Date.</b> 6 November 2026</p>
+      <p><b>Code.</b> <code>aslijobs/backend/src/modules/whatsapp</code>, website knowledge, operations inbox</p>
+      <p><b>Method.</b> Source reading. Five test files run locally. No live Meta, Sarvam, or OpenAI calls.</p>
+    </div>
+  </div>
+  <p class="foot">Companion files in docs/reports/whatsapp-bot: architecture, intelligence audit, roadmap, and the 116-case evaluation set.</p>
+</section>
+
+<h2>Contents</h2>
+<table class="toc">
+  <tr><td>1. Executive summary</td><td>2</td></tr>
+  <tr><td>2. How a message is handled</td><td>3</td></tr>
+  <tr><td>3. Component inventory</td><td>4</td></tr>
+  <tr><td>4. Understanding and memory</td><td>4</td></tr>
+  <tr><td>5. Website knowledge</td><td>5</td></tr>
+  <tr><td>6. Workflows that exist</td><td>5</td></tr>
+  <tr><td>7. Confirmed limits</td><td>6</td></tr>
+  <tr><td>8. Security and reliability</td><td>6</td></tr>
+  <tr><td>9. Roadmap</td><td>6</td></tr>
+  <tr><td>10. Tests and production checks</td><td>7</td></tr>
+</table>
+
+<h2>1. Executive summary</h2>
+<p>The WhatsApp bot is a backend pipeline on <code>POST /api/v1/whatsapp/webhook</code>. It stores the inbound message, claims the Meta message id, and runs one turn per phone. Job vacancies come from the public job query. The model is not the source of job rows.</p>
+<p>Question understanding is a local phrase and catalog classifier (<code>understandLocally</code>). Sarvam <code>sarvam-105b</code> is used only when that classifier is unsure and the text is at least 12 characters. OpenAI rephrasing and multilingual E5 retrieval exist in code and default to off.</p>
+<p>The bot can continue a search across short follow-ups such as a city, a salary, or “show more”. It cannot compare pay across the jobs it just showed. “Yes” and “No” are acknowledgements and do not answer an open clarification. A greeting clears the active search.</p>
+<p>Website answers are copied from retrieved pages, with a source URL. They are not written by a chat model. With the default hash embedder, a Telugu question will not semantically match an English page.</p>
+<p>Production readiness depends on environment facts this snapshot cannot see: Meta secrets, Redis, the Sarvam key, approved template names, and whether semantic retrieval is actually enabled on the host.</p>
+
+<h2>2. How a message is handled</h2>
+<div class="flow">Meta  POST /api/v1/whatsapp/webhook
+  verifyWhatsAppSignature          whatsapp-signature.ts
+  recordInboundUserMessage         whatsapp-inbox-store.ts
+  HTTP 200
+  claimWhatsAppEvent               whatsapp-processed-event.model.ts
+  pause? human inbox only
+  enqueueWhatsAppInbound           BullMQ "whatsapp-inbound" or inline
+  runInPhoneOrder
+  processInboundTurn               whatsapp-bot.service.ts
+     account lookup + WhatsAppSession
+     protocol (hi / yes / no) OR understandLocally
+     optional Sarvam JSON classify
+     resolveTurnUnderstanding + role gate
+     buildReply (jobs, applications, or knowledge)
+     localizeDeterministicReply
+     optional OpenAI rephrase
+     sendBotTextMessage</div>
+<p>OTP uses <code>WhatsAppService.sendOtpMessage</code>. That writes an inbox conversation through <code>recordOutboundMessage</code> → <code>ensureInboxConversation</code>. It does not create a <code>WhatsAppSession</code>. Bot memory starts on the first inbound turn.</p>
+<p>Redis is the BullMQ transport. Conversation slots live in Mongo, collection via <code>WhatsAppSessionModel</code>, and expire 14 days after <code>lastInteractionAt</code>.</p>
+
+<h2>3. Component inventory</h2>
+<table>
+  <tr><th>Component</th><th>Responsibility</th><th>Primary file</th></tr>
+  <tr><td>Webhook verify and receive</td><td>Subscribe challenge and signed POST</td><td>whatsapp-webhook.controller.ts</td></tr>
+  <tr><td>Signature</td><td>HMAC SHA-256 of the raw body</td><td>whatsapp-signature.ts</td></tr>
+  <tr><td>Inbound queue</td><td>BullMQ, 2 attempts, else inline</td><td>whatsapp-inbound.queue.ts</td></tr>
+  <tr><td>Phone lock</td><td>One turn at a time per phone</td><td>whatsapp-phone-order.ts</td></tr>
+  <tr><td>Session</td><td>Language, search slots, last jobs</td><td>whatsapp-session.model.ts</td></tr>
+  <tr><td>Local NLU</td><td>Intents, places, roles, follow-ups</td><td>whatsapp-bot.logic.ts</td></tr>
+  <tr><td>Criteria</td><td>Salary, experience, ordinals</td><td>whatsapp-bot.criteria.ts</td></tr>
+  <tr><td>Sarvam chat</td><td>JSON intent fallback, 8s timeout</td><td>sarvam.client.ts</td></tr>
+  <tr><td>Sarvam STT</td><td>Voice notes, two model attempts</td><td>sarvam.client.ts</td></tr>
+  <tr><td>Sarvam translate</td><td>Localize deterministic replies</td><td>sarvam-translate.client.ts</td></tr>
+  <tr><td>OpenAI assist</td><td>Rephrase only, default off</td><td>openai-assist.client.ts</td></tr>
+  <tr><td>Role gate</td><td>Seeker and employer isolation</td><td>whatsapp-role-policy.ts</td></tr>
+  <tr><td>Tools</td><td>Three allowlisted queries</td><td>whatsapp-bot-tools.ts</td></tr>
+  <tr><td>Orchestrator</td><td>No-match menu 1–4</td><td>whatsapp-conversation-orchestrator.ts</td></tr>
+  <tr><td>Cloud API</td><td>Text, templates, media download</td><td>whatsapp.service.ts</td></tr>
+  <tr><td>OTP</td><td>Authentication template</td><td>whatsapp-otp.provider.ts</td></tr>
+  <tr><td>Notifications</td><td>Account, job, interview templates</td><td>notifications/*.ts</td></tr>
+  <tr><td>Inbox</td><td>Persist, pause bot, delivery status</td><td>inbox/whatsapp-inbox-store.ts</td></tr>
+  <tr><td>Operations UI</td><td>Staff inbox and translation view</td><td>admin inbox components</td></tr>
+  <tr><td>Knowledge crawl</td><td>Public pages, chunks, FAQ</td><td>website-knowledge.sync.ts</td></tr>
+  <tr><td>Embeddings</td><td>Hash 256-d default, E5 384-d optional</td><td>website-knowledge.embeddings.ts</td></tr>
+  <tr><td>Knowledge answer</td><td>Extract plus URL, no LLM</td><td>website-knowledge.answer.ts</td></tr>
+  <tr><td>Media</td><td>Resume OCR, flag off by default</td><td>whatsapp-media-understand.service.ts</td></tr>
+  <tr><td>Rate limit</td><td>20 replies per phone per minute, in-process</td><td>allowReply</td></tr>
+</table>
+
+<h2>4. Understanding and memory</h2>
+<p>Intents are the <code>BOT_INTENTS</code> list: greeting, job search, job details, counts, profile, applications, employer jobs, post job, account status, platform knowledge, help, clarify, unrelated, unknown.</p>
+<p>Sarvam’s system prompt asks for JSON only and forbids inventing jobs. The user payload is the current text (280 characters), the account label, and previous city and role only when <code>isFollowUpFragment</code> is true (at most 48 characters and a bare place or role).</p>
+<p>Language is detected on the original text. The bot does not translate into English before classification. Romanized cues are finite word lists (<code>ROMAN_TELUGU</code>, <code>ROMAN_HINDI</code>, and the Tamil, Kannada, and Malayalam lists). Unit tests for those detectors passed. The lists are not a complete model of romanized speech.</p>
+<p>There is no stored chat transcript on the session. Follow-ups work from slots: <code>lastCategory</code>, <code>lastLocation</code>, salary, experience, and <code>lastJobs</code>. Tests that passed show React kept when the next message adds Hyderabad, salary added without dropping driver and city, and show-more keeping the same search.</p>
+<div class="note">“Which one pays more?” is not handled. <code>looksLikeRelativeHigherSalary</code> only matches phrases such as “higher salary” and “konchem ekkuva”, then adds 5000 to the previous minimum and searches again. It does not rank <code>lastJobs</code>.</div>
+
+<h2>5. Website knowledge</h2>
+<p>Crawl and chunk code writes FAQ and section documents. Default embedding is <code>aslijobs-hash-v1</code> (256 dimensions, hashed tokens, L2-normalized). Optional model is <code>Xenova/multilingual-e5-small</code> (384 dimensions). <code>embeddingsCompatible</code> refuses to mix them. If E5 fails to load, inference falls back to hash.</p>
+<p>Dense search runs only when <code>WEBSITE_KNOWLEDGE_SEMANTIC_ENABLED</code> is true. Cosine under 0.22 is ignored. The answer function pastes sanitized chunk text and a canonical URL. A miss returns a fixed line plus Help Center, Contact, and FAQs. Retrieved lines that look like prompt injection are stripped.</p>
+<p>The bot calls this only for <code>PLATFORM_KNOWLEDGE</code>. Live jobs never come from this index. OpenAI is not allowed to rephrase knowledge answers.</p>
+
+<h2>6. Workflows that exist</h2>
+<h3>Job seeker</h3>
+<p>Implemented in the turn handler: public search, counts, details for a numbered result, show more, profile-based search, application list and status, how-to-apply as a link, account status, voice notes when Sarvam STT is configured. Not implemented: creating an application inside WhatsApp. Resume OCR exists and is off unless <code>WHATSAPP_MEDIA_UNDERSTAND_ENABLED</code> is true. It stores skills on the session for 24 hours and does not write the profile.</p>
+<h3>Employer</h3>
+<p>Implemented: verification copy, post-job link (no in-chat draft), own job list, application counts. Not implemented in the bot: interview scheduling, draft delete, or approval. Those events are outbound templates in <code>whatsapp-notification.constants.ts</code> (account created, profile reminders, job submitted/approved/rejected/incomplete, application received, interview scheduled/rescheduled/cancelled).</p>
+<p>The bot sends session text. Interactive lists are not sent. Inbound button and list titles are flattened to text in <code>extractText</code>.</p>
+
+<h2>7. Confirmed limits</h2>
+<table>
+  <tr><th>Limit</th><th>Why it happens</th><th>Where</th></tr>
+  <tr><td>Yes/No ignore an open clarify</td><td>Protocol ack returns before slot merge</td><td>detectProtocolTurn</td></tr>
+  <tr><td>Hello clears the search</td><td>Greeting spreads clearedTemporarySearchSessionFields</td><td>processInboundTurn</td></tr>
+  <tr><td>Short text skips Sarvam</td><td>Length under 12 never calls the LLM</td><td>shouldUseLlmFallback</td></tr>
+  <tr><td>No pay comparison on the shown list</td><td>Relative salary only adds 5000 to the last minimum</td><td>mergePending</td></tr>
+  <tr><td>One intent per message</td><td>BotUnderstanding has a single intent</td><td>whatsapp-bot.logic.ts</td></tr>
+  <tr><td>Indic question vs English page</td><td>Default embedder hashes the query’s own tokens</td><td>embedKnowledgeTextHash</td></tr>
+  <tr><td>Extra “looking at your question” bubble</td><td>Sent in parallel with every Sarvam call</td><td>processInboundTurn</td></tr>
+  <tr><td>Silent rate limit</td><td>21st reply in a minute returns with no send</td><td>allowReply</td></tr>
+  <tr><td>Ack before routing finishes</td><td>HTTP 200 after inbox persist, then route</td><td>receiveWhatsAppWebhook</td></tr>
+</table>
+<p>These are source findings. This audit did not count how often they occur in production.</p>
+
+<h2>8. Security and reliability</h2>
+<ul>
+  <li>Verify token compare is timing-safe. The hub challenge must match a short token pattern.</li>
+  <li>HMAC is required when a secret is required. Production startup refuses unsigned webhooks.</li>
+  <li>Webhook limiter is 600 requests per minute. The path is skipped by the global API limiter.</li>
+  <li>Verify token is redacted in access logs.</li>
+  <li>Non-Indian numbers are not mapped onto Indian accounts. Tests passed.</li>
+  <li>Blocked or suspended accounts are not linked. Tests passed.</li>
+  <li>Employer and seeker tools are gated before queries. The tool list is search public jobs, list seeker applications, list employer jobs.</li>
+  <li>OpenAI text that claims an application was submitted is rejected. Test passed.</li>
+  <li>Inbound worker: 2 attempts, failed jobs kept (100). No separate dead-letter queue in the inbound file.</li>
+  <li>Without Redis, turns and notification sends run in-process and do not survive a restart. <code>env.ts</code> logs that warning.</li>
+</ul>
+
+<h2>9. Roadmap</h2>
+<p><b>P0.</b> Honor yes/no while a clarification is pending. Send one line when the rate limit trips, and move the counter to Redis. Acknowledge the webhook after enqueue succeeds.</p>
+<p><b>P1.</b> Compare salary labels on <code>lastJobs</code> for “which pays more”. Tell the user when shift is not a filter. Give “jobs” and “apply” a local intent instead of skipping the classifier because they are short. Reindex knowledge with E5 only as a matched 384-dimension index. Shorten knowledge extracts. Do not add an answer LLM.</p>
+<p><b>P2.</b> Send last slots to Sarvam on every non-protocol turn. Split a message only when two known intents are both obvious. Decide whether “Hi” should keep the search; the reset is intentional in the current comment.</p>
+<p><b>P3.</b> Delay the classifier acknowledgement. Keep the existing masked <code>[WA-FLOW]</code> logs.</p>
+<p><b>Not recommended now.</b> Replacing Sarvam as the primary brain, letting a model query Mongo, or submitting applications inside WhatsApp.</p>
+
+<h2>10. Tests and production checks</h2>
+<p>Executed on 6 November 2026, 55 passed, 0 failed:</p>
+<ul>
+  <li>whatsapp-language-detection.test.ts</li>
+  <li>whatsapp-conversation-context.test.ts</li>
+  <li>whatsapp-security.test.ts</li>
+  <li>whatsapp-bot.criteria.test.ts</li>
+  <li>website-knowledge.e2e-closure.test.ts</li>
+</ul>
+<p>The repository’s full <code>npm test</code> script was not run. The 116-row evaluation set in <code>WHATSAPP_BOT_TEST_CASES.md</code> was not executed. It covers English, Telugu, romanized Telugu, Hindi, Tamil, Kannada, Malayalam, mixed language, spelling, follow-ups, employer actions, knowledge, injection, and media flags.</p>
+<p>Before calling the bot production-ready, operations still need to confirm on the running host: <code>WHATSAPP_VERIFY_TOKEN</code>, <code>META_APP_SECRET</code>, <code>WHATSAPP_ACCESS_TOKEN</code>, <code>WHATSAPP_PHONE_NUMBER_ID</code>, <code>REDIS_URL</code>, <code>SARVAM_API_KEY</code>, template names versus Meta Manager, and whether <code>WEBSITE_KNOWLEDGE_SEMANTIC_ENABLED</code> and the embedding provider match the stored chunks. Those values were not read from production.</p>
+<p class="foot">End of report. Detailed write-ups are the four Markdown files in the same folder.</p>
+
+</body>
+</html>

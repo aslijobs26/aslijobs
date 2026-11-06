@@ -476,6 +476,78 @@ export function looksLikeRelativeHigherSalary(text: string): boolean {
   );
 }
 
+/**
+ * Compare jobs already shown. Does not include "higher salary", which still
+ * raises the previous minimum and searches again.
+ */
+export function looksLikeShownSalaryComparison(text: string): boolean {
+  if (looksLikeRelativeHigherSalary(text)) return false;
+  return /which\s+(one|job|of these|of them)\s+pays|who\s+pays\s+more|pays\s+(more|the most)|highest\s+(salary|pay)|better\s+pay|ekkuva\s+salary\s+edi|which\s+pays\s+more/i.test(
+    text,
+  );
+}
+
+/** Highest listed amount. Empty and "not disclosed" stay unknown — never zero. */
+export function parseSalaryLabelCeiling(label: string): number | null {
+  const cleaned = label.replace(/,/g, "");
+  if (!cleaned.trim() || /not\s+disclosed|undisclosed|salary\s+not/i.test(cleaned)) return null;
+  const range = cleaned.match(/(\d{4,7})\s*[–\-to]+\s*(\d{4,7})/i);
+  if (range?.[2]) {
+    const max = Number(range[2]);
+    return Number.isFinite(max) ? max : null;
+  }
+  const one = cleaned.match(/(\d{4,7})/);
+  if (!one?.[1]) return null;
+  const amount = Number(one[1]);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+export function compareShownJobSalaries(
+  jobs: Array<{ jobTitle: string; companyName?: string; salaryLabel: string }>,
+  language: "en" | "hi" | "te" | "ta" | "kn" | "ml" = "en",
+): string {
+  const ranked = jobs
+    .map((job, index) => ({
+      index: index + 1,
+      title: job.jobTitle || "Job",
+      company: job.companyName || "",
+      amount: parseSalaryLabelCeiling(job.salaryLabel),
+      label: job.salaryLabel.trim(),
+    }))
+    .filter((job) => job.title);
+  const known = ranked.filter((job) => job.amount != null);
+  if (ranked.length === 0) {
+    return language === "te"
+      ? "Mundu jobs chupinchandi. Appudu e list lo ekkuva salary edi cheptha."
+      : "Show me a job list first. Then I can compare the pay on those jobs.";
+  }
+  if (known.length === 0) {
+    return language === "te"
+      ? "Ee jobs lo salary mention cheyyaledhu, so ekkuva pay edi cheppalenu."
+      : "Pay was not listed on these jobs, so I cannot say which one pays more.";
+  }
+  const top = Math.max(...known.map((job) => job.amount ?? 0));
+  const winners = known.filter((job) => job.amount === top);
+  const lines = winners.map((job) => {
+    const who = job.company ? `${job.title} — ${job.company}` : job.title;
+    return `${job.index}. ${who} (${job.label})`;
+  });
+  const hidden = ranked.length - known.length;
+  const hiddenNote =
+    hidden > 0
+      ? language === "te"
+        ? `\n${hidden} job(s) lo salary ledu, avi compare cheyyaledhu.`
+        : `\n${hidden} job(s) had no salary listed, so they were left out.`
+      : "";
+  if (language === "te") {
+    return `Ee list lo ekkuva salary:\n${lines.join("\n")}${hiddenNote}`;
+  }
+  if (language === "hi") {
+    return `इस लिस्ट में ज़्यादा सैलरी:\n${lines.join("\n")}${hiddenNote}`;
+  }
+  return `Highest pay in the jobs I just showed:\n${lines.join("\n")}${hiddenNote}`;
+}
+
 /** Explicit salary preference / correction without requiring the word "salary". */
 /** Drop a saved experience filter. "No experience" stays a fresher request, not a clear. */
 export function looksLikeClearExperience(text: string): boolean {

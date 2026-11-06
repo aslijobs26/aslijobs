@@ -117,10 +117,13 @@ describe("whatsapp inbox store helpers", () => {
       "utf8",
     );
     const persist = source.indexOf("persistInboundMessages(body)");
+    const route = source.indexOf("routeConversationalMessages(body)");
     const ack = source.indexOf("res.sendStatus(200)");
     assert.equal(source.includes("describeInboundWhatsAppMessage(message)"), true);
     assert.ok(persist > 0);
-    assert.ok(ack > persist);
+    assert.ok(route > persist);
+    assert.ok(ack > route);
+    assert.equal(source.includes("throw error;"), true);
     assert.equal(source.includes("recordInboundUserMessage({"), true);
     assert.equal(source.includes("inbox persist failed reason="), false);
   });

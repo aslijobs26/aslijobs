@@ -1,6 +1,7 @@
 "use client";
 
 import { EmployerTableRowsSkeleton } from "@/components/employer-dashboard/skeletons/EmployerPageSkeletons";
+import { EmployerDraftJobDeleteModal } from "@/components/employer-jobs/EmployerDraftJobDeleteModal";
 import { EmployerJobsPagination } from "@/components/employer-jobs/EmployerJobsPagination";
 import { EMPLOYER_JOB_STATUS_PILL_CLASS } from "@/constants/employer-jobs";
 import { useTranslate, type MessageKey } from "@/i18n/translate";
@@ -148,6 +149,9 @@ export function EmployerJobsTable({
 }: EmployerJobsTableProps) {
   const t = useTranslate();
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
+  const [draftToDelete, setDraftToDelete] = useState<EmployerJobListItem | null>(
+    null,
+  );
   const columnCount = TABLE_COLUMN_KEYS.length + (canSelect ? 1 : 0);
   const columnWidths = canSelect ? COLUMN_WIDTHS_WITH_SELECT : COLUMN_WIDTHS;
 
@@ -257,7 +261,7 @@ export function EmployerJobsTable({
                   selectionLocked={selectionLocked}
                   onToggleRow={onToggleRow}
                   onStatusAction={onStatusAction}
-                  onDelete={onDelete}
+                  onDelete={() => setDraftToDelete(job)}
                   onPreview={onPreview}
                 />
               ))
@@ -265,6 +269,23 @@ export function EmployerJobsTable({
           </tbody>
         </table>
       </div>
+      ) : null}
+
+      {draftToDelete ? (
+        <EmployerDraftJobDeleteModal
+          jobTitle={draftToDelete.jobTitle}
+          isDeleting={isMutating}
+          onClose={() => {
+            if (!isMutating) {
+              setDraftToDelete(null);
+            }
+          }}
+          onConfirm={() => {
+            const jobId = draftToDelete.id;
+            setDraftToDelete(null);
+            onDelete(jobId);
+          }}
+        />
       ) : null}
 
       <div className="mt-auto shrink-0">
@@ -425,9 +446,7 @@ function EmployerJobsTableRow({
 
   const handleDelete = () => {
     setMenuOpen(false);
-    if (window.confirm(t("employer.jobs.deleteConfirm"))) {
-      onDelete(job.id);
-    }
+    onDelete(job.id);
   };
 
   const handleMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {

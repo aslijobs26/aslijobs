@@ -9,11 +9,7 @@ import {
   mapWithConcurrency,
 } from "./website-knowledge.crawl.js";
 import { discoverKnowledgePaths } from "./website-knowledge.discover.js";
-import {
-  embedKnowledgeText,
-  HASH_EMBEDDING_MODEL,
-  HASH_EMBEDDING_VERSION,
-} from "./website-knowledge.embeddings.js";
+import { embedKnowledgeText } from "./website-knowledge.embeddings.js";
 import { bumpKnowledgeMetric } from "./website-knowledge.metrics.js";
 import { mergePolicySectionsIntoCorpus } from "./website-knowledge.policy.js";
 import { extractWithOptionalBrowser } from "./website-knowledge.browser.js";
@@ -529,8 +525,8 @@ async function maybeChunkFromDoc(
     sourceType: doc.sourceType,
     contentHash: doc.contentHash,
     embedding: embedded?.vector,
-    embeddingModel: embedded?.model || HASH_EMBEDDING_MODEL,
-    embeddingVersion: embedded?.version || HASH_EMBEDDING_VERSION,
+    embeddingModel: embedded?.model || "",
+    embeddingVersion: embedded?.version || 0,
     active: true,
   };
 }

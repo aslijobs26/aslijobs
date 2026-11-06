@@ -95,16 +95,16 @@ export function receiveWhatsAppWebhook(req: Request, res: Response): void {
   console.info(`[WhatsApp] webhook_received messageId=${firstMessageId}`);
 
   void persistInboundMessages(body)
+    .then(() => routeConversationalMessages(body))
     .then(() => {
       if (!res.headersSent) {
         res.sendStatus(200);
       }
       console.info(`[WhatsApp] webhook_ack messageId=${firstMessageId}`);
-      return routeConversationalMessages(body);
     })
     .catch((error: unknown) => {
       console.error(
-        `[WhatsAppWebhook] inbound persist failed reason=${
+        `[WhatsAppWebhook] inbound failed reason=${
           error instanceof Error ? error.name : "unknown"
         }`,
       );
@@ -356,10 +356,12 @@ async function routeConversationalMessages(body: WebhookBody): Promise<void> {
               error instanceof Error ? error.name : "unknown"
             }`,
           );
-          // Webhook already ACKed — release claim so a later redelivery can retry.
+          // Persist already happened. Release the claim and fail the webhook
+          // so Meta retries. A successful enqueue keeps the claim.
           if (claimed) {
             await releaseWhatsAppEvent(messageId);
           }
+          throw error;
         }
       }
     }

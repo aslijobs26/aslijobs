@@ -322,6 +322,7 @@ export function blendSemanticHits(input: {
     const { cosineSimilarity } = requireCosine();
     for (const chunk of input.chunks) {
       if (!chunk.embedding?.length) continue;
+      if (chunk.embedding.length !== input.queryEmbedding.length) continue;
       const sim = cosineSimilarity(input.queryEmbedding, chunk.embedding);
       if (sim < 0.22) continue;
       const semanticScore = Math.round(sim * 70);

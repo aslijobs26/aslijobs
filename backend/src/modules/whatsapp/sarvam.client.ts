@@ -178,6 +178,35 @@ export type SarvamUnderstanding = {
   source: "sarvam" | "fallback" | "local";
 };
 
+export type SarvamTurnContext = {
+  accountType?: string;
+  priorIntent?: string;
+  priorLocation?: string;
+  priorRole?: string;
+  priorMinSalary?: number | null;
+};
+
+/** Compact prior slots. Local merge still runs after the model and keeps explicit slots. */
+export function sarvamUnderstandUserContent(text: string, context?: SarvamTurnContext): string {
+  const hasPrior = Boolean(
+    context?.priorIntent || context?.priorLocation || context?.priorRole || context?.priorMinSalary,
+  );
+  return JSON.stringify({
+    q: text.slice(0, 280),
+    acct: context?.accountType || "NEW_USER",
+    ...(hasPrior
+      ? {
+          prev: {
+            intent: context?.priorIntent || "",
+            loc: context?.priorLocation || "",
+            role: context?.priorRole || "",
+            minSalary: context?.priorMinSalary ?? null,
+          },
+        }
+      : {}),
+  });
+}
+
 export function sarvamFallbackUnderstanding(
   text: string,
   previous?: BotLanguage | null,
@@ -193,11 +222,7 @@ export async function understandMessage(
   text: string,
   previous?: BotLanguage | null,
   hint?: BotLanguage | null,
-  context?: {
-    accountType?: string;
-    priorLocation?: string;
-    priorRole?: string;
-  },
+  context?: SarvamTurnContext,
 ): Promise<SarvamUnderstanding> {
   const fallback = (): SarvamUnderstanding => sarvamFallbackUnderstanding(text, previous, hint);
   if (!env.SARVAM_API_KEY.trim()) {
@@ -205,13 +230,7 @@ export async function understandMessage(
     return fallback();
   }
 
-  const userContent = JSON.stringify({
-    q: text.slice(0, 280),
-    acct: context?.accountType || "NEW_USER",
-    ...(context?.priorLocation || context?.priorRole
-      ? { prev: { loc: context.priorLocation || "", role: context.priorRole || "" } }
-      : {}),
-  });
+  const userContent = sarvamUnderstandUserContent(text, context);
   const inChars = UNDERSTAND_SYSTEM.length + userContent.length;
   const started = Date.now();
   try {

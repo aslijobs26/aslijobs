@@ -50,6 +50,8 @@ describe("employer jobs draft delete menu", () => {
 
     assert.match(source, /job\.status === "draft" && can\("jobs", "delete"\)/);
     assert.match(source, /\{canDeleteDraft \? \(/);
+    assert.match(source, /EmployerDraftJobDeleteModal/);
+    assert.doesNotMatch(source, /employer\.jobs\.deleteConfirm/);
     assert.doesNotMatch(source, /\{canDeleteJobs \? \(/);
   });
 });

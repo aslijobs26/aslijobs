@@ -15,7 +15,13 @@ import { persistJobSeekerWhatsAppLanguage } from "./job-seeker-whatsapp-language
 import { getLocalizedWebsiteUrl } from "../../utils/site-language-url.js";
 import { WhatsAppSessionModel } from "./whatsapp-session.model.js";
 import { WhatsAppService } from "./whatsapp.service.js";
-import { formatAppliedFilters, looksLikeJobOrdinalSelection } from "./whatsapp-bot.criteria.js";
+import {
+  compareShownJobSalaries,
+  formatAppliedFilters,
+  looksLikeJobOrdinalSelection,
+  looksLikeShownSalaryComparison,
+  parseSalaryLabelCeiling,
+} from "./whatsapp-bot.criteria.js";
 import { runInPhoneOrder } from "./whatsapp-phone-order.js";
 import { transcribeWhatsAppAudio, understandMessage } from "./sarvam.client.js";
 import { localizeDeterministicReply, whatsappAiCallPlan } from "./sarvam-translate.client.js";
@@ -35,6 +41,14 @@ import {
   resolveNoMatchChoice,
 } from "./whatsapp-conversation-orchestrator.js";
 import { selectWhatsAppTool } from "./whatsapp-bot-tools.js";
+import { consumeWhatsAppReplySlot } from "./whatsapp-reply-limit.js";
+import {
+  describeStructuredTurn,
+  looksLikeIntentionalSearchReset,
+  resolveClarificationAck,
+  shouldClearSearchOnGreeting,
+  shouldDeferProtocolAck,
+} from "./whatsapp-turn-resolver.js";
 import {
   answerWebsiteKnowledgeQuestion,
   inferKnowledgePersona,
@@ -49,10 +63,10 @@ import {
   detectMenuSelection,
   detectProtocolTurn,
   formatSalaryLabel,
-  isFollowUpFragment,
   isNoResumeMessage,
   languageFromHint,
-  lookingAtQuestionCopy,
+  looksLikeShiftConstraint,
+  mentionsNightShift,
   menuUnderstanding,
   indianWhatsAppNationalPhone,
   whatsAppSessionPhoneKey,
@@ -64,7 +78,11 @@ import {
   PUBLIC_JOB_FETCH_LIMIT,
   resolveTurnUnderstanding,
   selectVerifiedJobsForReply,
+  askLocationCopy,
+  clarifyJobTitle,
+  clarifyNoMatchChoiceCopy,
   protocolReply,
+  rateLimitCopy,
   serviceErrorCopy,
   shouldUseLlmFallback,
   understandLocally,
@@ -78,29 +96,6 @@ import {
 } from "./whatsapp-bot.logic.js";
 
 const whatsAppService = new WhatsAppService();
-
-const recentReplies = new Map<string, number[]>();
-const RECENT_REPLIES_MAX_KEYS = 5_000;
-
-function allowReply(phone: string): boolean {
-  const now = Date.now();
-  const windowStart = now - 60_000;
-  const hits = (recentReplies.get(phone) ?? []).filter((time) => time > windowStart);
-  if (hits.length >= 20) {
-    recentReplies.set(phone, hits);
-    return false;
-  }
-  hits.push(now);
-  recentReplies.set(phone, hits);
-  if (recentReplies.size > RECENT_REPLIES_MAX_KEYS) {
-    for (const [key, times] of recentReplies) {
-      const kept = times.filter((time) => time > windowStart);
-      if (kept.length === 0) recentReplies.delete(key);
-      else recentReplies.set(key, kept);
-    }
-  }
-  return true;
-}
 
 const mediaProgressAcked = new Set<string>();
 const MEDIA_PROGRESS_ACK_MAX = 2_000;
@@ -271,7 +266,26 @@ async function processInboundTurn(input: {
   const phone = whatsAppSessionPhoneKey(input.from);
   /** Account lookup uses Indian identity only — never last-10 foreign collapse. */
   const identityPhone = indianWhatsAppNationalPhone(input.from) ?? "";
-  if (!allowReply(phone)) {
+  const replySlot = await consumeWhatsAppReplySlot(phone);
+  if (replySlot !== "allow") {
+    if (replySlot === "notice") {
+      const limited = await WhatsAppSessionModel.findOne({ phone })
+        .select("language")
+        .lean()
+        .catch(() => null);
+      const limitedLanguage =
+        limited?.language === "hi" ||
+        limited?.language === "te" ||
+        limited?.language === "ta" ||
+        limited?.language === "kn" ||
+        limited?.language === "ml"
+          ? limited.language
+          : "en";
+      await whatsAppService.sendTextMessage(input.from, rateLimitCopy(limitedLanguage));
+    }
+    console.info(
+      `[WhatsAppBot] reply_limited phone=${maskPhone(phone)} action=${replySlot}`,
+    );
     return;
   }
 
@@ -505,21 +519,62 @@ async function processInboundTurn(input: {
     }
 
     const hint = languageFromHint(languageHint);
+    let forcedNoMatchChoice: ReturnType<typeof resolveNoMatchChoice> = "";
+    if (looksLikeIntentionalSearchReset(text)) {
+      const language = detectLanguage(text, session?.language, hint, true);
+      await WhatsAppSessionModel.findOneAndUpdate(
+        { phone },
+        {
+          phone,
+          language,
+          lastInteractionAt: new Date(),
+          ...clearedTemporarySearchSessionFields(),
+        },
+        { upsert: true },
+      );
+      logWhatsAppBot("SESSION_RESET", "reason=explicit_reset cleared=temporary_search");
+      await whatsAppService.sendTextMessage(
+        input.from,
+        protocolReply("greeting", language, identity.linked, ""),
+      );
+      return;
+    }
     const protocol = detectProtocolTurn(text);
-    if (protocol) {
+    if (protocol && shouldDeferProtocolAck(protocol, session)) {
+      const action = resolveClarificationAck(text, session);
+      const language = detectLanguage(text, session?.language, hint, true);
+      if (action.kind === "no_match") {
+        forcedNoMatchChoice = action.choice;
+        logWhatsAppBot(
+          "CLARIFY_ANSWER",
+          `choice=${action.choice} pending=${session?.pendingClarification || "-"}`,
+        );
+      } else if (action.kind === "reask") {
+        const copy =
+          action.missing === "no_match"
+            ? clarifyNoMatchChoiceCopy(language)
+            : action.missing === "location" || action.missing === "which_city"
+              ? askLocationCopy(language)
+              : clarifyJobTitle(language);
+        logWhatsAppBot("CLARIFY_ANSWER", `reask missing=${action.missing}`);
+        await whatsAppService.sendTextMessage(input.from, copy);
+        return;
+      }
+    }
+    if (protocol && !forcedNoMatchChoice) {
       const language = detectLanguage(text, session?.language, hint, true);
       const name =
         identity.linked === "employer"
           ? identity.employer?.companyName?.trim() || ""
           : identity.seeker?.fullName?.trim() || "";
       const reply = protocolReply(protocol, language, identity.linked, name);
+      const clearSearch =
+        protocol === "greeting" && shouldClearSearchOnGreeting(text, session);
       const conversationState =
-        protocol === "greeting"
+        protocol === "greeting" && clearSearch
           ? conversationStateForAccount(identity.linked)
           : ((session?.conversationState as ConversationState | undefined) ?? "");
-      // Standalone Hi/Hello starts a fresh conversational search — clear temp filters only.
-      const greetingReset =
-        protocol === "greeting" ? clearedTemporarySearchSessionFields() : {};
+      const greetingReset = clearSearch ? clearedTemporarySearchSessionFields() : {};
       await WhatsAppSessionModel.findOneAndUpdate(
         { phone },
         {
@@ -531,8 +586,10 @@ async function processInboundTurn(input: {
         },
         { upsert: true },
       );
-      if (protocol === "greeting") {
+      if (protocol === "greeting" && clearSearch) {
         logWhatsAppBot("SESSION_RESET", "reason=standalone_greeting cleared=temporary_search");
+      } else if (protocol === "greeting") {
+        logWhatsAppBot("SESSION_KEPT", "reason=greeting_during_active_search");
       }
       void persistJobSeekerWhatsAppLanguage({
         phone,
@@ -565,11 +622,12 @@ async function processInboundTurn(input: {
 
     await ensureWhatsAppSearchCatalog(loadActiveJobCatalog);
     const understandStarted = performance.now();
-    const followUp = isFollowUpFragment(text);
     const prior = {
       accountType: accountLabel(identity.linked),
-      priorLocation: followUp ? session?.pendingLocation || session?.lastLocation || "" : "",
-      priorRole: followUp ? session?.pendingCategory || session?.lastCategory || "" : "",
+      priorIntent: session?.lastIntent || session?.pendingIntent || "",
+      priorLocation: session?.pendingLocation || session?.lastLocation || "",
+      priorRole: session?.pendingCategory || session?.lastCategory || "",
+      priorMinSalary: session?.lastMinSalary ?? null,
     };
     // After a job list, "2" / "apply for 5" must pick a shown job, not the seeker menu.
     const pickingShownJob =
@@ -627,16 +685,7 @@ async function processInboundTurn(input: {
           );
         } else {
         const llmStarted = performance.now();
-        const [remote] = await Promise.all([
-          understandMessage(text, session?.language, hint, prior),
-          whatsAppService
-            .sendTextMessage(input.from, lookingAtQuestionCopy(languageForAck))
-            .catch((error: unknown) => {
-              console.error(
-                `[WhatsApp] ack_failed reason=${error instanceof Error ? error.name : "unknown"}`,
-              );
-            }),
-        ]);
+        const remote = await understandMessage(text, session?.language, hint, prior);
         understood = {
           understanding: applyAccountAwareIntent(
             applyRoleHints(text, remote.understanding, identity.linked),
@@ -673,22 +722,22 @@ async function processInboundTurn(input: {
 
     // No-match menu follow-up (1–4) after salary-constrained empty search.
     let noMatchWaitOnly = false;
-    if (session?.pendingClarification === "job_search_no_match") {
-      const choice = resolveNoMatchChoice(text);
+    if (session?.pendingClarification === "job_search_no_match" || forcedNoMatchChoice) {
+      const choice = forcedNoMatchChoice || resolveNoMatchChoice(text);
       const applied = applyNoMatchChoiceToSearch(
         choice,
         {
-          lastCategory: session.lastCategory,
-          lastLocation: session.lastLocation,
-          lastMinSalary: session.lastMinSalary,
-          lastMaxSalary: session.lastMaxSalary,
-          lastSalaryBasis: session.lastSalaryBasis,
-          lastExperience: session.lastExperience,
-          lastExperienceYears: session.lastExperienceYears,
-          lastExperienceRange: session.lastExperienceRange,
-          locationKind: session.locationKind,
-          pendingNearbyCity: session.pendingNearbyCity,
-          pendingClarification: session.pendingClarification,
+          lastCategory: session?.lastCategory,
+          lastLocation: session?.lastLocation,
+          lastMinSalary: session?.lastMinSalary,
+          lastMaxSalary: session?.lastMaxSalary,
+          lastSalaryBasis: session?.lastSalaryBasis,
+          lastExperience: session?.lastExperience,
+          lastExperienceYears: session?.lastExperienceYears,
+          lastExperienceRange: session?.lastExperienceRange,
+          locationKind: session?.locationKind,
+          pendingNearbyCity: session?.pendingNearbyCity,
+          pendingClarification: session?.pendingClarification,
         },
         merged.language,
       );
@@ -816,6 +865,20 @@ async function processInboundTurn(input: {
       ),
     ];
 
+    const structured = describeStructuredTurn({
+      understanding: merged,
+      accountRole: accountLabel(identity.linked),
+      previousIntent: session?.lastIntent || "",
+      userText: text,
+      clarificationAnswer: forcedNoMatchChoice,
+      shiftUnsupported: looksLikeShiftConstraint(text),
+      refersToShownJobs:
+        Boolean(merged.compareShownSalaries) || looksLikeShownSalaryComparison(text),
+    });
+    logWhatsAppBot(
+      "TURN",
+      `intent=${structured.intent} action=${structured.action} lang=${structured.language} role=${structured.category || "-"} loc=${structured.location || "-"} clarify=${structured.needsClarification} confidence=${structured.confidence}`,
+    );
     const dbStarted = Date.now();
     const turn = await buildReply(
       identity,
@@ -949,7 +1012,23 @@ async function processInboundTurn(input: {
           : menuIntent
             ? ""
             : ((session?.conversationState as ConversationState | undefined) ?? ""),
-      ...(merged.intent === "GREETING" ? clearedTemporarySearchSessionFields() : {}),
+      ...(merged.intent === "GREETING"
+        ? !shouldClearSearchOnGreeting(text, session)
+          ? {
+              lastIntent: session?.lastIntent || "",
+              lastLocation: session?.lastLocation || "",
+              lastCategory: session?.lastCategory || "",
+              lastJobs: session?.lastJobs ?? [],
+              lastSeenJobIds: session?.lastSeenJobIds ?? [],
+              pendingClarification: session?.pendingClarification || "",
+              pendingNearbyCity: session?.pendingNearbyCity || "",
+              pendingIntent: session?.pendingIntent || "",
+              pendingLocation: session?.pendingLocation || "",
+              pendingCategory: session?.pendingCategory || "",
+              conversationState: session?.conversationState || "",
+            }
+          : clearedTemporarySearchSessionFields()
+        : {}),
     };
     void persistJobSeekerWhatsAppLanguage({
       phone: identityPhone || phone,
@@ -1187,15 +1266,21 @@ async function buildReply(
   const accountType: AccountKind =
     linked === "both" ? (activeRole === "employer" ? "employer" : activeRole === "seeker" ? "seeker" : "both") : linked;
   const meta = { accountType: linked === "both" && !activeRole ? "both" : accountType, activeRole };
-  const reply = (facts: Record<string, unknown>, shownJobs: PublicJobFact[] = []) =>
-    say(
+  const reply = (facts: Record<string, unknown>, shownJobs: PublicJobFact[] = []) => {
+    const withShift =
+      mentionsNightShift(userText) &&
+      (facts.situation === "jobs" || facts.situation === "job_search_no_match")
+        ? { ...facts, unsupportedFilter: "shift" }
+        : facts;
+    return say(
       "",
       shownJobs,
       meta,
       linked === "none"
-        ? { ...facts, registration: siteUrls(understanding.language) }
-        : facts,
+        ? { ...withShift, registration: siteUrls(understanding.language) }
+        : withShift,
     );
+  };
   const asSeeker = accountType === "seeker";
   const asEmployer = accountType === "employer";
 
@@ -1246,6 +1331,13 @@ async function buildReply(
       situation: "role_redirect",
       target: understanding.crossRole,
       url: understanding.crossRole === "employer" ? urls.employerRegisterUrl : urls.seekerRegisterUrl,
+    });
+  }
+
+  if (understanding.compareShownSalaries || looksLikeShownSalaryComparison(userText)) {
+    return reply({
+      situation: "salary_compare",
+      answer: compareShownJobSalaries(remembered, understanding.language),
     });
   }
   if (
@@ -1305,6 +1397,9 @@ async function buildReply(
           : {}),
       });
     case "CLARIFY":
+      if (understanding.clarifyField === "which_intent") {
+        return reply({ situation: "clarify", missing: "which_intent" });
+      }
       return reply({ situation: "clarify", accountType, missing: "which_account_data" });
     case "HOW_TO_APPLY":
       return reply({ situation: "how_to_apply", accountType });
@@ -1318,6 +1413,9 @@ async function buildReply(
       });
     case "JOB_DETAILS": {
       const ordinal = understanding.jobOrdinal ?? 0;
+      if (ordinal <= 0 && /^apply$/i.test(userText.trim())) {
+        return reply({ situation: "clarify", missing: "which_job" });
+      }
       const picked = ordinal > 0 ? remembered[ordinal - 1] : undefined;
       if (ordinal > 0 && !picked) return reply({ situation: "clarify", missing: "which_job" });
       const jobs = picked ? [picked] : remembered;
@@ -1665,16 +1763,7 @@ async function runAuthorizedJobSearch(
 }
 
 function parseSalaryLabelMax(label: string): number | null {
-  const cleaned = label.replace(/,/g, "");
-  const range = cleaned.match(/(\d{4,7})\s*[–\-to]+\s*(\d{4,7})/i);
-  if (range?.[2]) {
-    const max = Number(range[2]);
-    return Number.isFinite(max) ? max : null;
-  }
-  const one = cleaned.match(/(\d{4,7})/);
-  if (!one?.[1]) return null;
-  const amount = Number(one[1]);
-  return Number.isFinite(amount) ? amount : null;
+  return parseSalaryLabelCeiling(label);
 }
 
 function publicJobReplyFacts(

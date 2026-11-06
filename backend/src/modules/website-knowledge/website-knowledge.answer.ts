@@ -19,7 +19,7 @@ export function sanitizeRetrievedContent(text: string): string {
     .join(" ")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 1_200);
+    .slice(0, 700);
 }
 
 export function composeGroundedKnowledgeAnswer(input: {
@@ -87,7 +87,7 @@ export function composeGroundedKnowledgeAnswer(input: {
   }
 
   return {
-    text: lines.join("\n\n").slice(0, 1_600),
+    text: lines.join("\n\n").slice(0, 900),
     sourceUrl: top.canonicalUrl,
     sourceTitle: top.title || top.sectionHeading,
     confidence,

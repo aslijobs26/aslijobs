@@ -324,10 +324,11 @@ export async function embedKnowledgeText(input: {
     } catch (error) {
       xenovaLoadError = error instanceof Error ? error.message : "xenova_infer_failed";
       console.warn(
-        `[website-knowledge] e5_infer_failed falling_back=hash error=${xenovaLoadError.slice(0, 160)}`,
+        `[website-knowledge] e5_infer_failed error=${xenovaLoadError.slice(0, 160)}`,
       );
     }
-    // Graceful fallback — never fail WhatsApp path because model is cold/missing.
+    // Do not write a hash vector into an E5 index. Callers keep lexical retrieval.
+    return null;
   }
 
   return {

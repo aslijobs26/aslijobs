@@ -13,6 +13,7 @@ import {
   jobOrdinalFromText,
   looksLikeJobOrdinalSelection,
   looksLikeRelativeHigherSalary,
+  looksLikeShownSalaryComparison,
   looksLikeSalaryPreferenceUpdate,
   placeKind,
   recallsEarlierLocation,
@@ -94,8 +95,10 @@ export type BotUnderstanding = {
   /** Explicit "remove experience filter" — empty experience must not inherit the previous one. */
   clearExperience?: boolean;
   /** Set when two roles or cities are plausible and the bot should ask. */
-  clarifyField?: "" | "which_role" | "which_city";
+  clarifyField?: "" | "which_role" | "which_city" | "which_intent";
   clarifyOptions?: string[];
+  /** Compare lastJobs salaries instead of raising the minimum and searching again. */
+  compareShownSalaries?: boolean;
 };
 
 export type PublicJobFact = {
@@ -139,7 +142,7 @@ const KANNADA_SCRIPT = /[\u0C80-\u0CFF]/;
 const MALAYALAM_SCRIPT = /[\u0D00-\u0D7F]/;
 
 const ROMAN_TELUGU =
-  /\b(undha|unda|undi|undhi|vundha|vunda|vundi|vundhi|yundha|yunda|unnaya|unnayi|unnai|unnara|unnaru|kavali|kaavali|kavala|cheppu|cheppandi|cheyyandi|cheyandi|chudandi|chupinchu|naaku|naku|nenu|meeru|miru|enti|emiti|ela|enni|vachayi|chesina|pani|ledu|ledhu|levu|undali)\b|\blo\b/i;
+  /\b(undha|unda|undi|undhi|vundha|vunda|vundi|vundhi|yundha|yunda|unnaya|unnayi|unnai|unnara|unnaru|kavali|kaavali|kavala|cheppu|cheppandi|cheyyandi|cheyandi|cheyyali|chudandi|chudali|chupinchu|naaku|naku|nenu|meeru|miru|enti|emiti|ela|enni|vachayi|chesina|pani|ledu|ledhu|levu|undali|ekkuva|takkuva|ippudu)\b|\blo\b/i;
 const ROMAN_HINDI =
   /\b(kya|hain|mujhe|muje|muze|mujhko|chahiye|chaahiye|chahie|dikhao|dikha|batao|bataiye|naukri|mereko|mein|kitne|kitna|kitni|kaam|zarurat|zaroorat|milega|milegi)\b/i;
 /** English verbs that sit immediately before "me" and are not the Hindi locative. */
@@ -543,7 +546,7 @@ export function detectProtocolTurn(text: string): ProtocolTurn | null {
     return "thanks";
   }
   if (
-    /^(ok|okay|oke|bye|goodbye|yes|no|yeah|yep|yup|nope|haan|han|ha|avunu|kadu|nahi|nahin|సరే|అవును|కాదు|ठीक|सही|हाँ|हां|नहीं|சரி|ஆம்|இல்லை|ಸರಿ|ಹೌದು|ಇಲ್ಲ|ശരി|അതെ|ഇല്ല|బై)\.?$/i.test(
+    /^(ok|okay|oke|bye|goodbye|yes|no|yeah|yep|yup|nope|haan|han|ha|avunu|kadu|sare|nahi|nahin|సరే|అవును|కాదు|ठीक|सही|हाँ|हां|नहीं|சரி|ஆம்|இல்லை|ಸರಿ|ಹೌದು|ಇಲ್ಲ|ശരಿ|അതെ|ഇല്ല|బై)\.?$/i.test(
       trimmed,
     )
   ) {
@@ -618,12 +621,86 @@ function scopeForIntent(intent: BotIntent): BotScope {
   return "NONE";
 }
 
+function filledUnderstanding(
+  text: string,
+  language: BotLanguage,
+  patch: Partial<BotUnderstanding>,
+): BotUnderstanding {
+  return {
+    ...minimalUnderstanding(text),
+    language,
+    confidence: 0.94,
+    ...patch,
+  };
+}
+
+/** One-word commands that must not wait for a model. Protocol words stay in detectProtocolTurn. */
+export function shortCommandUnderstanding(
+  text: string,
+  language: BotLanguage,
+): BotUnderstanding | null {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 16 || trimmed.split(/\s+/).length > 2) {
+    return null;
+  }
+  if (/^(jobs?|naukri|udyogalu|panulu)$/i.test(trimmed)) {
+    return filledUnderstanding(text, language, {
+      intent: "JOB_SEARCH",
+      openSearch: true,
+      scope: "PUBLIC_JOBS",
+    });
+  }
+  if (/^(apply|applycheyyi)$/i.test(trimmed)) {
+    return filledUnderstanding(text, language, {
+      intent: "HOW_TO_APPLY",
+      scope: "NONE",
+    });
+  }
+  return null;
+}
+
+/**
+ * Two strong asks in one message. We do not run both. The reply asks which is first.
+ * "How do I apply for driver jobs" stays a single apply/search intent.
+ */
+export function looksLikeCompetingIntents(text: string): boolean {
+  if (!/\band\b|మరియు|\+|\/|,/i.test(text)) return false;
+  if (/how\s+(?:do\s+i\s+|to\s+|can\s+i\s+)?apply/i.test(text)) return false;
+  const jobs = messageLooksLikeJobAsk(text) && Boolean(extractRole(text) || extractPlace(text));
+  const applications =
+    /application\s+status|my\s+applications|naa\s+application|status\s+enti/i.test(text);
+  return jobs && applications;
+}
+
 export function understandLocally(
   text: string,
   previous?: BotLanguage | null,
   hint?: BotLanguage | null,
 ): BotUnderstanding {
   const language = detectLanguage(text, previous, hint, isFollowUpFragment(text));
+  const short = shortCommandUnderstanding(text, language);
+  if (short) return short;
+  if (looksLikeCompetingIntents(text)) {
+    return {
+      ...minimalUnderstanding(text, previous, hint),
+      intent: "CLARIFY",
+      language,
+      clarifyField: "which_intent",
+      confidence: 0.95,
+      scope: "NONE",
+    };
+  }
+  if (looksLikeShownSalaryComparison(text)) {
+    return {
+      ...minimalUnderstanding(text, previous, hint),
+      intent: "JOB_DETAILS",
+      language,
+      compareShownSalaries: true,
+      focus: "salary",
+      confidence: 0.95,
+      scope: "PUBLIC_JOBS",
+    };
+  }
   const folded = text.toLowerCase();
   let location = extractPlace(text);
   let category = extractRole(text);
@@ -1019,11 +1096,17 @@ export function looksLikeShowMoreJobs(text: string): boolean {
   );
 }
 
+const NIGHT_SHIFT =
+  /night\s*shift|నైట్\s*షిఫ్ట్|नाइट\s*शिफ्ट|நைட்\s*ஷிப்ட்|ನೈಟ್\s*ಶಿಫ್ಟ್|നൈറ്റ്\s*ഷിഫ്റ്റ്/i;
+
+/** User asked for a shift. The public job query has no shift field. */
+export function mentionsNightShift(text: string): boolean {
+  return NIGHT_SHIFT.test(text);
+}
+
 /** Shift is not a public job filter. Keep the saved search instead of inventing a role. */
 export function looksLikeShiftConstraint(text: string): boolean {
-  if (!/night\s*shift|నైట్\s*షిఫ్ట్|नाइट\s*शिफ्ट|நைட்\s*ஷிப்ட்|ನೈಟ್\s*ಶಿಫ್ಟ್|നൈറ്റ്\s*ഷിഫ്റ്റ്/i.test(text)) {
-    return false;
-  }
+  if (!mentionsNightShift(text)) return false;
   return !extractPlace(text);
 }
 
@@ -1322,7 +1405,13 @@ function combineSearchSlots(
       ? "monthly"
       : previous.salaryBasis || "monthly";
   // Relative bump ("salary konchem ekkuva") without a number.
-  if (next.minSalary == null && looksLikeRelativeHigherSalary(text) && (previous.minSalary ?? 0) > 0) {
+  // "Which one pays more?" compares the shown list and must not raise the minimum.
+  if (
+    next.minSalary == null &&
+    !looksLikeShownSalaryComparison(text) &&
+    looksLikeRelativeHigherSalary(text) &&
+    (previous.minSalary ?? 0) > 0
+  ) {
     minSalary = Math.round(Number(previous.minSalary) + 5000);
     maxSalary = null;
   }
@@ -2060,6 +2149,55 @@ export function disambiguationCopy(language: BotLanguage, missing: string, optio
     : `Which role did you mean? ${list || "Send the role name."}`;
 }
 
+export function unsupportedShiftFilterCopy(language: BotLanguage): string {
+  if (language === "te") {
+    return "Night shift ippudu search filter kadu. Nenu mee role + city tho jobs chupisthunnanu.";
+  }
+  if (language === "hi") {
+    return "नाइट शिफ्ट अभी सर्च फ़िल्टर नहीं है. मैं आपकी भूमिका और शहर वाली नौकरियां दिखा रहा हूँ.";
+  }
+  return "Night shift is not a search filter yet. I'll keep your role and city and show those jobs.";
+}
+
+export function clarifyCompetingIntentCopy(language: BotLanguage): string {
+  if (language === "te") {
+    return "Meeru rendu vishayalu adigaru: job search, and application status. Okati mundu cheppandi — jobs, leda status.";
+  }
+  if (language === "hi") {
+    return "आपने दो बातें पूछी हैं: जॉब सर्च और आवेदन स्टेटस. पहले क्या करूँ — jobs, या status?";
+  }
+  return "You asked about two things: job search and application status. Which should I do first — jobs, or status?";
+}
+
+export function clarifyNoMatchChoiceCopy(language: BotLanguage): string {
+  if (language === "te") {
+    return "Number tho cheppandi: 1 takkuva salary, 2 daggarlo location, 3 salary ledu, 4 tarvatha.";
+  }
+  if (language === "hi") {
+    return "नंबर बताइए: 1 कम सैलरी, 2 पास का शहर, 3 बिना सैलरी, 4 बाद में.";
+  }
+  return "Reply with a number: 1 lower salary, 2 a nearby city, 3 jobs with no salary listed, 4 check again later.";
+}
+
+export function rateLimitCopy(language: BotLanguage): string {
+  if (language === "te") {
+    return "Konchem aagu. Nenu oka nimisham lo 20 messages varaku reply istha. Tarvatha malli adagandi.";
+  }
+  if (language === "hi") {
+    return "एक मिनट रुकिए. मैं एक मिनट में 20 संदेशों तक जवाब देता हूँ. फिर पूछिए.";
+  }
+  return "Please wait a moment. I can reply to 20 messages a minute, then I'll continue.";
+}
+
+function withUnsupportedFilterNote(
+  language: BotLanguage,
+  facts: Record<string, unknown>,
+  body: string,
+): string {
+  if (facts.unsupportedFilter !== "shift") return body;
+  return `${unsupportedShiftFilterCopy(language)}\n\n${body}`;
+}
+
 export function buildDeterministicReply(
   language: BotLanguage,
   facts: Record<string, unknown>,
@@ -2157,6 +2295,8 @@ export function buildDeterministicReply(
     if (missing === "which_city" || missing === "which_role") {
       return disambiguationCopy(language, missing, facts.options);
     }
+    if (missing === "which_intent") return clarifyCompetingIntentCopy(language);
+    if (missing === "no_match") return clarifyNoMatchChoiceCopy(language);
     if (missing === "which_account_data") return clarifyAmbiguousCopy(language);
     if (missing === "purpose") return purposeClarifyCopy(language);
     if (missing === "which_job") return clarifyWhichShownJobCopy(language);
@@ -2229,7 +2369,7 @@ export function buildDeterministicReply(
     });
   }
   if (situation === "job_search_no_match") {
-    return jobSearchNoMatchCopy({
+    return withUnsupportedFilterNote(language, facts, jobSearchNoMatchCopy({
       language,
       location: String(facts.location ?? ""),
       role: String(facts.role ?? ""),
@@ -2238,7 +2378,7 @@ export function buildDeterministicReply(
       undisclosedCount: Number(facts.undisclosedCount ?? 0),
       nearbyCity: String(facts.nearbyCity ?? ""),
       showMore: Boolean(facts.showMore),
-    });
+    }));
   }
   if (situation === "job_search_no_more") {
     return jobSearchNoMoreCopy({
@@ -2251,11 +2391,15 @@ export function buildDeterministicReply(
   if (situation === "search_failed") {
     return serviceErrorCopy(language);
   }
+  if (situation === "salary_compare") {
+    const answer = String(facts.answer ?? "").trim();
+    return answer || null;
+  }
   if (situation === "jobs" || situation === "job_details") {
     const jobs = Array.isArray(facts.jobs)
       ? (facts.jobs as Array<Record<string, unknown>>)
       : [];
-    return renderJobSearchReply({
+    const rendered = renderJobSearchReply({
       language,
       location: String(facts.location ?? ""),
       jobTitle: String(facts.role ?? ""),
@@ -2279,6 +2423,7 @@ export function buildDeterministicReply(
           : "",
       appliedFilters: facts.appliedFilters ? String(facts.appliedFilters) : "",
     });
+    return withUnsupportedFilterNote(language, facts, rendered);
   }
   if (situation === "count" || situation === "status" || situation === "list") {
     const applications = Array.isArray(facts.applications)
@@ -2634,6 +2779,17 @@ export function applyConversationFollowUp(
   lastIntent: string | undefined | null,
 ): BotUnderstanding {
   const prior = String(lastIntent ?? "").trim();
+  if (/^apply$/i.test(text.trim()) && (prior === "JOB_SEARCH" || prior === "JOB_DETAILS" || prior === "JOB_COUNT")) {
+    return {
+      ...understanding,
+      intent: "JOB_DETAILS",
+      scope: "PUBLIC_JOBS",
+      requiresAuth: false,
+      openSearch: false,
+      jobOrdinal: null,
+      confidence: Math.max(understanding.confidence, 0.95),
+    };
+  }
   if (!prior || isPrivateIntent(understanding.intent) || understanding.intent === "ACCOUNT_STATUS") {
     return understanding;
   }
@@ -2644,6 +2800,25 @@ export function applyConversationFollowUp(
     understanding.intent === "UNRELATED"
   ) {
     return understanding;
+  }
+
+  if (
+    looksLikeStatusFollowUp(text) &&
+    (prior === "MY_APPLICATIONS" ||
+      prior === "APPLICATION_STATUS" ||
+      prior === "APPLICATION_COUNT" ||
+      prior === "APPLIED_COVERAGE")
+  ) {
+    return {
+      ...understanding,
+      intent: "APPLICATION_STATUS",
+      scope: "OWN_DATA",
+      requiresAuth: true,
+      category: "",
+      jobQuery: "",
+      openSearch: false,
+      confidence: Math.max(understanding.confidence, 0.92),
+    };
   }
 
   // "Status?" / "when will it be approved?" after posting or profile → keep employer/profile topic.
@@ -3494,13 +3669,22 @@ function extractRole(text: string): string {
   ) {
     return free;
   }
-  if (best) return alignKnownRole(best, text);
-  if (free) {
+  let picked = "";
+  if (best) picked = alignKnownRole(best, text);
+  else if (free) {
     const spelled = correctRoleSpelling(free);
-    if (spelled) return alignKnownRole(spelled, text);
-    return matchCatalogRole(free) || free;
+    picked = spelled ? alignKnownRole(spelled, text) : matchCatalogRole(free) || free;
+  } else {
+    picked = matchCatalogRole(text);
   }
-  return matchCatalogRole(text);
+  if (roleIsShiftOnly(picked)) return "";
+  return picked;
+}
+
+function roleIsShiftOnly(value: string): boolean {
+  if (!value || !mentionsNightShift(value)) return false;
+  const rest = value.replace(NIGHT_SHIFT, " ").replace(/[^a-zA-Z]+/g, " ").trim();
+  return rest.length === 0;
 }
 
 export function knownPlaceNames(): string[] {

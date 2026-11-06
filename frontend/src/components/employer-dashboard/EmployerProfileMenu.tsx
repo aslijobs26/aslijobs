@@ -3,7 +3,6 @@
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { EMPLOYER_DASHBOARD_AVATAR_INITIALS } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
-import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import { useTranslate, type MessageKey } from "@/i18n/translate";
 import { useCanOptional } from "@/providers/employer-permission-provider";
@@ -164,7 +163,7 @@ function EmployerProfileAvatar({
           loading="lazy"
           decoding="async"
           onError={() => setHasImageError(true)}
-          className={PROFILE_IMAGE_FIT_CLASSNAME}
+          className="size-full rounded-full object-cover object-center"
           aria-hidden="true"
         />
       </span>
