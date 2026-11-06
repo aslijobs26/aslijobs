@@ -5,6 +5,17 @@ import {
   tokenizeKnowledgeQuery,
 } from "./website-knowledge.normalize.js";
 
+/** Add English section words so Telugu and Roman Telugu questions hit the same pages. */
+export function expandKnowledgeQuery(query: string): string {
+  const hints: string[] = [];
+  if (/గైడ్|guidelines?|నియమా|రూల్|\brules?\b/i.test(query)) hints.push("guidelines");
+  if (/ఎంప్లాయర్|employer/i.test(query)) hints.push("employer");
+  if (/జాబ్\s*పోస్ట|job\s*post/i.test(query)) hints.push("job posting");
+  if (/జాబ్\s*సీకర్|job\s*seeker/i.test(query)) hints.push("job seeker");
+  const extra = hints.filter((hint) => !query.toLowerCase().includes(hint));
+  return extra.length ? `${query} ${extra.join(" ")}` : query;
+}
+
 const FAQ_QUERY_ALIASES: Array<{ pattern: RegExp; questionNeedle: string }> = [
   {
     pattern:
@@ -186,8 +197,28 @@ export function scoreSectionMatch(
   if (/pricing|price|subscription|payment|invoice|hiring plan/.test(foldedQuery)) {
     if (section.sourceType === "pricing") score += 28;
   }
-  if (/privacy|policy|terms|guidelines/.test(foldedQuery)) {
+  if (/privacy|policy|terms|guidelines|rules/.test(foldedQuery)) {
     if (section.sourceType === "policy") score += 28;
+  }
+  const guidelineAsk = /guideline|rules/.test(foldedQuery);
+  if (guidelineAsk && /guideline/i.test(section.sectionHeading)) {
+    score += 16;
+  }
+  if (
+    guidelineAsk &&
+    !/employer|seeker|posting|privacy|terms|admin/.test(foldedQuery) &&
+    /^(introduction|general platform guidelines)$/i.test(section.sectionHeading.trim())
+  ) {
+    score += 40;
+  }
+  if (guidelineAsk && /employer/.test(foldedQuery) && /employer guideline/i.test(section.sectionHeading)) {
+    score += 24;
+  }
+  if (guidelineAsk && /job\s*seeker|\bseeker\b/.test(foldedQuery) && /job seeker guideline/i.test(section.sectionHeading)) {
+    score += 24;
+  }
+  if (guidelineAsk && /post/.test(foldedQuery) && /job posting guideline/i.test(section.sectionHeading)) {
+    score += 24;
   }
   if (/contact|support|email|phone|help center/.test(normalizeKnowledgeText(query))) {
     if (section.sourceType === "contact" || section.sourceType === "help") score += 10;

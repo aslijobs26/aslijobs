@@ -79,6 +79,7 @@ import {
   resolveTurnUnderstanding,
   selectVerifiedJobsForReply,
   askLocationCopy,
+  capabilityCopy,
   clarifyJobTitle,
   clarifyNoMatchChoiceCopy,
   protocolReply,
@@ -550,6 +551,21 @@ async function processInboundTurn(input: {
           `choice=${action.choice} pending=${session?.pendingClarification || "-"}`,
         );
       } else if (action.kind === "reask") {
+        const seekerSlot =
+          action.missing === "role" ||
+          action.missing === "which_job" ||
+          action.missing === "location" ||
+          action.missing === "which_city";
+        if (identity.linked === "employer" && seekerSlot) {
+          await WhatsAppSessionModel.findOneAndUpdate(
+            { phone },
+            { phone, ...clearedTemporarySearchSessionFields(), lastInteractionAt: new Date() },
+            { upsert: true },
+          );
+          logWhatsAppBot("CLARIFY_ANSWER", `employer_skip_seeker_slot missing=${action.missing}`);
+          await whatsAppService.sendTextMessage(input.from, capabilityCopy(language, "employer"));
+          return;
+        }
         const copy =
           action.missing === "no_match"
             ? clarifyNoMatchChoiceCopy(language)
@@ -1272,14 +1288,11 @@ async function buildReply(
       (facts.situation === "jobs" || facts.situation === "job_search_no_match")
         ? { ...facts, unsupportedFilter: "shift" }
         : facts;
-    return say(
-      "",
-      shownJobs,
-      meta,
-      linked === "none"
-        ? { ...withShift, registration: siteUrls(understanding.language) }
-        : withShift,
-    );
+    return say("", shownJobs, meta, {
+      ...withShift,
+      accountType: withShift.accountType ?? meta.accountType,
+      ...(linked === "none" ? { registration: siteUrls(understanding.language) } : {}),
+    });
   };
   const asSeeker = accountType === "seeker";
   const asEmployer = accountType === "employer";

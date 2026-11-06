@@ -2031,7 +2031,7 @@ describe("whatsapp job search — requested city is the source of truth", () => 
       profileUrl: "https://aslijobs.com/employer/company-profile",
     });
     assert.match(verified, /post-job/);
-    assert.match(verified, /Electrician/);
+    assert.doesNotMatch(verified, /You mentioned|మీరు చెప్పింది|आपने बताया/);
     assert.match(purposeClarifyCopy("en"), /finding a job or posting a job/i);
     const seekerReg = buildDeterministicReply("en", {
       situation: "new_user",

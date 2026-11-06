@@ -188,7 +188,7 @@ function cleanRolePhrase(value: string, isKnownPlace: (place: string) => boolean
     previous = phrase;
     phrase = phrase
       .replace(
-        /^(?:a|an|the|any|some|my|me|i|please|show|find|need|want|wnat|looking|for|available|are|there|what|which|how|do|can|is|matching|suitable|only|just|sirf|fresher|freshers|experienced|enni|entha|enta|unnayi|vunnayi|vunnaya|unnaya|unnai|unnaayi|vundi|vundhi|ga|lo)\s+/i,
+        /^(?:a|an|the|any|some|my|me|i|nenu|naaku|naku|meeru|memu|please|show|find|need|want|wnat|looking|for|available|are|there|what|which|how|do|can|is|matching|suitable|only|just|sirf|fresher|freshers|experienced|enni|entha|enta|unnayi|vunnayi|vunnaya|unnaya|unnai|unnaayi|vundi|vundhi|ga|lo)\s+/i,
         "",
       )
       .replace(
@@ -206,6 +206,8 @@ function cleanRolePhrase(value: string, isKnownPlace: (place: string) => boolean
     }
   }
   if (!phrase || phrase.length < 3 || phrase.length > 40) return "";
+  // Brand name and leftover sentence words are not a job title.
+  if (/\basli\s*jobs\b/i.test(phrase)) return "";
   const tokens = phrase.toLowerCase().split(/\s+/);
   if (tokens.every((token) => ROLE_REJECT.has(token))) return "";
   // Single filler/question token after stripping must never become a role.

@@ -85,6 +85,10 @@ Do not enable E5 on a hash index.
 5. `REDIS_URL` should be set so the reply counter and the inbound queue are shared across processes. Empty Redis keeps the in-process counter and the inline inbound fallback.
 6. Leave `WHATSAPP_OPENAI_ASSIST_ENABLED` unset until a separate evaluation. This change does not turn it on.
 
+## Real conversation follow-up
+
+Live WhatsApp checks after the changes above found three further defects: an employer guidelines question was answered with a job-seeker prompt, a correct post-job link was followed by `మీరు చెప్పింది: Nenu Aslijobs Lo.`, and guideline questions were not consistently answered from the official guidelines page. Those are fixed in the same rule-first pipeline. OpenAI assist stays off. E5 stays off. Details, root causes, exact replies, and the new regression file are in `WHATSAPP_BOT_REAL_CONVERSATION_FIXES.md`.
+
 ## Needs live Meta or Sarvam validation
 
 - Webhook 200 timing against Meta’s timeout when Redis is down and the turn runs inline.

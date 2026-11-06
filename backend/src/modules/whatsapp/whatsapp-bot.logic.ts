@@ -1198,6 +1198,18 @@ export function validateCurrentMessageIntent(
     };
   }
   // Wipe free-title pollution on employer intents (e.g. "Nenu Post Chesina").
+  if (understanding.intent === "POST_JOB") {
+    const catalogRole = matchCatalogRole(understanding.category);
+    return {
+      ...understanding,
+      category: catalogRole,
+      jobQuery: catalogRole,
+      location: extractPlace(text),
+      openSearch: false,
+      scope: "OWN_EMPLOYER_DATA",
+      requiresAuth: true,
+    };
+  }
   if (
     understanding.intent === "EMPLOYER_JOBS" ||
     understanding.intent === "EMPLOYER_JOB_STATUS" ||
@@ -2300,6 +2312,9 @@ export function buildDeterministicReply(
     if (missing === "which_account_data") return clarifyAmbiguousCopy(language);
     if (missing === "purpose") return purposeClarifyCopy(language);
     if (missing === "which_job") return clarifyWhichShownJobCopy(language);
+    if (missing === "intent" && facts.accountType === "employer") {
+      return capabilityCopy(language, "employer");
+    }
     return clarifyJobTitle(language);
   }
   if (situation === "no_resume") {
@@ -3304,23 +3319,13 @@ export function postJobGuideCopy(input: {
     });
   }
   const url = input.postJobUrl.trim();
-  const role = input.role.trim();
-  const location = input.location.trim();
-  const mentioned = [role, location].filter(Boolean).join(" — ");
-  const detail = mentioned
-    ? input.language === "te"
-      ? `\n\nమీరు చెప్పింది: ${mentioned}.`
-      : input.language === "hi"
-        ? `\n\nआपने बताया: ${mentioned}.`
-        : `\n\nYou mentioned: ${mentioned}.`
-    : "";
   if (input.language === "te") {
-    return `సరే 👍 జాబ్ పోస్ట్ చేయడానికి ఈ లింక్ ఓపెన్ చేయండి:\n👉 ${url}${detail}`;
+    return `సరే 👍 జాబ్ పోస్ట్ చేయడానికి ఈ లింక్ ఓపెన్ చేయండి:\n👉 ${url}`;
   }
   if (input.language === "hi") {
-    return `ज़रूर 👍 नौकरी पोस्ट करने के लिए यह लिंक खोलें:\n👉 ${url}${detail}`;
+    return `ज़रूर 👍 नौकरी पोस्ट करने के लिए यह लिंक खोलें:\n👉 ${url}`;
   }
-  return `Sure 👍 Open this link to post a job:\n👉 ${url}${detail}`;
+  return `Sure 👍 Open this link to post a job:\n👉 ${url}`;
 }
 
 export function fallbackCopy(language: BotLanguage): string {
@@ -3753,7 +3758,7 @@ export function looksLikeAppDownloadQuestion(text: string): boolean {
 }
 
 export function looksLikeHowToFindJobs(text: string): boolean {
-  return /how\s+(?:do\s+i\s+|to\s+|can\s+i\s+)?find\s+(?:a\s+)?jobs?|jobs?\s+ela\s+kanukko|నౌకరీ\s+ఎలా|नौकरी\s+कैसे\s+(?:ढूंढ|पता)/i.test(
+  return /how\s+(?:do\s+i\s+|to\s+|can\s+i\s+)?find\s+(?:a\s+)?jobs?|jobs?\s+ela\s+(?:search|kanukko|chud|chod|vetuk)|ela\s+search\s+cheyy|నౌకరీ\s+ఎలా|नौकरी\s+कैसे\s+(?:ढूंढ|पता)/i.test(
     text,
   );
 }
@@ -3821,13 +3826,13 @@ export function looksLikeEmployerInformationQuestion(text: string): boolean {
 }
 
 export function looksLikePolicyQuestion(text: string): boolean {
-  return /privacy\s*policy|terms?\s*(?:and|&)?\s*conditions?|guidelines?|గోప్యత|प्राइवेसी|தனியுரிமை|ಗೌಪ್ಯತೆ|സ്വകാര്യത|terms\s+explain|privacy\s+explain/i.test(
+  return /privacy\s*policy|terms?\s*(?:and|&)?\s*conditions?|guidelines?|గైడ్|రూల్|(?:aslijobs|employer|job\s*seeker|job\s*post(?:ing)?).{0,48}\brules?\b|\brules?\b.{0,32}(?:cheppu|enti|follow|ఏంటి|చెప్పు)|follow\s+avvali|నియమా|గోప్యత|प्राइवेसी|தனியுரிமை|ಗೌಪ್ಯತೆ|സ്വകാര്യത|terms\s+explain|privacy\s+explain/i.test(
     text,
   );
 }
 
 export function looksLikeApplicantsWhereGuide(text: string): boolean {
-  return /(?:applicants?|applications?|candidates?).{0,24}(?:ekkada|where|எங்க|ಎಲ್ಲಿ|എവിടെ|कहाँ|ఎక్కడ)|(?:ekkada|where|ఎక్కడ).{0,24}(?:applicants?|applications?|candidates?)|dashboard.{0,32}(?:applicants?|applications?|candidates?)|na\s+applicants/i.test(
+  return /(?:applicants?|applications?|candidates?).{0,24}(?:ekkada|where|எங்க|ಎಲ್ಲಿ|എവിടെ|कहाँ|ఎక్కడ)|(?:ekkada|where|ఎక్కడ).{0,24}(?:applicants?|applications?|candidates?)|dashboard.{0,32}(?:applicants?|applications?|candidates?)|na\s+applicants|how\s+(?:do\s+i\s+|can\s+i\s+|to\s+)?(?:manage|view|see|track)\s+(?:my\s+|the\s+)?(?:applicants?|applications?|candidates?)/i.test(
     text,
   );
 }

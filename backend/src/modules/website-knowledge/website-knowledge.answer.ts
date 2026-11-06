@@ -19,7 +19,22 @@ export function sanitizeRetrievedContent(text: string): string {
     .join(" ")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 700);
+    .slice(0, 1200);
+}
+
+function stripLeadingHeading(heading: string, body: string): string {
+  const clean = heading.trim();
+  if (!clean) return body;
+  const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return body.replace(new RegExp(`^${escaped}\\s*`, "i"), "").trim();
+}
+
+function clipAtSentence(text: string, max: number): string {
+  const clipped = text.trim().slice(0, max);
+  if (clipped.length === text.trim().length) return clipped;
+  const end = Math.max(clipped.lastIndexOf(". "), clipped.lastIndexOf(".\n"), clipped.lastIndexOf("."));
+  if (end > max * 0.45) return clipped.slice(0, end + 1).trim();
+  return clipped.trim();
 }
 
 export function composeGroundedKnowledgeAnswer(input: {
@@ -48,14 +63,25 @@ export function composeGroundedKnowledgeAnswer(input: {
     };
   }
 
-  const evidence = sanitizeRetrievedContent(top.content);
-  const extras =
-    confidence === "low"
-      ? input.hits
-          .slice(1, 3)
-          .map((hit) => sanitizeRetrievedContent(hit.content))
-          .filter(Boolean)
-      : [];
+  const evidence = stripLeadingHeading(
+    top.sectionHeading,
+    sanitizeRetrievedContent(top.content),
+  );
+  const broadGuide = /guideline|rules|job posting|employer guide/i.test(input.query);
+  const samePage = input.hits.filter(
+    (hit) => hit.canonicalUrl === top.canonicalUrl && hit.sectionHeading !== top.sectionHeading,
+  );
+  const extraHits = broadGuide || confidence === "low" ? samePage.slice(0, 2) : [];
+  const extras = extraHits
+    .map((hit) => {
+      const heading = hit.sectionHeading?.trim() ?? "";
+      const body = clipAtSentence(
+        stripLeadingHeading(heading, sanitizeRetrievedContent(hit.content)),
+        280,
+      );
+      return [heading, body].filter(Boolean).join(": ");
+    })
+    .filter(Boolean);
 
   // Prefer official contact numbers from a contact hit when FAQ answer is generic.
   const contactHit = input.hits.find(
@@ -77,7 +103,7 @@ export function composeGroundedKnowledgeAnswer(input: {
           .join(" ")
           .trim();
 
-  const lines = [body];
+  const lines = [clipAtSentence(body, 720)];
   if (confidence === "low") {
     lines.push("If you need more detail, open the official page below.");
   }

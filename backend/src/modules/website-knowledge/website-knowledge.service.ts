@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { getLocalizedWebsiteUrl } from "../../utils/site-language-url.js";
 import { composeGroundedKnowledgeAnswer } from "./website-knowledge.answer.js";
 import { CORPUS_FAQS, CORPUS_SECTIONS } from "./website-knowledge.corpus.js";
+import { mergePolicySectionsIntoCorpus } from "./website-knowledge.policy.js";
 import { embedKnowledgeText } from "./website-knowledge.embeddings.js";
 import { bumpKnowledgeMetric, knowledgeHealthSnapshot } from "./website-knowledge.metrics.js";
 import {
@@ -10,6 +11,7 @@ import {
 } from "./website-knowledge.normalize.js";
 import {
   blendSemanticHits,
+  expandKnowledgeQuery,
   rankKnowledgeHits,
   type RetrievableFaq,
   type RetrievableSection,
@@ -63,7 +65,7 @@ function corpusAsFaqs(origin: string): RetrievableFaq[] {
 }
 
 function corpusAsSections(origin: string): RetrievableSection[] {
-  return CORPUS_SECTIONS.map((section) => ({
+  return mergePolicySectionsIntoCorpus(CORPUS_SECTIONS).map((section) => ({
     title: section.title,
     sectionHeading: section.sectionHeading,
     content: section.content,
@@ -210,8 +212,9 @@ export async function answerWebsiteKnowledgeQuestion(input: {
     loadSections(origin),
     loadChunks(),
   ]);
+  const retrievalQuery = expandKnowledgeQuery(input.query);
   const lexicalHits = rankKnowledgeHits({
-    query: input.query,
+    query: retrievalQuery,
     faqs,
     sections,
     persona: input.persona,
@@ -268,7 +271,7 @@ export async function answerWebsiteKnowledgeQuestion(input: {
   }
 
   const answer = composeGroundedKnowledgeAnswer({
-    query: input.query,
+    query: retrievalQuery,
     hits,
     helpCenterUrl: siteUrl("/help-center", origin, input.language),
     contactUrl: siteUrl("/contact", origin, input.language),
