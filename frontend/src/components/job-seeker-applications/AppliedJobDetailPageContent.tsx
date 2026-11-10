@@ -10,9 +10,11 @@ import { useSiteLanguage } from "@/i18n/site-language";
 import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import {
   fetchSeekerApplication,
+  respondToSeekerOffer,
   withdrawSeekerApplication,
 } from "@/services/job-seeker-applications.service";
 import type {
+  ApplicationOfferResponseStatus,
   ApplicationStatus,
   ApplicationStatusHistoryEntry,
 } from "@/types/job-seeker-applications";
@@ -96,6 +98,44 @@ export function AppliedJobDetailPageContent({
       );
     },
   });
+
+  const offerResponseMutation = useMutation({
+    mutationFn: (response: ApplicationOfferResponseStatus) =>
+      respondToSeekerOffer(applicationId, response),
+    onSuccess: (data, response) => {
+      queryClient.setQueryData(
+        ["job-seeker", "application", applicationId],
+        data,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: ["job-seeker", "applications"],
+      });
+      showAppToast(
+        response === "accepted"
+          ? t("seeker.applicationDetail.offerResponse.acceptedToast")
+          : t("seeker.applicationDetail.offerResponse.declinedToast"),
+      );
+    },
+    onError: (error) => {
+      void queryClient.invalidateQueries({
+        queryKey: ["job-seeker", "application", applicationId],
+      });
+      showAppToast(
+        getApiErrorMessage(error, t("seeker.common.genericError")),
+        "error",
+      );
+    },
+  });
+
+  const submitOfferResponse = (response: ApplicationOfferResponseStatus) => {
+    const confirmKey =
+      response === "accepted"
+        ? "seeker.applicationDetail.offerResponse.acceptConfirm"
+        : "seeker.applicationDetail.offerResponse.declineConfirm";
+    if (window.confirm(t(confirmKey))) {
+      offerResponseMutation.mutate(response);
+    }
+  };
 
   if (detailQuery.isLoading) {
     return <JobSeekerApplicationDetailSkeleton />;
@@ -335,6 +375,51 @@ export function AppliedJobDetailPageContent({
                   value={application.offer.notes || "—"}
                 />
               </dl>
+              {application.offerResponse ? (
+                <p
+                  className={cn(
+                    "mt-4 rounded-lg px-3 py-2 text-sm font-medium",
+                    application.offerResponse.status === "accepted"
+                      ? "bg-emerald-50 text-emerald-800"
+                      : "bg-rose-50 text-rose-800",
+                  )}
+                >
+                  {t(
+                    application.offerResponse.status === "accepted"
+                      ? "seeker.applicationDetail.offerResponse.acceptedStatus"
+                      : "seeker.applicationDetail.offerResponse.declinedStatus",
+                    {
+                      date: formatDateTime(application.offerResponse.respondedAt),
+                    },
+                  )}
+                </p>
+              ) : application.canRespondToOffer ? (
+                <div className="mt-4 border-t border-border-subtle pt-4">
+                  <p className="text-sm text-muted">
+                    {t("seeker.applicationDetail.offerResponse.prompt")}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={offerResponseMutation.isPending}
+                      onClick={() => submitOfferResponse("accepted")}
+                      className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+                    >
+                      {offerResponseMutation.isPending
+                        ? t("seeker.applicationDetail.offerResponse.submitting")
+                        : t("seeker.applicationDetail.offerResponse.accept")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={offerResponseMutation.isPending}
+                      onClick={() => submitOfferResponse("declined")}
+                      className="inline-flex min-h-10 items-center justify-center rounded-lg border border-pin-state/30 bg-primary-light px-3.5 py-2 text-sm font-semibold text-pin-state hover:bg-primary-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30 disabled:opacity-60"
+                    >
+                      {t("seeker.applicationDetail.offerResponse.decline")}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </section>
           ) : null}
 

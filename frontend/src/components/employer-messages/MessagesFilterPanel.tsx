@@ -11,6 +11,7 @@ import {
   MESSAGES_QUICK_DATE_OPTIONS,
   MESSAGES_STATUS_OPTIONS,
   messagesFiltersAreActive,
+  translateMessagesOptions,
   type MessagesFiltersState,
   type MessagesJobFacet,
   type MessagesQuickDateFilter,
@@ -18,9 +19,10 @@ import {
   type MessagesConversationTypeFilter,
 } from "@/components/employer-messages/messages-filters";
 import { EmployerRegisterSearchableSelect } from "@/components/employer-register/EmployerRegisterSearchableSelect";
+import { useTranslate } from "@/i18n/translate";
 import type { EmployerRegisterSelectOption } from "@/types/employer-register";
 import { cn } from "@/utils/cn";
-import { Filter, X } from "lucide-react";
+import { Filter, Info, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 type MessagesFilterPanelProps = {
@@ -88,6 +90,7 @@ export function MessagesFilterPanel({
   presentation = "sidebar",
   idPrefix = "",
 }: MessagesFilterPanelProps) {
+  const t = useTranslate();
   const [draft, setDraft] = useState<MessagesFiltersState>(filters);
   const [syncedFilters, setSyncedFilters] = useState(filters);
   const isSheet = presentation === "sheet";
@@ -98,9 +101,10 @@ export function MessagesFilterPanel({
   }
 
   const hasActiveFilters = messagesFiltersAreActive(draft);
+  const allLabel = t("employer.messagesPage.filters.all");
 
   const jobOptions: EmployerRegisterSelectOption[] = [
-    { value: "", label: "All Jobs" },
+    { value: "", label: t("employer.messagesPage.filters.allJobs") },
     ...jobFacets.map((facet) => ({
       value: facet.publicJobId,
       label: `${facet.jobTitle} (${facet.count})`,
@@ -116,26 +120,30 @@ export function MessagesFilterPanel({
     ? sheetSelectTriggerClassName
     : filterSelectTriggerClassName;
 
+  const selectProps = {
+    hideLabel: true,
+    triggerClassName: selectTriggerClassName,
+    panelClassName: filterSelectPanelClassName,
+    optionClassName: filterSelectOptionClassName,
+  } as const;
+
   const filterFields = (
     <>
-      <FilterField label="Job">
+      <FilterField label={t("employer.messagesPage.filters.job")}>
         <EmployerRegisterSearchableSelect
+          {...selectProps}
           id={`${idPrefix}messages-filter-job`}
-          label="Job"
-          hideLabel
+          label={t("employer.messagesPage.filters.job")}
           hideSearch={jobOptions.length <= 8}
           value={draft.publicJobId}
-          placeholder="All Jobs"
+          placeholder={t("employer.messagesPage.filters.allJobs")}
           options={jobOptions}
           onChange={(value) => patch({ publicJobId: value })}
-          triggerClassName={selectTriggerClassName}
-          panelClassName={filterSelectPanelClassName}
-          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
       <FilterField
-        label="Candidate"
+        label={t("employer.messagesPage.filters.candidate")}
         htmlFor={`${idPrefix}messages-filter-candidate`}
       >
         <input
@@ -143,96 +151,88 @@ export function MessagesFilterPanel({
           type="search"
           value={draft.candidateSearch}
           onChange={(event) => patch({ candidateSearch: event.target.value })}
-          placeholder="Search by name, phone or App ID"
+          placeholder={t("employer.messagesPage.filters.candidatePlaceholder")}
           className={inputClassName}
         />
       </FilterField>
 
-      <FilterField label="Notification Category">
+      <FilterField label={t("employer.messagesPage.filters.category")}>
         <EmployerRegisterSearchableSelect
+          {...selectProps}
           id={`${idPrefix}messages-filter-category`}
-          label="Notification Category"
-          hideLabel
+          label={t("employer.messagesPage.filters.category")}
           hideSearch
           value={draft.category}
-          placeholder="All"
-          options={MESSAGES_CATEGORY_OPTIONS}
+          placeholder={allLabel}
+          options={translateMessagesOptions(MESSAGES_CATEGORY_OPTIONS, t)}
           onChange={(value) =>
             patch({ category: value as MessagesCategoryFilter })
           }
-          triggerClassName={selectTriggerClassName}
-          panelClassName={filterSelectPanelClassName}
-          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
-      <FilterField label="Hiring Status">
+      <FilterField label={t("employer.messagesPage.filters.hiringStatus")}>
         <EmployerRegisterSearchableSelect
+          {...selectProps}
           id={`${idPrefix}messages-filter-status`}
-          label="Hiring Status"
-          hideLabel
+          label={t("employer.messagesPage.filters.hiringStatus")}
           hideSearch
           value={draft.applicationStatus}
-          placeholder="All Status"
-          options={MESSAGES_STATUS_OPTIONS}
+          placeholder={t("employer.messagesPage.filters.allStatus")}
+          options={translateMessagesOptions(MESSAGES_STATUS_OPTIONS, t)}
           onChange={(value) => patch({ applicationStatus: value })}
-          triggerClassName={selectTriggerClassName}
-          panelClassName={filterSelectPanelClassName}
-          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
-      <FilterField label="Interview Status">
+      <FilterField label={t("employer.messagesPage.filters.interviewStatus")}>
         <EmployerRegisterSearchableSelect
+          {...selectProps}
           id={`${idPrefix}messages-filter-interview`}
-          label="Interview Status"
-          hideLabel
+          label={t("employer.messagesPage.filters.interviewStatus")}
           hideSearch
           value={draft.interviewStatus}
-          placeholder="All"
-          options={MESSAGES_INTERVIEW_STATUS_OPTIONS}
+          placeholder={allLabel}
+          options={translateMessagesOptions(MESSAGES_INTERVIEW_STATUS_OPTIONS, t)}
           onChange={(value) =>
             patch({
               interviewStatus: value,
               offerStatus: value !== "all" ? "all" : draft.offerStatus,
             })
           }
-          triggerClassName={selectTriggerClassName}
-          panelClassName={filterSelectPanelClassName}
-          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
-      <FilterField label="Offer Status">
+      <FilterField label={t("employer.messagesPage.filters.offerStatus")}>
         <EmployerRegisterSearchableSelect
+          {...selectProps}
           id={`${idPrefix}messages-filter-offer`}
-          label="Offer Status"
-          hideLabel
+          label={t("employer.messagesPage.filters.offerStatus")}
           hideSearch
           value={draft.offerStatus}
-          placeholder="All"
-          options={MESSAGES_OFFER_STATUS_OPTIONS}
+          placeholder={allLabel}
+          options={translateMessagesOptions(MESSAGES_OFFER_STATUS_OPTIONS, t)}
           onChange={(value) =>
             patch({
               offerStatus: value,
               interviewStatus: value !== "all" ? "all" : draft.interviewStatus,
             })
           }
-          triggerClassName={selectTriggerClassName}
-          panelClassName={filterSelectPanelClassName}
-          optionClassName={filterSelectOptionClassName}
         />
+        <p className="mt-1 flex items-start gap-1 text-[0.625rem] leading-snug text-muted">
+          <Info className="mt-px size-3 shrink-0" aria-hidden="true" />
+          {t("employer.messagesPage.filters.offerNote")}
+        </p>
       </FilterField>
 
-      <FilterField label="Quick Date">
+      <FilterField label={t("employer.messagesPage.filters.quickDate")}>
         <EmployerRegisterSearchableSelect
+          {...selectProps}
           id={`${idPrefix}messages-filter-date`}
-          label="Quick Date"
-          hideLabel
+          label={t("employer.messagesPage.filters.quickDate")}
           hideSearch
           value={draft.quickDate}
-          placeholder="Any Time"
-          options={MESSAGES_QUICK_DATE_OPTIONS}
+          placeholder={t("employer.messagesPage.options.quickDate.all")}
+          options={translateMessagesOptions(MESSAGES_QUICK_DATE_OPTIONS, t)}
           onChange={(value) =>
             patch({
               quickDate: value as MessagesQuickDateFilter,
@@ -240,16 +240,13 @@ export function MessagesFilterPanel({
               dateTo: value === "custom" ? draft.dateTo : "",
             })
           }
-          triggerClassName={selectTriggerClassName}
-          panelClassName={filterSelectPanelClassName}
-          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
       {draft.quickDate === "custom" ? (
         <div className="grid w-full grid-cols-2 gap-2">
           <FilterField
-            label="From"
+            label={t("employer.messagesPage.filters.from")}
             htmlFor={`${idPrefix}messages-filter-from`}
           >
             <input
@@ -260,7 +257,10 @@ export function MessagesFilterPanel({
               className={inputClassName}
             />
           </FilterField>
-          <FilterField label="To" htmlFor={`${idPrefix}messages-filter-to`}>
+          <FilterField
+            label={t("employer.messagesPage.filters.to")}
+            htmlFor={`${idPrefix}messages-filter-to`}
+          >
             <input
               id={`${idPrefix}messages-filter-to`}
               type="date"
@@ -284,58 +284,52 @@ export function MessagesFilterPanel({
           onChange={(event) => patch({ unreadOnly: event.target.checked })}
           className="size-3.5 shrink-0 rounded border-border-subtle text-primary focus-visible:ring-primary/30"
         />
-        Unread only
+        {t("employer.messagesPage.filters.unreadOnly")}
       </label>
 
-      <FilterField label="Employer Actions">
+      <FilterField label={t("employer.messagesPage.filters.employerActions")}>
         <EmployerRegisterSearchableSelect
+          {...selectProps}
           id={`${idPrefix}messages-filter-employer-action`}
-          label="Employer Actions"
-          hideLabel
+          label={t("employer.messagesPage.filters.employerActions")}
           hideSearch
           value={draft.employerAction}
-          placeholder="All"
-          options={MESSAGES_EMPLOYER_ACTION_OPTIONS}
+          placeholder={allLabel}
+          options={translateMessagesOptions(MESSAGES_EMPLOYER_ACTION_OPTIONS, t)}
           onChange={(value) => patch({ employerAction: value })}
-          triggerClassName={selectTriggerClassName}
-          panelClassName={filterSelectPanelClassName}
-          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
-      <FilterField label="Candidate Actions">
+      <FilterField label={t("employer.messagesPage.filters.candidateActions")}>
         <EmployerRegisterSearchableSelect
+          {...selectProps}
           id={`${idPrefix}messages-filter-candidate-action`}
-          label="Candidate Actions"
-          hideLabel
+          label={t("employer.messagesPage.filters.candidateActions")}
           hideSearch
           value={draft.candidateAction}
-          placeholder="All"
-          options={MESSAGES_CANDIDATE_ACTION_OPTIONS}
+          placeholder={allLabel}
+          options={translateMessagesOptions(MESSAGES_CANDIDATE_ACTION_OPTIONS, t)}
           onChange={(value) => patch({ candidateAction: value })}
-          triggerClassName={selectTriggerClassName}
-          panelClassName={filterSelectPanelClassName}
-          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
 
-      <FilterField label="Conversation Type">
+      <FilterField label={t("employer.messagesPage.filters.conversationType")}>
         <EmployerRegisterSearchableSelect
+          {...selectProps}
           id={`${idPrefix}messages-filter-conversation-type`}
-          label="Conversation Type"
-          hideLabel
+          label={t("employer.messagesPage.filters.conversationType")}
           hideSearch
           value={draft.conversationType}
-          placeholder="All"
-          options={MESSAGES_CONVERSATION_TYPE_OPTIONS}
+          placeholder={allLabel}
+          options={translateMessagesOptions(
+            MESSAGES_CONVERSATION_TYPE_OPTIONS,
+            t,
+          )}
           onChange={(value) =>
             patch({
               conversationType: value as MessagesConversationTypeFilter,
             })
           }
-          triggerClassName={selectTriggerClassName}
-          panelClassName={filterSelectPanelClassName}
-          optionClassName={filterSelectOptionClassName}
         />
       </FilterField>
     </>
@@ -349,13 +343,15 @@ export function MessagesFilterPanel({
             <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
               <Filter className="size-3.5" aria-hidden="true" />
             </span>
-            <h2 className="text-base font-semibold text-foreground">Filters</h2>
+            <h2 className="text-base font-semibold text-foreground">
+              {t("employer.messagesPage.filters.title")}
+            </h2>
           </div>
           {onCancel ? (
             <button
               type="button"
               onClick={onCancel}
-              aria-label="Close filters"
+              aria-label={t("employer.messagesPage.filters.close")}
               className="inline-flex size-11 items-center justify-center rounded-lg text-muted hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
               <X className="size-5" aria-hidden="true" />
@@ -373,7 +369,7 @@ export function MessagesFilterPanel({
             onClick={() => onApply(draft)}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            Apply
+            {t("employer.messagesPage.filters.apply")}
           </button>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -384,14 +380,14 @@ export function MessagesFilterPanel({
               }}
               className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-subtle bg-surface text-sm font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              Clear
+              {t("employer.messagesPage.filters.clear")}
             </button>
             <button
               type="button"
               onClick={onCancel}
               className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-subtle bg-surface text-sm font-semibold text-muted hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              Cancel
+              {t("employer.messagesPage.filters.cancel")}
             </button>
           </div>
         </div>
@@ -407,7 +403,7 @@ export function MessagesFilterPanel({
             <Filter className="size-3 lg:size-2.5" aria-hidden="true" />
           </span>
           <h2 className="text-sm font-semibold text-foreground lg:text-xs">
-            Filters
+            {t("employer.messagesPage.filters.title")}
           </h2>
         </div>
         <button
@@ -425,7 +421,7 @@ export function MessagesFilterPanel({
           )}
         >
           <X className="size-3 lg:size-2.5" aria-hidden="true" />
-          Clear All
+          {t("employer.messagesPage.filters.clearAll")}
         </button>
       </div>
 
@@ -438,7 +434,7 @@ export function MessagesFilterPanel({
         onClick={() => onApply(draft)}
         className="mt-3 inline-flex h-9 w-full shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 lg:mt-2 lg:h-8 lg:text-xs"
       >
-        Apply Filters
+        {t("employer.messagesPage.filters.applyFilters")}
       </button>
     </section>
   );

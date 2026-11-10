@@ -21,6 +21,11 @@ export const ROUTES = {
   EMPLOYER_CANDIDATES: "/employer/candidates",
   employerCandidateDetail: (applicationId: string) =>
     `/employer/candidates/${applicationId}`,
+  /** Deep link that scrolls the candidate detail page to one section. */
+  employerCandidateDetailSection: (
+    applicationId: string,
+    section: "resume" | "interview" | "offer",
+  ) => `/employer/candidates/${applicationId}#${section}`,
   EMPLOYER_INTERVIEWS: "/employer/interviews",
   EMPLOYER_MESSAGES: "/employer/messages",
   EMPLOYER_SAVED_CANDIDATES: "/employer/saved-candidates",

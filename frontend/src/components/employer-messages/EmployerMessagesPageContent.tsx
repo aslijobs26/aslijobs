@@ -7,45 +7,77 @@ import {
 import { getCandidateInitials } from "@/components/employer-candidates/candidates-ats-utils";
 import {
   DEFAULT_MESSAGES_FILTERS,
+  MESSAGES_CATEGORY_OPTIONS,
+  messagesListIsFiltered,
   parseMessagesFiltersFromSearchParams,
   resolveMessagesHasType,
   timelineMessageMatchesFilters,
   writeMessagesFiltersToSearchParams,
   type MessagesFiltersState,
 } from "@/components/employer-messages/messages-filters";
+import { localizeNotification } from "@/components/employer-messages/localize-notification";
+import {
+  buildMessagesActivitySignature,
+  flattenConversationPages,
+  flattenTimelinePages,
+  MESSAGES_BULK_SELECTION_LIMIT,
+  patchConversationPages,
+  safeEmployerActionPath,
+  toggleBulkSelection,
+} from "@/components/employer-messages/messages-merge";
 import { MessagesFilterPanel } from "@/components/employer-messages/MessagesFilterPanel";
 import { MessagesMobileFiltersSheet } from "@/components/employer-messages/MessagesMobileFiltersSheet";
 import { MessagesStatsCards } from "@/components/employer-messages/MessagesStatsCards";
+import { triggerBlobDownload } from "@/components/employer-saved-candidates/saved-candidates-utils";
 import "@/components/employer-messages/employer-messages-page-layout.css";
 import { ROUTES } from "@/constants/routes";
+import type { SiteLanguageCode } from "@/constants/site-language";
+import { useSiteLanguage } from "@/i18n/site-language";
+import { useTranslate, type MessageKey } from "@/i18n/translate";
 import { useCan } from "@/providers/employer-permission-provider";
 import { useEmployerProfile } from "@/hooks/useEmployerProfile";
 import type { EmployerLoginPublic } from "@/services/employer-login.service";
 import {
+  bulkUpdateConversationReadState,
   employerMessageQueryKeys,
+  exportEmployerMessagesCsv,
   fetchConversationTimeline,
   fetchNotificationConversations,
-  fetchNotificationUnreadCount,
   markConversationNotificationsAsRead,
+  markConversationNotificationsAsUnread,
   notificationQueryKeys,
+  setConversationFlag,
 } from "@/services/notifications.service";
 import type {
   EmployerMessageConversation,
+  EmployerMessageConversationFlag,
   EmployerMessageConversationListResult,
+  EmployerMessageConversationView,
   EmployerMessageTimelineItem,
 } from "@/types/employer-messages";
 import {
-  EMPLOYER_APPLICATION_STATUS_LABELS,
+  EMPLOYER_APPLICATION_STATUSES,
+  isEmployerTerminalStatus,
   type EmployerApplicationStatus,
 } from "@/types/employer-applications";
 import type { NotificationType } from "@/types/notifications";
 import { cn } from "@/utils/cn";
 import { resolveEmployerPosterImageUrl } from "@/utils/employer-poster-image";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { showAppToast } from "@/utils/share-job";
 import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
+import {
+  Archive,
   BadgeCheck,
+  BellOff,
   ChevronLeft,
+  Download,
   Filter,
   MessageSquare,
   MoreVertical,
@@ -56,15 +88,51 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  createElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 
-type ConversationTab = "all" | "unread" | "starred";
+type ConversationTab = "all" | "unread" | "starred" | "archived";
+
+type ConversationPages = InfiniteData<
+  EmployerMessageConversationListResult,
+  number
+>;
+
+const CONVERSATION_PAGE_SIZE = 20;
+
+const FLAG_SUCCESS_KEYS: Record<
+  EmployerMessageConversationFlag,
+  { on: MessageKey; off: MessageKey }
+> = {
+  star: {
+    on: "employer.messagesPage.actions.starSuccess",
+    off: "employer.messagesPage.actions.unstarSuccess",
+  },
+  archive: {
+    on: "employer.messagesPage.actions.archiveSuccess",
+    off: "employer.messagesPage.actions.unarchiveSuccess",
+  },
+  mute: {
+    on: "employer.messagesPage.actions.muteSuccess",
+    off: "employer.messagesPage.actions.unmuteSuccess",
+  },
+};
+
+function tabView(tab: ConversationTab): EmployerMessageConversationView {
+  if (tab === "starred" || tab === "archived") {
+    return tab;
+  }
+  return "inbox";
+}
+
+type Translate = (key: MessageKey, values?: Record<string, string | number>) => string;
 
 /** Keeps the three-column workspace usable on very short viewports. */
 const MIN_WORKSPACE_HEIGHT_PX = 420;
@@ -77,6 +145,11 @@ const MOBILE_FLOATING_NAV_RESERVE_PX = 90;
 
 /** Treat "near bottom" as bottom so auto-scroll survives sub-pixel rounding. */
 const TIMELINE_BOTTOM_THRESHOLD_PX = 48;
+
+const TIMELINE_PAGE_SIZE = 50;
+
+/** Messages activity probe interval; paused while the tab is hidden. */
+const MESSAGES_ACTIVITY_POLL_MS = 45_000;
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -93,6 +166,10 @@ function buildTelHref(phone: string): string | null {
     return null;
   }
   return `tel:+${digits.startsWith("91") ? digits : `91${digits}`}`;
+}
+
+function intlLocale(languageCode: string): string {
+  return `${languageCode}-IN`;
 }
 
 /** Candidate / system events → left. Employer-initiated → right. */
@@ -112,6 +189,8 @@ function isEmployerAlignedNotification(type: NotificationType): boolean {
     case "application_submitted":
     case "candidate_withdrawn":
     case "application_withdrawn":
+    case "offer_accepted":
+    case "offer_declined":
     case "job_closed":
     case "job_approved":
     case "job_rejected":
@@ -142,6 +221,7 @@ function isEmployerAlignedNotification(type: NotificationType): boolean {
 function isRejectionNotification(type: NotificationType): boolean {
   switch (type) {
     case "application_rejected":
+    case "offer_declined":
     case "job_rejected":
     case "job_live_changes_rejected":
     case "employer_verification_rejected":
@@ -151,65 +231,68 @@ function isRejectionNotification(type: NotificationType): boolean {
   }
 }
 
-function notificationBadgeLabel(type: NotificationType): string {
+function notificationBadgeKey(type: NotificationType): MessageKey {
   switch (type) {
     case "application_received":
     case "application_submitted":
-      return "Application";
+      return "employer.messagesPage.badges.application";
     case "application_viewed":
-      return "Viewed";
+      return "employer.messagesPage.badges.viewed";
     case "application_under_review":
-      return "Under Review";
+      return "employer.messagesPage.badges.underReview";
     case "application_shortlisted":
-      return "Shortlisted";
+      return "employer.messagesPage.badges.shortlisted";
     case "interview_scheduled":
-      return "Scheduled";
+      return "employer.messagesPage.badges.scheduled";
     case "interview_updated":
-      return "Updated";
+      return "employer.messagesPage.badges.updated";
     case "interview_completed":
-      return "Completed";
+      return "employer.messagesPage.badges.completed";
     case "interview_cancelled":
-      return "Cancelled";
+      return "employer.messagesPage.badges.cancelled";
     case "offer_sent":
-      return "Offer Sent";
+      return "employer.messagesPage.badges.offerSent";
+    case "offer_accepted":
+      return "employer.messagesPage.badges.offerAccepted";
+    case "offer_declined":
+      return "employer.messagesPage.badges.offerDeclined";
     case "application_selected":
-      return "Selected";
+      return "employer.messagesPage.badges.selected";
     case "application_joined":
-      return "Joined";
+      return "employer.messagesPage.badges.joined";
     case "application_did_not_join":
-      return "Did Not Join";
+      return "employer.messagesPage.badges.didNotJoin";
     case "application_rejected":
-      return "Rejected";
+    case "job_rejected":
+      return "employer.messagesPage.badges.rejected";
     case "application_withdrawn":
     case "candidate_withdrawn":
-      return "Withdrawn";
+      return "employer.messagesPage.badges.withdrawn";
     case "job_closed":
-      return "Closed";
+      return "employer.messagesPage.badges.closed";
     case "job_approved":
-      return "Approved";
-    case "job_rejected":
-      return "Rejected";
+      return "employer.messagesPage.badges.approved";
     case "job_live_changes_approved":
-      return "Changes Approved";
+      return "employer.messagesPage.badges.changesApproved";
     case "job_live_changes_rejected":
-      return "Changes Rejected";
+      return "employer.messagesPage.badges.changesRejected";
     case "employer_verification_approved":
-      return "Verified";
+      return "employer.messagesPage.badges.verified";
     case "employer_verification_rejected":
-      return "Verification Rejected";
+      return "employer.messagesPage.badges.verificationRejected";
     case "employer_verification_documents_requested":
-      return "Documents Requested";
+      return "employer.messagesPage.badges.documentsRequested";
     default:
-      return "Update";
+      return "employer.messagesPage.badges.update";
   }
 }
 
-function formatBubbleTime(value: string): string {
+function formatBubbleTime(value: string, locale: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "—";
   }
-  return new Intl.DateTimeFormat("en-IN", {
+  return new Intl.DateTimeFormat(locale, {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
@@ -224,29 +307,46 @@ function dayKey(value: string): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function formatDaySeparatorDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-IN", {
+function daySeparatorLabel(
+  value: string,
+  locale: string,
+  olderLabel: string,
+): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return olderLabel;
+  }
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
   }).format(date);
 }
 
-function daySeparatorLabel(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Older";
-  }
-  return formatDaySeparatorDate(date);
-}
-
-function statusLabel(status: string): string {
-  if (status in EMPLOYER_APPLICATION_STATUS_LABELS) {
-    return EMPLOYER_APPLICATION_STATUS_LABELS[
-      status as EmployerApplicationStatus
-    ];
+function statusLabel(status: string, t: Translate): string {
+  if ((EMPLOYER_APPLICATION_STATUSES as readonly string[]).includes(status)) {
+    return t(
+      `employer.status.application.${status as EmployerApplicationStatus}`,
+    );
   }
   return status || "—";
+}
+
+function isJobThread(conversation: EmployerMessageConversation | null): boolean {
+  return conversation?.referenceType === "job";
+}
+
+function conversationDisplayName(
+  conversation: EmployerMessageConversation | null,
+  t: Translate,
+): string {
+  if (!conversation) {
+    return t("employer.messagesPage.list.candidate");
+  }
+  if (isJobThread(conversation)) {
+    return t("employer.messagesPage.list.operations");
+  }
+  return conversation.candidateName || t("employer.messagesPage.list.candidate");
 }
 
 function getEmployerDisplayName(employer: EmployerLoginPublic): string {
@@ -277,6 +377,20 @@ function getEmployerAvatarName(employer: EmployerLoginPublic): string {
 
 function getEmployerAvatarUrl(employer: EmployerLoginPublic): string | null {
   return resolveEmployerPosterImageUrl(employer) || null;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: { data?: { message?: string } } }).response
+      ?.data?.message === "string"
+  ) {
+    return (error as { response: { data: { message: string } } }).response.data
+      .message;
+  }
+  return fallback;
 }
 
 function ConversationAvatar({
@@ -323,6 +437,43 @@ function ConversationAvatar({
   );
 }
 
+function ConversationFlagIcons({
+  conversation,
+  t,
+}: {
+  conversation: EmployerMessageConversation | null;
+  t: Translate;
+}) {
+  if (!conversation) {
+    return null;
+  }
+  return (
+    <>
+      {conversation.starred ? (
+        <Star
+          className="size-3 shrink-0 fill-amber-400 text-amber-500"
+          aria-label={t("employer.messagesPage.list.starredLabel")}
+          role="img"
+        />
+      ) : null}
+      {conversation.muted ? (
+        <BellOff
+          className="size-3 shrink-0 text-muted"
+          aria-label={t("employer.messagesPage.list.mutedLabel")}
+          role="img"
+        />
+      ) : null}
+      {conversation.archived ? (
+        <Archive
+          className="size-3 shrink-0 text-muted"
+          aria-label={t("employer.messagesPage.tabs.archived")}
+          role="img"
+        />
+      ) : null}
+    </>
+  );
+}
+
 function TimelineSkeleton() {
   return (
     <div className="flex min-h-0 flex-1 flex-col" aria-hidden="true">
@@ -350,7 +501,7 @@ function TimelineSkeleton() {
   );
 }
 
-function WhatsAppTicks({ read }: { read: boolean }) {
+function WhatsAppTicks({ read, label }: { read: boolean; label: string }) {
   const color = read ? "var(--color-employer-button)" : "var(--color-muted)";
   return (
     <svg
@@ -361,7 +512,7 @@ function WhatsAppTicks({ read }: { read: boolean }) {
       aria-hidden="true"
       focusable="false"
     >
-      <title>{read ? "Read" : "Delivered"}</title>
+      <title>{label}</title>
       <path
         fill={color}
         d="M11.07.65a.46.46 0 0 0-.68.08L4.2 8.36 1.8 6.09a.46.46 0 0 0-.65.66l2.9 2.83a.46.46 0 0 0 .68-.05L11.15 1.3a.46.46 0 0 0-.08-.65z"
@@ -379,16 +530,26 @@ function MessageBubble({
   candidateName,
   employerName,
   employerImageUrl,
+  locale,
+  language,
+  t,
 }: {
   message: EmployerMessageTimelineItem;
   candidateName: string;
   employerName: string;
   employerImageUrl: string | null;
+  locale: string;
+  language: SiteLanguageCode;
+  t: Translate;
 }) {
   const employerSide = isOutgoingTimelineItem(message);
-  const Icon = notificationIcon(message.type);
-  const badge = notificationBadgeLabel(message.type);
+  const copy = localizeNotification(message, language);
+  const badge = t(notificationBadgeKey(message.type));
   const rejection = isRejectionNotification(message.type);
+  const time = formatBubbleTime(message.createdAt, locale);
+  const tickLabel = message.isRead
+    ? t("employer.messagesPage.thread.read")
+    : t("employer.messagesPage.thread.delivered");
 
   return (
     <li
@@ -409,39 +570,37 @@ function MessageBubble({
         )}
       >
         <div className="mb-0.5 flex flex-wrap items-center gap-1 sm:gap-1.5">
-          <Icon
-            className="size-3 shrink-0 text-primary sm:size-3.5"
-            aria-hidden="true"
-          />
+          {createElement(notificationIcon(message.type), {
+            className: "size-3 shrink-0 text-primary sm:size-3.5",
+            "aria-hidden": true,
+          })}
           <h3
             className={cn(
               "text-xs font-semibold leading-[1.2] tracking-[0.01em] sm:text-[0.8125rem]",
               rejection ? "text-pin-state" : "text-foreground",
             )}
           >
-            {message.title}
+            {copy.title}
           </h3>
           <span className="inline-flex shrink-0 items-center rounded px-1 py-px text-[0.5625rem] font-medium leading-4 text-primary sm:px-1.5 sm:text-[0.625rem]">
             {badge}
           </span>
         </div>
         <p className="whitespace-pre-wrap text-xs leading-[1.35] [overflow-wrap:anywhere] text-foreground sm:text-[0.875rem]">
-          {message.body}
+          {copy.body}
           <span
             className="float-right clear-both ml-2.5 mt-1 inline-flex h-[14px] items-center gap-[3px] text-[0.625rem] leading-none text-muted sm:ml-3 sm:h-[15px] sm:text-[0.6875rem]"
             aria-hidden="true"
           >
-            <span>{formatBubbleTime(message.createdAt)}</span>
-            {employerSide ? <WhatsAppTicks read={message.isRead} /> : null}
+            <span>{time}</span>
+            {employerSide ? (
+              <WhatsAppTicks read={message.isRead} label={tickLabel} />
+            ) : null}
           </span>
         </p>
         <span className="sr-only">
-          {formatBubbleTime(message.createdAt)}
-          {employerSide
-            ? message.isRead
-              ? ", Read"
-              : ", Delivered"
-            : ""}
+          {time}
+          {employerSide ? `, ${tickLabel}` : ""}
         </span>
       </article>
       {employerSide ? (
@@ -456,21 +615,150 @@ function MessageBubble({
 }
 
 const actionsMenuItemClassName =
-  "block min-h-10 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-primary-light/50 focus-visible:outline-none focus-visible:bg-primary-light/50 lg:min-h-0 lg:py-2 lg:text-xs";
+  "block w-full min-h-10 px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-primary-light/50 focus-visible:outline-none focus-visible:bg-primary-light/50 disabled:cursor-not-allowed disabled:opacity-60 lg:min-h-0 lg:py-2 lg:text-xs";
 
+type ActionsMenuItem =
+  | { key: string; label: string; kind: "link"; href: string }
+  | { key: string; label: string; kind: "tel"; href: string }
+  | {
+      key: string;
+      label: string;
+      kind: "button";
+      onSelect: () => void;
+      disabled?: boolean;
+    };
+
+/**
+ * Every destination is a real, distinct target and is only listed when the
+ * team member's existing candidate / interview permissions allow it.
+ */
 function ActionsMenu({
-  applicationId,
+  conversation,
   phoneHref,
+  onMarkUnread,
+  isMarkingUnread,
+  onToggleFlag,
+  isUpdatingFlag,
+  t,
 }: {
-  applicationId: string;
+  conversation: EmployerMessageConversation;
   phoneHref: string | null;
+  onMarkUnread: () => void;
+  isMarkingUnread: boolean;
+  onToggleFlag: (flag: EmployerMessageConversationFlag, value: boolean) => void;
+  isUpdatingFlag: boolean;
+  t: Translate;
 }) {
-  const { can } = useCan();
-  const canSendOffer = can("messages", "update");
-  const canScheduleInterview =
-    can("interviews", "create") || can("interviews", "update");
+  const { can, canField } = useCan();
   const [open, setOpen] = useState(false);
-  const candidateHref = ROUTES.employerCandidateDetail(applicationId);
+  const applicationId = conversation.applicationId;
+  const items: ActionsMenuItem[] = [];
+
+  if (isJobThread(conversation)) {
+    if (can("jobs", "read")) {
+      items.push({
+        key: "view-job",
+        kind: "link",
+        label: t("employer.messagesPage.actions.viewJob"),
+        href:
+          safeEmployerActionPath(conversation.latestNotification.actionPath) ??
+          ROUTES.EMPLOYER_JOBS,
+      });
+    }
+  } else {
+    const isClosed = isEmployerTerminalStatus(conversation.applicationStatus);
+    if (phoneHref) {
+      items.push({
+        key: "call",
+        kind: "tel",
+        label: t("employer.messagesPage.actions.call"),
+        href: phoneHref,
+      });
+    }
+    if (can("candidates", "read")) {
+      items.push({
+        key: "profile",
+        kind: "link",
+        label: t("employer.messagesPage.actions.openProfile"),
+        href: ROUTES.employerCandidateDetail(applicationId),
+      });
+    }
+    if (can("candidates", "read") && canField("candidates", "resume")) {
+      items.push({
+        key: "resume",
+        kind: "link",
+        label: t("employer.messagesPage.actions.viewResume"),
+        href: ROUTES.employerCandidateDetailSection(applicationId, "resume"),
+      });
+    }
+    if (
+      !isClosed &&
+      (can("interviews", "create") || can("interviews", "update"))
+    ) {
+      items.push({
+        key: "interview",
+        kind: "link",
+        label: t("employer.messagesPage.actions.scheduleInterview"),
+        href: ROUTES.employerCandidateDetailSection(applicationId, "interview"),
+      });
+    }
+    if (
+      !isClosed &&
+      can("candidates", "update") &&
+      canField("candidates", "offer_amount", "write")
+    ) {
+      items.push({
+        key: "offer",
+        kind: "link",
+        label: t("employer.messagesPage.actions.sendOffer"),
+        href: ROUTES.employerCandidateDetailSection(applicationId, "offer"),
+      });
+    }
+  }
+
+  if (conversation.unreadCount === 0) {
+    items.push({
+      key: "mark-unread",
+      kind: "button",
+      label: t("employer.messagesPage.actions.markUnread"),
+      onSelect: onMarkUnread,
+      disabled: isMarkingUnread,
+    });
+  }
+
+  if (can("messages", "update")) {
+    items.push(
+      {
+        key: "star",
+        kind: "button",
+        label: conversation.starred
+          ? t("employer.messagesPage.actions.unstar")
+          : t("employer.messagesPage.actions.star"),
+        onSelect: () => onToggleFlag("star", !conversation.starred),
+        disabled: isUpdatingFlag,
+      },
+      {
+        key: "archive",
+        kind: "button",
+        label: conversation.archived
+          ? t("employer.messagesPage.actions.unarchive")
+          : t("employer.messagesPage.actions.archive"),
+        onSelect: () => onToggleFlag("archive", !conversation.archived),
+        disabled: isUpdatingFlag,
+      },
+      {
+        key: "mute",
+        kind: "button",
+        label: conversation.muted
+          ? t("employer.messagesPage.actions.unmute")
+          : t("employer.messagesPage.actions.mute"),
+        onSelect: () => onToggleFlag("mute", !conversation.muted),
+        disabled: isUpdatingFlag,
+      },
+    );
+  }
+
+  const close = () => setOpen(false);
 
   return (
     <div className="relative">
@@ -478,7 +766,8 @@ function ActionsMenu({
         type="button"
         onClick={() => setOpen((current) => !current)}
         className="inline-flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-light hover:text-primary lg:size-9"
-        aria-label="More actions"
+        aria-label={t("employer.messagesPage.actions.more")}
+        aria-haspopup="menu"
         aria-expanded={open}
       >
         <MoreVertical className="size-5" aria-hidden="true" />
@@ -488,51 +777,62 @@ function ActionsMenu({
           <button
             type="button"
             className="fixed inset-0 z-10 cursor-default"
-            aria-label="Close menu"
-            onClick={() => setOpen(false)}
+            aria-label={t("employer.messagesPage.actions.closeMenu")}
+            onClick={close}
           />
-          <div className="absolute top-full right-0 z-20 mt-1.5 max-h-[min(18rem,60dvh)] min-w-[11.5rem] overflow-y-auto overscroll-contain rounded-xl border border-border-subtle bg-surface py-1.5 shadow-[0_10px_28px_rgba(26,43,60,0.14)] lg:mt-1 lg:min-w-44 lg:rounded-lg lg:py-1 lg:shadow-lg">
-            {phoneHref ? (
-              <a
-                href={phoneHref}
-                className={actionsMenuItemClassName}
-                onClick={() => setOpen(false)}
-              >
-                Call candidate
-              </a>
-            ) : null}
-            <Link
-              href={candidateHref}
-              className={actionsMenuItemClassName}
-              onClick={() => setOpen(false)}
-            >
-              Open candidate profile
-            </Link>
-            <Link
-              href={candidateHref}
-              className={actionsMenuItemClassName}
-              onClick={() => setOpen(false)}
-            >
-              View resume
-            </Link>
-            {canScheduleInterview ? (
-              <Link
-                href={candidateHref}
-                className={actionsMenuItemClassName}
-                onClick={() => setOpen(false)}
-              >
-                Schedule interview
-              </Link>
-            ) : null}
-            {canSendOffer ? (
-              <Link
-                href={candidateHref}
-                className={actionsMenuItemClassName}
-                onClick={() => setOpen(false)}
-              >
-                Send offer
-              </Link>
-            ) : null}
+          <div
+            role="menu"
+            className="absolute top-full right-0 z-20 mt-1.5 max-h-[min(18rem,60dvh)] min-w-[11.5rem] overflow-y-auto overscroll-contain rounded-xl border border-border-subtle bg-surface py-1.5 shadow-[0_10px_28px_rgba(26,43,60,0.14)] lg:mt-1 lg:min-w-44 lg:rounded-lg lg:py-1 lg:shadow-lg"
+          >
+            {items.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-muted">
+                {t("employer.messagesPage.actions.noActions")}
+              </p>
+            ) : (
+              items.map((item) => {
+                if (item.kind === "button") {
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      role="menuitem"
+                      disabled={item.disabled}
+                      className={actionsMenuItemClassName}
+                      onClick={() => {
+                        close();
+                        item.onSelect();
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                }
+                if (item.kind === "tel") {
+                  return (
+                    <a
+                      key={item.key}
+                      role="menuitem"
+                      href={item.href}
+                      className={actionsMenuItemClassName}
+                      onClick={close}
+                    >
+                      {item.label}
+                    </a>
+                  );
+                }
+                return (
+                  <Link
+                    key={item.key}
+                    role="menuitem"
+                    href={item.href}
+                    className={actionsMenuItemClassName}
+                    onClick={close}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })
+            )}
           </div>
         </>
       ) : null}
@@ -555,6 +855,14 @@ export function EmployerMessagesPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const t = useTranslate();
+  const language = useSiteLanguage();
+  const locale = intlLocale(language.code);
+  const { can, canField, getFieldLevel } = useCan();
+  const canViewCandidatePhone =
+    canField("candidates", "phone") &&
+    getFieldLevel("candidates", "phone") !== "mask";
+  const canExportMessages = can("messages", "export");
 
   const selectedApplicationId =
     searchParams.get("applicationId")?.trim() || null;
@@ -574,17 +882,20 @@ export function EmployerMessagesPageContent() {
   const [tab, setTab] = useState<ConversationTab>(
     filters.unreadOnly ? "unread" : "all",
   );
-  const [page, setPage] = useState(1);
-  const [loadedConversations, setLoadedConversations] = useState<
-    EmployerMessageConversation[]
-  >([]);
   const [selectedSnapshot, setSelectedSnapshot] =
     useState<EmployerMessageConversation | null>(null);
-  const [mobileShowTimeline, setMobileShowTimeline] = useState(
-    Boolean(selectedApplicationId),
-  );
+  /** Thread the employer backed out of on mobile; any other selection shows the timeline. */
+  const [mobileClosedApplicationId, setMobileClosedApplicationId] = useState<
+    string | null
+  >(null);
+  const mobileShowTimeline =
+    Boolean(selectedApplicationId) &&
+    mobileClosedApplicationId !== selectedApplicationId;
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [actionsPhoneHref, setActionsPhoneHref] = useState<string | null>(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSelection, setBulkSelection] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const timelineEndRef = useRef<HTMLDivElement>(null);
   const timelineScrollRef = useRef<HTMLDivElement>(null);
@@ -592,7 +903,10 @@ export function EmployerMessagesPageContent() {
   const lastRenderedApplicationIdRef = useRef<string | null>(null);
   const openingApplicationIdRef = useRef<string | null>(null);
   const hasAppliedInitialSelectionRef = useRef(false);
-  const lastUnreadCountRef = useRef<number | null>(null);
+  const lastActivitySignatureRef = useRef<string | null>(null);
+  const pendingScrollRestoreRef = useRef<number | null>(null);
+  /** Threads the employer marked unread; auto mark-read skips them until reopened. */
+  const manualUnreadIdsRef = useRef<Set<string>>(new Set());
   const lastMarkReadAttemptRef = useRef<{
     applicationId: string;
     unreadCount: number;
@@ -689,12 +1003,23 @@ export function EmployerMessagesPageContent() {
     [pathname, router, searchParams],
   );
 
+  /**
+   * Starred / Archived tabs keep their view when filters change; the All /
+   * Unread tabs follow the unread-only filter.
+   */
   const updateFilters = useCallback(
-    (next: MessagesFiltersState) => {
+    (next: MessagesFiltersState, nextTab?: ConversationTab) => {
       setFilters(next);
-      setTab(next.unreadOnly ? "unread" : "all");
-      setPage(1);
-      setLoadedConversations([]);
+      setTab(
+        (current) =>
+          nextTab ??
+          (current === "starred" || current === "archived"
+            ? current
+            : next.unreadOnly
+              ? "unread"
+              : "all"),
+      );
+      setBulkSelection(new Set());
       syncFiltersToUrl(next);
     },
     [syncFiltersToUrl],
@@ -704,32 +1029,8 @@ export function EmployerMessagesPageContent() {
     updateFilters({ ...DEFAULT_MESSAGES_FILTERS });
   }, [updateFilters]);
 
-  useEffect(() => {
-    if (selectedApplicationId) {
-      setMobileShowTimeline(true);
-    }
-  }, [selectedApplicationId]);
-
-  useEffect(() => {
-    setPage(1);
-    setLoadedConversations([]);
-  }, [
-    tab,
-    filters.publicJobId,
-    filters.category,
-    filters.applicationStatus,
-    filters.interviewStatus,
-    filters.offerStatus,
-    filters.quickDate,
-    filters.dateFrom,
-    filters.dateTo,
-    filters.unreadOnly,
-    filters.employerAction,
-    filters.candidateAction,
-    filters.conversationType,
-    filters.sort,
-    debouncedCandidateSearch,
-  ]);
+  const listView = tabView(tab);
+  const listReadStatus = filters.unreadOnly ? "unread" : "all";
 
   const conversationFilterParams = {
     search: debouncedCandidateSearch || undefined,
@@ -762,9 +1063,14 @@ export function EmployerMessagesPageContent() {
     debouncedCandidateSearch,
   ] as const;
 
+  const listIsFiltered = messagesListIsFiltered({
+    ...filters,
+    candidateSearch: debouncedCandidateSearch,
+  });
+
   /**
-   * Tab/KPI totals must stay stable when the list is filtered by Unread/Starred.
-   * `pagination.total` on the list query reflects the active readStatus only.
+   * Tab counts under the current filters (`viewCounts`), plus the unfiltered
+   * KPI stats and job facets (computed server-side once per filter set).
    */
   const allConversationsStatsQuery = useQuery({
     queryKey: [
@@ -785,42 +1091,27 @@ export function EmployerMessagesPageContent() {
     refetchOnWindowFocus: false,
   });
 
-  const unreadConversationsStatsQuery = useQuery({
-    queryKey: [
-      ...employerMessageQueryKeys.stats,
-      "unread",
-      ...conversationFilterKey,
-    ],
-    queryFn: () =>
-      fetchNotificationConversations({
-        page: 1,
-        limit: 1,
-        readStatus: "unread",
-        ...conversationFilterParams,
-      }),
-    staleTime: 5 * 60_000,
-    gcTime: 30 * 60_000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-  });
-
-  const conversationsQuery = useQuery({
+  const conversationsQuery = useInfiniteQuery({
     queryKey: [
       ...employerMessageQueryKeys.conversations,
-      tab,
+      listView,
+      listReadStatus,
       ...conversationFilterKey,
-      filters.unreadOnly,
-      page,
     ],
-    queryFn: () =>
+    queryFn: ({ pageParam }) =>
       fetchNotificationConversations({
-        page,
-        limit: 20,
-        readStatus:
-          tab === "unread" || filters.unreadOnly ? "unread" : "all",
+        page: pageParam,
+        limit: CONVERSATION_PAGE_SIZE,
+        readStatus: listReadStatus,
+        view: listView,
+        includeStats: false,
         ...conversationFilterParams,
       }),
-    enabled: tab !== "starred",
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages
+        ? lastPage.pagination.page + 1
+        : undefined,
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     refetchOnMount: true,
@@ -828,36 +1119,47 @@ export function EmployerMessagesPageContent() {
   });
 
   /**
-   * A single shared unread-count heartbeat drives live message refreshes.
-   * Sidebar and bell observe the same key, so TanStack Query deduplicates the
-   * request. Conversations/timeline refresh once only when the count increases.
+   * Messages-scoped activity probe: newest employer thread only, so account
+   * notices outside Messages never trigger a refresh. Polling pauses while
+   * the tab is hidden and runs once more when it regains focus.
    */
-  const unreadHeartbeatQuery = useQuery({
-    queryKey: notificationQueryKeys.unreadCount("employer"),
-    queryFn: fetchNotificationUnreadCount,
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
+  const activityQuery = useQuery({
+    queryKey: employerMessageQueryKeys.activity,
+    queryFn: () =>
+      fetchNotificationConversations({
+        page: 1,
+        limit: 1,
+        readStatus: "all",
+        sort: "newest",
+        includeStats: false,
+      }),
+    staleTime: 15_000,
+    refetchInterval: MESSAGES_ACTIVITY_POLL_MS,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
+  const activitySignature = buildMessagesActivitySignature(activityQuery.data);
+
   useEffect(() => {
-    const unreadCount = unreadHeartbeatQuery.data;
-    if (unreadCount === undefined) {
+    if (!activitySignature) {
+      return;
+    }
+    const previous = lastActivitySignatureRef.current;
+    lastActivitySignatureRef.current = activitySignature;
+    if (previous === null || previous === activitySignature) {
       return;
     }
 
-    const previousUnreadCount = lastUnreadCountRef.current;
-    lastUnreadCountRef.current = unreadCount;
-
-    if (previousUnreadCount === null || unreadCount <= previousUnreadCount) {
-      return;
-    }
-
-    const refreshes = [
+    const refreshes: Promise<unknown>[] = [
       queryClient.invalidateQueries({
         queryKey: employerMessageQueryKeys.conversations,
       }),
       queryClient.invalidateQueries({
         queryKey: employerMessageQueryKeys.stats,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: notificationQueryKeys.unreadCount("employer"),
       }),
     ];
 
@@ -869,27 +1171,15 @@ export function EmployerMessagesPageContent() {
       );
     }
 
-    void Promise.all(refreshes);
-  }, [queryClient, selectedApplicationId, unreadHeartbeatQuery.data]);
+    void Promise.allSettled(refreshes);
+    // Only a new activity signature should trigger a refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activitySignature]);
 
-  useEffect(() => {
-    const nextPage = conversationsQuery.data?.conversations;
-    if (!nextPage) {
-      return;
-    }
-    setLoadedConversations((current) => {
-      if (page === 1) {
-        return nextPage;
-      }
-      const seen = new Set(current.map((item) => item.applicationId));
-      const appended = nextPage.filter(
-        (item) => !seen.has(item.applicationId),
-      );
-      return [...current, ...appended];
-    });
-  }, [conversationsQuery.data, page]);
-
-  const conversations = loadedConversations;
+  const conversations = useMemo(
+    () => flattenConversationPages(conversationsQuery.data?.pages ?? []),
+    [conversationsQuery.data?.pages],
+  );
 
   const selectedConversation = useMemo(() => {
     if (!selectedApplicationId) {
@@ -905,33 +1195,26 @@ export function EmployerMessagesPageContent() {
     );
   }, [conversations, selectedApplicationId, selectedSnapshot]);
 
-  useEffect(() => {
-    if (selectedConversation?.candidatePhone) {
-      setActionsPhoneHref(buildTelHref(selectedConversation.candidatePhone));
-    } else {
-      setActionsPhoneHref(null);
-    }
-  }, [selectedConversation?.candidatePhone]);
+  const selectedIsJobThread = isJobThread(selectedConversation);
+  const actionsPhoneHref =
+    canViewCandidatePhone &&
+    !selectedIsJobThread &&
+    selectedConversation?.candidatePhone
+      ? buildTelHref(selectedConversation.candidatePhone)
+      : null;
 
-  useEffect(() => {
-    if (!selectedApplicationId) {
-      return;
-    }
-    const fresh = conversations.find(
-      (item) => item.applicationId === selectedApplicationId,
-    );
-    if (fresh) {
-      setSelectedSnapshot(fresh);
-    }
-  }, [conversations, selectedApplicationId]);
-
-  const timelineQuery = useQuery({
+  const timelineQuery = useInfiniteQuery({
     queryKey: employerMessageQueryKeys.timeline(selectedApplicationId),
-    queryFn: () =>
+    queryFn: ({ pageParam }) =>
       fetchConversationTimeline(selectedApplicationId!, {
-        page: 1,
-        limit: 50,
+        limit: TIMELINE_PAGE_SIZE,
+        before: pageParam,
       }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.hasOlder && lastPage.pagination.olderCursor
+        ? lastPage.pagination.olderCursor
+        : undefined,
     enabled: Boolean(selectedApplicationId),
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
@@ -939,45 +1222,43 @@ export function EmployerMessagesPageContent() {
     refetchOnWindowFocus: false,
   });
 
+  const patchConversations = useCallback(
+    (
+      applicationIds: ReadonlySet<string>,
+      patch: (item: EmployerMessageConversation) => EmployerMessageConversation,
+    ) => {
+      setSelectedSnapshot((current) =>
+        current && applicationIds.has(current.applicationId)
+          ? patch(current)
+          : current,
+      );
+      queryClient.setQueriesData<ConversationPages>(
+        { queryKey: employerMessageQueryKeys.conversations },
+        (current) => patchConversationPages(current, applicationIds, patch),
+      );
+    },
+    [queryClient],
+  );
+
+  const applyUnreadCount = useCallback(
+    (applicationId: string, unreadCount: number) => {
+      patchConversations(new Set([applicationId]), (item) => ({
+        ...item,
+        unreadCount,
+      }));
+    },
+    [patchConversations],
+  );
+
   const markReadMutation = useMutation({
     mutationFn: (applicationId: string) =>
       markConversationNotificationsAsRead(applicationId),
     onSuccess: (updatedCount, applicationId) => {
-      setLoadedConversations((current) =>
-        current.map((item) =>
-          item.applicationId === applicationId
-            ? { ...item, unreadCount: 0 }
-            : item,
-        ),
-      );
-      setSelectedSnapshot((current) =>
-        current?.applicationId === applicationId
-          ? { ...current, unreadCount: 0 }
-          : current,
-      );
+      applyUnreadCount(applicationId, 0);
 
       queryClient.setQueryData<number>(
         notificationQueryKeys.unreadCount("employer"),
         (current) => Math.max(0, (current ?? 0) - updatedCount),
-      );
-
-      queryClient.setQueriesData<EmployerMessageConversationListResult>(
-        { queryKey: employerMessageQueryKeys.conversations },
-        (current) =>
-          current
-            ? {
-                ...current,
-                unreadCount: Math.max(
-                  0,
-                  current.unreadCount - updatedCount,
-                ),
-                conversations: current.conversations.map((item) =>
-                  item.applicationId === applicationId
-                    ? { ...item, unreadCount: 0 }
-                    : item,
-                ),
-              }
-            : current,
       );
 
       void queryClient.invalidateQueries({
@@ -986,8 +1267,172 @@ export function EmployerMessagesPageContent() {
     },
   });
 
+  const markUnreadMutation = useMutation({
+    mutationFn: (applicationId: string) =>
+      markConversationNotificationsAsUnread(applicationId),
+    onSuccess: ({ unreadCount }, applicationId) => {
+      manualUnreadIdsRef.current.add(applicationId);
+      lastMarkReadAttemptRef.current = { applicationId, unreadCount };
+      applyUnreadCount(applicationId, unreadCount);
+      void Promise.allSettled([
+        queryClient.invalidateQueries({
+          queryKey: employerMessageQueryKeys.stats,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: notificationQueryKeys.unreadCount("employer"),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: employerMessageQueryKeys.timeline(applicationId),
+        }),
+      ]);
+      showAppToast(t("employer.messagesPage.actions.markUnreadSuccess"));
+    },
+    onError: (error) => {
+      showAppToast(
+        getErrorMessage(error, t("employer.messagesPage.actions.markUnreadError")),
+        "error",
+      );
+    },
+  });
+
+  const flagMutation = useMutation({
+    mutationFn: (input: {
+      applicationId: string;
+      flag: EmployerMessageConversationFlag;
+      value: boolean;
+    }) => setConversationFlag(input.applicationId, input.flag, input.value),
+    onSuccess: (state, input) => {
+      patchConversations(new Set([state.applicationId]), (item) => ({
+        ...item,
+        starred: state.starred,
+        archived: state.archived,
+        muted: state.muted,
+      }));
+      void Promise.allSettled([
+        queryClient.invalidateQueries({
+          queryKey: employerMessageQueryKeys.conversations,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: employerMessageQueryKeys.stats,
+        }),
+      ]);
+      showAppToast(t(FLAG_SUCCESS_KEYS[input.flag][input.value ? "on" : "off"]));
+    },
+    onError: (error) => {
+      showAppToast(
+        getErrorMessage(error, t("employer.messagesPage.actions.updateError")),
+        "error",
+      );
+    },
+  });
+
+  const exitBulkMode = useCallback(() => {
+    setBulkMode(false);
+    setBulkSelection(new Set());
+  }, []);
+
+  const bulkMutation = useMutation({
+    mutationFn: (input: { applicationIds: string[]; action: "read" | "unread" }) =>
+      bulkUpdateConversationReadState(input.applicationIds, input.action),
+    onSuccess: (result) => {
+      const unreadById = new Map(
+        result.updated.map((entry) => [entry.applicationId, entry.unreadCount]),
+      );
+      patchConversations(new Set(unreadById.keys()), (item) => ({
+        ...item,
+        unreadCount: unreadById.get(item.applicationId) ?? item.unreadCount,
+      }));
+      for (const applicationId of unreadById.keys()) {
+        if (result.action === "unread") {
+          manualUnreadIdsRef.current.add(applicationId);
+        } else {
+          manualUnreadIdsRef.current.delete(applicationId);
+        }
+      }
+      lastMarkReadAttemptRef.current = null;
+
+      void Promise.allSettled([
+        queryClient.invalidateQueries({
+          queryKey: employerMessageQueryKeys.stats,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: employerMessageQueryKeys.conversations,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: notificationQueryKeys.unreadCount("employer"),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: employerMessageQueryKeys.timelines,
+        }),
+      ]);
+
+      showAppToast(
+        t(
+          result.action === "read"
+            ? "employer.messagesPage.bulk.readSuccess"
+            : "employer.messagesPage.bulk.unreadSuccess",
+          { count: result.updated.length },
+        ),
+      );
+      const notUpdated = result.notFound.length + result.skipped.length;
+      if (notUpdated > 0) {
+        showAppToast(
+          t("employer.messagesPage.bulk.skipped", { count: notUpdated }),
+          "error",
+        );
+      }
+      exitBulkMode();
+    },
+    onError: (error) => {
+      showAppToast(
+        getErrorMessage(error, t("employer.messagesPage.bulk.error")),
+        "error",
+      );
+    },
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: () =>
+      exportEmployerMessagesCsv({
+        ...conversationFilterParams,
+        readStatus: listReadStatus,
+        view: listView,
+      }),
+    onSuccess: ({ blob, fileName }) => {
+      triggerBlobDownload(blob, fileName);
+      showAppToast(t("employer.messagesPage.export.success"));
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error && !("response" in error) && error.message
+          ? error.message
+          : getErrorMessage(error, t("employer.messagesPage.export.error"));
+      showAppToast(message, "error");
+    },
+  });
+
+  const toggleBulkItem = (applicationId: string) => {
+    const { next, limitReached } = toggleBulkSelection(
+      bulkSelection,
+      applicationId,
+    );
+    if (limitReached) {
+      showAppToast(
+        t("employer.messagesPage.bulk.limit", {
+          max: MESSAGES_BULK_SELECTION_LIMIT,
+        }),
+        "error",
+      );
+      return;
+    }
+    setBulkSelection(next);
+  };
+
   const openConversation = useCallback(
-    (conversation: EmployerMessageConversation) => {
+    (
+      conversation: EmployerMessageConversation,
+      options?: { auto?: boolean },
+    ) => {
       const applicationId = conversation.applicationId?.trim();
       if (!applicationId) {
         return;
@@ -995,12 +1440,20 @@ export function EmployerMessagesPageContent() {
 
       openingApplicationIdRef.current = applicationId;
       setSelectedSnapshot(conversation);
-      setMobileShowTimeline(true);
+      setMobileClosedApplicationId(null);
 
       const params = new URLSearchParams(searchParams.toString());
       writeMessagesFiltersToSearchParams(params, filters);
       params.set("applicationId", applicationId);
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+
+      if (manualUnreadIdsRef.current.has(applicationId)) {
+        if (options?.auto) {
+          return;
+        }
+        manualUnreadIdsRef.current.delete(applicationId);
+        lastMarkReadAttemptRef.current = null;
+      }
 
       const lastAttempt = lastMarkReadAttemptRef.current;
       if (
@@ -1020,7 +1473,12 @@ export function EmployerMessagesPageContent() {
 
   /** Keep open chats marked read when new candidate notifications arrive live. */
   useEffect(() => {
-    if (!selectedApplicationId || markReadMutation.isPending) {
+    if (
+      !selectedApplicationId ||
+      markReadMutation.isPending ||
+      markUnreadMutation.isPending ||
+      manualUnreadIdsRef.current.has(selectedApplicationId)
+    ) {
       return;
     }
     const openChat =
@@ -1046,6 +1504,7 @@ export function EmployerMessagesPageContent() {
   }, [
     conversations,
     markReadMutation,
+    markUnreadMutation.isPending,
     selectedApplicationId,
     selectedSnapshot,
   ]);
@@ -1056,9 +1515,6 @@ export function EmployerMessagesPageContent() {
    * After that, keep the open chat; only auto-open when nothing is selected.
    */
   useEffect(() => {
-    if (tab === "starred") {
-      return;
-    }
     if (conversationsQuery.isLoading && conversations.length === 0) {
       return;
     }
@@ -1091,31 +1547,30 @@ export function EmployerMessagesPageContent() {
       return;
     }
 
-    openConversation(pick);
+    openConversation(pick, { auto: true });
   }, [
     conversations,
     conversationsQuery.isLoading,
     openConversation,
     selectedApplicationId,
-    tab,
   ]);
 
   const closeMobileTimeline = () => {
-    setMobileShowTimeline(false);
+    setMobileClosedApplicationId(selectedApplicationId);
   };
 
-  const timelineMessages = useMemo(() => {
-    const items = [...(timelineQuery.data?.notifications ?? [])]
-      .filter((item) =>
+  const allTimelineMessages = useMemo(
+    () => flattenTimelinePages(timelineQuery.data?.pages ?? []),
+    [timelineQuery.data?.pages],
+  );
+
+  const timelineMessages = useMemo(
+    () =>
+      allTimelineMessages.filter((item) =>
         timelineMessageMatchesFilters(item.type, item.category, filters),
-      )
-      .sort(
-        (left, right) =>
-          new Date(left.createdAt).getTime() -
-          new Date(right.createdAt).getTime(),
-      );
-    return items;
-  }, [filters, timelineQuery.data?.notifications]);
+      ),
+    [allTimelineMessages, filters],
+  );
 
   const timelineGroups = useMemo(() => {
     const groups: {
@@ -1123,18 +1578,24 @@ export function EmployerMessagesPageContent() {
       key: string;
       items: EmployerMessageTimelineItem[];
     }[] = [];
+    const olderLabel = t("employer.messagesPage.thread.olderDay");
     for (const item of timelineMessages) {
       const key = dayKey(item.createdAt);
-      const label = daySeparatorLabel(item.createdAt);
       const last = groups[groups.length - 1];
       if (last && last.key === key) {
         last.items.push(item);
       } else {
-        groups.push({ label, key, items: [item] });
+        groups.push({
+          label: daySeparatorLabel(item.createdAt, locale, olderLabel),
+          key,
+          items: [item],
+        });
       }
     }
     return groups;
-  }, [timelineMessages]);
+    // `t` changes identity every render; the language code drives the labels.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timelineMessages, locale]);
 
   const handleTimelineScroll = useCallback(() => {
     const container = timelineScrollRef.current;
@@ -1146,6 +1607,29 @@ export function EmployerMessagesPageContent() {
     timelineAtBottomRef.current =
       distanceFromBottom <= TIMELINE_BOTTOM_THRESHOLD_PX;
   }, []);
+
+  const loadOlderTimeline = useCallback(() => {
+    const container = timelineScrollRef.current;
+    if (container) {
+      pendingScrollRestoreRef.current =
+        container.scrollHeight - container.scrollTop;
+    }
+    void timelineQuery.fetchNextPage();
+  }, [timelineQuery]);
+
+  /** Keep the reader's position when older notifications are prepended. */
+  useLayoutEffect(() => {
+    const distanceFromBottom = pendingScrollRestoreRef.current;
+    const container = timelineScrollRef.current;
+    if (distanceFromBottom === null || !container) {
+      return;
+    }
+    if (timelineQuery.isFetchingNextPage) {
+      return;
+    }
+    pendingScrollRestoreRef.current = null;
+    container.scrollTop = container.scrollHeight - distanceFromBottom;
+  }, [allTimelineMessages.length, timelineQuery.isFetchingNextPage]);
 
   /**
    * WhatsApp behaviour: jump to the latest message when a chat opens, but only
@@ -1177,34 +1661,24 @@ export function EmployerMessagesPageContent() {
 
   useEffect(() => {
     timelineAtBottomRef.current = true;
+    pendingScrollRestoreRef.current = null;
   }, [selectedApplicationId]);
 
-  const totalConversations =
-    allConversationsStatsQuery.data?.pagination.total ??
-    (tab === "all" && !filters.unreadOnly
-      ? (conversationsQuery.data?.pagination.total ?? 0)
-      : 0);
-  const unreadTotal =
-    unreadConversationsStatsQuery.data?.pagination.total ??
-    (tab === "unread" || filters.unreadOnly
-      ? (conversationsQuery.data?.pagination.total ?? 0)
-      : 0);
-  const activeHiringCount =
-    allConversationsStatsQuery.data?.activeHiringCount ??
-    conversationsQuery.data?.activeHiringCount ??
-    0;
-  const interviewWeekCount =
-    allConversationsStatsQuery.data?.interviewWeekCount ??
-    conversationsQuery.data?.interviewWeekCount ??
-    0;
+  const stats = allConversationsStatsQuery.data?.stats ?? null;
+  const viewCounts = allConversationsStatsQuery.data?.viewCounts ?? null;
+  const listTotal =
+    conversationsQuery.data?.pages[0]?.pagination.total ?? null;
+  const tabCount = (id: ConversationTab): number | null => {
+    if (viewCounts) {
+      return id === "all" ? viewCounts.inbox : viewCounts[id];
+    }
+    return id === tab ? listTotal : null;
+  };
   const isMessagesStatsLoading =
-    (conversationsQuery.isLoading && !conversationsQuery.data) ||
-    (allConversationsStatsQuery.isLoading && !allConversationsStatsQuery.data);
-  const jobFacets =
-    allConversationsStatsQuery.data?.jobFacets ??
-    conversationsQuery.data?.jobFacets ??
-    [];
+    allConversationsStatsQuery.isLoading && !allConversationsStatsQuery.data;
+  const jobFacets = allConversationsStatsQuery.data?.jobFacets ?? [];
   const showTimeline = Boolean(selectedApplicationId);
+  const hasOlderTimeline = Boolean(timelineQuery.hasNextPage);
 
   let timelineBody: ReactNode;
   if (!showTimeline) {
@@ -1212,10 +1686,10 @@ export function EmployerMessagesPageContent() {
       <div className="employer-messages-thread-empty flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center lg:gap-1 lg:px-4">
         <div className="rounded-lg bg-brand-accent/25 px-5 py-3 shadow-sm ring-1 ring-black/5 lg:px-3.5 lg:py-2">
           <p className="employer-messages-thread-empty__title text-sm font-medium text-muted lg:text-[11px]">
-            Select a conversation
+            {t("employer.messagesPage.thread.selectTitle")}
           </p>
           <p className="employer-messages-thread-empty__desc mt-1 text-xs text-muted lg:mt-0.5 lg:text-[10px]">
-            Notification activity for each application appears here.
+            {t("employer.messagesPage.thread.selectDesc")}
           </p>
         </div>
       </div>
@@ -1223,7 +1697,9 @@ export function EmployerMessagesPageContent() {
   } else if (timelineQuery.isLoading && !timelineQuery.data) {
     timelineBody = <TimelineSkeleton />;
   } else {
-    const candidateName = selectedConversation?.candidateName ?? "Candidate";
+    const candidateName = conversationDisplayName(selectedConversation, t);
+    const showVerified =
+      !selectedIsJobThread && selectedConversation?.candidateVerified === true;
 
     timelineBody = (
       <>
@@ -1233,42 +1709,64 @@ export function EmployerMessagesPageContent() {
               type="button"
               className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
               onClick={closeMobileTimeline}
-              aria-label="Back to conversations"
+              aria-label={t("employer.messagesPage.thread.back")}
             >
               <ChevronLeft className="size-6" aria-hidden="true" />
             </button>
             <div className="relative shrink-0">
               <ConversationAvatar name={candidateName} />
-              <span
-                className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center rounded-full bg-surface text-resource-guide-icon shadow-sm ring-1 ring-surface sm:hidden"
-                title="Verified"
-                aria-label="Verified"
-              >
-                <BadgeCheck className="size-3.5" aria-hidden="true" />
-              </span>
+              {showVerified ? (
+                <span
+                  className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center rounded-full bg-surface text-resource-guide-icon shadow-sm ring-1 ring-surface sm:hidden"
+                  title={t("employer.messagesPage.thread.verifiedHint")}
+                  aria-label={t("employer.messagesPage.thread.verified")}
+                >
+                  <BadgeCheck className="size-3.5" aria-hidden="true" />
+                </span>
+              ) : null}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 <h2 className="truncate text-sm font-bold text-foreground">
                   {candidateName}
                 </h2>
-                <span className="hidden rounded bg-primary-light px-1.5 py-px text-[0.5625rem] font-semibold leading-4 text-primary ring-1 ring-inset ring-primary/20 sm:inline-flex">
-                  {statusLabel(selectedConversation?.applicationStatus ?? "")}
-                </span>
+                {showVerified ? (
+                  <span
+                    className="hidden shrink-0 text-resource-guide-icon sm:inline-flex"
+                    title={t("employer.messagesPage.thread.verifiedHint")}
+                    aria-label={t("employer.messagesPage.thread.verified")}
+                  >
+                    <BadgeCheck className="size-3.5" aria-hidden="true" />
+                  </span>
+                ) : null}
+                {!selectedIsJobThread &&
+                selectedConversation?.applicationStatus ? (
+                  <span className="hidden rounded bg-primary-light px-1.5 py-px text-[0.5625rem] font-semibold leading-4 text-primary ring-1 ring-inset ring-primary/20 sm:inline-flex">
+                    {statusLabel(selectedConversation.applicationStatus, t)}
+                  </span>
+                ) : null}
+                <ConversationFlagIcons
+                  conversation={selectedConversation}
+                  t={t}
+                />
               </div>
               <p className="truncate text-[0.625rem] font-medium text-muted sm:text-[0.6875rem]">
-                {selectedConversation?.jobTitle ?? "Job"}
+                {selectedConversation?.jobTitle ??
+                  t("employer.messagesPage.list.job")}
                 {selectedConversation?.publicJobId
                   ? ` - ${selectedConversation.publicJobId}`
+                  : ""}
+                {selectedIsJobThread
+                  ? ` · ${t("employer.messagesPage.thread.operationsSubtitle")}`
                   : ""}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              {actionsPhoneHref ? (
+              {selectedIsJobThread ? null : actionsPhoneHref ? (
                 <a
                   href={actionsPhoneHref}
                   className="inline-flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-light hover:text-primary lg:size-9"
-                  aria-label="Call candidate"
+                  aria-label={t("employer.messagesPage.thread.call")}
                 >
                   <Phone className="size-5" aria-hidden="true" />
                 </a>
@@ -1276,15 +1774,30 @@ export function EmployerMessagesPageContent() {
                 <span
                   className="inline-flex size-11 items-center justify-center rounded-full text-muted/40 lg:size-9"
                   aria-hidden="true"
-                  title="Phone unavailable"
+                  title={t("employer.messagesPage.thread.phoneUnavailable")}
                 >
                   <Phone className="size-5" aria-hidden="true" />
                 </span>
               )}
-              <ActionsMenu
-                applicationId={selectedApplicationId!}
-                phoneHref={actionsPhoneHref}
-              />
+              {selectedConversation ? (
+                <ActionsMenu
+                  conversation={selectedConversation}
+                  phoneHref={actionsPhoneHref}
+                  onMarkUnread={() =>
+                    markUnreadMutation.mutate(selectedConversation.applicationId)
+                  }
+                  isMarkingUnread={markUnreadMutation.isPending}
+                  onToggleFlag={(flag, value) =>
+                    flagMutation.mutate({
+                      applicationId: selectedConversation.applicationId,
+                      flag,
+                      value,
+                    })
+                  }
+                  isUpdatingFlag={flagMutation.isPending}
+                  t={t}
+                />
+              ) : null}
             </div>
           </div>
         </header>
@@ -1294,57 +1807,104 @@ export function EmployerMessagesPageContent() {
           onScroll={handleTimelineScroll}
           className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-2.5 py-2 scrollbar-thin sm:px-5"
         >
-          {timelineQuery.isError ? (
+          {timelineQuery.isError && allTimelineMessages.length === 0 ? (
             <div className="flex justify-center py-8">
               <div className="rounded-lg bg-brand-accent/25 px-4 py-2.5 text-center shadow-sm">
                 <p className="text-sm font-medium text-muted">
-                  Unable to load conversation.
+                  {t("employer.messagesPage.thread.errorTitle")}
                 </p>
                 <button
                   type="button"
                   onClick={() => void timelineQuery.refetch()}
                   className="mt-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-hover"
                 >
-                  Retry
+                  {t("employer.messagesPage.thread.retry")}
                 </button>
               </div>
             </div>
-          ) : timelineMessages.length === 0 ? (
-            <div className="flex justify-center py-8">
-              <p className="rounded-lg bg-brand-accent/25 px-3 py-1.5 text-center text-sm text-muted shadow-sm">
-                No notification activity yet.
-              </p>
-            </div>
           ) : (
-            <div className="space-y-2">
-              {timelineGroups.map((group) => (
-                <div key={group.key}>
-                  <div className="mb-1.5 flex justify-center">
-                    <span className="rounded-md bg-brand-accent/30 px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground/70 shadow-sm">
-                      {group.label}
-                    </span>
-                  </div>
-                  <ul className="space-y-1">
-                    {group.items.map((message) => (
-                      <MessageBubble
-                        key={message.id}
-                        message={message}
-                        candidateName={candidateName}
-                        employerName={employerName}
-                        employerImageUrl={employerImageUrl}
-                      />
-                    ))}
-                  </ul>
+            <>
+              {hasOlderTimeline ? (
+                <div className="mb-2 flex flex-col items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={loadOlderTimeline}
+                    disabled={timelineQuery.isFetchingNextPage}
+                    className="rounded-full bg-surface px-3 py-1 text-[0.6875rem] font-semibold text-primary shadow-sm ring-1 ring-border-subtle hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+                  >
+                    {timelineQuery.isFetchingNextPage
+                      ? t("employer.messagesPage.thread.loadingOlder")
+                      : t("employer.messagesPage.thread.loadOlder")}
+                  </button>
+                  {timelineQuery.isFetchNextPageError ? (
+                    <p className="text-[0.625rem] text-pin-state" role="alert">
+                      {t("employer.messagesPage.thread.olderError")}
+                    </p>
+                  ) : null}
                 </div>
-              ))}
-              <div ref={timelineEndRef} className="h-px w-full" aria-hidden="true" />
-            </div>
+              ) : allTimelineMessages.length > TIMELINE_PAGE_SIZE ? (
+                <p className="mb-2 text-center text-[0.625rem] text-muted">
+                  {t("employer.messagesPage.thread.historyStart")}
+                </p>
+              ) : null}
+
+              {timelineMessages.length === 0 ? (
+                <div className="flex justify-center py-8">
+                  <p className="rounded-lg bg-brand-accent/25 px-3 py-1.5 text-center text-sm text-muted shadow-sm">
+                    {allTimelineMessages.length > 0
+                      ? t("employer.messagesPage.thread.emptyFiltered")
+                      : t("employer.messagesPage.thread.empty")}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {timelineGroups.map((group) => (
+                    <div key={group.key}>
+                      <div className="mb-1.5 flex justify-center">
+                        <span className="rounded-md bg-brand-accent/30 px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground/70 shadow-sm">
+                          {group.label}
+                        </span>
+                      </div>
+                      <ul className="space-y-1">
+                        {group.items.map((message) => (
+                          <MessageBubble
+                            key={message.id}
+                            message={message}
+                            candidateName={candidateName}
+                            employerName={employerName}
+                            employerImageUrl={employerImageUrl}
+                            locale={locale}
+                            language={language.code}
+                            t={t}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                  <div
+                    ref={timelineEndRef}
+                    className="h-px w-full"
+                    aria-hidden="true"
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
 
         <footer className="shrink-0 border-t border-border-subtle bg-surface/90 px-3 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] lg:pb-1.5">
+          {selectedConversation?.archived ? (
+            <p className="text-center text-[0.6875rem] text-muted">
+              {t("employer.messagesPage.thread.archivedNote")}
+            </p>
+          ) : null}
+          {selectedConversation?.muted ? (
+            <p className="text-center text-[0.6875rem] text-muted">
+              {t("employer.messagesPage.thread.mutedNote")}
+            </p>
+          ) : null}
           <p className="text-center text-[0.6875rem] text-muted">
-            This is notification history — not a live chat.
+            {t("employer.messagesPage.header.historyNote")}
           </p>
         </footer>
       </>
@@ -1378,21 +1938,35 @@ export function EmployerMessagesPageContent() {
       >
         <div className="min-w-0">
           <h1 className="employer-messages-header__title text-lg font-bold tracking-tight text-foreground sm:text-xl lg:text-[1.125rem]">
-            Messages
+            {t("employer.messagesPage.header.title")}
           </h1>
           <p className="employer-messages-header__subtitle mt-0.5 text-[11px] leading-snug text-muted sm:text-sm lg:text-[11px] lg:leading-snug">
-            Review hiring notifications for each candidate application in one
-            place.
+            {t("employer.messagesPage.header.subtitle")}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setMobileFiltersOpen(true)}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
-        >
-          <Filter className="size-3.5" aria-hidden="true" />
-          Filters
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {canExportMessages ? (
+            <button
+              type="button"
+              onClick={() => exportMutation.mutate()}
+              disabled={exportMutation.isPending}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60 lg:min-h-8 lg:text-[11px]"
+            >
+              <Download className="size-3.5" aria-hidden="true" />
+              {exportMutation.isPending
+                ? t("employer.messagesPage.export.exporting")
+                : t("employer.messagesPage.export.button")}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen(true)}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
+          >
+            <Filter className="size-3.5" aria-hidden="true" />
+            {t("employer.messagesPage.header.filters")}
+          </button>
+        </div>
       </header>
 
       <div
@@ -1416,10 +1990,13 @@ export function EmployerMessagesPageContent() {
             )}
           >
             <MessagesStatsCards
-              totalConversations={totalConversations}
-              unreadConversations={unreadTotal}
-              activeHiringConversations={activeHiringCount}
-              interviewWeekConversations={interviewWeekCount}
+              stats={stats}
+              filteredTotal={
+                listIsFiltered ? (viewCounts?.inbox ?? null) : null
+              }
+              filteredUnread={
+                listIsFiltered ? (viewCounts?.unread ?? null) : null
+              }
               isLoading={isMessagesStatsLoading}
             />
           </div>
@@ -1447,28 +2024,36 @@ export function EmployerMessagesPageContent() {
                 [
                   {
                     id: "all" as const,
-                    label: "All Conversations",
-                    count: totalConversations,
+                    label: t("employer.messagesPage.tabs.all"),
+                    count: tabCount("all"),
                   },
                   {
                     id: "unread" as const,
-                    label: "Unread",
-                    count: unreadTotal,
+                    label: t("employer.messagesPage.tabs.unread"),
+                    count: tabCount("unread"),
                   },
-                  { id: "starred" as const, label: "Starred", count: 0 },
+                  {
+                    id: "starred" as const,
+                    label: t("employer.messagesPage.tabs.starred"),
+                    count: tabCount("starred"),
+                  },
+                  {
+                    id: "archived" as const,
+                    label: t("employer.messagesPage.tabs.archived"),
+                    count: tabCount("archived"),
+                  },
                 ] as const
               ).map((item) => (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => {
-                    setTab(item.id);
-                    if (item.id === "unread") {
-                      updateFilters({ ...filters, unreadOnly: true });
-                    } else if (item.id === "all") {
-                      updateFilters({ ...filters, unreadOnly: false });
-                    }
-                  }}
+                  aria-pressed={tab === item.id}
+                  onClick={() =>
+                    updateFilters(
+                      { ...filters, unreadOnly: item.id === "unread" },
+                      item.id,
+                    )
+                  }
                   className={cn(
                     "employer-messages-list-tab inline-flex min-h-9 shrink-0 items-center gap-1 border-b-2 px-2 py-1.5 text-[11px] font-semibold sm:min-h-11 sm:px-2.5 sm:py-2 sm:text-xs lg:min-h-0 lg:px-1.5 lg:py-1 lg:text-[0.6875rem]",
                     tab === item.id
@@ -1507,40 +2092,107 @@ export function EmployerMessagesPageContent() {
                     candidateSearch: event.target.value,
                   })
                 }
-                placeholder="Search conversations..."
+                placeholder={t("employer.messagesPage.list.searchPlaceholder")}
+                aria-label={t("employer.messagesPage.list.searchPlaceholder")}
                 className="employer-messages-list-search h-9 w-full rounded-full border border-border-subtle bg-hero-bg py-2 pr-3 pl-9 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:text-sm lg:h-8 lg:py-1.5 lg:pl-8 lg:text-[11px]"
               />
             </div>
 
             <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hidden lg:pb-1.5">
-              {(
-                [
-                  { id: "all", label: "All" },
-                  { id: "application", label: "Application" },
-                  { id: "interview", label: "Interview" },
-                  { id: "offer", label: "Offer" },
-                  { id: "system", label: "Status" },
-                ] as const
-              ).map((chip) => (
+              {MESSAGES_CATEGORY_OPTIONS.map((chip) => (
                 <button
-                  key={chip.id}
+                  key={chip.value}
                   type="button"
+                  aria-pressed={filters.category === chip.value}
                   onClick={() =>
                     updateFilters({
                       ...filters,
-                      category: chip.id,
+                      category: chip.value,
                     })
                   }
                   className={cn(
                     "employer-messages-list-chip shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors sm:px-3 sm:py-1.5 sm:text-xs lg:px-2 lg:py-0.5 lg:text-[0.625rem]",
-                    filters.category === chip.id
+                    filters.category === chip.value
                       ? "bg-primary text-surface"
                       : "bg-hero-bg text-muted hover:text-foreground",
                   )}
                 >
-                  {chip.label}
+                  {t(chip.labelKey)}
                 </button>
               ))}
+            </div>
+
+            <div className="flex min-h-8 flex-wrap items-center gap-1.5 pb-2 lg:pb-1.5">
+              {bulkMode ? (
+                <>
+                  <span className="text-[11px] font-semibold text-foreground lg:text-[0.625rem]">
+                    {t("employer.messagesPage.bulk.selectedCount", {
+                      count: bulkSelection.size,
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBulkSelection(
+                        bulkSelection.size > 0
+                          ? new Set()
+                          : new Set(
+                              conversations
+                                .slice(0, MESSAGES_BULK_SELECTION_LIMIT)
+                                .map((item) => item.applicationId),
+                            ),
+                      )
+                    }
+                    className="rounded-full bg-hero-bg px-2.5 py-1 text-[11px] font-semibold text-muted hover:text-foreground lg:py-0.5 lg:text-[0.625rem]"
+                  >
+                    {bulkSelection.size > 0
+                      ? t("employer.messagesPage.bulk.clearSelection")
+                      : t("employer.messagesPage.bulk.selectAll")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkSelection.size === 0 || bulkMutation.isPending}
+                    onClick={() =>
+                      bulkMutation.mutate({
+                        applicationIds: [...bulkSelection],
+                        action: "read",
+                      })
+                    }
+                    className="rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-surface hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 lg:py-0.5 lg:text-[0.625rem]"
+                  >
+                    {t("employer.messagesPage.bulk.markRead")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkSelection.size === 0 || bulkMutation.isPending}
+                    onClick={() =>
+                      bulkMutation.mutate({
+                        applicationIds: [...bulkSelection],
+                        action: "unread",
+                      })
+                    }
+                    className="rounded-full border border-primary/40 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-60 lg:py-0.5 lg:text-[0.625rem]"
+                  >
+                    {t("employer.messagesPage.bulk.markUnread")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={exitBulkMode}
+                    className="ml-auto text-[11px] font-semibold text-muted hover:text-foreground lg:text-[0.625rem]"
+                  >
+                    {t("employer.messagesPage.bulk.cancel")}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setBulkMode(true)}
+                  disabled={conversations.length === 0}
+                  className="ml-auto text-[11px] font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50 lg:text-[0.625rem]"
+                >
+                  {t("employer.messagesPage.bulk.select")}
+                </button>
+              )}
             </div>
           </div>
 
@@ -1551,17 +2203,7 @@ export function EmployerMessagesPageContent() {
                 : "overflow-visible",
             )}
           >
-            {tab === "starred" ? (
-              <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-                <Star className="size-7 text-muted" aria-hidden="true" />
-                <p className="text-sm font-medium text-foreground">
-                  Starred conversations coming soon
-                </p>
-                <p className="text-xs text-muted">
-                  Star important candidate threads to find them quickly.
-                </p>
-              </div>
-            ) : conversationsQuery.isLoading && conversations.length === 0 ? (
+            {conversationsQuery.isLoading && conversations.length === 0 ? (
               <ul className="space-y-0 p-1.5" aria-hidden="true">
                 {Array.from({ length: 8 }).map((_, index) => (
                   <li key={index} className="flex gap-2.5 rounded-lg px-2 py-2">
@@ -1574,50 +2216,101 @@ export function EmployerMessagesPageContent() {
                   </li>
                 ))}
               </ul>
-            ) : conversationsQuery.isError ? (
+            ) : conversationsQuery.isError && conversations.length === 0 ? (
               <div className="px-4 py-10 text-center">
                 <p className="text-sm font-medium text-foreground">
-                  Unable to load conversations.
+                  {t("employer.messagesPage.list.errorTitle")}
                 </p>
                 <button
                   type="button"
                   onClick={() => void conversationsQuery.refetch()}
                   className="mt-3 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-surface hover:bg-primary-hover"
                 >
-                  Retry
+                  {t("employer.messagesPage.list.retry")}
                 </button>
               </div>
             ) : conversations.length === 0 ? (
               <div className="employer-messages-empty flex flex-col items-center gap-2 px-4 py-10 text-center lg:gap-1 lg:px-3 lg:py-5">
-                <MessageSquare
-                  className="employer-messages-empty__icon size-7 text-muted lg:size-3.5"
-                  aria-hidden="true"
-                />
+                {createElement(
+                  tab === "starred"
+                    ? Star
+                    : tab === "archived"
+                      ? Archive
+                      : MessageSquare,
+                  {
+                    className:
+                      "employer-messages-empty__icon size-7 text-muted lg:size-3.5",
+                    "aria-hidden": true,
+                  },
+                )}
                 <p className="employer-messages-empty__title text-sm font-medium text-foreground lg:text-[11px]">
-                  No conversations yet.
+                  {listIsFiltered
+                    ? t("employer.messagesPage.list.emptyFilteredTitle")
+                    : tab === "starred"
+                      ? t("employer.messagesPage.list.starredEmptyTitle")
+                      : tab === "archived"
+                        ? t("employer.messagesPage.list.archivedEmptyTitle")
+                        : t("employer.messagesPage.list.emptyTitle")}
                 </p>
                 <p className="employer-messages-empty__desc text-xs text-muted lg:text-[10px]">
-                  Application activity will appear here as notifications.
+                  {listIsFiltered
+                    ? t("employer.messagesPage.list.emptyFilteredDesc")
+                    : tab === "starred"
+                      ? t("employer.messagesPage.list.starredEmptyDesc")
+                      : tab === "archived"
+                        ? t("employer.messagesPage.list.archivedEmptyDesc")
+                        : t("employer.messagesPage.list.emptyDesc")}
                 </p>
+                {listIsFiltered ? (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="mt-1 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:text-[10px]"
+                  >
+                    {t("employer.messagesPage.list.clearFilters")}
+                  </button>
+                ) : null}
               </div>
             ) : (
               <ul>
                 {conversations.map((conversation) => {
                   const isActive =
+                    !bulkMode &&
                     conversation.applicationId === selectedApplicationId;
+                  const isBulkSelected =
+                    bulkMode && bulkSelection.has(conversation.applicationId);
+                  const jobThread = isJobThread(conversation);
+                  const displayName = conversationDisplayName(conversation, t);
+                  const previewTitle = localizeNotification(
+                    conversation.latestNotification,
+                    language.code,
+                  ).title;
                   return (
                     <li key={conversation.applicationId}>
                       <button
                         type="button"
-                        onClick={() => openConversation(conversation)}
-                        aria-pressed={isActive}
+                        onClick={() =>
+                          bulkMode
+                            ? toggleBulkItem(conversation.applicationId)
+                            : openConversation(conversation)
+                        }
+                        aria-pressed={bulkMode ? isBulkSelected : isActive}
+                        aria-label={
+                          bulkMode
+                            ? t("employer.messagesPage.list.selectConversation", {
+                                name: displayName,
+                              })
+                            : undefined
+                        }
                         className={cn(
                           "relative flex w-full gap-3 border-b border-border-subtle text-left transition-colors lg:gap-2.5",
                           "min-h-[4.5rem] px-3 py-3 lg:min-h-0 lg:px-2.5 lg:py-2.5",
-                          isActive
+                          isActive || isBulkSelected
                             ? "bg-primary-light/50"
                             : "hover:bg-hero-bg",
-                          conversation.unreadCount > 0 && !isActive
+                          conversation.unreadCount > 0 &&
+                            !isActive &&
+                            !isBulkSelected
                             ? "bg-primary-light/20"
                             : "",
                         )}
@@ -1628,11 +2321,41 @@ export function EmployerMessagesPageContent() {
                             aria-hidden="true"
                           />
                         ) : null}
-                        <ConversationAvatar name={conversation.candidateName} />
+                        {bulkMode ? (
+                          <span
+                            className={cn(
+                              "mt-2.5 inline-flex size-4 shrink-0 items-center justify-center rounded border",
+                              isBulkSelected
+                                ? "border-primary bg-primary text-surface"
+                                : "border-border-subtle bg-surface",
+                            )}
+                            aria-hidden="true"
+                          >
+                            {isBulkSelected ? (
+                              <svg viewBox="0 0 12 12" className="size-3">
+                                <path
+                                  d="M2.5 6.2 5 8.5l4.5-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            ) : null}
+                          </span>
+                        ) : null}
+                        <ConversationAvatar name={displayName} />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-start justify-between gap-2">
-                            <span className="truncate text-xs font-bold text-foreground sm:text-sm lg:text-[0.8125rem]">
-                              {conversation.candidateName}
+                            <span className="flex min-w-0 items-center gap-1">
+                              <span className="truncate text-xs font-bold text-foreground sm:text-sm lg:text-[0.8125rem]">
+                                {displayName}
+                              </span>
+                              <ConversationFlagIcons
+                                conversation={conversation}
+                                t={t}
+                              />
                             </span>
                             <span className="shrink-0 text-[0.625rem] text-muted">
                               {formatNotificationTime(
@@ -1643,14 +2366,18 @@ export function EmployerMessagesPageContent() {
                           <span className="mt-px block truncate text-[11px] font-medium text-muted sm:text-xs lg:text-[0.6875rem]">
                             {conversation.jobTitle}
                             <span className="hidden lg:inline">
-                              {conversation.candidatePhone
+                              {!jobThread &&
+                              canViewCandidatePhone &&
+                              conversation.candidatePhone
                                 ? ` - ${conversation.candidatePhone}`
                                 : ""}
                             </span>
                           </span>
-                          <span className="mt-0.5 block truncate text-[0.625rem] font-semibold text-primary lg:hidden">
-                            {statusLabel(conversation.applicationStatus)}
-                          </span>
+                          {!jobThread && conversation.applicationStatus ? (
+                            <span className="mt-0.5 block truncate text-[0.625rem] font-semibold text-primary lg:hidden">
+                              {statusLabel(conversation.applicationStatus, t)}
+                            </span>
+                          ) : null}
                           <span className="mt-0.5 flex items-center justify-between gap-2">
                             <span
                               className={cn(
@@ -1662,10 +2389,16 @@ export function EmployerMessagesPageContent() {
                                   : "text-foreground/80",
                               )}
                             >
-                              {conversation.latestNotification.title}
+                              {previewTitle}
                             </span>
                             {conversation.unreadCount > 0 ? (
-                              <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-pin-state px-1.5 text-[0.625rem] font-bold text-surface lg:min-w-4 lg:px-1 lg:text-[0.5625rem]">
+                              <span
+                                className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-pin-state px-1.5 text-[0.625rem] font-bold text-surface lg:min-w-4 lg:px-1 lg:text-[0.5625rem]"
+                                aria-label={t(
+                                  "employer.messagesPage.list.unreadCount",
+                                  { count: conversation.unreadCount },
+                                )}
+                              >
                                 {conversation.unreadCount}
                               </span>
                             ) : null}
@@ -1679,17 +2412,17 @@ export function EmployerMessagesPageContent() {
             )}
           </div>
 
-          {(conversationsQuery.data?.pagination.totalPages ?? 1) > page ? (
+          {conversationsQuery.hasNextPage ? (
             <div className="shrink-0 border-t border-border-subtle p-2 text-center">
               <button
                 type="button"
-                disabled={conversationsQuery.isFetching}
-                onClick={() => setPage((current) => current + 1)}
+                disabled={conversationsQuery.isFetchingNextPage}
+                onClick={() => void conversationsQuery.fetchNextPage()}
                 className="inline-flex min-h-11 items-center justify-center px-3 text-sm font-semibold text-primary hover:text-primary-hover disabled:opacity-60 lg:min-h-0 lg:text-xs"
               >
-                {conversationsQuery.isFetching
-                  ? "Loading…"
-                  : "Load More Conversations"}
+                {conversationsQuery.isFetchingNextPage
+                  ? t("employer.messagesPage.list.loading")
+                  : t("employer.messagesPage.list.loadMore")}
               </button>
             </div>
           ) : null}

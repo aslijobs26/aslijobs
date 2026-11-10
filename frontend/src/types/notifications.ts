@@ -20,6 +20,8 @@ export type NotificationType =
   | "interview_completed"
   | "interview_cancelled"
   | "offer_sent"
+  | "offer_accepted"
+  | "offer_declined"
   | "application_selected"
   | "application_joined"
   | "application_did_not_join"
@@ -35,6 +37,15 @@ export type NotificationType =
   | "employer_verification_rejected"
   | "employer_verification_documents_requested";
 
+/**
+ * Render-time translation hint. `key` points into the notification i18n
+ * bundle; stored title/body stay the English source of truth.
+ */
+export type NotificationTemplate = {
+  key: string;
+  params: Record<string, string> | null;
+};
+
 export type NotificationListItem = {
   id: string;
   type: NotificationType;
@@ -48,6 +59,7 @@ export type NotificationListItem = {
   isRead: boolean;
   readAt: string | null;
   createdAt: string;
+  template?: NotificationTemplate | null;
 };
 
 export type NotificationListResult = {

@@ -1,12 +1,16 @@
 import type { SiteLanguageCode } from "../constants/site-language";
 import { authBundle } from "./bundles/auth";
 import { employerBundle } from "./bundles/employer";
+import { employerMessagesBundle } from "./bundles/employer-messages";
+import { employerMessagesHistoryBundle } from "./bundles/employer-messages-history";
 import { faqsBundle } from "./bundles/faqs";
 import { guidelinesBundle } from "./bundles/guidelines";
 import { homeBundle } from "./bundles/home";
+import { notificationTemplatesBundle } from "./bundles/notification-templates";
 import { privacyBundle } from "./bundles/privacy";
 import { publicContentBundle } from "./bundles/public-content";
 import { seekerBundle } from "./bundles/seeker";
+import { seekerOfferResponseBundle } from "./bundles/seeker-offer-response";
 import { termsBundle } from "./bundles/terms";
 import { whatsappFabBundle } from "./bundles/whatsapp-fab";
 import { useSiteLanguage } from "./site-language";
@@ -22,7 +26,11 @@ const BUNDLES = [
   homeBundle,
   authBundle,
   seekerBundle,
+  seekerOfferResponseBundle,
   employerBundle,
+  employerMessagesBundle,
+  employerMessagesHistoryBundle,
+  notificationTemplatesBundle,
   faqsBundle,
   guidelinesBundle,
   publicContentBundle,
@@ -35,7 +43,11 @@ type Messages = typeof en &
   (typeof homeBundle)["en"] &
   (typeof authBundle)["en"] &
   (typeof seekerBundle)["en"] &
+  (typeof seekerOfferResponseBundle)["en"] &
   (typeof employerBundle)["en"] &
+  (typeof employerMessagesBundle)["en"] &
+  (typeof employerMessagesHistoryBundle)["en"] &
+  (typeof notificationTemplatesBundle)["en"] &
   (typeof faqsBundle)["en"] &
   (typeof guidelinesBundle)["en"] &
   (typeof publicContentBundle)["en"] &
@@ -97,6 +109,17 @@ function readPath(catalog: Messages, key: string): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+function interpolate(
+  template: string,
+  values?: Record<string, string | number>,
+): string {
+  if (!values) return template;
+  return template.replace(/\{(\w+)\}/g, (token, name: string) => {
+    const value = values[name];
+    return value === undefined ? token : String(value);
+  });
+}
+
 export function translate(
   language: SiteLanguageCode,
   key: MessageKey,
@@ -107,12 +130,20 @@ export function translate(
   if (process.env.NODE_ENV !== "production" && !fallback) {
     console.warn(`[i18n] Missing translation key: ${key}`);
   }
-  const template = fallback ?? key;
-  if (!values) return template;
-  return template.replace(/\{(\w+)\}/g, (token, name: string) => {
-    const value = values[name];
-    return value === undefined ? token : String(value);
-  });
+  return interpolate(fallback ?? key, values);
+}
+
+/**
+ * Exact-language lookup for runtime keys (e.g. server notification templates).
+ * Returns undefined instead of falling back so callers can keep source text.
+ */
+export function translateIfPresent(
+  language: SiteLanguageCode,
+  key: string,
+  values?: Record<string, string | number>,
+): string | undefined {
+  const localized = readPath(CATALOGS[language], key);
+  return localized === undefined ? undefined : interpolate(localized, values);
 }
 
 export function useTranslate(): (

@@ -52,6 +52,9 @@ export const APPLICATION_INTERVIEW_MODES = [
   "phone",
 ] as const;
 
+/** Candidate answers to a sent offer; only recorded while status is `offer_sent`. */
+export const APPLICATION_OFFER_RESPONSES = ["accepted", "declined"] as const;
+
 export const WITHDRAWABLE_STATUSES = [
   "submitted",
   "viewed",
@@ -117,6 +120,8 @@ export const APPLICATION_EVENT_NAMES = {
   INTERVIEW_COMPLETED: "application.interview_completed",
   INTERVIEW_CANCELLED: "application.interview_cancelled",
   OFFER_SENT: "application.offer_sent",
+  OFFER_ACCEPTED: "application.offer_accepted",
+  OFFER_DECLINED: "application.offer_declined",
   SELECTED: "application.selected",
   REJECTED: "application.rejected",
   JOINED: "application.joined",

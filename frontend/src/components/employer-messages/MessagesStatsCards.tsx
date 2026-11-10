@@ -1,6 +1,8 @@
 "use client";
 
 import { SkeletonKpiValue } from "@/components/shared/skeletons/SkeletonBone";
+import { useTranslate } from "@/i18n/translate";
+import type { EmployerMessageConversationStats } from "@/types/employer-messages";
 import { cn } from "@/utils/cn";
 import {
   Briefcase,
@@ -14,7 +16,10 @@ type MessagesStatCard = {
   id: string;
   title: string;
   description: string;
+  hint: string;
   value: number | null;
+  /** Count within the active list filters; shown only when filters apply. */
+  filteredValue: number | null;
   icon: LucideIcon;
   iconClassName: string;
   cardClassName: string;
@@ -22,32 +27,29 @@ type MessagesStatCard = {
 };
 
 type MessagesStatsCardsProps = {
-  totalConversations: number | null;
-  unreadConversations: number | null;
-  /** Optional KPI counts derived from the loaded conversation page / filters. */
-  activeHiringConversations?: number | null;
-  interviewWeekConversations?: number | null;
+  /** Unfiltered KPIs from the conversations API. */
+  stats: EmployerMessageConversationStats | null;
+  /** Filtered conversation totals; pass null when no list filter is active. */
+  filteredTotal?: number | null;
+  filteredUnread?: number | null;
   isLoading?: boolean;
 };
 
-/**
- * Stats strip for Messages. Does not issue extra API probes — values come from
- * the parent conversation query (and optional derived counts) to avoid burning
- * the shared rate-limit budget.
- */
 export function MessagesStatsCards({
-  totalConversations,
-  unreadConversations,
-  activeHiringConversations = null,
-  interviewWeekConversations = null,
+  stats,
+  filteredTotal = null,
+  filteredUnread = null,
   isLoading = false,
 }: MessagesStatsCardsProps) {
+  const t = useTranslate();
   const cards: MessagesStatCard[] = [
     {
       id: "total",
-      title: "Total Conversations",
-      description: "All time",
-      value: totalConversations,
+      title: t("employer.messagesPage.kpi.totalTitle"),
+      description: t("employer.messagesPage.kpi.totalDesc"),
+      hint: t("employer.messagesPage.kpi.totalHint"),
+      value: stats?.totalConversations ?? null,
+      filteredValue: filteredTotal,
       icon: MessagesSquare,
       iconClassName: "bg-primary-light text-primary",
       cardClassName:
@@ -56,9 +58,11 @@ export function MessagesStatsCards({
     },
     {
       id: "unread",
-      title: "Unread Conversations",
-      description: "Needs your attention",
-      value: unreadConversations,
+      title: t("employer.messagesPage.kpi.unreadTitle"),
+      description: t("employer.messagesPage.kpi.unreadDesc"),
+      hint: t("employer.messagesPage.kpi.unreadHint"),
+      value: stats?.unreadConversations ?? null,
+      filteredValue: filteredUnread,
       icon: MessageSquare,
       iconClassName: "bg-amber-50 text-amber-600",
       cardClassName:
@@ -67,9 +71,11 @@ export function MessagesStatsCards({
     },
     {
       id: "active",
-      title: "Active Hiring",
-      description: "In progress",
-      value: activeHiringConversations,
+      title: t("employer.messagesPage.kpi.activeTitle"),
+      description: t("employer.messagesPage.kpi.activeDesc"),
+      hint: t("employer.messagesPage.kpi.activeHint"),
+      value: stats?.activeHiringConversations ?? null,
+      filteredValue: null,
       icon: Briefcase,
       iconClassName: "bg-sky-50 text-sky-600",
       cardClassName:
@@ -78,9 +84,11 @@ export function MessagesStatsCards({
     },
     {
       id: "interview",
-      title: "Interviews (7d)",
-      description: "This week",
-      value: interviewWeekConversations,
+      title: t("employer.messagesPage.kpi.interviewsTitle"),
+      description: t("employer.messagesPage.kpi.interviewsDesc"),
+      hint: t("employer.messagesPage.kpi.interviewsHint"),
+      value: stats?.interviewEventsLast7Days ?? null,
+      filteredValue: null,
       icon: CalendarDays,
       iconClassName: "bg-violet-50 text-violet-600",
       cardClassName:
@@ -96,6 +104,7 @@ export function MessagesStatsCards({
         return (
           <article
             key={card.id}
+            title={card.hint}
             className={cn(
               "employer-messages-kpi-card rounded-xl border p-4 shadow-sm transition-[border-color,box-shadow] hover:shadow-md max-sm:p-2.5 lg:rounded-lg lg:p-2",
               card.cardClassName,
@@ -126,15 +135,25 @@ export function MessagesStatsCards({
             {isLoading ? (
               <SkeletonKpiValue className="mt-3 max-sm:mt-2 lg:mt-1" />
             ) : (
-              <p
-                className={cn(
-                  "employer-messages-kpi-card__value mt-3 text-2xl font-bold max-sm:mt-2 max-sm:text-xl lg:mt-1 lg:text-base",
-                  card.valueClassName,
-                )}
-              >
-                {card.value ?? 0}
-              </p>
+              <div className="mt-3 flex flex-wrap items-baseline gap-x-2 max-sm:mt-2 lg:mt-1">
+                <p
+                  className={cn(
+                    "employer-messages-kpi-card__value text-2xl font-bold max-sm:text-xl lg:text-base",
+                    card.valueClassName,
+                  )}
+                >
+                  {card.value ?? 0}
+                </p>
+                {card.filteredValue !== null ? (
+                  <p className="text-[0.625rem] font-medium text-muted">
+                    {t("employer.messagesPage.kpi.matchingFilters", {
+                      count: card.filteredValue,
+                    })}
+                  </p>
+                ) : null}
+              </div>
             )}
+            <span className="sr-only">{card.hint}</span>
           </article>
         );
       })}

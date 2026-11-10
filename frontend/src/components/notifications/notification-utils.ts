@@ -77,8 +77,10 @@ export function notificationIcon(type: NotificationType): LucideIcon {
     case "application_selected":
       return Gift;
     case "application_rejected":
+    case "offer_declined":
       return XCircle;
     case "application_joined":
+    case "offer_accepted":
       return CheckCircle2;
     case "application_did_not_join":
       return XCircle;
@@ -116,9 +118,11 @@ export function notificationIconTone(type: NotificationType): NotificationIconTo
     case "interview_cancelled":
       return "amber";
     case "offer_sent":
+    case "offer_accepted":
     case "application_selected":
       return "emerald";
     case "application_rejected":
+    case "offer_declined":
     case "application_did_not_join":
     case "job_rejected":
     case "job_live_changes_rejected":

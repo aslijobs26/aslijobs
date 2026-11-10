@@ -29,6 +29,7 @@ import type {
   ListEmployerInterviewsQuerySchema,
   ListSeekerApplicationsQuerySchema,
   CancelApplicationInterviewSchema,
+  RespondToOfferSchema,
   ShortlistApplicationSchema,
   UpdateApplicationHiringSchema,
   UpdateApplicationInterviewSchema,
@@ -165,6 +166,27 @@ export class ApplicationController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Application withdrawn.",
+      data: result,
+    });
+  };
+
+  respondToOfferForSeeker = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const jobSeekerId = requireJobSeekerId(req);
+    const applicationId = String(req.params.applicationId ?? "");
+    const body = req.body as RespondToOfferSchema;
+
+    const result = await applicationService.respondToOfferForSeeker({
+      jobSeekerId,
+      applicationId,
+      response: body.response,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message:
+        body.response === "accepted" ? "Offer accepted." : "Offer declined.",
       data: result,
     });
   };

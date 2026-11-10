@@ -60,9 +60,14 @@ export const listNotificationsQuerySchema = z.object({
   referenceId: z.string().trim().optional().default(""),
 });
 
-export const listNotificationConversationsQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(50).optional().default(20),
+const booleanQueryFlag = (defaultValue: "true" | "false") =>
+  z
+    .enum(["true", "false"])
+    .optional()
+    .default(defaultValue)
+    .transform((value) => value === "true");
+
+const conversationFilterQueryShape = {
   search: z.string().trim().optional().default(""),
   readStatus: z.enum(["all", "unread", "read"]).optional().default("all"),
   category: z.enum(categoryFilterValues).optional().default("all"),
@@ -75,12 +80,48 @@ export const listNotificationConversationsQuerySchema = z.object({
   quickDate: z.enum(quickDateValues).optional().default("all"),
   dateFrom: z.string().trim().optional().default(""),
   dateTo: z.string().trim().optional().default(""),
+  view: z.enum(["inbox", "starred", "archived"]).optional().default("inbox"),
+  excludeMuted: booleanQueryFlag("false"),
+};
+
+export const exportNotificationConversationsQuerySchema = z.object(
+  conversationFilterQueryShape,
+);
+
+const objectIdString = z
+  .string()
+  .trim()
+  .regex(/^[a-fA-F0-9]{24}$/, "Invalid application id");
+
+export const bulkConversationReadStateBodySchema = z.object({
+  action: z.enum(["read", "unread"]),
+  applicationIds: z
+    .array(objectIdString)
+    .min(1, "Select at least one conversation.")
+    .max(100, "You can update up to 100 conversations at a time."),
+});
+
+export const conversationFlagParamsSchema = z.object({
+  applicationId: objectIdString,
+  flag: z.enum(["star", "archive", "mute"]),
+});
+
+export const listNotificationConversationsQuerySchema = z.object({
+  ...conversationFilterQueryShape,
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(50).optional().default(20),
   sort: z.enum(sortValues).optional().default("newest"),
+  includeStats: booleanQueryFlag("true"),
 });
 
 export const listConversationTimelineQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  before: z
+    .string()
+    .trim()
+    .regex(/^[a-fA-F0-9]{24}$/, "Invalid timeline cursor")
+    .optional(),
 });
 
 export const conversationReferenceParamsSchema = z.object({
@@ -105,6 +146,15 @@ export type ListNotificationConversationsQuerySchema = z.infer<
 >;
 export type ListConversationTimelineQuerySchema = z.infer<
   typeof listConversationTimelineQuerySchema
+>;
+export type ExportNotificationConversationsQuerySchema = z.infer<
+  typeof exportNotificationConversationsQuerySchema
+>;
+export type BulkConversationReadStateBodySchema = z.infer<
+  typeof bulkConversationReadStateBodySchema
+>;
+export type ConversationFlagParamsSchema = z.infer<
+  typeof conversationFlagParamsSchema
 >;
 export type ConversationReferenceParamsSchema = z.infer<
   typeof conversationReferenceParamsSchema

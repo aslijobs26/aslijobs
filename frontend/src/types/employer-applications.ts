@@ -4,6 +4,7 @@ import {
   APPLICATION_STATUSES,
   type ApplicationInterview,
   type ApplicationOffer,
+  type ApplicationOfferResponse,
   type ApplicationStatus,
   type ApplicationStatusHistoryEntry,
 } from "@/types/job-seeker-applications";
@@ -257,6 +258,7 @@ export type EmployerApplicationDetail = {
   rejectReason: string;
   interview: ApplicationInterview;
   offer: ApplicationOffer;
+  offerResponse?: ApplicationOfferResponse | null;
   shortlist?: ApplicationShortlistDetails | null;
   savedCandidate?: ApplicationSavedCandidatePrefill | null;
   statusHistory: ApplicationStatusHistoryEntry[];

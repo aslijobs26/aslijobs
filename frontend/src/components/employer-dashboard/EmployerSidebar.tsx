@@ -62,6 +62,8 @@ export function EmployerSidebar({
         page: 1,
         limit: 1,
         readStatus: "unread",
+        excludeMuted: true,
+        includeStats: false,
       });
       return result.pagination.total;
     },

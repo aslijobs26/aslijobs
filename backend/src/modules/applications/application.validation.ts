@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   APPLICATION_INTERVIEW_MODES,
+  APPLICATION_OFFER_RESPONSES,
   APPLICATION_STATUSES,
 } from "./application.constants.js";
 import { parseEmployerAvailabilityFilter } from "./employer-availability-filter.js";
@@ -14,6 +15,12 @@ export const applyToJobSchema = z.object({
     .transform((value) => value.toUpperCase()),
   resumeSource: z.enum(["generated", "uploaded"]).optional(),
 });
+
+export const respondToOfferSchema = z.object({
+  response: z.enum(APPLICATION_OFFER_RESPONSES),
+});
+
+export type RespondToOfferSchema = z.infer<typeof respondToOfferSchema>;
 
 export const listEmployerApplicationsQuerySchema = z.object({
   publicJobId: z

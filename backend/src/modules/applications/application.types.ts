@@ -1,6 +1,7 @@
 import type {
   APPLICATION_HISTORY_ACTORS,
   APPLICATION_INTERVIEW_MODES,
+  APPLICATION_OFFER_RESPONSES,
   APPLICATION_STATUSES,
 } from "./application.constants.js";
 import type { ResumeJson, ResumeStatus } from "../resumes/resume.types.js";
@@ -45,6 +46,14 @@ export type ApplicationOffer = {
   joiningDate: string;
   packageText: string;
   notes: string;
+};
+
+export type ApplicationOfferResponseStatus =
+  (typeof APPLICATION_OFFER_RESPONSES)[number];
+
+export type ApplicationOfferResponse = {
+  status: ApplicationOfferResponseStatus;
+  respondedAt: string;
 };
 
 export type ApplicationResumeSnapshot = {
@@ -231,6 +240,7 @@ export type EmployerApplicationDetail = {
   rejectReason: string;
   interview: ApplicationInterview;
   offer: ApplicationOffer;
+  offerResponse: ApplicationOfferResponse | null;
   shortlist: ApplicationShortlistDetails | null;
   savedCandidate: ApplicationSavedCandidatePrefill | null;
   statusHistory: ApplicationStatusHistoryEntry[];
@@ -312,6 +322,9 @@ export type SeekerApplicationDetail = {
   statusHistory: ApplicationStatusHistoryEntry[];
   interview: ApplicationInterview | null;
   offer: ApplicationOffer | null;
+  offerResponse: ApplicationOfferResponse | null;
+  /** True while the offer is open and the candidate has not answered it. */
+  canRespondToOffer: boolean;
   rejectReason: string;
   employerNotes: string | null;
   appliedAt: string;

@@ -18,6 +18,7 @@ import {
   listEmployerInterviewStatsQuerySchema,
   listEmployerInterviewsQuerySchema,
   listSeekerApplicationsQuerySchema,
+  respondToOfferSchema,
   shortlistApplicationSchema,
   updateApplicationHiringSchema,
   updateApplicationInterviewSchema,
@@ -61,6 +62,14 @@ applicationRouter.post(
   asyncHandler(requireJobSeekerAuth),
   validate(applicationIdParamsSchema, "params"),
   asyncHandler(applicationController.withdrawForSeeker),
+);
+
+applicationRouter.post(
+  "/me/:applicationId/offer-response",
+  asyncHandler(requireJobSeekerAuth),
+  validate(applicationIdParamsSchema, "params"),
+  validate(respondToOfferSchema),
+  asyncHandler(applicationController.respondToOfferForSeeker),
 );
 
 applicationRouter.get(

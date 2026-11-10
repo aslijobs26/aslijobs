@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/api-client";
 import type {
+  ApplicationOfferResponseStatus,
   ApplicationStatus,
   SeekerApplicationDetail,
   SeekerApplicationListItem,
@@ -115,6 +116,17 @@ export async function fetchSeekerApplication(
   >(`/applications/me/${applicationId}`);
 
   return response.data.data.application;
+}
+
+export async function respondToSeekerOffer(
+  applicationId: string,
+  response: ApplicationOfferResponseStatus,
+): Promise<SeekerApplicationDetail> {
+  const result = await apiClient.post<
+    ApiSuccess<{ application: SeekerApplicationDetail }>
+  >(`/applications/me/${applicationId}/offer-response`, { response });
+
+  return result.data.data.application;
 }
 
 export async function withdrawSeekerApplication(

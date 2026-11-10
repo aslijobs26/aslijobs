@@ -7,7 +7,10 @@ import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { notificationController } from "./notification.controller.js";
 import {
+  bulkConversationReadStateBodySchema,
+  conversationFlagParamsSchema,
   conversationReferenceParamsSchema,
+  exportNotificationConversationsQuerySchema,
   listConversationTimelineQuerySchema,
   listNotificationConversationsQuerySchema,
   listNotificationsQuerySchema,
@@ -35,11 +38,46 @@ notificationRouter.get(
   asyncHandler(notificationController.listConversations),
 );
 
+notificationRouter.get(
+  "/me/conversations/export",
+  asyncHandler(requireEmployerMessagesAccess("export")),
+  validate(exportNotificationConversationsQuerySchema, "query"),
+  asyncHandler(notificationController.exportConversations),
+);
+
+notificationRouter.post(
+  "/me/conversations/bulk",
+  asyncHandler(requireEmployerMessagesAccess("read")),
+  validate(bulkConversationReadStateBodySchema),
+  asyncHandler(notificationController.bulkUpdateConversationReadState),
+);
+
+notificationRouter.put(
+  "/me/conversations/:applicationId/:flag",
+  asyncHandler(requireEmployerMessagesAccess("update")),
+  validate(conversationFlagParamsSchema, "params"),
+  asyncHandler(notificationController.setConversationFlag(true)),
+);
+
+notificationRouter.delete(
+  "/me/conversations/:applicationId/:flag",
+  asyncHandler(requireEmployerMessagesAccess("update")),
+  validate(conversationFlagParamsSchema, "params"),
+  asyncHandler(notificationController.setConversationFlag(false)),
+);
+
 notificationRouter.post(
   "/me/conversations/:applicationId/read",
   asyncHandler(requireEmployerMessagesAccess("read")),
   validate(conversationReferenceParamsSchema, "params"),
   asyncHandler(notificationController.markConversationAsRead),
+);
+
+notificationRouter.post(
+  "/me/conversations/:applicationId/unread",
+  asyncHandler(requireEmployerMessagesAccess("read")),
+  validate(conversationReferenceParamsSchema, "params"),
+  asyncHandler(notificationController.markConversationAsUnread),
 );
 
 notificationRouter.get(

@@ -26,6 +26,8 @@ export const NOTIFICATION_TYPES = [
   "interview_completed",
   "interview_cancelled",
   "offer_sent",
+  "offer_accepted",
+  "offer_declined",
   "application_selected",
   "application_joined",
   "application_did_not_join",

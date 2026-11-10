@@ -70,6 +70,13 @@ export type ApplicationOffer = {
   notes: string;
 };
 
+export type ApplicationOfferResponseStatus = "accepted" | "declined";
+
+export type ApplicationOfferResponse = {
+  status: ApplicationOfferResponseStatus;
+  respondedAt: string;
+};
+
 export type ApplicationResumeSnapshot = {
   resumeJson: ResumeJson;
   templateId: string;
@@ -142,6 +149,9 @@ export type SeekerApplicationDetail = {
   statusHistory: ApplicationStatusHistoryEntry[];
   interview: ApplicationInterview | null;
   offer: ApplicationOffer | null;
+  offerResponse: ApplicationOfferResponse | null;
+  /** True while the offer is open and the candidate has not answered it. */
+  canRespondToOffer: boolean;
   rejectReason: string;
   employerNotes: string | null;
   appliedAt: string;

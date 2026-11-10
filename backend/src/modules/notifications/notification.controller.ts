@@ -4,7 +4,10 @@ import { AppError } from "../../middleware/error.middleware.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { notificationService } from "./notification.service.js";
 import type {
+  BulkConversationReadStateBodySchema,
+  ConversationFlagParamsSchema,
   ConversationReferenceParamsSchema,
+  ExportNotificationConversationsQuerySchema,
   ListConversationTimelineQuerySchema,
   ListNotificationConversationsQuerySchema,
   ListNotificationsQuerySchema,
@@ -20,6 +23,22 @@ function requireRecipient(req: Request) {
   }
 
   return { recipientType, recipientId };
+}
+
+function requireEmployerRecipient(req: Request) {
+  const recipient = requireRecipient(req);
+  if (recipient.recipientType !== "employer") {
+    throw new AppError("Forbidden", HTTP_STATUS.FORBIDDEN);
+  }
+  return recipient;
+}
+
+function resolveClientIp(req: Request): string | null {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",")[0]?.trim() || null;
+  }
+  return req.ip ?? null;
 }
 
 export class NotificationController {
@@ -68,7 +87,10 @@ export class NotificationController {
       quickDate: query.quickDate,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
+      view: query.view,
+      excludeMuted: query.excludeMuted,
       sort: query.sort,
+      includeStats: query.includeStats,
     });
 
     sendSuccess(res, HTTP_STATUS.OK, {
@@ -76,6 +98,90 @@ export class NotificationController {
       data: result,
     });
   };
+
+  exportConversations = async (req: Request, res: Response): Promise<void> => {
+    const recipient = requireEmployerRecipient(req);
+    const query =
+      req.query as unknown as ExportNotificationConversationsQuerySchema;
+
+    const file = await notificationService.exportConversationsCsv({
+      employerId: recipient.recipientId,
+      search: query.search,
+      readStatus: query.readStatus,
+      category: query.category,
+      publicJobId: query.publicJobId,
+      applicationStatus: query.applicationStatus,
+      hasType: query.hasType,
+      employerAction: query.employerAction,
+      candidateAction: query.candidateAction,
+      conversationType: query.conversationType,
+      quickDate: query.quickDate,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+      view: query.view,
+      excludeMuted: query.excludeMuted,
+      actor: {
+        teamMemberId: req.teamMemberId ?? null,
+        ip: resolveClientIp(req),
+      },
+    });
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${file.fileName}"`,
+    );
+    res.setHeader("Content-Length", String(file.buffer.length));
+    res.setHeader("Cache-Control", "no-store");
+    res.status(HTTP_STATUS.OK).send(file.buffer);
+  };
+
+  bulkUpdateConversationReadState = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const recipient = requireEmployerRecipient(req);
+    const body = req.body as BulkConversationReadStateBodySchema;
+
+    const result = await notificationService.bulkUpdateConversationReadState({
+      employerId: recipient.recipientId,
+      applicationIds: body.applicationIds,
+      action: body.action,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message:
+        body.action === "read"
+          ? "Conversations marked as read."
+          : "Conversations marked as unread.",
+      data: result,
+    });
+  };
+
+  setConversationFlag =
+    (value: boolean) =>
+    async (req: Request, res: Response): Promise<void> => {
+      const recipient = requireEmployerRecipient(req);
+      const params = req.params as unknown as ConversationFlagParamsSchema;
+      const flag =
+        params.flag === "star"
+          ? "starred"
+          : params.flag === "archive"
+            ? "archived"
+            : "muted";
+
+      const result = await notificationService.setConversationFlag({
+        employerId: recipient.recipientId,
+        applicationId: params.applicationId,
+        flag,
+        value,
+      });
+
+      sendSuccess(res, HTTP_STATUS.OK, {
+        message: "Conversation updated.",
+        data: result,
+      });
+    };
 
   unreadCount = async (req: Request, res: Response): Promise<void> => {
     const recipient = requireRecipient(req);
@@ -130,6 +236,27 @@ export class NotificationController {
     });
   };
 
+  markConversationAsUnread = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const recipient = requireRecipient(req);
+    if (recipient.recipientType !== "employer") {
+      throw new AppError("Forbidden", HTTP_STATUS.FORBIDDEN);
+    }
+    const params = req.params as unknown as ConversationReferenceParamsSchema;
+
+    const result = await notificationService.markConversationAsUnread({
+      employerId: recipient.recipientId,
+      applicationId: params.applicationId,
+    });
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Conversation marked as unread.",
+      data: result,
+    });
+  };
+
   listConversationTimeline = async (
     req: Request,
     res: Response,
@@ -148,6 +275,7 @@ export class NotificationController {
         applicationId: params.applicationId,
         page: query.page,
         limit: query.limit,
+        before: query.before,
       });
 
     sendSuccess(res, HTTP_STATUS.OK, {

@@ -31,16 +31,22 @@ import type {
   ApplicationOffer,
   ApplicationStatusHistoryEntry,
 } from "@/types/job-seeker-applications";
-import { cn } from "@/utils/cn";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 import { showAppToast } from "@/utils/share-job";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Download, Printer } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type EmployerCandidateDetailPageContentProps = {
   applicationId: string;
+};
+
+/** Hash targets used by ROUTES.employerCandidateDetailSection, in fallback order. */
+const DETAIL_SECTION_ELEMENT_IDS: Record<string, readonly string[]> = {
+  resume: ["resume-preview", "employer-candidate-uploaded-resume"],
+  interview: ["employer-candidate-interview-section"],
+  offer: ["employer-candidate-offer-section"],
 };
 
 function formatDateTime(value: string | null | undefined): string {
@@ -240,6 +246,24 @@ export function EmployerCandidateDetailPageContent({
       showAppToast(getErrorMessage(error), "error");
     },
   });
+
+  const isApplicationLoaded = Boolean(application);
+  useEffect(() => {
+    if (!isApplicationLoaded) {
+      return;
+    }
+    const section = window.location.hash.replace(/^#/, "");
+    const target = (DETAIL_SECTION_ELEMENT_IDS[section] ?? [])
+      .map((id) => document.getElementById(id))
+      .find((element): element is HTMLElement => Boolean(element));
+    if (!target) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isApplicationLoaded]);
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -453,7 +477,10 @@ export function EmployerCandidateDetailPageContent({
           {canViewResume ? (
             application.resumeSource === "uploaded" &&
             application.uploadedResumeSnapshot?.url ? (
-              <section className="rounded-xl border border-border-subtle bg-surface p-4">
+              <section
+                id="employer-candidate-uploaded-resume"
+                className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4"
+              >
                 <h2 className="text-sm font-semibold text-foreground">
                   Submitted uploaded resume
                 </h2>
@@ -639,6 +666,22 @@ export function EmployerCandidateDetailPageContent({
             <h2 className="text-sm font-semibold text-foreground">
               Offer details
             </h2>
+            {application.offerResponse ? (
+              <p
+                className={
+                  application.offerResponse.status === "accepted"
+                    ? "mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800"
+                    : "mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800"
+                }
+              >
+                Candidate{" "}
+                {application.offerResponse.status === "accepted"
+                  ? "accepted"
+                  : "declined"}{" "}
+                this offer on{" "}
+                {formatDateTime(application.offerResponse.respondedAt)}.
+              </p>
+            ) : null}
             <div className="mt-3 space-y-2">
               <Field
                 id="offer-date"

@@ -5,6 +5,7 @@ import type {
   MessagesFiltersState,
   MessagesJobFacet,
 } from "@/components/employer-messages/messages-filters";
+import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
 import { useEffect, useId, useRef } from "react";
 
@@ -25,6 +26,7 @@ export function MessagesMobileFiltersSheet({
   onApply,
   onClear,
 }: MessagesMobileFiltersSheetProps) {
+  const t = useTranslate();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +64,7 @@ export function MessagesMobileFiltersSheet({
     <div className="fixed inset-0 z-50 lg:hidden" role="presentation">
       <button
         type="button"
-        aria-label="Close filters"
+        aria-label={t("employer.messagesPage.filters.close")}
         className="absolute inset-0 bg-foreground/30 backdrop-blur-[1px]"
         onClick={onClose}
       />
@@ -80,7 +82,7 @@ export function MessagesMobileFiltersSheet({
         )}
       >
         <span id={titleId} className="sr-only">
-          Message filters
+          {t("employer.messagesPage.filters.sheetTitle")}
         </span>
         <MessagesFilterPanel
           key={JSON.stringify(filters)}

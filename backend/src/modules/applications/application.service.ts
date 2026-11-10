@@ -31,6 +31,7 @@ import type { ResumeJson } from "../resumes/resume.types.js";
 import {
   APPLICATION_DEFAULT_STATUS,
   APPLICATION_EVENT_NAMES,
+  APPLICATION_OFFER_RESPONSES,
   WITHDRAWABLE_STATUSES,
 } from "./application.constants.js";
 import { ApplicationModel } from "./application.model.js";
@@ -60,6 +61,8 @@ import type {
   ApplicationHistoryActor,
   ApplicationInterview,
   ApplicationOffer,
+  ApplicationOfferResponse,
+  ApplicationOfferResponseStatus,
   ApplicationResumeSnapshot,
   ApplicationSavedCandidatePrefill,
   ApplicationShortlistDetails,
@@ -654,6 +657,32 @@ function mapOffer(value: unknown): ApplicationOffer {
   };
 }
 
+export function mapOfferResponse(
+  value: unknown,
+): ApplicationOfferResponse | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const response = value as { status?: unknown; respondedAt?: unknown };
+  if (
+    !(APPLICATION_OFFER_RESPONSES as readonly unknown[]).includes(
+      response.status,
+    )
+  ) {
+    return null;
+  }
+  const respondedAt =
+    response.respondedAt instanceof Date
+      ? response.respondedAt
+      : new Date(String(response.respondedAt ?? ""));
+  return {
+    status: response.status as ApplicationOfferResponse["status"],
+    respondedAt: Number.isNaN(respondedAt.getTime())
+      ? ""
+      : respondedAt.toISOString(),
+  };
+}
+
 function mapStatusHistory(
   value: unknown,
 ): ApplicationStatusHistoryEntry[] {
@@ -852,6 +881,13 @@ function buildApplicationEventContext(input: {
 
 function canWithdraw(status: ApplicationStatus): boolean {
   return (WITHDRAWABLE_STATUSES as readonly string[]).includes(status);
+}
+
+export function canRespondToOffer(
+  status: ApplicationStatus,
+  offerResponse: ApplicationOfferResponse | null,
+): boolean {
+  return status === "offer_sent" && offerResponse === null;
 }
 
 function interviewHasContent(interview: ApplicationInterview): boolean {
@@ -1192,6 +1228,7 @@ export class ApplicationService {
       rejectReason?: string;
       interview?: unknown;
       offer?: unknown;
+      offerResponse?: unknown;
       shortlist?: unknown;
       statusHistory?: unknown;
       appliedAt: Date;
@@ -1254,6 +1291,7 @@ export class ApplicationService {
       rejectReason: text(application.rejectReason),
       interview: mapInterview(application.interview),
       offer: mapOffer(application.offer),
+      offerResponse: mapOfferResponse(application.offerResponse),
       shortlist: this.mapShortlistDetails(application.shortlist),
       savedCandidate: savedCandidate ?? null,
       statusHistory: mapStatusHistory(application.statusHistory),
@@ -2431,7 +2469,10 @@ export class ApplicationService {
         status: expectedStatus,
       },
       {
-        $set: { status: input.status },
+        $set:
+          input.status === "offer_sent"
+            ? { status: input.status, offerResponse: null }
+            : { status: input.status },
         $push: { statusHistory: historyEntry },
       },
       { new: true },
@@ -2953,6 +2994,9 @@ export class ApplicationService {
         rejectReason: application.rejectReason,
         employerNotesVisibleToSeeker: application.employerNotesVisibleToSeeker,
       };
+      if (nextStatus === "offer_sent") {
+        $set.offerResponse = null;
+      }
 
       const updated = await ApplicationModel.findOneAndUpdate(
         {
@@ -3441,6 +3485,7 @@ export class ApplicationService {
 
     const interview = mapInterview(application.interview);
     const offer = mapOffer(application.offer);
+    const offerResponse = mapOfferResponse(application.offerResponse);
     const status = application.status as ApplicationStatus;
 
     return {
@@ -3470,6 +3515,8 @@ export class ApplicationService {
         statusHistory: mapStatusHistory(application.statusHistory),
         interview: interviewHasContent(interview) ? interview : null,
         offer: offerHasContent(offer) ? offer : null,
+        offerResponse,
+        canRespondToOffer: canRespondToOffer(status, offerResponse),
         rejectReason: text(application.rejectReason),
         employerNotes: application.employerNotesVisibleToSeeker
           ? text(application.employerNotes)
@@ -3543,6 +3590,68 @@ export class ApplicationService {
 
     await this.emitForApplication(
       APPLICATION_EVENT_NAMES.WITHDRAWN,
+      application,
+    );
+
+    return this.getForSeeker({
+      jobSeekerId: input.jobSeekerId,
+      applicationId: input.applicationId,
+    });
+  }
+
+  /**
+   * Records the candidate's answer to an open offer. The application status is
+   * unchanged; the employer still decides Selected / Joined / Rejected.
+   */
+  async respondToOfferForSeeker(input: {
+    jobSeekerId: string;
+    applicationId: string;
+    response: ApplicationOfferResponseStatus;
+  }) {
+    if (
+      !mongoose.Types.ObjectId.isValid(input.applicationId) ||
+      !mongoose.Types.ObjectId.isValid(input.jobSeekerId)
+    ) {
+      throw new AppError("Application not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const application = await ApplicationModel.findOneAndUpdate(
+      {
+        _id: input.applicationId,
+        jobSeekerId: input.jobSeekerId,
+        status: "offer_sent",
+        offerResponse: null,
+      },
+      {
+        $set: {
+          offerResponse: { status: input.response, respondedAt: new Date() },
+        },
+      },
+      { new: true },
+    );
+
+    if (!application) {
+      const existing = await ApplicationModel.findOne({
+        _id: input.applicationId,
+        jobSeekerId: input.jobSeekerId,
+      })
+        .select("_id")
+        .lean();
+
+      if (!existing) {
+        throw new AppError("Application not found", HTTP_STATUS.NOT_FOUND);
+      }
+
+      throw new AppError(
+        "This offer can no longer be answered.",
+        HTTP_STATUS.CONFLICT,
+      );
+    }
+
+    await this.emitForApplication(
+      input.response === "accepted"
+        ? APPLICATION_EVENT_NAMES.OFFER_ACCEPTED
+        : APPLICATION_EVENT_NAMES.OFFER_DECLINED,
       application,
     );
 

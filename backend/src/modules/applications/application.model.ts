@@ -6,6 +6,7 @@ import {
   APPLICATION_DEFAULT_STATUS,
   APPLICATION_HISTORY_ACTORS,
   APPLICATION_INTERVIEW_MODES,
+  APPLICATION_OFFER_RESPONSES,
   APPLICATION_STATUSES,
 } from "./application.constants.js";
 import { APPLICATION_SHORTLIST_NEXT_ACTIONS } from "./application-shortlist.constants.js";
@@ -65,6 +66,18 @@ const offerSchema = new Schema(
     joiningDate: { type: String, trim: true, default: "" },
     packageText: { type: String, trim: true, default: "" },
     notes: { type: String, trim: true, default: "" },
+  },
+  { _id: false },
+);
+
+const offerResponseSchema = new Schema(
+  {
+    status: {
+      type: String,
+      enum: APPLICATION_OFFER_RESPONSES,
+      required: true,
+    },
+    respondedAt: { type: Date, required: true },
   },
   { _id: false },
 );
@@ -188,6 +201,11 @@ const applicationSchema = new Schema(
     offer: {
       type: offerSchema,
       default: () => ({}),
+    },
+    /** Candidate's answer to the current offer; cleared when an offer is (re)sent. */
+    offerResponse: {
+      type: offerResponseSchema,
+      default: null,
     },
     shortlist: {
       type: shortlistSchema,

@@ -71,6 +71,7 @@ export const TEAM_ACTIVITY_TYPES = [
   "member_login",
   "member_logout",
   "saved_candidates_exported",
+  "messages_exported",
   "jobs_bulk_deleted",
   "job_deleted",
 ] as const;
