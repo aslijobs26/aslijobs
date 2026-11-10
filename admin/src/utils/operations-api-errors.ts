@@ -89,6 +89,15 @@ export function getOperationsApiErrorMessage(
   return fallback;
 }
 
+/** The API answered, but has no handler for this path (it predates the Admin build). */
+export function isMissingApiRouteError(error: unknown): boolean {
+  return (
+    isAxiosError(error) &&
+    error.response?.status === 404 &&
+    readApiMessage(error) === "Route not found"
+  );
+}
+
 export function firstOperationsErrorMessage(
   errors: Record<string, string>,
   fallback: string,

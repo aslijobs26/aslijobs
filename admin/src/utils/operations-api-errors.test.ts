@@ -6,6 +6,7 @@ import {
   firstOperationsErrorMessage,
   getOperationsApiErrorMessage,
   getOperationsApiFieldErrors,
+  isMissingApiRouteError,
 } from "./operations-api-errors.ts";
 
 function axiosError(data: {
@@ -85,6 +86,23 @@ describe("operations WhatsApp conflict copy", () => {
       getOperationsApiFieldErrors(error).whatsappNumber,
       EXISTING_EMPLOYER_WHATSAPP_MESSAGE,
     );
+  });
+});
+
+describe("isMissingApiRouteError", () => {
+  const withStatus = (status: number, message: string) => ({
+    isAxiosError: true,
+    response: { status, data: { success: false, message } },
+  });
+
+  it("detects the API catch-all 404", () => {
+    assert.equal(isMissingApiRouteError(withStatus(404, "Route not found")), true);
+  });
+
+  it("ignores 404s for missing records and other failures", () => {
+    assert.equal(isMissingApiRouteError(withStatus(404, "Employer not found")), false);
+    assert.equal(isMissingApiRouteError(withStatus(500, "Route not found")), false);
+    assert.equal(isMissingApiRouteError(new Error("Route not found")), false);
   });
 });
 

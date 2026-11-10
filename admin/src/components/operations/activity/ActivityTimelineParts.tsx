@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { Check, ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import { cn } from "../../../utils/cn";
+import {
+  getOperationsApiErrorMessage,
+  isMissingApiRouteError,
+} from "../../../utils/operations-api-errors";
 import { OperationsFilterSelect } from "../jobs/OperationsFilterSelect";
 
 export interface ActivityJourneyStage {
@@ -118,12 +122,17 @@ export function ActivityPanelSkeleton() {
 }
 
 export function ActivityLoadError({
-  message,
+  error,
+  fallback,
   onRetry,
 }: {
-  message: string;
+  error: unknown;
+  fallback: string;
   onRetry: () => void;
 }) {
+  const message = isMissingApiRouteError(error)
+    ? "Activity history is not available on the server yet. The AsliJobs API needs to be redeployed with the latest release."
+    : getOperationsApiErrorMessage(error, fallback);
   return (
     <div className="rounded-xl border border-border-subtle bg-surface px-3 py-10 text-center">
       <p className="text-[12px] font-medium text-danger sm:text-sm">{message}</p>

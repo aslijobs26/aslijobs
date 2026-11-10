@@ -154,7 +154,8 @@ export function EmployerActivityPanel({ employerId }: EmployerActivityPanelProps
   if (activityQuery.isError || !data) {
     return (
       <ActivityLoadError
-        message="Failed to load employer activity."
+        error={activityQuery.error}
+        fallback="Failed to load employer activity."
         onRetry={() => void activityQuery.refetch()}
       />
     );

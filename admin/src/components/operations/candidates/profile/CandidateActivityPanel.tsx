@@ -122,7 +122,8 @@ export function CandidateActivityPanel({ jobSeekerId }: CandidateActivityPanelPr
   if (activityQuery.isError || !data) {
     return (
       <ActivityLoadError
-        message="Failed to load candidate activity."
+        error={activityQuery.error}
+        fallback="Failed to load candidate activity."
         onRetry={() => void activityQuery.refetch()}
       />
     );
