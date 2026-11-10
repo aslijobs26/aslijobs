@@ -9,6 +9,8 @@ import type {
 } from "../types/operations-post-job";
 import type {
   CompleteOperationsEmployerInput,
+  OperationsEmployerActivityParams,
+  OperationsEmployerActivityResult,
   OperationsEmployerDetail,
   OperationsEmployerJobsResult,
   OperationsEmployerOtpDelivery,
@@ -77,6 +79,24 @@ export async function fetchOperationsEmployerJobs(
         page: params.page,
         limit: params.limit,
         status: params.status || undefined,
+      },
+    },
+  );
+
+  return response.data.data;
+}
+
+export async function fetchOperationsEmployerActivity(
+  employerId: string,
+  params: OperationsEmployerActivityParams,
+): Promise<OperationsEmployerActivityResult> {
+  const response = await apiClient.get<{ data: OperationsEmployerActivityResult }>(
+    `${OPERATIONS_EMPLOYERS_BASE}/${encodeURIComponent(employerId)}/activity`,
+    {
+      params: {
+        limit: params.limit,
+        category: params.category === "all" ? undefined : params.category,
+        cursor: params.cursor || undefined,
       },
     },
   );

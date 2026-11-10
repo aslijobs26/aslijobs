@@ -73,6 +73,7 @@ export class EmployerController {
         document: getUploadedFile(req.files, "document"),
         companyLogo: getUploadedFile(req.files, "companyLogo"),
       },
+      { userAgent: req.get("user-agent") },
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {
@@ -101,6 +102,7 @@ export class EmployerController {
         document: getUploadedFile(req.files, "document"),
         profilePhoto: getUploadedFile(req.files, "profilePhoto"),
       },
+      { userAgent: req.get("user-agent") },
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {

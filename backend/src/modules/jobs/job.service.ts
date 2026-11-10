@@ -1849,6 +1849,33 @@ export class JobService {
       });
     }
 
+    const employerStatusAuditAction =
+      action === "pause"
+        ? OPERATIONS_JOB_AUDIT_ACTIONS.PAUSED
+        : action === "resume"
+          ? OPERATIONS_JOB_AUDIT_ACTIONS.RESUMED
+          : action === "close"
+            ? OPERATIONS_JOB_AUDIT_ACTIONS.CLOSED
+            : action === "reactivate"
+              ? OPERATIONS_JOB_AUDIT_ACTIONS.REACTIVATED
+              : null;
+    if (employerStatusAuditAction) {
+      scheduleJobModerationAudit({
+        actorUserId: null,
+        actorName: "Employer",
+        action: employerStatusAuditAction,
+        publicJobId: updatedJob.jobId,
+        jobTitle: updatedJob.jobTitle?.trim() || "Untitled job",
+        previousStatus,
+        nextStatus,
+        metadata: {
+          actorType: "employer",
+          employerId,
+          source: "updateJobStatus",
+        },
+      });
+    }
+
     return {
       job: toJobPublic(updatedJob),
     };

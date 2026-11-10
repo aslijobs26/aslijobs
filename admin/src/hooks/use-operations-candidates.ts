@@ -7,6 +7,7 @@ import {
 import {
   deleteOperationsCandidate,
   exportOperationsCandidates,
+  fetchOperationsCandidateActivity,
   fetchOperationsCandidateApplications,
   fetchOperationsCandidateDetail,
   fetchOperationsCandidates,
@@ -17,6 +18,7 @@ import { OPERATIONS_PLACEMENTS_QUERY_KEY } from "./use-operations-placements";
 import { OPERATIONS_REGISTRATION_AWARENESS_QUERY_KEY } from "./use-operations-registration-awareness";
 import { OPERATIONS_WORK_QUERY_KEY } from "./use-operations-work";
 import type {
+  OperationsCandidateActivityParams,
   OperationsCandidatesAnalyticsParams,
   OperationsCandidatesExportParams,
   OperationsCandidatesListParams,
@@ -121,6 +123,27 @@ export function useOperationsCandidateDetail(
     queryFn: () => fetchOperationsCandidateDetail(jobSeekerId!),
     enabled: Boolean(jobSeekerId),
     staleTime: 30_000,
+    retry: shouldRetryCandidatesQuery,
+    retryDelay: candidatesRetryDelay,
+  });
+}
+
+export function useOperationsCandidateActivity(
+  jobSeekerId: string | undefined,
+  params: OperationsCandidateActivityParams,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: [
+      ...OPERATIONS_CANDIDATES_QUERY_KEY,
+      "activity",
+      jobSeekerId,
+      params,
+    ],
+    queryFn: () => fetchOperationsCandidateActivity(jobSeekerId!, params),
+    enabled: Boolean(jobSeekerId) && (options?.enabled ?? true),
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
     retry: shouldRetryCandidatesQuery,
     retryDelay: candidatesRetryDelay,
   });

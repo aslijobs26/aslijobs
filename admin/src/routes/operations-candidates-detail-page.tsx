@@ -2,6 +2,7 @@ import { useState } from "react";
 import { isAxiosError } from "axios";
 import { ArrowLeft } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { CandidateActivityPanel } from "../components/operations/candidates/profile/CandidateActivityPanel";
 import { CandidateApplicationsTable } from "../components/operations/candidates/profile/CandidateApplicationsTable";
 import { CandidateDocumentsPanel } from "../components/operations/candidates/profile/CandidateDocumentsPanel";
 import { CandidatePreferencesPanel } from "../components/operations/candidates/profile/CandidatePreferencesPanel";
@@ -251,6 +252,10 @@ export function OperationsCandidatesDetailPage() {
 
               {activeTab === "documents" ? (
                 <CandidateDocumentsPanel detail={detail} />
+              ) : null}
+
+              {activeTab === "activity" && jobSeekerId ? (
+                <CandidateActivityPanel jobSeekerId={jobSeekerId} />
               ) : null}
             </div>
           </div>

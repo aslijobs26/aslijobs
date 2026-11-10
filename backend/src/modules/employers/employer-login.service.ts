@@ -11,6 +11,7 @@ import { otpService } from "../otp/otp.service.js";
 import { PhoneAccountIdentityModel } from "../accounts/phone-account-identity.model.js";
 import { normalizeRegisteredWhatsappNumber } from "../accounts/phone-account.policy.js";
 import { EmployerModel } from "./employer.model.js";
+import { recordEmployerLogin } from "./employer-login-history.js";
 import {
   employerWhatsappLookupValues,
   maskEmployerLoginPhone,
@@ -332,7 +333,10 @@ export class EmployerLoginService {
     return issueAndPersistLoginOtp(employer);
   }
 
-  async verifyLoginOtp(input: EmployerLoginVerifyOtpInput) {
+  async verifyLoginOtp(
+    input: EmployerLoginVerifyOtpInput,
+    context: { userAgent?: string | null } = {},
+  ) {
     const employer = await findLoginEligibleEmployer(input.whatsappNumber);
     const acceptedViaTestOtp = otpService.matchesTestOtp(input.otp);
 
@@ -379,14 +383,28 @@ export class EmployerLoginService {
     });
 
     const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
+    const consumedOtpHash = employer.otpHash;
+    const loggedInAt = new Date();
 
     employer.otpHash = null;
     employer.otpExpiresAt = null;
     employer.otpAttempts = 0;
     employer.refreshTokenHash = refreshTokenHash;
     employer.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt;
-    employer.lastLoginAt = new Date();
+    employer.lastLoginAt = loggedInAt;
     await employer.save();
+
+    await recordEmployerLogin({
+      employerId: employer._id,
+      method: "whatsapp_otp",
+      loggedInAt,
+      // One OTP challenge yields at most one event; test-OTP sign-ins without
+      // an issued challenge fall back to the new session.
+      challengeKey: consumedOtpHash
+        ? `otp:${consumedOtpHash}`
+        : `session:${refreshTokenHash}`,
+      userAgent: context.userAgent,
+    });
 
     return {
       employer: toLoginEmployer(employer),

@@ -14,6 +14,7 @@ import { operationsEmployersController } from "./operations-employers.controller
 import {
   employersAnalyticsQuerySchema,
   exportOperationsEmployersQuerySchema,
+  listOperationsEmployerActivityQuerySchema,
   listOperationsEmployerJobsQuerySchema,
   listOperationsEmployersQuerySchema,
   operationsCompleteEmployerBodySchema,
@@ -87,6 +88,14 @@ operationsEmployersRouter.get(
   validate(operationsEmployerIdParamsSchema, "params"),
   validate(listOperationsEmployerJobsQuerySchema, "query"),
   asyncHandler(operationsEmployersController.listJobs),
+);
+
+operationsEmployersRouter.get(
+  "/:employerId/activity",
+  requireOperationsPermission("employers", "read"),
+  validate(operationsEmployerIdParamsSchema, "params"),
+  validate(listOperationsEmployerActivityQuerySchema, "query"),
+  asyncHandler(operationsEmployersController.getActivity),
 );
 
 operationsEmployersRouter.get(

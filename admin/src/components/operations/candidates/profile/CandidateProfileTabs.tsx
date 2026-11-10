@@ -5,7 +5,8 @@ export type CandidateProfileTabId =
   | "applications"
   | "preferences"
   | "profile_details"
-  | "documents";
+  | "documents"
+  | "activity";
 
 interface CandidateProfileTabsProps {
   activeTab: CandidateProfileTabId;
@@ -32,6 +33,11 @@ const TABS: Array<{
     shortLabel: "Details",
   },
   { id: "documents", label: "Documents" },
+  {
+    id: "activity",
+    label: "Activity & History",
+    shortLabel: "Activity",
+  },
 ];
 
 export function CandidateProfileTabs({

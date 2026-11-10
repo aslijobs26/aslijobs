@@ -3,6 +3,7 @@ import { afterEach, describe, it, mock } from "node:test";
 import mongoose from "mongoose";
 import { EmployerModel } from "../../employers/employer.model.js";
 import { JobSeekerModel } from "../../job-seekers/job-seeker.model.js";
+import { JobSeekerLoginEventModel } from "../../job-seekers/job-seeker-login-event.model.js";
 import { jobSeekerService } from "../../job-seekers/job-seeker.service.js";
 import { jobSeekerLoginService } from "../../job-seekers/job-seeker-login.service.js";
 import { otpService } from "../../otp/otp.service.js";
@@ -102,7 +103,12 @@ const completionInput = {
   availabilityStatus: "immediate" as const,
 };
 
+function stubLoginHistory(): void {
+  mock.method(JobSeekerLoginEventModel, "create", (async () => ({})) as never);
+}
+
 function stubCompletionSideEffects(): void {
+  stubLoginHistory();
   mock.method(JobSeekerModel, "findOne", () => queryResult(null));
   mock.method(EmployerModel, "findOne", () => queryResult(null));
   mock.method(OperationsNotificationModel, "updateOne", async () => ({
@@ -254,6 +260,7 @@ describe("jobseeker account created WhatsApp", () => {
     mock.method(otpService, "verifyOtpHash", async () => true);
     mock.method(JobSeekerModel, "findOne", () => queryResult(null));
     mock.method(EmployerModel, "findOne", () => queryResult(null));
+    stubLoginHistory();
 
     const registering = pendingSeeker({ isWhatsappVerified: false });
     mock.method(JobSeekerModel, "findById", () => queryResult(registering));

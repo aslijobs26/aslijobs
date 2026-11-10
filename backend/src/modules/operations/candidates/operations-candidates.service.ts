@@ -28,9 +28,13 @@ import { deleteOperationsJobSeekerAccount } from "./operations-candidate-delete.
 import { calculateProfileCompleteness } from "../../resumes/utils/profile-completeness.js";
 import type { Readable } from "node:stream";
 import type {
+  ListOperationsCandidateActivityQuery,
   ListOperationsCandidateApplicationsQuery,
   ListOperationsCandidatesQuery,
 } from "./operations-candidates.validation.js";
+import { evaluateJobSeekerProfileCompletion } from "../../job-seekers/job-seeker-profile-completion.js";
+import { decodeCandidateActivityCursor } from "./operations-candidate-activity.js";
+import { loadCandidateActivity } from "./operations-candidate-activity.sources.js";
 import {
   buildCandidateOverviewKpiFilter,
   resolveCandidateOverviewKpiWindow,
@@ -49,6 +53,7 @@ import {
 } from "../rbac/operations-permission-catalog.js";
 import { sanitizeCandidateListItem } from "../rbac/operations-field-sanitize.js";
 import type {
+  OperationsCandidateActivityResult,
   OperationsCandidateApplicationItem,
   OperationsCandidateApplicationsResult,
   OperationsCandidateDatePreset,
@@ -133,7 +138,7 @@ function titleCaseToken(value: string): string {
     .join(" ");
 }
 
-function formatCandidateDisplayId(id: string): string {
+export function formatCandidateDisplayId(id: string): string {
   const cleaned = id.replace(/[^a-fA-F0-9]/g, "");
   const segment =
     cleaned.length >= 8
@@ -1445,6 +1450,37 @@ function toListItemFromSeeker(row: SeekerListRow): OperationsCandidateListItem {
   };
 }
 
+function seekerProfileCompleteness(jobSeeker: Record<string, unknown>) {
+  return calculateProfileCompleteness({
+    fullName: text(jobSeeker.fullName),
+    whatsappNumber: text(jobSeeker.whatsappNumber),
+    dateOfBirth: (jobSeeker.dateOfBirth as Date | string | null) ?? null,
+    gender: (jobSeeker.gender as string | null) ?? null,
+    pincode: text(jobSeeker.pincode),
+    city: text(jobSeeker.city),
+    state: text(jobSeeker.state),
+    jobRole: text(jobSeeker.jobRole),
+    jobType: (jobSeeker.jobType as string | null) ?? null,
+    workMode: (jobSeeker.workMode as string | null) ?? null,
+    preferredJobLocation: text(jobSeeker.preferredJobLocation),
+    expectedSalary: (jobSeeker.expectedSalary as number | null) ?? null,
+    expectedSalaryPeriod:
+      (jobSeeker.expectedSalaryPeriod as string | null) ?? null,
+    education: (jobSeeker.education as Record<string, unknown> | null) ?? null,
+    experienceType: (jobSeeker.experienceType as string | null) ?? null,
+    experiences: Array.isArray(jobSeeker.experiences)
+      ? jobSeeker.experiences
+      : [],
+    languages: Array.isArray(jobSeeker.languages)
+      ? (jobSeeker.languages as string[])
+      : [],
+    professionalSummary: text(jobSeeker.professionalSummary),
+    skills: Array.isArray(jobSeeker.skills)
+      ? (jobSeeker.skills as string[])
+      : [],
+  });
+}
+
 function buildDetailFromSeeker(input: {
   jobSeeker: Record<string, unknown> & {
     _id: mongoose.Types.ObjectId;
@@ -1477,32 +1513,7 @@ function buildDetailFromSeeker(input: {
   descriptionExcerpt?: string;
 }): OperationsCandidateDetail {
   const { jobSeeker, listItem } = input;
-  const completeness = calculateProfileCompleteness({
-    fullName: text(jobSeeker.fullName),
-    whatsappNumber: text(jobSeeker.whatsappNumber),
-    dateOfBirth: (jobSeeker.dateOfBirth as Date | string | null) ?? null,
-    gender: (jobSeeker.gender as string | null) ?? null,
-    pincode: text(jobSeeker.pincode),
-    city: text(jobSeeker.city),
-    state: text(jobSeeker.state),
-    jobRole: text(jobSeeker.jobRole),
-    jobType: (jobSeeker.jobType as string | null) ?? null,
-    workMode: (jobSeeker.workMode as string | null) ?? null,
-    preferredJobLocation: text(jobSeeker.preferredJobLocation),
-    expectedSalary: (jobSeeker.expectedSalary as number | null) ?? null,
-    expectedSalaryPeriod:
-      (jobSeeker.expectedSalaryPeriod as string | null) ?? null,
-    education: jobSeeker.education ?? null,
-    experienceType: (jobSeeker.experienceType as string | null) ?? null,
-    experiences: Array.isArray(jobSeeker.experiences)
-      ? jobSeeker.experiences
-      : [],
-    languages: Array.isArray(jobSeeker.languages) ? jobSeeker.languages : [],
-    professionalSummary: text(jobSeeker.professionalSummary),
-    skills: Array.isArray(jobSeeker.skills)
-      ? (jobSeeker.skills as string[])
-      : [],
-  });
+  const completeness = seekerProfileCompleteness(jobSeeker);
 
   const availabilityStatus = text(jobSeeker.availabilityStatus);
   const availabilityLabel =
@@ -1957,6 +1968,74 @@ export const operationsCandidatesService = {
     };
   },
 
+  /**
+   * Account activity + hiring journey for one job seeker, built from stored
+   * records only and paged with an opaque `(timestamp, event id)` cursor.
+   * Application events are omitted when `includeApplications` is false
+   * (caller lacks candidates.profile.applications.view).
+   */
+  async getSeekerActivity(
+    jobSeekerId: string,
+    query: ListOperationsCandidateActivityQuery,
+    options: { includeApplications: boolean },
+  ): Promise<OperationsCandidateActivityResult> {
+    if (!mongoose.Types.ObjectId.isValid(jobSeekerId)) {
+      throw new AppError("Candidate not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const cursor = query.cursor
+      ? decodeCandidateActivityCursor(query.cursor)
+      : null;
+    if (query.cursor && !cursor) {
+      throw new AppError("Invalid activity cursor.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const jobSeeker = await JobSeekerModel.findById(jobSeekerId).lean();
+    if (!jobSeeker) {
+      throw new AppError("Candidate not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const firstSeenBy = jobSeeker.operationsRegistrationAwareness?.firstSeenBy
+      ? await OperationsTeamUserModel.findById(
+          jobSeeker.operationsRegistrationAwareness.firstSeenBy,
+        )
+          .select("fullName")
+          .lean()
+      : null;
+
+    return loadCandidateActivity({
+      jobSeekerId: jobSeeker._id as mongoose.Types.ObjectId,
+      seeker: {
+        createdAt: jobSeeker.createdAt,
+        lastLoginAt: jobSeeker.lastLoginAt,
+        isWhatsappVerified: Boolean(jobSeeker.isWhatsappVerified),
+        whatsappVerifiedAt: jobSeeker.whatsappVerifiedAt ?? null,
+        registrationStatus: jobSeeker.registrationStatus,
+        profileCompletedAt: jobSeeker.profileCompletedAt ?? null,
+        profileCompleteNow: evaluateJobSeekerProfileCompletion(
+          jobSeeker as unknown as Parameters<
+            typeof evaluateJobSeekerProfileCompletion
+          >[0],
+        ).isComplete,
+        profileCompletionPercent: seekerProfileCompleteness(
+          jobSeeker as unknown as Record<string, unknown>,
+        ).percent,
+        uploadedResume: jobSeeker.uploadedResume
+          ? {
+              originalName: jobSeeker.uploadedResume.originalName,
+              uploadedAt: jobSeeker.uploadedResume.uploadedAt,
+            }
+          : null,
+        operationsFirstSeenAt:
+          jobSeeker.operationsRegistrationAwareness?.firstSeenAt ?? null,
+        operationsFirstSeenByName: text(
+          (firstSeenBy as { fullName?: string } | null)?.fullName,
+        ),
+      },
+      query: { limit: query.limit, category: query.category, cursor },
+      includeApplications: options.includeApplications,
+    });
+  },
   async getApplicationDetail(
     applicationId: string,
   ): Promise<OperationsCandidateDetail> {

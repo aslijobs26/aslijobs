@@ -430,7 +430,7 @@ describe("jobseeker profile completion reminder", () => {
     const verifyStart = registration.indexOf("async verifyOtp");
     const verifyEnd = registration.indexOf("async searchJobRoles");
     const verifyBody = registration.slice(verifyStart, verifyEnd);
-    const verifiedAt = verifyBody.indexOf("isWhatsappVerified = true");
+    const verifiedAt = verifyBody.indexOf("markJobSeekerWhatsappVerified(jobSeeker");
     const armedAt = verifyBody.indexOf("armJobSeekerProfileCompletionReminder");
     assert.ok(verifiedAt >= 0);
     assert.ok(armedAt > verifiedAt);

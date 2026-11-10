@@ -191,7 +191,7 @@ export function OperationsEmployersDetailPage() {
                   />
                 )}
                 {activeTab === "activity" && (
-                  <EmployerActivityPanel employer={employer} />
+                  <EmployerActivityPanel employerId={employer.id} />
                 )}
               </div>
             </div>

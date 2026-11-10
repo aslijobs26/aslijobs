@@ -32,7 +32,9 @@ export class JobSeekerLoginController {
 
   verifyOtp = async (req: Request, res: Response): Promise<void> => {
     const body = req.body as JobSeekerLoginVerifyOtpSchema;
-    const result = await jobSeekerLoginService.verifyLoginOtp(body);
+    const result = await jobSeekerLoginService.verifyLoginOtp(body, {
+      userAgent: req.get("user-agent"),
+    });
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Login successful.",

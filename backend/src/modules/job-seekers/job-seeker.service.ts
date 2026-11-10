@@ -26,6 +26,12 @@ import { cancelJobSeekerProfileCompletionReminder } from "../whatsapp/notificati
 import { resumeService } from "../resumes/resume.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
 import { assertJobSeekerAccountActive } from "./job-seeker-account-status.js";
+import { recordJobSeekerLogin } from "./job-seeker-login-history.js";
+import {
+  isJobSeekerProfileComplete,
+  markJobSeekerWhatsappVerified,
+  recordJobSeekerProfileCompletion,
+} from "./job-seeker-milestones.js";
 import {
   canLoginVerifiedJobSeeker,
   evaluateJobSeekerProfileCompletion,
@@ -397,11 +403,14 @@ export class JobSeekerService {
       accountId: jobSeeker._id.toString(),
     });
 
-    jobSeeker.isWhatsappVerified = true;
+    const verifiedAt = new Date();
+    const wasProfileComplete = isJobSeekerProfileComplete(jobSeeker);
+    markJobSeekerWhatsappVerified(jobSeeker, verifiedAt);
     jobSeeker.otpHash = null;
     jobSeeker.otpExpiresAt = null;
     jobSeeker.otpAttempts = 0;
     jobSeeker.registrationStatus = "PENDING";
+    recordJobSeekerProfileCompletion(jobSeeker, wasProfileComplete, verifiedAt);
     await jobSeeker.save();
 
     if (!evaluateJobSeekerProfileCompletion(jobSeeker).isComplete) {
@@ -472,6 +481,7 @@ export class JobSeekerService {
       );
     }
 
+    const wasProfileComplete = isJobSeekerProfileComplete(jobSeeker);
     jobSeeker.dateOfBirth = new Date(`${input.dateOfBirth}T00:00:00.000Z`);
     jobSeeker.gender = input.gender;
     jobSeeker.jobRole = input.jobRole;
@@ -481,6 +491,7 @@ export class JobSeekerService {
     jobSeeker.expectedSalary = input.expectedSalary;
     jobSeeker.expectedSalaryPeriod = input.expectedSalaryPeriod;
     jobSeeker.registrationStatus = "PENDING";
+    recordJobSeekerProfileCompletion(jobSeeker, wasProfileComplete);
     await jobSeeker.save();
 
     return {
@@ -491,7 +502,7 @@ export class JobSeekerService {
   async completeRegistration(
     jobSeekerId: string,
     input: Omit<CompleteJobSeekerRegistrationInput, "jobSeekerId">,
-    options?: { correlationId?: string },
+    options?: { correlationId?: string; userAgent?: string | null },
   ) {
     const jobSeeker = await findJobSeekerOrThrow(jobSeekerId);
 
@@ -535,6 +546,7 @@ export class JobSeekerService {
       jobSeeker._id,
     );
 
+    const wasProfileComplete = isJobSeekerProfileComplete(jobSeeker);
     jobSeeker.education = input.education;
     jobSeeker.experienceType = input.experienceType;
     jobSeeker.set(
@@ -558,14 +570,24 @@ export class JobSeekerService {
     });
 
     const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
+    const signedInAt = new Date();
+    recordJobSeekerProfileCompletion(jobSeeker, wasProfileComplete, signedInAt);
     jobSeeker.refreshTokenHash = refreshTokenHash;
     jobSeeker.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt;
-    jobSeeker.lastLoginAt = new Date();
+    jobSeeker.lastLoginAt = signedInAt;
     jobSeeker.whatsappLanguage = await copyWhatsAppSessionLanguageToJobSeeker({
       phoneNumber: jobSeeker.whatsappNumber,
       storedLanguage: jobSeeker.whatsappLanguage,
     });
     await jobSeeker.save();
+
+    await recordJobSeekerLogin({
+      jobSeekerId: jobSeeker._id,
+      method: "registration_otp",
+      loggedInAt: signedInAt,
+      challengeKey: `registration:${jobSeeker._id.toString()}`,
+      userAgent: options?.userAgent,
+    });
 
     const correlationId = options?.correlationId?.trim() || randomUUID();
     console.info("[JobSeekerRegistration] completed", {
@@ -620,6 +642,8 @@ export class JobSeekerService {
         HTTP_STATUS.BAD_REQUEST,
       );
     }
+
+    const wasProfileComplete = isJobSeekerProfileComplete(jobSeeker);
 
     if (input.fullName !== undefined) {
       jobSeeker.fullName = input.fullName;
@@ -703,6 +727,7 @@ export class JobSeekerService {
       jobSeeker.set("experiences", []);
     }
 
+    recordJobSeekerProfileCompletion(jobSeeker, wasProfileComplete);
     await jobSeeker.save();
     await finalizeJobSeekerAccountIfReady(jobSeeker);
     await refreshResumeAfterProfileChange(jobSeeker._id.toString());

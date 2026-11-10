@@ -1019,6 +1019,9 @@ export const CANDIDATE_LIST_FILTER_PERMISSION_KEY =
 export const CANDIDATE_PROFILE_VIEW_PERMISSION_KEY =
   "candidates.profile.view" as const;
 
+export const CANDIDATE_APPLICATIONS_VIEW_PERMISSION_KEY =
+  "candidates.profile.applications.view" as const;
+
 export const CANDIDATE_DOCUMENTS_PERMISSION_KEY =
   "candidates.profile.documents.view" as const;
 

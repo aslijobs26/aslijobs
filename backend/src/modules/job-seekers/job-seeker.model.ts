@@ -218,11 +218,27 @@ const jobSeekerSchema = new Schema(
       default: false,
       index: true,
     },
+    /**
+     * Server time of the unverified → verified WhatsApp OTP transition.
+     * Null for accounts verified before this was recorded.
+     */
+    whatsappVerifiedAt: {
+      type: Date,
+      default: null,
+    },
     registrationStatus: {
       type: String,
       enum: JOB_SEEKER_REGISTRATION_STATUSES,
       default: "PENDING",
       index: true,
+    },
+    /**
+     * First recorded time every required apply section was complete.
+     * Never reset by later edits. Null when completion was not observed.
+     */
+    profileCompletedAt: {
+      type: Date,
+      default: null,
     },
     /**
      * Runtime account gate. Legacy documents without this field are active.

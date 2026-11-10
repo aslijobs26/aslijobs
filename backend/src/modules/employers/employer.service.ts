@@ -35,6 +35,11 @@ import { scheduleEmployerVerificationWork } from "../operations/work/operations-
 import { toPublicMediaUrl } from "../storage/public-media-url.js";
 import { storageService } from "../storage/storage.service.js";
 import { EmployerDocumentModel } from "./employer-document.model.js";
+import { recordEmployerLogin } from "./employer-login-history.js";
+import {
+  markEmployerProfileComplete,
+  markEmployerWhatsappVerified,
+} from "./employer-milestones.js";
 import { EmployerModel } from "./employer.model.js";
 import type {
   CompleteCompanyProfileInput,
@@ -344,17 +349,26 @@ async function issueEmployerRegistrationSession(employer: {
   refreshTokenExpiresAt?: Date | null;
   lastLoginAt?: Date | null;
   save: () => Promise<unknown>;
-}) {
+}, context: { userAgent?: string | null } = {}) {
   const tokens = jwtService.issueEmployerTokens({
     sub: employer._id.toString(),
     accountType: employer.accountType as EmployerAccountType,
     whatsappNumber: employer.whatsappNumber,
   });
 
+  const signedInAt = new Date();
   employer.refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
   employer.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt;
-  employer.lastLoginAt = new Date();
+  employer.lastLoginAt = signedInAt;
   await employer.save();
+
+  await recordEmployerLogin({
+    employerId: employer._id,
+    method: "registration_otp",
+    loggedInAt: signedInAt,
+    challengeKey: `registration:${employer._id.toString()}`,
+    userAgent: context.userAgent,
+  });
 
   return {
     accessToken: tokens.accessToken,
@@ -624,7 +638,7 @@ export class EmployerService {
       accountId: employer._id.toString(),
     });
 
-    employer.isWhatsappVerified = true;
+    markEmployerWhatsappVerified(employer);
     employer.otpHash = null;
     employer.otpExpiresAt = null;
     employer.otpAttempts = 0;
@@ -652,6 +666,7 @@ export class EmployerService {
       document?: Express.Multer.File;
       companyLogo?: Express.Multer.File;
     },
+    context: { userAgent?: string | null } = {},
   ) {
     const file = files.document;
 
@@ -806,10 +821,11 @@ export class EmployerService {
       if (companyLogoAsset) {
         employer.companyLogo = companyLogoAsset;
       }
-      employer.isProfileComplete = true;
+      const completedAt = new Date();
+      markEmployerProfileComplete(employer, completedAt);
       employer.registrationStatus = "completed";
       employer.verificationStatus = "pending";
-      employer.verificationSubmittedAt = new Date();
+      employer.verificationSubmittedAt = completedAt;
       if (!employer.operationsRegistrationAwareness?.registeredAt) {
         employer.operationsRegistrationAwareness =
           buildNewRegistrationAwarenessPayload(new Date());
@@ -823,7 +839,7 @@ export class EmployerService {
       throw new AppError("Database error", HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 
-    const session = await issueEmployerRegistrationSession(employer);
+    const session = await issueEmployerRegistrationSession(employer, context);
 
     scheduleEmployerRegisteredAwareness({
       employerId: employer._id.toString(),
@@ -863,6 +879,7 @@ export class EmployerService {
       document?: Express.Multer.File;
       profilePhoto?: Express.Multer.File;
     },
+    context: { userAgent?: string | null } = {},
   ) {
     const file = files.document;
 
@@ -965,10 +982,11 @@ export class EmployerService {
       employer.pincode = input.pincode.trim();
       employer.city = input.city.trim();
       employer.state = input.state.trim();
+      const completedAt = new Date();
       employer.registrationStatus = "completed";
-      employer.isProfileComplete = true;
+      markEmployerProfileComplete(employer, completedAt);
       employer.verificationStatus = "pending";
-      employer.verificationSubmittedAt = new Date();
+      employer.verificationSubmittedAt = completedAt;
       if (!employer.operationsRegistrationAwareness?.registeredAt) {
         employer.operationsRegistrationAwareness =
           buildNewRegistrationAwarenessPayload(new Date());
@@ -981,7 +999,7 @@ export class EmployerService {
       throw new AppError("Database error", HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 
-    const session = await issueEmployerRegistrationSession(employer);
+    const session = await issueEmployerRegistrationSession(employer, context);
 
     scheduleEmployerRegisteredAwareness({
       employerId: employer._id.toString(),
@@ -1172,10 +1190,11 @@ export class EmployerService {
     });
 
     employer.documentIds = [...(employer.documentIds ?? []), document._id];
-    employer.isProfileComplete = true;
+    const completedAt = new Date();
+    markEmployerProfileComplete(employer, completedAt);
     employer.registrationStatus = "completed";
     employer.verificationStatus = "pending";
-    employer.verificationSubmittedAt = new Date();
+    employer.verificationSubmittedAt = completedAt;
     employer.status = "active";
     if (!employer.operationsRegistrationAwareness?.registeredAt) {
       employer.operationsRegistrationAwareness =
@@ -1501,10 +1520,11 @@ export class EmployerService {
       employer.operationsRegistrationAwareness =
         buildNewRegistrationAwarenessPayload(new Date());
     }
-    employer.isProfileComplete = true;
+    const completedAt = new Date();
+    markEmployerProfileComplete(employer, completedAt);
     employer.registrationStatus = "completed";
     employer.verificationStatus = "pending";
-    employer.verificationSubmittedAt = new Date();
+    employer.verificationSubmittedAt = completedAt;
     await employer.save();
 
     const submittedAt = employer.verificationSubmittedAt ?? new Date();
@@ -1576,10 +1596,11 @@ export class EmployerService {
     }
 
     const previousRemarks = String(employer.verificationRemarks ?? "").trim();
-    employer.isProfileComplete = true;
+    const resubmittedAt = new Date();
+    markEmployerProfileComplete(employer, resubmittedAt);
     employer.registrationStatus = "completed";
     employer.verificationStatus = "pending";
-    employer.verificationSubmittedAt = new Date();
+    employer.verificationSubmittedAt = resubmittedAt;
     // Keep remarks so Operations can see the prior rejection reason.
     await employer.save();
 

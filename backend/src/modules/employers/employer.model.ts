@@ -217,10 +217,26 @@ const employerSchema = new Schema(
       default: false,
       index: true,
     },
+    /**
+     * Server time of the first unverified → verified WhatsApp OTP transition.
+     * Null for accounts verified before this was recorded.
+     */
+    whatsappVerifiedAt: {
+      type: Date,
+      default: null,
+    },
     isProfileComplete: {
       type: Boolean,
       default: false,
       index: true,
+    },
+    /**
+     * First recorded time registration was completed and sent for
+     * verification. Never reset by later edits. Null when not observed.
+     */
+    profileCompletedAt: {
+      type: Date,
+      default: null,
     },
     companyProfileVisited: {
       type: Boolean,

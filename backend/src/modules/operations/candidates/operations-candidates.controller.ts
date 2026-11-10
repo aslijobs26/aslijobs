@@ -11,6 +11,7 @@ import {
   sanitizeCandidateListItem,
 } from "../rbac/operations-field-sanitize.js";
 import {
+  CANDIDATE_APPLICATIONS_VIEW_PERMISSION_KEY,
   CANDIDATE_DELETE_PERMISSION_KEY,
   CANDIDATE_DOCUMENTS_PERMISSION_KEY,
   CANDIDATE_EXPORT_PERMISSION_KEY,
@@ -25,6 +26,7 @@ import { getOperationsCandidatesAnalytics } from "./operations-candidates-analyt
 import type {
   CandidatesAnalyticsQuery,
   ExportOperationsCandidatesQuery,
+  ListOperationsCandidateActivityQuery,
   ListOperationsCandidateApplicationsQuery,
   ListOperationsCandidatesQuery,
   OperationsCandidateApplicationIdParams,
@@ -227,7 +229,7 @@ export const operationsCandidatesController = {
     assertOperationsPermissionKey(access, CANDIDATE_PROFILE_VIEW_PERMISSION_KEY);
     assertOperationsPermissionKey(
       access,
-      "candidates.profile.applications.view",
+      CANDIDATE_APPLICATIONS_VIEW_PERMISSION_KEY,
     );
     const { jobSeekerId } = req.params as OperationsCandidateSeekerIdParams;
     const query =
@@ -239,6 +241,28 @@ export const operationsCandidatesController = {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Operations candidate applications fetched successfully.",
+      data: result,
+    });
+  },
+
+  async getSeekerActivity(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    assertOperationsPermissionKey(access, CANDIDATE_PROFILE_VIEW_PERMISSION_KEY);
+    const { jobSeekerId } = req.params as OperationsCandidateSeekerIdParams;
+    const query = req.query as unknown as ListOperationsCandidateActivityQuery;
+    const result = await operationsCandidatesService.getSeekerActivity(
+      jobSeekerId,
+      query,
+      {
+        includeApplications: operationsAccessCanKey(
+          access,
+          CANDIDATE_APPLICATIONS_VIEW_PERMISSION_KEY,
+        ),
+      },
+    );
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Operations candidate activity fetched successfully.",
       data: result,
     });
   },

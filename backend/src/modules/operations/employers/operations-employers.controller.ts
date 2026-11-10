@@ -6,7 +6,12 @@ import { sendSuccess } from "../../../utils/api-response.js";
 import {
   assertFineOrCoarsePermission,
   assertOperationsPermissionKey,
+  operationsAccessCanKey,
 } from "../rbac/operations-access.service.js";
+import {
+  CANDIDATE_APPLICATIONS_VIEW_PERMISSION_KEY,
+  CANDIDATE_FIELD_PERMISSION_KEYS,
+} from "../rbac/operations-permission-catalog.js";
 import {
   sanitizeEmployerDetail,
   sanitizeEmployerListItem,
@@ -17,6 +22,7 @@ import { operationsEmployersService } from "./operations-employers.service.js";
 import type {
   EmployersAnalyticsQuery,
   ExportOperationsEmployersQuery,
+  ListOperationsEmployerActivityQuery,
   ListOperationsEmployerJobsQuery,
   ListOperationsEmployersQuery,
   OperationsCompleteEmployerBody,
@@ -224,6 +230,36 @@ export const operationsEmployersController = {
     });
   },
 
+  async getActivity(req: Request, res: Response): Promise<void> {
+    const access = requireAccess(req);
+    const { employerId } = req.params as OperationsEmployerIdParams;
+    const query = req.query as unknown as ListOperationsEmployerActivityQuery;
+    const result = await operationsEmployersService.getEmployerActivity(
+      employerId,
+      query,
+      {
+        includeJobs: operationsAccessCanKey(access, "employers.profile.jobs.view"),
+        includeDocuments: operationsAccessCanKey(
+          access,
+          "employers.profile.documents.view",
+        ),
+        includeCandidates: operationsAccessCanKey(
+          access,
+          CANDIDATE_APPLICATIONS_VIEW_PERMISSION_KEY,
+        ),
+        includeCandidateNames: operationsAccessCanKey(
+          access,
+          CANDIDATE_FIELD_PERMISSION_KEYS.name,
+        ),
+      },
+    );
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Operations employer activity fetched successfully.",
+      data: result,
+    });
+  },
+
   async updateVerification(req: Request, res: Response): Promise<void> {
     const body = req.body as UpdateOperationsEmployerVerificationBody;
     const key =
@@ -312,6 +348,7 @@ export const operationsEmployersController = {
     const result = await operationsEmployersService.updateStatus(
       employerId,
       body,
+      req.operationsUserId,
     );
 
     sendSuccess(res, HTTP_STATUS.OK, {

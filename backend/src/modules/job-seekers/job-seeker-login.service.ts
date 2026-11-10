@@ -6,6 +6,7 @@ import { jwtService } from "../auth/jwt.service.js";
 import { otpService } from "../otp/otp.service.js";
 import { JobSeekerModel } from "./job-seeker.model.js";
 import { assertJobSeekerAccountActive } from "./job-seeker-account-status.js";
+import { recordJobSeekerLogin } from "./job-seeker-login-history.js";
 import { canLoginVerifiedJobSeeker } from "./job-seeker-profile-completion.js";
 import { toPublicJobSeeker } from "./job-seeker.serializer.js";
 import type {
@@ -120,7 +121,10 @@ export class JobSeekerLoginService {
     return issueLoginOrResumeOtp(input.whatsappNumber);
   }
 
-  async verifyLoginOtp(input: JobSeekerLoginVerifyOtpInput) {
+  async verifyLoginOtp(
+    input: JobSeekerLoginVerifyOtpInput,
+    context: { userAgent?: string | null } = {},
+  ) {
     const jobSeeker = await findLoginEligibleJobSeeker(input.whatsappNumber);
     const acceptedViaTestOtp = otpService.matchesTestOtp(input.otp);
 
@@ -163,14 +167,28 @@ export class JobSeekerLoginService {
     });
 
     const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
+    const consumedOtpHash = jobSeeker.otpHash;
+    const loggedInAt = new Date();
 
     jobSeeker.otpHash = null;
     jobSeeker.otpExpiresAt = null;
     jobSeeker.otpAttempts = 0;
     jobSeeker.refreshTokenHash = refreshTokenHash;
     jobSeeker.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt;
-    jobSeeker.lastLoginAt = new Date();
+    jobSeeker.lastLoginAt = loggedInAt;
     await jobSeeker.save();
+
+    await recordJobSeekerLogin({
+      jobSeekerId: jobSeeker._id,
+      method: "whatsapp_otp",
+      loggedInAt,
+      // One OTP challenge yields at most one event; test-OTP sign-ins without
+      // an issued challenge fall back to the new session.
+      challengeKey: consumedOtpHash
+        ? `otp:${consumedOtpHash}`
+        : `session:${refreshTokenHash}`,
+      userAgent: context.userAgent,
+    });
 
     return {
       jobSeeker: toPublicJobSeeker(jobSeeker),

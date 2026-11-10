@@ -17,7 +17,13 @@ import { employerAccountApprovedWhatsApp } from "../../whatsapp/notifications/em
 import { employerAccountRejectedWhatsApp } from "../../whatsapp/notifications/employer-account-rejected.notification.js";
 import { OperationsTeamUserModel } from "../auth/operations-team-user.model.js";
 import { recordOperationsAuditEvent } from "../rbac/operations-audit.service.js";
+import { decodeActivityCursor } from "../activity/activity-timeline.js";
+import {
+  loadEmployerActivity,
+  type EmployerActivityAccess,
+} from "./operations-employer-activity.sources.js";
 import type {
+  OperationsEmployerActivityResult,
   OperationsEmployerDetail,
   OperationsEmployerDocumentItem,
   OperationsEmployerJobItem,
@@ -32,6 +38,7 @@ import type {
   OperationsEmployerDatePreset,
 } from "./operations-employers.types.js";
 import type {
+  ListOperationsEmployerActivityQuery,
   ListOperationsEmployerJobsQuery,
   ListOperationsEmployersQuery,
   UpdateOperationsEmployerStatusBody,
@@ -1081,6 +1088,83 @@ export const operationsEmployersService = {
     };
   },
 
+  /**
+   * Account activity + hiring journey for one employer, built from stored
+   * records only and paged with an opaque `(timestamp, event id)` cursor.
+   * Job, document and candidate events are included only when `access`
+   * allows the matching employer tab / candidate permission.
+   */
+  async getEmployerActivity(
+    employerId: string,
+    query: ListOperationsEmployerActivityQuery,
+    access: EmployerActivityAccess,
+  ): Promise<OperationsEmployerActivityResult> {
+    if (!mongoose.Types.ObjectId.isValid(employerId)) {
+      throw new AppError("Employer not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const cursor = query.cursor ? decodeActivityCursor(query.cursor) : null;
+    if (query.cursor && !cursor) {
+      throw new AppError("Invalid activity cursor.", HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const employerDoc = await EmployerModel.findById(employerId).lean();
+    if (!employerDoc) {
+      throw new AppError("Employer not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const reviewerIds = [
+      employerDoc.verifiedBy,
+      employerDoc.rejectedBy,
+      employerDoc.operationsRegistrationAwareness?.firstSeenBy,
+    ]
+      .map((id) => (id ? String(id) : ""))
+      .filter((id) => mongoose.Types.ObjectId.isValid(id));
+    const reviewers =
+      reviewerIds.length > 0
+        ? await OperationsTeamUserModel.find({ _id: { $in: [...new Set(reviewerIds)] } })
+            .select("fullName")
+            .lean()
+        : [];
+    const reviewerName = (id: unknown): string =>
+      id
+        ? text(reviewers.find((user) => String(user._id) === String(id))?.fullName)
+        : "";
+
+    return loadEmployerActivity({
+      employerId: employerDoc._id as mongoose.Types.ObjectId,
+      employer: {
+        accountType: employerDoc.accountType,
+        createdAt: employerDoc.createdAt,
+        isWhatsappVerified: Boolean(employerDoc.isWhatsappVerified),
+        whatsappVerifiedAt: employerDoc.whatsappVerifiedAt ?? null,
+        isProfileComplete: Boolean(employerDoc.isProfileComplete),
+        profileCompletedAt: employerDoc.profileCompletedAt ?? null,
+        registrationStatus: employerDoc.registrationStatus,
+        verificationStatus: employerDoc.verificationStatus,
+        verificationSubmittedAt: employerDoc.verificationSubmittedAt ?? null,
+        verifiedAt: employerDoc.verifiedAt ?? null,
+        verifiedByName: reviewerName(employerDoc.verifiedBy),
+        rejectedAt: employerDoc.rejectedAt ?? null,
+        rejectedByName: reviewerName(employerDoc.rejectedBy),
+        verificationRemarks: employerDoc.verificationRemarks,
+        status: employerDoc.status,
+        suspendedAt: employerDoc.suspendedAt ?? null,
+        suspensionReason: employerDoc.suspensionReason,
+        companyLogoUpdatedAt: employerDoc.companyLogo?.updatedAt ?? null,
+        profilePhotoUpdatedAt: employerDoc.profilePhoto?.updatedAt ?? null,
+        lastLoginAt: employerDoc.lastLoginAt ?? null,
+        operationsFirstSeenAt:
+          employerDoc.operationsRegistrationAwareness?.firstSeenAt ?? null,
+        operationsFirstSeenByName: reviewerName(
+          employerDoc.operationsRegistrationAwareness?.firstSeenBy,
+        ),
+      },
+      query: { limit: query.limit, category: query.category, cursor },
+      access,
+    });
+  },
+
   async listEmployerJobs(
     employerId: string,
     query: ListOperationsEmployerJobsQuery,
@@ -1386,6 +1470,7 @@ export const operationsEmployersService = {
   async updateStatus(
     employerId: string,
     body: UpdateOperationsEmployerStatusBody,
+    operationsUserId?: string,
   ): Promise<OperationsEmployerDetail> {
     if (!mongoose.Types.ObjectId.isValid(employerId)) {
       throw new AppError("Employer not found.", HTTP_STATUS.NOT_FOUND);
@@ -1405,14 +1490,51 @@ export const operationsEmployersService = {
       update.suspensionReason = "";
     }
 
-    const employer = await EmployerModel.findByIdAndUpdate(
+    const previous = await EmployerModel.findByIdAndUpdate(
       employerObjectId,
       { $set: update },
-      { new: true },
-    );
+      { new: false },
+    )
+      .select("status accountType companyName establishmentName firstName lastName")
+      .lean();
 
-    if (!employer) {
+    if (!previous) {
       throw new AppError("Employer not found.", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const previousStatus = text(previous.status);
+    if (
+      previousStatus !== body.status &&
+      operationsUserId &&
+      mongoose.Types.ObjectId.isValid(operationsUserId) &&
+      (body.status === "suspended" || body.status === "active")
+    ) {
+      const opsUserObjectId = new mongoose.Types.ObjectId(operationsUserId);
+      try {
+        const actor = await OperationsTeamUserModel.findById(opsUserObjectId)
+          .select("fullName")
+          .lean();
+        await recordOperationsAuditEvent({
+          actorUserId: opsUserObjectId,
+          actorName: text(actor?.fullName) || "Operations",
+          action:
+            body.status === "suspended"
+              ? "employer.account_suspended"
+              : "employer.account_reactivated",
+          targetType: "employer",
+          targetId: employerId,
+          targetLabel: resolveDisplayName(previous),
+          previousState: { status: previousStatus },
+          nextState: { status: body.status },
+          reason: body.status === "suspended" ? body.reason?.trim() || "" : "",
+        });
+      } catch (error) {
+        // The status change is already saved; a missing audit row must not fail it.
+        console.error("[operations-employers] status audit write failed", {
+          employerId,
+          errorCategory: error instanceof Error ? error.name : "unknown",
+        });
+      }
     }
 
     return this.getEmployerById(employerId);

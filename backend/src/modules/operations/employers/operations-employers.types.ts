@@ -1,4 +1,10 @@
 import type { ListPagination } from "../../../utils/pagination.js";
+import type {
+  EmployerActivityCategory,
+  EmployerActivityEvent,
+  EmployerActivitySummary,
+  EmployerJourneyStage,
+} from "./operations-employer-activity.js";
 
 export type OperationsEmployerVerificationStatus =
   | "verified"
@@ -208,6 +214,29 @@ export interface OperationsEmployerJobsResult {
   jobs: OperationsEmployerJobItem[];
   pagination: ListPagination;
 }
+
+export type OperationsEmployerActivityPageInfo = {
+  limit: number;
+  /** Total events for the selected category across all pages. */
+  total: number;
+  hasMore: boolean;
+  /** Opaque cursor for the next (older) page; null on the last page. */
+  nextCursor: string | null;
+};
+
+export type OperationsEmployerActivityResult = {
+  journey: EmployerJourneyStage[];
+  summary: EmployerActivitySummary;
+  /** True when application and candidate events were omitted for this user. */
+  applicationsRestricted: boolean;
+  /** True when job events and job stats were omitted for this user. */
+  jobsRestricted: boolean;
+  /** True when document upload events were omitted for this user. */
+  documentsRestricted: boolean;
+  categoryCounts: Record<"all" | EmployerActivityCategory, number>;
+  events: EmployerActivityEvent[];
+  pageInfo: OperationsEmployerActivityPageInfo;
+};
 
 export interface OperationsEmployerDetail extends OperationsEmployerListItem {
   industry: string;

@@ -14,6 +14,7 @@ import {
 } from "../rbac/operations-permission-catalog.js";
 import { operationsCandidatesController } from "./operations-candidates.controller.js";
 import {
+  listOperationsCandidateActivityQuerySchema,
   listOperationsCandidateApplicationsQuerySchema,
   listOperationsCandidatesQuerySchema,
   candidatesAnalyticsQuerySchema,
@@ -65,6 +66,18 @@ operationsCandidatesRouter.get(
   validate(operationsCandidateSeekerIdParamsSchema, "params"),
   validate(listOperationsCandidateApplicationsQuerySchema, "query"),
   asyncHandler(operationsCandidatesController.listSeekerApplications),
+);
+
+operationsCandidatesRouter.get(
+  "/seekers/:jobSeekerId/activity",
+  requireFineOrCoarsePermission(
+    CANDIDATE_PROFILE_VIEW_PERMISSION_KEY,
+    "candidates",
+    "read",
+  ),
+  validate(operationsCandidateSeekerIdParamsSchema, "params"),
+  validate(listOperationsCandidateActivityQuerySchema, "query"),
+  asyncHandler(operationsCandidatesController.getSeekerActivity),
 );
 
 operationsCandidatesRouter.get(

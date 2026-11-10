@@ -1,6 +1,12 @@
 import type { ListPagination } from "../../../utils/pagination.js";
 import type { ApplicationStatus } from "../../applications/application.types.js";
 import type { OPERATIONS_CANDIDATE_TABS } from "./operations-candidates.validation.js";
+import type {
+  CandidateActivityCategory,
+  CandidateActivityEvent,
+  CandidateActivitySummary,
+  CandidateJourneyStage,
+} from "./operations-candidate-activity.js";
 
 export type OperationsCandidateTab = (typeof OPERATIONS_CANDIDATE_TABS)[number];
 
@@ -170,6 +176,25 @@ export type OperationsCandidateApplicationItem = {
 export type OperationsCandidateApplicationsResult = {
   applications: OperationsCandidateApplicationItem[];
   pagination: ListPagination;
+};
+
+export type OperationsCandidateActivityPageInfo = {
+  limit: number;
+  /** Total events for the selected category across all pages. */
+  total: number;
+  hasMore: boolean;
+  /** Opaque cursor for the next (older) page; null on the last page. */
+  nextCursor: string | null;
+};
+
+export type OperationsCandidateActivityResult = {
+  journey: CandidateJourneyStage[];
+  summary: CandidateActivitySummary;
+  /** True when application events were omitted for this operations user. */
+  applicationsRestricted: boolean;
+  categoryCounts: Record<"all" | CandidateActivityCategory, number>;
+  events: CandidateActivityEvent[];
+  pageInfo: OperationsCandidateActivityPageInfo;
 };
 
 export type OperationsCandidateDetail = OperationsCandidateListItem & {

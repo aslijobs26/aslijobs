@@ -8,6 +8,7 @@ import {
   completeOperationsEmployer,
   deleteOperationsEmployer,
   exportOperationsEmployersCsv,
+  fetchOperationsEmployerActivity,
   fetchOperationsEmployerDetail,
   fetchOperationsEmployerJobs,
   fetchOperationsEmployers,
@@ -20,6 +21,7 @@ import {
 } from "../services/operations-employers.service";
 import type {
   CompleteOperationsEmployerInput,
+  OperationsEmployerActivityParams,
   OperationsEmployersAnalyticsParams,
   OperationsEmployersExportParams,
   OperationsEmployersListParams,
@@ -113,6 +115,27 @@ export function useOperationsEmployerJobs(
       params,
     ],
     queryFn: () => fetchOperationsEmployerJobs(employerId!, params),
+    enabled: Boolean(employerId) && (options?.enabled ?? true),
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+    retry: shouldRetryEmployersQuery,
+    retryDelay: employersRetryDelay,
+  });
+}
+
+export function useOperationsEmployerActivity(
+  employerId: string | undefined,
+  params: OperationsEmployerActivityParams,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: [
+      ...OPERATIONS_EMPLOYERS_QUERY_KEY,
+      "activity",
+      employerId,
+      params,
+    ],
+    queryFn: () => fetchOperationsEmployerActivity(employerId!, params),
     enabled: Boolean(employerId) && (options?.enabled ?? true),
     staleTime: 30_000,
     placeholderData: keepPreviousData,

@@ -168,6 +168,96 @@ export interface OperationsEmployerJobsResult {
   pagination: OperationsEmployersPagination;
 }
 
+export const OPERATIONS_EMPLOYER_ACTIVITY_CATEGORIES = [
+  "account",
+  "profile",
+  "verification",
+  "job",
+  "application",
+  "interview",
+  "offer",
+  "candidate",
+  "team",
+  "operations",
+] as const;
+
+export type OperationsEmployerActivityCategory =
+  (typeof OPERATIONS_EMPLOYER_ACTIVITY_CATEGORIES)[number];
+
+export type OperationsEmployerActivityActor =
+  | "employer"
+  | "candidate"
+  | "operations"
+  | "system";
+
+export interface OperationsEmployerActivityEvent {
+  id: string;
+  type: string;
+  category: OperationsEmployerActivityCategory;
+  title: string;
+  description: string;
+  at: string;
+  actor: OperationsEmployerActivityActor;
+  actorName: string;
+  publicJobId: string;
+  jobTitle: string;
+  applicationId: string | null;
+  /** Job seeker id; only set on candidate events the user may see. */
+  candidateId: string | null;
+  candidateDisplayId: string;
+  candidateName: string;
+}
+
+export interface OperationsEmployerJourneyStage {
+  id: string;
+  label: string;
+  state: "done" | "current" | "pending";
+  at: string | null;
+  detail: string;
+}
+
+export interface OperationsEmployerActivitySummary {
+  jobs: number;
+  draftJobs: number;
+  liveJobs: number;
+  pendingJobs: number;
+  closedJobs: number;
+  applications: number;
+  shortlisted: number;
+  interviews: number;
+  hired: number;
+  savedCandidates: number;
+  lastLoginAt: string | null;
+  lastActivityAt: string | null;
+}
+
+export interface OperationsEmployerActivityPageInfo {
+  limit: number;
+  /** Total events for the selected category across all pages. */
+  total: number;
+  hasMore: boolean;
+  /** Opaque cursor for the next (older) page; null on the last page. */
+  nextCursor: string | null;
+}
+
+export interface OperationsEmployerActivityResult {
+  journey: OperationsEmployerJourneyStage[];
+  summary: OperationsEmployerActivitySummary;
+  applicationsRestricted: boolean;
+  jobsRestricted: boolean;
+  documentsRestricted: boolean;
+  categoryCounts: Record<"all" | OperationsEmployerActivityCategory, number>;
+  events: OperationsEmployerActivityEvent[];
+  pageInfo: OperationsEmployerActivityPageInfo;
+}
+
+export interface OperationsEmployerActivityParams {
+  limit: number;
+  category: "all" | OperationsEmployerActivityCategory;
+  /** Empty for the newest page. */
+  cursor: string;
+}
+
 export interface OperationsEmployerDetail extends OperationsEmployerListItem {
   industry: string;
   businessCategory: string;

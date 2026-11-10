@@ -1,5 +1,7 @@
 import { apiClient } from "./api-client";
 import type {
+  OperationsCandidateActivityParams,
+  OperationsCandidateActivityResult,
   OperationsCandidateApplicationsResult,
   OperationsCandidateDetail,
   OperationsCandidatesAnalyticsParams,
@@ -152,6 +154,26 @@ export async function fetchOperationsCandidateDetail(
 ): Promise<OperationsCandidateDetail> {
   const response = await apiClient.get<{ data: OperationsCandidateDetail }>(
     `${OPERATIONS_CANDIDATES_BASE}/seekers/${encodeURIComponent(jobSeekerId)}`,
+  );
+
+  return response.data.data;
+}
+
+export async function fetchOperationsCandidateActivity(
+  jobSeekerId: string,
+  params: OperationsCandidateActivityParams,
+): Promise<OperationsCandidateActivityResult> {
+  const response = await apiClient.get<{
+    data: OperationsCandidateActivityResult;
+  }>(
+    `${OPERATIONS_CANDIDATES_BASE}/seekers/${encodeURIComponent(jobSeekerId)}/activity`,
+    {
+      params: {
+        limit: params.limit,
+        category: params.category === "all" ? undefined : params.category,
+        cursor: params.cursor || undefined,
+      },
+    },
   );
 
   return response.data.data;

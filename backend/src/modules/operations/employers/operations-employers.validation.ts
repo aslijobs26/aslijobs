@@ -3,6 +3,7 @@ import {
   EMPLOYER_OVERVIEW_KPIS,
   EMPLOYERS_ANALYTICS_PRESETS,
 } from "./operations-employers-analytics.js";
+import { EMPLOYER_ACTIVITY_CATEGORIES } from "./operations-employer-activity.js";
 
 const isoDateStringSchema = z
   .string()
@@ -74,6 +75,20 @@ export const listOperationsEmployerJobsQuerySchema = z.object({
 
 export type ListOperationsEmployerJobsQuery = z.infer<
   typeof listOperationsEmployerJobsQuerySchema
+>;
+
+export const listOperationsEmployerActivityQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  category: z
+    .enum(["all", ...EMPLOYER_ACTIVITY_CATEGORIES])
+    .optional()
+    .default("all"),
+  /** Opaque `pageInfo.nextCursor` from the previous page; empty for page 1. */
+  cursor: z.string().trim().max(512).optional().default(""),
+});
+
+export type ListOperationsEmployerActivityQuery = z.infer<
+  typeof listOperationsEmployerActivityQuerySchema
 >;
 
 export const updateOperationsEmployerVerificationBodySchema = z

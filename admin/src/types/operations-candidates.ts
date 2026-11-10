@@ -343,6 +343,88 @@ export interface OperationsCandidateApplicationsResult {
   pagination: OperationsCandidatesPagination;
 }
 
+export const OPERATIONS_CANDIDATE_ACTIVITY_CATEGORIES = [
+  "account",
+  "profile",
+  "resume",
+  "saved_job",
+  "application",
+  "interview",
+  "offer",
+  "operations",
+] as const;
+
+export type OperationsCandidateActivityCategory =
+  (typeof OPERATIONS_CANDIDATE_ACTIVITY_CATEGORIES)[number];
+
+export type OperationsCandidateActivityActor =
+  | "candidate"
+  | "employer"
+  | "operations"
+  | "system";
+
+export interface OperationsCandidateActivityEvent {
+  id: string;
+  type: string;
+  category: OperationsCandidateActivityCategory;
+  title: string;
+  description: string;
+  at: string;
+  actor: OperationsCandidateActivityActor;
+  actorName: string;
+  applicationId: string | null;
+  publicJobId: string;
+  jobTitle: string;
+  employerName: string;
+}
+
+export interface OperationsCandidateJourneyStage {
+  id: string;
+  label: string;
+  state: "done" | "current" | "pending";
+  at: string | null;
+  detail: string;
+}
+
+export interface OperationsCandidateActivitySummary {
+  applications: number;
+  activeApplications: number;
+  interviews: number;
+  offers: number;
+  offersAccepted: number;
+  offersDeclined: number;
+  hired: number;
+  rejected: number;
+  withdrawn: number;
+  savedJobs: number;
+  lastActivityAt: string | null;
+}
+
+export interface OperationsCandidateActivityResult {
+  journey: OperationsCandidateJourneyStage[];
+  summary: OperationsCandidateActivitySummary;
+  applicationsRestricted: boolean;
+  categoryCounts: Record<"all" | OperationsCandidateActivityCategory, number>;
+  events: OperationsCandidateActivityEvent[];
+  pageInfo: OperationsCandidateActivityPageInfo;
+}
+
+export interface OperationsCandidateActivityPageInfo {
+  limit: number;
+  /** Total events for the selected category across all pages. */
+  total: number;
+  hasMore: boolean;
+  /** Opaque cursor for the next (older) page; null on the last page. */
+  nextCursor: string | null;
+}
+
+export interface OperationsCandidateActivityParams {
+  limit: number;
+  category: "all" | OperationsCandidateActivityCategory;
+  /** Empty for the newest page. */
+  cursor: string;
+}
+
 export interface OperationsCandidateDetail extends OperationsCandidateListItem {
   candidateCity?: string;
   candidateState?: string;

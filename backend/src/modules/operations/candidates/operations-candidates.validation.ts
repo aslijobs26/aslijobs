@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { JOB_SEEKER_GENDERS } from "../../../constants/job-seeker.constants.js";
 import { APPLICATION_STATUSES } from "../../applications/application.constants.js";
+import { CANDIDATE_ACTIVITY_CATEGORIES } from "./operations-candidate-activity.js";
 import {
   CANDIDATE_OVERVIEW_KPIS,
   CANDIDATES_ANALYTICS_PRESETS,
@@ -131,6 +132,20 @@ export const listOperationsCandidateApplicationsQuerySchema = z.object({
 
 export type ListOperationsCandidateApplicationsQuery = z.infer<
   typeof listOperationsCandidateApplicationsQuerySchema
+>;
+
+export const listOperationsCandidateActivityQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  category: z
+    .enum(["all", ...CANDIDATE_ACTIVITY_CATEGORIES])
+    .optional()
+    .default("all"),
+  /** Opaque `pageInfo.nextCursor` from the previous page; empty for page 1. */
+  cursor: z.string().trim().max(512).optional().default(""),
+});
+
+export type ListOperationsCandidateActivityQuery = z.infer<
+  typeof listOperationsCandidateActivityQuerySchema
 >;
 
 export const operationsCandidateApplicationIdParamsSchema = z.object({
