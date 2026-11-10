@@ -5,6 +5,13 @@ import { operationsVerificationReviewPath } from "../../../constants/operations-
 import type { OperationsVerificationListItem } from "../../../types/operations-verifications";
 import { EmployerLogo } from "../../ui/EmployerLogo";
 import { OperationsBadge } from "../../ui/OperationsBadge";
+import {
+  tableRowAccentCell,
+  tableRowHover,
+  tableRowMediaHover,
+  tableRowTitleHover,
+} from "../../ui/table-row-hover";
+import { cn } from "../../../utils/cn";
 import { formatEmployerDateTime } from "../employers/employers-format";
 import { VerificationsMobileCard } from "./VerificationsMobileCard";
 import {
@@ -190,9 +197,14 @@ export function VerificationsTableSection({
                 return (
                   <tr
                     key={item.id}
-                    className="align-middle transition-colors hover:bg-hero-bg/30"
+                    className={cn("align-middle", tableRowHover)}
                   >
-                    <td className="max-w-[15rem] px-3 py-3 pl-4 sm:px-3.5 xl:max-w-[12rem] xl:px-2.5 xl:py-2 xl:pl-3">
+                    <td
+                      className={cn(
+                        "max-w-[15rem] px-3 py-3 pl-4 sm:px-3.5 xl:max-w-[12rem] xl:px-2.5 xl:py-2 xl:pl-3",
+                        tableRowAccentCell,
+                      )}
+                    >
                       <Link
                         to={reviewPath}
                         className="flex min-w-0 items-center gap-2.5 xl:gap-2"
@@ -200,9 +212,17 @@ export function VerificationsTableSection({
                         <EmployerLogo
                           name={companyName}
                           logoUrl={item.logoUrl}
-                          className="size-9 text-[11px] ring-0 xl:size-7 xl:text-[10px]"
+                          className={cn(
+                            "size-9 text-[11px] ring-0 xl:size-7 xl:text-[10px]",
+                            tableRowMediaHover,
+                          )}
                         />
-                        <span className="truncate text-xs font-semibold text-foreground hover:text-primary xl:text-[11px]">
+                        <span
+                          className={cn(
+                            "truncate text-xs font-semibold text-foreground xl:text-[11px]",
+                            tableRowTitleHover,
+                          )}
+                        >
                           {companyName}
                         </span>
                       </Link>

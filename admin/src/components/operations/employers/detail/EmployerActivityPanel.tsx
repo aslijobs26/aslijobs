@@ -205,11 +205,17 @@ export function EmployerActivityPanel({ employerId }: EmployerActivityPanelProps
           <>
             <ActivitySummaryTile
               label="Jobs (drafts)"
+              tone="primary"
               value={`${formatCount(summary.jobs)} (${formatCount(summary.draftJobs)})`}
             />
-            <ActivitySummaryTile label="Live jobs" value={formatCount(summary.liveJobs)} />
+            <ActivitySummaryTile
+              label="Live jobs"
+              tone="success"
+              value={formatCount(summary.liveJobs)}
+            />
             <ActivitySummaryTile
               label="Pending approval"
+              tone="warning"
               value={formatCount(summary.pendingJobs)}
             />
             <ActivitySummaryTile
@@ -222,15 +228,22 @@ export function EmployerActivityPanel({ employerId }: EmployerActivityPanelProps
           <>
             <ActivitySummaryTile
               label="Applications (shortlisted)"
+              tone="primary"
               value={`${formatCount(summary.applications)} (${formatCount(summary.shortlisted)})`}
             />
             <ActivitySummaryTile
               label="Interviews"
+              tone="accent"
               value={formatCount(summary.interviews)}
             />
-            <ActivitySummaryTile label="Hired" value={formatCount(summary.hired)} />
+            <ActivitySummaryTile
+              label="Hired"
+              tone="success"
+              value={formatCount(summary.hired)}
+            />
             <ActivitySummaryTile
               label="Saved candidates"
+              tone="warning"
               value={formatCount(summary.savedCandidates)}
             />
           </>
@@ -238,11 +251,13 @@ export function EmployerActivityPanel({ employerId }: EmployerActivityPanelProps
         <ActivitySummaryTile
           label="Last login"
           compact
+          tone="accent"
           value={summary.lastLoginAt ? formatEmployerDateTimeFull(summary.lastLoginAt) : "—"}
         />
         <ActivitySummaryTile
           label="Last activity"
           compact
+          tone="accent"
           value={
             summary.lastActivityAt ? formatEmployerDateTimeFull(summary.lastActivityAt) : "—"
           }

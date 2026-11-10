@@ -3,7 +3,14 @@ import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { operationsCandidateDetailPath } from "../../../constants/operations-routes";
 import type { OperationsCandidateListItem } from "../../../types/operations-candidates";
+import { cn } from "../../../utils/cn";
 import { OperationsBadge } from "../../ui/OperationsBadge";
+import {
+  tableRowAccentCell,
+  tableRowHover,
+  tableRowMediaHover,
+  tableRowTitleHover,
+} from "../../ui/table-row-hover";
 import { CandidatesMobileCard } from "./CandidatesMobileCard";
 import { CandidatesRowActions } from "./CandidatesRowActions";
 import { OperationsCandidateAvatar } from "./OperationsCandidateAvatar";
@@ -276,16 +283,21 @@ export function CandidatesTableSection({
                   return (
                     <tr
                       key={application.id}
-                      className="align-middle hover:bg-hero-bg/30"
+                      className={cn("align-middle", tableRowHover)}
                     >
-                      <td className="max-w-[14rem] px-3 py-3 first:pl-4 sm:px-3.5 xl:max-w-[12rem] xl:px-2.5 xl:py-2 xl:first:pl-3">
+                      <td
+                        className={cn(
+                          "max-w-[14rem] px-3 py-3 first:pl-4 sm:px-3.5 xl:max-w-[12rem] xl:px-2.5 xl:py-2 xl:first:pl-3",
+                          tableRowAccentCell,
+                        )}
+                      >
                         <Link
                           to={operationsCandidateDetailPath(
                             application.jobSeekerId || application.id,
                           )}
                           className="flex min-w-0 items-center gap-2.5 xl:gap-2"
                         >
-                          <span className="inline-flex">
+                          <span className={cn("inline-flex", tableRowMediaHover)}>
                             <OperationsCandidateAvatar
                               name={application.candidateName ?? "Candidate"}
                               jobSeekerId={
@@ -297,7 +309,12 @@ export function CandidatesTableSection({
                           </span>
                           <span className="min-w-0">
                             <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                              <span className="truncate text-xs font-semibold text-foreground xl:text-[11px]">
+                              <span
+                                className={cn(
+                                  "truncate text-xs font-semibold text-foreground xl:text-[11px]",
+                                  tableRowTitleHover,
+                                )}
+                              >
                                 {application.candidateName ?? "Candidate"}
                               </span>
                               {application.isNewRegistration ? (

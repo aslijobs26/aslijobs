@@ -82,18 +82,30 @@ export function ActivityJourneyStep({
   );
 }
 
+export type ActivitySummaryTone = "primary" | "accent" | "success" | "warning" | "neutral";
+
+const SUMMARY_TONE_CLASSES: Record<ActivitySummaryTone, string> = {
+  primary: "border-primary/15 bg-gradient-to-br from-surface to-primary/10",
+  accent: "border-chart-accent/15 bg-gradient-to-br from-surface to-chart-accent/10",
+  success: "border-success/15 bg-gradient-to-br from-surface to-success/10",
+  warning: "border-warning/15 bg-gradient-to-br from-surface to-warning/10",
+  neutral: "border-border-subtle bg-gradient-to-br from-surface to-hero-bg",
+};
+
 export function ActivitySummaryTile({
   label,
   value,
   compact = false,
+  tone = "neutral",
 }: {
   label: string;
   value: string;
   /** Smaller text for long values such as dates. */
   compact?: boolean;
+  tone?: ActivitySummaryTone;
 }) {
   return (
-    <div className="rounded-lg border border-border-subtle bg-hero-bg/40 px-2.5 py-2">
+    <div className={cn("rounded-lg border px-2.5 py-2", SUMMARY_TONE_CLASSES[tone])}>
       <p className="text-[10px] font-medium text-muted sm:text-[11px]">{label}</p>
       <p
         className={cn(

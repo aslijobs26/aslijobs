@@ -11,6 +11,13 @@ import {
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import { OperationsCard } from "../../../ui/OperationsCard";
+import {
+  quickActionArrowClass,
+  quickActionCardClass,
+  quickActionIconClass,
+  quickActionLabelClass,
+  type QuickActionTone,
+} from "../../../ui/quick-action-tone";
 import { OperationsCanKey } from "../../auth/OperationsCanKey";
 
 interface VerificationsQuickActionsProps {
@@ -18,26 +25,38 @@ interface VerificationsQuickActionsProps {
   isExporting?: boolean;
 }
 
-const className =
-  "group flex w-full items-center gap-2.5 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 text-left transition-colors hover:border-primary/25 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60 max-sm:gap-2 max-sm:px-2.5 max-sm:py-2";
+const cardLayout =
+  "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left max-sm:gap-2 max-sm:px-2.5 max-sm:py-2";
 
 function ActionContent({
   label,
   icon: Icon,
+  tone,
 }: {
   label: string;
   icon: LucideIcon;
+  tone: QuickActionTone;
 }) {
   return (
     <>
-      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary max-sm:size-7">
+      <span
+        className={quickActionIconClass(
+          tone,
+          "inline-flex size-8 shrink-0 items-center justify-center rounded-lg max-sm:size-7",
+        )}
+      >
         <Icon className="size-4 max-sm:size-3.5" strokeWidth={2} aria-hidden="true" />
       </span>
-      <span className="min-w-0 flex-1 text-[12px] font-semibold leading-snug text-foreground max-sm:text-[11px]">
+      <span
+        className={quickActionLabelClass(
+          tone,
+          "min-w-0 flex-1 text-[12px] font-semibold leading-snug max-sm:text-[11px]",
+        )}
+      >
         {label}
       </span>
       <ArrowRight
-        className="size-3.5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+        className={quickActionArrowClass(tone, "size-3.5 shrink-0")}
         strokeWidth={2}
         aria-hidden="true"
       />
@@ -55,46 +74,47 @@ export function VerificationsQuickActions({
         <li>
           <Link
             to={`${OPERATIONS_ROUTES.VERIFICATIONS}?tab=pending`}
-            className={className}
+            className={quickActionCardClass("warning", cardLayout)}
           >
-            <ActionContent label="Review Pending Verifications" icon={Clock} />
+            <ActionContent label="Review Pending Verifications" icon={Clock} tone="warning" />
           </Link>
         </li>
         <li>
           <Link
             to={`${OPERATIONS_ROUTES.VERIFICATIONS}?tab=slaBreaches`}
-            className={className}
+            className={quickActionCardClass("danger", cardLayout)}
           >
-            <ActionContent label="Check SLA Breaches" icon={ShieldAlert} />
+            <ActionContent label="Check SLA Breaches" icon={ShieldAlert} tone="danger" />
           </Link>
         </li>
         <OperationsCanKey permissionKey="employers.profile.actions.verify">
           <li>
             <Link
               to={`${OPERATIONS_ROUTES.VERIFICATIONS}?tab=pending`}
-              className={className}
+              className={quickActionCardClass("success", cardLayout)}
             >
-              <ActionContent label="Verify New Employer" icon={ShieldCheck} />
+              <ActionContent label="Verify New Employer" icon={ShieldCheck} tone="success" />
             </Link>
           </li>
         </OperationsCanKey>
         <li>
           <Link
             to={`${OPERATIONS_ROUTES.VERIFICATIONS}?tab=pending`}
-            className={className}
+            className={quickActionCardClass("accent", cardLayout)}
           >
             <ActionContent
               label="Request Additional Documents"
               icon={FileWarning}
+              tone="accent"
             />
           </Link>
         </li>
         <li>
           <Link
             to={`${OPERATIONS_ROUTES.VERIFICATIONS}?tab=rejected`}
-            className={className}
+            className={quickActionCardClass("danger", cardLayout)}
           >
-            <ActionContent label="View Rejected Verifications" icon={XCircle} />
+            <ActionContent label="View Rejected Verifications" icon={XCircle} tone="danger" />
           </Link>
         </li>
         <OperationsCanKey permissionKey="employers.list.export">
@@ -103,13 +123,14 @@ export function VerificationsQuickActions({
               type="button"
               onClick={onExport}
               disabled={isExporting}
-              className={className}
+              className={quickActionCardClass("primary", cardLayout, isExporting)}
             >
               <ActionContent
                 label={
                   isExporting ? "Exporting…" : "Download Verification Report"
                 }
                 icon={Download}
+                tone="primary"
               />
             </button>
           </li>

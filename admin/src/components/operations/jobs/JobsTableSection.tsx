@@ -2,6 +2,12 @@ import { BadgeCheck, Briefcase, MapPin } from "lucide-react";
 import { type ReactNode } from "react";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import { EmployerLogo } from "../../ui/EmployerLogo";
+import {
+  tableRowAccentCell,
+  tableRowHover,
+  tableRowMediaHover,
+  tableRowTitleHover,
+} from "../../ui/table-row-hover";
 import type {
   OperationsJobListItem,
   OperationsJobStatusAction,
@@ -349,9 +355,12 @@ export function JobsTableSection({
                 return (
                   <tr
                     key={job.id}
-                    className="border-b border-border-subtle/80 transition-colors last:border-0 hover:bg-hero-bg/35"
+                    className={cn(
+                      "border-b border-border-subtle/80 last:border-0",
+                      tableRowHover,
+                    )}
                   >
-                    <td className={cn(tdClassName, "whitespace-nowrap")}>
+                    <td className={cn(tdClassName, "whitespace-nowrap", tableRowAccentCell)}>
                       <span className="font-mono text-[11px] font-medium tracking-tight text-muted xl:text-[10px]">
                         {job.jobId}
                       </span>
@@ -360,7 +369,12 @@ export function JobsTableSection({
                     <td className={cn(tdClassName, "max-w-[14rem] xl:max-w-[12rem]")}>
                       <div className="flex min-w-0 flex-col gap-0.5">
                         <div className="flex min-w-0 items-center gap-1.5">
-                          <span className="truncate font-semibold text-foreground xl:text-[11px]">
+                          <span
+                            className={cn(
+                              "truncate font-semibold text-foreground xl:text-[11px]",
+                              tableRowTitleHover,
+                            )}
+                          >
                             {job.jobTitle}
                           </span>
                           {job.isFeatured ? (
@@ -383,6 +397,7 @@ export function JobsTableSection({
                         <EmployerLogo
                           name={job.employer.companyName}
                           logoUrl={job.employer.logoUrl}
+                          className={tableRowMediaHover}
                         />
                         <span className="min-w-0 truncate font-medium text-foreground xl:text-[11px]">
                           {job.employer.companyName}

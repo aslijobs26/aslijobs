@@ -9,6 +9,13 @@ import {
 import { Link } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 import { OperationsCard } from "../../../ui/OperationsCard";
+import {
+  quickActionArrowClass,
+  quickActionCardClass,
+  quickActionIconClass,
+  quickActionLabelClass,
+  type QuickActionTone,
+} from "../../../ui/quick-action-tone";
 import { OperationsCanKey } from "../../auth/OperationsCanKey";
 
 interface JobsQuickActionsProps {
@@ -17,24 +24,34 @@ interface JobsQuickActionsProps {
   onCheckAtRisk: () => void;
 }
 
+const cardLayout =
+  "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left max-sm:gap-2 max-sm:px-2.5 max-sm:py-2 xl:gap-2 xl:px-2.5 xl:py-2";
+
 export function JobsQuickActions({
   onExport,
   onReviewPending,
   onCheckAtRisk,
 }: JobsQuickActionsProps) {
-  const className =
-    "group flex w-full items-center gap-2.5 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 text-left transition-colors hover:border-primary/25 hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:gap-2 max-sm:px-2.5 max-sm:py-2 xl:gap-2 xl:px-2.5 xl:py-2";
-
-  const content = (label: string, Icon: LucideIcon) => (
+  const content = (label: string, Icon: LucideIcon, tone: QuickActionTone) => (
     <>
-      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary max-sm:size-7 xl:size-7">
+      <span
+        className={quickActionIconClass(
+          tone,
+          "inline-flex size-8 shrink-0 items-center justify-center rounded-lg max-sm:size-7 xl:size-7",
+        )}
+      >
         <Icon className="size-4 max-sm:size-3.5 xl:size-3.5" aria-hidden="true" />
       </span>
-      <span className="min-w-0 flex-1 text-[12px] font-semibold text-foreground max-sm:text-[11px] xl:text-[11px]">
+      <span
+        className={quickActionLabelClass(
+          tone,
+          "min-w-0 flex-1 text-[12px] font-semibold max-sm:text-[11px] xl:text-[11px]",
+        )}
+      >
         {label}
       </span>
       <ArrowRight
-        className="size-3.5 shrink-0 text-muted group-hover:text-primary xl:size-3"
+        className={quickActionArrowClass(tone, "size-3.5 shrink-0 xl:size-3")}
         aria-hidden="true"
       />
     </>
@@ -44,26 +61,41 @@ export function JobsQuickActions({
     <OperationsCard title="Quick Actions" className="jobs-analytics-card min-w-0">
       <ul className="grid gap-2">
         <li>
-          <button type="button" onClick={onReviewPending} className={className}>
-            {content("Review Pending Jobs", ClipboardCheck)}
+          <button
+            type="button"
+            onClick={onReviewPending}
+            className={quickActionCardClass("warning", cardLayout)}
+          >
+            {content("Review Pending Jobs", ClipboardCheck, "warning")}
           </button>
         </li>
         <li>
-          <button type="button" onClick={onCheckAtRisk} className={className}>
-            {content("Check Jobs at Risk", AlertTriangle)}
+          <button
+            type="button"
+            onClick={onCheckAtRisk}
+            className={quickActionCardClass("danger", cardLayout)}
+          >
+            {content("Check Jobs at Risk", AlertTriangle, "danger")}
           </button>
         </li>
         <OperationsCanKey permissionKey="jobs.post.create">
           <li>
-            <Link to={OPERATIONS_ROUTES.JOBS_POST} className={className}>
-              {content("Post a Job", Briefcase)}
+            <Link
+              to={OPERATIONS_ROUTES.JOBS_POST}
+              className={quickActionCardClass("primary", cardLayout)}
+            >
+              {content("Post a Job", Briefcase, "primary")}
             </Link>
           </li>
         </OperationsCanKey>
         <OperationsCanKey permissionKey="jobs.list.export">
           <li>
-            <button type="button" onClick={onExport} className={className}>
-              {content("Download Jobs Report", Download)}
+            <button
+              type="button"
+              onClick={onExport}
+              className={quickActionCardClass("accent", cardLayout)}
+            >
+              {content("Download Jobs Report", Download, "accent")}
             </button>
           </li>
         </OperationsCanKey>

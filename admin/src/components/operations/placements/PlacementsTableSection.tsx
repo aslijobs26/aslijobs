@@ -12,6 +12,12 @@ import type {
 } from "../../../types/operations-placements";
 import { cn } from "../../../utils/cn";
 import { OperationsBadge } from "../../ui/OperationsBadge";
+import {
+  tableRowAccentCell,
+  tableRowHover,
+  tableRowMediaHover,
+  tableRowTitleHover,
+} from "../../ui/table-row-hover";
 import { formatEmployerDateTime } from "../employers/employers-format";
 import {
   placementCandidateInitials,
@@ -336,18 +342,33 @@ export function PlacementsTableSection({
                 return (
                   <tr
                     key={item.id}
-                    className="align-middle transition-colors hover:bg-hero-bg/30"
+                    className={cn("align-middle", tableRowHover)}
                   >
-                    <td className="max-w-[14rem] px-3 py-3 pl-4 sm:px-3.5 xl:max-w-[11rem] xl:px-2.5 xl:py-2 xl:pl-3">
+                    <td
+                      className={cn(
+                        "max-w-[14rem] px-3 py-3 pl-4 sm:px-3.5 xl:max-w-[11rem] xl:px-2.5 xl:py-2 xl:pl-3",
+                        tableRowAccentCell,
+                      )}
+                    >
                       <Link
                         to={detailPath}
                         className="flex min-w-0 items-center gap-2.5 xl:gap-2"
                       >
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary xl:size-7 xl:text-[10px]">
+                        <span
+                          className={cn(
+                            "inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-[11px] font-semibold text-primary xl:size-7 xl:text-[10px]",
+                            tableRowMediaHover,
+                          )}
+                        >
                           {placementCandidateInitials(item.candidateName)}
                         </span>
                         <span className="min-w-0">
-                          <span className="block truncate text-xs font-semibold text-foreground hover:text-primary xl:text-[11px]">
+                          <span
+                            className={cn(
+                              "block truncate text-xs font-semibold text-foreground xl:text-[11px]",
+                              tableRowTitleHover,
+                            )}
+                          >
                             {item.candidateName || "—"}
                           </span>
                           <span className="block truncate text-[10px] text-muted xl:text-[9px]">

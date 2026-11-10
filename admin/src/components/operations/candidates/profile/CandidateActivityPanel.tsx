@@ -169,33 +169,40 @@ export function CandidateActivityPanel({ jobSeekerId }: CandidateActivityPanelPr
           <>
             <ActivitySummaryTile
               label="Applications"
+              tone="primary"
               value={summary.applications.toLocaleString("en-IN")}
             />
             <ActivitySummaryTile
               label="Active"
+              tone="primary"
               value={summary.activeApplications.toLocaleString("en-IN")}
             />
             <ActivitySummaryTile
               label="Interviews"
+              tone="accent"
               value={summary.interviews.toLocaleString("en-IN")}
             />
             <ActivitySummaryTile
               label="Offers (accepted / declined)"
+              tone="success"
               value={`${summary.offers} (${summary.offersAccepted} / ${summary.offersDeclined})`}
             />
             <ActivitySummaryTile
               label="Hired"
+              tone="success"
               value={summary.hired.toLocaleString("en-IN")}
             />
           </>
         )}
         <ActivitySummaryTile
           label="Saved jobs"
+          tone="warning"
           value={summary.savedJobs.toLocaleString("en-IN")}
         />
         <ActivitySummaryTile
           label="Last activity"
           compact
+          tone="accent"
           value={
             summary.lastActivityAt
               ? formatCandidateDateTimeFull(summary.lastActivityAt)

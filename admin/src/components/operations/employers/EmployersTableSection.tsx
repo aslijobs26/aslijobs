@@ -6,6 +6,13 @@ import type { OperationsEmployerListItem } from "../../../types/operations-emplo
 import { EmployerLogo } from "../../ui/EmployerLogo";
 import { OperationsBadge } from "../../ui/OperationsBadge";
 import {
+  tableRowAccentCell,
+  tableRowHover,
+  tableRowMediaHover,
+  tableRowTitleHover,
+} from "../../ui/table-row-hover";
+import { cn } from "../../../utils/cn";
+import {
   employerProvidedDisplayName,
   employerStatusBadgeVariant,
   formatEmployerRegisteredParts,
@@ -201,9 +208,14 @@ export function EmployersTableSection({
                 return (
                   <tr
                     key={emp.id}
-                    className="align-middle transition-colors hover:bg-hero-bg/30"
+                    className={cn("align-middle", tableRowHover)}
                   >
-                    <td className="py-3 pl-4 pr-3 sm:pr-3.5 xl:py-2 xl:pl-3 xl:pr-2.5">
+                    <td
+                      className={cn(
+                        "py-3 pl-4 pr-3 sm:pr-3.5 xl:py-2 xl:pl-3 xl:pr-2.5",
+                        tableRowAccentCell,
+                      )}
+                    >
                       <Link
                         to={operationsEmployerDetailPath(emp.id)}
                         className="flex min-w-0 items-center gap-2.5 xl:gap-2"
@@ -211,12 +223,18 @@ export function EmployersTableSection({
                         <EmployerLogo
                           name={companyName}
                           logoUrl={emp.logoUrl}
-                          className="size-9 text-[11px] ring-0 xl:size-7 xl:text-[10px]"
+                          className={cn(
+                            "size-9 text-[11px] ring-0 xl:size-7 xl:text-[10px]",
+                            tableRowMediaHover,
+                          )}
                         />
                         <div className="min-w-0">
                           <span className="flex min-w-0 items-start gap-1.5">
                             <span
-                              className="min-w-0 flex-1 break-words text-xs font-semibold leading-snug text-foreground hover:text-primary xl:text-[11px]"
+                              className={cn(
+                                "min-w-0 flex-1 break-words text-xs font-semibold leading-snug text-foreground xl:text-[11px]",
+                                tableRowTitleHover,
+                              )}
                               title={companyName}
                             >
                               {companyName}
