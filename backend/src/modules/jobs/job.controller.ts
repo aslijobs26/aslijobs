@@ -350,6 +350,16 @@ export class JobController {
     });
   };
 
+  getPublicSeoByPublicId = async (req: Request, res: Response): Promise<void> => {
+    const { publicJobId } = req.params as { publicJobId: string };
+    const result = await jobService.getPublicJobSeoByPublicId(publicJobId);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Job SEO details fetched successfully.",
+      data: result,
+    });
+  };
+
   listPublicSitemap = async (req: Request, res: Response): Promise<void> => {
     const query = req.query as unknown as PublicJobSitemapQuery;
     const result = await listPublicJobSitemapEntries(query);

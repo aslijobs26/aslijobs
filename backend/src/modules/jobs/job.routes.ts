@@ -40,6 +40,12 @@ jobRouter.get(
 );
 
 jobRouter.get(
+  "/public/:publicJobId/seo",
+  validate(publicJobIdParamsSchema, "params"),
+  asyncHandler(jobController.getPublicSeoByPublicId),
+);
+
+jobRouter.get(
   "/public/:publicJobId/similar",
   asyncHandler(optionalJobSeekerAuth),
   asyncHandler(optionalWorkspaceAuth),

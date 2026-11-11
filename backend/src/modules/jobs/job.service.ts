@@ -45,6 +45,10 @@ import {
 import { jobPostIncompleteReminder } from "../whatsapp/notifications/job-post-incomplete-reminder.service.js";
 import { presentPublicRecruiterContact } from "./public-job-recruiter-contact.js";
 import {
+  PUBLIC_JOB_SEO_EMPLOYER_FIELDS,
+  toPublicJobSeoSnapshot,
+} from "./public-job-seo.js";
+import {
   cascadeDeleteOwnedJobs,
   ensureEmployerJobRelationsConsistent,
   purgeOrphanJobRelationsForEmployer,
@@ -2316,31 +2320,10 @@ export class JobService {
       revealRecruiterContact?: boolean;
     },
   ) {
-    const job = await JobModel.findOne({
-      jobId: publicJobId.toUpperCase(),
-      status: "active",
-    });
-
-    if (!job) {
-      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
-    }
-
-    const employerId = getJobEmployerId(job);
-    const employer =
-      employerId && mongoose.Types.ObjectId.isValid(employerId)
-        ? await EmployerModel.findById(employerId)
-            .select("verificationStatus")
-            .lean()
-        : null;
-
-    if (
-      !isJobPubliclyEligible({
-        creationSource: job.creationSource,
-        employer,
-      })
-    ) {
-      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
-    }
+    const { job } = await this.findPubliclyVisibleJob(
+      publicJobId,
+      "verificationStatus",
+    );
 
     const requestedLanguage = parseJobContentLanguage(options?.language);
     const translation = await serveJobDetailTranslation({
@@ -2432,6 +2415,54 @@ export class JobService {
         isTranslated: translation.isTranslated,
       },
     };
+  }
+
+  /**
+   * Read-only public snapshot for structured data and page metadata. Same
+   * visibility rules as the public detail endpoint, without recording a view,
+   * setting cookies or scheduling translations.
+   */
+  async getPublicJobSeoByPublicId(publicJobId: string) {
+    const { job, employer } = await this.findPubliclyVisibleJob(
+      publicJobId,
+      PUBLIC_JOB_SEO_EMPLOYER_FIELDS,
+    );
+
+    return { job: toPublicJobSeoSnapshot(job, employer) };
+  }
+
+  /** Active job whose employer passes the public verification rule, else 404. */
+  private async findPubliclyVisibleJob(
+    publicJobId: string,
+    employerFields: string,
+  ) {
+    const job = await JobModel.findOne({
+      jobId: publicJobId.toUpperCase(),
+      status: "active",
+    });
+
+    if (!job) {
+      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    const employerId = getJobEmployerId(job);
+    const employer =
+      employerId && mongoose.Types.ObjectId.isValid(employerId)
+        ? await EmployerModel.findById(employerId)
+            .select(employerFields)
+            .lean()
+        : null;
+
+    if (
+      !isJobPubliclyEligible({
+        creationSource: job.creationSource,
+        employer,
+      })
+    ) {
+      throw new AppError("Job not found", HTTP_STATUS.NOT_FOUND);
+    }
+
+    return { job, employer };
   }
 
   async listSimilarPublicJobs(
