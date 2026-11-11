@@ -37,6 +37,8 @@ type RolePermissionMatrixProps = {
   editable?: boolean;
   onChange?: (next: RolePermissionsMatrix) => void;
   compact?: boolean;
+  /** Product tour anchor (`data-tour`) for the matrix column headers. */
+  dataTour?: string;
 };
 
 const N_A_MODULES: Partial<
@@ -74,6 +76,7 @@ export function RolePermissionMatrix({
   editable = false,
   onChange,
   compact = false,
+  dataTour,
 }: RolePermissionMatrixProps) {
   const modules = Object.keys(permissions) as TeamPermissionModule[];
 
@@ -98,7 +101,7 @@ export function RolePermissionMatrix({
             compact ? "min-w-[34rem]" : "min-w-[42rem]",
           )}
         >
-          <thead>
+          <thead data-tour={dataTour}>
             <tr className="border-b border-border-subtle bg-hero-bg/50 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
               <th className="sticky left-0 z-[1] bg-hero-bg/95 px-3 py-2.5">
                 Module

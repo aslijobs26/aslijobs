@@ -96,12 +96,15 @@ export function SavedCandidatesCardGrid({
     <div
       className={cn("grid gap-3", variant === "grid" && "sm:grid-cols-2")}
     >
-      {items.map((item) => (
+      {items.map((item, index) => (
         <SavedCandidateCard
           key={item.id}
           item={item}
           isSelected={selectedApplicationId === item.applicationId}
           actions={actions}
+          dataTourPrefix={
+            index === 0 ? "employer-shortlist-first-row" : undefined
+          }
         />
       ))}
     </div>
@@ -113,11 +116,14 @@ function CardMoreMenu({
   actions,
   canUpdate,
   canWriteNotes,
+  dataTour,
 }: {
   item: SavedCandidateListItem;
   actions: SavedCandidateRowActions;
   canUpdate: boolean;
   canWriteNotes: boolean;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   const menuId = useId();
   const [open, setOpen] = useState(false);
@@ -157,6 +163,7 @@ function CardMoreMenu({
         aria-expanded={open}
         aria-controls={menuId}
         aria-label={`More actions for ${item.candidateName}`}
+        data-tour={dataTour}
         className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface text-primary transition-colors hover:border-primary/30 hover:bg-primary-light/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         onClick={(event) => {
           event.stopPropagation();
@@ -229,10 +236,13 @@ function SavedCandidateCard({
   item,
   isSelected,
   actions,
+  dataTourPrefix,
 }: {
   item: SavedCandidateListItem;
   isSelected: boolean;
   actions: SavedCandidateRowActions;
+  /** Product tour anchor prefix (`data-tour`) for the card, its actions and menu. */
+  dataTourPrefix?: string;
 }) {
   const { can, canField, getFieldLevel } = useCan();
   const canViewPhone = canField("candidates", "phone");
@@ -269,6 +279,7 @@ function SavedCandidateCard({
 
   return (
     <article
+      data-tour={dataTourPrefix}
       className={cn(
         "group relative rounded-xl border bg-surface shadow-sm transition-[border-color,box-shadow,background-color]",
         isSelected
@@ -369,7 +380,10 @@ function SavedCandidateCard({
       </button>
 
       {hasFooterActions ? (
-        <div className="border-t border-border-subtle bg-hero-bg/50 px-3 py-2.5 pl-4 sm:px-3 sm:pl-5">
+        <div
+          data-tour={dataTourPrefix ? `${dataTourPrefix}-actions` : undefined}
+          className="border-t border-border-subtle bg-hero-bg/50 px-3 py-2.5 pl-4 sm:px-3 sm:pl-5"
+        >
           <div className="flex items-center gap-1.5">
             {whatsappHref ? (
               <a
@@ -438,6 +452,7 @@ function SavedCandidateCard({
                 actions={actions}
                 canUpdate={canUpdate}
                 canWriteNotes={canWriteNotes}
+                dataTour={dataTourPrefix ? `${dataTourPrefix}-more` : undefined}
               />
             ) : null}
           </div>

@@ -60,7 +60,10 @@ export function DashboardSupportCard() {
   const whatsappExternal = WHATSAPP_JOIN_URL.startsWith("http");
 
   return (
-    <section className="employer-rail-card overflow-hidden rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4">
+    <section
+      data-tour="employer-home-support"
+      className="employer-rail-card overflow-hidden rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4"
+    >
       <div className="flex items-center gap-2 sm:gap-2.5">
         <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-9">
           <Headphones className="size-3.5 sm:size-4" aria-hidden="true" />

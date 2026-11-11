@@ -181,7 +181,7 @@ export function NotificationsPageContent({
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
+        <div data-tour="employer-notifications-header">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {title}
           </h1>
@@ -194,6 +194,7 @@ export function NotificationsPageContent({
             type="button"
             disabled={!hasInboxItems || clearAllMutation.isPending}
             onClick={handleClearAll}
+            data-tour="employer-notifications-clear-all"
             className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Clear all
@@ -202,6 +203,7 @@ export function NotificationsPageContent({
             type="button"
             disabled={unreadCount === 0 || markAllMutation.isPending}
             onClick={() => markAllMutation.mutate()}
+            data-tour="employer-notifications-mark-all-read"
             className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border-subtle px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Mark all as read
@@ -210,7 +212,7 @@ export function NotificationsPageContent({
       </header>
 
       <div className="mt-5 flex flex-col gap-3">
-        <div className="relative">
+        <div className="relative" data-tour="employer-notifications-search">
           <Search
             className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted"
             aria-hidden="true"
@@ -228,7 +230,10 @@ export function NotificationsPageContent({
           />
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div
+          className="flex gap-2 overflow-x-auto pb-1"
+          data-tour="employer-notifications-read-filters"
+        >
           {READ_FILTERS.map((filter) => (
             <button
               key={filter.key}
@@ -246,7 +251,10 @@ export function NotificationsPageContent({
           ))}
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div
+          className="flex gap-2 overflow-x-auto pb-1"
+          data-tour="employer-notifications-categories"
+        >
           {CATEGORY_FILTERS.map((filter) => (
             <button
               key={filter.key}
@@ -289,7 +297,10 @@ export function NotificationsPageContent({
             </button>
           </div>
         ) : notifications.length === 0 ? (
-          <div className="rounded-xl border border-border-subtle bg-surface px-4 py-14 text-center">
+          <div
+            className="rounded-xl border border-border-subtle bg-surface px-4 py-14 text-center"
+            data-tour="employer-notifications-empty"
+          >
             <Bell className="mx-auto size-10 text-muted" aria-hidden="true" />
             <p className="mt-4 text-sm font-semibold text-foreground">
               No notifications found
@@ -299,11 +310,14 @@ export function NotificationsPageContent({
             </p>
           </div>
         ) : (
-          notifications.map((notification) => {
+          notifications.map((notification, index) => {
             const Icon = notificationIcon(notification.type);
             return (
               <article
                 key={notification.id}
+                data-tour={
+                  index === 0 ? "employer-notifications-first-row" : undefined
+                }
                 className={cn(
                   "rounded-xl border border-border-subtle bg-surface p-4 transition-colors",
                   !notification.isRead && "border-primary/25 bg-primary-light/20",
@@ -323,7 +337,14 @@ export function NotificationsPageContent({
                       </time>
                     </div>
                     <p className="mt-1 text-sm text-muted">{notification.body}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div
+                      className="mt-3 flex flex-wrap gap-2"
+                      data-tour={
+                        index === 0
+                          ? "employer-notifications-first-row-actions"
+                          : undefined
+                      }
+                    >
                       <button
                         type="button"
                         onClick={() => void openNotification(notification)}
@@ -366,6 +387,7 @@ export function NotificationsPageContent({
         <nav
           className="mt-6 flex flex-wrap items-center justify-between gap-3"
           aria-label="Notifications pagination"
+          data-tour="employer-notifications-pagination"
         >
           <p className="text-sm text-muted">
             Page {pagination.page} of {pagination.totalPages}

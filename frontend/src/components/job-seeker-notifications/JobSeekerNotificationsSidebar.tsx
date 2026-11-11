@@ -58,7 +58,10 @@ export function JobSeekerNotificationsSidebar({
   return (
     <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
       <section className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
-        <h2 className="break-words text-sm font-bold text-foreground sm:text-base">
+        <h2
+          data-tour="seeker-notifications-summary"
+          className="break-words text-sm font-bold text-foreground sm:text-base"
+        >
           {t("seeker.notifications.summaryTitle")}
         </h2>
         <ul className="mt-4 space-y-1">
@@ -86,7 +89,10 @@ export function JobSeekerNotificationsSidebar({
         </ul>
       </section>
 
-      <section className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
+      <section
+        data-tour="seeker-notifications-preferences"
+        className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="break-words text-sm font-bold text-foreground sm:text-base">

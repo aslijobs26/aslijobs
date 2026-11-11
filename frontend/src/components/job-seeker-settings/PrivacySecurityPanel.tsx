@@ -73,6 +73,7 @@ export function PrivacySecurityPanel({
   return (
     <div className="space-y-4">
       <SettingsSection
+        dataTour="seeker-settings-security"
         title="Account Security"
         description="Your job seeker account uses WhatsApp OTP authentication."
       >
@@ -96,6 +97,7 @@ export function PrivacySecurityPanel({
       </SettingsSection>
 
       <SettingsSection
+        dataTour="seeker-settings-visibility"
         title="Profile Visibility"
         description="Control who can see your job seeker profile."
       >
@@ -133,6 +135,7 @@ export function PrivacySecurityPanel({
       </SettingsSection>
 
       <SettingsSection
+        dataTour="seeker-settings-legal"
         title="Privacy & Legal"
         description="Review AsliJobs privacy and terms documents."
       >
@@ -153,7 +156,10 @@ export function PrivacySecurityPanel({
       </SettingsSection>
 
       <SettingsSection title="Session">
-        <div className="flex flex-wrap gap-2">
+        <div
+          data-tour="seeker-settings-session"
+          className="flex flex-wrap gap-2"
+        >
           <button
             type="button"
             onClick={handleLogoutRequest}

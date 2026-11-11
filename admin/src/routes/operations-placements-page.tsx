@@ -393,7 +393,10 @@ export function OperationsPlacementsPage() {
                     />
 
                     {listData?.pagination ? (
-                      <div className="border-t border-border-subtle p-3 xl:p-2.5">
+                      <div
+                        data-tour="ops-placements-pagination"
+                        className="border-t border-border-subtle p-3 xl:p-2.5"
+                      >
                         <JobsPaginationBar
                           pagination={listData.pagination}
                           onPageChange={setPage}

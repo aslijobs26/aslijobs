@@ -130,14 +130,21 @@ export function VerificationsTableSection({
         ) : null}
         {!isLoading &&
           !isError &&
-          items.map((item) => (
-            <VerificationsMobileCard key={item.id} item={item} />
+          items.map((item, index) => (
+            <VerificationsMobileCard
+              key={item.id}
+              item={item}
+              dataTour={index === 0 ? "ops-verifications-list" : undefined}
+            />
           ))}
       </ul>
 
       <div className="hidden overflow-x-auto overscroll-x-contain scrollbar-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:block">
         <table className="min-w-[1080px] text-left text-xs xl:min-w-full xl:text-[11px]">
-          <thead className="border-b border-border-subtle bg-hero-bg/60 text-muted">
+          <thead
+            data-tour="ops-verifications-list"
+            className="border-b border-border-subtle bg-hero-bg/60 text-muted"
+          >
             <tr>
               <th scope="col" className={thClassName}>
                 Company Name
@@ -184,7 +191,7 @@ export function VerificationsTableSection({
             ) : null}
             {!isLoading &&
               !isError &&
-              items.map((item) => {
+              items.map((item, index) => {
                 const submitted = submittedLabel(item);
                 const reviewPath = operationsVerificationReviewPath(item.id);
                 const companyName =
@@ -284,7 +291,10 @@ export function VerificationsTableSection({
                       </span>
                     </td>
 
-                    <td className="whitespace-nowrap py-3 pl-3 pr-4 text-right sm:pl-3.5 xl:py-2 xl:pl-2.5 xl:pr-3">
+                    <td
+                      data-tour={index === 0 ? "ops-verifications-row-actions" : undefined}
+                      className="whitespace-nowrap py-3 pl-3 pr-4 text-right sm:pl-3.5 xl:py-2 xl:pl-2.5 xl:pr-3"
+                    >
                       <Link
                         to={reviewPath}
                         className="inline-flex h-8 items-center justify-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:h-7 xl:px-2 xl:text-[10px]"

@@ -58,7 +58,7 @@ export function AnalyticsTabContent({
           </div>
         ) : null}
         {data.interviewMetrics ? (
-          <OperationsCard title="Interview outcomes" subtitle={data.interviewMetrics.note} bodyClassName="grid grid-cols-2 gap-2 p-3 md:grid-cols-4">
+          <OperationsCard dataTour="ops-analytics-interviews" title="Interview outcomes" subtitle={data.interviewMetrics.note} bodyClassName="grid grid-cols-2 gap-2 p-3 md:grid-cols-4">
             <p className="text-[12px]">Scheduled <strong>{formatCount(data.interviewMetrics.scheduled)}</strong></p>
             <p className="text-[12px]">Completed <strong>{formatCount(data.interviewMetrics.completed)}</strong></p>
             <p className="text-[12px]">Rescheduled <strong>{formatCount(data.interviewMetrics.rescheduled ?? 0)}</strong></p>
@@ -270,6 +270,7 @@ export function AnalyticsTabContent({
 
   return (
     <OperationsCard
+      headerDataTour="ops-analytics-report"
       title="Analytics report summary"
       subtitle={`${data.range.label}${data.state ? ` · ${data.state}` : " · All India"}`}
       action={

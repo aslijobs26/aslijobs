@@ -88,7 +88,7 @@ export function OrganizationPageHeader({
       </nav>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
+        <div data-tour="ops-org-header" className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-tight text-foreground sm:text-[24px]">
             Organization
           </h1>
@@ -98,7 +98,10 @@ export function OrganizationPageHeader({
           </p>
         </div>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div
+          data-tour="ops-org-actions"
+          className="flex min-w-0 flex-wrap items-center gap-2"
+        >
           <div className="w-full min-w-[9rem] sm:w-[11rem]">
             <OperationsFilterSelect
               label={`Organization scope ${selectedScopeLabel}`}

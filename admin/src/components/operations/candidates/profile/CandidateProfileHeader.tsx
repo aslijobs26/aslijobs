@@ -104,7 +104,10 @@ export function CandidateProfileHeader({
     <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-5">
       <div className="flex flex-col gap-3 max-sm:gap-2.5 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-start gap-2.5 sm:gap-4">
+          <div
+            data-tour="ops-candidate-identity"
+            className="flex min-w-0 items-start gap-2.5 sm:gap-4"
+          >
             <OperationsCandidateAvatar
               name={detail.candidateName ?? "Candidate"}
               jobSeekerId={detail.jobSeekerId || detail.id}
@@ -146,7 +149,7 @@ export function CandidateProfileHeader({
                   formatCandidateDisplayId(detail.jobSeekerId || detail.id)}
               </p>
 
-              <div className="mt-2 flex min-w-0 flex-row flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-muted max-sm:mt-1.5 max-sm:text-[10px] sm:mt-3 sm:gap-x-2 sm:text-xs">
+              <div data-tour="ops-candidate-contact" className="mt-2 flex min-w-0 flex-row flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-muted max-sm:mt-1.5 max-sm:text-[10px] sm:mt-3 sm:gap-x-2 sm:text-xs">
                 {detail.candidatePhone ? (
                   <span className="inline-flex min-w-0 items-center gap-1 sm:gap-1.5">
                     <Phone
@@ -195,7 +198,7 @@ export function CandidateProfileHeader({
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-3 gap-1 border-t border-border-subtle pt-3 max-sm:mt-2.5 max-sm:pt-2.5 sm:mt-4 sm:gap-3 sm:pt-4">
+          <div data-tour="ops-candidate-stats" className="mt-3 grid grid-cols-3 gap-1 border-t border-border-subtle pt-3 max-sm:mt-2.5 max-sm:pt-2.5 sm:mt-4 sm:gap-3 sm:pt-4">
             <div className="min-w-0">
               <p className="text-[8px] font-semibold uppercase leading-tight tracking-wide text-muted max-sm:text-[7px] sm:text-[10px]">
                 Registered on
@@ -269,7 +272,7 @@ export function CandidateProfileHeader({
           </p>
         </div>
 
-        <div className="flex w-full shrink-0 flex-col gap-1.5 sm:w-auto sm:min-w-[11rem] sm:gap-2">
+        <div data-tour="ops-candidate-resume" className="flex w-full shrink-0 flex-col gap-1.5 sm:w-auto sm:min-w-[11rem] sm:gap-2">
           <OperationsCanKey permissionKey="candidates.profile.documents.view">
             {detail.hasUploadedResume ? (
               <button

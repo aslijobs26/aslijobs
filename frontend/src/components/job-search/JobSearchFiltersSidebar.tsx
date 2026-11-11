@@ -58,6 +58,8 @@ type FilterSectionProps = {
   collapsible?: boolean;
   showTitle?: boolean;
   showBorder?: boolean;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 type LocationOption = {
@@ -73,6 +75,7 @@ function FilterSection({
   collapsible = true,
   showTitle = true,
   showBorder = true,
+  dataTour,
 }: FilterSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
@@ -88,6 +91,7 @@ function FilterSection({
       {showTitle && collapsible ? (
         <button
           type="button"
+          data-tour={dataTour}
           onClick={() => setOpen((current) => !current)}
           className="flex w-full items-center justify-between gap-2 rounded-lg text-left transition-colors hover:text-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/30"
           aria-expanded={isOpen}
@@ -107,7 +111,10 @@ function FilterSection({
         </button>
       ) : null}
       {showTitle && !collapsible ? (
-        <h3 className="text-[15px] font-bold tracking-tight text-foreground">
+        <h3
+          data-tour={dataTour}
+          className="text-[15px] font-bold tracking-tight text-foreground"
+        >
           {title}
         </h3>
       ) : null}
@@ -462,6 +469,7 @@ export function JobSearchFiltersSidebar({
   const singlePanel = isPanel && (panels?.length ?? 0) === 1;
   const sectionShowTitle = !singlePanel;
   const sectionShowBorder = !singlePanel;
+  const sidebarTour = (id: string) => (isPanel ? undefined : id);
   const [withinDraft, setWithinDraft] = useState(state.within);
   const [syncedWithin, setSyncedWithin] = useState(state.within);
   const [locationQuery, setLocationQuery] = useState("");
@@ -646,7 +654,10 @@ export function JobSearchFiltersSidebar({
       aria-label="Job filters"
     >
       {!isPanel ? (
-        <div className="mb-5 flex items-center justify-between gap-3">
+        <div
+          data-tour="job-search-filters"
+          className="mb-5 flex items-center justify-between gap-3"
+        >
           <h2 className="text-xl font-bold tracking-tight text-foreground">
             Filters
           </h2>
@@ -666,7 +677,10 @@ export function JobSearchFiltersSidebar({
       ) : null}
 
       {showPanel("within") ? (
-        <div className={cn(!isPanel && "mb-1")}>
+        <div
+          data-tour={sidebarTour("job-search-filter-within")}
+          className={cn(!isPanel && "mb-1")}
+        >
           <label htmlFor={withinInputId} className="sr-only">
             Search within results
           </label>
@@ -690,6 +704,7 @@ export function JobSearchFiltersSidebar({
 
       {showPanel("location") ? (
         <FilterSection title={t("jobs.location")} collapsible={sectionCollapsible}
+          dataTour={sidebarTour("job-search-filter-location")}
           showTitle={sectionShowTitle}
           showBorder={sectionShowBorder}>
           {!state.state ? (
@@ -764,6 +779,7 @@ export function JobSearchFiltersSidebar({
 
       {showPanel("experience") ? (
         <FilterSection title={t("jobs.experience")} collapsible={sectionCollapsible}
+          dataTour={sidebarTour("job-search-filter-experience")}
           showTitle={sectionShowTitle}
           showBorder={sectionShowBorder}>
           <ul className="space-y-0.5">
@@ -790,6 +806,7 @@ export function JobSearchFiltersSidebar({
 
       {showPanel("salary") ? (
         <FilterSection title={t("jobs.salaryRange")} collapsible={sectionCollapsible}
+          dataTour={sidebarTour("job-search-filter-salary")}
           showTitle={sectionShowTitle}
           showBorder={sectionShowBorder}>
           <SalaryRangeFilter
@@ -802,6 +819,7 @@ export function JobSearchFiltersSidebar({
 
       {showPanel("jobType") ? (
         <FilterSection title={t("jobs.jobType")} collapsible={sectionCollapsible}
+          dataTour={sidebarTour("job-search-filter-job-type")}
           showTitle={sectionShowTitle}
           showBorder={sectionShowBorder}>
           <ul className="space-y-0.5">
@@ -829,6 +847,7 @@ export function JobSearchFiltersSidebar({
       {showPanel("gender") ? (
         <FilterSection
           title={t("jobs.genderPreference")}
+          dataTour={sidebarTour("job-search-filter-gender")}
           collapsible={sectionCollapsible}
           showTitle={sectionShowTitle}
           showBorder={sectionShowBorder}
@@ -862,6 +881,7 @@ export function JobSearchFiltersSidebar({
       {showPanel("workMode") && (isPanel || showMoreFilters) ? (
         <FilterSection
           title={t("jobs.workMode")}
+          dataTour={sidebarTour("job-search-filter-work-mode")}
           defaultOpen
           collapsible={sectionCollapsible}
           showTitle={sectionShowTitle}
@@ -892,6 +912,7 @@ export function JobSearchFiltersSidebar({
       {!isPanel ? (
         <button
           type="button"
+          data-tour="job-search-more-filters"
           onClick={() => setShowMoreFilters((current) => !current)}
           className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface text-sm font-bold text-foreground shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-px hover:border-primary-soft/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-soft/30"
         >

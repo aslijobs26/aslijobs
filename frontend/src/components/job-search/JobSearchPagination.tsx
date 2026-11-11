@@ -48,6 +48,7 @@ export function JobSearchPagination({
 
   return (
     <nav
+      data-tour="job-search-pagination"
       className="flex flex-wrap items-center justify-center gap-1.5"
       aria-label="Job results pagination"
     >

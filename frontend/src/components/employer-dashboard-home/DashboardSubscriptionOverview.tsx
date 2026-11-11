@@ -84,7 +84,10 @@ export function DashboardSubscriptionOverview() {
       className="employer-subscription-card rounded-xl border border-primary/10 bg-primary-light p-2.5 sm:p-4 lg:p-2.5"
       aria-labelledby="dashboard-subscription-overview-title"
     >
-      <header className="mb-2 sm:mb-4 lg:mb-2">
+      <header
+        data-tour="employer-home-subscription"
+        className="mb-2 sm:mb-4 lg:mb-2"
+      >
         <h2
           id="dashboard-subscription-overview-title"
           className="employer-subscription-card__title text-xs font-bold text-foreground sm:text-base lg:text-[0.8125rem]"

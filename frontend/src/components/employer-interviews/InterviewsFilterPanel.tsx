@@ -35,6 +35,8 @@ type InterviewsFilterPanelProps = {
   onInterviewFromChange: (value: string) => void;
   onInterviewToChange: (value: string) => void;
   onClear: () => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 const QUICK_DATE_OPTIONS: EmployerRegisterSelectOption[] = [
@@ -86,6 +88,7 @@ export function InterviewsFilterPanel({
   onInterviewFromChange,
   onInterviewToChange,
   onClear,
+  dataTour,
 }: InterviewsFilterPanelProps) {
   const hasActiveFilters =
     Boolean(quickDate) ||
@@ -96,7 +99,10 @@ export function InterviewsFilterPanel({
     Boolean(interviewTo);
 
   return (
-    <section className="employer-interviews-filters rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-2.5">
+    <section
+      className="employer-interviews-filters rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-2.5"
+      data-tour={dataTour}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2 lg:gap-1.5">
           <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary lg:size-6">

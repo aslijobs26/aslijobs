@@ -20,7 +20,10 @@ interface AnalyticsTabsProps {
 
 export function AnalyticsTabs({ activeTab, onChange }: AnalyticsTabsProps) {
   return (
-    <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 scrollbar-hidden">
+    <div
+      data-tour="ops-analytics-tabs"
+      className="-mx-1 overflow-x-auto overscroll-x-contain px-1 scrollbar-hidden"
+    >
       <div
         role="tablist"
         aria-label="Analytics sections"

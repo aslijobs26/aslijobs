@@ -465,7 +465,10 @@ export function OperationsCandidatesPage() {
                       }
                     />
                     {listData?.pagination ? (
-                      <div className="border-t border-border-subtle p-3 max-sm:p-2.5 xl:p-2.5">
+                      <div
+                        data-tour="ops-job-seekers-pagination"
+                        className="border-t border-border-subtle p-3 max-sm:p-2.5 xl:p-2.5"
+                      >
                         <JobsPaginationBar
                           pagination={listData.pagination}
                           ariaLabel="Jobseekers pagination"

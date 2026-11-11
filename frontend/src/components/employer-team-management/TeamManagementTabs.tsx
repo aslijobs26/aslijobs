@@ -17,6 +17,7 @@ export function TeamManagementTabs({
 }: TeamManagementTabsProps) {
   return (
     <div
+      data-tour="employer-team-tabs"
       role="tablist"
       aria-label="Team management sections"
       className="employer-team-tabs flex gap-1 overflow-x-auto border-b border-border-subtle [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

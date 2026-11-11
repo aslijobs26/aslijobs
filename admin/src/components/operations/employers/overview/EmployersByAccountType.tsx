@@ -44,6 +44,7 @@ export function EmployersByAccountType({ items }: EmployersByAccountTypeProps) {
 
   return (
     <OperationsCard
+      dataTour="ops-employers-account-types"
       title="Account Types"
       subtitle="Individual, company & consultancy mix"
       className="employers-analytics-card min-w-0"

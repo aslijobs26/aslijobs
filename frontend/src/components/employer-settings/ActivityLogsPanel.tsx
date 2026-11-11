@@ -36,6 +36,7 @@ export function ActivityLogsPanel() {
     <SettingsSection
       title="Activity Logs"
       description="Recent team activity from Team Management. A dedicated full audit-log API is not available yet."
+      dataTour="employer-settings-activity-logs"
       action={
         <Link
           href={ROUTES.EMPLOYER_TEAM_MANAGEMENT}

@@ -67,6 +67,7 @@ export function WhatNeedsAttentionSection({
       title="What needs attention"
       subtitle="Items that need action from your team"
       className="min-w-0"
+      dataTour="ops-home-attention"
       badge={
         <span className="inline-flex items-center gap-1">
           <Clock3 className="size-3.5 text-danger" strokeWidth={2} aria-hidden="true" />
@@ -78,6 +79,7 @@ export function WhatNeedsAttentionSection({
       action={
         <Link
           to={OPERATIONS_ROUTES.WORK_QUEUE}
+          data-tour="ops-home-attention-view-all"
           className="text-[11px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-[12px]"
         >
           View all →
@@ -89,6 +91,7 @@ export function WhatNeedsAttentionSection({
         className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-border-subtle px-2 pt-0.5 scrollbar-hidden max-sm:px-2 sm:gap-1 sm:px-3.5 sm:pt-1"
         role="tablist"
         aria-label="Attention filters"
+        data-tour="ops-home-attention-tabs"
       >
         {tabs.map((tab) => {
           const selected = activeTab === tab.id;

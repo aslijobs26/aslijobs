@@ -273,7 +273,7 @@ export function OperationsTeamsPage() {
     <OperationsLayout title="Teams" headerVariant="command">
       <div className="flex flex-col gap-4 lg:gap-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
+          <div className="min-w-0" data-tour="ops-teams-header">
             <Link
               to={OPERATIONS_ROUTES.ORGANIZATION}
               className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
@@ -293,7 +293,10 @@ export function OperationsTeamsPage() {
               organization.
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div
+            className="flex shrink-0 items-center gap-2"
+            data-tour="ops-teams-actions"
+          >
             <OperationsCanKey permissionKey="team.teams.create">
               <button
                 type="button"
@@ -325,7 +328,10 @@ export function OperationsTeamsPage() {
           </p>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <div
+          className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 xl:grid-cols-6"
+          data-tour="ops-teams-kpis"
+        >
           {KPI_CARDS.map((item) => (
             <PeopleKpiCard
               key={item.key}
@@ -344,7 +350,10 @@ export function OperationsTeamsPage() {
           ))}
         </div>
 
-        <div className="rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5">
+        <div
+          className="rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5"
+          data-tour="ops-teams-filters"
+        >
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="relative min-w-0 flex-1">
               <Search
@@ -503,7 +512,10 @@ export function OperationsTeamsPage() {
         ) : (
           <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <table className="min-w-[64rem] w-full text-left">
-              <thead className="border-b border-border-subtle bg-[#F8FAFC] text-[11px] font-semibold uppercase tracking-[0.04em] text-muted">
+              <thead
+                className="border-b border-border-subtle bg-[#F8FAFC] text-[11px] font-semibold uppercase tracking-[0.04em] text-muted"
+                data-tour="ops-teams-list"
+              >
                 <tr>
                   <th className="px-4 py-3">Team</th>
                   <th className="px-4 py-3">Department</th>
@@ -517,7 +529,7 @@ export function OperationsTeamsPage() {
                 </tr>
               </thead>
               <tbody>
-                {teams.map((team) => {
+                {teams.map((team, index) => {
                   const isActive = team.status === "active";
                   return (
                     <tr
@@ -603,7 +615,12 @@ export function OperationsTeamsPage() {
                       <td className="px-4 py-3 align-middle whitespace-pre-line text-[12px] leading-snug text-muted">
                         {formatPeopleTimestamp(team.createdAt)}
                       </td>
-                      <td className="px-4 py-3 align-middle">
+                      <td
+                        className="px-4 py-3 align-middle"
+                        data-tour={
+                          index === 0 ? "ops-teams-row-actions" : undefined
+                        }
+                      >
                         <TeamsRowActions
                           team={team}
                           onArchive={(target) => {
@@ -621,7 +638,10 @@ export function OperationsTeamsPage() {
         )}
 
         {pagination.total > limit ? (
-          <div className="rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:px-4">
+          <div
+            className="rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:px-4"
+            data-tour="ops-teams-pagination"
+          >
             <JobsPaginationBar
               pagination={pagination}
               onPageChange={setPage}

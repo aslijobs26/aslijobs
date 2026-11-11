@@ -15,6 +15,8 @@ type ResumeActionsProps = {
   onPrint: () => void;
   onRegenerate: () => void;
   className?: string;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 function ActionButton({
@@ -58,9 +60,13 @@ export function ResumeActions({
   onPrint,
   onRegenerate,
   className,
+  dataTour,
 }: ResumeActionsProps) {
   return (
-    <div className={cn("resume-no-print space-y-2", className)}>
+    <div
+      data-tour={dataTour}
+      className={cn("resume-no-print space-y-2", className)}
+    >
       <h3 className="text-xs font-semibold text-foreground sm:text-sm">
         Resume Actions
       </h3>

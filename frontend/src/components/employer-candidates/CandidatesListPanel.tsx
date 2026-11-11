@@ -70,6 +70,7 @@ function CandidateMobileCard({
   onSelect,
   onOpenResume,
   onToggleSave,
+  dataTourPrefix,
 }: {
   item: EmployerApplicationListItem;
   isSelected: boolean;
@@ -78,6 +79,8 @@ function CandidateMobileCard({
   onSelect: (id: string) => void;
   onOpenResume: (id: string) => void;
   onToggleSave?: (applicationId: string, isSaved: boolean) => void;
+  /** Product tour anchor prefix (`data-tour`) for the shortlist button and action bar. */
+  dataTourPrefix?: string;
 }) {
   const { canField, getFieldLevel } = useCan();
   const canViewPhone = canField("candidates", "phone");
@@ -106,6 +109,7 @@ function CandidateMobileCard({
               : `Shortlist ${item.candidateName}`
           }
           aria-pressed={isSaved}
+          data-tour={dataTourPrefix ? `${dataTourPrefix}-shortlist` : undefined}
           className="absolute right-2.5 top-2.5 z-10 inline-flex size-8 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:right-3 sm:top-3 sm:size-9"
           onClick={(event) => {
             event.stopPropagation();
@@ -168,7 +172,10 @@ function CandidateMobileCard({
         </span>
       </button>
 
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-1 border-t border-border-subtle pt-3">
+      <div
+        data-tour={dataTourPrefix ? `${dataTourPrefix}-actions` : undefined}
+        className="mt-3 flex flex-wrap items-center justify-center gap-1 border-t border-border-subtle pt-3"
+      >
         {whatsappHref ? (
           <a
             href={whatsappHref}
@@ -241,12 +248,15 @@ function CandidateDesktopRow({
   canSave,
   onSelect,
   onToggleSave,
+  dataTourPrefix,
 }: {
   item: EmployerApplicationListItem;
   isSaved: boolean;
   canSave: boolean;
   onSelect: (id: string) => void;
   onToggleSave?: (applicationId: string, isSaved: boolean) => void;
+  /** Product tour anchor prefix (`data-tour`) for the shortlist button and actions. */
+  dataTourPrefix?: string;
 }) {
   const { canField, getFieldLevel } = useCan();
   const canViewPhone = canField("candidates", "phone");
@@ -304,7 +314,10 @@ function CandidateDesktopRow({
         </span>
       </button>
 
-      <div className="flex shrink-0 flex-col items-end justify-center gap-1 self-center sm:flex-row sm:items-center">
+      <div
+        data-tour={dataTourPrefix ? `${dataTourPrefix}-actions` : undefined}
+        className="flex shrink-0 flex-col items-end justify-center gap-1 self-center sm:flex-row sm:items-center"
+      >
         {canSave && onToggleSave ? (
           <button
             type="button"
@@ -314,6 +327,7 @@ function CandidateDesktopRow({
                 : `Shortlist ${item.candidateName}`
             }
             aria-pressed={isSaved}
+            data-tour={dataTourPrefix ? `${dataTourPrefix}-shortlist` : undefined}
             className="inline-flex size-8 items-center justify-center rounded-lg text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             onClick={(event) => {
               event.stopPropagation();
@@ -419,7 +433,7 @@ export function CandidatesListPanel({
     <section className="employer-candidates-list flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface lg:h-full">
       <div className="employer-candidates-list__toolbar shrink-0 border-b border-border-subtle p-3 sm:p-4 lg:p-2">
         <div className="employer-candidates-list__toolbar-grid grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(8.5rem,10.5rem)] lg:gap-1.5">
-          <label className="min-w-0">
+          <label className="min-w-0" data-tour="employer-candidates-job-filter">
             <span className="employer-candidates-list__label mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs lg:mb-1 lg:text-[10px]">
               Filter by job
             </span>
@@ -437,7 +451,10 @@ export function CandidatesListPanel({
               optionClassName={toolbarSelectOptionClassName}
             />
           </label>
-          <label className="min-w-0 md:max-w-[10.5rem]">
+          <label
+            className="min-w-0 md:max-w-[10.5rem]"
+            data-tour="employer-candidates-sort"
+          >
             <span className="employer-candidates-list__label mb-1.5 block text-[11px] font-semibold text-muted sm:text-xs lg:mb-1 lg:text-[10px]">
               Sort by
             </span>
@@ -500,7 +517,10 @@ export function CandidatesListPanel({
             </div>
           </>
         ) : applications.length === 0 ? (
-          <div className="px-3 py-6 text-left sm:px-4 sm:py-12 sm:text-center lg:px-4 lg:py-8">
+          <div
+            data-tour="employer-candidates-empty"
+            className="px-3 py-6 text-left sm:px-4 sm:py-12 sm:text-center lg:px-4 lg:py-8"
+          >
             <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
               {hasLocationFilter && !hasActiveSearch
                 ? "No candidates found for the selected location."
@@ -535,12 +555,17 @@ export function CandidatesListPanel({
         ) : (
           <>
             <ul className="space-y-3 p-3 lg:hidden">
-              {applications.map((item) => {
+              {applications.map((item, index) => {
                 const isSaved =
                   Boolean(savedByApplicationId[item.id]) ||
                   isEmployerShortlistedOrLaterStatus(item.status);
                 return (
-                  <li key={item.id}>
+                  <li
+                    key={item.id}
+                    data-tour={
+                      index === 0 ? "employer-candidates-first-row" : undefined
+                    }
+                  >
                     <CandidateMobileCard
                       item={item}
                       isSelected={selectedId === item.id}
@@ -549,6 +574,9 @@ export function CandidatesListPanel({
                       onSelect={onSelect}
                       onOpenResume={onOpenResume}
                       onToggleSave={onToggleSave}
+                      dataTourPrefix={
+                        index === 0 ? "employer-candidates-first-row" : undefined
+                      }
                     />
                   </li>
                 );
@@ -556,7 +584,7 @@ export function CandidatesListPanel({
             </ul>
 
             <ul className="hidden lg:block">
-              {applications.map((item) => {
+              {applications.map((item, index) => {
                 const isSelected = selectedId === item.id;
                 const isSaved =
                   Boolean(savedByApplicationId[item.id]) ||
@@ -564,6 +592,9 @@ export function CandidatesListPanel({
                 return (
                   <li
                     key={item.id}
+                    data-tour={
+                      index === 0 ? "employer-candidates-first-row" : undefined
+                    }
                     className={cn(
                       "border-b border-border-subtle transition-colors",
                       isSelected
@@ -577,6 +608,9 @@ export function CandidatesListPanel({
                       canSave={canSave}
                       onSelect={onSelect}
                       onToggleSave={onToggleSave}
+                      dataTourPrefix={
+                        index === 0 ? "employer-candidates-first-row" : undefined
+                      }
                     />
                   </li>
                 );
@@ -586,7 +620,9 @@ export function CandidatesListPanel({
         )}
       </div>
 
-      <div className="employer-candidates-list__pager flex shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t border-border-subtle px-3 py-2 sm:px-4 sm:py-3 lg:px-2.5 lg:py-1.5">
+      <div
+        data-tour="employer-candidates-pagination"
+        className="employer-candidates-list__pager flex shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t border-border-subtle px-3 py-2 sm:px-4 sm:py-3 lg:px-2.5 lg:py-1.5">
         <p className="text-[11px] text-muted sm:text-xs lg:text-[11px]">
           Page {page} of {totalPages}
         </p>

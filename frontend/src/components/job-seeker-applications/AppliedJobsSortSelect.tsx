@@ -12,11 +12,14 @@ import { useEffect, useId, useRef, useState } from "react";
 type AppliedJobsSortSelectProps = {
   value: AppliedJobsSort;
   onChange: (value: AppliedJobsSort) => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 export function AppliedJobsSortSelect({
   value,
   onChange,
+  dataTour,
 }: AppliedJobsSortSelectProps) {
   const t = useTranslate();
   const listboxId = useId();
@@ -57,6 +60,7 @@ export function AppliedJobsSortSelect({
   return (
     <div
       ref={rootRef}
+      data-tour={dataTour}
       className="inline-flex shrink-0 items-center gap-1.5 sm:gap-2.5"
     >
       <span

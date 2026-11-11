@@ -83,7 +83,10 @@ export function OverviewTaskStatus({
   const chartData = legend.filter((row) => row.value > 0);
 
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+    <section
+      data-tour="ops-dashboard-task-status"
+      className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+    >
       <h3 className="mb-3 text-[13px] font-semibold text-foreground">
         Task Status
       </h3>
@@ -152,7 +155,10 @@ export function OverviewTeamPerformance({
   rows: OperationsDashboardOverview["teamPerformance"];
 }) {
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+    <section
+      data-tour="ops-dashboard-team-performance"
+      className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+    >
       <div className="mb-3 flex items-start justify-between gap-2">
         <h3 className="text-[13px] font-semibold text-foreground">
           Team Performance
@@ -258,7 +264,10 @@ export function OverviewRecentTasks({
   }, [recentTasks.items, taskSearch, taskTab]);
 
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+    <section
+      data-tour="ops-dashboard-tasks"
+      className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+    >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-[13px] font-semibold text-foreground">
           Recent Operational Tasks
@@ -271,7 +280,10 @@ export function OverviewRecentTasks({
           <ChevronRight className="size-3.5" aria-hidden />
         </Link>
       </div>
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div
+        data-tour="ops-dashboard-task-filters"
+        className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2"
+      >
         <div
           role="tablist"
           aria-label="Task status filters"
@@ -327,7 +339,7 @@ export function OverviewRecentTasks({
               </tr>
             </thead>
             <tbody>
-              {visibleItems.map((task) => (
+              {visibleItems.map((task, index) => (
                 <tr
                   key={task.id}
                   className="border-b border-border-subtle/70 last:border-0"
@@ -361,7 +373,12 @@ export function OverviewRecentTasks({
                       {STATUS_BUCKET_LABELS[task.statusBucket]}
                     </OperationsBadge>
                   </td>
-                  <td className="py-2.5">
+                  <td
+                    data-tour={
+                      index === 0 ? "ops-dashboard-task-actions" : undefined
+                    }
+                    className="py-2.5"
+                  >
                     <Link
                       to={task.href}
                       className="font-semibold text-primary hover:underline"

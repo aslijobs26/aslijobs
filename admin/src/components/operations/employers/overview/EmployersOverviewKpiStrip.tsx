@@ -97,6 +97,7 @@ export function EmployersOverviewKpiStrip({
   return (
     <section
       aria-label="Employer overview KPIs"
+      data-tour="ops-employers-kpis"
       className="grid grid-cols-2 gap-2.5 max-lg:gap-2 max-sm:gap-1.5 lg:grid-cols-5"
     >
       {KPI_CARDS.map((card) => {

@@ -50,6 +50,7 @@ export function DashboardStatCards({
 
   return (
     <section
+      data-tour="employer-home-stats"
       aria-label={t("employer.dashboard.statsAria")}
       className="employer-kpi-grid"
     >

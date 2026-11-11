@@ -510,6 +510,7 @@ export function EmployerJobsPageContent() {
 
           {filterChips.length > 0 ? (
             <div
+              data-tour="employer-jobs-filter-chips"
               className="-mt-1 flex flex-wrap items-center gap-1.5"
               aria-label={t("employer.jobs.activeFiltersAria")}
             >
@@ -532,6 +533,7 @@ export function EmployerJobsPageContent() {
 
           {canDeleteJobs && selectedCount > 0 ? (
             <EmployerJobsBulkToolbar
+              dataTour="employer-jobs-bulk-toolbar"
               selectedCount={selectedCount}
               filteredTotal={filteredTotal}
               isFilteredSelection={selectionMode === "filtered"}

@@ -168,16 +168,22 @@ function FaqAccordionItem({
   article,
   isOpen,
   onToggle,
+  dataTour,
 }: {
   article: HelpCenterArticle;
   isOpen: boolean;
   onToggle: () => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   const panelId = useId();
   const buttonId = useId();
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
+    <div
+      data-tour={dataTour}
+      className="overflow-hidden rounded-xl border border-border bg-surface"
+    >
       <h3>
         <button
           id={buttonId}
@@ -286,7 +292,7 @@ export function JobSeekerHelpSupportPageContent() {
     <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:gap-6 xl:grid-cols-[minmax(0,1fr)_19rem] xl:gap-8">
         <div className="flex min-w-0 flex-col gap-5 sm:gap-6">
-          <header className="min-w-0">
+          <header data-tour="seeker-help-header" className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-[1.75rem]">
                 {JOB_SEEKER_HELP_SUPPORT_TITLE}
@@ -303,7 +309,7 @@ export function JobSeekerHelpSupportPageContent() {
             </p>
           </header>
 
-          <div className="relative">
+          <div data-tour="seeker-help-search" className="relative">
             <label htmlFor="job-seeker-help-search" className="sr-only">
               Search help
             </label>
@@ -334,6 +340,7 @@ export function JobSeekerHelpSupportPageContent() {
             >
               <h2
                 id="help-search-results-heading"
+                data-tour="seeker-help-search-results"
                 className="text-base font-bold text-foreground"
               >
                 Search results
@@ -374,7 +381,10 @@ export function JobSeekerHelpSupportPageContent() {
           ) : null}
 
           <section aria-labelledby="popular-topics-heading" className="min-w-0">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:mb-4">
+            <div
+              data-tour="seeker-help-topics"
+              className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:mb-4"
+            >
               <h2
                 id="popular-topics-heading"
                 className="text-base font-bold text-foreground sm:text-lg"
@@ -390,13 +400,16 @@ export function JobSeekerHelpSupportPageContent() {
             </div>
 
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-5">
-              {topics.map((topic) => {
+              {topics.map((topic, index) => {
                 const styles = topicIconStyles[topic.icon];
                 const isActive = activeTopicId === topic.id;
                 return (
                   <button
                     key={topic.id}
                     type="button"
+                    data-tour={
+                      index === 0 ? "seeker-help-first-topic" : undefined
+                    }
                     onClick={() =>
                       setActiveTopicId((current) =>
                         current === topic.id ? null : topic.id,
@@ -439,7 +452,10 @@ export function JobSeekerHelpSupportPageContent() {
 
             {activeTopic ? (
               <div className="mt-4 rounded-2xl border border-border bg-surface p-4 sm:p-5">
-                <div className="mb-3 flex items-center justify-between gap-2">
+                <div
+                  data-tour="seeker-help-topic-articles"
+                  className="mb-3 flex items-center justify-between gap-2"
+                >
                   <h3 className="text-base font-bold text-foreground">
                     {activeTopic.title}
                   </h3>
@@ -480,14 +496,16 @@ export function JobSeekerHelpSupportPageContent() {
             <section aria-labelledby="faq-heading" className="min-w-0">
               <h2
                 id="faq-heading"
+                data-tour="seeker-help-faq"
                 className="mb-3 text-base font-bold text-foreground sm:mb-4 sm:text-lg"
               >
                 {JOB_SEEKER_HELP_FAQ_HEADING}
               </h2>
               <div className="space-y-2 sm:space-y-2.5">
-                {featuredFaqs.map((article) => (
+                {featuredFaqs.map((article, index) => (
                   <FaqAccordionItem
                     key={article.id}
+                    dataTour={index === 0 ? "seeker-help-first-faq" : undefined}
                     article={article}
                     isOpen={openFaqId === article.id}
                     onToggle={() =>
@@ -498,7 +516,7 @@ export function JobSeekerHelpSupportPageContent() {
                   />
                 ))}
               </div>
-              <div className="mt-3 sm:mt-4">
+              <div data-tour="seeker-help-all-faqs" className="mt-3 sm:mt-4">
                 <Link
                   href={JOB_SEEKER_HELP_VIEW_ALL_FAQS_HREF}
                   className="text-xs font-semibold text-employer-button transition-colors hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
@@ -536,7 +554,10 @@ export function JobSeekerHelpSupportPageContent() {
                   />
                 </div>
 
-                <div className="relative z-10 overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
+                <div
+                  data-tour="seeker-help-contact"
+                  className="relative z-10 overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm"
+                >
                   <div className="divide-y divide-border-subtle">
                     <SupportActionRow
                       href={WHATSAPP_JOIN_URL}
@@ -576,6 +597,7 @@ export function JobSeekerHelpSupportPageContent() {
         <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
           <section
             aria-labelledby="ai-help-heading"
+            data-tour="seeker-help-ai-assistant"
             className="rounded-2xl border border-border bg-surface p-3.5 shadow-sm sm:p-5"
           >
             <div className="flex flex-wrap items-center gap-2">
@@ -624,6 +646,7 @@ export function JobSeekerHelpSupportPageContent() {
 
           <section
             aria-labelledby="support-tickets-heading"
+            data-tour="seeker-help-tickets"
             className="rounded-2xl border border-border bg-surface p-3.5 shadow-sm sm:p-5"
           >
             <div className="flex items-start justify-between gap-2">
@@ -661,6 +684,7 @@ export function JobSeekerHelpSupportPageContent() {
 
           <section
             aria-labelledby="connect-heading"
+            data-tour="seeker-help-social"
             className="rounded-2xl border border-border bg-surface p-3.5 shadow-sm sm:p-5"
           >
             <h2

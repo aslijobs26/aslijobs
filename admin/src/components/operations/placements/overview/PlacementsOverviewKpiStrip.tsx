@@ -88,6 +88,7 @@ export function PlacementsOverviewKpiStrip({
   return (
     <section
       aria-label="Placement overview KPIs"
+      data-tour="ops-placements-kpis"
       className="grid grid-cols-2 gap-2 max-sm:gap-1.5 sm:grid-cols-3 xl:grid-cols-5"
     >
       {KPI_CARDS.map((card) => {

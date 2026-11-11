@@ -149,7 +149,10 @@ export function AnalyticsFilterBar({
       className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow sm:p-4"
       aria-label="Analytics filters"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-3">
+      <div
+        data-tour="ops-analytics-filters"
+        className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-3"
+      >
         <div className="flex min-w-0 items-center gap-2">
           <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
             <SlidersHorizontal className="size-4" aria-hidden />

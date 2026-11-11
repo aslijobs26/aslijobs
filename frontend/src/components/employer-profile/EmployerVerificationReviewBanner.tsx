@@ -51,9 +51,17 @@ const STEP_STATUS_CLASS: Record<VerificationStepState, string> = {
   upcoming: "bg-border-subtle text-muted",
 };
 
-export function EmployerVerificationReviewBanner() {
+type EmployerVerificationReviewBannerProps = {
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
+};
+
+export function EmployerVerificationReviewBanner({
+  dataTour,
+}: EmployerVerificationReviewBannerProps) {
   return (
     <section
+      data-tour={dataTour}
       className="employer-profile-banner mt-4 overflow-hidden rounded-xl border border-amber-200 bg-amber-50/80 shadow-sm lg:mt-2.5"
       aria-labelledby="profile-verification-review-title"
       aria-live="polite"

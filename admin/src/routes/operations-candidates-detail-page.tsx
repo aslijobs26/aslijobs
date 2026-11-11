@@ -136,6 +136,7 @@ export function OperationsCandidatesDetailPage() {
       <div className="mb-2.5 flex justify-end max-sm:mb-2 sm:mb-3">
         <Link
           to={OPERATIONS_ROUTES.CANDIDATES}
+          data-tour="ops-candidate-back"
           className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:h-7 max-sm:gap-1 max-sm:px-2 max-sm:text-[10px] sm:h-9 sm:px-3 sm:text-xs"
         >
           <ArrowLeft
@@ -207,7 +208,10 @@ export function OperationsCandidatesDetailPage() {
                   }
                 >
                   <div className="flex flex-col gap-2.5 max-sm:gap-2 sm:gap-3">
-                    <section className="rounded-xl border border-border-subtle bg-surface shadow-sm">
+                    <section
+                      data-tour="ops-candidate-applications"
+                      className="rounded-xl border border-border-subtle bg-surface shadow-sm"
+                    >
                       <div className="border-b border-border-subtle px-3 py-2 max-sm:px-2.5 max-sm:py-1.5 sm:px-4 sm:py-3">
                         <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
                           All Applications (
@@ -228,15 +232,17 @@ export function OperationsCandidatesDetailPage() {
                       />
                     </section>
                     {(applicationsPagination.total || 0) > 0 ? (
-                      <JobsPaginationBar
-                        pagination={applicationsPagination}
-                        ariaLabel="Candidate applications pagination"
-                        onPageChange={setApplicationsPage}
-                        onLimitChange={(nextLimit) => {
-                          setApplicationsLimit(nextLimit);
-                          setApplicationsPage(1);
-                        }}
-                      />
+                      <div data-tour="ops-candidate-applications-pagination">
+                        <JobsPaginationBar
+                          pagination={applicationsPagination}
+                          ariaLabel="Candidate applications pagination"
+                          onPageChange={setApplicationsPage}
+                          onLimitChange={(nextLimit) => {
+                            setApplicationsLimit(nextLimit);
+                            setApplicationsPage(1);
+                          }}
+                        />
+                      </div>
                     ) : null}
                   </div>
                 </OperationsCanKey>

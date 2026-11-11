@@ -89,7 +89,10 @@ export function PlatformKpisStrip({ kpis, rangeLabel, onOpenKpi }: PlatformKpisS
 
   return (
     <section aria-label="Platform KPIs" className="min-w-0">
-      <div className="mb-2 flex items-baseline justify-between gap-2">
+      <div
+        data-tour="ops-analytics-kpis"
+        className="mb-2 flex items-baseline justify-between gap-2"
+      >
         <h3 className="text-[13px] font-semibold text-foreground">
           Platform overview
         </h3>

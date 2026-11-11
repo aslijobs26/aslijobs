@@ -21,7 +21,10 @@ export function DashboardProfileCompletion({
   const t = useTranslate();
 
   return (
-    <section className="employer-rail-card overflow-hidden rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4">
+    <section
+      data-tour="employer-home-profile-completion"
+      className="employer-rail-card overflow-hidden rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4"
+    >
       <div className="flex items-center gap-2.5 sm:gap-3.5">
         <EmployerProfileCompletionCircle percentage={percentage} compact />
         <div className="min-w-0 flex-1">

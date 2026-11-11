@@ -72,7 +72,10 @@ export function OrganizationHierarchyPanel({
   }, [roots, filterQuery]);
 
   return (
-    <section className="flex min-h-[28rem] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm xl:min-h-[36rem]">
+    <section
+      data-tour="ops-org-hierarchy"
+      className="flex min-h-[28rem] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm xl:min-h-[36rem]"
+    >
       <header className="shrink-0 space-y-2 border-b border-border-subtle px-3 py-3">
         <h2 className="text-[13px] font-semibold tracking-tight text-foreground">
           Organization Hierarchy

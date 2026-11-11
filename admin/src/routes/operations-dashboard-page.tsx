@@ -135,10 +135,13 @@ export function OperationsDashboardPage() {
         </nav>
 
         <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
+          <div data-tour="ops-dashboard-modules" className="min-w-0">
             <OverviewModuleTabs active="overview" />
           </div>
-          <div className="flex min-w-0 flex-wrap items-end gap-2">
+          <div
+            data-tour="ops-dashboard-filters"
+            className="flex min-w-0 flex-wrap items-end gap-2"
+          >
             <div className="min-w-[140px] flex-1 sm:flex-none">
               <OperationsFilterSelect
                 label="Date range"

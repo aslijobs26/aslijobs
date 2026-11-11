@@ -36,6 +36,7 @@ export function JobDetailTabs({
 }: JobDetailTabsProps) {
   return (
     <div
+      data-tour="ops-job-tabs"
       className="-mx-0.5 flex touch-manipulation gap-0.5 overflow-x-auto overscroll-x-contain border-b border-border-subtle px-0.5 scrollbar-hidden max-sm:gap-1 sm:gap-1"
       role="tablist"
       aria-label="Job detail sections"

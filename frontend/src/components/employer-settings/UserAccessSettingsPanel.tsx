@@ -29,6 +29,7 @@ export function UserAccessSettingsPanel({
       <SettingsSection
         title="User & Access"
         description="Team members, roles, departments, and permissions are managed in Team Management."
+        dataTour="employer-settings-user-access"
         action={
           <Link
             href={ROUTES.EMPLOYER_TEAM_MANAGEMENT}
@@ -41,10 +42,14 @@ export function UserAccessSettingsPanel({
         <TeamManagementStatsCards
           stats={statsQuery.data}
           isLoading={statsQuery.isLoading}
+          dataTour="employer-settings-user-access-stats"
         />
       </SettingsSection>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div
+        data-tour="employer-settings-user-access-links"
+        className="grid gap-3 sm:grid-cols-2"
+      >
         <SettingCard
           title="Team Members"
           description="Invites, active members, and status"

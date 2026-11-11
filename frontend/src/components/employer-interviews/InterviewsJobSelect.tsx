@@ -16,6 +16,8 @@ type InterviewsJobSelectProps = {
   selectedPublicJobId: string | null;
   isLoading: boolean;
   onSelect: (publicJobId: string | null) => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 export function InterviewsJobSelect({
@@ -23,6 +25,7 @@ export function InterviewsJobSelect({
   selectedPublicJobId,
   isLoading,
   onSelect,
+  dataTour,
 }: InterviewsJobSelectProps) {
   const options = useMemo<EmployerRegisterSelectOption[]>(() => {
     const totalCount = jobTabs.reduce((sum, tab) => sum + tab.count, 0);
@@ -38,7 +41,7 @@ export function InterviewsJobSelect({
   }, [jobTabs]);
 
   return (
-    <div className="min-w-0 flex-1 sm:max-w-xs">
+    <div className="min-w-0 flex-1 sm:max-w-xs" data-tour={dataTour}>
       <EmployerRegisterSearchableSelect
         id="interviews-job-filter"
         label="Filter by job"

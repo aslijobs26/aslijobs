@@ -166,7 +166,9 @@ export function InterviewsTable({
       ) : null}
 
       {!showTable && !isError ? (
-        <div className="employer-interviews-empty px-3 py-6 text-left sm:px-4 sm:py-10 sm:text-center lg:px-4 lg:py-5">
+        <div
+          data-tour="employer-interviews-empty"
+          className="employer-interviews-empty px-3 py-6 text-left sm:px-4 sm:py-10 sm:text-center lg:px-4 lg:py-5">
           <p className="employer-interviews-empty__title text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
             {emptyTitle}
           </p>
@@ -188,7 +190,9 @@ export function InterviewsTable({
       {showTable ? (
       <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <table className="min-w-[64rem] w-full border-collapse text-left text-sm lg:text-xs">
-          <thead className="sticky top-0 z-10 bg-[#f7f8fa] text-[11px] font-semibold uppercase tracking-wide text-muted lg:text-[10px]">
+          <thead
+            data-tour="employer-interviews-table-head"
+            className="sticky top-0 z-10 bg-[#f7f8fa] text-[11px] font-semibold uppercase tracking-wide text-muted lg:text-[10px]">
             <tr className="border-b border-border-subtle">
               <th className="px-4 py-3.5 whitespace-nowrap">Candidate</th>
               <th className="px-4 py-3.5 whitespace-nowrap">Job ID</th>
@@ -197,6 +201,7 @@ export function InterviewsTable({
                 <button
                   type="button"
                   onClick={toggleDateSort}
+                  data-tour="employer-interviews-sort"
                   className="inline-flex items-center gap-1 uppercase tracking-wide text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                   aria-label={`Sort by interview date, currently ${sort === "interview_asc" ? "ascending" : "descending"}`}
                 >
@@ -228,7 +233,7 @@ export function InterviewsTable({
                 </tr>
               ))
             ) : (
-              interviews.map((item) => {
+              interviews.map((item, index) => {
                 const status = interviewDisplayStatus(item);
                 const interviewType = resolveInterviewTypeDisplay({
                   mode: item.interviewMode,
@@ -240,6 +245,9 @@ export function InterviewsTable({
                 return (
                   <tr
                     key={item.id}
+                    data-tour={
+                      index === 0 ? "employer-interviews-first-row" : undefined
+                    }
                     className="cursor-pointer border-b border-border-subtle transition-colors hover:bg-primary-light/20"
                     onClick={() => onRowOpen(item.id)}
                   >
@@ -307,6 +315,11 @@ export function InterviewsTable({
                     <td
                       className="relative px-4 py-3.5"
                       onClick={(event) => event.stopPropagation()}
+                      data-tour={
+                        index === 0
+                          ? "employer-interviews-first-row-actions"
+                          : undefined
+                      }
                     >
                       <button
                         type="button"
@@ -397,7 +410,9 @@ export function InterviewsTable({
       </div>
       ) : null}
 
-      <div className="employer-interviews-pager mt-auto flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border-subtle bg-surface px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:gap-2 lg:px-2.5 lg:py-1.5">
+      <div
+        data-tour="employer-interviews-pagination"
+        className="employer-interviews-pager mt-auto flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border-subtle bg-surface px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:gap-2 lg:px-2.5 lg:py-1.5">
         <p className="text-[11px] text-muted sm:text-xs lg:text-[11px]">
           Showing {from} to {to} of {total} interviews
         </p>

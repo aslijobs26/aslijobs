@@ -127,7 +127,7 @@ export function TeamMembersSidebar({
   return (
     <aside className="employer-team-sidebar space-y-4 lg:space-y-2.5">
       {canInviteMember ? (
-      <section className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
+      <section data-tour="employer-team-sidebar-invite" className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
         <h3 className="employer-team-sidebar__title text-sm font-bold text-foreground lg:text-xs">
           Invite Team Member
         </h3>
@@ -192,7 +192,7 @@ export function TeamMembersSidebar({
       </section>
       ) : null}
 
-      <section className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
+      <section data-tour="employer-team-sidebar-roles" className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
         <h3 className="employer-team-sidebar__title text-sm font-bold text-foreground lg:text-xs">
           Team by Role
         </h3>
@@ -253,7 +253,7 @@ export function TeamMembersSidebar({
         </button>
       </section>
 
-      <section className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
+      <section data-tour="employer-team-sidebar-activity" className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
         <div className="flex items-center justify-between gap-2">
           <h3 className="employer-team-sidebar__title text-sm font-bold text-foreground lg:text-xs">
             Recent Activity
@@ -301,7 +301,7 @@ export function TeamMembersSidebar({
         )}
       </section>
 
-      <section className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
+      <section data-tour="employer-team-sidebar-access" className="employer-team-sidebar__card rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
         <h3 className="employer-team-sidebar__title text-sm font-bold text-foreground lg:text-xs">
           Access Control
         </h3>

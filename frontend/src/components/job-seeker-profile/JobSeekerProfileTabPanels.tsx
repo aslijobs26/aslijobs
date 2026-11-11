@@ -80,11 +80,14 @@ function SectionCard({
   action,
   children,
   id,
+  dataTour,
 }: {
   title: string;
   action?: React.ReactNode;
   children: React.ReactNode;
   id?: string;
+  /** Product tour anchor (`data-tour`) for the section header row. */
+  dataTour?: string;
 }) {
   return (
     <section
@@ -92,7 +95,10 @@ function SectionCard({
       className="rounded-2xl border border-border-subtle bg-hero-bg/40 p-4 sm:p-5"
       aria-labelledby={id ? `${id}-heading` : undefined}
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div
+        data-tour={dataTour}
+        className="mb-4 flex flex-wrap items-center justify-between gap-2"
+      >
         <h2
           id={id ? `${id}-heading` : undefined}
           className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base"
@@ -144,6 +150,7 @@ export function JobSeekerProfileTabPanels({
     return (
       <div className="space-y-4">
         <SectionCard
+          dataTour="seeker-profile-about"
           title={t("seeker.profilePanels.aboutMe")}
           action={
             <button
@@ -167,7 +174,7 @@ export function JobSeekerProfileTabPanels({
           )}
         </SectionCard>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div data-tour="seeker-profile-snapshot" className="grid gap-3 sm:grid-cols-2">
           {(
             [
               {
@@ -224,7 +231,10 @@ export function JobSeekerProfileTabPanels({
           })}
         </div>
 
-        <SectionCard title={t("seeker.profilePanels.latestExperience")}>
+        <SectionCard
+          dataTour="seeker-profile-latest-experience"
+          title={t("seeker.profilePanels.latestExperience")}
+        >
           {latestExperience ? (
             <div className="rounded-xl border border-border-subtle bg-surface p-3.5">
               <p className="break-words text-xs font-bold text-foreground sm:text-sm">
@@ -250,6 +260,7 @@ export function JobSeekerProfileTabPanels({
         </SectionCard>
 
         <SectionCard
+          dataTour="seeker-profile-top-skills"
           title={t("seeker.profilePanels.topSkills")}
           action={
             <button
@@ -279,7 +290,10 @@ export function JobSeekerProfileTabPanels({
           )}
         </SectionCard>
 
-        <div className="rounded-2xl border border-primary/20 bg-primary-light/45 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div
+          data-tour="seeker-profile-ai-insights"
+          className="rounded-2xl border border-primary/20 bg-primary-light/45 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4"
+        >
           <div className="flex items-start gap-3">
             <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-surface sm:size-10">
               <Sparkles className="size-4 sm:size-5" aria-hidden="true" />
@@ -310,7 +324,10 @@ export function JobSeekerProfileTabPanels({
   if (activeTab === "experience") {
     return (
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div
+          data-tour="seeker-profile-experience-toolbar"
+          className="flex flex-wrap items-center justify-between gap-2"
+        >
           <p className="min-w-0 break-words text-xs text-muted sm:text-sm">
             {jobSeeker.experienceType === "fresher"
               ? t("seeker.profilePanels.registeredFresher")
@@ -345,6 +362,9 @@ export function JobSeekerProfileTabPanels({
             return (
             <SectionCard
               key={`${entry.companyName}-${entry.startDate}-${index}`}
+              dataTour={
+                index === 0 ? "seeker-profile-experience-first" : undefined
+              }
               title={t("seeker.profilePanels.experienceTitle", {
                 role: entry.jobRole,
                 company: entry.companyName,
@@ -420,7 +440,10 @@ export function JobSeekerProfileTabPanels({
     const education = jobSeeker.education;
     return (
       <div className="space-y-4">
-        <div className="flex flex-wrap justify-end gap-2">
+        <div
+          data-tour="seeker-profile-education-actions"
+          className="flex flex-wrap justify-end gap-2"
+        >
           {education?.level ? (
             <>
               <button
@@ -454,7 +477,10 @@ export function JobSeekerProfileTabPanels({
             </button>
           )}
         </div>
-        <SectionCard title={t("seeker.profilePanels.education")}>
+        <SectionCard
+          dataTour="seeker-profile-education"
+          title={t("seeker.profilePanels.education")}
+        >
           {education?.level ? (
             <div className="flex gap-3">
               <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary sm:size-10">
@@ -497,6 +523,7 @@ export function JobSeekerProfileTabPanels({
   if (activeTab === "skills") {
     return (
       <SectionCard
+        dataTour="seeker-profile-skills"
         title={t("seeker.profilePanels.skills")}
         action={
           <button
@@ -533,7 +560,10 @@ export function JobSeekerProfileTabPanels({
     const hasResume = Boolean(resume && resume.status !== "NOT_GENERATED");
     return (
       <SectionCard title={t("seeker.profilePanels.resume")}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div
+          data-tour="seeker-profile-documents"
+          className="flex flex-wrap items-start justify-between gap-3"
+        >
           <div className="min-w-0">
             <p className="text-xs font-semibold text-foreground sm:text-sm">
               {t("seeker.profilePanels.myResume")}
@@ -643,6 +673,7 @@ export function JobSeekerProfileTabPanels({
     return (
       <div className="space-y-4">
         <SectionCard
+          dataTour="seeker-profile-preferences"
           title={t("seeker.profilePanels.careerPreferences")}
           action={
             <button
@@ -713,7 +744,10 @@ export function JobSeekerProfileTabPanels({
           </dl>
         </SectionCard>
 
-        <SectionCard title={t("seeker.profilePanels.languagesContact")}>
+        <SectionCard
+          dataTour="seeker-profile-languages-contact"
+          title={t("seeker.profilePanels.languagesContact")}
+        >
           <div className="space-y-4">
             <div>
               <div className="mb-2 flex items-center gap-2">
@@ -767,7 +801,10 @@ export function JobSeekerProfileTabPanels({
   if (activeTab === "activity") {
     return (
       <div className="space-y-4">
-        <SectionCard title={t("seeker.profilePanels.recentlyApplied")}>
+        <SectionCard
+          dataTour="seeker-profile-activity-applied"
+          title={t("seeker.profilePanels.recentlyApplied")}
+        >
           {isApplicationsLoading ? (
             <JobSeekerActivityListSkeleton rows={3} />
           ) : applications.length === 0 ? (
@@ -804,7 +841,10 @@ export function JobSeekerProfileTabPanels({
           )}
         </SectionCard>
 
-        <SectionCard title={t("seeker.profilePanels.savedJobs")}>
+        <SectionCard
+          dataTour="seeker-profile-activity-saved"
+          title={t("seeker.profilePanels.savedJobs")}
+        >
           {isSavedJobsLoading ? (
             <JobSeekerActivityListSkeleton rows={3} />
           ) : savedJobs.length === 0 ? (
@@ -830,7 +870,10 @@ export function JobSeekerProfileTabPanels({
           )}
         </SectionCard>
 
-        <SectionCard title={t("seeker.profilePanels.notifications")}>
+        <SectionCard
+          dataTour="seeker-profile-activity-notifications"
+          title={t("seeker.profilePanels.notifications")}
+        >
           {isNotificationsLoading ? (
             <JobSeekerActivityListSkeleton rows={2} />
           ) : notifications.length === 0 ? (

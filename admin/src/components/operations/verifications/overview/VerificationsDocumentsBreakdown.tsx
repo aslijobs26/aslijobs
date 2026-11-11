@@ -15,6 +15,7 @@ export function VerificationsDocumentsBreakdown({
 
   return (
     <OperationsCard
+      dataTour="ops-verifications-documents"
       title="Document Verification Breakdown"
       className="employers-analytics-card min-w-0"
       action={

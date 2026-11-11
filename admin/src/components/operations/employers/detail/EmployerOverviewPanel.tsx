@@ -24,13 +24,16 @@ function SectionCard({
   title,
   icon: Icon,
   children,
+  dataTour,
 }: {
   title: string;
   icon: typeof Briefcase;
   children: React.ReactNode;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   return (
-    <section className="@container flex h-full min-h-0 min-w-0 flex-col rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow max-sm:rounded-lg sm:p-3.5">
+    <section data-tour={dataTour} className="@container flex h-full min-h-0 min-w-0 flex-col rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow max-sm:rounded-lg sm:p-3.5">
       <header className="flex min-w-0 shrink-0 items-center gap-2 border-b border-border-subtle pb-2">
         <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
           <Icon className="size-3.5" aria-hidden="true" />
@@ -150,7 +153,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
   return (
     <div className="space-y-3 max-sm:space-y-2.5 sm:space-y-4">
       {/* KPI Stats Strip */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6">
+      <div data-tour="ops-employer-kpis" className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6">
         <article className="min-w-0 rounded-lg border border-border-subtle bg-surface p-2 shadow-xs sm:rounded-xl sm:p-3">
           <div className="flex min-w-0 items-center gap-1.5 text-muted">
             <Briefcase className="size-3.5 shrink-0 text-primary" />
@@ -226,7 +229,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
 
       {/* Account Type Specific Details & Contacts */}
       {isIndividual ? (
-        <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2 lg:gap-3.5">
+        <div data-tour="ops-employer-details" className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2 lg:gap-3.5">
           <SectionCard title="Individual & Account Details" icon={UserCheck}>
             <InfoGrid>
               <InfoRow
@@ -321,7 +324,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
           </SectionCard>
         </div>
       ) : isConsultancy ? (
-        <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2 lg:gap-3.5">
+        <div data-tour="ops-employer-details" className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2 lg:gap-3.5">
           <SectionCard title="Consultancy Details" icon={Building}>
             <InfoGrid>
               <InfoRow
@@ -446,7 +449,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
           </SectionCard>
         </div>
       ) : (
-        <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2 lg:gap-3.5">
+        <div data-tour="ops-employer-details" className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2 lg:gap-3.5">
           <SectionCard title="Company & Organization Details" icon={Building}>
             <InfoGrid>
               <InfoRow
@@ -605,6 +608,7 @@ export function EmployerOverviewPanel({ employer }: EmployerOverviewPanelProps) 
                 : "About Company & Culture"
           }
           icon={Globe}
+          dataTour="ops-employer-about"
         >
           <div className="space-y-3 text-xs">
             {hasText(employer.companyDescription) ? (

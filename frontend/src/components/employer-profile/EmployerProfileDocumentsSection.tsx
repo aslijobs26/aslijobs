@@ -33,6 +33,10 @@ import { useId, useRef, useState } from "react";
 type EmployerProfileDocumentsSectionProps = {
   accountType: "company" | "consultancy" | "individual";
   canUpdate: boolean;
+  /** Product tour anchor (`data-tour`) for the section header. */
+  dataTour?: string;
+  /** Product tour anchor (`data-tour`) for the first document's actions. */
+  firstDocumentActionsDataTour?: string;
 };
 
 type DocumentEditorMode = "upload" | "reupload";
@@ -123,6 +127,8 @@ function getErrorMessage(error: unknown, fallback: string): string {
 export function EmployerProfileDocumentsSection({
   accountType,
   canUpdate,
+  dataTour,
+  firstDocumentActionsDataTour,
 }: EmployerProfileDocumentsSectionProps) {
   const queryClient = useQueryClient();
   const fileInputId = useId();
@@ -302,7 +308,7 @@ export function EmployerProfileDocumentsSection({
       data-profile-section="documents"
       className="employer-profile-card overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
     >
-      <header className="employer-profile-card__header flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 lg:min-h-10 lg:px-3.5 lg:py-2.5">
+      <header data-tour={dataTour} className="employer-profile-card__header flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 lg:min-h-10 lg:px-3.5 lg:py-2.5">
         <h2 className="employer-profile-card__title text-sm font-bold text-foreground lg:text-xs">
           {title}
         </h2>
@@ -344,7 +350,7 @@ export function EmployerProfileDocumentsSection({
           </p>
         ) : (
           <ul className="employer-profile-doc-list mt-4 grid gap-3 sm:grid-cols-2 lg:mt-3 lg:gap-2">
-            {documents.map((doc) => (
+            {documents.map((doc, index) => (
               <li
                 key={doc.id}
                 className="employer-profile-doc-card flex min-w-0 flex-col justify-between rounded-xl border border-border-subtle bg-hero-bg/40 p-3 lg:p-2"
@@ -377,7 +383,11 @@ export function EmployerProfileDocumentsSection({
                   </div>
                 </div>
 
-                <div className="employer-profile-doc-card__actions mt-3 flex flex-wrap gap-1.5 border-t border-border-subtle pt-3 lg:mt-2 lg:pt-2">
+                <div
+                  data-tour={
+                    index === 0 ? firstDocumentActionsDataTour : undefined
+                  }
+                  className="employer-profile-doc-card__actions mt-3 flex flex-wrap gap-1.5 border-t border-border-subtle pt-3 lg:mt-2 lg:pt-2">
                   <button
                     type="button"
                     onClick={() => void handlePreview(doc)}

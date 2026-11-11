@@ -51,6 +51,7 @@ export function SecurityPanel({
       <SettingsSection
         title="Authentication"
         description="How you sign in to this workspace."
+        dataTour="employer-settings-authentication"
       >
         <dl className="grid gap-3 sm:grid-cols-2 lg:gap-2">
           <div className="employer-settings-meta-tile rounded-lg border border-border-subtle px-3 py-2.5 lg:px-2 lg:py-1.5">
@@ -73,6 +74,7 @@ export function SecurityPanel({
       </SettingsSection>
 
       <SecurityCard
+        dataTour="employer-settings-security"
         actions={[
           {
             id: "logout",

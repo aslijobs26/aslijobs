@@ -39,7 +39,7 @@ export function EmployerJobsPanel({ employerId }: EmployerJobsPanelProps) {
 
   return (
     <div className="space-y-3 max-sm:space-y-2.5 sm:space-y-4">
-      <div className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm max-sm:gap-2 max-sm:rounded-lg max-sm:p-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-4">
+      <div data-tour="ops-employer-jobs-toolbar" className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm max-sm:gap-2 max-sm:rounded-lg max-sm:p-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-4">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <Briefcase className="size-3.5 text-primary sm:size-4" />
           <h3 className="text-[12px] font-bold text-foreground sm:text-sm">
@@ -77,7 +77,7 @@ export function EmployerJobsPanel({ employerId }: EmployerJobsPanelProps) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm max-sm:rounded-lg">
+      <div data-tour="ops-employer-jobs-list" className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm max-sm:rounded-lg">
         <div className="overflow-x-auto overscroll-x-contain scrollbar-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <table className="min-w-[700px] text-left text-xs xl:min-w-full">
             <thead className="border-b border-border-subtle bg-hero-bg/60 text-[10px] font-semibold uppercase text-muted">
@@ -186,7 +186,7 @@ export function EmployerJobsPanel({ employerId }: EmployerJobsPanelProps) {
         </div>
 
         {pagination && pagination.total > 0 ? (
-          <div className="border-t border-border-subtle p-3">
+          <div data-tour="ops-employer-jobs-pagination" className="border-t border-border-subtle p-3">
             <JobsPaginationBar
               pagination={pagination}
               onPageChange={setPage}

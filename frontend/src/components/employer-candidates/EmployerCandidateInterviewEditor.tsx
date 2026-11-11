@@ -29,6 +29,8 @@ type EmployerCandidateInterviewEditorProps = {
   onSave: (payload: EmployerInterviewSavePayload) => void;
   className?: string;
   compact?: boolean;
+  /** Product tour anchor (`data-tour`) for the schedule / update button. */
+  submitDataTour?: string;
 };
 
 const EMPTY_INTERVIEW: ApplicationInterview = {
@@ -546,6 +548,7 @@ export function EmployerCandidateInterviewEditor({
   onSave,
   className,
   compact = false,
+  submitDataTour,
 }: EmployerCandidateInterviewEditorProps) {
   const [draft, setDraft] = useState<ApplicationInterview>(() =>
     normalizeInterview(application.interview),
@@ -1035,6 +1038,7 @@ export function EmployerCandidateInterviewEditor({
         type="button"
         disabled={!canSubmit}
         onClick={handleSubmit}
+        data-tour={submitDataTour}
         className={cn(
           "inline-flex min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60",
           !compact && "min-h-10 w-full text-sm",

@@ -267,7 +267,7 @@ export function EmployerDocumentsPanel({
 
   return (
     <div className="space-y-3 max-sm:space-y-2.5 sm:space-y-4">
-      <div className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm max-sm:rounded-lg max-sm:p-2 sm:p-4 lg:p-5">
+      <div data-tour="ops-employer-documents" className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm max-sm:rounded-lg max-sm:p-2 sm:p-4 lg:p-5">
         <div className="flex items-center justify-between border-b border-border-subtle pb-2 max-sm:pb-1.5 sm:pb-3">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <FileText className="size-3.5 text-primary sm:size-4" aria-hidden="true" />
@@ -289,7 +289,7 @@ export function EmployerDocumentsPanel({
           </div>
         ) : (
           <div className="mt-2.5 grid gap-2 max-sm:mt-2 max-sm:gap-1.5 sm:mt-4 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
-            {documents.map((doc) => {
+            {documents.map((doc, index) => {
               const accessible = canAccessDocument(
                 doc,
                 employerId,
@@ -338,7 +338,12 @@ export function EmployerDocumentsPanel({
                     </p>
                   </div>
 
-                  <div className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-2 max-sm:mt-2.5 sm:mt-4 sm:gap-2 sm:pt-2.5">
+                  <div
+                    data-tour={
+                      index === 0 ? "ops-employer-document-actions" : undefined
+                    }
+                    className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-2 max-sm:mt-2.5 sm:mt-4 sm:gap-2 sm:pt-2.5"
+                  >
                     {accessible ? (
                       <>
                         <OperationsCanKey permissionKey="employers.profile.documents.view">

@@ -77,7 +77,7 @@ export function OrganizationUnitDetail({
   return (
     <section className="flex min-h-[24rem] flex-col rounded-xl border border-border-subtle bg-surface shadow-sm xl:min-h-[32rem]">
       <header className="flex flex-col gap-3 border-b border-border-subtle px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:px-4">
-        <div className="min-w-0">
+        <div data-tour="ops-org-unit" className="min-w-0">
           <h2 className="truncate text-[18px] font-semibold tracking-tight text-foreground">
             {unit.name}
           </h2>
@@ -85,7 +85,10 @@ export function OrganizationUnitDetail({
             {formatPartOfLabel(overview?.breadcrumbs, unit.type)}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          data-tour="ops-org-unit-actions"
+          className="flex flex-wrap items-center gap-2"
+        >
           <OperationsCan module="team" action="update">
             <button
               type="button"
@@ -121,6 +124,7 @@ export function OrganizationUnitDetail({
       </header>
 
       <div
+        data-tour="ops-org-unit-tabs"
         role="tablist"
         aria-label="Unit sections"
         className="flex gap-1 overflow-x-auto border-b border-border-subtle px-2 scrollbar-hidden"

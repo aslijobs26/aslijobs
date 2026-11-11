@@ -16,6 +16,8 @@ type InterviewsTodayScheduleProps = {
   onSelect: (applicationId: string) => void;
   onScheduleInterview?: () => void;
   onViewAll: () => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 type ScheduleStatusKey =
@@ -127,6 +129,7 @@ export function InterviewsTodaySchedule({
   onSelect,
   onScheduleInterview,
   onViewAll,
+  dataTour,
 }: InterviewsTodayScheduleProps) {
   const sortedItems = useMemo(
     () =>
@@ -140,7 +143,10 @@ export function InterviewsTodaySchedule({
   const hasItems = !isLoading && sortedItems.length > 0;
 
   return (
-    <section className="employer-interviews-today flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+    <section
+      className="employer-interviews-today flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      data-tour={dataTour}
+    >
       <header className="employer-interviews-today__header flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-3 py-3 sm:px-4 lg:px-2.5 lg:py-2">
         <h2 className="text-sm font-semibold text-foreground lg:text-xs">
           Today&apos;s Schedule

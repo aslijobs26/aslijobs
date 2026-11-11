@@ -40,7 +40,10 @@ export function AnalyticsPageHeader({
   hideControls = false,
 }: AnalyticsPageHeaderProps) {
   return (
-    <header className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5">
+    <header
+      data-tour="ops-analytics-header"
+      className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5"
+    >
       <nav
         aria-label="Breadcrumb"
         className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted"

@@ -66,6 +66,7 @@ export function PlacementsJoiningStatusDonut({
 
   return (
     <OperationsCard
+      dataTour="ops-placements-joining"
       title="Joining Status"
       subtitle="Current joining mix"
       className="placements-analytics-card min-w-0"

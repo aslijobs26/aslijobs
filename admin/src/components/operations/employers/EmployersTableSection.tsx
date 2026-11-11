@@ -134,9 +134,10 @@ export function EmployersTableSection({
         ) : null}
         {!isLoading &&
           !isError &&
-          employers.map((emp) => (
+          employers.map((emp, index) => (
             <EmployersMobileCard
               key={emp.id}
+              dataTour={index === 0 ? "ops-employers-list" : undefined}
               employer={emp}
               onVerify={onVerify}
               onReject={onReject}
@@ -148,7 +149,10 @@ export function EmployersTableSection({
 
       <div className="hidden overflow-x-auto overscroll-x-contain scrollbar-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:block">
         <table className="min-w-[960px] text-left text-xs xl:min-w-full xl:text-[11px]">
-          <thead className="border-b border-border-subtle bg-hero-bg/60 text-muted">
+          <thead
+            data-tour="ops-employers-list"
+            className="border-b border-border-subtle bg-hero-bg/60 text-muted"
+          >
             <tr>
               <th scope="col" className={thClassName}>
                 Company Name
@@ -201,7 +205,7 @@ export function EmployersTableSection({
             ) : null}
             {!isLoading &&
               !isError &&
-              employers.map((emp) => {
+              employers.map((emp, index) => {
                 const companyName = employerProvidedDisplayName(emp);
                 const registered = formatEmployerRegisteredParts(emp);
 
@@ -308,7 +312,9 @@ export function EmployersTableSection({
                       </OperationsBadge>
                     </td>
 
-                    <td className="whitespace-nowrap py-3 pl-3 pr-4 text-right sm:pl-3.5 xl:py-2 xl:pl-2.5 xl:pr-3 xl:[&_button]:h-7 xl:[&_button]:min-h-0 xl:[&_a]:h-7 xl:[&_a]:px-2 xl:[&_a]:text-[10px] xl:[&_button.size-8]:size-7">
+                    <td
+                      data-tour={index === 0 ? "ops-employers-row-actions" : undefined}
+                      className="whitespace-nowrap py-3 pl-3 pr-4 text-right sm:pl-3.5 xl:py-2 xl:pl-2.5 xl:pr-3 xl:[&_button]:h-7 xl:[&_button]:min-h-0 xl:[&_a]:h-7 xl:[&_a]:px-2 xl:[&_a]:text-[10px] xl:[&_button.size-8]:size-7">
                       <EmployersRowActions
                         employer={emp}
                         onVerify={onVerify}

@@ -21,6 +21,7 @@ export function LanguageSettingsPanel() {
 
   return (
     <SettingsSection
+      dataTour="seeker-settings-language"
       title="Language"
       description="Choose your preferred language for the job seeker website and WhatsApp notifications."
     >

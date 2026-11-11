@@ -190,8 +190,11 @@ export function JobsTableSection({
         ) : null}
         {!isLoading && !isError && jobs.length > 0 ? (
           <ul className="flex flex-col gap-2.5 p-2.5">
-            {jobs.map((job) => (
-              <li key={job.id}>
+            {jobs.map((job, index) => (
+              <li
+                key={job.id}
+                data-tour={index === 0 ? "ops-jobs-list" : undefined}
+              >
                 <JobsMobileJobCard
                   job={job}
                   pendingStatusJobId={pendingStatusJobId}
@@ -217,14 +220,18 @@ export function JobsTableSection({
         ) : null}
         {!isLoading && !isError && jobs.length > 0 ? (
           <ul className="divide-y divide-border-subtle">
-            {jobs.map((job) => {
+            {jobs.map((job, index) => {
               const posted = formatPostedDate(job.publishedAt ?? job.createdAt);
               const showVerified =
                 job.employer.isWhatsappVerified ||
                 job.employer.registrationCompleted;
 
               return (
-                <li key={job.id} className="px-3 py-3 sm:px-3.5">
+                <li
+                  key={job.id}
+                  data-tour={index === 0 ? "ops-jobs-list" : undefined}
+                  className="px-3 py-3 sm:px-3.5"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="font-mono text-[10px] font-medium text-muted">
@@ -315,7 +322,7 @@ export function JobsTableSection({
       {/* Desktop table with contained horizontal scroll */}
       <div className="hidden min-w-0 max-w-full overflow-x-auto overscroll-x-contain scrollbar-hidden lg:block">
         <table className="w-full min-w-[920px] border-collapse text-left text-xs leading-snug xl:min-w-full xl:text-[11px]">
-          <thead>
+          <thead data-tour="ops-jobs-list">
             <tr className="ops-brand-border-glow border-y border-border-subtle bg-hero-bg/40">
               <th className={thClassName}>Job ID</th>
               <th className={thClassName}>Job Title</th>
@@ -346,7 +353,7 @@ export function JobsTableSection({
 
             {!isLoading &&
               !isError &&
-              jobs.map((job) => {
+              jobs.map((job, index) => {
                 const posted = formatPostedDate(job.publishedAt ?? job.createdAt);
                 const showVerified =
                   job.employer.isWhatsappVerified ||
@@ -492,7 +499,10 @@ export function JobsTableSection({
                       ) : null}
                     </td>
 
-                    <td className={cn(tdClassName, "text-right")}>
+                    <td
+                      data-tour={index === 0 ? "ops-jobs-row-actions" : undefined}
+                      className={cn(tdClassName, "text-right")}
+                    >
                       <JobsRowActions
                         job={job}
                         pendingStatusJobId={pendingStatusJobId}

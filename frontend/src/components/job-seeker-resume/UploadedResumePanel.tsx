@@ -29,6 +29,8 @@ type UploadedResumePanelProps = {
   onReplaceClick: () => void;
   onDelete: () => void;
   onSetDefault: (source: ApplicationResumeSource) => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 function formatDate(value: string | null): string {
@@ -71,6 +73,7 @@ export function UploadedResumePanel({
   onReplaceClick,
   onDelete,
   onSetDefault,
+  dataTour,
 }: UploadedResumePanelProps) {
   const isDefault = defaultResumeSource === "uploaded";
   const [isDownloading, setIsDownloading] = useState(false);
@@ -98,7 +101,10 @@ export function UploadedResumePanel({
   };
 
   return (
-    <section className="resume-no-print rounded-2xl border border-border-subtle bg-surface p-3.5 shadow-sm sm:p-5">
+    <section
+      data-tour={dataTour}
+      className="resume-no-print rounded-2xl border border-border-subtle bg-surface p-3.5 shadow-sm sm:p-5"
+    >
       <div className="flex items-start gap-3">
         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-resource-salary-surface text-resource-salary-icon sm:size-10 sm:rounded-full">
           <FileUp className="size-4 sm:size-5" aria-hidden="true" />

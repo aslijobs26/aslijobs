@@ -16,6 +16,7 @@ export function ApplicationSettingsPanel() {
       <SettingsSection
         title="Application Settings"
         description="Hiring stages and transitions are enforced by the applications service. Employers move candidates through the Candidates workspace."
+        dataTour="employer-settings-application"
         action={
           <Link
             href={ROUTES.EMPLOYER_CANDIDATES}

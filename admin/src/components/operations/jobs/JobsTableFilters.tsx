@@ -85,7 +85,7 @@ export function JobsTableFilters({
   ].filter(Boolean).length;
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-border-subtle/80 bg-hero-bg/50 p-2 xl:gap-1.5 xl:p-1.5 dark:bg-hero-bg/40">
+    <div data-tour="ops-jobs-filters" className="flex min-w-0 flex-col gap-2 rounded-lg border border-border-subtle/80 bg-hero-bg/50 p-2 xl:gap-1.5 xl:p-1.5 dark:bg-hero-bg/40">
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <form
           className="relative block min-w-0 sm:min-w-[12rem] sm:max-w-xs sm:flex-1 xl:max-w-[14rem]"

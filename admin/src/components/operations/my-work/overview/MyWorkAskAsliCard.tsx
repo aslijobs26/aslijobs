@@ -10,7 +10,9 @@ export function MyWorkAskAsliCard() {
   ];
 
   return (
-    <section className="rounded-xl border border-primary/15 bg-gradient-to-br from-[#EFF6FF] to-[#F8FAFC] p-3.5 shadow-sm dark:from-primary/10 dark:to-surface">
+    <section
+      data-tour="ops-my-work-assistant"
+      className="rounded-xl border border-primary/15 bg-gradient-to-br from-[#EFF6FF] to-[#F8FAFC] p-3.5 shadow-sm dark:from-primary/10 dark:to-surface">
       <div className="flex items-start gap-2.5">
         <img
           src="/assets/ask-asli-robot.png"

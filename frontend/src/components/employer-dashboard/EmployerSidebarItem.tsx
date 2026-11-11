@@ -29,6 +29,7 @@ export function EmployerSidebarItem({
   return (
     <Link
       href={item.href}
+      data-tour={`employer-nav-${item.id}`}
       onClick={onNavigate}
       aria-current={isActive ? "page" : undefined}
       aria-label={ariaLabel}

@@ -51,6 +51,7 @@ export function WebsiteTrafficPanel({
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <OperationsCard
+        headerDataTour="ops-analytics-traffic"
         title="Website traffic"
         subtitle={
           traffic.scopeNote

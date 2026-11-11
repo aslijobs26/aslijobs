@@ -92,7 +92,7 @@ export function MembersTable({
 
   if (!isLoading && members.length === 0) {
     return (
-      <div className="employer-team-table__empty flex flex-col items-center justify-center px-4 py-12 text-center lg:px-3 lg:py-8">
+      <div data-tour="employer-team-members-empty" className="employer-team-table__empty flex flex-col items-center justify-center px-4 py-12 text-center lg:px-3 lg:py-8">
         <p className="text-sm text-muted lg:text-xs">
           No team members yet. Invite your first teammate to get started.
         </p>
@@ -103,7 +103,7 @@ export function MembersTable({
   return (
     <div className="min-w-0 overflow-x-auto overscroll-x-contain scrollbar-hidden">
       <table className="employer-team-table min-w-[70rem] w-full border-collapse text-left">
-        <thead>
+        <thead data-tour="employer-team-members-thead">
           <tr className="border-b border-border-subtle bg-hero-bg/60 text-xs font-semibold uppercase tracking-wide text-muted">
             <th className="px-4 py-3 lg:px-3 lg:py-2">Member</th>
             <th className="px-4 py-3 lg:px-3 lg:py-2">Role</th>
@@ -128,7 +128,7 @@ export function MembersTable({
             : null}
 
           {!isLoading
-            ? members.map((member) => {
+            ? members.map((member, index) => {
                 const isYou =
                   normalizedCurrentEmail.length > 0 &&
                   member.email.trim().toLowerCase() === normalizedCurrentEmail;
@@ -136,6 +136,9 @@ export function MembersTable({
                 return (
                 <tr
                   key={member.id}
+                  data-tour={
+                    index === 0 ? "employer-team-members-first-row" : undefined
+                  }
                   className="border-b border-border-subtle last:border-b-0 hover:bg-primary-light/20"
                 >
                   <td className="px-4 py-3.5 lg:px-3 lg:py-2">
@@ -208,7 +211,14 @@ export function MembersTable({
                   <td className="px-4 py-3.5 lg:px-3 lg:py-2 text-sm text-muted">
                     {formatLastActive(member.lastActiveAt)}
                   </td>
-                  <td className="px-4 py-3.5 lg:px-3 lg:py-2">
+                  <td
+                    data-tour={
+                      index === 0
+                        ? "employer-team-members-first-actions"
+                        : undefined
+                    }
+                    className="px-4 py-3.5 lg:px-3 lg:py-2"
+                  >
                     <div className="flex items-center justify-end gap-1">
                       {member.status === "invited" ? (
                         canCreateMember || canUpdateMember ? (

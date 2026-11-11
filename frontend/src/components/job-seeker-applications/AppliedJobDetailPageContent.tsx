@@ -185,6 +185,7 @@ export function AppliedJobDetailPageContent({
       <div className="mb-4">
         <Link
           href={ROUTES.JOB_SEEKER_APPLIED_JOBS}
+          data-tour="seeker-application-back"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm"
         >
           <ArrowLeft className="size-3.5 sm:size-4" aria-hidden="true" />
@@ -194,7 +195,7 @@ export function AppliedJobDetailPageContent({
 
       <header className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-2.5 sm:gap-3">
-          <div className="min-w-0">
+          <div data-tour="seeker-application-summary" className="min-w-0">
             <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               {displayJobTitle}
             </h1>
@@ -207,12 +208,18 @@ export function AppliedJobDetailPageContent({
                 .join(" · ")}
             </p>
           </div>
-          <span className="inline-flex rounded-full bg-primary-light/60 px-2 py-0.5 text-[11px] font-semibold text-foreground ring-1 ring-inset ring-border-subtle sm:px-2.5 sm:py-1 sm:text-xs">
+          <span
+            data-tour="seeker-application-status"
+            className="inline-flex rounded-full bg-primary-light/60 px-2 py-0.5 text-[11px] font-semibold text-foreground ring-1 ring-inset ring-border-subtle sm:px-2.5 sm:py-1 sm:text-xs"
+          >
             {t(APPLICATION_STATUS_LABEL_KEYS[status])}
           </span>
         </div>
 
-        <div className="mt-3.5 flex flex-wrap gap-2 sm:mt-4">
+        <div
+          data-tour="seeker-application-actions"
+          className="mt-3.5 flex flex-wrap gap-2 sm:mt-4"
+        >
           <Link
             href={jobHref}
             className="inline-flex min-h-9 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
@@ -302,7 +309,10 @@ export function AppliedJobDetailPageContent({
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
         <div className="space-y-6">
           <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
-            <h2 className="text-sm font-semibold text-foreground">
+            <h2
+              data-tour="seeker-application-timeline"
+              className="text-sm font-semibold text-foreground"
+            >
               {t("seeker.applicationDetail.timeline")}
             </h2>
             <ol className="mt-4 space-y-3">
@@ -337,7 +347,10 @@ export function AppliedJobDetailPageContent({
               id="interview-details"
               className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4 sm:p-5"
             >
-              <h2 className="text-sm font-semibold text-foreground">
+              <h2
+                data-tour="seeker-application-interview"
+                className="text-sm font-semibold text-foreground"
+              >
                 {t("seeker.applicationDetail.interviewDetails")}
               </h2>
               <div className="mt-3">
@@ -354,7 +367,10 @@ export function AppliedJobDetailPageContent({
               id="offer-details"
               className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4 sm:p-5"
             >
-              <h2 className="text-sm font-semibold text-foreground">
+              <h2
+                data-tour="seeker-application-offer"
+                className="text-sm font-semibold text-foreground"
+              >
                 {t("seeker.applicationDetail.offerDetails")}
               </h2>
               <dl className="mt-3 space-y-2 text-sm">
@@ -428,7 +444,10 @@ export function AppliedJobDetailPageContent({
               id="rejection-feedback"
               className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4 sm:p-5"
             >
-              <h2 className="text-sm font-semibold text-foreground">
+              <h2
+                data-tour="seeker-application-rejection"
+                className="text-sm font-semibold text-foreground"
+              >
                 {t("seeker.applicationDetail.rejectionReason")}
               </h2>
               <p className="mt-2 text-sm text-muted">{application.rejectReason}</p>
@@ -437,7 +456,10 @@ export function AppliedJobDetailPageContent({
 
           {application.employerNotes !== null && application.employerNotes ? (
             <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
-              <h2 className="text-sm font-semibold text-foreground">
+              <h2
+                data-tour="seeker-application-employer-notes"
+                className="text-sm font-semibold text-foreground"
+              >
                 {t("seeker.applicationDetail.employerNotes")}
               </h2>
               <p className="mt-2 whitespace-pre-wrap text-sm text-muted">
@@ -447,7 +469,10 @@ export function AppliedJobDetailPageContent({
           ) : null}
 
           <section>
-            <h2 className="mb-3 text-sm font-semibold text-foreground">
+            <h2
+              data-tour="seeker-application-resume"
+              className="mb-3 text-sm font-semibold text-foreground"
+            >
               {t("seeker.applicationDetail.resumeUsed")}
             </h2>
             <p className="mb-3 break-words text-sm text-muted">
@@ -476,7 +501,10 @@ export function AppliedJobDetailPageContent({
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-24">
-          <section className="rounded-xl border border-border-subtle bg-surface p-4">
+          <section
+            data-tour="seeker-application-info"
+            className="rounded-xl border border-border-subtle bg-surface p-4"
+          >
             <h2 className="text-sm font-semibold text-foreground">
               {t("seeker.applicationDetail.info")}
             </h2>

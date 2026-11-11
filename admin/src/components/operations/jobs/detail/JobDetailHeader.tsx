@@ -46,12 +46,16 @@ function FieldLabel({ children }: { children: ReactNode }) {
 function HeaderColumn({
   children,
   className,
+  dataTour,
 }: {
   children: ReactNode;
   className?: string;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   return (
     <div
+      data-tour={dataTour}
       className={cn(
         "min-w-0 border-t border-border-subtle pt-3 first:border-t-0 first:pt-0 max-sm:pt-3 sm:pt-4 lg:border-t-0 lg:pt-0",
         className,
@@ -144,7 +148,10 @@ export function JobDetailHeader({
       <div className="flex flex-col gap-3 max-sm:gap-3 sm:gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-5">
         <div className="grid min-w-0 grid-cols-1 gap-0 sm:gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-border-subtle">
           {/* Job identity */}
-          <HeaderColumn className="flex min-w-0 gap-2.5 max-sm:gap-2.5 sm:gap-3 lg:pr-4">
+          <HeaderColumn
+            dataTour="ops-job-identity"
+            className="flex min-w-0 gap-2.5 max-sm:gap-2.5 sm:gap-3 lg:pr-4"
+          >
             <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 ring-1 ring-warning/10 max-sm:size-9 sm:size-11">
               <Hammer className="size-4 text-warning sm:size-5" aria-hidden="true" />
             </span>
@@ -215,7 +222,7 @@ export function JobDetailHeader({
           </HeaderColumn>
 
           {/* Employer */}
-          <HeaderColumn className="lg:px-4">
+          <HeaderColumn dataTour="ops-job-employer" className="lg:px-4">
             <FieldLabel>Posted by</FieldLabel>
             <div className="mt-1.5 flex items-center gap-2 max-sm:mt-1.5 sm:mt-2">
               <EmployerLogo
@@ -255,7 +262,10 @@ export function JobDetailHeader({
           </HeaderColumn>
 
           {/* Location & category */}
-          <HeaderColumn className="md:col-span-2 lg:col-span-1 lg:px-4">
+          <HeaderColumn
+            dataTour="ops-job-location"
+            className="md:col-span-2 lg:col-span-1 lg:px-4"
+          >
             <FieldLabel>Location</FieldLabel>
             <p className="mt-1.5 flex items-start gap-1.5 text-[12px] font-medium text-foreground max-sm:mt-1.5 sm:mt-2 sm:text-[13px]">
               <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted" aria-hidden="true" />
@@ -272,7 +282,10 @@ export function JobDetailHeader({
         </div>
 
         <aside className="flex shrink-0 flex-col gap-2.5 border-t border-border-subtle pt-3 max-sm:gap-2.5 max-sm:pt-3 sm:gap-3 sm:pt-4 lg:min-w-[12rem] lg:border-t-0 lg:border-l lg:pl-5 lg:pt-0">
-          <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+          <div
+            data-tour="ops-job-actions"
+            className="flex flex-wrap items-center gap-1.5 lg:justify-end"
+          >
             {isPendingApproval ? (
               <>
                 <OperationsCanKey permissionKey="jobs.detail.actions.approve">
@@ -360,7 +373,7 @@ export function JobDetailHeader({
             </p>
           ) : null}
 
-          <div className="flex flex-wrap items-start gap-4 border-t border-border-subtle/80 pt-2.5 max-sm:gap-4 max-sm:pt-2.5 sm:gap-5 sm:pt-3 lg:justify-end">
+          <div data-tour="ops-job-stats" className="flex flex-wrap items-start gap-4 border-t border-border-subtle/80 pt-2.5 max-sm:gap-4 max-sm:pt-2.5 sm:gap-5 sm:pt-3 lg:justify-end">
             <StatMetric
               label="Applications"
               value={job.analytics.applications}

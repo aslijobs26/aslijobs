@@ -20,6 +20,7 @@ export function OperationsPostJobStepper({
 
   return (
     <nav
+      data-tour="ops-post-job-steps"
       aria-label="Job posting steps"
       className="relative w-full shrink-0 overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm"
     >

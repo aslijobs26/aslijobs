@@ -72,6 +72,7 @@ export function DepartmentDetailsPageContent({
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href={ROUTES.EMPLOYER_TEAM_MANAGEMENT}
+          data-tour="employer-department-back"
           className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
@@ -81,7 +82,10 @@ export function DepartmentDetailsPageContent({
 
       <header className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
+          <div
+            data-tour="employer-department-header"
+            className="flex min-w-0 items-start gap-3"
+          >
             <span
               className={cn(
                 "inline-flex size-12 shrink-0 items-center justify-center rounded-xl",
@@ -114,7 +118,10 @@ export function DepartmentDetailsPageContent({
           </div>
         </div>
 
-        <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <dl
+          data-tour="employer-department-stats"
+          className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
           <DetailStat label="Members" value={String(department.memberCount)} />
           <DetailStat
             label="Active Members"
@@ -132,7 +139,10 @@ export function DepartmentDetailsPageContent({
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
+        <section
+          data-tour="employer-department-info"
+          className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
+        >
           <h2 className="text-base font-bold text-foreground">
             Department Information
           </h2>

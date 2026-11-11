@@ -94,7 +94,10 @@ export function VerificationsFiltersBar({
   ].filter(Boolean).length;
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 xl:gap-1.5">
+    <div
+      data-tour="ops-verifications-filters"
+      className="flex min-w-0 flex-col gap-2 xl:gap-1.5"
+    >
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <label className="relative block min-w-0 sm:min-w-[12rem] sm:max-w-xs sm:flex-1 xl:max-w-[14rem]">
           <span className="sr-only">Search verifications</span>

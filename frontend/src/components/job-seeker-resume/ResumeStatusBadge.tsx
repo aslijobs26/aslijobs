@@ -30,13 +30,20 @@ const STATUS_STYLES: Record<
 type ResumeStatusBadgeProps = {
   status: ResumeStatus;
   className?: string;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
-export function ResumeStatusBadge({ status, className }: ResumeStatusBadgeProps) {
+export function ResumeStatusBadge({
+  status,
+  className,
+  dataTour,
+}: ResumeStatusBadgeProps) {
   const style = STATUS_STYLES[status] ?? STATUS_STYLES.NOT_GENERATED;
 
   return (
     <span
+      data-tour={dataTour}
       className={cn(
         "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset sm:px-2.5 sm:py-1 sm:text-xs",
         style.className,

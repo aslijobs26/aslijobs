@@ -10,6 +10,8 @@ import { cn } from "@/utils/cn";
 type TeamManagementStatsCardsProps = {
   stats?: TeamStats;
   isLoading?: boolean;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 const EMPTY_STATS: Record<TeamStatKey, number> = {
@@ -23,6 +25,7 @@ const EMPTY_STATS: Record<TeamStatKey, number> = {
 export function TeamManagementStatsCards({
   stats,
   isLoading = false,
+  dataTour,
 }: TeamManagementStatsCardsProps) {
   const values: Record<TeamStatKey, number> = {
     totalMembers: stats?.totalMembers ?? 0,
@@ -34,6 +37,7 @@ export function TeamManagementStatsCards({
 
   return (
     <section
+      data-tour={dataTour}
       aria-label="Team management statistics"
       className="employer-team-kpi grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 lg:gap-2"
     >

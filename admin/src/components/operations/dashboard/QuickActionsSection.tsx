@@ -37,7 +37,11 @@ interface QuickActionsSectionProps {
 
 export function QuickActionsSection({ actions }: QuickActionsSectionProps) {
   return (
-    <OperationsCard title="Quick Actions" className="min-w-0">
+    <OperationsCard
+      title="Quick Actions"
+      className="min-w-0"
+      dataTour="ops-home-quick-actions"
+    >
       <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 sm:gap-2">
         {actions.map((action) => {
           const Icon = ICON_MAP[action.icon];

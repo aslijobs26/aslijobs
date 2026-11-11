@@ -43,6 +43,7 @@ export function CompanySettingsPanel({
       <SettingsSection
         title="Company Settings"
         description="Company profile data is managed in the Company Profile workspace."
+        dataTour="employer-settings-company"
         action={
           <Link
             href={ROUTES.EMPLOYER_COMPANY_PROFILE}

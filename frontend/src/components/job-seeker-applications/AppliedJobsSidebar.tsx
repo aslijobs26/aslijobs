@@ -227,7 +227,10 @@ export function AppliedJobsSidebar({
       aria-label={t("seeker.applicationSidebar.aria")}
     >
       <section className="rounded-xl border border-border-subtle bg-resource-resume-surface/60 p-4 shadow-[0_1px_4px_rgba(26,43,60,0.04)]">
-        <div className="flex items-center justify-between gap-2">
+        <div
+          data-tour="seeker-applications-reminders"
+          className="flex items-center justify-between gap-2"
+        >
           <h2 className="inline-flex min-w-0 items-center gap-2 break-words text-sm font-bold text-foreground">
             {/* eslint-disable-next-line @next/next/no-img-element -- static PNG icon asset */}
             <img
@@ -304,7 +307,10 @@ export function AppliedJobsSidebar({
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_4px_rgba(26,43,60,0.04)]">
+      <section
+        data-tour="seeker-applications-whatsapp"
+        className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_4px_rgba(26,43,60,0.04)]"
+      >
         <Link
           href={WHATSAPP_JOIN_URL}
           target={whatsappExternal ? "_blank" : undefined}
@@ -322,7 +328,10 @@ export function AppliedJobsSidebar({
         </Link>
       </section>
 
-      <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-[0_1px_4px_rgba(26,43,60,0.04)]">
+      <section
+        data-tour="seeker-applications-overview"
+        className="rounded-xl border border-border-subtle bg-surface p-4 shadow-[0_1px_4px_rgba(26,43,60,0.04)]"
+      >
         <div className="flex items-center justify-between gap-2">
           <h2 className="min-w-0 break-words text-sm font-bold text-foreground">
             {t("seeker.applicationSidebar.overviewTitle")}

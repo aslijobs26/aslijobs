@@ -103,7 +103,10 @@ export function CandidatesFiltersBar({
   ].filter(Boolean).length;
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 max-sm:gap-2 xl:gap-1">
+    <div
+      data-tour="ops-job-seekers-filters"
+      className="flex min-w-0 flex-col gap-2 max-sm:gap-2 xl:gap-1"
+    >
       <div className="flex min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center xl:gap-1.5">
         <form
           className="relative block w-full min-w-0 sm:min-w-[12rem] sm:max-w-xs sm:flex-1 xl:max-w-[14rem]"

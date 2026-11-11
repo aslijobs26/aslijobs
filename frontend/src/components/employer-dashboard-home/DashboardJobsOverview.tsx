@@ -55,7 +55,10 @@ export function DashboardJobsOverview({
 
   return (
     <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5 lg:px-4 lg:py-2.5">
+      <div
+        data-tour="employer-home-jobs-overview"
+        className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5 lg:px-4 lg:py-2.5"
+      >
         <h2 className="employer-section-title min-w-0 break-words text-sm font-bold text-foreground sm:text-base">
           {t("employer.dashboard.jobsOverview")}
         </h2>
@@ -99,7 +102,9 @@ export function DashboardJobsOverview({
       ) : null}
 
       {!isLoading && !isError && jobs.length === 0 ? (
-        <div className="px-3 py-6 text-center sm:px-5 sm:py-10 lg:px-4 lg:py-6">
+        <div
+          data-tour="employer-home-jobs-empty"
+          className="px-3 py-6 text-center sm:px-5 sm:py-10 lg:px-4 lg:py-6">
           <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
             {t("employer.dashboard.noJobsTitle")}
           </p>
@@ -141,7 +146,7 @@ export function DashboardJobsOverview({
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">
-              {jobs.map((job) => {
+              {jobs.map((job, index) => {
                 const location = formatEmployerJobLocation(
                   job.cityName,
                   job.stateName,
@@ -153,6 +158,9 @@ export function DashboardJobsOverview({
                 return (
                   <tr
                     key={job.id}
+                    data-tour={
+                      index === 0 ? "employer-home-jobs-first-row" : undefined
+                    }
                     className={cn(
                       "transition-colors hover:bg-hero-bg/40",
                       canReadJobs && "cursor-pointer",
@@ -247,6 +255,11 @@ export function DashboardJobsOverview({
                       {formatEmployerJobCount(job.views)}
                     </td>
                     <td
+                      data-tour={
+                        index === 0
+                          ? "employer-home-jobs-first-row-actions"
+                          : undefined
+                      }
                       className="px-3 py-3 last:pr-4 sm:px-4"
                       onClick={(event) => event.stopPropagation()}
                       onKeyDown={(event) => event.stopPropagation()}

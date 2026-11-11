@@ -21,6 +21,8 @@ type SecurityCardProps = {
   title?: string;
   description?: string;
   actions: SecurityAction[];
+  /** Product tour anchor (`data-tour`) for the card header. */
+  dataTour?: string;
 };
 
 const ICON_MAP: Record<SecurityActionIcon, LucideIcon> = {
@@ -34,9 +36,14 @@ export function SecurityCard({
   title = "Security",
   description = "Keep your account secure.",
   actions,
+  dataTour,
 }: SecurityCardProps) {
   return (
-    <SettingsSection title={title} description={description}>
+    <SettingsSection
+      title={title}
+      description={description}
+      dataTour={dataTour}
+    >
       <ul className="divide-y divide-border-subtle" role="list">
         {actions.map((action) => {
           const Icon = ICON_MAP[action.icon];

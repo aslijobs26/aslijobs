@@ -55,7 +55,10 @@ export function CandidatePreferencesPanel({
 }: CandidatePreferencesPanelProps) {
   return (
     <div className="grid gap-2.5 max-sm:gap-2 sm:gap-3 lg:grid-cols-2">
-      <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4">
+      <section
+        data-tour="ops-candidate-pref-interests"
+        className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4"
+      >
         <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
           Job Preferences / Interests
         </h3>
@@ -92,7 +95,10 @@ export function CandidatePreferencesPanel({
         </div>
       </section>
 
-      <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4">
+      <section
+        data-tour="ops-candidate-pref-skills"
+        className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4"
+      >
         <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
           Skills
         </h3>

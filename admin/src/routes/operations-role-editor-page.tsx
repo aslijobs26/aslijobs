@@ -329,7 +329,7 @@ export function OperationsRoleEditorPage() {
     >
       <div className="space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
+          <div className="min-w-0" data-tour="ops-role-header">
             <h1 className="text-[18px] font-bold tracking-tight text-foreground sm:text-[20px]">
               {pageTitle}
             </h1>
@@ -348,7 +348,10 @@ export function OperationsRoleEditorPage() {
               </p>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="flex flex-wrap items-center gap-2"
+            data-tour="ops-role-header-actions"
+          >
             {isEdit ? (
               <button
                 type="button"
@@ -442,6 +445,7 @@ export function OperationsRoleEditorPage() {
         <div className="grid min-w-0 items-stretch gap-3 overflow-x-auto overscroll-x-contain scrollbar-hidden xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]">
           <form
             className="flex h-full min-h-[28rem] max-h-[min(42rem,calc(100dvh-10rem))] flex-col gap-3 rounded-xl border border-border-subtle bg-surface p-4 xl:max-h-[calc(100dvh-9.5rem)]"
+            data-tour="ops-role-details"
             onSubmit={(event) => {
               event.preventDefault();
               void submit();
@@ -506,7 +510,10 @@ export function OperationsRoleEditorPage() {
               />
             </OperationsFormField>
 
-            <div className="space-y-2 border-t border-border-subtle pt-3">
+            <div
+              className="space-y-2 border-t border-border-subtle pt-3"
+              data-tour="ops-role-capabilities"
+            >
               <label className="flex items-center gap-2.5 text-[13px] text-foreground">
                 <input
                   type="checkbox"
@@ -565,7 +572,10 @@ export function OperationsRoleEditorPage() {
               </p>
             ) : null}
 
-            <div className="mt-auto flex items-center gap-2 border-t border-border-subtle pt-3">
+            <div
+              className="mt-auto flex items-center gap-2 border-t border-border-subtle pt-3"
+              data-tour="ops-role-save"
+            >
               <button
                 type="button"
                 disabled={busy}

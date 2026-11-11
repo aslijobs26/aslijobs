@@ -92,6 +92,7 @@ export function RoleDetailsPageContent({ roleId }: RoleDetailsPageContentProps) 
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href={ROUTES.EMPLOYER_TEAM_MANAGEMENT}
+          data-tour="employer-role-back"
           className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
@@ -101,7 +102,10 @@ export function RoleDetailsPageContent({ roleId }: RoleDetailsPageContentProps) 
 
       <header className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
+          <div
+            data-tour="employer-role-header"
+            className="flex min-w-0 items-start gap-3"
+          >
             <span
               className={cn(
                 "inline-flex size-12 shrink-0 items-center justify-center rounded-xl",
@@ -138,7 +142,10 @@ export function RoleDetailsPageContent({ roleId }: RoleDetailsPageContentProps) 
               </p>
             </div>
           </div>
-          <dl className="grid grid-cols-2 gap-3 text-sm sm:min-w-[14rem]">
+          <dl
+            data-tour="employer-role-summary"
+            className="grid grid-cols-2 gap-3 text-sm sm:min-w-[14rem]"
+          >
             <div>
               <dt className="text-xs text-muted">Access Level</dt>
               <dd className="mt-1">
@@ -176,7 +183,12 @@ export function RoleDetailsPageContent({ roleId }: RoleDetailsPageContentProps) 
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-foreground">Members</h2>
+          <h2
+            data-tour="employer-role-members"
+            className="text-sm font-bold text-foreground"
+          >
+            Members
+          </h2>
           <p className="mt-0.5 text-xs text-muted">
             Team members currently assigned to this role
           </p>
@@ -215,7 +227,12 @@ export function RoleDetailsPageContent({ roleId }: RoleDetailsPageContentProps) 
         </section>
 
         <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-foreground">Recent Changes</h2>
+          <h2
+            data-tour="employer-role-recent-changes"
+            className="text-sm font-bold text-foreground"
+          >
+            Recent Changes
+          </h2>
           <p className="mt-0.5 text-xs text-muted">
             Activity related to this role
           </p>
@@ -242,12 +259,20 @@ export function RoleDetailsPageContent({ roleId }: RoleDetailsPageContentProps) 
       </div>
 
       <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-        <h2 className="text-sm font-bold text-foreground">Permission Matrix</h2>
+        <h2
+          data-tour="employer-role-permissions"
+          className="text-sm font-bold text-foreground"
+        >
+          Permission Matrix
+        </h2>
         <p className="mt-0.5 text-xs text-muted">
           Module access configured for this role
         </p>
         <div className="mt-3">
-          <RolePermissionMatrix permissions={role.permissions} />
+          <RolePermissionMatrix
+            permissions={role.permissions}
+            dataTour="employer-role-matrix-thead"
+          />
         </div>
       </section>
     </div>

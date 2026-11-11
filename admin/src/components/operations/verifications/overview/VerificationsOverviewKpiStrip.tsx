@@ -84,6 +84,7 @@ export function VerificationsOverviewKpiStrip({
   return (
     <section
       aria-label="Verification overview KPIs"
+      data-tour="ops-verifications-kpis"
       className="grid grid-cols-2 gap-2 max-sm:gap-1.5 sm:grid-cols-3 xl:grid-cols-5"
     >
       {KPI_CARDS.map((card) => {

@@ -72,7 +72,11 @@ export function CandidatesQuickActions({
     </>
   );
   return (
-    <OperationsCard title="Quick Actions" className="min-w-0">
+    <OperationsCard
+      dataTour="ops-job-seekers-quick-actions"
+      title="Quick Actions"
+      className="min-w-0"
+    >
       <ul className="grid gap-2">
         <OperationsCanKey permissionKey="candidates.list.export">
           <li>

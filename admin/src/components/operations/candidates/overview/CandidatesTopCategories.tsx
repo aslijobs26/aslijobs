@@ -12,6 +12,7 @@ export function CandidatesTopCategories({
 }) {
   return (
     <OperationsCard
+      dataTour="ops-job-seekers-categories"
       title="Top Job Categories"
       subtitle="Most preferred job categories"
       className="candidates-analytics-card min-w-0"

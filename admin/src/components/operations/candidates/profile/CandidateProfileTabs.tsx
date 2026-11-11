@@ -47,6 +47,7 @@ export function CandidateProfileTabs({
 }: CandidateProfileTabsProps) {
   return (
     <div
+      data-tour="ops-candidate-tabs"
       className="-mx-0.5 flex min-w-0 items-center gap-0.5 overflow-x-auto border-b border-border-subtle px-0.5 scrollbar-hidden max-sm:gap-0 sm:gap-1"
       role="tablist"
       aria-label="Candidate profile sections"
@@ -70,6 +71,7 @@ export function CandidateProfileTabs({
             key={tab.id}
             type="button"
             role="tab"
+            data-tour={tab.id === "activity" ? "ops-activity-tab" : undefined}
             aria-selected={selected}
             onClick={() => onChange(tab.id)}
             className={cn(

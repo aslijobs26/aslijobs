@@ -7,6 +7,7 @@ export function CandidatesByExperience({ items }: { items: OperationsCandidatesA
   const colors = useOperationsThemeColors();
   return (
     <OperationsCard
+      dataTour="ops-job-seekers-experience"
       title="By Experience"
       subtitle="Jobseekers by experience level"
       className="candidates-analytics-card min-w-0"

@@ -1,6 +1,8 @@
 "use client";
 
 import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
+import { JobSearchProductTour } from "@/components/product-tour/ProductTourMounts";
+import { TakeTourButton } from "@/components/product-tour/ProductTourHost";
 import { JobSearchBar } from "@/components/job-search/JobSearchBar";
 import { JobSearchFiltersSidebar } from "@/components/job-search/JobSearchFiltersSidebar";
 import { JobSearchJobList } from "@/components/job-search/JobSearchJobList";
@@ -396,6 +398,9 @@ export function JobSearchPageContent() {
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 xl:px-10 lg:py-8">
+      <div className="mb-3 flex justify-end">
+        <TakeTourButton className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-xs font-semibold text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30" />
+      </div>
       <JobSearchBar
         state={urlState}
         locationLabel={locationLabel}
@@ -508,6 +513,7 @@ export function JobSearchPageContent() {
           </div>
         </div>
       </div>
+      <JobSearchProductTour />
     </main>
   );
 }

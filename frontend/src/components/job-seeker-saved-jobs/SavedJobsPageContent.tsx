@@ -316,7 +316,7 @@ export function SavedJobsPageContent() {
     <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17.5rem] xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0">
-          <header>
+          <header data-tour="seeker-saved-header">
             <h1 className="flex min-w-0 items-center gap-2.5 break-words text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               <Bookmark
                 className="size-7 shrink-0 fill-primary text-primary sm:size-8"
@@ -331,6 +331,7 @@ export function SavedJobsPageContent() {
 
           <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <SavedJobsStatsBar
+              dataTour="seeker-saved-tabs"
               activeFilter={tab}
               stats={stats}
               isLoading={listQuery.isLoading && !stats}
@@ -341,6 +342,7 @@ export function SavedJobsPageContent() {
             <div className="flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
+                data-tour="seeker-saved-filters-toggle"
                 onClick={() => setFiltersOpen((current) => !current)}
                 aria-expanded={filtersOpen}
                 aria-controls="saved-jobs-mobile-filters"
@@ -362,6 +364,7 @@ export function SavedJobsPageContent() {
                 ) : null}
               </button>
               <SavedJobsSortSelect
+                dataTour="seeker-saved-sort"
                 value={sort}
                 onChange={(nextSort) => {
                   updateUrl({ sort: nextSort, page: 1 });
@@ -383,7 +386,7 @@ export function SavedJobsPageContent() {
           ) : null}
 
           <div className="mt-4">
-            <div className="relative min-w-0">
+            <div data-tour="seeker-saved-search" className="relative min-w-0">
               <Search
                 className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
                 aria-hidden="true"
@@ -433,7 +436,10 @@ export function SavedJobsPageContent() {
                 </button>
               </div>
             ) : jobs.length === 0 ? (
-              <div className="rounded-xl border border-border-subtle bg-surface px-4 py-14 text-center">
+              <div
+                data-tour="seeker-saved-empty"
+                className="rounded-xl border border-border-subtle bg-surface px-4 py-14 text-center"
+              >
                 <Bookmark
                   className="mx-auto size-10 text-muted"
                   aria-hidden="true"
@@ -453,10 +459,17 @@ export function SavedJobsPageContent() {
               </div>
             ) : (
               <div className="space-y-3">
-                {jobs.map((job) => (
+                {jobs.map((job, index) => (
                   <SavedJobCard
                     key={job.id}
                     job={job}
+                    dataTour={index === 0 ? "seeker-saved-first-card" : undefined}
+                    actionsDataTour={
+                      index === 0 ? "seeker-saved-first-actions" : undefined
+                    }
+                    applyDataTour={
+                      index === 0 ? "seeker-saved-first-apply" : undefined
+                    }
                     isRemoving={
                       removeMutation.isPending &&
                       removeMutation.variables === job.publicJobId
@@ -467,16 +480,18 @@ export function SavedJobsPageContent() {
                   />
                 ))}
 
-                <ListPagination
-                  page={pagination.page}
-                  limit={pagination.limit}
-                  total={pagination.total}
-                  totalPages={pagination.totalPages}
-                  onPageChange={goToPage}
-                  isLoading={listQuery.isFetching}
-                  ariaLabel={t("seeker.saved.paginationAria")}
-                  entityLabel={t("seeker.saved.entityLabel")}
-                />
+                <div data-tour="seeker-saved-pagination">
+                  <ListPagination
+                    page={pagination.page}
+                    limit={pagination.limit}
+                    total={pagination.total}
+                    totalPages={pagination.totalPages}
+                    onPageChange={goToPage}
+                    isLoading={listQuery.isFetching}
+                    ariaLabel={t("seeker.saved.paginationAria")}
+                    entityLabel={t("seeker.saved.entityLabel")}
+                  />
+                </div>
               </div>
             )}
           </div>

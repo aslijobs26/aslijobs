@@ -287,7 +287,10 @@ export function PermissionMatrixPanel({
             Manage permissions for the selected role.
           </p>
         </div>
-        <div className="w-full sm:min-w-[14rem] sm:max-w-[16rem]">
+        <div
+          className="w-full sm:min-w-[14rem] sm:max-w-[16rem]"
+          data-tour="ops-role-template"
+        >
           <OperationsFilterSelect
             label="Permission template"
             value={templateId}
@@ -300,7 +303,12 @@ export function PermissionMatrixPanel({
       </header>
 
       <div className="border-b border-border-subtle px-4">
-        <div className="flex gap-4" role="tablist" aria-label="Permission views">
+        <div
+          className="flex gap-4"
+          role="tablist"
+          aria-label="Permission views"
+          data-tour="ops-role-views"
+        >
           {(
             [
               { id: "module", label: "Module Access" },
@@ -329,7 +337,10 @@ export function PermissionMatrixPanel({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 border-b border-border-subtle px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+      <div
+        className="flex flex-col gap-2 border-b border-border-subtle px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center"
+        data-tour="ops-role-matrix-toolbar"
+      >
         <label className="relative min-w-0 flex-1 sm:max-w-xs">
           <span className="sr-only">Search modules</span>
           <Search
@@ -373,7 +384,10 @@ export function PermissionMatrixPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto overscroll-contain scrollbar-hidden">
+      <div
+        className="min-h-0 flex-1 overflow-auto overscroll-contain scrollbar-hidden"
+        data-tour="ops-role-matrix"
+      >
         {tab === "module" ? (
           <table className="min-w-[64rem] w-full border-collapse text-left">
             <thead className="sticky top-0 z-10 bg-hero-bg">
@@ -568,7 +582,10 @@ export function PermissionMatrixPanel({
         )}
       </div>
 
-      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle px-4 py-2.5 text-[11px] text-muted">
+      <footer
+        className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle px-4 py-2.5 text-[11px] text-muted"
+        data-tour="ops-role-legend"
+      >
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-1.5">
             <span className="inline-flex size-[15px] items-center justify-center rounded-[3px] border border-primary bg-primary text-surface">

@@ -25,11 +25,14 @@ import { useEffect, useId, useRef, useState } from "react";
 type NotificationBellProps = {
   viewAllHref: string;
   className?: string;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 export function NotificationBell({
   viewAllHref,
   className,
+  dataTour,
 }: NotificationBellProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -196,7 +199,7 @@ export function NotificationBell({
   };
 
   return (
-    <div ref={rootRef} className={cn("relative", className)}>
+    <div ref={rootRef} data-tour={dataTour} className={cn("relative", className)}>
       <button
         type="button"
         className="relative inline-flex size-10 items-center justify-center rounded-lg text-nav transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"

@@ -335,9 +335,10 @@ export function JobSeekerProfileDashboard() {
       <header className="overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
         <div className="border-b border-border-subtle bg-primary-light/35 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
+            <div data-tour="seeker-profile-header" className="min-w-0">
               <div className="flex min-w-0 items-center gap-3 sm:items-start sm:gap-4">
                 <JobSeekerProfilePhotoAvatar
+                  dataTour="seeker-profile-photo"
                   jobSeeker={jobSeeker}
                   size="header"
                   isUploading={isPhotoUploading}
@@ -453,7 +454,7 @@ export function JobSeekerProfileDashboard() {
               ) : null}
             </div>
 
-            <div className="flex w-full shrink-0 items-center gap-2.5 rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:w-auto sm:min-w-[14rem] sm:gap-3 sm:p-3.5">
+            <div data-tour="seeker-profile-strength" className="flex w-full shrink-0 items-center gap-2.5 rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:w-auto sm:min-w-[14rem] sm:gap-3 sm:p-3.5">
               <ProfileStrengthCircle
                 percentage={completion.percent}
                 size={58}
@@ -495,6 +496,7 @@ export function JobSeekerProfileDashboard() {
       <div className="mt-5 grid grid-cols-1 items-start gap-5 lg:mt-6 lg:grid-cols-[minmax(0,1fr)_minmax(17.5rem,20rem)] lg:gap-6">
         <div className="min-w-0 rounded-2xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4">
           <div
+            data-tour="seeker-profile-tabs"
             className="overflow-x-auto scrollbar-hidden"
             role="tablist"
             aria-label={t("seeker.profile.sectionsAria")}

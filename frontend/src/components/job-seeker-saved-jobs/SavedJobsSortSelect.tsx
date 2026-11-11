@@ -10,11 +10,14 @@ import { SAVED_JOBS_SORT_OPTIONS } from "./saved-jobs-utils";
 type SavedJobsSortSelectProps = {
   value: SavedJobsSort;
   onChange: (value: SavedJobsSort) => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 export function SavedJobsSortSelect({
   value,
   onChange,
+  dataTour,
 }: SavedJobsSortSelectProps) {
   const t = useTranslate();
   const listboxId = useId();
@@ -52,7 +55,11 @@ export function SavedJobsSortSelect({
   }, [isOpen]);
 
   return (
-    <div ref={rootRef} className="relative inline-flex items-center gap-2 text-sm text-muted">
+    <div
+      ref={rootRef}
+      data-tour={dataTour}
+      className="relative inline-flex items-center gap-2 text-sm text-muted"
+    >
       <span className="hidden shrink-0 font-medium sm:inline">
         {t("seeker.saved.sortBy")}
       </span>

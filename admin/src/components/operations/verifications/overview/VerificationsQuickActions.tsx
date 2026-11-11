@@ -69,7 +69,11 @@ export function VerificationsQuickActions({
   isExporting = false,
 }: VerificationsQuickActionsProps) {
   return (
-    <OperationsCard title="Quick Actions" className="min-w-0">
+    <OperationsCard
+      dataTour="ops-verifications-quick-actions"
+      title="Quick Actions"
+      className="min-w-0"
+    >
       <ul className="grid grid-cols-1 gap-2">
         <li>
           <Link

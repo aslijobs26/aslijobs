@@ -320,7 +320,7 @@ export function JobSeekerSettingsPageContent() {
   return (
     <>
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-        <header className="min-w-0">
+        <header data-tour="seeker-settings-header" className="min-w-0">
           <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-[1.875rem]">
             Settings
           </h1>
@@ -329,7 +329,7 @@ export function JobSeekerSettingsPageContent() {
           </p>
         </header>
 
-        <div className="mt-5 sm:mt-6">
+        <div data-tour="seeker-settings-nav" className="mt-5 sm:mt-6">
           <SettingsNav
             items={JOB_SEEKER_SETTINGS_NAV_ITEMS}
             activeId={activeSection}

@@ -39,7 +39,14 @@ const FALLBACK_STATUSES: {
   { key: "cancelled", label: "Cancelled" },
 ];
 
-export function InterviewsStatusOverview() {
+type InterviewsStatusOverviewProps = {
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
+};
+
+export function InterviewsStatusOverview({
+  dataTour,
+}: InterviewsStatusOverviewProps = {}) {
   const [period, setPeriod] =
     useState<EmployerInterviewStatsPeriod>("all_time");
 
@@ -64,7 +71,10 @@ export function InterviewsStatusOverview() {
     (overview?.total ?? 0) === 0;
 
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-4">
+    <section
+      className="rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-4"
+      data-tour={dataTour}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-foreground lg:text-xs">
           Interview Status Overview

@@ -49,6 +49,7 @@ export function EmployerJobsToolbar({
       className="employer-jobs-toolbar flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-2"
     >
       <div
+        data-tour="employer-jobs-status-tabs"
         role="tablist"
         aria-label={t("employer.jobs.statusTabsAria")}
         className="employer-jobs-tabs flex min-w-0 flex-wrap items-center gap-1 sm:gap-1.5 lg:gap-1"
@@ -95,6 +96,7 @@ export function EmployerJobsToolbar({
 
       <div className="employer-jobs-toolbar__controls flex w-full shrink-0 items-center gap-2 lg:w-auto">
         <button
+          data-tour="employer-jobs-filters"
           type="button"
           onClick={onOpenFilters}
           aria-expanded={filtersOpen}
@@ -114,7 +116,10 @@ export function EmployerJobsToolbar({
           </span>
         </button>
 
-        <label className="relative min-w-0 flex-1 lg:w-[15rem] lg:flex-none xl:w-[17.5rem]">
+        <label
+          data-tour="employer-jobs-search"
+          className="relative min-w-0 flex-1 lg:w-[15rem] lg:flex-none xl:w-[17.5rem]"
+        >
           <span className="sr-only">{t("employer.jobs.searchJobs")}</span>
           <Search
             className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted lg:size-3"

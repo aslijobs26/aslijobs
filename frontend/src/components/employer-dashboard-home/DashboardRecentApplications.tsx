@@ -50,7 +50,10 @@ export function DashboardRecentApplications({
 
   return (
     <section className="employer-panel-card overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="employer-panel-card__header flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
+      <div
+        data-tour="employer-home-recent-applications"
+        className="employer-panel-card__header flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5"
+      >
         <h2 className="employer-panel-card__title min-w-0 break-words text-base font-bold text-foreground">
           {t("employer.dashboard.recentApplications")}
         </h2>
@@ -104,8 +107,15 @@ export function DashboardRecentApplications({
 
       {!isLoading && !isError && applications.length > 0 ? (
         <ul className="divide-y divide-border-subtle">
-          {applications.map((application) => (
-            <li key={application.id}>
+          {applications.map((application, index) => (
+            <li
+              key={application.id}
+              data-tour={
+                index === 0
+                  ? "employer-home-recent-applications-first-row"
+                  : undefined
+              }
+            >
               <Link
                 href={`${ROUTES.EMPLOYER_CANDIDATES}/${application.id}`}
                 className="employer-apps-row flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-hero-bg/50 focus-visible:bg-hero-bg/50 focus-visible:outline-none sm:px-5"

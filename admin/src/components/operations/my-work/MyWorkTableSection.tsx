@@ -220,6 +220,7 @@ export function MyWorkTableSection({
             className="-mx-0.5 flex min-w-0 items-end gap-0 overflow-x-auto overscroll-x-contain border-b border-border-subtle px-0.5 scrollbar-hidden"
             role="tablist"
             aria-label="Work queues"
+            data-tour="ops-my-work-tabs"
           >
             {tabsConfig.map((tab) => {
               const active = activeTab === tab.id;
@@ -249,7 +250,10 @@ export function MyWorkTableSection({
             })}
           </div>
 
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div
+            data-tour="ops-my-work-filters"
+            className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+          >
             {showFilters ? (
               <>
                 <OperationsFilterSelect
@@ -319,7 +323,7 @@ export function MyWorkTableSection({
       {/* Desktop / tablet table */}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[720px] border-collapse text-left">
-          <thead>
+          <thead data-tour="ops-my-work-list">
             <tr className="border-b border-border-subtle bg-hero-bg/40">
               {selectionEnabled ? (
                 <th className={thClassName} scope="col">
@@ -391,7 +395,7 @@ export function MyWorkTableSection({
                 </td>
               </tr>
             ) : (
-              items.map((item) => {
+              items.map((item, index) => {
                 const dueInfo = formatWorkDueLabel(item.dueAt);
                 const relatedHref = relatedEntityHref(
                   item.relatedEntityType,
@@ -481,7 +485,10 @@ export function MyWorkTableSection({
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 last:pr-4 xl:px-2.5 xl:last:pr-3">
+                    <td
+                      data-tour={index === 0 ? "ops-my-work-row-actions" : undefined}
+                      className="px-3 py-2.5 last:pr-4 xl:px-2.5 xl:last:pr-3"
+                    >
                       <MyWorkRowActions
                         item={item}
                         busy={busyId === item.id}
@@ -524,7 +531,7 @@ export function MyWorkTableSection({
             <p className="mt-1 text-xs text-muted">{empty.body}</p>
           </li>
         ) : (
-          items.map((item) => {
+          items.map((item, index) => {
             const dueInfo = formatWorkDueLabel(item.dueAt);
             const selectable = isItemSelectable
               ? isItemSelectable(item)
@@ -537,7 +544,11 @@ export function MyWorkTableSection({
               .join(" · ");
 
             return (
-              <li key={item.id} className="flex items-start gap-2 px-2.5 py-2.5">
+              <li
+                key={item.id}
+                data-tour={index === 0 ? "ops-my-work-list" : undefined}
+                className="flex items-start gap-2 px-2.5 py-2.5"
+              >
                 {selectionEnabled ? (
                   <input
                     type="checkbox"
@@ -572,7 +583,10 @@ export function MyWorkTableSection({
                         ) : null}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1">
+                    <div
+                      data-tour={index === 0 ? "ops-my-work-row-actions" : undefined}
+                      className="flex shrink-0 items-center gap-1"
+                    >
                       <OperationsBadge
                         variant={priorityVariant(item.priority)}
                         className="px-1.5 py-0 text-[9px]"

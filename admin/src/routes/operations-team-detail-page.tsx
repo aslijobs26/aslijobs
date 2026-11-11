@@ -237,7 +237,7 @@ export function OperationsTeamDetailPage() {
       headerVariant="command"
     >
       <div className="flex flex-col gap-4 lg:gap-5">
-        <div className="min-w-0">
+        <div className="min-w-0" data-tour="ops-team-header">
           <Link
             to={OPERATIONS_ROUTES.TEAMS}
             className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
@@ -290,7 +290,10 @@ export function OperationsTeamDetailPage() {
           </div>
         ) : (
           <>
-            <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-5">
+            <section
+              className="rounded-xl border border-border-subtle bg-surface p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-5"
+              data-tour="ops-team-summary"
+            >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                   <span
@@ -337,7 +340,10 @@ export function OperationsTeamDetailPage() {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              <div
+                className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4"
+                data-tour="ops-team-stats"
+              >
                 <SummaryStat
                   label="Lead"
                   value={team.leadName || "Unassigned"}
@@ -372,6 +378,7 @@ export function OperationsTeamDetailPage() {
               role="tablist"
               aria-label="Team sections"
               className="flex gap-1 overflow-x-auto border-b border-border-subtle scrollbar-hidden"
+              data-tour="ops-team-tabs"
             >
               {DETAIL_TABS.map((item) => {
                 const selected = tab === item.id;
@@ -406,7 +413,10 @@ export function OperationsTeamDetailPage() {
 
             {tab === "overview" ? (
               <div className="flex flex-col gap-4">
-                <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+                <div
+                  className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4"
+                  data-tour="ops-team-locations"
+                >
                   <InfoCard
                     label="Region"
                     value={team.region}
@@ -443,9 +453,12 @@ export function OperationsTeamDetailPage() {
                   </p>
                   {team.capabilities && team.capabilities.length > 0 ? (
                     <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                      {team.capabilities.map((capability) => (
+                      {team.capabilities.map((capability, index) => (
                         <li
                           key={capability.workType}
+                          data-tour={
+                            index === 0 ? "ops-team-capabilities" : undefined
+                          }
                           className="flex items-start gap-2.5 rounded-lg border border-border-subtle bg-hero-bg/30 px-3 py-2.5"
                         >
                           <span
@@ -476,7 +489,10 @@ export function OperationsTeamDetailPage() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="mt-4 rounded-lg border border-dashed border-border-subtle px-4 py-8 text-center text-[13px] text-muted">
+                    <p
+                      className="mt-4 rounded-lg border border-dashed border-border-subtle px-4 py-8 text-center text-[13px] text-muted"
+                      data-tour="ops-team-capabilities"
+                    >
                       No capability data yet. Add active members to this team.
                     </p>
                   )}
@@ -487,7 +503,10 @@ export function OperationsTeamDetailPage() {
             {tab === "members" ? (
               <div className="flex flex-col gap-4">
                 <div className="rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                  <div
+                    className="flex flex-col gap-3 lg:flex-row lg:items-end"
+                    data-tour="ops-team-members-toolbar"
+                  >
                     <OperationsCanKey permissionKey="team.teams.members.add">
                       <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end">
                         <div className="min-w-0 flex-1">
@@ -578,7 +597,10 @@ export function OperationsTeamDetailPage() {
                 ) : (
                   <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                     <table className="min-w-[44rem] w-full text-left">
-                      <thead className="border-b border-border-subtle bg-[#F8FAFC] text-[11px] font-semibold uppercase tracking-[0.04em] text-muted">
+                      <thead
+                        className="border-b border-border-subtle bg-[#F8FAFC] text-[11px] font-semibold uppercase tracking-[0.04em] text-muted"
+                        data-tour="ops-team-members"
+                      >
                         <tr>
                           <th className="px-4 py-3">Member</th>
                           <th className="px-4 py-3">Role</th>
@@ -588,7 +610,7 @@ export function OperationsTeamDetailPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(membersQuery.data?.members ?? []).map((member) => {
+                        {(membersQuery.data?.members ?? []).map((member, index) => {
                           const roleLabel =
                             member.roleName || member.role || "—";
                           return (
@@ -655,7 +677,14 @@ export function OperationsTeamDetailPage() {
                               <td className="px-4 py-3 align-middle whitespace-pre-line text-[12px] leading-snug text-muted">
                                 {formatPeopleTimestamp(member.lastActiveAt)}
                               </td>
-                              <td className="px-4 py-3 align-middle">
+                              <td
+                                className="px-4 py-3 align-middle"
+                                data-tour={
+                                  index === 0
+                                    ? "ops-team-member-actions"
+                                    : undefined
+                                }
+                              >
                                 <OperationsCanKey permissionKey="team.teams.members.remove">
                                   <button
                                     type="button"
@@ -701,7 +730,10 @@ export function OperationsTeamDetailPage() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5">
+                <div
+                  className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5"
+                  data-tour="ops-team-work"
+                >
                   {WORK_KPI.map((item) => (
                     <PeopleKpiCard
                       key={item.key}
@@ -726,7 +758,10 @@ export function OperationsTeamDetailPage() {
                   Update team identity. Department and location stay bound to
                   operational boundaries.
                 </p>
-                <div className="mt-4 grid max-w-xl gap-3">
+                <div
+                  className="mt-4 grid max-w-xl gap-3"
+                  data-tour="ops-team-settings"
+                >
                   <label className="grid gap-1 text-xs font-semibold text-muted">
                     Team name
                     <input

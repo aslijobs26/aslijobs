@@ -144,8 +144,11 @@ export function CandidatesTableSection({
           <li className="px-2 py-10 text-center">{emptyMessage}</li>
         ) : null}
         {!isLoading && !isError
-          ? applications.map((application) => (
-              <li key={application.id}>
+          ? applications.map((application, index) => (
+              <li
+                key={application.id}
+                data-tour={index === 0 ? "ops-job-seekers-list" : undefined}
+              >
                 <CandidatesMobileCard
                   application={application}
                   onDelete={onDelete}
@@ -168,11 +171,12 @@ export function CandidatesTableSection({
           <li className="px-3 py-10 text-center sm:px-3.5">{emptyMessage}</li>
         ) : null}
         {!isLoading && !isError
-          ? applications.map((application) => {
+          ? applications.map((application, index) => {
               const registered = formatCandidateDateTime(application.registeredAt);
               return (
                 <li
                   key={application.id}
+                  data-tour={index === 0 ? "ops-job-seekers-list" : undefined}
                   className="px-3 py-3 max-md:py-2.5 sm:px-3.5"
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -250,7 +254,10 @@ export function CandidatesTableSection({
 
       <div className="hidden overflow-x-auto overscroll-x-contain scrollbar-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden lg:block">
         <table className="min-w-[960px] text-left text-xs xl:min-w-full xl:text-[11px]">
-          <thead className="border-b border-border-subtle bg-hero-bg/40">
+          <thead
+            data-tour="ops-job-seekers-list"
+            className="border-b border-border-subtle bg-hero-bg/40"
+          >
             <tr>
               <th className={thClassName}>Candidate</th>
               <th className={thClassName}>Contact</th>
@@ -276,7 +283,7 @@ export function CandidatesTableSection({
               <TableMessage>{emptyMessage}</TableMessage>
             ) : null}
             {!isLoading && !isError
-              ? applications.map((application) => {
+              ? applications.map((application, index) => {
                   const registered = formatCandidateDateTime(
                     application.registeredAt,
                   );
@@ -378,7 +385,10 @@ export function CandidatesTableSection({
                           {application.profileStatusLabel || "Incomplete"}
                         </OperationsBadge>
                       </td>
-                      <td className="px-3 py-3 text-right last:pr-4 sm:px-3.5 xl:px-2.5 xl:py-2 xl:last:pr-3">
+                      <td
+                        data-tour={index === 0 ? "ops-job-seekers-row-actions" : undefined}
+                        className="px-3 py-3 text-right last:pr-4 sm:px-3.5 xl:px-2.5 xl:py-2 xl:last:pr-3"
+                      >
                         <div className="inline-flex justify-end">
                           <CandidatesRowActions
                             application={application}

@@ -8,7 +8,7 @@ interface JobActivityPanelProps {
 
 export function JobActivityPanel({ activity }: JobActivityPanelProps) {
   return (
-    <OperationsCard title="Job Activity">
+    <OperationsCard dataTour="ops-job-activity" title="Job Activity">
       {activity.length === 0 ? (
         <p className="text-xs text-muted">No activity recorded for this job.</p>
       ) : (

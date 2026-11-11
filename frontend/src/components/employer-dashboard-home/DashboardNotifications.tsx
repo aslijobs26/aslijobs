@@ -49,7 +49,9 @@ export function DashboardNotifications({
 
   return (
     <section className="employer-rail-card overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="employer-notifications-header flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3.5">
+      <div
+        data-tour="employer-home-notifications"
+        className="employer-notifications-header flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3.5">
         <div className="flex items-center gap-2">
           <h2 className="employer-rail-title text-xs font-bold text-foreground sm:text-sm">
             {t("employer.dashboard.notifications")}

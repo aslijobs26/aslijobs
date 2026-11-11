@@ -58,7 +58,11 @@ export function JobsQuickActions({
   );
 
   return (
-    <OperationsCard title="Quick Actions" className="jobs-analytics-card min-w-0">
+    <OperationsCard
+      dataTour="ops-jobs-quick-actions"
+      title="Quick Actions"
+      className="jobs-analytics-card min-w-0"
+    >
       <ul className="grid gap-2">
         <li>
           <button

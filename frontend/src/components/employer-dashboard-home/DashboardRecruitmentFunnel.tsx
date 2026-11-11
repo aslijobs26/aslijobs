@@ -40,11 +40,17 @@ export function DashboardRecruitmentFunnel({
 
   return (
     <section className="employer-analytics-card flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="employer-analytics-card__header flex items-center justify-between gap-2 px-3 pt-3 sm:gap-3 sm:px-5 sm:pt-5">
+      <div
+        data-tour="employer-home-funnel"
+        className="employer-analytics-card__header flex items-center justify-between gap-2 px-3 pt-3 sm:gap-3 sm:px-5 sm:pt-5"
+      >
         <h2 className="employer-analytics-card__title employer-section-title min-w-0 break-words text-sm font-bold text-foreground sm:text-base">
           {t("employer.dashboard.recruitmentFunnel")}
         </h2>
-        <div className="min-w-[7.5rem] shrink-0 lg:min-w-[6.25rem]">
+        <div
+          data-tour="employer-home-funnel-period"
+          className="min-w-[7.5rem] shrink-0 lg:min-w-[6.25rem]"
+        >
           <EmployerRegisterSearchableSelect
             id="dashboard-funnel-period"
             label={t("employer.dashboard.funnelPeriodLabel")}
@@ -152,7 +158,9 @@ export function DashboardRecruitmentFunnel({
               })}
         </ul>
 
-        <div className="employer-funnel-footer mt-3 flex items-center justify-between gap-2 border-t border-border-subtle pt-2.5 sm:mt-5 sm:gap-3 sm:pt-4">
+        <div
+          data-tour="employer-home-funnel-conversion"
+          className="employer-funnel-footer mt-3 flex items-center justify-between gap-2 border-t border-border-subtle pt-2.5 sm:mt-5 sm:gap-3 sm:pt-4">
           <p className="employer-funnel-footer__label min-w-0 text-xs font-medium text-muted sm:text-sm">
             {t("employer.dashboard.conversionRate")}
           </p>

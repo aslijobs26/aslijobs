@@ -79,7 +79,10 @@ export function DashboardSourcesPerformance({
 
   return (
     <section className="employer-panel-card flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="employer-panel-card__header flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5">
+      <div
+        data-tour="employer-home-sources"
+        className="employer-panel-card__header flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5 sm:px-5"
+      >
         <h2 className="employer-panel-card__title min-w-0 break-words text-base font-bold text-foreground">
           {t("employer.dashboard.sourcesPerformance")}
         </h2>

@@ -14,7 +14,10 @@ export function OverviewQuickActions({
   exporting: boolean;
 }) {
   return (
-    <section className="rounded-xl border border-border-subtle bg-[#FFFBEB] p-3.5 shadow-sm dark:bg-hero-bg">
+    <section
+      data-tour="ops-dashboard-quick-actions"
+      className="rounded-xl border border-border-subtle bg-[#FFFBEB] p-3.5 shadow-sm dark:bg-hero-bg"
+    >
       <h3 className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
         <Zap
           className="size-3.5 shrink-0 text-brand-accent"
@@ -65,7 +68,10 @@ export function OverviewMyTeams({
   teams: OperationsDashboardOverview["myTeams"];
 }) {
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm">
+    <section
+      data-tour="ops-dashboard-teams"
+      className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm"
+    >
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-[12px] font-semibold text-foreground">My Teams</h3>
         <Link
@@ -107,7 +113,10 @@ export function OverviewAlerts({
   alerts: OperationsDashboardOverview["alerts"];
 }) {
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm">
+    <section
+      data-tour="ops-dashboard-alerts"
+      className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm"
+    >
       <h3 className="text-[12px] font-semibold text-foreground">
         Operational Alerts
       </h3>
@@ -147,7 +156,10 @@ export function OverviewAlerts({
 
 export function OverviewAskAsli() {
   return (
-    <section className="rounded-xl border border-primary/15 bg-gradient-to-br from-[#EFF6FF] to-[#F8FAFC] p-3.5 shadow-sm dark:from-primary/10 dark:to-surface">
+    <section
+      data-tour="ops-dashboard-assistant"
+      className="rounded-xl border border-primary/15 bg-gradient-to-br from-[#EFF6FF] to-[#F8FAFC] p-3.5 shadow-sm dark:from-primary/10 dark:to-surface"
+    >
       <div className="flex items-start gap-2.5">
         <img
           src="/assets/ask-asli-robot.png"

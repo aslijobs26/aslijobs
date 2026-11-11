@@ -22,6 +22,7 @@ import { cn } from "../../../utils/cn";
 import { getOperationsAuthUser } from "../../../utils/operations-auth-storage";
 import { clearOperationsClientSession } from "../../../utils/operations-session";
 import { OperationsNotificationsMenu } from "./OperationsNotificationsMenu";
+import { TakeTourButton } from "../../product-tour/ProductTourHost";
 
 export type OperationsHeaderVariant = "default" | "command";
 
@@ -161,6 +162,7 @@ export function OperationsHeader({
           !isCommand && "hidden md:block",
         )}
         role="search"
+        data-tour="ops-global-search"
       >
         <label htmlFor="ops-global-search" className="sr-only">
           Global search
@@ -211,6 +213,7 @@ export function OperationsHeader({
           />
         </button>
 
+        <TakeTourButton className="inline-flex h-8 items-center rounded-lg border border-border-subtle bg-surface px-2.5 text-[11px] font-semibold text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30" />
         <button
           type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}

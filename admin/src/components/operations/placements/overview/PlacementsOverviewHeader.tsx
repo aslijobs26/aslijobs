@@ -70,7 +70,7 @@ export function PlacementsOverviewHeader({
       </nav>
 
       <div className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
+        <div data-tour="ops-placements-header" className="min-w-0">
           <h1 className="text-xl font-bold tracking-tight text-foreground max-lg:text-lg max-sm:text-base">
             Placements Overview
           </h1>
@@ -80,7 +80,10 @@ export function PlacementsOverviewHeader({
           </p>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
+        <div
+          data-tour="ops-placements-actions"
+          className="flex min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center"
+        >
           <OperationsFilterSelect
             label="Date range"
             value={preset}

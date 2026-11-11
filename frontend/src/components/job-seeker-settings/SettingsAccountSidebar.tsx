@@ -79,7 +79,10 @@ export function SettingsAccountSidebar({
 
   return (
     <aside className="flex min-w-0 flex-col gap-4">
-      <section className="rounded-2xl border border-border-subtle bg-surface p-5">
+      <section
+        data-tour="seeker-settings-profile-strength"
+        className="rounded-2xl border border-border-subtle bg-surface p-5"
+      >
         <h2 className="text-sm font-bold text-foreground sm:text-base">
           Profile Strength
         </h2>
@@ -117,7 +120,10 @@ export function SettingsAccountSidebar({
         </Link>
       </section>
 
-      <section className="rounded-2xl border border-border-subtle bg-surface p-5">
+      <section
+        data-tour="seeker-settings-quick-settings"
+        className="rounded-2xl border border-border-subtle bg-surface p-5"
+      >
         <h2 className="text-sm font-bold text-foreground sm:text-base">
           Quick Settings
         </h2>
@@ -167,7 +173,10 @@ export function SettingsAccountSidebar({
         </ul>
       </section>
 
-      <section className="rounded-2xl border border-border-subtle bg-surface p-5">
+      <section
+        data-tour="seeker-settings-security-card"
+        className="rounded-2xl border border-border-subtle bg-surface p-5"
+      >
         <div className="flex items-start gap-3">
           <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-resource-guide-icon-surface text-resource-guide-icon">
             <ShieldCheck className="size-5" aria-hidden="true" />
@@ -193,7 +202,10 @@ export function SettingsAccountSidebar({
         </button>
       </section>
 
-      <section className="rounded-2xl border border-border-subtle bg-surface p-5">
+      <section
+        data-tour="seeker-settings-clear-cache"
+        className="rounded-2xl border border-border-subtle bg-surface p-5"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-sm font-bold text-foreground sm:text-base">

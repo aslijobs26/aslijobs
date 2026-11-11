@@ -74,12 +74,17 @@ export function JobSearchResultsHeader({
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h2 className="text-sm font-bold text-foreground sm:text-lg" suppressHydrationWarning>
+      <h2
+        data-tour="job-search-results-count"
+        className="text-sm font-bold text-foreground sm:text-lg"
+        suppressHydrationWarning
+      >
         {title || "\u00a0"}
       </h2>
 
       <div
         ref={rootRef}
+        data-tour="job-search-sort"
         className="hidden shrink-0 items-center gap-2.5 md:inline-flex"
       >
         <span

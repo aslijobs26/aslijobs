@@ -56,6 +56,7 @@ export function AccountSettingsPanel({
         avatarInitials={avatarInitials}
         editHref={editHref}
         canEdit={canEditProfile}
+        dataTour="employer-settings-profile-summary"
         details={[
           { label: "Login Email", value: loginEmail || "—" },
           { label: "Current Plan", value: "Not available" },
@@ -64,7 +65,7 @@ export function AccountSettingsPanel({
         ]}
       />
 
-      <div className="employer-settings-quick-grid grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-2">
+      <div data-tour="employer-settings-quick-links" className="employer-settings-quick-grid grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-2">
         {showCompanyQuickLink ? (
           <SettingCard
             title="Company Settings"

@@ -319,7 +319,7 @@ export function JobSeekerNotificationsPageContent() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17.5rem] xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0">
           <header className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
+            <div data-tour="seeker-notifications-header" className="min-w-0">
               <h1 className="break-words text-xl font-bold tracking-tight text-foreground sm:text-3xl">
                 {t("seeker.notifications.title")}
               </h1>
@@ -327,7 +327,10 @@ export function JobSeekerNotificationsPageContent() {
                 {t("seeker.notifications.subtitle")}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4">
+            <div
+              data-tour="seeker-notifications-bulk-actions"
+              className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4"
+            >
               <button
                 type="button"
                 disabled={!hasInboxItems || clearAllMutation.isPending}
@@ -348,7 +351,7 @@ export function JobSeekerNotificationsPageContent() {
           </header>
 
           <div className="mt-5 space-y-3">
-            <div className="relative">
+            <div data-tour="seeker-notifications-search" className="relative">
               <Search
                 className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
                 aria-hidden="true"
@@ -367,6 +370,7 @@ export function JobSeekerNotificationsPageContent() {
             </div>
 
             <div
+              data-tour="seeker-notifications-read-filter"
               className="flex gap-2 overflow-x-auto pb-0.5 max-lg:scrollbar-hidden"
               role="tablist"
               aria-label={t("seeker.notifications.readStatusAria")}
@@ -396,6 +400,7 @@ export function JobSeekerNotificationsPageContent() {
             </div>
 
             <div
+              data-tour="seeker-notifications-category-filter"
               className="flex gap-2 overflow-x-auto pb-0.5 max-lg:scrollbar-hidden"
               role="tablist"
               aria-label={t("seeker.notifications.categoryAria")}
@@ -451,7 +456,10 @@ export function JobSeekerNotificationsPageContent() {
                 </button>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="rounded-2xl border border-border-subtle bg-surface px-4 py-14 text-center shadow-sm">
+              <div
+                data-tour="seeker-notifications-empty"
+                className="rounded-2xl border border-border-subtle bg-surface px-4 py-14 text-center shadow-sm"
+              >
                 <span className="mx-auto inline-flex size-14 items-center justify-center rounded-full bg-primary-light text-primary">
                   <Bell className="size-7" aria-hidden="true" />
                 </span>
@@ -467,11 +475,14 @@ export function JobSeekerNotificationsPageContent() {
                 </p>
               </div>
             ) : (
-              notifications.map((notification) => {
+              notifications.map((notification, index) => {
                 const Icon = notificationIcon(notification.type);
                 return (
                   <article
                     key={notification.id}
+                    data-tour={
+                      index === 0 ? "seeker-notifications-first-item" : undefined
+                    }
                     className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
                   >
                     <div className="flex gap-3 sm:gap-4">
@@ -504,7 +515,14 @@ export function JobSeekerNotificationsPageContent() {
                           {notification.body}
                         </p>
 
-                        <div className="mt-3.5 flex flex-wrap gap-2">
+                        <div
+                          data-tour={
+                            index === 0
+                              ? "seeker-notifications-first-item-actions"
+                              : undefined
+                          }
+                          className="mt-3.5 flex flex-wrap gap-2"
+                        >
                           {notification.actionPath ? (
                             <button
                               type="button"
@@ -538,16 +556,18 @@ export function JobSeekerNotificationsPageContent() {
           </div>
 
           {pagination ? (
-            <ListPagination
-              page={pagination.page}
-              limit={pagination.limit}
-              total={pagination.total}
-              totalPages={pagination.totalPages}
-              onPageChange={(nextPage) => updateUrl({ page: nextPage })}
-              isLoading={listQuery.isFetching}
-              ariaLabel={t("seeker.notifications.paginationAria")}
-              entityLabel={t("seeker.notifications.entityLabel")}
-            />
+            <div data-tour="seeker-notifications-pagination">
+              <ListPagination
+                page={pagination.page}
+                limit={pagination.limit}
+                total={pagination.total}
+                totalPages={pagination.totalPages}
+                onPageChange={(nextPage) => updateUrl({ page: nextPage })}
+                isLoading={listQuery.isFetching}
+                ariaLabel={t("seeker.notifications.paginationAria")}
+                entityLabel={t("seeker.notifications.entityLabel")}
+              />
+            </div>
           ) : null}
         </div>
 

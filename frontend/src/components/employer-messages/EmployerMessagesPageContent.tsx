@@ -533,6 +533,7 @@ function MessageBubble({
   locale,
   language,
   t,
+  dataTour,
 }: {
   message: EmployerMessageTimelineItem;
   candidateName: string;
@@ -541,6 +542,8 @@ function MessageBubble({
   locale: string;
   language: SiteLanguageCode;
   t: Translate;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   const employerSide = isOutgoingTimelineItem(message);
   const copy = localizeNotification(message, language);
@@ -562,6 +565,7 @@ function MessageBubble({
         <ConversationAvatar name={candidateName} size="sm" />
       ) : null}
       <article
+        data-tour={dataTour}
         className={cn(
           "relative w-fit max-w-[min(85%,22rem)] min-w-[7.5rem] px-2 pt-1 pb-1 shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] sm:px-[9px] sm:pt-1.5 sm:pb-1.5 lg:max-w-[65%] lg:min-w-[8.5rem]",
           employerSide
@@ -1683,7 +1687,9 @@ export function EmployerMessagesPageContent() {
   let timelineBody: ReactNode;
   if (!showTimeline) {
     timelineBody = (
-      <div className="employer-messages-thread-empty flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center lg:gap-1 lg:px-4">
+      <div
+        data-tour="employer-messages-thread-empty"
+        className="employer-messages-thread-empty flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center lg:gap-1 lg:px-4">
         <div className="rounded-lg bg-brand-accent/25 px-5 py-3 shadow-sm ring-1 ring-black/5 lg:px-3.5 lg:py-2">
           <p className="employer-messages-thread-empty__title text-sm font-medium text-muted lg:text-[11px]">
             {t("employer.messagesPage.thread.selectTitle")}
@@ -1703,7 +1709,10 @@ export function EmployerMessagesPageContent() {
 
     timelineBody = (
       <>
-        <header className="sticky top-0 z-10 flex shrink-0 flex-col border-b border-border-subtle bg-surface/95 backdrop-blur-[2px]">
+        <header
+          data-tour="employer-messages-conversation-header"
+          className="sticky top-0 z-10 flex shrink-0 flex-col border-b border-border-subtle bg-surface/95 backdrop-blur-[2px]"
+        >
           <div className="flex items-center gap-2 px-3.5 py-3.5 sm:gap-2.5 sm:px-5 sm:py-3.5 lg:px-6">
             <button
               type="button"
@@ -1761,7 +1770,10 @@ export function EmployerMessagesPageContent() {
                   : ""}
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            <div
+              className="flex shrink-0 items-center gap-1"
+              data-tour="employer-messages-conversation-actions"
+            >
               {selectedIsJobThread ? null : actionsPhoneHref ? (
                 <a
                   href={actionsPhoneHref}
@@ -1858,7 +1870,7 @@ export function EmployerMessagesPageContent() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {timelineGroups.map((group) => (
+                  {timelineGroups.map((group, groupIndex) => (
                     <div key={group.key}>
                       <div className="mb-1.5 flex justify-center">
                         <span className="rounded-md bg-brand-accent/30 px-2.5 py-0.5 text-[0.6875rem] font-medium text-foreground/70 shadow-sm">
@@ -1866,7 +1878,7 @@ export function EmployerMessagesPageContent() {
                         </span>
                       </div>
                       <ul className="space-y-1">
-                        {group.items.map((message) => (
+                        {group.items.map((message, itemIndex) => (
                           <MessageBubble
                             key={message.id}
                             message={message}
@@ -1876,6 +1888,12 @@ export function EmployerMessagesPageContent() {
                             locale={locale}
                             language={language.code}
                             t={t}
+                            dataTour={
+                              groupIndex === timelineGroups.length - 1 &&
+                              itemIndex === group.items.length - 1
+                                ? "employer-messages-latest-message"
+                                : undefined
+                            }
                           />
                         ))}
                       </ul>
@@ -1892,7 +1910,9 @@ export function EmployerMessagesPageContent() {
           )}
         </div>
 
-        <footer className="shrink-0 border-t border-border-subtle bg-surface/90 px-3 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] lg:pb-1.5">
+        <footer
+          data-tour="employer-messages-thread-footer"
+          className="shrink-0 border-t border-border-subtle bg-surface/90 px-3 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] lg:pb-1.5">
           {selectedConversation?.archived ? (
             <p className="text-center text-[0.6875rem] text-muted">
               {t("employer.messagesPage.thread.archivedNote")}
@@ -1936,7 +1956,7 @@ export function EmployerMessagesPageContent() {
           mobileShowTimeline && "hidden lg:flex",
         )}
       >
-        <div className="min-w-0">
+        <div className="min-w-0" data-tour="employer-messages-header">
           <h1 className="employer-messages-header__title text-lg font-bold tracking-tight text-foreground sm:text-xl lg:text-[1.125rem]">
             {t("employer.messagesPage.header.title")}
           </h1>
@@ -1950,6 +1970,7 @@ export function EmployerMessagesPageContent() {
               type="button"
               onClick={() => exportMutation.mutate()}
               disabled={exportMutation.isPending}
+              data-tour="employer-messages-export"
               className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60 lg:min-h-8 lg:text-[11px]"
             >
               <Download className="size-3.5" aria-hidden="true" />
@@ -1961,6 +1982,7 @@ export function EmployerMessagesPageContent() {
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(true)}
+            data-tour="employer-messages-filters-toggle"
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 text-xs font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:hidden"
           >
             <Filter className="size-3.5" aria-hidden="true" />
@@ -1988,6 +2010,7 @@ export function EmployerMessagesPageContent() {
               "shrink-0",
               mobileShowTimeline && "hidden lg:block",
             )}
+            data-tour="employer-messages-stats"
           >
             <MessagesStatsCards
               stats={stats}
@@ -2019,7 +2042,10 @@ export function EmployerMessagesPageContent() {
               )}
             >
           <div className="employer-messages-list-toolbar shrink-0 border-b border-border-subtle px-2.5 pt-2 lg:px-2 lg:pt-1.5">
-            <div className="flex gap-0.5 overflow-x-auto scrollbar-hidden">
+            <div
+              className="flex gap-0.5 overflow-x-auto scrollbar-hidden"
+              data-tour="employer-messages-tabs"
+            >
               {(
                 [
                   {
@@ -2078,7 +2104,10 @@ export function EmployerMessagesPageContent() {
               ))}
             </div>
 
-            <div className="relative py-2 lg:py-1.5">
+            <div
+              className="relative py-2 lg:py-1.5"
+              data-tour="employer-messages-search"
+            >
               <Search
                 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted lg:left-2.5 lg:size-3.5"
                 aria-hidden="true"
@@ -2098,7 +2127,10 @@ export function EmployerMessagesPageContent() {
               />
             </div>
 
-            <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hidden lg:pb-1.5">
+            <div
+              className="flex gap-1 overflow-x-auto pb-2 scrollbar-hidden lg:pb-1.5"
+              data-tour="employer-messages-categories"
+            >
               {MESSAGES_CATEGORY_OPTIONS.map((chip) => (
                 <button
                   key={chip.value}
@@ -2122,7 +2154,10 @@ export function EmployerMessagesPageContent() {
               ))}
             </div>
 
-            <div className="flex min-h-8 flex-wrap items-center gap-1.5 pb-2 lg:pb-1.5">
+            <div
+              className="flex min-h-8 flex-wrap items-center gap-1.5 pb-2 lg:pb-1.5"
+              data-tour="employer-messages-bulk"
+            >
               {bulkMode ? (
                 <>
                   <span className="text-[11px] font-semibold text-foreground lg:text-[0.625rem]">
@@ -2230,7 +2265,9 @@ export function EmployerMessagesPageContent() {
                 </button>
               </div>
             ) : conversations.length === 0 ? (
-              <div className="employer-messages-empty flex flex-col items-center gap-2 px-4 py-10 text-center lg:gap-1 lg:px-3 lg:py-5">
+              <div
+                data-tour="employer-messages-list-empty"
+                className="employer-messages-empty flex flex-col items-center gap-2 px-4 py-10 text-center lg:gap-1 lg:px-3 lg:py-5">
                 {createElement(
                   tab === "starred"
                     ? Star
@@ -2273,7 +2310,7 @@ export function EmployerMessagesPageContent() {
               </div>
             ) : (
               <ul>
-                {conversations.map((conversation) => {
+                {conversations.map((conversation, index) => {
                   const isActive =
                     !bulkMode &&
                     conversation.applicationId === selectedApplicationId;
@@ -2286,7 +2323,14 @@ export function EmployerMessagesPageContent() {
                     language.code,
                   ).title;
                   return (
-                    <li key={conversation.applicationId}>
+                    <li
+                      key={conversation.applicationId}
+                      data-tour={
+                        index === 0
+                          ? "employer-messages-first-conversation"
+                          : undefined
+                      }
+                    >
                       <button
                         type="button"
                         onClick={() =>
@@ -2413,7 +2457,10 @@ export function EmployerMessagesPageContent() {
           </div>
 
           {conversationsQuery.hasNextPage ? (
-            <div className="shrink-0 border-t border-border-subtle p-2 text-center">
+            <div
+              className="shrink-0 border-t border-border-subtle p-2 text-center"
+              data-tour="employer-messages-load-more"
+            >
               <button
                 type="button"
                 disabled={conversationsQuery.isFetchingNextPage}

@@ -1,6 +1,7 @@
 "use client";
 
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { TakeTourButton } from "@/components/product-tour/ProductTourHost";
 import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
 import { cn } from "@/utils/cn";
@@ -41,13 +42,15 @@ export function JobSeekerTopBar({
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <TakeTourButton className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-surface px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:px-3 sm:text-sm" />
         <Link
           href={ROUTES.FIND_JOBS}
+          data-tour="seeker-browse-jobs"
           className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:px-4 sm:text-sm"
         >
           {t("seeker.common.browseJobs")}
         </Link>
-        <NotificationBell viewAllHref={ROUTES.JOB_SEEKER_NOTIFICATIONS} />
+        <NotificationBell dataTour="seeker-bell" viewAllHref={ROUTES.JOB_SEEKER_NOTIFICATIONS} />
       </div>
     </header>
   );

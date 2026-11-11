@@ -262,7 +262,11 @@ export function SavedCandidatesToolbar({
     <div className="rounded-xl border border-border-subtle bg-surface p-2.5 sm:p-4 lg:p-3">
       <div className="flex flex-col gap-2 sm:gap-3 lg:gap-2.5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="relative min-w-0 flex-1" htmlFor={searchId}>
+          <label
+            className="relative min-w-0 flex-1"
+            htmlFor={searchId}
+            data-tour="employer-shortlist-search"
+          >
             <span className="sr-only">Search saved candidates</span>
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted sm:left-3 sm:size-4"
@@ -289,6 +293,7 @@ export function SavedCandidatesToolbar({
               <button
                 type="button"
                 onClick={onOpenAddModal}
+                data-tour="employer-shortlist-add"
                 className={cn(
                   primaryActionButtonClassName,
                   "min-w-0 flex-1 bg-primary text-surface hover:bg-primary-hover sm:flex-none",
@@ -306,6 +311,7 @@ export function SavedCandidatesToolbar({
               <button
                 type="button"
                 onClick={onOpenExportModal}
+                data-tour="employer-shortlist-export"
                 className={cn(
                   primaryActionButtonClassName,
                   "min-w-0 flex-1 border border-primary bg-primary-light text-primary hover:bg-primary hover:text-surface sm:flex-none",
@@ -324,6 +330,7 @@ export function SavedCandidatesToolbar({
             className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 scrollbar-hidden"
             role="toolbar"
             aria-label="Saved candidate filters"
+            data-tour="employer-shortlist-filters"
           >
             {mobileFilterChips.map((chip) => {
               const isOpen = mobileOpenFilter === chip.key;
@@ -514,7 +521,10 @@ export function SavedCandidatesToolbar({
         </div>
 
         {/* Desktop: full filter row */}
-        <div className="hidden lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_minmax(11rem,13rem)_auto] lg:items-center lg:gap-2">
+        <div
+          data-tour="employer-shortlist-filters"
+          className="hidden lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_minmax(11rem,13rem)_auto] lg:items-center lg:gap-2"
+        >
           <label className="min-w-0">
             <span className="sr-only">Job title</span>
             <EmployerRegisterSearchableSelect
@@ -580,6 +590,7 @@ export function SavedCandidatesToolbar({
           <button
             type="button"
             onClick={() => setMoreFiltersOpen((open) => !open)}
+            data-tour="employer-shortlist-more-filters"
             className={cn(
               filterActionButtonClassName,
               "w-auto border border-border-subtle bg-surface text-foreground hover:border-primary/30",
@@ -597,7 +608,7 @@ export function SavedCandidatesToolbar({
             ) : null}
           </button>
 
-          <label className="min-w-0">
+          <label className="min-w-0" data-tour="employer-shortlist-sort">
             <span className="sr-only">Sort by</span>
             <EmployerRegisterSearchableSelect
               id="saved-candidates-sort"
@@ -618,6 +629,7 @@ export function SavedCandidatesToolbar({
             className="flex h-10 w-auto items-center gap-0.5 rounded-xl border border-border-subtle p-1 lg:h-9"
             role="group"
             aria-label="View mode"
+            data-tour="employer-shortlist-view-toggle"
           >
             <button
               type="button"

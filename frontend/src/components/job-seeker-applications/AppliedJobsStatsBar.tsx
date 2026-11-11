@@ -15,6 +15,8 @@ type AppliedJobsStatsBarProps = {
   stats: SeekerApplicationStats | undefined;
   isLoading: boolean;
   onChange: (filter: AppliedJobsStatsFilter) => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 export function AppliedJobsStatsBar({
@@ -22,11 +24,13 @@ export function AppliedJobsStatsBar({
   stats,
   isLoading,
   onChange,
+  dataTour,
 }: AppliedJobsStatsBarProps) {
   const t = useTranslate();
 
   return (
     <div
+      data-tour={dataTour}
       className="flex gap-2 overflow-x-auto pb-1 scrollbar-hidden"
       role="tablist"
       aria-label={t("seeker.applications.chipsAria")}

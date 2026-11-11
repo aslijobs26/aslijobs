@@ -169,7 +169,7 @@ export function DepartmentsTabPanel() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div data-tour="employer-team-departments-header">
           <h2 className="text-base font-bold text-foreground sm:text-lg lg:text-sm">
             Departments
           </h2>
@@ -242,6 +242,7 @@ export function DepartmentsTabPanel() {
             total={pagination.total}
             totalPages={pagination.totalPages}
             isLoading={departmentsQuery.isFetching}
+            dataTour="employer-team-departments-pagination"
             onPageChange={setPage}
             onLimitChange={(nextLimit) => {
               setLimit(nextLimit);

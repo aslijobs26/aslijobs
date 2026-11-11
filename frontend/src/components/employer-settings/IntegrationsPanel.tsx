@@ -9,6 +9,7 @@ export function IntegrationsPanel() {
     <SettingsSection
       title="Integrations"
       description="These services are configured at the platform level. Employers cannot connect or disconnect them from Settings."
+      dataTour="employer-settings-integrations"
     >
       <ul className="space-y-3" role="list">
         {EMPLOYER_SETTINGS_PLATFORM_INTEGRATIONS.map((item) => (

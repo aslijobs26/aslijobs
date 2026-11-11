@@ -567,7 +567,10 @@ export function InterviewsCalendar({
   return (
     <section className="flex min-w-0 flex-1 flex-col rounded-xl border border-border-subtle bg-surface lg:min-h-[32rem] lg:overflow-hidden">
       <header className="hidden shrink-0 flex-col gap-3 border-b border-border-subtle p-3 sm:p-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          className="flex flex-wrap items-center gap-2"
+          data-tour="employer-interviews-calendar-nav"
+        >
           <div className="inline-flex overflow-hidden rounded-lg border border-border-subtle">
             <button
               type="button"
@@ -602,6 +605,7 @@ export function InterviewsCalendar({
           className="inline-flex overflow-hidden rounded-lg border border-border-subtle"
           role="tablist"
           aria-label="Calendar view mode"
+          data-tour="employer-interviews-calendar-modes"
         >
           {(["month", "week", "day"] as const).map((option) => (
             <button
@@ -628,6 +632,7 @@ export function InterviewsCalendar({
           className="grid grid-cols-3 overflow-hidden rounded-lg border border-border-subtle"
           role="tablist"
           aria-label="Calendar view mode"
+          data-tour="employer-interviews-calendar-modes"
         >
           {(["day", "week", "month"] as const).map((option) => (
             <button
@@ -652,7 +657,10 @@ export function InterviewsCalendar({
           ))}
         </div>
 
-        <div className="mt-2 flex min-w-0 items-center justify-between gap-2 sm:mt-3">
+        <div
+          className="mt-2 flex min-w-0 items-center justify-between gap-2 sm:mt-3"
+          data-tour="employer-interviews-calendar-nav"
+        >
           <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-border-subtle">
             <button
               type="button"

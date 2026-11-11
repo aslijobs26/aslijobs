@@ -34,7 +34,7 @@ export function TopHiringLocations({
     .slice(0, 5);
 
   return (
-    <section className="employers-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section data-tour="ops-employers-hiring-locations" className="employers-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
       <header className="flex shrink-0 items-center justify-between gap-2 px-3.5 pt-3 sm:px-4 sm:pt-3.5">
         <h3 className="text-[13px] font-semibold tracking-tight text-foreground">
           Top Hiring Locations

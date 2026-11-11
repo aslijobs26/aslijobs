@@ -64,7 +64,7 @@ interface PlatformPulseSectionProps {
 
 export function PlatformPulseSection({ metrics }: PlatformPulseSectionProps) {
   return (
-    <section aria-label="Platform pulse">
+    <section aria-label="Platform pulse" data-tour="ops-home-pulse">
       <div className="grid grid-cols-2 gap-1.5 max-sm:gap-1.5 sm:gap-3 lg:grid-cols-5">
         {metrics.map((metric) => {
           const config = TONE_CONFIG[metric.iconTone];

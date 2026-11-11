@@ -17,7 +17,7 @@ export function MyWorkOverviewHeader({
   return (
     <header className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5 max-sm:gap-2">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+        <div data-tour="ops-my-work-header" className="min-w-0">
           <h1 className="text-xl font-bold tracking-tight text-foreground max-lg:text-lg max-sm:text-base">
             My Work
           </h1>
@@ -26,7 +26,10 @@ export function MyWorkOverviewHeader({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          data-tour="ops-my-work-actions"
+          className="flex flex-wrap items-center gap-2"
+        >
           <OperationsCanKey permissionKey="my_work.create">
             {onCreate ? (
               <button

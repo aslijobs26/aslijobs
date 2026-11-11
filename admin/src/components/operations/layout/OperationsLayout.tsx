@@ -7,6 +7,7 @@ import {
   type OperationsLayoutDensity,
 } from "../../../constants/operations-layout";
 import { cn } from "../../../utils/cn";
+import { OperationsProductTour } from "../../product-tour/ProductTourHost";
 import "../dashboard/operations-dashboard-density.css";
 import {
   OperationsHeader,
@@ -112,6 +113,7 @@ export function OperationsLayout({
         >
           <div className="mx-auto w-full min-w-0 max-w-full">{children}</div>
         </main>
+        <OperationsProductTour />
       </div>
     </div>
   );

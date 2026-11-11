@@ -186,7 +186,9 @@ export function EmployerJobsTable({
       ) : null}
 
       {!showTable && !isError ? (
-        <div className="employer-jobs-empty px-4 py-10 text-left sm:py-14 sm:text-center lg:py-8">
+        <div
+          data-tour="employer-jobs-empty"
+          className="employer-jobs-empty px-4 py-10 text-left sm:py-14 sm:text-center lg:py-8">
           <p className="employer-jobs-empty__title text-sm font-semibold text-foreground sm:text-base lg:text-sm">
             {t("employer.jobs.emptyTitle")}
           </p>
@@ -216,7 +218,7 @@ export function EmployerJobsTable({
               />
             ))}
           </colgroup>
-          <thead>
+          <thead data-tour="employer-jobs-table">
             <tr className="border-b border-border-subtle bg-hero-bg/70">
               {canSelect ? (
                 <th scope="col" className={HEADER_CELL_CLASS}>
@@ -251,10 +253,11 @@ export function EmployerJobsTable({
             {isLoading ? (
               <EmployerTableRowsSkeleton rows={8} colSpan={columnCount} />
             ) : (
-              jobs.map((job) => (
+              jobs.map((job, index) => (
                 <EmployerJobsTableRow
                   key={job.id}
                   job={job}
+                  isTourAnchor={index === 0}
                   disabled={isMutating}
                   canSelect={canSelect}
                   selected={selectionLocked || selectedIds.has(job.id)}
@@ -288,7 +291,7 @@ export function EmployerJobsTable({
         />
       ) : null}
 
-      <div className="mt-auto shrink-0">
+      <div data-tour="employer-jobs-pagination" className="mt-auto shrink-0">
         <EmployerJobsPagination
           page={page}
           limit={limit}
@@ -305,6 +308,8 @@ export function EmployerJobsTable({
 
 type EmployerJobsTableRowProps = {
   job: EmployerJobListItem;
+  /** Adds the product tour anchors (`data-tour`) used for the first row. */
+  isTourAnchor?: boolean;
   disabled: boolean;
   canSelect: boolean;
   selected: boolean;
@@ -317,6 +322,7 @@ type EmployerJobsTableRowProps = {
 
 function EmployerJobsTableRow({
   job,
+  isTourAnchor = false,
   disabled,
   canSelect,
   selected,
@@ -464,6 +470,7 @@ function EmployerJobsTableRow({
 
   return (
     <tr
+      data-tour={isTourAnchor ? "employer-jobs-first-row" : undefined}
       className={cn(
         "border-b border-border-subtle last:border-b-0 hover:bg-hero-bg/35",
         selected && "bg-primary/5",
@@ -507,7 +514,12 @@ function EmployerJobsTableRow({
           </span>
         </span>
       </td>
-      <td className={cn(BODY_CELL_CLASS, "text-center text-[11px] font-semibold text-foreground xl:text-[12px]")}>
+      <td
+        data-tour={
+          isTourAnchor ? "employer-jobs-first-row-applications" : undefined
+        }
+        className={cn(BODY_CELL_CLASS, "text-center text-[11px] font-semibold text-foreground xl:text-[12px]")}
+      >
         {canViewCandidates ? (
           <Link
             href={`${ROUTES.EMPLOYER_CANDIDATES}?jobId=${encodeURIComponent(job.jobId)}`}
@@ -532,7 +544,10 @@ function EmployerJobsTableRow({
       <td className={cn(BODY_CELL_CLASS, "text-center text-[11px] font-semibold text-foreground xl:text-[12px]")}>
         {formatEmployerJobCount(job.views)}
       </td>
-      <td className={BODY_CELL_CLASS}>
+      <td
+        data-tour={isTourAnchor ? "employer-jobs-first-row-status" : undefined}
+        className={BODY_CELL_CLASS}
+      >
         <div className="flex min-w-0 flex-col gap-1">
           {job.status === "pending_approval" ? (
             <span
@@ -617,7 +632,10 @@ function EmployerJobsTableRow({
           </p>
         ) : null}
       </td>
-      <td className={BODY_CELL_CLASS}>
+      <td
+        data-tour={isTourAnchor ? "employer-jobs-first-row-actions" : undefined}
+        className={BODY_CELL_CLASS}
+      >
         <div className="flex items-center justify-start gap-1.5">
           {canReadJobs ? (
             <IconActionButton

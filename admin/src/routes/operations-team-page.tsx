@@ -374,7 +374,7 @@ export function OperationsTeamPage() {
     <OperationsLayout title="People" headerVariant="command">
       <div className="flex flex-col gap-4 lg:gap-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
+          <div className="min-w-0" data-tour="ops-people-header">
             <Link
               to={OPERATIONS_ROUTES.ORGANIZATION}
               className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
@@ -394,7 +394,10 @@ export function OperationsTeamPage() {
               the organization.
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div
+            className="flex shrink-0 items-center gap-2"
+            data-tour="ops-people-actions"
+          >
             <OperationsCan module="team" action="create">
               <button
                 type="button"
@@ -428,6 +431,7 @@ export function OperationsTeamPage() {
 
         {visibleKpis.length > 0 ? (
           <div
+            data-tour="ops-people-kpis"
             className={cn(
               "grid gap-2.5 sm:gap-3",
               visibleKpis.length >= 6
@@ -450,7 +454,10 @@ export function OperationsTeamPage() {
           </div>
         ) : null}
 
-        <div className="rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5">
+        <div
+          className="rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5"
+          data-tour="ops-people-filters"
+        >
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="relative min-w-0 flex-1">
               <Search
@@ -652,7 +659,10 @@ export function OperationsTeamPage() {
         ) : (
           <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <table className="min-w-[78rem] w-full text-left">
-              <thead className="border-b border-border-subtle bg-[#F8FAFC] text-[11px] font-semibold uppercase tracking-[0.04em] text-muted">
+              <thead
+                className="border-b border-border-subtle bg-[#F8FAFC] text-[11px] font-semibold uppercase tracking-[0.04em] text-muted"
+                data-tour="ops-people-list"
+              >
                 <tr>
                   <th className="px-4 py-3">Member</th>
                   {canViewEmail ? <th className="px-4 py-3">Email</th> : null}
@@ -673,7 +683,7 @@ export function OperationsTeamPage() {
                 </tr>
               </thead>
               <tbody>
-                {members.map((member) => {
+                {members.map((member, index) => {
                   const roleLabel = memberRoleLabel(member);
                   const canEditMember =
                     member.role !== "SUPER_ADMIN" || Boolean(user?.isSuperAdmin);
@@ -765,7 +775,12 @@ export function OperationsTeamPage() {
                         {formatPeopleTimestamp(member.lastActiveAt)}
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <div className="flex items-center gap-2">
+                        <div
+                          className="flex items-center gap-2"
+                          data-tour={
+                            index === 0 ? "ops-people-row-actions" : undefined
+                          }
+                        >
                           {showResendPrimary ? (
                             <OperationsCanKey permissionKey="team.members.invite">
                               <button
@@ -859,7 +874,10 @@ export function OperationsTeamPage() {
         )}
 
         {pagination.total > limit ? (
-          <div className="rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:px-4">
+          <div
+            className="rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:px-4"
+            data-tour="ops-people-pagination"
+          >
             <JobsPaginationBar
               pagination={pagination}
               onPageChange={setPage}

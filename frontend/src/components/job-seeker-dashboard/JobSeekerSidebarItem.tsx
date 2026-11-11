@@ -36,6 +36,7 @@ export function JobSeekerSidebarItem({
   return (
     <Link
       href={item.href}
+      data-tour={`seeker-nav-${item.id}`}
       onClick={onNavigate}
       aria-current={isActive ? "page" : undefined}
       title={collapsed ? label : undefined}

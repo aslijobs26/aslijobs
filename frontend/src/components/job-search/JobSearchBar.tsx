@@ -104,6 +104,7 @@ export function JobSearchBar({
 
   return (
     <form
+      data-tour="job-search-bar"
       onSubmit={handleSubmit}
       className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
       aria-label={t("jobs.refineSearch")}

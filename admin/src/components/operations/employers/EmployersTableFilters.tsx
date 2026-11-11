@@ -110,7 +110,10 @@ export function EmployersTableFilters({
   ].filter(Boolean).length;
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 max-sm:gap-2 xl:gap-1.5">
+    <div
+      data-tour="ops-employers-filters"
+      className="flex min-w-0 flex-col gap-2 max-sm:gap-2 xl:gap-1.5"
+    >
       <div className="flex min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
         <label className="relative block w-full min-w-0 sm:min-w-[12rem] sm:max-w-xs sm:flex-1 xl:max-w-[14rem]">
           <span className="mb-1 block text-[8px] font-semibold uppercase tracking-wide text-muted sm:hidden">

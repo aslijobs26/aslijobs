@@ -78,6 +78,7 @@ export function DepartmentsKpiStrip({
     <section
       aria-label="Department overview KPIs"
       className="grid grid-cols-2 gap-2.5 lg:grid-cols-4"
+      data-tour="ops-departments-kpis"
     >
       {KPI_CARDS.map((item) => {
         const Icon = item.icon;

@@ -44,6 +44,7 @@ export function VerificationsOverviewTabs({
       className="-mx-0.5 flex min-w-0 items-end gap-0 overflow-x-auto overscroll-x-contain border-b border-border-subtle px-0.5 scrollbar-hidden"
       role="tablist"
       aria-label="Verifications overview tabs"
+      data-tour="ops-verifications-tabs"
     >
       {TABS.map((tab) => {
         const selected = activeTab === tab.id;

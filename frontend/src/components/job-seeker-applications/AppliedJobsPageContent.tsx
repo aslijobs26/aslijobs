@@ -320,7 +320,7 @@ export function AppliedJobsPageContent({
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17.5rem] xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0">
-          <header>
+          <header data-tour="seeker-applications-header">
             <h1 className="break-words text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               {t("seeker.applications.title")}
             </h1>
@@ -331,6 +331,7 @@ export function AppliedJobsPageContent({
 
           <div className="mt-5">
             <AppliedJobsStatsBar
+              dataTour="seeker-applications-status"
               activeFilter={statsFilter}
               stats={statsQuery.data}
               isLoading={statsQuery.isLoading}
@@ -341,7 +342,10 @@ export function AppliedJobsPageContent({
           </div>
 
           <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
-            <div className="relative min-w-0 flex-1">
+            <div
+              data-tour="seeker-applications-search"
+              className="relative min-w-0 flex-1"
+            >
               <Search
                 className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
                 aria-hidden="true"
@@ -367,6 +371,7 @@ export function AppliedJobsPageContent({
             <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
+                data-tour="seeker-applications-filters"
                 onClick={() => setFiltersOpen(true)}
                 className={cn(
                   "inline-flex h-9 items-center gap-1.5 rounded-lg border bg-surface px-3 text-xs font-semibold shadow-sm transition-[border-color,background-color,box-shadow] sm:h-11 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm",
@@ -390,6 +395,7 @@ export function AppliedJobsPageContent({
               </button>
 
               <AppliedJobsSortSelect
+                dataTour="seeker-applications-sort"
                 value={sort}
                 onChange={(nextSort) => {
                   updateUrl({ sort: nextSort, page: 1 });
@@ -434,24 +440,36 @@ export function AppliedJobsPageContent({
             ) : (
               <>
                 <div className="flex flex-col gap-3">
-                  {applications.map((application) => (
+                  {applications.map((application, index) => (
                     <AppliedJobCard
                       key={application.id}
                       application={application}
+                      dataTour={
+                        index === 0
+                          ? "seeker-applications-first-card"
+                          : undefined
+                      }
+                      statusDataTour={
+                        index === 0
+                          ? "seeker-applications-first-status"
+                          : undefined
+                      }
                     />
                   ))}
                 </div>
 
-                <ListPagination
-                  page={pagination.page}
-                  limit={pagination.limit}
-                  total={pagination.total}
-                  totalPages={pagination.totalPages}
-                  onPageChange={(nextPage) => updateUrl({ page: nextPage })}
-                  isLoading={listQuery.isFetching}
-                  ariaLabel={t("seeker.applications.paginationAria")}
-                  entityLabel={t("seeker.applications.entityLabel")}
-                />
+                <div data-tour="seeker-applications-pagination">
+                  <ListPagination
+                    page={pagination.page}
+                    limit={pagination.limit}
+                    total={pagination.total}
+                    totalPages={pagination.totalPages}
+                    onPageChange={(nextPage) => updateUrl({ page: nextPage })}
+                    isLoading={listQuery.isFetching}
+                    ariaLabel={t("seeker.applications.paginationAria")}
+                    entityLabel={t("seeker.applications.entityLabel")}
+                  />
+                </div>
               </>
             )}
           </div>
@@ -513,7 +531,10 @@ function EmptyAppliedJobsState({ hasFilters }: { hasFilters: boolean }) {
 
   if (hasFilters) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface px-4 py-12 text-center">
+      <div
+        data-tour="seeker-applications-empty"
+        className="rounded-xl border border-border-subtle bg-surface px-4 py-12 text-center"
+      >
         <Briefcase className="mx-auto size-10 text-muted" aria-hidden="true" />
         <h2 className="mt-4 break-words text-base font-semibold text-foreground">
           {t("seeker.applications.emptyFilteredTitle")}
@@ -526,7 +547,10 @@ function EmptyAppliedJobsState({ hasFilters }: { hasFilters: boolean }) {
   }
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface px-4 py-14 text-center sm:px-8">
+    <div
+      data-tour="seeker-applications-empty"
+      className="rounded-xl border border-border-subtle bg-surface px-4 py-14 text-center sm:px-8"
+    >
       <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-primary-light">
         <Briefcase className="size-8 text-primary" aria-hidden="true" />
       </div>

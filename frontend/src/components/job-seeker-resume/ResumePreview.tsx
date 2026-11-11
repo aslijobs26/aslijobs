@@ -5,6 +5,8 @@ import type { PublicResume } from "@/types/job-seeker-resume";
 type ResumePreviewProps = {
   resume?: PublicResume;
   resumeJson?: ResumeJson | Record<string, never>;
+  /** Product tour anchor (`data-tour`) for the preview header. */
+  dataTour?: string;
 };
 
 function Section({
@@ -47,12 +49,19 @@ function formatEducationMeta(entry: ResumeJson["sections"]["education"][number])
     .join(" · ");
 }
 
-export function ResumePreview({ resume, resumeJson }: ResumePreviewProps) {
+export function ResumePreview({
+  resume,
+  resumeJson,
+  dataTour,
+}: ResumePreviewProps) {
   const sourceJson = resumeJson ?? resume?.resumeJson;
 
   if (!sourceJson || !isResumeJson(sourceJson)) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface p-6 text-xs text-muted sm:text-sm">
+      <div
+        data-tour={dataTour}
+        className="rounded-xl border border-border-subtle bg-surface p-6 text-xs text-muted sm:text-sm"
+      >
         Resume content is not available yet.
       </div>
     );
@@ -67,7 +76,10 @@ export function ResumePreview({ resume, resumeJson }: ResumePreviewProps) {
       id="resume-preview"
       className="resume-print-root rounded-xl border border-border-subtle bg-surface p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)] sm:p-8"
     >
-      <header className="border-b border-border-subtle pb-4">
+      <header
+        data-tour={dataTour}
+        className="border-b border-border-subtle pb-4"
+      >
         <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
           {json.header.fullName || "Job Seeker"}
         </h2>

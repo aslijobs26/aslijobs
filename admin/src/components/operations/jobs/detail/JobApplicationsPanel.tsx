@@ -61,6 +61,7 @@ export function JobApplicationsPanel({
 }: JobApplicationsPanelProps) {
   return (
     <OperationsCard
+      dataTour="ops-job-applications"
       title={`Applications (${total.toLocaleString("en-IN")})`}
       action={
         <button
@@ -118,7 +119,7 @@ export function JobApplicationsPanel({
                 </tr>
               </thead>
               <tbody>
-                {applications.map((application) => {
+                {applications.map((application, index) => {
                   const profilePath = application.jobSeekerId
                     ? operationsCandidateDetailPath(application.jobSeekerId)
                     : null;
@@ -177,7 +178,12 @@ export function JobApplicationsPanel({
                           {application.statusLabel}
                         </OperationsBadge>
                       </td>
-                      <td className="px-3 py-3 text-right">
+                      <td
+                        data-tour={
+                          index === 0 ? "ops-job-application-actions" : undefined
+                        }
+                        className="px-3 py-3 text-right"
+                      >
                         {profilePath ? (
                           <Link
                             to={profilePath}
@@ -198,7 +204,7 @@ export function JobApplicationsPanel({
           </div>
 
           <ul className="divide-y divide-border-subtle md:hidden">
-            {applications.map((application) => {
+            {applications.map((application, index) => {
               const profilePath = application.jobSeekerId
                 ? operationsCandidateDetailPath(application.jobSeekerId)
                 : null;
@@ -232,7 +238,12 @@ export function JobApplicationsPanel({
                         {application.candidatePhone || "—"} ·{" "}
                         {application.candidateLocation || "—"}
                       </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <div
+                        data-tour={
+                          index === 0 ? "ops-job-application-actions" : undefined
+                        }
+                        className="mt-2 flex flex-wrap items-center gap-2"
+                      >
                         <OperationsBadge
                           variant={applicationBadgeVariant(application.status)}
                         >
@@ -261,7 +272,10 @@ export function JobApplicationsPanel({
       ) : null}
 
       {!isLoading && !isError ? (
-        <div className="border-t border-border-subtle px-3 py-2.5">
+        <div
+          data-tour="ops-job-applications-pagination"
+          className="border-t border-border-subtle px-3 py-2.5"
+        >
           <JobsPaginationBar
             pagination={pagination}
             onPageChange={onPageChange}

@@ -147,6 +147,7 @@ export function OperationsPlacementDetailPage() {
         <div>
           <Link
             to={OPERATIONS_ROUTES.PLACEMENTS_LIST}
+            data-tour="ops-placement-back"
             className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
             <ArrowLeft className="size-3.5" aria-hidden="true" />
@@ -173,7 +174,10 @@ export function OperationsPlacementDetailPage() {
           <>
             <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm max-sm:p-3">
               <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex min-w-0 items-start gap-3">
+                <div
+                  data-tour="ops-placement-header"
+                  className="flex min-w-0 items-start gap-3"
+                >
                   <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-light text-sm font-semibold text-primary">
                     {placementCandidateInitials(placement.candidateName)}
                   </span>
@@ -203,7 +207,10 @@ export function OperationsPlacementDetailPage() {
 
                 {placement.canUpdateJoining ? (
                   <OperationsCanKey permissionKey="placements.detail.actions.update_joining">
-                    <div className="flex min-w-0 flex-col gap-2 sm:items-end">
+                    <div
+                      data-tour="ops-placement-joining"
+                      className="flex min-w-0 flex-col gap-2 sm:items-end"
+                    >
                       <label className="block w-full max-w-xs">
                         <span className="sr-only">Remarks</span>
                         <input
@@ -251,7 +258,10 @@ export function OperationsPlacementDetailPage() {
             </section>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm">
+              <section
+                data-tour="ops-placement-candidate"
+                className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm"
+              >
                 <h2 className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
                   <User className="size-3.5 text-primary" aria-hidden="true" />
                   Candidate
@@ -293,7 +303,10 @@ export function OperationsPlacementDetailPage() {
                 </dl>
               </section>
 
-              <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm">
+              <section
+                data-tour="ops-placement-job"
+                className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm"
+              >
                 <h2 className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
                   <Briefcase
                     className="size-3.5 text-primary"
@@ -334,7 +347,10 @@ export function OperationsPlacementDetailPage() {
                 </dl>
               </section>
 
-              <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm">
+              <section
+                data-tour="ops-placement-employer"
+                className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm"
+              >
                 <h2 className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
                   <Building2
                     className="size-3.5 text-primary"
@@ -377,7 +393,10 @@ export function OperationsPlacementDetailPage() {
                 </dl>
               </section>
 
-              <section className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm">
+              <section
+                data-tour="ops-placement-offer"
+                className="rounded-xl border border-border-subtle bg-surface p-3.5 shadow-sm"
+              >
                 <h2 className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
                   <CalendarDays
                     className="size-3.5 text-primary"
@@ -437,7 +456,11 @@ export function OperationsPlacementDetailPage() {
               ) : (
                 <ol className="relative space-y-3 border-l border-border-subtle pl-4">
                   {placement.timeline.map((entry, index) => (
-                    <li key={`${entry.status}-${entry.at}-${index}`} className="relative">
+                    <li
+                      key={`${entry.status}-${entry.at}-${index}`}
+                      data-tour={index === 0 ? "ops-placement-timeline" : undefined}
+                      className="relative"
+                    >
                       <span
                         className="absolute -left-[1.3rem] top-1 size-2.5 rounded-full bg-primary"
                         aria-hidden="true"

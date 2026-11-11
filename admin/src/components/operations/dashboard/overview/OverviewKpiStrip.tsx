@@ -51,7 +51,10 @@ export function OverviewKpiStrip({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div
+      data-tour="ops-dashboard-kpis"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+    >
       {kpis.map((kpi) => {
         const Icon = ICONS[kpi.id];
         const tone = CARD_TONES[kpi.id];

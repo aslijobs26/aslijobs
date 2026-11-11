@@ -67,7 +67,10 @@ export function AccountSettingsPanel({
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(16.5rem,1fr)] lg:gap-6">
         <div className="flex min-w-0 flex-col gap-4">
           <section className="overflow-hidden rounded-2xl border border-border-subtle bg-surface">
-            <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5">
+            <div
+              data-tour="seeker-settings-account-profile"
+              className="flex flex-wrap items-start justify-between gap-4 px-5 py-5"
+            >
               <div className="flex min-w-0 items-start gap-4">
                 <div className="relative size-[4.5rem] shrink-0">
                   {showImage ? (
@@ -148,10 +151,14 @@ export function AccountSettingsPanel({
                   </>
                 );
 
+                const rowTour =
+                  index === 0 ? "seeker-settings-account-details" : undefined;
+
                 if (row.href) {
                   return (
                     <div
                       key={row.label}
+                      data-tour={rowTour}
                       className={
                         index > 0 ? "border-t border-border-subtle" : undefined
                       }
@@ -169,6 +176,7 @@ export function AccountSettingsPanel({
                 return (
                   <div
                     key={row.label}
+                    data-tour={rowTour}
                     className={
                       index > 0
                         ? `border-t border-border-subtle ${rowClass}`
@@ -199,6 +207,7 @@ export function AccountSettingsPanel({
               </div>
               <button
                 type="button"
+                data-tour="seeker-settings-deactivate"
                 onClick={() => setShowDeactivateModal(true)}
                 className="inline-flex h-9 items-center justify-center rounded-xl border border-pin-state/50 bg-surface px-3.5 text-sm font-semibold text-pin-state transition-colors hover:bg-benefit-ai-matching-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pin-state/30"
               >

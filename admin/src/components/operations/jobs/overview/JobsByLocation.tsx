@@ -147,6 +147,7 @@ export function JobsByLocation({ data, className }: JobsByLocationProps) {
 
   return (
     <section
+      data-tour="ops-jobs-location"
       className={cn(
         "jobs-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm",
         className,

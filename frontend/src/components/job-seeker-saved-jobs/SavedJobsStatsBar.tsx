@@ -10,6 +10,8 @@ type SavedJobsStatsBarProps = {
   stats: SavedJobsStats | undefined;
   isLoading: boolean;
   onChange: (filter: SavedJobsStatsFilter) => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 export function SavedJobsStatsBar({
@@ -17,11 +19,13 @@ export function SavedJobsStatsBar({
   stats,
   isLoading,
   onChange,
+  dataTour,
 }: SavedJobsStatsBarProps) {
   const t = useTranslate();
 
   return (
     <div
+      data-tour={dataTour}
       className="flex gap-2 overflow-x-auto pb-1 scrollbar-hidden"
       role="tablist"
       aria-label={t("seeker.saved.tabsAria")}

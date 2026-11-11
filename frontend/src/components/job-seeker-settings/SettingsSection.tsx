@@ -5,6 +5,8 @@ type SettingsSectionProps = {
   description?: string;
   action?: ReactNode;
   children: ReactNode;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 export function SettingsSection({
@@ -12,10 +14,14 @@ export function SettingsSection({
   description,
   action,
   children,
+  dataTour,
 }: SettingsSectionProps) {
   return (
     <section className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div
+        data-tour={dataTour}
+        className="flex flex-wrap items-start justify-between gap-3"
+      >
         <div className="min-w-0">
           <h2 className="text-sm font-bold text-foreground sm:text-base">
             {title}

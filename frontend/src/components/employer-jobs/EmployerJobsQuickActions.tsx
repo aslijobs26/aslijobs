@@ -20,7 +20,10 @@ export function EmployerJobsQuickActions() {
 
   return (
     <aside className="employer-jobs-rail flex w-full min-w-0 flex-col gap-2 sm:gap-3 lg:w-[14.5rem] lg:shrink-0 lg:gap-2 xl:w-[16rem] 2xl:w-[17rem]">
-      <section className="employer-jobs-rail-card rounded-xl border border-border-subtle bg-surface p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5 lg:p-2.5">
+      <section
+        data-tour="employer-jobs-quick-actions"
+        className="employer-jobs-rail-card rounded-xl border border-border-subtle bg-surface p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5 lg:p-2.5"
+      >
         <h2 className="employer-jobs-rail-card__title text-xs font-bold text-foreground sm:text-sm lg:text-xs">
           {t("employer.jobs.quickActionsTitle")}
         </h2>
@@ -58,7 +61,9 @@ export function EmployerJobsQuickActions() {
         </ul>
       </section>
 
-      <section className="employer-jobs-rail-card rounded-xl border border-border-subtle bg-gradient-to-br from-primary-light/80 to-surface p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5 lg:p-2.5">
+      <section
+        data-tour="employer-jobs-boost"
+        className="employer-jobs-rail-card rounded-xl border border-border-subtle bg-gradient-to-br from-primary-light/80 to-surface p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5 lg:p-2.5">
         <div
           className="employer-jobs-rail-card__icon mb-1.5 inline-flex size-7 items-center justify-center rounded-full bg-primary-soft/15 text-primary-soft sm:mb-2.5 sm:size-9 lg:mb-1.5 lg:size-7"
           aria-hidden="true"
@@ -83,7 +88,10 @@ export function EmployerJobsQuickActions() {
       </section>
 
       <Can module="candidates" action="read">
-        <section className="employer-jobs-rail-card rounded-xl border border-border-subtle bg-surface p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5 lg:p-2.5">
+        <section
+          data-tour="employer-jobs-search-candidates"
+          className="employer-jobs-rail-card rounded-xl border border-border-subtle bg-surface p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5 lg:p-2.5"
+        >
           <div
             className="employer-jobs-rail-card__icon mb-1.5 inline-flex size-7 items-center justify-center rounded-full bg-sky-50 text-sky-600 sm:mb-2.5 sm:size-9 lg:mb-1.5 lg:size-7"
             aria-hidden="true"
@@ -105,7 +113,10 @@ export function EmployerJobsQuickActions() {
         </section>
       </Can>
 
-      <section className="employer-jobs-rail-card rounded-xl border border-border-subtle bg-surface p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5 lg:p-2.5">
+      <section
+        data-tour="employer-jobs-help"
+        className="employer-jobs-rail-card rounded-xl border border-border-subtle bg-surface p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-3.5 lg:p-2.5"
+      >
         <h2 className="employer-jobs-rail-card__title text-xs font-bold text-foreground sm:text-sm lg:text-xs">
           {t("employer.shell.helpTitle")}
         </h2>

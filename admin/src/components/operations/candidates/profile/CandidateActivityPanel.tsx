@@ -139,7 +139,7 @@ export function CandidateActivityPanel({ jobSeekerId }: CandidateActivityPanelPr
 
   return (
     <div className="flex flex-col gap-2.5 sm:gap-3">
-      <section className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm sm:p-4">
+      <section data-tour="ops-candidate-journey" className="rounded-xl border border-border-subtle bg-surface p-2.5 shadow-sm sm:p-4">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <BadgeCheck className="size-3.5 text-primary sm:size-4" aria-hidden="true" />
           <h3 className="text-[12px] font-bold text-foreground sm:text-sm">
@@ -164,7 +164,7 @@ export function CandidateActivityPanel({ jobSeekerId }: CandidateActivityPanelPr
         ) : null}
       </section>
 
-      <section className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-7">
+      <section data-tour="ops-candidate-activity-summary" className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-7">
         {data.applicationsRestricted ? null : (
           <>
             <ActivitySummaryTile
@@ -240,11 +240,12 @@ export function CandidateActivityPanel({ jobSeekerId }: CandidateActivityPanelPr
               activityQuery.isFetching && "opacity-70",
             )}
           >
-            {data.events.map((event) => {
+            {data.events.map((event, index) => {
               const style = CATEGORY_STYLES[event.category];
               return (
                 <ActivityEventRow
                   key={event.id}
+                  dataTour={index === 0 ? "ops-activity-timeline" : undefined}
                   icon={EVENT_TYPE_ICONS[event.type] ?? style.icon}
                   iconClassName={
                     NEGATIVE_EVENT_TYPES.has(event.type)
@@ -273,25 +274,27 @@ export function CandidateActivityPanel({ jobSeekerId }: CandidateActivityPanelPr
       </section>
 
       {pageInfo.total > 0 ? (
-        <ActivityPaginationBar
-          ariaLabel="Candidate activity pagination"
-          from={pageRange.from}
-          to={pageRange.to}
-          total={pageInfo.total}
-          limit={view.limit}
-          loading={pageBusy}
-          canGoBack={view.cursors.length > 1 && !pageBusy}
-          canGoForward={Boolean(pageInfo.hasMore && pageInfo.nextCursor) && !pageBusy}
-          onPrevious={() => setView(newerCandidateActivityPage)}
-          onNext={() =>
-            setView((current) =>
-              olderCandidateActivityPage(current, pageInfo.nextCursor),
-            )
-          }
-          onLimitChange={(limit) =>
-            setView((current) => resizeCandidateActivity(current, limit))
-          }
-        />
+        <div data-tour="ops-candidate-activity-pagination">
+          <ActivityPaginationBar
+            ariaLabel="Candidate activity pagination"
+            from={pageRange.from}
+            to={pageRange.to}
+            total={pageInfo.total}
+            limit={view.limit}
+            loading={pageBusy}
+            canGoBack={view.cursors.length > 1 && !pageBusy}
+            canGoForward={Boolean(pageInfo.hasMore && pageInfo.nextCursor) && !pageBusy}
+            onPrevious={() => setView(newerCandidateActivityPage)}
+            onNext={() =>
+              setView((current) =>
+                olderCandidateActivityPage(current, pageInfo.nextCursor),
+              )
+            }
+            onLimitChange={(limit) =>
+              setView((current) => resizeCandidateActivity(current, limit))
+            }
+          />
+        </div>
       ) : null}
     </div>
   );

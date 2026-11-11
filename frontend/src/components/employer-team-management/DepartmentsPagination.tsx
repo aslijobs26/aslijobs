@@ -18,6 +18,8 @@ type DepartmentsPaginationProps = {
   /** Hide footer when total is below this value. Defaults to page size (10). */
   minTotalToShow?: number;
   showRowsPerPage?: boolean;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 function pageNumbers(current: number, totalPages: number): number[] {
@@ -41,6 +43,7 @@ export function DepartmentsPagination({
   entityLabel = "departments",
   minTotalToShow = EMPLOYER_TEAM_DEFAULT_PAGE_SIZE,
   showRowsPerPage = true,
+  dataTour,
 }: DepartmentsPaginationProps) {
   if (total < minTotalToShow && !isLoading) {
     return null;
@@ -52,7 +55,10 @@ export function DepartmentsPagination({
   const pages = pageNumbers(page, safeTotalPages);
 
   return (
-    <div className="flex flex-col gap-3 border-t border-border-subtle bg-surface px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+    <div
+      data-tour={dataTour}
+      className="flex flex-col gap-3 border-t border-border-subtle bg-surface px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
+    >
       <p className="text-sm text-muted">
         Showing{" "}
         <span className="font-semibold text-foreground">

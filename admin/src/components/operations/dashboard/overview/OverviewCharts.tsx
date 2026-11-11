@@ -28,7 +28,10 @@ export function OverviewActivityTrend({
   );
 
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+    <section
+      data-tour="ops-dashboard-trend"
+      className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+    >
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="text-[13px] font-semibold text-foreground">
           Operational Activity Trend
@@ -240,7 +243,10 @@ export function OverviewByLocation({
   }, [activityByState, hoveredState]);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+    <section
+      data-tour="ops-dashboard-location"
+      className="overflow-hidden rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+    >
       <div className="mb-3">
         <h3 className="text-[13px] font-semibold text-foreground">
           Operations by Location

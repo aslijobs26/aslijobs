@@ -43,7 +43,10 @@ export function DashboardRecruiterPerformance({
       className="employer-analytics-card employer-recruiter-card flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm sm:min-h-[22rem]"
       aria-labelledby="dashboard-recruiter-performance-title"
     >
-      <div className="employer-analytics-card__header flex items-center justify-between gap-2 px-3 pt-3 sm:gap-3 sm:px-5 sm:pt-5">
+      <div
+        data-tour="employer-home-recruiter-performance"
+        className="employer-analytics-card__header flex items-center justify-between gap-2 px-3 pt-3 sm:gap-3 sm:px-5 sm:pt-5"
+      >
         <h2
           id="dashboard-recruiter-performance-title"
           className="employer-analytics-card__title employer-section-title min-w-0 break-words text-sm font-bold text-foreground sm:text-base"

@@ -61,6 +61,7 @@ export function MemberDetailsPageContent({
     <div className="flex flex-1 flex-col gap-4 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
       <Link
         href={ROUTES.EMPLOYER_TEAM_MANAGEMENT}
+        data-tour="employer-member-back"
         className="inline-flex h-9 w-fit items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
@@ -68,7 +69,10 @@ export function MemberDetailsPageContent({
       </Link>
 
       <header className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div
+          data-tour="employer-member-header"
+          className="flex flex-col gap-4 sm:flex-row sm:items-start"
+        >
           <span className="inline-flex size-14 items-center justify-center rounded-full bg-primary-light text-sm font-bold text-primary">
             {getInitials(member.fullName)}
           </span>
@@ -93,7 +97,10 @@ export function MemberDetailsPageContent({
           </div>
         </div>
 
-        <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <dl
+          data-tour="employer-member-summary"
+          className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
           <Stat
             label="Department"
             value={member.department?.name ?? "Unassigned"}
@@ -117,7 +124,10 @@ export function MemberDetailsPageContent({
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
+        <section
+          data-tour="employer-member-basic-info"
+          className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
+        >
           <h2 className="text-base font-bold text-foreground">
             Basic Information
           </h2>
@@ -145,7 +155,10 @@ export function MemberDetailsPageContent({
         </section>
 
         <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
-          <h2 className="text-base font-bold text-foreground">
+          <h2
+            data-tour="employer-member-invitations"
+            className="text-base font-bold text-foreground"
+          >
             Invitation History
           </h2>
           {member.invitationHistory.length === 0 ? (

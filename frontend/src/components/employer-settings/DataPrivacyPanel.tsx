@@ -10,6 +10,7 @@ export function DataPrivacyPanel() {
     <SettingsSection
       title="Data & Privacy"
       description="Legal documents for AsliJobs. Account export and deletion APIs are not available yet."
+      dataTour="employer-settings-data-privacy"
     >
       <ul className="space-y-3" role="list">
         <li>

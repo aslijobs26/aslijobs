@@ -61,7 +61,10 @@ export function JobSeekerProfileSidebar({
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-      <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
+      <div
+        data-tour="seeker-profile-edit-actions"
+        className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
+      >
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -133,7 +136,10 @@ export function JobSeekerProfileSidebar({
         className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
         aria-labelledby="profile-completion-heading"
       >
-        <div className="flex items-center justify-between gap-3">
+        <div
+          data-tour="seeker-profile-completion"
+          className="flex items-center justify-between gap-3"
+        >
           <div className="min-w-0">
             <h2
               id="profile-completion-heading"
@@ -166,8 +172,13 @@ export function JobSeekerProfileSidebar({
           />
         </div>
         <ul className="mt-4 space-y-2">
-          {checklist.map((item) => (
-            <li key={item.id}>
+          {checklist.map((item, index) => (
+            <li
+              key={item.id}
+              data-tour={
+                index === 0 ? "seeker-profile-checklist-first" : undefined
+              }
+            >
               <button
                 type="button"
                 className="flex w-full items-center justify-between gap-2 rounded-xl border border-border-subtle bg-hero-bg/60 px-3 py-2 text-left text-xs hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:py-2.5 sm:text-sm"
@@ -215,6 +226,7 @@ export function JobSeekerProfileSidebar({
       </section>
 
       <section
+        data-tour="seeker-profile-quick-actions"
         className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
         aria-labelledby="quick-actions-heading"
       >

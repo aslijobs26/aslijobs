@@ -68,6 +68,7 @@ export function NotificationsSettingsPanel() {
   return (
     <div className="space-y-4">
       <SettingsSection
+        dataTour="seeker-settings-inbox"
         title="In-app Notifications"
         description="Manage your notification inbox. Email and WhatsApp delivery preferences are not configurable yet."
         action={
@@ -79,7 +80,10 @@ export function NotificationsSettingsPanel() {
           </Link>
         }
       >
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border-subtle bg-hero-bg/60 px-4 py-3.5">
+        <div
+          data-tour="seeker-settings-inbox-actions"
+          className="flex flex-wrap items-center gap-3 rounded-xl border border-border-subtle bg-hero-bg/60 px-4 py-3.5"
+        >
           <span className="inline-flex size-10 items-center justify-center rounded-lg bg-primary-light text-primary">
             <Bell className="size-5" aria-hidden="true" />
           </span>
@@ -126,6 +130,7 @@ export function NotificationsSettingsPanel() {
       </SettingsSection>
 
       <SettingsSection
+        dataTour="seeker-settings-retention"
         title="Retention policy"
         description="Inbox visibility is managed by AsliJobs platform retention rules."
       >

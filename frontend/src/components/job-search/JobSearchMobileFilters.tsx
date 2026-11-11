@@ -550,7 +550,10 @@ export function JobSearchMobileFilters({
 
   return (
     <div className="md:hidden">
-      <div className="-mx-4 overflow-x-auto px-4 scrollbar-hidden">
+      <div
+        data-tour="job-search-filters"
+        className="-mx-4 overflow-x-auto px-4 scrollbar-hidden"
+      >
         <div className="flex w-max items-center gap-3 py-0.5">
           {pills.map((pill) => {
             const count = countForSheet(pill.id, state);
@@ -569,7 +572,10 @@ export function JobSearchMobileFilters({
       </div>
 
       {activeChips.length > 0 ? (
-        <ul className="mt-3 flex flex-wrap gap-2">
+        <ul
+          data-tour="job-search-active-filters"
+          className="mt-3 flex flex-wrap gap-2"
+        >
           {activeChips.map((chip) => (
             <li key={chip.id}>
               <button

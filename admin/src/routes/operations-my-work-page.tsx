@@ -656,15 +656,17 @@ export function OperationsMyWorkPage() {
                     void handleRowAction(item, action);
                   }}
                 />
-                <JobsPaginationBar
-                  pagination={pagination}
-                  onPageChange={setPage}
-                  onLimitChange={(next) => {
-                    setLimit(next);
-                    setPage(1);
-                  }}
-                  ariaLabel="My Work pagination"
-                />
+                <div data-tour="ops-my-work-pagination">
+                  <JobsPaginationBar
+                    pagination={pagination}
+                    onPageChange={setPage}
+                    onLimitChange={(next) => {
+                      setLimit(next);
+                      setPage(1);
+                    }}
+                    ariaLabel="My Work pagination"
+                  />
+                </div>
               </div>
             </OperationsOverviewSplit>
           </>

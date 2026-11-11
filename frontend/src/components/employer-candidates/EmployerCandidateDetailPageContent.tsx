@@ -330,6 +330,7 @@ export function EmployerCandidateDetailPageContent({
       <div className="resume-no-print mb-4">
         <Link
           href={backHref}
+          data-tour="employer-candidate-back"
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
@@ -337,7 +338,10 @@ export function EmployerCandidateDetailPageContent({
         </Link>
       </div>
 
-      <header className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
+      <header
+        data-tour="employer-candidate-header"
+        className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4 sm:p-5"
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -422,7 +426,12 @@ export function EmployerCandidateDetailPageContent({
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div className="order-2 space-y-6 lg:order-1">
           <section className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
-            <h2 className="text-sm font-semibold text-foreground">Timeline</h2>
+            <h2
+              data-tour="employer-candidate-timeline"
+              className="text-sm font-semibold text-foreground"
+            >
+              Timeline
+            </h2>
             <ol className="mt-4 space-y-3">
               {(application.statusHistory ?? []).length === 0 ? (
                 <li className="text-sm text-muted">No status updates yet.</li>
@@ -479,6 +488,7 @@ export function EmployerCandidateDetailPageContent({
             application.uploadedResumeSnapshot?.url ? (
               <section
                 id="employer-candidate-uploaded-resume"
+                data-tour="employer-candidate-uploaded-resume"
                 className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4"
               >
                 <h2 className="text-sm font-semibold text-foreground">
@@ -505,7 +515,10 @@ export function EmployerCandidateDetailPageContent({
 
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24">
           {canViewResume || canExportCandidates ? (
-          <section className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">
+          <section
+            data-tour="employer-candidate-resume-actions"
+            className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4"
+          >
             <h2 className="text-sm font-semibold text-foreground">
               Resume Actions
             </h2>
@@ -549,7 +562,10 @@ export function EmployerCandidateDetailPageContent({
           </section>
           ) : null}
 
-          <section className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">
+          <section
+            data-tour="employer-candidate-status"
+            className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4"
+          >
             <h2 className="text-sm font-semibold text-foreground">
               Hiring Actions
             </h2>
@@ -645,7 +661,10 @@ export function EmployerCandidateDetailPageContent({
             id="employer-candidate-interview-section"
             className="resume-no-print scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4"
           >
-            <h2 className="text-sm font-semibold text-foreground">
+            <h2
+              data-tour="employer-candidate-interview"
+              className="text-sm font-semibold text-foreground"
+            >
               Interview details
             </h2>
             <div className="mt-3">
@@ -653,6 +672,7 @@ export function EmployerCandidateDetailPageContent({
                 application={application}
                 isSaving={interviewMutation.isPending}
                 onSave={(payload) => interviewMutation.mutate(payload)}
+                submitDataTour="employer-candidate-interview-save"
               />
             </div>
           </section>
@@ -663,7 +683,10 @@ export function EmployerCandidateDetailPageContent({
             id="employer-candidate-offer-section"
             className="resume-no-print scroll-mt-24 rounded-xl border border-border-subtle bg-surface p-4"
           >
-            <h2 className="text-sm font-semibold text-foreground">
+            <h2
+              data-tour="employer-candidate-offer"
+              className="text-sm font-semibold text-foreground"
+            >
               Offer details
             </h2>
             {application.offerResponse ? (
@@ -738,7 +761,10 @@ export function EmployerCandidateDetailPageContent({
           ) : null}
 
           {canUpdateCandidates ? (
-          <section className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">
+          <section
+            data-tour="employer-candidate-reject-reason"
+            className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4"
+          >
             <h2 className="text-sm font-semibold text-foreground">
               Rejection reason
             </h2>
@@ -757,13 +783,20 @@ export function EmployerCandidateDetailPageContent({
           ) : null}
 
           <section className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">
-            <h2 className="text-sm font-semibold text-foreground">Notes</h2>
+            <h2
+              data-tour="employer-candidate-notes"
+              className="text-sm font-semibold text-foreground"
+            >
+              Notes
+            </h2>
             <div className="mt-3">
               <EmployerCandidateNotesEditor
                 application={application}
                 isSaving={notesMutation.isPending}
                 canWrite={canWriteNotes && canUpdateCandidates}
                 onSave={(payload) => notesMutation.mutate(payload)}
+                shareDataTour="employer-candidate-notes-share"
+                actionsDataTour="employer-candidate-notes-actions"
               />
             </div>
             {canWriteOffer && canUpdateCandidates ? (
@@ -771,6 +804,7 @@ export function EmployerCandidateDetailPageContent({
               type="button"
               disabled={hiringMutation.isPending}
               onClick={() => hiringMutation.mutate()}
+              data-tour="employer-candidate-save-hiring"
               className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-border-subtle px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
             >
               {hiringMutation.isPending

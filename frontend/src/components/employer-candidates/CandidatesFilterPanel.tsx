@@ -136,6 +136,7 @@ export function CandidatesFilterPanel({
   const canFilterByLocation =
     getFieldLevel("candidates", "location") !== "hidden";
   const isSheet = presentation === "sheet";
+  const tourId = (id: string) => (isSheet ? undefined : id);
   const hasAdvanced =
     (canFilterByLocation && Boolean(location)) ||
     Boolean(experience) ||
@@ -171,7 +172,10 @@ export function CandidatesFilterPanel({
         className,
       )}
     >
-      <div className="flex flex-col gap-3 lg:gap-2">
+      <div
+        className="flex flex-col gap-3 lg:gap-2"
+        data-tour={tourId("employer-candidates-search")}
+      >
         <label className="block min-w-0 flex-1">
           <span className="sr-only">Search candidates</span>
           <span className="relative block">
@@ -210,7 +214,10 @@ export function CandidatesFilterPanel({
         </label>
       </div>
 
-      <div className="employer-candidates-filters__section mt-5 border-t border-border-subtle pt-4 lg:mt-3 lg:pt-2.5">
+      <div
+        className="employer-candidates-filters__section mt-5 border-t border-border-subtle pt-4 lg:mt-3 lg:pt-2.5"
+        data-tour={tourId("employer-candidates-quick-filters")}
+      >
         <h2 className="employer-candidates-filters__title flex items-center gap-2 text-sm font-bold text-foreground lg:gap-1.5 lg:text-[11px]">
           <Filter className="h-4 w-4 text-primary-soft lg:size-3" />
           Quick Filters
@@ -259,7 +266,10 @@ export function CandidatesFilterPanel({
       </div>
 
       <div className="mt-5 border-t border-border-subtle pt-4 lg:mt-3.5 lg:pt-3">
-        <div className="flex items-center justify-between gap-2">
+        <div
+          className="flex items-center justify-between gap-2"
+          data-tour={tourId("employer-candidates-advanced-filters")}
+        >
           <h2 className="employer-candidates-filters__advanced-title text-sm font-bold text-foreground lg:text-[11px]">
             Advanced Filters
           </h2>

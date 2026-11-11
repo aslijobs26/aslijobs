@@ -26,6 +26,8 @@ interface EmployersMobileCardProps {
   onReject?: (employer: OperationsEmployerListItem) => void;
   onToggleStatus?: (employer: OperationsEmployerListItem) => void;
   onDelete?: (employer: OperationsEmployerListItem) => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }
 
 function AccountStatusDot({
@@ -125,6 +127,7 @@ export function EmployersMobileCard({
   onReject,
   onToggleStatus,
   onDelete,
+  dataTour,
 }: EmployersMobileCardProps) {
   const profilePath = operationsEmployerDetailPath(employer.id);
   const companyName = employerProvidedDisplayName(employer);
@@ -139,7 +142,7 @@ export function EmployersMobileCard({
   const registered = formatEmployerRegisteredParts(employer);
 
   return (
-    <li className="list-none overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_12px_rgba(15,23,42,0.03)]">
+    <li data-tour={dataTour} className="list-none overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_12px_rgba(15,23,42,0.03)]">
       {/* Identity header */}
       <div className="border-b border-border-subtle/80 bg-hero-bg/40 px-3 py-2.5">
         <div className="flex items-start gap-2">

@@ -216,13 +216,16 @@ function CardHeader({
   title,
   onEdit,
   editLabel,
+  dataTour,
 }: {
   title: string;
   onEdit?: () => void;
   editLabel?: string;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   return (
-    <header className="employer-profile-card__header flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 lg:min-h-10 lg:px-3.5 lg:py-2.5">
+    <header data-tour={dataTour} className="employer-profile-card__header flex min-h-12 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 lg:min-h-10 lg:px-3.5 lg:py-2.5">
       <h2 className="employer-profile-card__title text-sm font-bold text-foreground lg:text-xs">
         {title}
       </h2>
@@ -290,6 +293,7 @@ function VerificationSubmitSection({
 
   return (
     <section
+      data-tour="employer-profile-verification-submit"
       className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
       aria-label="Submit for verification"
     >
@@ -612,7 +616,7 @@ export function EmployerProfilePageContent() {
       data-employer-profile-page
       className="employer-page-shell employer-profile-shell mx-auto w-full max-w-[1600px] overflow-x-clip px-3 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 md:pb-8 lg:px-3.5 lg:pt-3 lg:pb-5"
     >
-      <header className="employer-profile-header overflow-hidden rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:p-3">
+      <header data-tour="employer-profile-header" className="employer-profile-header overflow-hidden rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:p-3">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-3">
           <div className="min-w-0">
             <h1 className="employer-profile-header__title text-xl font-bold tracking-tight text-foreground sm:text-2xl lg:text-[1.125rem]">
@@ -626,7 +630,7 @@ export function EmployerProfilePageContent() {
           </div>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center lg:shrink-0 lg:gap-2.5">
-            <div className="employer-profile-completion relative min-w-[14.5rem] overflow-hidden rounded-xl border border-primary/20 bg-primary-light/40 p-3 shadow-xs lg:min-w-[12.5rem] lg:p-2">
+            <div data-tour="employer-profile-completion" className="employer-profile-completion relative min-w-[14.5rem] overflow-hidden rounded-xl border border-primary/20 bg-primary-light/40 p-3 shadow-xs lg:min-w-[12.5rem] lg:p-2">
               <div
                 className="pointer-events-none absolute -right-7 -top-8 size-24 rounded-full bg-primary/10 blur-2xl"
                 aria-hidden="true"
@@ -654,6 +658,7 @@ export function EmployerProfilePageContent() {
 
             <button
               type="button"
+              data-tour="employer-profile-preview"
               onClick={() => setPreviewOpen(true)}
               className="employer-profile-preview-btn inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:min-h-8 lg:gap-1.5 lg:px-3 lg:text-[11px]"
             >
@@ -668,6 +673,7 @@ export function EmployerProfilePageContent() {
 
       {isVerificationRejected ? (
         <section
+          data-tour="employer-profile-verification-rejected"
           className="mt-4 flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50/80 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
           aria-live="polite"
         >
@@ -689,7 +695,7 @@ export function EmployerProfilePageContent() {
           </button>
         </section>
       ) : isVerificationPending ? (
-        <EmployerVerificationReviewBanner />
+        <EmployerVerificationReviewBanner dataTour="employer-profile-verification-review" />
       ) : null}
 
       <div className="employer-profile-layout mt-5 grid items-start gap-4 lg:mt-3 lg:grid-cols-[minmax(0,1fr)_minmax(14rem,0.85fr)] lg:gap-2.5">
@@ -706,6 +712,7 @@ export function EmployerProfilePageContent() {
                   : "Professional Information"
               }
               onEdit={canUpdateProfile ? () => openEditor("company") : undefined}
+              dataTour="employer-profile-company-info"
             />
             <div className="employer-profile-card__body p-4 lg:p-3">
               <div className="flex flex-col gap-4 sm:flex-row lg:gap-3">
@@ -820,6 +827,8 @@ export function EmployerProfilePageContent() {
           <EmployerProfileDocumentsSection
             accountType={profile.accountType}
             canUpdate={canUpdateProfile}
+            dataTour="employer-profile-documents"
+            firstDocumentActionsDataTour="employer-profile-documents-first-actions"
           />
 
           {canUpdateProfile && canOfferVerificationSubmit(profile) ? (
@@ -848,9 +857,11 @@ export function EmployerProfilePageContent() {
             <CardHeader
               title={isBusinessProfile ? "About Company" : "About Me"}
               onEdit={canUpdateProfile ? () => openEditor("about") : undefined}
+              dataTour="employer-profile-about"
             />
             <div className="grid min-w-0 md:grid-cols-[9rem_minmax(0,1fr)] lg:grid-cols-[8rem_minmax(0,1fr)]">
               <div
+                data-tour="employer-profile-about-tabs"
                 className="employer-profile-about-tabs flex flex-wrap gap-1 border-b border-border-subtle p-3 md:flex-col md:flex-nowrap md:border-r md:border-b-0 lg:p-2"
                 role="tablist"
                 aria-label={
@@ -1052,6 +1063,7 @@ export function EmployerProfilePageContent() {
                 title="Company Media"
                 onEdit={canUpdateProfile ? openMediaEditor : undefined}
                 editLabel="Edit company media"
+                dataTour="employer-profile-media"
               />
               <div className="p-4">
                 {media.length > 0 ? (
@@ -1127,6 +1139,7 @@ export function EmployerProfilePageContent() {
           <section className={cardClassName}>
             <CardHeader
               title={isBusinessProfile ? "Company Snapshot" : "Recruiter Summary"}
+              dataTour="employer-profile-snapshot"
             />
             <dl className="divide-y divide-border-subtle px-4 lg:px-3">
               {[
@@ -1189,6 +1202,7 @@ export function EmployerProfilePageContent() {
             <CardHeader
               title="Contact Information"
               onEdit={canUpdateProfile ? () => openEditor("contact") : undefined}
+              dataTour="employer-profile-contact"
             />
             <dl className="employer-profile-contact-list space-y-3 p-4 lg:space-y-2 lg:p-3">
               {[
@@ -1256,6 +1270,7 @@ export function EmployerProfilePageContent() {
             <CardHeader
               title={isBusinessProfile ? "Social Links" : "Professional Links"}
               onEdit={canUpdateProfile ? () => openEditor("social") : undefined}
+              dataTour="employer-profile-social"
             />
             <div className="divide-y divide-border-subtle px-4 lg:px-3">
               {activeSocialItems.length > 0 ? (
@@ -1305,6 +1320,7 @@ export function EmployerProfilePageContent() {
 
       {isVerificationRejected ? (
         <section
+          data-tour="employer-profile-resubmit"
           className="mt-4 rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:mt-5"
           aria-label="Resubmit verification"
         >

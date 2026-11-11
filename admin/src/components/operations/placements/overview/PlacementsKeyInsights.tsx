@@ -46,6 +46,7 @@ export function PlacementsKeyInsights({
 
   return (
     <OperationsCard
+      dataTour="ops-placements-insights"
       title="Key Insights"
       subtitle="Selected period"
       className="placements-analytics-card min-w-0"

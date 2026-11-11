@@ -41,6 +41,7 @@ export function InboxContactPanel({
 }: InboxContactPanelProps) {
   return (
     <aside
+      data-tour="ops-inbox-contact"
       className="flex h-full min-h-0 w-full min-w-0 flex-col border-border-subtle bg-surface xl:border-l"
       aria-label="Contact details"
     >

@@ -18,6 +18,10 @@ type EmployerCandidateNotesEditorProps = {
   className?: string;
   compact?: boolean;
   canWrite?: boolean;
+  /** Product tour anchor (`data-tour`) for the share-with-candidate checkbox. */
+  shareDataTour?: string;
+  /** Product tour anchor (`data-tour`) for the save / delete buttons. */
+  actionsDataTour?: string;
 };
 
 export function EmployerCandidateNotesEditor({
@@ -27,6 +31,8 @@ export function EmployerCandidateNotesEditor({
   className,
   compact = false,
   canWrite = true,
+  shareDataTour,
+  actionsDataTour,
 }: EmployerCandidateNotesEditorProps) {
   const [notesDraft, setNotesDraft] = useState(application.employerNotes ?? "");
   const [notesVisible, setNotesVisible] = useState(
@@ -138,7 +144,10 @@ export function EmployerCandidateNotesEditor({
         ) : null}
       </div>
 
-      <label className="flex items-start gap-2 text-sm text-foreground">
+      <label
+        data-tour={shareDataTour}
+        className="flex items-start gap-2 text-sm text-foreground"
+      >
         <input
           type="checkbox"
           checked={notesVisible}
@@ -173,7 +182,7 @@ export function EmployerCandidateNotesEditor({
       </dl>
 
       {canWrite ? (
-        <div className="flex flex-wrap gap-2">
+        <div data-tour={actionsDataTour} className="flex flex-wrap gap-2">
           <button
             type="button"
             disabled={!canSave}

@@ -21,6 +21,8 @@ type ProfileSummaryCardProps = {
   details: ProfileSummaryDetail[];
   editHref: string;
   canEdit: boolean;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 export function ProfileSummaryCard({
@@ -33,12 +35,13 @@ export function ProfileSummaryCard({
   details,
   editHref,
   canEdit,
+  dataTour,
 }: ProfileSummaryCardProps) {
   const [hasImageError, setHasImageError] = useState(false);
   const showImage = Boolean(avatarUrl) && !hasImageError;
 
   return (
-    <section className="employer-settings-profile rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:rounded-lg lg:p-3">
+    <section data-tour={dataTour} className="employer-settings-profile rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:rounded-lg lg:p-3">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="employer-settings-profile__title text-sm font-bold tracking-tight text-foreground sm:text-base lg:text-xs">

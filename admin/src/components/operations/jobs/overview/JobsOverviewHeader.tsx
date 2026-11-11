@@ -58,7 +58,7 @@ export function JobsOverviewHeader({
       </nav>
 
       <div className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5 xl:flex-row xl:items-end xl:justify-between">
-        <div className="min-w-0 flex-1">
+        <div data-tour="ops-jobs-header" className="min-w-0 flex-1">
           <h1 className="text-xl font-bold tracking-tight text-foreground max-lg:text-lg max-sm:text-base">
             Jobs Overview
           </h1>
@@ -68,7 +68,10 @@ export function JobsOverviewHeader({
           </p>
         </div>
 
-        <div className="flex w-full min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-nowrap sm:items-end xl:w-auto xl:justify-end">
+        <div
+          data-tour="ops-jobs-actions"
+          className="flex w-full min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-nowrap sm:items-end xl:w-auto xl:justify-end"
+        >
           <OperationsFilterSelect
             label="Date range"
             value={preset}

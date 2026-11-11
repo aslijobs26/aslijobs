@@ -9,6 +9,10 @@ interface OperationsCardProps {
   action?: ReactNode;
   badge?: ReactNode;
   bodyClassName?: string;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
+  /** Product tour anchor on the header, for cards too tall to point at as a whole. */
+  headerDataTour?: string;
 }
 
 export function OperationsCard({
@@ -19,11 +23,14 @@ export function OperationsCard({
   action,
   badge,
   bodyClassName,
+  dataTour,
+  headerDataTour,
 }: OperationsCardProps) {
   const isFlushBody = Boolean(bodyClassName?.includes("p-0"));
 
   return (
     <section
+      data-tour={dataTour}
       className={cn(
         // Content-sized by default. Pass `h-full` (or use `.operations-analytics-grid`)
         // only when equal-height card rows are intentional.
@@ -33,7 +40,7 @@ export function OperationsCard({
       )}
     >
       {(title || action || badge) && (
-        <header className="flex shrink-0 flex-wrap items-start justify-between gap-1 border-b border-border-subtle px-2.5 py-1.5 max-sm:gap-1 sm:gap-1.5 sm:px-3.5 sm:py-2.5">
+        <header data-tour={headerDataTour} className="flex shrink-0 flex-wrap items-start justify-between gap-1 border-b border-border-subtle px-2.5 py-1.5 max-sm:gap-1 sm:gap-1.5 sm:px-3.5 sm:py-2.5">
           <div className="min-w-0">
             {title && (
               <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">

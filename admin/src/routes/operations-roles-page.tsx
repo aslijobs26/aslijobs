@@ -62,7 +62,10 @@ function RolesHierarchyToggle({
   onChange: (next: "roles" | "hierarchy") => void;
 }) {
   return (
-    <div className="inline-flex w-fit rounded-lg border border-border-subtle bg-surface p-1 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+    <div
+      className="inline-flex w-fit rounded-lg border border-border-subtle bg-surface p-1 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
+      data-tour="ops-roles-view-toggle"
+    >
       <button
         type="button"
         onClick={() => onChange("roles")}
@@ -126,7 +129,7 @@ export function OperationsRolesPage() {
     <OperationsLayout title="Roles & Permissions" headerVariant="command">
       <div className="flex flex-col gap-4 lg:gap-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
+          <div className="min-w-0" data-tour="ops-roles-header">
             <Link
               to={OPERATIONS_ROUTES.ORGANIZATION}
               className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
@@ -145,6 +148,7 @@ export function OperationsRolesPage() {
           <OperationsCan module="roles" action="create">
             <Link
               to={OPERATIONS_ROUTES.ROLES_NEW}
+              data-tour="ops-roles-create"
               className="inline-flex h-[42px] min-w-[130px] shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-primary px-4 text-[13px] font-semibold text-white shadow-sm hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
               <Plus className="size-4" strokeWidth={2.5} aria-hidden="true" />
@@ -180,7 +184,10 @@ export function OperationsRolesPage() {
           <>
             <RolesHierarchyToggle tab={tab} onChange={setTab} />
 
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <div
+              className="flex flex-col gap-2.5 sm:flex-row sm:items-center"
+              data-tour="ops-roles-filters"
+            >
               <label className="relative min-w-0 flex-1">
                 <span className="sr-only">Search roles</span>
                 <Search
@@ -243,7 +250,7 @@ export function OperationsRolesPage() {
               <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                 <div className="overflow-x-auto">
                   <table className="min-w-[64rem] w-full border-collapse text-left">
-                    <thead>
+                    <thead data-tour="ops-roles-list">
                       <tr className="border-b border-border-subtle bg-[#F8FAFC]">
                         {(
                           [
@@ -272,7 +279,7 @@ export function OperationsRolesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {pagedRoles.map((role) => {
+                      {pagedRoles.map((role, index) => {
                         const { Icon, className: iconClass } = getRoleVisual(
                           role.name,
                         );
@@ -329,7 +336,14 @@ export function OperationsRolesPage() {
                               )}
                             </td>
                             <td className="px-4 py-3.5 align-middle text-center">
-                              <div className="flex justify-center">
+                              <div
+                                className="flex justify-center"
+                                data-tour={
+                                  index === 0
+                                    ? "ops-roles-row-actions"
+                                    : undefined
+                                }
+                              >
                                 <RolesRowActions
                                   role={role}
                                   onArchive={openArchive}
@@ -349,7 +363,10 @@ export function OperationsRolesPage() {
                   </table>
                 </div>
 
-                <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div
+                  className="flex flex-col gap-3 border-t border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  data-tour="ops-roles-pagination"
+                >
                   <p className="text-[12px] text-muted">
                     Showing {roles.length} role{roles.length === 1 ? "" : "s"}
                   </p>

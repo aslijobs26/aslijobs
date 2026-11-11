@@ -60,6 +60,7 @@ export function TodaysActivitySection({
       title="Today's Activity"
       subtitle="Live updates from across the platform"
       className="min-w-0"
+      dataTour="ops-home-activity"
       badge={
         <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary-light text-primary">
           <Activity className="size-3" strokeWidth={2} aria-hidden="true" />

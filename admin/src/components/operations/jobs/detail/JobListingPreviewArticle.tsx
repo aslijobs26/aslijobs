@@ -216,6 +216,7 @@ export function JobListingPreviewArticle({
 
   return (
     <article
+      data-tour="ops-job-preview-card"
       className={cn(
         "job-preview-card overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm",
         className,

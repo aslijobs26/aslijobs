@@ -39,6 +39,8 @@ import {
 
 type EmployerProfileMenuProps = {
   className?: string;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
   compact?: boolean;
   onLogout?: () => void;
 };
@@ -187,6 +189,7 @@ type ProfileIdentity = {
 
 export function EmployerProfileMenu({
   className,
+  dataTour,
   compact = false,
   onLogout,
 }: EmployerProfileMenuProps) {
@@ -394,7 +397,7 @@ export function EmployerProfileMenu({
     : t("employer.profileMenu.menuAria");
 
   return (
-    <div ref={rootRef} className={cn("relative", className)}>
+    <div ref={rootRef} data-tour={dataTour} className={cn("relative", className)}>
       <button
         type="button"
         className="inline-flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"

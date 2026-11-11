@@ -2,7 +2,9 @@ import { Lightbulb } from "lucide-react";
 
 export function MyWorkTipOfTheDay() {
   return (
-    <section className="rounded-xl border border-warning/25 bg-[#FFFBEB] p-3 shadow-sm dark:bg-warning/10">
+    <section
+      data-tour="ops-my-work-tip"
+      className="rounded-xl border border-warning/25 bg-[#FFFBEB] p-3 shadow-sm dark:bg-warning/10">
       <div className="flex items-start gap-2">
         <Lightbulb
           className="mt-0.5 size-4 shrink-0 text-warning"

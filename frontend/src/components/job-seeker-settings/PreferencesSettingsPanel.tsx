@@ -87,6 +87,7 @@ export function PreferencesSettingsPanel({
   return (
     <div className="space-y-4">
       <SettingsSection
+        dataTour="seeker-settings-job-preferences"
         title="Job Preferences"
         description="These preferences power job matching. Edit them on your profile."
         action={
@@ -114,6 +115,7 @@ export function PreferencesSettingsPanel({
       </SettingsSection>
 
       <SettingsSection
+        dataTour="seeker-settings-app-preferences"
         title="App Preferences"
         description="Control how the job seeker workspace behaves on this device."
       >

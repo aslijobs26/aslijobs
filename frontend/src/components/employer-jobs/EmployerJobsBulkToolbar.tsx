@@ -14,6 +14,8 @@ type EmployerJobsBulkToolbarProps = {
   onSelectFiltered: () => void;
   onDeleteSelected: () => void;
   onDeleteAll: () => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 export function EmployerJobsBulkToolbar({
@@ -27,6 +29,7 @@ export function EmployerJobsBulkToolbar({
   onSelectFiltered,
   onDeleteSelected,
   onDeleteAll,
+  dataTour,
 }: EmployerJobsBulkToolbarProps) {
   const t = useTranslate();
 
@@ -42,6 +45,7 @@ export function EmployerJobsBulkToolbar({
 
   return (
     <div
+      data-tour={dataTour}
       className="flex flex-col gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3"
       role="region"
       aria-label={t("employer.jobs.bulkActionsAria")}

@@ -62,6 +62,7 @@ export function PlacementsTrendChart({
 
   return (
     <OperationsCard
+      dataTour="ops-placements-trend"
       title="Placements Trend"
       subtitle={
         isOverall

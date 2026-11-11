@@ -46,7 +46,10 @@ export function DepartmentsToolbar({
   onAddDepartment,
 }: DepartmentsToolbarProps) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      data-tour="employer-team-departments-toolbar"
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">Search departments</span>
@@ -85,6 +88,7 @@ export function DepartmentsToolbar({
       {onAddDepartment ? (
         <button
           type="button"
+          data-tour="employer-team-departments-add"
           onClick={onAddDepartment}
           className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
@@ -110,7 +114,10 @@ export function DepartmentsFilterPanel({
   onClose,
 }: DepartmentsFilterPanelProps) {
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+    <div
+      data-tour="employer-team-departments-filters"
+      className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+    >
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold text-foreground">Filters</h3>
         <button

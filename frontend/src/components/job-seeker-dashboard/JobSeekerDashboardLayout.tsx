@@ -1,5 +1,6 @@
 "use client";
 
+import { JobSeekerProductTour } from "@/components/product-tour/ProductTourMounts";
 import { JobSeekerAuthGuard } from "@/components/job-seeker/JobSeekerAuthGuard";
 import { JobSeekerSidebar } from "@/components/job-seeker-dashboard/JobSeekerSidebar";
 import { JobSeekerTopBar } from "@/components/job-seeker-dashboard/JobSeekerTopBar";
@@ -77,6 +78,7 @@ export function JobSeekerDashboardLayout({
           </main>
         </div>
         <FloatingBottomNav />
+        <JobSeekerProductTour />
       </div>
     </JobSeekerAuthGuard>
   );

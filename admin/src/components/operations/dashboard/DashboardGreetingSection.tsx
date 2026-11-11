@@ -33,7 +33,7 @@ export function DashboardGreetingSection() {
 
   return (
     <section className="flex flex-col gap-2 max-sm:gap-2 sm:flex-row sm:items-stretch sm:justify-between sm:gap-4">
-      <div className="min-w-0">
+      <div data-tour="ops-home-greeting" className="min-w-0">
         <p className="text-[11px] font-medium text-muted max-sm:text-[10px] sm:text-[12px]">
           {dateLabel}
         </p>
@@ -49,6 +49,7 @@ export function DashboardGreetingSection() {
         to={OPERATIONS_ROUTES.MY_WORK}
         className="group inline-flex min-h-12 w-full shrink-0 items-center gap-2.5 rounded-xl border border-primary/20 bg-[#E8F1FF] px-2.5 py-2 transition-colors hover:bg-primary-light max-sm:rounded-lg sm:min-h-14 sm:w-[22rem] sm:max-w-sm sm:gap-3 sm:px-3.5 sm:py-3 dark:bg-primary-light/40"
         aria-label="Ask ASLI"
+        data-tour="ops-home-ask-asli"
       >
         <span className="inline-flex size-11 shrink-0 items-center justify-center overflow-hidden bg-transparent sm:size-16">
           <img

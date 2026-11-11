@@ -3,6 +3,8 @@ import type { PublicResume } from "@/types/job-seeker-resume";
 
 type ResumeMetadataPanelProps = {
   resume: PublicResume;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 function formatDate(value: string | null | undefined): string {
@@ -24,7 +26,10 @@ function formatDate(value: string | null | undefined): string {
   }).format(date);
 }
 
-export function ResumeMetadataPanel({ resume }: ResumeMetadataPanelProps) {
+export function ResumeMetadataPanel({
+  resume,
+  dataTour,
+}: ResumeMetadataPanelProps) {
   const rows: Array<{ label: string; value: string }> = [
     { label: "Resume Version", value: `v${resume.versionNumber}` },
     { label: "Generated", value: formatDate(resume.lastGeneratedAt) },
@@ -48,7 +53,10 @@ export function ResumeMetadataPanel({ resume }: ResumeMetadataPanelProps) {
   ];
 
   return (
-    <div className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4">
+    <div
+      data-tour={dataTour}
+      className="resume-no-print rounded-xl border border-border-subtle bg-surface p-4"
+    >
       <h3 className="text-xs font-semibold text-foreground sm:text-sm">
         Resume Metadata
       </h3>

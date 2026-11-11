@@ -285,6 +285,8 @@ export function EmployerSettingsPageContent() {
             items={visibleNavItems}
             activeId={activeSection}
             onSelect={setActiveSection}
+            dataTour="employer-settings-header"
+            itemsDataTour="employer-settings-nav"
           />
         </aside>
         <div className="employer-settings-content min-w-0">{content}</div>

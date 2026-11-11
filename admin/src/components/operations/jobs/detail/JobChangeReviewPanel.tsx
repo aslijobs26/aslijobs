@@ -261,7 +261,10 @@ export function JobChangeReviewPanel({ job }: JobChangeReviewPanelProps) {
   const rows = buildChangeRows(job, revision);
   if (rows.length === 0) {
     return (
-      <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4">
+      <section
+        data-tour="ops-job-change-review"
+        className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4"
+      >
         <h2 className="text-sm font-semibold text-foreground">
           Proposed changes
         </h2>
@@ -273,7 +276,10 @@ export function JobChangeReviewPanel({ job }: JobChangeReviewPanelProps) {
   }
 
   return (
-    <section className="rounded-xl border border-warning/30 bg-warning/5 p-3 shadow-sm sm:p-4">
+    <section
+      data-tour="ops-job-change-review"
+      className="rounded-xl border border-warning/30 bg-warning/5 p-3 shadow-sm sm:p-4"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-foreground">
           Edited live job — before / after

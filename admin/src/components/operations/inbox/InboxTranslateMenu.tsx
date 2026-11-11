@@ -78,7 +78,7 @@ export function InboxTranslateMenu({
     : "bg-[#e7fce3] text-[#008069] @min-[40rem]/inbox-chat:border-[#00a884]";
 
   return (
-    <div ref={rootRef} className="relative shrink-0">
+    <div ref={rootRef} data-tour="ops-inbox-translate" className="relative shrink-0">
       <button
         ref={buttonRef}
         type="button"

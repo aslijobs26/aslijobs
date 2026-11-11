@@ -49,6 +49,7 @@ export function OperationsHealthSection({
     <OperationsCard
       title="Operations Health"
       className="min-w-0"
+      dataTour="ops-home-health"
       action={
         <Link
           to={OPERATIONS_ROUTES.ACTIVITY_LOG}

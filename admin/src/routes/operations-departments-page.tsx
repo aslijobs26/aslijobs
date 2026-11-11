@@ -233,6 +233,7 @@ export function OperationsDepartmentsPage() {
         <nav
           aria-label="Breadcrumb"
           className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted"
+          data-tour="ops-departments-breadcrumb"
         >
           <span>Management</span>
           <span aria-hidden="true">›</span>
@@ -251,6 +252,7 @@ export function OperationsDepartmentsPage() {
           <OperationsCan module="departments" action="create">
             <button
               type="button"
+              data-tour="ops-departments-add"
               onClick={() => {
                 setShowCreateForm(true);
                 window.setTimeout(() => {
@@ -303,7 +305,10 @@ export function OperationsDepartmentsPage() {
           </OperationsCan>
 
           <section className="flex min-h-[28rem] min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm xl:min-h-0 xl:h-full">
-            <div className="flex flex-col gap-2 border-b border-border-subtle p-3 sm:flex-row sm:items-center">
+            <div
+              className="flex flex-col gap-2 border-b border-border-subtle p-3 sm:flex-row sm:items-center"
+              data-tour="ops-departments-toolbar"
+            >
               <label className="relative min-w-0 flex-1">
                 <span className="sr-only">Search departments</span>
                 <Search
@@ -373,7 +378,7 @@ export function OperationsDepartmentsPage() {
               <>
                 <div className="min-h-0 flex-1 overflow-auto scrollbar-hidden">
                   <table className="w-full min-w-[52rem] text-left text-[12px]">
-                    <thead>
+                    <thead data-tour="ops-departments-list">
                       <tr className="border-b border-border-subtle bg-hero-bg/50 text-[10px] uppercase tracking-wide text-muted">
                         <th className="px-3 py-2.5 font-semibold">Department</th>
                         <th className="px-3 py-2.5 font-semibold">Code</th>
@@ -387,7 +392,7 @@ export function OperationsDepartmentsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {departments.map((department) => {
+                      {departments.map((department, index) => {
                         const isActive = department.status === "active";
                         const visual = getDepartmentVisual(
                           department.slug,
@@ -461,7 +466,14 @@ export function OperationsDepartmentsPage() {
                             <td className="px-3 py-2.5 text-muted">
                               {formatOperationsTimestamp(department.createdAt)}
                             </td>
-                            <td className="px-3 py-2.5">
+                            <td
+                              className="px-3 py-2.5"
+                              data-tour={
+                                index === 0
+                                  ? "ops-departments-row-actions"
+                                  : undefined
+                              }
+                            >
                               <DepartmentRowActions
                                 department={department}
                                 isStatusPending={updateMutation.isPending}
@@ -480,7 +492,10 @@ export function OperationsDepartmentsPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-auto border-t border-border-subtle px-3 py-2.5">
+                <div
+                  className="mt-auto border-t border-border-subtle px-3 py-2.5"
+                  data-tour="ops-departments-pagination"
+                >
                   <JobsPaginationBar
                     pagination={pagination}
                     ariaLabel="Departments pagination"

@@ -23,6 +23,7 @@ export function EmployerJobsStats({
 
   return (
     <section
+      data-tour="employer-jobs-stats"
       aria-label={t("employer.jobs.statsAria")}
       className={cn(
         "employer-jobs-stats grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6 lg:gap-2",

@@ -108,13 +108,17 @@ function SectionCard({
   title,
   children,
   className,
+  dataTour,
 }: {
   title: string;
   children: ReactNode;
   className?: string;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   return (
     <section
+      data-tour={dataTour}
       className={cn(
         "rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4",
         className,
@@ -171,7 +175,10 @@ export function CandidateProfileOverview({
 
   return (
     <div className="flex flex-col gap-2.5 max-sm:gap-2 sm:gap-3">
-      <div className="grid grid-cols-2 gap-1.5 max-sm:gap-1.5 sm:gap-2 lg:grid-cols-4">
+      <div
+        data-tour="ops-candidate-kpis"
+        className="grid grid-cols-2 gap-1.5 max-sm:gap-1.5 sm:gap-2 lg:grid-cols-4"
+      >
         <OverviewKpi
           label="Experience"
           value={detail.candidateExperienceLabel || "Not specified"}
@@ -215,7 +222,11 @@ export function CandidateProfileOverview({
       </div>
 
       <div className="grid gap-2.5 max-sm:gap-2 sm:gap-3 lg:grid-cols-3">
-        <SectionCard title="About Candidate" className="lg:col-span-2">
+        <SectionCard
+          title="About Candidate"
+          className="lg:col-span-2"
+          dataTour="ops-candidate-about"
+        >
           <p className="mt-2 text-[11px] leading-relaxed text-muted max-sm:mt-1.5 max-sm:text-[10px] sm:text-xs">
             {detail.professionalSummary ||
               detail.candidateHeadline ||
@@ -259,12 +270,12 @@ export function CandidateProfileOverview({
         </SectionCard>
 
         <div className="flex flex-col gap-2.5 max-sm:gap-2 sm:gap-3">
-          <SectionCard title="Skills">
+          <SectionCard title="Skills" dataTour="ops-candidate-skills">
             <div className="mt-2 sm:mt-3">
               <ChipList values={detail.skills} />
             </div>
           </SectionCard>
-          <SectionCard title="Education">
+          <SectionCard title="Education" dataTour="ops-candidate-education">
             {detail.education ? (
               <div className="mt-2 sm:mt-3">
                 <p className="text-[11px] font-semibold text-foreground max-sm:text-[10px] sm:text-xs">
@@ -287,6 +298,7 @@ export function CandidateProfileOverview({
         <SectionCard
           title="Job Preferences / Interests"
           className="lg:col-span-2"
+          dataTour="ops-candidate-interests"
         >
           <div className="mt-2 space-y-3 max-sm:mt-1.5 max-sm:space-y-2.5 sm:mt-3 sm:space-y-3.5">
             <div>
@@ -315,7 +327,7 @@ export function CandidateProfileOverview({
           </div>
         </SectionCard>
 
-        <SectionCard title="Expected Details">
+        <SectionCard title="Expected Details" dataTour="ops-candidate-expected">
           <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-border-subtle/80 pt-3 max-sm:mt-1.5 max-sm:gap-x-3 max-sm:gap-y-3 max-sm:pt-2.5 sm:mt-3 sm:grid-cols-1 sm:gap-3 sm:border-0 sm:pt-0">
             <DetailField
               label="Expected Salary"
@@ -345,7 +357,10 @@ export function CandidateProfileOverview({
         </SectionCard>
       </div>
 
-      <section className="rounded-xl border border-border-subtle bg-surface shadow-sm">
+      <section
+        data-tour="ops-candidate-applications"
+        className="rounded-xl border border-border-subtle bg-surface shadow-sm"
+      >
         <div className="border-b border-border-subtle px-3 py-2 max-sm:px-2.5 max-sm:py-1.5 sm:px-4 sm:py-3">
           <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
             All Applications ({applicationsTotal.toLocaleString("en-IN")})

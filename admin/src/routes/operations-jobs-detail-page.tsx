@@ -251,6 +251,7 @@ export function OperationsJobsDetailPage() {
         <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] max-sm:text-[11px] sm:gap-x-2 sm:text-xs">
           <Link
             to={OPERATIONS_ROUTES.JOBS}
+            data-tour="ops-job-back"
             className="inline-flex shrink-0 items-center gap-1 rounded-md px-1 py-0.5 font-semibold text-primary-soft transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:gap-1 sm:gap-1.5 sm:px-1.5 sm:py-1"
           >
             <ArrowLeft className="size-3.5" aria-hidden="true" />
@@ -289,21 +290,21 @@ export function OperationsJobsDetailPage() {
         {job ? (
           <>
             {job.status === "pending_approval" ? (
-              <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+              <div data-tour="ops-job-status-banner" className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
                 This employer-submitted job is waiting for Operations review
                 before it can go Live.
               </div>
             ) : null}
 
             {job.isLiveChangeReview ? (
-              <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+              <div data-tour="ops-job-status-banner" className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
                 This is an edited live job. The current live listing stays
                 public until you approve these changes.
               </div>
             ) : null}
 
             {job.status === "rejected" ? (
-              <div className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+              <div data-tour="ops-job-status-banner" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
                 This job was rejected
                 {job.rejectionReason ? `: ${job.rejectionReason}` : "."}
               </div>
@@ -311,7 +312,7 @@ export function OperationsJobsDetailPage() {
 
             {job.status === "active" &&
             job.liveChangeReviewStatus === "rejected" ? (
-              <div className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+              <div data-tour="ops-job-status-banner" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
                 Live job changes were rejected
                 {job.liveChangeRejectionReason
                   ? `: ${job.liveChangeRejectionReason}`
@@ -324,7 +325,7 @@ export function OperationsJobsDetailPage() {
             job.status === "expired" ||
             job.status === "paused" ||
             job.status === "closed" ? (
-              <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+              <div data-tour="ops-job-status-banner" className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
                 This job is currently <strong>{job.statusLabel}</strong>
                 {job.analytics.daysRemaining != null &&
                 job.analytics.daysRemaining < 0

@@ -96,6 +96,7 @@ function HierarchyNodeRow({
   onToggle,
   onArchive,
   onRestore,
+  dataTour,
 }: {
   node: OperationsRoleTreeNode;
   depth: number;
@@ -104,6 +105,8 @@ function HierarchyNodeRow({
   onToggle: (id: string) => void;
   onArchive: (role: OperationsRole) => void;
   onRestore: (role: OperationsRole) => void;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   const hasChildren = node.children.length > 0;
   const isExpanded = expanded.has(node.id);
@@ -120,6 +123,7 @@ function HierarchyNodeRow({
 
   const rowContent = (
     <div
+      data-tour={dataTour}
       className={cn(
         "flex min-w-0 items-center gap-3 rounded-xl border border-border-subtle bg-surface px-3 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors",
         isSystemRoot ? "py-3" : "hover:bg-[#F8FAFC]",
@@ -297,7 +301,10 @@ export function RolesHierarchyPanel({
           <div className="shrink-0">{leadingControls}</div>
         ) : null}
 
-        <label className="relative min-w-0 w-full sm:max-w-sm sm:flex-1 sm:ml-auto">
+        <label
+          className="relative min-w-0 w-full sm:max-w-sm sm:flex-1 sm:ml-auto"
+          data-tour="ops-roles-hierarchy-search"
+        >
           <span className="sr-only">Search roles in hierarchy</span>
           <Search
             className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted"
@@ -365,6 +372,7 @@ export function RolesHierarchyPanel({
                   onToggle={toggleNode}
                   onArchive={onArchive}
                   onRestore={onRestore}
+                  dataTour={index === 0 ? "ops-roles-hierarchy" : undefined}
                 />
               ))}
             </ul>

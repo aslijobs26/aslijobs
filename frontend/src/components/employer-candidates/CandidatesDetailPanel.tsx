@@ -70,6 +70,8 @@ type CandidatesDetailPanelProps = {
   variant?: "panel" | "drawer";
   /** When set, only these tabs are shown (still subject to RBAC). */
   allowedTabs?: readonly CandidatesDetailTab[];
+  /** Product tour anchor prefix (`data-tour`); sections get `<prefix>-header`, `<prefix>-status`, etc. */
+  dataTourPrefix?: string;
 };
 
 const PANEL_DESKTOP_CLASSES = EMPLOYER_CANDIDATE_DETAIL_PANEL_ASIDE_CLASS;
@@ -309,7 +311,10 @@ export function CandidatesDetailPanel({
   onClose,
   variant = "panel",
   allowedTabs,
+  dataTourPrefix,
 }: CandidatesDetailPanelProps) {
+  const tourId = (section: string) =>
+    dataTourPrefix ? `${dataTourPrefix}-${section}` : undefined;
   const queryClient = useQueryClient();
   const { can, canField, getFieldLevel } = useCan();
   const canViewPhone = canField("candidates", "phone");
@@ -466,7 +471,10 @@ export function CandidatesDetailPanel({
           variant === "panel" && PANEL_DESKTOP_CLASSES,
         )}
       >
-        <div className="employer-candidates-detail__empty p-8 pb-9 text-center lg:p-4 lg:pb-4">
+        <div
+          data-tour={tourId("empty")}
+          className="employer-candidates-detail__empty p-8 pb-9 text-center lg:p-4 lg:pb-4"
+        >
           <p className="text-sm text-muted lg:text-xs lg:leading-snug">
             Select a candidate to preview their profile, resume, and hiring
             actions.
@@ -549,7 +557,10 @@ export function CandidatesDetailPanel({
           variant === "drawer" && "relative z-20",
         )}
       >
-        <div className="flex items-start gap-3 lg:gap-2">
+        <div
+          data-tour={tourId("header")}
+          className="flex items-start gap-3 lg:gap-2"
+        >
           <span
             className="employer-candidates-detail__avatar inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-surface lg:size-9 lg:text-xs"
             aria-hidden="true"
@@ -595,7 +606,10 @@ export function CandidatesDetailPanel({
                   {application.jobTitle}
                 </span>
               </p>
-              <div className="flex shrink-0 items-center gap-1">
+              <div
+                data-tour={tourId("actions")}
+                className="flex shrink-0 items-center gap-1"
+              >
                 {canUsePhone && whatsappHref ? (
                   <a
                     href={whatsappHref}
@@ -647,7 +661,7 @@ export function CandidatesDetailPanel({
           </div>
         </div>
 
-        <div className="mt-3 lg:mt-2">
+        <div data-tour={tourId("status")} className="mt-3 lg:mt-2">
           {isEmployerTerminalStatus(application.status) ? (
             <div className="rounded-lg border border-border-subtle bg-hero-bg px-2.5 py-2">
               <p className="text-sm font-semibold text-foreground">
@@ -709,6 +723,7 @@ export function CandidatesDetailPanel({
           )}
           role="tablist"
           aria-label="Candidate detail sections"
+          data-tour={tourId("tabs")}
         >
           {visibleTabs.map((tab) => (
             <button
@@ -870,7 +885,10 @@ export function CandidatesDetailPanel({
 
         {activeTab === "resume" ? (
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
+            <div
+              data-tour={tourId("resume-actions")}
+              className="flex flex-wrap gap-2"
+            >
               <button
                 type="button"
                 disabled={isDownloading}
@@ -963,6 +981,7 @@ export function CandidatesDetailPanel({
               isSaving={interviewMutation.isPending}
               compact
               onSave={(payload) => interviewMutation.mutate(payload)}
+              submitDataTour={tourId("interview-save")}
             />
           ) : (
             <p className="text-sm text-muted">
@@ -1050,6 +1069,7 @@ export function CandidatesDetailPanel({
                 type="button"
                 disabled={hiringMutation.isPending}
                 onClick={() => hiringMutation.mutate()}
+                data-tour={tourId("offer-save")}
                 className="mt-2 inline-flex w-full min-h-9 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               >
                 {hiringMutation.isPending ? "Saving…" : "Save offer details"}

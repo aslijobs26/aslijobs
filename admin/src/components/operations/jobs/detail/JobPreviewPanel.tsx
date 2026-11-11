@@ -102,7 +102,7 @@ export function JobPreviewPanel({ job }: JobPreviewPanelProps) {
 
   return (
     <div className="job-preview-canvas -m-2.5 flex min-h-[32rem] flex-col bg-surface px-3 py-6 sm:-m-3.5 sm:px-8 sm:py-10">
-      <div className="mx-auto mb-4 flex w-full max-w-[40rem] flex-wrap items-center justify-between gap-2">
+      <div data-tour="ops-job-preview-language" className="mx-auto mb-4 flex w-full max-w-[40rem] flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold tracking-[0.04em] text-muted uppercase">
             Preview language

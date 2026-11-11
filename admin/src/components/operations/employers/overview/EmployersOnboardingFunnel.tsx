@@ -47,7 +47,7 @@ export function EmployersOnboardingFunnel({
       : stages.slice(0, 5);
 
   return (
-    <section className="employers-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section data-tour="ops-employers-funnel" className="employers-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
       <header className="flex shrink-0 items-center justify-between gap-2 px-3 pt-2.5 max-sm:gap-1.5 max-sm:px-2.5 max-sm:pt-2 sm:px-3.5 sm:pt-3 xl:px-3 xl:pt-2">
         <h3 className="text-[13px] font-semibold tracking-tight text-foreground max-sm:text-[12px] xl:text-[12px]">
           Onboarding Funnel

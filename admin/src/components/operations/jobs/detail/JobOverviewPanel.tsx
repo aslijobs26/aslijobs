@@ -213,6 +213,7 @@ export function JobOverviewPanel({
     <div className="grid grid-cols-1 gap-2 max-sm:gap-2 sm:gap-2.5 lg:grid-cols-12 xl:gap-2">
       <div className="grid grid-cols-1 gap-2 max-sm:gap-2 sm:gap-2.5 lg:col-span-9 lg:grid-cols-9 lg:items-stretch xl:gap-2">
         <OperationsCard
+          dataTour="ops-job-description"
           title="Job Description"
           className={cn(
             pairedOverviewCardClassName,
@@ -251,6 +252,7 @@ export function JobOverviewPanel({
           )}        </OperationsCard>
 
         <OperationsCard
+          dataTour="ops-job-information"
           title="Job Information"
           className={cn(
             pairedOverviewCardClassName,
@@ -266,6 +268,7 @@ export function JobOverviewPanel({
         </OperationsCard>
 
         <div
+          data-tour="ops-job-highlights"
           className={cn(
             "order-2 grid grid-cols-2 items-stretch gap-2 sm:gap-2.5",
             "lg:order-3 lg:col-span-9 lg:col-start-1 lg:row-start-2 lg:grid-cols-4 lg:gap-3",
@@ -301,6 +304,7 @@ export function JobOverviewPanel({
 
       <div className="flex min-w-0 flex-col gap-2 max-sm:gap-2 sm:gap-2.5 lg:col-span-3 xl:gap-2">
         <OperationsCard
+          dataTour="ops-job-status-card"
           title="Job Status & Visibility"
           className={sideOverviewCardClassName}
           bodyClassName={overviewCardBodyClassName}
@@ -339,6 +343,7 @@ export function JobOverviewPanel({
         </OperationsCard>
 
         <OperationsCard
+          dataTour="ops-job-performance"
           title="Job Performance"
           className={sideOverviewCardClassName}
           bodyClassName={overviewCardBodyClassName}

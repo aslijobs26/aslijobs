@@ -206,6 +206,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
           </div>
 
           <h1
+            data-tour="employer-job-review-heading"
             id="job-under-review-heading"
             className="text-2xl font-bold tracking-tight break-words text-foreground sm:text-3xl lg:text-4xl"
           >
@@ -234,6 +235,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
 
           {rejectionReason ? (
             <p
+              data-tour="employer-job-review-rejection"
               className="mt-4 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left text-sm text-red-700"
               role="status"
             >
@@ -243,6 +245,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
         </section>
 
         <section
+          data-tour="employer-job-review-summary"
           className="w-full rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:p-6"
           aria-labelledby="job-under-review-summary-heading"
         >
@@ -295,6 +298,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
                 </div>
 
                 <button
+                  data-tour="employer-job-review-refresh"
                   type="button"
                   onClick={() => void jobQuery.refetch()}
                   disabled={jobQuery.isFetching}
@@ -373,6 +377,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
         </section>
 
         <section
+          data-tour="employer-job-review-timeline"
           className="w-full rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:p-6"
           aria-labelledby="job-under-review-timeline-heading"
         >
@@ -421,6 +426,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
 
         <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-4">
           <Link
+            data-tour="employer-job-review-go-to-jobs"
             href={
               phase === "under_review" || phase === "live_change_review"
                 ? ROUTES.employerJobsTab("pending_approval")
@@ -438,6 +444,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
 
           {phase === "rejected" ? (
             <Link
+              data-tour="employer-job-review-edit"
               href={ROUTES.postJobEdit(job.id)}
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary-soft px-5 text-sm font-bold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:w-auto"
             >
@@ -447,6 +454,7 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
 
           {phase === "live" && job.jobId ? (
             <Link
+              data-tour="employer-job-review-view-live"
               href={ROUTES.jobPublic(job.jobId)}
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary-soft px-5 text-sm font-bold text-surface transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:h-12 sm:w-auto"
             >
@@ -454,7 +462,9 @@ function JobUnderReviewBody({ jobMongoId }: JobUnderReviewPageContentProps) {
             </Link>
           ) : null}
 
-          <EmployerPostJobLink className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-primary-soft/40 bg-primary-light px-5 text-sm font-bold text-primary transition-colors hover:bg-primary-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:w-auto">
+          <EmployerPostJobLink
+            data-tour="employer-job-review-post-another"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-primary-soft/40 bg-primary-light px-5 text-sm font-bold text-primary transition-colors hover:bg-primary-light/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:w-auto">
             <Plus className="size-4" aria-hidden />
             {t("employer.underReview.postAnother")}
           </EmployerPostJobLink>

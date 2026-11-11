@@ -159,6 +159,7 @@ export function KeyInsightsSection({
 }) {
   return (
     <OperationsCard
+      headerDataTour="ops-analytics-insights"
       title="Key Insights"
       subtitle="Insights derived from platform data"
       className="min-w-0"
@@ -197,6 +198,7 @@ export function HiringFunnelCard({
 }) {
   return (
     <OperationsCard
+      dataTour="ops-analytics-funnel"
       title="Hiring Funnel Analytics"
       subtitle="Overall conversion across all job categories"
       action={
@@ -272,6 +274,7 @@ export function SupplyDemandCard({
 
   return (
     <OperationsCard
+      dataTour="ops-analytics-supply-demand"
       title="Supply vs Demand by Job Category"
       subtitle="Registered jobseekers compared with active jobs. Registration is not confirmed availability."
       action={
@@ -354,6 +357,7 @@ export function TopLocationsCard({
 }) {
   return (
     <OperationsCard
+      dataTour="ops-analytics-locations"
       title="Top Locations by Opportunity"
       subtitle="Based on demand-supply gap and growth"
       action={
@@ -434,6 +438,7 @@ export function PlacementIntelligenceCard({
 }) {
   return (
     <OperationsCard
+      dataTour="ops-analytics-placement"
       title="Placement Intelligence"
       subtitle="What drives successful placements?"
       action={
@@ -529,6 +534,7 @@ export function MarketIntelligenceCard({
 }) {
   return (
     <OperationsCard
+      dataTour="ops-analytics-market"
       title="Market Intelligence"
       subtitle="Key insights by state"
       action={
@@ -633,6 +639,7 @@ export function ForecastsCard({
 
   return (
     <OperationsCard
+      dataTour="ops-analytics-forecasts"
       title="Forecasts & Predictions"
       subtitle={model?.methodology ?? "Estimates from historical daily counts. Not guaranteed outcomes."}
       action={

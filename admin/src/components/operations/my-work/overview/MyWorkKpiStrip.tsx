@@ -72,6 +72,7 @@ export function MyWorkKpiStrip({
   return (
     <section
       aria-label="My Work KPIs"
+      data-tour="ops-my-work-kpis"
       className="grid grid-cols-2 gap-2 max-sm:gap-1.5 sm:grid-cols-3 xl:grid-cols-5"
     >
       {CARDS.map((card) => {

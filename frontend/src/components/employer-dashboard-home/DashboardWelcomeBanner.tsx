@@ -23,6 +23,7 @@ export function DashboardWelcomeBanner({
 
   return (
     <section
+      data-tour="employer-home-welcome"
       className={`employer-welcome-banner relative overflow-hidden rounded-2xl border border-border-subtle bg-employer-welcome-surface shadow-sm ${EMPLOYER_DASHBOARD_HERO_ROW_HEIGHT_CLASS}`}
     >
       <div className="pointer-events-none absolute -left-16 -top-20 size-56 rounded-full bg-primary-light/70" aria-hidden="true" />
@@ -72,7 +73,9 @@ export function DashboardWelcomeBanner({
             </p>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-1.5 sm:mt-5 sm:max-w-[62%] sm:gap-3 md:max-w-[58%]">
+          <div
+            data-tour="employer-home-welcome-actions"
+            className="mt-4 flex flex-wrap items-center gap-1.5 sm:mt-5 sm:max-w-[62%] sm:gap-3 md:max-w-[58%]">
             <Can module="jobs" action="create">
               <EmployerPostJobLink className="employer-welcome-banner__cta inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-2.5 text-[0.6875rem] font-semibold text-surface shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-11 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm">
                 <span className="inline-flex size-5 items-center justify-center rounded-md bg-surface/20 sm:size-6">

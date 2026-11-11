@@ -39,6 +39,7 @@ export function VerificationsSlaCard({ sla }: VerificationsSlaCardProps) {
 
   return (
     <OperationsCard
+      dataTour="ops-verifications-sla"
       title="SLA Performance"
       subtitle={`Target ${sla.targetDays} days`}
       className="employers-analytics-card min-w-0"

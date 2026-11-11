@@ -36,6 +36,7 @@ export function EmployersOverviewTabs({
       className="-mx-0.5 flex min-w-0 items-center gap-1.5 overflow-x-auto overscroll-x-contain px-0.5 pb-0.5 scrollbar-hidden max-sm:gap-1 sm:gap-2 lg:flex-wrap lg:overflow-visible lg:pb-0"
       role="tablist"
       aria-label="Recent employers tabs"
+      data-tour="ops-employers-tabs"
     >
       {TABS.map((tab) => {
         const selected = activeTab === tab.id;

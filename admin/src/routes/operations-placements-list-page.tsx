@@ -224,7 +224,7 @@ export function OperationsPlacementsListPage() {
     >
       <div className="flex w-full min-w-0 flex-col gap-3 max-lg:gap-2.5 max-sm:gap-2">
         <header className="flex min-w-0 flex-col gap-3 max-sm:gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
+          <div data-tour="ops-placements-list-header" className="min-w-0">
             <nav
               aria-label="Breadcrumb"
               className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted"
@@ -256,6 +256,7 @@ export function OperationsPlacementsListPage() {
           <OperationsCanKey permissionKey="placements.list.export">
             <button
               type="button"
+              data-tour="ops-placements-list-export"
               onClick={handleExport}
               disabled={exportMutation.isPending}
               className="inline-flex h-8 min-h-8 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-hero-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
@@ -274,7 +275,10 @@ export function OperationsPlacementsListPage() {
           />
         ) : (
           <div className="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm ops-brand-border-glow">
-            <div className="border-b border-border-subtle px-3 py-2.5 sm:px-4">
+            <div
+              data-tour="ops-placements-list-filters"
+              className="border-b border-border-subtle px-3 py-2.5 sm:px-4"
+            >
               <PlacementsFiltersBar
                 filters={filters}
                 filterOptions={filterOptions}
@@ -303,7 +307,10 @@ export function OperationsPlacementsListPage() {
             />
 
             {listData?.pagination ? (
-              <div className="border-t border-border-subtle p-3 xl:p-2.5">
+              <div
+                data-tour="ops-placements-list-pagination"
+                className="border-t border-border-subtle p-3 xl:p-2.5"
+              >
                 <JobsPaginationBar
                   pagination={listData.pagination}
                   onPageChange={setPage}

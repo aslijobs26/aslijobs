@@ -89,7 +89,7 @@ export function DepartmentsTable({
   return (
     <div className="overflow-x-auto">
       <table className="min-w-[64rem] w-full border-collapse text-left">
-          <thead>
+          <thead data-tour="employer-team-departments-thead">
             <tr className="border-b border-border-subtle bg-hero-bg/60 text-xs font-semibold uppercase tracking-wide text-muted">
               <th className="px-4 py-3">Department</th>
               <th className="px-4 py-3">Department Head</th>
@@ -120,6 +120,7 @@ export function DepartmentsTable({
               <tr>
                 <td
                   colSpan={7}
+                  data-tour="employer-team-departments-empty"
                   className="px-4 py-12 text-center text-sm text-muted"
                 >
                   No departments found. Create your first department to build
@@ -129,7 +130,7 @@ export function DepartmentsTable({
             ) : null}
 
             {!isLoading
-              ? departments.map((department) => {
+              ? departments.map((department, index) => {
                   const Icon =
                     ICON_MAP[department.icon || "building"] ?? Building2;
                   const colorKey =
@@ -143,6 +144,11 @@ export function DepartmentsTable({
                   return (
                     <tr
                       key={department.id}
+                      data-tour={
+                        index === 0
+                          ? "employer-team-departments-first-row"
+                          : undefined
+                      }
                       className="border-b border-border-subtle last:border-b-0 hover:bg-primary-light/20"
                     >
                       <td className="px-4 py-3.5">
@@ -209,7 +215,14 @@ export function DepartmentsTable({
                       <td className="px-4 py-3.5 text-sm text-muted">
                         {formatDepartmentDate(department.createdAt)}
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td
+                        data-tour={
+                          index === 0
+                            ? "employer-team-departments-first-actions"
+                            : undefined
+                        }
+                        className="px-4 py-3.5"
+                      >
                         <div className="flex items-center justify-end gap-1">
                           <Link
                             href={ROUTES.employerTeamDepartment(department.id)}

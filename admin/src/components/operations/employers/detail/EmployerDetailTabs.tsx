@@ -62,7 +62,7 @@ export function EmployerDetailTabs({
   onTabChange,
 }: EmployerDetailTabsProps) {
   return (
-    <div className="flex border-b border-border-subtle bg-surface px-2.5 shadow-xs max-sm:px-2.5 sm:px-3 lg:px-4">
+    <div data-tour="ops-employer-tabs" className="flex border-b border-border-subtle bg-surface px-2.5 shadow-xs max-sm:px-2.5 sm:px-3 lg:px-4">
       <nav
         className="-mb-px flex gap-x-3 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-sm:gap-x-3.5 sm:gap-x-4 lg:gap-x-6"
         aria-label="Employer profile tabs"
@@ -81,6 +81,7 @@ export function EmployerDetailTabs({
             <button
               key={tab.id}
               type="button"
+              data-tour={tab.id === "activity" ? "ops-activity-tab" : undefined}
               onClick={() => onTabChange(tab.id)}
               className={cn(
                 "group inline-flex shrink-0 items-center gap-1.5 border-b-2 px-0.5 py-2.5 text-[11px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none max-sm:gap-1.5 max-sm:py-2.5 sm:gap-2 sm:py-2.5 sm:text-xs lg:py-3",

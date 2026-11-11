@@ -84,12 +84,16 @@ export function OperationsOrganizationSettingsPage() {
         ) : (
           <form
             className="max-w-xl space-y-4 rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+            data-tour="ops-settings-form"
             onSubmit={(event) => {
               event.preventDefault();
               void save();
             }}
           >
-            <label className="grid gap-1 text-xs font-semibold text-muted">
+            <label
+              className="grid gap-1 text-xs font-semibold text-muted"
+              data-tour="ops-settings-name"
+            >
               Organization display name
               <input
                 value={organizationName}
@@ -98,7 +102,7 @@ export function OperationsOrganizationSettingsPage() {
                 className="h-10 rounded-lg border border-border-subtle bg-hero-bg/50 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-70"
               />
             </label>
-            <div className="grid gap-1.5">
+            <div className="grid gap-1.5" data-tour="ops-settings-country">
               <p className="text-xs font-semibold text-muted">Default country</p>
               {canUpdateSettings ? (
                 <OperationsFilterSelect
@@ -120,7 +124,7 @@ export function OperationsOrganizationSettingsPage() {
                 </p>
               )}
             </div>
-            <div className="grid gap-1.5">
+            <div className="grid gap-1.5" data-tour="ops-settings-timezone">
               <p className="text-xs font-semibold text-muted">Default timezone</p>
               {canUpdateSettings ? (
                 <OperationsFilterSelect
@@ -150,6 +154,7 @@ export function OperationsOrganizationSettingsPage() {
             <OperationsCan module="settings" action="update">
               <button
                 type="submit"
+                data-tour="ops-settings-save"
                 disabled={
                   updateMutation.isPending ||
                   !organizationName.trim() ||

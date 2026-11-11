@@ -139,6 +139,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
     <div className="flex min-w-0 flex-col gap-3 max-sm:gap-2">
       <div className="operations-analytics-grid grid grid-cols-1 gap-3 max-sm:gap-2 md:grid-cols-2 xl:grid-cols-3">
         <OperationsCard
+          dataTour="ops-jobs-trend"
           title="Job Postings Trend"
           subtitle={
             isOverall
@@ -214,6 +215,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
         </OperationsCard>
 
         <OperationsCard
+          dataTour="ops-jobs-status"
           title="Jobs by Status"
           subtitle="Current job lifecycle distribution"
           className="jobs-analytics-card min-w-0"
@@ -296,6 +298,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
         </OperationsCard>
 
         <OperationsCard
+          dataTour="ops-jobs-industry"
           title="Jobs by Industry"
           subtitle="Top industries by job volume"
           className="jobs-analytics-card min-w-0"
@@ -309,6 +312,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
         <JobsByLocation data={locationData} />
 
         <OperationsCard
+          dataTour="ops-jobs-roles"
           title="Top Job Roles"
           subtitle="Most common job titles"
           className="jobs-analytics-card min-w-0"
@@ -320,6 +324,7 @@ export function JobsOverviewAnalytics({ data }: JobsOverviewAnalyticsProps) {
         </OperationsCard>
 
         <OperationsCard
+          dataTour="ops-jobs-employment-type"
           title="Jobs by Employment Type"
           subtitle="Full-time, part-time, contract"
           className="jobs-analytics-card min-w-0"

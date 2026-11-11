@@ -51,6 +51,7 @@ export function EmployerDetailHeader({
           <Link
             to={OPERATIONS_ROUTES.EMPLOYERS}
             aria-label="Back to Employers"
+            data-tour="ops-employer-back"
             className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle text-muted transition-colors hover:bg-hero-bg/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 max-sm:size-8 sm:size-8 lg:size-9"
           >
             <ArrowLeft className="size-3.5 sm:size-4" aria-hidden="true" />
@@ -78,7 +79,7 @@ export function EmployerDetailHeader({
           </span>
 
           <div className="min-w-0 flex-1 space-y-1.5 max-sm:space-y-1.5">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 max-sm:gap-x-1.5 max-sm:gap-y-1 sm:gap-1.5 lg:gap-2">
+            <div data-tour="ops-employer-identity" className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 max-sm:gap-x-1.5 max-sm:gap-y-1 sm:gap-1.5 lg:gap-2">
               <h1 className="min-w-0 break-words text-[13px] font-bold leading-snug text-foreground sm:text-base lg:text-xl">
                 {employer.displayName}
               </h1>
@@ -101,7 +102,7 @@ export function EmployerDetailHeader({
               </span>
             </div>
 
-            <div className="flex flex-col gap-1.5 text-[11px] leading-snug text-muted max-sm:gap-1.5 sm:mt-0.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1 sm:text-xs lg:gap-x-3.5 lg:gap-y-1.5">
+            <div data-tour="ops-employer-meta" className="flex flex-col gap-1.5 text-[11px] leading-snug text-muted max-sm:gap-1.5 sm:mt-0.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1 sm:text-xs lg:gap-x-3.5 lg:gap-y-1.5">
               {employer.phone || employer.email ? (
                 <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:contents">
                   {employer.phone ? (
@@ -148,7 +149,7 @@ export function EmployerDetailHeader({
           </div>
         </div>
 
-        <div className="grid w-full grid-cols-2 gap-2 max-sm:gap-2 sm:gap-2 md:grid-cols-4 xl:flex xl:w-auto xl:shrink-0 xl:flex-wrap xl:items-center xl:justify-end">
+        <div data-tour="ops-employer-actions" className="grid w-full grid-cols-2 gap-2 max-sm:gap-2 sm:gap-2 md:grid-cols-4 xl:flex xl:w-auto xl:shrink-0 xl:flex-wrap xl:items-center xl:justify-end">
           <OperationsCan module="jobs" action="create">
             <button
               type="button"

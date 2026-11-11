@@ -1,0 +1,347 @@
+.driver-popover.aslijobs-tour-popover {
+  --tour-primary: var(--color-primary, var(--ds-primary, #0e8585));
+  --tour-primary-hover: var(--color-primary-hover, var(--ds-primary-hover, #0b6f6f));
+  --tour-primary-light: var(--color-primary-light, var(--ds-primary-light, #e8f5f5));
+  --tour-surface: var(--color-surface, var(--ds-surface, #fff));
+  --tour-foreground: var(--color-foreground, var(--ds-foreground, #1a2b3c));
+  --tour-muted: var(--color-muted, var(--ds-muted, #5a6570));
+  --tour-hero: var(--color-hero-bg, var(--ds-hero-bg, #f4f7f8));
+  --tour-border: var(--color-border, var(--ds-border, #e5e7eb));
+  --tour-border-subtle: var(--color-border-subtle, var(--ds-border-subtle, #eef1f3));
+
+  box-sizing: border-box;
+  min-width: min(18rem, calc(100vw - 1.5rem));
+  max-width: min(24rem, calc(100vw - 1.5rem));
+  padding: 1rem 1.125rem 1rem;
+  border: 1px solid var(--tour-border-subtle);
+  border-radius: 1.125rem;
+  background:
+    radial-gradient(120% 70% at 0% 0%, color-mix(in srgb, var(--tour-primary) 9%, transparent), transparent 62%),
+    var(--tour-surface);
+  color: var(--tour-foreground);
+  box-shadow:
+    0 1px 2px rgba(8, 22, 27, 0.06),
+    0 28px 64px -16px rgba(8, 22, 27, 0.42);
+  animation: aslijobs-tour-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.driver-popover.aslijobs-tour-popover * {
+  font-family: inherit;
+}
+
+[data-theme="dark"] .driver-popover.aslijobs-tour-popover,
+.dark .driver-popover.aslijobs-tour-popover {
+  border-color: var(--tour-border);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 28px 64px -16px rgba(0, 0, 0, 0.7);
+}
+
+/* Header: tour name, step counter and progress meter */
+.driver-popover.aslijobs-tour-popover .aslijobs-tour-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.625rem 0.75rem;
+  margin: 0 2.25rem 0.875rem 0;
+}
+
+.driver-popover.aslijobs-tour-popover .aslijobs-tour-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0.3125rem 0.5625rem;
+  border-radius: 999px;
+  background: var(--tour-primary-light);
+  color: var(--tour-primary);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.driver-popover.aslijobs-tour-popover .aslijobs-tour-eyebrow::before {
+  content: "";
+  flex-shrink: 0;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.driver-popover.aslijobs-tour-popover .aslijobs-tour-count {
+  color: var(--tour-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.driver-popover.aslijobs-tour-popover .aslijobs-tour-meter {
+  grid-column: 1 / -1;
+  display: block;
+  height: 0.25rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--tour-border-subtle);
+}
+
+.driver-popover.aslijobs-tour-popover .aslijobs-tour-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    var(--tour-primary),
+    color-mix(in srgb, var(--tour-primary) 55%, #ffffff)
+  );
+  transition: width 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Content */
+.driver-popover.aslijobs-tour-popover .driver-popover-title {
+  margin: 0;
+  color: var(--tour-foreground);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-description {
+  margin: 0.4375rem 0 0;
+  color: var(--tour-muted);
+  font-size: 0.84375rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-close-btn {
+  top: 0.75rem;
+  right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  color: var(--tour-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-close-btn:hover {
+  background: var(--tour-hero);
+  color: var(--tour-foreground);
+}
+
+/* Footer */
+.driver-popover.aslijobs-tour-popover .driver-popover-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.125rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--tour-border-subtle);
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-progress-text {
+  display: none;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-navigation-btns {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-navigation-btns button + button {
+  margin-left: 0;
+}
+
+/* Driver.js writes `display: block` inline on its footer buttons. */
+.driver-popover.aslijobs-tour-popover .driver-popover-footer button {
+  box-sizing: border-box;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  text-shadow: none;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-next-btn {
+  border: 1px solid var(--tour-primary);
+  background: var(--tour-primary);
+  color: var(--tour-surface);
+  box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--tour-primary) 70%, transparent);
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-next-btn:hover,
+.driver-popover.aslijobs-tour-popover .driver-popover-next-btn:focus {
+  border-color: var(--tour-primary-hover);
+  background: var(--tour-primary-hover);
+  color: var(--tour-surface);
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-next-btn:active,
+.driver-popover.aslijobs-tour-popover .driver-popover-prev-btn:active {
+  transform: translateY(1px);
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-prev-btn {
+  border: 1px solid var(--tour-border);
+  background: var(--tour-surface);
+  color: var(--tour-foreground);
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-prev-btn:hover,
+.driver-popover.aslijobs-tour-popover .driver-popover-prev-btn:focus {
+  border-color: color-mix(in srgb, var(--tour-primary) 35%, var(--tour-border));
+  background: var(--tour-primary-light);
+  color: var(--tour-foreground);
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-footer .driver-popover-prev-btn.driver-popover-btn-disabled {
+  display: none !important;
+}
+
+.driver-popover.aslijobs-tour-popover .aslijobs-tour-skip {
+  margin-right: auto;
+  padding: 0 0.375rem;
+  border: 0;
+  background: transparent;
+  color: var(--tour-muted);
+}
+
+.driver-popover.aslijobs-tour-popover .aslijobs-tour-skip:hover,
+.driver-popover.aslijobs-tour-popover .aslijobs-tour-skip:focus {
+  background: transparent;
+  color: var(--tour-foreground);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.driver-popover.aslijobs-tour-popover button:focus-visible {
+  outline: 2px solid var(--tour-primary);
+  outline-offset: 2px;
+}
+
+/* Arrow: colour only the side that points at the highlighted element */
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow {
+  border-width: 7px;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-side-left {
+  border-left-color: var(--tour-surface);
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-side-right {
+  border-right-color: var(--tour-surface);
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-side-top {
+  border-top-color: var(--tour-surface);
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--tour-surface);
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-start.driver-popover-arrow-side-top,
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-start.driver-popover-arrow-side-bottom {
+  left: 1.25rem;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-end.driver-popover-arrow-side-top,
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-end.driver-popover-arrow-side-bottom {
+  right: 1.25rem;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-start.driver-popover-arrow-side-left,
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-start.driver-popover-arrow-side-right {
+  top: 1.5rem;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-end.driver-popover-arrow-side-left,
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-end.driver-popover-arrow-side-right {
+  bottom: 1.5rem;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-center.driver-popover-arrow-side-left,
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-center.driver-popover-arrow-side-right {
+  margin-top: -7px;
+}
+
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-center.driver-popover-arrow-side-top,
+.driver-popover.aslijobs-tour-popover .driver-popover-arrow-align-center.driver-popover-arrow-side-bottom {
+  margin-left: -7px;
+}
+
+@keyframes aslijobs-tour-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .driver-popover.aslijobs-tour-popover {
+    padding: 0.875rem 0.875rem 0.875rem;
+    border-radius: 1rem;
+  }
+
+  .driver-popover.aslijobs-tour-popover .driver-popover-title {
+    font-size: 1rem;
+  }
+
+  .driver-popover.aslijobs-tour-popover .driver-popover-next-btn,
+  .driver-popover.aslijobs-tour-popover .driver-popover-prev-btn {
+    flex: 1;
+  }
+
+  .driver-popover.aslijobs-tour-popover .aslijobs-tour-skip {
+    order: 3;
+    flex-basis: 100%;
+    min-height: 2rem;
+    margin-right: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-popover.aslijobs-tour-popover {
+    animation: none;
+  }
+
+  .driver-popover.aslijobs-tour-popover .aslijobs-tour-meter-fill {
+    transition: none;
+  }
+}

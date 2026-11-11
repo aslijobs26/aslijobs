@@ -27,7 +27,10 @@ export function CandidateProfileDetailsPanel({
 }: CandidateProfileDetailsPanelProps) {
   return (
     <div className="grid gap-2.5 max-sm:gap-2 sm:gap-3 lg:grid-cols-2">
-      <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4">
+      <section
+        data-tour="ops-candidate-personal"
+        className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4"
+      >
         <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
           Personal Information
         </h3>
@@ -73,7 +76,10 @@ export function CandidateProfileDetailsPanel({
         </div>
       </section>
 
-      <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4">
+      <section
+        data-tour="ops-candidate-experience"
+        className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4"
+      >
         <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
           Education & Experience
         </h3>
@@ -137,7 +143,10 @@ export function CandidateProfileDetailsPanel({
         </div>
       </section>
 
-      <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4 lg:col-span-2">
+      <section
+        data-tour="ops-candidate-about-details"
+        className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4 lg:col-span-2"
+      >
         <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
           About
         </h3>

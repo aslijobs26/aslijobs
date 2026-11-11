@@ -67,6 +67,12 @@ type SavedJobCardProps = {
   job: SavedJobListItem;
   onRemove: (publicJobId: string) => Promise<void>;
   isRemoving?: boolean;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
+  /** Product tour anchor (`data-tour`) for the remove and more-actions buttons. */
+  actionsDataTour?: string;
+  /** Product tour anchor (`data-tour`) for the apply button. */
+  applyDataTour?: string;
 };
 
 function splitSalaryLabel(salaryLabel: string): {
@@ -88,6 +94,9 @@ export function SavedJobCard({
   job,
   onRemove,
   isRemoving = false,
+  dataTour,
+  actionsDataTour,
+  applyDataTour,
 }: SavedJobCardProps) {
   const t = useTranslate();
   const displayJobTitle = transliterateJobTitle(job.jobTitle, useSiteLanguage().code);
@@ -212,6 +221,7 @@ export function SavedJobCard({
 
   return (
     <article
+      data-tour={dataTour}
       className={cn(
         "border border-border-subtle bg-surface transition-colors hover:border-primary/25",
         "rounded-[18px] p-4 shadow-[0_4px_14px_rgba(26,43,60,0.06)]",
@@ -295,7 +305,7 @@ export function SavedJobCard({
             ref={mobileMenuRef}
             className="relative flex shrink-0 flex-col items-end gap-1.5"
           >
-            <div className="flex items-center gap-1.5">
+            <div data-tour={actionsDataTour} className="flex items-center gap-1.5">
               <button
                 type="button"
                 disabled={isRemoving}
@@ -401,6 +411,7 @@ export function SavedJobCard({
 
           <button
             type="button"
+            data-tour={applyDataTour}
             disabled={isApplied || job.isExpired || isApplying}
             onClick={() => void handleApply()}
             className={cn(
@@ -530,7 +541,11 @@ export function SavedJobCard({
             </div>
           </div>
 
-          <div className="relative flex shrink-0 items-center gap-2" ref={desktopMenuRef}>
+          <div
+            data-tour={actionsDataTour}
+            className="relative flex shrink-0 items-center gap-2"
+            ref={desktopMenuRef}
+          >
             <button
               type="button"
               disabled={isRemoving}
@@ -592,6 +607,7 @@ export function SavedJobCard({
 
           <button
             type="button"
+            data-tour={applyDataTour}
             disabled={isApplied || job.isExpired || isApplying}
             onClick={() => void handleApply()}
             className={cn(

@@ -17,6 +17,7 @@ export function PlacementsByCategory({ items }: PlacementsByCategoryProps) {
 
   return (
     <OperationsCard
+      dataTour="ops-placements-category"
       title="Placements by Category"
       className="placements-analytics-card min-w-0"
       action={

@@ -79,12 +79,16 @@ export function InboxConversationList({
         panelBg,
         headerBorder,
       )}
+      data-tour="ops-inbox-list"
       aria-label="Conversations"
     >
       <div className={cn("border-b px-4 py-3", headerBorder)}>
         <div className="flex items-center justify-between gap-2">
           <h2 className={cn("text-base font-semibold", titleClass)}>Inbox</h2>
-          <div className={cn("flex rounded-lg p-0.5 text-xs", searchBg)}>
+          <div
+            data-tour="ops-inbox-mode"
+            className={cn("flex rounded-lg p-0.5 text-xs", searchBg)}
+          >
             <button
               type="button"
               onClick={() => onModeChange("conversations")}
@@ -116,6 +120,7 @@ export function InboxConversationList({
           </div>
         </div>
         <label
+          data-tour="ops-inbox-search"
           className={cn(
             "mt-3 flex items-center gap-2 rounded-lg px-3 py-2",
             searchBg,
@@ -134,7 +139,12 @@ export function InboxConversationList({
             )}
           />
         </label>
-        <div className="mt-3 flex flex-wrap gap-1.5" role="tablist" aria-label="Participant filter">
+        <div
+          data-tour="ops-inbox-filters"
+          className="mt-3 flex flex-wrap gap-1.5"
+          role="tablist"
+          aria-label="Participant filter"
+        >
           {FILTERS.map((item) => {
             const active = filter === item.id;
             return (
@@ -156,7 +166,7 @@ export function InboxConversationList({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div data-tour="ops-inbox-conversations" className="min-h-0 flex-1 overflow-y-auto">
         {loading && (mode === "contacts" ? contacts.length === 0 : items.length === 0) ? (
           <p className={cn("px-4 py-8 text-sm", mutedClass)}>
             {mode === "contacts" ? "Loading contacts…" : "Loading conversations…"}

@@ -71,6 +71,7 @@ export function PlacementsTimeToJoin({
 
   return (
     <OperationsCard
+      dataTour="ops-placements-time-to-join"
       title="Placements Time to Join"
       className="placements-analytics-card min-w-0"
       action={

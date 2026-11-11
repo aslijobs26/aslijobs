@@ -39,6 +39,7 @@ export function AsliInsightsSection({ insights }: AsliInsightsSectionProps) {
       title="ASLI Insights"
       subtitle="AI-powered insights for better decisions"
       className="min-w-0"
+      dataTour="ops-home-insights"
       badge={
         <span className="inline-flex size-5 items-center justify-center rounded-md bg-violet-500/10 text-violet-600">
           <Sparkles className="size-3" strokeWidth={2} aria-hidden="true" />

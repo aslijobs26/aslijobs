@@ -37,6 +37,7 @@ export function EmployerTypeDonut({ items, total }: EmployerTypeDonutProps) {
 
   return (
     <OperationsCard
+      dataTour="ops-employers-type"
       title="Employer Type"
       subtitle="Company size / account mix"
       className="employers-analytics-card min-w-0"

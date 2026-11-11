@@ -417,7 +417,7 @@ export function SavedCandidatesPageContent() {
   return (
     <div className="employer-page-shell mx-auto w-full max-w-[1600px] overflow-x-clip px-3 py-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:py-5 md:pb-5 lg:overflow-x-visible">
       <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between lg:gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0" data-tour="employer-shortlist-header">
           <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-xl">
             Shortlisted Candidates
           </h1>
@@ -426,7 +426,10 @@ export function SavedCandidatesPageContent() {
             opportunities.
           </p>
           {publicJobId ? (
-            <p className="mt-2 text-[11px] font-medium text-primary sm:text-xs">
+            <p
+              data-tour="employer-shortlist-job-filter-active"
+              className="mt-2 text-[11px] font-medium text-primary sm:text-xs"
+            >
               Filtered by job {publicJobId}
               {" · "}
               <button
@@ -441,7 +444,7 @@ export function SavedCandidatesPageContent() {
         </div>
       </header>
 
-      <div className="mt-3 sm:mt-5 lg:mt-3">
+      <div className="mt-3 sm:mt-5 lg:mt-3" data-tour="employer-shortlist-stats">
         <SavedCandidatesStatsCards
           stats={statsQuery.data}
           isLoading={statsQuery.isLoading}
@@ -482,7 +485,9 @@ export function SavedCandidatesPageContent() {
       </div>
 
       {showEmptyState ? (
-        <div className="mt-4 rounded-xl border border-dashed border-border-subtle bg-surface px-4 py-6 text-center sm:mt-6 sm:px-6 sm:py-12 lg:mt-4 lg:px-5 lg:py-8">
+        <div
+          data-tour="employer-shortlist-empty"
+          className="mt-4 rounded-xl border border-dashed border-border-subtle bg-surface px-4 py-6 text-center sm:mt-6 sm:px-6 sm:py-12 lg:mt-4 lg:px-5 lg:py-8">
           <span className="mx-auto inline-flex size-10 items-center justify-center rounded-xl bg-primary-light text-primary sm:size-14 sm:rounded-2xl lg:size-11">
             <Bookmark className="size-5 sm:size-7 lg:size-5" aria-hidden="true" />
           </span>
@@ -516,7 +521,10 @@ export function SavedCandidatesPageContent() {
         <div className={EMPLOYER_SAVED_CANDIDATES_LAYOUT_GRID_CLASS}>
           <div className="min-w-0">
             {!listQuery.isLoading && items.length === 0 && hasActiveFilters ? (
-              <div className="rounded-xl border border-border-subtle bg-surface px-4 py-6 text-left sm:px-6 sm:py-10 sm:text-center lg:px-5 lg:py-8">
+              <div
+                data-tour="employer-shortlist-no-results"
+                className="rounded-xl border border-border-subtle bg-surface px-4 py-6 text-left sm:px-6 sm:py-10 sm:text-center lg:px-5 lg:py-8"
+              >
                 <p className="text-xs font-semibold text-foreground sm:text-sm lg:text-xs">
                   No shortlisted candidates match your filters
                 </p>
@@ -562,7 +570,10 @@ export function SavedCandidatesPageContent() {
                             variant="grid"
                           />
                         </div>
-                        <div className="shrink-0 border-t border-border-subtle px-3 py-3 sm:px-4">
+                        <div
+                          data-tour="employer-shortlist-pagination"
+                          className="shrink-0 border-t border-border-subtle px-3 py-3 sm:px-4"
+                        >
                           <ListPagination
                             page={pagination.page}
                             limit={pagination.limit}
@@ -581,7 +592,10 @@ export function SavedCandidatesPageContent() {
                   </div>
                 </div>
 
-                <div className="lg:hidden">
+                <div
+                  className="lg:hidden"
+                  data-tour="employer-shortlist-pagination"
+                >
                   <ListPagination
                     page={pagination.page}
                     limit={pagination.limit}
@@ -606,6 +620,7 @@ export function SavedCandidatesPageContent() {
                 onScheduleInterview={openScheduleInterview}
                 variant="panel"
                 allowedTabs={["resume"]}
+                dataTourPrefix="employer-shortlist-detail"
               />
             </div>
           </div>

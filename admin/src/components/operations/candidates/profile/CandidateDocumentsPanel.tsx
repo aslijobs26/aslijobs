@@ -250,7 +250,10 @@ export function CandidateDocumentsPanel({
     <OperationsCanKey
       permissionKey="candidates.profile.documents.view"
       fallback={
-        <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4">
+        <section
+          data-tour="ops-candidate-documents"
+          className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4"
+        >
           <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
             Documents
           </h3>
@@ -260,7 +263,10 @@ export function CandidateDocumentsPanel({
         </section>
       }
     >
-      <section className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4">
+      <section
+        data-tour="ops-candidate-documents"
+        className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm max-sm:p-2.5 sm:p-4"
+      >
         <h3 className="text-[13px] font-semibold text-foreground max-sm:text-[12px] sm:text-sm">
           Documents
         </h3>
@@ -292,7 +298,10 @@ export function CandidateDocumentsPanel({
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <div
+              data-tour="ops-candidate-document-actions"
+              className="flex flex-wrap items-center gap-1.5 sm:gap-2"
+            >
               <button
                 type="button"
                 onClick={openPreview}

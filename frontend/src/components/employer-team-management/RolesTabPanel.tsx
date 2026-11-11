@@ -374,7 +374,10 @@ export function RolesTabPanel({
       <div className="grid items-stretch gap-4 xl:grid-cols-[14rem_minmax(0,1fr)_minmax(18rem,22rem)]">
         {/* Departments column */}
         <aside className="flex flex-col rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-          <div className="mb-4 flex flex-col gap-3">
+          <div
+            data-tour="employer-team-roles-departments"
+            className="mb-4 flex flex-col gap-3"
+          >
             <div className="min-w-0">
               <h3 className="text-base font-bold text-foreground">
                 Departments
@@ -444,6 +447,7 @@ export function RolesTabPanel({
 
           <button
             type="button"
+            data-tour="employer-team-roles-all-departments"
             onClick={() => onNavigateToDepartments?.()}
             className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
@@ -454,7 +458,10 @@ export function RolesTabPanel({
 
         {/* Roles column */}
         <section className="flex min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-border-subtle p-4 sm:flex-row sm:items-start sm:justify-between">
+          <div
+            data-tour="employer-team-roles-header"
+            className="flex flex-col gap-3 border-b border-border-subtle p-4 sm:flex-row sm:items-start sm:justify-between"
+          >
             <div className="min-w-0">
               <h3 className="text-base font-bold text-foreground lg:text-sm">Roles</h3>
               <p className="mt-0.5 text-xs text-muted">
@@ -477,7 +484,10 @@ export function RolesTabPanel({
             ) : null}
           </div>
 
-          <div className="border-b border-border-subtle p-4">
+          <div
+            data-tour="employer-team-roles-search"
+            className="border-b border-border-subtle p-4"
+          >
             <label className="relative block">
               <span className="sr-only">Search roles</span>
               <Search
@@ -544,6 +554,7 @@ export function RolesTabPanel({
             }}
             isLoading={rolesQuery.isFetching}
             entityLabel="roles"
+            dataTour="employer-team-roles-pagination"
             minTotalToShow={1}
             showRowsPerPage={false}
           />
@@ -551,7 +562,10 @@ export function RolesTabPanel({
 
         {/* Permissions column */}
         <aside className="flex min-w-0 flex-col rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+          <div
+            data-tour="employer-team-roles-permissions"
+            className="mb-3 flex flex-wrap items-start justify-between gap-2"
+          >
             <div className="min-w-0">
               <h3 className="text-base font-bold text-foreground">
                 Permissions
@@ -581,6 +595,7 @@ export function RolesTabPanel({
           </div>
 
           <div
+            data-tour="employer-team-roles-permission-tabs"
             role="tablist"
             aria-label="Permission views"
             className="mb-4 flex gap-4 border-b border-border-subtle"
@@ -651,6 +666,7 @@ export function RolesTabPanel({
                     .filter((role) => role.id !== selectedRoleId)
                     .map((role) => ({ id: role.id, name: role.name }))}
                   onChange={setFieldAccessDraft}
+                  dataTour="employer-team-roles-field-controls"
                   onReset={() =>
                     setFieldAccessDraft(
                       hydrateFieldAccessDraft(
@@ -677,12 +693,16 @@ export function RolesTabPanel({
                 permissions={matrixDraft}
                 editable={matrixEditing}
                 compact
+                dataTour="employer-team-roles-matrix-thead"
                 onChange={setMatrixDraft}
               />
             )}
           </div>
 
-          <div className="mt-4 flex flex-col gap-3 border-t border-border-subtle pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            data-tour="employer-team-roles-permission-actions"
+            className="mt-4 flex flex-col gap-3 border-t border-border-subtle pt-3 sm:flex-row sm:items-center sm:justify-between"
+          >
             <p className="inline-flex items-start gap-2 text-xs text-muted">
               <Info
                 className="mt-0.5 size-3.5 shrink-0 text-primary"

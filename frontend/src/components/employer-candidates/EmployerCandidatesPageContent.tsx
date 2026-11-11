@@ -427,7 +427,7 @@ export function EmployerCandidatesPageContent() {
     >
       <div className="employer-candidates-chrome shrink-0">
       <header className="employer-candidates-header flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3 lg:gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0" data-tour="employer-candidates-header">
           <h1 className="employer-candidates-header__title text-lg font-bold tracking-tight text-foreground sm:text-3xl lg:text-[1.25rem]">
             Candidates
           </h1>
@@ -436,7 +436,10 @@ export function EmployerCandidatesPageContent() {
             candidates through the hiring pipeline.
           </p>
           {publicJobId ? (
-            <p className="mt-2 text-[11px] font-medium text-primary sm:text-xs lg:mt-1 lg:text-[11px]">
+            <p
+              data-tour="employer-candidates-job-filter-active"
+              className="mt-2 text-[11px] font-medium text-primary sm:text-xs lg:mt-1 lg:text-[11px]"
+            >
               Filtered by job {publicJobId}
               {" · "}
               <button
@@ -456,6 +459,7 @@ export function EmployerCandidatesPageContent() {
             <button
               type="button"
               onClick={() => setExportModalOpen(true)}
+              data-tour="employer-candidates-export"
               className="employer-candidates-export inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary-light px-4 text-xs font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:w-auto sm:min-w-[7.5rem] sm:gap-2 sm:px-5 sm:text-sm lg:min-h-8 lg:min-w-0 lg:gap-1.5 lg:px-3 lg:text-xs"
             >
               <Download
@@ -486,7 +490,10 @@ export function EmployerCandidatesPageContent() {
         />
       ) : null}
 
-      <div className="employer-candidates-kpi-wrap mt-3 sm:mt-5 lg:mt-2">
+      <div
+        data-tour="employer-candidates-kpis"
+        className="employer-candidates-kpi-wrap mt-3 sm:mt-5 lg:mt-2"
+      >
         <CandidatesKpiStrip
           stats={statsQuery.data}
           isLoading={statsQuery.isLoading}
@@ -497,6 +504,7 @@ export function EmployerCandidatesPageContent() {
         <button
           type="button"
           onClick={() => setMobileFiltersOpen(true)}
+          data-tour="employer-candidates-mobile-filters"
           className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           <Filter className="size-3.5" aria-hidden="true" />
@@ -593,6 +601,7 @@ export function EmployerCandidatesPageContent() {
             onScheduleInterview={openScheduleInterview}
             onOpenShortlist={openShortlistCandidate}
             variant="panel"
+            dataTourPrefix="employer-candidates-detail"
           />
         </div>
       </div>

@@ -132,11 +132,14 @@ function RowMoreMenu({
   actions,
   canUpdate,
   canWriteNotes,
+  dataTour,
 }: {
   item: SavedCandidateListItem;
   actions: SavedCandidateRowActions;
   canUpdate: boolean;
   canWriteNotes: boolean;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   const menuId = useId();
   const [open, setOpen] = useState(false);
@@ -232,6 +235,7 @@ function RowMoreMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
+        data-tour={dataTour}
         className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         onClick={(event) => {
           event.stopPropagation();
@@ -310,10 +314,13 @@ function SavedCandidateTableRow({
   item,
   isSelected,
   actions,
+  dataTourPrefix,
 }: {
   item: SavedCandidateListItem;
   isSelected: boolean;
   actions: SavedCandidateRowActions;
+  /** Product tour anchor prefix (`data-tour`) for the row, its actions cell and menu. */
+  dataTourPrefix?: string;
 }) {
   const { can, canField, getFieldLevel } = useCan();
   const canViewPhone = canField("candidates", "phone");
@@ -342,6 +349,7 @@ function SavedCandidateTableRow({
 
   return (
     <tr
+      data-tour={dataTourPrefix}
       tabIndex={0}
       aria-selected={isSelected}
       aria-label={`Open profile for ${item.candidateName}`}
@@ -411,7 +419,10 @@ function SavedCandidateTableRow({
       <td className="hidden min-w-[7rem] max-w-[10rem] px-3 py-3 align-middle md:table-cell lg:py-2.5">
         <TagPills tags={item.tags} />
       </td>
-      <td className="whitespace-nowrap px-2 py-3 align-middle sm:px-3 lg:py-2.5">
+      <td
+        data-tour={dataTourPrefix ? `${dataTourPrefix}-actions` : undefined}
+        className="whitespace-nowrap px-2 py-3 align-middle sm:px-3 lg:py-2.5"
+      >
         <div className="flex items-center justify-end gap-0.5">
           {whatsappHref ? (
             <a
@@ -476,6 +487,7 @@ function SavedCandidateTableRow({
             actions={actions}
             canUpdate={canUpdate}
             canWriteNotes={canWriteNotes}
+            dataTour={dataTourPrefix ? `${dataTourPrefix}-more` : undefined}
           />
         </div>
       </td>
@@ -531,7 +543,10 @@ export function SavedCandidatesTable({
           </div>
         ) : (
           <table className="w-full min-w-[40rem] border-collapse text-left xl:min-w-0">
-            <thead className="sticky top-0 z-10">
+            <thead
+              className="sticky top-0 z-10"
+              data-tour="employer-shortlist-table-head"
+            >
               <tr className="border-b border-border-subtle bg-hero-bg/95 text-[11px] font-semibold uppercase tracking-wide text-muted backdrop-blur-sm sm:text-xs lg:text-[10px]">
                 <th className="min-w-0 px-3 py-3 sm:px-4 lg:px-3 lg:py-2.5">Candidate</th>
                 <th className="hidden whitespace-nowrap px-3 py-3 xl:table-cell">
@@ -548,12 +563,15 @@ export function SavedCandidatesTable({
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <SavedCandidateTableRow
                   key={item.id}
                   item={item}
                   isSelected={selectedApplicationId === item.applicationId}
                   actions={actions}
+                  dataTourPrefix={
+                    index === 0 ? "employer-shortlist-first-row" : undefined
+                  }
                 />
               ))}
             </tbody>
@@ -561,7 +579,10 @@ export function SavedCandidatesTable({
         )}
       </div>
 
-      <div className="flex shrink-0 flex-col gap-2 border-t border-border-subtle px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
+      <div
+        data-tour="employer-shortlist-pagination"
+        className="flex shrink-0 flex-col gap-2 border-t border-border-subtle px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4"
+      >
         <p className="text-xs text-muted lg:text-[11px]">
           Page {page} of {Math.max(1, totalPages)}
         </p>

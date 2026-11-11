@@ -162,6 +162,7 @@ export function PlacementsTableSection({
               className="-mx-0.5 flex min-w-0 items-end gap-0 overflow-x-auto overscroll-x-contain border-b border-border-subtle px-0.5 scrollbar-hidden"
               role="tablist"
               aria-label="Placement status tabs"
+              data-tour="ops-placements-tabs"
             >
               {TABS.map((tab) => {
                 const selected = statusTabs.activeTab === tab.id;
@@ -203,7 +204,10 @@ export function PlacementsTableSection({
           ) : null}
 
           {!hideInlineSearch ? (
-            <label className="relative block min-w-0 max-w-md">
+            <label
+              data-tour="ops-placements-search"
+              className="relative block min-w-0 max-w-md"
+            >
               <span className="sr-only">Search recent placements</span>
               <Search
                 className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted xl:size-3"
@@ -244,11 +248,12 @@ export function PlacementsTableSection({
         ) : null}
         {!isLoading &&
           !isError &&
-          items.map((item) => {
+          items.map((item, index) => {
             const detailPath = operationsPlacementDetailPath(item.id);
             return (
               <li
                 key={item.id}
+                data-tour={index === 0 ? "ops-placements-list" : undefined}
                 className="rounded-xl border border-border-subtle bg-surface p-3 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-2">
@@ -292,7 +297,10 @@ export function PlacementsTableSection({
 
       <div className="hidden overflow-x-auto overscroll-x-contain scrollbar-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:block">
         <table className="min-w-[980px] text-left text-xs xl:min-w-full xl:text-[11px]">
-          <thead className="border-b border-border-subtle bg-hero-bg/60 text-muted">
+          <thead
+            data-tour="ops-placements-list"
+            className="border-b border-border-subtle bg-hero-bg/60 text-muted"
+          >
             <tr>
               <th scope="col" className={thClassName}>
                 Candidate
@@ -336,7 +344,7 @@ export function PlacementsTableSection({
             ) : null}
             {!isLoading &&
               !isError &&
-              items.map((item) => {
+              items.map((item, index) => {
                 const detailPath = operationsPlacementDetailPath(item.id);
 
                 return (
@@ -422,7 +430,10 @@ export function PlacementsTableSection({
                       </OperationsBadge>
                     </td>
 
-                    <td className="whitespace-nowrap py-3 pl-3 pr-4 text-right sm:pl-3.5 xl:py-2 xl:pl-2.5 xl:pr-3">
+                    <td
+                      data-tour={index === 0 ? "ops-placements-row-actions" : undefined}
+                      className="whitespace-nowrap py-3 pl-3 pr-4 text-right sm:pl-3.5 xl:py-2 xl:pl-2.5 xl:pr-3"
+                    >
                       <Link
                         to={detailPath}
                         className="inline-flex h-8 items-center justify-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 xl:h-7 xl:px-2 xl:text-[10px]"

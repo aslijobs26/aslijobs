@@ -42,6 +42,8 @@ type SavedJobsFiltersFormProps = {
   onClearFilters: () => void;
   onClose?: () => void;
   className?: string;
+  /** Product tour anchor (`data-tour`) for the form header row. */
+  dataTour?: string;
 };
 
 const fieldClassName =
@@ -84,6 +86,7 @@ export function SavedJobsFiltersForm({
   onClearFilters,
   onClose,
   className,
+  dataTour,
 }: SavedJobsFiltersFormProps) {
   const t = useTranslate();
   const anyLabel = t("seeker.savedFilters.any");
@@ -122,7 +125,10 @@ export function SavedJobsFiltersForm({
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div
+        data-tour={dataTour}
+        className="flex items-center justify-between gap-2"
+      >
         <h2 className="min-w-0 break-words text-sm font-bold text-foreground">
           {t("seeker.savedFilters.title")}
         </h2>
@@ -343,13 +349,17 @@ export function SavedJobsSidebar({
     <aside className="space-y-4 lg:sticky lg:top-24">
       <SavedJobsFiltersForm
         idPrefix="saved-filter-desktop"
+        dataTour="seeker-saved-filters"
         filters={filters}
         onChangeFilters={onChangeFilters}
         onClearFilters={onClearFilters}
         className="hidden lg:block"
       />
 
-      <section className="rounded-xl border border-border-subtle bg-resource-resume-surface p-4 shadow-sm">
+      <section
+        data-tour="seeker-saved-ask-ai"
+        className="rounded-xl border border-border-subtle bg-resource-resume-surface p-4 shadow-sm"
+      >
         <div className="flex items-start gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- static Asli AI PNG asset */}
           <img
@@ -377,7 +387,10 @@ export function SavedJobsSidebar({
         </div>
       </section>
 
-      <section className="rounded-xl border border-border-subtle bg-resource-interview-surface p-4 shadow-sm">
+      <section
+        data-tour="seeker-saved-alerts"
+        className="rounded-xl border border-border-subtle bg-resource-interview-surface p-4 shadow-sm"
+      >
         <div className="flex items-start gap-3">
           <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-resource-interview-icon-surface text-resource-interview-icon">
             <Star className="size-5 fill-current" aria-hidden="true" />
@@ -397,7 +410,10 @@ export function SavedJobsSidebar({
         </div>
       </section>
 
-      <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm">
+      <section
+        data-tour="seeker-saved-overview"
+        className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm"
+      >
         <div className="flex items-center justify-between gap-2">
           <h2 className="min-w-0 break-words text-sm font-bold text-foreground">
             {t("seeker.savedSidebar.overviewTitle")}

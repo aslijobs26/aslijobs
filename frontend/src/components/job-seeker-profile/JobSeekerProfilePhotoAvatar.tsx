@@ -17,6 +17,8 @@ type JobSeekerProfilePhotoAvatarProps = {
   isUploading?: boolean;
   onUpload: (file: File) => Promise<void>;
   onRemove?: () => Promise<void>;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 };
 
 export function JobSeekerProfilePhotoAvatar({
@@ -25,6 +27,7 @@ export function JobSeekerProfilePhotoAvatar({
   isUploading = false,
   onUpload,
   onRemove,
+  dataTour,
 }: JobSeekerProfilePhotoAvatarProps) {
   const t = useTranslate();
   const inputId = useId();
@@ -50,7 +53,7 @@ export function JobSeekerProfilePhotoAvatar({
   };
 
   return (
-    <div className="relative inline-flex shrink-0">
+    <div data-tour={dataTour} className="relative inline-flex shrink-0">
       <div
         className={`relative overflow-hidden rounded-full border-2 border-primary/20 ${sizeClass} ${
           photoUrl ? "bg-hero-bg" : "bg-primary-soft"

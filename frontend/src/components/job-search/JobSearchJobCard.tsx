@@ -39,6 +39,8 @@ type JobSearchJobCardProps = {
   bookmarked: boolean;
   onSelect: () => void;
   onToggleBookmark: () => void;
+  /** Adds the product tour anchors (`data-tour`) for the first card's actions. */
+  tourAnchors?: boolean;
 };
 
 type CardTag = {
@@ -113,6 +115,7 @@ export function JobSearchJobCard({
   bookmarked,
   onSelect,
   onToggleBookmark,
+  tourAnchors = false,
 }: JobSearchJobCardProps) {
   const t = useTranslate();
   const language = useSiteLanguage().code;
@@ -269,6 +272,7 @@ export function JobSearchJobCard({
               ) : null}
               <button
                 type="button"
+                data-tour={tourAnchors ? "job-search-first-card-save" : undefined}
                 onClick={handleBookmarkClick}
                 aria-label={bookmarked ? t("jobs.removeBookmark") : t("jobs.saveJob")}
                 aria-pressed={bookmarked}
@@ -334,6 +338,7 @@ export function JobSearchJobCard({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
           <button
             type="button"
+            data-tour={tourAnchors ? "job-search-first-card-details" : undefined}
             onClick={handleViewDetailsClick}
             className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl border border-[#E5E7EB] bg-surface px-4 text-xs font-medium text-primary transition-colors hover:border-primary/35 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-[13px]"
           >
@@ -345,6 +350,7 @@ export function JobSearchJobCard({
             />
           </button>
           <div
+            data-tour={tourAnchors ? "job-search-first-card-apply" : undefined}
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
           >

@@ -40,6 +40,7 @@ export function TeamWorkloadSection({
     <OperationsCard
       title="Team Workload"
       className="min-w-0"
+      dataTour="ops-home-team"
       action={
         <Link
           to={OPERATIONS_ROUTES.TEAM_MANAGEMENT}

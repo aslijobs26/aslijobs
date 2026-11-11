@@ -180,9 +180,19 @@ function CompactMetaItem({
   );
 }
 
-function DetailSectionHeading({ children }: { children: ReactNode }) {
+function DetailSectionHeading({
+  children,
+  dataTour,
+}: {
+  children: ReactNode;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
+}) {
   return (
-    <h3 className="text-[18px] leading-tight font-bold text-[#1F2937]">
+    <h3
+      data-tour={dataTour}
+      className="text-[18px] leading-tight font-bold text-[#1F2937]"
+    >
       {children}
     </h3>
   );
@@ -461,7 +471,10 @@ export function JobSearchOverviewPanel({
           </button>
         ) : null}
 
-        <header className="flex items-start gap-2.5">
+        <header
+          data-tour="job-search-overview-header"
+          className="flex items-start gap-2.5"
+        >
           <JobPosterAvatar
             companyName={job.companyName}
             imageUrl={job.companyLogoUrl}
@@ -524,7 +537,10 @@ export function JobSearchOverviewPanel({
             ) : null}
             <JobTranslationPendingNote translationStatus={job.translationStatus} />
           </div>
-          <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
+          <div
+            data-tour="job-search-overview-quick-actions"
+            className="flex shrink-0 items-center gap-1.5 pt-0.5"
+          >
             <button
               type="button"
               onClick={handleShare}
@@ -560,6 +576,7 @@ export function JobSearchOverviewPanel({
           className={isSummaryCollapsed ? "mt-0" : "mt-3"}
         >
           <div
+            data-tour="job-search-overview-summary"
             className="border-t border-[#EEF1F4] pt-3"
             aria-label={t("jobs.jobInformation")}
           >
@@ -639,7 +656,9 @@ export function JobSearchOverviewPanel({
       >
         <div className="divide-y divide-[#EEEEEE]">
           <section className="pb-5">
-            <DetailSectionHeading>{t("jobs.jobDescription")}</DetailSectionHeading>
+            <DetailSectionHeading dataTour="job-search-overview-description">
+              {t("jobs.jobDescription")}
+            </DetailSectionHeading>
             <p className="mt-2 text-[16px] leading-snug font-semibold text-[#1F2937]">
               {displayJobTitle}
             </p>
@@ -659,7 +678,9 @@ export function JobSearchOverviewPanel({
 
           {job.address || location || job.landmark ? (
             <section className="py-5">
-              <DetailSectionHeading>{t("jobs.address")}</DetailSectionHeading>
+              <DetailSectionHeading dataTour="job-search-overview-address">
+                {t("jobs.address")}
+              </DetailSectionHeading>
               <div className="mt-3 space-y-1">
                 {job.address ? (
                   <DetailPlainText>{job.address}</DetailPlainText>
@@ -676,7 +697,9 @@ export function JobSearchOverviewPanel({
 
           {job.walkInEnabled ? (
             <section className="py-5">
-              <DetailSectionHeading>{t("jobs.walkInDetails")}</DetailSectionHeading>
+              <DetailSectionHeading dataTour="job-search-overview-walk-in">
+                {t("jobs.walkInDetails")}
+              </DetailSectionHeading>
               <div className="mt-4 space-y-4">
                 <div>
                   <DetailFieldLabel>{t("jobs.interviewAddress")}</DetailFieldLabel>
@@ -714,7 +737,9 @@ export function JobSearchOverviewPanel({
 
           {job.interviewInstructions?.trim() ? (
             <section className="py-5">
-              <DetailSectionHeading>{t("jobs.otherInstructions")}</DetailSectionHeading>
+              <DetailSectionHeading dataTour="job-search-overview-instructions">
+                {t("jobs.otherInstructions")}
+              </DetailSectionHeading>
               <div className="mt-3">
                 <DetailMultilineText text={job.interviewInstructions} />
               </div>
@@ -723,7 +748,9 @@ export function JobSearchOverviewPanel({
 
           {recruiter.hasDetails ? (
             <section className="py-5">
-              <DetailSectionHeading>{t("jobs.recruiter")}</DetailSectionHeading>
+              <DetailSectionHeading dataTour="job-search-overview-recruiter">
+                {t("jobs.recruiter")}
+              </DetailSectionHeading>
               <JobRecruiterContactDetails
                 name={recruiter.name}
                 whatsapp={recruiter.whatsapp}
@@ -736,7 +763,10 @@ export function JobSearchOverviewPanel({
           ) : null}
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-2 border-t border-[#EEEEEE] pt-5">
+        <div
+          data-tour="job-search-overview-actions"
+          className="mt-5 flex flex-wrap gap-2 border-t border-[#EEEEEE] pt-5"
+        >
           <JobApplyButton
             isApplied={isApplied}
             isApplying={isApplying}

@@ -10,6 +10,8 @@ type SettingsSectionProps = {
   children: ReactNode;
   className?: string;
   tone?: "default" | "danger";
+  /** Product tour anchor (`data-tour`) for the section header. */
+  dataTour?: string;
 };
 
 export function SettingsSection({
@@ -19,6 +21,7 @@ export function SettingsSection({
   children,
   className,
   tone = "default",
+  dataTour,
 }: SettingsSectionProps) {
   return (
     <section
@@ -30,7 +33,10 @@ export function SettingsSection({
         className,
       )}
     >
-      <header className="flex items-start justify-between gap-3">
+      <header
+        data-tour={dataTour}
+        className="flex items-start justify-between gap-3"
+      >
         <div className="min-w-0 flex-1">
           <h2
             className={cn(

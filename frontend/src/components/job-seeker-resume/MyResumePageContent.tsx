@@ -232,7 +232,7 @@ export function MyResumePageContent() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-      <header className="resume-no-print">
+      <header data-tour="seeker-resume-header" className="resume-no-print">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -243,7 +243,12 @@ export function MyResumePageContent() {
               You can also upload your own resume for applications.
             </p>
           </div>
-          {resume ? <ResumeStatusBadge status={resume.status} /> : null}
+          {resume ? (
+            <ResumeStatusBadge
+              dataTour="seeker-resume-status"
+              status={resume.status}
+            />
+          ) : null}
         </div>
 
         {resume ? (
@@ -278,11 +283,17 @@ export function MyResumePageContent() {
       ) : (
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
           <div className="order-2 lg:order-1">
-            <ResumePreview resume={resume as PublicResume} />
+            <ResumePreview
+              dataTour="seeker-resume-preview"
+              resume={resume as PublicResume}
+            />
           </div>
 
           <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24">
-            <section className="resume-no-print rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm">
+            <section
+              data-tour="seeker-resume-default"
+              className="resume-no-print rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm"
+            >
               <h2 className="text-sm font-bold text-foreground sm:text-base">
                 AsliJobs Resume
               </h2>
@@ -310,6 +321,7 @@ export function MyResumePageContent() {
             </section>
 
             <ResumeActions
+              dataTour="seeker-resume-actions"
               canDownload={hasPreviewableContent}
               canPrint={hasPreviewableContent}
               canEdit={Boolean(profileQuery.data) && hasPreviewableContent}
@@ -326,9 +338,13 @@ export function MyResumePageContent() {
               onPrint={handlePrint}
               onRegenerate={handleRegenerate}
             />
-            <ResumeMetadataPanel resume={resume} />
+            <ResumeMetadataPanel
+              dataTour="seeker-resume-metadata"
+              resume={resume}
+            />
 
             <UploadedResumePanel
+              dataTour="seeker-resume-uploaded"
               uploadedResume={uploadedResume}
               defaultResumeSource={defaultResumeSource}
               isBusy={isBusy || isSavingProfile}
@@ -339,13 +355,19 @@ export function MyResumePageContent() {
             />
 
             {resume.status === "FAILED" ? (
-              <p className="resume-no-print rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+              <p
+                data-tour="seeker-resume-notice"
+                className="resume-no-print rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700"
+              >
                 {resume.failureReason ||
                   "Generation failed. You can retry using the button above."}
               </p>
             ) : null}
             {resume.status === "OUTDATED" ? (
-              <p className="resume-no-print rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              <p
+                data-tour="seeker-resume-notice"
+                className="resume-no-print rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800"
+              >
                 Your profile may have changed. Regenerate to refresh this
                 resume.
               </p>
@@ -358,6 +380,7 @@ export function MyResumePageContent() {
       {(!resume || resume.status === "NOT_GENERATED" || (resume.status === "FAILED" && !hasPreviewableContent)) ? (
         <div className="resume-no-print mt-6 max-w-xl">
           <UploadedResumePanel
+            dataTour="seeker-resume-uploaded"
             uploadedResume={uploadedResume}
             defaultResumeSource={defaultResumeSource}
             isBusy={isBusy}
@@ -403,7 +426,10 @@ function EmptyResumeState({
   onGenerate: () => void;
 }) {
   return (
-    <div className="resume-no-print mt-10 rounded-xl border border-dashed border-border-subtle bg-surface px-6 py-12 text-center">
+    <div
+      data-tour="seeker-resume-generate"
+      className="resume-no-print mt-10 rounded-xl border border-dashed border-border-subtle bg-surface px-6 py-12 text-center"
+    >
       <h2 className="text-base font-semibold text-foreground sm:text-lg">
         Resume not available
       </h2>
@@ -432,7 +458,10 @@ function FailedResumeState({
   onRetry: () => void;
 }) {
   return (
-    <div className="resume-no-print mt-10 rounded-xl border border-red-200 bg-red-50/60 px-6 py-12 text-center">
+    <div
+      data-tour="seeker-resume-failed"
+      className="resume-no-print mt-10 rounded-xl border border-red-200 bg-red-50/60 px-6 py-12 text-center"
+    >
       <h2 className="text-base font-semibold text-red-800 sm:text-lg">
         Generation failed
       </h2>

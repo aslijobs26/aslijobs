@@ -65,6 +65,7 @@ export function VerificationsStatusDonut({
 
   return (
     <OperationsCard
+      dataTour="ops-verifications-status"
       title="Verifications by Status"
       subtitle="Current status mix"
       className="employers-analytics-card min-w-0"

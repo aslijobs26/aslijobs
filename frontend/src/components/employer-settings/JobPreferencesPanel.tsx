@@ -36,6 +36,7 @@ export function JobPreferencesPanel({ canCreateJob }: JobPreferencesPanelProps) 
       <SettingsSection
         title="Job Preferences"
         description="Job defaults are configured per job when you post or edit. There is no separate employer-wide defaults API yet."
+        dataTour="employer-settings-job-preferences"
         action={
           <Link
             href={ROUTES.EMPLOYER_JOBS}
@@ -75,7 +76,10 @@ export function JobPreferencesPanel({ canCreateJob }: JobPreferencesPanelProps) 
         </div>
       </SettingsSection>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div
+        data-tour="employer-settings-job-links"
+        className="grid gap-3 sm:grid-cols-2"
+      >
         <SettingCard
           title="Jobs workspace"
           description="Review and manage posted jobs"

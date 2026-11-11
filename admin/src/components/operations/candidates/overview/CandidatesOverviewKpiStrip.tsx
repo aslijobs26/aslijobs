@@ -66,6 +66,7 @@ export function CandidatesOverviewKpiStrip({
   return (
     <section
       aria-label="Jobseeker overview KPIs"
+      data-tour="ops-job-seekers-kpis"
       className="grid grid-cols-2 gap-2.5 max-lg:gap-2 max-sm:gap-1.5 lg:grid-cols-5"
     >
       {CARDS.map((card) => {

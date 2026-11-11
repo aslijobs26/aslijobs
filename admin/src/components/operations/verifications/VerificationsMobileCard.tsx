@@ -12,6 +12,8 @@ import {
 
 interface VerificationsMobileCardProps {
   item: OperationsVerificationListItem;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }
 
 function submittedLabel(item: OperationsVerificationListItem): {
@@ -29,6 +31,7 @@ function submittedLabel(item: OperationsVerificationListItem): {
 
 export function VerificationsMobileCard({
   item,
+  dataTour,
 }: VerificationsMobileCardProps) {
   const submitted = submittedLabel(item);
   const reviewPath = operationsVerificationReviewPath(item.id);
@@ -37,7 +40,7 @@ export function VerificationsMobileCard({
   const actionLabel = item.allowedActions.canReview ? "Review" : "View";
 
   return (
-    <li className="min-w-0 rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow">
+    <li data-tour={dataTour} className="min-w-0 rounded-xl border border-border-subtle bg-surface p-3 shadow-sm ops-brand-border-glow">
       <div className="flex items-start justify-between gap-2 border-b border-border-subtle pb-2.5">
         <Link to={reviewPath} className="flex min-w-0 items-center gap-2.5">
           <EmployerLogo

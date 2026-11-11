@@ -207,6 +207,7 @@ export function InboxChatPanel({
   if (!conversation) {
     return (
       <section
+        data-tour="ops-inbox-thread"
         className={cn(
           "flex h-full min-h-0 flex-col items-center justify-center px-6 text-center",
           isDarkTheme ? "bg-[#0b141a]" : "bg-[#f3f6f7]",
@@ -406,6 +407,7 @@ export function InboxChatPanel({
 
   return (
     <section
+      data-tour="ops-inbox-thread"
       className={cn(
         "flex h-full min-h-0 min-w-0 flex-1 flex-col @container/inbox-chat",
         chatPaneBg,
@@ -445,14 +447,14 @@ export function InboxChatPanel({
             </p>
           ) : null}
           <p className="truncate text-[11px] leading-tight text-muted">
-            <span className="@min-[40rem]/inbox-chat:hidden">
+            <span data-tour="ops-inbox-status" className="@min-[40rem]/inbox-chat:hidden">
               {conversation.botPaused ? "Human handling" : "Bot active"}
               {" · "}
             </span>
             {conversation.phoneDisplay}
           </p>
         </div>
-        <span className="hidden shrink-0 text-[11px] font-medium text-muted @min-[40rem]/inbox-chat:inline">
+        <span data-tour="ops-inbox-status" className="hidden shrink-0 text-[11px] font-medium text-muted @min-[40rem]/inbox-chat:inline">
           {conversation.botPaused ? "Human handling" : "Bot active"}
         </span>
         <InboxTranslateMenu
@@ -465,6 +467,7 @@ export function InboxChatPanel({
         {onToggleBot ? (
           <button
             type="button"
+            data-tour="ops-inbox-bot"
             onClick={onToggleBot}
             aria-label={conversation.botPaused ? "Resume bot" : "Pause bot"}
             className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[#54656f] @min-[40rem]/inbox-chat:h-9 @min-[40rem]/inbox-chat:w-auto @min-[40rem]/inbox-chat:gap-1.5 @min-[40rem]/inbox-chat:rounded-lg @min-[40rem]/inbox-chat:border @min-[40rem]/inbox-chat:border-border @min-[40rem]/inbox-chat:px-2.5 @min-[40rem]/inbox-chat:text-xs @min-[40rem]/inbox-chat:font-medium @min-[40rem]/inbox-chat:text-foreground"
@@ -612,6 +615,7 @@ export function InboxChatPanel({
 
       <form
         ref={emojiRootRef}
+        data-tour="ops-inbox-composer"
         onSubmit={(event) => void handleSubmit(event)}
         className={cn(
           "relative shrink-0 border-t px-2 py-1.5 sm:px-3 sm:py-2.5",

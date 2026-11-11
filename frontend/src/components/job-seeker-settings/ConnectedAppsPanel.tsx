@@ -16,6 +16,7 @@ export function ConnectedAppsPanel({ jobSeeker }: ConnectedAppsPanelProps) {
 
   return (
     <SettingsSection
+      dataTour="seeker-settings-connected-apps"
       title="Connected Apps"
       description="Services linked to your job seeker account. Only supported integrations are shown."
     >

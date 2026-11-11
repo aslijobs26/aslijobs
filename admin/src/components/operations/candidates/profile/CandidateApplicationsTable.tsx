@@ -66,7 +66,7 @@ export function CandidateApplicationsTable({
   return (
     <>
       <ul className="flex flex-col divide-y divide-border-subtle sm:hidden">
-        {applications.map((application) => (
+        {applications.map((application, index) => (
           <li key={application.id} className="px-2.5 py-2.5">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
@@ -105,6 +105,9 @@ export function CandidateApplicationsTable({
               {application.publicJobId ? (
                 <Link
                   to={operationsJobDetailPath(application.publicJobId)}
+                  data-tour={
+                    index === 0 ? "ops-candidate-application-actions" : undefined
+                  }
                   className="inline-flex h-6 items-center rounded-md border border-border-subtle px-2 text-[9px] font-semibold text-foreground transition-colors hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                 >
                   View Details
@@ -140,7 +143,7 @@ export function CandidateApplicationsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
-            {applications.map((application) => (
+            {applications.map((application, index) => (
               <tr key={application.id} className="hover:bg-hero-bg/30">
                 <td className="px-4 py-3">
                   <p className="font-semibold text-foreground">
@@ -174,7 +177,12 @@ export function CandidateApplicationsTable({
                 <td className="whitespace-nowrap px-4 py-3 text-muted">
                   {formatCandidateDateTimeFull(application.updatedAt)}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td
+                  data-tour={
+                    index === 0 ? "ops-candidate-application-actions" : undefined
+                  }
+                  className="px-4 py-3 text-right"
+                >
                   {application.publicJobId ? (
                     <Link
                       to={operationsJobDetailPath(application.publicJobId)}

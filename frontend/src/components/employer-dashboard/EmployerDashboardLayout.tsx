@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployerProductTour } from "@/components/product-tour/ProductTourMounts";
 import { EmployerAuthGuard } from "@/components/employer-dashboard/EmployerAuthGuard";
 import { EmployerDashboardPlaceholder } from "@/components/employer-dashboard/EmployerDashboardPlaceholder";
 import { EmployerNavbar } from "@/components/employer-dashboard/EmployerNavbar";
@@ -74,6 +75,7 @@ export function EmployerDashboardLayout({
             </main>
           </div>
           <FloatingBottomNav />
+          <EmployerProductTour />
         </div>
       </EmployerPermissionProvider>
     </EmployerAuthGuard>

@@ -10,7 +10,7 @@ export function EmployerJobsHeader() {
 
   return (
     <header className="employer-jobs-header flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4 lg:gap-3">
-      <div className="min-w-0">
+      <div data-tour="employer-jobs-header" className="min-w-0">
         <h1 className="employer-jobs-header__title text-xl font-bold tracking-tight text-foreground sm:text-[1.625rem] lg:text-[1.25rem]">
           {t("employer.nav.jobs")}
         </h1>
@@ -20,6 +20,7 @@ export function EmployerJobsHeader() {
       </div>
 
       <Link
+        data-tour="employer-jobs-how-it-works"
         href={ROUTES.EMPLOYER_HELP_CENTER}
         className="employer-jobs-header__link inline-flex shrink-0 items-center gap-1.5 pt-0.5 text-xs font-semibold text-primary-soft transition-colors hover:text-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-sm lg:text-xs"
       >

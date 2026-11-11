@@ -344,6 +344,7 @@ export function OperationsSidebar({
                         onClick={onMobileClose}
                         title={collapsed ? item.label : undefined}
                         aria-current={active ? "page" : undefined}
+                        data-tour={`ops-nav-${item.id}`}
                         className={cn(
                           "group relative flex items-center rounded-md font-medium transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",

@@ -3,7 +3,7 @@ import { OPERATIONS_ROUTES } from "../../../../constants/operations-routes";
 
 export function VerificationsAskAsliCard() {
   return (
-    <section className="rounded-xl border border-primary/15 bg-gradient-to-br from-[#EFF6FF] to-[#F8FAFC] p-3.5 shadow-sm max-lg:p-3 max-sm:p-2.5 dark:from-primary/10 dark:to-surface">
+    <section data-tour="ops-verifications-assistant" className="rounded-xl border border-primary/15 bg-gradient-to-br from-[#EFF6FF] to-[#F8FAFC] p-3.5 shadow-sm max-lg:p-3 max-sm:p-2.5 dark:from-primary/10 dark:to-surface">
       <p className="text-[12px] font-semibold text-foreground max-sm:text-[11px]">
         Need Help?
       </p>

@@ -75,6 +75,7 @@ export function NotificationsSettingsPanel({
       <SettingsSection
         title="In-app Notifications"
         description="Manage your notification inbox. Delivery preferences for email channels are not configurable yet."
+        dataTour="employer-settings-notifications"
         action={
           <Link
             href={ROUTES.EMPLOYER_NOTIFICATIONS}
@@ -84,7 +85,10 @@ export function NotificationsSettingsPanel({
           </Link>
         }
       >
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border-subtle bg-hero-bg/60 px-4 py-3.5">
+        <div
+          data-tour="employer-settings-notifications-inbox"
+          className="flex flex-wrap items-center gap-3 rounded-xl border border-border-subtle bg-hero-bg/60 px-4 py-3.5"
+        >
           <span className="inline-flex size-10 items-center justify-center rounded-lg bg-primary-light text-primary">
             <Bell className="size-5" aria-hidden="true" />
           </span>
@@ -133,6 +137,7 @@ export function NotificationsSettingsPanel({
       <SettingsSection
         title="Retention policy"
         description="Inbox visibility is managed by AsliJobs platform retention rules."
+        dataTour="employer-settings-retention"
       >
         <dl className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-border-subtle px-3 py-2.5">

@@ -636,6 +636,7 @@ export function OperationsJobsPage() {
                       className="flex min-w-0 items-center gap-1.5 overflow-x-auto overflow-y-clip overscroll-x-contain scrollbar-hidden"
                       role="tablist"
                       aria-label="Recent job posting tabs"
+                      data-tour="ops-jobs-tabs"
                     >
                       {(
                         [

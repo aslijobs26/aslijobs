@@ -170,7 +170,10 @@ export function OrganizationOverview({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        data-tour="ops-org-kpis"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      >
         {overview.kpis.map((kpi) => {
           const meta = KPI_META[kpi.id];
           const Icon = meta.icon;
@@ -440,7 +443,10 @@ function LocationMapCard({
     (Boolean(highlightName) && !districtsLoading && visibleFeatures.length > 0);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section
+      data-tour="ops-org-map"
+      className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
+    >
       <header className="border-b border-border-subtle px-3 py-2.5">
         <h3 className="text-[13px] font-semibold text-foreground">
           Location Map
@@ -640,7 +646,10 @@ function KeyInformationCard({
   ];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section
+      data-tour="ops-org-key-info"
+      className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
+    >
       <header className="border-b border-border-subtle px-3 py-2.5">
         <h3 className="text-[13px] font-semibold text-foreground">
           Key Information
@@ -679,7 +688,10 @@ function QuickActionsCard({
 }) {
   const available = actions.filter((action) => action.available);
   return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section
+      data-tour="ops-org-quick-actions"
+      className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
+    >
       <header className="border-b border-border-subtle px-3 py-2.5">
         <h3 className="text-[13px] font-semibold text-foreground">
           Quick Actions
@@ -725,7 +737,10 @@ function TeamsTable({
   teams: OperationsOrgOverviewResponse["teams"];
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section
+      data-tour="ops-org-teams"
+      className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
+    >
       <header className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5">
         <h3 className="text-[13px] font-semibold text-foreground">
           Teams in {unitName}
@@ -820,7 +835,10 @@ function PeopleDistribution({
   const active = chartData.find((item) => item.id === activeId) ?? null;
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section
+      data-tour="ops-org-people"
+      className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm"
+    >
       <header className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-2.5">
         <h3 className="text-[13px] font-semibold text-foreground">
           People Distribution by Department

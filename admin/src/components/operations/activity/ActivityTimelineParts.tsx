@@ -177,6 +177,7 @@ export function ActivityFilterChips<Category extends string>({
       className="mt-2 flex gap-1 overflow-x-auto pb-1 scrollbar-hidden"
       role="group"
       aria-label="Filter activity"
+      data-tour="ops-activity-filters"
     >
       {categories.map((category) => (
         <button
@@ -206,6 +207,7 @@ export function ActivityEventRow({
   description,
   formatDateTime,
   children,
+  dataTour,
 }: {
   icon: LucideIcon;
   iconClassName: string;
@@ -215,9 +217,11 @@ export function ActivityEventRow({
   formatDateTime: FormatDateTime;
   /** Actor badge and links shown under the description. */
   children?: ReactNode;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   return (
-    <li className="flex items-start gap-2 text-[11px] sm:gap-3 sm:text-xs">
+    <li data-tour={dataTour} className="flex items-start gap-2 text-[11px] sm:gap-3 sm:text-xs">
       <span
         className={cn(
           "inline-flex size-7 shrink-0 items-center justify-center rounded-md sm:size-8 sm:rounded-lg",

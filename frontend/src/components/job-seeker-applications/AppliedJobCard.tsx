@@ -30,6 +30,10 @@ import {
 
 type AppliedJobCardProps = {
   application: SeekerApplicationListItem;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
+  /** Product tour anchor (`data-tour`) for the status badge. */
+  statusDataTour?: string;
 };
 
 function splitSalaryLabel(salaryLabel: string): {
@@ -81,7 +85,11 @@ function CompanyLogo({
   );
 }
 
-export function AppliedJobCard({ application }: AppliedJobCardProps) {
+export function AppliedJobCard({
+  application,
+  dataTour,
+  statusDataTour,
+}: AppliedJobCardProps) {
   const t = useTranslate();
   const displayJobTitle = transliterateJobTitle(application.jobTitle, useSiteLanguage().code);
   const href = ROUTES.jobSeekerApplicationDetail(application.id);
@@ -113,7 +121,7 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
       : "");
 
   return (
-    <article className="group relative">
+    <article data-tour={dataTour} className="group relative">
       <Link
         href={href}
         aria-label={t("seeker.applications.cardAria", {
@@ -151,6 +159,7 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
 
             <div className="flex shrink-0 flex-col items-end gap-1 pt-0.5">
               <span
+                data-tour={statusDataTour}
                 className={statusBadgeClasses(
                   application.status,
                   "gap-0.5 px-1.5 py-0.5 text-[9px]",
@@ -271,7 +280,10 @@ export function AppliedJobCard({ application }: AppliedJobCardProps) {
             )}
           </div>
 
-          <div className="min-w-0 flex-col items-end gap-1.5 md:flex">
+          <div
+            data-tour={statusDataTour}
+            className="min-w-0 flex-col items-end gap-1.5 md:flex"
+          >
             <span className={statusBadgeClasses(application.status)}>
               <StatusIcon className="size-3.5 shrink-0" aria-hidden="true" />
               {statusLabel}

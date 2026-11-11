@@ -57,7 +57,7 @@ export function JobSearchJobList({
 
   if (jobs.length === 0) {
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface p-8 text-center">
+      <div data-tour="job-search-empty" className="rounded-xl border border-border-subtle bg-surface p-8 text-center">
         <h3 className="text-lg font-bold text-foreground">No Jobs Found</h3>
         <p className="mt-2 text-sm text-muted">
           {emptyMessage ??
@@ -76,9 +76,13 @@ export function JobSearchJobList({
 
   return (
     <ul className="space-y-3" aria-busy={isFetching}>
-      {jobs.map((job) => (
-        <li key={job.jobId}>
+      {jobs.map((job, index) => (
+        <li
+          key={job.jobId}
+          data-tour={index === 0 ? "job-search-results" : undefined}
+        >
           <JobSearchJobCard
+            tourAnchors={index === 0}
             job={job}
             selected={selectedJobId === job.jobId}
             bookmarked={bookmarkedIds.has(job.jobId)}

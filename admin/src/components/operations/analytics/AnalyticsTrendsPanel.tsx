@@ -33,6 +33,7 @@ export function AnalyticsTrendsPanel({
 
   return (
     <OperationsCard
+      dataTour="ops-analytics-trends"
       title="Platform Trends"
       subtitle={`${rangeLabel} · placements, joins, registrations, and jobs created`}
       className="min-w-0"

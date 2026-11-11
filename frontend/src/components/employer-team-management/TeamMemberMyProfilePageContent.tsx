@@ -93,13 +93,17 @@ export function TeamMemberMyProfilePageContent() {
     <div className="flex flex-1 flex-col gap-4 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
       <Link
         href={ROUTES.EMPLOYER_DASHBOARD}
+        data-tour="employer-my-profile-back"
         className="inline-flex h-9 w-fit items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
         Back
       </Link>
 
-      <header className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
+      <header
+        data-tour="employer-my-profile-header"
+        className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
+      >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <span
             className="inline-flex size-14 items-center justify-center rounded-full bg-primary-light text-sm font-bold text-primary"
@@ -130,7 +134,10 @@ export function TeamMemberMyProfilePageContent() {
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
+        <section
+          data-tour="employer-my-profile-basic"
+          className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
+        >
           <h2 className="text-base font-bold text-foreground">
             Basic Information
           </h2>
@@ -156,7 +163,10 @@ export function TeamMemberMyProfilePageContent() {
           </dl>
         </section>
 
-        <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
+        <section
+          data-tour="employer-my-profile-organization"
+          className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
+        >
           <h2 className="text-base font-bold text-foreground">Organization</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <Row label="Company Name" value={companyName} />
@@ -185,7 +195,10 @@ export function TeamMemberMyProfilePageContent() {
           </dl>
         </section>
 
-        <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:col-span-2">
+        <section
+          data-tour="employer-my-profile-account"
+          className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:col-span-2"
+        >
           <h2 className="text-base font-bold text-foreground">Account</h2>
           <dl className="mt-4 grid gap-3 sm:grid-cols-3 text-sm">
             <Row

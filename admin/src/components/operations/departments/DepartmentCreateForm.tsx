@@ -63,6 +63,7 @@ export function DepartmentCreateForm({
     <form
       onSubmit={handleSubmit}
       className="ops-brand-border-glow flex h-full min-h-[28rem] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm xl:min-h-0"
+      data-tour="ops-departments-create"
     >
       <header className="shrink-0 border-b border-border-subtle px-4 py-3.5">
         <div className="flex items-start gap-2.5">

@@ -19,6 +19,7 @@ export function VerificationsByIndustry({
 
   return (
     <OperationsCard
+      dataTour="ops-verifications-industry"
       title="Verifications by Industry"
       className="employers-analytics-card min-w-0"
       action={

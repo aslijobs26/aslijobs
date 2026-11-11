@@ -62,6 +62,7 @@ export function VerificationsTrendChart({
 
   return (
     <OperationsCard
+      dataTour="ops-verifications-trend"
       title="Verifications Trend"
       subtitle={
         isOverall

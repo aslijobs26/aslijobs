@@ -62,7 +62,7 @@ export function TeamManagementPageContent() {
       data-employer-team-page
       className="employer-page-shell employer-team-shell flex flex-1 flex-col gap-4 px-4 pt-5 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:gap-5 sm:px-6 sm:pt-6 md:pb-6 lg:gap-3 lg:px-3.5 lg:pt-3 lg:pb-5"
     >
-      <header className="employer-team-header flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between lg:gap-2">
+      <header data-tour="employer-team-header" className="employer-team-header flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between lg:gap-2">
         <div className="min-w-0">
           <h1 className="employer-team-header__title text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-[1.125rem]">
             {EMPLOYER_TEAM_PAGE_TITLE}
@@ -75,6 +75,7 @@ export function TeamManagementPageContent() {
           <Can module="team_management" action="read">
             <button
               type="button"
+              data-tour="employer-team-permission-matrix"
               onClick={() => setActiveTab("roles")}
               className="employer-team-header__btn inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-10 sm:gap-2 sm:px-4 sm:text-sm lg:h-8 lg:gap-1.5 lg:px-2.5 lg:text-[11px]"
             >
@@ -88,6 +89,7 @@ export function TeamManagementPageContent() {
           <Can module="team_management" action="create">
             <button
               type="button"
+              data-tour="employer-team-invite"
               onClick={() => {
                 setInviteError(null);
                 setInviteOpen(true);
@@ -108,6 +110,7 @@ export function TeamManagementPageContent() {
       <TeamManagementStatsCards
         stats={statsQuery.data}
         isLoading={statsQuery.isLoading}
+        dataTour="employer-team-stats"
       />
 
       {inviteNotice ? (

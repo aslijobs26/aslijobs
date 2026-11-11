@@ -72,14 +72,17 @@ function Field({
   required,
   error,
   children,
+  dataTour,
 }: {
   label: string;
   required?: boolean;
   error?: string;
   children: ReactNode;
+  /** Product tour anchor (`data-tour`). */
+  dataTour?: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div data-tour={dataTour} className="flex min-w-0 flex-col gap-2">
       <label className={labelClass}>
         {label}
         {required ? <span className="text-danger"> *</span> : null}
@@ -462,7 +465,7 @@ export function OperationsPostJobWizardAligned() {
 
   return (
     <div className="flex min-w-0 flex-col gap-3 pb-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div data-tour="ops-post-job-topbar" className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <OperationsBadge variant="support">{workflowState.label}</OperationsBadge>
           {savedJobId ? <span className="text-[11px] font-medium text-muted">Job ID: <span className="text-foreground">{savedJobId}</span></span> : null}
@@ -479,7 +482,7 @@ export function OperationsPostJobWizardAligned() {
           <section className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5 lg:p-6">
             {activeStep === 1 ? (
               <div className="space-y-4 sm:space-y-5 lg:space-y-6">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:gap-6">
+                <div data-tour="ops-post-job-fields" className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:gap-6">
                   <Field label="Establishment Name" error={errors.companyDetails}>
                     <input className={inputClass} placeholder="Enter Establishment Name" value={formData.jobInformation.companyDetails} onChange={(e) => updateFormData((c) => ({ ...c, jobInformation: { ...c.jobInformation, companyDetails: e.target.value } }))} />
                   </Field>
@@ -594,7 +597,7 @@ export function OperationsPostJobWizardAligned() {
 
             {activeStep === 2 ? (
               <div className="space-y-4 sm:space-y-5 lg:space-y-6">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:gap-6">
+                <div data-tour="ops-post-job-fields" className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:gap-6">
                   <Field label="State" required error={errors.state}><OperationsPostJobPlaceAutocomplete id="ops-post-job-state" mode="state" value={formData.locationAndSalary.state} placeholder="Search state" hasError={Boolean(errors.state)} onChange={(value) => updateFormData((c) => ({ ...c, locationAndSalary: { ...c.locationAndSalary, state: value, city: "" } }))} onSelect={(s) => updateFormData((c) => ({ ...c, locationAndSalary: { ...c.locationAndSalary, state: s.state, city: "" } }))} /></Field>
                   <Field label="City" required error={errors.city}><OperationsPostJobPlaceAutocomplete id="ops-post-job-city" mode="city" value={formData.locationAndSalary.city} selectedState={formData.locationAndSalary.state} disabled={!formData.locationAndSalary.state.trim()} placeholder={formData.locationAndSalary.state.trim() ? "Search city" : "Select a state first"} hasError={Boolean(errors.city)} onChange={(value) => updateFormData((c) => ({ ...c, locationAndSalary: { ...c.locationAndSalary, city: value } }))} onSelect={(s) => updateFormData((c) => ({ ...c, locationAndSalary: { ...c.locationAndSalary, city: s.city } }))} /></Field>
                 </div>
@@ -655,7 +658,7 @@ export function OperationsPostJobWizardAligned() {
 
             {activeStep === 3 ? (
               <div className="space-y-4 sm:space-y-5 lg:space-y-6">
-                <Field label="Education Qualification" required error={errors.education}>
+                <Field label="Education Qualification" required error={errors.education} dataTour="ops-post-job-fields">
                   <div className="flex flex-wrap gap-2.5 sm:gap-3">
                     {OPERATIONS_POST_JOB_EDUCATION_OPTIONS.map((option) => (
                       <button
@@ -892,7 +895,7 @@ export function OperationsPostJobWizardAligned() {
 
           {actionError ? <p className="rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-xs font-medium text-danger">{actionError}</p> : null}
 
-          <div className="flex flex-wrap justify-end gap-2">
+          <div data-tour="ops-post-job-buttons" className="flex flex-wrap justify-end gap-2">
             <button
               type="button"
               className="inline-flex h-11 items-center justify-center rounded-md border border-primary-soft bg-surface px-6 text-sm font-bold text-primary-soft"

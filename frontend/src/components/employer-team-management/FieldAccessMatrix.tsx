@@ -39,6 +39,8 @@ type FieldAccessMatrixProps = {
   onChange?: (next: RoleFieldAccessMap) => void;
   onReset?: () => void;
   onCopyFromRole?: (roleId: string) => void;
+  /** Product tour anchor (`data-tour`) for the search and bulk controls. */
+  dataTour?: string;
 };
 
 function SensitivityBadge({
@@ -112,6 +114,7 @@ export function FieldAccessMatrix({
   onChange,
   onReset,
   onCopyFromRole,
+  dataTour,
 }: FieldAccessMatrixProps) {
   const [search, setSearch] = useState("");
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(
@@ -238,7 +241,7 @@ export function FieldAccessMatrix({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2">
+      <div data-tour={dataTour} className="flex flex-col gap-2">
         <label className="relative block">
           <span className="sr-only">Search fields</span>
           <Search

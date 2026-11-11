@@ -61,7 +61,7 @@ export function CandidatesOverviewHeader({
         <span className="font-semibold text-foreground">Jobseekers</span>
       </nav>
       <div className="flex min-w-0 flex-col gap-3 max-lg:gap-2.5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
+        <div data-tour="ops-job-seekers-header" className="min-w-0">
           <h1 className="text-xl font-bold tracking-tight text-foreground max-lg:text-lg max-sm:text-base">
             Jobseekers Overview
           </h1>
@@ -70,7 +70,10 @@ export function CandidatesOverviewHeader({
             engagement across all jobseekers.
           </p>
         </div>
-        <div className="flex min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center">
+        <div
+          data-tour="ops-job-seekers-actions"
+          className="flex min-w-0 flex-col gap-2 max-sm:gap-1.5 sm:flex-row sm:flex-wrap sm:items-center"
+        >
           <OperationsFilterSelect
             label="Date range"
             value={preset}

@@ -5,7 +5,9 @@ import { WHATSAPP_JOIN_URL } from "@/constants/cta";
 
 export function JobSearchWhatsAppBanner() {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
+    <div
+      data-tour="job-search-whatsapp"
+      className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-whatsapp text-white">
           <WhatsAppIcon className="text-xl text-white" />

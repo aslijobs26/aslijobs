@@ -282,7 +282,7 @@ export function EmployerInterviewsPageContent() {
       className="employer-page-shell employer-interviews-shell mx-auto w-full max-w-[1600px] px-3 pt-4 pb-[calc(5.875rem+env(safe-area-inset-bottom)+0.75rem)] sm:px-5 sm:pt-5 md:pb-5"
     >
       <header className="employer-interviews-header flex flex-col gap-2 sm:gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0" data-tour="employer-interviews-header">
           <h1 className="employer-interviews-header__title text-lg font-bold tracking-tight text-foreground sm:text-2xl lg:text-[1.25rem]">
             Interviews
           </h1>
@@ -295,6 +295,7 @@ export function EmployerInterviewsPageContent() {
             className="inline-flex overflow-hidden rounded-lg border border-border-subtle bg-surface"
             role="tablist"
             aria-label="Interviews view"
+            data-tour="employer-interviews-view-toggle"
           >
             <button
               type="button"
@@ -335,6 +336,7 @@ export function EmployerInterviewsPageContent() {
             <button
               type="button"
               onClick={() => openScheduleModal(null)}
+              data-tour="employer-interviews-schedule"
               className="employer-interviews-schedule-btn inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm lg:gap-1 lg:px-2.5 lg:py-1.5 lg:text-xs"
             >
               <Plus className="size-3.5 sm:size-4 lg:size-3.5" aria-hidden="true" />
@@ -344,7 +346,10 @@ export function EmployerInterviewsPageContent() {
         </div>
       </header>
 
-      <div className="employer-interviews-kpi-wrap mt-3 sm:mt-5 lg:mt-2.5">
+      <div
+        className="employer-interviews-kpi-wrap mt-3 sm:mt-5 lg:mt-2.5"
+        data-tour="employer-interviews-kpis"
+      >
         <InterviewsKpiStrip
           stats={statsQuery.data?.stats}
           isLoading={statsQuery.isLoading}
@@ -360,6 +365,7 @@ export function EmployerInterviewsPageContent() {
                 selectedPublicJobId={selectedPublicJobId}
                 isLoading={statsQuery.isLoading}
                 onSelect={setSelectedPublicJobId}
+                dataTour="employer-interviews-job-select"
               />
               <label className="sr-only" htmlFor="interviews-search">
                 Search interviews
@@ -370,12 +376,14 @@ export function EmployerInterviewsPageContent() {
                 value={searchDraft}
                 onChange={(event) => setSearchDraft(event.target.value)}
                 placeholder="Search candidate, job, interviewer…"
+                data-tour="employer-interviews-search"
                 className={`${interviewsToolbarControlClassName} shrink-0 sm:max-w-sm`}
               />
             </div>
             <button
               type="button"
               onClick={() => setMobileFiltersOpen((open) => !open)}
+              data-tour="employer-interviews-filters-toggle"
               className="mt-2 inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-3 text-[11px] font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mt-3 sm:min-h-9 sm:text-xs lg:hidden"
               aria-expanded={mobileFiltersOpen}
             >
@@ -400,6 +408,7 @@ export function EmployerInterviewsPageContent() {
                 onInterviewFromChange={setInterviewFrom}
                 onInterviewToChange={setInterviewTo}
                 onClear={clearInterviewFilters}
+                dataTour="employer-interviews-filters"
               />
             </div>
           ) : null}
@@ -462,6 +471,7 @@ export function EmployerInterviewsPageContent() {
               onInterviewFromChange={setInterviewFrom}
               onInterviewToChange={setInterviewTo}
               onClear={clearInterviewFilters}
+              dataTour="employer-interviews-filters"
             />
           </div>
           <InterviewsTodaySchedule
@@ -474,8 +484,9 @@ export function EmployerInterviewsPageContent() {
               setQuickDate("today");
               setPage(1);
             }}
+            dataTour="employer-interviews-today"
           />
-          <InterviewsStatusOverview />
+          <InterviewsStatusOverview dataTour="employer-interviews-status-overview" />
         </aside>
       </div>
 

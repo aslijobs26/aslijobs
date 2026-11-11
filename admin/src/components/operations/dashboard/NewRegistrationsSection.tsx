@@ -176,6 +176,7 @@ export function NewRegistrationsSection() {
       title="New Registrations"
       subtitle="Unseen and recent employer & jobseeker sign-ups"
       className="min-w-0"
+      dataTour="ops-home-registrations"
       badge={
         <span className="inline-flex size-5 items-center justify-center rounded-md bg-primary-light text-primary">
           <Building2 className="size-3" strokeWidth={2} aria-hidden="true" />

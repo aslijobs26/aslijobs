@@ -87,7 +87,10 @@ export function OperationsPostJobEmployerSelect({
   }
 
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section
+      data-tour="ops-post-job-employer"
+      className="rounded-xl border border-border-subtle bg-surface shadow-sm"
+    >
       {/* Header trigger */}
       <button
         type="button"

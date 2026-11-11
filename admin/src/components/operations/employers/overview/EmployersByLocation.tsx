@@ -121,7 +121,7 @@ export function EmployersByLocation({
   }, [countByState, hoveredState]);
 
   return (
-    <section className="employers-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section data-tour="ops-employers-location" className="employers-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3 py-2 sm:px-3.5 sm:py-2.5">
         <h3 className="text-[13px] font-semibold tracking-tight text-foreground">
           Employers by Location

@@ -105,7 +105,7 @@ export function RolesTable({
   return (
     <div className="min-w-0 overflow-x-auto overscroll-x-contain scrollbar-hidden">
       <table className="min-w-[42rem] w-full border-collapse text-left">
-        <thead>
+        <thead data-tour="employer-team-roles-thead">
           <tr className="border-b border-border-subtle text-xs font-semibold uppercase tracking-wide text-muted">
             <th className="px-3 py-2.5 sm:px-4">Role Name</th>
             <th className="px-3 py-2.5">Access</th>
@@ -130,14 +130,18 @@ export function RolesTable({
 
           {!isLoading && roles.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-3 py-10 text-center text-sm text-muted">
+              <td
+                colSpan={6}
+                data-tour="employer-team-roles-empty"
+                className="px-3 py-10 text-center text-sm text-muted"
+              >
                 No roles found. Create a role to get started.
               </td>
             </tr>
           ) : null}
 
           {!isLoading
-            ? roles.map((role) => {
+            ? roles.map((role, index) => {
                 const Icon = ICON_MAP[role.icon || "shield"] ?? Shield;
                 const colorKey =
                   role.color && role.color in ROLE_COLOR_ICON_WRAP
@@ -146,6 +150,9 @@ export function RolesTable({
                 return (
                   <tr
                     key={role.id}
+                    data-tour={
+                      index === 0 ? "employer-team-roles-first-row" : undefined
+                    }
                     onClick={() => onSelect(role)}
                     className={cn(
                       "cursor-pointer border-b border-border-subtle transition-colors last:border-b-0 hover:bg-hero-bg/50",
@@ -194,6 +201,11 @@ export function RolesTable({
                       </span>
                     </td>
                     <td
+                      data-tour={
+                        index === 0
+                          ? "employer-team-roles-first-actions"
+                          : undefined
+                      }
                       className="px-3 py-3"
                       onClick={(event) => event.stopPropagation()}
                     >

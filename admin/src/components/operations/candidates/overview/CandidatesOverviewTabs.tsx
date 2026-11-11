@@ -37,6 +37,7 @@ export function CandidatesOverviewTabs({
       className="-mx-0.5 flex min-w-0 items-center gap-1.5 overflow-x-auto overscroll-x-contain px-0.5 pb-0.5 scrollbar-hidden max-sm:gap-1 sm:gap-2 xl:gap-1.5"
       role="tablist"
       aria-label="Jobseeker overview tabs"
+      data-tour="ops-job-seekers-tabs"
     >
       {TABS.map((tab) => {
         const selected = activeTab === tab.id;

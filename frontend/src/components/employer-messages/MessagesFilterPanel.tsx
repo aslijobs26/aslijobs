@@ -397,7 +397,10 @@ export function MessagesFilterPanel({
 
   return (
     <section className="employer-messages-filters flex h-full min-h-0 w-full flex-col bg-surface p-3 lg:p-2.5">
-      <div className="flex shrink-0 items-center justify-between gap-2">
+      <div
+        className="flex shrink-0 items-center justify-between gap-2"
+        data-tour="employer-messages-filters"
+      >
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary lg:size-5">
             <Filter className="size-3 lg:size-2.5" aria-hidden="true" />
@@ -432,6 +435,7 @@ export function MessagesFilterPanel({
       <button
         type="button"
         onClick={() => onApply(draft)}
+        data-tour="employer-messages-filters-apply"
         className="mt-3 inline-flex h-9 w-full shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 lg:mt-2 lg:h-8 lg:text-xs"
       >
         {t("employer.messagesPage.filters.applyFilters")}

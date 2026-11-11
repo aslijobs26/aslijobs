@@ -14,9 +14,19 @@ type SettingsNavProps = {
   items: EmployerSettingsNavItem[];
   activeId: EmployerSettingsSectionId;
   onSelect: (id: EmployerSettingsSectionId) => void;
+  /** Product tour anchor (`data-tour`) for the nav heading. */
+  dataTour?: string;
+  /** Product tour anchor (`data-tour`) for the section picker (first item on desktop). */
+  itemsDataTour?: string;
 };
 
-export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
+export function SettingsNav({
+  items,
+  activeId,
+  onSelect,
+  dataTour,
+  itemsDataTour,
+}: SettingsNavProps) {
   const sectionOptions = useMemo<EmployerRegisterSelectOption[]>(
     () =>
       items.map((item) => ({
@@ -32,7 +42,10 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
       aria-label="Settings sections"
       className="employer-settings-nav rounded-xl border border-border-subtle bg-surface p-3 shadow-sm sm:p-4 lg:rounded-lg lg:p-2.5"
     >
-      <div className="employer-settings-nav__intro px-2 pb-3 lg:px-1 lg:pb-2">
+      <div
+        data-tour={dataTour}
+        className="employer-settings-nav__intro px-2 pb-3 lg:px-1 lg:pb-2"
+      >
         <h1 className="employer-settings-nav__title text-base font-bold tracking-tight text-foreground sm:text-lg lg:text-[0.8125rem]">
           Settings
         </h1>
@@ -45,11 +58,14 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
         className="employer-settings-nav__list hidden space-y-1 lg:block lg:space-y-0.5"
         role="list"
       >
-        {items.map((item) => {
+        {items.map((item, index) => {
           const Icon = item.icon;
           const isActive = item.id === activeId;
           return (
-            <li key={item.id}>
+            <li
+              key={item.id}
+              data-tour={index === 0 ? itemsDataTour : undefined}
+            >
               <button
                 type="button"
                 onClick={() => onSelect(item.id)}
@@ -97,7 +113,7 @@ export function SettingsNav({ items, activeId, onSelect }: SettingsNavProps) {
         })}
       </ul>
 
-      <div className="lg:hidden">
+      <div data-tour={itemsDataTour} className="lg:hidden">
         <EmployerRegisterSearchableSelect
           id="settings-section-select"
           label="Settings section"

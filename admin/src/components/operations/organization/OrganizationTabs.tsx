@@ -131,6 +131,7 @@ export function OrganizationTabs() {
 
   return (
     <div
+      data-tour="ops-org-tabs"
       role="tablist"
       aria-label="Organization sections"
       className="flex gap-1 overflow-x-auto border-b border-border-subtle scrollbar-hidden"

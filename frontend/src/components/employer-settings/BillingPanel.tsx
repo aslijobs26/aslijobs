@@ -10,6 +10,7 @@ export function BillingPanel() {
     <SettingsSection
       title="Billing & Invoices"
       description="Subscription, credits, and invoice APIs are not available in AsliJobs yet."
+      dataTour="employer-settings-billing"
     >
       <div className="rounded-xl border border-dashed border-border-subtle bg-hero-bg/60 px-4 py-8 text-center">
         <span className="mx-auto inline-flex size-11 items-center justify-center rounded-full bg-primary-light text-primary">

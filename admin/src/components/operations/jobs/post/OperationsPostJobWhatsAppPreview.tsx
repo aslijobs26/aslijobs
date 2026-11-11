@@ -58,6 +58,7 @@ export function OperationsPostJobWhatsAppPreview({
 
   return (
     <aside
+      data-tour="ops-post-job-preview"
       aria-label="WhatsApp message preview"
       className="flex min-w-0 flex-col xl:sticky xl:top-2"
     >

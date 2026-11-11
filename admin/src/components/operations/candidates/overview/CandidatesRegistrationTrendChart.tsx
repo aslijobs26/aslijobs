@@ -34,6 +34,7 @@ export function CandidatesRegistrationTrendChart({
 
   return (
     <OperationsCard
+      dataTour="ops-job-seekers-trend"
       title="Registration Trend"
       subtitle={
         isOverall

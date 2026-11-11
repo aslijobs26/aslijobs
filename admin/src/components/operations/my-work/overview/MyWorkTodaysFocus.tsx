@@ -14,6 +14,7 @@ export function MyWorkTodaysFocus({ focus, onViewAll }: MyWorkTodaysFocusProps) 
   return (
     <OperationsCard
       title="Today's Focus"
+      dataTour="ops-my-work-focus"
       action={
         <button
           type="button"

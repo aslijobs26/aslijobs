@@ -178,7 +178,7 @@ export function CandidatesByLocation({
       : "No location data available";
 
   return (
-    <section className="candidates-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <section data-tour="ops-job-seekers-location" className="candidates-analytics-card operations-density-card flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-3 py-2 max-sm:gap-1.5 max-sm:px-2.5 max-sm:py-1.5 sm:px-3.5 sm:py-2.5">
         <h3 className="text-[13px] font-semibold tracking-tight text-foreground max-sm:text-[12px]">
           By Location

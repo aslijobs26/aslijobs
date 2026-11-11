@@ -249,7 +249,10 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
   return (
     <div className="employer-team-members-layout grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(12rem,15.5rem)] lg:gap-2.5">
       <div className="employer-team-members-primary min-w-0 space-y-4 lg:space-y-2.5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:gap-2">
+        <div
+          data-tour="employer-team-members-toolbar"
+          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:gap-2"
+        >
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center lg:gap-1.5">
             <label className="relative min-w-0 flex-1">
               <span className="sr-only">Search members</span>
@@ -267,6 +270,7 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
             </label>
             <button
               type="button"
+              data-tour="employer-team-members-filter"
               onClick={() => setFiltersOpen((current) => !current)}
               className="employer-team-toolbar__btn inline-flex h-10 items-center gap-2 rounded-xl border border-border-subtle bg-surface px-3 text-sm font-semibold text-foreground hover:bg-primary-light/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 lg:h-8 lg:gap-1.5 lg:px-2.5 lg:text-[11px]"
             >
@@ -303,7 +307,7 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
         </div>
 
         {filtersOpen ? (
-          <div className="employer-team-filters rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
+          <div data-tour="employer-team-members-filters" className="employer-team-filters rounded-xl border border-border-subtle bg-surface p-4 shadow-sm lg:p-3">
             <div className="mb-3 flex items-center justify-between lg:mb-2">
               <h3 className="employer-team-filters__title text-sm font-bold text-foreground lg:text-xs">
                 Filters
@@ -445,6 +449,7 @@ export function MembersTabPanel({ onOpenRoles }: MembersTabPanelProps) {
               totalPages={pagination.totalPages}
               isLoading={membersQuery.isFetching}
               entityLabel="members"
+              dataTour="employer-team-members-pagination"
               onPageChange={setPage}
               onLimitChange={(next) => {
                 setLimit(next);

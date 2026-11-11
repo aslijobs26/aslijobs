@@ -8,6 +8,7 @@ export function CandidatesByLanguage({ items, total }: { items: OperationsCandid
   const chartData = items.slice(0, 6);
   return (
     <OperationsCard
+      dataTour="ops-job-seekers-language"
       title="By Language"
       subtitle="Languages reported by jobseekers"
       className="candidates-analytics-card min-w-0"

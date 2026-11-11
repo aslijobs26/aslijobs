@@ -11,7 +11,9 @@ export function DashboardAcademyCard() {
   const t = useTranslate();
 
   return (
-    <section className="employer-rail-card employer-academy-card relative min-h-28 overflow-hidden rounded-xl border border-resource-resume-icon-surface bg-resource-resume-surface px-5 py-4 shadow-sm">
+    <section
+      data-tour="employer-home-academy"
+      className="employer-rail-card employer-academy-card relative min-h-28 overflow-hidden rounded-xl border border-resource-resume-icon-surface bg-resource-resume-surface px-5 py-4 shadow-sm">
       <div className="relative z-10 min-w-0 max-w-[60%]">
         <h2 className="employer-rail-title break-words text-sm font-bold text-foreground">
           {t("employer.dashboard.academyTitle")}
