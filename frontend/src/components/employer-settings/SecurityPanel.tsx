@@ -84,6 +84,7 @@ export function SecurityPanel({
             onAction: handleLogoutRequest,
             icon: "logout",
             tone: "danger",
+            dataTour: "employer-settings-logout",
           },
           {
             id: "password",

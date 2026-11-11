@@ -57,7 +57,6 @@ export function SavedJobsSortSelect({
   return (
     <div
       ref={rootRef}
-      data-tour={dataTour}
       className="relative inline-flex items-center gap-2 text-sm text-muted"
     >
       <span className="hidden shrink-0 font-medium sm:inline">
@@ -67,6 +66,7 @@ export function SavedJobsSortSelect({
         <button
           type="button"
           id="saved-jobs-sort"
+          data-tour={dataTour}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           aria-controls={listboxId}

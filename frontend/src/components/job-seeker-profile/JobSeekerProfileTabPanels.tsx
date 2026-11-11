@@ -86,19 +86,17 @@ function SectionCard({
   action?: React.ReactNode;
   children: React.ReactNode;
   id?: string;
-  /** Product tour anchor (`data-tour`) for the section header row. */
+  /** Product tour anchor (`data-tour`) for the whole section. */
   dataTour?: string;
 }) {
   return (
     <section
       id={id}
+      data-tour={dataTour}
       className="rounded-2xl border border-border-subtle bg-hero-bg/40 p-4 sm:p-5"
       aria-labelledby={id ? `${id}-heading` : undefined}
     >
-      <div
-        data-tour={dataTour}
-        className="mb-4 flex flex-wrap items-center justify-between gap-2"
-      >
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2
           id={id ? `${id}-heading` : undefined}
           className="min-w-0 break-words text-sm font-bold text-foreground sm:text-base"

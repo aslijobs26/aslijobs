@@ -179,6 +179,28 @@ html.operations-shell-lock #root {
   }
 }
 
+/*
+ * Recharts tooltip defaults to a white box. In dark theme the label inherits
+ * the light page color and series colors are the light chart fills, so the
+ * hover text disappears. Pin a dark surface and a light font.
+ */
+html[data-theme="dark"] .recharts-default-tooltip {
+  background-color: color-mix(in srgb, var(--ds-surface) 78%, white) !important;
+  border: 1px solid var(--ds-border) !important;
+  border-radius: 8px;
+  color: var(--ds-foreground) !important;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+html[data-theme="dark"] .recharts-tooltip-label,
+html[data-theme="dark"] .recharts-tooltip-item,
+html[data-theme="dark"] .recharts-tooltip-item-name,
+html[data-theme="dark"] .recharts-tooltip-item-separator,
+html[data-theme="dark"] .recharts-tooltip-item-value,
+html[data-theme="dark"] .recharts-tooltip-item-unit {
+  color: var(--ds-foreground) !important;
+}
+
 /* Dark-mode card elevation — soft lift without harsh shadows */
 html[data-theme="dark"] .shadow-sm {
   --tw-shadow-color: rgb(0 0 0 / 0.35);

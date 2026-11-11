@@ -352,13 +352,13 @@ export function EmployerDashboardHome() {
 
         <aside className="employer-home-rail">
           {canCompanyProfile ? (
-            profileCompletion ? (
+            profileCompletion && !profileCompletion.isComplete ? (
               <DashboardProfileCompletion
                 percentage={profileCompletion.percentage}
-                isComplete={profileCompletion.isComplete}
+                isComplete={false}
                 isIndividual={profile?.accountType === "individual"}
               />
-            ) : (
+            ) : profileCompletion ? null : (
               <div className="h-28 animate-pulse rounded-xl border border-border-subtle bg-surface" />
             )
           ) : null}

@@ -24,12 +24,15 @@ function usagePercent(used: number, limit: number): number {
 function MetricCard({
   children,
   className = "",
+  dataTour,
 }: {
   children: ReactNode;
   className?: string;
+  dataTour?: string;
 }) {
   return (
     <div
+      data-tour={dataTour}
       className={`employer-subscription-metric flex h-full min-h-0 min-w-0 flex-col rounded-lg border border-border-subtle bg-surface p-2.5 shadow-sm sm:rounded-xl sm:p-3.5 lg:rounded-lg lg:p-2 ${className}`}
     >
       {children}
@@ -84,10 +87,7 @@ export function DashboardSubscriptionOverview() {
       className="employer-subscription-card rounded-xl border border-primary/10 bg-primary-light p-2.5 sm:p-4 lg:p-2.5"
       aria-labelledby="dashboard-subscription-overview-title"
     >
-      <header
-        data-tour="employer-home-subscription"
-        className="mb-2 sm:mb-4 lg:mb-2"
-      >
+      <header className="mb-2 sm:mb-4 lg:mb-2">
         <h2
           id="dashboard-subscription-overview-title"
           className="employer-subscription-card__title text-xs font-bold text-foreground sm:text-base lg:text-[0.8125rem]"
@@ -157,7 +157,7 @@ export function DashboardSubscriptionOverview() {
           ) : null}
         </MetricCard>
 
-        <MetricCard className="col-span-2">
+        <MetricCard className="col-span-2" dataTour="employer-home-subscription">
           <p className="employer-subscription-metric__value text-xs font-bold text-foreground sm:text-[0.9375rem] lg:text-[0.8125rem]">
             {t("employer.subscription.benefitsTitle")}
           </p>

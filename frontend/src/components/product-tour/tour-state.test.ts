@@ -58,14 +58,14 @@ describe("product tour state", () => {
 describe("product tour route selection", () => {
   it("gives every job seeker page its own tour", () => {
     const expected: Record<string, string> = {
-      "/job-seeker/profile": "seeker-workspace-v2",
-      "/job-seeker/applied-jobs": "seeker-applications-v2",
-      "/job-seeker/applied-jobs/app-1": "seeker-application-detail",
-      "/job-seeker/my-resume": "seeker-resume-v2",
-      "/job-seeker/saved-jobs": "seeker-saved-jobs-v2",
-      "/job-seeker/notifications": "seeker-notifications-v2",
-      "/job-seeker/settings": "seeker-settings-v2",
-      "/job-seeker/help-support": "seeker-help-support",
+      "/job-seeker/profile": "seeker-workspace-v3",
+      "/job-seeker/applied-jobs": "seeker-applications-v3",
+      "/job-seeker/applied-jobs/app-1": "seeker-application-detail-v2",
+      "/job-seeker/my-resume": "seeker-resume-v3",
+      "/job-seeker/saved-jobs": "seeker-saved-jobs-v3",
+      "/job-seeker/notifications": "seeker-notifications-v3",
+      "/job-seeker/settings": "seeker-settings-v3",
+      "/job-seeker/help-support": "seeker-help-support-v2",
     };
     for (const [path, tourId] of Object.entries(expected)) {
       assert.equal(
@@ -78,28 +78,28 @@ describe("product tour route selection", () => {
   });
 
   it("does not run the job search tour on a job detail page", () => {
-    assert.equal(selectTourForPath(JOB_SEARCH_TOURS, "/jobs")?.id, "seeker-job-search-v2");
+    assert.equal(selectTourForPath(JOB_SEARCH_TOURS, "/jobs")?.id, "seeker-job-search-v3");
     assert.equal(selectTourForPath(JOB_SEARCH_TOURS, "/jobs/AJ-2026-000054"), null);
   });
 
   it("gives every employer page its own tour", () => {
     const expected: Record<string, string> = {
-      "/employer/dashboard": "employer-overview-v2",
-      "/employer/jobs": "employer-jobs-v2",
-      "/employer/jobs/job-1/under-review": "employer-job-under-review",
-      "/employer/candidates": "employer-candidates-v2",
-      "/employer/candidates/app-1": "employer-candidate-detail",
-      "/employer/saved-candidates": "employer-shortlist-v2",
-      "/employer/interviews": "employer-interviews-v2",
-      "/employer/messages": "employer-messages-v2",
-      "/employer/notifications": "employer-notifications",
-      "/employer/company-profile": "employer-company-profile-v2",
-      "/employer/settings": "employer-settings-v2",
-      "/employer/team-management": "employer-team-v2",
-      "/employer/team-management/members/m-1": "employer-team-member-detail",
-      "/employer/team-management/roles/r-1": "employer-team-role-detail",
-      "/employer/team-management/departments/d-1": "employer-team-department-detail",
-      "/employer/team-member/profile": "employer-my-profile",
+      "/employer/dashboard": "employer-overview-v3",
+      "/employer/jobs": "employer-jobs-v3",
+      "/employer/jobs/job-1/under-review": "employer-job-under-review-v2",
+      "/employer/candidates": "employer-candidates-v3",
+      "/employer/candidates/app-1": "employer-candidate-detail-v2",
+      "/employer/saved-candidates": "employer-shortlist-v3",
+      "/employer/interviews": "employer-interviews-v3",
+      "/employer/messages": "employer-messages-v3",
+      "/employer/notifications": "employer-notifications-v2",
+      "/employer/company-profile": "employer-company-profile-v3",
+      "/employer/settings": "employer-settings-v3",
+      "/employer/team-management": "employer-team-v3",
+      "/employer/team-management/members/m-1": "employer-team-member-detail-v2",
+      "/employer/team-management/roles/r-1": "employer-team-role-detail-v2",
+      "/employer/team-management/departments/d-1": "employer-team-department-detail-v2",
+      "/employer/team-member/profile": "employer-my-profile-v2",
     };
     for (const [path, tourId] of Object.entries(expected)) {
       assert.equal(

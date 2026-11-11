@@ -61,13 +61,11 @@ export function JobSeekerProfileSidebar({
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-      <div
-        data-tour="seeker-profile-edit-actions"
-        className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5"
-      >
+      <div className="rounded-2xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            data-tour="seeker-profile-edit"
             className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-surface transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-10 sm:gap-2 sm:text-sm"
             onClick={onOpenPersonal}
           >

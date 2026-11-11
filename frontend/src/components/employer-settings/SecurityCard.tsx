@@ -15,6 +15,8 @@ export type SecurityAction = {
   icon: SecurityActionIcon;
   disabled?: boolean;
   tone?: "default" | "danger";
+  /** Product tour anchor (`data-tour`) for this action button. */
+  dataTour?: string;
 };
 
 type SecurityCardProps = {
@@ -75,6 +77,7 @@ export function SecurityCard({
               </div>
               <button
                 type="button"
+                data-tour={action.dataTour}
                 disabled={disabled}
                 onClick={action.onAction}
                 className={cn(
