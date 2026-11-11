@@ -1,44 +1,17 @@
-import DOMPurify from "isomorphic-dompurify";
+import DOMPurify from "dompurify";
+import { sanitizeJobDescriptionHtmlAllowlist } from "./job-description-html-allowlist";
+import {
+  isJobDescriptionEmpty,
+  JOB_DESCRIPTION_ALLOWED_ATTRIBUTES,
+  JOB_DESCRIPTION_ALLOWED_TAGS,
+} from "./job-description-text";
 
-const EMPTY_HTML_PATTERN = /^(?:<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+$/i;
-
-/** Strip tags for counters, validation, and plain-text channels. */
-export function getJobDescriptionPlainText(htmlOrText: string): string {
-  if (!htmlOrText.trim()) {
-    return "";
-  }
-
-  return htmlOrText
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<\/h[1-6]>/gi, "\n")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/[ \t]+\n/g, "\n")
-    .trim();
-}
-
-export function getJobDescriptionPlainTextLength(htmlOrText: string): number {
-  return getJobDescriptionPlainText(htmlOrText).length;
-}
-
-export function isJobDescriptionEmpty(htmlOrText: string): boolean {
-  const trimmed = htmlOrText.trim();
-  if (!trimmed) {
-    return true;
-  }
-  if (EMPTY_HTML_PATTERN.test(trimmed)) {
-    return true;
-  }
-  return getJobDescriptionPlainText(trimmed).length === 0;
-}
+export {
+  getJobDescriptionPlainText,
+  getJobDescriptionPlainTextLength,
+  isJobDescriptionEmpty,
+  looksLikeJobDescriptionHtml,
+} from "./job-description-text";
 
 /** Persist empty editor state as "" so existing required checks keep working. */
 export function normalizeJobDescriptionHtml(html: string): string {
@@ -48,35 +21,21 @@ export function normalizeJobDescriptionHtml(html: string): string {
   return sanitizeJobDescriptionHtml(html);
 }
 
+/**
+ * DOMPurify in the browser. Server rendering has no DOM, and jsdom (what
+ * `isomorphic-dompurify` would load) cannot run in the Vercel server runtime,
+ * so the server uses the equivalent DOM-free allowlist sanitizer.
+ */
 export function sanitizeJobDescriptionHtml(html: string): string {
   if (!html.trim()) {
     return "";
   }
+  if (!DOMPurify.isSupported) {
+    return sanitizeJobDescriptionHtmlAllowlist(html);
+  }
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: [
-      "p",
-      "br",
-      "strong",
-      "b",
-      "em",
-      "i",
-      "u",
-      "ul",
-      "ol",
-      "li",
-      "h1",
-      "h2",
-      "h3",
-      "h4",
-      "h5",
-      "h6",
-      "a",
-    ],
-    ALLOWED_ATTR: ["href", "target", "rel", "class"],
+    ALLOWED_TAGS: JOB_DESCRIPTION_ALLOWED_TAGS,
+    ALLOWED_ATTR: JOB_DESCRIPTION_ALLOWED_ATTRIBUTES,
     ALLOW_DATA_ATTR: false,
   }).trim();
-}
-
-export function looksLikeJobDescriptionHtml(value: string): boolean {
-  return /<\/?[a-z][\s\S]*>/i.test(value);
 }

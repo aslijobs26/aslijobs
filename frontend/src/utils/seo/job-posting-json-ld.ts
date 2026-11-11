@@ -1,8 +1,8 @@
+import { sanitizeJobDescriptionHtmlAllowlist } from "../job-description-html-allowlist";
 import {
   getJobDescriptionPlainText,
   looksLikeJobDescriptionHtml,
-  sanitizeJobDescriptionHtml,
-} from "../job-description-html";
+} from "../job-description-text";
 import {
   buildPublicJobUrl,
   publicJobCityLabel,
@@ -47,6 +47,7 @@ function escapeHtml(value: string): string {
 /**
  * Same content the job page renders: sanitized HTML, or legacy plain text
  * turned into paragraphs and line breaks (the page shows it pre-wrapped).
+ * Runs in the server component, so it must not load DOMPurify/jsdom.
  */
 export function toJobPostingDescriptionHtml(description: string): string {
   const trimmed = description.trim();
@@ -54,7 +55,7 @@ export function toJobPostingDescriptionHtml(description: string): string {
     return "";
   }
   if (looksLikeJobDescriptionHtml(trimmed)) {
-    return sanitizeJobDescriptionHtml(trimmed);
+    return sanitizeJobDescriptionHtmlAllowlist(trimmed);
   }
   return trimmed
     .split(/\n\s*\n/)
