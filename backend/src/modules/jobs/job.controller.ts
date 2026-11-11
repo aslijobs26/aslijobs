@@ -5,6 +5,7 @@ import { assertJobWriteFieldsAllowed } from "./job-write-field-access.js";
 import { sanitizeJobDto } from "../rbac/field-access.response.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { jobService } from "./job.service.js";
+import { listPublicJobSitemapEntries } from "./public-job-sitemap.js";
 import {
   resolveJobViewVisitor,
   setJobViewGuestCookie,
@@ -13,6 +14,7 @@ import type {
   BulkDeleteJobsBody,
   CreateJobInput,
   ListEmployerJobsQuery,
+  PublicJobSitemapQuery,
   PublicJobsQuery,
   SaveDraftJobInput,
   SimilarPublicJobsQuery,
@@ -344,6 +346,16 @@ export class JobController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Active jobs fetched successfully.",
+      data: result,
+    });
+  };
+
+  listPublicSitemap = async (req: Request, res: Response): Promise<void> => {
+    const query = req.query as unknown as PublicJobSitemapQuery;
+    const result = await listPublicJobSitemapEntries(query);
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Public job sitemap entries fetched successfully.",
       data: result,
     });
   };

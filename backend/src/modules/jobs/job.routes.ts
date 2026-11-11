@@ -14,6 +14,7 @@ import {
   jobIdParamsSchema,
   listEmployerJobsQuerySchema,
   publicJobIdParamsSchema,
+  publicJobSitemapQuerySchema,
   publicJobsQuerySchema,
   publishDraftJobSchema,
   saveDraftJobSchema,
@@ -30,6 +31,12 @@ jobRouter.get(
   asyncHandler(optionalWorkspaceAuth),
   validate(publicJobsQuerySchema, "query"),
   asyncHandler(jobController.listPublic),
+);
+
+jobRouter.get(
+  "/public/sitemap",
+  validate(publicJobSitemapQuerySchema, "query"),
+  asyncHandler(jobController.listPublicSitemap),
 );
 
 jobRouter.get(

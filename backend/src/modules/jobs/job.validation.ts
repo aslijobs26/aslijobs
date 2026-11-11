@@ -9,6 +9,7 @@ import {
   JOB_STATUSES,
   JOB_TYPES,
   PART_TIME_SCHEDULES,
+  PUBLIC_JOB_SITEMAP_MAX_LIMIT,
   SALARY_PERIODS,
   SALARY_TYPES,
   WORK_MODES,
@@ -553,6 +554,17 @@ export const publicJobIdParamsSchema = z.object({
     .regex(/^AJ-\d{4}-\d{6}$/i, "Invalid public job id"),
 });
 
+export const publicJobSitemapQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(PUBLIC_JOB_SITEMAP_MAX_LIMIT)
+    .optional()
+    .default(PUBLIC_JOB_SITEMAP_MAX_LIMIT),
+});
+
 export const similarPublicJobsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(10).optional().default(5),
   language: z.string().trim().optional().default(""),
@@ -836,6 +848,7 @@ export type CreateJobInput = z.infer<typeof createJobSchema>;
 export type ListEmployerJobsQuery = z.infer<typeof listEmployerJobsQuerySchema>;
 export type PublicJobsQuery = z.infer<typeof publicJobsQuerySchema>;
 export type SimilarPublicJobsQuery = z.infer<typeof similarPublicJobsQuerySchema>;
+export type PublicJobSitemapQuery = z.infer<typeof publicJobSitemapQuerySchema>;
 export type UpdateJobStatusInput = z.infer<typeof updateJobStatusSchema>;
 export type SaveDraftJobInput = z.infer<typeof saveDraftJobSchema>;
 export type PublishDraftJobInput = z.infer<typeof publishDraftJobSchema>;

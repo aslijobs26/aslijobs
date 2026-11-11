@@ -95,6 +95,9 @@ export const JOB_LIVE_CHANGE_REVIEW_STATUSES = [
 
 export const JOB_CREATION_SOURCES = ["employer", "operations"] as const;
 
+/** Sitemap protocol limit: a single sitemap file may list at most 50,000 URLs. */
+export const PUBLIC_JOB_SITEMAP_MAX_LIMIT = 50_000;
+
 export type JobType = (typeof JOB_TYPES)[number];
 export type WorkMode = (typeof WORK_MODES)[number];
 export type PartTimeSchedule = (typeof PART_TIME_SCHEDULES)[number];
