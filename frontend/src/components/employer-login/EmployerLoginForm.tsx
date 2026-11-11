@@ -1,5 +1,6 @@
 "use client";
 
+import { trackFirebaseEvent } from "@/components/analytics/firebase-analytics";
 import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { EmployerRegisterOtpInput } from "@/components/employer-register/EmployerRegisterOtpInput";
@@ -212,6 +213,10 @@ export function EmployerLoginForm() {
         accessToken: session.accessToken,
         refreshToken: session.refreshToken,
         employer: session.employer,
+      });
+      trackFirebaseEvent("login", {
+        method: "whatsapp_otp",
+        user_role: "employer",
       });
       router.replace(
         resolveEmployerPostLoginPath(

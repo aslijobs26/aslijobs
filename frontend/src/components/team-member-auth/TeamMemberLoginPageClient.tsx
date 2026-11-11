@@ -1,6 +1,7 @@
 "use client";
 
 import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
+import { trackFirebaseEvent } from "@/components/analytics/firebase-analytics";
 import { ROUTES } from "@/constants/routes";
 import { RBAC_QUERY_KEYS } from "@/constants/employer-rbac";
 import { useTranslate } from "@/i18n/translate";
@@ -32,6 +33,11 @@ function TeamMemberLoginForm() {
         refreshToken: data.refreshToken,
       });
       queryClient.setQueryData(RBAC_QUERY_KEYS.session(), data.rbac);
+      trackFirebaseEvent("login", {
+        method: "password",
+        user_role: "employer",
+        login_type: "team_member",
+      });
       router.replace(ROUTES.EMPLOYER_DASHBOARD);
     },
     onError: (error) => {

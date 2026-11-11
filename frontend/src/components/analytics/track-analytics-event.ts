@@ -6,6 +6,7 @@ import {
   resolveAttribution,
   type AttributionTouch,
 } from "./analytics-attribution";
+import { forwardToFirebase } from "./firebase-analytics";
 
 const VISITOR_KEY = "aslijobs_analytics_visitor_id";
 const SESSION_KEY = "aslijobs_analytics_session_id";
@@ -107,6 +108,7 @@ export function trackAnalyticsEvent(input: {
   } catch {
     // The request still sends an idempotency key.
   }
+  forwardToFirebase(input);
   const visitorId = readOrCreate(localStorage, VISITOR_KEY);
   const sessionId = resolveSessionId();
   const attribution = resolveAttribution({

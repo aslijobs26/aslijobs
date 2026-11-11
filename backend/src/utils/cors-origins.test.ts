@@ -190,11 +190,22 @@ describe("production Admin CORS allowlist", () => {
     const allowed = buildAllowedCorsOrigins({
       frontendUrl: "http://localhost:3000",
       adminUrl: "http://localhost:5173",
-      extraOrigins: ["https://staging.aslijobs.com"],
+      extraOrigins: [
+        "https://staging.aslijobs.com",
+        "http://localhost:3100",
+        "https://aslijobs.com",
+      ],
     });
 
     assert.equal(
       isCorsOriginAllowed("https://staging.aslijobs.com", allowed),
+      true,
+    );
+    assert.equal(isCorsOriginAllowed("http://localhost:3100", allowed), true);
+    assert.equal(isCorsOriginAllowed("http://127.0.0.1:3100", allowed), true);
+    assert.equal(isCorsOriginAllowed("https://aslijobs.com", allowed), true);
+    assert.equal(
+      isCorsOriginAllowed("https://www.aslijobs.com", allowed),
       true,
     );
     assert.equal(

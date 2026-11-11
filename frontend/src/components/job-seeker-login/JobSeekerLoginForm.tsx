@@ -1,5 +1,6 @@
 "use client";
 
+import { trackFirebaseEvent } from "@/components/analytics/firebase-analytics";
 import { FieldError } from "@/components/auth/FieldError";
 import { RequiredFieldLabel } from "@/components/auth/RequiredFieldLabel";
 import { EmployerRegisterOtpInput } from "@/components/employer-register/EmployerRegisterOtpInput";
@@ -293,6 +294,10 @@ export function JobSeekerLoginForm() {
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
         jobSeeker: data.jobSeeker,
+      });
+      trackFirebaseEvent("login", {
+        method: "whatsapp_otp",
+        user_role: "job_seeker",
       });
       const returnUrl = readLoginReturnUrl();
       router.push(returnUrl ?? ROUTES.HOME);

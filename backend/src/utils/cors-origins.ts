@@ -148,10 +148,17 @@ export function buildAllowedCorsOrigins(input: {
 
   for (const extra of input.extraOrigins ?? []) {
     const normalized = normalizeOrigin(extra);
-    if (normalized) {
-      for (const origin of expandLocalhostOrigins(normalized)) {
-        allowed.add(origin);
-      }
+    if (!normalized) {
+      continue;
+    }
+
+    // Apex and www, plus localhost and 127.0.0.1 when the extra origin is local.
+    const expanded = new Set<string>([
+      ...expandPublicSiteOrigins(normalized),
+      ...expandLocalhostOrigins(normalized),
+    ]);
+    for (const origin of expanded) {
+      allowed.add(origin);
     }
   }
 

@@ -1,3 +1,4 @@
+import { FirebaseAnalytics } from "@/components/analytics/FirebaseAnalytics";
 import {
   GoogleTagManagerNoscript,
   GoogleTagManagerScript,
@@ -88,6 +89,7 @@ export default function RootLayout({
           {children}
         </QueryProvider>
         <MicrosoftClarity />
+        <FirebaseAnalytics />
       </body>
     </html>
   );
