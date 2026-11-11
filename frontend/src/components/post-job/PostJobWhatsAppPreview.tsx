@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import asliJobsAvatar from "@/assets/logos/Frame 130.png";
 import whatsappChatBg from "@/assets/post-job-whatsapp-chat-bg.png";
 import whatsappInputBar from "@/assets/post-job-whatsapp-input.png";
@@ -41,6 +42,7 @@ export function PostJobWhatsAppPreview({
     <aside
       aria-label={t("employer.postJob.whatsappPreview.title")}
       className="flex h-full min-h-full w-full flex-col rounded-2xl bg-[#EEFFFB] p-4 sm:p-5"
+      {...CLARITY_MASK}
     >
       <div className="mb-4 min-w-0">
         <h2 className="break-words text-base font-bold text-foreground sm:text-lg">

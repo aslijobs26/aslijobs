@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import { ROUTES } from "@/constants/routes";
 import { RBAC_QUERY_KEYS } from "@/constants/employer-rbac";
 import { useTranslate } from "@/i18n/translate";
@@ -60,6 +61,7 @@ function TeamMemberLoginForm() {
 
       <form
         className="mt-6 space-y-4"
+        {...CLARITY_MASK}
         onSubmit={(event) => {
           event.preventDefault();
           loginMutation.mutate({

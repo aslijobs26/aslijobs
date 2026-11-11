@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import { JobSeekerLoginForm } from "@/components/job-seeker-login/JobSeekerLoginForm";
 import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
@@ -29,7 +30,7 @@ export function JobSeekerLoginContent({ children }: JobSeekerLoginContentProps) 
             </Link>
           </p>
 
-          <div className="employer-register-form-body">
+          <div className="employer-register-form-body" {...CLARITY_MASK}>
             <JobSeekerLoginForm />
           </div>
         </div>

@@ -18,6 +18,7 @@ import {
   Underline as UnderlineIcon,
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 
 import { cn } from "@/utils/cn";
 import {
@@ -344,7 +345,7 @@ export function JobDescriptionEditor({
             <Link2 className="size-3.5" aria-hidden="true" />
           </ToolbarButton>
         </div>
-        <EditorContent editor={editor} />
+        <EditorContent editor={editor} {...CLARITY_MASK} />
       </div>
       <p
         id={ariaDescribedBy}

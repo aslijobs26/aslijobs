@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
 import type {
@@ -56,7 +57,7 @@ export function EmployerRegisterContent({
             </Link>
           </p>
 
-          <div className="employer-register-form-body">
+          <div className="employer-register-form-body" {...CLARITY_MASK}>
             {step === "account" ? (
               <EmployerRegisterForm
                 onContinue={(formData, nextAccountType, nextEmployerId) => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { ROUTES } from "@/constants/routes";
 import { PROFILE_IMAGE_FIT_CLASSNAME } from "@/constants/profile-image";
@@ -121,7 +122,7 @@ export function JobSeekerProfileMenu({
   const initials = getInitials(displayName);
 
   return (
-    <div ref={rootRef} className={cn("relative", className)}>
+    <div ref={rootRef} className={cn("relative", className)} {...CLARITY_MASK}>
       <button
         type="button"
         className="inline-flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"

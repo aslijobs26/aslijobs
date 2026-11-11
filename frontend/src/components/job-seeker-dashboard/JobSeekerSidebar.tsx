@@ -1,6 +1,7 @@
 "use client";
 
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
+import { CLARITY_UNMASK } from "@/components/analytics/clarity-privacy";
 import asliLogo from "@/assets/AsliLogo.svg";
 import asliLogoMark from "@/assets/logos/Frame 130.png";
 import { JobSeekerSidebarItem } from "@/components/job-seeker-dashboard/JobSeekerSidebarItem";
@@ -78,6 +79,7 @@ export function JobSeekerSidebar({
       />
 
       <aside
+        {...CLARITY_UNMASK}
         aria-label={t("seeker.nav.dashboardAria")}
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex h-dvh flex-col border-r border-border-subtle bg-surface transition-[width,transform] duration-200 ease-out",

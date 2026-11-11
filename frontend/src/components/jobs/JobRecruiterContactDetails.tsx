@@ -1,3 +1,4 @@
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import { cn } from "@/utils/cn";
 
 type JobRecruiterContactDetailsProps = {
@@ -21,6 +22,7 @@ export function JobRecruiterContactDetails({
         "mt-3 space-y-1 text-[15px] leading-[1.7] break-words text-muted",
         className,
       )}
+      {...CLARITY_MASK}
     >
       {name ? <p className="font-medium text-foreground">{name}</p> : null}
       {whatsapp ? <p>{whatsappLabel}</p> : null}

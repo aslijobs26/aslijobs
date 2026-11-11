@@ -2,6 +2,7 @@ import {
   GoogleTagManagerNoscript,
   GoogleTagManagerScript,
 } from "@/components/analytics/GoogleTagManager";
+import { MicrosoftClarity } from "@/components/analytics/MicrosoftClarity";
 import { SiteLanguageSync } from "@/components/i18n/SiteLanguageSync";
 import { QueryProvider } from "@/providers/query-provider";
 import type { Metadata } from "next";
@@ -86,6 +87,7 @@ export default function RootLayout({
           <SiteLanguageSync />
           {children}
         </QueryProvider>
+        <MicrosoftClarity />
       </body>
     </html>
   );

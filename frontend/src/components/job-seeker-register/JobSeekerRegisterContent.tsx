@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
 import Link from "next/link";
@@ -31,7 +32,7 @@ export function JobSeekerRegisterContent({
             </Link>
           </p>
 
-          <div className="employer-register-form-body">
+          <div className="employer-register-form-body" {...CLARITY_MASK}>
             <JobSeekerRegisterForm />
           </div>
         </div>

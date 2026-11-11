@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { EMPLOYER_DASHBOARD_AVATAR_INITIALS } from "@/constants/employer-dashboard";
 import { ROUTES } from "@/constants/routes";
@@ -200,6 +201,7 @@ export function EmployerProfileMenu({
   const accountFallbackName = t("employer.profileMenu.accountName");
   const employerRoleLabel = t("employer.terms.employer");
   const menuId = useId();
+  const menuLabelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -397,11 +399,20 @@ export function EmployerProfileMenu({
     : t("employer.profileMenu.menuAria");
 
   return (
-    <div ref={rootRef} data-tour={dataTour} className={cn("relative", className)}>
+    <div
+      ref={rootRef}
+      data-tour={dataTour}
+      className={cn("relative", className)}
+      {...CLARITY_MASK}
+    >
+      {/* The label holds the member's name, so it stays out of attributes that Clarity sends. */}
+      <span id={menuLabelId} hidden>
+        {ariaLabel}
+      </span>
       <button
         type="button"
         className="inline-flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-        aria-label={ariaLabel}
+        aria-labelledby={menuLabelId}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-controls={menuId}
@@ -438,7 +449,7 @@ export function EmployerProfileMenu({
       <div
         id={menuId}
         role="menu"
-        aria-label={ariaLabel}
+        aria-labelledby={menuLabelId}
         className={cn(
           "absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-lg border border-border-subtle bg-surface p-1.5 shadow-sm transition-[opacity,transform,visibility] duration-200 ease-out",
           isOpen

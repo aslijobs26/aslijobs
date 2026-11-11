@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import {
   formatNotificationTime,
   notificationIcon,
@@ -199,7 +200,12 @@ export function NotificationBell({
   };
 
   return (
-    <div ref={rootRef} data-tour={dataTour} className={cn("relative", className)}>
+    <div
+      ref={rootRef}
+      data-tour={dataTour}
+      className={cn("relative", className)}
+      {...CLARITY_MASK}
+    >
       <button
         type="button"
         className="relative inline-flex size-10 items-center justify-center rounded-lg text-nav transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"

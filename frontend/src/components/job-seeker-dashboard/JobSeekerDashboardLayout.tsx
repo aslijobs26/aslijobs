@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import { JobSeekerProductTour } from "@/components/product-tour/ProductTourMounts";
 import { JobSeekerAuthGuard } from "@/components/job-seeker/JobSeekerAuthGuard";
 import { JobSeekerSidebar } from "@/components/job-seeker-dashboard/JobSeekerSidebar";
@@ -47,6 +48,7 @@ export function JobSeekerDashboardLayout({
     <JobSeekerAuthGuard>
       <div
         className="min-h-dvh bg-hero-bg"
+        {...CLARITY_MASK}
         style={
           {
             "--seeker-sidebar-width": JOB_SEEKER_DASHBOARD_SIDEBAR_WIDTH,

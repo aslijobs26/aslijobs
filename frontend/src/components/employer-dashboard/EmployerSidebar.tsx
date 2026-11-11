@@ -1,6 +1,7 @@
 "use client";
 
 import { SkeletonBone } from "@/components/shared/skeletons/SkeletonBone";
+import { CLARITY_UNMASK } from "@/components/analytics/clarity-privacy";
 import asliLogo from "@/assets/AsliLogo.svg";
 import asliLogoMark from "@/assets/logos/Frame 130.png";
 import { EmployerSidebarItem } from "@/components/employer-dashboard/EmployerSidebarItem";
@@ -140,6 +141,7 @@ export function EmployerSidebar({
       />
 
       <aside
+        {...CLARITY_UNMASK}
         aria-label={t("employer.shell.sidebarAria")}
         className={cn(
           "employer-sidebar fixed inset-y-0 left-0 z-50 flex h-dvh flex-col border-r border-border-subtle bg-surface transition-[width,transform] duration-200 ease-out",

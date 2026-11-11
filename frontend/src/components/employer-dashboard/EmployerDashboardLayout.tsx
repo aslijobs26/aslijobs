@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import { EmployerProductTour } from "@/components/product-tour/ProductTourMounts";
 import { EmployerAuthGuard } from "@/components/employer-dashboard/EmployerAuthGuard";
 import { EmployerDashboardPlaceholder } from "@/components/employer-dashboard/EmployerDashboardPlaceholder";
@@ -46,7 +47,11 @@ export function EmployerDashboardLayout({
   return (
     <EmployerAuthGuard>
       <EmployerPermissionProvider>
-        <div className="min-h-dvh bg-hero-bg" data-employer-workspace="">
+        <div
+          className="min-h-dvh bg-hero-bg"
+          data-employer-workspace=""
+          {...CLARITY_MASK}
+        >
           <EmployerSidebar
             collapsed={collapsed}
             mobileOpen={mobileOpen}

@@ -1,5 +1,6 @@
 "use client";
 
+import { CLARITY_MASK } from "@/components/analytics/clarity-privacy";
 import { EmployerLoginForm } from "@/components/employer-login/EmployerLoginForm";
 import { InAppBrowserHandoffGate } from "@/components/in-app-browser/InAppBrowserHandoff";
 import { ROUTES } from "@/constants/routes";
@@ -40,7 +41,7 @@ export function EmployerLoginContent({ children }: EmployerLoginContentProps) {
               </Link>
             </p>
 
-            <div className="employer-register-form-body">
+            <div className="employer-register-form-body" {...CLARITY_MASK}>
               <Suspense
                 fallback={
                   <p className="text-sm text-muted">
