@@ -32,6 +32,25 @@
     "availableLanguages": "అందుబాటులో ఉన్న భాషలు",
     "registerMenuAria": "నమోదు ఎంపికలను తెరవండి"
   },
+  "languageConfirm": {
+    "suggestionTitle": "భాష సూచన",
+    "suggestionMessage": "మీ ప్రాంతం ఆధారంగా, వెబ్‌సైట్ భాషను {language} ({native})కి మార్చమని సూచిస్తున్నాం.",
+    "changeTo": "{language}కి మార్చండి",
+    "keepEnglish": "ఇంగ్లీష్ ఉంచండి",
+    "confirmTitle": "వెబ్‌సైట్ భాష మార్చాలా?",
+    "confirmMessage": "ASLIJobs వెబ్‌సైట్ భాషను {language} ({native})కి మార్చాలనుకుంటున్నారా?",
+    "apply": "వర్తింపజేయండి",
+    "cancel": "రద్దు",
+    "close": "మూసివేయండి",
+    "names": {
+      "en": "ఇంగ్లీష్",
+      "hi": "హిందీ",
+      "te": "తెలుగు",
+      "ta": "తమిళం",
+      "kn": "కన్నడ",
+      "ml": "మలయాళం"
+    }
+  },
   "nav": {
     "home": "హోమ్", "jobs": "ఉద్యోగాలు", "post": "పోస్ట్", "saved": "సేవ్", "profile": "ప్రొఫైల్",
     "applications": "దరఖాస్తులు", "dashboard": "హోమ్", "candidates": "అభ్యర్థులు", "interviews": "ఇంటర్వ్యూలు", "messages": "సందేశాలు", "mobileAria": "మొబైల్ నావిగేషన్"

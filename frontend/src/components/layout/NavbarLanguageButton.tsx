@@ -4,7 +4,8 @@ import {
   SITE_LANGUAGE_OPTIONS,
   type SiteLanguageOption,
 } from "@/constants/site-language";
-import { useSiteLanguage, writeSiteLanguage } from "@/i18n/site-language";
+import { openLanguagePrompt } from "@/i18n/language-confirmation";
+import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
 import {
   computeAnchoredDropdownPosition,
@@ -141,8 +142,11 @@ export function NavbarLanguageButton({ className }: { className?: string }) {
   };
 
   const selectLanguage = (option: SiteLanguageOption) => {
-    writeSiteLanguage(option);
     setIsOpen(false);
+    if (option.code === selectedLanguage.code) {
+      return;
+    }
+    openLanguagePrompt("navbar", option);
   };
 
   return (

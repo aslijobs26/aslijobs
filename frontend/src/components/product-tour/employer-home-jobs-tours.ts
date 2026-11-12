@@ -26,9 +26,9 @@ export const EMPLOYER_HOME_JOBS_TOURS: readonly ProductTourDefinition[] = [
       },
       {
         target: "employer-home-profile-completion",
-        title: "Finish your profile",
+        title: "Complete your profile",
         description:
-          "This appears only while your profile is incomplete. View Profile opens the missing details.",
+          "Please complete your profile so we can verify your employer account. View Profile opens the remaining details.",
         side: "left",
         align: "start",
       },

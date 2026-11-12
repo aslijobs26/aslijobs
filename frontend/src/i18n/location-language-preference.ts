@@ -2,6 +2,7 @@ import {
   SITE_LANGUAGE_AUTO_LOCATION_STORAGE_KEY,
   SITE_LANGUAGE_SOURCE_STORAGE_KEY,
   SITE_LOCATION_LANGUAGE_ATTEMPT_STORAGE_KEY,
+  SITE_LOCATION_SUGGESTION_DECISION_KEY,
   type SiteLanguagePreferenceSource,
 } from "../constants/site-language";
 
@@ -107,6 +108,40 @@ export function markLocationLanguageAttempted(): void {
   }
   try {
     window.sessionStorage.setItem(SITE_LOCATION_LANGUAGE_ATTEMPT_STORAGE_KEY, "1");
+  } catch {
+    // Ignore storage access errors.
+  }
+}
+
+/** The visitor chose Keep English. Later visits must not suggest again. */
+export function hasDeclinedLocationLanguageSuggestion(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    return window.localStorage.getItem(SITE_LOCATION_SUGGESTION_DECISION_KEY) === "keep-english";
+  } catch {
+    return false;
+  }
+}
+
+export function rememberLocationLanguageDeclined(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(SITE_LOCATION_SUGGESTION_DECISION_KEY, "keep-english");
+  } catch {
+    // Ignore storage access errors.
+  }
+}
+
+export function clearLocationLanguageDecision(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.removeItem(SITE_LOCATION_SUGGESTION_DECISION_KEY);
   } catch {
     // Ignore storage access errors.
   }

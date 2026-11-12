@@ -138,13 +138,13 @@ export function Navbar() {
               <>
                 <NavbarMobileRegisterMenu />
                 <Link
-                  href={ROUTES.JOB_SEEKER_REGISTER}
+                  href={ROUTES.JOB_SEEKER_LOGIN}
                   className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-primary-soft px-3 text-sm font-medium text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 mobile:hidden sm:px-3.5 xl:h-10 xl:px-5 xl:text-[15px]"
                 >
                   {t("navbar.jobSeeker")}
                 </Link>
                 <Link
-                  href={ROUTES.EMPLOYER_REGISTER}
+                  href={ROUTES.EMPLOYER_LOGIN}
                   className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-primary bg-transparent px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 mobile:hidden sm:px-3.5 xl:h-10 xl:px-5 xl:text-[15px]"
                 >
                   <span className="xl:hidden">{t("navbar.employers")}</span>
@@ -288,7 +288,7 @@ function NavbarMobileRegisterMenu() {
               className="fixed z-[55] min-w-[9.25rem] overflow-x-hidden overflow-y-auto overscroll-contain rounded-md border border-border-subtle bg-surface py-0.5 shadow-md"
             >
               <Link
-                href={ROUTES.JOB_SEEKER_REGISTER}
+                href={ROUTES.JOB_SEEKER_LOGIN}
                 role="menuitem"
                 className={itemClassName}
                 onClick={() => setIsOpen(false)}
@@ -297,7 +297,7 @@ function NavbarMobileRegisterMenu() {
                 <span className="min-w-0 break-words">{jobSeekerLabel}</span>
               </Link>
               <Link
-                href={ROUTES.EMPLOYER_REGISTER}
+                href={ROUTES.EMPLOYER_LOGIN}
                 role="menuitem"
                 className={itemClassName}
                 onClick={() => setIsOpen(false)}

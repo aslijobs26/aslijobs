@@ -4285,6 +4285,16 @@ body:has(.employer-register-page) {
   color: var(--color-foreground);
 }
 
+.language-prompt {
+  animation: asli-toast-enter 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .language-prompt {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .asli-toast,
   .asli-toast--leaving {

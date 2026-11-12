@@ -32,6 +32,25 @@
     "availableLanguages": "கிடைக்கும் மொழிகள்",
     "registerMenuAria": "பதிவு விருப்பங்களைத் திறக்கவும்"
   },
+  "languageConfirm": {
+    "suggestionTitle": "மொழி பரிந்துரை",
+    "suggestionMessage": "உங்கள் இருப்பிடத்தின் அடிப்படையில், வலைத்தள மொழியை {language} ({native}) ஆக மாற்ற பரிந்துரைக்கிறோம்.",
+    "changeTo": "{language} ஆக மாற்று",
+    "keepEnglish": "ஆங்கிலத்தில் தொடரவும்",
+    "confirmTitle": "வலைத்தள மொழியை மாற்றவா?",
+    "confirmMessage": "ASLIJobs வலைத்தள மொழியை {language} ({native}) ஆக மாற்ற விரும்புகிறீர்களா?",
+    "apply": "பயன்படுத்து",
+    "cancel": "ரத்து",
+    "close": "மூடு",
+    "names": {
+      "en": "ஆங்கிலம்",
+      "hi": "இந்தி",
+      "te": "தெலுங்கு",
+      "ta": "தமிழ்",
+      "kn": "கன்னடம்",
+      "ml": "மலையாளம்"
+    }
+  },
   "nav": {
     "home": "முகப்பு", "jobs": "வேலைகள்", "post": "பதிவு", "saved": "சேமிப்பு", "profile": "சுயவிவரம்",
     "applications": "விண்ணப்பங்கள்", "dashboard": "முகப்பு", "candidates": "விண்ணப்பதாரர்கள்", "interviews": "நேர்காணல்கள்", "messages": "செய்திகள்", "mobileAria": "மொபைல் வழிசெலுத்தல்"

@@ -1,17 +1,19 @@
 import { siteLanguageFromValue } from "../constants/site-language";
+import { openLanguagePrompt } from "./language-confirmation";
 import { languageCodeForRegion, type LocationLanguageRegion } from "./location-language-map";
 import {
+  hasDeclinedLocationLanguageSuggestion,
   hasLocationLanguageAttempted,
   markLocationLanguageAttempted,
   readLanguagePreferenceSource,
 } from "./location-language-preference";
 import {
   canApplyDetectedLanguage,
-  writeAutomaticSiteLanguage,
+  readSiteLanguage,
   writeDefaultSiteLanguage,
 } from "./site-language";
 
-export type LocationLanguageResult = "applied" | "skipped" | "fallback";
+export type LocationLanguageResult = "applied" | "suggested" | "skipped" | "fallback";
 
 type GeolocationLike = {
   getCurrentPosition: (
@@ -61,6 +63,9 @@ export function shouldRequestLocationLanguage(): boolean {
     return false;
   }
   if (hasLocationLanguageAttempted()) {
+    return false;
+  }
+  if (hasDeclinedLocationLanguageSuggestion()) {
     return false;
   }
   return true;
@@ -228,14 +233,19 @@ async function detectLocationLanguage(
   }
 
   const language = languageCodeForRegion(region);
-  const applied = writeAutomaticSiteLanguage(siteLanguageFromValue(language ?? "en"));
+  const option = siteLanguageFromValue(language ?? "en");
   markLocationLanguageAttempted();
-  if (!applied) {
-    note("detected language was not applied");
+  if (!language || option.code === readSiteLanguage().code) {
+    note("detected language matches the current language");
     return "skipped";
   }
-  note(`applied ${language ?? "en"}`);
-  return "applied";
+  const opened = openLanguagePrompt("location", option);
+  if (!opened) {
+    note("location suggestion was not shown");
+    return "skipped";
+  }
+  note(`suggested ${option.code}`);
+  return "suggested";
 }
 
 /**

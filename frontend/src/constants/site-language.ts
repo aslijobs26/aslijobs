@@ -32,6 +32,9 @@ export const SITE_LANGUAGE_AUTO_LOCATION_STORAGE_KEY =
 /** Session flag so a failed lookup is not repeated on every client navigation. */
 export const SITE_LOCATION_LANGUAGE_ATTEMPT_STORAGE_KEY =
   "aslijobs_location_language_attempt";
+/** Local decision to keep English after a location suggestion. */
+export const SITE_LOCATION_SUGGESTION_DECISION_KEY =
+  "aslijobs_location_language_decision";
 
 export type SiteLanguagePreferenceSource = "manual" | "automatic" | "default";
 

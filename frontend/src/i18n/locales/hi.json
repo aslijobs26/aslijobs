@@ -32,6 +32,25 @@
     "availableLanguages": "उपलब्ध भाषाएँ",
     "registerMenuAria": "पंजीकरण विकल्प खोलें"
   },
+  "languageConfirm": {
+    "suggestionTitle": "भाषा सुझाव",
+    "suggestionMessage": "आपके स्थान के आधार पर, हम वेबसाइट की भाषा {language} ({native}) में बदलने का सुझाव देते हैं।",
+    "changeTo": "{language} में बदलें",
+    "keepEnglish": "अंग्रेज़ी रखें",
+    "confirmTitle": "वेबसाइट की भाषा बदलें?",
+    "confirmMessage": "क्या आप ASLIJobs वेबसाइट की भाषा {language} ({native}) में बदलना चाहते हैं?",
+    "apply": "लागू करें",
+    "cancel": "रद्द करें",
+    "close": "बंद करें",
+    "names": {
+      "en": "अंग्रेज़ी",
+      "hi": "हिंदी",
+      "te": "तेलुगु",
+      "ta": "तमिल",
+      "kn": "कन्नड़",
+      "ml": "मलयालम"
+    }
+  },
   "nav": {
     "home": "होम", "jobs": "नौकरियाँ", "post": "पोस्ट", "saved": "सेव", "profile": "प्रोफ़ाइल",
     "applications": "आवेदन", "dashboard": "होम", "candidates": "उम्मीदवार", "interviews": "इंटरव्यू", "messages": "संदेश", "mobileAria": "मोबाइल नेविगेशन"

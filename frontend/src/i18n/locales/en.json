@@ -32,6 +32,25 @@
     "availableLanguages": "Available languages",
     "registerMenuAria": "Open registration options"
   },
+  "languageConfirm": {
+    "suggestionTitle": "Language suggestion",
+    "suggestionMessage": "Based on your location, we recommend changing your website language to {language} ({native}).",
+    "changeTo": "Change to {language}",
+    "keepEnglish": "Keep English",
+    "confirmTitle": "Change website language?",
+    "confirmMessage": "Do you want to change the ASLIJobs website language to {language} ({native})?",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "close": "Close",
+    "names": {
+      "en": "English",
+      "hi": "Hindi",
+      "te": "Telugu",
+      "ta": "Tamil",
+      "kn": "Kannada",
+      "ml": "Malayalam"
+    }
+  },
   "nav": {
     "home": "Home",
     "jobs": "Jobs",

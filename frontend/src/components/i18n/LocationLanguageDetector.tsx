@@ -7,8 +7,8 @@ import { useEffect } from "react";
 const START_DELAY_MS = 800;
 
 /**
- * Asks for location once, after the page has loaded, and switches language
- * through the existing site-language store. It does not render anything.
+ * Asks for location once, after the page has loaded. A supported language
+ * stays pending until the visitor confirms it. This component renders nothing.
  */
 export function LocationLanguageDetector() {
   useEffect(() => {

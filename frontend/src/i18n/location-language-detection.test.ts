@@ -10,6 +10,11 @@ import {
   resetLocationLanguageDetectionForTests,
   runLocationLanguageDetection,
 } from "./detect-location-language";
+import {
+  acceptLanguagePrompt,
+  readLanguagePrompt,
+  resetLanguagePromptForTests,
+} from "./language-confirmation";
 import type { LocationLanguageRegion } from "./location-language-map";
 import { readSiteLanguage, writeSiteLanguage } from "./site-language";
 
@@ -64,6 +69,7 @@ function permissions(state: string, calls: { count: number }) {
 describe("location language detection", () => {
   afterEach(() => {
     resetLocationLanguageDetectionForTests();
+    resetLanguagePromptForTests();
     delete (globalThis as { window?: unknown }).window;
   });
 
@@ -99,9 +105,13 @@ describe("location language detection", () => {
           } satisfies LocationLanguageRegion;
         },
       });
-      assert.equal(result, "applied", item.state);
+      assert.equal(result, "suggested", item.state);
+      assert.equal(readSiteLanguage().code, "en", item.state);
+      assert.equal(readLanguagePrompt()?.language.code, item.language, item.state);
+      assert.equal(localStorage.getItem(SITE_LANGUAGE_SOURCE_STORAGE_KEY), null);
+      acceptLanguagePrompt();
       assert.equal(readSiteLanguage().code, item.language, item.state);
-      assert.equal(localStorage.getItem(SITE_LANGUAGE_SOURCE_STORAGE_KEY), "automatic");
+      assert.equal(localStorage.getItem(SITE_LANGUAGE_SOURCE_STORAGE_KEY), "manual");
       assert.equal(geocodeCalls, 1);
 
       const again = await runLocationLanguageDetection({
@@ -118,7 +128,7 @@ describe("location language detection", () => {
   });
 
   it("keeps English for an international visitor", async () => {
-    installBrowser("fr-FR");
+    const { localStorage } = installBrowser("fr-FR");
     const result = await runLocationLanguageDetection({
       isSecureContext: true,
       permissions: permissions("granted", { count: 0 }),
@@ -134,8 +144,10 @@ describe("location language detection", () => {
         stateCode: "US-NY",
       }),
     });
-    assert.equal(result, "applied");
+    assert.equal(result, "skipped");
+    assert.equal(readLanguagePrompt(), null);
     assert.equal(readSiteLanguage().code, "en");
+    assert.equal(localStorage.getItem(SITE_LANGUAGE_SOURCE_STORAGE_KEY), null);
   });
 
   it("stays in English when location permission is denied and does not ask again", async () => {
@@ -304,7 +316,10 @@ describe("location language detection", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.equal(positionCalls, 1);
     pending.finish?.();
-    assert.equal(await first, "applied");
+    assert.equal(await first, "suggested");
+    assert.equal(readSiteLanguage().code, "en");
+    assert.equal(readLanguagePrompt()?.language.code, "kn");
+    acceptLanguagePrompt();
     assert.equal(readSiteLanguage().code, "kn");
     assert.equal(permissionCalls.count, 1);
   });
@@ -385,7 +400,9 @@ describe("location language detection", () => {
         stateCode: "IN-AP",
       }),
     });
-    assert.equal(result, "skipped");
+    assert.equal(result, "suggested");
+    assert.equal(readSiteLanguage().code, "en");
+    assert.doesNotThrow(() => acceptLanguagePrompt());
     assert.equal(readSiteLanguage().code, "en");
   });
 

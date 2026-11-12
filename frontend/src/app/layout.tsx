@@ -4,6 +4,7 @@ import {
   GoogleTagManagerScript,
 } from "@/components/analytics/GoogleTagManager";
 import { MicrosoftClarity } from "@/components/analytics/MicrosoftClarity";
+import { LanguageConfirmationToast } from "@/components/i18n/LanguageConfirmationToast";
 import { LocationLanguageDetector } from "@/components/i18n/LocationLanguageDetector";
 import { SiteLanguageSync } from "@/components/i18n/SiteLanguageSync";
 import { QueryProvider } from "@/providers/query-provider";
@@ -88,6 +89,7 @@ export default function RootLayout({
         <QueryProvider>
           <SiteLanguageSync />
           <LocationLanguageDetector />
+          <LanguageConfirmationToast />
           {children}
         </QueryProvider>
         <MicrosoftClarity />

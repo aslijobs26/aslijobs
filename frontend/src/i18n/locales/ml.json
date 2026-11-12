@@ -32,6 +32,25 @@
     "availableLanguages": "ലഭ്യമായ ഭാഷകൾ",
     "registerMenuAria": "രജിസ്ട്രേഷൻ ഓപ്ഷനുകൾ തുറക്കുക"
   },
+  "languageConfirm": {
+    "suggestionTitle": "ഭാഷാ നിർദ്ദേശം",
+    "suggestionMessage": "നിങ്ങളുടെ സ്ഥലം അടിസ്ഥാനമാക്കി, വെബ്‌സൈറ്റ് ഭാഷ {language} ({native}) ആക്കി മാറ്റാൻ ഞങ്ങൾ ശുപാർശ ചെയ്യുന്നു.",
+    "changeTo": "{language} ആക്കി മാറ്റുക",
+    "keepEnglish": "ഇംഗ്ലീഷ് നിലനിർത്തുക",
+    "confirmTitle": "വെബ്‌സൈറ്റ് ഭാഷ മാറ്റണോ?",
+    "confirmMessage": "ASLIJobs വെബ്‌സൈറ്റ് ഭാഷ {language} ({native}) ആക്കി മാറ്റണോ?",
+    "apply": "പ്രയോഗിക്കുക",
+    "cancel": "റദ്ദാക്കുക",
+    "close": "അടയ്ക്കുക",
+    "names": {
+      "en": "ഇംഗ്ലീഷ്",
+      "hi": "ഹിന്ദി",
+      "te": "തെലുങ്ക്",
+      "ta": "തമിഴ്",
+      "kn": "കന്നഡ",
+      "ml": "മലയാളം"
+    }
+  },
   "nav": {
     "home": "ഹോം", "jobs": "ജോലികൾ", "post": "പോസ്റ്റ്", "saved": "സേവ്", "profile": "പ്രൊഫൈൽ",
     "applications": "അപേക്ഷകൾ", "dashboard": "ഹോം", "candidates": "ഉദ്യോഗാർത്ഥികൾ", "interviews": "അഭിമുഖങ്ങൾ", "messages": "സന്ദേശങ്ങൾ", "mobileAria": "മൊബൈൽ നാവിഗേഷൻ"

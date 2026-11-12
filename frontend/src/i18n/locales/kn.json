@@ -32,6 +32,25 @@
     "availableLanguages": "ಲಭ್ಯ ಭಾಷೆಗಳು",
     "registerMenuAria": "ನೋಂದಣಿ ಆಯ್ಕೆಗಳನ್ನು ತೆರೆಯಿರಿ"
   },
+  "languageConfirm": {
+    "suggestionTitle": "ಭಾಷೆ ಸಲಹೆ",
+    "suggestionMessage": "ನಿಮ್ಮ ಸ್ಥಳದ ಆಧಾರದ ಮೇಲೆ, ವೆಬ್‌ಸೈಟ್ ಭಾಷೆಯನ್ನು {language} ({native}) ಗೆ ಬದಲಾಯಿಸಲು ಶಿಫಾರಸು ಮಾಡುತ್ತೇವೆ.",
+    "changeTo": "{language} ಗೆ ಬದಲಾಯಿಸಿ",
+    "keepEnglish": "ಇಂಗ್ಲಿಷ್ ಇರಿಸಿ",
+    "confirmTitle": "ವೆಬ್‌ಸೈಟ್ ಭಾಷೆ ಬದಲಾಯಿಸಬೇಕೇ?",
+    "confirmMessage": "ASLIJobs ವೆಬ್‌ಸೈಟ್ ಭಾಷೆಯನ್ನು {language} ({native}) ಗೆ ಬದಲಾಯಿಸಲು ಬಯಸುವಿರಾ?",
+    "apply": "ಅನ್ವಯಿಸಿ",
+    "cancel": "ರದ್ದು",
+    "close": "ಮುಚ್ಚಿ",
+    "names": {
+      "en": "ಇಂಗ್ಲಿಷ್",
+      "hi": "ಹಿಂದಿ",
+      "te": "ತೆಲುಗು",
+      "ta": "ತಮಿಳು",
+      "kn": "ಕನ್ನಡ",
+      "ml": "ಮಲಯಾಳಂ"
+    }
+  },
   "nav": {
     "home": "ಮುಖಪುಟ", "jobs": "ಉದ್ಯೋಗಗಳು", "post": "ಪೋಸ್ಟ್", "saved": "ಉಳಿಸಿದವು", "profile": "ಪ್ರೊಫೈಲ್",
     "applications": "ಅರ್ಜಿಗಳು", "dashboard": "ಮುಖಪುಟ", "candidates": "ಅಭ್ಯರ್ಥಿಗಳು", "interviews": "ಸಂದರ್ಶನಗಳು", "messages": "ಸಂದೇಶಗಳು", "mobileAria": "ಮೊಬೈಲ್ ನ್ಯಾವಿಗೇಶನ್"
