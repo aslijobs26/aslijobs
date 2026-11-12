@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import {
+  SITE_LANGUAGE_AUTO_LOCATION_STORAGE_KEY,
   SITE_LANGUAGE_SOURCE_STORAGE_KEY,
   SITE_LANGUAGE_STORAGE_KEY,
   SITE_LOCATION_LANGUAGE_ATTEMPT_STORAGE_KEY,
@@ -386,5 +387,56 @@ describe("location language detection", () => {
     });
     assert.equal(result, "skipped");
     assert.equal(readSiteLanguage().code, "en");
+  });
+
+  it("does not request location when automatic language selection is off", async () => {
+    const { localStorage } = installBrowser("te-IN");
+    localStorage.setItem(SITE_LANGUAGE_AUTO_LOCATION_STORAGE_KEY, "0");
+    let positionCalls = 0;
+    const result = await runLocationLanguageDetection({
+      isSecureContext: true,
+      geolocation: {
+        getCurrentPosition: () => {
+          positionCalls += 1;
+        },
+      },
+      reverseGeocode: async () => {
+        throw new Error("should not geocode");
+      },
+    });
+    assert.equal(result, "skipped");
+    assert.equal(positionCalls, 0);
+    assert.equal(readSiteLanguage().code, "te");
+  });
+
+  it("stays in English when reverse geocoding throws", async () => {
+    const { localStorage, sessionStorage } = installBrowser("ta-IN");
+    const result = await runLocationLanguageDetection({
+      isSecureContext: true,
+      permissions: permissions("granted", { count: 0 }),
+      geolocation: {
+        getCurrentPosition: (success) => {
+          success({ coords: { latitude: 17.4, longitude: 78.5, accuracy: 40 } });
+        },
+      },
+      reverseGeocode: async () => {
+        throw new Error("region unavailable");
+      },
+    });
+    assert.equal(result, "fallback");
+    assert.equal(readSiteLanguage().code, "en");
+    assert.equal(localStorage.getItem(SITE_LANGUAGE_SOURCE_STORAGE_KEY), null);
+    assert.equal(sessionStorage.getItem(SITE_LOCATION_LANGUAGE_ATTEMPT_STORAGE_KEY), "1");
+
+    let positionCalls = 0;
+    const again = await runLocationLanguageDetection({
+      geolocation: {
+        getCurrentPosition: () => {
+          positionCalls += 1;
+        },
+      },
+    });
+    assert.equal(again, "skipped");
+    assert.equal(positionCalls, 0);
   });
 });

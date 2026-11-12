@@ -51,12 +51,13 @@ export function reverseGeocodeLanguageRegionFromCoords(coords: {
 export async function reverseGeocodeLanguageRegion(
   latitude: number,
   longitude: number,
+  options?: { timeoutMs?: number },
 ): Promise<LanguageRegion | null> {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return null;
   }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12_000);
+  const timer = setTimeout(() => controller.abort(), options?.timeoutMs ?? 15_000);
   try {
     const response = await fetch(`${getApiUrl()}/geo/region`, {
       method: "POST",

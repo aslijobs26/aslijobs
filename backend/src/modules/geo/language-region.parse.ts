@@ -54,6 +54,36 @@ export function parseBigDataCloudRegion(payload: unknown): LanguageRegion | null
   );
 }
 
+/**
+ * Photon reverse GeoJSON. A place name is not used as the city: the first
+ * feature is often a building rather than the locality.
+ */
+export function parsePhotonRegion(payload: unknown): LanguageRegion | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  const features = (payload as { features?: unknown }).features;
+  if (!Array.isArray(features) || features.length === 0) {
+    return null;
+  }
+  const first = features[0];
+  if (!first || typeof first !== "object" || Array.isArray(first)) {
+    return null;
+  }
+  const properties = (first as { properties?: unknown }).properties;
+  if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
+    return null;
+  }
+  const record = properties as Record<string, unknown>;
+  return regionFromParts(
+    asString(record.countrycode, 8),
+    asString(record.country),
+    asString(record.state),
+    "",
+    asString(record.city) || asString(record.locality),
+  );
+}
+
 /** Nominatim reverse JSON (`addressdetails=1`). The display name is not kept. */
 export function parseNominatimRegion(payload: unknown): LanguageRegion | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {

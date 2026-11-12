@@ -384,13 +384,14 @@ const envSchema = z.object({
     .max(60_000)
     .default(12_000),
   /**
-   * Optional BigDataCloud server-API key for language-region lookup.
-   * Empty uses the keyless client endpoint. Never sent to the browser.
+   * Optional BigDataCloud server-API key. When set, that server API is tried
+   * before Photon. Empty keeps Photon as the server-side provider. Never
+   * sent to the browser.
    */
   REVERSE_GEOCODE_API_KEY: z.string().optional().default(""),
   /**
-   * Optional self-hosted Nominatim `/reverse` URL. When set, it replaces
-   * BigDataCloud. Example: https://nominatim.example.com/reverse
+   * Optional self-hosted Nominatim `/reverse` URL. When set, it is the only
+   * provider. Must be a public http(s) URL with no credentials.
    */
   REVERSE_GEOCODE_BASE_URL: z.string().optional().default(""),
 });
