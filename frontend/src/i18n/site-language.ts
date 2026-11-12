@@ -13,6 +13,11 @@ import {
   type SiteLanguageOption,
 } from "../constants/site-language";
 import { resolveInterfaceSiteLanguage } from "./employer-interface-language";
+import {
+  isAutomaticLocationLanguageEnabled,
+  readLanguagePreferenceSource,
+  writeLanguagePreferenceSource,
+} from "./location-language-preference";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 
@@ -146,23 +151,31 @@ function applyVisitLanguageHint(): void {
  * Website language (this tab):
  * 1. Explicit selection this visit (navbar / settings) — stored, visit overlay cleared
  * 2. Trusted `lang` query overlay for this tab (does not overwrite a saved preference)
- * 3. Saved website / account preference in localStorage
- * 4. Browser language as a hint
- * 5. English
+ * 3. Saved language: manual, previously detected, or a legacy value with no source
+ * 4. English when location permission was declined
+ * 5. Browser language only when automatic location selection is turned off
+ * 6. English while a first visit is waiting on location, or when nothing else matches
  *
  * Account language is copied into localStorage on login unless a visit overlay
  * or this-visit explicit choice is already active. Notification `lang` wins
  * for the current tab so English/Telugu template links open in that language,
  * without permanently overriding the saved preference.
+ * Location detection never replaces a manual or legacy saved language.
  */
 export function readSiteLanguage(): SiteLanguageOption {
   if (typeof window === "undefined") return SITE_DEFAULT_LANGUAGE;
   applyVisitLanguageHint();
   const visit = readVisitLanguage();
   if (visit) return visit;
-  return (
-    readStoredLanguage() ?? readBrowserLanguage() ?? SITE_DEFAULT_LANGUAGE
-  );
+  if (readLanguagePreferenceSource() === "default") {
+    return SITE_DEFAULT_LANGUAGE;
+  }
+  const stored = readStoredLanguage();
+  if (stored) return stored;
+  if (!isAutomaticLocationLanguageEnabled()) {
+    return readBrowserLanguage() ?? SITE_DEFAULT_LANGUAGE;
+  }
+  return SITE_DEFAULT_LANGUAGE;
 }
 
 /**
@@ -203,6 +216,7 @@ export function writeSiteLanguage(
     window.sessionStorage.removeItem(SITE_LANGUAGE_VISIT_STORAGE_KEY);
     window.sessionStorage.setItem(SITE_LANGUAGE_QUERY_APPLIED_KEY, "explicit");
     window.localStorage.setItem(SITE_LANGUAGE_STORAGE_KEY, option.value);
+    writeLanguagePreferenceSource("manual");
   } catch {
     // Ignore storage access errors.
   }
@@ -212,6 +226,81 @@ export function writeSiteLanguage(
   if (options?.persistAccount !== false) {
     persistAccountLanguage?.(option);
   }
+}
+
+/**
+ * Location detection may change the language only when the visitor has not
+ * already chosen one, and has not opened a trusted `lang` link this tab.
+ * A legacy saved value with no source is treated as a manual preference.
+ */
+export function canApplyDetectedLanguage(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  if (!isAutomaticLocationLanguageEnabled()) {
+    return false;
+  }
+  if (hasExplicitSiteLanguageChoiceThisVisit()) {
+    return false;
+  }
+  applyVisitLanguageHint();
+  if (readVisitLanguage()) {
+    return false;
+  }
+  const source = readLanguagePreferenceSource();
+  const stored = readStoredLanguage();
+  if (source === "manual") {
+    return false;
+  }
+  if (source == null && stored) {
+    return false;
+  }
+  return true;
+}
+
+/** Save a language chosen from the visitor's region. Does not update the account. */
+export function writeAutomaticSiteLanguage(option: SiteLanguageOption): boolean {
+  if (!canApplyDetectedLanguage()) {
+    return false;
+  }
+  try {
+    window.localStorage.setItem(SITE_LANGUAGE_STORAGE_KEY, option.value);
+    writeLanguagePreferenceSource("automatic");
+  } catch {
+    return false;
+  }
+  markSiteLanguageHydrated();
+  window.dispatchEvent(new CustomEvent(SITE_LANGUAGE_CHANGE_EVENT));
+  notifySiteLanguage();
+  document.documentElement.lang = option.code;
+  return true;
+}
+
+/**
+ * Remember that location could not choose a language (permission declined).
+ * Does not replace a language that was already saved.
+ */
+export function writeDefaultSiteLanguage(): boolean {
+  if (!canApplyDetectedLanguage()) {
+    return false;
+  }
+  if (readLanguagePreferenceSource() === "automatic") {
+    return false;
+  }
+  try {
+    window.localStorage.setItem(
+      SITE_LANGUAGE_STORAGE_KEY,
+      SITE_DEFAULT_LANGUAGE.value,
+    );
+    writeLanguagePreferenceSource("default");
+  } catch {
+    return false;
+  }
+  markSiteLanguageHydrated();
+  window.dispatchEvent(new CustomEvent(SITE_LANGUAGE_CHANGE_EVENT));
+  notifySiteLanguage();
+  document.documentElement.lang = SITE_DEFAULT_LANGUAGE.code;
+  return true;
 }
 
 /**

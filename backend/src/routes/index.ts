@@ -1,5 +1,6 @@
 import { Router } from "express";
 import analyticsEventRouter from "../modules/analytics/analytics-event.routes.js";
+import languageRegionRouter from "../modules/geo/language-region.routes.js";
 import applicationRouter from "../modules/applications/application.routes.js";
 import authRouter from "../modules/auth/auth.routes.js";
 import employerRouter from "../modules/employers/employer.routes.js";
@@ -26,6 +27,7 @@ apiRouter.use("/saved-candidates", savedCandidateRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/team", teamRouter);
 apiRouter.use("/analytics", analyticsEventRouter);
+apiRouter.use("/geo", languageRegionRouter);
 apiRouter.use("/operations", operationsRouter);
 apiRouter.use("/whatsapp", whatsappRouter);
 

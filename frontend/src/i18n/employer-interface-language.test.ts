@@ -9,6 +9,7 @@ import {
   isEmployerDashboardInterfacePath,
   resolveInterfaceSiteLanguage,
 } from "./employer-interface-language";
+import { setAutomaticLocationLanguageEnabled } from "./location-language-preference";
 import { getSiteLanguageCode, readSiteLanguage, writeSiteLanguage } from "./site-language";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -130,6 +131,7 @@ describe("employer dashboard language isolation", () => {
     const location = installBrowser("ta-IN", "/employer/settings");
     writeSiteLanguage({ value: "english", code: "en", label: "English" });
     window.localStorage.removeItem(SITE_LANGUAGE_STORAGE_KEY);
+    setAutomaticLocationLanguageEnabled(false);
     assert.equal(readSiteLanguage().code, "ta");
     assert.equal(getSiteLanguageCode(), "en");
     location.pathname = "/";

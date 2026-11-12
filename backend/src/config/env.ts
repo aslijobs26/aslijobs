@@ -383,6 +383,16 @@ const envSchema = z.object({
     .min(2_000)
     .max(60_000)
     .default(12_000),
+  /**
+   * Optional BigDataCloud server-API key for language-region lookup.
+   * Empty uses the keyless client endpoint. Never sent to the browser.
+   */
+  REVERSE_GEOCODE_API_KEY: z.string().optional().default(""),
+  /**
+   * Optional self-hosted Nominatim `/reverse` URL. When set, it replaces
+   * BigDataCloud. Example: https://nominatim.example.com/reverse
+   */
+  REVERSE_GEOCODE_BASE_URL: z.string().optional().default(""),
 });
 
 const parsed = envSchema.safeParse(process.env);

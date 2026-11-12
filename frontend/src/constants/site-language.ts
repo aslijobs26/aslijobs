@@ -24,6 +24,17 @@ export const SITE_LANGUAGE_QUERY_APPLIED_KEY =
 export const SITE_LANGUAGE_CHANGE_EVENT = "aslijobs-site-language-change";
 export const SITE_LANGUAGE_QUERY_PARAM = "lang";
 
+/** How the saved language was chosen. Missing means a legacy saved preference. */
+export const SITE_LANGUAGE_SOURCE_STORAGE_KEY = "aslijobs_site_language_source";
+/** "0" turns off location-based language selection. Missing or "1" leaves it on. */
+export const SITE_LANGUAGE_AUTO_LOCATION_STORAGE_KEY =
+  "aslijobs_auto_language_from_location";
+/** Session flag so a failed lookup is not repeated on every client navigation. */
+export const SITE_LOCATION_LANGUAGE_ATTEMPT_STORAGE_KEY =
+  "aslijobs_location_language_attempt";
+
+export type SiteLanguagePreferenceSource = "manual" | "automatic" | "default";
+
 export function siteLanguageFromValue(value: string | null | undefined): SiteLanguageOption {
   if (value == null || value.trim() === "") {
     return SITE_DEFAULT_LANGUAGE;

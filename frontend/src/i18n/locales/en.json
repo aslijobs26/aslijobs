@@ -218,5 +218,9 @@
     "noSimilarJobs": "No similar jobs available.",
     "viewAll": "View all",
     "jobSummary": "Job summary"
+  },
+  "languageSettings": {
+    "useLocation": "Use location to automatically select language",
+    "useLocationHint": "AsliJobs asks once for your location and switches to a supported language. A language you choose yourself is always kept."
   }
 }

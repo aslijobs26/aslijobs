@@ -6,12 +6,14 @@ import { fileURLToPath } from "node:url";
 import {
   SITE_DEFAULT_LANGUAGE,
   SITE_LANGUAGE_QUERY_PARAM,
+  SITE_LANGUAGE_SOURCE_STORAGE_KEY,
   SITE_LANGUAGE_STORAGE_KEY,
   SITE_LANGUAGE_VISIT_STORAGE_KEY,
   normalizeSiteLanguageCode,
   parseSiteLanguageQuery,
   withSiteLanguageQuery,
 } from "../constants/site-language";
+import { setAutomaticLocationLanguageEnabled } from "./location-language-preference";
 import {
   applyAccountSiteLanguage,
   getSiteLanguageClientSnapshot,
@@ -20,6 +22,8 @@ import {
   getSiteLanguageServerSnapshot,
   readExplicitSiteLanguage,
   readSiteLanguage,
+  writeAutomaticSiteLanguage,
+  writeDefaultSiteLanguage,
   writeSiteLanguage,
 } from "./site-language";
 
@@ -71,10 +75,63 @@ describe("site language persistence", () => {
     assert.equal(readSiteLanguage().code, SITE_DEFAULT_LANGUAGE.code);
   });
 
-  it("uses a supported browser language only when nothing is saved", () => {
+  it("stays in English on a first visit until location detection finishes", () => {
     installBrowser("ta-IN");
+    assert.equal(readSiteLanguage().code, "en");
+    assert.equal(readExplicitSiteLanguage(), null);
+  });
+
+  it("uses a supported browser language when automatic location is turned off", () => {
+    installBrowser("ta-IN");
+    setAutomaticLocationLanguageEnabled(false);
     assert.equal(readSiteLanguage().code, "ta");
     assert.equal(readExplicitSiteLanguage(), null);
+  });
+
+  it("keeps a legacy saved language that has no preference source", () => {
+    const { localStorage } = installBrowser("en-US");
+    localStorage.setItem(SITE_LANGUAGE_STORAGE_KEY, "hindi");
+    assert.equal(readSiteLanguage().code, "hi");
+    assert.equal(
+      writeAutomaticSiteLanguage({ value: "telugu", code: "te", label: "తెలుగు" }),
+      false,
+    );
+    assert.equal(readSiteLanguage().code, "hi");
+  });
+
+  it("does not let a detected language replace a manual choice", () => {
+    const { localStorage } = installBrowser("te-IN");
+    writeSiteLanguage({ value: "english", code: "en", label: "English" });
+    assert.equal(
+      writeAutomaticSiteLanguage({ value: "telugu", code: "te", label: "తెలుగు" }),
+      false,
+    );
+    assert.equal(readSiteLanguage().code, "en");
+    assert.equal(localStorage.getItem(SITE_LANGUAGE_SOURCE_STORAGE_KEY), "manual");
+  });
+
+  it("restores an automatic language instead of the browser language", () => {
+    const { navigatorState, localStorage } = installBrowser("en-US");
+    assert.equal(
+      writeAutomaticSiteLanguage({ value: "telugu", code: "te", label: "తెలుగు" }),
+      true,
+    );
+    navigatorState.language = "ta-IN";
+    assert.equal(readSiteLanguage().code, "te");
+    assert.equal(localStorage.getItem(SITE_LANGUAGE_SOURCE_STORAGE_KEY), "automatic");
+  });
+
+  it("stays in English after location permission is declined", () => {
+    installBrowser("ta-IN");
+    assert.equal(writeDefaultSiteLanguage(), true);
+    assert.equal(readSiteLanguage().code, "en");
+  });
+
+  it("ignores an invalid saved language and stays in English", () => {
+    const { localStorage } = installBrowser("ta-IN");
+    localStorage.setItem(SITE_LANGUAGE_STORAGE_KEY, "french");
+    localStorage.setItem(SITE_LANGUAGE_SOURCE_STORAGE_KEY, "manual");
+    assert.equal(readSiteLanguage().code, "en");
   });
 
   it("keeps the saved language across reads and ignores a later browser language", () => {

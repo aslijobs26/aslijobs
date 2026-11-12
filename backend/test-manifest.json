@@ -143,7 +143,8 @@
     "src/modules/jobs/job-translation.policy.test.ts",
     "src/modules/jobs/job-translation.queue.test.ts",
     "src/modules/notifications/notification-conversation.helpers.test.ts",
-    "src/modules/notifications/messages-history.test.ts"
+    "src/modules/notifications/messages-history.test.ts",
+    "src/modules/geo/language-region.test.ts"
   ],
   "exclude": []
 }
