@@ -92,52 +92,55 @@ export function LanguageConfirmationToast() {
     : t("languageConfirm.cancel");
 
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 top-[4.75rem] z-[110] flex justify-center px-4 md:top-[5.5rem] lg:top-[6rem]">
+    <div className="pointer-events-none fixed inset-x-0 top-[4.75rem] z-[110] flex justify-center px-3 sm:px-4 md:top-[5.5rem] lg:top-[6rem]">
       <section
         role={LANGUAGE_PROMPT_A11Y.role}
         aria-live={LANGUAGE_PROMPT_A11Y.live}
         aria-atomic="true"
         aria-labelledby={titleId}
         aria-describedby={messageId}
-        className="language-prompt pointer-events-auto w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-border-subtle bg-surface p-4 shadow-[0_18px_50px_rgba(26,43,60,0.14)] sm:p-5"
+        className="language-prompt pointer-events-auto w-[min(22rem,calc(100vw-1.5rem))] rounded-xl border border-border-subtle bg-surface p-3 shadow-[0_18px_50px_rgba(26,43,60,0.14)] sm:w-[min(28rem,calc(100vw-2rem))] sm:rounded-2xl sm:p-5"
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2 sm:gap-3">
           <span
-            className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-light text-primary"
+            className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-light text-primary sm:size-10"
             aria-hidden="true"
           >
-            <Globe className="size-5" strokeWidth={2} />
+            <Globe className="size-4 sm:size-5" strokeWidth={2} />
           </span>
-          <div className="min-w-0 flex-1 pt-0.5">
-            <div className="flex items-start justify-between gap-3">
-              <h2 id={titleId} className="text-[15px] font-semibold leading-5 text-foreground">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2 sm:gap-3">
+              <h2
+                id={titleId}
+                className="text-[13px] font-semibold leading-4 text-foreground sm:text-[15px] sm:leading-5"
+              >
                 {title}
               </h2>
               <button
                 type="button"
-                className="-mr-1 -mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="-mr-1 -mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-light hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:size-8"
                 aria-label={t("languageConfirm.close")}
                 onClick={() => closeLanguagePromptWithoutApplying()}
               >
-                <X className="size-4" strokeWidth={2.25} aria-hidden="true" />
+                <X className="size-3.5 sm:size-4" strokeWidth={2.25} aria-hidden="true" />
               </button>
             </div>
-            <p id={messageId} className="mt-1.5 text-sm leading-6 text-muted">
+            <p id={messageId} className="mt-1 text-[12.5px] leading-4 text-muted sm:mt-1.5 sm:text-sm sm:leading-6">
               {message}
             </p>
           </div>
         </div>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <div className="mt-2.5 flex flex-row gap-1.5 sm:mt-4 sm:flex-row sm:justify-end sm:gap-2">
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:min-w-36"
+            className="inline-flex min-h-9 flex-1 items-center justify-center rounded-lg bg-primary px-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:min-h-11 sm:min-w-36 sm:flex-none sm:whitespace-nowrap sm:rounded-xl sm:px-4 sm:text-sm"
             onClick={() => acceptLanguagePrompt()}
           >
             {confirmLabel}
           </button>
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-xl border border-border-subtle bg-white px-4 text-sm font-semibold text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-w-32"
+            className="inline-flex min-h-9 flex-1 items-center justify-center rounded-lg border border-border-subtle bg-white px-2.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:min-h-11 sm:min-w-32 sm:flex-none sm:whitespace-nowrap sm:rounded-xl sm:px-4 sm:text-sm"
             onClick={() => rejectLanguagePrompt()}
           >
             {rejectLabel}
