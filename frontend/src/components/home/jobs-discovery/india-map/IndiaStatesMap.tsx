@@ -142,7 +142,7 @@ export function IndiaStatesMap({
       <div className="relative min-w-0 w-full lg:max-w-4xl lg:flex-1">
         <svg
           viewBox={`0 0 ${INDIA_MAP_VIEWBOX.width} ${INDIA_MAP_VIEWBOX.height}`}
-          className="mx-auto block h-auto w-full"
+          className="mx-auto block h-auto w-full lg:w-[92%]"
           role="group"
           aria-label={t("home.jobsDiscovery.mapAria")}
           onClick={(event) => {
