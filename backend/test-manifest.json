@@ -72,6 +72,7 @@
     "src/modules/jobs/job-id-params.test.ts",
     "src/modules/jobs/job-moderation.production.test.ts",
     "src/modules/jobs/public-job-eligibility.test.ts",
+    "src/modules/jobs/public-location-counts.test.ts",
     "src/modules/jobs/public-job-sitemap.test.ts",
     "src/modules/jobs/public-job-seo.test.ts",
     "src/modules/job-seekers/job-seeker-hardening.production.test.ts",

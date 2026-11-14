@@ -122,10 +122,10 @@ app.use(cookieParser());
  * Public media under /uploads (employer logos, company assets, profile images).
  * Sensitive prefixes always 404 here — use authenticated download APIs instead.
  *
- * - local: serve from disk first.
- * - If the local file is missing (or STORAGE_PROVIDER=cloudinary), optionally
- *   redirect to Cloudinary ONLY when a HEAD check confirms the asset exists.
- *   Never redirect to a non-existent Cloudinary URL — that breaks <img> tags.
+ * Disk is always checked first. Older records were stored locally, and those
+ * files must keep loading after STORAGE_PROVIDER is switched to Cloudinary.
+ * If the file is not on disk, redirect to Cloudinary only when a HEAD check
+ * confirms the asset exists. Never redirect to a missing Cloudinary URL.
  */
 app.use("/uploads", (req, res, next) => {
   if (isSensitiveUploadPublicPath(req.path)) {
@@ -135,22 +135,20 @@ app.use("/uploads", (req, res, next) => {
   next();
 });
 
-if (env.STORAGE_PROVIDER === "local") {
-  app.use(
-    "/uploads",
-    express.static(path.resolve(process.cwd(), env.UPLOAD_DIR), {
-      etag: true,
-      lastModified: true,
-      fallthrough: true,
-      setHeaders(res) {
-        res.setHeader(
-          "Cache-Control",
-          "public, max-age=86400, stale-while-revalidate=604800",
-        );
-      },
-    }),
-  );
-}
+app.use(
+  "/uploads",
+  express.static(path.resolve(process.cwd(), env.UPLOAD_DIR), {
+    etag: true,
+    lastModified: true,
+    fallthrough: true,
+    setHeaders(res) {
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=86400, stale-while-revalidate=604800",
+      );
+    },
+  }),
+);
 
 app.use("/uploads", async (req, res, next) => {
   if (req.method !== "GET" && req.method !== "HEAD") {

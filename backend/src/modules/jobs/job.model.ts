@@ -1,4 +1,5 @@
 import { Schema, model, type InferSchemaType, type Types } from "mongoose";
+import { clearPublicLocationCountsCache } from "./public-location-counts.js";
 import { invalidateWhatsAppSearchCatalog } from "../whatsapp/whatsapp-search-catalog.js";
 import {
   JOB_EDUCATION_LEVELS,
@@ -555,6 +556,7 @@ const jobSchema = new Schema(
 );
 
 jobSchema.post("save", (doc) => {
+  clearPublicLocationCountsCache();
   const status = String(doc.status ?? "");
   if (status === "draft" || status === "pending_approval") return;
   invalidateWhatsAppSearchCatalog("job_save");
@@ -566,6 +568,8 @@ jobSchema.index({ createdAt: -1, employerId: 1 });
 jobSchema.index({ status: 1, stateName: 1, cityName: 1, createdAt: -1 });
 /** Public Jobs listing default sort: active → publishedAt/createdAt. */
 jobSchema.index({ status: 1, publishedAt: -1, createdAt: -1 });
+/** Homepage map counts group active jobs by state and city slug. */
+jobSchema.index({ status: 1, state: 1, city: 1 });
 jobSchema.index({
   jobTitle: "text",
   jobId: "text",

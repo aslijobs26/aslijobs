@@ -5,6 +5,7 @@ import { assertJobWriteFieldsAllowed } from "./job-write-field-access.js";
 import { sanitizeJobDto } from "../rbac/field-access.response.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { jobService } from "./job.service.js";
+import { getPublicLocationCounts } from "./public-location-counts.service.js";
 import { listPublicJobSitemapEntries } from "./public-job-sitemap.js";
 import {
   resolveJobViewVisitor,
@@ -330,6 +331,18 @@ export class JobController {
 
     sendSuccess(res, HTTP_STATUS.OK, {
       message: "Similar jobs fetched successfully.",
+      data: result,
+    });
+  };
+
+  listPublicLocationCounts = async (
+    _req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const result = await getPublicLocationCounts();
+
+    sendSuccess(res, HTTP_STATUS.OK, {
+      message: "Public job location counts fetched successfully.",
       data: result,
     });
   };

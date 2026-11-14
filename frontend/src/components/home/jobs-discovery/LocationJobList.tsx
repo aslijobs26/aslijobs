@@ -13,6 +13,8 @@ type LocationJobListProps = {
   actionHref: string;
   items: JobLocationItem[];
   iconType: JobLocationIconType;
+  showHeader?: boolean;
+  listClassName?: string;
 };
 
 export function LocationJobList({
@@ -22,17 +24,21 @@ export function LocationJobList({
   actionHref,
   items,
   iconType,
+  showHeader = true,
+  listClassName,
 }: LocationJobListProps) {
   return (
-    <section aria-labelledby={titleId}>
-      <DiscoverySectionHeader
-        title={title}
-        titleId={titleId}
-        actionLabel={actionLabel}
-        actionHref={actionHref}
-      />
+    <section aria-labelledby={showHeader ? titleId : undefined}>
+      {showHeader ? (
+        <DiscoverySectionHeader
+          title={title}
+          titleId={titleId}
+          actionLabel={actionLabel}
+          actionHref={actionHref}
+        />
+      ) : null}
 
-      <ul className="divide-y divide-border-subtle">
+      <ul className={cn("divide-y divide-border-subtle", listClassName)}>
         {items.map((item) => (
           <li key={item.id}>
             <Link

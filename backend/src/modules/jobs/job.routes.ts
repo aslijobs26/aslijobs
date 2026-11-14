@@ -40,6 +40,11 @@ jobRouter.get(
 );
 
 jobRouter.get(
+  "/public/location-counts",
+  asyncHandler(jobController.listPublicLocationCounts),
+);
+
+jobRouter.get(
   "/public/:publicJobId/seo",
   validate(publicJobIdParamsSchema, "params"),
   asyncHandler(jobController.getPublicSeoByPublicId),

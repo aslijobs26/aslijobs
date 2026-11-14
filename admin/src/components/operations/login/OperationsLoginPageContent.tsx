@@ -181,29 +181,29 @@ export function OperationsLoginPageContent() {
 
           <div className="operations-login-form-container">
             <OperationsLoginForm />
-
-            <footer className="operations-login-footer">
-              <span>{OPERATIONS_LOGIN_COPY.footer}</span>
-              <span className="operations-login-footer-separator" aria-hidden="true">
-                |
-              </span>
-              <a href="#" className="operations-login-footer-link">
-                Privacy Policy
-              </a>
-              <span className="operations-login-footer-separator" aria-hidden="true">
-                |
-              </span>
-              <a href="#" className="operations-login-footer-link">
-                Terms of Service
-              </a>
-              <span className="operations-login-footer-separator" aria-hidden="true">
-                |
-              </span>
-              <a href="#" className="operations-login-footer-link">
-                Help
-              </a>
-            </footer>
           </div>
+
+          <footer className="operations-login-footer">
+            <span>{OPERATIONS_LOGIN_COPY.footer}</span>
+            <span className="operations-login-footer-separator" aria-hidden="true">
+              |
+            </span>
+            <a href="#" className="operations-login-footer-link">
+              Privacy Policy
+            </a>
+            <span className="operations-login-footer-separator" aria-hidden="true">
+              |
+            </span>
+            <a href="#" className="operations-login-footer-link">
+              Terms of Service
+            </a>
+            <span className="operations-login-footer-separator" aria-hidden="true">
+              |
+            </span>
+            <a href="#" className="operations-login-footer-link">
+              Help
+            </a>
+          </footer>
         </section>
 
         <OperationsLoginVisualPanel />
