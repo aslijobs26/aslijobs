@@ -315,7 +315,7 @@ export async function understandWithOpenAi(
 ): Promise<BotUnderstanding | null> {
   const apiKey = env.OPENAI_API_KEY.trim();
   const model = env.OPENAI_MODEL.trim();
-  if (!env.WHATSAPP_OPENAI_ASSIST_ENABLED || !apiKey || !model) return null;
+  if (env.WHATSAPP_REPLY_MODE !== "llm" || !apiKey || !model) return null;
   const started = Date.now();
   try {
     const response = await fetch(OPENAI_CHAT_URL, {
@@ -398,7 +398,7 @@ export async function assistWhatsAppReply(
   const started = Date.now();
   const apiKey = env.OPENAI_API_KEY.trim();
   const model = env.OPENAI_MODEL.trim();
-  if (!env.WHATSAPP_OPENAI_ASSIST_ENABLED) {
+  if (env.WHATSAPP_REPLY_MODE !== "llm") {
     return { ok: false, reason: "disabled", latencyMs: 0 };
   }
   if (!apiKey || !model) {

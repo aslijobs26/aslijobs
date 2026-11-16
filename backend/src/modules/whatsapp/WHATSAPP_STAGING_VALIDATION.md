@@ -5,7 +5,7 @@ Use this only on a staging Meta app, staging API, and staging database. Do not m
 ## Setup
 
 - Staging `WHATSAPP_TOKEN`, phone number id, and webhook verify token.
-- `OPENAI_API_KEY` and `WHATSAPP_OPENAI_ASSIST_ENABLED` only on the staging process.
+- `OPENAI_API_KEY` and `WHATSAPP_REPLY_MODE=llm` only on the staging process.
 - `SARVAM_API_KEY` on staging if translation fallback should be exercised.
 - Redis available so BullMQ is used. Repeat one case with Redis stopped to confirm the inline fallback still answers.
 - Allowlist of test handsets only. Remove every other recipient from the staging send path.

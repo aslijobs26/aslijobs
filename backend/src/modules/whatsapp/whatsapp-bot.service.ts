@@ -70,6 +70,7 @@ import {
   menuUnderstanding,
   indianWhatsAppNationalPhone,
   whatsAppSessionPhoneKey,
+  locationGrain,
   nextClarifyLoopState,
   parentCity,
   placeCityAliases,
@@ -909,6 +910,26 @@ async function processInboundTurn(input: {
       merged.showMore ? seenJobIds : [],
       text,
     );
+    const profileSearchContext =
+      turn.facts.profileSearchContext && typeof turn.facts.profileSearchContext === "object"
+        ? (turn.facts.profileSearchContext as { role?: unknown; location?: unknown })
+        : null;
+    if (profileSearchContext) {
+      const profileRole = String(profileSearchContext.role ?? "").trim();
+      const profileLocation = String(profileSearchContext.location ?? "").trim();
+      const resolvedProfileLocationKind = locationGrain(profileLocation);
+      merged = {
+        ...merged,
+        category: profileRole || merged.category,
+        jobQuery: profileRole || merged.jobQuery,
+        location: profileLocation || merged.location,
+        locationKind:
+          resolvedProfileLocationKind === "city" || resolvedProfileLocationKind === "state"
+            ? resolvedProfileLocationKind
+            : "",
+        openSearch: false,
+      };
+    }
     timing.db_query = Date.now() - dbStarted;
     const redirected = merged.crossRole === "seeker" || merged.crossRole === "employer";
     let situation = String(turn.facts.situation ?? "");
@@ -1068,7 +1089,7 @@ async function processInboundTurn(input: {
       logWhatsAppBot("TEMPLATE_USED", `situation=${String(turn.facts.situation ?? "-")} language=${merged.language}`);
     }
     const assistEligible = shouldUseOpenAiAssist({
-      enabled: env.WHATSAPP_OPENAI_ASSIST_ENABLED,
+      enabled: env.WHATSAPP_REPLY_MODE === "llm",
       hasApiKey: Boolean(env.OPENAI_API_KEY.trim()),
       model: env.OPENAI_MODEL,
       protocol: false,
@@ -1579,36 +1600,77 @@ async function buildReply(
     case "JOB_COUNT":
     case "JOB_SEARCH":
     default: {
+      let searchUnderstanding = understanding;
+      let profileSearchContext: { role: string; location: string } | null = null;
       if (
-        (understanding.clarifyField === "which_city" || understanding.clarifyField === "which_role") &&
-        (understanding.clarifyOptions?.length ?? 0) >= 2
+        asSeeker &&
+        seeker &&
+        (understanding.intent === "JOB_SEARCH" || understanding.intent === "JOB_COUNT") &&
+        !understanding.category &&
+        !understanding.location &&
+        !understanding.anyLocation
+      ) {
+        const profileRole = seeker.jobRole?.trim() || "";
+        const preferredLocation = seeker.preferredJobLocation?.trim() || "";
+        const locationAliases = preferredLocation ? placeCityAliases(preferredLocation) : [];
+        // A saved preference can include both city and state; prefer its catalog
+        // city label for the public jobs lookup, then fall back to the profile city.
+        const profileLocation =
+          (locationAliases.length > 1 ? locationAliases[1] : "") ||
+          seeker.city?.trim() ||
+          preferredLocation;
+        if (profileRole || profileLocation) {
+          const resolvedProfileLocationKind = locationGrain(profileLocation);
+          searchUnderstanding = {
+            ...understanding,
+            category: profileRole,
+            jobQuery: profileRole,
+            location: profileLocation,
+            locationKind:
+              resolvedProfileLocationKind === "city" || resolvedProfileLocationKind === "state"
+                ? resolvedProfileLocationKind
+                : "",
+            openSearch: !profileRole,
+          };
+          if (profileRole && profileLocation) {
+            profileSearchContext = { role: profileRole, location: profileLocation };
+          }
+        }
+      }
+      if (
+        (searchUnderstanding.clarifyField === "which_city" || searchUnderstanding.clarifyField === "which_role") &&
+        (searchUnderstanding.clarifyOptions?.length ?? 0) >= 2
       ) {
         return reply({
           situation: "clarify",
-          missing: understanding.clarifyField,
-          options: understanding.clarifyOptions,
+          missing: searchUnderstanding.clarifyField,
+          options: searchUnderstanding.clarifyOptions,
         });
       }
-      if (understanding.intent === "UNKNOWN") {
+      if (searchUnderstanding.intent === "UNKNOWN") {
         return reply({ situation: "clarify", missing: linked === "none" ? "purpose" : "intent" });
       }
-      if (!understanding.location && !understanding.anyLocation && !understanding.category && !understanding.openSearch) {
+      if (!searchUnderstanding.location && !searchUnderstanding.anyLocation && !searchUnderstanding.category && !searchUnderstanding.openSearch) {
         return reply({ situation: "clarify", missing: "role_and_location" });
       }
-      if (!understanding.location && !understanding.anyLocation) {
+      if (!searchUnderstanding.location && !searchUnderstanding.anyLocation) {
         return reply({ situation: "clarify", missing: "location" });
       }
-      if (!understanding.category && !understanding.openSearch) {
+      if (!searchUnderstanding.category && !searchUnderstanding.openSearch) {
         return reply({ situation: "clarify", missing: "role" });
       }
-      return searchJobs(
-        understanding,
+      const searchResult = await searchJobs(
+        searchUnderstanding,
         asSeeker ? seeker?._id.toString() : undefined,
         meta,
-        understanding.language,
+        searchUnderstanding.language,
         remembered,
         excludeJobIds,
       );
+      if (profileSearchContext && searchResult.facts.situation === "jobs") {
+        searchResult.facts.profileSearchContext = profileSearchContext;
+      }
+      return searchResult;
     }
   }
 }

@@ -311,21 +311,23 @@ const envSchema = z.object({
    */
   OPENAI_API_KEY: z.string().optional().default(""),
   /**
-   * OpenAI model id used when WHATSAPP_OPENAI_ASSIST_ENABLED=true.
+   * OpenAI model id used when WHATSAPP_REPLY_MODE=llm.
    * Verified against OpenAI docs as of 2026-10: gpt-6-luna (efficient chat).
    * Override if your project has a different enabled model.
    */
   OPENAI_MODEL: z.string().trim().optional().default("gpt-6-luna"),
   /**
-   * Feature flag: natural-language phrasing of verified bot facts via OpenAI.
-   * Default off — deterministic templates + Mayura remain the production path.
+   * Reply mode selector. The LLM path is selective and may rephrase only
+   * verified bot facts; database-backed job facts remain authoritative.
+   * Default to the legacy flag when the new setting is absent.
    */
-  WHATSAPP_OPENAI_ASSIST_ENABLED: z.preprocess((value) => {
-    if (typeof value === "boolean") return value;
-    return String(value ?? "")
-      .trim()
-      .toLowerCase() === "true";
-  }, z.boolean()),
+  WHATSAPP_REPLY_MODE: z
+    .enum(["chatbot", "llm"])
+    .default(
+      process.env.WHATSAPP_OPENAI_ASSIST_ENABLED?.trim().toLowerCase() === "true"
+        ? "llm"
+        : "chatbot",
+    ),
   /**
    * Feature flag: download + extract text from inbound image/document resumes.
    * Default off — inbox still persists media; bot does not auto-process files.
@@ -490,11 +492,11 @@ if (parsed.data.NODE_ENV === "production") {
     process.exit(1);
   }
   if (
-    parsed.data.WHATSAPP_OPENAI_ASSIST_ENABLED &&
+    parsed.data.WHATSAPP_REPLY_MODE === "llm" &&
     (!parsed.data.OPENAI_API_KEY.trim() || !parsed.data.OPENAI_MODEL.trim())
   ) {
     console.error(
-      "Production refused to start: WHATSAPP_OPENAI_ASSIST_ENABLED requires OPENAI_API_KEY and OPENAI_MODEL.",
+      "Production refused to start: WHATSAPP_REPLY_MODE=llm requires OPENAI_API_KEY and OPENAI_MODEL.",
     );
     process.exit(1);
   }
