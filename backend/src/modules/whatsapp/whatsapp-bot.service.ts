@@ -1592,6 +1592,9 @@ async function buildReply(
       if (understanding.intent === "UNKNOWN") {
         return reply({ situation: "clarify", missing: linked === "none" ? "purpose" : "intent" });
       }
+      if (!understanding.location && !understanding.anyLocation && !understanding.category && !understanding.openSearch) {
+        return reply({ situation: "clarify", missing: "role_and_location" });
+      }
       if (!understanding.location && !understanding.anyLocation) {
         return reply({ situation: "clarify", missing: "location" });
       }
