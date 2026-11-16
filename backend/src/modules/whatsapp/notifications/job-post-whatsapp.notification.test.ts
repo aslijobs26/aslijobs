@@ -30,6 +30,7 @@ import {
 } from "./whatsapp-notification.policy.js";
 import type { WhatsAppNotificationPayload } from "./whatsapp-notification.types.js";
 import { enqueueWhatsAppNotification } from "./whatsapp-notification.service.js";
+import { subscriptionEntitlementService } from "../../subscriptions/subscription-entitlement.service.js";
 
 const employerId = "64f0000000000000000000aa";
 const operationsUserId = "64f0000000000000000000bb";
@@ -304,6 +305,7 @@ describe("job submission flows", () => {
     mock.method(jobPostSubmittedWhatsApp, "schedule", () => {
       submitted += 1;
     });
+    stubSubscriptionCredits();
 
     await assert.rejects(() => jobService.createJob(employerId, submittedJobInput("active")));
     assert.equal(submitted, 0);
@@ -1103,7 +1105,20 @@ describe("job rejection WhatsApp notification", () => {
   });
 });
 
+/** Plan credits always available; no Mongo round-trip. */
+function stubSubscriptionCredits(): void {
+  mock.method(subscriptionEntitlementService, "consumeCredit", async () => ({
+    grantId: new mongoose.Types.ObjectId(),
+    planCode: "free",
+    packageLabel: "Free",
+    listingValidityDays: 7,
+  }));
+  mock.method(subscriptionEntitlementService, "refundCredit", async () => true);
+  mock.method(subscriptionEntitlementService, "reassignJobCity", async () => true);
+}
+
 function stubSideEffects(): void {
+  stubSubscriptionCredits();
   mock.method(OperationsAuditLogModel, "create", async () => ({}));
   mock.method(OperationsNotificationModel, "updateOne", async () => ({
     acknowledged: true,

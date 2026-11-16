@@ -3,6 +3,7 @@ import { authBundle } from "./bundles/auth";
 import { employerBundle } from "./bundles/employer";
 import { employerMessagesBundle } from "./bundles/employer-messages";
 import { employerMessagesHistoryBundle } from "./bundles/employer-messages-history";
+import { employerSubscriptionBundle } from "./bundles/employer-subscription";
 import { faqsBundle } from "./bundles/faqs";
 import { guidelinesBundle } from "./bundles/guidelines";
 import { homeBundle } from "./bundles/home";
@@ -30,6 +31,7 @@ const BUNDLES = [
   employerBundle,
   employerMessagesBundle,
   employerMessagesHistoryBundle,
+  employerSubscriptionBundle,
   notificationTemplatesBundle,
   faqsBundle,
   guidelinesBundle,
@@ -47,6 +49,7 @@ type Messages = typeof en &
   (typeof employerBundle)["en"] &
   (typeof employerMessagesBundle)["en"] &
   (typeof employerMessagesHistoryBundle)["en"] &
+  (typeof employerSubscriptionBundle)["en"] &
   (typeof notificationTemplatesBundle)["en"] &
   (typeof faqsBundle)["en"] &
   (typeof guidelinesBundle)["en"] &

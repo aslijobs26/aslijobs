@@ -105,8 +105,11 @@ app.use(
   express.json({
     limit: "2mb",
     verify(req, _res, buf) {
-      if (req.url?.includes("/whatsapp/webhook")) {
-        // Meta payloads are small. Oversized bodies skip rawBody so HMAC fails closed.
+      if (
+        req.url?.includes("/whatsapp/webhook") ||
+        req.url?.includes("/payments/webhooks/cashfree")
+      ) {
+        // Meta / Cashfree payloads are small. Oversized bodies skip rawBody so HMAC fails closed.
         if (buf.length <= 256_000) {
           (req as Express.Request & { rawBody?: Buffer }).rawBody =
             Buffer.from(buf);
@@ -229,7 +232,10 @@ const apiRateLimit = rateLimit({
     if (pathName === "/health" || pathName === "/api/v1/health") {
       return true;
     }
-    if (pathName.includes("/whatsapp/webhook")) {
+    if (
+      pathName.includes("/whatsapp/webhook") ||
+      pathName.includes("/payments/webhooks/cashfree")
+    ) {
       return true;
     }
     if (isHighFrequencyOperationsRead(pathName)) {

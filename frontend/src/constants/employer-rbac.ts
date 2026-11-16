@@ -40,6 +40,7 @@ export const ROUTE_PERMISSION_RULES: Array<{
   { prefix: ROUTES.EMPLOYER_MESSAGES, module: "messages" },
   { prefix: ROUTES.EMPLOYER_CAMPAIGNS, module: "campaigns" },
   { prefix: ROUTES.EMPLOYER_SUBSCRIPTION, module: "subscription" },
+  { prefix: "/employer/payments", module: "subscription" },
   { prefix: ROUTES.EMPLOYER_COMPANY_PROFILE, module: "company_profile" },
   { prefix: ROUTES.EMPLOYER_TEAM_MANAGEMENT, module: "team_management" },
   { prefix: ROUTES.EMPLOYER_SETTINGS, module: "settings" },

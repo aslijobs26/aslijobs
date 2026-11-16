@@ -31,6 +31,8 @@ export const ROUTES = {
   EMPLOYER_SAVED_CANDIDATES: "/employer/saved-candidates",
   EMPLOYER_CAMPAIGNS: "/employer/campaigns",
   EMPLOYER_SUBSCRIPTION: "/employer/subscription",
+  /** Cashfree return_url target (backend default). */
+  EMPLOYER_PAYMENT_STATUS: "/employer/payments/status",
   EMPLOYER_COMPANY_PROFILE: "/employer/company-profile",
   EMPLOYER_TEAM_MEMBER_PROFILE: "/employer/team-member/profile",
   EMPLOYER_TEAM_MANAGEMENT: "/employer/team-management",

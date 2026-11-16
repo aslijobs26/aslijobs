@@ -394,6 +394,80 @@ const envSchema = z.object({
    * provider. Must be a public http(s) URL with no credentials.
    */
   REVERSE_GEOCODE_BASE_URL: z.string().optional().default(""),
+  /**
+   * Cashfree Payment Gateway. `sandbox` uses sandbox.cashfree.com.
+   * Keys come from the Cashfree merchant dashboard (Developers → API keys).
+   * The secret key also signs webhooks. Never expose it to clients.
+   */
+  CASHFREE_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
+  CASHFREE_APP_ID: z.string().trim().optional().default(""),
+  CASHFREE_SECRET_KEY: z.string().trim().optional().default(""),
+  CASHFREE_API_VERSION: z.string().trim().default("2025-01-01"),
+  /**
+   * Public HTTPS origin Cashfree can reach for webhooks (no trailing slash).
+   * Local: your ngrok static domain forwarding to port 5000.
+   * Empty → derived from PUBLIC_API_URL.
+   */
+  CASHFREE_WEBHOOK_BASE_URL: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .transform((value) => value.replace(/\/+$/, ""))
+    .refine((value) => value === "" || /^https:\/\/[^\s/]+$/.test(value), {
+      message:
+        "must be an https origin with no spaces or path, e.g. https://your-name.ngrok-free.dev",
+    }),
+  /**
+   * Where Cashfree sends the browser after checkout. `{order_id}` is
+   * replaced by Cashfree. Empty → FRONTEND_URL/employer/payments/status?order_id={order_id}
+   */
+  CASHFREE_RETURN_URL: z.string().trim().optional().default(""),
+  CASHFREE_REQUEST_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(2_000)
+    .max(60_000)
+    .default(15_000),
+  /** Minutes before an unpaid Cashfree order expires (Cashfree minimum is 15). */
+  PAYMENT_ORDER_EXPIRY_MINUTES: z.coerce.number().int().min(15).max(1440).default(30),
+  /**
+   * Seller ("Billed by") details printed on employer payment invoices.
+   * INVOICE_SELLER_STATE decides the GST split: same state as the employer →
+   * CGST + SGST, otherwise IGST. Empty → a single "GST" line.
+   */
+  INVOICE_SELLER_NAME: z.string().trim().optional().default("AsliJobs"),
+  INVOICE_SELLER_ADDRESS: z.string().trim().optional().default(""),
+  INVOICE_SELLER_STATE: z.string().trim().optional().default(""),
+  INVOICE_SELLER_GSTIN: z.string().trim().toUpperCase().optional().default(""),
+  INVOICE_SELLER_PAN: z.string().trim().toUpperCase().optional().default(""),
+  INVOICE_SELLER_EMAIL: z.string().trim().optional().default(""),
+  INVOICE_SELLER_PHONE: z.string().trim().optional().default(""),
+  /** Services Accounting Code printed per line item (e.g. 998365). */
+  INVOICE_SAC_CODE: z.string().trim().optional().default(""),
+  /** Kill switch for paid checkout. Free plan and enforcement keep working. */
+  PAYMENTS_ENABLED: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    const raw = String(value ?? "").trim().toLowerCase();
+    return raw === "" ? true : raw === "true";
+  }, z.boolean()),
+  /**
+   * When true, employer job submissions consume plan credits and are blocked
+   * (HTTP 402) when none remain. When false, credits are still consumed if
+   * available but submissions are never blocked.
+   */
+  SUBSCRIPTION_ENFORCEMENT_ENABLED: z.preprocess((value) => {
+    if (typeof value === "boolean") return value;
+    const raw = String(value ?? "").trim().toLowerCase();
+    return raw === "" ? true : raw === "true";
+  }, z.boolean()),
+  /** Listing-expiry + stale-order reconcile sweep interval. Default 10 minutes. */
+  SUBSCRIPTION_SWEEP_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .min(60_000)
+    .max(86_400_000)
+    .default(600_000),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -495,6 +569,16 @@ if (parsed.data.NODE_ENV === "production") {
   ) {
     console.error(
       "Production refused to start: WHATSAPP_OPENAI_ASSIST_ENABLED requires OPENAI_API_KEY and OPENAI_MODEL.",
+    );
+    process.exit(1);
+  }
+  if (
+    parsed.data.PAYMENTS_ENABLED &&
+    parsed.data.CASHFREE_ENV === "production" &&
+    (!parsed.data.CASHFREE_APP_ID.trim() || !parsed.data.CASHFREE_SECRET_KEY.trim())
+  ) {
+    console.error(
+      "Production refused to start: CASHFREE_APP_ID and CASHFREE_SECRET_KEY are required when CASHFREE_ENV=production.",
     );
     process.exit(1);
   }

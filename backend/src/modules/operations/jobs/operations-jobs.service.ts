@@ -48,6 +48,11 @@ import {
   resolveJobReviewHistoryKind,
 } from "../../jobs/job-review-history.js";
 import { createJobSchema } from "../../jobs/job.validation.js";
+import { COMPLIMENTARY_PACKAGE_LABEL } from "../../subscriptions/subscription.constants.js";
+import {
+  buildJobCityKey,
+  subscriptionEntitlementService,
+} from "../../subscriptions/subscription-entitlement.service.js";
 import { notificationService } from "../../notifications/notification.service.js";
 import {
   jobPostApprovalCycle,
@@ -1832,13 +1837,23 @@ export const operationsJobsService = {
     if (action === "reactivate") {
       $set.publishedAt = now;
       $set.reactivatedAt = now;
+      // Operations reactivation is complimentary: renew the plan validity window.
+      $set.listingValidUntil = await subscriptionEntitlementService.getListingValidUntil(
+        job.subscriptionGrantId,
+        now,
+      );
     } else if (action === "publish") {
       $set.publishedAt = now;
-      if (
-        job.listingPaymentStatus === "pending" ||
-        job.listingPaymentStatus === "unpaid"
-      ) {
-        $set.listingPaymentStatus = "paid";
+      if (job.subscriptionGrantId) {
+        $set.listingValidUntil = await subscriptionEntitlementService.getListingValidUntil(
+          job.subscriptionGrantId,
+          now,
+        );
+      } else {
+        // Operations-published jobs are complimentary: no credit, no auto-expiry.
+        $set.listingPaymentStatus = "not_applicable";
+        $set.listingPackageLabel = COMPLIMENTARY_PACKAGE_LABEL;
+        $set.listingValidUntil = null;
       }
     }
 
@@ -1974,6 +1989,14 @@ export const operationsJobsService = {
       job.listingPaymentStatus === "unpaid"
     ) {
       $set.listingPaymentStatus = "paid";
+    }
+
+    // Plan validity (7 / 15 days) starts when the listing goes Live.
+    if (job.subscriptionGrantId) {
+      $set.listingValidUntil = await subscriptionEntitlementService.getListingValidUntil(
+        job.subscriptionGrantId,
+        now,
+      );
     }
 
     const updateResult = await JobModel.updateOne(
@@ -2177,6 +2200,23 @@ export const operationsJobsService = {
         "This job was already reviewed by another Operations user.",
         HTTP_STATUS.CONFLICT,
       );
+    }
+
+    // Keep the plan's city record in sync. The employer-side edit already
+    // checked the city limit, so a failure here is logged, not blocking.
+    if (freshJob.subscriptionGrantId) {
+      const cityTracked = await subscriptionEntitlementService
+        .reassignJobCity({
+          grantId: freshJob.subscriptionGrantId,
+          jobId: freshJob._id,
+          cityKey: buildJobCityKey(freshJob),
+        })
+        .catch(() => false);
+      if (!cityTracked) {
+        console.warn("[subscriptions] live-change city exceeds plan limit", {
+          publicJobId: freshJob.jobId,
+        });
+      }
     }
 
     scheduleJobTranslationRefresh(freshJob._id.toString());

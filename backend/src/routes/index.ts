@@ -8,9 +8,11 @@ import jobSeekerRouter from "../modules/job-seekers/job-seeker.routes.js";
 import jobRouter from "../modules/jobs/job.routes.js";
 import notificationRouter from "../modules/notifications/notification.routes.js";
 import operationsRouter from "../modules/operations/operations.routes.js";
+import paymentRouter from "../modules/payments/payment.routes.js";
 import resumeRouter from "../modules/resumes/resume.routes.js";
 import savedCandidateRouter from "../modules/saved-candidates/saved-candidate.routes.js";
 import savedJobRouter from "../modules/saved-jobs/saved-job.routes.js";
+import subscriptionRouter from "../modules/subscriptions/subscription.routes.js";
 import teamRouter from "../modules/team/team.routes.js";
 import whatsappRouter from "../modules/whatsapp/whatsapp.routes.js";
 
@@ -30,5 +32,7 @@ apiRouter.use("/analytics", analyticsEventRouter);
 apiRouter.use("/geo", languageRegionRouter);
 apiRouter.use("/operations", operationsRouter);
 apiRouter.use("/whatsapp", whatsappRouter);
+apiRouter.use("/subscriptions", subscriptionRouter);
+apiRouter.use("/payments", paymentRouter);
 
 export default apiRouter;
