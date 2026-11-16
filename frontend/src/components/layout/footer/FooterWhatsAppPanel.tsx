@@ -4,11 +4,8 @@ import { WhatsAppIcon } from "@/components/home/hero/HeroIcons";
 import { buildWhatsAppWelcomeUrl } from "@/constants/whatsapp-welcome-messages";
 import { useSiteLanguage } from "@/i18n/site-language";
 import { useTranslate } from "@/i18n/translate";
-import { ExternalLink, QrCode } from "lucide-react";
-import Image from "next/image";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
-
-const whatsappQrCodePath = process.env.NEXT_PUBLIC_WHATSAPP_QR_IMAGE;
 
 export function FooterWhatsAppPanel() {
   const t = useTranslate();
@@ -40,32 +37,6 @@ export function FooterWhatsAppPanel() {
           aria-hidden="true"
         />
       </Link>
-
-      <div className="mt-5 flex flex-wrap items-center gap-3">
-        <div className="flex min-w-0 items-center gap-2 text-sm text-primary-light">
-          <QrCode className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
-          <span className="break-words">{t("footer.scanQr")}</span>
-        </div>
-
-        {whatsappQrCodePath ? (
-          <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-surface p-1">
-            <Image
-              src={whatsappQrCodePath}
-              alt={t("footer.qrAlt")}
-              width={80}
-              height={80}
-              className="size-full object-contain"
-            />
-          </div>
-        ) : (
-          <div
-            className="flex size-20 shrink-0 items-center justify-center rounded-lg border border-border/30 bg-surface/10"
-            aria-hidden="true"
-          >
-            <QrCode className="size-8 text-primary-light" strokeWidth={1.5} />
-          </div>
-        )}
-      </div>
     </aside>
   );
 }

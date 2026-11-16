@@ -3,7 +3,8 @@ export type SocialPlatform =
   | "facebook"
   | "instagram"
   | "youtube"
-  | "linkedin";
+  | "linkedin"
+  | "telegram";
 
 export type SocialLink = {
   id: SocialPlatform;
@@ -17,6 +18,7 @@ const ASLIJOBS_SOCIAL_URLS = {
   instagram: "https://www.instagram.com/asli.jobs/",
   youtube: "https://www.youtube.com/@Aslijobs",
   linkedin: "https://www.linkedin.com/company/aslijobs/",
+  telegram: "https://t.me/aslijobs26",
 } as const;
 
 function resolveSocialUrl(
@@ -66,6 +68,14 @@ export const SOCIAL_LINKS: SocialLink[] = [
     href: resolveSocialUrl(
       process.env.NEXT_PUBLIC_LINKEDIN_URL,
       ASLIJOBS_SOCIAL_URLS.linkedin,
+    ),
+  },
+  {
+    id: "telegram",
+    label: "Telegram",
+    href: resolveSocialUrl(
+      process.env.NEXT_PUBLIC_TELEGRAM_URL,
+      ASLIJOBS_SOCIAL_URLS.telegram,
     ),
   },
 ];

@@ -5,8 +5,8 @@ import type { ReactNode } from "react";
 type DiscoverySectionHeaderProps = {
   title: ReactNode;
   titleId: string;
-  actionLabel: string;
-  actionHref: string;
+  actionLabel?: string;
+  actionHref?: string;
   className?: string;
   titleClassName?: string;
 };
@@ -35,12 +35,14 @@ export function DiscoverySectionHeader({
       >
         {title}
       </h2>
-      <Link
-        href={actionHref}
-        className="discovery-section-action max-w-full text-sm font-semibold leading-snug text-primary transition-colors hover:text-primary-hover focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:shrink-0"
-      >
-        {actionLabel}
-      </Link>
+      {actionLabel && actionHref ? (
+        <Link
+          href={actionHref}
+          className="discovery-section-action max-w-full text-sm font-semibold leading-snug text-primary transition-colors hover:text-primary-hover focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:shrink-0"
+        >
+          {actionLabel}
+        </Link>
+      ) : null}
     </div>
   );
 }

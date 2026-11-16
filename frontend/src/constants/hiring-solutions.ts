@@ -4,8 +4,6 @@ import { ROUTES } from "./routes";
 export const HIRING_SOLUTIONS_SECTION = {
   title: "Hiring Solutions for Every Need",
   description: "Choose the perfect solution to find the right talent",
-  compareLabel: "Compare Solutions →",
-  compareHref: ROUTES.CONTACT,
 } as const;
 
 export const HIRING_SOLUTIONS: readonly HiringSolution[] = [

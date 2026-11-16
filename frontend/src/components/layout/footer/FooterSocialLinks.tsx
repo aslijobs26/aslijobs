@@ -9,11 +9,12 @@ const socialButtonStyles: Record<SocialPlatform, string> = {
   instagram: "bg-social-instagram text-surface hover:brightness-110",
   youtube: "bg-social-youtube text-surface hover:brightness-110",
   linkedin: "bg-social-linkedin text-surface hover:brightness-110",
+  telegram: "bg-social-telegram text-surface hover:brightness-110",
 };
 
 export function FooterSocialLinks() {
   return (
-    <div className="flex flex-nowrap items-center gap-2">
+    <div className="flex flex-nowrap items-center gap-2 xl:gap-1.5">
       {SOCIAL_LINKS.map((link) => {
         return (
           <a
@@ -23,7 +24,7 @@ export function FooterSocialLinks() {
             rel="noopener noreferrer"
             aria-label={link.label}
             className={cn(
-              "flex size-7 shrink-0 items-center justify-center rounded-full transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+              "flex size-7 shrink-0 items-center xl:size-6 justify-center rounded-full transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
               socialButtonStyles[link.id],
             )}
           >

@@ -3,7 +3,6 @@
 import { DiscoverySectionHeader } from "@/components/home/discovery/DiscoverySectionHeader";
 import { RESOURCE_KEYS } from "@/components/home/home-i18n";
 import { JOB_SEEKER_RESOURCES } from "@/constants/job-seeker-resources";
-import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
 import { ResourceCard } from "./ResourceCard";
 
@@ -15,8 +14,6 @@ export function JobSeekerResources() {
       <DiscoverySectionHeader
         title={t("home.trust.resourcesTitle")}
         titleId="job-seeker-resources"
-        actionLabel={t("home.trust.resourcesAction")}
-        actionHref={ROUTES.RESOURCES}
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">

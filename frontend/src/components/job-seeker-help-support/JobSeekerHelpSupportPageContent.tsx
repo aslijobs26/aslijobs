@@ -712,6 +712,7 @@ export function JobSeekerHelpSupportPageContent() {
                       link.id === "instagram" && "bg-social-instagram",
                       link.id === "youtube" && "bg-social-youtube",
                       link.id === "linkedin" && "bg-social-linkedin",
+                      link.id === "telegram" && "bg-social-telegram",
                     )}
                   >
                     <SocialIcon platform={link.id} className="size-4" />
