@@ -1518,6 +1518,29 @@ export function applyCurrentMessageSearchRules(
       anyLocation: false,
     };
   }
+  // "Any jobs in India" means search across job types and nationwide. Do not
+  // let a saved profile role/location (or fuzzy extracted slots) narrow it.
+  const asksForAnyJobType =
+    /\b(?:any|all|whatever)\s+(?:(?:kind|type|category)\s+of\s+)?jobs?\b/i.test(text) ||
+    /\bjobs?\s+(?:of\s+)?any\s+(?:kind|type|category)\b/i.test(text);
+  const asksNationwide =
+    /\b(?:in\s+india|across\s+india|all\s+india|pan[\s-]?india|nationwide)\b/i.test(text);
+  if (asksForAnyJobType && (asksNationwide || wantsAnyLocation(text) || extractPlace(text))) {
+    const nationwide = asksNationwide || wantsAnyLocation(text);
+    const explicitLocation = nationwide ? "" : extractPlace(text);
+    return {
+      ...understanding,
+      intent: "JOB_SEARCH",
+      scope: "PUBLIC_JOBS",
+      requiresAuth: false,
+      location: explicitLocation,
+      locationKind: explicitLocation ? placeKind(explicitLocation) : "",
+      category: "",
+      jobQuery: "",
+      openSearch: true,
+      anyLocation: nationwide,
+    };
+  }
   // Salary-only / show-more follow-ups must keep prior role + city.
   if (
     understanding.showMore ||
@@ -2138,7 +2161,7 @@ export function unknownApplyFooter(
   if (mode === "apply_only") {
     return `To apply, please create a Job Seeker account first.${link ? `\n\n👉 ${link}` : ""}`;
   }
-  return `To apply for these jobs, please create a Job Seeker account:${link ? `\n👉 ${link}` : ""}\n\nAfter registration, message us again on WhatsApp.`;
+  return `To apply for these jobs, create a free Job Seeker account:${link ? `\n👉 ${link}` : ""}\n\nAfter registering, message us here on WhatsApp to continue.`;
 }
 
 export function profileCopy(input: {
@@ -2218,6 +2241,29 @@ export function rateLimitCopy(language: BotLanguage): string {
     return "एक मिनट रुकिए. मैं एक मिनट में 20 संदेशों तक जवाब देता हूँ. फिर पूछिए.";
   }
   return "Please wait a moment. I can reply to 20 messages a minute, then I'll continue.";
+}
+
+function savedProfileSearchCopy(
+  language: BotLanguage,
+  role: string,
+  location: string,
+): string {
+  if (language === "te") {
+    return `మీ ప్రొఫైల్‌లో మీకు కావాల్సిన ఉద్యోగం ${role}, లొకేషన్ ${location}గా ఉంది. అక్కడ సరిపోయే ఉద్యోగాల కోసం వెతుకుతున్నాను. వేరే ఉద్యోగం లేదా లొకేషన్ కావాలంటే చెప్పండి.`;
+  }
+  if (language === "hi") {
+    return `आपकी प्रोफ़ाइल में पसंदीदा नौकरी ${role} और लोकेशन ${location} है। मैं वहाँ आपके लिए मिलती-जुलती नौकरियाँ खोज रहा हूँ। दूसरी नौकरी या जगह चाहिए तो बताइए।`;
+  }
+  if (language === "ta") {
+    return `உங்கள் சுயவிவரத்தில் விருப்பமான வேலை ${role}, இடம் ${location} என்று உள்ளது. அங்கு பொருத்தமான வேலைகளைத் தேடுகிறேன். வேறு வேலை அல்லது இடம் வேண்டுமெனில் சொல்லுங்கள்.`;
+  }
+  if (language === "kn") {
+    return `ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ನಲ್ಲಿ ಇಷ್ಟದ ಕೆಲಸ ${role}, ಸ್ಥಳ ${location} ಎಂದು ಇದೆ. ಅಲ್ಲಿ ಹೊಂದುವ ಕೆಲಸಗಳನ್ನು ಹುಡುಕುತ್ತಿದ್ದೇನೆ. ಬೇರೆ ಕೆಲಸ ಅಥವಾ ಸ್ಥಳ ಬೇಕಿದ್ದರೆ ತಿಳಿಸಿ.`;
+  }
+  if (language === "ml") {
+    return `നിങ്ങളുടെ പ്രൊഫൈലിൽ ഇഷ്ടമുള്ള ജോലി ${role}, സ്ഥലം ${location} എന്നാണ്. അവിടെ അനുയോജ്യമായ ജോലികൾ തിരയുകയാണ്. മറ്റൊരു ജോലിയോ സ്ഥലമോ വേണമെങ്കിൽ പറയൂ.`;
+  }
+  return `Your profile lists ${role} as your preferred job role and ${location} as your location. I’ll look for matching jobs there now. If you want a different role or location, just tell me.`;
 }
 
 function withUnsupportedFilterNote(
@@ -2470,7 +2516,22 @@ export function buildDeterministicReply(
           : "",
       appliedFilters: facts.appliedFilters ? String(facts.appliedFilters) : "",
     });
-    return withUnsupportedFilterNote(language, facts, rendered);
+    const profileContext =
+      facts.profileSearchContext && typeof facts.profileSearchContext === "object"
+        ? (facts.profileSearchContext as { role?: unknown; location?: unknown })
+        : null;
+    const profileIntro = profileContext
+      ? savedProfileSearchCopy(
+          language,
+          String(profileContext.role ?? "").trim(),
+          String(profileContext.location ?? "").trim(),
+        )
+      : "";
+    return withUnsupportedFilterNote(
+      language,
+      facts,
+      profileIntro ? `${profileIntro}\n\n${rendered}` : rendered,
+    );
   }
   if (situation === "count" || situation === "status" || situation === "list") {
     const applications = Array.isArray(facts.applications)

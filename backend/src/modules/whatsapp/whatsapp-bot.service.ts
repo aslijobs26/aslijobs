@@ -23,7 +23,7 @@ import {
   parseSalaryLabelCeiling,
 } from "./whatsapp-bot.criteria.js";
 import { runInPhoneOrder } from "./whatsapp-phone-order.js";
-import { transcribeWhatsAppAudio, understandMessage } from "./sarvam.client.js";
+import { compactFacts, generateSarvamReply, transcribeWhatsAppAudio, understandMessage } from "./sarvam.client.js";
 import { localizeDeterministicReply, whatsappAiCallPlan } from "./sarvam-translate.client.js";
 import { assistWhatsAppReply, understandWithOpenAi } from "./openai-assist.client.js";
 import { ensureWhatsAppSearchCatalog } from "./whatsapp-search-catalog.js";
@@ -57,6 +57,7 @@ import {
   activeSearchContext,
   applyAccountAwareIntent,
   applyRoleHints,
+  buildDeterministicReply,
   clearedTemporarySearchSessionFields,
   conversationStateForAccount,
   detectLanguage,
@@ -70,6 +71,7 @@ import {
   menuUnderstanding,
   indianWhatsAppNationalPhone,
   whatsAppSessionPhoneKey,
+  locationGrain,
   nextClarifyLoopState,
   parentCity,
   placeCityAliases,
@@ -664,7 +666,7 @@ async function processInboundTurn(input: {
         identity.linked,
       );
       const localMs = performance.now() - understandStarted;
-      if (!shouldUseLlmFallback(local, text)) {
+      if (env.WHATSAPP_REPLY_MODE !== "sarvam" && !shouldUseLlmFallback(local, text)) {
         understood = { understanding: local, source: "local" };
         timing.sarvam_understand = 0;
         logWhatsAppBot("LANGUAGE_DETECTED", `language=${local.language} source=local`);
@@ -909,6 +911,26 @@ async function processInboundTurn(input: {
       merged.showMore ? seenJobIds : [],
       text,
     );
+    const profileSearchContext =
+      turn.facts.profileSearchContext && typeof turn.facts.profileSearchContext === "object"
+        ? (turn.facts.profileSearchContext as { role?: unknown; location?: unknown })
+        : null;
+    if (profileSearchContext) {
+      const profileRole = String(profileSearchContext.role ?? "").trim();
+      const profileLocation = String(profileSearchContext.location ?? "").trim();
+      const resolvedProfileLocationKind = locationGrain(profileLocation);
+      merged = {
+        ...merged,
+        category: profileRole || merged.category,
+        jobQuery: profileRole || merged.jobQuery,
+        location: profileLocation || merged.location,
+        locationKind:
+          resolvedProfileLocationKind === "city" || resolvedProfileLocationKind === "state"
+            ? resolvedProfileLocationKind
+            : "",
+        openSearch: false,
+      };
+    }
     timing.db_query = Date.now() - dbStarted;
     const redirected = merged.crossRole === "seeker" || merged.crossRole === "employer";
     let situation = String(turn.facts.situation ?? "");
@@ -1052,23 +1074,56 @@ async function processInboundTurn(input: {
       jobSeekerId: identity.seekerId,
     });
     const localizeStarted = performance.now();
-    const localized = await localizeDeterministicReply({
-      language: merged.language,
-      facts: {
-        ...turn.facts,
-        intent: merged.intent,
-        accountType: turn.accountType,
-        applyOrigin: env.FRONTEND_URL,
-      },
-    });
+    const replyFacts = {
+      ...turn.facts,
+      intent: merged.intent,
+      accountType: turn.accountType,
+      applyOrigin: env.FRONTEND_URL,
+    };
+    const localized =
+      env.WHATSAPP_REPLY_MODE === "sarvam"
+        ? {
+            text:
+              buildDeterministicReply(merged.language, replyFacts) ??
+              serviceErrorCopy(merged.language),
+            generatedLanguage: merged.language,
+            translated: false,
+            skipped: true,
+            failed: false,
+            chatLlmUsed: false as const,
+          }
+        : await localizeDeterministicReply({
+            language: merged.language,
+            facts: replyFacts,
+          });
     const translateMs = performance.now() - localizeStarted;
     let replyText = localized.text;
     let openAiUsed = false;
+    let sarvamReplyUsed = false;
+    let openAiAssistAttempted = false;
     if (localized.skipped) {
       logWhatsAppBot("TEMPLATE_USED", `situation=${String(turn.facts.situation ?? "-")} language=${merged.language}`);
     }
+    if (env.WHATSAPP_REPLY_MODE === "sarvam") {
+      const generated = await generateSarvamReply({
+        userText: text,
+        language: merged.language,
+        deterministicReply: localized.text,
+        facts: replyFacts,
+        modelFacts: compactFacts(replyFacts),
+      });
+      if (generated.ok) {
+        replyText = generated.responseText;
+        sarvamReplyUsed = true;
+      } else {
+        logWhatsAppBot(
+          "SARVAM_REPLY_FALLBACK",
+          `reason=${generated.reason} latencyMs=${generated.latencyMs}`,
+        );
+      }
+    }
     const assistEligible = shouldUseOpenAiAssist({
-      enabled: env.WHATSAPP_OPENAI_ASSIST_ENABLED,
+      enabled: env.WHATSAPP_REPLY_MODE === "openai",
       hasApiKey: Boolean(env.OPENAI_API_KEY.trim()),
       model: env.OPENAI_MODEL,
       protocol: false,
@@ -1083,6 +1138,7 @@ async function processInboundTurn(input: {
       language: merged.language,
     });
     if (assistEligible && !openAiUnderstood) {
+      openAiAssistAttempted = true;
       const assist = await assistWhatsAppReply({
         userText: text,
         language: merged.language,
@@ -1107,13 +1163,18 @@ async function processInboundTurn(input: {
     const plan = whatsappAiCallPlan({
       protocol: false,
       voice: input.messageType === "audio",
-      needsTranslation: !localized.skipped,
-      skipUnderstand: understood.source === "local",
+      needsTranslation: env.WHATSAPP_REPLY_MODE === "sarvam" ? false : !localized.skipped,
+      skipUnderstand:
+        Boolean(menuIntent) ||
+        (env.WHATSAPP_REPLY_MODE !== "sarvam" && understood.source === "local"),
     });
+    const finalChatLlmCalls =
+      env.WHATSAPP_REPLY_MODE === "sarvam" || openAiAssistAttempted ? 1 : 0;
+    const totalChatLlmCalls = plan.chatLlmCalls + finalChatLlmCalls;
     const trace = describeTurn(merged, turn);
     const llmUsed = understood.source === "sarvam";
     console.info(
-      `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${merged.intent} language=${merged.language} understandingMode=${menuIntent ? "MENU" : openAiUnderstood ? "OPENAI" : llmUsed ? "LLM_FALLBACK" : "RULE"} llmUsed=${llmUsed} openAiUnderstand=${openAiUnderstood} openAiAssist=${openAiUsed} llmCalls=${plan.chatLlmCalls} dbService=${trace.service} responseType=${openAiUsed ? "openai_assist" : "deterministic"} latency=${Date.now() - started}`,
+      `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${merged.intent} language=${merged.language} understandingMode=${menuIntent ? "MENU" : openAiUnderstood ? "OPENAI" : llmUsed ? "SARVAM" : "RULE"} llmUsed=${llmUsed} openAiUnderstand=${openAiUnderstood} openAiAssist=${openAiUsed} sarvamReply=${sarvamReplyUsed} llmCalls=${totalChatLlmCalls} dbService=${trace.service} responseType=${sarvamReplyUsed ? "sarvam_reply" : openAiUsed ? "openai_assist" : "deterministic_fallback"} latency=${Date.now() - started}`,
     );
     console.info(
       [
@@ -1129,10 +1190,10 @@ async function processInboundTurn(input: {
         `source=${understood.source}`,
         `understand=${understood.source === "local" ? "local" : "chat-llm"}`,
         `db=${trace.service}`,
-        `response=deterministic`,
+        `response=${sarvamReplyUsed ? "sarvam" : openAiUsed ? "openai" : "deterministic_fallback"}`,
         `translation=${localized.skipped ? "skip" : localized.failed ? "failed" : localized.translated ? "once" : "none"}`,
-        `chatLlmCalls=${plan.chatLlmCalls}`,
-        `finalChatLlmCalls=${plan.finalChatLlmCalls}`,
+        `chatLlmCalls=${totalChatLlmCalls}`,
+        `finalChatLlmCalls=${finalChatLlmCalls}`,
         `translateCalls=${plan.translateCalls}`,
         `service=${trace.service}`,
         `dbResults=${trace.resultCount}`,
@@ -1166,9 +1227,10 @@ async function processInboundTurn(input: {
         `resultCount=${trace.resultCount}`,
         "[REPLY]",
         `language=${merged.language}`,
-        `deterministic=${openAiUsed ? "base" : "yes"}`,
+        `deterministic=${openAiUsed || sarvamReplyUsed ? "base" : "yes"}`,
+        `sarvamReply=${sarvamReplyUsed ? "yes" : "no"}`,
         `openAiAssist=${openAiUsed ? "yes" : "no"}`,
-        `chatLlmFinal=no`,
+        `chatLlmFinal=${sarvamReplyUsed || openAiUsed ? "yes" : "no"}`,
         `translated=${localized.translated ? "yes" : "no"}`,
       ].join(" "),
     );
@@ -1579,36 +1641,77 @@ async function buildReply(
     case "JOB_COUNT":
     case "JOB_SEARCH":
     default: {
+      let searchUnderstanding = understanding;
+      let profileSearchContext: { role: string; location: string } | null = null;
       if (
-        (understanding.clarifyField === "which_city" || understanding.clarifyField === "which_role") &&
-        (understanding.clarifyOptions?.length ?? 0) >= 2
+        asSeeker &&
+        seeker &&
+        (understanding.intent === "JOB_SEARCH" || understanding.intent === "JOB_COUNT") &&
+        !understanding.category &&
+        !understanding.location &&
+        !understanding.anyLocation
+      ) {
+        const profileRole = seeker.jobRole?.trim() || "";
+        const preferredLocation = seeker.preferredJobLocation?.trim() || "";
+        const locationAliases = preferredLocation ? placeCityAliases(preferredLocation) : [];
+        // A saved preference can include both city and state; prefer its catalog
+        // city label for the public jobs lookup, then fall back to the profile city.
+        const profileLocation =
+          (locationAliases.length > 1 ? locationAliases[1] : "") ||
+          seeker.city?.trim() ||
+          preferredLocation;
+        if (profileRole || profileLocation) {
+          const resolvedProfileLocationKind = locationGrain(profileLocation);
+          searchUnderstanding = {
+            ...understanding,
+            category: profileRole,
+            jobQuery: profileRole,
+            location: profileLocation,
+            locationKind:
+              resolvedProfileLocationKind === "city" || resolvedProfileLocationKind === "state"
+                ? resolvedProfileLocationKind
+                : "",
+            openSearch: !profileRole,
+          };
+          if (profileRole && profileLocation) {
+            profileSearchContext = { role: profileRole, location: profileLocation };
+          }
+        }
+      }
+      if (
+        (searchUnderstanding.clarifyField === "which_city" || searchUnderstanding.clarifyField === "which_role") &&
+        (searchUnderstanding.clarifyOptions?.length ?? 0) >= 2
       ) {
         return reply({
           situation: "clarify",
-          missing: understanding.clarifyField,
-          options: understanding.clarifyOptions,
+          missing: searchUnderstanding.clarifyField,
+          options: searchUnderstanding.clarifyOptions,
         });
       }
-      if (understanding.intent === "UNKNOWN") {
+      if (searchUnderstanding.intent === "UNKNOWN") {
         return reply({ situation: "clarify", missing: linked === "none" ? "purpose" : "intent" });
       }
-      if (!understanding.location && !understanding.anyLocation && !understanding.category && !understanding.openSearch) {
+      if (!searchUnderstanding.location && !searchUnderstanding.anyLocation && !searchUnderstanding.category && !searchUnderstanding.openSearch) {
         return reply({ situation: "clarify", missing: "role_and_location" });
       }
-      if (!understanding.location && !understanding.anyLocation) {
+      if (!searchUnderstanding.location && !searchUnderstanding.anyLocation) {
         return reply({ situation: "clarify", missing: "location" });
       }
-      if (!understanding.category && !understanding.openSearch) {
+      if (!searchUnderstanding.category && !searchUnderstanding.openSearch) {
         return reply({ situation: "clarify", missing: "role" });
       }
-      return searchJobs(
-        understanding,
+      const searchResult = await searchJobs(
+        searchUnderstanding,
         asSeeker ? seeker?._id.toString() : undefined,
         meta,
-        understanding.language,
+        searchUnderstanding.language,
         remembered,
         excludeJobIds,
       );
+      if (profileSearchContext && searchResult.facts.situation === "jobs") {
+        searchResult.facts.profileSearchContext = profileSearchContext;
+      }
+      return searchResult;
     }
   }
 }
