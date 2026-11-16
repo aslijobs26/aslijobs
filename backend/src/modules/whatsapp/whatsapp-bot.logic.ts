@@ -1499,6 +1499,25 @@ export function applyCurrentMessageSearchRules(
   if (looksLikeOwnPostedJobsQuestion(text) || isPrivateIntent(understanding.intent)) {
     return understanding;
   }
+  // A generic request to find a job does not contain usable search filters.
+  // Do not let a prior search (or a fuzzy language-model slot) turn it into a
+  // search for a made-up role/location such as "to find a" in Bihar.
+  if (/^(?:i\s+)?(?:want|would\s+like|need)\s+to\s+(?:find|look\s+for)\s+(?:a\s+)?jobs?\.?$/i.test(text.trim()) ||
+      /^(?:i\s+)?(?:want|need)\s+(?:a\s+)?job\.?$/i.test(text.trim()) ||
+      /^(?:find|looking\s+for)\s+(?:a\s+)?jobs?\.?$/i.test(text.trim())) {
+    return {
+      ...understanding,
+      intent: "JOB_SEARCH",
+      scope: "PUBLIC_JOBS",
+      requiresAuth: false,
+      location: "",
+      locationKind: "",
+      category: "",
+      jobQuery: "",
+      openSearch: false,
+      anyLocation: false,
+    };
+  }
   // Salary-only / show-more follow-ups must keep prior role + city.
   if (
     understanding.showMore ||
@@ -2302,6 +2321,19 @@ export function buildDeterministicReply(
         location: String(facts.knownLocation ?? ""),
         minSalary: facts.knownMinSalary != null ? Number(facts.knownMinSalary) : null,
       });
+    }
+    if (missing === "role_and_location") {
+      return language === "hi"
+        ? "किस तरह की नौकरी और किस शहर में ढूँढ रहे हैं? उदाहरण: पटना में ड्राइवर की नौकरी।"
+        : language === "te"
+          ? "ఏ రకమైన ఉద్యోగం, ఏ ప్రాంతంలో వెతుకుతున్నారు? ఉదాహరణ: హైదరాబాద్‌లో డ్రైవర్ ఉద్యోగం."
+          : language === "ta"
+            ? "எந்த வகை வேலை, எந்த இடத்தில் தேடுகிறீர்கள்? உதாரணம்: சென்னையில் ஓட்டுநர் வேலை."
+            : language === "kn"
+              ? "ಯಾವ ರೀತಿಯ ಕೆಲಸ, ಯಾವ ಸ್ಥಳದಲ್ಲಿ ಹುಡುಕುತ್ತಿದ್ದೀರಿ? ಉದಾಹರಣೆ: ಬೆಂಗಳೂರಿನಲ್ಲಿ ಡ್ರೈವರ್ ಕೆಲಸ."
+              : language === "ml"
+                ? "ഏത് തരത്തിലുള്ള ജോലി, ഏത് സ്ഥലത്താണ് അന്വേഷിക്കുന്നത്? ഉദാഹരണം: കൊച്ചിയിൽ ഡ്രൈവർ ജോലി."
+                : "What type of job and which location are you looking for? For example: driver jobs in Patna.";
     }
     if (missing === "location") return askLocationCopy(language);
     if (missing === "which_city" || missing === "which_role") {
