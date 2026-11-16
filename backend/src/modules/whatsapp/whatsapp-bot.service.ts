@@ -23,7 +23,7 @@ import {
   parseSalaryLabelCeiling,
 } from "./whatsapp-bot.criteria.js";
 import { runInPhoneOrder } from "./whatsapp-phone-order.js";
-import { transcribeWhatsAppAudio, understandMessage } from "./sarvam.client.js";
+import { compactFacts, generateSarvamReply, transcribeWhatsAppAudio, understandMessage } from "./sarvam.client.js";
 import { localizeDeterministicReply, whatsappAiCallPlan } from "./sarvam-translate.client.js";
 import { assistWhatsAppReply, understandWithOpenAi } from "./openai-assist.client.js";
 import { ensureWhatsAppSearchCatalog } from "./whatsapp-search-catalog.js";
@@ -57,6 +57,7 @@ import {
   activeSearchContext,
   applyAccountAwareIntent,
   applyRoleHints,
+  buildDeterministicReply,
   clearedTemporarySearchSessionFields,
   conversationStateForAccount,
   detectLanguage,
@@ -665,7 +666,7 @@ async function processInboundTurn(input: {
         identity.linked,
       );
       const localMs = performance.now() - understandStarted;
-      if (!shouldUseLlmFallback(local, text)) {
+      if (env.WHATSAPP_REPLY_MODE !== "sarvam" && !shouldUseLlmFallback(local, text)) {
         understood = { understanding: local, source: "local" };
         timing.sarvam_understand = 0;
         logWhatsAppBot("LANGUAGE_DETECTED", `language=${local.language} source=local`);
@@ -1073,23 +1074,56 @@ async function processInboundTurn(input: {
       jobSeekerId: identity.seekerId,
     });
     const localizeStarted = performance.now();
-    const localized = await localizeDeterministicReply({
-      language: merged.language,
-      facts: {
-        ...turn.facts,
-        intent: merged.intent,
-        accountType: turn.accountType,
-        applyOrigin: env.FRONTEND_URL,
-      },
-    });
+    const replyFacts = {
+      ...turn.facts,
+      intent: merged.intent,
+      accountType: turn.accountType,
+      applyOrigin: env.FRONTEND_URL,
+    };
+    const localized =
+      env.WHATSAPP_REPLY_MODE === "sarvam"
+        ? {
+            text:
+              buildDeterministicReply(merged.language, replyFacts) ??
+              serviceErrorCopy(merged.language),
+            generatedLanguage: merged.language,
+            translated: false,
+            skipped: true,
+            failed: false,
+            chatLlmUsed: false as const,
+          }
+        : await localizeDeterministicReply({
+            language: merged.language,
+            facts: replyFacts,
+          });
     const translateMs = performance.now() - localizeStarted;
     let replyText = localized.text;
     let openAiUsed = false;
+    let sarvamReplyUsed = false;
+    let openAiAssistAttempted = false;
     if (localized.skipped) {
       logWhatsAppBot("TEMPLATE_USED", `situation=${String(turn.facts.situation ?? "-")} language=${merged.language}`);
     }
+    if (env.WHATSAPP_REPLY_MODE === "sarvam") {
+      const generated = await generateSarvamReply({
+        userText: text,
+        language: merged.language,
+        deterministicReply: localized.text,
+        facts: replyFacts,
+        modelFacts: compactFacts(replyFacts),
+      });
+      if (generated.ok) {
+        replyText = generated.responseText;
+        sarvamReplyUsed = true;
+      } else {
+        logWhatsAppBot(
+          "SARVAM_REPLY_FALLBACK",
+          `reason=${generated.reason} latencyMs=${generated.latencyMs}`,
+        );
+      }
+    }
     const assistEligible = shouldUseOpenAiAssist({
-      enabled: env.WHATSAPP_REPLY_MODE === "llm",
+      enabled: env.WHATSAPP_REPLY_MODE === "openai",
       hasApiKey: Boolean(env.OPENAI_API_KEY.trim()),
       model: env.OPENAI_MODEL,
       protocol: false,
@@ -1104,6 +1138,7 @@ async function processInboundTurn(input: {
       language: merged.language,
     });
     if (assistEligible && !openAiUnderstood) {
+      openAiAssistAttempted = true;
       const assist = await assistWhatsAppReply({
         userText: text,
         language: merged.language,
@@ -1128,13 +1163,18 @@ async function processInboundTurn(input: {
     const plan = whatsappAiCallPlan({
       protocol: false,
       voice: input.messageType === "audio",
-      needsTranslation: !localized.skipped,
-      skipUnderstand: understood.source === "local",
+      needsTranslation: env.WHATSAPP_REPLY_MODE === "sarvam" ? false : !localized.skipped,
+      skipUnderstand:
+        Boolean(menuIntent) ||
+        (env.WHATSAPP_REPLY_MODE !== "sarvam" && understood.source === "local"),
     });
+    const finalChatLlmCalls =
+      env.WHATSAPP_REPLY_MODE === "sarvam" || openAiAssistAttempted ? 1 : 0;
+    const totalChatLlmCalls = plan.chatLlmCalls + finalChatLlmCalls;
     const trace = describeTurn(merged, turn);
     const llmUsed = understood.source === "sarvam";
     console.info(
-      `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${merged.intent} language=${merged.language} understandingMode=${menuIntent ? "MENU" : openAiUnderstood ? "OPENAI" : llmUsed ? "LLM_FALLBACK" : "RULE"} llmUsed=${llmUsed} openAiUnderstand=${openAiUnderstood} openAiAssist=${openAiUsed} llmCalls=${plan.chatLlmCalls} dbService=${trace.service} responseType=${openAiUsed ? "openai_assist" : "deterministic"} latency=${Date.now() - started}`,
+      `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${merged.intent} language=${merged.language} understandingMode=${menuIntent ? "MENU" : openAiUnderstood ? "OPENAI" : llmUsed ? "SARVAM" : "RULE"} llmUsed=${llmUsed} openAiUnderstand=${openAiUnderstood} openAiAssist=${openAiUsed} sarvamReply=${sarvamReplyUsed} llmCalls=${totalChatLlmCalls} dbService=${trace.service} responseType=${sarvamReplyUsed ? "sarvam_reply" : openAiUsed ? "openai_assist" : "deterministic_fallback"} latency=${Date.now() - started}`,
     );
     console.info(
       [
@@ -1150,10 +1190,10 @@ async function processInboundTurn(input: {
         `source=${understood.source}`,
         `understand=${understood.source === "local" ? "local" : "chat-llm"}`,
         `db=${trace.service}`,
-        `response=deterministic`,
+        `response=${sarvamReplyUsed ? "sarvam" : openAiUsed ? "openai" : "deterministic_fallback"}`,
         `translation=${localized.skipped ? "skip" : localized.failed ? "failed" : localized.translated ? "once" : "none"}`,
-        `chatLlmCalls=${plan.chatLlmCalls}`,
-        `finalChatLlmCalls=${plan.finalChatLlmCalls}`,
+        `chatLlmCalls=${totalChatLlmCalls}`,
+        `finalChatLlmCalls=${finalChatLlmCalls}`,
         `translateCalls=${plan.translateCalls}`,
         `service=${trace.service}`,
         `dbResults=${trace.resultCount}`,
@@ -1187,9 +1227,10 @@ async function processInboundTurn(input: {
         `resultCount=${trace.resultCount}`,
         "[REPLY]",
         `language=${merged.language}`,
-        `deterministic=${openAiUsed ? "base" : "yes"}`,
+        `deterministic=${openAiUsed || sarvamReplyUsed ? "base" : "yes"}`,
+        `sarvamReply=${sarvamReplyUsed ? "yes" : "no"}`,
         `openAiAssist=${openAiUsed ? "yes" : "no"}`,
-        `chatLlmFinal=no`,
+        `chatLlmFinal=${sarvamReplyUsed || openAiUsed ? "yes" : "no"}`,
         `translated=${localized.translated ? "yes" : "no"}`,
       ].join(" "),
     );

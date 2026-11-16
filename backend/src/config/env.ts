@@ -311,23 +311,26 @@ const envSchema = z.object({
    */
   OPENAI_API_KEY: z.string().optional().default(""),
   /**
-   * OpenAI model id used when WHATSAPP_REPLY_MODE=llm.
+   * OpenAI model id used when WHATSAPP_REPLY_MODE=openai.
    * Verified against OpenAI docs as of 2026-10: gpt-6-luna (efficient chat).
    * Override if your project has a different enabled model.
    */
   OPENAI_MODEL: z.string().trim().optional().default("gpt-6-luna"),
   /**
-   * Reply mode selector. The LLM path is selective and may rephrase only
-   * verified bot facts; database-backed job facts remain authoritative.
-   * Default to the legacy flag when the new setting is absent.
+   * WhatsApp response engine. `llm` remains an alias for the previous OpenAI mode.
+   * Sarvam mode uses Sarvam for intent understanding and final reply wording.
    */
-  WHATSAPP_REPLY_MODE: z
-    .enum(["chatbot", "llm"])
-    .default(
-      process.env.WHATSAPP_OPENAI_ASSIST_ENABLED?.trim().toLowerCase() === "true"
-        ? "llm"
-        : "chatbot",
-    ),
+  WHATSAPP_REPLY_MODE: z.preprocess(
+    (value) => {
+      const configured = String(value ?? "").trim().toLowerCase();
+      if (configured === "llm") return "openai";
+      if (configured) return configured;
+      return process.env.WHATSAPP_OPENAI_ASSIST_ENABLED?.trim().toLowerCase() === "true"
+        ? "openai"
+        : "chatbot";
+    },
+    z.enum(["chatbot", "openai", "sarvam"]),
+  ),
   /**
    * Feature flag: download + extract text from inbound image/document resumes.
    * Default off — inbox still persists media; bot does not auto-process files.
@@ -385,6 +388,9 @@ const envSchema = z.object({
     .min(2_000)
     .max(60_000)
     .default(12_000),
+  /** Sarvam final WhatsApp reply timeout and token budget. */
+  SARVAM_REPLY_TIMEOUT_MS: z.coerce.number().int().min(2_000).max(60_000).default(15_000),
+  SARVAM_REPLY_MAX_TOKENS: z.coerce.number().int().min(64).max(2048).default(512),
   /**
    * Optional BigDataCloud server-API key. When set, that server API is tried
    * before Photon. Empty keeps Photon as the server-side provider. Never
@@ -492,11 +498,17 @@ if (parsed.data.NODE_ENV === "production") {
     process.exit(1);
   }
   if (
-    parsed.data.WHATSAPP_REPLY_MODE === "llm" &&
+    parsed.data.WHATSAPP_REPLY_MODE === "openai" &&
     (!parsed.data.OPENAI_API_KEY.trim() || !parsed.data.OPENAI_MODEL.trim())
   ) {
     console.error(
-      "Production refused to start: WHATSAPP_REPLY_MODE=llm requires OPENAI_API_KEY and OPENAI_MODEL.",
+      "Production refused to start: WHATSAPP_REPLY_MODE=openai requires OPENAI_API_KEY and OPENAI_MODEL.",
+    );
+    process.exit(1);
+  }
+  if (parsed.data.WHATSAPP_REPLY_MODE === "sarvam" && !parsed.data.SARVAM_API_KEY.trim()) {
+    console.error(
+      "Production refused to start: WHATSAPP_REPLY_MODE=sarvam requires SARVAM_API_KEY.",
     );
     process.exit(1);
   }

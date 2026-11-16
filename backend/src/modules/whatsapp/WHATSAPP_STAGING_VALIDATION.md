@@ -5,8 +5,9 @@ Use this only on a staging Meta app, staging API, and staging database. Do not m
 ## Setup
 
 - Staging `WHATSAPP_TOKEN`, phone number id, and webhook verify token.
-- `OPENAI_API_KEY` and `WHATSAPP_REPLY_MODE=llm` only on the staging process.
-- `SARVAM_API_KEY` on staging if translation fallback should be exercised.
+- For OpenAI mode, set `OPENAI_API_KEY` and `WHATSAPP_REPLY_MODE=openai` only on the staging process.
+- For Sarvam mode, set `SARVAM_API_KEY` and `WHATSAPP_REPLY_MODE=sarvam` only on the staging process.
+- `SARVAM_API_KEY` is required for Sarvam mode; that mode uses Sarvam for intent understanding and final conversational replies.
 - Redis available so BullMQ is used. Repeat one case with Redis stopped to confirm the inline fallback still answers.
 - Allowlist of test handsets only. Remove every other recipient from the staging send path.
 
@@ -25,6 +26,7 @@ Use this only on a staging Meta app, staging API, and staging database. Do not m
 11. Stop Mongo or point the search at a down database. The reply must say the search failed, not that there are no jobs.
 12. Logs may show `OPENAI_UNDERSTAND`, `source=sarvam`, or `source=local`. They must not contain the API key or the full phone number.
 13. Publish or pause a staging job, then send a search for its title. The catalog log should show `invalidated` and, on the next message, `refreshed` with title and city counts. A failed refresh must keep answering from the previous catalog.
+14. In Sarvam mode, send a greeting, an unrelated request, and a job search. Each conversational reply should log `sarvamReply=yes` and `responseType=sarvam_reply`; job details must match staging database results.
 
 ## Stop
 
