@@ -100,25 +100,43 @@ import {
 
 const whatsAppService = new WhatsAppService();
 
-async function generateSarvamTextReply(input: {
+async function generateConfiguredTextReply(input: {
   userText: string;
   language: BotLanguage;
   deterministicReply: string;
   facts: Record<string, unknown>;
-}): Promise<{ text: string; used: boolean }> {
-  if (env.WHATSAPP_REPLY_MODE !== "sarvam") {
-    return { text: input.deterministicReply, used: false };
+  intent?: string;
+}): Promise<{ text: string; provider: "openai" | "sarvam" | "none" }> {
+  if (env.WHATSAPP_REPLY_MODE === "openai") {
+    const generated = await assistWhatsAppReply({
+      userText: input.userText,
+      language: input.language,
+      deterministicReply: input.deterministicReply,
+      facts: input.facts,
+      intent: input.intent || String(input.facts.intent ?? input.facts.situation ?? "UNKNOWN"),
+    });
+    if (generated.ok) return { text: generated.response_text, provider: "openai" };
+    logWhatsAppBot(
+      "OPENAI_REPLY_FALLBACK",
+      `reason=${generated.reason} latencyMs=${generated.latencyMs}`,
+    );
+    return { text: input.deterministicReply, provider: "none" };
   }
-  const generated = await generateSarvamReply({
-    ...input,
-    modelFacts: compactFacts(input.facts),
-  });
-  if (generated.ok) return { text: generated.responseText, used: true };
-  logWhatsAppBot(
-    "SARVAM_REPLY_FALLBACK",
-    `reason=${generated.reason} latencyMs=${generated.latencyMs}`,
-  );
-  return { text: input.deterministicReply, used: false };
+  if (env.WHATSAPP_REPLY_MODE === "sarvam") {
+    const generated = await generateSarvamReply({
+      userText: input.userText,
+      language: input.language,
+      deterministicReply: input.deterministicReply,
+      facts: input.facts,
+      modelFacts: compactFacts(input.facts),
+    });
+    if (generated.ok) return { text: generated.responseText, provider: "sarvam" };
+    logWhatsAppBot(
+      "SARVAM_REPLY_FALLBACK",
+      `reason=${generated.reason} latencyMs=${generated.latencyMs}`,
+    );
+  }
+  return { text: input.deterministicReply, provider: "none" };
 }
 
 const mediaProgressAcked = new Set<string>();
@@ -535,7 +553,7 @@ async function processInboundTurn(input: {
         { phone, language, lastInteractionAt: new Date() },
         { upsert: true },
       );
-      const generated = await generateSarvamTextReply({
+      const generated = await generateConfiguredTextReply({
         userText: text,
         language,
         deterministicReply: localized.text,
@@ -543,7 +561,7 @@ async function processInboundTurn(input: {
       });
       await whatsAppService.sendTextMessage(input.from, generated.text);
       console.info(
-        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=NO_RESUME language=${language} understandingMode=RULE llmUsed=${generated.used} sarvamReply=${generated.used} responseType=${generated.used ? "sarvam_reply" : "deterministic_fallback"} latency=${Date.now() - started}`,
+        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=NO_RESUME language=${language} understandingMode=RULE llmUsed=${generated.provider !== "none"} openAiReply=${generated.provider === "openai"} sarvamReply=${generated.provider === "sarvam"} responseType=${generated.provider === "none" ? "deterministic_fallback" : `${generated.provider}_reply`} latency=${Date.now() - started}`,
       );
       return;
     }
@@ -564,7 +582,7 @@ async function processInboundTurn(input: {
       );
       logWhatsAppBot("SESSION_RESET", "reason=explicit_reset cleared=temporary_search");
       const deterministicReply = protocolReply("greeting", language, identity.linked, "");
-      const generated = await generateSarvamTextReply({
+      const generated = await generateConfiguredTextReply({
         userText: text,
         language,
         deterministicReply,
@@ -597,7 +615,7 @@ async function processInboundTurn(input: {
           );
           logWhatsAppBot("CLARIFY_ANSWER", `employer_skip_seeker_slot missing=${action.missing}`);
           const deterministicReply = capabilityCopy(language, "employer");
-          const generated = await generateSarvamTextReply({
+          const generated = await generateConfiguredTextReply({
             userText: text,
             language,
             deterministicReply,
@@ -613,7 +631,7 @@ async function processInboundTurn(input: {
               ? askLocationCopy(language)
               : clarifyJobTitle(language);
         logWhatsAppBot("CLARIFY_ANSWER", `reask missing=${action.missing}`);
-        const generated = await generateSarvamTextReply({
+        const generated = await generateConfiguredTextReply({
           userText: text,
           language,
           deterministicReply: copy,
@@ -659,7 +677,7 @@ async function processInboundTurn(input: {
         jobSeekerId: identity.seekerId,
       });
       const sendStarted = Date.now();
-      const generated = await generateSarvamTextReply({
+      const generated = await generateConfiguredTextReply({
         userText: text,
         language,
         deterministicReply: reply,
@@ -670,22 +688,22 @@ async function processInboundTurn(input: {
       const plan = whatsappAiCallPlan({ protocol: true, voice: input.messageType === "audio", needsTranslation: false });
       logWhatsAppBot("LANGUAGE_DETECTED", `language=${language} source=current_message`);
       logWhatsAppBot("LOCAL_INTENT", `intent=${protocol.toUpperCase()} confidence=1 source=protocol`);
-      if (!generated.used) {
+      if (generated.provider === "none") {
         logWhatsAppBot("LLM_SKIPPED", "reason=protocol_template_or_sarvam_fallback");
         logWhatsAppBot("TEMPLATE_USED", `situation=${protocol}`);
       }
       logWhatsAppBot("REPLY_SENT", `language=${language} protocol=${protocol}`);
       console.info(
-        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${protocol.toUpperCase()} language=${language} understandingMode=PROTOCOL llmUsed=${generated.used} sarvamReply=${generated.used} llmCalls=${generated.used ? 1 : 0} dbService=none responseType=${generated.used ? "sarvam_reply" : "deterministic_fallback"} latency=${Date.now() - started}`,
+        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${protocol.toUpperCase()} language=${language} understandingMode=PROTOCOL llmUsed=${generated.provider !== "none"} openAiReply=${generated.provider === "openai"} sarvamReply=${generated.provider === "sarvam"} llmCalls=${generated.provider !== "none" ? 1 : 0} dbService=none responseType=${generated.provider === "none" ? "deterministic_fallback" : `${generated.provider}_reply`} latency=${Date.now() - started}`,
       );
       console.info(
-        `[WA-TRACE] messageId=${input.messageId ?? "-"} phone=${maskPhone(phone)} accountType=${accountLabel(identity.linked)} protocol=${protocol} understand=skip db=skip translation=skip chatLlmCalls=${generated.used ? 1 : 0} translateCalls=${plan.translateCalls} finalChatLlmCalls=${generated.used ? 1 : 0} totalMs=${Date.now() - started}`,
+        `[WA-TRACE] messageId=${input.messageId ?? "-"} phone=${maskPhone(phone)} accountType=${accountLabel(identity.linked)} protocol=${protocol} understand=skip db=skip translation=skip chatLlmCalls=${generated.provider !== "none" ? 1 : 0} translateCalls=${plan.translateCalls} finalChatLlmCalls=${generated.provider !== "none" ? 1 : 0} totalMs=${Date.now() - started}`,
       );
       console.info(
-        `[WA-AI-COST] stage=PROTOCOL provider=${generated.used ? "sarvam" : "none"} model=${generated.used ? "chat" : "none"} durationMs=${Date.now() - started}`,
+        `[WA-AI-COST] stage=PROTOCOL provider=${generated.provider} model=${generated.provider === "none" ? "none" : "chat"} durationMs=${Date.now() - started}`,
       );
       console.info(
-        `[WA-PERF] protocol=${protocol} account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms sarvam_understand=0ms sarvam_reply=${generated.used ? "yes" : "no"} db_query=0ms translate=0ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
+        `[WA-PERF] protocol=${protocol} account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms llm_reply=${generated.provider} db_query=0ms translate=0ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
       );
       return;
     }
@@ -837,7 +855,7 @@ async function processInboundTurn(input: {
         { upsert: true },
       );
       const deterministicReply = noMatchWaitCopy(language);
-      const generated = await generateSarvamTextReply({
+      const generated = await generateConfiguredTextReply({
         userText: text,
         language,
         deterministicReply,
@@ -845,7 +863,7 @@ async function processInboundTurn(input: {
       });
       await whatsAppService.sendTextMessage(input.from, generated.text);
       console.info(
-        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=JOB_SEARCH_WAIT language=${language} understandingMode=ORCHESTRATOR llmUsed=${generated.used} sarvamReply=${generated.used} responseType=${generated.used ? "sarvam_reply" : "deterministic_fallback"} latency=${Date.now() - started}`,
+        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=JOB_SEARCH_WAIT language=${language} understandingMode=ORCHESTRATOR llmUsed=${generated.provider !== "none"} openAiReply=${generated.provider === "openai"} sarvamReply=${generated.provider === "sarvam"} responseType=${generated.provider === "none" ? "deterministic_fallback" : `${generated.provider}_reply`} latency=${Date.now() - started}`,
       );
       return;
     }
@@ -1181,7 +1199,7 @@ async function processInboundTurn(input: {
         );
       }
     }
-    const assistEligible = shouldUseOpenAiAssist({
+    const assistEligible = env.WHATSAPP_REPLY_MODE === "openai" || shouldUseOpenAiAssist({
       enabled: env.WHATSAPP_REPLY_MODE === "openai",
       hasApiKey: Boolean(env.OPENAI_API_KEY.trim()),
       model: env.OPENAI_MODEL,
@@ -1196,13 +1214,13 @@ async function processInboundTurn(input: {
           : "local",
       language: merged.language,
     });
-    if (assistEligible && !openAiUnderstood) {
+    if (assistEligible) {
       openAiAssistAttempted = true;
       const assist = await assistWhatsAppReply({
         userText: text,
         language: merged.language,
         deterministicReply: localized.text,
-        facts: turn.facts,
+        facts: replyFacts,
         intent: merged.intent,
       });
       if (assist.ok) {
