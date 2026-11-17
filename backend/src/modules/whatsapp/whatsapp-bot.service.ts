@@ -27,7 +27,6 @@ import { compactFacts, generateSarvamReply, transcribeWhatsAppAudio, understandM
 import { localizeDeterministicReply, whatsappAiCallPlan } from "./sarvam-translate.client.js";
 import { assistWhatsAppReply, understandWithOpenAi } from "./openai-assist.client.js";
 import { ensureWhatsAppSearchCatalog } from "./whatsapp-search-catalog.js";
-import { shouldUseOpenAiAssist } from "./openai-assist.routing.js";
 import { understandInboundWhatsAppMedia } from "./whatsapp-media-understand.service.js";
 import { mediaProgressCopy } from "./whatsapp-media-messages.js";
 import {
@@ -1199,21 +1198,7 @@ async function processInboundTurn(input: {
         );
       }
     }
-    const assistEligible = env.WHATSAPP_REPLY_MODE === "openai" || shouldUseOpenAiAssist({
-      enabled: env.WHATSAPP_REPLY_MODE === "openai",
-      hasApiKey: Boolean(env.OPENAI_API_KEY.trim()),
-      model: env.OPENAI_MODEL,
-      protocol: false,
-      menuIntent: Boolean(menuIntent),
-      situation: String(turn.facts.situation ?? ""),
-      userText: text,
-      understandingSource: menuIntent
-        ? "menu"
-        : understood.source === "sarvam"
-          ? "sarvam"
-          : "local",
-      language: merged.language,
-    });
+    const assistEligible = env.WHATSAPP_REPLY_MODE === "openai";
     if (assistEligible) {
       openAiAssistAttempted = true;
       const assist = await assistWhatsAppReply({
