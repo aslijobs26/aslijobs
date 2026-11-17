@@ -470,8 +470,19 @@ export async function assistWhatsAppReply(
     });
     const latencyMs = Date.now() - started;
     if (!response.ok) {
+      const errorPayload = (await response.json().catch(() => null)) as
+        | { error?: { code?: unknown; type?: unknown } }
+        | null;
+      const errorCode =
+        typeof errorPayload?.error?.code === "string"
+          ? errorPayload.error.code.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64)
+          : "unknown";
+      const errorType =
+        typeof errorPayload?.error?.type === "string"
+          ? errorPayload.error.type.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64)
+          : "unknown";
       console.error(
-        `[OpenAI] assist_http status=${response.status} latencyMs=${latencyMs} model=${model}`,
+        `[OpenAI] assist_http status=${response.status} code=${errorCode} type=${errorType} latencyMs=${latencyMs} model=${model}`,
       );
       console.info(
         `[WA-AI-COST] stage=OPENAI_ASSIST provider=openai model=${model} inputTokens=- outputTokens=- totalTokens=- durationMs=${latencyMs} ok=no`,

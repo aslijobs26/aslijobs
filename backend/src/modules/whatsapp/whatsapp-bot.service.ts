@@ -107,7 +107,7 @@ async function generateConfiguredTextReply(input: {
   intent?: string;
 }): Promise<{ text: string; provider: "openai" | "sarvam" | "none" }> {
   if (env.WHATSAPP_REPLY_MODE === "openai") {
-    const generated = await assistWhatsAppReply({
+    const generated = await assistWhatsAppReplyWithRetry({
       userText: input.userText,
       language: input.language,
       deterministicReply: input.deterministicReply,
@@ -171,6 +171,16 @@ async function sendGeneratedWhatsAppText(
   }
   await whatsAppService.sendTextMessage(to, generated.text);
   return true;
+}
+
+async function assistWhatsAppReplyWithRetry(input: Parameters<typeof assistWhatsAppReply>[0]) {
+  const first = await assistWhatsAppReply(input);
+  if (first.ok || (first.reason !== "timeout" && first.reason !== "http")) {
+    return first;
+  }
+  console.warn(`[WhatsApp] openai_reply_retry reason=${first.reason}`);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return assistWhatsAppReply(input);
 }
 
 const mediaProgressAcked = new Set<string>();
@@ -763,14 +773,14 @@ async function processInboundTurn(input: {
         language,
         jobSeekerId: identity.seekerId,
       });
-      const sendStarted = Date.now();
       const generated = await generateConfiguredTextReply({
         userText: text,
         language,
         deterministicReply: reply,
         facts: { situation: protocol, accountType: identity.linked, name },
       });
-      await sendGeneratedWhatsAppText(input.from, generated);
+      const sendStarted = Date.now();
+      const wasSent = await sendGeneratedWhatsAppText(input.from, generated);
       timing.whatsapp_send = Date.now() - sendStarted;
       const plan = whatsappAiCallPlan({ protocol: true, voice: input.messageType === "audio", needsTranslation: false });
       logWhatsAppBot("LANGUAGE_DETECTED", `language=${language} source=current_message`);
@@ -779,9 +789,13 @@ async function processInboundTurn(input: {
         logWhatsAppBot("LLM_SKIPPED", "reason=protocol_template_or_sarvam_fallback");
         logWhatsAppBot("TEMPLATE_USED", `situation=${protocol}`);
       }
-      logWhatsAppBot("REPLY_SENT", `language=${language} protocol=${protocol}`);
+      if (wasSent) {
+        logWhatsAppBot("REPLY_SENT", `language=${language} protocol=${protocol}`);
+      } else {
+        logWhatsAppBot("REPLY_NOT_SENT", `language=${language} protocol=${protocol} reason=openai_unavailable`);
+      }
       console.info(
-        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${protocol.toUpperCase()} language=${language} understandingMode=PROTOCOL llmUsed=${generated.provider !== "none"} openAiReply=${generated.provider === "openai"} sarvamReply=${generated.provider === "sarvam"} llmCalls=${generated.provider !== "none" ? 1 : 0} dbService=none responseType=${generated.provider === "none" ? "deterministic_fallback" : `${generated.provider}_reply`} latency=${Date.now() - started}`,
+        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${protocol.toUpperCase()} language=${language} understandingMode=PROTOCOL llmUsed=${generated.provider !== "none"} openAiReply=${generated.provider === "openai"} sarvamReply=${generated.provider === "sarvam"} llmCalls=${generated.provider !== "none" ? 1 : 0} dbService=none responseType=${wasSent ? (generated.provider === "none" ? "deterministic_fallback" : `${generated.provider}_reply`) : "not_sent_openai_error"} latency=${Date.now() - started}`,
       );
       console.info(
         `[WA-TRACE] messageId=${input.messageId ?? "-"} phone=${maskPhone(phone)} accountType=${accountLabel(identity.linked)} protocol=${protocol} understand=skip db=skip translation=skip chatLlmCalls=${generated.provider !== "none" ? 1 : 0} translateCalls=${plan.translateCalls} finalChatLlmCalls=${generated.provider !== "none" ? 1 : 0} totalMs=${Date.now() - started}`,
@@ -1291,7 +1305,7 @@ async function processInboundTurn(input: {
     const assistEligible = env.WHATSAPP_REPLY_MODE === "openai";
     if (assistEligible) {
       openAiAssistAttempted = true;
-      const assist = await assistWhatsAppReply({
+      const assist = await assistWhatsAppReplyWithRetry({
         userText: text,
         language: merged.language,
         deterministicReply: localized.text,
