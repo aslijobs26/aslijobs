@@ -138,6 +138,41 @@ async function generateConfiguredTextReply(input: {
   return { text: input.deterministicReply, provider: "none" };
 }
 
+/** Route code-authored WhatsApp copy through the selected reply model. In OpenAI
+ * mode, do not silently send the draft when the model is unavailable. */
+async function sendConfiguredWhatsAppText(input: {
+  to: string;
+  userText: string;
+  language: BotLanguage;
+  draft: string;
+  facts: Record<string, unknown>;
+}): Promise<boolean> {
+  const generated = await generateConfiguredTextReply({
+    userText: input.userText,
+    language: input.language,
+    deterministicReply: input.draft,
+    facts: input.facts,
+  });
+  if (env.WHATSAPP_REPLY_MODE === "openai" && generated.provider !== "openai") {
+    logWhatsAppBot("OPENAI_REPLY_NOT_SENT", "reason=model_unavailable_no_scripted_fallback");
+    return false;
+  }
+  await whatsAppService.sendTextMessage(input.to, generated.text);
+  return true;
+}
+
+async function sendGeneratedWhatsAppText(
+  to: string,
+  generated: { text: string; provider: "openai" | "sarvam" | "none" },
+): Promise<boolean> {
+  if (env.WHATSAPP_REPLY_MODE === "openai" && generated.provider !== "openai") {
+    logWhatsAppBot("OPENAI_REPLY_NOT_SENT", "reason=model_unavailable_no_scripted_fallback");
+    return false;
+  }
+  await whatsAppService.sendTextMessage(to, generated.text);
+  return true;
+}
+
 const mediaProgressAcked = new Set<string>();
 const MEDIA_PROGRESS_ACK_MAX = 2_000;
 
@@ -161,10 +196,13 @@ async function acknowledgeMediaProcessing(input: {
   }
   // Official Cloud API: mark read + typing indicator (dismisses on reply or ~25s).
   await whatsAppService.markReadWithTyping(messageId || undefined);
-  await whatsAppService.sendTextMessage(
-    input.from,
-    mediaProgressCopy(input.language, input.messageType),
-  );
+  await sendConfiguredWhatsAppText({
+    to: input.from,
+    userText: `The user sent a ${input.messageType}.`,
+    language: input.language,
+    draft: mediaProgressCopy(input.language, input.messageType),
+    facts: { situation: "media_processing", mediaType: input.messageType },
+  });
   if (messageId) {
     await WhatsAppSessionModel.findOneAndUpdate(
       { phone: input.phone },
@@ -322,7 +360,13 @@ async function processInboundTurn(input: {
         limited?.language === "ml"
           ? limited.language
           : "en";
-      await whatsAppService.sendTextMessage(input.from, rateLimitCopy(limitedLanguage));
+      await sendConfiguredWhatsAppText({
+        to: input.from,
+        userText: input.text?.trim() || "The user sent a message while replies are rate limited.",
+        language: limitedLanguage,
+        draft: rateLimitCopy(limitedLanguage),
+        facts: { situation: "rate_limit" },
+      });
     }
     console.info(
       `[WhatsAppBot] reply_limited phone=${maskPhone(phone)} action=${replySlot}`,
@@ -407,10 +451,13 @@ async function processInboundTurn(input: {
           error instanceof Error ? error.name : "unknown"
         }`,
       );
-      await whatsAppService.sendTextMessage(
-        input.from,
-        serviceErrorCopy("en"),
-      );
+      await sendConfiguredWhatsAppText({
+        to: input.from,
+        userText: input.text?.trim() || "The bot could not verify the account right now.",
+        language: "en",
+        draft: serviceErrorCopy("en"),
+        facts: { situation: "account_lookup_error" },
+      });
       return;
     }
     timing.account_lookup = Date.now() - lookupStarted;
@@ -452,7 +499,13 @@ async function processInboundTurn(input: {
           { phone, lastInteractionAt: new Date() },
           { upsert: true },
         );
-        await whatsAppService.sendTextMessage(input.from, restriction);
+        await sendConfiguredWhatsAppText({
+          to: input.from,
+          userText: text || `The user sent a ${input.messageType}.`,
+          language: sessionLanguage,
+          draft: restriction,
+          facts: { situation: "role_restriction", accountType: identity.linked },
+        });
         console.info(
           `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=MEDIA_ROLE_BLOCK language=${sessionLanguage} understandingMode=GATE llmUsed=false responseType=role_redirect latency=${Date.now() - started}`,
         );
@@ -492,7 +545,17 @@ async function processInboundTurn(input: {
         },
         { upsert: true },
       );
-      await whatsAppService.sendTextMessage(input.from, mediaOutcome.replyText);
+      await sendConfiguredWhatsAppText({
+        to: input.from,
+        userText: text || `The user uploaded a ${input.messageType}.`,
+        language: sessionLanguage,
+        draft: mediaOutcome.replyText,
+        facts: {
+          situation: "media_result",
+          status: mediaOutcome.status,
+          extractedSkills: mediaOutcome.skills.slice(0, 12),
+        },
+      });
       console.info(
         `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=MEDIA language=${sessionLanguage} understandingMode=MEDIA llmUsed=false responseType=media status=${mediaOutcome.status} latency=${Date.now() - started}`,
       );
@@ -522,17 +585,23 @@ async function processInboundTurn(input: {
         console.error(
           `[WhatsApp] voice failed reason=${error instanceof Error ? error.name : "unknown"}`,
         );
-        await whatsAppService.sendTextMessage(
-          input.from,
-          voiceUnclearCopy(sessionLanguage),
-        );
+        await sendConfiguredWhatsAppText({
+          to: input.from,
+          userText: text || "The voice message could not be transcribed.",
+          language: sessionLanguage,
+          draft: voiceUnclearCopy(sessionLanguage),
+          facts: { situation: "voice_transcription_error" },
+        });
         return;
       }
       if (!text) {
-        await whatsAppService.sendTextMessage(
-          input.from,
-          voiceUnclearCopy(sessionLanguage),
-        );
+        await sendConfiguredWhatsAppText({
+          to: input.from,
+          userText: "The voice message had no transcribed words.",
+          language: sessionLanguage,
+          draft: voiceUnclearCopy(sessionLanguage),
+          facts: { situation: "voice_transcription_empty" },
+        });
         return;
       }
     }
@@ -558,7 +627,7 @@ async function processInboundTurn(input: {
         deterministicReply: localized.text,
         facts: turnFacts,
       });
-      await whatsAppService.sendTextMessage(input.from, generated.text);
+      await sendGeneratedWhatsAppText(input.from, generated);
       console.info(
         `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=NO_RESUME language=${language} understandingMode=RULE llmUsed=${generated.provider !== "none"} openAiReply=${generated.provider === "openai"} sarvamReply=${generated.provider === "sarvam"} responseType=${generated.provider === "none" ? "deterministic_fallback" : `${generated.provider}_reply`} latency=${Date.now() - started}`,
       );
@@ -587,7 +656,7 @@ async function processInboundTurn(input: {
         deterministicReply,
         facts: { situation: "greeting", accountType: identity.linked },
       });
-      await whatsAppService.sendTextMessage(input.from, generated.text);
+      await sendGeneratedWhatsAppText(input.from, generated);
       return;
     }
     const protocol = detectProtocolTurn(text);
@@ -620,7 +689,7 @@ async function processInboundTurn(input: {
             deterministicReply,
             facts: { situation: "role_restriction", accountType: "employer" },
           });
-          await whatsAppService.sendTextMessage(input.from, generated.text);
+          await sendGeneratedWhatsAppText(input.from, generated);
           return;
         }
         const copy =
@@ -636,7 +705,7 @@ async function processInboundTurn(input: {
           deterministicReply: copy,
           facts: { situation: "clarify", missing: action.missing, accountType: identity.linked },
         });
-        await whatsAppService.sendTextMessage(input.from, generated.text);
+        await sendGeneratedWhatsAppText(input.from, generated);
         return;
       }
     }
@@ -682,7 +751,7 @@ async function processInboundTurn(input: {
         deterministicReply: reply,
         facts: { situation: protocol, accountType: identity.linked, name },
       });
-      await whatsAppService.sendTextMessage(input.from, generated.text);
+      await sendGeneratedWhatsAppText(input.from, generated);
       timing.whatsapp_send = Date.now() - sendStarted;
       const plan = whatsappAiCallPlan({ protocol: true, voice: input.messageType === "audio", needsTranslation: false });
       logWhatsAppBot("LANGUAGE_DETECTED", `language=${language} source=current_message`);
@@ -735,11 +804,9 @@ async function processInboundTurn(input: {
         identity.linked,
       );
       const localMs = performance.now() - understandStarted;
-      if (
-        env.WHATSAPP_REPLY_MODE !== "sarvam" &&
-        env.WHATSAPP_REPLY_MODE !== "openai" &&
-        !shouldUseLlmFallback(local, text)
-      ) {
+      // Use the local parser for clear requests to avoid a redundant OpenAI
+      // understanding call; OpenAI still generates every final text reply.
+      if (env.WHATSAPP_REPLY_MODE !== "sarvam" && !shouldUseLlmFallback(local, text)) {
         understood = { understanding: local, source: "local" };
         timing.sarvam_understand = 0;
         logWhatsAppBot("LANGUAGE_DETECTED", `language=${local.language} source=local`);
@@ -864,7 +931,7 @@ async function processInboundTurn(input: {
         deterministicReply,
         facts: { situation: "no_match_wait", accountType: identity.linked },
       });
-      await whatsAppService.sendTextMessage(input.from, generated.text);
+      await sendGeneratedWhatsAppText(input.from, generated);
       console.info(
         `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=JOB_SEARCH_WAIT language=${language} understandingMode=ORCHESTRATOR llmUsed=${generated.provider !== "none"} openAiReply=${generated.provider === "openai"} sarvamReply=${generated.provider === "sarvam"} responseType=${generated.provider === "none" ? "deterministic_fallback" : `${generated.provider}_reply`} latency=${Date.now() - started}`,
       );
@@ -1226,6 +1293,11 @@ async function processInboundTurn(input: {
         );
       }
     }
+    if (assistEligible && !openAiUsed) {
+      // In OpenAI mode, never send the code-authored draft as an implicit fallback.
+      logWhatsAppBot("OPENAI_REPLY_NOT_SENT", "reason=model_unavailable_no_scripted_fallback");
+      return;
+    }
     const plan = whatsappAiCallPlan({
       protocol: false,
       voice: input.messageType === "audio",
@@ -1344,10 +1416,14 @@ async function processInboundTurn(input: {
     if (error instanceof Error && error.name === "WhatsAppSendRetryable") {
       throw error;
     }
-    await whatsAppService.sendTextMessage(
-      input.from,
-      serviceErrorCopy(detectLanguage(input.text ?? "", undefined, undefined, true)),
-    );
+    if (env.WHATSAPP_REPLY_MODE !== "openai") {
+      await whatsAppService.sendTextMessage(
+        input.from,
+        serviceErrorCopy(detectLanguage(input.text ?? "", undefined, undefined, true)),
+      );
+    } else {
+      logWhatsAppBot("OPENAI_REPLY_NOT_SENT", "reason=exception_no_scripted_fallback");
+    }
   }
 }
 
