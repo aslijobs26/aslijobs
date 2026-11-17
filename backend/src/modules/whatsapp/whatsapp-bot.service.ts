@@ -735,7 +735,11 @@ async function processInboundTurn(input: {
         identity.linked,
       );
       const localMs = performance.now() - understandStarted;
-      if (env.WHATSAPP_REPLY_MODE !== "sarvam" && !shouldUseLlmFallback(local, text)) {
+      if (
+        env.WHATSAPP_REPLY_MODE !== "sarvam" &&
+        env.WHATSAPP_REPLY_MODE !== "openai" &&
+        !shouldUseLlmFallback(local, text)
+      ) {
         understood = { understanding: local, source: "local" };
         timing.sarvam_understand = 0;
         logWhatsAppBot("LANGUAGE_DETECTED", `language=${local.language} source=local`);

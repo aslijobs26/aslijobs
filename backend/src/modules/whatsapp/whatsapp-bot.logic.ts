@@ -1525,6 +1525,28 @@ export function applyCurrentMessageSearchRules(
     /\bjobs?\s+(?:of\s+)?any\s+(?:kind|type|category)\b/i.test(text);
   const asksNationwide =
     /\b(?:in\s+india|across\s+india|all\s+india|pan[\s-]?india|nationwide)\b/i.test(text);
+  // A current message that says "job(s) in India" establishes national scope,
+  // even when it omits "any". Clear stale city/role slots unless this message
+  // explicitly names a role; keep any salary parsed from the current message.
+  const explicitRoleInNationwideRequest = extractRole(text);
+  if (
+    asksNationwide &&
+    (explicitRoleInNationwideRequest || mentionsJobWord(text) || includesAny(text, REQUEST_WORDS))
+  ) {
+    return {
+      ...understanding,
+      intent: understanding.intent === "JOB_COUNT" ? "JOB_COUNT" : "JOB_SEARCH",
+      scope: "PUBLIC_JOBS",
+      requiresAuth: false,
+      location: "",
+      locationKind: "",
+      category: explicitRoleInNationwideRequest,
+      jobQuery: explicitRoleInNationwideRequest,
+      openSearch: !explicitRoleInNationwideRequest,
+      anyLocation: true,
+      reuseLocation: false,
+    };
+  }
   if (asksForAnyJobType && (asksNationwide || wantsAnyLocation(text) || extractPlace(text))) {
     const nationwide = asksNationwide || wantsAnyLocation(text);
     const explicitLocation = nationwide ? "" : extractPlace(text);
