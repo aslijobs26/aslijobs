@@ -100,6 +100,27 @@ import {
 
 const whatsAppService = new WhatsAppService();
 
+async function generateSarvamTextReply(input: {
+  userText: string;
+  language: BotLanguage;
+  deterministicReply: string;
+  facts: Record<string, unknown>;
+}): Promise<{ text: string; used: boolean }> {
+  if (env.WHATSAPP_REPLY_MODE !== "sarvam") {
+    return { text: input.deterministicReply, used: false };
+  }
+  const generated = await generateSarvamReply({
+    ...input,
+    modelFacts: compactFacts(input.facts),
+  });
+  if (generated.ok) return { text: generated.responseText, used: true };
+  logWhatsAppBot(
+    "SARVAM_REPLY_FALLBACK",
+    `reason=${generated.reason} latencyMs=${generated.latencyMs}`,
+  );
+  return { text: input.deterministicReply, used: false };
+}
+
 const mediaProgressAcked = new Set<string>();
 const MEDIA_PROGRESS_ACK_MAX = 2_000;
 
@@ -514,9 +535,15 @@ async function processInboundTurn(input: {
         { phone, language, lastInteractionAt: new Date() },
         { upsert: true },
       );
-      await whatsAppService.sendTextMessage(input.from, localized.text);
+      const generated = await generateSarvamTextReply({
+        userText: text,
+        language,
+        deterministicReply: localized.text,
+        facts: turnFacts,
+      });
+      await whatsAppService.sendTextMessage(input.from, generated.text);
       console.info(
-        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=NO_RESUME language=${language} understandingMode=RULE llmUsed=false responseType=deterministic latency=${Date.now() - started}`,
+        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=NO_RESUME language=${language} understandingMode=RULE llmUsed=${generated.used} sarvamReply=${generated.used} responseType=${generated.used ? "sarvam_reply" : "deterministic_fallback"} latency=${Date.now() - started}`,
       );
       return;
     }
@@ -536,10 +563,14 @@ async function processInboundTurn(input: {
         { upsert: true },
       );
       logWhatsAppBot("SESSION_RESET", "reason=explicit_reset cleared=temporary_search");
-      await whatsAppService.sendTextMessage(
-        input.from,
-        protocolReply("greeting", language, identity.linked, ""),
-      );
+      const deterministicReply = protocolReply("greeting", language, identity.linked, "");
+      const generated = await generateSarvamTextReply({
+        userText: text,
+        language,
+        deterministicReply,
+        facts: { situation: "greeting", accountType: identity.linked },
+      });
+      await whatsAppService.sendTextMessage(input.from, generated.text);
       return;
     }
     const protocol = detectProtocolTurn(text);
@@ -565,7 +596,14 @@ async function processInboundTurn(input: {
             { upsert: true },
           );
           logWhatsAppBot("CLARIFY_ANSWER", `employer_skip_seeker_slot missing=${action.missing}`);
-          await whatsAppService.sendTextMessage(input.from, capabilityCopy(language, "employer"));
+          const deterministicReply = capabilityCopy(language, "employer");
+          const generated = await generateSarvamTextReply({
+            userText: text,
+            language,
+            deterministicReply,
+            facts: { situation: "role_restriction", accountType: "employer" },
+          });
+          await whatsAppService.sendTextMessage(input.from, generated.text);
           return;
         }
         const copy =
@@ -575,7 +613,13 @@ async function processInboundTurn(input: {
               ? askLocationCopy(language)
               : clarifyJobTitle(language);
         logWhatsAppBot("CLARIFY_ANSWER", `reask missing=${action.missing}`);
-        await whatsAppService.sendTextMessage(input.from, copy);
+        const generated = await generateSarvamTextReply({
+          userText: text,
+          language,
+          deterministicReply: copy,
+          facts: { situation: "clarify", missing: action.missing, accountType: identity.linked },
+        });
+        await whatsAppService.sendTextMessage(input.from, generated.text);
         return;
       }
     }
@@ -615,25 +659,33 @@ async function processInboundTurn(input: {
         jobSeekerId: identity.seekerId,
       });
       const sendStarted = Date.now();
-      await whatsAppService.sendTextMessage(input.from, reply);
+      const generated = await generateSarvamTextReply({
+        userText: text,
+        language,
+        deterministicReply: reply,
+        facts: { situation: protocol, accountType: identity.linked, name },
+      });
+      await whatsAppService.sendTextMessage(input.from, generated.text);
       timing.whatsapp_send = Date.now() - sendStarted;
       const plan = whatsappAiCallPlan({ protocol: true, voice: input.messageType === "audio", needsTranslation: false });
       logWhatsAppBot("LANGUAGE_DETECTED", `language=${language} source=current_message`);
       logWhatsAppBot("LOCAL_INTENT", `intent=${protocol.toUpperCase()} confidence=1 source=protocol`);
-      logWhatsAppBot("LLM_SKIPPED", "reason=protocol_template");
-      logWhatsAppBot("TEMPLATE_USED", `situation=${protocol}`);
+      if (!generated.used) {
+        logWhatsAppBot("LLM_SKIPPED", "reason=protocol_template_or_sarvam_fallback");
+        logWhatsAppBot("TEMPLATE_USED", `situation=${protocol}`);
+      }
       logWhatsAppBot("REPLY_SENT", `language=${language} protocol=${protocol}`);
       console.info(
-        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${protocol.toUpperCase()} language=${language} understandingMode=PROTOCOL llmUsed=false llmCalls=0 dbService=none responseType=template latency=${Date.now() - started}`,
+        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=${protocol.toUpperCase()} language=${language} understandingMode=PROTOCOL llmUsed=${generated.used} sarvamReply=${generated.used} llmCalls=${generated.used ? 1 : 0} dbService=none responseType=${generated.used ? "sarvam_reply" : "deterministic_fallback"} latency=${Date.now() - started}`,
       );
       console.info(
-        `[WA-TRACE] messageId=${input.messageId ?? "-"} phone=${maskPhone(phone)} accountType=${accountLabel(identity.linked)} protocol=${protocol} understand=skip db=skip translation=skip chatLlmCalls=${plan.chatLlmCalls} translateCalls=${plan.translateCalls} finalChatLlmCalls=${plan.finalChatLlmCalls} totalMs=${Date.now() - started}`,
+        `[WA-TRACE] messageId=${input.messageId ?? "-"} phone=${maskPhone(phone)} accountType=${accountLabel(identity.linked)} protocol=${protocol} understand=skip db=skip translation=skip chatLlmCalls=${generated.used ? 1 : 0} translateCalls=${plan.translateCalls} finalChatLlmCalls=${generated.used ? 1 : 0} totalMs=${Date.now() - started}`,
       );
       console.info(
-        `[WA-AI-COST] stage=PROTOCOL provider=none model=none inputTokens=0 outputTokens=0 totalTokens=0 durationMs=${Date.now() - started}`,
+        `[WA-AI-COST] stage=PROTOCOL provider=${generated.used ? "sarvam" : "none"} model=${generated.used ? "chat" : "none"} durationMs=${Date.now() - started}`,
       );
       console.info(
-        `[WA-PERF] protocol=${protocol} account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms sarvam_understand=0ms db_query=0ms translate=0ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
+        `[WA-PERF] protocol=${protocol} account_lookup=${timing.account_lookup}ms session_lookup=${timing.session_lookup}ms sarvam_understand=0ms sarvam_reply=${generated.used ? "yes" : "no"} db_query=0ms translate=0ms whatsapp_send=${timing.whatsapp_send}ms total=${Date.now() - started}ms`,
       );
       return;
     }
@@ -784,9 +836,16 @@ async function processInboundTurn(input: {
         },
         { upsert: true },
       );
-      await whatsAppService.sendTextMessage(input.from, noMatchWaitCopy(language));
+      const deterministicReply = noMatchWaitCopy(language);
+      const generated = await generateSarvamTextReply({
+        userText: text,
+        language,
+        deterministicReply,
+        facts: { situation: "no_match_wait", accountType: identity.linked },
+      });
+      await whatsAppService.sendTextMessage(input.from, generated.text);
       console.info(
-        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=JOB_SEARCH_WAIT language=${language} understandingMode=ORCHESTRATOR llmUsed=false responseType=no_match_wait latency=${Date.now() - started}`,
+        `[WA-FLOW] accountType=${accountLabel(identity.linked)} intent=JOB_SEARCH_WAIT language=${language} understandingMode=ORCHESTRATOR llmUsed=${generated.used} sarvamReply=${generated.used} responseType=${generated.used ? "sarvam_reply" : "deterministic_fallback"} latency=${Date.now() - started}`,
       );
       return;
     }
