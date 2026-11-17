@@ -144,6 +144,13 @@ const ROLE_REJECT = new Set([
   "avail",
   "there",
   "are",
+  // Salary language and country scope are search filters, never job titles.
+  "salary",
+  "salaried",
+  "salery",
+  "salered",
+  "monthly",
+  "india",
 ]);
 
 const EXPERIENCE_LABELS: Record<string, string> = {
@@ -183,6 +190,16 @@ function titleCase(value: string): string {
 
 function cleanRolePhrase(value: string, isKnownPlace: (place: string) => boolean): string {
   let phrase = value.replace(/\s+/g, " ").trim();
+  // Strip salary descriptors accidentally captured by patterns like
+  // "salaried jobs" or "60k salaried jobs" while preserving a real role
+  // that follows them (for example, "60k salaried driver jobs").
+  if (/\b(?:salary|salaried|salery|salered|monthly|per\s+month)\b/i.test(phrase)) {
+    phrase = phrase
+      .replace(/^(?:₹\s*)?\d[\d,]*(?:\.\d+)?\s*(?:k|l|lakh|lakhs)?\s+/i, "")
+      .replace(/^(?:salary|salaried|salery|salered|monthly|per\s+month)\s+/i, "")
+      .replace(/\s+(?:salary|salaried|salery|salered|monthly|per\s+month)$/i, "")
+      .trim();
+  }
   let previous = "";
   while (phrase && phrase !== previous) {
     previous = phrase;

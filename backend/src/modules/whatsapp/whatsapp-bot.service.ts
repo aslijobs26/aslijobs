@@ -576,11 +576,15 @@ async function processInboundTurn(input: {
         const speech = await transcribeWhatsAppAudio({
           buffer: media.buffer,
           mimeType: input.mimeType || media.mimeType,
-          languageHint: session?.language,
+          // A conversation can switch languages between voice notes. Do not
+          // force the last reply language onto this recording; let STT detect it.
+          languageHint: input.languageHint,
         });
         text = speech.transcript.trim();
         languageHint = speech.languageHint || languageHint;
-        console.info("[WhatsApp] voice transcript ready");
+        console.info(
+          `[WhatsApp] voice transcript ready chars=${text.length} detectedLanguage=${speech.languageHint || "unknown"}`,
+        );
       } catch (error) {
         console.error(
           `[WhatsApp] voice failed reason=${error instanceof Error ? error.name : "unknown"}`,

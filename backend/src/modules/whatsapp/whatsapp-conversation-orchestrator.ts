@@ -31,7 +31,15 @@ export type JobSearchSessionSlots = {
 export function resolveNoMatchChoice(text: string): NoMatchChoice {
   const trimmed = text.trim();
   if (!trimmed) return "";
-  if (/^1[).:]?$|takkuva|lower\s+salary|less\s+salary|konchem\s+takkuva/i.test(trimmed)) {
+  const lowerSalaryChoice =
+    /^1[).:]?$|takkuva|lower\s+salary|less\s+salary|low\s+salary|konchem\s+takkuva/i.test(trimmed) ||
+    // Native-language voice transcripts commonly preserve the source script.
+    /\u0c24\u0c15\u0c4d\u0c15\u0c41\u0c35.{0,24}\u0c1c\u0c40\u0c24\u0c02/i.test(trimmed) ||
+    /\u0915\u092e.{0,16}(?:\u0935\u0947\u0924\u0928|\u0938\u0948\u0932\u0930\u0940|\u0924\u0928\u0916\u094d\u0935\u093e\u0939)/i.test(trimmed) ||
+    /\u0b95\u0bc1\u0bb1\u0bc8\u0ba8\u0bcd\u0ba4.{0,20}\u0b9a\u0bae\u0bcd\u0baa\u0bb3\u0bae\u0bcd/i.test(trimmed) ||
+    /\u0c95\u0ca1\u0cbf\u0cae\u0cc6.{0,20}\u0cb8\u0c82\u0cac\u0cb3/i.test(trimmed) ||
+    /\u0d15\u0d41\u0d31\u0d1e\u0d4d\u0d1e.{0,20}\u0d36\u0d2e\u0d4d\u0d2a\u0d33\u0d02/i.test(trimmed);
+  if (lowerSalaryChoice) {
     return "relax_salary";
   }
   if (/^2[).:]?$|nearby|daggar|vere\s+location|other\s+location|near\b/i.test(trimmed)) {
