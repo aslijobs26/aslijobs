@@ -37,6 +37,26 @@ export const HERO_FEATURE_KEYS: Record<HeroFeatureId, TitleDescriptionKeys> = {
   },
 };
 
+/** Shown only while the hiring-team photo is on screen. Keys follow the same card slots. */
+export const HERO_HIRING_TEAM_FEATURE_KEYS: Record<HeroFeatureId, TitleDescriptionKeys> = {
+  "voice-search": {
+    title: "home.hero.features.hiringTeam.bulkHiring.title",
+    description: "home.hero.features.hiringTeam.bulkHiring.description",
+  },
+  "whatsapp-first": {
+    title: "home.hero.features.hiringTeam.aiShortlisting.title",
+    description: "home.hero.features.hiringTeam.aiShortlisting.description",
+  },
+  "verified-jobs": {
+    title: "home.hero.features.hiringTeam.verifiedTalent.title",
+    description: "home.hero.features.hiringTeam.verifiedTalent.description",
+  },
+  "in-your-language": {
+    title: "home.hero.features.hiringTeam.inYourLanguage.title",
+    description: "home.hero.features.hiringTeam.inYourLanguage.description",
+  },
+};
+
 /** "in-your-language" intentionally keeps its regional-language demo message. */
 export const HERO_FEATURE_MESSAGE_KEYS: Partial<Record<HeroFeatureId, MessageKey>> = {
   "voice-search": "home.hero.messages.voiceSearch",

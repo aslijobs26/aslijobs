@@ -22,7 +22,7 @@ export function CategorySection() {
         actionHref={ROUTES.JOB_CATEGORIES}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 xl:grid-cols-8">
+      <div className="grid grid-cols-4 gap-2 sm:gap-2.5 lg:grid-cols-8 lg:gap-3">
         {JOB_CATEGORIES.map((category) => (
           <CategoryCard
             key={category.id}

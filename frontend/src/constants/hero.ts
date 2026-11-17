@@ -6,8 +6,10 @@ export const HERO_HEADING = {
 } as const;
 
 export const HERO_SUPPORTING = {
-  line1: "The fastest way to hire people or find jobs.",
-  line2: "Simple • Multilingual • WhatsApp First",
+  badge: "India's Jobs Platform for Blue & Grey Collar Workforce",
+  line1:
+    "From drivers to technicians, delivery partners to factory workers,\nfind genuine job opportunities through WhatsApp, in your own language.",
+  line2: "Simple • Multilingual • AI Enabled • WhatsApp First",
 } as const;
 
 export const HERO_FEATURE_CARDS = [

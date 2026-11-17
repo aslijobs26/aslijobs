@@ -25,7 +25,7 @@ export function HeroPhoneMessageBubble({
       aria-live="polite"
       aria-hidden={!visible}
       className={cn(
-        "pointer-events-none absolute z-40 hidden origin-bottom-left transition-all duration-[260ms] ease-out will-change-transform motion-reduce:transition-none lg:left-[14%] lg:top-[34%]",
+        "pointer-events-none absolute z-40 hidden origin-bottom-left transition-all duration-[260ms] ease-out will-change-transform motion-reduce:transition-none lg:left-[28%] lg:top-[6%]",
         "[@media(hover:hover)_and_(min-width:1024px)]:block",
         visible
           ? "translate-y-0 scale-100 opacity-100"

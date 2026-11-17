@@ -19,6 +19,7 @@ import operationsTeamsRouter from "./teams/operations-teams.routes.js";
 import operationsSettingsRouter from "./organization/operations-settings.routes.js";
 import operationsWhatsAppInboxRouter from "./whatsapp-inbox/operations-whatsapp-inbox.routes.js";
 import operationsWebsiteKnowledgeRouter from "./website-knowledge/operations-website-knowledge.routes.js";
+import { hireAssistAdminRouter } from "../hire-assist/hire-assist.admin.routes.js";
 
 export const operationsRouter = Router();
 
@@ -45,5 +46,6 @@ operationsRouter.use(
 );
 operationsRouter.use("/whatsapp-inbox", operationsWhatsAppInboxRouter);
 operationsRouter.use("/website-knowledge", operationsWebsiteKnowledgeRouter);
+operationsRouter.use("/hire-assist", hireAssistAdminRouter);
 
 export default operationsRouter;

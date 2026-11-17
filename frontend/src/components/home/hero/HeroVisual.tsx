@@ -1,53 +1,52 @@
 "use client";
 
-import heroPersonImage from "@/assets/image/hero-img.png";
+import heroDeliveryImage from "@/assets/image/hero-delivery.png";
+import heroElectricianImage from "@/assets/image/hero-electrician.png";
+import heroHiringTeamImage from "@/assets/image/hero-hiring-team.png";
+import heroSecurityImage from "@/assets/image/hero-security.png";
 import {
   HERO_FEATURE_KEYS,
-  HERO_FEATURE_MESSAGE_KEYS,
+  HERO_HIRING_TEAM_FEATURE_KEYS,
 } from "@/components/home/home-i18n";
-import { HERO_FEATURE_CARDS, HERO_FEATURE_MESSAGES } from "@/constants/hero";
+import { HERO_FEATURE_CARDS } from "@/constants/hero";
 import { useTranslate } from "@/i18n/translate";
-import type {
-  HeroFeatureCardPosition,
-  HeroFeatureId,
-  HeroFeatureMessage,
-} from "@/types/hero";
+import type { HeroFeatureCardPosition, HeroFeatureId } from "@/types/hero";
 import { cn } from "@/utils/cn";
-import { Languages, Mic, ShieldCheck } from "lucide-react";
-import Image from "next/image";
-import { useState } from "react";
+import { Bot, Languages, Mic, ShieldCheck, Users } from "lucide-react";
+import Image, { type StaticImageData } from "next/image";
+import { useEffect, useState } from "react";
 import { HeroFeatureCard } from "./HeroFeatureCard";
-import { HeroPhoneMessageBubble } from "./HeroPhoneMessageBubble";
 import { WhatsAppIcon } from "./HeroIcons";
 
-const PHONE_MESSAGE_ID = "hero-phone-message";
+/** Order matches the hero reference: electrician, security, delivery, hiring team. */
+const HERO_PERSONS: readonly StaticImageData[] = [
+  heroElectricianImage,
+  heroSecurityImage,
+  heroDeliveryImage,
+  heroHiringTeamImage,
+];
+
+const PERSON_ROTATE_MS = 4800;
+const HIRING_TEAM_INDEX = HERO_PERSONS.length - 1;
 
 /** Glyph scales with card — largest only at 2xl. */
 const iconClassName =
-  "size-3 mobile:size-3.5 md:size-3.5 lg:size-4 xl:size-4 2xl:size-5";
+  "size-3 mobile:size-2.5 md:size-3.5 lg:size-4 xl:size-4 2xl:size-5";
 
 /**
- * Floating card anchors.
- * Bottom cards: z-30 in front of the person (z-[1]).
- * xl/2xl use mild offsets so left cards stay in the illustration column
- * (not over the language chips).
+ * Cards are anchored to the illustration stage, not the viewport.
+ * Top-left / top-right sit beside the head. Lower cards sit beside the torso.
+ * They stay put while the person crossfades.
  */
 const FLOATING_POSITIONS: Record<HeroFeatureCardPosition, string> = {
   "top-left":
-    "absolute z-10 -left-2 top-0 w-max max-w-[8.5rem] mobile:-left-3 mobile:top-0 mobile:max-w-[9.25rem] md:-left-4 md:top-0 md:max-w-[10rem] lg:z-20 lg:-left-10 lg:top-[14%] lg:max-w-[11rem] xl:-left-14 xl:top-[16%] xl:max-w-[13rem] 2xl:-left-16 2xl:top-[18%] 2xl:max-w-[14rem]",
+    "absolute z-20 left-0 top-[22%] w-max mobile:top-[30%] md:top-[28%] lg:left-0 lg:top-[30%] xl:top-[28%]",
   "top-right":
-    "absolute z-10 -right-2 top-6 w-max max-w-[8.5rem] mobile:-right-3 mobile:top-0 mobile:max-w-[9.25rem] md:-right-4 md:top-0 md:max-w-[10rem] lg:z-20 lg:-right-10 lg:top-[12%] lg:max-w-[11rem] xl:-right-14 xl:top-[14%] xl:max-w-[13rem] 2xl:-right-16 2xl:top-[16%] 2xl:max-w-[14rem]",
+    "absolute z-20 right-0 top-0 w-max mobile:top-[6%] md:top-[2%] lg:right-0 lg:top-[2%] xl:top-0",
   "bottom-left":
-    "absolute z-30 -left-2 bottom-4 w-max max-w-[8.5rem] mobile:-left-3 mobile:bottom-[14%] mobile:max-w-[9.25rem] md:-left-4 md:bottom-1 md:max-w-[10rem] lg:-left-6 lg:bottom-[10%] lg:max-w-[11rem] xl:-left-4 xl:bottom-[12%] xl:max-w-[13rem] 2xl:-left-6 2xl:bottom-[14%] 2xl:max-w-[14rem]",
+    "absolute z-20 left-0 top-[68%] w-max mobile:top-[62%] md:top-[64%] lg:left-0 lg:top-[72%] xl:top-[74%]",
   "bottom-right":
-    "absolute z-30 -right-2 bottom-1 w-max max-w-[8.5rem] mobile:-right-3 mobile:bottom-[8%] mobile:max-w-[9.25rem] md:-right-4 md:bottom-1 md:max-w-[10rem] lg:-right-6 lg:bottom-[18%] lg:max-w-[11rem] xl:-right-4 xl:bottom-[20%] xl:max-w-[13rem] 2xl:-right-6 2xl:bottom-[22%] 2xl:max-w-[14rem]",
-};
-
-const CARD_DESKTOP_POSITION_OVERRIDES: Partial<Record<HeroFeatureId, string>> = {
-  "voice-search": "lg:top-[16%] xl:top-[17%] 2xl:top-[18%]",
-  "whatsapp-first": "lg:top-[14%] xl:top-[15%] 2xl:top-[16%]",
-  "verified-jobs": "lg:bottom-[12%] xl:bottom-[13%] 2xl:bottom-[14%]",
-  "in-your-language": "lg:bottom-[20%] xl:bottom-[22%] 2xl:bottom-[24%]",
+    "absolute z-20 right-0 top-[72%] w-max mobile:top-[66%] md:top-[68%] lg:right-0 lg:top-[74%] xl:top-[76%]",
 };
 
 /**
@@ -55,7 +54,7 @@ const CARD_DESKTOP_POSITION_OVERRIDES: Partial<Record<HeroFeatureId, string>> = 
  * Mobile/tablet get comfortable padding; xl+ stays denser until 2xl.
  */
 const CARD_SIZE_SCALE =
-  "w-max max-w-full gap-1.5 px-2.5 py-2 mobile:gap-2 mobile:px-3 mobile:py-2.5 [&>div:first-child]:size-6 mobile:[&>div:first-child]:size-7 md:gap-2 md:px-3 md:py-2.5 md:[&>div:first-child]:size-7 lg:gap-1.5 lg:px-2 lg:py-1.5 lg:[&>div:first-child]:size-8 xl:gap-2 xl:px-2.5 xl:py-2 xl:[&>div:first-child]:size-10 2xl:gap-2.5 2xl:px-2.5 2xl:py-2 2xl:[&>div:first-child]:size-14";
+  "w-max gap-2 px-2.5 py-2 [&>div:first-child]:size-8 mobile:gap-1.5 mobile:px-2 mobile:py-1.5 mobile:[&>div:first-child]:size-6 md:gap-2.5 md:px-3 md:py-2 md:[&>div:first-child]:size-9 lg:gap-2.5 lg:px-3 lg:py-2 lg:[&>div:first-child]:size-9 xl:gap-2.5 xl:px-3.5 xl:py-2.5 xl:[&>div:first-child]:size-10";
 
 const FLOAT_ANIMATIONS: Record<string, string> = {
   "voice-search": "animate-hero-float-voice",
@@ -83,6 +82,25 @@ function getFeatureIcon(id: string) {
   }
 }
 
+function getHiringTeamIcon(id: HeroFeatureId) {
+  switch (id) {
+    case "voice-search":
+      return <Users className={iconClassName} strokeWidth={2} aria-hidden="true" />;
+    case "whatsapp-first":
+      return <Bot className={iconClassName} strokeWidth={2} aria-hidden="true" />;
+    case "verified-jobs":
+      return (
+        <ShieldCheck className={iconClassName} strokeWidth={2} aria-hidden="true" />
+      );
+    case "in-your-language":
+      return (
+        <Languages className={iconClassName} strokeWidth={2} aria-hidden="true" />
+      );
+    default:
+      return <Users className={iconClassName} strokeWidth={2} aria-hidden="true" />;
+  }
+}
+
 function getIconContainerClassName(id: string) {
   if (id === "whatsapp-first") {
     return "relative overflow-hidden rounded-full";
@@ -93,24 +111,22 @@ function getIconContainerClassName(id: string) {
 
 export function HeroVisual() {
   const t = useTranslate();
-  const [activeFeature, setActiveFeature] = useState<HeroFeatureId | null>(null);
-  // Keep the last feature so its text stays put while the bubble fades out.
-  const [displayedFeature, setDisplayedFeature] =
-    useState<HeroFeatureId | null>(null);
+  const [personIndex, setPersonIndex] = useState(0);
 
-  const showFeature = (id: HeroFeatureId) => {
-    setActiveFeature(id);
-    setDisplayedFeature(id);
-  };
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (media.matches) {
+      return;
+    }
 
-  const clearFeature = (id: HeroFeatureId) =>
-    setActiveFeature((current) => (current === id ? null : current));
+    const timer = window.setInterval(() => {
+      setPersonIndex((current) => (current + 1) % HERO_PERSONS.length);
+    }, PERSON_ROTATE_MS);
 
-  const getFeatureMessage = (id: HeroFeatureId): HeroFeatureMessage => {
-    const message = HERO_FEATURE_MESSAGES[id];
-    const messageKey = HERO_FEATURE_MESSAGE_KEYS[id];
-    return messageKey ? { ...message, text: t(messageKey) } : message;
-  };
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const hiringTeam = personIndex === HIRING_TEAM_INDEX;
 
   const topCards = HERO_FEATURE_CARDS.filter(
     (card) => card.position === "top-left" || card.position === "top-right",
@@ -123,75 +139,74 @@ export function HeroVisual() {
   const renderFeatureCard = (card: (typeof HERO_FEATURE_CARDS)[number]) => (
     <div
       key={card.id}
-      className={cn(
-        FLOATING_POSITIONS[card.position],
-        CARD_DESKTOP_POSITION_OVERRIDES[card.id],
-        "rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-      )}
-      tabIndex={0}
-      aria-describedby={PHONE_MESSAGE_ID}
-      onMouseEnter={() => showFeature(card.id)}
-      onMouseLeave={() => clearFeature(card.id)}
-      onFocus={() => showFeature(card.id)}
-      onBlur={() => clearFeature(card.id)}
+      className={FLOATING_POSITIONS[card.position]}
     >
       <HeroFeatureCard
-        title={t(HERO_FEATURE_KEYS[card.id].title)}
-        description={t(HERO_FEATURE_KEYS[card.id].description)}
-        icon={getFeatureIcon(card.id)}
-        iconContainerClassName={getIconContainerClassName(card.id)}
+        title={t(
+          (hiringTeam ? HERO_HIRING_TEAM_FEATURE_KEYS : HERO_FEATURE_KEYS)[card.id]
+            .title,
+        )}
+        description={t(
+          (hiringTeam ? HERO_HIRING_TEAM_FEATURE_KEYS : HERO_FEATURE_KEYS)[card.id]
+            .description,
+        )}
+        icon={hiringTeam ? getHiringTeamIcon(card.id) : getFeatureIcon(card.id)}
+        iconContainerClassName={
+          hiringTeam ? undefined : getIconContainerClassName(card.id)
+        }
         className={cn(FLOAT_ANIMATIONS[card.id], CARD_SIZE_SCALE)}
       />
     </div>
   );
 
   return (
-    <div className="relative mt-2 flex w-full min-w-0 flex-col items-center mobile:mt-1.5 md:mt-4 lg:mt-0 lg:items-center lg:justify-start">
+    <div className="relative mt-2 flex w-full min-w-0 flex-col items-center mobile:mt-1.5 md:mt-4 lg:mt-0 lg:h-full lg:items-center lg:justify-end">
       <div
         className={cn(
-          "hero-illustration-group relative w-full max-w-[min(100%,318px)] mobile:max-w-[min(100%,340px)] md:max-w-[380px] lg:mx-auto lg:max-w-[100%] lg:min-w-0 xl:max-w-[620px] 2xl:max-w-[680px]",
+          "hero-illustration-group relative mx-auto w-full max-w-full min-w-0 md:max-w-[640px] lg:max-w-[100%] xl:max-w-[620px] 2xl:max-w-[680px]",
         )}
       >
         <div
-          className="pointer-events-none absolute left-1/2 top-[45%] size-[220px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-80 mobile:size-[240px] md:size-[300px] lg:hidden"
+          className="pointer-events-none absolute left-1/2 top-[45%] size-[220px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-80 mobile:top-1/2 mobile:size-[280px] md:top-1/2 md:size-[420px] lg:hidden"
           aria-hidden="true"
         />
 
-        <div className="relative isolate mx-auto min-h-[340px] w-full min-w-0 overflow-visible px-0 mobile:min-h-[380px] mobile:px-1 md:min-h-[420px] md:px-0 lg:min-h-0 lg:max-w-[460px] xl:max-w-[500px] 2xl:max-w-[540px] lg:px-0">
+        <div className="relative isolate mx-auto w-full min-w-0 overflow-visible px-0 lg:px-0">
           <div
-            className="pointer-events-none absolute left-1/2 top-[36%] z-0 hidden size-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-25 xl:size-[380px] 2xl:size-[420px] lg:block"
+            className="pointer-events-none absolute left-1/2 top-1/2 z-0 hidden size-[280px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-hero-glow opacity-25 xl:size-[340px] lg:block"
             aria-hidden="true"
           />
 
           {topCards.map(renderFeatureCard)}
 
-          {/* Person stays behind bottom cards (z-[1] < z-30). */}
           <div
             className={cn(
-              "pointer-events-none absolute left-1/2 top-[50%] z-[1] w-[56%] max-w-[160px] -translate-x-1/2 -translate-y-1/2",
-              "mobile:w-[54%] mobile:max-w-[180px] md:top-[48%] md:w-[64%] md:max-w-[230px]",
-              "lg:relative lg:left-auto lg:top-auto lg:z-[1] lg:mx-auto lg:mt-[-0.5rem] lg:w-full lg:max-w-[270px] lg:translate-x-0 lg:translate-y-0",
-              "xl:max-w-[310px] 2xl:max-w-[350px]",
+              "pointer-events-none relative z-[1] mx-auto aspect-[5/4] w-[58%] max-w-[240px]",
+              "mobile:w-[86%] mobile:max-w-[320px] md:w-4/5 md:max-w-md",
+              "lg:w-[92%] lg:max-w-none xl:w-[94%] 2xl:max-w-[560px]",
             )}
           >
-            <Image
-              src={heroPersonImage}
-              alt={t("home.hero.imageAlt")}
-              priority
-              className="h-auto w-full object-contain"
-            />
+            {HERO_PERSONS.map((person, index) => {
+              const active = index === personIndex;
+              return (
+                <Image
+                  key={person.src}
+                  src={person}
+                  alt={active ? t("home.hero.imageAlt") : ""}
+                  aria-hidden={active ? undefined : true}
+                  priority={index === 0}
+                  fill
+                  sizes="(min-width: 1280px) 560px, (min-width: 1024px) 500px, 70vw"
+                  className={cn(
+                    "object-contain object-center transition-opacity duration-700 ease-in-out motion-reduce:transition-none",
+                    active ? "opacity-100" : "opacity-0",
+                  )}
+                />
+              );
+            })}
           </div>
 
-          {/* Bottom cards after person in DOM + z-30 → clearly in front on xl. */}
           {bottomCards.map(renderFeatureCard)}
-
-          <HeroPhoneMessageBubble
-            id={PHONE_MESSAGE_ID}
-            visible={activeFeature !== null}
-            message={
-              displayedFeature ? getFeatureMessage(displayedFeature) : null
-            }
-          />
         </div>
       </div>
     </div>

@@ -35,6 +35,6 @@ export const HERO_CTA_CARDS = [
     title: "Need Help Hiring?",
     description: "Our experts will help you hire faster",
     actionLabel: "Get Hire Assist",
-    href: ROUTES.CONTACT,
+    href: ROUTES.HIRE_ASSIST,
   },
 ] as const;

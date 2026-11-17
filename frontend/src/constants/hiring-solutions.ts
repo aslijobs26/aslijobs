@@ -44,7 +44,7 @@ export const HIRING_SOLUTIONS: readonly HiringSolution[] = [
       "Candidate data access",
     ],
     actionLabel: "Get Hire Assist",
-    href: ROUTES.CONTACT,
+    href: ROUTES.HIRE_ASSIST,
   },
   {
     id: "business-hiring",

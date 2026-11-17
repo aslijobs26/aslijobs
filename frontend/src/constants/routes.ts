@@ -59,6 +59,7 @@ export const ROUTES = {
   JOB_SEEKER_SETTINGS: "/job-seeker/settings",
   EMPLOYER_NOTIFICATIONS: "/employer/notifications",
   CONTACT: "/contact",
+  HIRE_ASSIST: "/hire-assist",
   EMPLOYERS: "/employer/register",
   /** Informational content pages for job seekers (footer links). */
   JOB_SEEKER_FIND_JOBS: "/find-jobs",

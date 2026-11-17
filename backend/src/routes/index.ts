@@ -13,6 +13,7 @@ import savedCandidateRouter from "../modules/saved-candidates/saved-candidate.ro
 import savedJobRouter from "../modules/saved-jobs/saved-job.routes.js";
 import teamRouter from "../modules/team/team.routes.js";
 import whatsappRouter from "../modules/whatsapp/whatsapp.routes.js";
+import hireAssistRouter from "../modules/hire-assist/hire-assist.routes.js";
 
 const apiRouter = Router();
 
@@ -30,5 +31,6 @@ apiRouter.use("/analytics", analyticsEventRouter);
 apiRouter.use("/geo", languageRegionRouter);
 apiRouter.use("/operations", operationsRouter);
 apiRouter.use("/whatsapp", whatsappRouter);
+apiRouter.use("/hire-assist", hireAssistRouter);
 
 export default apiRouter;

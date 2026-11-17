@@ -15,7 +15,7 @@ export function FooterWhatsAppPanel() {
   return (
     <aside
       aria-label={t("footer.whatsappSupport")}
-      className="min-w-0 border-t border-border/20 pt-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0"
+      className="min-w-0 border-t border-border/20 pt-6 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0 xl:pl-6"
     >
       <h3 className="text-sm font-bold text-balance text-surface">{t("footer.whatsappTitle")}</h3>
 

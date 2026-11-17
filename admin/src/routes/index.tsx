@@ -19,6 +19,7 @@ import { OperationsDepartmentsPage } from "./operations-departments-page";
 import { OperationsOrganizationPage } from "./operations-organization-page";
 import { OperationsAnalyticsPage } from "./operations-analytics-page";
 import { OperationsPlaceholderPage } from "./operations-placeholder-page";
+import { OperationsSupportTicketsPage } from "./operations-support-tickets-page";
 import { OperationsWhatsAppInboxPage } from "./operations-whatsapp-inbox-page";
 import { OperationsRoleEditorPage } from "./operations-role-editor-page";
 import { OperationsRolePreviewPage } from "./operations-role-preview-page";
@@ -96,7 +97,7 @@ export function AppRoutes() {
         />
         <Route
           path={OPERATIONS_ROUTES.SUPPORT_TICKETS}
-          element={<OperationsPlaceholderPage title="Support Tickets" />}
+          element={<OperationsSupportTicketsPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.EMPLOYERS}

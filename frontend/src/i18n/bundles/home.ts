@@ -9,10 +9,12 @@ const en = {
       logoAlt: "{name} logo",
     },
     hero: {
+      badge: "India's Jobs Platform for Blue & Grey Collar Workforce",
       headingLine1: "Find Jobs Easy.",
       headingLine2: "On WhatsApp.",
-      supportingLine1: "The fastest way to hire people or find jobs.",
-      supportingLine2: "Simple • Multilingual • WhatsApp First",
+      supportingLine1:
+        "From drivers to technicians, delivery partners to factory workers,\nfind genuine job opportunities through WhatsApp, in your own language.",
+      supportingLine2: "Simple • Multilingual • AI Enabled • WhatsApp First",
       languagesLabel: "Multi-language Support",
       languagesAria: "Supported languages",
       imageAlt: "Job seeker browsing jobs on WhatsApp",
@@ -21,6 +23,12 @@ const en = {
         whatsappFirst: { title: "WhatsApp First", description: "No App Needed" },
         verifiedJobs: { title: "Verified Jobs", description: "Trusted Employers" },
         inYourLanguage: { title: "In Your Language", description: "Apply with ease" },
+        hiringTeam: {
+          bulkHiring: { title: "Bulk Hiring", description: "Hire At Scale" },
+          aiShortlisting: { title: "AI Shortlisting", description: "Find Candidates" },
+          verifiedTalent: { title: "Verified Talent", description: "Trusted Job Seekers" },
+          inYourLanguage: { title: "In Your language", description: "Post Jobs Easily" },
+        },
       },
       messages: {
         voiceSearch: "Delivery jobs near me",
@@ -255,10 +263,12 @@ const hi: HomeCatalog = {
       logoAlt: "{name} लोगो",
     },
     hero: {
+      badge: "ब्लू और ग्रे कॉलर वर्कफोर्स के लिए भारत का जॉब्स प्लेटफॉर्म",
       headingLine1: "आसानी से नौकरी पाएं।",
       headingLine2: "WhatsApp पर।",
-      supportingLine1: "लोगों को काम पर रखने या नौकरी पाने का सबसे तेज़ तरीका।",
-      supportingLine2: "आसान • बहुभाषी • WhatsApp फ़र्स्ट",
+      supportingLine1:
+        "ड्राइवर से टेक्नीशियन तक, डिलीवरी पार्टनर से फैक्ट्री वर्कर तक,\nWhatsApp पर अपनी भाषा में असली नौकरी के अवसर पाएं।",
+      supportingLine2: "आसान • बहुभाषी • AI सक्षम • WhatsApp फ़र्स्ट",
       languagesLabel: "बहुभाषी सहायता",
       languagesAria: "समर्थित भाषाएं",
       imageAlt: "WhatsApp पर नौकरियां देखता नौकरी खोजने वाला",
@@ -267,6 +277,12 @@ const hi: HomeCatalog = {
         whatsappFirst: { title: "WhatsApp फ़र्स्ट", description: "कोई ऐप नहीं चाहिए" },
         verifiedJobs: { title: "सत्यापित नौकरियां", description: "भरोसेमंद नियोक्ता" },
         inYourLanguage: { title: "आपकी भाषा में", description: "आसानी से आवेदन करें" },
+        hiringTeam: {
+          bulkHiring: { title: "बल्क हायरिंग", description: "बड़े पैमाने पर भर्ती" },
+          aiShortlisting: { title: "एआई शॉर्टलिस्टिंग", description: "उम्मीदवार खोजें" },
+          verifiedTalent: { title: "सत्यापित प्रतिभा", description: "भरोसेमंद नौकरी चाहने वाले" },
+          inYourLanguage: { title: "आपकी भाषा में", description: "आसानी से नौकरी पोस्ट करें" },
+        },
       },
       messages: {
         voiceSearch: "मेरे पास डिलीवरी की नौकरियां",
@@ -495,11 +511,12 @@ const te: HomeCatalog = {
       logoAlt: "{name} లోగో",
     },
     hero: {
+      badge: "బ్లూ & గ్రే కాలర్ వర్క్‌ఫోర్స్ కోసం భారతదేశ ఉద్యోగాల వేదిక",
       headingLine1: "ఉద్యోగాలు సులభంగా పొందండి.",
       headingLine2: "WhatsAppలో.",
       supportingLine1:
-        "సిబ్బందిని నియమించుకోవడానికి లేదా ఉద్యోగం పొందడానికి అత్యంత వేగవంతమైన మార్గం.",
-      supportingLine2: "సులభం • బహుభాషా • WhatsApp ఫస్ట్",
+        "డ్రైవర్ల నుండి టెక్నీషియన్ల వరకు, డెలివరీ పార్ట్‌నర్ల నుండి ఫ్యాక్టరీ కార్మికుల వరకు,\nWhatsApp ద్వారా మీ భాషలో నిజమైన ఉద్యోగ అవకాశాలను కనుగొనండి.",
+      supportingLine2: "సులభం • బహుభాషా • AI సక్రియం • WhatsApp ఫస్ట్",
       languagesLabel: "బహుభాషా సపోర్ట్",
       languagesAria: "అందుబాటులో ఉన్న భాషలు",
       imageAlt: "WhatsAppలో ఉద్యోగాలు చూస్తున్న ఉద్యోగార్థి",
@@ -508,6 +525,12 @@ const te: HomeCatalog = {
         whatsappFirst: { title: "WhatsApp ఫస్ట్", description: "యాప్ అవసరం లేదు" },
         verifiedJobs: { title: "ధృవీకరించిన ఉద్యోగాలు", description: "నమ్మకమైన యజమానులు" },
         inYourLanguage: { title: "మీ భాషలో", description: "సులభంగా దరఖాస్తు చేయండి" },
+        hiringTeam: {
+          bulkHiring: { title: "బల్క్ హైరింగ్", description: "పెద్ద ఎత్తున నియామకం" },
+          aiShortlisting: { title: "ఏఐ షార్ట్‌లిస్టింగ్", description: "అభ్యర్థులను కనుగొనండి" },
+          verifiedTalent: { title: "ధృవీకరించిన ప్రతిభ", description: "నమ్మకమైన ఉద్యోగార్థులు" },
+          inYourLanguage: { title: "మీ భాషలో", description: "ఉద్యోగాలు సులభంగా పోస్ట్ చేయండి" },
+        },
       },
       messages: {
         voiceSearch: "నా దగ్గర డెలివరీ ఉద్యోగాలు",
@@ -739,10 +762,12 @@ const ta: HomeCatalog = {
       logoAlt: "{name} லோகோ",
     },
     hero: {
+      badge: "ப்ளூ & கிரே காலர் பணியாளர்களுக்கான இந்தியாவின் வேலை தளம்",
       headingLine1: "எளிதாக வேலை தேடுங்கள்.",
       headingLine2: "WhatsApp-இல்.",
-      supportingLine1: "ஆட்களை பணியமர்த்த அல்லது வேலை தேட மிக விரைவான வழி.",
-      supportingLine2: "எளிமை • பல மொழி • WhatsApp முதன்மை",
+      supportingLine1:
+        "ஓட்டுநர்கள் முதல் தொழில்நுட்ப வல்லுநர்கள் வரை, டெலிவரி கூட்டாளிகள் முதல் தொழிற்சாலை தொழிலாளர்கள் வரை,\nWhatsApp மூலம் உங்கள் மொழியில் உண்மையான வேலை வாய்ப்புகளைக் கண்டறியுங்கள்.",
+      supportingLine2: "எளிமை • பல மொழி • AI இயக்கம் • WhatsApp முதன்மை",
       languagesLabel: "பல மொழி ஆதரவு",
       languagesAria: "ஆதரிக்கப்படும் மொழிகள்",
       imageAlt: "WhatsApp-இல் வேலைகளைப் பார்க்கும் வேலை தேடுபவர்",
@@ -754,6 +779,12 @@ const ta: HomeCatalog = {
           description: "நம்பகமான முதலாளிகள்",
         },
         inYourLanguage: { title: "உங்கள் மொழியில்", description: "எளிதாக விண்ணப்பிக்கவும்" },
+        hiringTeam: {
+          bulkHiring: { title: "மொத்த ஆட்சேர்ப்பு", description: "பெரிய அளவில் ஆட்சேர்ப்பு" },
+          aiShortlisting: { title: "AI குறுக்குப்பட்டியல்", description: "வேட்பாளர்களைக் கண்டறியுங்கள்" },
+          verifiedTalent: { title: "சரிபார்க்கப்பட்ட திறமை", description: "நம்பகமான வேலை தேடுபவர்கள்" },
+          inYourLanguage: { title: "உங்கள் மொழியில்", description: "வேலைகளை எளிதாக இடுகையிடுங்கள்" },
+        },
       },
       messages: {
         voiceSearch: "எனக்கு அருகில் டெலிவரி வேலைகள்",
@@ -988,10 +1019,12 @@ const kn: HomeCatalog = {
       logoAlt: "{name} ಲೋಗೋ",
     },
     hero: {
+      badge: "ಬ್ಲೂ ಮತ್ತು ಗ್ರೇ ಕಾಲರ್ ಕಾರ್ಯಪಡೆಗಾಗಿ ಭಾರತದ ಉದ್ಯೋಗ ವೇದಿಕೆ",
       headingLine1: "ಸುಲಭವಾಗಿ ಉದ್ಯೋಗ ಹುಡುಕಿ.",
       headingLine2: "WhatsApp ನಲ್ಲಿ.",
-      supportingLine1: "ಸಿಬ್ಬಂದಿಯನ್ನು ನೇಮಿಸಿಕೊಳ್ಳಲು ಅಥವಾ ಉದ್ಯೋಗ ಪಡೆಯಲು ಅತ್ಯಂತ ವೇಗದ ಮಾರ್ಗ.",
-      supportingLine2: "ಸರಳ • ಬಹುಭಾಷಾ • WhatsApp ಮೊದಲು",
+      supportingLine1:
+        "ಚಾಲಕರಿಂದ ತಂತ್ರಜ್ಞರವರೆಗೆ, ಡೆಲಿವರಿ ಪಾಲುದಾರರಿಂದ ಕಾರ್ಖಾನೆ ಕಾರ್ಮಿಕರವರೆಗೆ,\nWhatsApp ಮೂಲಕ ನಿಮ್ಮ ಭಾಷೆಯಲ್ಲಿ ನಿಜವಾದ ಉದ್ಯೋಗಾವಕಾಶಗಳನ್ನು ಹುಡುಕಿ.",
+      supportingLine2: "ಸರಳ • ಬಹುಭಾಷಾ • AI ಸಕ್ರಿಯ • WhatsApp ಮೊದಲು",
       languagesLabel: "ಬಹುಭಾಷಾ ಬೆಂಬಲ",
       languagesAria: "ಬೆಂಬಲಿತ ಭಾಷೆಗಳು",
       imageAlt: "WhatsApp ನಲ್ಲಿ ಉದ್ಯೋಗಗಳನ್ನು ನೋಡುತ್ತಿರುವ ಉದ್ಯೋಗಾರ್ಥಿ",
@@ -1000,6 +1033,12 @@ const kn: HomeCatalog = {
         whatsappFirst: { title: "WhatsApp ಮೊದಲು", description: "ಆ್ಯಪ್ ಬೇಕಿಲ್ಲ" },
         verifiedJobs: { title: "ಪರಿಶೀಲಿತ ಉದ್ಯೋಗಗಳು", description: "ನಂಬಿಕಸ್ಥ ಉದ್ಯೋಗದಾತರು" },
         inYourLanguage: { title: "ನಿಮ್ಮ ಭಾಷೆಯಲ್ಲಿ", description: "ಸುಲಭವಾಗಿ ಅರ್ಜಿ ಸಲ್ಲಿಸಿ" },
+        hiringTeam: {
+          bulkHiring: { title: "ಬಲ್ಕ್ ನೇಮಕಾತಿ", description: "ದೊಡ್ಡ ಪ್ರಮಾಣದಲ್ಲಿ ನೇಮಕ" },
+          aiShortlisting: { title: "ಎಐ ಶಾರ್ಟ್‌ಲಿಸ್ಟಿಂಗ್", description: "ಅಭ್ಯರ್ಥಿಗಳನ್ನು ಹುಡುಕಿ" },
+          verifiedTalent: { title: "ಪರಿಶೀಲಿತ ಪ್ರತಿಭೆ", description: "ನಂಬಿಕಸ್ಥ ಉದ್ಯೋಗಾರ್ಥಿಗಳು" },
+          inYourLanguage: { title: "ನಿಮ್ಮ ಭಾಷೆಯಲ್ಲಿ", description: "ಉದ್ಯೋಗಗಳನ್ನು ಸುಲಭವಾಗಿ ಪೋಸ್ಟ್ ಮಾಡಿ" },
+        },
       },
       messages: {
         voiceSearch: "ನನ್ನ ಹತ್ತಿರದ ಡೆಲಿವರಿ ಉದ್ಯೋಗಗಳು",
@@ -1230,10 +1269,12 @@ const ml: HomeCatalog = {
       logoAlt: "{name} ലോഗോ",
     },
     hero: {
+      badge: "ബ്ലൂ & ഗ്രേ കോളർ തൊഴിലാളികൾക്കായുള്ള ഇന്ത്യയുടെ ജോബ് പ്ലാറ്റ്‌ഫോം",
       headingLine1: "എളുപ്പത്തിൽ ജോലി കണ്ടെത്തൂ.",
       headingLine2: "WhatsApp-ൽ.",
-      supportingLine1: "ആളുകളെ നിയമിക്കാനോ ജോലി കണ്ടെത്താനോ ഉള്ള ഏറ്റവും വേഗമേറിയ മാർഗം.",
-      supportingLine2: "ലളിതം • ബഹുഭാഷ • WhatsApp ഫസ്റ്റ്",
+      supportingLine1:
+        "ഡ്രൈവർമാരിൽ നിന്ന് ടെക്നീഷ്യൻമാർ വരെ, ഡെലിവറി പങ്കാളികളിൽ നിന്ന് ഫാക്ടറി തൊഴിലാളികൾ വരെ,\nWhatsApp വഴി നിങ്ങളുടെ ഭാഷയിൽ യഥാർത്ഥ ജോലി അവസരങ്ങൾ കണ്ടെത്തൂ.",
+      supportingLine2: "ലളിതം • ബഹുഭാഷ • AI പ്രാപ്തം • WhatsApp ഫസ്റ്റ്",
       languagesLabel: "ബഹുഭാഷാ പിന്തുണ",
       languagesAria: "പിന്തുണയ്ക്കുന്ന ഭാഷകൾ",
       imageAlt: "WhatsApp-ൽ ജോലികൾ തിരയുന്ന തൊഴിൽ അന്വേഷകൻ",
@@ -1242,6 +1283,12 @@ const ml: HomeCatalog = {
         whatsappFirst: { title: "WhatsApp ഫസ്റ്റ്", description: "ആപ്പ് ആവശ്യമില്ല" },
         verifiedJobs: { title: "പരിശോധിച്ച ജോലികൾ", description: "വിശ്വസ്ത തൊഴിലുടമകൾ" },
         inYourLanguage: { title: "നിങ്ങളുടെ ഭാഷയിൽ", description: "എളുപ്പത്തിൽ അപേക്ഷിക്കൂ" },
+        hiringTeam: {
+          bulkHiring: { title: "ബൾക്ക് ഹയറിംഗ്", description: "വലിയ തോതിൽ നിയമനം" },
+          aiShortlisting: { title: "എഐ ഷോർട്ട്‌ലിസ്റ്റിംഗ്", description: "സ്ഥാനാർത്ഥികളെ കണ്ടെത്തൂ" },
+          verifiedTalent: { title: "പരിശോധിച്ച പ്രതിഭ", description: "വിശ്വസ്ത തൊഴിൽ അന്വേഷകർ" },
+          inYourLanguage: { title: "നിങ്ങളുടെ ഭാഷയിൽ", description: "ജോലികൾ എളുപ്പത്തിൽ പോസ്റ്റ് ചെയ്യൂ" },
+        },
       },
       messages: {
         voiceSearch: "എന്റെ അടുത്തുള്ള ഡെലിവറി ജോലികൾ",

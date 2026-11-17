@@ -11,7 +11,7 @@ export function HeroFeatureCard({
   return (
     <div
       className={cn(
-        "flex items-center rounded-xl border border-border-subtle bg-surface shadow-sm",
+        "flex items-center rounded-md border border-border-subtle bg-surface shadow-sm md:rounded-xl",
         className,
       )}
     >
@@ -24,11 +24,11 @@ export function HeroFeatureCard({
       >
         {icon}
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-px">
-        <p className="text-balance break-words text-[10px] font-bold leading-tight text-foreground mobile:text-[11px] md:text-xs lg:text-xs xl:text-sm 2xl:text-base">
+      <div className="flex shrink-0 flex-col gap-0.5 pr-0.5 mobile:gap-0">
+        <p className="whitespace-nowrap text-[11px] font-bold leading-tight text-foreground mobile:text-[9px] md:text-[13px] lg:text-sm">
           {title}
         </p>
-        <p className="text-balance break-words text-[9px] leading-snug text-muted mobile:text-[10px] md:text-[11px] lg:text-[11px] xl:text-xs 2xl:text-sm">
+        <p className="whitespace-nowrap text-[10px] leading-snug text-muted mobile:text-[8px] md:text-xs lg:text-[13px]">
           {description}
         </p>
       </div>
