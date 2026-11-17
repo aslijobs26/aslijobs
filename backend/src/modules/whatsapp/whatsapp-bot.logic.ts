@@ -425,6 +425,9 @@ export function detectLanguage(
   const roman = explicitRomanLanguage(text);
   if (roman) return roman;
   const trimmed = text.trim();
+  // These plain English greetings should switch the reply language to English,
+  // even when the previous voice turn was in Telugu or another language.
+  if (/^(hi|hello|hey)[.!?]*$/i.test(trimmed)) return "en";
   if (previous && isAmbiguousLanguageSignal(trimmed)) {
     return previous;
   }

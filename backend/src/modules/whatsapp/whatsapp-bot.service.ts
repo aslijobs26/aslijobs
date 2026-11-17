@@ -545,14 +545,29 @@ async function processInboundTurn(input: {
         },
         { upsert: true },
       );
+      const unregisteredMedia = identity.linked === "none" && mediaOutcome.status === "completed";
+      const mediaReplyDraft = unregisteredMedia
+        ? [
+            "I received and read your document, but this WhatsApp number is not linked to a Job Seeker account, so I cannot attach it to a profile.",
+            `To save your resume and use resume-based job matching, create a Job Seeker account: ${siteUrls(sessionLanguage).seekerRegisterUrl}`,
+            "You can still search public jobs now. Tell me the job role and city you want.",
+            mediaOutcome.skills.length > 0
+              ? `Skills I could read: ${mediaOutcome.skills.slice(0, 12).join(", ")}.`
+              : "I could not identify a clear skills list in the document.",
+          ].join("\n")
+        : mediaOutcome.replyText;
       await sendConfiguredWhatsAppText({
         to: input.from,
         userText: text || `The user uploaded a ${input.messageType}.`,
         language: sessionLanguage,
-        draft: mediaOutcome.replyText,
+        draft: mediaReplyDraft,
         facts: {
-          situation: "media_result",
+          situation: unregisteredMedia ? "unregistered_document_upload" : "media_result",
           status: mediaOutcome.status,
+          accountType: identity.linked,
+          profileUpdated: false,
+          seekerRegistrationUrl: unregisteredMedia ? siteUrls(sessionLanguage).seekerRegisterUrl : "",
+          canSearchPublicJobsWithoutAccount: true,
           extractedSkills: mediaOutcome.skills.slice(0, 12),
         },
       });
