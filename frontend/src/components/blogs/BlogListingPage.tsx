@@ -386,7 +386,12 @@ function ReadingTime({ minutes }: { minutes: number }) {
 
 function CategoryStackCard({ blog, large = false }: { blog: BlogCard; large?: boolean }) {
   return (
-    <Link href={ROUTES.blog(blog.slug)} className="group flex min-w-0 items-start gap-3.5">
+    <Link
+      href={ROUTES.blog(blog.slug)}
+      className={cn(
+        "group flex min-w-0 items-start gap-3.5 rounded-xl border border-[#e4ebe8] bg-white p-2.5 shadow-sm",
+      )}
+    >
       <span className={cn("shrink-0 overflow-hidden rounded-lg bg-primary-light", large ? "size-32" : "size-36")}>
         {blog.coverImageUrl ? <img src={blog.coverImageUrl} alt="" className="size-full object-cover" /> : null}
       </span>
