@@ -1,6 +1,8 @@
 import { getSiteUrl } from "@/constants/site-url";
+import { fetchBlogSitemap } from "@/services/blogs.service";
 import { fetchSitemapJobsPage } from "@/services/sitemap-jobs.service";
 import {
+  buildBlogEntries,
   buildJobEntries,
   buildPublicPageEntries,
   parseSitemapFile,
@@ -28,7 +30,19 @@ export async function GET(
   const siteUrl = getSiteUrl();
 
   if (sitemapFile.kind === "pages") {
-    return sitemapXmlResponse(buildUrlsetXml(buildPublicPageEntries(siteUrl)));
+    let blogEntries: ReturnType<typeof buildBlogEntries> = [];
+    try {
+      const blogs = await fetchBlogSitemap();
+      blogEntries = buildBlogEntries(
+        siteUrl,
+        blogs.map((blog) => ({ slug: blog.slug, lastModified: blog.updatedAt })),
+      );
+    } catch (error) {
+      logSitemapFailure("public blogs unavailable for pages sitemap", error);
+    }
+    return sitemapXmlResponse(
+      buildUrlsetXml([...buildPublicPageEntries(siteUrl), ...blogEntries]),
+    );
   }
 
   try {

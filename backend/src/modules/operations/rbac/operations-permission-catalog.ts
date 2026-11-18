@@ -777,6 +777,7 @@ const UNIMPLEMENTED_READ_WRITE: OperationsPermissionModule[] = [
   "whatsapp",
   "support",
   "verifications",
+  "content",
   "escalations",
   "campaigns",
 ];

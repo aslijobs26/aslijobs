@@ -37,6 +37,11 @@ import { OperationsMyWorkPerformancePage } from "./operations-my-work-performanc
 import { OperationsVerificationReviewPage } from "./operations-verification-review-page";
 import { OperationsVerificationsPage } from "./operations-verifications-page";
 import { OperationsWebsiteKnowledgePage } from "./operations-website-knowledge-page";
+import { OperationsBlogsPage } from "./operations-blogs-page";
+import { OperationsBlogEditorRoute } from "./operations-blog-editor-page";
+import { OperationsBlogPreviewPage } from "./operations-blog-preview-page";
+import { OperationsBlogCategoriesPage } from "./operations-blog-categories-page";
+import { OperationsBlogTagsPage } from "./operations-blog-tags-page";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 function OperationsProtectedLayout() {
@@ -211,6 +216,12 @@ export function AppRoutes() {
           path={OPERATIONS_ROUTES.WEBSITE_KNOWLEDGE}
           element={<OperationsWebsiteKnowledgePage />}
         />
+        <Route path={OPERATIONS_ROUTES.BLOGS_NEW} element={<OperationsBlogEditorRoute />} />
+        <Route path={`${OPERATIONS_ROUTES.BLOGS}/:blogId/edit`} element={<OperationsBlogEditorRoute />} />
+        <Route path={`${OPERATIONS_ROUTES.BLOGS}/:blogId/preview`} element={<OperationsBlogPreviewPage />} />
+        <Route path={OPERATIONS_ROUTES.BLOGS} element={<OperationsBlogsPage />} />
+        <Route path={OPERATIONS_ROUTES.BLOG_CATEGORIES} element={<OperationsBlogCategoriesPage />} />
+        <Route path={OPERATIONS_ROUTES.BLOG_TAGS} element={<OperationsBlogTagsPage />} />
         <Route
           path={OPERATIONS_ROUTES.BUSINESS_DEVELOPMENT}
           element={

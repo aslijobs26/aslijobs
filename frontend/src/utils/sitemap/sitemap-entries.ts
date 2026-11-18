@@ -20,6 +20,7 @@ export const PUBLIC_SITEMAP_PATHS = [
   "/employer-guide",
   "/employer-login-info",
   "/resources",
+  "/blogs",
   "/help-center",
   "/faqs",
   "/guidelines",
@@ -77,6 +78,31 @@ export function buildPublicPageEntries(siteUrl: string): SitemapEntry[] {
   return PUBLIC_SITEMAP_PATHS.map((path) => ({
     loc: buildPageUrl(siteUrl, path),
   }));
+}
+
+const BLOG_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export type SitemapBlog = {
+  slug: string;
+  lastModified: string | null;
+};
+
+export function buildBlogEntries(
+  siteUrl: string,
+  blogs: readonly SitemapBlog[],
+): SitemapEntry[] {
+  const seen = new Set<string>();
+  const entries: SitemapEntry[] = [];
+  for (const blog of blogs) {
+    const slug = blog.slug.trim().toLowerCase();
+    if (!BLOG_SLUG_PATTERN.test(slug) || seen.has(slug)) continue;
+    seen.add(slug);
+    entries.push({
+      loc: `${siteUrl}/blogs/${slug}`,
+      lastModified: blog.lastModified,
+    });
+  }
+  return entries;
 }
 
 export function buildJobEntries(

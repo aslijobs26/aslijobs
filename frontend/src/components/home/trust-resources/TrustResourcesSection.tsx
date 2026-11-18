@@ -4,6 +4,7 @@ import { Container } from "@/components/layout/Container";
 import { useTranslate } from "@/i18n/translate";
 import { HomeStatsBanner } from "./HomeStatsBanner";
 import { HowItWorksSection } from "./HowItWorksSection";
+import { HomeBlogSection } from "@/components/blogs/HomeBlogSection";
 import { JobSeekerResources } from "./JobSeekerResources";
 import { WhyChooseSection } from "./WhyChooseSection";
 
@@ -19,6 +20,7 @@ export function TrustResourcesSection() {
         <WhyChooseSection />
         <HowItWorksSection />
         <JobSeekerResources />
+        <HomeBlogSection />
         <HomeStatsBanner />
       </Container>
     </section>

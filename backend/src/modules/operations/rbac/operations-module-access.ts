@@ -39,6 +39,7 @@ export const OPERATIONS_MODULE_ENTRY_VIEW_KEYS: Partial<
   work_queue: ["work_queue.view"],
   escalations: ["escalations.view"],
   activity_logs: ["activity_logs.view"],
+  content: ["content.view"],
 };
 
 function hasFineGrantsForModule(

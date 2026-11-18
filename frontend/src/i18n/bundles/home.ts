@@ -220,6 +220,9 @@ const en = {
       },
       resourcesTitle: "Job Seeker Resources",
       resourcesAction: "View all resources →",
+      blogsTitle: "Career insights",
+      blogsAction: "View all blogs →",
+      blogsEmpty: "New articles will appear here.",
       resources: {
         guide: {
           title: "Job Seeker Guide",
@@ -470,6 +473,9 @@ const hi: HomeCatalog = {
       },
       resourcesTitle: "नौकरी खोजने वालों के लिए संसाधन",
       resourcesAction: "सभी संसाधन देखें →",
+      blogsTitle: "करियर लेख",
+      blogsAction: "सभी लेख देखें →",
+      blogsEmpty: "नए लेख यहाँ दिखेंगे।",
       resources: {
         guide: {
           title: "नौकरी खोजने वाले के लिए गाइड",
@@ -720,6 +726,9 @@ const te: HomeCatalog = {
       },
       resourcesTitle: "ఉద్యోగార్థుల వనరులు",
       resourcesAction: "అన్ని వనరులు చూడండి →",
+      blogsTitle: "కెరీర్ వ్యాసాలు",
+      blogsAction: "అన్ని వ్యాసాలు చూడండి →",
+      blogsEmpty: "కొత్త వ్యాసాలు ఇక్కడ కనిపిస్తాయి.",
       resources: {
         guide: {
           title: "ఉద్యోగార్థి గైడ్",
@@ -977,6 +986,9 @@ const ta: HomeCatalog = {
       },
       resourcesTitle: "வேலை தேடுபவர் வளங்கள்",
       resourcesAction: "அனைத்து வளங்களையும் பாருங்கள் →",
+      blogsTitle: "தொழில் கட்டுரைகள்",
+      blogsAction: "அனைத்து கட்டுரைகளும் →",
+      blogsEmpty: "புதிய கட்டுரைகள் இங்கே தோன்றும்.",
       resources: {
         guide: {
           title: "வேலை தேடுபவர் வழிகாட்டி",
@@ -1228,6 +1240,9 @@ const kn: HomeCatalog = {
       },
       resourcesTitle: "ಉದ್ಯೋಗಾರ್ಥಿ ಸಂಪನ್ಮೂಲಗಳು",
       resourcesAction: "ಎಲ್ಲಾ ಸಂಪನ್ಮೂಲಗಳನ್ನು ನೋಡಿ →",
+      blogsTitle: "ವೃತ್ತಿ ಲೇಖನಗಳು",
+      blogsAction: "ಎಲ್ಲಾ ಲೇಖನಗಳನ್ನು ನೋಡಿ →",
+      blogsEmpty: "ಹೊಸ ಲೇಖನಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.",
       resources: {
         guide: {
           title: "ಉದ್ಯೋಗಾರ್ಥಿ ಮಾರ್ಗದರ್ಶಿ",
@@ -1481,6 +1496,9 @@ const ml: HomeCatalog = {
       },
       resourcesTitle: "തൊഴിൽ അന്വേഷകർക്കുള്ള ഉറവിടങ്ങൾ",
       resourcesAction: "എല്ലാ ഉറവിടങ്ങളും കാണൂ →",
+      blogsTitle: "കരിയർ ലേഖനങ്ങൾ",
+      blogsAction: "എല്ലാ ലേഖനങ്ങളും കാണൂ →",
+      blogsEmpty: "പുതിയ ലേഖനങ്ങൾ ഇവിടെ കാണാം.",
       resources: {
         guide: {
           title: "തൊഴിൽ അന്വേഷക ഗൈഡ്",

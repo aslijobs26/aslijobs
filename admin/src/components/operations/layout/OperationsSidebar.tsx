@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { ChevronsLeft, X } from "lucide-react";
-import { useMemo, type CSSProperties } from "react";
+import { useLayoutEffect, useMemo, useRef, type CSSProperties } from "react";
 import indiaStatesMap from "../../../assets/india-states-map.json";
 import {
   OPERATIONS_BRAND,
@@ -104,6 +104,8 @@ function isNavItemActive(
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
+let savedNavScroll = 0;
+
 export function OperationsSidebar({
   collapsed,
   onCollapseToggle,
@@ -112,7 +114,22 @@ export function OperationsSidebar({
   density = "compact",
 }: OperationsSidebarProps) {
   const location = useLocation();
+  const navRef = useRef<HTMLElement>(null);
   const isCompact = density === "compact";
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    nav.scrollTop = savedNavScroll;
+    const active = nav.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!active) return;
+    const navRect = nav.getBoundingClientRect();
+    const itemRect = active.getBoundingClientRect();
+    if (itemRect.top < navRect.top || itemRect.bottom > navRect.bottom) {
+      active.scrollIntoView({ block: "nearest" });
+      savedNavScroll = nav.scrollTop;
+    }
+  }, [location.pathname]);
+
   const sidebarWidth = isCompact
     ? OPERATIONS_SIDEBAR_WIDTH_COMPACT
     : OPERATIONS_SIDEBAR_WIDTH;
@@ -275,6 +292,10 @@ export function OperationsSidebar({
         </div>
 
         <nav
+          ref={navRef}
+          onScroll={(event) => {
+            savedNavScroll = event.currentTarget.scrollTop;
+          }}
           className={cn(
             "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-hidden",
             isCompact ? "px-2 py-2.5" : "px-2.5 py-3",
