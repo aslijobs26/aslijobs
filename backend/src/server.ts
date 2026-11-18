@@ -26,6 +26,7 @@ let stopEmployerProfileReminders: (() => Promise<void>) | null = null;
 let stopJobSeekerProfileReminders: (() => Promise<void>) | null = null;
 let stopJobPostIncompleteReminders: (() => Promise<void>) | null = null;
 let stopWebsiteKnowledge: (() => Promise<void>) | null = null;
+let stopBlogPublish: (() => void) | null = null;
 
 async function shutdown(signal: string, exitCode = 0): Promise<void> {
   if (isShuttingDown) {
@@ -57,6 +58,8 @@ async function shutdown(signal: string, exitCode = 0): Promise<void> {
   stopNotificationRetention = null;
   stopWorkReconcile?.();
   stopWorkReconcile = null;
+  stopBlogPublish?.();
+  stopBlogPublish = null;
 
   const stops: Array<Promise<unknown>> = [
     closeHttp,
@@ -129,6 +132,12 @@ async function startServer(): Promise<void> {
   stopJobSeekerProfileReminders = startJobSeekerProfileCompletionReminderRuntime();
   stopJobPostIncompleteReminders = startJobPostIncompleteReminderRuntime();
   stopWebsiteKnowledge = startWebsiteKnowledgeRuntime();
+  const { startBlogPublishScheduler } = await import(
+    "./modules/blogs/blog-scheduler.js"
+  );
+  const { ensureDefaultBlogCategories } = await import("./modules/blogs/blog.service.js");
+  await ensureDefaultBlogCategories();
+  stopBlogPublish = startBlogPublishScheduler();
 
   httpServer = app.listen(env.PORT, () => {
     console.log(`AsliJobs API running on port ${env.PORT}`);

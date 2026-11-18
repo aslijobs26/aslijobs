@@ -1,0 +1,210 @@
+.article {
+  color: var(--color-foreground);
+  background: #fff;
+}
+
+.body {
+  color: color-mix(in srgb, var(--color-foreground) 82%, var(--color-muted));
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+
+.body > * + * {
+  margin-top: 1.35rem;
+}
+
+.body p {
+  color: color-mix(in srgb, var(--color-foreground) 78%, var(--color-muted));
+}
+
+.body h2,
+.body h3 {
+  color: var(--color-foreground);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.body h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 0.15rem;
+  font-size: 1.375rem;
+}
+
+.body h3 {
+  margin-top: 2rem;
+  margin-bottom: 0.1rem;
+  font-size: 1.15rem;
+}
+
+.body h2 + *,
+.body h3 + * {
+  margin-top: 0.85rem;
+}
+
+.body a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.body strong {
+  color: var(--color-foreground);
+  font-weight: 700;
+}
+
+.body ul,
+.body ol {
+  padding-left: 1.35rem;
+}
+
+.body ul {
+  list-style: disc;
+}
+
+.body ol {
+  list-style: decimal;
+}
+
+.body li + li {
+  margin-top: 0.4rem;
+}
+
+.body li::marker {
+  color: var(--color-primary);
+}
+
+.body blockquote {
+  margin-top: 1.5rem;
+  border-left: 3px solid var(--color-primary);
+  padding: 0.15rem 0 0.15rem 1rem;
+  color: var(--color-muted);
+  font-size: 1.05rem;
+}
+
+.body figure {
+  margin-top: 1.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.body img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.9rem;
+  object-fit: cover;
+}
+
+.body figcaption {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.body :global(.blog-youtube) {
+  margin: 1.75rem 0;
+}
+
+.body :global(.blog-youtube) a {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 0.9rem;
+  background: #111827;
+  text-decoration: none;
+}
+
+.body :global(.blog-youtube) img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  object-fit: cover;
+  object-position: center;
+}
+
+.body :global(.blog-youtube) a::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4.25rem;
+  height: 3rem;
+  transform: translate(-50%, -50%);
+  border-radius: 0.8rem;
+  background: #ff0033;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.body :global(.blog-youtube) a::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  transform: translate(-35%, -50%);
+  border-style: solid;
+  border-width: 0.55rem 0 0.55rem 0.9rem;
+  border-color: transparent transparent transparent white;
+}
+
+.body iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border: 0;
+  border-radius: 0.9rem;
+  background: #111827;
+}
+
+.body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.body th,
+.body td {
+  border: 1px solid var(--color-border-subtle);
+  padding: 0.7rem 0.85rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.body th {
+  background: var(--color-primary-light);
+  font-weight: 700;
+}
+
+.body .blog-callout,
+.body .blog-cta {
+  border-radius: 1rem;
+  padding: 1rem 1.15rem;
+}
+
+.body .blog-callout {
+  background: color-mix(in srgb, var(--color-primary) 8%, white);
+  border-left: 3px solid var(--color-primary);
+}
+
+.body .blog-cta {
+  background: var(--color-foreground);
+  color: white;
+}
+
+.body .blog-cta a {
+  color: white;
+}
+
+.bodyMobile {
+  font-size: 1rem;
+}
+
+.bodyMobile h2 {
+  font-size: 1.25rem;
+}

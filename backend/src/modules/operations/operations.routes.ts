@@ -20,6 +20,11 @@ import operationsSettingsRouter from "./organization/operations-settings.routes.
 import operationsWhatsAppInboxRouter from "./whatsapp-inbox/operations-whatsapp-inbox.routes.js";
 import operationsWebsiteKnowledgeRouter from "./website-knowledge/operations-website-knowledge.routes.js";
 import { hireAssistAdminRouter } from "../hire-assist/hire-assist.admin.routes.js";
+import {
+  blogAdminRouter,
+  blogCategoryAdminRouter,
+  blogTagAdminRouter,
+} from "../blogs/blog.admin.routes.js";
 
 export const operationsRouter = Router();
 
@@ -47,5 +52,8 @@ operationsRouter.use(
 operationsRouter.use("/whatsapp-inbox", operationsWhatsAppInboxRouter);
 operationsRouter.use("/website-knowledge", operationsWebsiteKnowledgeRouter);
 operationsRouter.use("/hire-assist", hireAssistAdminRouter);
+operationsRouter.use("/blogs", blogAdminRouter);
+operationsRouter.use("/blog-categories", blogCategoryAdminRouter);
+operationsRouter.use("/blog-tags", blogTagAdminRouter);
 
 export default operationsRouter;

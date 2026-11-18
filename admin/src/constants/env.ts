@@ -19,6 +19,9 @@ function resolveApiUrl(): string {
 
 export const env = {
   apiUrl: resolveApiUrl(),
+  publicSiteUrl:
+    import.meta.env.VITE_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "") ||
+    (import.meta.env.DEV ? "http://localhost:3000" : ""),
   /**
    * When true, Operations login may fall back to temporary local credentials
    * in `auth/dev/operations-auth.dev.ts` if the backend login API is unavailable.

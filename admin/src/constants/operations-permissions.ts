@@ -27,6 +27,7 @@ export const OPERATIONS_PERMISSION_MODULES = [
   "campaigns",
   "billing",
   "settings",
+  "content",
 ] as const;
 
 export type OperationsPermissionModule =
@@ -132,6 +133,7 @@ export const OPERATIONS_ROLE_PERMISSION_DEFAULTS: Record<
     verifications: readWriteActions(),
     escalations: readWriteActions(),
     reports: readOnlyActions(),
+    content: readWriteActions(),
   }),
   SUPPORT: buildPermissionMap({
     dashboard: readOnlyActions(),
@@ -152,12 +154,14 @@ export const OPERATIONS_ROLE_PERMISSION_DEFAULTS: Record<
     employers: readOnlyActions(),
     jobs: readOnlyActions(),
     placements: readOnlyActions(),
+    content: readWriteActions(),
   }),
   CONTENT_LANGUAGE: buildPermissionMap({
     dashboard: readOnlyActions(),
     jobs: readOnlyActions(),
     placements: readOnlyActions(),
     campaigns: readOnlyActions(),
+    content: readWriteActions(),
   }),
   SALES: buildPermissionMap({
     dashboard: readOnlyActions(),

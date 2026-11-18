@@ -76,6 +76,8 @@ export const ROUTES = {
   PRICING_PLANS: "/pricing-plans",
   EMPLOYER_GUIDE: "/employer-guide",
   RESOURCES: "/resources",
+  BLOGS: "/blogs",
+  blog: (slug: string) => `/blogs/${slug}`,
   FAQS: "/faqs",
   HELP_CENTER: "/help-center",
   TERMS_AND_CONDITIONS: "/terms-and-conditions",

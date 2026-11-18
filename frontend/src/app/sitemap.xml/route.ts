@@ -1,6 +1,8 @@
 import { getSiteUrl } from "@/constants/site-url";
+import { fetchBlogSitemap } from "@/services/blogs.service";
 import { fetchSitemapJobsPage } from "@/services/sitemap-jobs.service";
 import {
+  buildBlogEntries,
   buildJobEntries,
   buildPublicPageEntries,
   buildSitemapIndexEntries,
@@ -22,6 +24,7 @@ export const revalidate = 0;
 export async function GET(): Promise<Response> {
   const siteUrl = getSiteUrl();
   const pageEntries = buildPublicPageEntries(siteUrl);
+  const blogEntries = await loadBlogEntries(siteUrl);
 
   try {
     const firstJobsPage = await fetchSitemapJobsPage(1);
@@ -37,11 +40,27 @@ export async function GET(): Promise<Response> {
     return sitemapXmlResponse(
       buildUrlsetXml([
         ...pageEntries,
+        ...blogEntries,
         ...buildJobEntries(siteUrl, firstJobsPage.jobs),
       ]),
     );
   } catch (error) {
     logSitemapFailure("public jobs unavailable, serving public pages only", error);
-    return sitemapXmlResponse(buildUrlsetXml(pageEntries), { degraded: true });
+    return sitemapXmlResponse(buildUrlsetXml([...pageEntries, ...blogEntries]), {
+      degraded: true,
+    });
+  }
+}
+
+async function loadBlogEntries(siteUrl: string) {
+  try {
+    const blogs = await fetchBlogSitemap();
+    return buildBlogEntries(
+      siteUrl,
+      blogs.map((blog) => ({ slug: blog.slug, lastModified: blog.updatedAt })),
+    );
+  } catch (error) {
+    logSitemapFailure("public blogs unavailable", error);
+    return [];
   }
 }

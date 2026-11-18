@@ -116,6 +116,26 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
       action: "read",
     },
     {
+      prefix: OPERATIONS_ROUTES.BLOGS_NEW,
+      module: "content",
+      action: "create",
+    },
+    {
+      prefix: OPERATIONS_ROUTES.BLOGS,
+      module: "content",
+      action: "read",
+    },
+    {
+      prefix: OPERATIONS_ROUTES.BLOG_CATEGORIES,
+      module: "content",
+      action: "read",
+    },
+    {
+      prefix: OPERATIONS_ROUTES.BLOG_TAGS,
+      module: "content",
+      action: "read",
+    },
+    {
       prefix: OPERATIONS_ROUTES.SETTINGS,
       module: "settings",
       action: "read",
