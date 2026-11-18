@@ -2376,7 +2376,12 @@ export function buildDeterministicReply(
   }
   if (situation === "role_redirect") {
     const target = facts.target === "employer" ? "employer" : "seeker";
-    return roleRedirectCopy(language, target, String(facts.url ?? ""));
+    return roleRedirectCopy(
+      language,
+      target,
+      String(facts.url ?? ""),
+      String(facts.companyContactPhone ?? ""),
+    );
   }
   if (situation === "new_user") {
     const registration =
@@ -3295,9 +3300,20 @@ export function roleRedirectCopy(
   language: BotLanguage,
   target: "seeker" | "employer",
   url: string,
+  companyContactPhone = "",
 ): string {
   const link = url.trim();
   if (target === "employer") {
+    const phone = companyContactPhone.trim();
+    if (phone) {
+      if (language === "te") {
+        return `మీ WhatsApp నంబర్ Job Seeker account‌కు లింక్ అయింది. ఉద్యోగాలు వెతకడం, applications‌లో సహాయం చేయగలను; job post చేయడానికి Employer account అవసరం. Employer account సహాయం కోసం AsliJobs‌ను ${phone}లో సంప్రదించండి.`;
+      }
+      if (language === "hi") {
+        return `आपका WhatsApp नंबर Job Seeker खाते से जुड़ा है. मैं नौकरी खोजने और आवेदन में मदद कर सकता हूँ, लेकिन नौकरी पोस्ट करने के लिए Employer खाता चाहिए. Employer खाते की मदद के लिए AsliJobs से ${phone} पर संपर्क करें.`;
+      }
+      return `Your WhatsApp number is linked to a Job Seeker account. I can help you find jobs and manage applications, but posting jobs requires an Employer account. Please contact AsliJobs at ${phone} for help.`;
+    }
     if (language === "te") {
       return `క్షమించండి, నేను ఉద్యోగాలు వెతకడం, దరఖాస్తులు, ఇంటర్వ్యూలు, మరియు మీ Job Seeker ప్రొఫైల్‌లో సహాయం చేయగలను. ఉద్యోగులను నియమించాలంటే Employer గా నమోదు చేసుకోండి:\n${link}`;
     }

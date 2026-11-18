@@ -52,6 +52,7 @@ import {
   answerWebsiteKnowledgeQuestion,
   inferKnowledgePersona,
 } from "../website-knowledge/website-knowledge.service.js";
+import { OFFICIAL_PUBLIC_CONTACT } from "../website-knowledge/website-knowledge.catalog.js";
 import {
   activeSearchContext,
   applyAccountAwareIntent,
@@ -1619,7 +1620,15 @@ async function buildReply(
     return reply({
       situation: "role_redirect",
       target: understanding.crossRole,
-      url: understanding.crossRole === "employer" ? urls.employerRegisterUrl : urls.seekerRegisterUrl,
+      url:
+        understanding.crossRole === "employer" && asSeeker
+          ? ""
+          : understanding.crossRole === "employer"
+            ? urls.employerRegisterUrl
+            : urls.seekerRegisterUrl,
+      ...(understanding.crossRole === "employer" && asSeeker
+        ? { companyContactPhone: `+91 ${OFFICIAL_PUBLIC_CONTACT.phone}` }
+        : {}),
     });
   }
 
