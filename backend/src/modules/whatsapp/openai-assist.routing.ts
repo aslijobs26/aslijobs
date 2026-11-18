@@ -9,6 +9,7 @@ import {
 /** Situations where OpenAI may rephrase verified facts — never invent new ones. */
 const ASSIST_SITUATIONS = new Set([
   "jobs",
+  "job_count",
   "job_details",
   "clarify",
   "help",

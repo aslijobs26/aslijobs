@@ -2000,6 +2000,7 @@ async function runAuthorizedJobSearch(
 ): Promise<BotTurn> {
   const lookup = publicJobFilters(understanding);
   const role = lookup.search || "ANY";
+  const replySituation = understanding.intent === "JOB_COUNT" ? "job_count" : "jobs";
   const appliedFilters = formatAppliedFilters(understanding);
   const excludeIds = new Set(
     understanding.showMore
@@ -2026,7 +2027,7 @@ async function runAuthorizedJobSearch(
       `[WHATSAPP-BOT] JOB_RESULTS accountType=${meta.accountType} location=${lookup.city || "-"} role=${role} count=${primary.jobs.length}`,
     );
     return say("", primary.jobs, meta, publicJobReplyFacts(meta, {
-      situation: "jobs",
+      situation: replySituation,
       location: understanding.location,
       role: understanding.category,
       appliedFilters,
@@ -2092,7 +2093,7 @@ async function runAuthorizedJobSearch(
     `[WHATSAPP-BOT] ${wider.jobs.length > 0 ? "JOB_RESULTS" : "JOB_SEARCH_EMPTY"} accountType=${meta.accountType} location=${wider.jobs.length > 0 ? widerCity : lookup.city || "-"} role=${role} count=${wider.jobs.length} path=${wider.jobs.length > 0 ? "parent_city" : "empty"}`,
   );
   return say("", wider.jobs, meta, publicJobReplyFacts(meta, {
-    situation: "jobs",
+    situation: replySituation,
     location: understanding.location,
     role: understanding.category,
     appliedFilters,

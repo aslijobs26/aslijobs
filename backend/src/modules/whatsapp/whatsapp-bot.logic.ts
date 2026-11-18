@@ -796,6 +796,10 @@ export function understandLocally(
     !location;
   const companyAsk =
     /company|కంపెనీ|कंपनी|நிறுவனம்/i.test(text) && !category && text.trim().length < 60;
+  const jobCountAsk =
+    /\bhow\s+many\b|\bnumber\s+of\s+(?:active\s+)?jobs?\b|\btotal\s+(?:number\s+of\s+)?(?:active\s+)?jobs?\b|\bjob\s+count\b|\bhow\s+many\s+(?:job\s+)?openings?\b|\b(?:enni|kitne|kitni)\b.*\b(?:jobs?|naukri(?:yan)?|udyogalu)\b|ఎన్ని.*(?:ఉద్యోగాలు|జాబ్స్|జాబ్)|कितने.*(?:नौकरी|जॉब)|कितनी.*(?:नौकरी|जॉब)/i.test(
+      text,
+    );
 
   let intent: BotIntent = "UNKNOWN";
   let guideFocus: BotUnderstanding["focus"] = "";
@@ -847,6 +851,7 @@ export function understandLocally(
         ? "APPLICATION_COUNT"
         : "MY_APPLICATIONS";
   } else if (/my skills|skills unnayi|నైపుణ్యాలు/i.test(text)) intent = "MY_SKILLS";
+  else if (jobCountAsk) intent = "JOB_COUNT";
   else if (salaryAsk || companyAsk) intent = "JOB_DETAILS";
   else if (showMoreAsk || salaryOnlyAsk || relativeSalaryAsk) intent = "JOB_SEARCH";
   else if (
@@ -889,7 +894,7 @@ export function understandLocally(
     intent === "CLARIFY";
   const cleanCategory = employerManaged || followUpSlot || wipeRoleNoise ? "" : category;
   const openSearch =
-    intent === "JOB_SEARCH" &&
+    (intent === "JOB_SEARCH" || intent === "JOB_COUNT") &&
     !cleanCategory &&
     !followUpSlot &&
     (mentionsJob || mentionsRequest || anyLocation);
@@ -2527,6 +2532,25 @@ export function buildDeterministicReply(
       role: String(facts.role ?? ""),
       minSalary: typeof facts.minSalary === "number" ? facts.minSalary : null,
     });
+  }
+  if (situation === "job_count") {
+    const total = Math.max(0, Number(facts.total ?? 0));
+    const place = labelPlace(String(facts.location ?? ""), language);
+    const role = String(facts.role ?? "").trim();
+    const subject = role ? `${labelRole(role, language)} ` : "";
+    if (language === "hi") {
+      return total === 0
+        ? `${place ? `${place} में ` : ""}${subject}की कोई सक्रिय नौकरी अभी उपलब्ध नहीं है।`
+        : `${place ? `${place} में ` : ""}${subject}${total} सक्रिय नौकरियाँ हैं।`;
+    }
+    if (language === "te") {
+      return total === 0
+        ? `${place ? `${place}లో ` : ""}${subject}ప్రస్తుతం క్రియాశీల ఉద్యోగాలు లేవు.`
+        : `${place ? `${place}లో ` : ""}${subject}${total} క్రియాశీల ఉద్యోగాలు ఉన్నాయి.`;
+    }
+    return total === 0
+      ? `There are currently no active ${subject}job listings${place ? ` in ${place}` : ""}.`
+      : `There are ${total} active ${subject}job listing${total === 1 ? "" : "s"}${place ? ` in ${place}` : ""}.`;
   }
   if (situation === "search_failed") {
     return serviceErrorCopy(language);
