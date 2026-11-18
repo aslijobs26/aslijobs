@@ -62,6 +62,16 @@ const whatsAppSessionSchema = new Schema(
     },
     /** Job IDs already shown for the active search — used by show-more to avoid repeats. */
     lastSeenJobIds: { type: [String], default: [] },
+    /** Only the latest four user/assistant exchanges are sent as chat context. */
+    recentMessages: {
+      type: [
+        {
+          role: { type: String, enum: ["user", "assistant"], required: true },
+          content: { type: String, required: true, maxlength: 1000 },
+        },
+      ],
+      default: [],
+    },
     /**
      * Authoritative account binding for this phone session.
      * When the linked account changes (number reclaim), prior private context is cleared.

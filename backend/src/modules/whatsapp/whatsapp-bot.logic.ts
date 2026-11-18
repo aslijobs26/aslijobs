@@ -1479,11 +1479,19 @@ export function resolveTurnUnderstanding(
   previous: PendingSearchContext | null,
   lastIntent?: string | null,
 ): BotUnderstanding {
+  // An explicit seeker request starts a new public search. Do not carry a
+  // previous city's role, salary, or intent into this new request.
+  const startsNewSeekerRequest = chooseAccountRole(text) === "seeker";
   const validated = validateCurrentMessageIntent(text, overlayMessageEntities(text, raw));
-  const withFollowUp = applyConversationFollowUp(text, validated, lastIntent ?? previous?.intent);
+  const priorContext = startsNewSeekerRequest ? null : previous;
+  const withFollowUp = applyConversationFollowUp(
+    text,
+    validated,
+    startsNewSeekerRequest ? "" : lastIntent ?? previous?.intent,
+  );
   return applyCurrentMessageSearchRules(
     text,
-    mergePending(previous, withFollowUp, text),
+    mergePending(priorContext, withFollowUp, text),
   );
 }
 
@@ -2668,7 +2676,7 @@ export function chooseAccountRole(text: string): "seeker" | "employer" | null {
     );
   // Typo-tolerant seeker cues (wnat→want) and compacted "jobseeker".
   const seekerPhrase =
-    /\b(job[-\s]?seeker|jobseeker|looking for (a )?job|looking for work|need (a )?job|find (a )?job|want (a )?job|wnat (a )?job|want work|need work|suitable jobs?|match(ing)? (my )?resume|jobs? (for|matching) me)\b|ఉద్యోగం కావాలి|ఉద్యోగాలను|జాబ్ కావాలి|పని కావాలి|नौकरी चाहिए|नौकरी ढूंढ|सही नौकरी|काम चाहिए|जॉब चाहिए|வேலை தேவை|வேலை வேண்டும்|ಉದ್ಯೋಗ ಬೇಕು|ಕೆಲಸ ಬೇಕು|ജോലി വേണം|job kavali|jobs kavali|naaku job|naku job|pani kavali|job chupinchu|jobs chupinchu/i.test(
+    /\b(job[-\s]?seeker|jobseeker|looking for (a )?job|looking for work|need (a )?job|find (a )?job|want (a )?job|wnat (a )?job|want work|need work|suitable jobs?|match(ing)? (my )?resume|jobs? (for|matching) me)\b|ఉద్యోగం కావాలి|ఉద్యోగాలను|జాబ్ కావాలి|పని కావాలి|नौकरी चाहिए|नौकरी ढूंढ|सही नौकरी|काम चाहिए|जॉब चाहिए|வேலை தேவை|வேலை வேண்டும்|ಉದ್ಯೋಗ ಬೇಕು|ಕೆಲಸ ಬೇಕು|ജോലി വേണം|\b(?:merko|mujhe|mujhko|mereko)\s+(?:koi\s+)?(?:job|naukri)\s+(?:chahiye|chaahiye|chahie)\b|\b(?:job|naukri)\s+chahiye\b|job kavali|jobs kavali|naaku job|naku job|pani kavali|job chupinchu|jobs chupinchu/i.test(
       trimmed,
     );
   // Role + job = seeker only when not posting ("post electrician job" stays employer).
@@ -2716,7 +2724,7 @@ export function detectMenuSelection(
   const digit = digitMatch?.[1] ?? "";
 
   if (state === "NEW_USER_INTENT") {
-    if (digit === "1" || /find a job|looking for a job|🔎/i.test(trimmed)) return "JOB_SEARCH";
+    if (digit === "1" || /find a job|looking for a job|🔎|\b(?:merko|mujhe|mujhko|mereko)\s+(?:koi\s+)?(?:job|naukri)\s+(?:chahiye|chaahiye|chahie)\b|\b(?:job|naukri)\s+chahiye\b|\b(?:job|naukri)\s+k[aá]vali\b|\bnaaku\s+job\b/i.test(trimmed)) return "JOB_SEARCH";
     if (digit === "2" || /post a job|want to hire|📢/i.test(trimmed)) return "POST_JOB";
     return null;
   }

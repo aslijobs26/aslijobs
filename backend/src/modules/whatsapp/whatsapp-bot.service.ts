@@ -59,6 +59,7 @@ import {
   buildDeterministicReply,
   clearedTemporarySearchSessionFields,
   conversationStateForAccount,
+  chooseAccountRole,
   detectLanguage,
   detectMenuSelection,
   detectProtocolTurn,
@@ -423,6 +424,7 @@ async function processInboundTurn(input: {
       locationKind?: string;
       lastJobs?: Array<Record<string, string>>;
       lastSeenJobIds?: string[];
+      recentMessages?: Array<{ role: "user" | "assistant"; content: string }>;
       lastExperience?: string;
       lastExperienceYears?: number | null;
       lastExperienceRange?: string;
@@ -1155,6 +1157,7 @@ async function processInboundTurn(input: {
       Boolean(merged.location) &&
       !merged.category &&
       !merged.openSearch;
+    const freshSeekerRequest = chooseAccountRole(text) === "seeker";
     const rememberSearch =
       !redirected &&
       (merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT" || merged.intent === "JOB_DETAILS");
@@ -1176,14 +1179,14 @@ async function processInboundTurn(input: {
       clarifyAttempts: clarifyLoop.attempts,
       lastIntent: redirected ? session?.lastIntent || "" : merged.intent,
       lastLocation: rememberGoal
-        ? merged.location || session?.lastLocation || ""
+        ? merged.location || (freshSeekerRequest ? "" : session?.lastLocation || "")
         : session?.lastLocation || "",
       lastCategory: rememberSearch
         ? merged.openSearch
           ? ""
-          : merged.category || session?.lastCategory || ""
+          : merged.category || (freshSeekerRequest ? "" : session?.lastCategory || "")
         : rememberGoal
-          ? merged.category || session?.lastCategory || ""
+          ? merged.category || (freshSeekerRequest ? "" : session?.lastCategory || "")
           : session?.lastCategory || "",
       ...(rememberSearch && (merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT")
         ? {
@@ -1307,6 +1310,10 @@ async function processInboundTurn(input: {
       openAiAssistAttempted = true;
       const assist = await assistWhatsAppReplyWithRetry({
         userText: text,
+        recentMessages: [
+          ...(session?.recentMessages ?? []).slice(-7),
+          { role: "user", content: text.slice(0, 1000) },
+        ],
         language: merged.language,
         deterministicReply: localized.text,
         facts: replyFacts,
@@ -1424,9 +1431,18 @@ async function processInboundTurn(input: {
       }
       return;
     }
-    await WhatsAppSessionModel.findOneAndUpdate({ phone }, sessionPatch, {
+    const recentMessages = [
+      ...(session?.recentMessages ?? []).slice(-7),
+      { role: "user" as const, content: text.slice(0, 1000) },
+      { role: "assistant" as const, content: replyText.slice(0, 1000) },
+    ].slice(-8);
+    await WhatsAppSessionModel.findOneAndUpdate(
+      { phone },
+      { ...sessionPatch, recentMessages },
+      {
       upsert: true,
-    });
+      },
+    );
     logWhatsAppBot(
       "REPLY_SENT",
       `language=${merged.language} intent=${merged.intent} situation=${String(turn.facts.situation ?? "-")} llm=${understood.source === "sarvam"} messageId=${sendResult.messageId} inbound=${input.messageId ?? "-"}`,
