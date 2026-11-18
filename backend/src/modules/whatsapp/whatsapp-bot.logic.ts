@@ -1059,9 +1059,18 @@ export function looksLikeOwnPostedJobsQuestion(text: string): boolean {
 }
 
 /** Profile / company verification or profile-status questions (not "jobs matching my profile"). */
+export function looksLikeAccountCreationClaim(text: string): boolean {
+  const folded = text.toLowerCase().trim();
+  return /\b(?:i|we)\s+(?:have\s+)?(?:just\s+)?(?:created|made|opened|registered)\s+(?:my\s+)?(?:job\s*seeker\s+)?account\b|\b(?:nenu|nen)\s+(?:job\s*seeker\s+)?account\s+(?:create|register|open)\s+ches(?:anu|a|esa)\b|\b(?:job\s*seeker\s+)?account\s+(?:create|register)\s+ches(?:anu|a|esa)\b|\bmaine\s+(?:job\s*seeker\s+)?account\s+(?:banaya|bana\s+liya|register\s+kiya)\b/i.test(
+    folded,
+  );
+}
+
 export function looksLikeProfileStatusQuestion(text: string): boolean {
   const folded = text.toLowerCase().trim();
   if (!folded) return false;
+  // Verify registration claims against the linked account record.
+  if (looksLikeAccountCreationClaim(folded)) return true;
   // Explicit English / romanized verification or status about a profile/account/company.
   if (
     /profile\s+(is\s+)?(status|verify|verified|verification)|is\s+(my\s+)?profile\s+verif|profile\s+is\s+verified|verify\s+ayyindh|verification\s+status|account\s+(status|verif)|company\s+profile|naa\s+profile|naaku\s+profile|i\s+want\s+profile\s+status|my\s+profile\s+status|profile\s+status\s+(ela|elu|enti|undhi|undi)|status\s+(ela|elu|enti)\s+undh/i.test(

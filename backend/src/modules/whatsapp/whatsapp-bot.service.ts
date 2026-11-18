@@ -65,6 +65,7 @@ import {
   detectProtocolTurn,
   formatSalaryLabel,
   isNoResumeMessage,
+  looksLikeAccountCreationClaim,
   languageFromHint,
   looksLikeShiftConstraint,
   mentionsNightShift,
@@ -523,6 +524,37 @@ async function processInboundTurn(input: {
         );
         return;
       }
+      if (identity.linked === "none" && mediaRequiresSeekerRole(input.messageType)) {
+        const registrationUrl = siteUrls(sessionLanguage).seekerRegisterUrl;
+        const guestDocumentReply = [
+          "I received your document. To analyze a resume and match it with jobs, please create a Job Seeker account:",
+          registrationUrl,
+          "You can still ask me to search public job listings without an account.",
+        ].join("\n");
+        await WhatsAppSessionModel.findOneAndUpdate(
+          { phone },
+          { phone, lastInteractionAt: new Date() },
+          { upsert: true },
+        );
+        await sendConfiguredWhatsAppText({
+          to: input.from,
+          userText: text || `The guest uploaded a ${input.messageType}.`,
+          language: sessionLanguage,
+          draft: guestDocumentReply,
+          facts: {
+            situation: "unregistered_document_upload",
+            accountType: "none",
+            documentAnalyzed: false,
+            profileUpdated: false,
+            seekerRegistrationUrl: registrationUrl,
+            canSearchPublicJobsWithoutAccount: true,
+          },
+        });
+        console.info(
+          `[WA-FLOW] accountType=none intent=MEDIA_GUEST_GATED language=${sessionLanguage} understandingMode=GATE llmUsed=false documentAnalyzed=false responseType=registration_prompt latency=${Date.now() - started}`,
+        );
+        return;
+      }
       await acknowledgeMediaProcessing({
         from: input.from,
         phone,
@@ -557,28 +589,17 @@ async function processInboundTurn(input: {
         },
         { upsert: true },
       );
-      const unregisteredMedia = identity.linked === "none" && mediaOutcome.status === "completed";
-      const mediaReplyDraft = unregisteredMedia
-        ? [
-            "I received and read your document, but this WhatsApp number is not linked to a Job Seeker account, so I cannot attach it to a profile.",
-            `To save your resume and use resume-based job matching, create a Job Seeker account: ${siteUrls(sessionLanguage).seekerRegisterUrl}`,
-            "You can still search public jobs now. Tell me the job role and city you want.",
-            mediaOutcome.skills.length > 0
-              ? `Skills I could read: ${mediaOutcome.skills.slice(0, 12).join(", ")}.`
-              : "I could not identify a clear skills list in the document.",
-          ].join("\n")
-        : mediaOutcome.replyText;
       await sendConfiguredWhatsAppText({
         to: input.from,
         userText: text || `The user uploaded a ${input.messageType}.`,
         language: sessionLanguage,
-        draft: mediaReplyDraft,
+        draft: mediaOutcome.replyText,
         facts: {
-          situation: unregisteredMedia ? "unregistered_document_upload" : "media_result",
+          situation: "media_result",
           status: mediaOutcome.status,
           accountType: identity.linked,
           profileUpdated: false,
-          seekerRegistrationUrl: unregisteredMedia ? siteUrls(sessionLanguage).seekerRegisterUrl : "",
+          seekerRegistrationUrl: "",
           canSearchPublicJobsWithoutAccount: true,
           extractedSkills: mediaOutcome.skills.slice(0, 12),
         },
@@ -1158,6 +1179,7 @@ async function processInboundTurn(input: {
       !merged.category &&
       !merged.openSearch;
     const freshSeekerRequest = chooseAccountRole(text) === "seeker";
+    const accountCreationClaim = looksLikeAccountCreationClaim(text);
     const rememberSearch =
       !redirected &&
       (merged.intent === "JOB_SEARCH" || merged.intent === "JOB_COUNT" || merged.intent === "JOB_DETAILS");
@@ -1250,6 +1272,7 @@ async function processInboundTurn(input: {
             }
           : clearedTemporarySearchSessionFields()
         : {}),
+      ...(accountCreationClaim ? clearedTemporarySearchSessionFields() : {}),
     };
     void persistJobSeekerWhatsAppLanguage({
       phone: identityPhone || phone,
