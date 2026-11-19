@@ -2,7 +2,7 @@ import { Router } from "express";
 import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { blogController } from "./blog.controller.js";
-import { publicBlogListQuerySchema, slugParamsSchema } from "./blog.validation.js";
+import { previewTokenParamsSchema, publicBlogListQuerySchema, slugParamsSchema } from "./blog.validation.js";
 
 const blogPublicRouter = Router();
 
@@ -27,6 +27,11 @@ blogPublicRouter.get(
   "/",
   validate(publicBlogListQuerySchema, "query"),
   asyncHandler(blogController.listPublic),
+);
+blogPublicRouter.get(
+  "/preview/:token",
+  validate(previewTokenParamsSchema, "params"),
+  asyncHandler(blogController.previewByToken),
 );
 blogPublicRouter.get(
   "/:slug/related",

@@ -1,4 +1,6 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { Types, type FilterQuery } from "mongoose";
+import { env } from "../../config/env.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { storageService } from "../storage/storage.service.js";
@@ -210,7 +212,74 @@ export async function publishDueBlogs(now = new Date()): Promise<number> {
   return due.length;
 }
 
-const RESERVED_SLUGS = new Set(["featured", "categories", "sitemap", "category"]);
+const RESERVED_SLUGS = new Set(["featured", "categories", "sitemap", "category", "preview"]);
+const PREVIEW_TTL_MS = 2 * 60 * 60 * 1000;
+
+function signBlogPreviewToken(blogId: string, now = Date.now()) {
+  const exp = now + PREVIEW_TTL_MS;
+  const payload = Buffer.from(JSON.stringify({ id: blogId, exp }), "utf8").toString("base64url");
+  const signature = createHmac("sha256", env.JWT_ACCESS_SECRET).update(payload).digest("base64url");
+  return { token: `${payload}.${signature}`, expiresAt: new Date(exp).toISOString() };
+}
+
+function readBlogPreviewToken(token: string): string {
+  const invalid = new AppError("Preview link is invalid or expired.", HTTP_STATUS.NOT_FOUND);
+  const dot = token.lastIndexOf(".");
+  if (dot <= 0) throw invalid;
+  const payload = token.slice(0, dot);
+  const signature = token.slice(dot + 1);
+  const expected = createHmac("sha256", env.JWT_ACCESS_SECRET).update(payload).digest("base64url");
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (actualBuffer.length !== expectedBuffer.length || !timingSafeEqual(actualBuffer, expectedBuffer)) {
+    throw invalid;
+  }
+  let parsed: { id?: string; exp?: number };
+  try {
+    parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { id?: string; exp?: number };
+  } catch {
+    throw invalid;
+  }
+  if (!parsed.id || !/^[a-f\d]{24}$/i.test(parsed.id) || !parsed.exp || parsed.exp < Date.now()) {
+    throw invalid;
+  }
+  return parsed.id;
+}
+
+async function companionArticles(current: {
+  _id: Types.ObjectId;
+  categoryId: unknown;
+  tagIds?: unknown[];
+  relatedBlogIds?: Types.ObjectId[];
+}) {
+  const refId = (value: unknown) =>
+    value && typeof value === "object" && "_id" in value ? (value as { _id: unknown })._id : value;
+  const preferred = current.relatedBlogIds ?? [];
+  const [relatedRows, popularRows] = await Promise.all([
+    BlogModel.find({
+      _id: { $ne: current._id },
+      ...publishedFilter(),
+      $or: [
+        { _id: { $in: preferred } },
+        { categoryId: refId(current.categoryId) },
+        { tagIds: { $in: (current.tagIds ?? []).map(refId) } },
+      ],
+    })
+      .sort({ publishedAt: -1 })
+      .limit(3)
+      .populate(publicPopulate)
+      .lean(),
+    BlogModel.find({ _id: { $ne: current._id }, ...publishedFilter() })
+      .sort({ publishedAt: -1 })
+      .limit(6)
+      .populate(publicPopulate)
+      .lean(),
+  ]);
+  return {
+    related: (relatedRows as unknown as LeanBlog[]).map(toPublicCard),
+    popular: (popularRows as unknown as LeanBlog[]).map(toPublicCard),
+  };
+}
 
 async function uniqueSlug(
   model: { exists: (filter: object) => Promise<unknown> },
@@ -371,21 +440,36 @@ export const blogService = {
     if (!current) {
       throw new AppError("Article not found.", HTTP_STATUS.NOT_FOUND);
     }
-    const preferred = current.relatedBlogIds ?? [];
-    const rows = await BlogModel.find({
-      _id: { $ne: current._id },
-      ...publishedFilter(),
-      $or: [
-        { _id: { $in: preferred } },
-        { categoryId: current.categoryId },
-        { tagIds: { $in: current.tagIds ?? [] } },
-      ],
-    })
-      .sort({ publishedAt: -1 })
-      .limit(3)
-      .populate(publicPopulate)
-      .lean();
-    return (rows as unknown as LeanBlog[]).map(toPublicCard);
+    const companions = await companionArticles(current as unknown as LeanBlog);
+    return companions.related;
+  },
+
+  async issuePreviewToken(blogId: string) {
+    const exists = await BlogModel.exists({ _id: blogId });
+    if (!exists) {
+      throw new AppError("Article not found.", HTTP_STATUS.NOT_FOUND);
+    }
+    return signBlogPreviewToken(blogId);
+  },
+
+  async previewByToken(token: string) {
+    const id = readBlogPreviewToken(token);
+    const row = await BlogModel.findById(id).populate(publicPopulate).lean();
+    if (!row) {
+      throw new AppError("Article not found.", HTTP_STATUS.NOT_FOUND);
+    }
+    const blog = row as unknown as LeanBlog;
+    const article = toPublicArticle(blog);
+    if (!article.publishedAt) {
+      article.publishedAt = iso(blog.updatedAt) ?? iso(blog.createdAt);
+    }
+    const companions = await companionArticles(blog);
+    return {
+      article,
+      related: companions.related,
+      popular: companions.popular,
+      status: blog.status,
+    };
   },
 
   async categoriesPublic() {

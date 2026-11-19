@@ -4,7 +4,7 @@ import { Container } from "@/components/layout/Container";
 import { ROUTES } from "@/constants/routes";
 import type { BlogArticle, BlogCard } from "@/services/blogs.service";
 import { formatBlogDate, formatReadingTime } from "@/utils/blog-format";
-import { Calendar, ChevronDown, Clock3 } from "lucide-react";
+import { Calendar, ChevronDown, ChevronLeft, Clock3 } from "lucide-react";
 import Link from "next/link";
 
 export function BlogArticleView({
@@ -158,14 +158,14 @@ export function BlogArticleView({
       {related.length > 0 ? (
         <section className="mt-14">
           <h2 className="text-lg font-bold text-foreground">Recent articles</h2>
-          <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {related.map((blog) => (
               <Link
                 key={blog.id}
                 href={ROUTES.blog(blog.slug)}
-                className="group flex min-w-0 flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#e4ebe8] bg-white shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
-                <span className="block aspect-[16/10] overflow-hidden rounded-xl bg-primary-light">
+                <span className="block aspect-[16/10] overflow-hidden bg-primary-light">
                   {blog.coverImageUrl ? (
                     <img
                       src={blog.coverImageUrl}
@@ -174,11 +174,20 @@ export function BlogArticleView({
                     />
                   ) : null}
                 </span>
-                {blog.category ? (
-                  <span className="mt-3 text-xs font-semibold text-primary">{blog.category.name}</span>
-                ) : null}
-                <span className="mt-1 line-clamp-2 text-base font-bold leading-snug text-foreground group-hover:text-primary">
-                  {blog.title}
+                <span className="flex flex-1 flex-col p-4">
+                  {blog.category ? (
+                    <span className="text-xs font-semibold text-primary">{blog.category.name}</span>
+                  ) : null}
+                  <span className="mt-1.5 line-clamp-2 text-[15px] font-bold leading-snug text-foreground group-hover:text-primary">
+                    {blog.title}
+                  </span>
+                  {blog.excerpt ? (
+                    <span className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted">{blog.excerpt}</span>
+                  ) : null}
+                  <span className="mt-auto flex items-center gap-1.5 pt-3 text-xs text-muted">
+                    <Clock3 className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                    {formatReadingTime(blog.readingTimeMinutes)}
+                  </span>
                 </span>
               </Link>
             ))}
@@ -186,7 +195,11 @@ export function BlogArticleView({
         </section>
       ) : null}
 
-      <Link href={ROUTES.BLOGS} className="mt-8 inline-flex text-sm font-semibold text-primary">
+      <Link
+        href={ROUTES.BLOGS}
+        className="mt-8 inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#e4ebe8] bg-white px-4 text-sm font-semibold text-foreground shadow-sm hover:border-primary/30 hover:text-primary"
+      >
+        <ChevronLeft className="size-4" aria-hidden="true" />
         Back to all blogs
       </Link>
     </Container>

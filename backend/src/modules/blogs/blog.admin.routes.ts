@@ -80,6 +80,12 @@ blogAdminRouter.patch(
   asyncHandler(blogController.setFeatured),
 );
 blogAdminRouter.post(
+  "/:id/preview-token",
+  requireOperationsPermission("content", "read"),
+  validate(idParamsSchema, "params"),
+  asyncHandler(blogController.issuePreviewToken),
+);
+blogAdminRouter.post(
   "/:id/preview",
   requireOperationsPermission("content", "read"),
   validate(idParamsSchema, "params"),

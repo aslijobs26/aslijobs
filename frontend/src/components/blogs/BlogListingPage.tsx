@@ -16,7 +16,7 @@ import {
   type BlogCard,
   type BlogCategory,
 } from "@/services/blogs.service";
-import { formatBlogDate, formatReadingTime } from "@/utils/blog-format";
+import { formatReadingTime } from "@/utils/blog-format";
 import { cn } from "@/utils/cn";
 import { ChevronLeft, ChevronRight, Clock3, Mail, Search } from "lucide-react";
 import Image from "next/image";
@@ -216,10 +216,19 @@ export function BlogListingPage() {
         <p className="mt-12 text-sm text-muted">No articles match this search yet.</p>
       ) : null}
 
-      {!loading && !error && filtered ? (
-        <div className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2">
-          {items.map((blog) => (
-            <RowCard key={blog.id} blog={blog} />
+      {!loading && !error && filtered && items.length > 0 ? (
+        <div className="mt-8 grid gap-y-12">
+          {Array.from({ length: Math.ceil(items.length / 3) }, (_, index) => items.slice(index * 3, index * 3 + 3)).map((group) => (
+            <div key={group[0].id} className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)]">
+              <CategoryLeadCard blog={group[0]} />
+              {group.length > 1 ? (
+                <div className="grid content-start gap-5">
+                  {group.slice(1).map((blog) => (
+                    <CategoryStackCard key={blog.id} blog={blog} />
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ))}
         </div>
       ) : null}
@@ -428,26 +437,6 @@ function CategoryLeadCard({ blog }: { blog: BlogCard }) {
         {blog.excerpt ? <p className="mt-1.5 line-clamp-3 text-sm leading-relaxed text-[#6b7780]">{blog.excerpt}</p> : null}
       </div>
     </div>
-  );
-}
-
-function RowCard({ blog }: { blog: BlogCard }) {
-  const date = blog.publishedAt ? formatBlogDate(blog.publishedAt) : "";
-  return (
-    <Link href={ROUTES.blog(blog.slug)} className="group flex min-w-0 gap-3">
-      <span className="h-[4.5rem] w-[6.5rem] shrink-0 overflow-hidden rounded-xl bg-primary-light sm:h-20 sm:w-28">
-        {blog.coverImageUrl ? (
-          <img src={blog.coverImageUrl} alt="" className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
-        ) : null}
-      </span>
-      <span className="min-w-0">
-        {date ? <span className="block text-xs font-semibold text-primary">{date}</span> : null}
-        <span className="mt-0.5 line-clamp-2 block text-sm font-bold leading-snug text-foreground group-hover:text-primary">
-          {blog.title}
-        </span>
-        {blog.excerpt ? <span className="mt-1 line-clamp-2 block text-xs leading-relaxed text-muted">{blog.excerpt}</span> : null}
-      </span>
-    </Link>
   );
 }
 

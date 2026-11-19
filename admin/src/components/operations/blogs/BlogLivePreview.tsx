@@ -1,13 +1,11 @@
 import styles from "./blog-live-preview.module.css";
-import logo from "../../../../../frontend/src/assets/AsliLogo.svg";
 import { cn } from "../../../utils/cn";
-import { Bookmark, Briefcase, Calendar, Clock3, Globe, Home, Link2, Monitor, PlusCircle, Smartphone, UserRound } from "lucide-react";
+import { Calendar, ChevronDown, Clock3, Link2, Monitor, Smartphone } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 type Heading = { id: string; text: string; level: 2 | 3 };
 type Device = "laptop" | "mobile";
 
-/** Same widths the public site uses for a laptop window and a phone. */
 const LAPTOP_WIDTH = 1280;
 const MOBILE_WIDTH = 390;
 
@@ -56,92 +54,26 @@ export function BlogLivePreview({
         </div>
       </div>
 
-      <ScaledFrame
-        width={device === "laptop" ? LAPTOP_WIDTH : MOBILE_WIDTH}
-        watch={`${device}:${title}:${excerpt}:${content}:${categoryName}:${authorName}:${coverImageUrl}:${headings.length}:${faqs.map((item) => item.question).join("|")}`}
-      >
-        <div className="relative bg-white text-foreground">
-          <SiteHeader device={device} />
-          <div className={device === "laptop" ? "px-10 py-10" : "px-4 py-8 pb-28"}>
-            <ArticleCanvas
-              device={device}
-              title={title}
-              excerpt={excerpt}
-              content={content}
-              categoryName={categoryName}
-              authorName={authorName}
-              authorImageUrl={authorImageUrl}
-              coverImageUrl={coverImageUrl}
-              coverImageAlt={coverImageAlt}
-              readingTimeMinutes={readingTimeMinutes}
-              headings={headings}
-              faqs={faqs}
-              dateLabel={dateLabel}
-            />
-          </div>
-          {device === "mobile" ? <MobileTabBar /> : null}
-          <span className="absolute bottom-5 right-5 inline-flex size-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-md" aria-hidden>
-            <WhatsAppMark filled />
-          </span>
+      <ScaledFrame width={device === "laptop" ? LAPTOP_WIDTH : MOBILE_WIDTH}>
+        <div className={device === "laptop" ? "bg-white px-10 py-10" : "bg-white px-4 py-8"}>
+          <ArticleCanvas
+            device={device}
+            title={title}
+            excerpt={excerpt}
+            content={content}
+            categoryName={categoryName}
+            authorName={authorName}
+            authorImageUrl={authorImageUrl}
+            coverImageUrl={coverImageUrl}
+            coverImageAlt={coverImageAlt}
+            readingTimeMinutes={readingTimeMinutes}
+            headings={headings}
+            faqs={faqs}
+            dateLabel={dateLabel}
+          />
         </div>
       </ScaledFrame>
     </div>
-  );
-}
-
-function SiteHeader({ device }: { device: Device }) {
-  const laptop = device === "laptop";
-  return (
-    <header className="border-b border-border-subtle bg-white shadow-[0_1px_3px_rgba(15,23,42,0.08)]">
-      <div className={cn("flex items-center", laptop ? "min-h-20 gap-6 px-10 py-2" : "min-h-16 gap-2 px-3 py-1.5")}>
-        <span className="flex min-w-0 flex-col items-start">
-          <img src={logo} alt="" className={laptop ? "h-[52px] w-auto" : "h-[30px] w-auto"} />
-          <span className={cn("truncate font-bold leading-tight text-muted", laptop ? "text-[9px]" : "max-w-[8.75rem] text-[7px]")}>
-            India's 1st WhatsApp Job Platform
-          </span>
-        </span>
-        <div className={cn("ml-auto flex shrink-0 items-center", laptop ? "gap-3" : "gap-1.5")}>
-          <span className={cn("inline-flex items-center gap-1.5 rounded-full border border-border bg-white font-medium text-foreground", laptop ? "h-10 px-3 text-sm" : "h-9 px-2.5 text-xs")}>
-            <Globe className="size-4" aria-hidden />
-            English
-          </span>
-          {laptop ? (
-            <>
-              <span className="inline-flex h-10 items-center rounded-md bg-primary-soft px-5 text-[15px] font-medium text-white">
-                Job Seeker
-              </span>
-              <span className="inline-flex h-10 items-center rounded-md border border-primary px-5 text-[15px] font-medium text-primary">
-                Employers
-              </span>
-            </>
-          ) : (
-            <span className="inline-flex size-9 items-center justify-center rounded-md border border-border text-foreground">
-              <UserRound className="size-4" aria-hidden />
-            </span>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function MobileTabBar() {
-  const items = [
-    { label: "Home", icon: Home },
-    { label: "Jobs", icon: Briefcase },
-    { label: "Post", icon: PlusCircle },
-    { label: "Saved", icon: Bookmark },
-    { label: "Profile", icon: UserRound },
-  ];
-  return (
-    <nav className="sticky bottom-0 z-10 flex border-t border-border-subtle bg-white px-1 py-2 shadow-[0_-4px_16px_rgba(15,23,42,0.06)]">
-      {items.map((item) => (
-        <span key={item.label} className="flex flex-1 flex-col items-center gap-0.5 text-[10px] font-medium text-muted">
-          <item.icon className="size-5" aria-hidden />
-          {item.label}
-        </span>
-      ))}
-    </nav>
   );
 }
 
@@ -184,16 +116,20 @@ function ArticleCanvas({
   useEffect(() => {
     const root = bodyRef.current;
     if (!root) return;
+    const cleanups: Array<() => void> = [];
     for (const image of root.querySelectorAll("img")) {
       const hide = () => {
-        if (image.naturalWidth >= 64 && image.naturalHeight >= 64) return;
         const figure = image.closest("figure");
         const target = figure && figure.querySelectorAll("img").length === 1 ? figure : image;
         target.setAttribute("hidden", "");
       };
-      if (image.complete) hide();
-      else image.addEventListener("load", hide, { once: true });
+      if (image.complete && image.naturalWidth === 0) hide();
+      image.addEventListener("error", hide);
+      cleanups.push(() => image.removeEventListener("error", hide));
     }
+    return () => {
+      for (const cleanup of cleanups) cleanup();
+    };
   }, [content, device]);
 
   return (
@@ -244,29 +180,37 @@ function ArticleCanvas({
             <div
               ref={bodyRef}
               className={cn(styles.body, laptop ? "mt-7" : styles.bodyMobile, !laptop && "mt-6")}
-              dangerouslySetInnerHTML={{ __html: withYoutubePreview(content) }}
+              dangerouslySetInnerHTML={{ __html: content }}
             />
           ) : (
             <p className={cn("text-muted", laptop ? "mt-7 text-base" : "mt-6 text-sm")}>The article body appears here as you write.</p>
           )}
 
           {faqs.length > 0 ? (
-            <section className="mt-12">
-              <h2 className="text-[1.65rem] font-bold tracking-[-0.02em] text-foreground">Frequently Asked Questions</h2>
-              <div className="mt-2">
-                {faqs.map((item) => (
-                  <details key={item.question} className="py-4">
-                    <summary className="cursor-pointer list-none text-[15px] leading-relaxed text-muted marker:content-none [&::-webkit-details-marker]:hidden">
-                      {item.question}
+            <section className="mt-12 border-t border-border-subtle pt-8">
+              <h2 className="text-xl font-bold tracking-[-0.02em] text-foreground">Frequently Asked Questions</h2>
+              <div className="mt-1">
+                {faqs.map((item, index) => (
+                  <details key={item.question} className="group border-b border-border-subtle">
+                    <summary className="flex cursor-pointer list-none items-center gap-4 py-4 marker:content-none [&::-webkit-details-marker]:hidden">
+                      <span className="w-7 shrink-0 text-sm font-bold tabular-nums text-primary">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="min-w-0 flex-1 text-[15px] font-semibold leading-snug text-foreground group-open:text-primary">
+                        {item.question.replace(/^\s*\d+\.\s*/, "")}
+                      </span>
+                      <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-border-subtle text-muted">
+                        <ChevronDown className="size-3.5" aria-hidden />
+                      </span>
                     </summary>
-                    <p className="mt-2 text-sm leading-relaxed text-foreground/80">{item.answer}</p>
+                    <p className="max-w-[40rem] pb-4 pl-11 pr-11 text-sm leading-7 text-muted">{item.answer}</p>
                   </details>
                 ))}
               </div>
             </section>
           ) : null}
 
-          <div className="mt-10 rounded-xl border border-border-subtle px-4 py-3.5">
+          <div className="mt-10 rounded-xl border border-primary/15 bg-gradient-to-r from-primary-light to-white px-4 py-3.5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Written by</p>
             <div className="mt-2.5 flex items-center gap-3">
               {authorImageUrl ? (
@@ -282,7 +226,7 @@ function ArticleCanvas({
         </div>
       </article>
 
-      <aside className="grid gap-5">
+      <aside className={cn("grid gap-5", laptop && "lg:sticky lg:top-24")}>
         <div className="rounded-2xl border border-border-subtle bg-white p-5 text-center shadow-sm">
           <p className="text-base font-bold text-foreground">Find jobs on WhatsApp</p>
           <p className="mt-1 text-sm leading-relaxed text-muted">Browse verified openings and apply in a few taps.</p>
@@ -308,40 +252,7 @@ function ArticleCanvas({
   );
 }
 
-function withYoutubePreview(html: string): string {
-  return html.replace(/<iframe\b[^>]*>\s*<\/iframe>/gi, (iframe) => {
-    const src = iframe.match(/\bsrc="([^"]+)"/i)?.[1] ?? "";
-    const id = youtubeId(src);
-    if (!id) return "";
-    return `<figure class="blog-youtube"><a href="https://www.youtube.com/watch?v=${id}" target="_blank" rel="noopener noreferrer"><img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="YouTube video" /></a></figure>`;
-  });
-}
-
-function youtubeId(src: string): string {
-  try {
-    const url = new URL(src);
-    const host = url.hostname.replace(/^(?:www|m|music)\./, "");
-    if (host === "youtu.be") return url.pathname.split("/").filter(Boolean)[0]?.split(/[?&#]/)[0] ?? "";
-    if (host === "youtube.com" || host === "youtube-nocookie.com") {
-      const parts = url.pathname.split("/").filter(Boolean);
-      if (parts[0] === "embed" || parts[0] === "shorts" || parts[0] === "live") return parts[1]?.split(/[?&#]/)[0] ?? "";
-      return url.searchParams.get("v") ?? "";
-    }
-  } catch {
-    return "";
-  }
-  return "";
-}
-
-function ScaledFrame({
-  width,
-  watch,
-  children,
-}: {
-  width: number;
-  watch: string;
-  children: ReactNode;
-}) {
+function ScaledFrame({ width, children }: { width: number; children: ReactNode }) {
   const outerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -351,17 +262,25 @@ function ScaledFrame({
     const outer = outerRef.current;
     const inner = innerRef.current;
     if (!outer || !inner) return;
+    let frame = 0;
     const measure = () => {
-      const nextScale = Math.min(1, outer.clientWidth / width);
-      setScale(nextScale);
-      setHeight(inner.offsetHeight * nextScale);
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const nextScale = Math.min(1, outer.clientWidth / width);
+        const nextHeight = Math.round(inner.offsetHeight * nextScale);
+        setScale((current) => (Math.abs(current - nextScale) < 0.001 ? current : nextScale));
+        setHeight((current) => (current === nextHeight ? current : nextHeight));
+      });
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(outer);
     observer.observe(inner);
-    return () => observer.disconnect();
-  }, [width, watch]);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [width]);
 
   return (
     <div ref={outerRef} className="w-full overflow-hidden bg-white" style={{ height: height || undefined }}>
@@ -415,19 +334,6 @@ function ShareMarks() {
         <Link2 className="size-3.5" strokeWidth={2} />
       </span>
     </div>
-  );
-}
-
-function WhatsAppMark({ filled = false }: { filled?: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" className={filled ? "size-7" : "size-[18px]"} fill="none" aria-hidden>
-      <path
-        d="M12.04 3.5A8.2 8.2 0 0 0 4.7 16.2L3.6 20.4l4.3-1.1A8.2 8.2 0 1 0 12.04 3.5Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        fill={filled ? "currentColor" : "none"}
-      />
-    </svg>
   );
 }
 

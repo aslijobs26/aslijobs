@@ -109,6 +109,17 @@ export function fetchRelatedBlogs(slug: string): Promise<BlogCard[]> {
   return publicGet<BlogCard[]>(`/blogs/${encodeURIComponent(slug)}/related`);
 }
 
+export type BlogPreviewPage = {
+  article: BlogArticle;
+  related: BlogCard[];
+  popular: BlogCard[];
+  status: "draft" | "published" | "scheduled";
+};
+
+export function fetchBlogPreview(token: string): Promise<BlogPreviewPage> {
+  return publicGet<BlogPreviewPage>(`/blogs/preview/${encodeURIComponent(token)}`);
+}
+
 export type BlogSitemapItem = { slug: string; updatedAt: string | null };
 
 export function fetchBlogSitemap(): Promise<BlogSitemapItem[]> {

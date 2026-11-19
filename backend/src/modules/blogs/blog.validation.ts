@@ -108,6 +108,15 @@ export const slugParamsSchema = z.object({
   slug: z.string().trim().min(1).max(80),
 });
 
+export const previewTokenParamsSchema = z.object({
+  token: z
+    .string()
+    .trim()
+    .min(20)
+    .max(800)
+    .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/, "Preview link is invalid or expired."),
+});
+
 export const idParamsSchema = z.object({
   id: objectId,
 });

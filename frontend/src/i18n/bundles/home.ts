@@ -220,7 +220,8 @@ const en = {
       },
       resourcesTitle: "Job Seeker Resources",
       resourcesAction: "View all resources →",
-      blogsTitle: "Career insights",
+      blogsTitle: "Latest blogs & articles",
+      videosTitle: "Latest videos",
       blogsAction: "View all blogs →",
       blogsEmpty: "New articles will appear here.",
       resources: {
@@ -473,7 +474,8 @@ const hi: HomeCatalog = {
       },
       resourcesTitle: "नौकरी खोजने वालों के लिए संसाधन",
       resourcesAction: "सभी संसाधन देखें →",
-      blogsTitle: "करियर लेख",
+      blogsTitle: "नवीनतम ब्लॉग और लेख",
+      videosTitle: "नवीनतम वीडियो",
       blogsAction: "सभी लेख देखें →",
       blogsEmpty: "नए लेख यहाँ दिखेंगे।",
       resources: {
@@ -726,7 +728,8 @@ const te: HomeCatalog = {
       },
       resourcesTitle: "ఉద్యోగార్థుల వనరులు",
       resourcesAction: "అన్ని వనరులు చూడండి →",
-      blogsTitle: "కెరీర్ వ్యాసాలు",
+      blogsTitle: "తాజా బ్లాగులు & వ్యాసాలు",
+      videosTitle: "తాజా వీడియోలు",
       blogsAction: "అన్ని వ్యాసాలు చూడండి →",
       blogsEmpty: "కొత్త వ్యాసాలు ఇక్కడ కనిపిస్తాయి.",
       resources: {
@@ -986,7 +989,8 @@ const ta: HomeCatalog = {
       },
       resourcesTitle: "வேலை தேடுபவர் வளங்கள்",
       resourcesAction: "அனைத்து வளங்களையும் பாருங்கள் →",
-      blogsTitle: "தொழில் கட்டுரைகள்",
+      blogsTitle: "சமீபத்திய வலைப்பதிவுகள் & கட்டுரைகள்",
+      videosTitle: "சமீபத்திய வீடியோக்கள்",
       blogsAction: "அனைத்து கட்டுரைகளும் →",
       blogsEmpty: "புதிய கட்டுரைகள் இங்கே தோன்றும்.",
       resources: {
@@ -1240,7 +1244,8 @@ const kn: HomeCatalog = {
       },
       resourcesTitle: "ಉದ್ಯೋಗಾರ್ಥಿ ಸಂಪನ್ಮೂಲಗಳು",
       resourcesAction: "ಎಲ್ಲಾ ಸಂಪನ್ಮೂಲಗಳನ್ನು ನೋಡಿ →",
-      blogsTitle: "ವೃತ್ತಿ ಲೇಖನಗಳು",
+      blogsTitle: "ಇತ್ತೀಚಿನ ಬ್ಲಾಗ್‌ಗಳು ಮತ್ತು ಲೇಖನಗಳು",
+      videosTitle: "ಇತ್ತೀಚಿನ ವೀಡಿಯೊಗಳು",
       blogsAction: "ಎಲ್ಲಾ ಲೇಖನಗಳನ್ನು ನೋಡಿ →",
       blogsEmpty: "ಹೊಸ ಲೇಖನಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.",
       resources: {
@@ -1496,7 +1501,8 @@ const ml: HomeCatalog = {
       },
       resourcesTitle: "തൊഴിൽ അന്വേഷകർക്കുള്ള ഉറവിടങ്ങൾ",
       resourcesAction: "എല്ലാ ഉറവിടങ്ങളും കാണൂ →",
-      blogsTitle: "കരിയർ ലേഖനങ്ങൾ",
+      blogsTitle: "ഏറ്റവും പുതിയ ബ്ലോഗുകളും ലേഖനങ്ങളും",
+      videosTitle: "ഏറ്റവും പുതിയ വീഡിയോകൾ",
       blogsAction: "എല്ലാ ലേഖനങ്ങളും കാണൂ →",
       blogsEmpty: "പുതിയ ലേഖനങ്ങൾ ഇവിടെ കാണാം.",
       resources: {

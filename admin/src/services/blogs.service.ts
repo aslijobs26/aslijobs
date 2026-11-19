@@ -1,3 +1,4 @@
+import { env } from "../constants/env";
 import { apiClient } from "./api-client";
 
 export type BlogImage = {
@@ -117,6 +118,20 @@ export type BlogPreview = {
 export async function previewAdminBlog(body: unknown): Promise<BlogPreview> {
   const response = await apiClient.post<{ data: BlogPreview }>("/operations/blogs/preview", body);
   return response.data.data;
+}
+
+export async function openSiteBlogPreview(id: string): Promise<void> {
+  if (!env.publicSiteUrl) {
+    throw new Error("The public website address is not configured.");
+  }
+  const response = await apiClient.post<{ data: { token: string; expiresAt: string } }>(
+    `/operations/blogs/${id}/preview-token`,
+  );
+  const url = `${env.publicSiteUrl}/blogs/preview/${encodeURIComponent(response.data.data.token)}`;
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    window.location.assign(url);
+  }
 }
 
 export async function fetchBlogCategoriesAdmin(): Promise<BlogCategoryRecord[]> {

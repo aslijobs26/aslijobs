@@ -112,6 +112,18 @@ export const blogController = {
     sendSuccess(res, HTTP_STATUS.OK, { data });
   },
 
+  async issuePreviewToken(req: Request, res: Response) {
+    const data = await blogService.issuePreviewToken(String(req.params.id));
+    sendSuccess(res, HTTP_STATUS.OK, { data });
+  },
+
+  async previewByToken(req: Request, res: Response) {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+    res.setHeader("Cache-Control", "no-store");
+    const data = await blogService.previewByToken(String(req.params.token ?? ""));
+    sendSuccess(res, HTTP_STATUS.OK, { data });
+  },
+
   async listCategories(_req: Request, res: Response) {
     const data = await blogService.listCategories();
     sendSuccess(res, HTTP_STATUS.OK, { data });

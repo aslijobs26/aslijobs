@@ -1,4 +1,4 @@
-import { CircleHelp, ImageIcon, Newspaper, PenLine, Plus, Search, Trash2 } from "lucide-react";
+import { CircleHelp, ImageIcon, Newspaper, PenLine, Plus, Search, Trash2, X } from "lucide-react";
 import { BlogLivePreview } from "./BlogLivePreview";
 import { BlogRichTextEditor } from "./BlogRichTextEditor";
 import { OperationsLayout } from "../layout/OperationsLayout";
@@ -6,8 +6,7 @@ import {
   fetchAdminBlog,
   fetchBlogCategoriesAdmin,
   fetchBlogTagsAdmin,
-  previewAdminBlog,
-  type BlogPreview,
+  openSiteBlogPreview,
   saveAdminBlog,
   saveBlogTag,
   uploadBlogImage,
@@ -18,7 +17,7 @@ import {
 import { cn } from "../../../utils/cn";
 import { getOperationsApiErrorMessage } from "../../../utils/operations-api-errors";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
 
 type EditorState = {
@@ -164,7 +163,6 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState<EditorState["status"] | null>(null);
   const dirtyRef = useRef(false);
-  const [livePreview, setLivePreview] = useState<BlogPreview | null>(null);
 
   useEffect(() => {
     void Promise.all([fetchBlogCategoriesAdmin(), fetchBlogTagsAdmin()]).then(([nextCategories, nextTags]) => {
@@ -172,22 +170,6 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
       setTags(nextTags);
     });
   }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const payload = toPayload(state, state.status);
-      void previewAdminBlog({
-        title: payload.title,
-        excerpt: payload.excerpt,
-        content: payload.content,
-        authorName: payload.authorName,
-        ...(payload.coverImage ? { coverImage: payload.coverImage } : {}),
-      })
-        .then(setLivePreview)
-        .catch(() => undefined);
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [state]);
 
   useEffect(() => {
     if (!blogId) return;
@@ -329,8 +311,7 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
   }
 
   const categoryName = categories.find((item) => item.id === state.categoryId)?.name ?? "";
-  const previewContent = livePreview?.content || state.content;
-  const previewHeadings = livePreview?.headings?.length ? livePreview.headings : headingsFromHtml(state.content);
+  const previewHeadings = headingsFromHtml(state.content);
 
   return (
     <OperationsLayout title={blogId ? "Edit blog" : "Create blog"} subtitle="The preview on the right matches the public article.">
@@ -379,6 +360,7 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
                 square
                 image={state.authorImage}
                 onPick={async (file) => patch({ authorImage: await upload(file, "author") })}
+                onRemove={() => patch({ authorImage: null })}
               />
               <MediaSlot
                 label="Cover image"
@@ -386,6 +368,7 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
                 cover
                 image={state.coverImage}
                 onPick={async (file) => patch({ coverImage: await upload(file, "cover") })}
+                onRemove={() => patch({ coverImage: null })}
               />
               <Field label="Cover image description">
                 <input className={inputClass} placeholder="Describe the cover for screen readers" value={state.coverImageAlt} onChange={(event) => patch({ coverImageAlt: event.target.value })} />
@@ -545,9 +528,6 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
               <Field label="Keywords" hint="Separate with commas">
                 <input className={inputClass} value={state.keywords} placeholder="Related phrases" onChange={(event) => patch({ keywords: event.target.value })} />
               </Field>
-              <Field className="sm:col-span-2" label="Canonical URL" hint="Only if this article also lives at another address">
-                <input className={inputClass} placeholder="https://www.aslijobs.com/blogs/…" value={state.canonicalUrl} onChange={(event) => patch({ canonicalUrl: event.target.value })} />
-              </Field>
             </div>
 
             <div className="grid gap-4 border-t border-border-subtle pt-4 sm:grid-cols-2">
@@ -558,27 +538,32 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
                 <textarea className={textareaClass} rows={2} value={state.ogDescription} placeholder={state.seoDescription || state.excerpt || "Text beside the shared image"} onChange={(event) => patch({ ogDescription: event.target.value })} />
               </Field>
               <div className="sm:col-span-2">
-              <ImageField label="Social image" image={state.ogImage} onPick={async (file) => patch({ ogImage: await upload(file, "social") })} />
+              <ImageField
+                label="Social image"
+                image={state.ogImage}
+                onPick={async (file) => patch({ ogImage: await upload(file, "social") })}
+                onRemove={() => patch({ ogImage: null })}
+              />
               </div>
             </div>
           </div>
         </section>
 
         <section className={sectionClass}>
-          <SectionHeading title="Publishing" hint="Choose when the article goes live and what it links to." />
-          <div className="grid gap-4 sm:grid-cols-2">
-          <ToggleRow
-            checked={state.allowIndexing}
-            title="Allow search engines"
-            hint="Turn this off to keep the article out of Google."
-            onChange={(checked) => patch({ allowIndexing: checked })}
-          />
-          <Field label="Schedule" hint="Leave empty to publish immediately.">
-            <input className={inputClass} type="datetime-local" value={state.scheduledAt} onChange={(event) => patch({ scheduledAt: event.target.value, status: "scheduled" })} />
-          </Field>
-          <Field className="sm:col-span-2" label="Related article ids" hint="Comma-separated ids from the blogs list.">
-            <input className={inputClass} value={state.relatedBlogIds} onChange={(event) => patch({ relatedBlogIds: event.target.value })} />
-          </Field>
+          <SectionHeading title="Publishing" hint="Choose when the article goes live and which articles it links to." />
+          <div className="grid gap-4">
+            <ToggleRow
+              checked={state.allowIndexing}
+              title="Allow search engines"
+              hint="Turn this off to keep the article out of Google."
+              onChange={(checked) => patch({ allowIndexing: checked })}
+            />
+            <Field label="Schedule" hint="Leave empty to publish immediately." stackHint>
+              <input className={inputClass} type="datetime-local" value={state.scheduledAt} onChange={(event) => patch({ scheduledAt: event.target.value, status: "scheduled" })} />
+            </Field>
+            <Field label="Related articles" hint="Paste article ids, separated by commas." stackHint>
+              <input className={inputClass} value={state.relatedBlogIds} placeholder="Article ids" onChange={(event) => patch({ relatedBlogIds: event.target.value })} />
+            </Field>
           </div>
         </section>
 
@@ -596,9 +581,23 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
             {saving === "scheduled" ? "Scheduling…" : "Schedule"}
           </button>
           {blogId ? (
-            <Link to={`${OPERATIONS_ROUTES.BLOGS}/${blogId}/preview`} className={secondaryButtonClass}>
+            <button
+              type="button"
+              className={secondaryButtonClass}
+              onClick={() => {
+                if (
+                  dirtyRef.current &&
+                  !window.confirm("Preview opens the last saved version. Save first if these edits should be included.")
+                ) {
+                  return;
+                }
+                void openSiteBlogPreview(blogId).catch((err) => {
+                  setError(getOperationsApiErrorMessage(err, "Preview unavailable."));
+                });
+              }}
+            >
               Preview
-            </Link>
+            </button>
           ) : null}
           {blogId ? (
             <span className="text-xs font-semibold text-muted">
@@ -611,16 +610,16 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
         </div>
 
         <aside className="min-w-0 lg:sticky lg:top-2 lg:max-h-[calc(100dvh-6.5rem)] lg:overflow-y-auto">
-          <BlogLivePreview
+        <BlogLivePreview
             title={state.title}
             excerpt={state.excerpt}
-            content={previewContent}
+            content={state.content}
             categoryName={categoryName}
             authorName={state.authorName}
             authorImageUrl={state.authorImage?.url ?? ""}
             coverImageUrl={state.coverImage?.url ?? ""}
             coverImageAlt={state.coverImageAlt || state.title}
-            readingTimeMinutes={livePreview?.readingTimeMinutes ?? readingMinutes(state.content)}
+            readingTimeMinutes={readingMinutes(state.content)}
             headings={previewHeadings}
             faqs={state.faqs.filter((item) => item.question.trim() && item.answer.trim())}
           />
@@ -667,12 +666,26 @@ function SectionHeading({ title, hint }: { title: string; hint: string }) {
   );
 }
 
-function Field({ label, hint, className, children }: { label: string; hint?: string; className?: string; children: ReactNode }) {
+function Field({
+  label,
+  hint,
+  className,
+  stackHint = false,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  className?: string;
+  stackHint?: boolean;
+  children: ReactNode;
+}) {
   return (
     <label className={cn("grid gap-1.5 text-[13px] font-semibold text-foreground", className)}>
-      <span className="flex items-baseline justify-between gap-3">
-        {label}
-        {hint ? <span className="text-[11px] font-medium text-muted">{hint}</span> : null}
+      <span className={cn(!stackHint && "flex items-baseline justify-between gap-3")}>
+        <span className="block">{label}</span>
+        {hint ? (
+          <span className={cn("text-[11px] font-medium text-muted", stackHint && "mt-0.5 block font-normal leading-relaxed")}>{hint}</span>
+        ) : null}
       </span>
       {children}
     </label>
@@ -706,16 +719,31 @@ function ToggleRow({
   );
 }
 
+function RemoveImageButton({ onRemove }: { onRemove: () => void }) {
+  return (
+    <button
+      type="button"
+      className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border-subtle bg-white px-2.5 text-[11px] font-semibold text-danger hover:border-danger/40"
+      onClick={onRemove}
+    >
+      <X className="size-3.5" aria-hidden />
+      Remove
+    </button>
+  );
+}
+
 function CoverField({
   label,
   required,
   image,
   onPick,
+  onRemove,
 }: {
   label: string;
   required?: boolean;
   image: BlogImage | null;
   onPick: (file: File) => Promise<void>;
+  onRemove: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -755,6 +783,7 @@ function CoverField({
           )}
         </button>
         <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-2.5 py-2">
+          {image?.url ? <RemoveImageButton onRemove={onRemove} /> : null}
           <button
             type="button"
             className="inline-flex h-7 shrink-0 items-center rounded-md border border-border-subtle bg-white px-2.5 text-[11px] font-semibold text-foreground hover:border-primary/40 disabled:opacity-60"
@@ -788,6 +817,7 @@ function MediaSlot({
   square,
   cover,
   onPick,
+  onRemove,
 }: {
   label: string;
   image: BlogImage | null;
@@ -795,6 +825,7 @@ function MediaSlot({
   square?: boolean;
   cover?: boolean;
   onPick: (file: File) => Promise<void>;
+  onRemove: () => void;
 }) {
   const fileInput = (
     <input
@@ -810,7 +841,7 @@ function MediaSlot({
   );
 
   if (cover) {
-    return <CoverField label={label} required={required} image={image} onPick={onPick} />;
+    return <CoverField label={label} required={required} image={image} onPick={onPick} onRemove={onRemove} />;
   }
 
   return (
@@ -834,10 +865,13 @@ function MediaSlot({
           <span className="block truncate text-[11px] font-medium text-muted">
             {image?.url ? "Image added" : "PNG, JPG, or WEBP · up to 5 MB"}
           </span>
-          <label className="mt-1.5 inline-flex h-7 cursor-pointer items-center rounded-md border border-border-subtle bg-white px-2.5 text-[11px] font-semibold text-foreground shadow-sm hover:border-primary/40">
-            {image?.url ? "Replace" : "Upload"}
-            {fileInput}
-          </label>
+          <span className="mt-1.5 inline-flex items-center gap-1.5">
+            {image?.url ? <RemoveImageButton onRemove={onRemove} /> : null}
+            <label className="inline-flex h-7 cursor-pointer items-center rounded-md border border-border-subtle bg-white px-2.5 text-[11px] font-semibold text-foreground shadow-sm hover:border-primary/40">
+              {image?.url ? "Replace" : "Upload"}
+              {fileInput}
+            </label>
+          </span>
         </span>
       </div>
     </div>
@@ -849,11 +883,13 @@ function ImageField({
   image,
   required,
   onPick,
+  onRemove,
 }: {
   label: string;
   image: BlogImage | null;
   required?: boolean;
   onPick: (file: File) => Promise<void>;
+  onRemove: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -875,14 +911,17 @@ function ImageField({
             <span>PNG, JPG, or WEBP · up to 5 MB</span>
           </span>
         )}
-        <button
-          type="button"
-          className="mb-2 mt-2 rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-foreground shadow-sm hover:border-primary/40 disabled:opacity-60"
-          disabled={uploading}
-          onClick={() => inputRef.current?.click()}
-        >
-          {uploading ? "Uploading…" : image?.url ? "Replace image" : "Choose image"}
-        </button>
+        <span className="mb-2 mt-2 inline-flex items-center justify-center gap-1.5">
+          {image?.url ? <RemoveImageButton onRemove={onRemove} /> : null}
+          <button
+            type="button"
+            className="rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-foreground shadow-sm hover:border-primary/40 disabled:opacity-60"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+          >
+            {uploading ? "Uploading…" : image?.url ? "Replace image" : "Choose image"}
+          </button>
+        </span>
         <input
           ref={inputRef}
           type="file"

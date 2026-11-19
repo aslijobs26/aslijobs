@@ -91,7 +91,7 @@
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 0.9rem;
+  border-radius: 0.75rem;
   object-fit: cover;
 }
 
@@ -165,6 +165,8 @@
 .body table {
   width: 100%;
   border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 0.75rem;
   font-size: 0.95rem;
 }
 

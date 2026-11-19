@@ -5,6 +5,7 @@ import { OPERATIONS_ROUTES } from "../constants/operations-routes";
 import {
   deleteAdminBlog,
   fetchAdminBlogs,
+  openSiteBlogPreview,
   fetchBlogCategoriesAdmin,
   updateAdminBlogStatus,
   type AdminBlog,
@@ -313,10 +314,25 @@ export function OperationsBlogsPage() {
           <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="Close actions" onClick={() => setMenu(null)} />
           <div className="fixed z-50 w-44 overflow-hidden rounded-lg border border-border-subtle bg-surface py-1 shadow-md" style={{ top: menu.top, left: menu.left }} role="menu">
             <MenuLink to={`${OPERATIONS_ROUTES.BLOGS}/${menu.blog.id}/edit`} icon={Pencil} label="Edit" onClick={() => setMenu(null)} />
-            <MenuLink to={`${OPERATIONS_ROUTES.BLOGS}/${menu.blog.id}/preview`} icon={Eye} label="Preview" onClick={() => setMenu(null)} />
             {menu.blog.status === "published" && env.publicSiteUrl ? (
               <MenuAnchor href={`${env.publicSiteUrl}/blogs/${menu.blog.slug}`} label="View on site" onClick={() => setMenu(null)} />
-            ) : null}
+            ) : menu.blog.status === "published" ? null : (
+              <button
+                type="button"
+                className={menuItemClass}
+                role="menuitem"
+                onClick={() => {
+                  const blog = menu.blog;
+                  setMenu(null);
+                  void openSiteBlogPreview(blog.id).catch((err) => {
+                    setError(getOperationsApiErrorMessage(err, "Preview unavailable."));
+                  });
+                }}
+              >
+                <Eye className="size-3.5" aria-hidden />
+                Preview
+              </button>
+            )}
             <button
               type="button"
               className={menuItemClass}
