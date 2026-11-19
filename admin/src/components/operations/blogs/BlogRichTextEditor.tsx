@@ -86,6 +86,7 @@ export function BlogRichTextEditor({ value, onChange, onUploadImage }: BlogRichT
   if (!editor) return null;
 
   function openPanel(next: InsertPanel) {
+    if (!editor) return;
     setPanelError("");
     setPanel((current) => (current === next ? null : next));
     if (next === "link") {
@@ -102,6 +103,7 @@ export function BlogRichTextEditor({ value, onChange, onUploadImage }: BlogRichT
   }
 
   function applyLink() {
+    if (!editor) return;
     const href = linkUrl.trim();
     if (!/^https?:\/\//i.test(href)) {
       setPanelError("Enter a full link, starting with https://");
@@ -128,6 +130,7 @@ export function BlogRichTextEditor({ value, onChange, onUploadImage }: BlogRichT
     setBusy(true);
     setPanelError("");
     try {
+      if (!editor) return;
       const url = await onUploadImage(imageFile);
       editor.chain().focus().setImage({ src: url, alt: imageAlt.trim() }).run();
       setImageAlt("");
@@ -140,6 +143,7 @@ export function BlogRichTextEditor({ value, onChange, onUploadImage }: BlogRichT
   }
 
   function applyYoutube() {
+    if (!editor) return;
     const url = youtubeUrl.trim();
     if (!/(?:youtube\.com|youtu\.be)\//i.test(url)) {
       setPanelError("Paste a YouTube link.");
@@ -155,6 +159,7 @@ export function BlogRichTextEditor({ value, onChange, onUploadImage }: BlogRichT
   }
 
   function applyTable() {
+    if (!editor) return;
     const rows = Number(tableRows);
     const cols = Number(tableCols);
     if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows < 2 || rows > 8 || cols < 2 || cols > 6) {
@@ -166,6 +171,7 @@ export function BlogRichTextEditor({ value, onChange, onUploadImage }: BlogRichT
   }
 
   function applyCallout() {
+    if (!editor) return;
     const text = calloutText.trim();
     if (!text) {
       setPanelError("Write the callout text.");
@@ -177,6 +183,7 @@ export function BlogRichTextEditor({ value, onChange, onUploadImage }: BlogRichT
   }
 
   function applyCta() {
+    if (!editor) return;
     const text = ctaText.trim();
     const label = ctaLabel.trim();
     const href = ctaUrl.trim();

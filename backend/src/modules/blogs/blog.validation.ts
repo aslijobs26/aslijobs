@@ -16,7 +16,11 @@ const seoSchema = z
     title: z.string().trim().max(70).optional().default(""),
     description: z.string().trim().max(180).optional().default(""),
     focusKeyword: z.string().trim().max(80).optional().default(""),
-    keywords: z.array(z.string().trim().min(1).max(40)).max(12).optional().default([]),
+    keywords: z
+      .array(z.string().trim().min(1).max(40, "Each keyword must be 40 characters or fewer."))
+      .max(12, "Use up to 12 keywords.")
+      .optional()
+      .default([]),
     canonicalUrl: z.string().trim().max(500).optional().default(""),
     ogTitle: z.string().trim().max(90).optional().default(""),
     ogDescription: z.string().trim().max(200).optional().default(""),

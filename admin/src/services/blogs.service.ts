@@ -127,7 +127,8 @@ export async function openSiteBlogPreview(id: string): Promise<void> {
   const response = await apiClient.post<{ data: { token: string; expiresAt: string } }>(
     `/operations/blogs/${id}/preview-token`,
   );
-  const url = `${env.publicSiteUrl}/blogs/preview/${encodeURIComponent(response.data.data.token)}`;
+  const returnTo = `${window.location.origin}/operations/blogs`;
+  const url = `${env.publicSiteUrl}/blogs/preview/${encodeURIComponent(response.data.data.token)}?return=${encodeURIComponent(returnTo)}`;
   const opened = window.open(url, "_blank", "noopener,noreferrer");
   if (!opened) {
     window.location.assign(url);

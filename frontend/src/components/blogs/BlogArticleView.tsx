@@ -1,3 +1,4 @@
+import { ArticleBackLink } from "@/components/blogs/ArticleBackLink";
 import { BlogHtml } from "@/components/blogs/BlogHtml";
 import { BlogShareBar } from "@/components/blogs/BlogShareBar";
 import { Container } from "@/components/layout/Container";
@@ -6,15 +7,18 @@ import type { BlogArticle, BlogCard } from "@/services/blogs.service";
 import { formatBlogDate, formatReadingTime } from "@/utils/blog-format";
 import { Calendar, ChevronDown, ChevronLeft, Clock3 } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export function BlogArticleView({
   article,
   related,
   popular,
+  showBack = true,
 }: {
   article: BlogArticle;
   related: BlogCard[];
   popular: BlogCard[];
+  showBack?: boolean;
 }) {
   const published = article.publishedAt ? formatBlogDate(article.publishedAt) : "";
   const context = article.headings.some((heading) => heading.level === 2)
@@ -26,6 +30,11 @@ export function BlogArticleView({
     <Container className="py-8 sm:py-10">
       <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <article className="min-w-0">
+          {showBack ? (
+            <Suspense fallback={null}>
+              <ArticleBackLink />
+            </Suspense>
+          ) : null}
           <nav className="text-[13px] text-muted">
             <Link href={ROUTES.BLOGS} className="hover:text-primary">
               Career Insights

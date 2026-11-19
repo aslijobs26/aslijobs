@@ -1,4 +1,5 @@
 import { BlogArticleView } from "@/components/blogs/BlogArticleView";
+import { PreviewBackButton } from "./preview-back-button";
 import { BlogNotFoundError, fetchBlogPreview } from "@/services/blogs.service";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -31,12 +32,19 @@ export default async function BlogPreviewPage({ params }: PreviewPageProps) {
         : "Draft preview. This article is not published.";
     return (
       <>
-        {preview.status === "published" ? null : (
-          <p className="border-b border-[#f3e2b8] bg-[#fff8ea] px-4 py-2 text-center text-xs font-semibold text-[#8a5a12]">
-            {label}
-          </p>
-        )}
-        <BlogArticleView article={preview.article} related={related} popular={preview.popular} />
+        <div
+          className={
+            preview.status === "published"
+              ? "flex items-center gap-3 border-b border-border-subtle bg-white px-4 py-2"
+              : "flex items-center gap-3 border-b border-[#f3e2b8] bg-[#fff8ea] px-4 py-2"
+          }
+        >
+          <PreviewBackButton />
+          {preview.status === "published" ? null : (
+            <p className="min-w-0 flex-1 text-center text-xs font-semibold text-[#8a5a12]">{label}</p>
+          )}
+        </div>
+        <BlogArticleView article={preview.article} related={related} popular={preview.popular} showBack={false} />
       </>
     );
   } catch (error) {

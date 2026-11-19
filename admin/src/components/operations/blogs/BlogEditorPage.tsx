@@ -15,7 +15,7 @@ import {
   type BlogTagRecord,
 } from "../../../services/blogs.service";
 import { cn } from "../../../utils/cn";
-import { getOperationsApiErrorMessage } from "../../../utils/operations-api-errors";
+import { getOperationsApiErrorMessage, getOperationsApiFieldErrors } from "../../../utils/operations-api-errors";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { OPERATIONS_ROUTES } from "../../../constants/operations-routes";
@@ -160,6 +160,7 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
   const [categories, setCategories] = useState<BlogCategoryRecord[]>([]);
   const [tags, setTags] = useState<BlogTagRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState<EditorState["status"] | null>(null);
   const dirtyRef = useRef(false);
@@ -216,6 +217,13 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
   function patch(partial: Partial<EditorState>) {
     dirtyRef.current = true;
     setNotice(null);
+    setFieldErrors((current) => {
+      const next = { ...current };
+      for (const key of Object.keys(partial)) {
+        delete next[key === "tagIds" ? "tagText" : key];
+      }
+      return next;
+    });
     setState((current) => {
       const next = { ...current, ...partial };
       if (partial.title !== undefined && !slugTouched) {
@@ -255,33 +263,40 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
   }
 
   function readyToSave(status: EditorState["status"]) {
-    if (!state.title.trim()) return "Blog title is required.";
-    if (!state.excerpt.trim()) return "Description is required.";
-    if (!plainText(state.content)) return "Article content is required.";
-    if (!state.coverImage) return "Cover image is required.";
-    if (!/^[a-f\d]{24}$/i.test(state.categoryId)) return "Choose a category.";
-    const related = state.relatedBlogIds.split(",").map((item) => item.trim()).filter(Boolean);
-    if (related.length > 6) return "Use up to 6 related articles.";
-    if (related.some((item) => !/^[a-f\d]{24}$/i.test(item))) return "Related articles must be blog ids, separated by commas.";
-    if (status === "scheduled") {
-      if (!state.scheduledAt) return "Choose a publish date and time before scheduling.";
-      if (new Date(state.scheduledAt).getTime() <= Date.now()) return "Choose a future date and time. A past time publishes the article immediately.";
-    }
-    return null;
+    return blogFieldProblems(state, status);
+  }
+
+  function showFieldErrors(errors: Record<string, string>, formMessage: string | null = null) {
+    setNotice(null);
+    setFieldErrors(errors);
+    setError(formMessage);
+    const first = BLOG_FIELD_ORDER.find((field) => errors[field]);
+    if (!first) return;
+    const node = document.querySelector(`[data-blog-field="${first}"]`);
+    node?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const focusable = node?.querySelector("input, textarea, select");
+    if (focusable instanceof HTMLElement) focusable.focus();
   }
 
   async function save(status: EditorState["status"]) {
-    const problem = readyToSave(status);
-    if (problem) {
-      setNotice(null);
-      setError(problem);
+    const problems = readyToSave(status);
+    if (Object.keys(problems).length > 0) {
+      showFieldErrors(problems);
       return;
     }
     setSaving(status);
     setError(null);
+    setFieldErrors({});
     setNotice(null);
     try {
-      const tagIds = await resolveTagIds(state.tagText, tags);
+      let tagIds: string[];
+      try {
+        tagIds = await resolveTagIds(state.tagText, tags);
+      } catch (err) {
+        const tagError = getOperationsApiFieldErrors(err).name || getOperationsApiErrorMessage(err, "Could not save the tags.");
+        showFieldErrors({ tagText: humanBlogError("tagIds", tagError) });
+        return;
+      }
       const saved = await saveAdminBlog(blogId ?? null, toPayload({ ...state, tagIds }, status));
       const message = saveNotice(status, saved);
       dirtyRef.current = false;
@@ -299,7 +314,13 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
         setNotice(message);
       }
     } catch (err) {
-      setError(getOperationsApiErrorMessage(err, "Could not save the blog."));
+      const mapped = mapBlogApiFieldErrors(getOperationsApiFieldErrors(err));
+      if (Object.keys(mapped.fields).length > 0) {
+        showFieldErrors(mapped.fields, mapped.form);
+      } else {
+        setFieldErrors({});
+        setError(getOperationsApiErrorMessage(err, "Unable to save the blog. Please check the form fields and try again."));
+      }
     } finally {
       setSaving(null);
     }
@@ -329,28 +350,29 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
             </div>
           </header>
           <div className="grid gap-4 p-4 sm:grid-cols-2">
-            <Field className="sm:col-span-2" label="Title">
-              <input className={inputClass} value={state.title} placeholder="Article title" onChange={(event) => patch({ title: event.target.value })} />
+            <Field className="sm:col-span-2" label="Title" field="title" error={fieldErrors.title}>
+              <input className={cn(inputClass, fieldErrors.title && invalidControl)} maxLength={180} value={state.title} placeholder="Article title" aria-invalid={Boolean(fieldErrors.title)} onChange={(event) => patch({ title: event.target.value })} />
             </Field>
-            <Field className="sm:col-span-2" label="Short description" hint={`${state.excerpt.length}/400`}>
-              <textarea className={textareaClass} rows={3} maxLength={400} placeholder="One or two sentences for the article card" value={state.excerpt} onChange={(event) => patch({ excerpt: event.target.value })} />
+            <Field className="sm:col-span-2" label="Short description" hint={`${state.excerpt.length}/400`} field="excerpt" error={fieldErrors.excerpt}>
+              <textarea className={cn(textareaClass, fieldErrors.excerpt && invalidControl)} rows={3} maxLength={400} placeholder="One or two sentences for the article card" value={state.excerpt} aria-invalid={Boolean(fieldErrors.excerpt)} onChange={(event) => patch({ excerpt: event.target.value })} />
             </Field>
-            <Field label="Category">
-              <select className={inputClass} value={state.categoryId} onChange={(event) => patch({ categoryId: event.target.value })}>
+            <Field label="Category" field="categoryId" error={fieldErrors.categoryId}>
+              <select className={cn(inputClass, fieldErrors.categoryId && invalidControl)} value={state.categoryId} aria-invalid={Boolean(fieldErrors.categoryId)} onChange={(event) => patch({ categoryId: event.target.value })}>
                 <option value="">Select a category</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>{category.name}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Author name">
-              <input className={inputClass} value={state.authorName} onChange={(event) => patch({ authorName: event.target.value })} />
+            <Field label="Author name" field="authorName" error={fieldErrors.authorName}>
+              <input className={cn(inputClass, fieldErrors.authorName && invalidControl)} maxLength={80} value={state.authorName} aria-invalid={Boolean(fieldErrors.authorName)} onChange={(event) => patch({ authorName: event.target.value })} />
             </Field>
-            <Field className="sm:col-span-2" label="Tags" hint="Separate with commas">
+            <Field className="sm:col-span-2" label="Tags" hint="Separate with commas. Each tag can be 40 characters." field="tagText" error={fieldErrors.tagText}>
               <input
-                className={inputClass}
+                className={cn(inputClass, fieldErrors.tagText && invalidControl)}
                 placeholder="Delivery, Drivers, Warehouse"
                 value={state.tagText}
+                aria-invalid={Boolean(fieldErrors.tagText)}
                 onChange={(event) => patch({ tagText: event.target.value })}
               />
             </Field>
@@ -362,16 +384,19 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
                 onPick={async (file) => patch({ authorImage: await upload(file, "author") })}
                 onRemove={() => patch({ authorImage: null })}
               />
-              <MediaSlot
-                label="Cover image"
-                required
-                cover
-                image={state.coverImage}
-                onPick={async (file) => patch({ coverImage: await upload(file, "cover") })}
-                onRemove={() => patch({ coverImage: null })}
-              />
-              <Field label="Cover image description">
-                <input className={inputClass} placeholder="Describe the cover for screen readers" value={state.coverImageAlt} onChange={(event) => patch({ coverImageAlt: event.target.value })} />
+              <div data-blog-field="coverImage" className="grid gap-1.5">
+                <MediaSlot
+                  label="Cover image"
+                  required
+                  cover
+                  image={state.coverImage}
+                  onPick={async (file) => patch({ coverImage: await upload(file, "cover") })}
+                  onRemove={() => patch({ coverImage: null })}
+                />
+                {fieldErrors.coverImage ? <p className="text-[11px] font-medium text-danger" role="alert">{fieldErrors.coverImage}</p> : null}
+              </div>
+              <Field label="Cover image description" field="coverImageAlt" error={fieldErrors.coverImageAlt}>
+                <input className={cn(inputClass, fieldErrors.coverImageAlt && invalidControl)} maxLength={180} placeholder="Describe the cover for screen readers" value={state.coverImageAlt} aria-invalid={Boolean(fieldErrors.coverImageAlt)} onChange={(event) => patch({ coverImageAlt: event.target.value })} />
               </Field>
             </div>
 
@@ -403,16 +428,17 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
               <p className="mt-0.5 text-[11px] leading-snug text-muted">Write the story. Headings, images, and YouTube links appear in the preview.</p>
             </div>
           </header>
-          <div className="p-3">
+          <div className="p-3" data-blog-field="content">
             <BlogRichTextEditor
               value={state.content}
               onChange={(content) => patch({ content })}
               onUploadImage={async (file) => (await upload(file, "inline")).url}
             />
+            {fieldErrors.content ? <p className="px-1 pt-2 text-[11px] font-medium text-danger" role="alert">{fieldErrors.content}</p> : null}
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+        <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm" data-blog-field="faqs">
           <header className="flex items-start justify-between gap-3 border-b border-border-subtle bg-hero-bg/40 px-4 py-3">
             <div className="flex min-w-0 items-start gap-2.5">
               <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -434,6 +460,7 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
             </button>
           </header>
           <div className="grid gap-3 p-4">
+            {fieldErrors.faqs ? <p className="text-[11px] font-medium text-danger" role="alert">{fieldErrors.faqs}</p> : null}
             {state.faqs.length === 0 ? (
               <p className="text-xs text-muted">No questions yet. Add the questions readers ask about this article.</p>
             ) : null}
@@ -503,8 +530,8 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field className="sm:col-span-2" label="URL slug" hint={state.slug ? "Public address" : "Filled from the title until you edit it."}>
-                <div className="flex h-10 overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+              <Field className="sm:col-span-2" label="URL slug" hint={state.slug ? "Public address" : "Filled from the title until you edit it."} field="slug" error={fieldErrors.slug}>
+                <div className={cn("flex h-10 overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20", fieldErrors.slug && "border-danger focus-within:border-danger focus-within:ring-danger/20")}>
                   <span className="inline-flex shrink-0 items-center border-r border-border-subtle bg-hero-bg/70 px-2.5 text-xs font-medium text-muted">/blogs/</span>
                   <input
                     className="min-w-0 flex-1 bg-transparent px-3 text-sm font-medium text-foreground outline-none placeholder:font-normal placeholder:text-muted"
@@ -516,26 +543,26 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
                   />
                 </div>
               </Field>
-              <Field className="sm:col-span-2" label="SEO title" hint={state.seoTitle ? `${state.seoTitle.length}/70` : "Uses the article title"}>
-                <input className={inputClass} value={state.seoTitle} maxLength={70} placeholder={state.title || "Headline shown in Google"} onChange={(event) => patch({ seoTitle: event.target.value })} />
+              <Field className="sm:col-span-2" label="SEO title" hint={state.seoTitle ? `${state.seoTitle.length}/70` : "Uses the article title"} field="seoTitle" error={fieldErrors.seoTitle}>
+                <input className={cn(inputClass, fieldErrors.seoTitle && invalidControl)} value={state.seoTitle} maxLength={70} placeholder={state.title || "Headline shown in Google"} aria-invalid={Boolean(fieldErrors.seoTitle)} onChange={(event) => patch({ seoTitle: event.target.value })} />
               </Field>
-              <Field className="sm:col-span-2" label="Meta description" hint={state.seoDescription ? `${state.seoDescription.length}/180` : "Uses the short description"}>
-                <textarea className={textareaClass} rows={3} maxLength={180} placeholder={state.excerpt || "Short text under the Google headline"} value={state.seoDescription} onChange={(event) => patch({ seoDescription: event.target.value })} />
+              <Field className="sm:col-span-2" label="Meta description" hint={state.seoDescription ? `${state.seoDescription.length}/180` : "Uses the short description"} field="seoDescription" error={fieldErrors.seoDescription}>
+                <textarea className={cn(textareaClass, fieldErrors.seoDescription && invalidControl)} rows={3} maxLength={180} placeholder={state.excerpt || "Short text under the Google headline"} value={state.seoDescription} aria-invalid={Boolean(fieldErrors.seoDescription)} onChange={(event) => patch({ seoDescription: event.target.value })} />
               </Field>
-              <Field label="Focus keyword">
-                <input className={inputClass} value={state.focusKeyword} placeholder="Main phrase to rank for" onChange={(event) => patch({ focusKeyword: event.target.value })} />
+              <Field label="Focus keyword" field="focusKeyword" error={fieldErrors.focusKeyword}>
+                <input className={cn(inputClass, fieldErrors.focusKeyword && invalidControl)} maxLength={80} value={state.focusKeyword} placeholder="Main phrase to rank for" aria-invalid={Boolean(fieldErrors.focusKeyword)} onChange={(event) => patch({ focusKeyword: event.target.value })} />
               </Field>
-              <Field label="Keywords" hint="Separate with commas">
-                <input className={inputClass} value={state.keywords} placeholder="Related phrases" onChange={(event) => patch({ keywords: event.target.value })} />
+              <Field label="Keywords" hint="Separate with commas. Each keyword can be 40 characters." field="keywords" error={fieldErrors.keywords}>
+                <input className={cn(inputClass, fieldErrors.keywords && invalidControl)} value={state.keywords} placeholder="Related phrases" aria-invalid={Boolean(fieldErrors.keywords)} onChange={(event) => patch({ keywords: event.target.value })} />
               </Field>
             </div>
 
             <div className="grid gap-4 border-t border-border-subtle pt-4 sm:grid-cols-2">
-              <Field className="sm:col-span-2" label="Share title" hint="Uses the SEO title when empty">
-                <input className={inputClass} value={state.ogTitle} placeholder={state.seoTitle || state.title || "Title on WhatsApp and LinkedIn"} onChange={(event) => patch({ ogTitle: event.target.value })} />
+              <Field className="sm:col-span-2" label="Share title" hint="Uses the SEO title when empty" field="ogTitle" error={fieldErrors.ogTitle}>
+                <input className={cn(inputClass, fieldErrors.ogTitle && invalidControl)} maxLength={90} value={state.ogTitle} placeholder={state.seoTitle || state.title || "Title on WhatsApp and LinkedIn"} aria-invalid={Boolean(fieldErrors.ogTitle)} onChange={(event) => patch({ ogTitle: event.target.value })} />
               </Field>
-              <Field className="sm:col-span-2" label="Share description" hint="Uses the meta description when empty">
-                <textarea className={textareaClass} rows={2} value={state.ogDescription} placeholder={state.seoDescription || state.excerpt || "Text beside the shared image"} onChange={(event) => patch({ ogDescription: event.target.value })} />
+              <Field className="sm:col-span-2" label="Share description" hint="Uses the meta description when empty" field="ogDescription" error={fieldErrors.ogDescription}>
+                <textarea className={cn(textareaClass, fieldErrors.ogDescription && invalidControl)} maxLength={200} rows={2} value={state.ogDescription} placeholder={state.seoDescription || state.excerpt || "Text beside the shared image"} aria-invalid={Boolean(fieldErrors.ogDescription)} onChange={(event) => patch({ ogDescription: event.target.value })} />
               </Field>
               <div className="sm:col-span-2">
               <ImageField
@@ -558,11 +585,11 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
               hint="Turn this off to keep the article out of Google."
               onChange={(checked) => patch({ allowIndexing: checked })}
             />
-            <Field label="Schedule" hint="Leave empty to publish immediately." stackHint>
-              <input className={inputClass} type="datetime-local" value={state.scheduledAt} onChange={(event) => patch({ scheduledAt: event.target.value, status: "scheduled" })} />
+            <Field label="Schedule" hint="Leave empty to publish immediately." stackHint field="scheduledAt" error={fieldErrors.scheduledAt}>
+              <input className={cn(inputClass, fieldErrors.scheduledAt && invalidControl)} type="datetime-local" value={state.scheduledAt} aria-invalid={Boolean(fieldErrors.scheduledAt)} onChange={(event) => patch({ scheduledAt: event.target.value, status: "scheduled" })} />
             </Field>
-            <Field label="Related articles" hint="Paste article ids, separated by commas." stackHint>
-              <input className={inputClass} value={state.relatedBlogIds} placeholder="Article ids" onChange={(event) => patch({ relatedBlogIds: event.target.value })} />
+            <Field label="Related articles" hint="Paste article ids, separated by commas." stackHint field="relatedBlogIds" error={fieldErrors.relatedBlogIds}>
+              <input className={cn(inputClass, fieldErrors.relatedBlogIds && invalidControl)} value={state.relatedBlogIds} placeholder="Article ids" aria-invalid={Boolean(fieldErrors.relatedBlogIds)} onChange={(event) => patch({ relatedBlogIds: event.target.value })} />
             </Field>
           </div>
         </section>
@@ -572,7 +599,7 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
           {notice ? <p className="px-1 text-sm font-medium text-primary">{notice}</p> : null}
           <div className="flex flex-wrap items-center gap-2">
           <button type="button" disabled={saving !== null} className={primaryButtonClass} onClick={() => void save("published")}>
-            {saving === "published" ? "Publishing…" : blogId ? "Update" : "Publish"}
+            {saving === "published" ? "Publishing…" : state.status === "published" ? "Update" : "Publish"}
           </button>
           <button type="button" disabled={saving !== null} className={secondaryButtonClass} onClick={() => void save("draft")}>
             {saving === "draft" ? "Saving…" : "Save draft"}
@@ -647,11 +674,153 @@ function headingsFromHtml(html: string) {
     .filter((item) => item.text);
 }
 
+const BLOG_FIELD_ORDER = [
+  "title",
+  "excerpt",
+  "categoryId",
+  "authorName",
+  "tagText",
+  "coverImage",
+  "coverImageAlt",
+  "content",
+  "faqs",
+  "slug",
+  "seoTitle",
+  "seoDescription",
+  "focusKeyword",
+  "keywords",
+  "ogTitle",
+  "ogDescription",
+  "ogImage",
+  "scheduledAt",
+  "relatedBlogIds",
+] as const;
+
+const BLOG_API_FIELDS: { path: string; field: string }[] = [
+  { path: "seo.keywords", field: "keywords" },
+  { path: "seo.title", field: "seoTitle" },
+  { path: "seo.description", field: "seoDescription" },
+  { path: "seo.focusKeyword", field: "focusKeyword" },
+  { path: "seo.ogTitle", field: "ogTitle" },
+  { path: "seo.ogDescription", field: "ogDescription" },
+  { path: "seo.ogImage", field: "ogImage" },
+  { path: "coverImageAlt", field: "coverImageAlt" },
+  { path: "coverImage", field: "coverImage" },
+  { path: "authorImage", field: "authorImage" },
+  { path: "authorName", field: "authorName" },
+  { path: "categoryId", field: "categoryId" },
+  { path: "relatedBlogIds", field: "relatedBlogIds" },
+  { path: "tagIds", field: "tagText" },
+  { path: "scheduledAt", field: "scheduledAt" },
+  { path: "content", field: "content" },
+  { path: "excerpt", field: "excerpt" },
+  { path: "title", field: "title" },
+  { path: "slug", field: "slug" },
+  { path: "faqs", field: "faqs" },
+  { path: "name", field: "tagText" },
+];
+
+function splitList(value: string) {
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function limitMessage(message: string, label: string) {
+  const characters = message.match(/<=(\d+) characters/);
+  if (characters) return `${label} must be ${characters[1]} characters or fewer.`;
+  const items = message.match(/<=(\d+)/);
+  if (items && /array|items|element/i.test(message)) return `Use ${items[1]} or fewer.`;
+  if (/expected string to have >=1|required/i.test(message)) return `${label} is required.`;
+  return message;
+}
+
+function humanBlogError(path: string, message: string) {
+  if (path === "tagIds" || path.startsWith("tagIds.") || path === "name") {
+    return limitMessage(message, "Each tag");
+  }
+  if (path.startsWith("seo.keywords")) return limitMessage(message, "Each keyword");
+  if (path.startsWith("relatedBlogIds")) return /invalid id/i.test(message) ? "Related articles must be article ids, separated by commas." : limitMessage(message, "Related articles");
+  if (path.startsWith("faqs")) return limitMessage(message, "This answer");
+  if (path.startsWith("categoryId")) return "Choose a category.";
+  if (path.startsWith("slug")) return "Use a lowercase slug with hyphens, up to 80 characters.";
+  const labels: Record<string, string> = {
+    title: "Title",
+    excerpt: "Short description",
+    content: "Article",
+    coverImage: "Cover image",
+    coverImageAlt: "Cover image description",
+    authorName: "Author name",
+    seoTitle: "SEO title",
+    seoDescription: "Meta description",
+    focusKeyword: "Focus keyword",
+    ogTitle: "Share title",
+    ogDescription: "Share description",
+    scheduledAt: "Schedule",
+  };
+  const field = BLOG_API_FIELDS.find((item) => path === item.path || path.startsWith(`${item.path}.`))?.field ?? "";
+  return limitMessage(message, labels[field] ?? "This field");
+}
+
+function mapBlogApiFieldErrors(raw: Record<string, string>) {
+  const fields: Record<string, string> = {};
+  const leftover: string[] = [];
+  for (const [path, message] of Object.entries(raw)) {
+    const match = BLOG_API_FIELDS.find((item) => path === item.path || path.startsWith(`${item.path}.`));
+    const text = humanBlogError(path, message);
+    if (!match) leftover.push(text);
+    else if (!fields[match.field]) fields[match.field] = text;
+  }
+  return { fields, form: leftover[0] ?? null };
+}
+
+function blogFieldProblems(state: EditorState, status: EditorState["status"]) {
+  const errors: Record<string, string> = {};
+  const title = state.title.trim();
+  const excerpt = state.excerpt.trim();
+  if (!title) errors.title = "Title is required.";
+  else if (title.length > 180) errors.title = "Title must be 180 characters or fewer.";
+  if (!excerpt) errors.excerpt = "Short description is required.";
+  else if (excerpt.length > 400) errors.excerpt = "Short description must be 400 characters or fewer.";
+  if (!/^[a-f\d]{24}$/i.test(state.categoryId)) errors.categoryId = "Choose a category.";
+  if (state.authorName.trim().length > 80) errors.authorName = "Author name must be 80 characters or fewer.";
+  const tags = splitList(state.tagText);
+  if (tags.length > 12) errors.tagText = "Use up to 12 tags.";
+  else if (tags.some((tag) => tag.length > 40)) errors.tagText = "Each tag must be 40 characters or fewer.";
+  if (!state.coverImage?.url) errors.coverImage = "Cover image is required.";
+  if (state.coverImageAlt.trim().length > 180) errors.coverImageAlt = "Cover image description must be 180 characters or fewer.";
+  if (!plainText(state.content)) errors.content = "Article content is required.";
+  else if (state.content.length > 200_000) errors.content = "Article content is too long.";
+  const slug = state.slug.trim();
+  if (slug && (slug.length > 80 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))) {
+    errors.slug = "Use a lowercase slug with hyphens, up to 80 characters.";
+  }
+  if (state.seoTitle.trim().length > 70) errors.seoTitle = "SEO title must be 70 characters or fewer.";
+  if (state.seoDescription.trim().length > 180) errors.seoDescription = "Meta description must be 180 characters or fewer.";
+  if (state.focusKeyword.trim().length > 80) errors.focusKeyword = "Focus keyword must be 80 characters or fewer.";
+  const keywords = splitList(state.keywords);
+  if (keywords.length > 12) errors.keywords = "Use up to 12 keywords.";
+  else if (keywords.some((keyword) => keyword.length > 40)) errors.keywords = "Each keyword must be 40 characters or fewer.";
+  if (state.ogTitle.trim().length > 90) errors.ogTitle = "Share title must be 90 characters or fewer.";
+  if (state.ogDescription.trim().length > 200) errors.ogDescription = "Share description must be 200 characters or fewer.";
+  if (state.faqs.length > 8) errors.faqs = "Use up to 8 questions.";
+  else if (state.faqs.some((item) => item.question.trim().length > 180 || item.answer.trim().length > 800)) {
+    errors.faqs = "Each question must be 180 characters or fewer, and each answer 800 characters or fewer.";
+  }
+  const related = splitList(state.relatedBlogIds);
+  if (related.length > 6) errors.relatedBlogIds = "Use up to 6 related articles.";
+  else if (related.some((item) => !/^[a-f\d]{24}$/i.test(item))) errors.relatedBlogIds = "Related articles must be article ids, separated by commas.";
+  if (status === "scheduled") {
+    if (!state.scheduledAt) errors.scheduledAt = "Choose a publish date and time before scheduling.";
+    else if (new Date(state.scheduledAt).getTime() <= Date.now()) errors.scheduledAt = "Choose a future date and time. A past time publishes the article immediately.";
+  }
+  return errors;
+}
+
 const sectionClass = "grid gap-3.5 rounded-xl border border-border-subtle bg-surface p-4 shadow-sm";
 const fieldControl =
   "w-full rounded-lg border border-border-subtle bg-surface px-3 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-[border-color,box-shadow] placeholder:font-normal placeholder:text-muted hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20";
 const inputClass = `${fieldControl} h-10`;
 const textareaClass = `${fieldControl} min-h-[5.5rem] resize-y py-2.5 leading-relaxed`;
+const invalidControl = "border-danger hover:border-danger focus:border-danger focus:ring-danger/20";
 const primaryButtonClass =
   "inline-flex h-9 items-center rounded-md bg-primary px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-hover disabled:opacity-60";
 const secondaryButtonClass =
@@ -671,24 +840,31 @@ function Field({
   hint,
   className,
   stackHint = false,
+  field,
+  error,
   children,
 }: {
   label: string;
   hint?: string;
   className?: string;
   stackHint?: boolean;
+  field?: string;
+  error?: string;
   children: ReactNode;
 }) {
   return (
-    <label className={cn("grid gap-1.5 text-[13px] font-semibold text-foreground", className)}>
-      <span className={cn(!stackHint && "flex items-baseline justify-between gap-3")}>
-        <span className="block">{label}</span>
-        {hint ? (
-          <span className={cn("text-[11px] font-medium text-muted", stackHint && "mt-0.5 block font-normal leading-relaxed")}>{hint}</span>
-        ) : null}
-      </span>
-      {children}
-    </label>
+    <div data-blog-field={field} className={cn("grid gap-1.5 text-[13px] font-semibold text-foreground", className)}>
+      <label className="grid gap-1.5">
+        <span className={cn(!stackHint && "flex items-baseline justify-between gap-3")}>
+          <span className="block">{label}</span>
+          {hint ? (
+            <span className={cn("text-[11px] font-medium text-muted", stackHint && "mt-0.5 block font-normal leading-relaxed")}>{hint}</span>
+          ) : null}
+        </span>
+        {children}
+      </label>
+      {error ? <p className="text-[11px] font-medium text-danger" role="alert">{error}</p> : null}
+    </div>
   );
 }
 

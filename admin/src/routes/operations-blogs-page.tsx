@@ -315,7 +315,11 @@ export function OperationsBlogsPage() {
           <div className="fixed z-50 w-44 overflow-hidden rounded-lg border border-border-subtle bg-surface py-1 shadow-md" style={{ top: menu.top, left: menu.left }} role="menu">
             <MenuLink to={`${OPERATIONS_ROUTES.BLOGS}/${menu.blog.id}/edit`} icon={Pencil} label="Edit" onClick={() => setMenu(null)} />
             {menu.blog.status === "published" && env.publicSiteUrl ? (
-              <MenuAnchor href={`${env.publicSiteUrl}/blogs/${menu.blog.slug}`} label="View on site" onClick={() => setMenu(null)} />
+              <MenuAnchor
+                href={`${env.publicSiteUrl}/blogs/${menu.blog.slug}?return=${encodeURIComponent(`${window.location.origin}/operations/blogs`)}`}
+                label="View on site"
+                onClick={() => setMenu(null)}
+              />
             ) : menu.blog.status === "published" ? null : (
               <button
                 type="button"
