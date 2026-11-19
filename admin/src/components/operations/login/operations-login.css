@@ -2432,6 +2432,35 @@
 
 }
 
+@media (width >= 1024px) {
+  .operations-login-form-section {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .operations-login-topbar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+  }
+
+  .operations-login-form-container {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .operations-login-footer {
+    position: absolute;
+    right: 0;
+    bottom: 0.75rem;
+    left: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
+
 
 
 

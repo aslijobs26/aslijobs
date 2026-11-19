@@ -80,9 +80,7 @@ export function BlogCardLink({ blog, size = "home" }: BlogCardLinkProps) {
         >
           {blog.title}
         </span>
-        {size !== "home" ? (
-          <span className="line-clamp-2 text-sm leading-relaxed text-muted">{blog.excerpt}</span>
-        ) : null}
+        <span className="line-clamp-2 text-sm leading-relaxed text-muted">{blog.excerpt}</span>
         {feature ? (
           <span className="mt-1 text-sm font-semibold text-primary">Read article</span>
         ) : null}
