@@ -2396,6 +2396,44 @@ export function buildDeterministicReply(
     const reason = String(facts.reason ?? "");
     const employerNeeded = reason === "employer_account_required" || reason === "incomplete_employer";
     const resume = reason.startsWith("incomplete");
+    if (reason === "employer_account_required") {
+      const url = registration.employerRegisterUrl || "";
+      if (language === "te") {
+        return `మీ వ్యాపారానికి సరైన అభ్యర్థులను నియమించుకోవడంలో సహాయం చేయడానికి, దయచేసి AsliJobs‌లో Employer ఖాతాను సృష్టించండి. మీ నియామక ప్రక్రియను సులభతరం చేయడానికి ఇప్పుడే ప్రారంభించండి!\n\nలింక్: ${url}`;
+      }
+      if (language === "hi") {
+        return `आपके व्यवसाय के लिए सही उम्मीदवारों को नियुक्त करने में मदद के लिए, कृपया AsliJobs पर Employer खाता बनाएं। अपनी भर्ती प्रक्रिया को आसान बनाने के लिए अभी शुरू करें!\n\nलिंक: ${url}`;
+      }
+      if (language === "ta") {
+        return `உங்கள் வணிகத்திற்கு ஏற்ற விண்ணப்பதாரர்களைத் தேர்ந்தெடுக்க உதவ, AsliJobs-ல் Employer கணக்கை உருவாக்குங்கள். உங்கள் பணியமர்த்தல் செயல்முறையை எளிதாக்க இப்போதே தொடங்குங்கள்!\n\nஇணைப்பு: ${url}`;
+      }
+      if (language === "kn") {
+        return `ನಿಮ್ಮ ವ್ಯವಹಾರಕ್ಕೆ ಸೂಕ್ತ ಅಭ್ಯರ್ಥಿಗಳನ್ನು ನೇಮಿಸಿಕೊಳ್ಳಲು ಸಹಾಯವಾಗಲು, ದಯವಿಟ್ಟು AsliJobs‌ನಲ್ಲಿ Employer ಖಾತೆ ರಚಿಸಿ. ನಿಮ್ಮ ನೇಮಕಾತಿ ಪ್ರಕ್ರಿಯೆಯನ್ನು ಸುಲಭಗೊಳಿಸಲು ಈಗಲೇ ಪ್ರಾರಂಭಿಸಿ!\n\nಲಿಂಕ್: ${url}`;
+      }
+      if (language === "ml") {
+        return `നിങ്ങളുടെ ബിസിനസിന് അനുയോജ്യരായ ഉദ്യോഗാർത്ഥികളെ നിയമിക്കാൻ സഹായിക്കുന്നതിന്, ദയവായി AsliJobs-ൽ Employer അക്കൗണ്ട് സൃഷ്ടിക്കുക. നിങ്ങളുടെ നിയമന നടപടികൾ എളുപ്പമാക്കാൻ ഇപ്പോൾ തുടങ്ങൂ!\n\nലിങ്ക്: ${url}`;
+      }
+      return `To help you hire the right candidates for your business, please create your AsliJobs account as an Employer. Get started and simplify your hiring process!\n\nLink: ${url}`;
+    }
+    if (reason === "job_seeker_account_required") {
+      const url = registration.seekerRegisterUrl || "";
+      if (language === "te") {
+        return `మీకు సరైన ఉద్యోగ అవకాశాలను కనుగొనడంలో సహాయం చేయడానికి, దయచేసి AsliJobs‌లో Job Seeker ఖాతాను సృష్టించి మీ ప్రొఫైల్‌ను పూర్తి చేయండి.\n\nలింక్: ${url}`;
+      }
+      if (language === "hi") {
+        return `आपके लिए उपयुक्त नौकरी के अवसर खोजने में मदद करने के लिए, कृपया AsliJobs पर Job Seeker खाता बनाएं और अपनी प्रोफ़ाइल पूरी करें।\n\nलिंक: ${url}`;
+      }
+      if (language === "ta") {
+        return `உங்களுக்கு ஏற்ற வேலை வாய்ப்புகளைக் கண்டறிய உதவ, AsliJobs-ல் Job Seeker கணக்கை உருவாக்கி உங்கள் சுயவிவரத்தைப் பூர்த்தி செய்யுங்கள்.\n\nஇணைப்பு: ${url}`;
+      }
+      if (language === "kn") {
+        return `ನಿಮಗೆ ಸೂಕ್ತವಾದ ಉದ್ಯೋಗಾವಕಾಶಗಳನ್ನು ಹುಡುಕಲು ಸಹಾಯವಾಗಲು, ದಯವಿಟ್ಟು AsliJobs‌ನಲ್ಲಿ Job Seeker ಖಾತೆ ರಚಿಸಿ ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸಿ.\n\nಲಿಂಕ್: ${url}`;
+      }
+      if (language === "ml") {
+        return `നിങ്ങൾക്ക് അനുയോജ്യമായ ജോലി അവസരങ്ങൾ കണ്ടെത്താൻ സഹായിക്കുന്നതിന്, ദയവായി AsliJobs-ൽ Job Seeker അക്കൗണ്ട് സൃഷ്ടിച്ച് നിങ്ങളുടെ പ്രൊഫൈൽ പൂർത്തിയാക്കുക.\n\nലിങ്ക്: ${url}`;
+      }
+      return `To help you find suitable job opportunities, please create your AsliJobs account as a Job Seeker. Get started by completing your profile!\n\nLink: ${url}`;
+    }
     return [
       resume ? "" : unauthorizedCopy(language, employerNeeded ? "employer" : "seeker"),
       registrationCopy({
