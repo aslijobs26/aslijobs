@@ -88,6 +88,7 @@ import {
   clarifyNoMatchChoiceCopy,
   protocolReply,
   rateLimitCopy,
+  registrationCopy,
   serviceErrorCopy,
   shouldUseLlmFallback,
   understandLocally,
@@ -934,6 +935,39 @@ async function processInboundTurn(input: {
       ),
       identity.linked,
     );
+
+    // Guest job seekers should be sent to registration before a missing
+    // location/role clarification starts the search conversation.
+    if (
+      identity.linked === "none" &&
+      merged.intent === "JOB_SEARCH" &&
+      !merged.crossRole
+    ) {
+      const registration = siteUrls(merged.language);
+      const facts = {
+        situation: "new_user",
+        reason: "job_seeker_account_required",
+        registration,
+        accountType: "none",
+      };
+      const draft = buildDeterministicReply(merged.language, facts) ??
+        registrationCopy({
+          language: merged.language,
+          role: "seeker",
+          url: registration.seekerRegisterUrl,
+        });
+      const sent = await sendConfiguredWhatsAppText({
+        to: input.from,
+        userText: text,
+        language: merged.language,
+        draft,
+        facts,
+      });
+      console.info(
+        `[WA-FLOW] accountType=none intent=JOB_SEARCH_GUEST_REGISTRATION language=${merged.language} sent=${sent} latency=${Date.now() - started}`,
+      );
+      return;
+    }
 
     // No-match menu follow-up (1–4) after salary-constrained empty search.
     let noMatchWaitOnly = false;
