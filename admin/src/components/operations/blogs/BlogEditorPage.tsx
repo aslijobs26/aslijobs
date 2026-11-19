@@ -946,18 +946,18 @@ function CoverField({
       <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
         <button
           type="button"
-          className="relative flex aspect-[2/1] w-full items-center justify-center overflow-hidden bg-hero-bg text-muted"
+          className="relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden bg-hero-bg text-muted"
           onClick={() => inputRef.current?.click()}
         >
           {image?.url ? (
-            <img src={croppedImageUrl(image.url, 800, 400)} alt="" className="size-full object-cover" />
+            <img src={croppedImageUrl(image.url, 1920, 1080)} alt="" className="size-full object-cover" />
           ) : (
             <span className="flex flex-col items-center gap-1 px-2 text-[11px] font-medium">
               <ImageIcon className="size-4" aria-hidden="true" />
               Add cover
             </span>
           )}
-          <span className="absolute bottom-2 right-2 rounded-md bg-white/95 px-1.5 py-0.5 text-[10px] font-semibold text-foreground shadow-sm">2:1</span>
+          <span className="absolute bottom-2 right-2 rounded-md bg-white/95 px-1.5 py-0.5 text-[10px] font-semibold text-foreground shadow-sm">1920×1080</span>
         </button>
         <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-2.5 py-2">
           {image?.url ? <RemoveImageButton onRemove={onRemove} /> : null}

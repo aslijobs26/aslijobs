@@ -15,7 +15,7 @@ function HomeBlogCard({ blog, published }: { blog: BlogCard; published: string }
       href={ROUTES.blog(blog.slug)}
       className="group flex h-full min-w-0 flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
-      <span className="block aspect-[16/10] overflow-hidden rounded-xl bg-primary-light">
+      <span className="block aspect-[16/9] overflow-hidden rounded-xl bg-primary-light">
         {blog.coverImageUrl ? (
           <img
             src={blog.coverImageUrl}

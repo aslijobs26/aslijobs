@@ -79,7 +79,7 @@ export function BlogArticleView({
             <img
               src={article.coverImageUrl}
               alt={article.coverImageAlt || article.title}
-              className="mt-5 aspect-[16/8] w-full rounded-2xl object-cover"
+              className="mt-5 aspect-[16/9] w-full rounded-2xl object-cover"
             />
           ) : null}
 

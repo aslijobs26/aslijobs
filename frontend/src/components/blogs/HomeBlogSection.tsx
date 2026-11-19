@@ -34,7 +34,7 @@ function HomeVideoStrip({ blogs, title }: { blogs: BlogCard[]; title: string }) 
             key={blog.id}
             type="button"
             onClick={() => setActive(blog)}
-            className="group relative aspect-video w-[78%] shrink-0 overflow-hidden rounded-2xl bg-[#1c2430] sm:w-[46%] lg:w-[calc((100%-3rem)/3.2)]"
+            className="group relative aspect-video w-[78%] shrink-0 overflow-hidden rounded-2xl bg-[#1c2430] sm:w-[46%] lg:w-[calc((100%-3rem)/4)]"
           >
             <img
               src={`https://i.ytimg.com/vi/${blog.youtubeVideoId}/hqdefault.jpg`}
@@ -135,7 +135,7 @@ export function HomeBlogSection() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, index) => (
             <div key={index} className="animate-pulse">
-              <div className="aspect-[16/10] rounded-2xl bg-primary-light" />
+              <div className="aspect-[16/9] rounded-2xl bg-primary-light" />
               <div className="mt-3 h-3 w-24 rounded bg-primary-light" />
               <div className="mt-2 h-4 w-full rounded bg-primary-light" />
             </div>

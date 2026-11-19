@@ -171,7 +171,7 @@ function ArticleCanvas({
           <img
             src={coverImageUrl}
             alt={coverImageAlt || title}
-            className="mt-5 aspect-[16/8] w-full rounded-2xl object-cover"
+            className="mt-5 aspect-[16/9] w-full rounded-2xl object-cover"
           />
         ) : null}
 
