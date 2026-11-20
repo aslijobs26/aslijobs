@@ -11,6 +11,7 @@ import { startJobSeekerProfileCompletionReminderRuntime } from "./modules/whatsa
 import { startJobPostIncompleteReminderRuntime } from "./modules/whatsapp/notifications/job-post-incomplete-reminder.queue.js";
 import { startWhatsAppNotificationRuntime } from "./modules/whatsapp/notifications/whatsapp-notification.queue.js";
 import { startWebsiteKnowledgeRuntime } from "./modules/website-knowledge/website-knowledge.queue.js";
+import { startSubscriptionSweepScheduler } from "./modules/subscriptions/subscription-sweep.js";
 import { clearAllRbacCaches } from "./modules/rbac/rbac-context.cache.js";
 import { logEmailConfigurationStatus } from "./modules/team/team-invitation-email.service.js";
 import mongoose from "mongoose";
@@ -19,6 +20,7 @@ let httpServer: Server | null = null;
 let isShuttingDown = false;
 let stopNotificationRetention: (() => void) | null = null;
 let stopWorkReconcile: (() => void) | null = null;
+let stopSubscriptionSweep: (() => void) | null = null;
 let stopJobTranslation: (() => Promise<void>) | null = null;
 let stopWhatsAppInbound: (() => Promise<void>) | null = null;
 let stopWhatsAppNotifications: (() => Promise<void>) | null = null;
@@ -60,6 +62,8 @@ async function shutdown(signal: string, exitCode = 0): Promise<void> {
   stopWorkReconcile = null;
   stopBlogPublish?.();
   stopBlogPublish = null;
+  stopSubscriptionSweep?.();
+  stopSubscriptionSweep = null;
 
   const stops: Array<Promise<unknown>> = [
     closeHttp,
@@ -138,6 +142,7 @@ async function startServer(): Promise<void> {
   const { ensureDefaultBlogCategories } = await import("./modules/blogs/blog.service.js");
   await ensureDefaultBlogCategories();
   stopBlogPublish = startBlogPublishScheduler();
+  stopSubscriptionSweep = startSubscriptionSweepScheduler();
 
   httpServer = app.listen(env.PORT, () => {
     console.log(`AsliJobs API running on port ${env.PORT}`);

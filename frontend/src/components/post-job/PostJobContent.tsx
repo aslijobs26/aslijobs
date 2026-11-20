@@ -30,6 +30,7 @@ import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
 import { setJobPostedSuccessSummary } from "@/utils/job-posted-success-storage";
 import { mapWizardDataToCreateJobPayload } from "@/utils/map-post-job-payload";
 import { getApiErrorMessage } from "@/utils/normalize-api-error";
+import { isSubscriptionUpgradeRequired } from "@/utils/subscription-upgrade";
 import {
   mapJobDetailToWizardState,
   mapWizardDataToDraftPayload,
@@ -86,6 +87,7 @@ function PostJobActiveSection({
   formData,
   fieldErrors,
   submitError,
+  submitUpgradeRequired,
   isSubmitting,
   isEditMode,
   accountType,
@@ -103,6 +105,7 @@ function PostJobActiveSection({
   formData: PostJobWizardFormData;
   fieldErrors: PostJobFieldErrors;
   submitError: string;
+  submitUpgradeRequired: boolean;
   isSubmitting: boolean;
   isEditMode: boolean;
   accountType: EmployerAccountType | null;
@@ -156,6 +159,7 @@ function PostJobActiveSection({
       formData={formData.candidateAndInterview}
       fieldErrors={fieldErrors}
       submitError={submitError}
+      submitUpgradeRequired={submitUpgradeRequired}
       isSubmitting={isSubmitting}
       isEditMode={isEditMode}
       onFieldChange={onCandidateInterviewChange}
@@ -181,6 +185,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   );
   const [fieldErrors, setFieldErrors] = useState<PostJobFieldErrors>({});
   const [submitError, setSubmitError] = useState("");
+  const [submitUpgradeRequired, setSubmitUpgradeRequired] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [isHydratingDraft, setIsHydratingDraft] = useState(Boolean(draftJobId));
@@ -588,6 +593,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
 
   const handleStepChange = (step: PostJobActiveStep) => {
     setSubmitError("");
+    setSubmitUpgradeRequired(false);
 
     if (step > activeStep) {
       for (
@@ -635,6 +641,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
     }
 
     setSubmitError("");
+    setSubmitUpgradeRequired(false);
     setVerificationGate(null);
 
     if (!getEmployerAccessToken()) {
@@ -723,6 +730,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
           verificationStatus: resolved.verificationStatus,
         });
       } else {
+        setSubmitUpgradeRequired(isSubscriptionUpgradeRequired(error));
         setSubmitError(
           getApiErrorMessage(error, t("employer.postJob.postFailed")),
         );
@@ -773,6 +781,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
               formData={formData}
               fieldErrors={fieldErrors}
               submitError={submitError}
+              submitUpgradeRequired={submitUpgradeRequired}
               isSubmitting={isSubmitting}
               isEditMode={isActiveEditMode}
               accountType={accountType}

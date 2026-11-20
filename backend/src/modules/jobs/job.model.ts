@@ -300,6 +300,15 @@ const jobSchema = new Schema(
       default: null,
       index: true,
     },
+    /**
+     * Subscription grant whose credit pays for this listing. null → legacy
+     * job, Operations complimentary job, or enforcement disabled.
+     */
+    subscriptionGrantId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubscriptionGrant",
+      default: null,
+    },
     isFeatured: {
       type: Boolean,
       required: true,
@@ -563,6 +572,11 @@ jobSchema.post("save", (doc) => {
 });
 
 jobSchema.index({ employerId: 1, status: 1, createdAt: -1 });
+/** Plan listing-expiry sweep. */
+jobSchema.index(
+  { status: 1, listingValidUntil: 1 },
+  { partialFilterExpression: { subscriptionGrantId: { $type: "objectId" } } },
+);
 /** Period hiring analytics group jobs by employer without a status predicate. */
 jobSchema.index({ createdAt: -1, employerId: 1 });
 jobSchema.index({ status: 1, stateName: 1, cityName: 1, createdAt: -1 });

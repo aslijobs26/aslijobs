@@ -1,7 +1,5 @@
-import {
-  createEmployerModuleMetadata,
-  EmployerModulePage,
-} from "@/components/employer-dashboard/EmployerModulePage";
+import { createEmployerModuleMetadata } from "@/components/employer-dashboard/EmployerModulePage";
+import { EmployerSubscriptionPageContent } from "@/components/employer-subscription/EmployerSubscriptionPageContent";
 
 export const metadata = createEmployerModuleMetadata({
   title: "Subscription",
@@ -9,5 +7,5 @@ export const metadata = createEmployerModuleMetadata({
 });
 
 export default function EmployerSubscriptionPage() {
-  return <EmployerModulePage titleKey="employer.nav.subscription" />;
+  return <EmployerSubscriptionPageContent />;
 }

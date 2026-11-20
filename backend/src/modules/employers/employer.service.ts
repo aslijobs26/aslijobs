@@ -54,6 +54,7 @@ import type {
 import { assertEmployerDocumentTypeForAccount } from "./employer-document.policy.js";
 import { isolateOperationsEmployerProfileFields } from "./employer.validation.js";
 import { employerResubmitFieldErrors } from "./employer-verification-resubmit.policy.js";
+import { subscriptionService } from "../subscriptions/subscription.service.js";
 
 type EmployerImageAsset = {
   url?: string;
@@ -556,6 +557,17 @@ export class EmployerService {
 
       console.error("Employer registration persistence failed:", error);
       throw new AppError("Database error", HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+
+    // Silent Free plan (1 job, 7 days, 1 city). No notification by design.
+    // Never blocks registration; consumeCredit re-ensures it lazily.
+    try {
+      await subscriptionService.ensureFreeGrant(employer._id);
+    } catch (error) {
+      console.error("[subscriptions] free grant at registration failed", {
+        employerId: employer._id.toString(),
+        errorCategory: error instanceof Error ? error.name : "unknown",
+      });
     }
 
     const delivery = await otpService.issueAndDeliver(

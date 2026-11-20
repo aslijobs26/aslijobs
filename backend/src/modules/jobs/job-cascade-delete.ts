@@ -8,6 +8,7 @@ import { SavedJobModel } from "../saved-jobs/saved-job.model.js";
 import { TeamActivityModel } from "../team/team-activity.model.js";
 import { JobModel } from "./job.model.js";
 import { JobViewModel } from "./job-view.model.js";
+import { subscriptionEntitlementService } from "../subscriptions/subscription-entitlement.service.js";
 
 export type JobCascadeDeleteResult = {
   deletedJobIds: string[];
@@ -378,7 +379,7 @@ export async function cascadeDeleteOwnedJobs(input: {
     employerId: employerObjectId,
     _id: { $in: jobObjectIds },
   })
-    .select("_id jobId")
+    .select("_id jobId status publishedAt reviewDecision subscriptionGrantId")
     .lean();
 
   if (ownedJobs.length === 0) {
@@ -424,6 +425,9 @@ export async function cascadeDeleteOwnedJobs(input: {
         HTTP_STATUS.CONFLICT,
       );
     }
+
+    // Jobs that never went Live give their plan credit back.
+    await subscriptionEntitlementService.refundCreditsForDeletedJobs(ownedJobs);
 
     return {
       deletedJobIds,

@@ -60,6 +60,14 @@ import {
   type EmployerJobApplicationMetrics,
 } from "./employer-job-application-metrics.js";
 import { recordTeamActivity } from "../team/team-activity.service.js";
+import { COMPLIMENTARY_PACKAGE_LABEL } from "../subscriptions/subscription.constants.js";
+import {
+  buildJobCityKey,
+  computeListingValidUntil,
+  subscriptionEntitlementService,
+  type CreditErrorExtras,
+  type JobCreditAttachment,
+} from "../subscriptions/subscription-entitlement.service.js";
 import type {
   BulkDeleteJobsBody,
   CreateJobInput,
@@ -1398,8 +1406,31 @@ export class JobService {
     // Employer submissions require Operations approval before becoming Live.
     const status: JobStatus = isDraft ? "draft" : "pending_approval";
     const now = new Date();
+    const jobObjectId = new mongoose.Types.ObjectId();
+
+    // Submissions consume one plan credit. No credit -> keep the form as a draft, then 402.
+    const credit: JobCreditAttachment | null = isDraft
+      ? null
+      : await subscriptionEntitlementService.consumeForSubmission({
+          employerId: employerObjectId,
+          jobId: jobObjectId,
+          cityKey: buildJobCityKey(input),
+          onBlocked: async (): Promise<CreditErrorExtras> => {
+            const draftResult: { job: { id: string; jobId: string } } =
+              await this.createJob(employerId, {
+              ...input,
+              status: "draft",
+            });
+            return {
+              draftSaved: true,
+              jobId: draftResult.job.id,
+              jobPublicId: draftResult.job.jobId,
+            };
+          },
+        });
 
     const job = await JobModel.create({
+      _id: jobObjectId,
       jobId,
       employerId: employerObjectId,
       companyId: employerObjectId,
@@ -1459,8 +1490,9 @@ export class JobService {
         interviewInstructions: input.interviewInstructions,
       }),
       listingPaymentStatus: isDraft ? "pending" : "paid",
-      listingPackageLabel: "",
+      listingPackageLabel: credit?.packageLabel ?? "",
       listingValidUntil: null,
+      subscriptionGrantId: credit?.grantId ?? null,
       isFeatured: false,
       completedStep: isDraft ? 1 : 3,
       lastEditedAt: now,
@@ -1480,6 +1512,13 @@ export class JobService {
       createdBy: employerObjectId,
       // Server-authoritative — never trust client creationSource.
       creationSource: "employer",
+    }).catch(async (error: unknown) => {
+      if (credit?.grantId) {
+        await subscriptionEntitlementService
+          .refundCredit({ grantId: credit.grantId, jobId: jobObjectId })
+          .catch(() => false);
+      }
+      throw error;
     });
 
     if (!isDraft) {
@@ -1762,6 +1801,16 @@ export class JobService {
       assertEmployerVerifiedForJobAction(employer, gateAction);
     }
 
+    // First submission and every reactivation use a plan credit.
+    let consumedCredit: JobCreditAttachment | null = null;
+    if ((action === "publish" && !job.subscriptionGrantId) || action === "reactivate") {
+      consumedCredit = await subscriptionEntitlementService.consumeForSubmission({
+        employerId,
+        jobId: job._id,
+        cityKey: buildJobCityKey(job),
+      });
+    }
+
     const now = new Date();
 
     const $set: Record<string, unknown> = {
@@ -1790,6 +1839,23 @@ export class JobService {
       }
     }
 
+    if (consumedCredit?.grantId) {
+      $set.subscriptionGrantId = consumedCredit.grantId;
+      $set.listingPackageLabel = consumedCredit.packageLabel;
+      $set.listingPaymentStatus = "paid";
+      // Reactivation goes Live immediately, so the new validity starts now.
+      if (action === "reactivate" && consumedCredit.listingValidityDays) {
+        $set.listingValidUntil = computeListingValidUntil(
+          now,
+          consumedCredit.listingValidityDays,
+        );
+      }
+    } else if (action === "reactivate") {
+      // Enforcement disabled and no credit: no plan-backed expiry.
+      $set.subscriptionGrantId = null;
+      $set.listingValidUntil = null;
+    }
+
     const previousStatus = job.status as JobStatus;
     const updateResult = await JobModel.updateOne(
       {
@@ -1803,6 +1869,11 @@ export class JobService {
     );
 
     if (updateResult.matchedCount === 0) {
+      if (consumedCredit?.grantId) {
+        await subscriptionEntitlementService
+          .refundCredit({ grantId: consumedCredit.grantId, jobId: job._id })
+          .catch(() => false);
+      }
       throw new AppError(
         "This job was already updated. Refresh and try again.",
         HTTP_STATUS.CONFLICT,
@@ -2183,6 +2254,43 @@ export class JobService {
 
     const previousWasRejected = job.status === "rejected";
     applyCreateInputToJob(job, input);
+
+    // Credit: a rejected resubmission keeps its credit (city limit re-checked);
+    // a first submission consumes one. Blocked -> form saved, then 402.
+    const cityKey = buildJobCityKey(input);
+    const saveFormForCreditError = async () => {
+      job.completedStep = 3;
+      job.lastEditedAt = new Date();
+      job.wizardSnapshot = null;
+      await job.save();
+      return { draftSaved: true, jobId: job._id.toString(), jobPublicId: job.jobId };
+    };
+    let consumedGrantId: mongoose.Types.ObjectId | null = null;
+    if (job.subscriptionGrantId) {
+      const cityAllowed = await subscriptionEntitlementService.reassignJobCity({
+        grantId: job.subscriptionGrantId,
+        jobId: job._id,
+        cityKey,
+      });
+      if (!cityAllowed) {
+        throw subscriptionEntitlementService.buildCityLimitError(
+          await saveFormForCreditError(),
+        );
+      }
+    } else {
+      const credit = await subscriptionEntitlementService.consumeForSubmission({
+        employerId,
+        jobId: job._id,
+        cityKey,
+        onBlocked: saveFormForCreditError,
+      });
+      if (credit.grantId) {
+        job.subscriptionGrantId = credit.grantId;
+        job.listingPackageLabel = credit.packageLabel;
+        consumedGrantId = credit.grantId;
+      }
+    }
+
     const now = new Date();
     job.status = "pending_approval";
     // Server-authoritative creation source for employer-owned jobs.
@@ -2204,7 +2312,16 @@ export class JobService {
     job.reviewedByOperationsUserId = null;
     job.rejectionReason = "";
     job.reviewNotificationSentAt = null;
-    await job.save();
+    try {
+      await job.save();
+    } catch (error) {
+      if (consumedGrantId) {
+        await subscriptionEntitlementService
+          .refundCredit({ grantId: consumedGrantId, jobId: job._id })
+          .catch(() => false);
+      }
+      throw error;
+    }
 
     jobPostSubmittedWhatsApp.schedule({
       employerId,
@@ -2267,6 +2384,18 @@ export class JobService {
         "No changes to submit for approval",
         HTTP_STATUS.BAD_REQUEST,
       );
+    }
+
+    // Live edits must stay within the plan's city limit.
+    if (job.subscriptionGrantId) {
+      const cityAllowed = await subscriptionEntitlementService.canJobUseCity({
+        grantId: job.subscriptionGrantId,
+        jobId: job._id,
+        cityKey: buildJobCityKey(input),
+      });
+      if (!cityAllowed) {
+        throw subscriptionEntitlementService.buildCityLimitError();
+      }
     }
 
     const now = new Date();
@@ -3032,11 +3161,11 @@ export class JobService {
     applyCreateInputToJob(job, input);
     const now = new Date();
     job.status = "active";
-    if (
-      job.listingPaymentStatus === "pending" ||
-      job.listingPaymentStatus === "unpaid"
-    ) {
-      job.listingPaymentStatus = "paid";
+    // Operations-published jobs are complimentary: no plan credit, no auto-expiry.
+    if (!job.subscriptionGrantId) {
+      job.listingPaymentStatus = "not_applicable";
+      job.listingPackageLabel = COMPLIMENTARY_PACKAGE_LABEL;
+      job.listingValidUntil = null;
     }
     job.completedStep = 3;
     job.lastEditedAt = now;
